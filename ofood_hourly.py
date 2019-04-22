@@ -89,7 +89,7 @@ insert_ofood_order_sum = HiveOperator(
         GROUP BY
             dt,
             orderstatus,
-            deliverytype,
+            deliverytype
     """,
     schema='dashboard',
     task_id='insert_ofood_order_sum',
