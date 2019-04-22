@@ -52,7 +52,7 @@ user_register_add_partitions = HiveOperator(
 
 insert_ofood_dnu = HiveOperator(
     hql="""
-        insert overwrite table ofood_dau
+        insert overwrite table ofood_dnu
         select
             dt,
             count(distinct uid)
