@@ -91,16 +91,17 @@ insert_ofood_order_sum = HiveOperator(
     task_id='insert_ofood_order_sum',
     dag=dag)
 
-IMPALA_QUERY = """
-    REFRESH dashboard.ofood_dau;
-    REFRESH dashboard.ofood_dau;
-    REFRESH dashboard.ofood_order_sum;
-"""
+IMPALA_QUERY = [
+    "REFRESH dashboard.ofood_dau",
+    "REFRESH dashboard.ofood_dau",
+    "REFRESH dashboard.ofood_order_sum"
+]
 
 def impala_query(ds, **kwargs):
     conn = connect(host=Variable.get("IMPALA_URL"), port=21050)
     cur = conn.cursor()
-    cur.execute(IMPALA_QUERY)
+    for sql in IMPALA_QUERY:
+        cur.execute(sql)
 
 refresh_impala = PythonOperator(
     task_id='refresh_impala',
