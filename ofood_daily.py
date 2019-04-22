@@ -8,7 +8,7 @@ from airflow.operators.python_operator import PythonOperator
 args = {
     'owner': 'root',
     'start_date': datetime(2019, 4, 20),
-    'depends_on_past': False,
+    'depends_on_past': True,
     'retries': 1,
     'retry_delay': timedelta(minutes=5),
 }
