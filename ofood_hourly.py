@@ -1,8 +1,9 @@
 import airflow
 from datetime import datetime, timedelta
 from airflow.operators.hive_operator import HiveOperator
-from airflow.operators.bash_operator import BashOperator
 from airflow.models import Variable
+from impala.dbapi import connect
+from airflow.operators.python_operator import PythonOperator
 
 args = {
     'owner': 'root',
@@ -63,9 +64,8 @@ insert_ofood_order_sum = HiveOperator(
             dt
     """,
     schema='dashboard',
-    task_id='insert_ofood_dnu',
+    task_id='insert_ofood_order_sum',
     dag=dag)
-
 
 IMPALA_QUERY = """
     REFRESH dashboard.ofood_dau;
@@ -73,7 +73,18 @@ IMPALA_QUERY = """
     REFRESH dashboard.ofood_order_sum;
 """
 
-refresh_impala = BashOperator(
+def impala_query(ds, **kwargs):
+    conn = connect(host=Variable.get("IMPALA_URL"), port=21050)
+    cur = conn.cursor()
+    cur.execute(IMPALA_QUERY)
+
+refresh_impala = PythonOperator(
     task_id='refresh_impala',
-    bash_command='impala-shell -i "{impala_url}:21000" -q "{impala_query}"'.format(impala_url=Variable.get("IMPALA_URL"), impala_query=IMPALA_QUERY),
-    dag=dag)
+    provide_context=True,
+    python_callable=impala_query,
+    dag=dag
+)
+
+insert_ofood_dau >> refresh_impala
+insert_ofood_dnu >> refresh_impala
+insert_ofood_order_sum >> refresh_impala
