@@ -83,7 +83,7 @@ insert_ofood_order_sum = HiveOperator(
             count(distinct orderid)
         FROM
             ofood_source.user_orders
-        WHERE dt >= '2019-04-20'
+        WHERE dt >= '2019-04-20' and orderstatus=8
         GROUP BY
             dt
     """,
