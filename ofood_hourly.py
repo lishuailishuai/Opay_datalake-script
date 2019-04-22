@@ -18,6 +18,14 @@ dag = airflow.DAG(
     schedule_interval="15 * * * *",
     default_args=args)
 
+user_login_add_partitions = HiveOperator(
+    task_id='user_login_add_partitions',
+    hql="""
+            ALTER TABLE user_login ADD IF NOT EXISTS PARTITION (dt = '{{ ds }}', hour = '{{ execution_date.strftime("%H") }}')
+        """,
+    schema='ofood_source',
+    dag=dag)
+
 insert_ofood_dau = HiveOperator(
     hql="""
         insert overwrite table ofood_dau
@@ -32,6 +40,14 @@ insert_ofood_dau = HiveOperator(
     """,
     schema='dashboard',
     task_id='insert_ofood_dau',
+    dag=dag)
+
+user_register_add_partitions = HiveOperator(
+    task_id='user_register_add_partitions',
+    hql="""
+            ALTER TABLE user_register ADD IF NOT EXISTS PARTITION (dt = '{{ ds }}', hour = '{{ execution_date.strftime("%H") }}')
+        """,
+    schema='ofood_source',
     dag=dag)
 
 insert_ofood_dnu = HiveOperator(
@@ -50,6 +66,14 @@ insert_ofood_dnu = HiveOperator(
     task_id='insert_ofood_dnu',
     dag=dag)
 
+
+user_orders_add_partitions = HiveOperator(
+    task_id='user_orders_add_partitions',
+    hql="""
+            ALTER TABLE user_orders ADD IF NOT EXISTS PARTITION (dt = '{{ ds }}', hour = '{{ execution_date.strftime("%H") }}')
+        """,
+    schema='ofood_source',
+    dag=dag)
 
 insert_ofood_order_sum = HiveOperator(
     hql="""
@@ -85,6 +109,9 @@ refresh_impala = PythonOperator(
     dag=dag
 )
 
+user_login_add_partitions >> insert_ofood_dau
+user_register_add_partitions >> insert_ofood_dnu
+user_orders_add_partitions >> insert_ofood_order_sum
 insert_ofood_dau >> refresh_impala
 insert_ofood_dnu >> refresh_impala
 insert_ofood_order_sum >> refresh_impala
