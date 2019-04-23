@@ -98,31 +98,14 @@ insert_ofood_old_user_order_sum = HiveOperator(
     task_id='insert_ofood_old_user_order_sum',
     dag=dag)
 
-refresh_order_sum = ImpalaOperator(
-    task_id = 'refresh_order_sum',
-    hql="REFRESH dashboard.ofood_old_user_order_sum",
+refresh_impala = ImpalaOperator(
+    task_id = 'refresh_impala',
+    hql="""\
+        REFRESH dashboard.ofood_active_user;
+        REFRESH dashboard.ofood_active_user_retention;
+        REFRESH dashboard.ofood_old_user_order_sum;
+    """,
     schema='dashboard',
-    priority_weight=50,
-    dag=dag
-)
-
-IMPALA_QUERY = [
-    "REFRESH dashboard.ofood_active_user",
-    "REFRESH dashboard.ofood_active_user_retention",
-    "REFRESH dashboard.ofood_old_user_order_sum"
-]
-
-def impala_query(ds, **kwargs):
-    conn = connect(host=Variable.get("IMPALA_URL"), port=21050)
-    cur = conn.cursor()
-    for sql in IMPALA_QUERY:
-        cur.execute(sql)
-        logging.info('Executing: %s', sql)
-
-refresh_impala = PythonOperator(
-    task_id='refresh_impala',
-    provide_context=True,
-    python_callable=impala_query,
     dag=dag
 )
 
@@ -130,4 +113,3 @@ insert_ofood_active_user >> insert_ofood_active_user_retention
 insert_ofood_active_user >> refresh_impala
 insert_ofood_active_user_retention >> refresh_impala
 insert_ofood_old_user_order_sum >> refresh_impala
-insert_ofood_old_user_order_sum >> refresh_order_sum
