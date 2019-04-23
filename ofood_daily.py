@@ -71,9 +71,33 @@ insert_ofood_active_user_retention = HiveOperator(
     task_id='insert_ofood_active_user_retention',
     dag=dag)
 
+
+insert_ofood_old_user_order_sum = HiveOperator(
+    hql="""
+        INSERT OVERWRITE TABLE ofood_old_user_order_sum PARTITION (dt='{{ ds }}')
+        SELECT
+            COUNT(distinct a.orderid)
+        FROM
+            ofood_source.user_orders a
+            INNER JOIN (
+                SELECT
+                    DISTINCT uid
+                FROM
+                    ofood_source.user_orders
+                WHERE
+                    dt>='{{ macros.ds_add(ds, -15) }}' and dt<'{{ ds }}' and orderstatus=8
+            ) b on b.uid=a.uid
+        WHERE
+            a.dt='{{ ds }}' and a.orderstatus=8
+    """,
+    schema='dashboard',
+    task_id='insert_ofood_old_user_order_sum',
+    dag=dag)
+
 IMPALA_QUERY = [
     "REFRESH dashboard.ofood_active_user",
-    "REFRESH dashboard.ofood_active_user_retention"
+    "REFRESH dashboard.ofood_active_user_retention",
+    "REFRESH dashboard.ofood_old_user_order_sum"
 ]
 
 def impala_query(ds, **kwargs):
@@ -92,3 +116,4 @@ refresh_impala = PythonOperator(
 insert_ofood_active_user >> insert_ofood_active_user_retention
 insert_ofood_active_user >> refresh_impala
 insert_ofood_active_user_retention >> refresh_impala
+insert_ofood_old_user_order_sum >> refresh_impala
