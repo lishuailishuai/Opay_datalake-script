@@ -4,6 +4,8 @@ from airflow.operators.hive_operator import HiveOperator
 from airflow.models import Variable
 from impala.dbapi import connect
 from airflow.operators.python_operator import PythonOperator
+import logging
+
 
 args = {
     'owner': 'root',
@@ -105,6 +107,7 @@ def impala_query(ds, **kwargs):
     cur = conn.cursor()
     for sql in IMPALA_QUERY:
         cur.execute(sql)
+        logging.info('Executing: %s', sql)
 
 refresh_impala = PythonOperator(
     task_id='refresh_impala',
