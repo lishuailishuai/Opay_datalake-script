@@ -1,13 +1,7 @@
 import airflow
 from datetime import datetime, timedelta
 from airflow.operators.hive_operator import HiveOperator
-from airflow.models import Variable
-from impala.dbapi import connect
-from airflow.operators.python_operator import PythonOperator
-import logging
 from airflow.operators.impala_plugin import ImpalaOperator
-
-
 
 args = {
     'owner': 'root',
@@ -19,7 +13,7 @@ args = {
 
 dag = airflow.DAG(
     'ofood_daily',
-    schedule_interval="30 01 * * *",
+    schedule_interval="30 00 * * *",
     default_args=args)
 
 insert_ofood_active_user = HiveOperator(
