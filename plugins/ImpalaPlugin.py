@@ -5,6 +5,10 @@ from airflow.models import BaseOperator
 from airflow.plugins_manager import AirflowPlugin
 from airflow.utils.decorators import apply_defaults
 
+try:
+    basestring
+except NameError:
+    basestring = str
 
 def split_sql_expressions(text):
     results = []
