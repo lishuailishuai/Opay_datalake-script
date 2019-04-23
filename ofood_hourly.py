@@ -101,6 +101,7 @@ refresh_impala = ImpalaOperator(
         REFRESH dashboard.ofood_order_sum;
     """,
     schema='dashboard',
+    priority_weight=50,
     dag=dag
 )
 

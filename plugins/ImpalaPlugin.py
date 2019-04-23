@@ -136,11 +136,9 @@ class ImpalaOperator(BaseOperator):
     @apply_defaults
     def __init__(
             self, hql,
-            pool='Impala_Pool',
             impala_conn_id='impala',
             schema='default',
             *args, **kwargs):
-        kwargs['pool'] = pool
         super(ImpalaOperator, self).__init__(*args, **kwargs)
         self.hql = hql
         self.schema = schema
