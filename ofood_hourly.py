@@ -97,7 +97,7 @@ insert_ofood_order_sum = HiveOperator(
 
 IMPALA_QUERY = [
     "REFRESH dashboard.ofood_dau",
-    "REFRESH dashboard.ofood_dau",
+    "REFRESH dashboard.ofood_dnu",
     "REFRESH dashboard.ofood_order_sum"
 ]
 
