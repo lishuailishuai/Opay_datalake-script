@@ -5,6 +5,8 @@ from airflow.models import Variable
 from impala.dbapi import connect
 from airflow.operators.python_operator import PythonOperator
 import logging
+from airflow.operators.impala_plugin import ImpalaOperator
+
 
 
 args = {
@@ -96,6 +98,14 @@ insert_ofood_old_user_order_sum = HiveOperator(
     task_id='insert_ofood_old_user_order_sum',
     dag=dag)
 
+refresh_order_sum = ImpalaOperator(
+    task_id = 'refresh_order_sum',
+    hql="REFRESH dashboard.ofood_old_user_order_sum",
+    schema='dashboard',
+    priority_weight=50,
+    dag=dag
+)
+
 IMPALA_QUERY = [
     "REFRESH dashboard.ofood_active_user",
     "REFRESH dashboard.ofood_active_user_retention",
@@ -120,3 +130,4 @@ insert_ofood_active_user >> insert_ofood_active_user_retention
 insert_ofood_active_user >> refresh_impala
 insert_ofood_active_user_retention >> refresh_impala
 insert_ofood_old_user_order_sum >> refresh_impala
+insert_ofood_old_user_order_sum >> refresh_order_sum
