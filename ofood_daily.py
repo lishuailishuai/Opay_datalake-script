@@ -43,6 +43,87 @@ insert_ofood_active_user_retention = HiveOperator(
                     n.dt AS dt,
                     COUNT(*) AS retained_users
                 FROM
+                    ofood_active_user au, ofood_active_user n
+                WHERE
+                    au.uid = n.uid
+                    AND au.dt = '{{ ds }}'
+                    AND n.dt >= '{{ macros.ds_add(ds, -30) }}'
+                    AND n.dt < '{{ ds }}'
+                GROUP BY
+                    n.dt
+            ) a
+            RIGHT OUTER JOIN
+            (
+                SELECT
+                    dt,
+                    count(*) as cohort_size
+                FROM
+                    ofood_active_user
+                WHERE
+                    dt >= '{{ macros.ds_add(ds, -30) }}' AND dt < '{{ ds }}'
+                GROUP BY
+                    dt
+            ) b ON a.dt = b.dt
+    """,
+    schema='dashboard',
+    task_id='insert_ofood_active_user_retention',
+    dag=dag)
+
+
+insert_ofood_active_user_retention = HiveOperator(
+    hql="""
+        INSERT OVERWRITE TABLE ofood_active_user_retention PARTITION (dt='{{ ds }}')
+        SELECT
+            b.dt,
+            DATEDIFF('{{ ds }}', b.dt) AS period,
+            NVL(a.retained_users, 0) AS retained_users,
+            b.cohort_size
+        FROM
+            (
+                SELECT
+                    n.dt AS dt,
+                    COUNT(*) AS retained_users
+                FROM
+                    ofood_active_user au, ofood_active_user n
+                WHERE
+                    au.uid = n.uid
+                    AND au.dt = '{{ ds }}'
+                    AND n.dt >= '{{ macros.ds_add(ds, -30) }}'
+                    AND n.dt < '{{ ds }}'
+                GROUP BY
+                    n.dt
+            ) a
+            RIGHT OUTER JOIN
+            (
+                SELECT
+                    dt,
+                    count(*) as cohort_size
+                FROM
+                    ofood_active_user
+                WHERE
+                    dt >= '{{ macros.ds_add(ds, -30) }}' AND dt < '{{ ds }}'
+                GROUP BY
+                    dt
+            ) b ON a.dt = b.dt
+    """,
+    schema='dashboard',
+    task_id='insert_ofood_active_user_retention',
+    dag=dag)
+
+insert_ofood_register_user_retention = HiveOperator(
+    hql="""
+        INSERT OVERWRITE TABLE ofood_register_user_retention PARTITION (dt='{{ ds }}')
+        SELECT
+            b.dt,
+            DATEDIFF('{{ ds }}', b.dt) AS period,
+            NVL(a.retained_users, 0) AS retained_users,
+            b.cohort_size
+        FROM
+            (
+                SELECT
+                    n.dt AS dt,
+                    COUNT(*) AS retained_users
+                FROM
                     ofood_active_user au, ofood_source.user_register n
                 WHERE
                     au.uid = n.uid
@@ -66,9 +147,8 @@ insert_ofood_active_user_retention = HiveOperator(
             ) b ON a.dt = b.dt
     """,
     schema='dashboard',
-    task_id='insert_ofood_active_user_retention',
+    task_id='insert_ofood_register_user_retention',
     dag=dag)
-
 
 insert_ofood_old_user_order_sum = HiveOperator(
     hql="""
@@ -98,6 +178,7 @@ refresh_impala = ImpalaOperator(
         REFRESH dashboard.ofood_active_user;
         REFRESH dashboard.ofood_active_user_retention;
         REFRESH dashboard.ofood_old_user_order_sum;
+        REFRESH dashboard.ofood_register_user_retention;
     """,
     schema='dashboard',
     priority_weight=50,
@@ -108,3 +189,4 @@ insert_ofood_active_user >> insert_ofood_active_user_retention
 insert_ofood_active_user >> refresh_impala
 insert_ofood_active_user_retention >> refresh_impala
 insert_ofood_old_user_order_sum >> refresh_impala
+insert_ofood_register_user_retention >> refresh_impala
