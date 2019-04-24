@@ -43,7 +43,7 @@ insert_ofood_active_user_retention = HiveOperator(
                     n.dt AS dt,
                     COUNT(*) AS retained_users
                 FROM
-                    ofood_active_user au, ofood_active_user n
+                    ofood_active_user au, ofood_source.user_register n
                 WHERE
                     au.uid = n.uid
                     AND au.dt = '{{ ds }}'
@@ -58,7 +58,7 @@ insert_ofood_active_user_retention = HiveOperator(
                     dt,
                     count(*) as cohort_size
                 FROM
-                    ofood_active_user
+                    ofood_source.user_register
                 WHERE
                     dt >= '{{ macros.ds_add(ds, -30) }}' AND dt < '{{ ds }}'
                 GROUP BY
