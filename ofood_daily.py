@@ -16,6 +16,20 @@ dag = airflow.DAG(
     schedule_interval="30 01 * * *",
     default_args=args)
 
+create_ofood_active_user = HiveOperator(
+    hql="""
+        CREATE TABLE IF NOT EXISTS ofood_active_user (
+            uid int
+        )
+        PARTITIONED BY (
+            dt STRING
+        )
+        STORED AS PARQUET
+    """,
+    schema='dashboard',
+    task_id='create_ofood_active_user',
+    dag=dag)
+
 insert_ofood_active_user = HiveOperator(
     hql="""
         INSERT OVERWRITE TABLE ofood_active_user PARTITION (dt='{{ ds }}')
@@ -29,6 +43,23 @@ insert_ofood_active_user = HiveOperator(
     task_id='insert_ofood_active_user',
     dag=dag)
 
+create_ofood_active_user_retention = HiveOperator(
+    hql="""
+        CREATE TABLE IF NOT EXISTS ofood_active_user_retention (
+            install_date string,
+            period int,
+            retained_users int,
+            cohort_size int
+        )
+        PARTITIONED BY (
+            dt STRING
+        )
+        STORED AS PARQUET
+    """,
+    schema='dashboard',
+    task_id='create_ofood_active_user_retention',
+    dag=dag)
+
 insert_ofood_active_user_retention = HiveOperator(
     hql="""
         INSERT OVERWRITE TABLE ofood_active_user_retention PARTITION (dt='{{ ds }}')
@@ -69,45 +100,21 @@ insert_ofood_active_user_retention = HiveOperator(
     task_id='insert_ofood_active_user_retention',
     dag=dag)
 
-
-insert_ofood_active_user_retention = HiveOperator(
+create_ofood_register_user_retention = HiveOperator(
     hql="""
-        INSERT OVERWRITE TABLE ofood_active_user_retention PARTITION (dt='{{ ds }}')
-        SELECT
-            b.dt,
-            DATEDIFF('{{ ds }}', b.dt) AS period,
-            NVL(a.retained_users, 0) AS retained_users,
-            b.cohort_size
-        FROM
-            (
-                SELECT
-                    n.dt AS dt,
-                    COUNT(*) AS retained_users
-                FROM
-                    ofood_active_user au, ofood_active_user n
-                WHERE
-                    au.uid = n.uid
-                    AND au.dt = '{{ ds }}'
-                    AND n.dt >= '{{ macros.ds_add(ds, -30) }}'
-                    AND n.dt < '{{ ds }}'
-                GROUP BY
-                    n.dt
-            ) a
-            RIGHT OUTER JOIN
-            (
-                SELECT
-                    dt,
-                    count(*) as cohort_size
-                FROM
-                    ofood_active_user
-                WHERE
-                    dt >= '{{ macros.ds_add(ds, -30) }}' AND dt < '{{ ds }}'
-                GROUP BY
-                    dt
-            ) b ON a.dt = b.dt
+        CREATE TABLE IF NOT EXISTS ofood_register_user_retention (
+            install_date string,
+            period int,
+            retained_users int,
+            cohort_size int
+        )
+        PARTITIONED BY (
+            dt STRING
+        )
+        STORED AS PARQUET
     """,
     schema='dashboard',
-    task_id='insert_ofood_active_user_retention',
+    task_id='create_ofood_register_user_retention',
     dag=dag)
 
 insert_ofood_register_user_retention = HiveOperator(
@@ -150,6 +157,21 @@ insert_ofood_register_user_retention = HiveOperator(
     task_id='insert_ofood_register_user_retention',
     dag=dag)
 
+
+create_ofood_old_user_order_sum = HiveOperator(
+    hql="""
+        CREATE TABLE IF NOT EXISTS ofood_old_user_order_sum (
+            num int
+        )
+        PARTITIONED BY (
+            dt STRING
+        )
+        STORED AS PARQUET
+    """,
+    schema='dashboard',
+    task_id='create_ofood_old_user_order_sum',
+    dag=dag)
+
 insert_ofood_old_user_order_sum = HiveOperator(
     hql="""
         INSERT OVERWRITE TABLE ofood_old_user_order_sum PARTITION (dt='{{ ds }}')
@@ -185,6 +207,10 @@ refresh_impala = ImpalaOperator(
     dag=dag
 )
 
+create_ofood_active_user >> insert_ofood_active_user
+create_ofood_active_user_retention >> insert_ofood_active_user_retention
+create_ofood_register_user_retention >> insert_ofood_register_user_retention
+create_ofood_old_user_order_sum >> insert_ofood_old_user_order_sum
 insert_ofood_active_user >> insert_ofood_active_user_retention
 insert_ofood_active_user >> refresh_impala
 insert_ofood_active_user_retention >> refresh_impala

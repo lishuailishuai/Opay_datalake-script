@@ -24,6 +24,18 @@ user_login_add_partitions = HiveOperator(
     schema='ofood_source',
     dag=dag)
 
+create_ofood_dau = HiveOperator(
+    hql="""
+        CREATE TABLE IF NOT EXISTS ofood_dau (
+            dt string,
+            dau int
+        )
+        STORED AS PARQUET
+    """,
+    schema='dashboard',
+    task_id='create_ofood_dau',
+    dag=dag)
+
 insert_ofood_dau = HiveOperator(
     hql="""
         insert overwrite table ofood_dau
@@ -46,6 +58,18 @@ user_register_add_partitions = HiveOperator(
             ALTER TABLE user_register ADD IF NOT EXISTS PARTITION (dt = '{{ ds }}', hour = '{{ execution_date.strftime("%H") }}')
         """,
     schema='ofood_source',
+    dag=dag)
+
+create_ofood_dnu = HiveOperator(
+    hql="""
+        CREATE TABLE IF NOT EXISTS ofood_dnu (
+            dt string,
+            dnu int
+        )
+        STORED AS PARQUET
+    """,
+    schema='dashboard',
+    task_id='create_ofood_dnu',
     dag=dag)
 
 insert_ofood_dnu = HiveOperator(
@@ -73,6 +97,22 @@ user_orders_add_partitions = HiveOperator(
     schema='ofood_source',
     dag=dag)
 
+create_ofood_order_sum = HiveOperator(
+    hql="""
+        CREATE TABLE IF NOT EXISTS ofood_order_sum (
+            dt string,
+            order_status int,
+            delivery_type int,
+            num int,
+            discount int,
+            amount int
+        )
+        STORED AS PARQUET
+    """,
+    schema='dashboard',
+    task_id='create_ofood_order_sum',
+    dag=dag)
+
 insert_ofood_order_sum = HiveOperator(
     hql="""
         insert overwrite table ofood_order_sum
@@ -80,7 +120,9 @@ insert_ofood_order_sum = HiveOperator(
             dt,
             orderstatus,
             deliverytype,
-            count(distinct orderid)
+            count(orderid) as num,
+            sum(discount) as discount,
+            sum(amount) as amount
         FROM
             ofood_source.user_orders
         WHERE dt >= '2019-04-20'
@@ -105,6 +147,9 @@ refresh_impala = ImpalaOperator(
     dag=dag
 )
 
+create_ofood_dau >> insert_ofood_dau
+create_ofood_dnu >> insert_ofood_dnu
+create_ofood_order_sum >> insert_ofood_order_sum
 user_login_add_partitions >> insert_ofood_dau
 user_register_add_partitions >> insert_ofood_dnu
 user_orders_add_partitions >> insert_ofood_order_sum
