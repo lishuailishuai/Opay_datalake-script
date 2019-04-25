@@ -161,7 +161,8 @@ insert_ofood_register_user_retention = HiveOperator(
 create_ofood_old_user_order_sum = HiveOperator(
     hql="""
         CREATE TABLE IF NOT EXISTS ofood_old_user_order_sum (
-            num int
+            user_num int,
+            order_num int
         )
         PARTITIONED BY (
             dt STRING
@@ -176,6 +177,7 @@ insert_ofood_old_user_order_sum = HiveOperator(
     hql="""
         INSERT OVERWRITE TABLE ofood_old_user_order_sum PARTITION (dt='{{ ds }}')
         SELECT
+            COUNT(distinct a.uid),
             COUNT(distinct a.orderid)
         FROM
             ofood_source.user_orders a
