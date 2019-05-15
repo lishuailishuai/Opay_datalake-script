@@ -81,10 +81,10 @@ insert_oride_dnu = HiveOperator(
     dag=dag)
 
 
-user_orders_add_partitions = HiveOperator(
-    task_id='user_orders_add_partitions',
+user_order_add_partitions = HiveOperator(
+    task_id='user_order_add_partitions',
     hql="""
-            ALTER TABLE user_orders ADD IF NOT EXISTS PARTITION (dt = '{{ ds }}', hour = '{{ execution_date.strftime("%H") }}')
+            ALTER TABLE user_order ADD IF NOT EXISTS PARTITION (dt = '{{ ds }}', hour = '{{ execution_date.strftime("%H") }}')
         """,
     schema='oride_source',
     dag=dag)
