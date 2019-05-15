@@ -1,11 +1,13 @@
 # -*- coding: utf-8 -*-
-from datetime import *
-import time
 import os
 from oride_daily_report.connection_helper import get_hive_cursor
+file_path = os.path.realpath(__file__)
+tmp_arr = file_path.split("/")
+tmp_arr[-1] = "sqoop_db.sh"
+sqoop_path = "/".join(tmp_arr)
 
 default_command = '''
-/usr/bin/sh ./sqoop_db.sh %s %s
+/usr/bin/sh %s %s %s
 '''
 
 tables = [
@@ -20,6 +22,6 @@ def import_table(**op_kwargs):
     cursor = get_hive_cursor()
     for table in tables:
         print("importing table: %s" % table)
-        os.system(default_command % (table, dt))
+        os.system(default_command % (sqoop_path, table, dt))
         cursor.execute("msck repair table oride_source.db_%s" % table)
-    print()
+    print("import done")
