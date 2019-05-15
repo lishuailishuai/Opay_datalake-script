@@ -5,7 +5,7 @@ import os
 from oride_daily_report.connection_helper import get_hive_cursor
 
 default_command = '''
-/usr/bin/sh ./oride_daily_report/sqoop_db.sh %s %s
+/usr/bin/sh ./sqoop_db.sh %s %s
 '''
 
 tables = [
