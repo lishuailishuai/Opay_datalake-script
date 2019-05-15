@@ -277,7 +277,7 @@ def query_data(**op_kwargs):
     h += mail_msg_tail
     h += css_style
     message = MIMEText(h, 'html', 'utf-8')
-    subject = 'oride数据日报'
+    subject = 'Oride %s 数据日报' % dt
     message['Subject'] = Header(subject, 'utf-8')
     try:
         server = smtplib.SMTP('mail.opay-inc.com', 25)
