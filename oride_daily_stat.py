@@ -10,14 +10,15 @@ args = {
     'depends_on_past': False,
     'retries': 1,
     'retry_delay': timedelta(minutes=5),
-    # 'email': ['lichang.zhang@opay-inc.com', 'zhuohua.chen@opay-inc.com'],
-    # 'email_on_failure': True,
-    # 'email_on_retry': False,
+    'email': ['lichang.zhang@opay-inc.com', 'zhuohua.chen@opay-inc.com'],
+    'email_on_failure': True,
+    'email_on_retry': False,
 }
 
 dag = airflow.DAG(
     'oride_daily_stat',
     schedule_interval="00 01 * * *",
+    catchup=False,
     default_args=args)
 
 import_table_task = PythonOperator(
