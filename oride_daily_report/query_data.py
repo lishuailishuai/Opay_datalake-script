@@ -1,25 +1,30 @@
 # -*- coding: utf-8 -*-
-from datetime import *
+from datetime import datetime, timedelta
 import time
-from oride_daily_report.connection_helper import get_hive_cursor
+from oride_daily_report.connection_helper import *
 import smtplib
 from email.mime.text import MIMEText
 from email.header import Header
 sender = 'research@opay-inc.com'
 password = 'G%4nlD$YCJol@Op'
-receivers = ['lichang.zhang@opay-inc.com', 'zhuohua.chen@opay-inc.com', 'chengchingon@gmail.com']  # 接收邮件，可设置为你的QQ邮箱或者其他邮箱
+# receivers = ['lichang.zhang@opay-inc.com', 'zhuohua.chen@opay-inc.com', 'chengchingon@gmail.com']
+receivers = ['lichang.zhang@opay-inc.com', 'peter.akudike@lbs.net.ng', 'alleyo@opay.team', 'd.odenuga@gmail.com',
+             'zhi.li@opay-inc.com', 'ququ@opay.team', 'ridwano@opay.team', 'dinglun.fan@opay-inc.com',
+             'chengyangw@opay.team', 'lei.zheng@opay-inc.com', 'Chukwudie@opay.team', 'longfei.he@opay-inc.com',
+             'chengchingon@gmail.com', 'Femia@opay.team', 'jingtian.he@opay-inc.com', 'darlington@opay.team',
+             'nchukwu.frank@gmail.com', 'fobby2007@yahoo.com', 'chengjun.gao@opay-inc.com', 'zhuohua.chen@opay-inc.com',
+             'fisayoolowo@gmail.com']
 
-part_html = """
-      <tr>
-        <td class="title_td">{key}</td>
-        <td class="value_td">{val}</td>
-      </tr>
-"""
+part_html1 = """<tr><td class="title_td">{key}</td>"""
+part_html2 = """<td class="value_td">{val}</td>"""
+part_html2_1 = """<td class="value_1_td">{val}</td>"""
+part_html3 = """</tr>"""
 
 css_style = '''
 <style type="text/css">
-.title_td{border:solid#000 1px;width:200px;overflow:hidden;text-align:center}
+.title_td{border:solid#000 1px;width:300px;overflow:hidden;text-align:center}
 .value_td{border:solid#000 1px;width:100px;overflow:hidden;text-align:right}
+.value_1_td{border:solid#000 1px;width:100px;overflow:hidden;text-align:center}
 .table{border-collapse:collapse;border:none;}
 </style>
 '''
@@ -31,14 +36,13 @@ mail_msg_header = """
   </head>
   <body>
     <table class="table" cellpadding="5">
-      <caption><h4>{dt}日报</h4></caption>
+      <caption><h4>Oride {dt1} -- {dt2} Daily Report</h4></caption>
 """
 mail_msg_tail = '''
     </table>
   </body>
 </html>
 '''
-
 
 repair_table_query = '''
 MSCK REPAIR TABLE oride_source.%s
@@ -165,13 +169,28 @@ on `order`.driver_id = driver.id
 query7 = '''
 select sum(if(action="bubble",1,0)) from oride_source.user_action where dt="{dt}"
 '''
-#online_driver_num
+# online_driver_num
 query8 = '''
 select count(distinct driverid) as online_num from (
 select driverid, action from oride_source.driver_action where dt="{dt}" and action in
  ("taxi_accept", "login_success", "outset_show",
  "pay_review", "pay_successful", "review_consummation")) as tmp
 '''
+
+INSERT_SQL = '''
+REPLACE INTO oride_data.daily_report VALUES (
+%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 
+%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 
+%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 
+%s, %s)
+'''
+
+QUERY_DATA_RANGE = 8
+QUERY_EMAIL_DATA = '''
+select * from oride_data.daily_report where dt>="%s" and dt<="%s"
+'''
+col_meaning = ["Date", 'No. of completed ride', 'Fullfillment rate', 'No. of view', 'No. of request', 'View to request transfer rate', 'Online rider', 'Accepted order rider', 'GMV', 'ASP', 'B-subsidy', 'C-subsidy', 'Avg. B-sub per order', 'Avg. C-sub per order', 'Total subsidy ratio', 'Cancel rate before rider accept', 'Cancel rate after rider accept', 'Driver cancel rate (after driver accept)', 'ATA(min)', 'Avg order accept time(s)', 'Total registered rider', 'New registered rider', 'Completed-order rider', 'New completed-order rider', 'New completed-order rider ratio', 'No. of requested passenager', 'Completed order passenager ', 'New completed order passenager', 'New completed order passenger ratio', 'No. of online order', 'No. of offine order']
+not_show_indexs = [col_meaning.index("No. of view"), col_meaning.index("View to request transfer rate")]
 
 
 def query_repair_table(sql):
@@ -192,6 +211,13 @@ def mapper(x):
     if x is None:
         x = 0
     return x
+
+
+def n_days_ago(n_time, days):
+    now_time = datetime.strptime(n_time, '%Y-%m-%d')
+    delta = timedelta(days=days)
+    n_days = now_time - delta
+    return n_days.strftime("%Y-%m-%d")
 
 
 def query_data(**op_kwargs):
@@ -239,45 +265,74 @@ def query_data(**op_kwargs):
     res8 = map(mapper, list(res8[0]))
     [online_driver_num] = res8
     data = [
-        ["乘客完成行程数", success_num],
-        ["成单/呼叫", "%.2f%%" % (success_num * 100 / float(call_num) if call_num > 0 else 0)],
-        ["冒泡数", bubble_num],
-        ["呼叫数", call_num],
-        ["呼叫/冒泡", "%.2f%%" % (call_num * 100 / float(bubble_num) if bubble_num > 0 else 0)],
-        ["上线司机数", online_driver_num],
-        ["接单司机数", order_driver_num],
-        ["GMV(单均 * 单量)", round(gmv, 2)],
-        ["单均", round(gmv / float(success_num) if success_num > 0 else 0, 2)],
-        ["B端补贴金额", round(total_driver_price, 2)],
-        ["C端补贴金额", round(total_c_discount, 2)],
-        ["B端单均补贴", round(total_driver_price / float(success_num) if success_num > 0 else 0, 2)],
-        ["C端单均补贴", round(total_c_discount / float(success_num) if success_num > 0 else 0, 2)],
-        ["整体补贴率", "%.2f%%" % ((total_driver_price + total_c_discount) * 100 / float(total_price) if total_price > 0 else 0)],
-        ["应答前取消订单率", "%.2f%%" % (cancel_before_dispatching_num * 100 / float(call_num) if call_num > 0 else 0)],
-        ["应答后乘客取消率", "%.2f%%" % (cancel_after_dispatching_by_user_num * 100 / float(call_num) if call_num > 0 else 0)],
-        ["应答后司机取消率", "%.2f%%" % (cancel_after_dispatching_by_driver_num * 100 / float(call_num) if call_num > 0 else 0)],
-        ["实时单ATA(分钟)", round(pickup_total_time / float(pickup_num * 60) if pickup_num > 0 else 0, 2)],
-        ["实时单平均应答时长(秒)",  round(take_total_time/ float(take_num) if take_num > 0 else 0, 2)],
-        ["总注册司机数", total_driver_num],
-        ["新注册司机数", new_driver_num],
-        ["完单司机数", finished_driver_num],
-        ["新完单司机数", new_finished_driver_num],
-        ["新完单司机占比", "%.2f%%" % (new_finished_driver_num * 100 / float(finished_driver_num) if finished_driver_num > 0 else 0)],
-        ["呼叫乘客数", call_user_num],
-        ["完单乘客数", finished_user_num],
-        ["新完单乘客数", new_finished_user_num],
-        ["新完单乘客占比", "%.2f%%" % (new_finished_user_num * 100 / float(finished_user_num) if finished_driver_num > 0 else 0)],
-        ["线上支付订单", pay_num - offline_num],
-        ["线下支付订单", offline_num],
-]
-    h = mail_msg_header.format(dt=dt)
-    for elem in data:
-        tmp_html = part_html.format(key=elem[0], val=elem[1])
-        h += tmp_html
+        success_num,
+        success_num / float(call_num) if call_num > 0 else 0,
+        bubble_num,
+        call_num,
+        call_num / float(bubble_num) if bubble_num > 0 else 0,
+        online_driver_num,
+        order_driver_num,
+        round(gmv, 2),
+        round(gmv / float(success_num) if success_num > 0 else 0, 2),
+        round(total_driver_price, 2),
+        round(total_c_discount, 2),
+        round(total_driver_price / float(success_num) if success_num > 0 else 0, 2),
+        round(total_c_discount / float(success_num) if success_num > 0 else 0, 2),
+        (total_driver_price + total_c_discount) / float(total_price) if total_price > 0 else 0,
+        cancel_before_dispatching_num / float(call_num) if call_num > 0 else 0,
+        cancel_after_dispatching_by_user_num / float(call_num) if call_num > 0 else 0,
+        cancel_after_dispatching_by_driver_num / float(call_num) if call_num > 0 else 0,
+        round(pickup_total_time / float(pickup_num * 60) if pickup_num > 0 else 0, 2),
+        round(take_total_time / float(take_num) if take_num > 0 else 0, 2),
+        total_driver_num,
+        new_driver_num,
+        finished_driver_num,
+        new_finished_driver_num,
+        new_finished_driver_num / float(finished_driver_num) if finished_driver_num > 0 else 0,
+        call_user_num,
+        finished_user_num,
+        new_finished_user_num,
+        new_finished_user_num / float(finished_user_num) if finished_driver_num > 0 else 0,
+        pay_num - offline_num,
+        offline_num,
+    ]
+    insert_data = [None, dt] + data
+    sql_conn = get_db_conn()
+    sql_cursor = sql_conn.cursor()
+    sql_cursor.execute(INSERT_SQL, insert_data)
+
+
+def write_email(**op_kwargs):
+    dt = op_kwargs.get('ds')
+    init_day = n_days_ago(dt, QUERY_DATA_RANGE)
+    sql_conn = get_db_conn()
+    sql_cursor = sql_conn.cursor()
+    sql_cursor.execute(QUERY_EMAIL_DATA % (init_day, dt))
+    res = sql_cursor.fetchall()
+    res = list(res)
+    if len(res) < 1:
+        return
+    res = map(list, res)
+    arr = []
+    for elem in res:
+        elem[1] = elem[1].strftime('%Y-%m-%d')
+        arr.append(elem)
+    arr.sort(key=lambda x: x[1], reverse=True)
+    h = mail_msg_header.format(dt1=arr[0][1], dt2=arr[-1][1])
+    for x in range(len(col_meaning)):
+        if x in not_show_indexs:
+            continue
+        h += part_html1.format(key=col_meaning[x])
+        for y in range(len(arr)):
+            tmp_val = arr[y][x + 1]
+            if "ratio" in col_meaning[x] or "rate" in col_meaning[x]:
+                tmp_val = "%.2f%%" % (tmp_val * 100)
+            h += part_html2.format(val=tmp_val) if x > 0 else part_html2_1.format(val=tmp_val)
+        h += part_html3
     h += mail_msg_tail
     h += css_style
     message = MIMEText(h, 'html', 'utf-8')
-    subject = 'Oride %s 数据日报' % dt
+    subject = 'Oride {dt1} -- {dt2} Daily Report'.format(dt1=arr[0][1], dt2=arr[-1][1])
     message['Subject'] = Header(subject, 'utf-8')
     try:
         server = smtplib.SMTP('mail.opay-inc.com', 25)
@@ -288,7 +343,3 @@ def query_data(**op_kwargs):
         print("邮件发送成功")
     except smtplib.SMTPException as e:
         print(e.message)
-
-
-
-

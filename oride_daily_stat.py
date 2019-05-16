@@ -1,7 +1,7 @@
 import airflow
 from datetime import datetime, timedelta
 from airflow.operators.python_operator import PythonOperator
-from oride_daily_report.query_data import query_data
+from oride_daily_report.query_data import query_data, write_email
 from oride_daily_report.import_tables import import_table
 
 args = {
@@ -36,3 +36,13 @@ query_data_task = PythonOperator(
 )
 
 query_data_task.set_upstream(import_table_task)
+
+
+write_email_task = PythonOperator(
+    task_id='write_email',
+    python_callable=write_email,
+    dag=dag,
+    provide_context=True,
+)
+
+write_email_task.set_upstream(query_data_task)
