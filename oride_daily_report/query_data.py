@@ -13,7 +13,7 @@ receivers = ['lichang.zhang@opay-inc.com', 'peter.akudike@lbs.net.ng', 'alleyo@o
              'chengyangw@opay.team', 'lei.zheng@opay-inc.com', 'Chukwudie@opay.team', 'longfei.he@opay-inc.com',
              'chengchingon@gmail.com', 'Femia@opay.team', 'jingtian.he@opay-inc.com', 'darlington@opay.team',
              'nchukwu.frank@gmail.com', 'fobby2007@yahoo.com', 'chengjun.gao@opay-inc.com', 'zhuohua.chen@opay-inc.com',
-             'fisayoolowo@gmail.com']
+             'fisayoolowo@gmail.com', 'xin.ke@opay-inc.com']
 
 part_html1 = """<tr><td class="title_td">{key}</td>"""
 part_html2 = """<td class="value_td">{val}</td>"""
