@@ -16,10 +16,17 @@ dag = airflow.DAG(
     schedule_interval="20 * * * *",
     default_args=args)
 
-user_login_add_partitions = HiveOperator(
-    task_id='user_login_add_partitions',
+
+add_partitions = HiveOperator(
+    task_id='add_partitions',
     hql="""
-            ALTER TABLE user_login ADD IF NOT EXISTS PARTITION (dt = '{{ ds }}', hour = '{{ execution_date.strftime("%H") }}')
+            ALTER TABLE driver_action ADD IF NOT EXISTS PARTITION (dt = '{{ ds }}', hour = '{{ execution_date.strftime("%H") }}');
+            ALTER TABLE moto_locations ADD IF NOT EXISTS PARTITION (dt = '{{ ds }}', hour = '{{ execution_date.strftime("%H") }}');
+            ALTER TABLE order_locations ADD IF NOT EXISTS PARTITION (dt = '{{ ds }}', hour = '{{ execution_date.strftime("%H") }}');
+            ALTER TABLE user_action ADD IF NOT EXISTS PARTITION (dt = '{{ ds }}', hour = '{{ execution_date.strftime("%H") }}');
+            ALTER TABLE user_login ADD IF NOT EXISTS PARTITION (dt = '{{ ds }}', hour = '{{ execution_date.strftime("%H") }}');
+            ALTER TABLE user_order ADD IF NOT EXISTS PARTITION (dt = '{{ ds }}', hour = '{{ execution_date.strftime("%H") }}');
+            ALTER TABLE user_payment ADD IF NOT EXISTS PARTITION (dt = '{{ ds }}', hour = '{{ execution_date.strftime("%H") }}');
         """,
     schema='oride_source',
     dag=dag)
@@ -81,14 +88,6 @@ insert_oride_dnu = HiveOperator(
     dag=dag)
 
 
-user_order_add_partitions = HiveOperator(
-    task_id='user_order_add_partitions',
-    hql="""
-            ALTER TABLE user_order ADD IF NOT EXISTS PARTITION (dt = '{{ ds }}', hour = '{{ execution_date.strftime("%H") }}')
-        """,
-    schema='oride_source',
-    dag=dag)
-
 refresh_impala = ImpalaOperator(
     task_id = 'refresh_impala',
     hql="""\
@@ -102,7 +101,7 @@ refresh_impala = ImpalaOperator(
 
 create_oride_dau >> insert_oride_dau
 create_oride_dnu >> insert_oride_dnu
-user_login_add_partitions >> insert_oride_dau
-user_login_add_partitions  >> insert_oride_dnu
+add_partitions >> insert_oride_dau
+add_partitions  >> insert_oride_dnu
 insert_oride_dau >> refresh_impala
 insert_oride_dnu >> refresh_impala
