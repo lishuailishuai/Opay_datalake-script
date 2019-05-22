@@ -2,7 +2,7 @@ import os
 from PIL import Image
 from h3 import h3
 from geojson.feature import *
-from utils.connection_helper import get_redis_connection, get_ucloud_file_manager
+from utils.connection_helper import get_redis_connection, get_ucloud_file_manager, get_google_map_js_api_key
 import time
 
 minLat, maxLat, minLng, maxLng = 6.391823, 6.697766, 3.058968, 3.473307
@@ -90,11 +90,11 @@ html_part2 = '''
       }
     </script>
     <script async defer
-        src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBeo9UrvgKHUzw7PuwhNYnk4XvMP8oDod0&libraries=visualization&callback=initMap">
+        src="https://maps.googleapis.com/maps/api/js?language=en-US&key=%s&libraries=visualization&callback=initMap">
     </script>
   </body>
 </html>
-'''
+''' % get_google_map_js_api_key()
 
 
 def get_data(hex_addrs):

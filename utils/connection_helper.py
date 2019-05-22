@@ -42,3 +42,8 @@ def get_ucloud_file_manager(conf_name='ucloud_oride_resource'):
     config.set_default(connection_timeout=60)
     config.set_default(expires=60)
     return filemanager.FileManager(conn.login, conn.password)
+
+
+def get_google_map_js_api_key(conf_name='google_map_js'):
+    conn = BaseHook.get_connection(conf_name)
+    return conn.password
