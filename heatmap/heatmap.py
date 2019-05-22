@@ -1,7 +1,6 @@
 import os
 from PIL import Image
 from h3 import h3
-from geojson.feature import *
 from utils.connection_helper import get_redis_connection, get_ucloud_file_manager, get_google_map_js_api_key
 import time
 
@@ -111,13 +110,20 @@ def get_data(hex_addrs):
 
 
 def data2goolemap(hex_res, data, t):
+    tmp_dict = {
+        'o': b'o',
+        'oc': b'oc',
+        'd': b'd',
+    }
+    tt = tmp_dict[t]
     tmp_zip_data = zip(hex_res, data)
-    tmp_zip_data = [x for x in tmp_zip_data if x[1] != {} and t in x[1] and int(x[1][t]) > 0]
-    tmp_zip_data.sort(key=lambda x: int(x[1][t]))
+    tmp_zip_data = [x for x in tmp_zip_data if x[1] != {} and tt in x[1] and int(x[1][tt]) > 0]
+    print(len(tmp_zip_data))
+    tmp_zip_data.sort(key=lambda x: int(x[1][tt]))
     s = html_part1
     for x in range(len(tmp_zip_data)):
         tmp_loc = h3.h3_to_geo(tmp_zip_data[x][0])
-        s += data_format % (tmp_loc[0], tmp_loc[1], int(tmp_zip_data[x][1][t]))
+        s += data_format % (tmp_loc[0], tmp_loc[1], int(tmp_zip_data[x][1][tt]))
     s += html_part2
     return s
 
@@ -145,12 +151,13 @@ def upload_img(img_path):
     ret, resp = file_manager.putfile(public_bucket, remote_path, img_path)
     assert resp.status_code == 200
     rds = get_redis_connection()
-    rds.set("heatmap_key", remote_path, 86400*365)
+    rds.set("heatmap_key", remote_path, 86400 * 365)
     rds = get_redis_connection('redis_test')
     rds.set("heatmap_key", remote_path, 86400 * 365)
 
+
 def generate_heat_map(**op_kwargs):
-    hot_map_type = "o"
+    hot_map_type = 'o'
     tmp = {u'type': u'Polygon', u'coordinates':
         [[[minLat, minLng], [maxLat, minLng], [maxLat, maxLng], [minLat, maxLng]]]}
     hex_res = list(h3.polyfill(geo_json=tmp, res=hot_map_level))
@@ -167,5 +174,5 @@ def generate_heat_map(**op_kwargs):
 	'''.format(file_dir=file_dir, filename=hot_map_type)
     os.system(cmd.strip())
     cropped_file = reshape_img("%s/%s.png" % (file_dir, hot_map_type))
+    assert os.path.getsize(cropped_file) >= 10 * 1024
     upload_img(cropped_file)
-
