@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 import os
-from oride_daily_report.connection_helper import get_hive_cursor
+from utils.connection_helper import get_hive_cursor
 file_path = os.path.realpath(__file__)
 tmp_arr = file_path.split("/")
 tmp_arr[-1] = "sqoop_db.sh"

@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 from datetime import datetime, timedelta
 import time
-from oride_daily_report.connection_helper import *
+from utils.connection_helper import get_hive_cursor, get_db_conn
 import smtplib
 from email.mime.text import MIMEText
 from email.header import Header
+
 sender = 'research@opay-inc.com'
 password = 'G%4nlD$YCJol@Op'
 # receivers = ['lichang.zhang@opay-inc.com', 'zhuohua.chen@opay-inc.com', 'chengchingon@gmail.com']
@@ -189,7 +190,15 @@ QUERY_DATA_RANGE = 8
 QUERY_EMAIL_DATA = '''
 select * from oride_data.daily_report where dt>="%s" and dt<="%s"
 '''
-col_meaning = ["Date", 'No. of completed ride', 'Fullfillment rate', 'No. of view', 'No. of request', 'View to request transfer rate', 'Online rider', 'Accepted order rider', 'GMV', 'ASP', 'B-subsidy', 'C-subsidy', 'Avg. B-sub per order', 'Avg. C-sub per order', 'Total subsidy ratio', 'Cancel rate before rider accept', 'Cancel rate after rider accept', 'Driver cancel rate (after driver accept)', 'ATA(min)', 'Avg order accept time(s)', 'Total registered rider', 'New registered rider', 'Completed-order rider', 'New completed-order rider', 'New completed-order rider ratio', 'No. of requested passenager', 'Completed order passenager ', 'New completed order passenager', 'New completed order passenger ratio', 'No. of online order', 'No. of offine order']
+col_meaning = ["Date", 'No. of completed ride', 'Fullfillment rate', 'No. of view', 'No. of request',
+               'View to request transfer rate', 'Online rider', 'Accepted order rider', 'GMV', 'ASP', 'B-subsidy',
+               'C-subsidy', 'Avg. B-sub per order', 'Avg. C-sub per order', 'Total subsidy ratio',
+               'Cancel rate before rider accept', 'Cancel rate after rider accept',
+               'Driver cancel rate (after driver accept)', 'ATA(min)', 'Avg order accept time(s)',
+               'Total registered rider', 'New registered rider', 'Completed-order rider', 'New completed-order rider',
+               'New completed-order rider ratio', 'No. of requested passenager', 'Completed order passenager ',
+               'New completed order passenager', 'New completed order passenger ratio', 'No. of online order',
+               'No. of offine order']
 not_show_indexs = [col_meaning.index("No. of view"), col_meaning.index("View to request transfer rate")]
 
 
@@ -265,37 +274,37 @@ def query_data(**op_kwargs):
     res8 = map(mapper, list(res8[0]))
     [online_driver_num] = res8
     data = [
-            success_num,
-            success_num / float(call_num) if call_num > 0 else 0,
-            bubble_num,
-            call_num,
-            call_num / float(bubble_num) if bubble_num > 0 else 0,
-            online_driver_num,
-            order_driver_num,
-            round(float(gmv), 2),
-            round(float(gmv) / float(success_num) if success_num > 0 else 0, 2),
-            round(float(total_driver_price), 2),
-            round(float(total_c_discount), 2),
-            round(float(total_driver_price) / float(success_num) if success_num > 0 else 0, 2),
-            round(float(total_c_discount) / float(success_num) if success_num > 0 else 0, 2),
-            float(total_driver_price + total_c_discount) / float(total_price) if total_price > 0 else 0,
-            cancel_before_dispatching_num / float(call_num) if call_num > 0 else 0,
-            cancel_after_dispatching_by_user_num / float(call_num) if call_num > 0 else 0,
-            cancel_after_dispatching_by_driver_num / float(call_num) if call_num > 0 else 0,
-            round(pickup_total_time / float(pickup_num * 60) if pickup_num > 0 else 0, 2),
-            round(take_total_time / float(take_num) if take_num > 0 else 0, 2),
-            total_driver_num,
-            new_driver_num,
-            finished_driver_num,
-            new_finished_driver_num,
-            new_finished_driver_num / float(finished_driver_num) if finished_driver_num > 0 else 0,
-            call_user_num,
-            finished_user_num,
-            new_finished_user_num,
-            new_finished_user_num / float(finished_user_num) if finished_driver_num > 0 else 0,
-            pay_num - offline_num,
-            offline_num,
-        ]
+        success_num,
+        success_num / float(call_num) if call_num > 0 else 0,
+        bubble_num,
+        call_num,
+        call_num / float(bubble_num) if bubble_num > 0 else 0,
+        online_driver_num,
+        order_driver_num,
+        round(float(gmv), 2),
+        round(float(gmv) / float(success_num) if success_num > 0 else 0, 2),
+        round(float(total_driver_price), 2),
+        round(float(total_c_discount), 2),
+        round(float(total_driver_price) / float(success_num) if success_num > 0 else 0, 2),
+        round(float(total_c_discount) / float(success_num) if success_num > 0 else 0, 2),
+        float(total_driver_price + total_c_discount) / float(total_price) if total_price > 0 else 0,
+        cancel_before_dispatching_num / float(call_num) if call_num > 0 else 0,
+        cancel_after_dispatching_by_user_num / float(call_num) if call_num > 0 else 0,
+        cancel_after_dispatching_by_driver_num / float(call_num) if call_num > 0 else 0,
+        round(pickup_total_time / float(pickup_num * 60) if pickup_num > 0 else 0, 2),
+        round(take_total_time / float(take_num) if take_num > 0 else 0, 2),
+        total_driver_num,
+        new_driver_num,
+        finished_driver_num,
+        new_finished_driver_num,
+        new_finished_driver_num / float(finished_driver_num) if finished_driver_num > 0 else 0,
+        call_user_num,
+        finished_user_num,
+        new_finished_user_num,
+        new_finished_user_num / float(finished_user_num) if finished_driver_num > 0 else 0,
+        pay_num - offline_num,
+        offline_num,
+    ]
     insert_data = [None, dt] + data
     sql_conn = get_db_conn()
     sql_cursor = sql_conn.cursor()
