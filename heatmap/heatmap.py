@@ -146,6 +146,8 @@ def upload_img(img_path):
     assert resp.status_code == 200
     rds = get_redis_connection()
     rds.set("heatmap_key", remote_path, 86400*365)
+    rds = get_redis_connection('redis_test')
+    rds.set("heatmap_key", remote_path, 86400 * 365)
 
 def generate_heat_map(**op_kwargs):
     hot_map_type = "o"
