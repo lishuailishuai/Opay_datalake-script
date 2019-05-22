@@ -147,7 +147,7 @@ def reshape_img(img_path):
 def upload_img(img_path):
     file_manager = get_ucloud_file_manager()
     public_bucket = 'oride-resource'
-    remote_path = 'heatmap/heatmap_%s.png' % time.strftime("%Y%m%d%H%M%S", time.localtime(int(time.time())))
+    remote_path = 'heatmap/heatmap_%s.jpg' % time.strftime("%Y%m%d%H%M%S", time.localtime(int(time.time())))
     ret, resp = file_manager.putfile(public_bucket, remote_path, img_path)
     assert resp.status_code == 200
     rds = get_redis_connection()
@@ -157,6 +157,7 @@ def upload_img(img_path):
 
 
 def generate_heat_map(**op_kwargs):
+    # get data
     hot_map_type = 'o'
     tmp = {u'type': u'Polygon', u'coordinates':
         [[[minLat, minLng], [maxLat, minLng], [maxLat, maxLng], [minLat, maxLng]]]}
@@ -164,15 +165,30 @@ def generate_heat_map(**op_kwargs):
     file_dir = "/tmp/heat_map"
     data = get_data(hex_res)
     i1 = data2goolemap(hex_res, data, hot_map_type)
+
+    # generate html file
     if not os.path.exists(file_dir):
         os.mkdir(file_dir)
     f1 = open("%s/%s.html" % (file_dir, hot_map_type), "w")
     f1.write(i1)
     f1.close()
+
+    # convert html to png
     cmd = '''
 	xvfb-run --server-args="-screen 0 1024x768x24" CutyCapt --min-width=900 --min-height=400 --url=file:{file_dir}/{filename}.html --out={file_dir}/{filename}.png --delay=10000
 	'''.format(file_dir=file_dir, filename=hot_map_type)
     os.system(cmd.strip())
+
+    # crop to smaller png
     cropped_file = reshape_img("%s/%s.png" % (file_dir, hot_map_type))
-    assert os.path.getsize(cropped_file) >= 10 * 1024
-    upload_img(cropped_file)
+
+    # compress png to jpg
+    upload_file = '%s/%s.jpg' % (file_dir, hot_map_type)
+    cmd = 'guetzli --quality 90 %s %s' % (cropped_file, upload_file)
+    os.system(cmd)
+
+    # ensure that file is not bad
+    assert os.path.getsize(upload_file) >= 10 * 1024
+
+    # upload file
+    upload_img(upload_file)
