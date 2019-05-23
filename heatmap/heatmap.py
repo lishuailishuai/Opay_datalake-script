@@ -7,6 +7,8 @@ import time
 minLat, maxLat, minLng, maxLng = 6.391823, 6.697766, 3.058968, 3.473307
 hotmap_format = "hotmap:%s"
 hot_map_level = 8
+default_max_weight = 10
+key_memory_time = 120
 
 html_part1 = '''
 <!DOCTYPE html>
@@ -80,6 +82,10 @@ html_part1 = '''
         return [
 '''
 
+default_max_point = '''
+          {location: new google.maps.LatLng(39.890826, 116.394514), weight: %d},
+''' % default_max_weight
+
 data_format = '''
           {location: new google.maps.LatLng(%f, %f), weight: %d},
 '''
@@ -110,17 +116,25 @@ def get_data(hex_addrs):
 
 
 def data2goolemap(hex_res, data, t):
+    cur_time_stamp = int(time.time())
     tmp_dict = {
         'o': b'o',
         'oc': b'oc',
         'd': b'd',
     }
+    tmp_time_dict = {
+        'o': b'o:t',
+        'oc': b'oc:t',
+        'd': b'd:t',
+    }
     tt = tmp_dict[t]
+    ttime = tmp_time_dict[t]
     tmp_zip_data = zip(hex_res, data)
-    tmp_zip_data = [x for x in tmp_zip_data if x[1] != {} and tt in x[1] and int(x[1][tt]) > 0]
+    tmp_zip_data = [x for x in tmp_zip_data if
+                    x[1] != {} and tt in x[1] and ttime in x[1] and cur_time_stamp - int(x[1][ttime]) <= key_memory_time and int(
+                        x[1][tt]) > 0]
     print(len(tmp_zip_data))
-    tmp_zip_data.sort(key=lambda x: int(x[1][tt]))
-    s = html_part1
+    s = html_part1 + default_max_point
     for x in range(len(tmp_zip_data)):
         tmp_loc = h3.h3_to_geo(tmp_zip_data[x][0])
         s += data_format % (tmp_loc[0], tmp_loc[1], int(tmp_zip_data[x][1][tt]))
