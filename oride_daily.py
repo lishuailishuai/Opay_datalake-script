@@ -135,10 +135,77 @@ insert_oride_user_overview  = HiveOperator(
     schema='dashboard',
     dag=dag)
 
+# 给用户打标签
+create_oride_user_label  = HiveOperator(
+    task_id='create_oride_user_lable',
+    hql="""
+        CREATE TABLE IF NOT EXISTS oride_user_label(
+          user_id bigint,
+          lab_new_user boolean,
+          lab_login_without_orders boolean,
+          lab_login_have_orders boolean,
+          lab_cancel_ge_finish boolean
+        )
+        PARTITIONED BY (
+            dt STRING
+        )
+        STORED AS PARQUET
+    """,
+    schema='dashboard',
+    dag=dag)
+
+# 1. 新用户, 2, 1周有多次登录但是没有打过车，3，一周多次登录 多次打车，4，取消大于完成
+insert_oride_user_label  = HiveOperator(
+    task_id='insert_oride_user_lable',
+    hql="""
+        ALTER TABLE oride_user_label DROP IF EXISTS PARTITION (dt='{{ ds }}');
+        -- 一周登录情况 汇总登录次数
+        WITH week_login as (
+            SELECT
+              user_id,
+              count(distinct dt) as login_num
+            FROM
+              oride_source.user_login
+            WHERE
+              dt BETWEEN '{{ macros.ds_add(ds, -7) }}' AND '{{ ds }}'
+            GROUP BY
+              user_id
+        ),
+        -- 一周订单情况 统计完成取消
+        week_order as (
+            SELECT
+              user_id,
+              count(if(status=6, 1, null)) as cancel_num,
+              count(if(status=5, 1, null)) as finished_num
+            FROM
+              oride_source.db_data_order
+            WHERE
+              dt = '{{ ds }}' AND from_unixtime(create_time,'yyyy-MM-dd') BETWEEN '{{ macros.ds_add(ds, -7) }}' AND '{{ ds }}'
+            GROUP BY
+              user_id
+        )
+        INSERT OVERWRITE TABLE oride_user_label PARTITION (dt='{{ ds }}')
+        SELECT
+          ue.id,
+          if(datediff('{{ ds }}', from_unixtime(ue.register_time,'yyyy-MM-dd')) < 7, true, false),
+          if(nvl(wl.login_num,0)>1 and nvl(wo.finished_num, 0) < 1, true, false),
+          if(nvl(wl.login_num,0)>1 and nvl(wo.finished_num, 0) > 1, true, false),
+          if(nvl(wo.cancel_num, 0) > nvl(wo.finished_num,0), true, false)
+        FROM
+          oride_source.db_data_user_extend ue
+          LEFT JOIN week_login wl ON wl.user_id = ue.id
+          LEFT JOIN week_order wo ON wo.user_id = ue.id
+        WHERE
+          ue.dt='{{ ds }}'
+    """,
+    schema='dashboard',
+    dag=dag)
+
 refresh_impala = ImpalaOperator(
     task_id = 'refresh_impala',
     hql="""\
         REFRESH dashboard.oride_driver_overview PARTITION (dt='{{ds}}');
+        REFRESH dashboard.oride_user_overview PARTITION (dt='{{ds}}');
         REFRESH dashboard.oride_user_overview PARTITION (dt='{{ds}}');
     """,
     schema='dashboard',
@@ -150,3 +217,5 @@ create_oride_driver_overview >> insert_oride_driver_overview
 create_oride_user_overview >> insert_oride_user_overview
 insert_oride_driver_overview >> refresh_impala
 insert_oride_user_overview >> refresh_impala
+create_oride_user_label >> insert_oride_user_label
+insert_oride_user_label >> refresh_impala
