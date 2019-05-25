@@ -206,7 +206,7 @@ refresh_impala = ImpalaOperator(
     hql="""\
         REFRESH dashboard.oride_driver_overview PARTITION (dt='{{ds}}');
         REFRESH dashboard.oride_user_overview PARTITION (dt='{{ds}}');
-        REFRESH dashboard.oride_user_overview PARTITION (dt='{{ds}}');
+        REFRESH dashboard.oride_user_label PARTITION (dt='{{ds}}');
     """,
     schema='dashboard',
     priority_weight=50,
