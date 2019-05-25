@@ -12,7 +12,7 @@ default_command = '''
 
 tables = [
     "data_driver_extend", "data_order", "data_order_payment", "data_user_extend",
-    "data_driver_reward", "db_data_coupon"
+    "data_driver_reward", "data_coupon"
 ]
 
 
