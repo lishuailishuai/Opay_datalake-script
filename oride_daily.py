@@ -2,6 +2,11 @@ import airflow
 from datetime import datetime, timedelta
 from airflow.operators.hive_operator import HiveOperator
 from airflow.operators.impala_plugin import ImpalaOperator
+from utils.connection_helper import get_hive_cursor
+from airflow.operators.python_operator import PythonOperator
+from airflow.contrib.hooks.redis_hook import RedisHook
+import json
+import logging
 
 args = {
     'owner': 'root',
@@ -213,9 +218,58 @@ refresh_impala = ImpalaOperator(
     dag=dag
 )
 
+def user_label_to_redis(ds, **kwargs):
+    label_list = {
+        'lab_new_user' : 1,
+        'lab_login_without_orders' : 2,
+        'lab_login_have_orders' : 3,
+        'lab_cancel_ge_finish' : 4
+    }
+    query = """
+        SELECT
+          user_id,
+          lab_new_user,
+          lab_login_without_orders,
+          lab_login_have_orders,
+          lab_cancel_ge_finish
+        FROM
+          dashboard.oride_user_label
+        WHERE
+          dt='{dt}'
+    """.format(dt=ds)
+    cursor = get_hive_cursor()
+    cursor.execute(query)
+    results = cursor.fetchall()
+    redis_conn = RedisHook(redis_conn_id='redis_user_lab').get_conn()
+    expire_time = 86400
+    for user_id, lab_new_user, lab_login_without_orders,lab_login_have_orders,lab_cancel_ge_finish in results:
+        list = []
+        if lab_new_user == True:
+            list.append(label_list['lab_new_user'])
+        if lab_login_without_orders == True:
+            list.append(label_list['lab_login_without_orders'])
+        if lab_login_have_orders == True:
+            list.append(label_list['lab_login_have_orders'])
+        if lab_cancel_ge_finish == True:
+            list.append(label_list['lab_cancel_ge_finish'])
+        if len(list):
+            redis_key = 'user_tag_%s' % user_id
+            redis_conn.set(redis_key, json.dumps(list), ex=expire_time)
+            logging.info('user_id:%s, lab_list:%s, key:%s' % (user_id, json.dumps(list), redis_key))
+    cursor.close()
+
+user_label_export = PythonOperator(
+    task_id='user_label_export',
+    python_callable=user_label_to_redis,
+    provide_context=True,
+    dag=dag
+)
+
+
 create_oride_driver_overview >> insert_oride_driver_overview
 create_oride_user_overview >> insert_oride_user_overview
 insert_oride_driver_overview >> refresh_impala
 insert_oride_user_overview >> refresh_impala
 create_oride_user_label >> insert_oride_user_label
 insert_oride_user_label >> refresh_impala
+insert_oride_user_label >> user_label_export
