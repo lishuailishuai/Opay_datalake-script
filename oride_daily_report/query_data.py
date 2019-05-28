@@ -92,7 +92,7 @@ on a.id = b.id
 query3 = '''
 SELECT 
 count(*) as order_num,
-sum(reward) as total_price
+sum(amount) as total_reward
 FROM 
 (
 select id from
