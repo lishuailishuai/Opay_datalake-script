@@ -52,9 +52,9 @@ insert_oride_driver_overview  = HiveOperator(
             sum(o.distance),
             sum(o.duration)
         FROM
-            oride_source.db_data_order o
+            oride_db.data_order o
             INNER JOIN
-            oride_source.db_data_order_payment p on o.id=p.id and o.dt=p.dt
+            oride_db.data_order_payment p on o.id=p.id and o.dt=p.dt
         WHERE
             o.dt = '{{ ds }}' and from_unixtime(o.create_time,'yyyy-MM-dd')='{{ ds }}'
         GROUP BY
@@ -123,9 +123,9 @@ insert_oride_user_overview  = HiveOperator(
                     sum(o.distance) as distance_total,
                     sum(o.duration) as duration_total
                 FROM
-                    oride_source.db_data_order o
+                    oride_db.data_order o
                     INNER JOIN
-                    oride_source.db_data_order_payment p on o.id=p.id and o.dt=p.dt
+                    oride_db.data_order_payment p on o.id=p.id and o.dt=p.dt
                 WHERE
                     o.dt = '{{ ds }}' and from_unixtime(o.create_time,'yyyy-MM-dd')='{{ ds }}'
                 GROUP BY
@@ -178,7 +178,7 @@ insert_oride_user_label  = HiveOperator(
               count(if(status=6, 1, null)) as cancel_num,
               count(if(status=5, 1, null)) as finished_num
             FROM
-              oride_source.db_data_order
+              oride_db.data_order
             WHERE
               dt = '{{ ds }}' AND from_unixtime(create_time,'yyyy-MM-dd') BETWEEN '{{ macros.ds_add(ds, -7) }}' AND '{{ ds }}'
             GROUP BY
@@ -192,7 +192,7 @@ insert_oride_user_label  = HiveOperator(
           if(nvl(wl.login_num,0)>1 and nvl(wo.finished_num, 0) > 1, true, false),
           if(nvl(wo.cancel_num, 0) > nvl(wo.finished_num,0), true, false)
         FROM
-          oride_source.db_data_user_extend ue
+          oride_db.data_user_extend ue
           LEFT JOIN week_login wl ON wl.user_id = ue.id
           LEFT JOIN week_order wo ON wo.user_id = ue.id
         WHERE
