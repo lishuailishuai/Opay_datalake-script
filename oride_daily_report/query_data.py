@@ -8,7 +8,7 @@ from email.header import Header
 
 sender = 'research@opay-inc.com'
 password = 'G%4nlD$YCJol@Op'
-# receivers = ['lichang.zhang@opay-inc.com', 'zhuohua.chen@opay-inc.com', 'chengchingon@gmail.com']
+# receivers = ['zhuohua.chen@opay-inc.com']
 receivers = ['lichang.zhang@opay-inc.com', 'peter.akudike@lbs.net.ng', 'alleyo@opay.team', 'd.odenuga@gmail.com',
              'zhi.li@opay-inc.com', 'ququ@opay.team', 'ridwano@opay.team', 'dinglun.fan@opay-inc.com',
              'chengyangw@opay.team', 'lei.zheng@opay-inc.com', 'Chukwudie@opay.team', 'longfei.he@opay-inc.com',
@@ -179,12 +179,20 @@ select driverid, action from oride_source.driver_action where dt="{dt}" and acti
  "pay_review", "pay_successful", "review_consummation")) as tmp
 '''
 
+query9 = '''
+SELECT 
+sum(if(register_time BETWEEN unix_timestamp('{dt} 00:00:00') and unix_timestamp('{dt} 23:59:59'),1,0)) as new_num
+FROM oride_source.db_data_user_extend
+where dt = "{dt}"
+and register_time <= unix_timestamp('{dt} 23:59:59')
+'''
+
 INSERT_SQL = '''
 REPLACE INTO oride_data.daily_report VALUES (
 %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 
 %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 
 %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 
-%s, %s)
+%s, %s, %s, %s)
 '''
 
 QUERY_DATA_RANGE = 8
@@ -197,8 +205,11 @@ col_meaning = ["Date", 'No. of completed ride', 'Fullfillment rate', 'No. of vie
                'Cancel rate before rider accept', 'Cancel rate after rider accept',
                'Driver cancel rate (after driver accept)', 'ATA(min)', 'Avg order accept time(s)',
                'Total registered rider', 'New registered rider', 'Completed-order rider', 'New completed-order rider',
-               'New completed-order rider ratio', 'No. of requested passenager', 'Completed order passenager ',
-               'New completed order passenager', 'New completed order passenger ratio', 'No. of online order',
+               'New completed-order rider ratio', 'No. of requested passenager', 'Completed order passenager',
+               'New registered passenger',
+               'New completed order passenger', 'New completed order passenger / Completed order passenager',
+               'New completed order passenger / New registered passenger',
+               'No. of online order',
                'No. of offine order']
 not_show_indexs = [col_meaning.index("No. of view"), col_meaning.index("View to request transfer rate")]
 
@@ -246,34 +257,47 @@ def query_data(**op_kwargs):
     [call_num, success_num, gmv, cancel_before_dispatching_num, cancel_after_dispatching_by_user_num,
      cancel_after_dispatching_by_driver_num, pickup_num, pickup_total_time, take_num,
      take_total_time] = res1
+    print(1)
     cursor.execute(query2.format(dt=dt))
     res2 = cursor.fetchall()
     res2 = map(mapper, list(res2[0]))
     [pay_num, total_price, total_c_discount, offline_num] = res2
+    print(2)
     cursor.execute(query3.format(dt=dt))
     res3 = cursor.fetchall()
     res3 = map(mapper, list(res3[0]))
     [order_num, total_driver_price] = res3
+    print(3)
     cursor.execute(query4.format(dt=dt))
     res4 = cursor.fetchall()
     res4 = map(mapper, list(res4[0]))
     [call_user_num, finished_user_num, new_finished_user_num] = res4
+    print(4)
     cursor.execute(query5.format(dt=dt))
     res5 = cursor.fetchall()
     res5 = map(mapper, list(res5[0]))
     [total_driver_num, login_driver_num, new_driver_num] = res5
+    print(5)
     cursor.execute(query6.format(dt=dt))
     res6 = cursor.fetchall()
     res6 = map(mapper, list(res6[0]))
     [order_driver_num, finished_driver_num, new_finished_driver_num] = res6
+    print(6)
     cursor.execute(query7.format(dt=dt))
     res7 = cursor.fetchall()
     res7 = map(mapper, list(res7[0]))
     [bubble_num] = res7
+    print(7)
     cursor.execute(query8.format(dt=dt))
     res8 = cursor.fetchall()
     res8 = map(mapper, list(res8[0]))
     [online_driver_num] = res8
+    print(8)
+    cursor.execute(query9.format(dt=dt))
+    res9 = cursor.fetchall()
+    res9 = map(mapper, list(res9[0]))
+    [new_passenger_num] = res9
+    print(9)
     data = [
         success_num,
         success_num / float(call_num) if call_num > 0 else 0,
@@ -301,8 +325,10 @@ def query_data(**op_kwargs):
         new_finished_driver_num / float(finished_driver_num) if finished_driver_num > 0 else 0,
         call_user_num,
         finished_user_num,
+        new_passenger_num,
         new_finished_user_num,
         new_finished_user_num / float(finished_user_num) if finished_driver_num > 0 else 0,
+        new_finished_user_num / new_passenger_num if new_passenger_num > 0 else 0,
         pay_num - offline_num,
         offline_num,
     ]
@@ -335,7 +361,7 @@ def write_email(**op_kwargs):
         h += part_html1.format(key=col_meaning[x])
         for y in range(len(arr)):
             tmp_val = arr[y][x + 1]
-            if "ratio" in col_meaning[x] or "rate" in col_meaning[x]:
+            if "ratio" in col_meaning[x] or "rate" in col_meaning[x] or "/" in col_meaning[x]:
                 tmp_val = "%.2f%%" % (tmp_val * 100)
             h += part_html2.format(val=tmp_val) if x > 0 else part_html2_1.format(val=tmp_val)
         h += part_html3
