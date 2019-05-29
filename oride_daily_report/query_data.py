@@ -9,13 +9,13 @@ from email.header import Header
 sender = 'research@opay-inc.com'
 password = 'G%4nlD$YCJol@Op'
 # receivers = ['zhuohua.chen@opay-inc.com']
-receivers = ['lichang.zhang@opay-inc.com', 'peter.akudike@lbs.net.ng', 'alleyo@opay.team', 'd.odenuga@gmail.com',
-             'zhi.li@opay-inc.com', 'ququ@opay.team', 'ridwano@opay.team', 'dinglun.fan@opay-inc.com',
-             'chengyangw@opay.team', 'lei.zheng@opay-inc.com', 'Chukwudie@opay.team', 'longfei.he@opay-inc.com',
-             'chengchingon@gmail.com', 'Femia@opay.team', 'jingtian.he@opay-inc.com', 'darlington@opay.team',
-             'nchukwu.frank@gmail.com', 'fobby2007@yahoo.com', 'chengjun.gao@opay-inc.com', 'zhuohua.chen@opay-inc.com',
-             'fisayoolowo@gmail.com', 'xin.ke@opay-inc.com', 'zhenqian.zhang@opay-inc.com', 'narku.he@kunlun-inc.com', 'sunyuanyuan@mobimagic.com',
-             'Chingon.cheng@opay-inc.com']
+receivers = ['lichang.zhang@opay-inc.com', 'jikun.li@opay-inc.com', 'zhi.li@opay-inc.com', 'yudiw@opera.com',
+             'fengfeng.ning@opay-inc.com', 'xin.ke@opay-inc.com', 'narku.he@kunlun-inc.com', 'zhimeng.lu@opay-inc.com',
+             'shuai.ma@opay-inc.com', 'ao.ren@opay-inc.com', 'haihuan.zou@opay-inc.com', 'chengyangw@opay.team',
+             'mengshi.yang@opay-inc.com', 'gao.lv@opay-inc.com', 'zhuohua.chen@opay-inc.com',
+             'huacai.yang@opay-inc.com', 'ququ@opay.team', 'hua.guo@opay-inc.com', 'jingtian.he@opay-inc.com',
+             'jinsong@opera.com', 'qingchengl@opay.team', 'dehuiw@opay.team', 'dinglun.fan@opay-inc.com',
+             'Lei.zheng@opay-inc.com', 'chingon.cheng@opay-inc.com']
 
 part_html1 = """<tr><td class="title_td">{key}</td>"""
 part_html2 = """<td class="value_td">{val}</td>"""
@@ -200,17 +200,17 @@ QUERY_EMAIL_DATA = '''
 select * from oride_data.daily_report where dt>="%s" and dt<="%s"
 '''
 col_meaning = ["Date", 'No. of completed ride', 'Fullfillment rate', 'No. of view', 'No. of request',
-               'View to request transfer rate', 'Online rider', 'Accepted order rider', 'GMV', 'ASP', 'B-subsidy',
-               'C-subsidy', 'Avg. B-sub per order', 'Avg. C-sub per order', 'Total subsidy ratio',
-               'Cancel rate before rider accept', 'Cancel rate after rider accept',
-               'Driver cancel rate (after driver accept)', 'ATA(min)', 'Avg order accept time(s)',
-               'Total registered rider', 'New registered rider', 'Completed-order rider', 'New completed-order rider',
-               'New completed-order rider ratio', 'No. of requested passenager', 'Completed order passenager',
-               'New registered passenger',
-               'New completed order passenger', 'New completed order passenger / Completed order passenager',
-               'New completed order passenger / New registered passenger',
-               'No. of online order',
-               'No. of offine order']
+'View to request transfer rate', 'Online rider', 'Accepted order rider', 'GMV', 'ASP', 'B-subsidy',
+'C-subsidy', 'Avg. B-sub per order', 'Avg. C-sub per order', 'Total subsidy ratio',
+'Cancel rate before rider accept', 'Cancel rate after rider accept',
+'Driver cancel rate (after driver accept)', 'ATA(min)', 'Avg order accept time(s)',
+'Total registered rider', 'New registered rider', 'Completed-order rider', 'New completed-order rider',
+'New completed-order rider ratio', 'No. of requested passenager', 'Completed order passenager',
+'New registered passenger',
+'New completed order passenger', 'New completed order passenger / Completed order passenager',
+'New completed order passenger / New registered passenger',
+'No. of online order',
+'No. of offine order']
 not_show_indexs = [col_meaning.index("No. of view"), col_meaning.index("View to request transfer rate")]
 
 
