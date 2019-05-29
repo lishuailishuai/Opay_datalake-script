@@ -7,6 +7,9 @@ from airflow.operators.python_operator import PythonOperator
 from airflow.contrib.hooks.redis_hook import RedisHook
 import json
 import logging
+from airflow.models import Variable
+import requests
+import os
 
 args = {
     'owner': 'root',
@@ -212,6 +215,8 @@ refresh_impala = ImpalaOperator(
         REFRESH dashboard.oride_driver_overview PARTITION (dt='{{ds}}');
         REFRESH dashboard.oride_user_overview PARTITION (dt='{{ds}}');
         REFRESH dashboard.oride_user_label PARTITION (dt='{{ds}}');
+        REFRESH dashboard.opay_media_summary PARTITION (dt='{{macros.ds_add(ds, -1)}}');
+        REFRESH dashboard.opay_media_summary PARTITION (dt='{{ds}}');
     """,
     schema='dashboard',
     priority_weight=50,
@@ -265,6 +270,75 @@ user_label_export = PythonOperator(
     dag=dag
 )
 
+def import_opay_install(ds, **kwargs):
+    # download report
+    api_url = "https://hq.appsflyer.com/export/team.opay.pay/installs_report/v5?api_token={api_token}&from={dt}&to={dt}&additional_fields=install_app_store,match_type,contributor1_match_type,contributor2_match_type,contributor3_match_type,device_category,gp_referrer,gp_click_time,gp_install_begin,amazon_aid,keyword_match_type".format(api_token=Variable.get("opay_appsflyer_api_token"), dt=ds)
+    headers = {'Accept':'text/csv'}
+    response = requests.get(
+        api_url,
+        headers=headers
+    )
+    logging.info('url:{} response_len:{}'.format(response.url, len(response.content)))
+    tmp_path = '/tmp/'
+    file_name = 'appsflyer_opay_install_log_'+ds
+    tmp_file = tmp_path + file_name
+    with open(tmp_file, 'wb') as f:
+        f.write(response.content)
+    # upload to ufile
+    upload_cmd = '/root/filemgr/filemgr  --action mput --bucket opay-datalake --key oride/appsflyer/opay_install_log/dt={dt}/{file_name}  --file {tmp_file}'.format(dt=ds, file_name=file_name,tmp_file=tmp_file)
+
+    os.system(upload_cmd)
+    # clear tmp file
+    clear_cmd = 'rm -f %s' % tmp_file
+    os.system(clear_cmd)
+
+import_opay_install_log = PythonOperator(
+    task_id='import_opay_install_log',
+    python_callable=import_opay_install,
+    provide_context=True,
+    dag=dag
+)
+
+create_opay_media_summary  = HiveOperator(
+    task_id='create_opay_media_summary',
+    hql="""
+        CREATE TABLE IF NOT EXISTS opay_media_summary (
+          media_source string,
+          install_num int,
+          register_num int
+        )
+        PARTITIONED BY (
+            dt STRING
+        )
+        STORED AS PARQUET
+    """,
+    schema='dashboard',
+    dag=dag)
+
+insert_opay_media_summary  = HiveOperator(
+    task_id='insert_opay_media_summary',
+    hql="""
+        ALTER TABLE opay_media_summary DROP IF EXISTS PARTITION (dt='{{ macros.ds_add(ds, -1) }}');
+        ALTER TABLE opay_media_summary DROP IF EXISTS PARTITION (dt='{{ ds }}');
+        set hive.exec.dynamic.partition.mode=nonstrict;
+        INSERT OVERWRITE TABLE opay_media_summary PARTITION (dt)
+        SELECT
+          a.media_source,
+          count(distinct a.appsflyer_id) as install_num,
+          count(distinct u.appsflyer_id) as register_num,
+          a.dt
+        FROM
+          oride_source.appsflyer_opay_install_log a
+          left join oride_source.user_login u on u.appsflyer_id=a.appsflyer_id and u.dt BETWEEN  '{{ macros.ds_add(ds, -1) }}' and '{{ds}}'
+        WHERE
+          a.dt BETWEEN '{{ macros.ds_add(ds, -1) }}' and '{{ds}}'
+        GROUP BY
+          a.dt,
+          a.media_source
+    """,
+    schema='dashboard',
+    dag=dag)
+
 
 create_oride_driver_overview >> insert_oride_driver_overview
 create_oride_user_overview >> insert_oride_user_overview
@@ -273,3 +347,6 @@ insert_oride_user_overview >> refresh_impala
 create_oride_user_label >> insert_oride_user_label
 insert_oride_user_label >> refresh_impala
 insert_oride_user_label >> user_label_export
+create_opay_media_summary >> insert_opay_media_summary
+import_opay_install_log >> insert_opay_media_summary
+insert_opay_media_summary >> refresh_impala
