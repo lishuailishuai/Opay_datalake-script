@@ -36,6 +36,11 @@ def get_redis_connection(conf_name='redis'):
     return StrictRedis(host=conn.host, port=conn.port)
 
 
+def get_pika_connection(conf_name='pika'):
+    conn = BaseHook.get_connection(conf_name)
+    return StrictRedis(host=conn.host, port=conn.port)
+
+
 def get_ucloud_file_manager(conf_name='ucloud_oride_resource'):
     conn = BaseHook.get_connection(conf_name)
     config.set_default(uploadsuffix=conn.host)
