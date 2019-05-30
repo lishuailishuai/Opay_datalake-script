@@ -318,6 +318,7 @@ create_opay_media_summary  = HiveOperator(
 insert_opay_media_summary  = HiveOperator(
     task_id='insert_opay_media_summary',
     hql="""
+        ALTER TABLE oride_source.appsflyer_opay_install_log ADD IF NOT EXISTS PARTITION (dt = '{{ ds }}');
         ALTER TABLE opay_media_summary DROP IF EXISTS PARTITION (dt='{{ macros.ds_add(ds, -1) }}');
         ALTER TABLE opay_media_summary DROP IF EXISTS PARTITION (dt='{{ ds }}');
         set hive.exec.dynamic.partition.mode=nonstrict;
