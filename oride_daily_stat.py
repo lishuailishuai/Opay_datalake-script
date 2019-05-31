@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 from airflow.operators.python_operator import PythonOperator
 from oride_daily_report.query_data import query_data, write_email
 from oride_daily_report.import_tables import import_table
+from bad_debts.bad_delts_check import check_bad_debts_data
 
 args = {
     'owner': 'root',
@@ -45,3 +46,12 @@ write_email_task = PythonOperator(
 )
 
 write_email_task.set_upstream(query_data_task)
+
+bad_debt_task = PythonOperator(
+    task_id='bad_debt_check',
+    python_callable=check_bad_debts_data,
+    dag=dag,
+    provide_context=True,
+)
+
+bad_debt_task.set_upstream(write_email_task)
