@@ -209,6 +209,30 @@ insert_oride_user_label  = HiveOperator(
     schema='dashboard',
     dag=dag)
 
+insert_coupon_summary  = HiveOperator(
+    task_id='insert_coupon_summary',
+    hql="""
+        INSERT INTO coupon_summary
+        SELECT
+            dt,
+            count(distinct user_id) as cu_users,
+            count(distinct if (from_unixtime(receive_time, 'yyyy-MM-dd')=dt and type=1, user_id, null)) as t1_receive_users,
+            sum(if (from_unixtime(receive_time, 'yyyy-MM-dd')=dt and type=1, 1, 0)) as t1_receive_times,
+            count(distinct if (from_unixtime(receive_time, 'yyyy-MM-dd')=dt and type=2, user_id, null)) as t2_receive_users,
+            sum(if (from_unixtime(receive_time, 'yyyy-MM-dd')=dt and type=2, 1, 0)) as t2_receive_times,
+            count(distinct if (from_unixtime(used_time, 'yyyy-MM-dd')=dt and type=1, user_id, null)) as t1_used_users,
+            sum(if (from_unixtime(used_time, 'yyyy-MM-dd')=dt and type=1, 1, 0)) as t1_used_times,
+            count(distinct if (from_unixtime(used_time, 'yyyy-MM-dd')=dt and type=2, user_id, null)) as t2_used_users,
+            sum(if (from_unixtime(used_time, 'yyyy-MM-dd')=dt and type=2, 1, 0)) as t2_used_times
+        FROM
+            oride_db.data_coupon
+        WHERE
+            dt = '{{ ds }}'
+        GROUP BY dt
+    """,
+    schema='dashboard',
+    dag=dag)
+
 refresh_impala = ImpalaOperator(
     task_id = 'refresh_impala',
     hql="""\
@@ -217,6 +241,7 @@ refresh_impala = ImpalaOperator(
         REFRESH dashboard.oride_user_label PARTITION (dt='{{ds}}');
         REFRESH dashboard.opay_media_summary PARTITION (dt='{{macros.ds_add(ds, -1)}}');
         REFRESH dashboard.opay_media_summary PARTITION (dt='{{ds}}');
+        REFRESH dashboard.coupon_summary;
     """,
     schema='dashboard',
     priority_weight=50,
@@ -351,3 +376,4 @@ insert_oride_user_label >> user_label_export
 create_opay_media_summary >> insert_opay_media_summary
 import_opay_install_log >> insert_opay_media_summary
 insert_opay_media_summary >> refresh_impala
+insert_coupon_summary >> refresh_impala
