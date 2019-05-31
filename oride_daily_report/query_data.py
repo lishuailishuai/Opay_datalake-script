@@ -2,12 +2,12 @@
 from datetime import datetime, timedelta
 import time
 from utils.connection_helper import get_hive_cursor, get_db_conn, get_pika_connection
+from utils.util import *
+import csv
 import smtplib
 from email.mime.text import MIMEText
 from email.header import Header
-work_times = 15 * 3600
-driver_online_time_key = "online_time:time:2:{driver_id}:{dt}"
-# dt format YYYYmmDD
+from email.mime.multipart import MIMEMultipart
 sender = 'research@opay-inc.com'
 password = 'G%4nlD$YCJol@Op'
 # receivers = ['zhuohua.chen@opay-inc.com']
@@ -46,10 +46,6 @@ mail_msg_tail = '''
     </table>
   </body>
 </html>
-'''
-
-repair_table_query = '''
-MSCK REPAIR TABLE %s
 '''
 
 query1 = '''
@@ -198,7 +194,7 @@ select driverid, action from oride_source.driver_action where dt="{dt}" and acti
 
 # the time should be count after the join of drivers
 query_order_time = '''
-select take_time, wait_time, pickup_time, arrive_time, finish_time, cancel_time
+select take_time, wait_time, pickup_time, arrive_time
 from oride_db.data_order where dt="{dt}" and 
 create_time BETWEEN unix_timestamp('{dt} 00:00:00') and unix_timestamp('{dt} 23:59:59')
 '''
@@ -227,87 +223,108 @@ col_meaning = ["Date", 'No. of completed ride', 'Fullfillment rate', 'No. of vie
     'New completed order passenger / Completed order passenager', 'New completed order passenger / New registered passenger',
     'No. of online order', 'No. of offine order',
     # 'Driver online with order time / Driver online time',
-    # 'Driver online with order time / Driver work duration (15hours)',
+    # 'Driver online time / Driver work duration (15hours)',
     # 'Avg. Order per online driver'
     ]
 not_show_indexs = [col_meaning.index("No. of view"), col_meaning.index("View to request transfer rate")]
 
+driver_stat_query = '''
+select a.driver_id as online_driver, b.id as order_id, 
+take_time, wait_time, pickup_time, arrive_time from
+(select distinct driverid as driver_id from oride_source.driver_action where dt="{dt}" and action in
+ ("taxi_accept", "login_success", "outset_show",
+ "pay_review", "pay_successful", "review_consummation")) as a
+left join
+ (select id, driver_id, take_time, wait_time, pickup_time, arrive_time, finish_time, cancel_time
+from oride_db.data_order where dt="{dt}" and 
+create_time BETWEEN unix_timestamp('{dt} 00:00:00') and unix_timestamp('{dt} 23:59:59') and take_time > 0) as b
+ on a.driver_id=b.driver_id'''
 
-def query_repair_table(sql):
+driver_stat_titles = [
+    'Driver_id',
+    'Driver online time',
+    'Driver online time(sec)',
+    'Driver order nums',
+    'Driver online with order time',
+    'Driver online with order time(sec)',
+    'Driver online with order time / Driver online time',
+    'Driver online with order time / Driver work duration (15hours)',
+]
+
+
+def get_driver_stat_data(dt):
     cursor = get_hive_cursor()
-    cursor.execute(sql)
-    cursor.close()
-
-
-def query_hive_data(sql):
-    cursor = get_hive_cursor()
-    cursor.execute(sql)
-    result = cursor.fetchall()
-    cursor.close()
-    return result
-
-
-def mapper(x):
-    if x is None:
-        x = 0
-    return x
-
-
-def n_days_ago(n_time, days):
-    now_time = datetime.strptime(n_time, '%Y-%m-%d')
-    delta = timedelta(days=days)
-    n_days = now_time - delta
-    return n_days.strftime("%Y-%m-%d")
-
-
-def raw_data_mapper(x):
-    res = 0
-    try:
-        res = int(x)
-    except:
-        pass
-    return res
-
-
-def get_driver_online_time(dt):
+    cursor.execute("set hive.execution.engine=tez")
+    repair_table_names = ["oride_db.data_order", "oride_source.driver_action"]
+    for name in repair_table_names:
+        print(name)
+        cursor.execute(repair_table_query % name)
+    cursor.execute(driver_stat_query.format(dt=dt))
+    res_data = {}
+    res = cursor.fetchall()
+    for line in res:
+        line = map(mapper, list(line))
+        [online_driver, order_id, take_time, wait_time,
+         pickup_time, arrive_time] = line
+        if order_id <= 0:
+            continue
+        if online_driver not in res_data:
+            res_data[online_driver] = {}
+            res_data[online_driver]["order_ids"] = set()
+            res_data[online_driver]["order_time"] = 0
+        res_data[online_driver]["order_ids"].add(order_id)
+        if take_time <= 0:
+            continue
+        max_time = max(wait_time, pickup_time, arrive_time)
+        if max_time > take_time:
+            res_data[online_driver]["order_time"] += max_time - take_time
+    drivers = list(set(res_data.keys()))
     reform_dt = "".join(dt.split("-"))
     pika = get_pika_connection()
     pipe = pika.pipeline(transaction=False)
-    cursor = get_hive_cursor()
-    cursor.execute(query_online_drivers.format(dt=dt))
-    res_drivers = cursor.fetchall()
-    online_time = 0
     counter = 0
-    for driver_id in res_drivers:
+    driver_online_time = []
+    for driver_id in drivers:
         try:
-            pipe.get(driver_online_time_key.format(driver_id=driver_id[0], dt=reform_dt))
+            pipe.get(driver_online_time_key.format(driver_id=driver_id, dt=reform_dt))
             counter += 1
             if counter % 128 == 0:
                 tmp_res = pipe.execute()
                 tmp_res = map(raw_data_mapper, tmp_res)
-                online_time += sum(tmp_res)
+                driver_online_time += tmp_res
         except:
             pass
     tmp_res = pipe.execute()
     tmp_res = map(raw_data_mapper, tmp_res)
-    online_time += sum(tmp_res)
-    return online_time
-
-
-def get_order_time(dt):
-    cursor = get_hive_cursor()
-    cursor.execute(query_order_time.format(dt=dt))
-    res_order_time = cursor.fetchall()
-    driver_take_order_num = 0
-    order_time = 0
-    for line in res_order_time:
-        (take_time, wait_time, pickup_time, arrive_time, finish_time, _) = line
-        if take_time > 0:
-            driver_take_order_num += 1
-            single_order_max_time = max(wait_time, pickup_time, arrive_time, finish_time)
-            if single_order_max_time > take_time and single_order_max_time - take_time <= 86400:
-                order_time += (single_order_max_time - take_time)
-    return driver_take_order_num, order_time
+    driver_online_time += tmp_res
+    all_data = []
+    val1 = 0
+    val2 = 0
+    for x in range(len(drivers)):
+        tmp_data = [0, 0, 0]
+        tmp_data2 = [0, 0]
+        if drivers[x] in res_data:
+            tmp_data = [len(res_data[drivers[x]]["order_ids"]), time_transfer(res_data[drivers[x]]["order_time"]),
+                        res_data[drivers[x]]["order_time"]]
+        if driver_online_time[x] > 0:
+            tmp_val1 = res_data[drivers[x]]["order_time"] / float(driver_online_time[x])
+            tmp_val2 = float(driver_online_time[x]) / float(work_times)
+            tmp_data2 = ["%.2f%%" % (tmp_val1 * 100),
+                         "%.2f%%" % (tmp_val2 * 100)]
+            val1 += tmp_val1
+            val2 += tmp_val2
+        t = [drivers[x], time_transfer(driver_online_time[x]), driver_online_time[x]] + tmp_data + tmp_data2
+        all_data.append(t)
+    all_data.sort(key=lambda x: x[0], reverse=True)
+    driver_take_order_num = sum([x[3] for x in all_data])
+    all_data = [driver_stat_titles] + all_data
+    with open("/tmp/driver_stat_%s.csv" % dt, "w") as f:
+        csv_writer = csv.writer(f)
+        for elem in all_data:
+            csv_writer.writerow(elem)
+    print("csv write done")
+    return (val1 / float(len(drivers)), val2 / float(len(drivers)), driver_take_order_num) if len(drivers) > 0 \
+        else (0, 0, driver_take_order_num)
 
 
 def query_data(**op_kwargs):
@@ -370,12 +387,8 @@ def query_data(**op_kwargs):
     res9 = map(mapper, list(res9[0]))
     [new_passenger_num] = res9
     print(9)
-    driver_time = get_driver_online_time(dt)
+    (transport_efficiency, enthusiasm, driver_take_order_num) = get_driver_stat_data(dt)
     print(10)
-    driver_take_order_num, order_time = get_order_time(dt)
-    print(11)
-    transport_efficiency = order_time / float(driver_time) if driver_time > 0 else 0
-    enthusiasm = order_time / float(work_times * online_driver_num) if online_driver_num > 0 else 0
     order_num_per_driver = driver_take_order_num / float(online_driver_num) if online_driver_num > 0 else 0
     data = [
         success_num,
@@ -449,9 +462,14 @@ def write_email(**op_kwargs):
         h += part_html3
     h += mail_msg_tail
     h += css_style
-    message = MIMEText(h, 'html', 'utf-8')
+    message = MIMEMultipart()
     subject = 'Oride {dt1} -- {dt2} Daily Report'.format(dt1=arr[0][1], dt2=arr[-1][1])
     message['Subject'] = Header(subject, 'utf-8')
+    message.attach(MIMEText(h, 'html', 'utf-8'))
+    # att1 = MIMEText(open("/tmp/driver_stat_%s.csv" % dt, 'r').read(), 'plain', 'utf-8')
+    # att1["Content-Type"] = 'application/octet-stream'
+    # att1["Content-Disposition"] = 'attachment; filename="driver_stat_%s.csv"' % dt
+    # message.attach(att1)
     try:
         server = smtplib.SMTP('mail.opay-inc.com', 25)
         server.ehlo()
