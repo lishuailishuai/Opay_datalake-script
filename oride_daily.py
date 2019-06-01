@@ -5,6 +5,7 @@ from airflow.operators.impala_plugin import ImpalaOperator
 from utils.connection_helper import get_hive_cursor
 from airflow.operators.python_operator import PythonOperator
 from airflow.contrib.hooks.redis_hook import RedisHook
+from airflow.hooks.hive_hooks import HiveCliHook
 import json
 import logging
 from airflow.models import Variable
@@ -209,45 +210,6 @@ insert_oride_user_label  = HiveOperator(
     schema='dashboard',
     dag=dag)
 
-insert_coupon_summary  = HiveOperator(
-    task_id='insert_coupon_summary',
-    hql="""
-        INSERT INTO coupon_summary
-        SELECT
-            dt,
-            count(distinct user_id) as cu_users,
-            count(distinct if (from_unixtime(receive_time, 'yyyy-MM-dd')=dt and type=1, user_id, null)) as t1_receive_users,
-            sum(if (from_unixtime(receive_time, 'yyyy-MM-dd')=dt and type=1, 1, 0)) as t1_receive_times,
-            count(distinct if (from_unixtime(receive_time, 'yyyy-MM-dd')=dt and type=2, user_id, null)) as t2_receive_users,
-            sum(if (from_unixtime(receive_time, 'yyyy-MM-dd')=dt and type=2, 1, 0)) as t2_receive_times,
-            count(distinct if (from_unixtime(used_time, 'yyyy-MM-dd')=dt and type=1, user_id, null)) as t1_used_users,
-            sum(if (from_unixtime(used_time, 'yyyy-MM-dd')=dt and type=1, 1, 0)) as t1_used_times,
-            count(distinct if (from_unixtime(used_time, 'yyyy-MM-dd')=dt and type=2, user_id, null)) as t2_used_users,
-            sum(if (from_unixtime(used_time, 'yyyy-MM-dd')=dt and type=2, 1, 0)) as t2_used_times
-        FROM
-            oride_db.data_coupon
-        WHERE
-            dt = '{{ ds }}'
-        GROUP BY dt
-    """,
-    schema='dashboard',
-    dag=dag)
-
-refresh_impala = ImpalaOperator(
-    task_id = 'refresh_impala',
-    hql="""\
-        REFRESH dashboard.oride_driver_overview PARTITION (dt='{{ds}}');
-        REFRESH dashboard.oride_user_overview PARTITION (dt='{{ds}}');
-        REFRESH dashboard.oride_user_label PARTITION (dt='{{ds}}');
-        REFRESH dashboard.opay_media_summary PARTITION (dt='{{macros.ds_add(ds, -1)}}');
-        REFRESH dashboard.opay_media_summary PARTITION (dt='{{ds}}');
-        REFRESH dashboard.coupon_summary;
-    """,
-    schema='dashboard',
-    priority_weight=50,
-    dag=dag
-)
-
 def user_label_to_redis(ds, **kwargs):
     label_list = {
         'lab_new_user' : 1,
@@ -365,6 +327,120 @@ insert_opay_media_summary  = HiveOperator(
     schema='dashboard',
     dag=dag)
 
+create_opay_media_summary  = HiveOperator(
+    task_id='create_opay_media_summary',
+    hql="""
+        CREATE TABLE IF NOT EXISTS opay_media_summary (
+          media_source string,
+          install_num int,
+          register_num int
+        )
+        PARTITIONED BY (
+            dt STRING
+        )
+        STORED AS PARQUET
+    """,
+    schema='dashboard',
+    dag=dag)
+
+create_driver_online_time  = HiveOperator(
+    task_id='create_driver_online_time',
+    hql="""
+        CREATE TABLE IF NOT EXISTS oride_driver_online_time (
+          driver_id int,
+          online_date int,
+          online_time int
+        )
+        PARTITIONED BY (
+            dt STRING
+        )
+        STORED AS PARQUET
+    """,
+    schema='dashboard',
+    dag=dag)
+
+def import_driver_online_time_to_hive(ds, **kwargs):
+    redis_conn = RedisHook(redis_conn_id='pika').get_conn()
+    cursor=0
+    count=100
+    rows = []
+    while True:
+        result = redis_conn.scan(cursor, 'online_time:time:2:*', count)
+        cursor = result[0]
+        if cursor == 0:
+            break
+        for k in result[1]:
+            v = redis_conn.get(k)
+            tmp = str(k, 'utf-8').split(':')
+            rows.append('('+ tmp[3] + ',' + tmp[4] + ','+ str(v,'utf-8') +')')
+    query = """
+        INSERT OVERWRITE TABLE dashboard.oride_driver_online_time PARTITION (dt='{dt}')
+        VALUES {value}
+    """.format(dt=ds, value=','.join(rows))
+    hive_hook = HiveCliHook()
+    hive_hook.run_cli(query)
+
+import_driver_online_time = PythonOperator(
+    task_id='import_driver_online_time',
+    python_callable=import_driver_online_time_to_hive,
+    provide_context=True,
+    dag=dag
+)
+
+
+create_coupon_summary = HiveOperator(
+    task_id='create_coupon_summary',
+    hql="""
+        CREATE TABLE IF NOT EXISTS oride_coupon_summary (
+          template_id bigint,
+          receive_users bigint,
+          receive_times bigint,
+          used_users bigint,
+          used_times bigint
+        )
+        PARTITIONED BY (
+            dt STRING
+        )
+        STORED AS PARQUET
+    """,
+    schema='dashboard',
+    dag=dag)
+
+insert_coupon_summary  = HiveOperator(
+    task_id='insert_coupon_summary',
+    hql="""
+        ALTER TABLE oride_coupon_summary DROP IF EXISTS PARTITION (dt='{{ ds }}');
+        INSERT OVERWRITE TABLE oride_coupon_summary PARTITION (dt='{{ ds }}')
+        SELECT
+            template_id,
+            count(distinct if (from_unixtime(receive_time, 'yyyy-MM-dd')=dt, user_id, null)) as receive_users,
+            sum(if (from_unixtime(receive_time, 'yyyy-MM-dd')=dt, 1, 0)) as receive_times,
+            count(distinct if (from_unixtime(used_time, 'yyyy-MM-dd')=dt, user_id, null)) as used_users,
+            sum(if (from_unixtime(used_time, 'yyyy-MM-dd')=dt, 1, 0)) as used_times
+        FROM
+            oride_db.data_coupon
+        WHERE
+            dt = '{{ ds }}'
+        GROUP BY template_id
+    """,
+    schema='dashboard',
+    dag=dag)
+
+refresh_impala = ImpalaOperator(
+    task_id = 'refresh_impala',
+    hql="""\
+        REFRESH dashboard.oride_driver_overview PARTITION (dt='{{ds}}');
+        REFRESH dashboard.oride_user_overview PARTITION (dt='{{ds}}');
+        REFRESH dashboard.oride_user_label PARTITION (dt='{{ds}}');
+        REFRESH dashboard.opay_media_summary PARTITION (dt='{{macros.ds_add(ds, -1)}}');
+        REFRESH dashboard.opay_media_summary PARTITION (dt='{{ds}}');
+        REFRESH dashboard.oride_coupon_summary PARTITION (dt='{{ds}}');
+        REFRESH dashboard.oride_driver_online_time PARTITION (dt='{{ds}}');
+    """,
+    schema='dashboard',
+    priority_weight=50,
+    dag=dag
+)
 
 create_oride_driver_overview >> insert_oride_driver_overview
 create_oride_user_overview >> insert_oride_user_overview
@@ -376,4 +452,7 @@ insert_oride_user_label >> user_label_export
 create_opay_media_summary >> insert_opay_media_summary
 import_opay_install_log >> insert_opay_media_summary
 insert_opay_media_summary >> refresh_impala
+create_coupon_summary >> insert_coupon_summary
 insert_coupon_summary >> refresh_impala
+create_driver_online_time >> import_driver_online_time
+import_driver_online_time >> refresh_impala
