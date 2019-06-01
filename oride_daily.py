@@ -427,6 +427,286 @@ insert_coupon_summary  = HiveOperator(
     schema='dashboard',
     dag=dag)
 
+
+
+insert_daily_report = HiveOperator(
+    task_id='insert_daily_report',
+    hql="""
+        -- 删除数据
+        INSERT OVERWRITE TABLE oride_daily_report
+        SELECT
+            *
+        FROM
+           oride_daily_report
+        WHERE
+            dt != '{{ ds }}';
+        -- 插入日报数据
+        with order_data AS (
+            SELECT
+                dt,
+                count(*) as call_num,
+                sum(if(status=5,1,0)) as success_num,
+                sum(price*if(status=5,1,0)) as gmv,
+                sum(if(driver_id=0,1,0) * if(status=6,1,0)) as cancel_before_dispatching_num,
+                sum(if(driver_id>0,1,0) * if(status=6,1,0) * if (cancel_role=1,1,0)) as cancel_after_dispatching_by_user_num,
+                sum(if(driver_id>0,1,0) * if(status=6,1,0) * if (cancel_role=2,1,0)) as cancel_after_dispatching_by_driver_num,
+                sum(if(pickup_time>=create_time,1,0)) as pickup_num,
+                sum(if(pickup_time>=create_time,pickup_time-create_time,0)) as pickup_total_time,
+                sum(if(take_time>=create_time,1,0)) as take_num,
+                sum(if(take_time>=create_time,take_time-create_time,0)) as take_total_time
+            FROM
+                oride_db.data_order
+            where
+                dt = "{{ ds }}" AND from_unixtime(create_time, 'yyyy-MM-dd')=dt
+            GROUP BY
+                dt
+        ), pay_data as (
+            SELECT
+                a.dt,
+                count(*) as pay_num,
+                sum(price) as total_price,
+                sum(price-amount) as total_c_discount,
+                sum(if(mode=1,1,0)) as offline_num
+            FROM
+            (
+                SELECT
+                 dt,
+                 id
+                FROM
+                  oride_db.data_order
+                WHERE
+                    dt = "{{ ds }}" AND status=5 AND from_unixtime(create_time, 'yyyy-MM-dd')=dt
+
+            ) a
+            JOIN
+            (
+                SELECT
+                    *
+                FROM
+                    oride_db.data_order_payment
+                WHERE
+                    dt = "{{ ds }}"
+            ) b on a.id = b.id AND a.dt=b.dt
+            GROUP BY
+                a.dt
+        ), reward_data as (
+            SELECT
+                a.dt,
+                count(*) as order_num,
+                sum(amount) as total_reward
+            FROM
+            (
+                select
+                    id,
+                    dt
+                from
+                    oride_db.data_order
+                where
+                    dt = "{{ ds }}" AND status=5 AND from_unixtime(create_time, 'yyyy-MM-dd')=dt
+            ) a
+            join
+            (
+                SELECT
+                    *
+                FROM
+                    oride_db.data_driver_reward
+                WHERE
+                    dt = "{{ ds }}"
+            ) b on a.id = b.order_id AND a.dt=b.dt
+            GROUP BY
+                a.dt
+        ), order_user_data AS (
+            SELECT
+                `order`.dt,
+                count(distinct(user_id)) as call_user_num,
+                count(distinct(user_id * `order`.is_finished)) - if(sum(if(user_id * `order`.is_finished = 0, 1, 0)) > 0, 1, 0) as finished_user_num,
+                count(distinct(user_id * `order`.is_finished * `user`.is_new)) - if(sum(if(user_id * `order`.is_finished * `user`.is_new = 0, 1, 0)) > 0, 1, 0) as new_finished_user_num
+            FROM
+            (
+                SELECT
+                    dt,
+                    user_id,
+                    driver_id,
+                    if(status=5,1,0) as is_finished
+                FROM oride_db.data_order
+                WHERE
+                    dt = "{{ ds }}" AND create_time BETWEEN unix_timestamp('{{ ds }} 00:00:00') AND unix_timestamp('{{ ds }} 23:59:59')
+            ) as `order`
+            join
+            (
+                SELECT
+                    dt,
+                    id,
+                    if(register_time BETWEEN unix_timestamp('{{ ds }} 00:00:00') AND unix_timestamp('{{ ds }} 23:59:59'),1,0) as is_new
+                FROM
+                    oride_db.data_user_extend
+                where
+                    dt = "{{ ds }}"
+                AND register_time <= unix_timestamp('{{ ds }} 23:59:59')
+            ) as `user` on `order`.user_id = `user`.id AND `order`.dt = `user`.dt
+            GROUP BY
+                `order`.dt
+        ),
+        driver_extend_data AS (
+            SELECT
+                dt,
+                count(*) as total_driver_num,
+                sum(if(login_time BETWEEN unix_timestamp('{{ ds }} 00:00:00') AND unix_timestamp('{{ ds }} 23:59:59'),1,0)) as login_driver_num,
+                sum(if(register_time BETWEEN unix_timestamp('{{ ds }} 00:00:00') AND unix_timestamp('{{ ds }} 23:59:59'),1,0)) as new_driver_num
+            FROM
+                oride_db.data_driver_extend
+            WHERE
+                dt = "{{ ds }}" AND register_time <= unix_timestamp('{{ ds }} 23:59:59')
+            GROUP BY
+                dt
+        ),
+        driver_data AS (
+            SELECT
+                `order`.dt,
+                count(distinct(driver_id)) as order_driver_num,
+                count(distinct(driver_id * `order`.is_finished)) - if(sum(if(driver_id * `order`.is_finished = 0, 1, 0)) > 0, 1, 0) as finished_driver_num,
+                count(distinct(driver_id * `order`.is_finished * `driver`.is_new)) - if(sum(if(driver_id * `order`.is_finished * `driver`.is_new = 0, 1, 0)) > 0, 1, 0) as new_finished_driver_num
+            FROM
+            (
+              SELECT
+                dt,
+                user_id,
+                driver_id,
+                if(status=5,1,0) as is_finished
+              FROM
+                oride_db.data_order
+              WHERE
+                dt = "{{ ds }}" AND create_time BETWEEN unix_timestamp('{{ ds }} 00:00:00') AND unix_timestamp('{{ ds }} 23:59:59')
+            ) as `order`
+            join
+            (
+                SELECT
+                    dt,
+                    id,
+                    if(register_time BETWEEN unix_timestamp('{{ ds }} 00:00:00') AND unix_timestamp('{{ ds }} 23:59:59'),1,0) as is_new
+                FROM
+                    oride_db.data_driver_extend
+                where
+                    dt = "{{ ds }}" AND register_time <= unix_timestamp('{{ ds }} 23:59:59')
+            ) as driver
+            on `order`.driver_id = driver.id AND `order`.dt = driver.dt
+            GROUP BY
+                `order`.dt
+        ),
+        bubble AS (
+            SELECT
+                dt,
+                sum(if(action="bubble",1,0)) as bubble_num
+            FROM
+                oride_source.user_action
+            WHERE
+                dt="{{ ds }}"
+            GROUP BY
+                dt
+        ),
+        online_driver_data as (
+            SELECT
+                dt,
+                count(distinct driverid) as online_driver_num
+            FROM
+                oride_source.driver_action
+            WHERE
+                dt="{{ ds }}" AND action in ("taxi_accept", "login_success", "outset_show", "pay_review", "pay_successful", "review_consummation")
+            GROUP BY
+                dt
+        ),
+        user_extend_data as (
+            SELECT
+                dt,
+                sum(if(register_time BETWEEN unix_timestamp('{{ ds }} 00:00:00') AND unix_timestamp('{{ ds }} 23:59:59'),1,0)) as new_passenger_num
+            FROM
+                oride_db.data_user_extend
+            WHERE
+                dt = "{{ ds }}" AND register_time <= unix_timestamp('{{ ds }} 23:59:59')
+            GROUP BY
+                dt
+        ),transport_efficiency_data AS (
+            SELECT
+                '{{ ds }}' as dt,
+                count(a.driver_id) as drivers,
+                sum(a.order_num) as driver_take_order_num,
+                round(sum(if(dod.online_time>0, a.order_time/dod.online_time, 0))/count(a.driver_id),4) as transport_efficiency,
+                round(sum(if(dod.online_time>0, dod.online_time/(15 * 3600), 0))/count(a.driver_id), 4) as enthusiasm
+            FROM
+            (
+                SELECT
+                    a.driver_id as driver_id,
+                    count(b.id) as order_num,
+                    sum(if (greatest(wait_time, pickup_time, arrive_time) > take_time, greatest(wait_time, pickup_time, arrive_time)-take_time, 0)) as order_time
+                FROM
+                    (select distinct driverid as driver_id from oride_source.driver_action where dt="{{ ds }}" and action in
+                    ("taxi_accept", "login_success", "outset_show",
+                    "pay_review", "pay_successful", "review_consummation")) as a
+                    join
+                    (select id, driver_id, take_time, wait_time, pickup_time, arrive_time, finish_time, cancel_time
+                    from oride_db.data_order where dt="{{ ds }}" and
+                    create_time BETWEEN unix_timestamp('{{ ds }} 00:00:00') and unix_timestamp('{{ ds }} 23:59:59') and take_time > 0) as b
+                    on a.driver_id=b.driver_id
+                GROUP BY a.driver_id
+            ) a
+            LEFT JOIN
+                dashboard.oride_driver_online_time dod ON dod.driver_id = a.driver_id and dod.dt='{{ ds }}'
+
+        )
+        INSERT INTO TABLE oride_daily_report
+        SELECT
+            od.dt,
+            od.success_num,
+            round(od.success_num/od.call_num, 4),
+            bub.bubble_num,
+            od.call_num,
+            round(od.call_num/bub.bubble_num, 4),
+            odd.online_driver_num,
+            dd.order_driver_num,
+            round(od.gmv, 2),
+            round(od.gmv/od.success_num, 2),
+            round(rd.total_reward, 2),
+            round(pd.total_c_discount, 2),
+            round(rd.total_reward/od.success_num, 2),
+            round(pd.total_c_discount/od.success_num, 2),
+            round((rd.total_reward+pd.total_c_discount)/pd.total_price , 4),
+            round(od.cancel_before_dispatching_num/od.call_num, 4),
+            round(od.cancel_after_dispatching_by_user_num / od.call_num, 4),
+            round(od.cancel_after_dispatching_by_driver_num / od.call_num, 4),
+            round(od.pickup_total_time / 60 / od.pickup_num, 2),
+            round(od.take_total_time / od.take_num, 2),
+            ded.total_driver_num,
+            ded.new_driver_num,
+            dd.finished_driver_num,
+            dd.new_finished_driver_num,
+            round(dd.new_finished_driver_num / dd.finished_driver_num, 4),
+            oud.call_user_num,
+            oud.finished_user_num,
+            ued.new_passenger_num,
+            oud.new_finished_user_num,
+            round(oud.new_finished_user_num / oud.finished_user_num, 4),
+            round(oud.new_finished_user_num / ued.new_passenger_num, 4),
+            pd.pay_num - pd.offline_num,
+            pd.offline_num,
+            ted.transport_efficiency,
+            ted.enthusiasm,
+            round(ted.driver_take_order_num/odd.online_driver_num, 2)
+        FROM
+            order_data od
+            LEFT JOIN pay_data pd ON pd.dt=od.dt
+            LEFT JOIN reward_data rd ON rd.dt=od.dt
+            LEFT JOIN order_user_data oud ON oud.dt=od.dt
+            LEFT JOIN driver_extend_data ded ON ded.dt=od.dt
+            LEFT JOIN driver_data dd ON dd.dt=od.dt
+            LEFT JOIN bubble bub ON bub.dt=od.dt
+            LEFT JOIN online_driver_data odd ON odd.dt=od.dt
+            LEFT JOIN user_extend_data ued ON ued.dt=od.dt
+            LEFT JOIN transport_efficiency_data ted ON ted.dt=od.dt
+    """,
+    schema='dashboard',
+    dag=dag)
+
+
 refresh_impala = ImpalaOperator(
     task_id = 'refresh_impala',
     hql="""\
@@ -437,6 +717,7 @@ refresh_impala = ImpalaOperator(
         REFRESH dashboard.opay_media_summary PARTITION (dt='{{ds}}');
         REFRESH dashboard.oride_coupon_summary PARTITION (dt='{{ds}}');
         REFRESH dashboard.oride_driver_online_time PARTITION (dt='{{ds}}');
+        REFRESH dashboard.oride_daily_report;
     """,
     schema='dashboard',
     priority_weight=50,
@@ -457,3 +738,5 @@ create_coupon_summary >> insert_coupon_summary
 insert_coupon_summary >> refresh_impala
 create_driver_online_time >> import_driver_online_time
 import_driver_online_time >> refresh_impala
+import_driver_online_time >> insert_daily_report
+insert_daily_report >> refresh_impala
