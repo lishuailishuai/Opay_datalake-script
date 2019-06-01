@@ -348,7 +348,6 @@ create_driver_online_time  = HiveOperator(
     hql="""
         CREATE TABLE IF NOT EXISTS oride_driver_online_time (
           driver_id int,
-          online_date int,
           online_time int
         )
         PARTITIONED BY (
@@ -359,26 +358,28 @@ create_driver_online_time  = HiveOperator(
     schema='dashboard',
     dag=dag)
 
-def import_driver_online_time_to_hive(ds, **kwargs):
+def import_driver_online_time_to_hive(ds, ds_nodash, **kwargs):
     redis_conn = RedisHook(redis_conn_id='pika').get_conn()
     cursor=0
     count=100
     rows = []
     while True:
-        result = redis_conn.scan(cursor, 'online_time:time:2:*', count)
+        result = redis_conn.scan(cursor, 'online_time:time:2:*:%s' % ds_nodash, count)
         cursor = result[0]
         if cursor == 0:
             break
         for k in result[1]:
             v = redis_conn.get(k)
+            logging.info('k:%s, v:%s' % (k, v))
             tmp = str(k, 'utf-8').split(':')
-            rows.append('('+ tmp[3] + ',' + tmp[4] + ','+ str(v,'utf-8') +')')
-    query = """
-        INSERT OVERWRITE TABLE dashboard.oride_driver_online_time PARTITION (dt='{dt}')
-        VALUES {value}
-    """.format(dt=ds, value=','.join(rows))
-    hive_hook = HiveCliHook()
-    hive_hook.run_cli(query)
+            rows.append('('+ tmp[3] + ','+ str(v,'utf-8') +')')
+    if rows:
+        query = """
+            INSERT OVERWRITE TABLE dashboard.oride_driver_online_time PARTITION (dt='{dt}')
+            VALUES {value}
+        """.format(dt=ds, value=','.join(rows))
+        hive_hook = HiveCliHook()
+        hive_hook.run_cli(query)
 
 import_driver_online_time = PythonOperator(
     task_id='import_driver_online_time',
