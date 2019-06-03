@@ -1,16 +1,16 @@
 # -*- coding: utf-8 -*-
 from datetime import datetime, timedelta
 import time
+import csv
 from utils.connection_helper import get_hive_cursor, get_db_conn, get_pika_connection
 from utils.util import *
-import csv
 import smtplib
 from email.mime.text import MIMEText
 from email.header import Header
 from email.mime.multipart import MIMEMultipart
 sender = 'research@opay-inc.com'
 password = 'G%4nlD$YCJol@Op'
-# receivers = ['zhuohua.chen@opay-inc.com']
+# receivers = ['lichang.zhang@opay-inc.com']
 receivers = ['lichang.zhang@opay-inc.com', 'jikun.li@opay-inc.com', 'zhi.li@opay-inc.com', 'yudiw@opera.com',
              'fengfeng.ning@opay-inc.com', 'xin.ke@opay-inc.com', 'narku.he@kunlun-inc.com', 'zhimeng.lu@opay-inc.com',
              'shuai.ma@opay-inc.com', 'ao.ren@opay-inc.com', 'haihuan.zou@opay-inc.com', 'chengyangw@opay.team',
@@ -230,6 +230,43 @@ col_meaning = ["Date", 'No. of completed ride', 'Fullfillment rate', 'No. of vie
     ]
 not_show_indexs = [col_meaning.index("No. of view"), col_meaning.index("View to request transfer rate")]
 
+# =====================================================
+
+sql1 = '''
+select distinct(driverid) as driver_id
+from oride_source.driver_action 
+where dt = '{dt}'
+'''
+
+sql2 = '''
+select substr(from_unixtime(`timestamp`), 12, 2) as `hour`, count(distinct(driverid)) as driver_num
+from oride_source.driver_action 
+where dt = '{dt}'
+group by substr(from_unixtime(`timestamp`), 12, 2)
+'''
+
+sql3 = '''
+select 
+a.driver_id,
+sum(a.distance) as distance,
+sum(a.price) as money,
+count(*) as order_num,
+sum(if(b.score is not null, 1, 0)) as score_num,
+sum(if(b.score is not null, b.score, 0)) as score_sum
+from
+(select * from oride_db.data_order
+where dt = '{dt}'
+and create_time between unix_timestamp('{dt} 00:00:00') and unix_timestamp('{dt} 23:59:59')
+) a
+left outer join
+(
+select * from oride_db.data_driver_comment
+where dt = '{dt}'
+) b
+on a.id = b.order_id
+group by a.driver_id
+'''
+
 driver_stat_query = '''
 select a.driver_id as online_driver, b.id as order_id, 
 take_time, wait_time, pickup_time, arrive_time from
@@ -252,6 +289,46 @@ driver_stat_titles = [
     'Driver online with order time / Driver online time',
     'Driver online with order time / Driver work duration (15hours)',
 ]
+
+
+def cursor_driver_data(dt):
+    cursor = get_hive_cursor()
+    cursor.execute("set hive.execution.engine=tez")
+    driver_stats = {}
+    cursor.execute(sql2.format(dt=dt))
+    res = cursor.fetchall()
+    for x in res:
+        driver_stats[x[0]] = x[1]
+    cursor.execute(sql1.format(dt=dt))
+    res = cursor.fetchall()
+    driver_data = {}
+    for x in res:
+        if x[0] != 0:
+            driver_data[x[0]] = [0] * 6
+    cursor.execute(sql3.format(dt=dt))
+    res = cursor.fetchall()
+    for x in res:
+        if x[0] in driver_data:
+            for i in range(1, 6):
+                driver_data[x[0]][i - 1] = x[i]
+    pika = get_pika_connection()
+    pipe = pika.pipeline(transaction=False)
+    reform_dt = "".join(dt.split("-"))
+    driver_ids = []
+    for driver_id in driver_data:
+        driver_ids.append(driver_id)
+        _ = pipe.get(driver_online_time_key.format(driver_id=driver_id, dt=reform_dt))
+    tmp_res = pipe.execute()
+    for i in range(len(tmp_res)):
+        driver_data[driver_ids[i]][5] = 0 if tmp_res[i] is None else int(tmp_res[i])
+    with open("/tmp/%s_online_driver_num.csv" % dt, "w") as fout:
+        fout.write("hour,driver_num\n")
+        fout.write("all,%d\n" % len(driver_data))
+        for i in range(24):
+            x = "%02d" % i
+            y = 0 if x not in driver_stats else driver_stats[x]
+            fout.write("%s,%s\n" % (x, y))
+    return driver_data
 
 
 def get_driver_stat_data(dt):
@@ -319,14 +396,25 @@ def get_driver_stat_data(dt):
         all_data.append(t)
     all_data.sort(key=lambda x: x[0], reverse=True)
     driver_take_order_num = sum([x[3] for x in all_data])
-    all_data = [driver_stat_titles] + all_data
+    driver_data_dict = cursor_driver_data(dt)
     with open("/tmp/driver_stat_%s.csv" % dt, "w") as f:
         csv_writer = csv.writer(f)
+        csv_writer.writerow(
+            driver_stat_titles + ['total_distance', 'total_income', 'order_num', 'scored_order_num', 'avg_score',
+                                  'online_time'])
         for elem in all_data:
-            csv_writer.writerow(elem)
+            tmp2 = [0] * 6
+            if elem[0] in driver_data_dict:
+                rec = driver_data_dict[elem[0]]
+                rec[4] = 0 if rec[3] == 0 else ("%.2f" % (rec[4] / rec[3]))
+                tmp2 = rec[:len(tmp2)]
+            csv_writer.writerow(elem + tmp2)
     print("csv write done")
     return (val1 / float(len(drivers)), val2 / float(len(drivers)), driver_take_order_num) if len(drivers) > 0 \
         else (0, 0, driver_take_order_num)
+
+
+# =====================================================
 
 
 def query_data(**op_kwargs):
