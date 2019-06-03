@@ -707,6 +707,47 @@ insert_daily_report = HiveOperator(
     dag=dag)
 
 
+
+create_order_event_summary = HiveOperator(
+    task_id='create_order_event_summary',
+    hql="""
+        CREATE TABLE IF NOT EXISTS oride_order_event_summary (
+          status int,
+          order_num int,
+          drivers int,
+          users int,
+          price_total int,
+          reward_total int
+        )
+        PARTITIONED BY (
+            dt STRING
+        )
+        STORED AS PARQUET
+    """,
+    schema='dashboard',
+    dag=dag)
+
+insert_order_event_summary  = HiveOperator(
+    task_id='insert_order_event_summary',
+    hql="""
+        ALTER TABLE oride_order_event_summary DROP IF EXISTS PARTITION (dt='{{ ds }}');
+        INSERT OVERWRITE TABLE oride_order_event_summary PARTITION (dt='{{ ds }}')
+        SELECT
+            status,
+            count(distinct order_id) as order_num,
+            count(distinct driver_id) as drivers,
+            count(distinct user_id) as users,
+            sum(price) as price_total,
+            sum(reward) as reward_total
+        FROM
+            oride_source.user_order
+        WHERE
+          dt='{{ ds }}'
+        GROUP BY status
+    """,
+    schema='dashboard',
+    dag=dag)
+
 refresh_impala = ImpalaOperator(
     task_id = 'refresh_impala',
     hql="""\
@@ -718,6 +759,7 @@ refresh_impala = ImpalaOperator(
         REFRESH dashboard.oride_coupon_summary PARTITION (dt='{{ds}}');
         REFRESH dashboard.oride_driver_online_time PARTITION (dt='{{ds}}');
         REFRESH dashboard.oride_daily_report;
+        REFRESH dashboard.oride_order_event_summary  PARTITION (dt='{{ds}}');
     """,
     schema='dashboard',
     priority_weight=50,
@@ -740,3 +782,4 @@ create_driver_online_time >> import_driver_online_time
 import_driver_online_time >> refresh_impala
 import_driver_online_time >> insert_daily_report
 insert_daily_report >> refresh_impala
+create_order_event_summary >> insert_order_event_summary >> refresh_impala
