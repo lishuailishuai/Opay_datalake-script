@@ -9,7 +9,8 @@ bad_debt_email_limit = 50
 sender = 'research@opay-inc.com'
 password = 'G%4nlD$YCJol@Op'
 # receivers = ['lichang.zhang@opay-inc.com']
-receivers = ['lichang.zhang@opay-inc.com', 'tianzhi.zhang@opay-inc.com']
+receivers = ['lichang.zhang@opay-inc.com', 'tianzhi.zhang@opay-inc.com',
+             'lei.zheng@opay-inc.com', 'dinglun.fan@opay-inc.com', 'haihuan.zou@opay-inc.com']
 
 part_html1 = """<tr>"""
 part_html2 = """<td class="value_td">{val}</td>"""

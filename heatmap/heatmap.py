@@ -129,15 +129,29 @@ def data2goolemap(hex_res, data, t):
     }
     tt = tmp_dict[t]
     ttime = tmp_time_dict[t]
+    oc_tt = b'oc'
+    oc_ttime = b'oc:t'
     tmp_zip_data = zip(hex_res, data)
-    tmp_zip_data = [x for x in tmp_zip_data if
-                    x[1] != {} and tt in x[1] and ttime in x[1] and cur_time_stamp - int(x[1][ttime]) <= key_memory_time and int(
-                        x[1][tt]) > 0]
-    print(len(tmp_zip_data))
+    tmp_res = []
+    for x in tmp_zip_data:
+        val = 0
+        if x[1] != {}:
+            if tt in x[1] and ttime in x[1] and cur_time_stamp - int(
+                    x[1][ttime]) <= key_memory_time and int(
+                    x[1][tt]) > 0:
+                val += int(x[1][tt])
+            # vals related to cancel orders give 5 times weight
+            if oc_tt in x[1] and oc_ttime in x[1] and cur_time_stamp - int(
+                    x[1][oc_ttime]) <= key_memory_time and int(
+                    x[1][oc_tt]) > 0:
+                val += int(x[1][oc_tt]) * 5
+        if val > 0:
+            tmp_res.append([x[0], val])
+    print(len(tmp_res))
     s = html_part1 + default_max_point
-    for x in range(len(tmp_zip_data)):
-        tmp_loc = h3.h3_to_geo(tmp_zip_data[x][0])
-        s += data_format % (tmp_loc[0], tmp_loc[1], int(tmp_zip_data[x][1][tt]))
+    for x in range(len(tmp_res)):
+        tmp_loc = h3.h3_to_geo(tmp_res[x][0])
+        s += data_format % (tmp_loc[0], tmp_loc[1], tmp_res[x][1])
     s += html_part2
     return s
 
