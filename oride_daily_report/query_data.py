@@ -18,7 +18,8 @@ receivers = ['lichang.zhang@opay-inc.com', 'jikun.li@opay-inc.com', 'zhi.li@opay
              'huacai.yang@opay-inc.com', 'ququ@opay.team', 'hua.guo@opay-inc.com', 'jingtian.he@opay-inc.com',
              'jinsong@opera.com', 'qingchengl@opay.team', 'dehuiw@opay.team', 'dinglun.fan@opay-inc.com',
              'Lei.zheng@opay-inc.com', 'chingon.cheng@opay-inc.com', 'chang.zhao@opay-inc.com',
-             'zhenqian.zhang@opay-inc.com']
+             'zhenqian.zhang@opay-inc.com', 'han.fang@opay-inc.com', 'han.fang@kunlun-inc.com',
+             'xiaohua.mei@opay-inc.com', 'haifeng.li@opay-inc.com']
 
 part_html1 = """<tr><td class="title_td">{key}</td>"""
 part_html2 = """<td class="value_td">{val}</td>"""
