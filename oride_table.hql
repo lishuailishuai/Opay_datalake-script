@@ -240,7 +240,8 @@ CREATE EXTERNAL TABLE `data_driver`(
   `gender` tinyint,
   `country` string,
   `city` string,
-  `black` tinyint
+  `black` tinyint,
+  `group_id` int
 )
 PARTITIONED BY (
   `dt` string)
@@ -393,6 +394,23 @@ OUTPUTFORMAT
   'org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat'
 LOCATION
   'ufile://opay-datalake/oride/db/data_driver_fee_blacklist';
+
+
+CREATE EXTERNAL TABLE `data_driver_group`(
+  `id` bigint,
+  `group_name` string,
+  `group_leader` string
+)
+PARTITIONED BY (
+  `dt` string)
+ROW FORMAT SERDE
+  'org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe'
+STORED AS INPUTFORMAT
+  'org.apache.hadoop.mapred.TextInputFormat'
+OUTPUTFORMAT
+  'org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat'
+LOCATION
+  'ufile://opay-datalake/oride/db/data_driver_group';
 
 
 CREATE EXTERNAL TABLE `data_driver_operation_log`(

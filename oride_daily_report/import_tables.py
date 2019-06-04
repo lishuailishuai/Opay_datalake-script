@@ -28,6 +28,7 @@ tables = [
     "data_driver_discount",
     "data_driver_extend",
     "data_driver_fee_blacklist",
+    "data_driver_group",
     "data_driver_operation_log",
     "data_driver_pay_records",
     "data_driver_recharge_records",
