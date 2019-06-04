@@ -22,7 +22,7 @@ args = {
 
 dag = airflow.DAG(
     'oride_daily',
-    schedule_interval="30 02 * * *",
+    schedule_interval="00 02 * * *",
     default_args=args)
 
 create_oride_driver_overview  = HiveOperator(
