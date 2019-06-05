@@ -748,6 +748,93 @@ insert_order_event_summary  = HiveOperator(
     schema='dashboard',
     dag=dag)
 
+create_oride_driver_daily_summary = HiveOperator(
+    task_id='create_oride_driver_daily_summary',
+    hql="""
+        CREATE TABLE IF NOT EXISTS oride_driver_daily_summary (
+            driver_id bigint,
+            phone_number string,
+            real_name string,
+            group_id int,
+            group_name string,
+            group_leader string,
+            online_time bigint,
+            comment_scores int,
+            comment_times int,
+            order_num int,
+            order_finished_num int,
+            order_cancel_num int,
+            duration_total int,
+            distance_total int
+        )
+        PARTITIONED BY (
+            dt STRING
+        )
+        STORED AS PARQUET
+    """,
+    schema='dashboard',
+    dag=dag)
+
+insert_oride_driver_daily_summary  = HiveOperator(
+    task_id='insert_oride_driver_daily_summary',
+    hql="""
+        ALTER TABLE oride_driver_daily_summary DROP IF EXISTS PARTITION (dt='{{ ds }}');
+        with online_time as (
+            select
+                driver_id,
+                online_time
+            from dashboard.oride_driver_online_time where dt='{{ ds }}'
+        ),
+        driver_comment as (
+            select
+                driver_id,
+                count(id) as comment_times,
+                sum(score) as comment_scores
+            from
+                oride_db.data_driver_comment where dt='{{ ds }}' and from_unixtime(create_time,'yyyy-MM-dd')='{{ ds }}' group by driver_id
+        ),
+        order_data as (
+            select
+                driver_id,
+                sum(if(status=5, 1, 0)) as order_finished_num,
+                count(id) as order_num,
+                sum(if(status=6 and cancel_role=2, 1, 0)) as order_cancel_num,
+                sum(if(status=5, duration, 0)) as duration_total,
+                sum(if(status=5, distance, 0)) as distance_total
+            from
+                oride_db.data_order
+            where
+                dt='{{ ds }}' and from_unixtime(create_time,'yyyy-MM-dd')='{{ ds }}'
+            group by driver_id
+        )
+        INSERT OVERWRITE TABLE oride_driver_daily_summary PARTITION (dt='{{ ds }}')
+        SELECT
+            dd.id,
+            dd.phone_number,
+            dd.real_name,
+            dd.group_id,
+            ddg.group_name,
+            ddg.group_leader,
+            nvl(ot.online_time,0),
+            nvl(dc.comment_scores,0),
+            nvl(dc.comment_times,0),
+            nvl(od.order_num,0),
+            nvl(od.order_finished_num,0),
+            nvl(od.order_cancel_num,0),
+            nvl(od.duration_total,0),
+            nvl(od.distance_total,0)
+        FROM
+            oride_db.data_driver dd
+            left join online_time ot on ot.driver_id=dd.id
+            left join driver_comment dc on dc.driver_id=dd.id
+            left join order_data od on od.driver_id=dd.id
+            left join oride_db.data_driver_group ddg on ddg.id=dd.group_id AND ddg.dt=dd.dt
+        WHERE
+            dd.dt='{{ ds }}'
+    """,
+    schema='dashboard',
+    dag=dag)
+
 refresh_impala = ImpalaOperator(
     task_id = 'refresh_impala',
     hql="""\
@@ -759,7 +846,8 @@ refresh_impala = ImpalaOperator(
         REFRESH dashboard.oride_coupon_summary PARTITION (dt='{{ds}}');
         REFRESH dashboard.oride_driver_online_time PARTITION (dt='{{ds}}');
         REFRESH dashboard.oride_daily_report;
-        REFRESH dashboard.oride_order_event_summary  PARTITION (dt='{{ds}}');
+        REFRESH dashboard.oride_order_event_summary PARTITION (dt='{{ds}}');
+        REFRESH dashboard.oride_driver_daily_summary PARTITION (dt='{{ds}}');
     """,
     schema='dashboard',
     priority_weight=50,
@@ -783,3 +871,5 @@ import_driver_online_time >> refresh_impala
 import_driver_online_time >> insert_daily_report
 insert_daily_report >> refresh_impala
 create_order_event_summary >> insert_order_event_summary >> refresh_impala
+import_driver_online_time >> insert_oride_driver_daily_summary
+create_oride_driver_daily_summary >> insert_oride_driver_daily_summary >> refresh_impala

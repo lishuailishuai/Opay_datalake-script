@@ -31,7 +31,8 @@ create_oride_order_detail = HiveOperator(
           last_name string,
           is_new_customer tinyint,
           is_order_success tinyint,
-          is_offline_order tinyint
+          is_offline_order tinyint,
+          score tinyint
         )
         PARTITIONED BY (
             dt STRING
@@ -54,7 +55,8 @@ insert_oride_order_detail  = HiveOperator (
             du.last_name,
             if(do.id=ufo.first_order_id, 1, 0) as is_new_customer,
             if(do.status=5, 1, 0) as is_order_success,
-            if(dop.mode=1, 1, 0) as is_offline_order
+            if(dop.mode=1, 1, 0) as is_offline_order,
+            duc.score
         FROM
             oride_db.data_order do
             INNER JOIN
@@ -64,7 +66,9 @@ insert_oride_order_detail  = HiveOperator (
                select dt, user_id, min(id) as first_order_id from oride_db.data_order WHERE dt = '{{ ds }}' group by user_id,dt
             ) ufo ON ufo.user_id = do.user_id AND ufo.dt=do.dt
             LEFT JOIN
-            oride_db.data_order_payment dop on  dop.dt=do.dt AND dop.id=do.id
+                oride_db.data_order_payment dop on  dop.dt=do.dt AND dop.id=do.id
+            LEFT JOIN
+                oride_db.data_user_comment duc ON duc.dt=do.dt AND duc.order_id=do.id
         WHERE
             do.dt = '{{ ds }}' and from_unixtime(do.create_time, 'yyyy-MM-dd') = do.dt
     """,
@@ -92,6 +96,7 @@ def send_order_detail_email(ds, **kwargs):
         'is_new_customer',
         'is_order_success',
         'is_offline_order',
+        'score',
         'date'
     ]
     file_name = '/tmp/oride_order_detail_{dt}.csv'.format(dt=ds)
@@ -102,7 +107,8 @@ def send_order_detail_email(ds, **kwargs):
     # send mail
     email_to = [
         'zhenqian.zhang@opay-inc.com',
-        'chingon.cheng@opay-inc.com'
+        'chingon.cheng@opay-inc.com',
+        'ting.lei@opay-inc.com'
     ]
     email_subject = 'oride_order_detail_{dt}'.format(dt=ds)
     send_email(email_to, email_subject, '', [file_name])
