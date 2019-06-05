@@ -56,14 +56,15 @@ mail_msg_tail = '''
 query1 = '''
 select count(*) as call_num,
 sum(if(status=5,1,0)) as success_num,
-sum(price*if(status=5,1,0)) as gmv,
+sum(if(status=5,price,0)) as gmv,
 sum(if(driver_id=0,1,0) * if(status=6,1,0)) as cancel_before_dispatching_num,
 sum(if(driver_id>0,1,0) * if(status=6,1,0) * if (cancel_role=1,1,0)) as cancel_after_dispatching_by_user_num,
 sum(if(driver_id>0,1,0) * if(status=6,1,0) * if (cancel_role=2,1,0)) as cancel_after_dispatching_by_driver_num,
 sum(if(pickup_time>=create_time,1,0)) as pickup_num,
 sum(if(pickup_time>=create_time,pickup_time-create_time,0)) as pickup_total_time,
 sum(if(take_time>=create_time,1,0)) as take_num,
-sum(if(take_time>=create_time,take_time-create_time,0)) as take_total_time
+sum(if(take_time>=create_time,take_time-create_time,0)) as take_total_time,
+sum(if(status=5,reward,0)) as total_reward
 FROM oride_db.data_order 
 where dt = "{dt}" 
 and
@@ -90,27 +91,6 @@ oride_db.data_order_payment
 where dt = "{dt}"
 ) b
 on a.id = b.id
-'''
-
-query3 = '''
-SELECT 
-count(*) as order_num,
-sum(amount) as total_reward
-FROM 
-(
-select id from
-oride_db.data_order
-where dt = "{dt}"
-and status=5
-and create_time BETWEEN unix_timestamp('{dt} 00:00:00') and unix_timestamp('{dt} 23:59:59')
-) a 
-join
-(
-select * from
-oride_db.data_driver_reward
-where dt = "{dt}"
-) b
-on a.id = b.order_id
 '''
 
 query4 = '''
@@ -254,18 +234,13 @@ def query_data(**op_kwargs):
     res1 = map(mapper, list(res1[0]))
     [call_num, success_num, gmv, cancel_before_dispatching_num, cancel_after_dispatching_by_user_num,
      cancel_after_dispatching_by_driver_num, pickup_num, pickup_total_time, take_num,
-     take_total_time] = res1
+     take_total_time, total_driver_price] = res1
     print(1)
     cursor.execute(query2.format(dt=dt))
     res2 = cursor.fetchall()
     res2 = map(mapper, list(res2[0]))
     [pay_num, total_price, total_c_discount, offline_num] = res2
     print(2)
-    cursor.execute(query3.format(dt=dt))
-    res3 = cursor.fetchall()
-    res3 = map(mapper, list(res3[0]))
-    [order_num, total_driver_price] = res3
-    print(3)
     cursor.execute(query4.format(dt=dt))
     res4 = cursor.fetchall()
     res4 = map(mapper, list(res4[0]))
