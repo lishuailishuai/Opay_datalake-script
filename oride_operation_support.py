@@ -120,10 +120,194 @@ order_detail_email = PythonOperator(
     dag=dag
 )
 
+create_oride_overview = HiveOperator(
+    task_id='create_oirde_overview',
+    hql="""
+        CREATE TABLE IF NOT EXISTS oride_overview (
+          dt string,
+          new_users int,
+          dau int,
+          order_num int,
+          completed_order_num int,
+          canceled_order_num int,
+          order_amount int,
+          completed_order_amount int,
+          canceled_order_amount int,
+          new_user_order_num int,
+          new_user_completed_order_num int,
+          new_user_canceled_order_num int
+        )
+        STORED AS PARQUET
+    """,
+    schema='dashboard',
+    dag=dag)
+
+insert_oride_overview = HiveOperator(
+    task_id='insert_oirde_overview',
+    hql="""
+        -- 删除数据
+        INSERT OVERWRITE TABLE oride_overview
+        SELECT
+            *
+        FROM
+           oride_overview
+        WHERE
+            dt != '{{ ds }}';
+        -- 插入数据
+        with user_data as (
+            select
+                dt,
+                count(*) as dau,
+                count(if(is_new=true, user_id, null)) as new_users
+            from
+                dashboard.oride_active_user
+            where
+                dt='{{ ds }}'
+            group by
+                dt
+        ),
+        order_data as  (
+            SELECT
+                dt,
+                count(id) as order_num,
+                count(if(status=5, id, null)) as completed_order_num,
+                count(if(status!=5, id, null)) as canceled_order_num,
+                sum(price) as order_amount,
+                sum(if(status=5, price, 0)) as completed_order_amount,
+                sum(if(status!=5, price, 0)) as canceled_order_amount
+            FROM
+                oride_db.data_order
+            WHERE
+                dt='{{ ds }}' and from_unixtime(create_time, 'yyyy-MM-dd') = dt
+            GROUP BY dt
+        ),
+        new_user_order_data as (
+            SELECT
+                do.dt,
+                count(do.id) as new_user_order_num,
+                count(if(do.status=5, id, null)) as new_user_completed_order_num,
+                count(if(do.status!=5, id, null)) as new_user_canceled_order_num
+            FROM
+                oride_db.data_order do
+                inner join dashboard.oride_active_user au ON au.user_id=do.user_id AND au.dt=do.dt
+            WHERE
+                au.is_new=true AND do.dt='{{ ds }}' AND from_unixtime(do.create_time, 'yyyy-MM-dd') = do.dt
+            group by do.dt
+        )
+        INSERT INTO TABLE oride_overview
+        SELECT
+            ud.dt,
+            ud.new_users,
+            ud.dau,
+            od.order_num,
+            od.completed_order_num,
+            od.canceled_order_num,
+            od.order_amount,
+            od.completed_order_amount,
+            od.canceled_order_amount,
+            nod.new_user_order_num,
+            nod.new_user_completed_order_num,
+            nod.new_user_canceled_order_num
+        FROM
+            user_data ud
+            INNER JOIN
+            order_data od ON od.dt=ud.dt
+            INNER JOIN
+            new_user_order_data nod ON nod.dt=ud.dt
+    """,
+    schema='dashboard',
+    dag=dag)
+
+
+create_oride_user_behavior = HiveOperator(
+    task_id='create_oride_user_behavior',
+    hql="""
+        CREATE TABLE IF NOT EXISTS oride_user_behavior (
+          dt string,
+          dau int,
+          request_order_users int,
+          take_order_users int,
+          completed_order_users int,
+          invited_users int,
+          invitee_users int
+        )
+        STORED AS PARQUET
+    """,
+    schema='dashboard',
+    dag=dag)
+
+insert_oride_user_behavior = HiveOperator(
+    task_id='insert_oride_user_behavior',
+    hql="""
+        -- 删除数据
+        INSERT OVERWRITE TABLE oride_user_behavior
+        SELECT
+            *
+        FROM
+           oride_user_behavior
+        WHERE
+            dt != '{{ ds }}';
+        -- 插入数据
+        with user_data as (
+            select
+                dt,
+                count(*) as dau
+            from
+                dashboard.oride_active_user
+            where
+                dt='{{ ds }}'
+            group by
+                dt
+        ),
+        order_data as  (
+            SELECT
+                dt,
+                count(distinct user_id) as request_order_users,
+                count(distinct if(take_time > 0, user_id, null)) as take_order_users,
+                count(distinct if(status =5, user_id, null)) as completed_order_users
+            FROM
+                oride_db.data_order
+            WHERE
+                dt='{{ ds }}' and from_unixtime(create_time, 'yyyy-MM-dd') = dt
+            GROUP BY dt
+        ),
+        invite_data as (
+            SELECT
+                dt,
+                count(distinct uid) as invited_users,
+                count(distinct invitee_id) as invitee_users
+            FROM
+                oride_db.data_invite
+            WHERE
+                dt='{{ ds }}' and from_unixtime(`timestamp`, 'yyyy-MM-dd') = dt
+            GROUP BY dt
+        )
+        INSERT INTO TABLE oride_user_behavior
+        SELECT
+            ud.dt,
+            ud.dau,
+            od.request_order_users,
+            od.take_order_users,
+            od.completed_order_users,
+            id.invited_users,
+            id.invitee_users
+        FROM
+            user_data ud
+            INNER JOIN
+            order_data od ON od.dt=ud.dt
+            INNER JOIN
+            invite_data id ON id.dt=ud.dt
+    """,
+    schema='dashboard',
+    dag=dag)
+
+
 refresh_impala = ImpalaOperator(
     task_id = 'refresh_impala',
     hql="""\
         REFRESH dashboard.oride_order_detail PARTITION (dt='{{ds}}');
+        REFRESH dashboard.oride_overview;
+        REFRESH dashboard.oride_user_behavior;
     """,
     schema='dashboard',
     priority_weight=50,
@@ -131,3 +315,5 @@ refresh_impala = ImpalaOperator(
 )
 
 create_oride_order_detail >> insert_oride_order_detail >> order_detail_email >> refresh_impala
+create_oride_overview >> insert_oride_overview >> refresh_impala
+create_oride_user_behavior >> insert_oride_user_behavior >> refresh_impala
