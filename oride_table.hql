@@ -972,7 +972,8 @@ CREATE EXTERNAL TABLE `data_user`(
   `id` bigint,
   `phone_number` string,
   `first_name` string,
-  `last_name` string
+  `last_name` string,
+  `promoter_code` string
 )
 PARTITIONED BY (
   `dt` string)
