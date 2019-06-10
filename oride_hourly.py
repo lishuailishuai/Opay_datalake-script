@@ -80,7 +80,7 @@ insert_oride_realtime_overview = HiveOperator(
                 sum(t.price) as order_amount,
                 count(t.order_id) as order_num,
                 sum(if(t.status=5, 1, 0)) as completed_order_num,
-                sum(if(t.status=6, 1, 0)) as canceled_order_num,
+                sum(if(t.status>=6 and t.status<=12, 1, 0)) as canceled_order_num,
                 sum(if(t.status=5 and t.is_new_order=true, 1, 0)) as new_user_completed_order_num
             from
             (
@@ -105,6 +105,14 @@ insert_oride_realtime_overview = HiveOperator(
                     group by
                         order_id,dt
                 ) o
+                INNER JOIN (
+                    SELECT
+                        distinct order_id
+                    FROM
+                        oride_source.user_order
+                    WHERE
+                        dt='{{ ds }}' AND status=0 AND from_unixtime(`timestamp`, 'yyyy-MM-dd')=dt
+                ) oc ON oc.order_id=o.order_id
                 LEFT JOIN
                 (
                     select

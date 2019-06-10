@@ -38,13 +38,22 @@ create_ofood_dau = HiveOperator(
 
 insert_ofood_dau = HiveOperator(
     hql="""
-        insert overwrite table ofood_dau
-        select
+        -- 删除数据
+        INSERT OVERWRITE TABLE ofood_dau
+        SELECT
+            *
+        FROM
+           ofood_dau
+        WHERE
+            dt != '{{ ds }}';
+        -- 插入数据
+        INSERT INTO TABLE ofood_dau
+        SELECT
             dt,
             count(distinct uid)
         FROM
             ofood_source.user_login
-        WHERE dt >= '2019-04-20'
+        WHERE dt = '{{ ds }}'
         GROUP BY
             dt
     """,
@@ -74,13 +83,22 @@ create_ofood_dnu = HiveOperator(
 
 insert_ofood_dnu = HiveOperator(
     hql="""
-        insert overwrite table ofood_dnu
-        select
+        -- 删除数据
+        INSERT OVERWRITE TABLE ofood_dnu
+        SELECT
+            *
+        FROM
+           ofood_dnu
+        WHERE
+            dt != '{{ ds }}';
+        -- 插入数据
+        INSERT INTO TABLE ofood_dnu
+        SELECT
             dt,
             count(distinct uid)
         FROM
             ofood_source.user_register
-        WHERE dt >= '2019-04-20'
+        WHERE dt = '{{ ds }}'
         GROUP BY
             dt
     """,
@@ -115,8 +133,17 @@ create_ofood_order_sum = HiveOperator(
 
 insert_ofood_order_sum = HiveOperator(
     hql="""
-        insert overwrite table ofood_order_sum
-        select
+        -- 删除数据
+        INSERT OVERWRITE TABLE ofood_order_sum
+        SELECT
+            *
+        FROM
+           ofood_order_sum
+        WHERE
+            dt != '{{ ds }}';
+        -- 插入数据
+        INSERT INTO TABLE ofood_order_sum
+        SELECT
             dt,
             orderstatus,
             deliverytype,
@@ -125,7 +152,7 @@ insert_ofood_order_sum = HiveOperator(
             sum(amount) as amount
         FROM
             ofood_source.user_orders
-        WHERE dt >= '2019-04-20'
+        WHERE dt = '{{ ds }}'
         GROUP BY
             dt,
             orderstatus,
