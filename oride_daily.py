@@ -665,11 +665,11 @@ insert_daily_report = HiveOperator(
             dd.order_driver_num,
             round(od.gmv, 2),
             round(od.gmv/od.success_num, 2),
-            round(rd.total_reward, 2),
+            round(nvl(rd.total_reward,0), 2),
             round(pd.total_c_discount, 2),
-            round(rd.total_reward/od.success_num, 2),
+            round(nvl(rd.total_reward,0)/od.success_num, 2),
             round(pd.total_c_discount/od.success_num, 2),
-            round((rd.total_reward+pd.total_c_discount)/pd.total_price , 4),
+            round((nvl(rd.total_reward,0)+pd.total_c_discount)/pd.total_price , 4),
             round(od.cancel_before_dispatching_num/od.call_num, 4),
             round(od.cancel_after_dispatching_by_user_num / od.call_num, 4),
             round(od.cancel_after_dispatching_by_driver_num / od.call_num, 4),
@@ -689,7 +689,7 @@ insert_daily_report = HiveOperator(
             pd.pay_num - pd.offline_num,
             pd.offline_num,
             ted.transport_efficiency,
-            ted.enthusiasm,
+            0,
             round(ted.driver_take_order_num/odd.online_driver_num, 2)
         FROM
             order_data od
