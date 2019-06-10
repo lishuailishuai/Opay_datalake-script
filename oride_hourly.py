@@ -1,6 +1,8 @@
 import airflow
 from datetime import datetime, timedelta
 from airflow.operators.hive_operator import HiveOperator
+from airflow.operators.impala_plugin import ImpalaOperator
+
 
 args = {
     'owner': 'root',
@@ -29,3 +31,120 @@ add_partitions = HiveOperator(
     schema='oride_source',
     dag=dag)
 
+create_oride_realtime_overview = HiveOperator(
+    task_id='create_oride_realtime_overview',
+    hql="""
+        CREATE TABLE IF NOT EXISTS oride_realtime_overview (
+          dt string,
+          up_hour string,
+          dau int,
+          dnu int,
+          order_amount int,
+          order_num int,
+          canceled_order_num int,
+          completed_order_num int,
+          new_user_completed_order_num int
+        )
+        STORED AS PARQUET
+        """,
+    schema='dashboard',
+    dag=dag)
+
+insert_oride_realtime_overview = HiveOperator(
+    task_id='insert_oride_realtime_overview',
+    hql="""
+        -- 删除数据
+        INSERT OVERWRITE TABLE oride_realtime_overview
+        SELECT
+            *
+        FROM
+           oride_realtime_overview
+        WHERE
+            dt != '{{ ds }}';
+        -- 插入数据
+        with user_data as (
+            select
+                dt,
+                count(distinct user_id) as dau,
+                count(distinct if(is_new=true, user_id, null)) as dnu
+            from
+                oride_source.user_login
+            where
+                dt='{{ ds }}'
+            group by
+                dt
+        ),
+        order_data as (
+            select
+                t.dt as dt,
+                sum(t.price) as order_amount,
+                count(t.order_id) as order_num,
+                sum(if(t.status=5, 1, 0)) as completed_order_num,
+                sum(if(t.status=6, 1, 0)) as canceled_order_num,
+                sum(if(t.status=5 and t.is_new_order=true, 1, 0)) as new_user_completed_order_num
+            from
+            (
+                select
+                    o.dt as dt,
+                    o.order_id as order_id,
+                    o.status as status,
+                    o.price as price,
+                    if(isnotnull(nu.user_id), true, false) as is_new_order
+                from
+                (
+                    select
+                        dt,
+                        order_id,
+                        MAX(struct(`timestamp`, status)).col2 AS status,
+                        MAX(struct(`timestamp`, price)).col2 AS price,
+                        MAX(struct(`timestamp`, user_id)).col2 AS user_id
+                    from
+                        oride_source.user_order
+                    where
+                        dt='{{ ds }}'
+                    group by
+                        order_id,dt
+                ) o
+                LEFT JOIN
+                (
+                    select
+                        distinct user_id
+                    from
+                        oride_source.user_login
+                    where
+                        dt = '{{ ds }}' and is_new=true
+                ) nu on nu.user_id=o.user_id
+            ) t
+            group by t.dt
+        )
+        INSERT INTO TABLE oride_realtime_overview
+        SELECT
+            ud.dt,
+            '{{ execution_date.strftime("%H") }}',
+            ud.dau,
+            ud.dnu,
+            nvl(od.order_amount,0),
+            nvl(od.order_num, 0),
+            nvl(od.canceled_order_num, 0),
+            nvl(od.completed_order_num, 0),
+            nvl(new_user_completed_order_num, 0)
+        FROM
+            user_data ud
+            LEFT JOIN order_data od ON od.dt=ud.dt
+        """,
+    schema='dashboard',
+    dag=dag)
+
+
+refresh_impala = ImpalaOperator(
+    task_id = 'refresh_impala',
+    hql="""\
+        REFRESH oride_realtime_overview;
+    """,
+    schema='dashboard',
+    priority_weight=50,
+    dag=dag
+)
+
+create_oride_realtime_overview >> insert_oride_realtime_overview >> refresh_impala
+add_partitions >> insert_oride_realtime_overview
