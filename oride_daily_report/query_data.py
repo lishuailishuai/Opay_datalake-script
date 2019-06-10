@@ -9,20 +9,12 @@ from email.mime.text import MIMEText
 from email.header import Header
 from email.mime.multipart import MIMEMultipart
 from oride_daily_report.driver_data import get_driver_data
+from airflow.models import Variable
+
 sender = 'research@opay-inc.com'
 password = 'G%4nlD$YCJol@Op'
 # receivers = ['lichang.zhang@opay-inc.com']
-receivers = ['lichang.zhang@opay-inc.com', 'jikun.li@opay-inc.com', 'zhi.li@opay-inc.com', 'yudiw@opera.com',
-             'fengfeng.ning@opay-inc.com', 'xin.ke@opay-inc.com', 'narku.he@kunlun-inc.com', 'zhimeng.lu@opay-inc.com',
-             'shuai.ma@opay-inc.com', 'ao.ren@opay-inc.com', 'haihuan.zou@opay-inc.com', 'chengyangw@opay.team',
-             'mengshi.yang@opay-inc.com', 'gao.lv@opay-inc.com', 'zhuohua.chen@opay-inc.com',
-             'huacai.yang@opay-inc.com', 'ququ@opay.team', 'hua.guo@opay-inc.com', 'jingtian.he@opay-inc.com',
-             'jinsong@opera.com', 'qingchengl@opay.team', 'dehuiw@opay.team', 'dinglun.fan@opay-inc.com',
-             'Lei.zheng@opay-inc.com', 'chingon.cheng@opay-inc.com', 'chang.zhao@opay-inc.com',
-             'zhenqian.zhang@opay-inc.com', 'han.fang@opay-inc.com', 'han.fang@kunlun-inc.com',
-             'xiaohua.mei@opay-inc.com', 'haifeng.li@opay-inc.com', 'ting.lei@opay-inc.com',
-             'wenhao.xiong@opay-inc.com', 'xiaoqiang.yu@opay-inc.com',
-             'oduoluwatobi@gmail.com', 'Damilolal@opay.team', 'osagiea@opay.team']
+receivers = Variable.get("oride_daily_report_receivers").split()
 
 part_html1 = """<tr><td class="title_td">{key}</td>"""
 part_html2 = """<td class="value_td">{val}</td>"""
