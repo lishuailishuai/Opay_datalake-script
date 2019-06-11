@@ -52,3 +52,7 @@ def get_ucloud_file_manager(conf_name='ucloud_oride_resource'):
 def get_google_map_js_api_key(conf_name='google_map_js'):
     conn = BaseHook.get_connection(conf_name)
     return conn.password
+
+def get_db_conf(conf_name='mysql_default'):
+    conf = BaseHook.get_connection(conf_name)
+    return conf.host, conf.port, conf.schema, conf.login, conf.password

@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
 import os
-from utils.connection_helper import get_hive_cursor
+from utils.connection_helper import get_hive_cursor, get_db_conf
 file_path = os.path.realpath(__file__)
 tmp_arr = file_path.split("/")
 tmp_arr[-1] = "sqoop_db.sh"
 sqoop_path = "/".join(tmp_arr)
 
 default_command = '''
-/usr/bin/sh %s %s %s
+/usr/bin/sh %s %s %s %s %s %s %s %s
 '''
 
 tables = [
@@ -60,10 +60,19 @@ tables = [
 
 def import_table(**op_kwargs):
     dt = op_kwargs.get('ds')
+    env = op_kwargs.get("env")
     print("running date: %s" % dt)
     cursor = get_hive_cursor()
+    conf_name = "sqoop_db"
+    if env == "test":
+        conf_name += "_test"
+    host, port, schema, login, password  = get_db_conf(conf_name)
+    host += ":" + str(port)
     for table in tables:
         print("importing table: %s" % table)
-        os.system(default_command % (sqoop_path, table, dt))
-        cursor.execute("ALTER TABLE oride_db.%s ADD IF NOT EXISTS PARTITION (dt = '%s')" % (table, dt))
+        hive_table = table
+        if env == "test":
+            hive_table += "_dev"
+        os.system(default_command % (sqoop_path, host, schema, login, password, table, hive_table, dt))
+        cursor.execute("ALTER TABLE oride_db.%s ADD IF NOT EXISTS PARTITION (dt = '%s')" % (hive_table, dt))
     print("import done")

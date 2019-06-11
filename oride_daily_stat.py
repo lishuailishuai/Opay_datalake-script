@@ -29,6 +29,14 @@ import_table_task = PythonOperator(
     provide_context=True,
 )
 
+import_table_test_task = PythonOperator(
+    task_id='import_table_test',
+    python_callable=import_table,
+    dag=dag,
+    provide_context=True,
+    op_kwargs={"env" : "test"}
+)
+
 query_data_task = PythonOperator(
     task_id='query_data',
     python_callable=query_data,
