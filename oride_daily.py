@@ -153,7 +153,8 @@ create_oride_user_label  = HiveOperator(
           lab_new_user boolean,
           lab_login_without_orders boolean,
           lab_login_have_orders boolean,
-          lab_cancel_ge_finish boolean
+          lab_cancel_ge_finish boolean,
+          phone_number string
         )
         PARTITIONED BY (
             dt STRING
@@ -199,9 +200,11 @@ insert_oride_user_label  = HiveOperator(
           if(datediff('{{ ds }}', from_unixtime(ue.register_time,'yyyy-MM-dd')) < 7, true, false),
           if(nvl(wl.login_num,0)>1 and nvl(wo.finished_num, 0) < 1, true, false),
           if(nvl(wl.login_num,0)>1 and nvl(wo.finished_num, 0) > 1, true, false),
-          if(nvl(wo.cancel_num, 0) > nvl(wo.finished_num,0), true, false)
+          if(nvl(wo.cancel_num, 0) > nvl(wo.finished_num,0), true, false),
+          du.phone_number
         FROM
           oride_db.data_user_extend ue
+          INNER JOIN oride_db.data_user du ON du.id=ue.id AND du.dt=ue.dt
           LEFT JOIN week_login wl ON wl.user_id = ue.id
           LEFT JOIN week_order wo ON wo.user_id = ue.id
         WHERE
@@ -223,7 +226,8 @@ def user_label_to_redis(ds, **kwargs):
           lab_new_user,
           lab_login_without_orders,
           lab_login_have_orders,
-          lab_cancel_ge_finish
+          lab_cancel_ge_finish,
+          phone_number
         FROM
           dashboard.oride_user_label
         WHERE
@@ -234,7 +238,7 @@ def user_label_to_redis(ds, **kwargs):
     results = cursor.fetchall()
     redis_conn = RedisHook(redis_conn_id='redis_user_lab').get_conn()
     expire_time = 86400
-    for user_id, lab_new_user, lab_login_without_orders,lab_login_have_orders,lab_cancel_ge_finish in results:
+    for user_id, lab_new_user, lab_login_without_orders,lab_login_have_orders,lab_cancel_ge_finish,phone_number in results:
         list = []
         if lab_new_user == True:
             list.append(label_list['lab_new_user'])
@@ -245,9 +249,9 @@ def user_label_to_redis(ds, **kwargs):
         if lab_cancel_ge_finish == True:
             list.append(label_list['lab_cancel_ge_finish'])
         if len(list):
-            redis_key = 'user_tag_%s' % user_id
+            redis_key = 'user_tag_%s' % phone_number
             redis_conn.set(redis_key, json.dumps(list), ex=expire_time)
-            logging.info('user_id:%s, lab_list:%s, key:%s' % (user_id, json.dumps(list), redis_key))
+            logging.info('user_id:%s, lab_list:%s, key:%s, phone_number:%s' % (user_id, json.dumps(list), redis_key, phone_number))
     cursor.close()
 
 user_label_export = PythonOperator(
