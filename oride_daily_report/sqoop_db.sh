@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-sqoop import --connect "jdbc:mysql://$1/$2?tinyInt1isBit=false&useUnicode=true&characterEncoding=utf8" \
+sqoop import "-Dorg.apache.sqoop.splitter.allow_text_splitter=true" \
+--connect "jdbc:mysql://$1/$2?tinyInt1isBit=false&useUnicode=true&characterEncoding=utf8" \
 --username $3 \
 --password $4 \
 --table $5 \

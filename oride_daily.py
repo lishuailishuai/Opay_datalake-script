@@ -769,7 +769,8 @@ create_oride_driver_daily_summary = HiveOperator(
             order_finished_num int,
             order_cancel_num int,
             duration_total int,
-            distance_total int
+            distance_total int,
+            peak_time_order_num int
         )
         PARTITIONED BY (
             dt STRING
@@ -804,7 +805,8 @@ insert_oride_driver_daily_summary  = HiveOperator(
                 count(id) as order_num,
                 sum(if(status=6 and cancel_role=2, 1, 0)) as order_cancel_num,
                 sum(if(status=5, duration, 0)) as duration_total,
-                sum(if(status=5, distance, 0)) as distance_total
+                sum(if(status=5, distance, 0)) as distance_total,
+                sum(if(status=5 and cast(from_unixtime(create_time,'HH') as int)>=16 and cast(from_unixtime(create_time,'HH') as int)<20, 1, 0)) as peak_time_order_num
             from
                 oride_db.data_order
             where
@@ -826,7 +828,8 @@ insert_oride_driver_daily_summary  = HiveOperator(
             nvl(od.order_finished_num,0),
             nvl(od.order_cancel_num,0),
             nvl(od.duration_total,0),
-            nvl(od.distance_total,0)
+            nvl(od.distance_total,0),
+            nvl(od.peak_time_order_num, 0)
         FROM
             oride_db.data_driver dd
             left join online_time ot on ot.driver_id=dd.id
