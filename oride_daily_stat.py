@@ -37,6 +37,8 @@ import_table_test_task = PythonOperator(
     op_kwargs={"env" : "test"}
 )
 
+import_table_test_task.set_upstream(import_table_task)
+
 query_data_task = PythonOperator(
     task_id='query_data',
     python_callable=query_data,
@@ -44,7 +46,7 @@ query_data_task = PythonOperator(
     provide_context=True,
 )
 
-query_data_task.set_upstream(import_table_task)
+query_data_task.set_upstream(import_table_test_task)
 
 write_email_task = PythonOperator(
     task_id='write_email',

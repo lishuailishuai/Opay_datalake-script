@@ -13,6 +13,9 @@ body1 = "You have an order that hasn’t been paid for, please login on the app 
 title2 = "Reward Interception"
 body2 = "You have a reward which has been intercepted by our control department, it will be deducted during your next payment. For questions, please contact the customer service."
 
+driver_action = "oride://ride.driver/moneyManager"
+user_action = "ride://ride.passenger"
+
 not_pay_hql = '''
 select id from oride_db.{table_name} where status = 4 and dt = '{dt}'
 '''
@@ -23,7 +26,8 @@ select distinct(user_id) from data_order where status = 4 and id in ({ids})
 abnormal_sql = """
 select distinct(a1.driver_id) from
 (select order_id, driver_id from `oride_data`.`data_driver_recharge_records`
-where amount < 0) a1
+where amount < 0
+and created_at >= unix_timestamp('{dt} 00:00:00')) a1
 join
 (select order_id, driver_id from `oride_data`.`data_abnormal_order`
 where is_revoked = 0) a2
@@ -45,9 +49,11 @@ def send_push(env, role, role_id, lagos_time, push_type=""):
     if push_type == "deduct":
         title = title2
         body = body2
+        action = driver_action
     elif push_type == "not_pay":
         title = title1
         body = body1
+        action = user_action
     else:
         return
     url = test_url
@@ -57,6 +63,7 @@ def send_push(env, role, role_id, lagos_time, push_type=""):
         "role": role,
         "role_id": role_id,
         "title": title,
+        "action": action,
         "body": body,
         "delay": time_gap if time_gap > 0 else 0,
     }
@@ -101,7 +108,7 @@ def abnormal_push(**op_kwargs):
     if env == 'test':
         db_name += '_test'
     mysql_cursor = get_db_conn(db_name).cursor()
-    mysql_cursor.execute(abnormal_sql)
+    mysql_cursor.execute(abnormal_sql.format(dt=dt))
     abnormal_drivers = mysql_cursor.fetchall()
     abnormal_drivers = [x[0] for x in abnormal_drivers]
     print("abnormal order related drivers: %d" % len(abnormal_drivers))

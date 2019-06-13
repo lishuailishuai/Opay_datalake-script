@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import os
 from utils.connection_helper import get_hive_cursor, get_db_conf
+
 file_path = os.path.realpath(__file__)
 tmp_arr = file_path.split("/")
 tmp_arr[-1] = "sqoop_db.sh"
@@ -55,8 +56,16 @@ tables = [
     "data_user_comment",
     "data_user_complaint",
     "data_user_extend",
-    "data_user_recharge"
+    "data_user_recharge",
+
+    "data_user_whitelist",
+    "data_driver_whitelist",
+    "data_user_blacklist",
+    "data_driver_blacklist",
+    "data_abnormal_order",
+    "data_driver_recharge_records"
 ]
+
 
 def import_table(**op_kwargs):
     dt = op_kwargs.get('ds')
@@ -66,7 +75,7 @@ def import_table(**op_kwargs):
     conf_name = "sqoop_db"
     if env == "test":
         conf_name += "_test"
-    host, port, schema, login, password  = get_db_conf(conf_name)
+    host, port, schema, login, password = get_db_conf(conf_name)
     host += ":" + str(port)
     for table in tables:
         print("importing table: %s" % table)
