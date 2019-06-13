@@ -63,7 +63,6 @@ tables = [
     "data_user_blacklist",
     "data_driver_blacklist",
     "data_abnormal_order",
-    "data_driver_recharge_records"
 ]
 
 

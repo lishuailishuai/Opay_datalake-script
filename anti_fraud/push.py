@@ -18,6 +18,10 @@ user_action = "ride://ride.passenger"
 
 not_pay_hql = '''
 select id from oride_db.{table_name} where status = 4 and dt = '{dt}'
+and user_id not in (
+select distinct(user_id) from oride_db.{table_name2}
+where dt = '{dt}' and is_white = 1
+)
 '''
 not_pay_sql = '''
 select distinct(user_id) from data_order where status = 4 and id in ({ids})
@@ -25,12 +29,15 @@ select distinct(user_id) from data_order where status = 4 and id in ({ids})
 
 abnormal_sql = """
 select distinct(a1.driver_id) from
-(select order_id, driver_id from `oride_data`.`data_driver_recharge_records`
-where amount < 0
-and created_at >= unix_timestamp('{dt} 00:00:00')) a1
+(select order_id, driver_id from oride_db.{table_record}
+where dt = '{dt}' and amount < 0
+and created_at >= unix_timestamp('{dt} 00:00:00')
+and driver_id not in (
+select distinct(driver_id) as did from oride_db.{table_white} where dt = '{dt}' and is_white=1)
+) a1
 join
-(select order_id, driver_id from `oride_data`.`data_abnormal_order`
-where is_revoked = 0) a2
+(select order_id, driver_id from oride_db.{table_abnormal}
+where dt = '{dt}' and is_revoked = 0) a2
 on a1.order_id = a2.order_id
 """
 
@@ -77,9 +84,13 @@ def not_pay_push(**op_kwargs):
     lagos_9_clock_timestamp = get_lagos_timestamp(dt)
     cursor = get_hive_cursor()
     table_name = 'data_order'
+    table_name2 = 'data_user_whitelist'
     if env == 'test':
         table_name += '_dev'
-    cursor.execute(not_pay_hql.format(table_name=table_name, dt=dt))
+        table_name2 += '_dev'
+    cursor.execute("msck repair table oride_db.%s" % table_name)
+    cursor.execute("msck repair table oride_db.%s" % table_name2)
+    cursor.execute(not_pay_hql.format(table_name=table_name, table_name2=table_name2, dt=dt))
     res = [x[0] for x in cursor.fetchall()]
     print("not pay order ids: %d" % len(res))
     step = 100
@@ -104,13 +115,19 @@ def abnormal_push(**op_kwargs):
     dt = op_kwargs.get('ds')
     env = op_kwargs.get('env', 'prod')
     lagos_9_clock_timestamp = get_lagos_timestamp(dt)
-    db_name = 'sqoop_db'
+    cursor = get_hive_cursor()
+    table_record = 'data_driver_recharge_records'
+    table_abnormal = 'data_abnormal_order'
+    table_white = 'data_driver_whitelist'
     if env == 'test':
-        db_name += '_test'
-    mysql_cursor = get_db_conn(db_name).cursor()
-    mysql_cursor.execute(abnormal_sql.format(dt=dt))
-    abnormal_drivers = mysql_cursor.fetchall()
-    abnormal_drivers = [x[0] for x in abnormal_drivers]
+        table_record += '_dev'
+        table_abnormal += '_dev'
+        table_white += '_dev'
+    cursor.execute("msck repair table oride_db.%s" % table_record)
+    cursor.execute("msck repair table oride_db.%s" % table_abnormal)
+    cursor.execute("msck repair table oride_db.%s" % table_white)
+    cursor.execute(abnormal_sql.format(table_record=table_record, table_white=table_white, table_abnormal=table_abnormal,dt=dt))
+    abnormal_drivers = [x[0] for x in cursor.fetchall()]
     print("abnormal order related drivers: %d" % len(abnormal_drivers))
     for did in abnormal_drivers:
         send_push(env, 2, did, lagos_9_clock_timestamp, "deduct")
