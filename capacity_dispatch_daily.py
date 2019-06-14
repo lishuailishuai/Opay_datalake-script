@@ -6,15 +6,15 @@ from airflow.utils.email import send_email
 
 args = {
     'owner': 'root',
-    'start_date': datetime(2019, 5, 27),
-    'depends_on_past': True,
+    'start_date': datetime(2019, 6, 14),
+    'depends_on_past': False,
     'retries': 1,
     'retry_delay': timedelta(minutes=5),
 }
 
 dag = airflow.DAG(
     'capacity_dispatch_daily',
-    schedule_interval="50 01 * * *",
+    schedule_interval="30 0 * * *",
     default_args=args)
 
 import_log_file = BashOperator(
@@ -230,7 +230,7 @@ def send_csv_file(ds_nodash, **kwargs):
         'song.zhang@opay-inc.com',
 
     ]
-    email_subject = 'oride_order_data_{dt}'.format(dt=ds_nodash)
+    email_subject = 'capacity_dispatch_daily_{dt}'.format(dt=ds_nodash)
     send_email(email_to, email_subject, '', file_list)
 
 send_file_email = PythonOperator(
