@@ -12,6 +12,7 @@ from airflow.models import Variable
 import requests
 import os
 
+
 args = {
     'owner': 'root',
     'start_date': datetime(2019, 5, 20),
@@ -860,6 +861,8 @@ refresh_impala = ImpalaOperator(
     priority_weight=50,
     dag=dag
 )
+
+
 
 create_oride_driver_overview >> insert_oride_driver_overview
 create_oride_user_overview >> insert_oride_user_overview
