@@ -49,7 +49,7 @@ mail_msg_tail = '''
 '''
 
 repair_table_query = '''
-MSCK REPAIR TABLE oride_source.%s
+MSCK REPAIR TABLE oride_db.%s
 '''
 
 query1 = '''
@@ -60,7 +60,7 @@ id,
 user_id,
 driver_id,
 price
-from oride_source.db_data_order
+from oride_db.data_order
 where dt = "{dt}" and status = 4)a
 left join
 (select 
@@ -76,7 +76,7 @@ case when status='0' then '支付中'
 when status='1' then '成功'
 when status='2' then '失败'
 end as zfstatus
-from oride_source.db_data_order_payment
+from oride_db.data_order_payment
 where dt="{dt}")as b
 on a.id=b.id												
 '''
@@ -142,7 +142,7 @@ from_unixtime(cancel_time) as cancel_time,
 cancel_type,
 status,
 dt
-from oride_source.db_data_order
+from oride_db.data_order
 where dt ="{dt}" and take_time between unix_timestamp('{dt} 00:00:00')and unix_timestamp('{dt} 23:59:59')and status='4')a
 left join 
 (select 
@@ -171,7 +171,7 @@ end as zfstatus,
 modify_time,
 from_unixtime(create_time) as create_time,
 dt 
-from oride_source.db_data_order_payment
+from oride_db.data_order_payment
 where dt="{dt}" and status<>'1')as b
 on a.id=b.id
 """
@@ -256,7 +256,7 @@ def check_bad_debts_data(**op_kwargs):
     print(dt)
     cursor = get_hive_cursor()
     cursor.execute("set hive.execution.engine=tez")
-    repair_table_names = ["db_data_order", "db_data_order_payment"]
+    repair_table_names = ["data_order", "data_order_payment"]
     for name in repair_table_names:
         print(name)
         cursor.execute(repair_table_query % name)
