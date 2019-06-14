@@ -107,6 +107,7 @@ def not_pay_push(**op_kwargs):
         for rec in data:
             uids.add(rec[0])
     print("not pay user ids: %d" % len(uids))
+    print(uids)
     for uid in uids:
         send_push(env, 1, uid, lagos_9_clock_timestamp, "not_pay")
 
@@ -129,5 +130,6 @@ def abnormal_push(**op_kwargs):
     cursor.execute(abnormal_sql.format(table_record=table_record, table_white=table_white, table_abnormal=table_abnormal,dt=dt))
     abnormal_drivers = [x[0] for x in cursor.fetchall()]
     print("abnormal order related drivers: %d" % len(abnormal_drivers))
+    print(abnormal_drivers)
     for did in abnormal_drivers:
         send_push(env, 2, did, lagos_9_clock_timestamp, "deduct")
