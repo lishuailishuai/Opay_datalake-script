@@ -206,6 +206,21 @@ EOF
 EOF
 `
         hive -e "set hive.cli.print.header=true; ${daily_order_sql}" | sed 's/[\t]/,/g'  > ${log_path}/tmp/daily_order_${dt}.csv
+
+        driver_push_avg_dis_sql=`cat << EOF
+        select
+            dt,
+            count(distinct(order_id))/count(distinct(driver_id))
+        from
+            test_db.push_message
+        where
+            dt='${dt}'
+        group by dt
+        order by dt
+
+EOF
+`
+        hive -e "set hive.cli.print.header=true; ${driver_push_avg_dis_sql}" | sed 's/[\t]/,/g'  > ${log_path}/tmp/driver_push_avg_dis_${dt}.csv
     ''',
     dag=dag,
 )
@@ -217,7 +232,8 @@ def send_csv_file(ds_nodash, **kwargs):
         'driver_finish_order',
         'driver_push',
         'order_assgin',
-        'order_no_found_driver'
+        'order_no_found_driver',
+        'driver_push_avg_dis'
     ]
     file_list = []
     for name in name_list:
