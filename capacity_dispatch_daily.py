@@ -39,24 +39,24 @@ create_csv_file = BashOperator(
 
         # 圈选不到司机
         cd ${log_path}/${dt}
-        grep -R "no dax found for order" * | awk '{split($13,a,"("); print $3" "substr($4,0,8)","a[1]}' > ${log_path}/tmp/order_no_found_driver_${dt}.log
+        grep -R "no dax found for order" * | awk '{split($12,a,"("); print $2" "substr($3,0,8)","a[1]}' > ${log_path}/tmp/order_no_found_driver_${dt}.log
         hive -e "LOAD DATA LOCAL INPATH '${log_path}/tmp/order_no_found_driver_${dt}.log' OVERWRITE INTO TABLE test_db.order_no_found_driver PARTITION (dt='${dt}');"
 
         # 圈选到司机
-        grep -R "found dax count" * | awk '{split($12,a,"("); print $3" "substr($4,0,8)","$9","a[1]}' > ${log_path}/tmp/order_found_count_${dt}.log
+        grep -R "found dax count" * | awk '{split($11,a,"("); print $2" "substr($3,0,8)","$8","a[1]}' > ${log_path}/tmp/order_found_count_${dt}.log
         hive -e "LOAD DATA LOCAL INPATH '${log_path}/tmp/order_found_count_${dt}.log' OVERWRITE INTO TABLE test_db.order_found_count PARTITION (dt='${dt}');"
 
         # 过滤司机
-        grep -R "dax filtered because" * | awk '{if($9 != "[not_in_service_mode]|"){split($12,a,"(");split($15,b,"("); print $3" "substr($4,0,8)","$9","a[1]","b[1]} }' > ${log_path}/tmp/order_filtered_because_${dt}.log
-        grep -R "dax filtered because" * | awk '{if($9 == "[not_in_service_mode]|"){split($11,a,"(");split($14,b,"("); print $3" "substr($4,0,8)","$9","a[1]","b[1]} }' >> ${log_path}/tmp/order_filtered_because_${dt}.log
+        grep -R "dax filtered because" * | awk '{if($8 != "[not_in_service_mode]|"){split($11,a,"(");split($14,b,"("); print $2" "substr($3,0,8)","$8","a[1]","b[1]} }' > ${log_path}/tmp/order_filtered_because_${dt}.log
+        grep -R "dax filtered because" * | awk '{if($8 == "[not_in_service_mode]|"){split($10,a,"(");split($13,b,"("); print $2" "substr($3,0,8)","$8","a[1]","b[1]} }' >> ${log_path}/tmp/order_filtered_because_${dt}.log
         hive -e "LOAD DATA LOCAL INPATH '${log_path}/tmp/order_filtered_because_${dt}.log' OVERWRITE INTO TABLE test_db.order_filtered_because PARTITION (dt='${dt}');"
 
         # 播报司机
-        grep -R "order assign" *  | awk -F '|' '{n=split($3,nn,"} {");split($1,a," ");match($2, /{ID:([0-9]+)/, b);print a[3]" "substr(a[4],0,8)","b[1]","n}' > ${log_path}/tmp/order_assign_${dt}.log
+        grep -R "order assign" *  | awk -F '|' '{n=split($2,nn,"} {");split($1,a," ");match($2, /{ID:([0-9]+)/, b);print a[2]" "substr(a[3],0,8)","b[1]","n}' > ${log_path}/tmp/order_assign_${dt}.log
         hive -e "LOAD DATA LOCAL INPATH '${log_path}/tmp/order_assign_${dt}.log' OVERWRITE INTO TABLE test_db.order_assign PARTITION (dt='${dt}');"
 
         # 推单日志
-        cat * | grep "push message"  | grep "/driver/order" | awk '{match($0, /.+role: 2:([0-9]+).+"order":{"id":([0-9]+)./,a);print $3" "substr($4,0,8)"\t"a[1]"\t"a[2]}' > ${log_path}/tmp/push_message_${dt}.log
+        cat * | grep "push message"  | grep "/driver/order" | awk '{match($0, /.+role: 2:([0-9]+).+"order":{"id":([0-9]+)./,a);print $2" "substr($3,0,8)"\t"a[1]"\t"a[2]}' > ${log_path}/tmp/push_message_${dt}.log
 
         # load 到hive 过程
         hive -e "load data local inpath '${log_path}/tmp/push_message_${dt}.log' overwrite into table test_db.push_message partition(dt='${dt}');"
