@@ -14,7 +14,7 @@ args = {
 
 dag = airflow.DAG(
     'capacity_dispatch_daily',
-    schedule_interval="30 0 * * *",
+    schedule_interval="30 02 * * *",
     default_args=args)
 
 import_log_file = BashOperator(
