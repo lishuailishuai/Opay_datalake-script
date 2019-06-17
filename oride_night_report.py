@@ -18,7 +18,7 @@ args = {
 
 dag = airflow.DAG(
     'oride_night_report',
-    schedule_interval="0 10 * * *",
+    schedule_interval="0 22 * * *",
     default_args=args)
 
 table_list = [
