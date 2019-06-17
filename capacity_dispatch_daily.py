@@ -62,8 +62,107 @@ create_csv_file = BashOperator(
         hive -e "load data local inpath '${log_path}/tmp/push_message_${dt}.log' overwrite into table test_db.push_message partition(dt='${dt}');"
 
         # 导出数据到文件
-        # 圈选不到司机
-        order_no_found_driver_sql=`cat << EOF
+        # 所有核心指标
+        summary_metric_sql=`cat << EOF
+                    
+
+        select 
+        tt.dt,
+        tt.counts report_times,
+        oo.counts/tt.counts not_found_driver_rate,
+        (tt.counts - tt.push_driver_num)/tt.counts filter_driver_rate,
+        tt.push_driver_num/tt.counts push_driver_rate,
+        tt.accept_driver_time_num/tt.counts accept_driver_time_rate,
+
+        tt.not_idle_rate not_idle_rate,
+        tt.assigned_another_job_rate assigned_another_job_rate,
+        tt.assigned_this_order_rate assigned_this_order_rate,
+        tt.not_in_service_mode_rate not_in_service_mode_rate,
+        
+        
+        pp.push_avg push_avg,
+        pp.push_order_avg push_order_avg,
+        tt.order_push_driver_avg order_push_driver_avg,
+        tt.accept_driver_time_avg accept_driver_time_avg,
+        tt.accept_driver_time_avg/pp.push_avg obey_rate
+
+        from 
+        (
+            select 
+            t.dt dt,
+            count(1) counts,
+            count(if(assign_driver_num is not null,assign_driver_num,null)) push_driver_num,
+            count(if(driver_id = 0,null,driver_id)) accept_driver_time_num,
+            sum(not_idle_num)/sum(assigned_another_job_num + not_in_service_mode_num + not_idle_num + assigned_this_order_before) not_idle_rate,
+            sum(assigned_another_job_num)/sum(assigned_another_job_num + not_in_service_mode_num + not_idle_num + assigned_this_order_before) assigned_another_job_rate,
+            sum(assigned_this_order_before)/sum(assigned_another_job_num + not_in_service_mode_num + not_idle_num + assigned_this_order_before) assigned_this_order_rate,
+            sum(if(assign_driver_num is not null,assign_driver_num,null))/count(if(assign_driver_num is not null,assign_driver_num,null)) order_push_driver_avg,
+            sum(not_in_service_mode_num)/sum(assigned_another_job_num + not_in_service_mode_num + not_idle_num + assigned_this_order_before) not_in_service_mode_rate,
+            count(if(driver_id = 0,null,driver_id))/count(distinct(if(driver_id = 0,null,driver_id))) accept_driver_time_avg
+            
+            from
+            (
+            select
+                ofc.dt,
+                ofc.order_id,
+                ofc.rank_num,
+                max(ofc.count_str) as count_str,
+                sum(if(ofb.because='[assigned_another_job]', 1, 0)) as assigned_another_job_num,
+                sum(if(ofb.because='[not_in_service_mode]|', 1, 0)) as not_in_service_mode_num,
+                sum(if(ofb.because='[not_idle]', 1, 0)) as not_idle_num,
+                sum(if(ofb.because='[assigned_this_order_before]', 1, 0)) as assigned_this_order_before,
+                max(oa.driver_num) as assign_driver_num,
+                max(unix_timestamp(oa.timestr, 'yyyy-MM-dd HH:mm:ss')) as assign_time,
+                if(max(ofc.driver_id) is null,0,max(ofc.driver_id)) as driver_id,
+                max(ofc.take_time) as take_time
+                from
+                (
+                    select
+                        a.dt,
+                        a.order_id,
+                        a.count_str,
+                        dense_rank() over(partition by order_id order by unix_timestamp(timestr, 'yyyy-MM-dd HH:mm:ss') asc ) as rank_num,
+                        rank() over(partition by order_id order by unix_timestamp(timestr, 'yyyy-MM-dd HH:mm:ss') desc ) as top_rank,
+                        if (rank() over(partition by order_id order by unix_timestamp(timestr, 'yyyy-MM-dd HH:mm:ss') desc ) =1, b.driver_id, 0) as driver_id,
+                        if (rank() over(partition by order_id order by unix_timestamp(timestr, 'yyyy-MM-dd HH:mm:ss') desc ) =1, b.take_time, 0) as take_time,
+                        a.timestr
+                    from test_db.order_found_count a
+                    left join oride_db.data_order b ON b.id=a.order_id and b.dt='{{ ds }}'
+                    where a.dt='${dt}'
+                ) ofc
+                left join
+                (
+                    select
+                        dt,
+                        order_id,
+                        because,
+                        timestr
+                    from test_db.order_filtered_because
+                ) ofb on ofb.dt=ofc.dt and ofb.order_id=ofc.order_id and ofb.timestr=ofc.timestr
+                left join
+                (
+                select
+                        dt,
+                        timestr,
+                        order_id,
+                        driver_num
+                    from
+                        test_db.order_assign
+                ) oa on oa.dt=ofc.dt and oa.order_id=ofc.order_id and oa.timestr=ofc.timestr
+                where ofc.dt='${dt}'
+                group by
+                ofc.dt,
+                ofc.order_id,
+                ofc.rank_num
+            ) t
+            group by t.dt
+        ) tt
+        left join (
+            select 
+            o.dt dt,
+            count(1) counts
+            from
+            (
             select
                 dt,
                 order_id,
@@ -72,124 +171,34 @@ create_csv_file = BashOperator(
                 test_db.order_no_found_driver
             where
                 dt='${dt}'
-EOF
-`
-        hive -e "set hive.cli.print.header=true; ${order_no_found_driver_sql}" | sed 's/[\t]/,/g'  > ${log_path}/tmp/order_no_found_driver_${dt}.csv
-
-        # 轮播数据
-        order_assgin_sql=`cat << EOF
-           select
-              ofc.dt,
-              ofc.order_id,
-              ofc.rank_num,
-              max(ofc.count_str) as count_str,
-              sum(if(ofb.because='[assigned_another_job]', 1, 0)) as assigned_another_job_num,
-              sum(if(ofb.because='[not_in_service_mode]|', 1, 0)) as not_in_service_mode_num,
-              sum(if(ofb.because='[not_idle]', 1, 0)) as not_idle_num,
-              sum(if(ofb.because='[assigned_this_order_before]', 1, 0)) as assigned_this_order_before,
-              max(oa.driver_num) as assign_driver_num,
-              max(unix_timestamp(oa.timestr, 'yyyy-MM-dd HH:mm:ss')) as assign_time,
-              max(ofc.driver_id) as driver_id,
-              max(ofc.take_time) as take_time
-            from
+            ) o 
+            group by o.dt
+        ) oo on tt.dt = oo.dt
+        left join (
+            select 
+            p.dt dt,
+            sum(order_num)/count(1) push_avg, 
+            sum(order_num_dis)/count(1) push_order_avg
+            from 
             (
                 select
-                    a.dt,
-                    a.order_id,
-                    a.count_str,
-                    dense_rank() over(partition by order_id order by unix_timestamp(timestr, 'yyyy-MM-dd HH:mm:ss') asc ) as rank_num,
-                    rank() over(partition by order_id order by unix_timestamp(timestr, 'yyyy-MM-dd HH:mm:ss') desc ) as top_rank,
-                    if (rank() over(partition by order_id order by unix_timestamp(timestr, 'yyyy-MM-dd HH:mm:ss') desc ) =1, b.driver_id, 0) as driver_id,
-                    if (rank() over(partition by order_id order by unix_timestamp(timestr, 'yyyy-MM-dd HH:mm:ss') desc ) =1, b.take_time, 0) as take_time,
-                    a.timestr
-                from test_db.order_found_count a
-                left join oride_db.data_order b ON b.id=a.order_id and b.dt='{{ ds }}'
-                where a.dt='${dt}'
-            ) ofc
-            left join
-            (
-                select
-                    dt,
-                    order_id,
-                    because,
-                    timestr
-                from test_db.order_filtered_because
-            ) ofb on ofb.dt=ofc.dt and ofb.order_id=ofc.order_id and ofb.timestr=ofc.timestr
-            left join
-            (
-               select
-                    dt,
-                    timestr,
-                    order_id,
-                    driver_num
+                    dt dt,
+                    driver_id,
+                    count(order_id) order_num,
+                    count(distinct(order_id)) order_num_dis
                 from
-                    test_db.order_assign
-            ) oa on oa.dt=ofc.dt and oa.order_id=ofc.order_id and oa.timestr=ofc.timestr
-            where ofc.dt='${dt}'
-            group by
-              ofc.dt,
-              ofc.order_id,
-              ofc.rank_num
+                    test_db.push_message
+                where dt = '${dt}'
+                group by dt,driver_id
+            ) p
+            group by p.dt
+        ) pp on tt.dt = pp.dt
+;
+            
+            
 EOF
 `
-        hive -e "set hive.cli.print.header=true; ${order_assgin_sql}" | sed 's/[\t]/,/g'  > ${log_path}/tmp/order_assgin_${dt}.csv
-
-        # 平均抢单时长
-        avg_take_time_sql=`cat << EOF
-        select
-         from_unixtime(o.create_time,'yyyy-MM-dd'),
-         o.driver_id,
-        sum(if(o.take_time >0,o.take_time - unix_timestamp(t.max_timestr),0))/count(if(o.take_time >0,o.id,null)),
-        sum(if(o.take_time >0,o.take_time - unix_timestamp(t.min_timestr),0))/count(if(o.take_time >0,o.id,null))
-        from
-        (select id,driver_id,status,take_time,create_time
-        from
-        oride_db.data_order
-        where dt = '{{ ds }}' and from_unixtime(create_time,'yyyy-MM-dd') between '{{macros.ds_add(ds, -2)}}' and '{{ ds }}'
-        ) o join
-        (
-        select order_id ,driver_id,max(timestr) max_timestr,min(timestr) min_timestr
-        from
-        test_db.push_message
-        where dt between '{{macros.ds_format(macros.ds_add(ds, -2), "%Y-%m-%d", "%Y%m%d")}}' and '${dt}'
-        group by order_id ,driver_id
-        ) t on o.id = t.order_id and o.driver_id = t.driver_id
-        group by from_unixtime(o.create_time,'yyyy-MM-dd'),o.driver_id;
-EOF
-`
-        hive -e "set hive.cli.print.header=true; ${avg_take_time_sql}" | sed 's/[\t]/,/g'  > ${log_path}/tmp/avg_take_time_${dt}.csv
-
-        # 司机被推单数据
-        driver_push_sql=`cat << EOF
-        select
-            to_date(timestr),
-            driver_id,
-            count(order_id) order_num,
-            count(distinct(order_id)) order_num_dis
-        from
-            test_db.push_message
-        where dt = '${dt}'
-        group by to_date(timestr),driver_id
-EOF
-`
-        hive -e "set hive.cli.print.header=true; ${driver_push_sql}" | sed 's/[\t]/,/g'  > ${log_path}/tmp/driver_push_${dt}.csv
-
-        # 司机抢单量，完成量
-        driver_finish_order_sql=`cat << EOF
-        select
-            from_unixtime(create_time,'yyyy-MM-dd') as create_dt,
-            driver_id,
-            count(if(driver_id is not null,id,null)),
-            count(if(status = 4 or status = 5,id,null))
-        from
-            oride_db.data_order
-        where
-            dt = '{{ ds }}' and from_unixtime(create_time,'yyyy-MM-dd') between '{{ macros.ds_add(ds, -2) }}' and '{{ ds }}'
-        group by from_unixtime(create_time,'yyyy-MM-dd'),driver_id
-        order by create_dt desc,driver_id
-EOF
-`
-        hive -e "set hive.cli.print.header=true; ${driver_finish_order_sql}" | sed 's/[\t]/,/g'  > ${log_path}/tmp/driver_finish_order_${dt}.csv
+        hive -e "set hive.cli.print.header=true; ${summary_metric_sql}" | sed 's/[\t]/,/g'  > ${log_path}/tmp/summary_metric_${dt}.csv
 
         # daily下单量、完单量等信息
         daily_order_sql=`cat << EOF
@@ -207,33 +216,14 @@ EOF
 `
         hive -e "set hive.cli.print.header=true; ${daily_order_sql}" | sed 's/[\t]/,/g'  > ${log_path}/tmp/daily_order_${dt}.csv
 
-        driver_push_avg_dis_sql=`cat << EOF
-        select
-            dt,
-            count(distinct(order_id))/count(distinct(driver_id))
-        from
-            test_db.push_message
-        where
-            dt='${dt}'
-        group by dt
-        order by dt
-
-EOF
-`
-        hive -e "set hive.cli.print.header=true; ${driver_push_avg_dis_sql}" | sed 's/[\t]/,/g'  > ${log_path}/tmp/driver_push_avg_dis_${dt}.csv
     ''',
     dag=dag,
 )
 
 def send_csv_file(ds_nodash, **kwargs):
     name_list = [
-        'avg_take_time',
-        'daily_order',
-        'driver_finish_order',
-        'driver_push',
-        'order_assgin',
-        'order_no_found_driver',
-        'driver_push_avg_dis'
+        'summary_metric',
+        'daily_order'
     ]
     file_list = []
     for name in name_list:
@@ -244,7 +234,6 @@ def send_csv_file(ds_nodash, **kwargs):
         'zhenqian.zhang@opay-inc.com',
         'nan.li@opay-inc.com',
         'song.zhang@opay-inc.com',
-
     ]
     email_subject = 'capacity_dispatch_daily_{dt}'.format(dt=ds_nodash)
     send_email(email_to, email_subject, '', file_list)
