@@ -126,7 +126,8 @@ promoter_detail_to_msyql = HiveToMySqlTransfer(
                 0 as register_time,
                 get_json_object(event_value, '$.bind_time') as bind_time,
                 {{ ds_nodash }},
-                {{ execution_date.hour}}
+                {{ execution_date.hour}},
+                ip
             FROM
                 oride_bi.cheating_detection_detail
             WHERE
