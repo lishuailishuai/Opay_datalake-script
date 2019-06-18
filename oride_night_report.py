@@ -10,7 +10,7 @@ from airflow.models import Variable
 
 args = {
     'owner': 'root',
-    'start_date': datetime(2019, 6, 16),
+    'start_date': datetime(2019, 6, 17),
     'depends_on_past': False,
     'retries': 1,
     'retry_delay': timedelta(minutes=5),
@@ -18,7 +18,7 @@ args = {
 
 dag = airflow.DAG(
     'oride_night_report',
-    schedule_interval="0 22 * * *",
+    schedule_interval="0 23 * * *",
     default_args=args)
 
 table_list = [
