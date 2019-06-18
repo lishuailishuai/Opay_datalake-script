@@ -490,7 +490,8 @@ create_oride_driver_daily_summary = HiveOperator(
             order_cancel_num int,
             duration_total int,
             distance_total int,
-            peak_time_order_num int
+            peak_time_order_num int,
+            app_version string
         )
         PARTITIONED BY (
             dt STRING
@@ -517,6 +518,16 @@ insert_oride_driver_daily_summary  = HiveOperator(
                 sum(score) as comment_scores
             from
                 oride_db.data_driver_comment where dt='{{ ds }}' and from_unixtime(create_time,'yyyy-MM-dd')='{{ ds }}' group by driver_id
+        ),
+        driver_app_version as (
+            select
+                user_id as driver_id,
+                MAX(struct(`timestamp`, app_version)).col2 as app_version
+            from
+                oride_bi.oride_client_event_detail
+            where
+                app_name='ORide Driver' and dt='{{ ds }}' and event_name='active'
+            group by user_id
         ),
         order_data as (
             select
@@ -549,18 +560,21 @@ insert_oride_driver_daily_summary  = HiveOperator(
             nvl(od.order_cancel_num,0),
             nvl(od.duration_total,0),
             nvl(od.distance_total,0),
-            nvl(od.peak_time_order_num, 0)
+            nvl(od.peak_time_order_num, 0),
+            dav.app_version
         FROM
             oride_db.data_driver dd
             left join online_time ot on ot.driver_id=dd.id
             left join driver_comment dc on dc.driver_id=dd.id
             left join order_data od on od.driver_id=dd.id
             left join oride_db.data_driver_group ddg on ddg.id=dd.group_id AND ddg.dt=dd.dt
+            left join driver_app_version dav on dav.driver_id=dd.id
         WHERE
             dd.dt='{{ ds }}'
     """,
     schema='dashboard',
     dag=dag)
+
 
 refresh_impala = ImpalaOperator(
     task_id = 'refresh_impala',
