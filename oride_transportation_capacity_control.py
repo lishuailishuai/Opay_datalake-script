@@ -2,7 +2,7 @@ import airflow
 from datetime import datetime, timedelta
 from airflow.operators.hive_operator import HiveOperator
 from airflow.operators.impala_plugin import ImpalaOperator
-
+from airflow.operators.hive_to_mysql import HiveToMySqlTransfer
 
 args = {
     'owner': 'root',
@@ -54,7 +54,7 @@ insert_oride_transportation_capacity_control = HiveOperator(
         FROM
            oride_transportation_capacity_control
         WHERE
-            dt != '{{ ds }}' AND hour='{{ execution_date.strftime("%H") }}';
+            dt != '{{ ds }}' AND hour !='{{ execution_date.strftime("%H") }}';
         -- 插入数据
         with order_data as (
             select
@@ -114,6 +114,20 @@ insert_oride_transportation_capacity_control = HiveOperator(
     schema='dashboard',
     dag=dag)
 
+export_to_mysql = HiveToMySqlTransfer(
+    task_id='export_to_mysql',
+    sql="""
+        SELECT
+            *
+        FROM
+           dashboard.oride_transportation_capacity_control
+        WHERE
+            dt = '{{ ds }}' AND hour='{{ execution_date.strftime("%H") }}'
+        """,
+    mysql_conn_id='mysql_bi',
+    mysql_table='oride_transportation_capacity_control',
+    dag=dag)
+
 refresh_impala = ImpalaOperator(
     task_id = 'refresh_impala',
     hql="""\
@@ -124,4 +138,7 @@ refresh_impala = ImpalaOperator(
     dag=dag
 )
 
-add_partitions >> create_oride_transportation_capacity_control >> insert_oride_transportation_capacity_control >> refresh_impala
+add_partitions >> insert_oride_transportation_capacity_control
+create_oride_transportation_capacity_control >> insert_oride_transportation_capacity_control
+insert_oride_transportation_capacity_control >> refresh_impala
+insert_oride_transportation_capacity_control >> export_to_mysql
