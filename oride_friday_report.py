@@ -60,9 +60,7 @@ create_csv_file = BashOperator(
                 count(distinct(if(status = 4 or status = 5,driver_id,null))) on_ride_driver_num,
                 count(if(status = 4 or status = 5,id,null))/count(distinct(if(status = 4 or status = 5,driver_id,null))) on_ride_driver_avg,
                 count(distinct(if(status = 4 or status = 5,user_id,null))) on_ride_user_num,
-                sum(if(take_time is not null,take_time - create_time,0)),
-                count(if(driver_id is not null,id,null)),
-                sum(if(take_time <> 0,take_time - create_time,0))/count(if(driver_id is not null,id,null)) take_time_avg
+                sum(if(take_time <> 0,take_time - create_time,0))/count(if(driver_id > 0,id,null)) take_time_avg
                 from oride_db.data_order where dt = '${dt}'
                 group by from_unixtime(create_time,'yyyy-MM-dd')
             ) o on u.dt = o.dt
