@@ -217,7 +217,7 @@ def send_report_email(tomorrow_ds, **kwargs):
             pickup_time_avg=round(total_pickup_time/pickup_num)
         )
         # send mail
-        email_subject = 'oride晚十点数据快报_{}'.format(tomorrow_ds)
+        email_subject = 'oride晚十一点数据快报_{}'.format(tomorrow_ds)
         send_email(Variable.get("oride_night_report_receivers").split(), email_subject, html, mime_charset='utf-8')
         cursor.close()
         return
