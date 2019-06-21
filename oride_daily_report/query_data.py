@@ -148,13 +148,6 @@ on `order`.driver_id = driver.id
 query7 = '''
 select sum(if(action="bubble",1,0)) from oride_source.user_action where dt="{dt}"
 '''
-# online_driver_num
-query8 = '''
-select count(distinct driverid) as online_num from (
-select driverid, action from oride_source.driver_action where dt="{dt}" and action in
- ("taxi_accept", "login_success", "outset_show",
- "pay_review", "pay_successful", "review_consummation")) as tmp
-'''
 
 query9 = '''
 SELECT 
@@ -163,21 +156,6 @@ FROM oride_db.data_user_extend
 where dt = "{dt}"
 and register_time <= unix_timestamp('{dt} 23:59:59')
 '''
-
-query_online_drivers = '''
-select distinct driverid as online_num from (
-select driverid, action from oride_source.driver_action where dt="{dt}" and action in
- ("taxi_accept", "login_success", "outset_show",
- "pay_review", "pay_successful", "review_consummation")) as tmp
-'''
-
-# the time should be count after the join of drivers
-query_order_time = '''
-select take_time, wait_time, pickup_time, arrive_time
-from oride_db.data_order where dt="{dt}" and 
-create_time BETWEEN unix_timestamp('{dt} 00:00:00') and unix_timestamp('{dt} 23:59:59')
-'''
-
 
 INSERT_SQL = '''
 REPLACE INTO oride_data.daily_report VALUES (
@@ -216,7 +194,7 @@ def query_data(**op_kwargs):
     cursor.execute("set hive.execution.engine=tez")
     repair_table_names = ["data_driver_extend", "data_driver_reward",
                           "data_order", "data_order_payment", "data_user_extend",
-                          "user_action", "driver_action"]
+                          "user_action", "client_event"]
     for name in repair_table_names:
         print(name)
         db_name = "oride_source."
@@ -255,17 +233,12 @@ def query_data(**op_kwargs):
     res7 = map(mapper, list(res7[0]))
     [bubble_num] = res7
     print(7)
-    cursor.execute(query8.format(dt=dt))
-    res8 = cursor.fetchall()
-    res8 = map(mapper, list(res8[0]))
-    [online_driver_num] = res8
-    print(8)
     cursor.execute(query9.format(dt=dt))
     res9 = cursor.fetchall()
     res9 = map(mapper, list(res9[0]))
     [new_passenger_num] = res9
     print(9)
-    (transport_efficiency, avg_order_per_driver) = get_driver_data(dt)
+    (transport_efficiency, avg_order_per_driver, online_driver_num) = get_driver_data(dt)
     print(10)
     data = [
         success_num,

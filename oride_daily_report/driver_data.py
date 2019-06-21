@@ -4,18 +4,15 @@ from utils.connection_helper import get_hive_cursor, get_redis_connection
 driver_online_time_key = "driver:ont:%d:%s"
 driver_order_time_key = "driver:ort:%d:%s"
 
-sql1 = '''
-select distinct(driverid) as driver_id
-from oride_source.driver_action 
-where dt = '{dt}' and
-action in
- ("taxi_accept", "login_success", "outset_show",
- "pay_review", "pay_successful", "review_consummation")
-'''
+sql1 = """
+select distinct(common.user_id) from oride_source.client_event 
+where dt = '{dt}' and 
+`timestamp` BETWEEN unix_timestamp('{dt} 00:00:00') and unix_timestamp('{dt} 23:59:59')
+"""
 
 sql2 = '''
-select substr(from_unixtime(`timestamp`), 12, 2) as `hour`, count(distinct(driverid)) as driver_num
-from oride_source.driver_action 
+select substr(from_unixtime(`timestamp`), 12, 2) as `hour`, count(distinct(common.user_id)) as driver_num
+from oride_source.client_event
 where dt = '{dt}'
 group by substr(from_unixtime(`timestamp`), 12, 2)
 '''
@@ -47,6 +44,8 @@ group by a.driver_id
 def get_driver_data(dt):
     cursor = get_hive_cursor()
     cursor.execute("set hive.execution.engine=tez")
+    cursor.execute("msck repair table oride_source.client_event")
+    cursor.execute("msck repair table oride_db.data_order")
     driver_stats = {}
     cursor.execute(sql2.format(dt=dt))
     res = cursor.fetchall()
@@ -56,8 +55,10 @@ def get_driver_data(dt):
     res = cursor.fetchall()
     driver_data = {}
     for x in res:
-        if x[0] != 0:
-            driver_data[x[0]] = [0] * 8
+        if len(x) > 0 and x[0].isdigit():
+            if int(x[0]) != 0:
+                driver_data[int(x[0])] = [0] * 8
+    online_driver_num = len(driver_data)
     cursor.execute(sql3.format(dt=dt))
     res = cursor.fetchall()
     for x in res:
@@ -100,4 +101,4 @@ def get_driver_data(dt):
     if len(driver_data) > 0:
         order_num /= len(driver_data)
         eff /= len(driver_data)
-    return eff, order_num
+    return eff, order_num, online_driver_num
