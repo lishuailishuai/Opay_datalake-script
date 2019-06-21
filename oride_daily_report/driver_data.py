@@ -55,7 +55,7 @@ def get_driver_data(dt):
     res = cursor.fetchall()
     driver_data = {}
     for x in res:
-        if len(x) > 0 and x[0].isdigit():
+        if x is not None and len(x) > 0 and x[0] is not None and x[0].isdigit():
             if int(x[0]) != 0:
                 driver_data[int(x[0])] = [0] * 8
     online_driver_num = len(driver_data)
