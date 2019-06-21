@@ -22,13 +22,6 @@ dag = airflow.DAG(
     catchup=False,
     default_args=args)
 
-import_table_task = PythonOperator(
-    task_id='import_table',
-    python_callable=import_table,
-    dag=dag,
-    provide_context=True,
-)
-
 import_table_test_task = PythonOperator(
     task_id='import_table_test',
     python_callable=import_table,
@@ -36,8 +29,6 @@ import_table_test_task = PythonOperator(
     provide_context=True,
     op_kwargs={"env" : "test"}
 )
-
-import_table_test_task.set_upstream(import_table_task)
 
 query_data_task = PythonOperator(
     task_id='query_data',

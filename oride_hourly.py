@@ -14,7 +14,7 @@ args = {
 
 dag = airflow.DAG(
     'oride_hourly',
-    schedule_interval="20 * * * *",
+    schedule_interval="10 * * * *",
     default_args=args)
 
 add_partitions = HiveOperator(
