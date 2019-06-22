@@ -7,7 +7,7 @@ from airflow.operators.mysql_operator import MySqlOperator
 args = {
     'owner': 'root',
     'start_date': datetime(2019, 6, 16),
-    'depends_on_past': False,
+    'depends_on_past': True,
     'retries': 1,
     'retry_delay': timedelta(minutes=5),
     'email': ['bigdata@opay-inc.com'],

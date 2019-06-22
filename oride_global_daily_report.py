@@ -43,7 +43,8 @@ create_oride_global_daily_report = HiveOperator(
             `active_users` int,
             `register_users` int,
             `register_drivers` int,
-            `map_request_num` int
+            `map_request_num` int,
+            `avg_pickup_time` int
         )
         PARTITIONED BY (
             `dt` string)
@@ -85,15 +86,16 @@ insert_oride_global_daily_report = HiveOperator(
         order_data as (
             SELECT
                 do.dt,
-                count(do.id) as request_num,
-                count(if(do.status=4 or do.status=5, do.id, null)) as completed_num,
-                count(if(do.status=4 or do.status=5, do.driver_id, null)) as completed_drivers,
+                count(DISTINCT do.id) as request_num,
+                count(DISTINCT if(do.status=4 or do.status=5, do.id, null)) as completed_num,
+                count(DISTINCT if(do.status=4 or do.status=5, do.driver_id, null)) as completed_drivers,
                 avg(if(do.take_time>0, do.take_time-do.create_time, null)) as avg_take_time,
+                avg(if(do.pickup_time>0, do.pickup_time-do.take_time, null)) as avg_pickup_time,
                 avg(if(do.duration>0, do.duration, null)) as avg_duration,
                 avg(if(do.distance>0, do.distance, null)) as avg_distance,
                 SUM(do.duration) as total_duration,
-                count(if(do.status=4 or do.status=5, do.user_id, null)) as completed_users,
-                count(if((do.status=4 or do.status=5) and old_user.user_id is null, do.user_id, null)) as first_completed_users
+                count(DISTINCT if(do.status=4 or do.status=5, do.user_id, null)) as completed_users,
+                count(DISTINCT if((do.status=4 or do.status=5) and old_user.user_id is null, do.user_id, null)) as first_completed_users
             FROM
                 oride_db.data_order do
                 LEFT JOIN
@@ -184,7 +186,8 @@ insert_oride_global_daily_report = HiveOperator(
             ud.active_users,
             ud.register_users,
             dd.register_drivers,
-            nvl(md.map_request_num,0) as map_request_num
+            nvl(md.map_request_num,0) as map_request_num,
+            od.avg_pickup_time
         FROM
             order_data od
             LEFT JOIN lfw_data lf on lf.dt=od.dt
@@ -199,26 +202,27 @@ insert_oride_global_daily_report = HiveOperator(
 def send_report_email(ds, **kwargs):
     sql = '''
         SELECT
-            dt,
+            from_unixtime(unix_timestamp(dt, 'yyyy-MM-dd'),'yyyyMMdd') as dt,
+            from_unixtime(unix_timestamp(dt, 'yyyy-MM-dd'),'u') as week,
             request_num,
             request_num_lfw,
             completed_num,
             completed_num_lfw,
-            round(completed_num/request_num, 4),
-            round(completed_num_lfw/request_num_lfw, 4),
+            round(completed_num/request_num*100, 1),
+            round(completed_num_lfw/request_num_lfw*100, 1),
             active_users,
             completed_drivers,
             0 as avg_online_time,
             0 as btime_vs_otime,
-            register_drivers,
-            online_drivers,
-            round(completed_num/online_drivers, 4),
+            nvl(register_drivers, 0),
+            nvl(online_drivers, ''),
+            if(online_drivers is null, '', round(completed_num/online_drivers, 1)),
             avg_take_time,
             avg_distance,
-            avg_duration,
+            avg_pickup_time,
             register_users,
             first_completed_users,
-            round(first_completed_users/completed_users, 4),
+            round(first_completed_users/completed_users*100, 1),
             completed_users-first_completed_users,
             map_request_num
         FROM
@@ -226,7 +230,7 @@ def send_report_email(ds, **kwargs):
         WHERE
             dt <= '{dt}'
         ORDER BY dt DESC
-        LIMIT 15
+        LIMIT 14
     '''.format(dt=ds)
     cursor = get_hive_cursor()
     logging.info(sql)
@@ -247,24 +251,16 @@ def send_report_email(ds, **kwargs):
             }}
             table td, table th
             {{
-                border: 1px solid #cad9ea;
-                color: #666;
+                border: 1px solid #000000;
+                color: #000000;
                 height: 30px;
                 padding: 5px 10px 5px 5px;
             }}
             table thead th
             {{
-                background-color: #4CAF50;
-                color: white;
+                background-color: #f9cb9c;
+                //color: white;
                 width: 100px;
-            }}
-            table tr:nth-child(odd)
-            {{
-                background: #fff;
-            }}
-            table tr:nth-child(even)
-            {{
-                background: #F5FAFA;
             }}
         </style>
         </head>
@@ -279,7 +275,7 @@ def send_report_email(ds, **kwargs):
                         <th colspan="6" style="text-align: center;">关键指标</th>
                         <th colspan="4" style="text-align: center;">供需关系</th>
                         <th colspan="3" style="text-align: center;">司机指标</th>
-                        <th colspan="3" style="text-align: center;">体验指标</th>
+                        <th colspan="2" style="text-align: center;">体验指标</th>
                         <th colspan="4" style="text-align: center;">乘客指标</th>
                         <th colspan="1" style="text-align: center;">财务</th>
                     </tr>
@@ -295,16 +291,15 @@ def send_report_email(ds, **kwargs):
                         <!--供需关系-->
                         <th>活跃乘客数</th>
                         <th>完单司机数</th>
-                        <th>人均在线时长</th>
+                        <th>人均在线时长（秒）</th>
                         <th>计费时长占比</th>
                         <!--司机指标-->
                         <th>注册司机数</th>
                         <th>在线司机数</th>
                         <th>人均完单数</th>
                         <!--体验指标-->
-                        <th>平均应答时长</th>
-                        <th>平均接驾距离</th>
-                        <th>平均接驾时长</th>
+                        <th>平均应答时长（秒）</th>
+                        <th>平均接驾时长（秒）</th>
                         <!--乘客指标-->
                         <th>注册乘客数</th>
                         <th>首次完单乘客数</th>
@@ -319,15 +314,80 @@ def send_report_email(ds, **kwargs):
         </body>
         </html>
         '''
+
+        weekday = {
+            "1": "周一",
+            "2": "周二",
+            "3": "周三",
+            "4": "周四",
+            "5": "周五",
+            "6": "周六",
+            "7": "周日",
+        }
+        tr_fmt = '''
+            <tr>{row}</tr>
+        '''
+        weekend_tr_fmt = '''
+            <tr style="background:#fff2cc">{row}</tr>
+        '''
         row_fmt  = '''
-              <tr>
-                {}
-              </tr>
-            '''
-        td_fmt = '''
-              <td>{}</td>
-            '''
-        html = html_fmt.format(rows=''.join([row_fmt.format(r) for r in [''.join(td_fmt.format(x) for x in i) for i in data_list]]))
+                <th>{dt}</th>
+                <!--关键指标-->
+                <th>{request_num}</th>
+                <th>{request_num_lfw}</th>
+                <th style="background:#d9d9d9">{completed_num}</th>
+                <th>{completed_num_lfw}</th>
+                <th style="background:#d9d9d9">{c_vs_r}%</th>
+                <th>{c_vs_r_lfw}%</th>
+                <!--供需关系-->
+                <th>{active_users}</th>
+                <th style="background:#d9d9d9">{completed_drivers}</th>
+                <th></th>
+                <th></th>
+                <!--司机指标-->
+                <th>{register_drivers}</th>
+                <th>{online_drivers}</th>
+                <th>{c_vs_od}</th>
+                <!--体验指标-->
+                <th>{avg_take_time}</th>
+                <th>{avg_pickup_time}</th>
+                <!--乘客指标-->
+                <th>{register_users}</th>
+                <th>{first_completed_users}</th>
+                <th>{fcu_vs_cu}%</th>
+                <th>{old_completed_users}</th>
+                <!--财务-->
+                <th>{map_request_num}</th>
+        '''
+        row_html=''
+        for data in data_list:
+            [dt, week, request_num, request_num_lfw, completed_num, completed_num_lfw, c_vs_r, c_vs_r_lfw, active_users, completed_drivers, avg_online_time, btime_vs_otime, register_drivers, online_drivers, c_vs_od, avg_take_time, avg_distance, avg_pickup_time, register_users, first_completed_users, fcu_vs_cu, old_completed_users, map_request_num] = list(data)
+            row = row_fmt.format(
+                dt=dt,
+                request_num=request_num,
+                request_num_lfw=request_num_lfw,
+                completed_num=completed_num,
+                completed_num_lfw=completed_num_lfw,
+                c_vs_r=c_vs_r,
+                c_vs_r_lfw=c_vs_r_lfw,
+                active_users=active_users,
+                completed_drivers=completed_drivers,
+                register_drivers=register_drivers,
+                online_drivers=online_drivers,
+                c_vs_od=c_vs_od,
+                avg_take_time=avg_take_time,
+                avg_pickup_time=avg_pickup_time,
+                register_users=register_users,
+                first_completed_users=first_completed_users,
+                fcu_vs_cu=fcu_vs_cu,
+                old_completed_users=old_completed_users,
+                map_request_num=map_request_num
+            )
+            if week=='6' or week=='7':
+                row_html += weekend_tr_fmt.format(row=row)
+            else:
+                row_html += tr_fmt.format(row=row)
+        html = html_fmt.format(rows=row_html)
         # send mail
         email_subject = 'oride全局运营指标_{}'.format(ds)
         send_email(Variable.get("oride_global_daily_report_receivers").split(), email_subject, html, mime_charset='utf-8')
