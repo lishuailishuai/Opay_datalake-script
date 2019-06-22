@@ -9,15 +9,18 @@ from airflow.models import Variable
 
 args = {
     'owner': 'root',
-    'start_date': datetime(2019, 6, 17),
+    'start_date': datetime(2019, 6, 21),
     'depends_on_past': False,
     'retries': 1,
     'retry_delay': timedelta(minutes=5),
+    'email': ['bigdata@opay-inc.com'],
+    'email_on_failure': True,
+    'email_on_retry': False,
 }
 
 dag = airflow.DAG(
     'oride_global_daily_report',
-    schedule_interval="30 0 * * *",
+    schedule_interval="30 00 * * *",
     default_args=args)
 
 create_oride_global_daily_report = HiveOperator(
@@ -205,8 +208,8 @@ def send_report_email(ds, **kwargs):
             round(completed_num_lfw/request_num_lfw, 4),
             active_users,
             completed_drivers,
-            avg_online_time,
-            btime_vs_otime,
+            0 as avg_online_time,
+            0 as btime_vs_otime,
             register_drivers,
             online_drivers,
             round(completed_num/online_drivers, 4),
