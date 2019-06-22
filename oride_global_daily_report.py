@@ -216,7 +216,7 @@ def send_report_email(ds, **kwargs):
             0 as btime_vs_otime,
             nvl(register_drivers, 0),
             nvl(online_drivers, ''),
-            if(online_drivers is null, '', round(completed_num/online_drivers, 1)),
+            if(completed_drivers is null, '', round(completed_num/completed_drivers, 1)),
             avg_take_time,
             avg_distance,
             avg_pickup_time,
