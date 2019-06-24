@@ -30,6 +30,7 @@ table_list = [
     "data_user",
     "data_user_extend",
     "data_driver_extend",
+    "data_user_recharge",
 ]
 
 def send_report_email(tomorrow_ds, **kwargs):
@@ -76,6 +77,21 @@ def send_report_email(tomorrow_ds, **kwargs):
             WHERE
                 do.dt='{ds}' AND from_unixtime(do.create_time, 'yyyy-MM-dd')=do.dt
             GROUP BY do.dt
+        ),
+        recharge_data as (
+            SELECT
+                dt,
+                count(if(from_unixtime(create_time, 'yyyy-MM-dd')=dt, id, null)) as td_recharge_times,
+                sum(if(from_unixtime(create_time, 'yyyy-MM-dd')=dt, amount, 0)) as td_recharge_amount,
+                count(id) as recharge_times,
+                sum(amount) as recharge_amount,
+                sum(if(from_unixtime(create_time, 'yyyy-MM-dd')=dt, bonus, 0)) as td_recharge_bonus,
+                sum(bonus) as recharge_bonus
+            FROM
+                oride_db.data_user_recharge
+            WHERE
+                dt='{ds}' AND status=1
+            GROUP BY dt
         )
         SELECT
             od.request_users,
@@ -92,18 +108,25 @@ def send_report_email(tomorrow_ds, **kwargs):
             od.online_pay_orders,
             od.total_take_time,
             od.total_pickup_time,
-            od.pickup_num
+            od.pickup_num,
+            rd.td_recharge_times,
+            rd.td_recharge_amount,
+            rd.recharge_times,
+            rd.recharge_amount,
+            rd.td_recharge_bonus,
+            rd.recharge_bonus
         FROM
             user_data ud
             INNER JOIN driver_data dd ON dd.dt=ud.dt
             INNER JOIN order_data od ON od.dt=ud.dt
+            LEFT JOIN recharge_data rd on rd.dt=ud.dt
     '''.format(ds=tomorrow_ds)
     cursor = get_hive_cursor()
     logging.info(sql)
     cursor.execute(sql)
     res = cursor.fetchall()
     if len(res)>0 :
-        [request_users, active_users, new_users, online_pay_users, total_drivers, new_drivers, take_drivers, finish_drivers, request_num,take_num, finish_num, online_pay_orders, total_take_time, total_pickup_time, pickup_num] = list(res[0])
+        [request_users, active_users, new_users, online_pay_users, total_drivers, new_drivers, take_drivers, finish_drivers, request_num,take_num, finish_num, online_pay_orders, total_take_time, total_pickup_time, pickup_num, td_recharge_times, td_recharge_amount, recharge_times, recharge_amount, td_recharge_bonus, recharge_bonus] = list(res[0])
         html_fmt = '''
         <html>
         <head>
@@ -149,6 +172,7 @@ def send_report_email(tomorrow_ds, **kwargs):
                         <th colspan="4" style="text-align: center;">乘客</th>
                         <th colspan="5" style="text-align: center;">司机</th>
                         <th colspan="8" style="text-align: center;">订单</th>
+                        <th colspan="6" style="text-align: center;">充值</th>
                     </tr>
                     <tr>
                         <!--乘客-->
@@ -171,6 +195,13 @@ def send_report_email(tomorrow_ds, **kwargs):
                         <th>线上支持订单数</th>
                         <th>应答时长(平均)</th>
                         <th>接驾时长(平均)</th>
+                        <!--充值-->
+                        <th>每日充值笔数</th>
+                        <th>累计充值笔数</th>
+                        <th>每日充值真实金额</th>
+                        <th>累计充值真实金额</th>
+                        <th>每日充值总金额</th>
+                        <th>累计充值总金额</th>
                     </tr>
                 </thead>
                 <tr>
@@ -194,6 +225,13 @@ def send_report_email(tomorrow_ds, **kwargs):
                     <td>{online_pay_orders}</td>
                     <td>{take_time_avg}</td>
                     <td>{pickup_time_avg}</td>
+                    <!--充值-->
+                    <td>{td_recharge_times}</td>
+                    <td>{recharge_times}</td>
+                    <td>{td_recharge_amount}</td>
+                    <td>{recharge_amount}</td>
+                    <td>{td_recharge_total}</td>
+                    <td>{recharge_total}</td>
                 </tr>
             </table>
         </body>
@@ -217,11 +255,18 @@ def send_report_email(tomorrow_ds, **kwargs):
             finish_ratio=round(finish_num/request_num*100,2),
             online_pay_orders=online_pay_orders,
             take_time_avg=round(total_take_time/take_num),
-            pickup_time_avg=round(total_pickup_time/pickup_num)
+            pickup_time_avg=round(total_pickup_time/pickup_num),
+            td_recharge_times=td_recharge_times,
+            td_recharge_amount=td_recharge_amount,
+            recharge_times=recharge_times,
+            recharge_amount=recharge_amount,
+            td_recharge_total=td_recharge_amount+td_recharge_bonus,
+            recharge_total=recharge_amount+recharge_bonus
         )
         # send mail
         email_subject = 'oride晚十一点数据快报_{}'.format(tomorrow_ds)
         send_email(Variable.get("oride_night_report_receivers").split(), email_subject, html, mime_charset='utf-8')
+        #send_email(['zhenqian.zhang@opay-inc.com'], email_subject, html, mime_charset='utf-8')
         cursor.close()
         return
 
