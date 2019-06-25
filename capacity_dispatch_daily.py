@@ -209,11 +209,17 @@ EOF
             from_unixtime(create_time,'yyyy-MM-dd'),
             count(id),
             count(if(status = 5 or status = 4,id,null)),
+            count(if(driver_id <> 0,id,null))/count(id),
             count(if(status = 5 or status = 4,id,null))/count(id),
             count(distinct(if(status = 5 or status = 4,driver_id,null))),
             count(if(status = 5 or status = 4,id,null))/count(distinct(if(status = 5 or status = 4,driver_id,null))),
             round((sum(if(pickup_time <> 0, pickup_time - take_time,0)/60)/count(if(status = 5 or status = 4,id,null))),1),
-            round((sum(if(take_time <> 0,take_time - create_time,0))/count(if(driver_id <> 0,id,null)))/60,1)
+            round((sum(if(take_time <> 0,take_time - create_time,0))/count(if(driver_id <> 0,id,null)))/60,1),
+            
+            count(if(status = 6 and (cancel_role = 3 or cancel_role = 4),id,null))/count(id),
+            count(if(status = 6 and driver_id = 0,id,null))/count(id),
+            count(if(status = 6 and driver_id <> 0,id,null))/count(id)
+            
         from
             oride_db.data_order where dt= '{{ ds }}' and from_unixtime(create_time,'yyyy-MM-dd') between '{{ macros.ds_add(ds, -2) }}' and '{{ ds }}'
         group by from_unixtime(create_time,'yyyy-MM-dd');
