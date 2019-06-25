@@ -36,6 +36,7 @@ mail_msg_header = """
     <title></title>
   </head>
   <body>
+    <h3 style="color:#F00">The report will be offline, and the data will be subject to the new report. If you need the new report permissions, please contact jinping.yan@opay-inc.com. Detailed indicator definition reference https://docs.qq.com/sheet/DY215b3pud0V5Y0Jh?tab=tuo617&coord=D15%24D15%240%240%2416%240 , if there are new data needs, please contact  jinping.yan@opay-inc.com.</h3>
     <h4>The detail of driver analysis is in attachment.</h4>
     </br>
     <table class="table" cellpadding="5">
