@@ -135,3 +135,19 @@ ROW FORMAT SERDE
 with SERDEPROPERTIES("ignore.malformed.json"="true")
 LOCATION 'ufile://opay-datalake/oride/server_magic'
 
+
+CREATE EXTERNAL TABLE `anti_fraud`(
+    `action` string,
+    `driverId` bigint,
+    `userId` bigint,
+    `isSlient` boolean,
+    `reason` int
+)
+PARTITIONED BY (
+    `dt` string,
+    `hour` string)
+ROW FORMAT SERDE
+   'org.openx.data.jsonserde.JsonSerDe'
+with SERDEPROPERTIES("ignore.malformed.json"="true")
+LOCATION 'ufile://opay-datalake/oride-research/anti_fraud'
+
