@@ -55,7 +55,7 @@ create_csv_file = BashOperator(
         hive -e "LOAD DATA LOCAL INPATH '${log_path}/tmp/order_filtered_because_${dt}.log' OVERWRITE INTO TABLE test_db.order_filtered_because PARTITION (dt='${dt}');"
 
         # 播报司机
-        grep -R "order assign" *  | awk -F '|' '{n=split($3,nn,"} {");split($1,a," ");match($2, /{ID:([0-9]+)/, b);print a[3]" "substr(a[4],0,8)","b[1]","n}' > ${log_path}/tmp/order_assign_${dt}.log
+        grep -R "order assign" *  | awk -F '|' '{n=split($3,nn,"} {");split($1,a," ");match($2, /{ID:([0-9]+)/, b);print a[2]" "substr(a[3],0,8)","b[1]","n}' > ${log_path}/tmp/order_assign_${dt}.log
         hive -e "LOAD DATA LOCAL INPATH '${log_path}/tmp/order_assign_${dt}.log' OVERWRITE INTO TABLE test_db.order_assign PARTITION (dt='${dt}');"
 
         # 推单日志

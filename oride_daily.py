@@ -6,6 +6,8 @@ from utils.connection_helper import get_hive_cursor
 from airflow.operators.python_operator import PythonOperator
 from airflow.contrib.hooks.redis_hook import RedisHook
 from airflow.hooks.hive_hooks import HiveCliHook
+from airflow.operators.hive_to_mysql import HiveToMySqlTransfer
+from airflow.operators.mysql_operator import MySqlOperator
 import json
 import logging
 from airflow.models import Variable
@@ -578,6 +580,42 @@ insert_oride_driver_daily_summary  = HiveOperator(
     schema='dashboard',
     dag=dag)
 
+clear_driver_daily_summary = MySqlOperator(
+    task_id='clear_driver_daily_summary',
+    sql="""
+        DELETE FROM data_driver_report WHERE dt='{{ ds }}'
+    """,
+    dag=dag)
+
+driver_daily_summary_to_msyql = HiveToMySqlTransfer(
+    task_id='driver_daily_summary_to_msyql',
+    sql="""
+            SELECT
+                null as id,
+                dt,
+                driver_id,
+                real_name,
+                phone_number,
+                group_id,
+                nvl(group_name, ''),
+                nvl(group_leader, ''),
+                order_num,
+                order_finished_num,
+                order_cancel_num,
+                online_time,
+                duration_total,
+                distance_total,
+                comment_scores,
+                comment_times,
+                peak_time_order_num,
+                nvl(app_version, '')
+            FROM
+                dashboard.oride_driver_daily_summary
+            WHERE
+                dt='{{ ds }}'
+        """,
+    mysql_table='data_driver_report',
+    dag=dag)
 
 refresh_impala = ImpalaOperator(
     task_id = 'refresh_impala',
@@ -614,3 +652,4 @@ import_driver_online_time >> refresh_impala
 create_order_event_summary >> insert_order_event_summary >> refresh_impala
 import_driver_online_time >> insert_oride_driver_daily_summary
 create_oride_driver_daily_summary >> insert_oride_driver_daily_summary >> refresh_impala
+insert_oride_driver_daily_summary >> clear_driver_daily_summary >> driver_daily_summary_to_msyql

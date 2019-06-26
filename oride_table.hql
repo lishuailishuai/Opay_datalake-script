@@ -238,10 +238,12 @@ CREATE EXTERNAL TABLE `data_driver`(
   `real_name` string,
   `birthday` string,
   `gender` tinyint,
+  `government` string COMMENT 'Local Government',
   `country` string,
   `city` string,
   `black` tinyint,
-  `group_id` int
+  `group_id` int,
+  `updated_at` string COMMENT '最后更新时间'
 )
 PARTITIONED BY (
   `dt` string)
@@ -363,7 +365,13 @@ CREATE EXTERNAL TABLE `data_driver_extend`(
   `first_bind_time` bigint,
   `total_pay` decimal(10,2) ,
   `inviter_role` int,
-  `inviter_id` bigint
+  `inviter_id` bigint,
+  `block` int,
+    `serv_type` tinyint,
+    `serv_score` decimal(10,4),
+    `local_gov_ids` string,
+    `updated_at` string,
+    `fault` tinyint
 )
 PARTITIONED BY (
   `dt` string)
@@ -763,7 +771,16 @@ CREATE EXTERNAL TABLE `data_order`(
   `cancel_type` int,
   `cancel_reason` string,
   `status` int,
-  `create_time` bigint
+  `create_time` bigint,
+  `fraud` tinyint,
+    `driver_serv_type` int,
+    `serv_type` int,
+    `refund_before_pay` int COMMENT '支付前资金调整',
+    `refund_after_pay` int COMMENT '支付后资金调整',
+    `abnormal` tinyint COMMENT '异常状态(0 否 1 逃单)',
+    `flag_down_phone` string COMMENT '招手停上报手机号',
+    `zone_hash` string  COMMENT '所属区域 hash',
+    `updated_at` string COMMENT '最后更新时间'
 )
 PARTITIONED BY (
   `dt` string)
