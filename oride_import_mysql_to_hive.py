@@ -18,12 +18,20 @@ args = {
 dag = airflow.DAG(
     'oride_import_mysql_to_hive',
     schedule_interval="0 0 * * *",
+    concurrency=5,
+    max_active_runs=1,
     default_args=args)
 
 table_list = [
-    "data_driver_extend",
     "data_order",
+    "data_order_payment",
+    "data_user",
     "data_user_extend",
+    "data_coupon",
+    "data_driver",
+    "data_driver_group",
+    "data_driver_extend",
+    "data_driver_comment",
 ]
 
 host, port, schema, login, password = get_db_conf('sqoop_db')

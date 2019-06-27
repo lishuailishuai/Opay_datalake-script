@@ -6,6 +6,10 @@ from airflow.operators.hive_operator import HiveOperator
 from utils.connection_helper import get_hive_cursor
 import logging
 from airflow.models import Variable
+import pandas as pd
+import io
+import requests
+import os
 
 args = {
     'owner': 'root',
@@ -22,6 +26,54 @@ dag = airflow.DAG(
     'oride_global_daily_report',
     schedule_interval="30 00 * * *",
     default_args=args)
+
+def import_opay_event(ds, **kwargs):
+    # download report
+    api_url = "https://hq.appsflyer.com/export/team.opay.pay/partners_by_date_report/v5?api_token={api_token}&from={dt}&to={dt}".format(api_token=Variable.get("opay_appsflyer_api_token"), dt=ds)
+    headers = {'Accept':'text/csv'}
+    response = requests.get(
+        api_url,
+        headers=headers
+    )
+    logging.info('url:{} response_len:{}'.format(response.url, len(response.content)))
+    cols=[
+        "Agency/PMD (af_prt)",
+        "Media Source (pid)",
+        "Campaign (c)",
+        "Impressions",
+        "Clicks",
+        "CTR",
+        "Installs",
+        "Conversion Rate",
+        "Sessions",
+        "Loyal Users",
+        "Loyal Users/Installs",
+        "Total Revenue",
+        "Total Cost",
+        "ROI",
+        "ARPU",
+        "Average eCPI",
+        "estimated_price_cllick_request (Event counter)",
+        "oride_cllick_request (Event counter)",
+    ]
+    df = pd.read_csv(io.BytesIO(response.content), usecols=cols)[cols]
+    tmp_path = '/data/airflow/tmp/'
+    file_name = 'appsflyer_opay_event_log_'+ds
+    tmp_file = tmp_path + file_name
+    df.to_csv(tmp_file, index = None, header=True)
+    # upload to ufile
+    upload_cmd = '/root/filemgr/filemgr  --action mput --bucket opay-datalake --key oride/appsflyer/opay_event_log/dt={dt}/{file_name}  --file {tmp_file}'.format(dt=ds, file_name=file_name,tmp_file=tmp_file)
+
+    os.system(upload_cmd)
+    # clear tmp file
+    clear_cmd = 'rm -f %s' % tmp_file
+    os.system(clear_cmd)
+
+import_opay_event_log = PythonOperator(
+    task_id='import_opay_event_log',
+    python_callable=import_opay_event,
+    provide_context=True,
+    dag=dag)
 
 create_oride_global_daily_report = HiveOperator(
     task_id='create_oride_global_daily_report',
@@ -44,7 +96,23 @@ create_oride_global_daily_report = HiveOperator(
             `register_users` int,
             `register_drivers` int,
             `map_request_num` int,
-            `avg_pickup_time` int
+            `avg_pickup_time` int,
+            `oride_cllick_request_event_counter` int,
+            `estimated_price_cllick_request_event_counter` int,
+            `oride_cllick_request_event_counter_lfw` int,
+            `estimated_price_cllick_request_event_counter_lfw` int,
+            `take_num_lfw` int,
+            `before_take_cancel_num_lfw` int,
+            `after_take_cancel_num_lfw` int,
+            `driver_cancel_num_lfw` int,
+            `take_num` int,
+            `before_take_cancel_num` int,
+            `after_take_cancel_num` int,
+            `driver_cancel_num` int,
+            `pay_num` int,
+            `pay_price_total` int,
+            `pay_amount_total` int,
+            `push_num` int
         )
         PARTITIONED BY (
             `dt` string)
@@ -56,9 +124,35 @@ create_oride_global_daily_report = HiveOperator(
 insert_oride_global_daily_report = HiveOperator(
     task_id='insert_oride_global_daily_report',
     hql="""
+        ALTER TABLE oride_source.appsflyer_opay_event_log ADD IF NOT EXISTS PARTITION (dt = '{{ ds }}');
         ALTER TABLE oride_global_daily_report DROP IF EXISTS PARTITION (dt = '{{ ds }}');
+        -- 近4周event
+        with lfw_event_data as (
+            SELECT
+                '{{ ds }}' as dt,
+                SUM(oride_cllick_request_event_counter)/count(DISTINCT dt) as oride_cllick_request_event_counter_lfw,
+                SUM(estimated_price_cllick_request_event_counter)/count(DISTINCT dt) as estimated_price_cllick_request_event_counter_lfw
+            FROM
+                oride_source.appsflyer_opay_event_log
+            WHERE
+                dt BETWEEN '{{ macros.ds_add(ds, -28) }}' AND '{{ macros.ds_add(ds, -1) }}'
+                AND from_unixtime(unix_timestamp(dt, 'yyyy-MM-dd'),'u') = from_unixtime(unix_timestamp('{{ ds }}', 'yyyy-MM-dd'),'u')
+        ),
+        -- event数据
+        event_data as (
+            SELECT
+                dt,
+                SUM(oride_cllick_request_event_counter) as oride_cllick_request_event_counter,
+                SUM(estimated_price_cllick_request_event_counter) as estimated_price_cllick_request_event_counter
+            FROM
+                oride_source.appsflyer_opay_event_log
+            WHERE
+                dt='{{ ds }}'
+            GROUP BY
+                dt
+        ),
         -- 近4周数据
-        with lfw_data as (
+        lfw_data as (
             SELECT
                dt,
                count(
@@ -75,7 +169,43 @@ insert_oride_global_daily_report = HiveOperator(
                     and from_unixtime(create_time,'u') = from_unixtime(unix_timestamp(dt, 'yyyy-MM-dd'),'u')
                     and (status=4 or status=5)
                 , id, null)
-                )/4 as completed_num_lfw
+                )/4 as completed_num_lfw,
+               count(
+               if(
+                    datediff(dt, from_unixtime(create_time, 'yyyy-MM-dd'))>0
+                    and datediff(dt, from_unixtime(create_time, 'yyyy-MM-dd'))<=28
+                    and from_unixtime(create_time,'u') = from_unixtime(unix_timestamp(dt, 'yyyy-MM-dd'),'u')
+                    and (driver_id>0)
+                , id, null)
+                )/4 as take_num_lfw,
+               count(
+               if(
+                    datediff(dt, from_unixtime(create_time, 'yyyy-MM-dd'))>0
+                    and datediff(dt, from_unixtime(create_time, 'yyyy-MM-dd'))<=28
+                    and from_unixtime(create_time,'u') = from_unixtime(unix_timestamp(dt, 'yyyy-MM-dd'),'u')
+                    and (driver_id=0)
+                    and (status=6)
+                , id, null)
+                )/4 as before_take_cancel_num_lfw,
+               count(
+               if(
+                    datediff(dt, from_unixtime(create_time, 'yyyy-MM-dd'))>0
+                    and datediff(dt, from_unixtime(create_time, 'yyyy-MM-dd'))<=28
+                    and from_unixtime(create_time,'u') = from_unixtime(unix_timestamp(dt, 'yyyy-MM-dd'),'u')
+                    and driver_id>0
+                    and status=6
+                , id, null)
+                )/4 as after_take_cancel_num_lfw,
+               count(
+               if(
+                    datediff(dt, from_unixtime(create_time, 'yyyy-MM-dd'))>0
+                    and datediff(dt, from_unixtime(create_time, 'yyyy-MM-dd'))<=28
+                    and from_unixtime(create_time,'u') = from_unixtime(unix_timestamp(dt, 'yyyy-MM-dd'),'u')
+                    and driver_id>0
+                    and status=6
+                    and cancel_role=2
+                , id, null)
+                )/4 as driver_cancel_num_lfw
             FROM
                 oride_db.data_order
             WHERE
@@ -95,7 +225,14 @@ insert_oride_global_daily_report = HiveOperator(
                 avg(if(do.distance>0, do.distance, null)) as avg_distance,
                 SUM(do.duration) as total_duration,
                 count(DISTINCT if(do.status=4 or do.status=5, do.user_id, null)) as completed_users,
-                count(DISTINCT if((do.status=4 or do.status=5) and old_user.user_id is null, do.user_id, null)) as first_completed_users
+                count(DISTINCT if((do.status=4 or do.status=5) and old_user.user_id is null, do.user_id, null)) as first_completed_users,
+                count(DISTINCT if(do.driver_id>0, do.id, null)) as take_num,
+                count(DISTINCT if(do.driver_id=0 and do.status=6, do.id, null)) as before_take_cancel_num,
+                count(DISTINCT if(do.driver_id>0 and do.status=6, do.id, null)) as after_take_cancel_num,
+                count(DISTINCT if(do.cancel_role=2 and do.status=6, do.id, null)) as driver_cancel_num,
+                count(DISTINCT if(dop.status=1, do.id, null)) as pay_num,
+                SUM(if(dop.status=1, dop.price, 0)) as pay_price_total,
+                SUM(if(dop.status=1, dop.amount, 0)) as pay_amount_total
             FROM
                 oride_db.data_order do
                 LEFT JOIN
@@ -107,6 +244,7 @@ insert_oride_global_daily_report = HiveOperator(
                     WHERE
                         dt='{{ ds }}' and from_unixtime(create_time, 'yyyy-MM-dd')<dt and status in (4,5)
                 ) old_user on old_user.user_id=do.user_id
+                LEFT JOIN oride_db.data_order_payment dop on dop.id=do.id
             WHERE
                 do.dt='{{ ds }}' and from_unixtime(do.create_time, 'yyyy-MM-dd')=do.dt
             GROUP BY do.dt
@@ -167,6 +305,17 @@ insert_oride_global_daily_report = HiveOperator(
             WHERE
                 dt='{{ ds }}' and event_name in ('googlemap_directions', 'googlemap_nearbysearch', 'googlemap_autocomplete', 'googlemap_details', 'googlemap_geocode')
             GROUP BY dt
+        ),
+        -- push 数据
+        push_data as (
+            SELECT
+                dt,
+                count(distinct get_json_object(event_values, '$.order_id')) as push_num
+            FROM
+                oride_source.server_magic
+            WHERE
+                event_name='dispatch_push_driver' and dt='{{ ds }}'
+            GROUP BY dt
         )
         INSERT OVERWRITE TABLE oride_global_daily_report PARTITION (dt = '{{ ds }}')
         SELECT
@@ -187,7 +336,23 @@ insert_oride_global_daily_report = HiveOperator(
             ud.register_users,
             dd.register_drivers,
             nvl(md.map_request_num,0) as map_request_num,
-            od.avg_pickup_time
+            od.avg_pickup_time,
+            ed.oride_cllick_request_event_counter,
+            ed.estimated_price_cllick_request_event_counter,
+            led.oride_cllick_request_event_counter_lfw,
+            led.estimated_price_cllick_request_event_counter_lfw,
+            lf.take_num_lfw,
+            lf.before_take_cancel_num_lfw,
+            lf.after_take_cancel_num_lfw,
+            lf.driver_cancel_num_lfw,
+            od.take_num,
+            od.before_take_cancel_num,
+            od.after_take_cancel_num,
+            od.driver_cancel_num,
+            od.pay_num,
+            od.pay_price_total,
+            od.pay_amount_total,
+            pd.push_num
         FROM
             order_data od
             LEFT JOIN lfw_data lf on lf.dt=od.dt
@@ -195,6 +360,9 @@ insert_oride_global_daily_report = HiveOperator(
             LEFT JOIN user_data ud on ud.dt=od.dt
             LEFT JOIN driver_data dd on dd.dt=od.dt
             LEFT JOIN map_data md on md.dt=od.dt
+            LEFT JOIN event_data ed on ed.dt=od.dt
+            LEFT JOIN lfw_event_data led on led.dt=od.dt
+            LEFT JOIN push_data pd on pd.dt=od.dt
         """,
     schema='oride_bi',
     dag=dag)
@@ -401,5 +569,181 @@ send_report = PythonOperator(
     dag=dag
 )
 
+def send_funnel_report_email(ds, **kwargs):
+    sql = '''
+        SELECT
+            from_unixtime(unix_timestamp(dt, 'yyyy-MM-dd'),'yyyyMMdd') as dt,
+            from_unixtime(unix_timestamp(dt, 'yyyy-MM-dd'),'u') as week,
+            oride_cllick_request_event_counter,
+            estimated_price_cllick_request_event_counter,
+            round(estimated_price_cllick_request_event_counter/oride_cllick_request_event_counter*100, 1) as ep_vs_oc,
+            round(estimated_price_cllick_request_event_counter_lfw/oride_cllick_request_event_counter_lfw*100, 1) as ep_vs_oc_lfw,
+            round(request_num/estimated_price_cllick_request_event_counter*100, 1) as rq_vs_ep,
+            round(request_num_lfw/estimated_price_cllick_request_event_counter_lfw*100, 1) as rq_vs_ep_lfw,
+            request_num,
+            request_num_lfw,
+            round((request_num-push_num)/request_num*100, 1) as no_push_rate,
+            round(before_take_cancel_num/request_num*100, 1) as before_take_cancel_rate,
+            round(before_take_cancel_num_lfw/request_num_lfw*100, 1) as before_take_cancel_lfw_rate,
+            round(take_num/request_num*100, 1) as take_rate,
+            round(take_num_lfw/request_num_lfw*100, 1) as take_lfw_rate,
+            round(after_take_cancel_num/request_num*100, 1) as after_take_cancel_rate,
+            round(after_take_cancel_num_lfw/request_num_lfw*100, 1) as after_take_cancel_lfw_rate,
+            round(driver_cancel_num/request_num*100, 1) as driver_cancel_rate,
+            round(driver_cancel_num_lfw/request_num_lfw*100, 1) as driver_cancel_lfw_rate,
+            completed_num,
+            completed_num_lfw,
+            round(completed_num/request_num*100, 1) as completed_rate,
+            round(completed_num_lfw/request_num_lfw*100, 1) as completed_lfw_rate,
+            pay_num,
+            round(pay_price_total/pay_num, 1),
+            round(pay_amount_total/pay_num, 1)
+        FROM
+           oride_bi.oride_global_daily_report
+        WHERE
+            dt <= '{dt}'
+        ORDER BY dt DESC
+        LIMIT 14
+    '''.format(dt=ds)
+    cursor = get_hive_cursor()
+    logging.info(sql)
+    cursor.execute(sql)
+    data_list = cursor.fetchall()
+    if len(data_list) > 0 :
+        html_fmt = '''
+        <html>
+        <head>
+        <title></title>
+        <style type="text/css">
+            table
+            {{
+                font-family: "Trebuchet MS", Arial, Helvetica, sans-serif;
+                border-collapse: collapse;
+                margin: 0 auto;
+                text-align: left;
+            }}
+            table td, table th
+            {{
+                border: 1px solid #000000;
+                color: #000000;
+                height: 30px;
+                padding: 5px 10px 5px 5px;
+            }}
+            table thead th
+            {{
+                background-color: #f9cb9c;
+                //color: white;
+                width: 100px;
+            }}
+        </style>
+        </head>
+        <body>
+            <table width="95%" class="table">
+                <caption>
+                    <h2>订单漏斗</h2>
+                </caption>
+                <thead>
+                    <tr>
+                        <th></th>
+                        <th colspan="6" style="text-align: center;">呼叫前</th>
+                        <th colspan="11" style="text-align: center;">呼叫-应答</th>
+                        <th colspan="7" style="text-align: center;">完单-支付</th>
+                    </tr>
+                    <tr>
+                        <th>日期</th>
+                        <!--呼叫前-->
+                        <th>地址选择需求数</th>
+                        <th>估价需求数</th>
+                        <th>地址选择-估价转化率</th>
+                        <th>地址选择-估价转化率（近4周同期均值）</th>
+                        <th>估价-发单转化率</th>
+                        <th>估价-发单转化率（近4周同期均值）</th>
+                        <!--呼叫-应答-->
+                        <th>呼叫订单数</th>
+                        <th>呼叫订单数（近4周同期均值）</th>
+                        <th>未播率</th>
+                        <th>应答前取消率</th>
+                        <th>应答前取消率（近4周同期均值）</th>
+                        <th>应答率</th>
+                        <th>应答率（近4周同期均值）</th>
+                        <th>应答后取消率</th>
+                        <th>应答后取消率（近4周同期均值）</th>
+                        <th>司机取消率</th>
+                        <th>司机取消率（近4周同期均值）</th>
+                        <!--完单-支付-->
+                        <th>完成订单数</th>
+                        <th>完成订单数（近4周同期均值）</th>
+                        <th>完单率</th>
+                        <th>完单率（近4周同期均值）</th>
+                        <th>支付订单数</th>
+                        <th>单均应付</th>
+                        <th>单均实付</th>
+                    </tr>
+                </thead>
+                {rows}
+            </table>
+        </body>
+        </html>
+        '''
+        tr_fmt = '''
+            <tr>{row}</tr>
+        '''
+        weekend_tr_fmt = '''
+            <tr style="background:#fff2cc">{row}</tr>
+        '''
+        row_fmt  = '''
+                <td>{0}</td>
+                <!--呼叫前-->
+                <td><!--{2}--></td>
+                <td><!--{3}--></td>
+                <td><!--{4}%--></td>
+                <td><!--{5}%--></td>
+                <td><!--{6}%--></td>
+                <td><!--{7}%--></td>
+                <!--呼叫-应答-->
+                <td>{8}</td>
+                <td>{9}</td>
+                <td>{10}%</td>
+                <td>{11}%</td>
+                <td>{12}%</td>
+                <td>{13}%</td>
+                <td>{14}%</td>
+                <td>{15}%</td>
+                <td>{16}%</td>
+                <td>{17}%</td>
+                <td>{18}%</td>
+                <!--完单-支付-->
+                <td>{19}</td>
+                <td>{20}</td>
+                <td>{21}%</td>
+                <td>{22}%</td>
+                <td>{23}</td>
+                <td>{24}</td>
+                <td>{25}</td>
+        '''
+        row_html=''
+        for data in data_list:
+            row = row_fmt.format(*list(data))
+            week=data[1]
+            if week=='6' or week=='7':
+                row_html += weekend_tr_fmt.format(row=row)
+            else:
+                row_html += tr_fmt.format(row=row)
+        html = html_fmt.format(rows=row_html)
+        # send mail
+        email_subject = 'oride订单漏斗_{}'.format(ds)
+        send_email(Variable.get("oride_funnel_report_receivers").split(), email_subject, html, mime_charset='utf-8')
+    cursor.close()
+    return
+
+send_funnel_report = PythonOperator(
+    task_id='send_funnel_report',
+    python_callable=send_funnel_report_email,
+    provide_context=True,
+    dag=dag
+)
+
 create_oride_global_daily_report >> insert_oride_global_daily_report
 insert_oride_global_daily_report >> send_report
+import_opay_event_log >> insert_oride_global_daily_report
+insert_oride_global_daily_report >> send_funnel_report

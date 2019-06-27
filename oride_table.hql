@@ -1212,3 +1212,33 @@ LOCATION
 TBLPROPERTIES (
    'skip.header.line.count'='1'
 )
+
+CREATE EXTERNAL TABLE `appsflyer_opay_event_log`(
+    agency string,
+    media_source string,
+    campaign string,
+    impressions string,
+    clicks string,
+    ctr string,
+    installs string,
+    conversion_rate string,
+    sessions string,
+    loyal_users string,
+    loyal_users_installs string,
+    total_revenue string,
+    total_cost string,
+    roi string,
+    arpu string,
+    average_ecpi string,
+    estimated_price_cllick_request_event_counter int,
+    oride_cllick_request_event_counter int
+)
+PARTITIONED BY (
+   `dt` string)
+ROW FORMAT SERDE
+   'org.apache.hadoop.hive.serde2.OpenCSVSerde'
+LOCATION
+   'ufile://opay-datalake/oride/appsflyer/opay_event_log'
+TBLPROPERTIES (
+   'skip.header.line.count'='1'
+)
