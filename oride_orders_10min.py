@@ -29,14 +29,14 @@ dag = airflow.DAG(
 create_oride_orders_status = MySqlOperator(
     task_id='create_oride_orders_status',
     sql="""
-        CREATE TABLE IF NOT EXISTS oride_orders_status_hourly (
-            daily char(16) not null default '' comment 'day',
-            hourly tinyint unsigned not null default 0 comment 'hour',
+        CREATE TABLE IF NOT EXISTS oride_orders_status_10min (
+            order_time timestamp not null default '1970-01-02 00:00:00' comment 'time 10min',
+            daily timestamp not null default '1970-01-02 00:00:00' comment 'time day',
             orders int unsigned not null default 0 comment 'orders',
             orders_user int unsigned not null default 0 comment 'users',
             orders_pick int unsigned not null default 0 comment 'picks',
             drivers_serv int unsigned not null default 0 comment 'drivers',
-            primary key (daily, hourly)
+            primary key (order_time)
         )engine=innodb;
     """,
     database='bi',

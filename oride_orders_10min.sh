@@ -9,28 +9,43 @@ PORT_BI=$6
 USER_BI=$7
 PASS_BI=$8
 
-mysql -h${HOST_BI} -u${USER_BI} -P${PORT_BI} -p${PASS_BI} bi -e"
-    insert ignore into oride_orders_status_hourly
-        (daily, hourly)
-    values (date_format(from_unixtime(unix_timestamp()-3600), '%Y-%m-%d'), date_format(from_unixtime(unix_timestamp()-3600), '%k')),
-        (date_format(now(), '%Y-%m-%d'), date_format(now(), '%k'))
-"
+CURR_TIMESTAMP=$(date +'%s')
+PREV_10MIN=$((CURR_TIMESTAMP - 600))
+PREV_1HOUR=$(date +'%Y-%m-%d %H:00:00' --date="1 hour ago")
+PREV_HOUR_TIMESTAMP=$(date +'%s' --date="${PREV_1HOUR}")
 
-while read day hour orders orders_user orders_pick; do
+MYSQL_VALUES=""
+while ((${PREV_HOUR_TIMESTAMP} <= ${PREV_10MIN})); do
+    DAY_10MIN=$(date +'%Y-%m-%d %H:%M:00' --date=@${PREV_HOUR_TIMESTAMP})
+    DAY_DAY=$(date +'%Y-%m-%d 00:00:00' --date=@${PREV_HOUR_TIMESTAMP})
+    if [ -z "${MYSQL_VALUES}" ];then
+        MYSQL_VALUES="('${DAY_10MIN}', '${DAY_DAY}')"
+    else
+        MYSQL_VALUES="${MYSQL_VALUES},('${DAY_10MIN}', '${DAY_DAY}')"
+    fi
+    PREV_HOUR_TIMESTAMP=$((PREV_HOUR_TIMESTAMP + 600))
+done
+
+if [ -n "${MYSQL_VALUES}" ];then
     mysql -h${HOST_BI} -u${USER_BI} -P${PORT_BI} -p${PASS_BI} bi -e"
-        insert into oride_orders_status_hourly
-            (daily, hourly, orders, orders_user, orders_pick)
-        values ('${day}', ${hour}, ${orders}, ${orders_user}, ${orders_pick})
-            on duplicate key update orders=values(orders), orders_user=values(orders_user), orders_pick=values(orders_pick)"
+        insert ignore into oride_orders_status_10min (order_time, daily) values ${MYSQL_VALUES}
+    "
+fi
+
+while read daytime1 daytime2 day1 day2 orders orders_user orders_pick; do
+    mysql -h${HOST_BI} -u${USER_BI} -P${PORT_BI} -p${PASS_BI} bi -e"
+        insert into oride_orders_status_10min (order_time, daily, orders, orders_user, orders_pick)
+        values ('${daytime1} ${daytime2}', '${day1} ${day2}', ${orders}, ${orders_user}, ${orders_pick})
+        on duplicate key update orders=values(orders), orders_user=values(orders_user), orders_pick=values(orders_pick)"
 done <<_eof
-    $(mysql -h${HOST_RD} -u${USER_RD} -P${PORT_RD} -p${PASS_RD} oride_data --skip-column-names -e"set time_zone = '+1:00'; select date_format(from_unixtime(create_time), '%Y-%m-%d') as order_time, date_format(from_unixtime(create_time), '%k') as order_hour, count(1), count(distinct user_id), sum(if(driver_id>0,1,0)) from oride_data.data_order where create_time>=unix_timestamp(date_format(now(),'%Y-%m-%d %H'))-3600 group by order_time, order_hour")
+    $(mysql -h${HOST_RD} -u${USER_RD} -P${PORT_RD} -p${PASS_RD} oride_data --skip-column-names -e"set time_zone = '+1:00'; select date_format(from_unixtime(floor(create_time/600)*600), '%Y-%m-%d %H:%i:00') as order_time, date_format(from_unixtime(create_time), '%Y-%m-%d 00:00:00') as order_day, count(1), count(distinct user_id), sum(if(driver_id>0,1,0)) from oride_data.data_order where create_time>=unix_timestamp(date_format(now(),'%Y-%m-%d %H'))-3600 and create_time<floor(unix_timestamp()/600)*600 group by order_time, order_day")
 _eof
 
-while read day hour drivers; do
-    mysql -h${HOST_BI} -u${USER_BI} -P${PORT_BI} -p${PASS_BI} bi -e" insert into oride_orders_status_hourly
-        (daily, hourly, drivers_serv)
-    values ('${day}', ${hour}, ${drivers})
+while read daytime1 daytime2 day1 day2 drivers; do
+    mysql -h${HOST_BI} -u${USER_BI} -P${PORT_BI} -p${PASS_BI} bi -e" insert into oride_orders_status_10min
+        (order_time, daily, drivers_serv)
+    values ('${daytime1} ${daytime2}', '${day1} ${day2}', ${drivers})
     on duplicate key update drivers_serv=values(drivers_serv)"
 done<<_feof
-    $(mysql  -h${HOST_RD} -u${USER_RD} -P${PORT_RD} -p${PASS_RD} oride_data --skip-column-names -e"set time_zone = '+1:00'; select date_format(now(), '%Y-%m-%d'), date_format(now(), '%k'), count(1) from data_driver_extend where serv_mode>0")
+    $(mysql  -h${HOST_RD} -u${USER_RD} -P${PORT_RD} -p${PASS_RD} oride_data --skip-column-names -e"set time_zone = '+1:00'; select date_format(from_unixtime(floor((unix_timestamp()-600)/600)*600), '%Y-%m-%d %H:%i:00'), date_format(from_unixtime(unix_timestamp()-600), '%Y-%m-%d 00:00:00'), count(1) from data_driver_extend where serv_mode>0")
 _feof
