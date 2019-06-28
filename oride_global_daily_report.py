@@ -576,28 +576,28 @@ def send_funnel_report_email(ds, **kwargs):
             from_unixtime(unix_timestamp(dt, 'yyyy-MM-dd'),'u') as week,
             oride_cllick_request_event_counter,
             estimated_price_cllick_request_event_counter,
-            round(estimated_price_cllick_request_event_counter/oride_cllick_request_event_counter*100, 1) as ep_vs_oc,
-            round(estimated_price_cllick_request_event_counter_lfw/oride_cllick_request_event_counter_lfw*100, 1) as ep_vs_oc_lfw,
-            round(request_num/estimated_price_cllick_request_event_counter*100, 1) as rq_vs_ep,
-            round(request_num_lfw/estimated_price_cllick_request_event_counter_lfw*100, 1) as rq_vs_ep_lfw,
+            round(estimated_price_cllick_request_event_counter/oride_cllick_request_event_counter*100, 2) as ep_vs_oc,
+            round(estimated_price_cllick_request_event_counter_lfw/oride_cllick_request_event_counter_lfw*100, 2) as ep_vs_oc_lfw,
+            round(request_num/estimated_price_cllick_request_event_counter*100, 2) as rq_vs_ep,
+            round(request_num_lfw/estimated_price_cllick_request_event_counter_lfw*100, 2) as rq_vs_ep_lfw,
             request_num,
             request_num_lfw,
-            round((request_num-push_num)/request_num*100, 1) as no_push_rate,
-            round(before_take_cancel_num/request_num*100, 1) as before_take_cancel_rate,
-            round(before_take_cancel_num_lfw/request_num_lfw*100, 1) as before_take_cancel_lfw_rate,
-            round(take_num/request_num*100, 1) as take_rate,
-            round(take_num_lfw/request_num_lfw*100, 1) as take_lfw_rate,
-            round(after_take_cancel_num/request_num*100, 1) as after_take_cancel_rate,
-            round(after_take_cancel_num_lfw/request_num_lfw*100, 1) as after_take_cancel_lfw_rate,
-            round(driver_cancel_num/request_num*100, 1) as driver_cancel_rate,
-            round(driver_cancel_num_lfw/request_num_lfw*100, 1) as driver_cancel_lfw_rate,
+            round((request_num-push_num)/request_num*100, 2) as no_push_rate,
+            round(before_take_cancel_num/request_num*100, 2) as before_take_cancel_rate,
+            round(before_take_cancel_num_lfw/request_num_lfw*100, 2) as before_take_cancel_lfw_rate,
+            round(take_num/request_num*100, 2) as take_rate,
+            round(take_num_lfw/request_num_lfw*100, 2) as take_lfw_rate,
+            round(after_take_cancel_num/request_num*100, 2) as after_take_cancel_rate,
+            round(after_take_cancel_num_lfw/request_num_lfw*100, 2) as after_take_cancel_lfw_rate,
+            round(driver_cancel_num/request_num*100, 2) as driver_cancel_rate,
+            round(driver_cancel_num_lfw/request_num_lfw*100, 2) as driver_cancel_lfw_rate,
             completed_num,
             completed_num_lfw,
-            round(completed_num/request_num*100, 1) as completed_rate,
-            round(completed_num_lfw/request_num_lfw*100, 1) as completed_lfw_rate,
+            round(completed_num/request_num*100, 2) as completed_rate,
+            round(completed_num_lfw/request_num_lfw*100, 2) as completed_lfw_rate,
             pay_num,
-            round(pay_price_total/pay_num, 1),
-            round(pay_amount_total/pay_num, 1)
+            round(pay_price_total/pay_num, 2),
+            round(pay_amount_total/pay_num, 2)
         FROM
            oride_bi.oride_global_daily_report
         WHERE
@@ -611,85 +611,104 @@ def send_funnel_report_email(ds, **kwargs):
     data_list = cursor.fetchall()
     if len(data_list) > 0 :
         html_fmt = '''
-        <html>
-        <head>
-        <title></title>
-        <style type="text/css">
-            table
-            {{
-                font-family: "Trebuchet MS", Arial, Helvetica, sans-serif;
-                border-collapse: collapse;
-                margin: 0 auto;
-                text-align: left;
-            }}
-            table td, table th
-            {{
-                border: 1px solid #000000;
-                color: #000000;
-                height: 30px;
-                padding: 5px 10px 5px 5px;
-            }}
-            table thead th
-            {{
-                background-color: #f9cb9c;
-                //color: white;
-                width: 100px;
-            }}
-        </style>
-        </head>
-        <body>
+            <html>
+            <head>
+                <title></title>
+                <meta charset="utf-8">
+                <style type="text/css">
+                    table
+                    {{
+                        font-family:'黑体';
+                        border-collapse: collapse;
+                        margin: 0 auto;
+                        text-align: left;
+                        font-size:12px;
+                        color:#29303A;
+                    }}
+                    table h2
+                    {{
+                        font-size:20px;
+                        color:#000000;
+                    }}
+                    .th_title
+                    {{
+                        font-size:16px;
+                        color:#000000;
+                        text-align: center;
+                    }}
+                    table td, table th
+                    {{
+                        border: 1px solid #000000;
+                        color: #000000;
+                        height: 30px;
+                    }}
+                    table thead th
+                    {{
+                        background-color: #1DCF9F;
+                        width: 150px;
+                        text-align: center;
+                    }}
+                    .childTr th{{
+                        padding: 50px 0px;
+                    }}
+                    td {{
+                        padding: 20px;
+                    }}
+                </style>
+            </head>
+            <body>
             <table width="95%" class="table">
                 <caption>
-                    <h2>订单漏斗</h2>
+                    <h2>订单漏斗模型</h2>
                 </caption>
                 <thead>
-                    <tr>
-                        <th></th>
-                        <th colspan="6" style="text-align: center;">呼叫前</th>
-                        <th colspan="11" style="text-align: center;">呼叫-应答</th>
-                        <th colspan="7" style="text-align: center;">完单-支付</th>
-                    </tr>
-                    <tr>
-                        <th>日期</th>
-                        <!--呼叫前-->
-                        <th>地址选择需求数</th>
-                        <th>估价需求数</th>
-                        <th>地址选择-估价转化率</th>
-                        <th>地址选择-估价转化率（近4周同期均值）</th>
-                        <th>估价-发单转化率</th>
-                        <th>估价-发单转化率（近4周同期均值）</th>
-                        <!--呼叫-应答-->
-                        <th>呼叫订单数</th>
-                        <th>呼叫订单数（近4周同期均值）</th>
-                        <th>未播率</th>
-                        <th>应答前取消率</th>
-                        <th>应答前取消率（近4周同期均值）</th>
-                        <th>应答率</th>
-                        <th>应答率（近4周同期均值）</th>
-                        <th>应答后取消率</th>
-                        <th>应答后取消率（近4周同期均值）</th>
-                        <th>司机取消率</th>
-                        <th>司机取消率（近4周同期均值）</th>
-                        <!--完单-支付-->
-                        <th>完成订单数</th>
-                        <th>完成订单数（近4周同期均值）</th>
-                        <th>完单率</th>
-                        <th>完单率（近4周同期均值）</th>
-                        <th>支付订单数</th>
-                        <th>单均应付</th>
-                        <th>单均实付</th>
-                    </tr>
+                <tr>
+                    <th></th>
+                    <th colspan="6" class="th_title">呼叫前</th>
+                    <th colspan="11" class="th_title">呼叫-应答</th>
+                    <th colspan="7" class="th_title">完单-支付</th>
+                </tr>
+                <tr class="childTr">
+                    <th>日期</th>
+                    <!--呼叫前-->
+                    <th>地址选择需求数</th>
+                    <th>估价需求数</th>
+                    <th>地址选择-估价转化率</th>
+                    <th>地址选择-估价转化率（近4周同期均值）</th>
+                    <th>估价-下单转化率</th>
+                    <th>估价-下单转化率（近4周同期均值）</th>
+                    <!--呼叫-应答-->
+                    <th>下单数</th>
+                    <th>下单数（近4周同期均值）</th>
+                    <th>未播率</th>
+                    <th>应答前取消率</th>
+                    <th>应答前取消率（近4周同期均值）</th>
+                    <th>应答率</th>
+                    <th>应答率（近4周同期均值）</th>
+                    <th>应答后取消率</th>
+                    <th>应答后取消率（近4周同期均值）</th>
+                    <th>司机取消率</th>
+                    <th>司机取消率（近4周同期均值）</th>
+                    <!--完单-支付-->
+                    <th>完单数</th>
+                    <th>完单数（近4周同期均值）</th>
+                    <th>完单率</th>
+                    <th>完单率（近4周同期均值）</th>
+                    <th>支付订单数</th>
+                    <th>单均应付</th>
+                    <th>单均实付</th>
+                </tr>
                 </thead>
-                {rows}
+               {rows}
             </table>
-        </body>
-        </html>
+            </body>
+            </html>
         '''
         tr_fmt = '''
-            <tr>{row}</tr>
+            <tr style="background-color:#F5F5F5;">{row}</tr>
         '''
         weekend_tr_fmt = '''
-            <tr style="background:#fff2cc">{row}</tr>
+            <tr style="background:#FFD8BF">{row}</tr>
         '''
         row_fmt  = '''
                 <td>{0}</td>
@@ -731,7 +750,7 @@ def send_funnel_report_email(ds, **kwargs):
                 row_html += tr_fmt.format(row=row)
         html = html_fmt.format(rows=row_html)
         # send mail
-        email_subject = 'oride订单漏斗_{}'.format(ds)
+        email_subject = 'oride订单漏斗模型_{}'.format(ds)
         send_email(Variable.get("oride_funnel_report_receivers").split(), email_subject, html, mime_charset='utf-8')
     cursor.close()
     return
