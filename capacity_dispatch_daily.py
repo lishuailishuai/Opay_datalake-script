@@ -281,6 +281,7 @@ insert_order_metrics = HiveOperator(
                 select
                 t.time time,
                 t.mins * 30,
+                t.user_id,
                 start_name,
                 end_name,
                 count(id)
@@ -288,6 +289,7 @@ insert_order_metrics = HiveOperator(
                 (
                     select
                     id,
+                    user_id,
                     start_name,
                     end_name,
                     from_unixtime(create_time,'yyyy-MM-dd HH') as time, 
@@ -295,7 +297,7 @@ insert_order_metrics = HiveOperator(
                     from oride_db.data_order
                     where  dt= '{{ ds }}' and from_unixtime(create_time,'yyyy-MM-dd') = '{{ ds }}'
                 ) t
-                group by time,t.mins,start_name,end_name
+                group by time,t.mins,start_name,end_name,user_id
             ) d
             group by substring(d.time,1,10)
         ) dd on tt.dt = dd.dt;
