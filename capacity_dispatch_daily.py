@@ -21,19 +21,20 @@ dag = airflow.DAG(
     schedule_interval="30 02 * * *",
     default_args=args)
 
-import_log_file = BashOperator(
-    task_id='import_log_file',
-    bash_command='''
-        log_path="/data/app_log"
-        dt="{{ ds_nodash }}"
-        mkdir -p ${log_path}/${dt}
-        # pull log file
-        scp -P 622 root@124.156.118.128:/data/app/dispatcher/logs/${dt}.log ${log_path}/${dt}/gw1.log
-        scp -P 2522 root@124.156.118.128:/data/app/dispatcher/logs/${dt}.log ${log_path}/${dt}/gw2.log
-        scp -P 22722 root@124.156.118.128:/data/app/dispatcher/logs/${dt}.log ${log_path}/${dt}/gw3.log
-    ''',
-    dag=dag,
-)
+# import_log_file = BashOperator(
+#     task_id='import_log_file',
+#     bash_command='''
+#         log_path="/data/app_log"
+#         dt="{{ ds_nodash }}"
+#         mkdir -p ${log_path}/${dt}
+#         # pull log file
+#         scp -P 622 root@124.156.118.128:/data/app/dispatcher/logs/${dt}.log ${log_path}/${dt}/gw1.log
+#         scp -P 2522 root@124.156.118.128:/data/app/dispatcher/logs/${dt}.log ${log_path}/${dt}/gw2.log
+#         scp -P 22722 root@124.156.118.128:/data/app/dispatcher/logs/${dt}.log ${log_path}/${dt}/gw3.log
+#     ''',
+#     dag=dag,
+# )
+# )
 
 dispatch_table = HiveOperator(
     task_id='dispatch_table',
@@ -559,6 +560,8 @@ def send_report_email(ds_nodash, ds, **kwargs):
 
     '''.format(ds=ds, start_date=airflow.macros.ds_add(ds, -5))
 
+
+    logging.info(sql)
     cursor.execute(sql)
     res = cursor.fetchall()
 
@@ -699,13 +702,6 @@ def send_report_email(ds_nodash, ds, **kwargs):
     cursor.close()
     return
 
-
-# insert_report_data = PythonOperator(
-#     task_id='insert_data',
-#     python_callable=insert_data,
-#     provide_context=True,
-#     dag=dag
-# )
 
 send_report = PythonOperator(
     task_id='send_report',
