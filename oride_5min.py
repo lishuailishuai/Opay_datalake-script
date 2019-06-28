@@ -1,5 +1,5 @@
 '''
-add by duo.wu 小时下单数、下单人数、接单数
+add by duo.wu 司机状态打点
 '''
 
 import airflow
@@ -60,11 +60,12 @@ write_from_mysql = BashOperator(
         --connect "jdbc:mysql://{host}:{port}/{schema}?tinyInt1isBit=false&useUnicode=true&characterEncoding=utf8" \
         --username {username} \
         --password {password} \
-        --query 'select now(), id, serv_mode, serv_status from data_driver_extend where 1 and $CONDITIONS' \
+        --query "select convert_tz(now(), '+08:00', '+01:00') as create_at, id, serv_mode, serv_status from data_driver_extend where 1 and \$CONDITIONS" \
         --hive-import \
         --hive-database dashboard \
         --hive-table oride_driver_status \
         --target-dir '/tmp/oride_driver_status' \
+        --delete-target-dir \
         --num-mappers 1 \
         --hive-partition-key 'dt' \
         --hive-partition-value '{{{{ ds }}}}'
