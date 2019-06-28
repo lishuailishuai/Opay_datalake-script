@@ -109,91 +109,11 @@ push_table = HiveOperator(
     dag=dag)
 
 
-def insert_data(ds, **kwargs):
-    cursor = get_hive_cursor()
 
-    sql = '''
-        insert overwrite table oride_bi.server_magic_dispatch_detail
-        partition(dt='{dt}')
-        select 
-        get_json_object(event_values, '$.order_id') order_id, 
-        get_json_object(event_values, '$.round') as `round`, 
-        get_json_object(event_values, '$.user_id') as `user_id`,
-        driver_id
-        from  
-        oride_source.server_magic 
-        lateral view explode(split(substr(get_json_object(event_values, '$.driver_ids'),1,length(get_json_object(event_values, '$.driver_ids'))-2),',')) driver_ids as driver_id
-        where  dt = '{dt}' and event_name='dispatch_chose_driver' 
-        '''.format(dt=ds)
-
-    logging.info(sql)
-    cursor.execute(sql)
-    res = cursor.fetchall()
-
-    sql = '''
-        insert overwrite table oride_bi.server_magic_filter_detail
-        partition(dt='{dt}')
-        select 
-        get_json_object(event_values, '$.order_id') order_id, 
-        get_json_object(event_values, '$.round') as `round`, 
-        get_json_object(event_values, '$.user_id') as `user_id`,
-        get_json_object(event_values, '$.driver_id') as `driver_id`,
-        get_json_object(event_values, '$.reason') as `reason`
-        from  
-        oride_source.server_magic 
-        where  dt = '{dt}' and event_name='dispatch_filter_driver' 
-
-
-    '''.format(dt=ds)
-
-    logging.info(sql)
-    cursor.execute(sql)
-    res = cursor.fetchall()
-
-    sql = '''
-        insert overwrite table oride_bi.server_magic_assign_detail
-        partition(dt='{dt}')
-        select 
-        get_json_object(event_values, '$.order_id') order_id, 
-        get_json_object(event_values, '$.round') as `round`, 
-        get_json_object(event_values, '$.user_id') as `user_id`,
-        driver_id
-        from  
-        oride_source.server_magic 
-        lateral view explode(split(substr(get_json_object(event_values, '$.driver_ids'),1,length(get_json_object(event_values, '$.driver_ids'))-2),',')) driver_ids as driver_id
-        where  dt = '{dt}' and event_name='dispatch_assign_driver' 
-
-    '''.format(dt=ds)
-
-    logging.info(sql)
-    cursor.execute(sql)
-    res = cursor.fetchall()
-
-    sql = '''
-        insert overwrite table oride_bi.server_magic_push_detail
-        partition(dt='{dt}')
-        select 
-        get_json_object(event_values, '$.order_id') order_id, 
-        get_json_object(event_values, '$.round') as `round`, 
-        get_json_object(event_values, '$.user_id') as `user_id`,
-        get_json_object(event_values, '$.driver_id') as `driver_id`
-        from  
-        oride_source.server_magic 
-        where  dt = '{dt}' and event_name='dispatch_push_driver' 
-        and get_json_object(event_values, '$.success') = 1
-
-    '''.format(dt=ds)
-
-    logging.info(sql)
-    cursor.execute(sql)
-    res = cursor.fetchall()
-    cursor.close()
-    return
-
-
-def send_report_email(ds_nodash, ds, **kwargs):
-    cursor = get_hive_cursor()
-    sql = '''
+insert_report_metrics = HiveOperator(
+    task_id='insert_report_metrics',
+    hql='''
+        insert overwrite table oride_bi.report_metrics
         select 
         tt.dt,
         tt.counts report_times,
@@ -253,8 +173,8 @@ def send_report_email(ds_nodash, ds, **kwargs):
                         a.driver_id driver_id_not_found
 
                     from oride_bi.server_magic_dispatch_detail a
-                    left join oride_db.data_order b ON b.id=a.order_id and b.dt='{dt}' and from_unixtime(b.create_time,'yyyy-MM-dd') between '{start_date}' and '{dt}'
-                    where a.dt between '{start_date}' and '{dt}'
+                    left join oride_db.data_order b ON b.id=a.order_id and b.dt='{{ ds }}' and from_unixtime(b.create_time,'yyyy-MM-dd') between '{{ macros.ds_add(ds, -1) }}' and '{{ ds }}'
+                    where a.dt between '{{ macros.ds_add(ds, -1) }}' and '{{ ds }}'
                 ) ofc
                 left join
                 (
@@ -264,7 +184,7 @@ def send_report_email(ds_nodash, ds, **kwargs):
                         reason,
                         round
                     from oride_bi.server_magic_filter_detail
-                    where dt between '{start_date}' and '{dt}'
+                    where dt between '{{ macros.ds_add(ds, -1) }}' and '{{ ds }}'
                 ) ofb on ofb.dt=ofc.dt and ofb.order_id=ofc.order_id and ofb.round=ofc.round
                 left join
                 (
@@ -275,12 +195,12 @@ def send_report_email(ds_nodash, ds, **kwargs):
                         count(driver_id) driver_num
                     from
                         oride_bi.server_magic_push_detail
-                        where dt between '{start_date}' and '{dt}'
+                        where dt between '{{ macros.ds_add(ds, -1) }}' and '{{ ds }}'
                         group by dt,
                         round,
                         order_id
                 ) oa on oa.dt=ofc.dt and oa.order_id=ofc.order_id and oa.round=ofc.round
-                where ofc.dt between '{start_date}' and '{dt}'
+                where ofc.dt between '{{ macros.ds_add(ds, -1) }}' and '{{ ds }}'
                 group by
                 ofc.dt,
                 ofc.order_id,
@@ -302,11 +222,64 @@ def send_report_email(ds_nodash, ds, **kwargs):
                     count(distinct(order_id)) order_num_dis
                 from
                     oride_bi.server_magic_push_detail
-                where dt between '{start_date}' and '{dt}'
+                where dt between '{{ macros.ds_add(ds, -1) }}' and '{{ ds }}'
                 group by dt,driver_id
             ) p
             group by p.dt
         ) pp on tt.dt = pp.dt
+        ''',
+    schema='oride_bi',
+    dag=dag)
+
+insert_order_metrics = HiveOperator(
+    task_id='insert_order_metrics',
+    hql='''    
+        insert overwrite table oride_bi.order_metrics
+        select
+        from_unixtime(create_time,'yyyy-MM-dd'),
+        count(id),
+        count(if(driver_id <> 0,id,null)),
+        concat(cast(round(count(if(driver_id <> 0,id,null)) * 100/count(id),2) as string),'%'),
+        count(if(status = 5 or status = 4,id,null)),
+        concat(cast(round(count(if(status = 5 or status = 4,id,null)) * 100/count(id),2) as string),'%'),
+        count(distinct(if(status = 5 or status = 4,driver_id,null))),
+        round(count(if(status = 5 or status = 4,id,null))/count(distinct(if(status = 5 or status = 4,driver_id,null))),1),
+        round((sum(if(pickup_time <> 0, pickup_time - take_time,0)/60)/count(if(status = 5 or status = 4,id,null))),1),
+        round((sum(if(take_time <> 0,take_time - create_time,0))/count(if(driver_id <> 0,id,null)))/60,1),
+
+        concat(cast(round(count(if(status = 6 and (cancel_role = 3 or cancel_role = 4),id,null)) * 100/count(id),2) as string),'%'),
+        concat(cast(round(count(if(status = 6 and driver_id = 0  and cancel_role = 1,id,null)) * 100/count(id),2) as string),'%'),
+        concat(cast(round(count(if(status = 6 and driver_id <> 0  and cancel_role = 1,id,null)) * 100/count(id),2) as string),'%')
+    from
+        oride_db.data_order where dt= '{{ ds }}' and from_unixtime(create_time,'yyyy-MM-dd') between '{{ macros.ds_add(ds, -1) }}' and '{{ ds }}'
+    group by from_unixtime(create_time,'yyyy-MM-dd')
+        ''',
+    schema='oride_bi',
+    dag=dag)
+
+
+def send_report_email(ds_nodash, ds, **kwargs):
+    cursor = get_hive_cursor()
+    sql = '''
+        select 
+        dt ,
+        report_times ,
+        not_found_driver_rate ,
+        filter_driver_rate ,
+        push_driver_rate ,
+        accept_driver_time_rate ,
+        not_idle_rate ,
+        assigned_another_job_rate ,
+        assigned_this_order_rate ,
+        not_in_service_mode_rate ,
+        push_avg ,
+        push_order_avg ,
+        order_push_driver_avg ,
+        accept_driver_time_avg ,
+        obey_rate
+        from oride_bi.report_metrics
+        where dt between '{start_date}' and '{dt}'
+        
     '''.format(dt=ds,
                start_date=airflow.macros.ds_add(ds, -5))
 
@@ -539,27 +512,25 @@ def send_report_email(ds_nodash, ds, **kwargs):
     html += html_fmt_3_tail
 
     sql = '''
-        select
-        from_unixtime(create_time,'yyyy-MM-dd'),
-        count(id),
-        count(if(driver_id <> 0,id,null)),
-        concat(cast(round(count(if(driver_id <> 0,id,null)) * 100/count(id),2) as string),'%'),
-        count(if(status = 5 or status = 4,id,null)),
-        concat(cast(round(count(if(status = 5 or status = 4,id,null)) * 100/count(id),2) as string),'%'),
-        count(distinct(if(status = 5 or status = 4,driver_id,null))),
-        round(count(if(status = 5 or status = 4,id,null))/count(distinct(if(status = 5 or status = 4,driver_id,null))),1),
-        round((sum(if(pickup_time <> 0, pickup_time - take_time,0)/60)/count(if(status = 5 or status = 4,id,null))),1),
-        round((sum(if(take_time <> 0,take_time - create_time,0))/count(if(driver_id <> 0,id,null)))/60,1),
+        select 
+        dt ,
+        ride_num ,
+        request_num ,
+        request_rate ,
+        on_ride_num ,
+        on_ride_num ,
+        on_ride_driver_num ,
+        on_ride_avg ,
+        pick_up_time_avg ,
+        take_time_avg ,
+        sys_cancel_rate ,
+        passanger_before_cancel_rate ,
+        passanger_after_cancel_rate 
+        
+        from oride_bi.order_metrics
+        where dt between '{start_date}' and '{dt}'
 
-        concat(cast(round(count(if(status = 6 and (cancel_role = 3 or cancel_role = 4),id,null)) * 100/count(id),2) as string),'%'),
-        concat(cast(round(count(if(status = 6 and driver_id = 0  and cancel_role = 1,id,null)) * 100/count(id),2) as string),'%'),
-        concat(cast(round(count(if(status = 6 and driver_id <> 0  and cancel_role = 1,id,null)) * 100/count(id),2) as string),'%')
-    from
-        oride_db.data_order where dt= '{ds}' and from_unixtime(create_time,'yyyy-MM-dd') between '{start_date}' and '{ds}'
-    group by from_unixtime(create_time,'yyyy-MM-dd')
-
-    '''.format(ds=ds, start_date=airflow.macros.ds_add(ds, -5))
-
+    '''.format(dt=ds, start_date=airflow.macros.ds_add(ds, -5))
 
     logging.info(sql)
     cursor.execute(sql)
@@ -696,9 +667,8 @@ def send_report_email(ds_nodash, ds, **kwargs):
     logging.info(html)
 
     # send mail
-    email_subject = 'oride汇总指标统计_{}'.format(ds)
-    send_email(['nan.li@opay-inc.com', 'song.zhang@opay-inc.com', 'mingze.yang@opay-inc.com',
-                ], email_subject, html, mime_charset='utf-8')
+    email_subject = '调度算法效果监控指标_{}'.format(ds)
+    send_email(Variable.get("oride_metrics_report_receivers").split(), email_subject, html, mime_charset='utf-8')
     cursor.close()
     return
 
@@ -710,4 +680,4 @@ send_report = PythonOperator(
     dag=dag
 )
 
-dispatch_table >> filter_table >> assign_table >> push_table >> send_report
+dispatch_table >> filter_table >> assign_table >> push_table >> insert_report_metrics >> insert_order_metrics >>send_report
