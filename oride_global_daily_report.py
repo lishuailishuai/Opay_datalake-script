@@ -611,98 +611,92 @@ def send_funnel_report_email(ds, **kwargs):
     data_list = cursor.fetchall()
     if len(data_list) > 0 :
         html_fmt = '''
-            <html>
-            <head>
-                <title></title>
-                <meta charset="utf-8">
-                <style type="text/css">
-                    table
-                    {{
-                        font-family:'黑体';
-                        border-collapse: collapse;
-                        margin: 0 auto;
-                        text-align: left;
-                        font-size:12px;
-                        color:#29303A;
-                    }}
-                    table h2
-                    {{
-                        font-size:20px;
-                        color:#000000;
-                    }}
-                    .th_title
-                    {{
-                        font-size:16px;
-                        color:#000000;
-                        text-align: center;
-                    }}
-                    table td, table th
-                    {{
-                        border: 1px solid #000000;
-                        color: #000000;
-                        height: 30px;
-                    }}
-                    table thead th
-                    {{
-                        background-color: #1DCF9F;
-                        width: 150px;
-                        text-align: center;
-                    }}
-                    .childTr th{{
-                        padding: 50px 0px;
-                    }}
-                    td {{
-                        padding: 20px;
-                    }}
-                </style>
-            </head>
-            <body>
+        <html>
+        <head>
+        <title></title>
+        <style type="text/css">
+            table
+            {{
+                font-family:'黑体';
+                border-collapse: collapse;
+                margin: 0 auto;
+                text-align: left;
+                font-size:12px;
+                color:#29303A;
+            }}
+            table h2
+            {{
+                font-size:20px;
+                color:#000000;
+            }}
+            .th_title
+            {{
+                font-size:16px;
+                color:#000000;
+                text-align: center;
+            }}
+            table td, table th
+            {{
+                border: 1px solid #000000;
+                color: #000000;
+                height: 30px;
+                padding: 5px 10px 5px 5px;
+            }}
+            table thead th
+            {{
+                background-color: #1DCF9F;
+                //color: white;
+                width: 100px;
+            }}
+        </style>
+        </head>
+        <body>
             <table width="95%" class="table">
                 <caption>
                     <h2>订单漏斗模型</h2>
                 </caption>
                 <thead>
-                <tr>
-                    <th></th>
-                    <th colspan="6" class="th_title">呼叫前</th>
-                    <th colspan="11" class="th_title">呼叫-应答</th>
-                    <th colspan="7" class="th_title">完单-支付</th>
-                </tr>
-                <tr class="childTr">
-                    <th>日期</th>
-                    <!--呼叫前-->
-                    <th>地址选择需求数</th>
-                    <th>估价需求数</th>
-                    <th>地址选择-估价转化率</th>
-                    <th>地址选择-估价转化率（近4周同期均值）</th>
-                    <th>估价-下单转化率</th>
-                    <th>估价-下单转化率（近4周同期均值）</th>
-                    <!--呼叫-应答-->
-                    <th>下单数</th>
-                    <th>下单数（近4周同期均值）</th>
-                    <th>未播率</th>
-                    <th>应答前取消率</th>
-                    <th>应答前取消率（近4周同期均值）</th>
-                    <th>应答率</th>
-                    <th>应答率（近4周同期均值）</th>
-                    <th>应答后取消率</th>
-                    <th>应答后取消率（近4周同期均值）</th>
-                    <th>司机取消率</th>
-                    <th>司机取消率（近4周同期均值）</th>
-                    <!--完单-支付-->
-                    <th>完单数</th>
-                    <th>完单数（近4周同期均值）</th>
-                    <th>完单率</th>
-                    <th>完单率（近4周同期均值）</th>
-                    <th>支付订单数</th>
-                    <th>单均应付</th>
-                    <th>单均实付</th>
-                </tr>
+                    <tr>
+                        <th></th>
+                        <th colspan="6" class="th_title">呼叫前</th>
+                        <th colspan="11" class="th_title">呼叫-应答</th>
+                        <th colspan="7" class="th_title">完单-支付</th>
+                    </tr>
+                    <tr>
+                        <th>日期</th>
+                        <!--呼叫前-->
+                        <th>地址选择需求数</th>
+                        <th>估价需求数</th>
+                        <th>地址选择-估价转化率</th>
+                        <th>地址选择-估价转化率（近4周同期均值）</th>
+                        <th>估价-下单转化率</th>
+                        <th>估价-下单转化率（近4周同期均值）</th>
+                        <!--呼叫-应答-->
+                        <th>下单数</th>
+                        <th>下单数（近4周同期均值）</th>
+                        <th>未播率</th>
+                        <th>应答前取消率</th>
+                        <th>应答前取消率（近4周同期均值）</th>
+                        <th>应答率</th>
+                        <th>应答率（近4周同期均值）</th>
+                        <th>应答后取消率</th>
+                        <th>应答后取消率（近4周同期均值）</th>
+                        <th>司机取消率</th>
+                        <th>司机取消率（近4周同期均值）</th>
+                        <!--完单-支付-->
+                        <th>完成数</th>
+                        <th>完成数（近4周同期均值）</th>
+                        <th>完单率</th>
+                        <th>完单率（近4周同期均值）</th>
+                        <th>支付订单数</th>
+                        <th>单均应付</th>
+                        <th>单均实付</th>
+                    </tr>
                 </thead>
-               {rows}
+                {rows}
             </table>
-            </body>
-            </html>
+        </body>
+        </html>
         '''
         tr_fmt = '''
             <tr style="background-color:#F5F5F5;">{row}</tr>
