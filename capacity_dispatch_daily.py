@@ -108,12 +108,10 @@ push_table = HiveOperator(
     schema='oride_source',
     dag=dag)
 
-
-
 insert_report_metrics = HiveOperator(
     task_id='insert_report_metrics',
     hql='''
-        insert overwrite table oride_bi.report_metrics
+        insert into table oride_bi.report_metrics
         select 
         tt.dt,
         tt.counts report_times,
@@ -173,8 +171,8 @@ insert_report_metrics = HiveOperator(
                         a.driver_id driver_id_not_found
 
                     from oride_bi.server_magic_dispatch_detail a
-                    left join oride_db.data_order b ON b.id=a.order_id and b.dt='{{ ds }}' and from_unixtime(b.create_time,'yyyy-MM-dd') between '{{ macros.ds_add(ds, -1) }}' and '{{ ds }}'
-                    where a.dt between '{{ macros.ds_add(ds, -1) }}' and '{{ ds }}'
+                    left join oride_db.data_order b ON b.id=a.order_id and b.dt='{{ ds }}' and from_unixtime(b.create_time,'yyyy-MM-dd') = '{{ ds }}'
+                    where a.dt ='{{ ds }}'
                 ) ofc
                 left join
                 (
@@ -184,7 +182,7 @@ insert_report_metrics = HiveOperator(
                         reason,
                         round
                     from oride_bi.server_magic_filter_detail
-                    where dt between '{{ macros.ds_add(ds, -1) }}' and '{{ ds }}'
+                    where dt = '{{ ds }}'
                 ) ofb on ofb.dt=ofc.dt and ofb.order_id=ofc.order_id and ofb.round=ofc.round
                 left join
                 (
@@ -195,12 +193,12 @@ insert_report_metrics = HiveOperator(
                         count(driver_id) driver_num
                     from
                         oride_bi.server_magic_push_detail
-                        where dt between '{{ macros.ds_add(ds, -1) }}' and '{{ ds }}'
+                        where dt = '{{ ds }}'
                         group by dt,
                         round,
                         order_id
                 ) oa on oa.dt=ofc.dt and oa.order_id=ofc.order_id and oa.round=ofc.round
-                where ofc.dt between '{{ macros.ds_add(ds, -1) }}' and '{{ ds }}'
+                where ofc.dt = '{{ ds }}'
                 group by
                 ofc.dt,
                 ofc.order_id,
@@ -222,7 +220,7 @@ insert_report_metrics = HiveOperator(
                     count(distinct(order_id)) order_num_dis
                 from
                     oride_bi.server_magic_push_detail
-                where dt between '{{ macros.ds_add(ds, -1) }}' and '{{ ds }}'
+                where dt = '{{ ds }}'
                 group by dt,driver_id
             ) p
             group by p.dt
@@ -234,25 +232,76 @@ insert_report_metrics = HiveOperator(
 insert_order_metrics = HiveOperator(
     task_id='insert_order_metrics',
     hql='''    
-        insert overwrite table oride_bi.order_metrics
+      
+        insert into table order_metrics
+        select 
+        tt.dt,
+        tt.ride_num,
+        tt.request_num,
+        tt.request_rate,
+        tt.on_ride_num,
+        tt.on_ride_rate,
+        tt.on_ride_driver_num,
+        tt.on_ride_avg,
+        tt.pick_up_time_avg,
+        tt.take_time_avg,
+        tt.sys_cancel_rate,
+        tt.passanger_before_cancel_rate,
+        tt.passanger_after_cancel_rate,
+        dd.validity_ride_num
+        
+        from 
+        (
         select
-        from_unixtime(create_time,'yyyy-MM-dd'),
-        count(id),
-        count(if(driver_id <> 0,id,null)),
-        concat(cast(round(count(if(driver_id <> 0,id,null)) * 100/count(id),2) as string),'%'),
-        count(if(status = 5 or status = 4,id,null)),
-        concat(cast(round(count(if(status = 5 or status = 4,id,null)) * 100/count(id),2) as string),'%'),
-        count(distinct(if(status = 5 or status = 4,driver_id,null))),
-        round(count(if(status = 5 or status = 4,id,null))/count(distinct(if(status = 5 or status = 4,driver_id,null))),1),
-        round((sum(if(pickup_time <> 0, pickup_time - take_time,0)/60)/count(if(status = 5 or status = 4,id,null))),1),
-        round((sum(if(take_time <> 0,take_time - create_time,0))/count(if(driver_id <> 0,id,null)))/60,1),
-
-        concat(cast(round(count(if(status = 6 and (cancel_role = 3 or cancel_role = 4),id,null)) * 100/count(id),2) as string),'%'),
-        concat(cast(round(count(if(status = 6 and driver_id = 0  and cancel_role = 1,id,null)) * 100/count(id),2) as string),'%'),
-        concat(cast(round(count(if(status = 6 and driver_id <> 0  and cancel_role = 1,id,null)) * 100/count(id),2) as string),'%')
-    from
-        oride_db.data_order where dt= '{{ ds }}' and from_unixtime(create_time,'yyyy-MM-dd') between '{{ macros.ds_add(ds, -1) }}' and '{{ ds }}'
-    group by from_unixtime(create_time,'yyyy-MM-dd')
+            from_unixtime(create_time,'yyyy-MM-dd') dt,
+            count(id) ride_num,
+            count(if(driver_id <> 0,id,null)) request_num,
+            concat(cast(round(count(if(driver_id <> 0,id,null)) * 100/count(id),2) as string),'%') request_rate,
+            count(if(status = 5 or status = 4,id,null)) on_ride_num,
+            concat(cast(round(count(if(status = 5 or status = 4,id,null)) * 100/count(id),2) as string),'%') on_ride_rate,
+            count(distinct(if(status = 5 or status = 4,driver_id,null))) on_ride_driver_num,
+            round(count(if(status = 5 or status = 4,id,null))/count(distinct(if(status = 5 or status = 4,driver_id,null))),1) on_ride_avg,
+            round((sum(if(pickup_time <> 0, pickup_time - take_time,0)/60)/count(if(status = 5 or status = 4,id,null))),1) pick_up_time_avg,
+            round((sum(if(take_time <> 0,take_time - create_time,0))/count(if(driver_id <> 0,id,null)))/60,1) take_time_avg,
+        
+            concat(cast(round(count(if(status = 6 and (cancel_role = 3 or cancel_role = 4),id,null)) * 100/count(id),2) as string),'%') sys_cancel_rate,
+            concat(cast(round(count(if(status = 6 and driver_id = 0  and cancel_role = 1,id,null)) * 100/count(id),2) as string),'%') passanger_before_cancel_rate,
+            concat(cast(round(count(if(status = 6 and driver_id <> 0  and cancel_role = 1,id,null)) * 100/count(id),2) as string),'%') passanger_after_cancel_rate
+        from
+            oride_db.data_order where  dt= '{{ ds }}' and from_unixtime(create_time,'yyyy-MM-dd') = '{{ ds }}'
+        group by from_unixtime(create_time,'yyyy-MM-dd')
+        ) tt
+        left join 
+        (
+        select 
+            substring(d.time,1,10) dt,
+            count(1) validity_ride_num
+            from 
+            (
+                select
+                t.time time,
+                t.mins * 30,
+                start_name,
+                end_name,
+                count(id)
+                from 
+                (
+                    select
+                    id,
+                    start_name,
+                    end_name,
+                    from_unixtime(create_time,'yyyy-MM-dd HH') as time, 
+                    floor(cast(minute(from_unixtime(create_time)) as int) / 30) as mins
+                    from oride_db.data_order
+                    where  dt= '{{ ds }}' and from_unixtime(create_time,'yyyy-MM-dd') = '{{ ds }}'
+                ) t
+                group by time,t.mins,start_name,end_name
+            ) d
+            group by substring(d.time,1,10)
+        ) dd on tt.dt = dd.dt;
+    
+    
+    
         ''',
     schema='oride_bi',
     dag=dag)
@@ -279,6 +328,7 @@ def send_report_email(ds_nodash, ds, **kwargs):
         obey_rate
         from oride_bi.report_metrics
         where dt between '{start_date}' and '{dt}'
+        order  by dt
         
     '''.format(dt=ds,
                start_date=airflow.macros.ds_add(ds, -5))
@@ -518,17 +568,20 @@ def send_report_email(ds_nodash, ds, **kwargs):
         request_num ,
         request_rate ,
         on_ride_num ,
-        on_ride_num ,
+        on_ride_rate ,
         on_ride_driver_num ,
         on_ride_avg ,
         pick_up_time_avg ,
         take_time_avg ,
         sys_cancel_rate ,
         passanger_before_cancel_rate ,
-        passanger_after_cancel_rate 
+        passanger_after_cancel_rate,
+        validity_ride_num,
+        concat(cast(round(on_ride_num * 100/validity_ride_num,2) as string),'%') validity_on_ride_rate
         
         from oride_bi.order_metrics
         where dt between '{start_date}' and '{dt}'
+        order by dt
 
     '''.format(dt=ds, start_date=airflow.macros.ds_add(ds, -5))
 
@@ -543,19 +596,22 @@ def send_report_email(ds_nodash, ds, **kwargs):
                                         </caption>
                                         <thead>
                                             <tr>
-                                                <th colspan="10" style="text-align: center;">宏观指标</th>
+                                                <th colspan="12" style="text-align: center;">宏观指标</th>
                                             </tr>
                                             <tr>
                                                 <th>日期</th>
                                                 <th>下单量</th>
+                                                <th>有效下单量</th>
                                                 <th>接单量</th>
                                                 <th>接单率</th>
                                                 <th>完单量</th>
                                                 <th>完单率</th>
+                                                <th>完单率(有效订单数)</th>
                                                 <th>完单骑手数</th>
                                                 <th>人均完单量</th>
                                                 <th>单均接驾时长（分钟）</th>
                                                 <th>单均应答时长（分钟）</th>
+                                                
                                             </tr>
                                         </thead>
 
@@ -571,15 +627,20 @@ def send_report_email(ds_nodash, ds, **kwargs):
          pick_up_passager_time_avg, reply_time_avg
          ] = list(
             res[i][:10])
+        list_temp = list(res[i])
+        validity_on_ride_num = list_temp[len(list_temp) - 2]
+        validity_on_ride_rate = list_temp[len(list_temp) - 1]
         html_fmt_4 = '''
 
                                         <tr>
                                             <td>{date}</td>
                                             <td>{ride_num}</td>
+                                            <td>{validity_on_ride_num}</td>
                                             <td>{request_num}</td>
                                             <td>{request_rate}</td>
                                             <td>{on_ride_num}</td>
                                             <td>{on_ride_rate}</td>
+                                            <td>{validity_on_ride_rate}</td>
                                             <td>{onride_driver_num}</td>
                                             <td>{onride_driver_order_avg}</td>
                                             <td>{pick_up_passager_time_avg}</td>
@@ -599,8 +660,9 @@ def send_report_email(ds_nodash, ds, **kwargs):
             onride_driver_num=onride_driver_num,
             onride_driver_order_avg=onride_driver_order_avg,
             pick_up_passager_time_avg=pick_up_passager_time_avg,
-            reply_time_avg=reply_time_avg
-
+            reply_time_avg=reply_time_avg,
+            validity_on_ride_rate=validity_on_ride_rate,
+            validity_on_ride_num=validity_on_ride_num
         )
 
         html += html_fmt_4
@@ -680,4 +742,4 @@ send_report = PythonOperator(
     dag=dag
 )
 
-dispatch_table >> filter_table >> assign_table >> push_table >> insert_report_metrics >> insert_order_metrics >>send_report
+dispatch_table >> filter_table >> assign_table >> push_table >> insert_report_metrics >> insert_order_metrics >> send_report
