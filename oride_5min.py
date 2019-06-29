@@ -3,16 +3,18 @@ add by duo.wu 司机状态打点
 '''
 
 import airflow
+import time
 from airflow.operators.impala_plugin import ImpalaOperator
 from airflow.operators.hive_operator import HiveOperator
 from airflow.operators.bash_operator import BashOperator
-from datetime import timedelta, time, datetime
+from airflow.operators.mysql_operator import MySqlOperator
+from datetime import timedelta, datetime
 from utils.connection_helper import get_db_conf
 
 args = {
     'owner': 'root',
     'start_date': datetime(2019, 5, 11),
-    'depends_on_past': False,
+    'depends_on_past': True,
     'retries': 1,
     'retry_delay': timedelta(minutes=5),
     'email': ['bigdata@opay-inc.com'],
@@ -22,7 +24,7 @@ args = {
 
 dag = airflow.DAG(
     'oride_5min',
-    schedule_interval="*/2 * * * *",
+    schedule_interval="0 3 * * *",
     default_args=args
 )
 
@@ -33,7 +35,8 @@ create_driver_status = HiveOperator(
             create_at string,
             driver_id bigint,
             serv_model int,
-            serv_status int
+            serv_status int,
+            city int
         )
         PARTITIONED BY (`dt` string)
         STORED AS TEXTFILE;
@@ -51,7 +54,7 @@ add_partitions = HiveOperator(
     dag=dag
 )
 
-host, port, schema, login, password = get_db_conf('sqoop_db')
+host, port, schema, login, password = get_db_conf('mysql_bi')
 write_from_mysql = BashOperator(
     task_id='write_from_mysql',
     bash_command='''
@@ -60,7 +63,7 @@ write_from_mysql = BashOperator(
         --connect "jdbc:mysql://{host}:{port}/{schema}?tinyInt1isBit=false&useUnicode=true&characterEncoding=utf8" \
         --username {username} \
         --password {password} \
-        --query "select convert_tz(now(), '+08:00', '+01:00') as create_at, id, serv_mode, serv_status from data_driver_extend where 1 and \$CONDITIONS" \
+        --query "select create_time, driver_id, serv_model, serv_status, city from oride_driver_status_1min where create_time>='{prev_date}' and create_time<'{curr_date}' and \$CONDITIONS" \
         --hive-import \
         --hive-database dashboard \
         --hive-table oride_driver_status \
@@ -69,7 +72,15 @@ write_from_mysql = BashOperator(
         --num-mappers 1 \
         --hive-partition-key 'dt' \
         --hive-partition-value '{{{{ ds }}}}'
-    '''.format(host=host, port=port, schema=schema, username=login, password=password),
+    '''.format(
+        host=host,
+        port=port,
+        schema=schema,
+        username=login,
+        password=password,
+        prev_date=time.strftime('%Y-%m-%d', time.localtime(time.time()-86400)) + ' 00:00:00',
+        curr_date=time.strftime('%Y-%m-%d', time.localtime(time.time())) + ' 00:00:00'
+    ),
     dag=dag,
 )
 
@@ -83,4 +94,16 @@ refresh_impala = ImpalaOperator(
     dag=dag
 )
 
-create_driver_status >> write_from_mysql >> add_partitions >> refresh_impala
+delete_mysql_data = MySqlOperator(
+    task_id='delete_mysql_data',
+    sql='''
+        delete from oride_driver_status_1min where create_time>='{prev_date}' and create_time<'{curr_date}'
+    '''.format(
+        prev_date=time.strftime('%Y-%m-%d', time.localtime(time.time()-86400)) + ' 00:00:00',
+        curr_date=time.strftime('%Y-%m-%d', time.localtime(time.time())) + ' 00:00:00'),
+    database='bi',
+    mysql_conn_id='mysql_bi',
+    dag=dag
+)
+
+create_driver_status >> write_from_mysql >> add_partitions >> refresh_impala >> delete_mysql_data
