@@ -1109,6 +1109,30 @@ OUTPUTFORMAT
 LOCATION
   'ufile://opay-datalake/oride/db/data_user_recharge';
 
+
+CREATE EXTERNAL TABLE `data_abnormal_order`(
+  `id` bigint COMMENT '自增id',
+  `order_id` bigint COMMENT '涉及order_id',
+  `driver_id` bigint COMMENT '司机id',
+  `user_id` bigint COMMENT '用户id',
+  `behavior_ids` string COMMENT '命中规则id',
+  `rule_names` string COMMENT '命中规则名称',
+  `is_revoked` tinyint COMMENT '是否撤销，1是，0否',
+  `create_time` bigint COMMENT '创建时间',
+  `update_time` bigint COMMENT '更新时间',
+  `score` decimal(10,2) COMMENT '每单扣除分数',
+  `amount` decimal(10,2) COMMENT '扣款金额')
+PARTITIONED BY (
+  `dt` string)
+ROW FORMAT SERDE
+  'org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe'
+STORED AS INPUTFORMAT
+  'org.apache.hadoop.mapred.TextInputFormat'
+OUTPUTFORMAT
+  'org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat'
+LOCATION
+  'ufile://opay-datalake/oride/db/data_abnormal_order';
+
 CREATE EXTERNAL TABLE `appsflyer_opay_install_log`(
     attributed_touch_type string,
     attributed_touch_time string,
