@@ -244,7 +244,7 @@ insert_oride_global_daily_report = HiveOperator(
                     WHERE
                         dt='{{ ds }}' and from_unixtime(create_time, 'yyyy-MM-dd')<dt and status in (4,5)
                 ) old_user on old_user.user_id=do.user_id
-                LEFT JOIN oride_db.data_order_payment dop on dop.id=do.id
+                LEFT JOIN oride_db.data_order_payment dop on dop.id=do.id and dop.dt=do.dt
             WHERE
                 do.dt='{{ ds }}' and from_unixtime(do.create_time, 'yyyy-MM-dd')=do.dt
             GROUP BY do.dt
@@ -596,8 +596,8 @@ def send_funnel_report_email(ds, **kwargs):
             round(completed_num/request_num*100, 2) as completed_rate,
             round(completed_num_lfw/request_num_lfw*100, 2) as completed_lfw_rate,
             pay_num,
-            round(pay_price_total/pay_num, 2),
-            round(pay_amount_total/pay_num, 2)
+            if (dt >= '2019-06-26',  round(pay_price_total/pay_num, 2), ''),
+            if (dt >= '2019-06-26',  round(pay_amount_total/pay_num, 2), '')
         FROM
            oride_bi.oride_global_daily_report
         WHERE
