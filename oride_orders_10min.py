@@ -36,6 +36,9 @@ create_oride_orders_status = MySqlOperator(
             orders_user int unsigned not null default 0 comment 'users',
             orders_pick int unsigned not null default 0 comment 'picks',
             drivers_serv int unsigned not null default 0 comment 'drivers',
+            orders_finish int unsigned not null default 0 comment 'finish',
+            avg_pick int unsigned not null default 0 comment '(picktime-ordertime)/picks sec',
+            avg_take decimal(10,1) unsigned not null default '0.0' comment '(taktime-picktime)/finish min',
             primary key (order_time)
         )engine=innodb;
     """,
