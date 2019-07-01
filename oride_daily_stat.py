@@ -73,4 +73,3 @@ import_driver_online_time = PythonOperator(
     dag=dag
 )
 
-import_driver_online_time.set_upstream(bad_debt_task)
