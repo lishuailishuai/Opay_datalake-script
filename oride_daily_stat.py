@@ -1,7 +1,7 @@
 import airflow
 from datetime import datetime, timedelta
 from airflow.operators.python_operator import PythonOperator
-from oride_daily_report.query_data import query_data, write_email
+from oride_daily_report.query_data import query_data, write_email, get_driver_online_time
 from oride_daily_report.import_tables import import_table
 from bad_debts.bad_delts_check import check_bad_debts_data
 
@@ -65,3 +65,12 @@ bad_debt_task = PythonOperator(
 )
 
 bad_debt_task.set_upstream(write_email_task)
+
+import_driver_online_time = PythonOperator(
+    task_id='import_driver_online_time',
+    python_callable=get_driver_online_time,
+    provide_context=True,
+    dag=dag
+)
+
+import_driver_online_time.set_upstream(bad_debt_task)

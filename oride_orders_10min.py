@@ -5,9 +5,13 @@ add by duo.wu 下单量、下单人数、接单量、在线司机数，从业务
 import airflow
 from airflow.operators.bash_operator import BashOperator
 from airflow.operators.mysql_operator import MySqlOperator
+from airflow.operators.python_operator import PythonOperator
+from airflow.contrib.hooks.redis_hook import RedisHook
+from utils.connection_helper import get_hive_cursor, get_db_conn, get_pika_connection
 from datetime import timedelta, time, datetime
 from utils.connection_helper import get_db_conf
 import os
+import time
 
 args = {
     'owner': 'root',
@@ -25,6 +29,12 @@ dag = airflow.DAG(
     schedule_interval="*/10 * * * *",
     default_args=args
 )
+
+active_a_driver = "active_driver:a:%s"
+active_no_driver = "active_driver:no:%s"
+insert_driver_num = """
+replace into bi.driver_online (`online_time`,`drivers_online`,`driver_orderable`) values (%s,%d,%d)
+"""
 
 create_oride_orders_status = MySqlOperator(
     task_id='create_oride_orders_status',
@@ -57,6 +67,38 @@ write_from_mysql = BashOperator(
     ''',
     params={'host': host, 'port': port, 'username': login, 'password': password, 'host_bi': host_bi, 'user_bi': user_bi, 'port_bi': port_bi, 'pass_bi': pass_bi, 'path': os.path.split(os.path.realpath(__file__))[0]},
     dag=dag,
+)
+
+
+def get_driver_num(**op_kwargs):
+    redis_conn = RedisHook(redis_conn_id='pika').get_conn()
+    ts = op_kwargs['ts']
+    dt, h = ts.split('T')
+    dt = dt + ' ' + h.split('+')[0]
+    time_array = time.strptime(dt, "%Y-%m-%d %H:%M:%S")
+    timestamp = int(time.mktime(time_array))
+    a_member = set()
+    no_member = set()
+    dt_start = time.strftime('%Y%m%d%H%M', time.localtime(timestamp))
+    for i in range(0, 10):
+        dt = time.strftime('%Y%m%d%H%M', time.localtime(timestamp + i * 60))
+        a_member = a_member.union(set(redis_conn.smembers(active_a_driver % dt)))
+        no_member = no_member.union(set(redis_conn.smembers(active_no_driver % dt)))
+    conn = get_db_conn('mysql_bi')
+    mcursor = conn.cursor()
+    mcursor.execute(insert_driver_num % (dt_start+'00', len(a_member), len(no_member)))
+    conn.commit()
+    mcursor.close()
+    conn.close()
+
+
+
+
+import_driver_num = PythonOperator(
+    task_id='import_driver_num',
+    python_callable=get_driver_num,
+    provide_context=True,
+    dag=dag
 )
 
 create_oride_orders_status >> write_from_mysql
