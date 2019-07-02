@@ -192,9 +192,9 @@ def send_report_email(tomorrow_ds, **kwargs):
                         <th>完单数</th>
                         <th>应答率</th>
                         <th>完单率</th>
-                        <th>线上支持订单数</th>
-                        <th>应答时长(平均)</th>
-                        <th>接驾时长(平均)</th>
+                        <th>线上支付订单数</th>
+                        <th>平均应答时长（秒）</th>
+                        <th>平均接驾时长（秒）</th>
                         <!--充值-->
                         <th>每日充值笔数</th>
                         <th>累计充值笔数</th>

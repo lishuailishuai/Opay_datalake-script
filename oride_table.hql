@@ -1133,6 +1133,31 @@ OUTPUTFORMAT
 LOCATION
   'ufile://opay-datalake/oride/db/data_abnormal_order';
 
+
+CREATE EXTERNAL TABLE `data_anti_fraud_strategy`(
+  `id` int COMMENT 'ID',
+  `role` int COMMENT '策略针对的角色：1.乘客,2.司机',
+  `behavior` int COMMENT '异常行为',
+  `name` string COMMENT '策略名称',
+  `tpl_id` int COMMENT '策略模版ID',
+  `rules` string COMMENT '策略参数值列表',
+  `black_score` int COMMENT '黑名单分值',
+  `punish_result` int COMMENT '惩处结果',
+  `status` int COMMENT '状态',
+  `created_at` string COMMENT '申请时间',
+  `updated_at` string COMMENT '更新时间')
+PARTITIONED BY (
+  `dt` string)
+ROW FORMAT SERDE
+  'org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe'
+STORED AS INPUTFORMAT
+  'org.apache.hadoop.mapred.TextInputFormat'
+OUTPUTFORMAT
+  'org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat'
+LOCATION
+  'ufile://opay-datalake/oride/db/data_anti_fraud_strategy';
+
+
 CREATE EXTERNAL TABLE `appsflyer_opay_install_log`(
     attributed_touch_type string,
     attributed_touch_time string,
