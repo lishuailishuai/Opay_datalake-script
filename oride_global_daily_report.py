@@ -690,8 +690,8 @@ def send_funnel_report_email(ds, **kwargs):
                         <th>司机取消率</th>
                         <th>司机取消率（近4周同期均值）</th>
                         <!--完单-支付-->
-                        <th>完成数</th>
-                        <th>完成数（近4周同期均值）</th>
+                        <th>完单数</th>
+                        <th>完单数（近4周同期均值）</th>
                         <th>完单率</th>
                         <th>完单率（近4周同期均值）</th>
                         <th>支付订单数</th>
