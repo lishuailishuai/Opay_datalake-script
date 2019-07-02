@@ -51,11 +51,11 @@ done <<_eof
 _eof
 
 #在线司机数瞬时值
-while read daytime1 daytime2 day1 day2 drivers; do
-    mysql -h${HOST_BI} -u${USER_BI} -P${PORT_BI} -p${PASS_BI} bi -e" insert into oride_orders_status_10min
-        (order_time, daily, drivers_serv)
-    values ('${daytime1} ${daytime2}', '${day1} ${day2}', ${drivers})
-    on duplicate key update drivers_serv=values(drivers_serv)"
-done<<_feof
-    $(mysql  -h${HOST_RD} -u${USER_RD} -P${PORT_RD} -p${PASS_RD} oride_data --skip-column-names -e"set time_zone = '+1:00'; select date_format(from_unixtime(floor((unix_timestamp()-600)/600)*600), '%Y-%m-%d %H:%i:00'), date_format(from_unixtime(unix_timestamp()-600), '%Y-%m-%d 00:00:00'), count(1) from data_driver_extend where serv_mode>0")
-_feof
+#while read daytime1 daytime2 day1 day2 drivers; do
+#    mysql -h${HOST_BI} -u${USER_BI} -P${PORT_BI} -p${PASS_BI} bi -e" insert into oride_orders_status_10min
+#        (order_time, daily, drivers_serv)
+#    values ('${daytime1} ${daytime2}', '${day1} ${day2}', ${drivers})
+#    on duplicate key update drivers_serv=values(drivers_serv)"
+#done<<_feof
+#    $(mysql  -h${HOST_RD} -u${USER_RD} -P${PORT_RD} -p${PASS_RD} oride_data --skip-column-names -e"set time_zone = '+1:00'; select date_format(from_unixtime(floor((unix_timestamp()-600)/600)*600), '%Y-%m-%d %H:%i:00'), date_format(from_unixtime(unix_timestamp()-600), '%Y-%m-%d 00:00:00'), count(1) from data_driver_extend where serv_mode>0")
+#_feof
