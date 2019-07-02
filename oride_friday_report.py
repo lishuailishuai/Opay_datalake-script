@@ -5,7 +5,7 @@ from airflow.operators.python_operator import PythonOperator
 from airflow.utils.email import send_email
 
 args = {
-    'owner': 'root',
+    'owner': 'linan',
     'start_date': datetime(2019, 6, 15),
     'depends_on_past': False,
     'retries': 1,

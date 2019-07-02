@@ -9,7 +9,7 @@ from airflow.models import Variable
 from utils.connection_helper import get_hive_cursor
 
 args = {
-    'owner': 'root',
+    'owner': 'linan',
     'start_date': datetime(2019, 6, 14),
     'depends_on_past': False,
     'retries': 1,
