@@ -2,7 +2,7 @@
 from datetime import datetime, timedelta
 import time
 import csv
-from utils.connection_helper import get_hive_cursor, get_db_conn, get_pika_connection
+from utils.connection_helper import get_hive_cursor, get_db_conn, get_pika_connection, get_redis_connection
 from utils.util import *
 import smtplib
 from email.mime.text import MIMEText
@@ -10,6 +10,7 @@ from email.header import Header
 from email.mime.multipart import MIMEMultipart
 from oride_daily_report.driver_data import get_driver_data
 from airflow.models import Variable
+
 
 sender = 'research@opay-inc.com'
 password = 'G%4nlD$YCJol@Op'
@@ -47,6 +48,18 @@ mail_msg_tail = '''
   </body>
 </html>
 '''
+
+KeyDriverOnlineTime = "driver:ont:%d:%s"
+KeyDriverOrderTime = "driver:ort:%d:%s"
+
+get_driver_id = '''
+select max(id) from oride_data.data_driver
+'''
+
+insert_timerange = '''
+replace into bi.driver_timerange (`Daily`,`driver_id`,`driver_onlinerange`,`driver_freerange`) values (%s,%s,%s,%s)
+'''
+
 
 query1 = '''
 select count(*) as call_num,
@@ -336,3 +349,29 @@ def write_email(**op_kwargs):
         print("邮件发送成功")
     except smtplib.SMTPException as e:
         print(e.message)
+
+def get_driver_online_time(**op_kwargs):
+    dt = op_kwargs["ds_nodash"]
+    redis = get_redis_connection()
+    conn = get_db_conn('mysql_oride_data_readonly')
+    mcursor = conn.cursor()
+    mcursor.execute(get_driver_id)
+    result = mcursor.fetchone()
+    conn.commit()
+    mcursor.close()
+    conn.close()
+    res = []
+    for i in range(1, result[0]+1):
+        online_time = redis.get(KeyDriverOnlineTime % (i, dt))
+        order_time = redis.get(KeyDriverOrderTime % (i, dt))
+        if online_time is not None:
+            if order_time is None:
+                order_time = 0
+            free_time = int(online_time) - int(order_time)
+            res.append([dt+'000000', int(i), int(online_time), int(free_time)])
+    conn = get_db_conn('mysql_bi')
+    mcursor = conn.cursor()
+    mcursor.executemany(insert_timerange, res)
+    conn.commit()
+    mcursor.close()
+    conn.close()
