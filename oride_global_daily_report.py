@@ -112,7 +112,9 @@ create_oride_global_daily_report = HiveOperator(
             `pay_num` int,
             `pay_price_total` int,
             `pay_amount_total` int,
-            `push_num` int
+            `push_num` int,
+            `online_pay_driver_num` int,
+            `online_pay_order_num` int
         )
         PARTITIONED BY (
             `dt` string)
@@ -232,7 +234,9 @@ insert_oride_global_daily_report = HiveOperator(
                 count(DISTINCT if(do.cancel_role=2 and do.status=6, do.id, null)) as driver_cancel_num,
                 count(DISTINCT if(dop.status=1, do.id, null)) as pay_num,
                 SUM(if(dop.status=1, dop.price, 0)) as pay_price_total,
-                SUM(if(dop.status=1, dop.amount, 0)) as pay_amount_total
+                SUM(if(dop.status=1, dop.amount, 0)) as pay_amount_total,
+                COUNT(DISTINCT if(dop.status=1 and (dop.mode=2 or dop.mode=3), dop.driver_id, null)) as online_pay_driver_num,
+                COUNT(DISTINCT if(dop.status=1 and (dop.mode=2 or dop.mode=3), dop.id, null)) as online_pay_order_num
             FROM
                 oride_db.data_order do
                 LEFT JOIN
@@ -352,7 +356,9 @@ insert_oride_global_daily_report = HiveOperator(
             od.pay_num,
             od.pay_price_total,
             od.pay_amount_total,
-            pd.push_num
+            pd.push_num,
+            od.online_pay_driver_num,
+            od.online_pay_order_num
         FROM
             order_data od
             LEFT JOIN lfw_data lf on lf.dt=od.dt
@@ -756,6 +762,342 @@ send_funnel_report = PythonOperator(
     dag=dag
 )
 
+create_oride_anti_fraud_daily_report = HiveOperator(
+    task_id='create_oride_anti_fraud_daily_report',
+    hql="""
+        CREATE TABLE IF NOT EXISTS `oride_anti_fraud_daily_report`(
+            `rule_name` string,
+            `behavior_id` int,
+            `driver_register_num` int,
+            `user_register_num` int,
+            `driver_silence_num` int,
+            `user_silence_num` int,
+            `abnormal_order_num` int,
+            `abnormal_driver_num` int,
+            `revoked_order_num` int,
+            `order_amount` DECIMAL(10,2)
+        )
+        PARTITIONED BY (
+            `dt` string)
+        STORED AS PARQUET
+        """,
+    schema='oride_bi',
+    dag=dag)
+
+insert_oride_anti_fraud_daily_report = HiveOperator(
+    task_id='insert_oride_anti_fraud_daily_report',
+    hql="""
+        ALTER TABLE oride_anti_fraud_daily_report DROP IF EXISTS PARTITION (dt = '{{ ds }}');
+        INSERT OVERWRITE TABLE oride_anti_fraud_daily_report PARTITION (dt = '{{ ds }}')
+        SELECT
+            afs.name,
+            afs.behavior,
+            rd.driver_register_num,
+            rd.user_register_num,
+            sd.driver_silence_num,
+            sd.user_silence_num,
+            ao.abnormal_order_num,
+            ao.abnormal_driver_num,
+            ao.revoked_order_num,
+            ao.order_amount
+        FROM
+            oride_db.data_anti_fraud_strategy afs
+                LEFT JOIN (
+                    select
+                        dt,rule_name, count(distinct driverid) as driver_register_num, count(distinct userid) user_register_num
+                    from
+                        oride_source.anti_fraud
+                        lateral view explode(split(abnormalstrategy, ',')) addtable as rule_name
+                    where
+                        dt = '{{ ds }}'
+                        and action = 'UserRegister'
+                        and abnormalstrategy <> ''
+                    group by dt,rule_name
+                ) rd on rd.dt=afs.dt and rd.rule_name=afs.name
+                LEFT JOIN (
+                    select
+                        dt,
+                        behavior,
+                        count(distinct if(action='SilenceDriver2' or action='SilenceDriver', driverid, null)) as driver_silence_num,
+                        count(distinct if(action='SilenceUser', userid, null)) as user_silence_num
+                    from
+                        oride_source.anti_fraud
+                        lateral view explode(split(behaviors, ',')) addtable as behavior
+                    where
+                        dt = '{{ ds }}'
+                        and behaviors <> ''
+                        and behaviors is not null
+                        and action in ('SilenceDriver2', 'SilenceDriver', 'SilenceUser')
+                    group by dt,behavior
+                ) sd on sd.dt=afs.dt and sd.behavior=afs.behavior
+                LEFT JOIN (
+                    select
+                        dt,
+                        behavior,
+                        count(distinct order_id) as abnormal_order_num,
+                        count(distinct driver_id) as abnormal_driver_num,
+                        count(distinct if(is_revoked=1, order_id, null)) as revoked_order_num,
+                        sum(amount) as order_amount
+                    from
+                        oride_db.data_abnormal_order
+                        lateral view explode(split(behavior_ids, ',')) addtable as behavior
+                    where
+                        dt = '{{ ds }}'
+                        and from_unixtime(create_time, 'yyyy-MM-dd')=dt
+                    group by dt,behavior
+                ) ao on ao.dt=afs.dt and ao.behavior=afs.behavior
+            where
+                afs.dt='{{ ds }}' AND
+                !(rd.driver_register_num is null
+                and rd.user_register_num is null
+                and sd.driver_silence_num is null
+                and sd.user_silence_num is null
+                and ao.abnormal_order_num is null
+                and ao.abnormal_driver_num is null
+                and ao.revoked_order_num is null
+                and ao.order_amount  is null
+                )
+        """,
+    schema='oride_bi',
+    dag=dag)
+
+def send_anti_fraud_report_email(ds, **kwargs):
+    sql = '''
+        WITH last_day_data AS (
+            SELECT
+                *
+            FROM
+                oride_bi.oride_anti_fraud_daily_report
+            WHERE
+                dt='{last_day}'
+
+        ),
+        7_day_data as (
+            SELECT
+                behavior_id,
+                avg(user_register_num) as avg_user_register_num,
+                avg(driver_silence_num) as avg_driver_silence_num,
+                avg(user_silence_num) as avg_user_silence_num,
+                avg(abnormal_driver_num) as avg_abnormal_driver_num,
+                avg(abnormal_order_num) as avg_abnormal_order_num,
+                avg(order_amount) as avg_order_amount
+            FROM
+                oride_bi.oride_anti_fraud_daily_report
+            WHERE
+                dt BETWEEN '{day_start_7}' AND '{dt}'
+            GROUP BY
+                behavior_id
+        ),
+        y_7_day_data as (
+            SELECT
+                behavior_id,
+                avg(user_register_num) as avg_user_register_num,
+                avg(driver_silence_num) as avg_driver_silence_num,
+                avg(user_silence_num) as avg_user_silence_num,
+                avg(abnormal_driver_num) as avg_abnormal_driver_num,
+                avg(abnormal_order_num) as avg_abnormal_order_num,
+                avg(order_amount) as avg_order_amount
+            FROM
+                oride_bi.oride_anti_fraud_daily_report
+            WHERE
+                dt BETWEEN '{y_7_day_start}' AND '{last_day}'
+            GROUP BY
+                behavior_id
+        )
+        SELECT
+            td.dt,
+            td.rule_name,
+            nvl(td.user_register_num, 0),
+            nvl(round(td.user_register_num/gdr.register_users, 4), 0),
+            nvl(round((td.user_register_num/ldd.user_register_num-1),4), 0),
+            nvl(round((7dd.avg_user_register_num/y7dd.avg_user_register_num-1),4), 0),
+            nvl(td.driver_silence_num, 0),
+            nvl(td.user_silence_num, 0),
+            nvl(round(td.driver_silence_num/gdr.online_drivers, 4), 0),
+            nvl(round(td.user_silence_num/gdr.active_users, 4), 0),
+            nvl(round((td.driver_silence_num/ldd.driver_silence_num-1), 4), 0),
+            nvl(round((td.user_silence_num/ldd.user_silence_num-1), 4), 0),
+            nvl(round((7dd.avg_driver_silence_num/y7dd.avg_driver_silence_num-1), 4), 0),
+            nvl(round((7dd.avg_user_silence_num/y7dd.avg_user_silence_num-1), 4), 0),
+            nvl(td.abnormal_driver_num, 0),
+            nvl(round(td.abnormal_driver_num/gdr.online_pay_driver_num, 4), 0),
+            nvl(round(td.abnormal_driver_num/ldd.abnormal_driver_num-1, 4), 0),
+            nvl(round(7dd.avg_abnormal_driver_num/y7dd.avg_abnormal_driver_num-1, 4), 0),
+            nvl(td.abnormal_order_num, 0),
+            nvl(round(td.abnormal_order_num/gdr.online_pay_order_num, 4), 0),
+            nvl(round(td.abnormal_order_num/ldd.abnormal_order_num-1, 4), 0),
+            nvl(round(7dd.avg_abnormal_order_num/y7dd.avg_abnormal_order_num-1, 4), 0),
+            nvl(td.order_amount, 0),
+            nvl(round(td.order_amount/ldd.order_amount-1, 4), 0),
+            nvl(round(7dd.avg_order_amount/y7dd.avg_order_amount-1, 4), 0),
+            nvl(td.revoked_order_num, 0),
+            nvl(round(td.revoked_order_num/td.abnormal_order_num, 4), 0)
+        FROM
+            oride_bi.oride_anti_fraud_daily_report td
+            INNER JOIN oride_bi.oride_global_daily_report gdr ON gdr.dt=td.dt
+            LEFT JOIN last_day_data ldd on ldd.behavior_id=td.behavior_id
+            LEFT JOIN 7_day_data 7dd on 7dd.behavior_id=td.behavior_id
+            LEFT JOIN y_7_day_data y7dd on y7dd.behavior_id=td.behavior_id
+        WHERE
+            td.dt='{dt}'
+    '''.format(
+        dt=ds,
+        last_day=airflow.macros.ds_add(ds, -1),
+        day_start_7=airflow.macros.ds_add(ds, -6),
+        y_7_day_start=airflow.macros.ds_add(ds, -7)
+    )
+    cursor = get_hive_cursor()
+    logging.info(sql)
+    cursor.execute(sql)
+    data_list = cursor.fetchall()
+    if len(data_list) > 0 :
+        html_fmt = '''
+        <html>
+        <head>
+        <title></title>
+        <style type="text/css">
+            table
+            {{
+                font-family:'黑体';
+                border-collapse: collapse;
+                margin: 0 auto;
+                text-align: left;
+                font-size:12px;
+                color:#29303A;
+            }}
+            table h2
+            {{
+                font-size:20px;
+                color:#000000;
+            }}
+            .th_title
+            {{
+                font-size:16px;
+                color:#000000;
+                text-align: center;
+            }}
+            table td, table th
+            {{
+                border: 1px solid #000000;
+                color: #000000;
+                height: 30px;
+                padding: 5px 10px 5px 5px;
+            }}
+            table thead th
+            {{
+                background-color: #1DCF9F;
+                //color: white;
+                width: 100px;
+            }}
+        </style>
+        </head>
+        <body>
+            <table width="95%" class="table">
+                <caption>
+                    <h2>反作弊报表</h2>
+                </caption>
+                <thead>
+                    <tr>
+                        <th></th>
+                        <th></th>
+                        <th colspan="4" class="th_title">注册策略</th>
+                        <th colspan="8" class="th_title">事中策略</th>
+                        <th colspan="13" class="th_title">事后策略</th>
+                    </tr>
+                    <tr>
+                        <th>日期</th>
+                        <th>策略名称</th>
+                        <!--注册策略-->
+                        <th>当日注册拦截乘客总人数</th>
+                        <th>当日注册拦截乘客占比</th>
+                        <th>注册拦截乘客数日环比增量</th>
+                        <th>注册拦截乘客数7日环比增量</th>
+                        <!--事中策略-->
+                        <th>事中拦截司机总人数</th>
+                        <th>事中拦截乘客总人数</th>
+                        <th>事中拦截司机人数占比</th>
+                        <th>事中拦截乘客人数占比</th>
+                        <th>事中拦截司机数日环比增量</th>
+                        <th>事中拦截乘客数日环比增量</th>
+                        <th>事中拦截司机数7日环比增量</th>
+                        <th>事中拦截乘客数7日环比增量</th>
+                        <!--事后策略-->
+                        <th>扣款司机人数</th>
+                        <th>扣款司机人数占比</th>
+                        <th>扣款司机人数日环比增量</th>
+                        <th>扣款司机人数7日环比增量</th>
+                        <th>扣款订单量</th>
+                        <th>扣款订单占比</th>
+                        <th>扣款订单量日环比增量</th>
+                        <th>扣款订单量7日环比增量</th>
+                        <th>扣款金额</th>
+                        <th>扣款金额日环比增量</th>
+                        <th>扣款金额7日环比增量</th>
+                        <th>累计revoke量</th>
+                        <th>累计revoke率</th>
+                    </tr>
+                </thead>
+                {rows}
+            </table>
+        </body>
+        </html>
+        '''
+        tr_fmt = '''
+            <tr style="background-color:#F5F5F5;">{row}</tr>
+        '''
+        row_fmt  = '''
+            <td>{0}</td>
+            <td>{1}</td>
+            <!--注册策略-->
+            <td>{2}</td>
+            <td>{3:.2%}</td>
+            <td>{4:.2%}</td>
+            <td>{5:.2%}</td>
+            <!--事中策略-->
+            <td>{6}</td>
+            <td>{7}</td>
+            <td>{8:.2%}</td>
+            <td>{9:.2%}</td>
+            <td>{10:.2%}</td>
+            <td>{11:.2%}</td>
+            <td>{12:.2%}</td>
+            <td>{13:.2%}</td>
+            <!--事后策略-->
+            <td>{14}</td>
+            <td>{15:.2%}</td>
+            <td>{16:.2%}</td>
+            <td>{17:.2%}</td>
+            <td>{18}</td>
+            <td>{19:.2%}</td>
+            <td>{20:.2%}</td>
+            <td>{21:.2%}</td>
+            <td>{22}</td>
+            <td>{23:.2%}</td>
+            <td>{24:.2%}</td>
+            <td>{25}</td>
+            <td>{26:.2%}</td>
+        '''
+        row_html=''
+        for data in data_list:
+            row = row_fmt.format(*list(data))
+            row_html += tr_fmt.format(row=row)
+        html = html_fmt.format(rows=row_html)
+        # send mail
+        email_subject = 'oride反作弊报表_{}'.format(ds)
+        send_email(Variable.get("oride_anti_fraud_report_receivers").split(), email_subject, html, mime_charset='utf-8')
+    cursor.close()
+    return
+
+send_anti_fraud_report = PythonOperator(
+    task_id='send_anti_fraud_report',
+    python_callable=send_anti_fraud_report_email,
+    provide_context=True,
+    dag=dag
+)
+
+
+insert_oride_global_daily_report >> insert_oride_anti_fraud_daily_report >> send_anti_fraud_report
+create_oride_anti_fraud_daily_report >> insert_oride_anti_fraud_daily_report
 create_oride_global_daily_report >> insert_oride_global_daily_report
 insert_oride_global_daily_report >> send_report
 import_opay_event_log >> insert_oride_global_daily_report

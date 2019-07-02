@@ -33,6 +33,7 @@ table_list = [
     "data_driver_extend",
     "data_driver_comment",
     "data_abnormal_order",
+    "data_anti_fraud_strategy",
 ]
 
 host, port, schema, login, password = get_db_conf('sqoop_db')
