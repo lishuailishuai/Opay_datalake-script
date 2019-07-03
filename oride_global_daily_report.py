@@ -28,16 +28,18 @@ dag = airflow.DAG(
     schedule_interval="30 00 * * *",
     default_args=args)
 
+
 def import_opay_event(ds, **kwargs):
     # download report
-    api_url = "https://hq.appsflyer.com/export/team.opay.pay/partners_by_date_report/v5?api_token={api_token}&from={dt}&to={dt}".format(api_token=Variable.get("opay_appsflyer_api_token"), dt=ds)
-    headers = {'Accept':'text/csv'}
+    api_url = "https://hq.appsflyer.com/export/team.opay.pay/partners_by_date_report/v5?api_token={api_token}&from={dt}&to={dt}".format(
+        api_token=Variable.get("opay_appsflyer_api_token"), dt=ds)
+    headers = {'Accept': 'text/csv'}
     response = requests.get(
         api_url,
         headers=headers
     )
     logging.info('url:{} response_len:{}'.format(response.url, len(response.content)))
-    cols=[
+    cols = [
         "Agency/PMD (af_prt)",
         "Media Source (pid)",
         "Campaign (c)",
@@ -59,16 +61,18 @@ def import_opay_event(ds, **kwargs):
     ]
     df = pd.read_csv(io.BytesIO(response.content), usecols=cols)[cols]
     tmp_path = '/data/airflow/tmp/'
-    file_name = 'appsflyer_opay_event_log_'+ds
+    file_name = 'appsflyer_opay_event_log_' + ds
     tmp_file = tmp_path + file_name
-    df.to_csv(tmp_file, index = None, header=True)
+    df.to_csv(tmp_file, index=None, header=True)
     # upload to ufile
-    upload_cmd = '/root/filemgr/filemgr  --action mput --bucket opay-datalake --key oride/appsflyer/opay_event_log/dt={dt}/{file_name}  --file {tmp_file}'.format(dt=ds, file_name=file_name,tmp_file=tmp_file)
+    upload_cmd = '/root/filemgr/filemgr  --action mput --bucket opay-datalake --key oride/appsflyer/opay_event_log/dt={dt}/{file_name}  --file {tmp_file}'.format(
+        dt=ds, file_name=file_name, tmp_file=tmp_file)
 
     os.system(upload_cmd)
     # clear tmp file
     clear_cmd = 'rm -f %s' % tmp_file
     os.system(clear_cmd)
+
 
 import_opay_event_log = PythonOperator(
     task_id='import_opay_event_log',
@@ -225,7 +229,7 @@ insert_oride_global_daily_report = HiveOperator(
                 avg(if(do.take_time>0 and (do.status=4 or do.status=5), do.take_time-do.create_time, null)) as avg_take_time,
                 avg(if(do.pickup_time>0 and (do.status=4 or do.status=5), do.pickup_time-do.take_time, null)) as avg_pickup_time,
                 avg(if(do.duration>0, do.duration, null)) as avg_duration,
-                avg(if(do.distance>0, do.distance, null)) as avg_distance,
+                round(sum(if(do.status = 4 or do.status =5,do.distance, 0))/count(if(do.status=4 or do.status=5, do.id, null)),0) as avg_distance,
                 SUM(do.duration) as total_duration,
                 count(DISTINCT if(do.status=4 or do.status=5, do.user_id, null)) as completed_users,
                 count(DISTINCT if((do.status=4 or do.status=5) and old_user.user_id is null, do.user_id, null)) as first_completed_users,
@@ -364,6 +368,7 @@ insert_oride_global_daily_report = HiveOperator(
     schema='oride_bi',
     dag=dag)
 
+
 def send_report_email(ds, **kwargs):
     sql = '''
         SELECT
@@ -383,7 +388,7 @@ def send_report_email(ds, **kwargs):
             nvl(online_drivers, ''),
             if(completed_drivers is null, '', round(completed_num/completed_drivers, 1)),
             avg_take_time,
-            avg_distance,
+            if(dt>='2019-07-02',avg_distance,0) avg_distance,
             avg_pickup_time,
             register_users,
             first_completed_users,
@@ -401,7 +406,7 @@ def send_report_email(ds, **kwargs):
     logging.info(sql)
     cursor.execute(sql)
     data_list = cursor.fetchall()
-    if len(data_list) > 0 :
+    if len(data_list) > 0:
         html_fmt = '''
         <html>
         <head>
@@ -440,7 +445,7 @@ def send_report_email(ds, **kwargs):
                         <th colspan="6" style="text-align: center;">关键指标</th>
                         <th colspan="4" style="text-align: center;">供需关系</th>
                         <th colspan="3" style="text-align: center;">司机指标</th>
-                        <th colspan="2" style="text-align: center;">体验指标</th>
+                        <th colspan="3" style="text-align: center;">体验指标</th>
                         <th colspan="4" style="text-align: center;">乘客指标</th>
                         <th colspan="1" style="text-align: center;">财务</th>
                     </tr>
@@ -465,6 +470,7 @@ def send_report_email(ds, **kwargs):
                         <!--体验指标-->
                         <th>平均应答时长（秒）</th>
                         <th>平均接驾时长（秒）</th>
+                        <th>平均送驾距离（米）</th>
                         <!--乘客指标-->
                         <th>注册乘客数</th>
                         <th>首次完单乘客数</th>
@@ -495,7 +501,7 @@ def send_report_email(ds, **kwargs):
         weekend_tr_fmt = '''
             <tr style="background:#fff2cc">{row}</tr>
         '''
-        row_fmt  = '''
+        row_fmt = '''
                 <th>{dt}</th>
                 <!--关键指标-->
                 <th>{request_num}</th>
@@ -516,6 +522,7 @@ def send_report_email(ds, **kwargs):
                 <!--体验指标-->
                 <th>{avg_take_time}</th>
                 <th>{avg_pickup_time}</th>
+                <th>{avg_distance}</th>
                 <!--乘客指标-->
                 <th>{register_users}</th>
                 <th>{first_completed_users}</th>
@@ -524,9 +531,12 @@ def send_report_email(ds, **kwargs):
                 <!--财务-->
                 <th>{map_request_num}</th>
         '''
-        row_html=''
+        row_html = ''
         for data in data_list:
-            [dt, week, request_num, request_num_lfw, completed_num, completed_num_lfw, c_vs_r, c_vs_r_lfw, active_users, completed_drivers, avg_online_time, btime_vs_otime, register_drivers, online_drivers, c_vs_od, avg_take_time, avg_distance, avg_pickup_time, register_users, first_completed_users, fcu_vs_cu, old_completed_users, map_request_num] = list(data)
+            [dt, week, request_num, request_num_lfw, completed_num, completed_num_lfw, c_vs_r, c_vs_r_lfw, active_users,
+             completed_drivers, avg_online_time, btime_vs_otime, register_drivers, online_drivers, c_vs_od,
+             avg_take_time, avg_distance, avg_pickup_time, register_users, first_completed_users, fcu_vs_cu,
+             old_completed_users, map_request_num] = list(data)
             row = row_fmt.format(
                 dt=dt,
                 request_num=request_num,
@@ -542,6 +552,7 @@ def send_report_email(ds, **kwargs):
                 c_vs_od=c_vs_od,
                 avg_take_time=avg_take_time,
                 avg_pickup_time=avg_pickup_time,
+                avg_distance=avg_distance,
                 register_users=register_users,
                 first_completed_users=first_completed_users,
                 fcu_vs_cu=fcu_vs_cu,
@@ -550,16 +561,19 @@ def send_report_email(ds, **kwargs):
                 avg_online_time=avg_online_time,
                 btime_vs_otime=btime_vs_otime
             )
-            if week=='6' or week=='7':
+            if week == '6' or week == '7':
                 row_html += weekend_tr_fmt.format(row=row)
             else:
                 row_html += tr_fmt.format(row=row)
         html = html_fmt.format(rows=row_html)
         # send mail
         email_subject = 'oride全局运营指标_{}'.format(ds)
-        send_email(Variable.get("oride_global_daily_report_receivers").split(), email_subject, html, mime_charset='utf-8')
+        send_email(
+            Variable.get("oride_global_daily_report_receivers").split()
+            , email_subject, html, mime_charset='utf-8')
     cursor.close()
     return
+
 
 send_report = PythonOperator(
     task_id='send_report',
@@ -567,6 +581,7 @@ send_report = PythonOperator(
     provide_context=True,
     dag=dag
 )
+
 
 def send_funnel_report_email(ds, **kwargs):
     sql = '''
@@ -608,7 +623,7 @@ def send_funnel_report_email(ds, **kwargs):
     logging.info(sql)
     cursor.execute(sql)
     data_list = cursor.fetchall()
-    if len(data_list) > 0 :
+    if len(data_list) > 0:
         html_fmt = '''
         <html>
         <head>
@@ -703,7 +718,7 @@ def send_funnel_report_email(ds, **kwargs):
         weekend_tr_fmt = '''
             <tr style="background:#FFD8BF">{row}</tr>
         '''
-        row_fmt  = '''
+        row_fmt = '''
                 <td>{0}</td>
                 <!--呼叫前-->
                 <td><!--{2}--></td>
@@ -733,11 +748,11 @@ def send_funnel_report_email(ds, **kwargs):
                 <td>{24}</td>
                 <td>{25}</td>
         '''
-        row_html=''
+        row_html = ''
         for data in data_list:
             row = row_fmt.format(*list(data))
-            week=data[1]
-            if week=='6' or week=='7':
+            week = data[1]
+            if week == '6' or week == '7':
                 row_html += weekend_tr_fmt.format(row=row)
             else:
                 row_html += tr_fmt.format(row=row)
@@ -747,6 +762,7 @@ def send_funnel_report_email(ds, **kwargs):
         send_email(Variable.get("oride_funnel_report_receivers").split(), email_subject, html, mime_charset='utf-8')
     cursor.close()
     return
+
 
 send_funnel_report = PythonOperator(
     task_id='send_funnel_report',
@@ -854,6 +870,7 @@ insert_oride_anti_fraud_daily_report = HiveOperator(
     schema='oride_bi',
     dag=dag)
 
+
 def send_anti_fraud_report_email(ds, **kwargs):
     sql = '''
         WITH last_day_data AS (
@@ -943,7 +960,7 @@ def send_anti_fraud_report_email(ds, **kwargs):
     logging.info(sql)
     cursor.execute(sql)
     data_list = cursor.fetchall()
-    if len(data_list) > 0 :
+    if len(data_list) > 0:
         html_fmt = '''
         <html>
         <head>
@@ -1038,7 +1055,7 @@ def send_anti_fraud_report_email(ds, **kwargs):
         tr_fmt = '''
             <tr style="background-color:#F5F5F5;">{row}</tr>
         '''
-        row_fmt  = '''
+        row_fmt = '''
             <td>{0}</td>
             <td>{1}</td>
             <!--注册策略-->
@@ -1070,7 +1087,7 @@ def send_anti_fraud_report_email(ds, **kwargs):
             <td>{25}</td>
             <td>{26:.2%}</td>
         '''
-        row_html=''
+        row_html = ''
         for data in data_list:
             row = row_fmt.format(*list(data))
             row_html += tr_fmt.format(row=row)
@@ -1081,13 +1098,13 @@ def send_anti_fraud_report_email(ds, **kwargs):
     cursor.close()
     return
 
+
 send_anti_fraud_report = PythonOperator(
     task_id='send_anti_fraud_report',
     python_callable=send_anti_fraud_report_email,
     provide_context=True,
     dag=dag
 )
-
 
 KeyDriverOnlineTime = "driver:ont:%d:%s"
 KeyDriverOrderTime = "driver:ort:%d:%s"
@@ -1098,6 +1115,8 @@ select max(id) from oride_data.data_driver
 insert_timerange = '''
 replace into bi.driver_timerange (`Daily`,`driver_id`,`driver_onlinerange`,`driver_freerange`) values (%s,%s,%s,%s)
 '''
+
+
 def get_driver_online_time(ds, **op_kwargs):
     dt = op_kwargs["ds_nodash"]
     redis = get_redis_connection()
@@ -1110,15 +1129,15 @@ def get_driver_online_time(ds, **op_kwargs):
     conn.close()
     rows = []
     res = []
-    for i in range(1, result[0]+1):
+    for i in range(1, result[0] + 1):
         online_time = redis.get(KeyDriverOnlineTime % (i, dt))
         order_time = redis.get(KeyDriverOrderTime % (i, dt))
         if online_time is not None:
             if order_time is None:
                 order_time = 0
             free_time = int(online_time) - int(order_time)
-            res.append([dt+'000000', int(i), int(online_time), int(free_time)])
-            rows.append('('+ str(i) + ','+ str(online_time,'utf-8') +','+ str(free_time) +')')
+            res.append([dt + '000000', int(i), int(online_time), int(free_time)])
+            rows.append('(' + str(i) + ',' + str(online_time, 'utf-8') + ',' + str(free_time) + ')')
     if rows:
         query = """
             INSERT OVERWRITE TABLE oride_bi.oride_driver_timerange PARTITION (dt='{dt}')
@@ -1135,6 +1154,7 @@ def get_driver_online_time(ds, **op_kwargs):
         mcursor.close()
         conn.close()
 
+
 import_driver_online_time = PythonOperator(
     task_id='import_driver_online_time',
     python_callable=get_driver_online_time,
@@ -1142,7 +1162,7 @@ import_driver_online_time = PythonOperator(
     dag=dag
 )
 
-create_oride_driver_timerange  = HiveOperator(
+create_oride_driver_timerange = HiveOperator(
     task_id='create_oride_driver_timerange',
     hql="""
         CREATE TABLE IF NOT EXISTS oride_driver_timerange (
