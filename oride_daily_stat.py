@@ -1,7 +1,7 @@
 import airflow
 from datetime import datetime, timedelta
 from airflow.operators.python_operator import PythonOperator
-from oride_daily_report.query_data import query_data, write_email, get_driver_online_time
+from oride_daily_report.query_data import query_data, write_email
 from oride_daily_report.import_tables import import_table
 
 args = {
@@ -55,11 +55,4 @@ write_email_task = PythonOperator(
 )
 
 write_email_task.set_upstream(query_data_task)
-
-import_driver_online_time = PythonOperator(
-    task_id='import_driver_online_time',
-    python_callable=get_driver_online_time,
-    provide_context=True,
-    dag=dag
-)
 

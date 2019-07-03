@@ -3,7 +3,8 @@ from datetime import datetime, timedelta
 from airflow.operators.python_operator import PythonOperator
 from airflow.utils.email import send_email
 from airflow.operators.hive_operator import HiveOperator
-from utils.connection_helper import get_hive_cursor
+from utils.connection_helper import get_hive_cursor, get_db_conn, get_pika_connection, get_redis_connection
+from airflow.hooks.hive_hooks import HiveCliHook
 import logging
 from airflow.models import Variable
 import pandas as pd
@@ -236,7 +237,8 @@ insert_oride_global_daily_report = HiveOperator(
                 SUM(if(dop.status=1, dop.price, 0)) as pay_price_total,
                 SUM(if(dop.status=1, dop.amount, 0)) as pay_amount_total,
                 COUNT(DISTINCT if(dop.status=1 and (dop.mode=2 or dop.mode=3), dop.driver_id, null)) as online_pay_driver_num,
-                COUNT(DISTINCT if(dop.status=1 and (dop.mode=2 or dop.mode=3), dop.id, null)) as online_pay_order_num
+                COUNT(DISTINCT if(dop.status=1 and (dop.mode=2 or dop.mode=3), dop.id, null)) as online_pay_order_num,
+                SUM(if(do.arrive_time>0, do.arrive_time-do.pickup_time, 0)) as billing_time
             FROM
                 oride_db.data_order do
                 LEFT JOIN
@@ -280,23 +282,12 @@ insert_oride_global_daily_report = HiveOperator(
         online_data as (
             SELECT
                 dt,
-                count(distinct user_id) as online_drivers,
-                sum(if(period_s > 300, 0, period_s)) as total_online_time
+                count(1) as online_drivers,
+                SUM(driver_onlinerange) as total_online_time
             FROM
-            (
-                select
-                    dt,
-                    user_id,
-                    `timestamp`-LAG(`timestamp`, 1, 0) OVER (PARTITION BY user_id ORDER BY `timestamp`) period_s
-                from
-                    oride_bi.oride_client_event_detail
-                where
-                    dt='{{ ds }}'
-                    and event_name='active'
-                    and get_json_object(event_value, '$.status')=1
-                    and user_id>0
-                    and app_name='ORide Driver'
-            ) t
+                oride_bi.oride_driver_timerange
+            WHERE
+                dt='{{ ds }}'
             GROUP BY dt
         ),
         -- 地图调用数据
@@ -335,7 +326,7 @@ insert_oride_global_daily_report = HiveOperator(
             od.avg_distance,
             old.online_drivers,
             old.total_online_time/old.online_drivers as avg_online_time,
-            od.total_duration/old.total_online_time as btime_vs_otime,
+            od.billing_time/old.total_online_time as btime_vs_otime,
             ud.active_users,
             ud.register_users,
             dd.register_drivers,
@@ -386,8 +377,8 @@ def send_report_email(ds, **kwargs):
             round(completed_num_lfw/request_num_lfw*100, 1),
             active_users,
             completed_drivers,
-            0 as avg_online_time,
-            0 as btime_vs_otime,
+            if(dt>='2019-07-01', avg_online_time, 0) as avg_online_time,
+            if(dt>='2019-07-01', btime_vs_otime, 0) as btime_vs_otime,
             nvl(register_drivers, 0),
             nvl(online_drivers, ''),
             if(completed_drivers is null, '', round(completed_num/completed_drivers, 1)),
@@ -516,8 +507,8 @@ def send_report_email(ds, **kwargs):
                 <!--供需关系-->
                 <th>{active_users}</th>
                 <th style="background:#d9d9d9">{completed_drivers}</th>
-                <th></th>
-                <th></th>
+                <th>{avg_online_time}</th>
+                <th>{btime_vs_otime:.2%}</th>
                 <!--司机指标-->
                 <th>{register_drivers}</th>
                 <th>{online_drivers}</th>
@@ -555,7 +546,9 @@ def send_report_email(ds, **kwargs):
                 first_completed_users=first_completed_users,
                 fcu_vs_cu=fcu_vs_cu,
                 old_completed_users=old_completed_users,
-                map_request_num=map_request_num
+                map_request_num=map_request_num,
+                avg_online_time=avg_online_time,
+                btime_vs_otime=btime_vs_otime
             )
             if week=='6' or week=='7':
                 row_html += weekend_tr_fmt.format(row=row)
@@ -1096,6 +1089,76 @@ send_anti_fraud_report = PythonOperator(
 )
 
 
+KeyDriverOnlineTime = "driver:ont:%d:%s"
+KeyDriverOrderTime = "driver:ort:%d:%s"
+
+get_driver_id = '''
+select max(id) from oride_data.data_driver
+'''
+insert_timerange = '''
+replace into bi.driver_timerange (`Daily`,`driver_id`,`driver_onlinerange`,`driver_freerange`) values (%s,%s,%s,%s)
+'''
+def get_driver_online_time(ds, **op_kwargs):
+    dt = op_kwargs["ds_nodash"]
+    redis = get_redis_connection()
+    conn = get_db_conn('mysql_oride_data_readonly')
+    mcursor = conn.cursor()
+    mcursor.execute(get_driver_id)
+    result = mcursor.fetchone()
+    conn.commit()
+    mcursor.close()
+    conn.close()
+    rows = []
+    res = []
+    for i in range(1, result[0]+1):
+        online_time = redis.get(KeyDriverOnlineTime % (i, dt))
+        order_time = redis.get(KeyDriverOrderTime % (i, dt))
+        if online_time is not None:
+            if order_time is None:
+                order_time = 0
+            free_time = int(online_time) - int(order_time)
+            res.append([dt+'000000', int(i), int(online_time), int(free_time)])
+            rows.append('('+ str(i) + ','+ str(online_time,'utf-8') +','+ str(free_time) +')')
+    if rows:
+        query = """
+            INSERT OVERWRITE TABLE oride_bi.oride_driver_timerange PARTITION (dt='{dt}')
+            VALUES {value}
+        """.format(dt=ds, value=','.join(rows))
+        logging.info('import_driver_online_time run sql:%s' % query)
+        hive_hook = HiveCliHook()
+        hive_hook.run_cli(query)
+        # insert bi mysql
+        conn = get_db_conn('mysql_bi')
+        mcursor = conn.cursor()
+        mcursor.executemany(insert_timerange, res)
+        conn.commit()
+        mcursor.close()
+        conn.close()
+
+import_driver_online_time = PythonOperator(
+    task_id='import_driver_online_time',
+    python_callable=get_driver_online_time,
+    provide_context=True,
+    dag=dag
+)
+
+create_oride_driver_timerange  = HiveOperator(
+    task_id='create_oride_driver_timerange',
+    hql="""
+        CREATE TABLE IF NOT EXISTS oride_driver_timerange (
+          driver_id int,
+          driver_onlinerange int,
+          driver_freerange int
+        )
+        PARTITIONED BY (
+            dt STRING
+        )
+        STORED AS PARQUET
+    """,
+    schema='oride_bi',
+    dag=dag)
+
+create_oride_driver_timerange >> import_driver_online_time >> insert_oride_global_daily_report
 insert_oride_global_daily_report >> insert_oride_anti_fraud_daily_report >> send_anti_fraud_report
 create_oride_anti_fraud_daily_report >> insert_oride_anti_fraud_daily_report
 create_oride_global_daily_report >> insert_oride_global_daily_report
