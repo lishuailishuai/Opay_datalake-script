@@ -33,12 +33,12 @@ if [ -n "${MYSQL_VALUES}" ];then
 fi
 
 #下单量、下单人数、接单量、完单量、平均应答时长(s)、平均接驾时长(m)
-while read daytime1 daytime2 day1 day2 orders orders_user orders_pick orders_finish avg_pick avg_take not_sys_cancel_orders picked_orders; do
+while read daytime1 daytime2 day1 day2 orders orders_user orders_pick orders_finish avg_pick avg_take not_sys_cancel_orders picked_orders orders_accept; do
     mysql -h${HOST_BI} -u${USER_BI} -P${PORT_BI} -p${PASS_BI} bi -e"
         insert into oride_orders_status_10min
-            (order_time, daily, orders, orders_user, orders_pick, orders_finish, avg_pick, avg_take,not_sys_cancel_orders,picked_orders)
+            (order_time, daily, orders, orders_user, orders_pick, orders_finish, avg_pick, avg_take,not_sys_cancel_orders,picked_orders,orders_accept)
         values
-            ('${daytime1} ${daytime2}', '${day1} ${day2}', ${orders}, ${orders_user}, ${orders_pick}, ${orders_finish}, ${avg_pick}, ${avg_take},${not_sys_cancel_orders},${picked_orders})
+            ('${daytime1} ${daytime2}', '${day1} ${day2}', ${orders}, ${orders_user}, ${orders_pick}, ${orders_finish}, ${avg_pick}, ${avg_take},${not_sys_cancel_orders},${picked_orders},${orders_accept})
         on duplicate key update
             orders=values(orders),
             orders_user=values(orders_user),
@@ -47,7 +47,8 @@ while read daytime1 daytime2 day1 day2 orders orders_user orders_pick orders_fin
             avg_pick=values(avg_pick),
             avg_take=values(avg_take),
             not_sys_cancel_orders=values(not_sys_cancel_orders),
-            picked_orders=values(picked_orders)
+            picked_orders=values(picked_orders),
+            orders_accept=values(orders_accept)
             "
 done <<_eof
     $(mysql -h${HOST_RD} -u${USER_RD} -P${PORT_RD} -p${PASS_RD} oride_data --skip-column-names -e"
@@ -64,7 +65,8 @@ done <<_eof
     if(sum(if(status=4 or status=5,1,0))>0, round(sum(if(pickup_time>0,
     pickup_time-take_time, 0))/60/sum(if(status=4 or status=5,1,0)), 1), 0) as avg_take,
     count(if(status = 6 and driver_id <> 0 and  cancel_role <> 3 and cancel_role <> 4,id,null)) as not_sys_cancel_orders,
-    count(if(pickup_time > 0,id,null)) as picked_orders
+    count(if(pickup_time > 0,id,null)) as picked_orders,
+    count(if(take_time>0,id,null)) as orders_accept
     from oride_data.data_order
     where create_time>=unix_timestamp(date_format(now(),'%Y-%m-%d %H'))-7200 and create_time<floor(unix_timestamp()/600)*600
     group by order_time, order_day")
