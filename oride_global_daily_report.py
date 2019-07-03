@@ -370,6 +370,7 @@ insert_oride_global_daily_report = HiveOperator(
 
 
 def send_report_email(ds, **kwargs):
+    logging.info("receivers:%s" % Variable.get("oride_global_daily_report_receivers"))
     sql = '''
         SELECT
             from_unixtime(unix_timestamp(dt, 'yyyy-MM-dd'),'yyyyMMdd') as dt,
@@ -382,7 +383,7 @@ def send_report_email(ds, **kwargs):
             round(completed_num_lfw/request_num_lfw*100, 1),
             active_users,
             completed_drivers,
-            if(dt>='2019-07-01', avg_online_time, 0) as avg_online_time,
+            if(dt>='2019-07-01', round(avg_online_time/3600,2), 0) as avg_online_time,
             if(dt>='2019-07-01', btime_vs_otime, 0) as btime_vs_otime,
             nvl(register_drivers, 0),
             nvl(online_drivers, ''),
@@ -461,7 +462,7 @@ def send_report_email(ds, **kwargs):
                         <!--供需关系-->
                         <th>活跃乘客数</th>
                         <th>完单司机数</th>
-                        <th>人均在线时长（秒）</th>
+                        <th>人均在线时长（时）</th>
                         <th>计费时长占比</th>
                         <!--司机指标-->
                         <th>注册司机数</th>
