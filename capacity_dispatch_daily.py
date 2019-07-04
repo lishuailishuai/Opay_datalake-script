@@ -18,23 +18,8 @@ args = {
 
 dag = airflow.DAG(
     'capacity_dispatch_daily',
-    schedule_interval="30 02 * * *",
+    schedule_interval="00 01 * * *",
     default_args=args)
-
-# import_log_file = BashOperator(
-#     task_id='import_log_file',
-#     bash_command='''
-#         log_path="/data/app_log"
-#         dt="{{ ds_nodash }}"
-#         mkdir -p ${log_path}/${dt}
-#         # pull log file
-#         scp -P 622 root@124.156.118.128:/data/app/dispatcher/logs/${dt}.log ${log_path}/${dt}/gw1.log
-#         scp -P 2522 root@124.156.118.128:/data/app/dispatcher/logs/${dt}.log ${log_path}/${dt}/gw2.log
-#         scp -P 22722 root@124.156.118.128:/data/app/dispatcher/logs/${dt}.log ${log_path}/${dt}/gw3.log
-#     ''',
-#     dag=dag,
-# )
-# )
 
 dispatch_table = HiveOperator(
     task_id='dispatch_table',
