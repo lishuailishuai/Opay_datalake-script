@@ -383,13 +383,13 @@ def send_report_email(ds, **kwargs):
             round(completed_num_lfw/request_num_lfw*100, 1),
             active_users,
             completed_drivers,
-            if(dt>='2019-07-01', round(avg_online_time/3600,2), 0) as avg_online_time,
-            if(dt>='2019-07-01', btime_vs_otime, 0) as btime_vs_otime,
+            if(dt>='2019-07-01', round(avg_online_time/3600,2), '-') as avg_online_time,
+            if(dt>='2019-07-01', concat(cast(round(btime_vs_otime * 100,2) as string),'%'),'-') as btime_vs_otime,
             nvl(register_drivers, 0),
             nvl(online_drivers, ''),
             if(completed_drivers is null, '', round(completed_num/completed_drivers, 1)),
             avg_take_time,
-            if(dt>='2019-07-02',avg_distance,0) avg_distance,
+            if(dt>='2019-07-02',avg_distance,'-') avg_distance,
             avg_pickup_time,
             register_users,
             first_completed_users,
@@ -515,7 +515,7 @@ def send_report_email(ds, **kwargs):
                 <th>{active_users}</th>
                 <th style="background:#d9d9d9">{completed_drivers}</th>
                 <th>{avg_online_time}</th>
-                <th>{btime_vs_otime:.2%}</th>
+                <th>{btime_vs_otime}</th>
                 <!--司机指标-->
                 <th>{register_drivers}</th>
                 <th>{online_drivers}</th>
@@ -538,6 +538,7 @@ def send_report_email(ds, **kwargs):
              completed_drivers, avg_online_time, btime_vs_otime, register_drivers, online_drivers, c_vs_od,
              avg_take_time, avg_distance, avg_pickup_time, register_users, first_completed_users, fcu_vs_cu,
              old_completed_users, map_request_num] = list(data)
+
             row = row_fmt.format(
                 dt=dt,
                 request_num=request_num,
