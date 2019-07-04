@@ -52,6 +52,7 @@ create_oride_orders_status = MySqlOperator(
             not_sys_cancel_orders int unsigned not null default 0 comment 'status = 6 and driver_id > 0 and cancel_role <> 3 and cancel_role <> 4',
             picked_orders int unsigned not null default 0 comment 'pickup_time > 0',
             orders_accept int unsigned not null default 0 comment 'take_time > 0',
+            agg_orders_finish int unsigned not null default 0 comment '',
             primary key (order_time)
         )engine=innodb;
     """,

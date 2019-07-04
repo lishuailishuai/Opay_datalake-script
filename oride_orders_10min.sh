@@ -50,6 +50,20 @@ while read daytime1 daytime2 day1 day2 orders orders_user orders_pick orders_fin
             picked_orders=values(picked_orders),
             orders_accept=values(orders_accept)
             "
+
+    mysql -h${HOST_BI} -u${USER_BI} -P${PORT_BI} -p${PASS_BI} bi -e "
+        update oride_orders_status_10min set agg_orders_finish = (
+            select a.agg_orders_finish
+            from
+            (
+            select
+            sum(orders_finish)  agg_orders_finish
+            from oride_orders_status_10min
+            where order_time > '${day1}' and order_time <= '${daytime1} ${daytime2}'
+            ) a
+        ) where order_time = '${daytime1} ${daytime2}'
+    "
+
 done <<_eof
     $(mysql -h${HOST_RD} -u${USER_RD} -P${PORT_RD} -p${PASS_RD} oride_data --skip-column-names -e"
     set time_zone = '+1:00';
@@ -71,6 +85,9 @@ done <<_eof
     where create_time>=unix_timestamp(date_format(now(),'%Y-%m-%d %H'))-7200 and create_time<floor(unix_timestamp()/600)*600
     group by order_time, order_day")
 _eof
+
+
+
 
 #在线司机数瞬时值
 #while read daytime1 daytime2 day1 day2 drivers; do
