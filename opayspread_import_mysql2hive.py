@@ -9,6 +9,9 @@ from airflow.operators.bash_operator import BashOperator
 from utils.connection_helper import get_db_conf
 from airflow.operators.hive_operator import HiveOperator
 from airflow.operators.impala_plugin import ImpalaOperator
+from utils.connection_helper import get_hive_cursor
+from airflow.operators.python_operator import PythonOperator
+from airflow.hooks.mysql_hook import MySqlHook
 
 opaySpreadTable = {
     'promoter_user': '''
@@ -74,6 +77,7 @@ opaySpreadTable = {
             exp_cert_images string,
             exp_plate_number string,
             know_orider int,
+            know_orider_extend string,
             agent_opay_account string,
             field_sales_number string,
             telesales_number string,
@@ -160,7 +164,7 @@ def getOpaySpreadTableSource(tablename):
 args = {
     'owner': 'root',
     'start_date': datetime(2019, 6, 22),
-    'depends_on_past': False,
+    'depends_on_past': True,
     'retries': 1,
     'retry_delay': timedelta(minutes=5),
     #'email': ['bigdata@opay-inc.com'],
@@ -170,7 +174,7 @@ args = {
 
 dag = airflow.DAG(
     'opayspread_import_mysql2hive',
-    schedule_interval="0 3 * * *",
+    schedule_interval="0 0 * * *",
     concurrency=5,
     max_active_runs=1,
     default_args=args)
@@ -180,69 +184,6 @@ table_list = [
     "rider_signups",
     "rider_signups_guarantors"
 ]
-
-'''
-数据统计任务
-'''
-create_oride_promoter_overview = HiveOperator(
-    task_id='create_oride_promoter_overview',
-    hql='''
-        CREATE TABLE IF NOT EXISTS oride_promoter_overview (
-            daily string,
-            driver_type int,
-            promoter_id int,
-            promoter_name string,
-            promoter_mobile string,
-            drivers_preregist int,
-            drivers_regist int,
-            drivers_written int,
-            drivers_drive int,
-            vehicle_status int,
-            
-            drivers_firstorder int,
-            drivers_10order int,
-            drivers_online int,
-            orders_finish int,
-            orders_total int,
-            fullinfo int,
-            kpi int,
-            drivers_guarantors int,
-            drivers_vehicle int
-        )
-        PARTITIONED BY (
-            dt STRING
-        )
-        STORED AS PARQUET
-    ''',
-    schema='dashboard',
-    dag=dag
-)
-
-promoter_user_list = HiveOperator(
-    task_id='promoter_user_data',
-    hql='''
-        INSERT OVERWRITE TABLE oride_promoter_overview PARTITION (dt='{{ ds }}')
-        SELECT 
-            from_unixtime(r.create_time),
-            r.driver_type,
-            p.id,
-            p.user_name,
-            p.name,
-            count(1),
-            sum(if(length(r.field_sales_number)=6 and r.record_by<>'', 1, 0)),
-            sum(if(r.online_test=1, 1, 0)),
-            sum(if(r.drivers_test=1, 1, 0)),
-            sum(if(r.driver_type=2 and r.vehicle_status=1), 1, 0)
-        FROM opay_spread.promoter_user as p LEFT JOIN opay_spread.rider_signups as r 
-        ON if(r.know_orider=4, r.field_sales_number=p.name, if(r.know_orider=5, r.telesales_number=p.name, 0)) 
-        WHERE r.create_time >= unix_timestamp('{{ ds }}') and 
-            r.create_time <= unix_timestamp('{{ ds }} 23:59:59') 
-              
-        
-    ''',
-    schema='dashboard',
-    dag=dag
-)
 
 '''
 导入数据任务
@@ -315,6 +256,4 @@ for opayspreadtable in table_list:
         dag=dag
     )
 
-    create_table >> import_from_mysql >> add_partitions >> refresh_impala >> create_oride_promoter_overview >> promoter_user_list
-
-
+    create_table >> import_from_mysql >> add_partitions >> refresh_impala
