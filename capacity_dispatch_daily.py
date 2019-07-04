@@ -96,6 +96,11 @@ push_table = HiveOperator(
 insert_report_metrics = HiveOperator(
     task_id='insert_report_metrics',
     hql='''
+        set hive.execution.engine=mr;
+        set mapreduce.map.java.opts=-Xmx1800m -XX:-UseGCOverheadLimit;
+        set mapreduce.reduce.java.opts=-Xmx2048m;
+        set mapreduce.map.memory.mb=2048;
+        set mapreduce.reduce.memory.mb=3072;
         insert into table oride_bi.report_metrics
         select 
         tt.dt,
@@ -209,7 +214,7 @@ insert_report_metrics = HiveOperator(
                 group by dt,driver_id
             ) p
             group by p.dt
-        ) pp on tt.dt = pp.dt
+        ) pp on tt.dt = pp.dt;
         ''',
     schema='oride_bi',
     dag=dag)
