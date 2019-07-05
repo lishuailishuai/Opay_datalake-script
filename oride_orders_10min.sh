@@ -53,16 +53,16 @@ while read daytime1 daytime2 day1 day2 orders orders_user orders_pick orders_fin
 
     mysql -h${HOST_BI} -u${USER_BI} -P${PORT_BI} -p${PASS_BI} bi -e "
         update oride_orders_status_10min set agg_orders_finish = (
-            select a.agg_orders_finish
-            from
+            select if(isnull(a.agg_orders_finish), 0, a.agg_orders_finish)
+            from (select 0) as b left join
             (
             select
             sum(orders_finish)  agg_orders_finish
             from oride_orders_status_10min
             where order_time > '${day1}' and order_time <= '${daytime1} ${daytime2}'
             ) a
+            on 1=1
         ) where order_time = '${daytime1} ${daytime2}'
-    "
 
 done <<_eof
     $(mysql -h${HOST_RD} -u${USER_RD} -P${PORT_RD} -p${PASS_RD} oride_data --skip-column-names -e"
