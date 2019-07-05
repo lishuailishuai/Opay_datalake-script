@@ -11,7 +11,7 @@ PASS_BI=$8
 
 CURR_TIMESTAMP=$(date +'%s')
 PREV_10MIN=$((CURR_TIMESTAMP - 600))
-PREV_1HOUR=$(date +'%Y-%m-%d %H:00:00' --date="1 hour ago")
+PREV_1HOUR=$(date +'%Y-%m-%d %H:00:00' --date="3 hour ago")
 PREV_HOUR_TIMESTAMP=$(date +'%s' --date="${PREV_1HOUR}")
 
 MYSQL_VALUES=""
@@ -24,6 +24,7 @@ while ((${PREV_HOUR_TIMESTAMP} <= ${PREV_10MIN})); do
         MYSQL_VALUES="${MYSQL_VALUES},('${DAY_10MIN}', '${DAY_DAY}')"
     fi
     PREV_HOUR_TIMESTAMP=$((PREV_HOUR_TIMESTAMP + 600))
+
 done
 
 if [ -n "${MYSQL_VALUES}" ];then
@@ -48,21 +49,12 @@ while read daytime1 daytime2 day1 day2 orders orders_user orders_pick orders_fin
             avg_take=values(avg_take),
             not_sys_cancel_orders=values(not_sys_cancel_orders),
             picked_orders=values(picked_orders),
-            orders_accept=values(orders_accept)
+            orders_accept=values(orders_accept);
+
+
             "
 
-    mysql -h${HOST_BI} -u${USER_BI} -P${PORT_BI} -p${PASS_BI} bi -e "
-        update oride_orders_status_10min set agg_orders_finish = (
-            select if(isnull(a.agg_orders_finish), 0, a.agg_orders_finish)
-            from (select 0) as b left join
-            (
-            select
-            sum(orders_finish)  agg_orders_finish
-            from oride_orders_status_10min
-            where order_time > '${day1}' and order_time <= '${daytime1} ${daytime2}'
-            ) a
-            on 1=1
-        ) where order_time = '${daytime1} ${daytime2}'
+
 
 done <<_eof
     $(mysql -h${HOST_RD} -u${USER_RD} -P${PORT_RD} -p${PASS_RD} oride_data --skip-column-names -e"
@@ -85,6 +77,33 @@ done <<_eof
     where create_time>=unix_timestamp(date_format(now(),'%Y-%m-%d %H'))-7200 and create_time<floor(unix_timestamp()/600)*600
     group by order_time, order_day")
 _eof
+
+
+
+CURR_TIMESTAMP=$(date +'%s')
+PREV_10MIN=$((CURR_TIMESTAMP - 600))
+PREV_1HOUR=$(date +'%Y-%m-%d %H:00:00' --date="3 hour ago")
+PREV_HOUR_TIMESTAMP=$(date +'%s' --date="${PREV_1HOUR}")
+while ((${PREV_HOUR_TIMESTAMP} <= ${PREV_10MIN})); do
+    DAY_10MIN=$(date +'%Y-%m-%d %H:%M:00' --date=@${PREV_HOUR_TIMESTAMP})
+    DAY_DAY=$(date +'%Y-%m-%d 00:00:00' --date=@${PREV_HOUR_TIMESTAMP})
+    PREV_HOUR_TIMESTAMP=$((PREV_HOUR_TIMESTAMP + 600))
+
+    mysql -h${HOST_BI} -u${USER_BI} -P${PORT_BI} -p${PASS_BI} bi -e "
+        update oride_orders_status_10min set agg_orders_finish = (
+            select if(isnull(a.agg_orders_finish), 0, a.agg_orders_finish)
+            from (select 0) as b left join
+            (
+            select
+            sum(orders_finish)  agg_orders_finish
+            from oride_orders_status_10min
+            where order_time > '${DAY_DAY}' and order_time <= '${DAY_10MIN}'
+            ) a
+            on 1=1
+        ) where order_time = '${DAY_10MIN}'
+     "
+
+done
 
 
 
