@@ -101,9 +101,10 @@ insert_report_metrics = HiveOperator(
         set mapreduce.reduce.java.opts=-Xmx2048m;
         set mapreduce.map.memory.mb=2048;
         set mapreduce.reduce.memory.mb=3072;
-        insert into table oride_bi.report_metrics
+        
+        
+        insert overwrite table oride_bi.report_metrics partition (dt='{{ ds }}')
         select 
-        tt.dt,
         tt.counts report_times,
         concat(cast(round(tt.driver_id_not_found * 100/tt.counts,2) as string),'%') not_found_driver_rate,
         concat(cast(round((tt.counts - tt.push_driver_num) * 100/tt.counts,2) as string),'%') filter_driver_rate,
@@ -222,10 +223,9 @@ insert_report_metrics = HiveOperator(
 insert_order_metrics = HiveOperator(
     task_id='insert_order_metrics',
     hql='''    
-      
-        insert into table order_metrics
+        
+        insert overwrite table oride_bi.order_metrics partition (dt='{{ ds }}')
         select 
-        tt.dt,
         tt.ride_num,
         tt.request_num,
         tt.request_rate,
@@ -304,20 +304,20 @@ def send_report_email(ds_nodash, ds, **kwargs):
     sql = '''
         select 
         dt ,
-        report_times ,
-        not_found_driver_rate ,
-        filter_driver_rate ,
-        push_driver_rate ,
-        accept_driver_time_rate ,
-        not_idle_rate ,
-        assigned_another_job_rate ,
-        assigned_this_order_rate ,
-        not_in_service_mode_rate ,
-        push_avg ,
-        push_order_avg ,
-        order_push_driver_avg ,
-        accept_driver_time_avg ,
-        obey_rate
+        report_times , --播报轮数
+        not_found_driver_rate , --圈选不到司机
+        filter_driver_rate , --圈选后司机都被过滤
+        push_driver_rate , --订单指派给司机
+        accept_driver_time_rate , --司机成功接单
+        not_idle_rate , --正在干活
+        assigned_another_job_rate , --被其他订单锁住
+        assigned_this_order_rate , --被指派过
+        not_in_service_mode_rate , --不在接单状态
+        push_avg , --骑手平均被推送次数
+        push_order_avg , --骑手平均被推送订单
+        order_push_driver_avg , --订单平均推送骑手数
+        accept_driver_time_avg , --骑手平均应答次数
+        obey_rate --服从率
         from oride_bi.report_metrics
         where dt between '{start_date}' and '{dt}'
         order  by dt
@@ -556,17 +556,17 @@ def send_report_email(ds_nodash, ds, **kwargs):
     sql = '''
         select 
         dt ,
-        ride_num ,
-        request_num ,
-        request_rate ,
-        on_ride_num ,
-        on_ride_rate ,
-        on_ride_driver_num ,
-        on_ride_avg ,
-        pick_up_time_avg ,
-        take_time_avg ,
-        sys_cancel_rate ,
-        passanger_before_cancel_rate ,
+        ride_num , --下单量
+        request_num , --接单量
+        request_rate , --接单率
+        on_ride_num , --完单量
+        on_ride_rate , --完单率
+        on_ride_driver_num , --完单骑手数
+        on_ride_avg , --人均完单量
+        pick_up_time_avg , -- 单均接驾时长（分钟）
+        take_time_avg , -- 单均应答时长（分钟）
+        sys_cancel_rate , -- 系统取消率
+        passanger_before_cancel_rate , --乘客应答前取消率
         passanger_after_cancel_rate,
         validity_ride_num,
         concat(cast(round(on_ride_num * 100/validity_ride_num,2) as string),'%') validity_on_ride_rate
@@ -722,7 +722,9 @@ def send_report_email(ds_nodash, ds, **kwargs):
 
     # send mail
     email_subject = '调度算法效果监控指标_{}'.format(ds)
-    send_email(Variable.get("oride_metrics_report_receivers").split(), email_subject, html, mime_charset='utf-8')
+    send_email(
+        Variable.get("oride_metrics_report_receivers").split()
+        , email_subject, html, mime_charset='utf-8')
     cursor.close()
     return
 
