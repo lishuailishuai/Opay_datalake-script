@@ -567,9 +567,9 @@ def send_report_email(ds_nodash, ds, **kwargs):
         take_time_avg , -- 单均应答时长（分钟）
         sys_cancel_rate , -- 系统取消率
         passanger_before_cancel_rate , --乘客应答前取消率
-        passanger_after_cancel_rate,
-        validity_ride_num,
-        concat(cast(round(on_ride_num * 100/validity_ride_num,2) as string),'%') validity_on_ride_rate
+        passanger_after_cancel_rate,--乘客应答后取消率
+        validity_ride_num, --有效下单量
+        concat(cast(round(on_ride_num * 100/validity_ride_num,2) as string),'%') validity_on_ride_rate --完单率(有效订单数)
         
         from oride_bi.order_metrics
         where dt between '{start_date}' and '{dt}'
