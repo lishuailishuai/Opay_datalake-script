@@ -9,9 +9,6 @@ from airflow.operators.bash_operator import BashOperator
 from utils.connection_helper import get_db_conf
 from airflow.operators.hive_operator import HiveOperator
 from airflow.operators.impala_plugin import ImpalaOperator
-from utils.connection_helper import get_hive_cursor
-from airflow.operators.python_operator import PythonOperator
-from airflow.hooks.mysql_hook import MySqlHook
 
 opaySpreadTable = {
     'promoter_user': '''
@@ -167,9 +164,9 @@ args = {
     'depends_on_past': True,
     'retries': 1,
     'retry_delay': timedelta(minutes=5),
-    #'email': ['bigdata@opay-inc.com'],
-    #'email_on_failure': True,
-    #'email_on_retry': False,
+    'email': ['bigdata@opay-inc.com'],
+    'email_on_failure': True,
+    'email_on_retry': False,
 }
 
 dag = airflow.DAG(

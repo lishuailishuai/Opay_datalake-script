@@ -80,6 +80,15 @@ import_opay_event_log = PythonOperator(
     provide_context=True,
     dag=dag)
 
+'''
+modify by duo.wu at 2019-07-05 add 
+    beckoning_num 招手停完单数，
+    driect_ordernum 专车完单数，
+    driect_drivernum 专车完单司机数，
+    street_ordernum 快车完单数，
+    street_drivernum 快车完单司机数,
+    request_usernum 下单的乘客数
+'''
 create_oride_global_daily_report = HiveOperator(
     task_id='create_oride_global_daily_report',
     hql="""
@@ -119,7 +128,13 @@ create_oride_global_daily_report = HiveOperator(
             `pay_amount_total` int,
             `push_num` int,
             `online_pay_driver_num` int,
-            `online_pay_order_num` int
+            `online_pay_order_num` int,
+            `beckoning_num` int,
+            `driect_ordernum` int,
+            `driect_drivernum` int,
+            `street_ordernum` int,
+            `street_drivernum` int,
+            `request_usernum` int
         )
         PARTITIONED BY (
             `dt` string)
@@ -242,7 +257,13 @@ insert_oride_global_daily_report = HiveOperator(
                 SUM(if(dop.status=1, dop.amount, 0)) as pay_amount_total,
                 COUNT(DISTINCT if(dop.status=1 and (dop.mode=2 or dop.mode=3), dop.driver_id, null)) as online_pay_driver_num,
                 COUNT(DISTINCT if(dop.status=1 and (dop.mode=2 or dop.mode=3), dop.id, null)) as online_pay_order_num,
-                SUM(if(do.arrive_time>0, do.arrive_time-do.pickup_time, 0)) as billing_time
+                SUM(if(do.arrive_time>0, do.arrive_time-do.pickup_time, 0)) as billing_time,
+                count(distinct if(do.serv_type=99 and (do.status=4 or do.status=5), do.id, null)) as beckoning_num,
+                count(distinct if(do.driver_serv_type=1 and (do.status=4 or do.status=5), do.id, null)) as driect_ordernum,
+                count(distinct if(do.driver_serv_type=1 and (do.status=4 or do.status=5), do.driver_id, null)) as driect_drivernum,
+                count(distinct if(do.driver_serv_type=2 and (do.status=4 or do.status=5), do.id, null)) as street_ordernum,
+                count(distinct if(do.driver_serv_type=2 and (do.status=4 or do.status=5), do.driver_id, null)) as street_drivernum,
+                count(distinct do.user_id) as request_usernum
             FROM
                 oride_db.data_order do
                 LEFT JOIN
@@ -353,7 +374,13 @@ insert_oride_global_daily_report = HiveOperator(
             od.pay_amount_total,
             pd.push_num,
             od.online_pay_driver_num,
-            od.online_pay_order_num
+            od.online_pay_order_num,
+            od.beckoning_num,
+            od.driect_ordernum,
+            od.driect_drivernum,
+            od.street_ordernum,
+            od.street_drivernum,
+            od.request_usernum 
         FROM
             order_data od
             LEFT JOIN lfw_data lf on lf.dt=od.dt
@@ -395,7 +422,15 @@ def send_report_email(ds, **kwargs):
             first_completed_users,
             round(first_completed_users/completed_users*100, 1),
             completed_users-first_completed_users,
-            map_request_num
+            map_request_num,
+            if(dt>='2019-07-05', beckoning_num, '-') as beckoning_num,
+            if(dt>='2019-07-05', driect_ordernum, '-') as driect_ordernum,
+            if(dt>='2019-07-05', if(completed_num is null or completed_num=0, 0, concat(cast(round(driect_ordernum/completed_num*100,2) as string), '%')), '-') as driect_orderate,
+            if(dt>='2019-07-05', driect_drivernum, '-') as driect_drivernum,
+            if(dt>='2019-07-05', street_ordernum, '-') as street_ordernum,
+            if(dt>='2019-07-05', if(completed_num is null or completed_num=0, 0, concat(cast(round(street_ordernum/completed_num*100,2) as string), '%')), '-') as street_orderate,
+            if(dt>='2019-07-05', street_drivernum, '-') as street_drivernum,
+            if(dt>='2019-07-05', request_usernum, '-') as request_usernum 
         FROM
            oride_bi.oride_global_daily_report
         WHERE
@@ -443,11 +478,13 @@ def send_report_email(ds, **kwargs):
                 <thead>
                     <tr>
                         <th></th>
-                        <th colspan="6" style="text-align: center;">关键指标</th>
+                        <th colspan="7" style="text-align: center;">关键指标</th>
                         <th colspan="4" style="text-align: center;">供需关系</th>
                         <th colspan="3" style="text-align: center;">司机指标</th>
                         <th colspan="3" style="text-align: center;">体验指标</th>
-                        <th colspan="4" style="text-align: center;">乘客指标</th>
+                        <th colspan="5" style="text-align: center;">乘客指标</th>
+                        <th colspan="3" style="text-align: center;">专车指标</th>
+                        <th colspan="3" style="text-align: center;">快车指标</th>
                         <th colspan="1" style="text-align: center;">财务</th>
                     </tr>
                     <tr>
@@ -459,6 +496,7 @@ def send_report_email(ds, **kwargs):
                         <th>完单数（近四周均值）</th>
                         <th>完单率</th>
                         <th>完单率（近四周均值）</th>
+                        <th>招手停完单数</th>
                         <!--供需关系-->
                         <th>活跃乘客数</th>
                         <th>完单司机数</th>
@@ -474,9 +512,18 @@ def send_report_email(ds, **kwargs):
                         <th>平均送驾距离（米）</th>
                         <!--乘客指标-->
                         <th>注册乘客数</th>
+                        <th>下单乘客数</th>
                         <th>首次完单乘客数</th>
                         <th>完单新客占比</th>
                         <th>完单老乘客数</th>
+                        <!--专车指标-->
+                        <th>完单数</th>
+                        <th>完单占比</th>
+                        <th>完单司机数</th>
+                        <!--快车指标-->
+                        <th>完单数</th>
+                        <th>完单占比</th>
+                        <th>完单司机数</th>
                         <!--财务-->
                         <th>地图调用次数</th>
                     </tr>
@@ -511,6 +558,7 @@ def send_report_email(ds, **kwargs):
                 <th>{completed_num_lfw}</th>
                 <th style="background:#d9d9d9">{c_vs_r}%</th>
                 <th>{c_vs_r_lfw}%</th>
+                <th>{beckoning_num}</th>
                 <!--供需关系-->
                 <th>{active_users}</th>
                 <th style="background:#d9d9d9">{completed_drivers}</th>
@@ -526,9 +574,18 @@ def send_report_email(ds, **kwargs):
                 <th>{avg_distance}</th>
                 <!--乘客指标-->
                 <th>{register_users}</th>
+                <th>{order_users}</th>
                 <th>{first_completed_users}</th>
                 <th>{fcu_vs_cu}%</th>
                 <th>{old_completed_users}</th>
+                <!--专车指标-->
+                <th>{driect_ordernum}</th>
+                <th>{driect_orderate}</th>
+                <th>{driect_drivernum}</th>
+                <!--快车指标-->
+                <th>{street_ordernum}</th>
+                <th>{street_orderate}</th>
+                <th>{street_drivernum}</th>
                 <!--财务-->
                 <th>{map_request_num}</th>
         '''
@@ -537,7 +594,8 @@ def send_report_email(ds, **kwargs):
             [dt, week, request_num, request_num_lfw, completed_num, completed_num_lfw, c_vs_r, c_vs_r_lfw, active_users,
              completed_drivers, avg_online_time, btime_vs_otime, register_drivers, online_drivers, c_vs_od,
              avg_take_time, avg_distance, avg_pickup_time, register_users, first_completed_users, fcu_vs_cu,
-             old_completed_users, map_request_num] = list(data)
+             old_completed_users, map_request_num, beckoning_num, driect_ordernum, driect_orderate, driect_drivernum,
+             street_ordernum, street_orderate, street_drivernum, request_usernum] = list(data)
 
             row = row_fmt.format(
                 dt=dt,
@@ -561,7 +619,15 @@ def send_report_email(ds, **kwargs):
                 old_completed_users=old_completed_users,
                 map_request_num=map_request_num,
                 avg_online_time=avg_online_time,
-                btime_vs_otime=btime_vs_otime
+                btime_vs_otime=btime_vs_otime,
+                order_users=request_usernum,
+                beckoning_num=beckoning_num,
+                driect_ordernum=driect_ordernum,
+                driect_orderate=driect_orderate,
+                driect_drivernum=driect_drivernum,
+                street_ordernum=street_ordernum,
+                street_orderate=street_orderate,
+                street_drivernum=street_drivernum
             )
             if week == '6' or week == '7':
                 row_html += weekend_tr_fmt.format(row=row)
