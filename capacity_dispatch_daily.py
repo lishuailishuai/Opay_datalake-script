@@ -18,7 +18,7 @@ args = {
 
 dag = airflow.DAG(
     'capacity_dispatch_daily',
-    schedule_interval="00 01 * * *",
+    schedule_interval="40 00 * * *",
     default_args=args)
 
 dispatch_table = HiveOperator(
