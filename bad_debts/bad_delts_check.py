@@ -255,7 +255,7 @@ def check_bad_debts_data(**op_kwargs):
     dt = op_kwargs.get('ds')
     print(dt)
     cursor = get_hive_cursor()
-    cursor.execute("set hive.execution.engine=tez")
+    cursor.execute("hive.execution.engine=tez")
     repair_table_names = ["data_order", "data_order_payment"]
     for name in repair_table_names:
         print(name)

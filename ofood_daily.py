@@ -16,7 +16,7 @@ args = {
 
 dag = airflow.DAG(
     'ofood_daily',
-    schedule_interval="30 01 * * *",
+    schedule_interval="30 02 * * *",
     default_args=args)
 
 create_ofood_active_user = HiveOperator(
