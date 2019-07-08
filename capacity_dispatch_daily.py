@@ -238,7 +238,11 @@ insert_order_metrics = HiveOperator(
         tt.sys_cancel_rate,
         tt.passanger_before_cancel_rate,
         tt.passanger_after_cancel_rate,
-        dd.validity_ride_num
+        dd.validity_ride_num,
+        tt.cannel_pick_avg,
+        tt.wait_time_avg,
+        tt.billing_time_avg,
+        tt.pay_time_avg
         
         from 
         (
@@ -251,8 +255,13 @@ insert_order_metrics = HiveOperator(
             concat(cast(round(count(if(status = 5 or status = 4,id,null)) * 100/count(id),2) as string),'%') on_ride_rate,
             count(distinct(if(status = 5 or status = 4,driver_id,null))) on_ride_driver_num,
             round(count(if(status = 5 or status = 4,id,null))/count(distinct(if(status = 5 or status = 4,driver_id,null))),1) on_ride_avg,
+            
             round((sum(if(pickup_time <> 0, pickup_time - take_time,0)/60)/count(if(status = 5 or status = 4,id,null))),1) pick_up_time_avg,
             round((sum(if(take_time <> 0,take_time - create_time,0))/count(if(driver_id <> 0,id,null)))/60,1) take_time_avg,
+            round((sum(if(cancel_time>0 and take_time>0, abs(cancel_time-take_time), 0))/60)/count(if(driver_id<>0, id, null)), 1) as cannel_pick_avg,
+            round((sum(if(pickup_time>0 and wait_time>0, abs(pickup_time-wait_time), 0))/60)/count(if(status=4 or status=5, id, null)), 1) as wait_time_avg,
+            round((sum(if(arrive_time>0 and pickup_time>0, abs(arrive_time-pickup_time), 0))/60)/count(if(status=4 or status=5, id, null)), 1) as billing_time_avg,
+            round((sum(if(finish_time>0 and arrive_time>0, abs(finish_time-arrive_time), 0))/60)/count(if(status=5, id, null)), 1) as pay_time_avg,
         
             concat(cast(round(count(if(status = 6 and (cancel_role = 3 or cancel_role = 4),id,null)) * 100/count(id),2) as string),'%') sys_cancel_rate,
             concat(cast(round(count(if(status = 6 and driver_id = 0  and cancel_role = 1,id,null)) * 100/count(id),2) as string),'%') passanger_before_cancel_rate,
@@ -569,9 +578,13 @@ def send_report_email(ds_nodash, ds, **kwargs):
         passanger_before_cancel_rate , --乘客应答前取消率
         passanger_after_cancel_rate,--乘客应答后取消率
         validity_ride_num, --有效下单量
-        concat(cast(round(on_ride_num * 100/validity_ride_num,2) as string),'%') validity_on_ride_rate --完单率(有效订单数)
+        concat(cast(round(on_ride_num * 100/validity_ride_num,2) as string),'%') validity_on_ride_rate, --完单率(有效订单数)
+        if(cannel_pick_avg is null, '-', cannel_pick_avg) as cannel_pick_avg,      --平均取消接驾时长(分钟)
+        if(wait_time_avg is null, '-', wait_time_avg) as wait_time_avg,        --平均等待上车时长(分钟)
+        if(billing_time_avg is null, '-', billing_time_avg) as billing_time_avg,     --平均计费时长(分钟)
+        if(pay_time_avg is null, '-', pay_time_avg) as pay_time_avg         --平均支付时长(分钟)
         
-        from oride_bi.order_metrics
+        from oride_bi.order_metrics 
         where dt between '{start_date}' and '{dt}'
         order by dt
 
@@ -588,21 +601,19 @@ def send_report_email(ds_nodash, ds, **kwargs):
                                         </caption>
                                         <thead>
                                             <tr>
-                                                <th colspan="12" style="text-align: center;">宏观指标</th>
+                                                <th colspan="10" style="text-align: center;">宏观指标</th>
                                             </tr>
                                             <tr>
                                                 <th>日期</th>
-                                                <th>下单量</th>
-                                                <th>有效下单量</th>
-                                                <th>接单量</th>
+                                                <th>下单数</th>
+                                                <th>有效下单数</th>
+                                                <th>接单数</th>
                                                 <th>接单率</th>
-                                                <th>完单量</th>
+                                                <th>完单数</th>
                                                 <th>完单率</th>
                                                 <th>完单率(有效订单数)</th>
                                                 <th>完单骑手数</th>
-                                                <th>人均完单量</th>
-                                                <th>单均接驾时长（分钟）</th>
-                                                <th>单均应答时长（分钟）</th>
+                                                <th>人均完单数</th>
                                                 
                                             </tr>
                                         </thead>
@@ -612,16 +623,41 @@ def send_report_email(ds_nodash, ds, **kwargs):
     html_fmt_4_tail = '</table>'
     html += html_fmt_4_head
 
+    #时长指标
+    html_fmt_6_time_head = '''
+        <table width="95%" class="table">
+                                        <caption>
+                                            <h2></h2>
+                                        </caption>
+                                        <thead>
+                                            <tr>
+                                                <th colspan="7" style="text-align: center;">时长指标</th>
+                                            </tr>
+                                            <tr>
+                                                <th>日期</th>
+                                                <th>平均应答时长(分)</th>
+                                                <th>平均接驾时长(分)</th>
+                                                <th>平均取消接驾时长(分)</th>
+                                                <th>平均等待上车时长(分)</th>
+                                                <th>平均计费时长(分)</th>
+                                                <th>平均支付时长(分)</th>
+                                                
+                                            </tr>
+                                        </thead>
+    '''
+    html_fmt_6_time_tail = '</table>'
+
     i = 0
     while i < len(res):
         [date, ride_num, request_num, request_rate, on_ride_num, on_ride_rate, onride_driver_num,
          onride_driver_order_avg,
-         pick_up_passager_time_avg, reply_time_avg
-         ] = list(
-            res[i][:10])
-        list_temp = list(res[i])
-        validity_on_ride_num = list_temp[len(list_temp) - 2]
-        validity_on_ride_rate = list_temp[len(list_temp) - 1]
+         pick_up_passager_time_avg, reply_time_avg,
+         sys_cancel_rate, passanger_before_cancel_rate, passanger_after_cancel_rate, validity_ride_num,
+         validity_on_ride_rate, cannel_pick_avg, wait_time_avg, billing_time_avg, pay_time_avg
+         ] = list(res[i])
+        #list_temp = list(res[i])
+        #validity_on_ride_num = list_temp[len(list_temp) - 2]
+        #validity_on_ride_rate = list_temp[len(list_temp) - 1]
         html_fmt_4 = '''
 
                                         <tr>
@@ -635,12 +671,21 @@ def send_report_email(ds_nodash, ds, **kwargs):
                                             <td>{validity_on_ride_rate}</td>
                                             <td>{onride_driver_num}</td>
                                             <td>{onride_driver_order_avg}</td>
-                                            <td>{pick_up_passager_time_avg}</td>
-                                            <td>{reply_time_avg}</td>
                                         </tr>
 
 
                                 '''
+        html_fmt_6_time = '''
+                                        <tr>
+                                            <td>{date}</td>
+                                            <td>{take_time_avg}</td>
+                                            <td>{pick_up_time_avg}</td>
+                                            <td>{cannel_pick_avg}</td>
+                                            <td>{wait_time_avg}</td>
+                                            <td>{billing_time_avg}</td>
+                                            <td>{pay_time_avg}</td>
+                                        </tr>
+        '''
         html_fmt_4 = html_fmt_4.format(
             dt=ds,
             date=date,
@@ -654,14 +699,26 @@ def send_report_email(ds_nodash, ds, **kwargs):
             pick_up_passager_time_avg=pick_up_passager_time_avg,
             reply_time_avg=reply_time_avg,
             validity_on_ride_rate=validity_on_ride_rate,
-            validity_on_ride_num=validity_on_ride_num
+            validity_on_ride_num=validity_ride_num
+        )
+
+        html_fmt_6_time = html_fmt_6_time.format(
+            date=date,
+            take_time_avg=reply_time_avg,
+            pick_up_time_avg=pick_up_passager_time_avg,
+            cannel_pick_avg=cannel_pick_avg,
+            wait_time_avg=wait_time_avg,
+            billing_time_avg=billing_time_avg,
+            pay_time_avg=pay_time_avg
         )
 
         html += html_fmt_4
+        html_fmt_6_time_head += html_fmt_6_time
         i += 1
 
     html += html_fmt_4_tail
     html += html_tail
+    html_fmt_6_time_head += html_fmt_6_time_tail
 
     html_fmt_5_head = '''
             <table width="95%" class="table">
@@ -713,6 +770,8 @@ def send_report_email(ds_nodash, ds, **kwargs):
         i += 1
 
     html += html_fmt_5_tail
+
+    html += html_fmt_6_time_head
 
     html += '<p>策略文档地址：https://docs.qq.com/sheet/DV21ZdlJUUENyYXBn?preview_token=&tab=BB08J2&coord=B8%24B8%240%240%240%240</p>'
 
