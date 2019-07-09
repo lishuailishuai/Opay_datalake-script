@@ -395,6 +395,175 @@ insert_oride_global_daily_report = HiveOperator(
     schema='oride_bi',
     dag=dag)
 
+create_oride_global_city_daily_report = HiveOperator(
+    task_id='create_oride_global_city_daily_report',
+    hql="""
+        CREATE TABLE IF NOT EXISTS `oride_global_city_daily_report`(
+            `city_id` bigint COMMENT '所属城市ID',
+            `request_num` int comment '下单数',
+            `request_num_lfw` int comment '下单数（近4周均值）',
+            `completed_num` int comment '完单数',
+            `completed_num_lfw` int comment '完单数（近4周均值）',
+            `beckoning_num` int comment '招手停完单数',
+            `online_time_total` bigint comment '总在线时长',
+            `online_drivers` int comment '总在线司机数',
+            `billing_time_total` bigint comment '总计费时长',
+            `register_drivers` int comment '注册司机数',
+            `take_time_total` bigint comment '总应答时长（完单）',
+            `pickup_time_total` bigint comment '总接驾时长（完单）',
+            `distance_total` bigint comment '总送驾距离（完单）',
+            `request_users` int comment '下单乘客数',
+            `completed_users` int comment '完单乘客数',
+            `first_completed_users` int comment '首次完单乘客数',
+            `direct_completed_num` int comment '专车完单数',
+            `direct_drivers` int comment '专车完单司机数',
+            `street_completed_num` int comment '快车完单数',
+            `street_drivers` int comment '快车完单司机数'
+        )
+        PARTITIONED BY (
+            `dt` string)
+        STORED AS PARQUET
+        """,
+    schema='oride_bi',
+    dag=dag)
+
+insert_oride_global_city_daily_report = HiveOperator(
+    task_id='insert_oride_global_city_daily_report',
+    hql="""
+        ALTER TABLE oride_global_city_daily_report DROP IF EXISTS PARTITION (dt = '{{ ds }}');
+        -- 近4周数据
+        WITH lfw_data as (
+            SELECT
+               dt,
+               city_id,
+               count(
+               if(
+                    datediff(dt, from_unixtime(create_time, 'yyyy-MM-dd'))>0
+                    and datediff(dt, from_unixtime(create_time, 'yyyy-MM-dd'))<=28
+                    and from_unixtime(create_time,'u') = from_unixtime(unix_timestamp(dt, 'yyyy-MM-dd'),'u')
+                , id, null)
+                )/4 as request_num_lfw,
+                count(
+                if(
+                    datediff(dt, from_unixtime(create_time, 'yyyy-MM-dd'))>0
+                    and datediff(dt, from_unixtime(create_time, 'yyyy-MM-dd'))<=28
+                    and from_unixtime(create_time,'u') = from_unixtime(unix_timestamp(dt, 'yyyy-MM-dd'),'u')
+                    and (status=4 or status=5)
+                , id, null)
+                )/4 as completed_num_lfw
+            FROM
+                oride_db.data_order
+            WHERE
+                dt='{{ ds }}'
+            GROUP BY dt,city_id
+        ),
+        -- 订单数据
+        order_data as (
+            SELECT
+                do.dt,
+                do.city_id,
+                count(DISTINCT do.id) as request_num,
+                count(DISTINCT if(do.status=4 or do.status=5, do.id, null)) as completed_num,
+                count(distinct if(do.serv_type=99 and (do.status=4 or do.status=5), do.id, null)) as beckoning_num,
+                SUM(if(do.arrive_time>0, do.arrive_time-do.pickup_time, 0)) as billing_time_total,
+                SUM(if(do.status=4 or do.status=5, do.take_time-do.create_time, 0)) as take_time_total,
+                SUM(if(do.status=4 or do.status=5, do.pickup_time-do.take_time, 0)) as pickup_time_total,
+                sum(if(do.status = 4 or do.status =5,do.distance, 0)) as distance_total,
+                count(distinct if(do.driver_serv_type=1 and (do.status=4 or do.status=5), do.id, null)) as direct_completed_num,
+                count(distinct if(do.driver_serv_type=2 and (do.status=4 or do.status=5), do.id, null)) as street_completed_num,
+                count(DISTINCT do.user_id) as request_users,
+                count(DISTINCT if(do.status=4 or do.status=5, do.user_id, null)) as completed_users,
+                count(DISTINCT if((do.status=4 or do.status=5) and old_user.user_id is null, do.user_id, null)) as first_completed_users
+            FROM
+                oride_db.data_order do
+                LEFT JOIN
+                (
+                    SELECT
+                        distinct user_id
+                    FROM
+                        oride_db.data_order
+                    WHERE
+                        dt='{{ ds }}' and from_unixtime(create_time, 'yyyy-MM-dd')<dt and status in (4,5)
+                ) old_user on old_user.user_id=do.user_id
+            WHERE
+                do.dt='{{ ds }}' and from_unixtime(do.create_time, 'yyyy-MM-dd')=do.dt
+            GROUP BY do.dt,do.city_id
+        ),
+        -- 司机数据
+        driver_data as (
+            SELECT
+                dt,
+                city_id,
+                sum(if(from_unixtime(register_time, 'yyyy-MM-dd')=dt, 1, 0)) as register_drivers
+            FROM
+                oride_db.data_driver_extend
+            WHERE
+                dt='{{ ds }}'
+            GROUP BY dt,city_id
+        ),
+        -- 司机在线数据
+        online_data as (
+            SELECT
+                odt.dt,
+                dde.city_id,
+                count(distinct odt.driver_id) as online_drivers,
+                SUM(odt.driver_onlinerange) as online_time_total
+            FROM
+                oride_bi.oride_driver_timerange odt
+                INNER JOIN oride_db.data_driver_extend dde on dde.id=odt.driver_id and dde.dt=odt.dt
+            WHERE
+                odt.dt='{{ ds }}'
+            GROUP BY odt.dt,dde.city_id
+        ),
+        -- 完单司机数据
+        completed_driver_data as (
+            SELECT
+                do.dt,
+                dde.city_id,
+                count(distinct if(do.driver_serv_type=1 and (do.status=4 or do.status=5), do.driver_id, null)) as direct_drivers,
+                count(distinct if(do.driver_serv_type=2 and (do.status=4 or do.status=5), do.driver_id, null)) as street_drivers
+            FROM
+                oride_db.data_order do
+                INNER JOIN oride_db.data_driver_extend dde on dde.dt=do.dt and dde.id=do.driver_id
+            WHERE
+                do.dt='{{ds}}' AND from_unixtime(do.create_time, 'yyyy-MM-dd')=do.dt AND status in (4,5)
+            GROUP BY
+                do.dt, dde.city_id
+        )
+        INSERT OVERWRITE TABLE oride_global_city_daily_report PARTITION (dt = '{{ ds }}')
+        SELECT
+            od.city_id,
+            od.request_num,
+            ld.request_num_lfw,
+            od.completed_num,
+            ld.completed_num_lfw,
+            od.beckoning_num,
+            old.online_time_total,
+            old.online_drivers,
+            od.billing_time_total,
+            dd.register_drivers,
+            od.take_time_total,
+            od.pickup_time_total,
+            od.distance_total,
+            od.request_users,
+            od.completed_users,
+            od.first_completed_users,
+            od.direct_completed_num,
+            cdd.direct_drivers,
+            od.street_completed_num,
+            cdd.street_drivers
+        FROM
+            order_data od
+            LEFT JOIN lfw_data ld ON ld.dt=od.dt AND ld.city_id=od.city_id
+            LEFT JOIN driver_data dd ON dd.dt=od.dt AND dd.city_id=od.city_id
+            LEFT JOIN online_data old ON old.dt=od.dt AND old.city_id=od.city_id
+            LEFT JOIN completed_driver_data cdd ON cdd.dt=od.dt AND cdd.city_id=od.city_id
+        WHERE
+            od.dt='{{ ds }}'
+        """,
+    schema='oride_bi',
+    dag=dag)
+
 
 def send_report_email(ds, **kwargs):
     logging.info("receivers:%s" % Variable.get("oride_global_daily_report_receivers"))
@@ -442,6 +611,7 @@ def send_report_email(ds, **kwargs):
     logging.info(sql)
     cursor.execute(sql)
     data_list = cursor.fetchall()
+    cursor.close()
     if len(data_list) > 0:
         html_fmt = '''
         <html>
@@ -454,6 +624,7 @@ def send_report_email(ds, **kwargs):
                 border-collapse: collapse;
                 margin: 0 auto;
                 text-align: left;
+                align:left;
             }}
             table td, table th
             {{
@@ -471,9 +642,9 @@ def send_report_email(ds, **kwargs):
         </style>
         </head>
         <body>
-            <table width="95%" class="table">
+            <table width="100%" class="table">
                 <caption>
-                    <h2>全局运营指标</h2>
+                    <h3>全部城市</h3>
                 </caption>
                 <thead>
                     <tr>
@@ -529,6 +700,63 @@ def send_report_email(ds, **kwargs):
                     </tr>
                 </thead>
                 {rows}
+            </table>
+            <table width="100%" class="table">
+                <caption>
+                    <h3>分城市指标</h3>
+                </caption>
+                <thead>
+                    <tr>
+                        <th></th>
+                        <th></th>
+                        <th colspan="8" style="text-align: center;">关键指标</th>
+                        <th colspan="3" style="text-align: center;">供需关系</th>
+                        <th colspan="3" style="text-align: center;">司机指标</th>
+                        <th colspan="3" style="text-align: center;">体验指标</th>
+                        <th colspan="4" style="text-align: center;">乘客指标</th>
+                        <th colspan="3" style="text-align: center;">专车指标</th>
+                        <th colspan="3" style="text-align: center;">快车指标</th>
+                    </tr>
+                    <tr>
+                        <th>日期</th>
+                        <th>城市</th>
+                        <!--关键指标-->
+                        <th>下单数</th>
+                        <th>下单数（近四周均值）</th>
+                        <th>完单数</th>
+                        <th>完单数（近四周均值）</th>
+                        <th>完单率</th>
+                        <th>完单率（近四周均值）</th>
+                        <th>完单城市占比</th>
+                        <th>招手停完单数</th>
+                        <!--供需关系-->
+                        <th>完单司机数</th>
+                        <th>人均在线时长（时）</th>
+                        <th>计费时长占比</th>
+                        <!--司机指标-->
+                        <th>注册司机数</th>
+                        <th>在线司机数</th>
+                        <th>人均完单数</th>
+                        <!--体验指标-->
+                        <th>平均应答时长（秒）</th>
+                        <th>平均接驾时长（秒）</th>
+                        <th>平均送驾距离（米）</th>
+                        <!--乘客指标-->
+                        <th>下单乘客数</th>
+                        <th>首次完单乘客数</th>
+                        <th>完单新客占比</th>
+                        <th>完单老乘客数</th>
+                        <!--专车指标-->
+                        <th>完单数</th>
+                        <th>完单占比</th>
+                        <th>完单司机数</th>
+                        <!--快车指标-->
+                        <th>完单数</th>
+                        <th>完单占比</th>
+                        <th>完单司机数</th>
+                    </tr>
+                </thead>
+                {city_rows}
             </table>
         </body>
         </html>
@@ -633,15 +861,102 @@ def send_report_email(ds, **kwargs):
                 row_html += weekend_tr_fmt.format(row=row)
             else:
                 row_html += tr_fmt.format(row=row)
-        html = html_fmt.format(rows=row_html)
+
+
+
+            city_sql = '''
+                SELECT
+                    from_unixtime(unix_timestamp(cd.dt, 'yyyy-MM-dd'),'yyyyMMdd') as dt,
+                    nvl(dcc.name, cd.city_id),
+                    cd.request_num,
+                    if (cd.request_num_lfw is null or cd.request_num_lfw=0, '-', cd.request_num_lfw),
+                    cd.completed_num,
+                    if (cd.completed_num_lfw is null or cd.completed_num_lfw=0, '-', cd.completed_num_lfw),
+                    round(cd.completed_num/cd.request_num*100, 1),
+                    if (cd.request_num_lfw is null or cd.request_num_lfw=0, '-', concat(cast(round(cd.completed_num_lfw/cd.request_num_lfw*100, 1) as string), '%')),
+                    cd.beckoning_num,
+                    cd.direct_drivers + street_drivers,
+                    round(cd.online_time_total/cd.online_drivers/3600, 2),
+                    round(cd.billing_time_total/cd.online_time_total*100, 1),
+                    cd.register_drivers,
+                    cd.online_drivers,
+                    round(cd.completed_num/(cd.direct_drivers + street_drivers), 1),
+                    round(cd.take_time_total/cd.completed_num),
+                    round(cd.pickup_time_total/cd.completed_num),
+                    round(cd.distance_total/cd.completed_num),
+                    cd.request_users,
+                    cd.first_completed_users,
+                    round(cd.first_completed_users/cd.completed_users*100, 1),
+                    cd.completed_users-cd.first_completed_users,
+                    cd.direct_completed_num,
+                    round(cd.direct_completed_num/cd.completed_num*100, 1),
+                    cd.direct_drivers,
+                    cd.street_completed_num,
+                    round(cd.street_completed_num/cd.completed_num*100, 1),
+                    cd.street_drivers,
+                    round(cd.completed_num/gdr.completed_num, 4)
+                FROM
+                   oride_bi.oride_global_city_daily_report cd
+                   LEFT JOIN oride_db.data_city_conf dcc ON dcc.id=cd.city_id AND dcc.dt=cd.dt
+                   INNER JOIN oride_bi.oride_global_daily_report gdr ON gdr.dt=cd.dt
+                WHERE
+                    cd.dt = '{dt}'
+        '''.format(dt=ds)
+        cursor = get_hive_cursor()
+        logging.info(city_sql)
+        cursor.execute(city_sql)
+        city_data_list = cursor.fetchall()
+        cursor.close()
+        city_row_fmt = '''
+            <td>{0}</td>
+            <td>{1}</td>
+            <!--关键指标-->
+            <td>{2}</td>
+            <td>{3}</td>
+            <td style="background:#d9d9d9">{4}</td>
+            <td>{5}</td>
+            <td style="background:#d9d9d9">{6}%</td>
+            <td>{7}</td>
+            <td>{28:.2%}</td>
+            <td>{8}</td>
+            <!--供需关系-->
+            <td style="background:#d9d9d9">{9}</td>
+            <td>{10}</td>
+            <td>{11}%</td>
+            <!--司机指标-->
+            <td>{12}</td>
+            <td>{13}</td>
+            <td>{13}</td>
+            <!--体验指标-->
+            <td>{15:.0f}</td>
+            <td>{16:.0f}</td>
+            <td>{17:.0f}</td>
+            <!--乘客指标-->
+            <td>{18}</td>
+            <td>{19}</td>
+            <td>{20}%</td>
+            <td>{21}</td>
+            <!--专车指标-->
+            <td>{22}</td>
+            <td>{23}%</td>
+            <td>{24}</td>
+            <!--快车指标-->
+            <td>{25}</td>
+            <td>{26}%</td>
+            <td>{27}</td>
+        '''
+        city_row_html = ''
+        if len(city_data_list) > 0:
+            for data in city_data_list:
+                row = city_row_fmt.format(*list(data))
+                city_row_html += tr_fmt.format(row=row)
+        html = html_fmt.format(rows=row_html, city_rows=city_row_html)
         # send mail
         email_subject = 'oride全局运营指标_{}'.format(ds)
         send_email(
             Variable.get("oride_global_daily_report_receivers").split()
             , email_subject, html, mime_charset='utf-8')
-    cursor.close()
     return
-
 
 send_report = PythonOperator(
     task_id='send_report',
@@ -1250,6 +1565,8 @@ create_oride_driver_timerange >> import_driver_online_time >> insert_oride_globa
 insert_oride_global_daily_report >> insert_oride_anti_fraud_daily_report >> send_anti_fraud_report
 create_oride_anti_fraud_daily_report >> insert_oride_anti_fraud_daily_report
 create_oride_global_daily_report >> insert_oride_global_daily_report
-insert_oride_global_daily_report >> send_report
 import_opay_event_log >> insert_oride_global_daily_report
 insert_oride_global_daily_report >> send_funnel_report
+create_oride_global_city_daily_report >> insert_oride_global_city_daily_report
+insert_oride_global_city_daily_report >> send_report
+insert_oride_global_daily_report >> insert_oride_global_city_daily_report
