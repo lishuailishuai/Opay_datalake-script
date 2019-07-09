@@ -836,3 +836,131 @@ order_result_channel_to_mysql = PythonOperator(
 )
 
 order_result_channel_to_mysql
+
+
+# 中台数据查询
+cssql = '''
+SELECT  
+    if(TB.id is null, 0, TB.id) AS driver_id, TA.dt as dt, if(TB.real_name is null, 0, TB.real_name) AS name, 
+    if(TB.phone_number is null, 0, TB.phone_number) AS phone,  if(TC.city_id is null, 0, TC.city_id) AS city,  
+    if(TC.serv_type is null, 0, TC.serv_type) AS type, TA.distance AS distance, TA.money AS income, TA.olsettle as onlineSettlement, 
+    TA.olsettlecount as onlineTotal, TA.order_num AS total_orders, TA.arrived_order_num AS arrived_orders,
+    TA.score_num AS comment, TA.badcomments_num AS badcomments_num, TA.score_sum AS score, 
+    round(if(TD.driver_onlinerange is null, 0, TD.driver_onlinerange/60),2) AS onlinetime
+FROM 
+(
+	SELECT
+	    max(a.dt) as dt, 
+	    a.driver_id,
+	    sum(if(a.status in (4, 5),a.distance,0)) as distance,
+	    sum(if(a.status in (4, 5),a.price,0)) as money,
+	    sum(if(c.price is not null,c.price,0)) as olsettle,
+	    sum(if(c.price is not null,1,0)) as olsettlecount,
+	    count(*) as order_num,
+        sum(if(a.status in (4, 5),1,0)) as arrived_order_num,
+        sum(if(b.score is not null, 1, 0)) as score_num,
+        sum(if( (b.score is not null) AND (b.score<=3), 1, 0)) as badcomments_num,
+        sum(if(b.score is not null, b.score, 0)) as score_sum
+	from
+	(
+		select * from oride_db.data_order
+		where dt = '{ds}'
+		and from_unixtime(create_time, 'yyyy-MM-dd') = '{ds}' 
+	) a
+	left outer join
+	(
+		select * from oride_db.data_driver_comment where dt = '{ds}'
+	) b on a.id = b.order_id
+	left outer join
+	(
+		select * from oride_db.data_order_payment where dt = '{ds}' and mode>=0
+	) c on a.id = c.id
+	group by a.driver_id
+) TA
+LEFT JOIN 
+(
+    select * from oride_db.data_driver where dt = '{ds}'
+) TB on TA.driver_id = TB.id
+LEFT JOIN 
+(
+    select * from oride_db.data_driver_extend where dt = '{ds}'
+) TC on TA.driver_id = TC.id
+LEFT JOIN 
+(
+    select * from oride_bi.oride_driver_timerange where dt = '{ds}'
+) TD on TA.driver_id = TD.driver_id
+WHERE TA.driver_id>0 AND TC.serv_type=2
+'''
+
+def csresult_channel_to_mysql(ds, **kwargs):
+    cursor = get_hive_cursor()
+    logging.info(cssql.format(ds=ds))
+    cursor.execute(cssql.format(ds=ds))
+    results = cursor.fetchall()
+    mysql_conn = get_db_conn('opay_spread_mysql')
+    mcursor = mysql_conn.cursor()
+
+    sql_insert = '''
+        INSERT INTO promoter_order_day (
+            dt, driver_id, driver_type, name, mobile, city_id, distance, income, online_paid, online_total, total_orders,
+            arrived_orders, total_comments, bad_comments, total_score, online_time
+        ) VALUES
+    '''
+    sql_ext = '''
+        ON DUPLICATE KEY UPDATE 
+    '''
+    sql_val = ''
+    sql_count = 0
+    for driver_id, dt, name, phone, city, type, distance, income, onlineSettlement, onlineTotal, total_orders, arrived_orders, comment, badcomments_num, score, onlinetime in results:
+        sql_tmp = '''
+            ('{dt}', '{driver_id}', '{driver_type}', '{name}', '{mobile}', '{city_id}', '{distance}', '{income}', 
+            '{online_paid}', '{online_total}', '{total_orders}', '{arrived_orders}', '{total_comments}', '{bad_comments}', 
+            '{total_score}', '{online_time}')
+        '''.format(
+            dt=dt,
+            driver_id=driver_id,
+            driver_type=type,
+            name=name,
+            mobile=phone,
+            city_id=city,
+            distance=distance,
+            income=income,
+            online_paid=onlineSettlement,
+            online_total=onlineTotal,
+            total_orders=total_orders,
+            arrived_orders=arrived_orders,
+            total_comments=comment,
+            bad_comments=badcomments_num,
+            total_score=score,
+            online_time=onlinetime
+        )
+
+        if sql_val == '':
+            sql_val = sql_tmp
+        else:
+            sql_val += ',' + sql_tmp
+        sql_count += 1
+        if sql_count >= 1000:
+            sql = sql_insert + ' ' + sql_val
+            mcursor.execute(sql)
+            sql_count = 0
+            sql_val = ''
+
+    if sql_count > 0:
+        sql = sql_insert + ' ' + sql_val
+        mcursor.execute(sql)
+
+    mysql_conn.commit()
+    cursor.close()
+    mcursor.close()
+    mysql_conn.close()
+
+
+cs_result_channel_to_mysql = PythonOperator(
+    task_id='csresult_channel_to_mysql',
+    python_callable=csresult_channel_to_mysql,
+    provide_context=True,
+    dag=dag
+)
+
+cs_result_channel_to_mysql
