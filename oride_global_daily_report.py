@@ -5,6 +5,7 @@ from airflow.utils.email import send_email
 from airflow.operators.hive_operator import HiveOperator
 from utils.connection_helper import get_hive_cursor, get_db_conn, get_pika_connection, get_redis_connection
 from airflow.hooks.hive_hooks import HiveCliHook
+from airflow import macros
 import logging
 from airflow.models import Variable
 import pandas as pd
@@ -14,7 +15,7 @@ import os
 
 args = {
     'owner': 'root',
-    'start_date': datetime(2019, 6, 21),
+    'start_date': datetime(2019, 7, 10),
     'depends_on_past': False,
     'retries': 1,
     'retry_delay': timedelta(minutes=5),
@@ -1171,6 +1172,40 @@ create_oride_anti_fraud_daily_report = HiveOperator(
         )
         PARTITIONED BY (
             `dt` string)
+        STORED AS PARQUET;
+        CREATE TABLE IF NOT EXISTS `orider_anti_fraud_daily_report_result`(
+            `day` string comment '日期',
+            `rule_name` string comment '规则名称',
+            `behavior_id` int comment '策略ID',
+            `user_regist_num` int comment '注册拦截乘客数',
+            `user_regist_rate` decimal(10, 4) comment '注册拦截乘客占比',
+            `user_regist_1dayring` decimal(10, 4) comment '注册拦截总人数日环比',
+            `user_regist_7dayring` decimal(10, 4) comment '注册拦截总人数7日环比',
+            `driver_silence_num` int comment '事件中拦截司机数',
+            `user_silence_num` int comment '事件中拦截乘客数',
+            `driver_silence_rate` decimal(10, 4) comment '事件中拦截司机占比',
+            `user_silence_rate` decimal(10, 4) comment '事件中拦截乘客占比',
+            `driver_silence_1dayring` decimal(10, 4) comment '事件中拦截司机数日环比',
+            `user_silence_1dayring` decimal(10, 4) comment '事件中拦截乘客数日环比',
+            `driver_silence_7dayring` decimal(10, 4) comment '事件中拦截司机数7日环比',
+            `user_silence_7dayring` decimal(10, 4) comment '事件汇总拦截乘客数7日环比',
+            `abnormal_driver_num` int comment '扣款司机数',
+            `abnormal_driver_rate` decimal(10, 4) comment '扣款司机人数占比',
+            `abnormal_driver_1dayring` decimal(10, 4) comment '扣款司机数日环比',
+            `abnormal_driver_7dayring` decimal(10, 4) comment '扣款司机数7日环比',
+            `abnormal_order_num` int comment '扣款订单数',
+            `abnormal_order_rate` decimal(10, 4) comment '扣款订单数占比',
+            `abnormal_order_1dayring` decimal(10, 4) comment '扣款订单日环比',
+            `abnormal_order_7dayring` decimal(10, 4) comment '扣款订单7日环比',
+            `order_amount` decimal(15, 2) comment '扣款金额',
+            `order_amount_1dayring` decimal(10, 4) comment '扣款金额日环比',
+            `order_amount_7dayring` decimal(10, 4) comment '扣款金币7日环比',
+            `revoked_order_num` int comment '累计revoke量',
+            `revoked_order_rate` decimal(10, 4) comment '累计revoke率' 
+        ) 
+        PARTITIONED BY (
+            `dt` string
+        )
         STORED AS PARQUET
         """,
     schema='oride_bi',
@@ -1254,8 +1289,10 @@ insert_oride_anti_fraud_daily_report = HiveOperator(
     dag=dag)
 
 
-def send_anti_fraud_report_email(ds, **kwargs):
-    sql = '''
+insert_orider_anti_fraud_daily_report_result = HiveOperator(
+    task_id='insert_orider_anti_fraud_daily_report_result',
+    hql='''
+        ALTER TABLE orider_anti_fraud_daily_report_result DROP IF EXISTS PARTITION (dt = '{dt}');
         WITH last_day_data AS (
             SELECT
                 *
@@ -1297,9 +1334,11 @@ def send_anti_fraud_report_email(ds, **kwargs):
             GROUP BY
                 behavior_id
         )
+        INSERT OVERWRITE TABLE orider_anti_fraud_daily_report_result PARTITION (dt = '{dt}')
         SELECT
             td.dt,
             td.rule_name,
+            td.behavior_id,
             nvl(td.user_register_num, 0),
             nvl(round(td.user_register_num/gdr.register_users, 4), 0),
             nvl(round((td.user_register_num/ldd.user_register_num-1),4), 0),
@@ -1309,19 +1348,19 @@ def send_anti_fraud_report_email(ds, **kwargs):
             nvl(round(td.driver_silence_num/gdr.online_drivers, 4), 0),
             nvl(round(td.user_silence_num/gdr.active_users, 4), 0),
             nvl(round((td.driver_silence_num/ldd.driver_silence_num-1), 4), 0),
-            nvl(round((td.user_silence_num/ldd.user_silence_num-1), 4), 0),
-            nvl(round((7dd.avg_driver_silence_num/y7dd.avg_driver_silence_num-1), 4), 0),
-            nvl(round((7dd.avg_user_silence_num/y7dd.avg_user_silence_num-1), 4), 0),
-            nvl(td.abnormal_driver_num, 0),
-            nvl(round(td.abnormal_driver_num/gdr.online_pay_driver_num, 4), 0),
-            nvl(round(td.abnormal_driver_num/ldd.abnormal_driver_num-1, 4), 0),
-            nvl(round(7dd.avg_abnormal_driver_num/y7dd.avg_abnormal_driver_num-1, 4), 0),
-            nvl(td.abnormal_order_num, 0),
-            nvl(round(td.abnormal_order_num/gdr.online_pay_order_num, 4), 0),
+            nvl(round((td.user_silence_num/ldd.user_silence_num-1), 4), 0), 
+            nvl(round((7dd.avg_driver_silence_num/y7dd.avg_driver_silence_num-1), 4), 0), 
+            nvl(round((7dd.avg_user_silence_num/y7dd.avg_user_silence_num-1), 4), 0), 
+            nvl(td.abnormal_driver_num, 0), 
+            nvl(round(td.abnormal_driver_num/gdr.online_pay_driver_num, 4), 0), 
+            nvl(round(td.abnormal_driver_num/ldd.abnormal_driver_num-1, 4), 0), 
+            nvl(round(7dd.avg_abnormal_driver_num/y7dd.avg_abnormal_driver_num-1, 4), 0), 
+            nvl(td.abnormal_order_num, 0), 
+            nvl(round(td.abnormal_order_num/gdr.online_pay_order_num, 4), 0), 
             nvl(round(td.abnormal_order_num/ldd.abnormal_order_num-1, 4), 0),
             nvl(round(7dd.avg_abnormal_order_num/y7dd.avg_abnormal_order_num-1, 4), 0),
-            nvl(td.order_amount, 0),
-            nvl(round(td.order_amount/ldd.order_amount-1, 4), 0),
+            nvl(td.order_amount, 0), 
+            nvl(round(td.order_amount/ldd.order_amount-1, 4), 0), 
             nvl(round(7dd.avg_order_amount/y7dd.avg_order_amount-1, 4), 0),
             nvl(td.revoked_order_num, 0),
             nvl(round(td.revoked_order_num/td.abnormal_order_num, 4), 0)
@@ -1334,17 +1373,18 @@ def send_anti_fraud_report_email(ds, **kwargs):
         WHERE
             td.dt='{dt}'
     '''.format(
-        dt=ds,
-        last_day=airflow.macros.ds_add(ds, -1),
-        day_start_7=airflow.macros.ds_add(ds, -6),
-        y_7_day_start=airflow.macros.ds_add(ds, -7)
-    )
-    cursor = get_hive_cursor()
-    logging.info(sql)
-    cursor.execute(sql)
-    data_list = cursor.fetchall()
-    if len(data_list) > 0:
-        html_fmt = '''
+        dt='{{ ds }}',
+        last_day='{{ macros.ds_add(ds, -1) }}',
+        day_start_7='{{ macros.ds_add(ds, -6) }}',
+        y_7_day_start='{{ macros.ds_add(ds, -7) }}'
+    ),
+    schema='oride_bi',
+    dag=dag
+)
+
+
+def send_anti_fraud_report_email(ds, **kwargs):
+    html_mail_fmt = '''
         <html>
         <head>
         <title></title>
@@ -1389,96 +1429,341 @@ def send_anti_fraud_report_email(ds, **kwargs):
                 <caption>
                     <h2>反作弊报表</h2>
                 </caption>
+            </table>
+            {html_content_fmt}
+        </body>
+        </html>
+    '''
+    #注册策略
+    sql = '''
+        SELECT 
+            day, rule_name, behavior_id, user_regist_num, user_regist_rate, user_regist_1dayring, user_regist_7dayring, dt
+        FROM oride_bi.orider_anti_fraud_daily_report_result 
+        WHERE dt between '{last_7_day}' AND '{day}' AND 
+            behavior_id IN (9, 10, 11, 12, 13) 
+    '''.format(
+        day=ds,
+        last_7_day=airflow.macros.ds_add(ds, -6)
+    )
+    cursor = get_hive_cursor()
+    logging.info(sql)
+    cursor.execute(sql)
+    data_list = cursor.fetchall()
+    if len(data_list) > 0:
+        html_regist_fmt = '''
+            <table width="95%" class="table">
                 <thead>
                     <tr>
-                        <th></th>
-                        <th></th>
-                        <th colspan="4" class="th_title">注册策略</th>
-                        <th colspan="8" class="th_title">事中策略</th>
-                        <th colspan="13" class="th_title">事后策略</th>
+                        <th rowspan=3>日期</th>
+                        <th colspan="{colspan}" class="th_title">注册策略</th>
                     </tr>
-                    <tr>
-                        <th>日期</th>
-                        <th>策略名称</th>
-                        <!--注册策略-->
-                        <th>当日注册拦截乘客总人数</th>
-                        <th>当日注册拦截乘客占比</th>
-                        <th>注册拦截乘客数日环比增量</th>
-                        <th>注册拦截乘客数7日环比增量</th>
-                        <!--事中策略-->
-                        <th>事中拦截司机总人数</th>
-                        <th>事中拦截乘客总人数</th>
-                        <th>事中拦截司机人数占比</th>
-                        <th>事中拦截乘客人数占比</th>
-                        <th>事中拦截司机数日环比增量</th>
-                        <th>事中拦截乘客数日环比增量</th>
-                        <th>事中拦截司机数7日环比增量</th>
-                        <th>事中拦截乘客数7日环比增量</th>
-                        <!--事后策略-->
-                        <th>扣款司机人数</th>
-                        <th>扣款司机人数占比</th>
-                        <th>扣款司机人数日环比增量</th>
-                        <th>扣款司机人数7日环比增量</th>
-                        <th>扣款订单量</th>
-                        <th>扣款订单占比</th>
-                        <th>扣款订单量日环比增量</th>
-                        <th>扣款订单量7日环比增量</th>
-                        <th>扣款金额</th>
-                        <th>扣款金额日环比增量</th>
-                        <th>扣款金额7日环比增量</th>
-                        <th>累计revoke量</th>
-                        <th>累计revoke率</th>
-                    </tr>
+                    <tr>{rule_title}</tr>
+                    <tr>{rule_head}</tr>
                 </thead>
                 {rows}
             </table>
-        </body>
-        </html>
         '''
         tr_fmt = '''
             <tr style="background-color:#F5F5F5;">{row}</tr>
         '''
-        row_fmt = '''
-            <td>{0}</td>
-            <td>{1}</td>
-            <!--注册策略-->
-            <td>{2}</td>
-            <td>{3:.2%}</td>
-            <td>{4:.2%}</td>
-            <td>{5:.2%}</td>
-            <!--事中策略-->
-            <td>{6}</td>
-            <td>{7}</td>
-            <td>{8:.2%}</td>
-            <td>{9:.2%}</td>
-            <td>{10:.2%}</td>
-            <td>{11:.2%}</td>
-            <td>{12:.2%}</td>
-            <td>{13:.2%}</td>
-            <!--事后策略-->
-            <td>{14}</td>
-            <td>{15:.2%}</td>
-            <td>{16:.2%}</td>
-            <td>{17:.2%}</td>
-            <td>{18}</td>
-            <td>{19:.2%}</td>
-            <td>{20:.2%}</td>
-            <td>{21:.2%}</td>
-            <td>{22}</td>
-            <td>{23:.2%}</td>
-            <td>{24:.2%}</td>
-            <td>{25}</td>
-            <td>{26:.2%}</td>
+        row_html = ''
+        rule_head = {}
+        html_rule_title = ''
+        html_rule_head = ''
+        curr_day = set()
+        rule_set = set()
+        for day, rule_name, behavior_id, user_regist_num, user_regist_rate, user_regist_1dayring, user_regist_7dayring, dt in data_list:
+            if day not in curr_day:
+                curr_day.add(day)
+            if behavior_id not in rule_set:
+                rule_set.add(behavior_id)
+                rule_head['rule_title_' + str(behavior_id)] = '''
+                    <th colspan="4">{rule_name}</th>
+                '''.format(rule_name=rule_name)
+                rule_head['rule_head_' + str(behavior_id)] = '''
+                    <th>当日注册拦截乘客人数</th>
+                    <th>当日注册拦截乘客占比</th>
+                    <th>注册拦截乘客数日环比增量</th>
+                    <th>注册拦截乘客数7日环比增量</th>
+                '''
+            rule_head['rule_data_' + day + str(behavior_id)] = '''
+                <td>{user_regist_num}</td>
+                <td>{user_regist_rate:.2%}</td>
+                <td>{user_regist_1dayring:.2%}</td>
+                <td>{user_regist_7dayring:.2%}</td>
+            '''.format(
+                user_regist_num=user_regist_num,
+                user_regist_rate=user_regist_rate,
+                user_regist_1dayring=user_regist_1dayring,
+                user_regist_7dayring=user_regist_7dayring
+            )
+
+        head_complete = False
+        curr_day = sorted(curr_day, reverse=True)
+        rule_set = sorted(rule_set, reverse=False)
+        logging.info(curr_day)
+        logging.info(rule_set)
+        for d in curr_day:
+            row_temp = '<td>{day}</td>'.format(day=d)
+            for r in rule_set:
+                if not head_complete:
+                    html_rule_title += rule_head.get('rule_title_' + str(r), '<th colspan="4">--</th>')
+                    html_rule_head += rule_head.get('rule_head_' + str(r), '<th>-</th><th>-</th><th>-</th><th>-</th>')
+                row_temp += rule_head.get('rule_data_' + d + str(r), '<td>-</td><td>-</td><td>-</td><td>-</td>')
+            row_html += tr_fmt.format(row=row_temp)
+            head_complete = True
+
+        html_regist_fmt = html_regist_fmt.format(
+            colspan=len(rule_set) * 4,
+            rule_title=html_rule_title,
+            rule_head=html_rule_head,
+            rows=row_html
+        )
+    else:
+        html_regist_fmt = ''
+
+    cursor.close()
+
+    # 事中策略
+    sql = '''
+        SELECT 
+            day, rule_name, behavior_id, driver_silence_num, driver_silence_rate, driver_silence_1dayring, driver_silence_7dayring, 
+            user_silence_num, user_silence_rate, user_silence_1dayring, user_silence_7dayring, dt
+        FROM oride_bi.orider_anti_fraud_daily_report_result 
+        WHERE dt between '{last_7_day}' AND '{day}' AND 
+            behavior_id IN (6, 7, 8, 14, 15, 16, 17, 18, 19, 20, 21, 22, 25) 
+    '''.format(
+        day=ds,
+        last_7_day=airflow.macros.ds_add(ds, -6)
+    )
+    cursor = get_hive_cursor()
+    logging.info(sql)
+    cursor.execute(sql)
+    data_list = cursor.fetchall()
+    if len(data_list) > 0:
+        html_mid_fmt = '''
+            <table width="95%" class="table">
+                <thead>
+                    <tr>
+                        <th rowspan=3>日期</th>
+                        <th colspan="{colspan}" class="th_title">事中策略</th>
+                    </tr>
+                    <tr>{rule_title}</tr>
+                    <tr>{rule_head}</tr>
+                </thead>
+                {rows}
+            </table>
+        '''
+        tr_fmt = '''
+            <tr style="background-color:#F5F5F5;">{row}</tr>
         '''
         row_html = ''
-        for data in data_list:
-            row = row_fmt.format(*list(data))
-            row_html += tr_fmt.format(row=row)
-        html = html_fmt.format(rows=row_html)
-        # send mail
-        email_subject = 'oride反作弊报表_{}'.format(ds)
-        send_email(Variable.get("oride_anti_fraud_report_receivers").split(), email_subject, html, mime_charset='utf-8')
+        rule_head = {}
+        html_rule_title = ''
+        html_rule_head = ''
+        curr_day = set()
+        rule_set = set()
+        for day, rule_name, behavior_id, driver_silence_num, driver_silence_rate, driver_silence_1dayring, driver_silence_7dayring, user_silence_num, user_silence_rate, user_silence_1dayring, user_silence_7dayring, dt in data_list:
+            if day not in curr_day:
+                curr_day.add(day)
+            if behavior_id not in rule_set:
+                rule_set.add(behavior_id)
+                rule_head['rule_title_' + str(behavior_id)] = '''
+                            <th colspan="4">{rule_name}</th>
+                        '''.format(rule_name=rule_name)
+                if rule_name.find('乘客') >= 0:
+                    rule_head['rule_head_' + str(behavior_id)] = '''
+                            <th>事中拦截乘客人数</th>
+                            <th>事中拦截乘客人数占比</th>
+                            <th>事中拦截乘客数日环比增量</th>
+                            <th>事中拦截乘客数7日环比增量</th>
+                    '''
+                else:
+                    rule_head['rule_head_' + str(behavior_id)] = '''
+                            <th>事中拦截司机人数</th>
+                            <th>事中拦截司机人数占比</th>
+                            <th>事中拦截司机数日环比增量</th>
+                            <th>事中拦截司机数7日环比增量</th>
+                    '''
+            if rule_name.find('乘客') >= 0:
+                rule_head['rule_data_' + day + str(behavior_id)] = '''
+                            <td>{num}</td>
+                            <td>{rate:.2%}</td>
+                            <td>{o1dayring:.2%}</td>
+                            <td>{o7dayring:.2%}</td>
+                        '''.format(
+                    num=user_silence_num,
+                    rate=user_silence_rate,
+                    o1dayring=user_silence_1dayring,
+                    o7dayring=user_silence_7dayring
+                )
+            else:
+                rule_head['rule_data_' + day + str(behavior_id)] = '''
+                        <td>{num}</td>
+                        <td>{rate:.2%}</td>
+                        <td>{o1dayring:.2%}</td>
+                        <td>{o7dayring:.2%}</td>
+                    '''.format(
+                    num=driver_silence_num,
+                    rate=driver_silence_rate,
+                    o1dayring=driver_silence_1dayring,
+                    o7dayring=driver_silence_7dayring
+                )
+
+        head_complete = False
+        curr_day = sorted(curr_day, reverse=True)
+        rule_set = sorted(rule_set, reverse=False)
+        logging.info(curr_day)
+        logging.info(rule_set)
+        for d in curr_day:
+            row_temp = '<td>{day}</td>'.format(day=d)
+            for r in rule_set:
+                if not head_complete:
+                    html_rule_title += rule_head.get('rule_title_' + str(r), '<th colspan="4">--</th>')
+                    html_rule_head += rule_head.get('rule_head_' + str(r), '<th>-</th><th>-</th><th>-</th><th>-</th>')
+                row_temp += rule_head.get('rule_data_' + d + str(r), '<td>-</td><td>-</td><td>-</td><td>-</td>')
+            row_html += tr_fmt.format(row=row_temp)
+            head_complete = True
+
+        html_mid_fmt = html_mid_fmt.format(
+            colspan=len(rule_set) * 4,
+            rule_title=html_rule_title,
+            rule_head=html_rule_head,
+            rows=row_html
+        )
+    else:
+        html_mid_fmt = ''
     cursor.close()
+
+    #事后策略
+    sql = '''
+        SELECT 
+            day, rule_name, behavior_id, abnormal_driver_num, abnormal_driver_rate, abnormal_driver_1dayring, abnormal_driver_7dayring, 
+            abnormal_order_num, abnormal_order_rate, abnormal_order_1dayring, abnormal_order_7dayring, order_amount, order_amount_1dayring, 
+            order_amount_7dayring, revoked_order_num, revoked_order_rate, dt
+        FROM oride_bi.orider_anti_fraud_daily_report_result 
+        WHERE dt between '{last_7_day}' AND '{day}' AND 
+            behavior_id IN (1, 2, 3, 4, 5, 23, 24) 
+    '''.format(
+        day=ds,
+        last_7_day=airflow.macros.ds_add(ds, -6)
+    )
+    cursor = get_hive_cursor()
+    logging.info(sql)
+    cursor.execute(sql)
+    data_list = cursor.fetchall()
+    if len(data_list) > 0:
+        html_after_fmt = '''
+                <table width="95%" class="table">
+                    <thead>
+                        <tr>
+                            <th rowspan=3>日期</th>
+                            <th colspan="{colspan}" class="th_title">事后策略</th>
+                        </tr>
+                        <tr>{rule_title}</tr>
+                        <tr>{rule_head}</tr>
+                    </thead>
+                    {rows}
+                </table>
+            '''
+        tr_fmt = '''
+                <tr style="background-color:#F5F5F5;">{row}</tr>
+            '''
+        row_html = ''
+        rule_head = {}
+        html_rule_title = ''
+        html_rule_head = ''
+        curr_day = set()
+        rule_set = set()
+        for day, rule_name, behavior_id, abnormal_driver_num, abnormal_driver_rate, abnormal_driver_1dayring, abnormal_driver_7dayring, abnormal_order_num, abnormal_order_rate, abnormal_order_1dayring, abnormal_order_7dayring, order_amount, order_amount_1dayring, order_amount_7dayring, revoked_order_num, revoked_order_rate, dt in data_list:
+            if day not in curr_day:
+                curr_day.add(day)
+            if behavior_id not in rule_set:
+                rule_set.add(behavior_id)
+                rule_head['rule_title_' + str(behavior_id)] = '''
+                                <th colspan="13">{rule_name}</th>
+                            '''.format(rule_name=rule_name)
+
+                rule_head['rule_head_' + str(behavior_id)] = '''
+                            <th>扣款司机人数</th>
+                            <th>扣款司机人数占比</th>
+                            <th>扣款司机人数日环比增量</th>
+                            <th>扣款司机人数7日环比增量</th>
+                            <th>扣款订单量</th>
+                            <th>扣款订单占比</th>
+                            <th>扣款订单量日环比增量</th>
+                            <th>扣款订单量7日环比增量</th>
+                            <th>扣款金额</th>
+                            <th>扣款金额日环比增量</th>
+                            <th>扣款金额7日环比增量</th>
+                            <th>累计revoke量</th>
+                            <th>累计revoke率</th>
+                    '''
+
+            rule_head['rule_data_' + day + str(behavior_id)] = '''
+                            <td>{abnormal_driver_num}</td>
+                            <td>{abnormal_driver_rate:.2%}</td>
+                            <td>{abnormal_driver_1dayring:.2%}</td>
+                            <td>{abnormal_driver_7dayring:.2%}</td>
+                            <td>{abnormal_order_num}</td>
+                            <td>{abnormal_order_rate:.2%}</td>
+                            <td>{abnormal_order_1dayring:.2%}</td>
+                            <td>{abnormal_order_7dayring:.2%}</td>
+                            <td>{order_amount}</td>
+                            <td>{order_amount_1dayring:.2%}</td>
+                            <td>{order_amount_7dayring:.2%}</td>
+                            <td>{revoked_order_num}</td>
+                            <td>{revoked_order_rate:.2%}</td>
+                        '''.format(
+                abnormal_driver_num=abnormal_driver_num,
+                abnormal_driver_rate=abnormal_driver_rate,
+                abnormal_driver_1dayring=abnormal_driver_1dayring,
+                abnormal_driver_7dayring=abnormal_driver_7dayring,
+                abnormal_order_num=abnormal_order_num,
+                abnormal_order_rate=abnormal_order_rate,
+                abnormal_order_1dayring=abnormal_order_1dayring,
+                abnormal_order_7dayring=abnormal_order_7dayring,
+                order_amount=order_amount,
+                order_amount_1dayring=order_amount_1dayring,
+                order_amount_7dayring=order_amount_7dayring,
+                revoked_order_num=revoked_order_num,
+                revoked_order_rate=revoked_order_rate
+            )
+
+        head_complete = False
+        curr_day = sorted(curr_day, reverse=True)
+        rule_set = sorted(rule_set, reverse=False)
+        logging.info(curr_day)
+        logging.info(rule_set)
+        for d in curr_day:
+            row_temp = '<td>{day}</td>'.format(day=d)
+            for r in rule_set:
+                if not head_complete:
+                    html_rule_title += rule_head.get('rule_title_' + str(r), '<th colspan="13">--</th>')
+                    html_rule_head += rule_head.get('rule_head_' + str(r), '<th>-</th><th>-</th><th>-</th><th>-</th><th>-</th><th>-</th><th>-</th><th>-</th><th>-</th><th>-</th><th>-</th><th>-</th><th>-</th>')
+                row_temp += rule_head.get('rule_data_' + d + str(r), '<td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td>')
+            row_html += tr_fmt.format(row=row_temp)
+            head_complete = True
+
+        html_after_fmt = html_after_fmt.format(
+            colspan=len(rule_set) * 13,
+            rule_title=html_rule_title,
+            rule_head=html_rule_head,
+            rows=row_html
+        )
+    else:
+        html_after_fmt = ''
+    cursor.close()
+
+    # send mail
+    if html_mid_fmt != '' or html_regist_fmt != '' or html_after_fmt != '':
+        email_subject = 'oride反作弊报表_{}'.format(ds)
+        send_email(
+            # Variable.get("oride_anti_fraud_report_receivers").split(),
+            'duo.wu@opay-inc.com',
+            email_subject,
+            html_mail_fmt.format(html_content_fmt=html_regist_fmt+'<hr>'+html_mid_fmt + '<hr>' + html_after_fmt),
+            mime_charset='utf-8')
     return
 
 
@@ -1562,7 +1847,7 @@ create_oride_driver_timerange = HiveOperator(
     dag=dag)
 
 create_oride_driver_timerange >> import_driver_online_time >> insert_oride_global_daily_report
-insert_oride_global_daily_report >> insert_oride_anti_fraud_daily_report >> send_anti_fraud_report
+insert_oride_global_daily_report >> insert_oride_anti_fraud_daily_report >> insert_orider_anti_fraud_daily_report_result >> send_anti_fraud_report
 create_oride_anti_fraud_daily_report >> insert_oride_anti_fraud_daily_report
 create_oride_global_daily_report >> insert_oride_global_daily_report
 import_opay_event_log >> insert_oride_global_daily_report
