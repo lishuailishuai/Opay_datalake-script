@@ -926,7 +926,7 @@ def send_report_email(ds, **kwargs):
             <!--司机指标-->
             <td>{12}</td>
             <td>{13}</td>
-            <td>{13}</td>
+            <td>{14}</td>
             <!--体验指标-->
             <td>{15:.0f}</td>
             <td>{16:.0f}</td>
