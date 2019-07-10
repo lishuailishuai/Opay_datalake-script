@@ -452,7 +452,7 @@ def send_report_email(ds_nodash, ds, **kwargs):
                             </tr>
                             <tr>
                                 <th>日期</th>
-                                <th>正在干活</th>
+                                <th>正在做单</th>
                                 <th>被其他订单锁住</th>
                                 <th>被指派过</th>
                                 <th>不在接单状态</th>
@@ -601,12 +601,12 @@ def send_report_email(ds_nodash, ds, **kwargs):
                                         </caption>
                                         <thead>
                                             <tr>
-                                                <th colspan="10" style="text-align: center;">宏观指标</th>
+                                                <th colspan="9" style="text-align: center;">宏观指标</th>
                                             </tr>
                                             <tr>
                                                 <th>日期</th>
                                                 <th>下单数</th>
-                                                <th>有效下单数</th>
+                                                <!--<th>有效下单数</th>-->
                                                 <th>接单数</th>
                                                 <th>接单率</th>
                                                 <th>完单数</th>
@@ -637,7 +637,7 @@ def send_report_email(ds_nodash, ds, **kwargs):
                                                 <th>日期</th>
                                                 <th>平均应答时长(分)</th>
                                                 <th>平均接驾时长(分)</th>
-                                                <th>平均取消接驾时长(分)</th>
+                                                <th>应答后平均取消时长(分)</th>
                                                 <th>平均等待上车时长(分)</th>
                                                 <th>平均计费时长(分)</th>
                                                 <th>平均支付时长(分)</th>
@@ -663,7 +663,7 @@ def send_report_email(ds_nodash, ds, **kwargs):
                                         <tr>
                                             <td>{date}</td>
                                             <td>{ride_num}</td>
-                                            <td>{validity_on_ride_num}</td>
+                                            <!--<td>{validity_on_ride_num}</td>-->
                                             <td>{request_num}</td>
                                             <td>{request_rate}</td>
                                             <td>{on_ride_num}</td>
