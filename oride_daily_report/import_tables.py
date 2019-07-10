@@ -51,8 +51,7 @@ tables = [
     "data_user_whitelist",
     "data_driver_whitelist",
     "data_user_blacklist",
-    "data_driver_blacklist",
-    "data_device_extend"
+    "data_driver_blacklist"
 ]
 
 

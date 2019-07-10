@@ -45,6 +45,7 @@ table_list = [
     "data_abnormal_order",
     "data_anti_fraud_strategy",
     "data_city_conf",
+    "data_device_extend"
 ]
 
 # 需要验证的核心业务表
