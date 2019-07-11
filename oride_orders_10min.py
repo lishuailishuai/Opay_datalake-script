@@ -32,9 +32,14 @@ dag = airflow.DAG(
 
 active_a_driver = "active_driver:a:%s"
 active_no_driver = "active_driver:no:%s"
+
 insert_driver_num = """
-replace into bi.driver_online (`online_time`,`drivers_online`,`driver_orderable`) values (%s,%d,%d)
+replace into bi.driver_online values (%s,%s,%s,%s,%s)
 """
+
+query_driver_city_serv = '''
+select id,serv_type,city_id from data_driver_extend where id > {id} order by id limit 1000
+'''
 
 create_oride_orders_status = MySqlOperator(
     task_id='create_oride_orders_status',
@@ -75,6 +80,26 @@ write_from_mysql = BashOperator(
 
 
 def get_driver_num(**op_kwargs):
+    driver_num = {}
+    res = []
+    conn = get_db_conn('mysql_oride_data_readonly')
+    mcursor = conn.cursor()
+    driver_id = -1
+    results = tuple()
+    driver_dic = {}
+    while True:
+        mcursor.execute(query_driver_city_serv.format(id=driver_id))
+        conn.commit()
+        tmp = mcursor.fetchall()
+        if not tmp:
+            break
+        results += tmp
+        driver_id = tmp[-1][0]
+
+    mcursor.close()
+    conn.close()
+    for data in results:
+        driver_dic[data[0]] = ",".join([str(data[1]), str(data[2])])
     redis_conn = RedisHook(redis_conn_id='pika').get_conn()
     ts = op_kwargs['ts']
     dt, h = ts.split('T')
@@ -88,9 +113,24 @@ def get_driver_num(**op_kwargs):
         dt = time.strftime('%Y%m%d%H%M', time.localtime(timestamp + i * 60))
         a_member = a_member.union(set(redis_conn.smembers(active_a_driver % dt)))
         no_member = no_member.union(set(redis_conn.smembers(active_no_driver % dt)))
+    for mem in a_member:
+        tmp = driver_dic[int(mem)]
+        if tmp not in driver_num:
+            driver_num[tmp] = {"a_mem": 0, "no_mem": 0}
+        driver_num[tmp]["a_mem"] += 1
+    for mem in no_member:
+        tmp = driver_dic[int(mem)]
+        if tmp not in driver_num:
+            driver_num[tmp] = {"a_mem": 0, "no_mem": 0}
+        driver_num[tmp]["no_mem"] += 1
+
+    for k, v in driver_num.items():
+        info = k.split(",")
+        res.append([int(info[0]), int(info[1]), dt_start+'00', v["a_mem"], v["no_mem"]])
+
     conn = get_db_conn('mysql_bi')
     mcursor = conn.cursor()
-    mcursor.execute(insert_driver_num % (dt_start+'00', len(a_member), len(no_member)))
+    mcursor.executemany(insert_driver_num, res)
     conn.commit()
     mcursor.close()
     conn.close()
