@@ -913,9 +913,7 @@ def csresult_channel_to_mysql(ds, **kwargs):
     sql_count = 0
     for driver_id, dt, name, phone, city, type, distance, income, onlineSettlement, onlineTotal, total_orders, arrived_orders, comment, badcomments_num, score, onlinetime in results:
         sql_tmp = '''
-            ('{dt}', '{driver_id}', '{driver_type}', '{name}', '{mobile}', '{city_id}', '{distance}', '{income}', 
-            '{online_paid}', '{online_total}', '{total_orders}', '{arrived_orders}', '{total_comments}', '{bad_comments}', 
-            '{total_score}', '{online_time}')
+            ('{dt}', '{driver_id}', '{driver_type}', '{name}', '{mobile}', '{city_id}', '{distance}', '{income}', '{online_paid}', '{online_total}', '{total_orders}', '{arrived_orders}', '{total_comments}', '{bad_comments}', '{total_score}', '{online_time}')
         '''.format(
             dt=dt,
             driver_id=driver_id,
