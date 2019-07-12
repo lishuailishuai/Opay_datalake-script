@@ -150,7 +150,67 @@ opaySpreadTable = {
         OUTPUTFORMAT 'org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat'
         LOCATION
             'ufile://opay-datalake/opay-spread/rider_signups_guarantors';
-    '''
+    ''',
+
+    'driver_data': '''
+        CREATE EXTERNAL TABLE IF NOT EXISTS driver_data (
+            id bigint,
+            driver_id int,
+            city int,
+            group_id int,
+            team_id int,
+            create_time int,
+            admin_id int,
+            update_time int,
+            del int
+        )
+        PARTITIONED BY (`dt` string)
+        ROW FORMAT SERDE 'org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe'
+        STORED AS INPUTFORMAT 'org.apache.hadoop.mapred.TextInputFormat'
+        OUTPUTFORMAT 'org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat'
+        LOCATION
+            'ufile://opay-datalake/opay-spread/driver_data';
+    ''',
+
+    'driver_group': '''
+        CREATE EXTERNAL TABLE IF NOT EXISTS driver_group (
+            id bigint,
+            name string,
+            phone_number string,
+            del int,
+            create_time string,
+            city int,
+            manager_id int,
+            admin_id int,
+            update_time string
+        )
+        PARTITIONED BY (`dt` string)
+        ROW FORMAT SERDE 'org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe'
+        STORED AS INPUTFORMAT 'org.apache.hadoop.mapred.TextInputFormat'
+        OUTPUTFORMAT 'org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat'
+        LOCATION
+            'ufile://opay-datalake/opay-spread/driver_group';
+    ''',
+
+    'admin_users': '''
+        CREATE EXTERNAL TABLE IF NOT EXISTS admin_users (
+            id bigint,
+            username string,
+            password string,
+            name string,
+            avatar string,
+            remember_token string,
+            created_at string,
+            updated_at string
+        )
+        PARTITIONED BY (`dt` string)
+        ROW FORMAT SERDE 'org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe'
+        STORED AS INPUTFORMAT 'org.apache.hadoop.mapred.TextInputFormat'
+        OUTPUTFORMAT 'org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat'
+        LOCATION
+            'ufile://opay-datalake/opay-spread/admin_users';
+    ''',
+
 }
 
 
@@ -179,7 +239,10 @@ dag = airflow.DAG(
 table_list = [
     "promoter_user",
     "rider_signups",
-    "rider_signups_guarantors"
+    "rider_signups_guarantors",
+    "driver_data",
+    "driver_group",
+    "admin_users",
 ]
 
 '''

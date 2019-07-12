@@ -74,6 +74,24 @@ create_csv_file = BashOperator(
                 group by driver_id
             ),
             
+            -- order_pay as (
+            --     select 
+            --     driver_id driver_id,
+            --     sum(price) price_sum
+            --     from oride_db.data_order_payment
+            --     where dt = '${dt}' and status = 1
+            --     group by driver_id
+            -- ),
+            
+            
+            account_data as (
+                select 
+                driver_id,
+                balance,
+                total_income
+                from oride_db.data_driver_balance_extend
+                where dt = '${dt}'
+            ),
             
             push_data as (
                 select 
@@ -90,16 +108,57 @@ create_csv_file = BashOperator(
                 sum(driver_onlinerange) driver_online_sum
                 from oride_bi.oride_driver_timerange
                 group by driver_id
+            ),
+            
+            driver_comment as (
+                select 
+                driver_id,
+                count(1) score_num,
+                count(if(score <= 3,id,null)) low_socre_num,
+                round(sum(score)/count(1),2) score_avg
+                from oride_db.data_driver_comment 
+                where dt = '${dt}'
+                group by  driver_id  
+            ),
+            
+            driver_info as (
+                select 
+                dd.driver_id driver_id,
+                cc.name city,
+                dg.name group_name,
+                au.name admin_user
+                from 
+                (
+                select 
+                driver_id,group_id
+                from
+                opay_spread.driver_data
+                where dt = '${dt}'
+                ) dd 
+                left join opay_spread.driver_group dg on dd.group_id=dg.id and dg.dt = '${dt}'
+                left join oride_db.data_city_conf cc on dg.city = cc.id and cc.dt = '${dt}'
+                left join opay_spread.admin_users au on au.id = dg.manager_id and au.dt = '${dt}'
             )
+            
             
             select 
             rd.id as \`司机id\`,
             rd.name as \`司机姓名\`,
-            concat('TEL : ',rd.mobile) as \`司机电话\`,
+            rd.mobile as \`司机电话\`,
             rd.gender as \`性别\`,
             rd.birthday as \`生日\`,
             rd.create_time as \`注册时间\`,
+            
+            nvl(di.city,'') as \`所属区域\`,
+            nvl(di.group_name,'') as \`所属协会\`,
+            nvl(di.admin_user,'') as \`所属司管姓名\`,
+            
             nvl(round(od.distance_sum/1000,2),0) as \`总里程数（km）\`,
+            
+            -- nvl(op.price_sum,0) as \`总收入\`,
+            -- nvl(ad.total_income,0) as \`总收入1\`,
+            0 as \`总收入\`,
+            nvl(ad.balance,0) as \`司机账户余额\`,
             nvl(round(do.driver_online_sum/3600,0),0) as \`总在线时长（时）\`,
             nvl(round(od.duration_sum/3600,1),0) as \`总计费时长（时）\`,
             nvl(round(od.duration_sum/(60*od.on_ride_num),2),0) as \`平均计费时长（分）\`,
@@ -110,14 +169,20 @@ create_csv_file = BashOperator(
             nvl(od.driver_cancel_num,0) as \`总取消订单数\`,
             nvl(round(pd.push_num/rd.regis_days,0),0) as \`平均日推送订单数\`,
             nvl(round(od.accpet_num/rd.regis_days,0),0) as \`平均日接单数\`,
-            nvl(round(od.on_ride_num/rd.regis_days,0),0) as \`平均日完单数\`
-            
+            nvl(round(od.on_ride_num/rd.regis_days,0),0) as \`平均日完单数\`,
+            nvl(dc.score_num,0) as \`总评价次数\`,
+            nvl(dc.low_socre_num,0) as \`3分以下评价次数\`,
+            nvl(dc.score_avg,0) as \`平均评分\`
             
             
             from rider_data rd 
             left join order_data od on rd.id = od.driver_id
+            -- left join order_pay op on rd.id = op.driver_id
             left join push_data pd on rd.id = pd.driver_id
+            left join account_data ad on rd.id = ad.driver_id
             left join driver_online do on rd.id = do.driver_id
+            left join driver_comment dc on rd.id = dc.driver_id
+            left join driver_info di on rd.id = di.driver_id
             ;
 "
         echo ${fast_driver_sql}
@@ -139,7 +204,6 @@ def send_csv_file(ds, **kwargs):
 
     # send mail
     email_to = Variable.get("oride_fast_driver_metrics_report_receivers").split()
-
     email_subject = '快车司机档案数据_{dt}'.format(dt=ds)
     send_email(email_to, email_subject, '快车司机档案数据，请查收', file_list, mime_charset='utf-8')
 
