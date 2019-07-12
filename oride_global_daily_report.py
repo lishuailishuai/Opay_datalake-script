@@ -1759,8 +1759,7 @@ def send_anti_fraud_report_email(ds, **kwargs):
     if html_mid_fmt != '' or html_regist_fmt != '' or html_after_fmt != '':
         email_subject = 'oride反作弊报表_{}'.format(ds)
         send_email(
-            # Variable.get("oride_anti_fraud_report_receivers").split(),
-            'duo.wu@opay-inc.com',
+            Variable.get("oride_anti_fraud_report_receivers").split(),
             email_subject,
             html_mail_fmt.format(html_content_fmt=html_regist_fmt+'<hr>'+html_mid_fmt + '<hr>' + html_after_fmt),
             mime_charset='utf-8')
