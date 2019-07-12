@@ -316,3 +316,18 @@ mysql -h${HOST_BI} -u${USER_BI} -P${PORT_BI} -p${PASS_BI} bi -e"
         drivers_serv = values(drivers_serv),
         drivers_orderable = values(drivers_orderable)
 "
+#每类型汇总
+mysql -h${HOST_BI} -u${USER_BI} -P${PORT_BI} -p${PASS_BI} bi -e"
+    insert into ${DATA_TABLE} (city_id, serv_type, order_time, daily, drivers_serv, drivers_orderable)
+    (
+        select
+            0, type, online_time, date_format(online_time, '%Y-%m-%d 00:00:00'), sum(drivers_online), sum(driver_orderable)
+        from driver_online
+        where online_time>='${PREV_1HOUR}' and
+            online_time<='${CURR_TIME}'
+        group by type, online_time
+    )
+    on duplicate key update
+        drivers_serv = values(drivers_serv),
+        drivers_orderable = values(drivers_orderable)
+"
