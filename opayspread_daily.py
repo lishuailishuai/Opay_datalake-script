@@ -918,7 +918,7 @@ def csresult_channel_to_mysql(ds, **kwargs):
             dt=dt,
             driver_id=driver_id,
             driver_type=type,
-            name=name,
+            name=name.replace("'", "\\'"),
             mobile=phone,
             city_id=city,
             distance=distance,
