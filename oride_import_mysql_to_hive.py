@@ -1,5 +1,6 @@
 import airflow
 from datetime import datetime, timedelta
+from airflow.hooks.base_hook import BaseHook
 from airflow.operators.bash_operator import BashOperator
 from utils.connection_helper import get_db_conf
 from airflow.operators.hive_operator import HiveOperator
@@ -24,7 +25,7 @@ args = {
 
 dag = airflow.DAG(
     'oride_import_mysql_to_hive',
-    schedule_interval="0 0 * * *",
+    schedule_interval="00 01 * * *",
     concurrency=5,
     max_active_runs=1,
     default_args=args)
@@ -33,19 +34,22 @@ dag = airflow.DAG(
 # 导入数据的列表
 
 table_list = [
-    "data_order",
-    "data_order_payment",
-    "data_user",
-    "data_user_extend",
-    "data_coupon",
-    "data_driver",
-    "data_driver_group",
-    "data_driver_extend",
-    "data_driver_comment",
-    "data_abnormal_order",
-    "data_anti_fraud_strategy",
-    "data_city_conf",
-    "data_device_extend"
+    ("data_order", "sqoop_db"),
+    ("data_order_payment", "sqoop_db"),
+    ("data_user", "sqoop_db"),
+    ("data_user_extend", "sqoop_db"),
+    ("data_coupon", "sqoop_db"),
+    ("data_driver", "sqoop_db"),
+    ("data_driver_group", "sqoop_db"),
+    ("data_driver_extend", "sqoop_db"),
+    ("data_driver_comment", "sqoop_db"),
+    ("data_abnormal_order", "sqoop_db"),
+    ("data_anti_fraud_strategy", "sqoop_db"),
+    ("data_city_conf", "sqoop_db"),
+    ("data_device_extend", "sqoop_db"),
+    ("driver_group", "opay_spread_mysql"),
+    ("driver_team", "opay_spread_mysql"),
+    ("rider_signups", "opay_spread_mysql"),
 ]
 
 # 需要验证的核心业务表
@@ -235,10 +239,10 @@ def write_meta_data(table_name, day, result, msg):
 
     cursor.execute(sql)
 
-
-host, port, schema, login, password = get_db_conf('sqoop_db')
-
-for table_name in table_list:
+conn_conf_dict={}
+for table_name,conn_id in table_list:
+    if conn_id not in conn_conf_dict:
+        conn_conf_dict[conn_id]=BaseHook.get_connection(conn_id)
     import_table = BashOperator(
         task_id='import_table_{}'.format(table_name),
         bash_command='''
@@ -254,16 +258,30 @@ for table_name in table_list:
             --hive-delims-replacement " " \
             --delete-target-dir \
             --compression-codec=snappy
-        '''.format(host=host, port=port, schema=schema, username=login, password=password, table=table_name),
+        '''.format(
+            host=conn_conf_dict[conn_id].host,
+            port=conn_conf_dict[conn_id].port,
+            schema=conn_conf_dict[conn_id].schema,
+            username=conn_conf_dict[conn_id].login,
+            password=conn_conf_dict[conn_id].password,
+            table=table_name
+        ),
         dag=dag,
     )
+
+    if conn_id=='sqoop_db':
+        hive_db='oride_db'
+        hive_table=table_name
+    else:
+        hive_db='oride_dw'
+        hive_table='ods_sqoop_%s_df' % table_name
 
     add_partitions = HiveOperator(
         task_id='add_partitions_{}'.format(table_name),
         hql='''
-                ALTER TABLE oride_db.{table} ADD IF NOT EXISTS PARTITION (dt = '{{{{ ds }}}}')
-            '''.format(table=table_name),
-        schema='oride_db',
+                ALTER TABLE {table} ADD IF NOT EXISTS PARTITION (dt = '{{{{ ds }}}}')
+            '''.format(table=hive_table),
+        schema=hive_db,
         dag=dag)
 
     validate_all_data = PythonOperator(
