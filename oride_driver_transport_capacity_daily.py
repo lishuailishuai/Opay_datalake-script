@@ -384,7 +384,7 @@ def send_report_email(ds, **kwargs):
     # send mail
     email_subject = '司机运力日报-快车_{}'.format(ds)
     send_email(
-        Variable.get("oride_metrics_report_receivers").split()
+        Variable.get("oride_driver_transport_metrics_receivers").split()
         , email_subject, html, mime_charset='utf-8')
     cursor.close()
     return
