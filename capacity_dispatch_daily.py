@@ -21,78 +21,6 @@ dag = airflow.DAG(
     schedule_interval="40 00 * * *",
     default_args=args)
 
-dispatch_table = HiveOperator(
-    task_id='dispatch_table',
-    hql='''
-        insert overwrite table oride_bi.server_magic_dispatch_detail
-        partition(dt='{{ ds }}')
-        select 
-        get_json_object(event_values, '$.order_id') order_id, 
-        get_json_object(event_values, '$.round') as `round`, 
-        get_json_object(event_values, '$.user_id') as `user_id`,
-        driver_id
-        from  
-        oride_source.server_magic 
-        lateral view explode(split(substr(get_json_object(event_values, '$.driver_ids'),1,length(get_json_object(event_values, '$.driver_ids'))-2),',')) driver_ids as driver_id
-        where  dt = '{{ ds }}' and event_name='dispatch_chose_driver' 
-        ''',
-    schema='oride_source',
-    dag=dag)
-
-filter_table = HiveOperator(
-    task_id='filter_table',
-    hql='''
-        insert overwrite table oride_bi.server_magic_filter_detail
-        partition(dt='{{ ds }}')
-        select 
-        get_json_object(event_values, '$.order_id') order_id, 
-        get_json_object(event_values, '$.round') as `round`, 
-        get_json_object(event_values, '$.user_id') as `user_id`,
-        get_json_object(event_values, '$.driver_id') as `driver_id`,
-        get_json_object(event_values, '$.reason') as `reason`
-        from  
-        oride_source.server_magic 
-        where  dt = '{{ ds }}' and event_name='dispatch_filter_driver' 
-        ''',
-    schema='oride_source',
-    dag=dag)
-
-assign_table = HiveOperator(
-    task_id='assign_table',
-    hql='''
-        insert overwrite table oride_bi.server_magic_assign_detail
-        partition(dt='{{ ds }}')
-        select 
-        get_json_object(event_values, '$.order_id') order_id, 
-        get_json_object(event_values, '$.round') as `round`, 
-        get_json_object(event_values, '$.user_id') as `user_id`,
-        driver_id
-        from  
-        oride_source.server_magic 
-        lateral view explode(split(substr(get_json_object(event_values, '$.driver_ids'),1,length(get_json_object(event_values, '$.driver_ids'))-2),',')) driver_ids as driver_id
-        where  dt = '{{ ds }}' and event_name='dispatch_assign_driver' 
-        ''',
-    schema='oride_source',
-    dag=dag)
-
-push_table = HiveOperator(
-    task_id='push_table',
-    hql='''
-        insert overwrite table oride_bi.server_magic_push_detail
-        partition(dt='{{ ds }}')
-        select 
-        get_json_object(event_values, '$.order_id') order_id, 
-        get_json_object(event_values, '$.round') as `round`, 
-        get_json_object(event_values, '$.user_id') as `user_id`,
-        get_json_object(event_values, '$.driver_id') as `driver_id`
-        from  
-        oride_source.server_magic 
-        where  dt = '{{ ds }}' and event_name='dispatch_push_driver' 
-        and get_json_object(event_values, '$.success') = 1
-        ''',
-    schema='oride_source',
-    dag=dag)
-
 insert_report_metrics = HiveOperator(
     task_id='insert_report_metrics',
     hql='''
@@ -184,7 +112,7 @@ insert_report_metrics = HiveOperator(
                         count(driver_id) driver_num
                     from
                         oride_bi.server_magic_push_detail
-                        where dt = '{{ ds }}'
+                        where dt = '{{ ds }}' and success = 1
                         group by dt,
                         round,
                         order_id
@@ -211,7 +139,7 @@ insert_report_metrics = HiveOperator(
                     count(distinct(order_id)) order_num_dis
                 from
                     oride_bi.server_magic_push_detail
-                where dt = '{{ ds }}'
+                where dt = '{{ ds }}' and success = 1
                 group by dt,driver_id
             ) p
             group by p.dt
@@ -795,4 +723,4 @@ send_report = PythonOperator(
     dag=dag
 )
 
-dispatch_table >> filter_table >> assign_table >> push_table >> insert_report_metrics >> insert_order_metrics >> send_report
+insert_report_metrics >> insert_order_metrics >> send_report
