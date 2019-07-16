@@ -18,7 +18,7 @@ args = {
 
 dag = airflow.DAG(
     'oride_driver_transport_capacity_daily',
-    schedule_interval="00 01 * * *",
+    schedule_interval="00 02 * * *",
     default_args=args)
 
 insert_driver_metrics = HiveOperator(

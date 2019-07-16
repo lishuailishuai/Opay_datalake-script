@@ -20,7 +20,7 @@ args = {
 
 dag = airflow.DAG(
     'oride_fast_driver_info_daily_report',
-    schedule_interval="30 02 * * *",
+    schedule_interval="30 03 * * *",
     default_args=args)
 
 create_csv_file = BashOperator(
