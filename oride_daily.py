@@ -17,7 +17,7 @@ import os
 
 args = {
     'owner': 'root',
-    'start_date': datetime(2019, 5, 20),
+    'start_date': datetime(2019, 7, 16),
     'depends_on_past': False,
     'retries': 1,
     'retry_delay': timedelta(minutes=5),
@@ -28,7 +28,7 @@ args = {
 
 dag = airflow.DAG(
     'oride_daily',
-    schedule_interval="00 02 * * *",
+    schedule_interval="00 03 * * *",
     default_args=args)
 
 create_oride_driver_overview  = HiveOperator(

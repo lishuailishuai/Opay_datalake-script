@@ -5,7 +5,7 @@ from airflow.operators.impala_plugin import ImpalaOperator
 
 args = {
     'owner': 'root',
-    'start_date': datetime(2019, 5, 27),
+    'start_date': datetime(2019, 7, 16),
     'depends_on_past': True,
     'retries': 1,
     'retry_delay': timedelta(minutes=5),
@@ -16,7 +16,7 @@ args = {
 
 dag = airflow.DAG(
     'oride_retain',
-    schedule_interval="50 01 * * *",
+    schedule_interval="50 02 * * *",
     default_args=args)
 
 create_oride_new_user_channel = HiveOperator(

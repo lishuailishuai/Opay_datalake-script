@@ -15,7 +15,7 @@ import os
 
 args = {
     'owner': 'root',
-    'start_date': datetime(2019, 7, 10),
+    'start_date': datetime(2019, 7, 16),
     'depends_on_past': False,
     'retries': 1,
     'retry_delay': timedelta(minutes=5),
@@ -26,7 +26,7 @@ args = {
 
 dag = airflow.DAG(
     'oride_global_daily_report',
-    schedule_interval="30 00 * * *",
+    schedule_interval="30 01 * * *",
     default_args=args)
 
 

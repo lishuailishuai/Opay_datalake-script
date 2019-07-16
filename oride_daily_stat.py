@@ -6,7 +6,7 @@ from oride_daily_report.import_tables import import_table
 
 args = {
     'owner': 'root',
-    'start_date': datetime(2019, 5, 14),
+    'start_date': datetime(2019, 7, 16),
     'depends_on_past': False,
     'retries': 1,
     'retry_delay': timedelta(minutes=5),
@@ -17,7 +17,7 @@ args = {
 
 dag = airflow.DAG(
     'oride_daily_stat',
-    schedule_interval="00 01 * * *",
+    schedule_interval="00 02 * * *",
     catchup=False,
     default_args=args)
 
