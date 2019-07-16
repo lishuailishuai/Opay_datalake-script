@@ -21,6 +21,12 @@ dag = airflow.DAG(
     schedule_interval="00 02 * * *",
     default_args=args)
 
+city_list = [
+    'ALL',
+    'lagos',
+    'Ibadan'
+]
+
 insert_driver_metrics = HiveOperator(
     task_id='insert_driver_metrics',
     hql='''
@@ -113,9 +119,7 @@ insert_driver_metrics = HiveOperator(
             select 
             o.city_name,
             count(s.order_id) push_order_times_num, --推送订单次数
-            count(distinct(s.order_id)) push_order_num, -- 成功推送订单量
-            count(distinct(s.driver_id))  push_driver_num, -- 推送司机数
-            count(distinct(concat(s.order_id,'_',s.driver_id))) push_order_to_driver_num -- 订单推送司机数
+            count(distinct(s.order_id)) push_order_num -- 成功推送订单量
             from 
             (
                 select 
@@ -134,14 +138,49 @@ insert_driver_metrics = HiveOperator(
                 where o.dt = '{{ ds }}' and o.serv_type = 2
             ) o on s.order_id = o.id 
             group by o.city_name
+        ),
+        
+        
+        order_push_driver as (
+            select 
+            o.city_name,
+            count(driver_num)  push_driver_num, -- 推送司机数
+            sum(driver_num) push_order_to_driver_num -- 订单推送司机数
+            from 
+            (
+                select 
+                t.order_id,
+                max(t.driver_num) driver_num
+                from 
+                (
+                select 
+                order_id,
+                round,
+                count(driver_id) driver_num
+                from oride_bi.server_magic_push_detail
+                where dt = '{{ ds }}' and success = 1
+                group by order_id,round
+                ) t
+                group by t.order_id
+            ) s 
+            join 
+            (
+                select 
+                c.name city_name, 
+                o.id
+                from oride_db.data_order o 
+                join oride_db.data_city_conf c on c.dt = '{{ ds }}' and o.city_id = c.id
+                where o.dt = '{{ ds }}' and o.serv_type = 2
+            ) o on s.order_id = o.id 
+            group by o.city_name
         )
 
 
         insert overwrite table oride_driver_capacity_metrics_info partition (dt='{{ ds }}')
         select 
         od.city_name,
-        opu.push_order_to_driver_num,
-        opu.push_driver_num,
+        opd.push_order_to_driver_num,
+        opd.push_driver_num,
         opu.push_order_times_num,
         opu.push_order_num,
         oda.online_driver_num,
@@ -166,6 +205,7 @@ insert_driver_metrics = HiveOperator(
         left join order_pay op on od.city_name = op.city_name
         left join driver_register dr on od.city_name = dr.city_name 
         left join order_push opu on od.city_name = opu.city_name
+        left join order_push_driver opd on od.city_name = opd.city_name
         ;
 
 
@@ -316,7 +356,6 @@ def send_report_email(ds, **kwargs):
     res = cursor.fetchall()
 
     row_html = ''
-
     tr_fmt = '''
                 <tr>{row}</tr>
             '''
@@ -342,26 +381,34 @@ def send_report_email(ds, **kwargs):
                 <th>{driver_cancel_rate}</th>
         '''
 
+    data_map = dict()
     for data in res:
-        [city_name,
-         order_dispatch_push_driver_avg,
-         order_time_push_driver_avg,
-         order_push_driver_avg,
-         driver_online_time_sum,
-         driver_online_avg,
-         duration_rate,
-         onride_avg,
-         online_driver_num,
-         accpet_driver_num,
-         onride_driver_num,
-         register_driver_num,
-         register_and_onride_driver_num,
-         agg_register_driver_num,
-         agg_onride_driver_num,
-         price_avg,
-         amount_avg,
-         driver_cancel_rate
-         ] = list(data)
+        data_list = list(data)
+        data_map[data_list[0]] = data_list
+
+    for city in city_list:
+        data = data_map.get(city)
+
+        [
+            city_name,
+            order_dispatch_push_driver_avg,
+            order_time_push_driver_avg,
+            order_push_driver_avg,
+            driver_online_time_sum,
+            driver_online_avg,
+            duration_rate,
+            onride_avg,
+            online_driver_num,
+            accpet_driver_num,
+            onride_driver_num,
+            register_driver_num,
+            register_and_onride_driver_num,
+            agg_register_driver_num,
+            agg_onride_driver_num,
+            price_avg,
+            amount_avg,
+            driver_cancel_rate
+        ] = data
 
         row = row_fmt.format(
             city_name=city_name,

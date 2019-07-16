@@ -205,7 +205,10 @@ def send_csv_file(ds, **kwargs):
     # send mail
     email_to = Variable.get("oride_fast_driver_metrics_report_receivers").split()
     email_subject = 'oride快车司机明细附件（测试版）_{dt}'.format(dt=ds)
-    send_email(email_to, email_subject, '快车司机档案数据，请查收', file_list, mime_charset='utf-8')
+    send_email(email_to, email_subject,
+               '快车司机档案数据，请查收。\n 附件中文乱码解决:使用记事本打开CSV文件，“文件”->“另存为”，编码方式选择ANSI，保存完毕后，用EXCEL打开，即可。',
+               file_list,
+               mime_charset='utf-8')
 
 
 send_file_email = PythonOperator(
