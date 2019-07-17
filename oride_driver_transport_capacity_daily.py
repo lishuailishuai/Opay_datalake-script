@@ -113,31 +113,32 @@ insert_driver_metrics = HiveOperator(
             driver_dim 
             group by city_name
         ),
-
-
+        
         order_push as (
             select 
-            o.city_name,
-            count(s.order_id) push_order_times_num, --推送订单次数
-            count(distinct(s.order_id)) push_order_num -- 成功推送订单量
+            t.city_name city_name,
+            sum(t.push_num) push_order_times_num, --推送订单次数 
+            sum(t.order_num) push_order_num, -- 推送订单量
+            count(t.driver_id)  push_driver_num -- 推送司机数
             from 
             (
                 select 
-                order_id,
-                driver_id
-                from oride_bi.server_magic_push_detail
-                where dt = '{{ ds }}' and success = 1
-            ) s 
-            join 
-            (
-                select 
-                c.name city_name, 
-                o.id
-                from oride_db.data_order o 
-                join oride_db.data_city_conf c on c.dt = '{{ ds }}' and o.city_id = c.id
-                where o.dt = '{{ ds }}' and o.serv_type = 2
-            ) o on s.order_id = o.id 
-            group by o.city_name
+                d.city_name city_name,
+                s.driver_id driver_id,
+                count(s.order_id) push_num,
+                count(distinct(s.order_id)) order_num
+                from 
+                (
+                    select 
+                    order_id,
+                    driver_id
+                    from oride_bi.server_magic_push_detail
+                    where dt = '{{ ds }}' and success = 1
+                ) s
+                join driver_dim d on d.id = s.driver_id
+                group by d.city_name,s.driver_id
+            ) t
+            group by t.city_name
         ),
         
         
@@ -180,7 +181,7 @@ insert_driver_metrics = HiveOperator(
         select 
         od.city_name,
         opd.push_order_to_driver_num,
-        opd.push_driver_num,
+        opu.push_driver_num,
         opu.push_order_times_num,
         opu.push_order_num,
         oda.online_driver_num,
@@ -225,9 +226,8 @@ def send_report_email(ds, **kwargs):
         (
             select 
             city_name,
-            round(sum(push_order_to_driver_num)/sum(push_driver_num),2),
-            round(sum(push_order_times_num)/sum(online_driver_num),2),
-            round(sum(push_order_num)/sum(online_driver_num),2),
+            round(sum(push_order_times_num)/sum(push_driver_num),2),
+            round(sum(push_order_num)/sum(push_driver_num),2),
             round(sum(driver_onlinerange_sum)/3600,2),
             round(sum(driver_onlinerange_sum)/(3600 * sum(online_driver_num)),2),
             concat(cast(round((sum(duration_sum) * 100)/sum(driver_onlinerange_sum),2) as string),'%'),
@@ -240,8 +240,7 @@ def send_report_email(ds, **kwargs):
             sum(agg_register_driver_num),
             sum(agg_onride_driver_num),
             round(sum(price_sum)/sum(order_pay_num),2),
-            round(sum(amount_sum)/sum(order_pay_num),2),
-            concat(cast(round((sum(driver_cancel_num) * 100)/sum(accept_num),2) as string),'%')
+            round(sum(amount_sum)/sum(order_pay_num),2)
             from 
             oride_bi.oride_driver_capacity_metrics_info
             where dt = '{dt}'
@@ -249,9 +248,8 @@ def send_report_email(ds, **kwargs):
             union all
             select 
             'ALL' city_name,
-            round(sum(push_order_to_driver_num)/sum(push_driver_num),2),
-            round(sum(push_order_times_num)/sum(online_driver_num),2),
-            round(sum(push_order_num)/sum(online_driver_num),2),
+            round(sum(push_order_times_num)/sum(push_driver_num),2),
+            round(sum(push_order_num)/sum(push_driver_num),2),
             round(sum(driver_onlinerange_sum)/3600,2),
             round(sum(driver_onlinerange_sum)/(3600 * sum(online_driver_num)),2),
             concat(cast(round((sum(duration_sum) * 100)/sum(driver_onlinerange_sum),2) as string),'%'),
@@ -264,8 +262,7 @@ def send_report_email(ds, **kwargs):
             sum(agg_register_driver_num),
             sum(agg_onride_driver_num),
             round(sum(price_sum)/sum(order_pay_num),2),
-            round(sum(amount_sum)/sum(order_pay_num),2),
-            concat(cast(round((sum(driver_cancel_num) * 100)/sum(accept_num),2) as string),'%')
+            round(sum(amount_sum)/sum(order_pay_num),2)
             from 
             oride_bi.oride_driver_capacity_metrics_info
             where dt = '{dt}'
@@ -311,23 +308,21 @@ def send_report_email(ds, **kwargs):
                     <thead>
                         <tr>
                             <th></th>
-                            <th colspan="3" style="text-align: center;">总需求</th>
+                            <th colspan="2" style="text-align: center;">总需求</th>
                             <th colspan="7" style="text-align: center;">总供给</th>
                             <th colspan="4" style="text-align: center;">招募</th>
                             <th colspan="2" style="text-align: center;">财务</th>
-                            <th colspan="1" style="text-align: center;">司机考核</th>
                         </tr>
                         <tr>
                             <th>城市</th>
                             <!--总需求-->
-                            <th>单均推送司机数</th>
                             <th>人均推单次数</th>
-                            <th>人均成功推单量</th>
+                            <th>人均推送订单数</th>
                             <!--总供给-->
                             <th>总在线时长</th>
                             <th>人均在线时长</th>
                             <th>计费时长占比</th>
-                            <th>人均完单量</th>
+                            <th>人均完单数</th>
                             <th>在线司机数</th>
                             <th>接单司机数</th>
                             <th>完单司机数</th>
@@ -341,7 +336,6 @@ def send_report_email(ds, **kwargs):
                             <th>单均应付</th>
                             <th>单均实付</th>
                             <!--司机考核-->
-                            <th>司机取消率</th>
 
                         </tr>
                     </thead>
@@ -362,7 +356,6 @@ def send_report_email(ds, **kwargs):
 
     row_fmt = '''
                 <th>{city_name}</th>
-                <th>{order_dispatch_push_driver_avg}</th>
                 <th>{order_time_push_driver_avg}</th>
                 <th>{order_push_driver_avg}</th>
                 <th>{driver_online_time_sum}</th>
@@ -378,7 +371,6 @@ def send_report_email(ds, **kwargs):
                 <th>{agg_onride_driver_num}</th>
                 <th>{price_avg}</th>
                 <th>{amount_avg}</th>
-                <th>{driver_cancel_rate}</th>
         '''
 
     data_map = dict()
@@ -391,7 +383,6 @@ def send_report_email(ds, **kwargs):
 
         [
             city_name,
-            order_dispatch_push_driver_avg,
             order_time_push_driver_avg,
             order_push_driver_avg,
             driver_online_time_sum,
@@ -406,13 +397,11 @@ def send_report_email(ds, **kwargs):
             agg_register_driver_num,
             agg_onride_driver_num,
             price_avg,
-            amount_avg,
-            driver_cancel_rate
+            amount_avg
         ] = data
 
         row = row_fmt.format(
             city_name=city_name,
-            order_dispatch_push_driver_avg=order_dispatch_push_driver_avg,
             order_time_push_driver_avg=order_time_push_driver_avg,
             order_push_driver_avg=order_push_driver_avg,
             driver_online_time_sum=driver_online_time_sum,
@@ -427,8 +416,7 @@ def send_report_email(ds, **kwargs):
             agg_register_driver_num=agg_register_driver_num,
             agg_onride_driver_num=agg_onride_driver_num,
             price_avg=price_avg,
-            amount_avg=amount_avg,
-            driver_cancel_rate=driver_cancel_rate
+            amount_avg=amount_avg
         )
 
         row_html += tr_fmt.format(row=row)
