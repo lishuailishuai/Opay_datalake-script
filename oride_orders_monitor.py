@@ -11,7 +11,7 @@ from airflow.operators.python_operator import PythonOperator
 import logging
 
 args = {
-    'owner': 'root',
+    'owner': 'wuduo',
     'start_date': datetime(2019, 7, 16),
     'depends_on_past': True,
     'retries': 1,
@@ -51,7 +51,7 @@ def data_monitor(**op_kwargs):
     #查询当前点数据指标总数
     metrics_sql = '''
         select 
-            city_id, serv_type, order_time, (orders+orders_user+orders_pick+drivers_serv+drivers_orderable+orders_finish+
+            city_id, city_name, serv_type, order_time, (orders+orders_user+orders_pick+drivers_serv+drivers_orderable+orders_finish+
             avg_pick+avg_take+not_sys_cancel_orders+picked_orders+orders_accept+agg_orders_finish) as total 
         from oride_orders_status_10min where order_time = '{}'
     '''.format(prev_timestr)
@@ -61,22 +61,18 @@ def data_monitor(**op_kwargs):
     bidb.execute(metrics_sql)
     results = bidb.fetchall()
     metrics_cnt = 0
-    for (city_id, serv_type, order_time, total) in results:
+    for (city_id, city_name, serv_type, order_time, total) in results:
         if city_id >= 999000:
             continue
         metrics_cnt += 1
         if city_id != 1002 and serv_type != 0 and serv_type != 1 and serv_type != 99 and total <= 0:
-            pass
-            logging.info('10分钟数据{}数据记录指标全部为0异常，请及时排查，谢谢'.format(order_time))
-            comwx.postAppMessage('10分钟数据{}数据记录指标全部为0异常，请及时排查，谢谢'.format(order_time), '271', '')
+            comwx.postAppMessage('{0}[{1}]10分钟数据{2}数据记录指标全部为0异常，请及时排查，谢谢'.format(city_name,serv_type,order_time), '271')
             return
 
     if metrics_cnt < total_count:
-        pass
-        logging.info('10分钟数据{0}数据记录缺失异常({1}<{2})，请及时排查，谢谢'.format(prev_timestr, metrics_cnt, total_count))
         comwx.postAppMessage('10分钟数据{0}数据记录缺失异常({1}<{2})，请及时排查，谢谢'.format(
                 prev_timestr, metrics_cnt, total_count
-            ), '271', ''
+            ), '271'
         )
         return
 
@@ -84,20 +80,31 @@ def data_monitor(**op_kwargs):
     weekly_diff = '''
         select 
             t1.city_id, 
+            t1.city_name,
             t1.serv_type, 
             t1.order_time, 
-            if(isnull(t2.orders) or t2.orders<=0, 0, if(t1.orders>=t2.orders, 0, t2.orders-t1.orders)/t2.orders) as orders,
-            if(isnull(t2.orders_user) or t2.orders_user<=0, 0, if(t1.orders_user>=t2.orders_user, 0, t2.orders_user-t1.orders_user)/t2.orders_user) as orders_user,
-            if(isnull(t2.orders_pick) or t2.orders_pick<=0, 0, if(t1.orders_pick>=t2.orders_pick, 0, t2.orders_pick-t1.orders_pick)/t2.orders_pick) as orders_pick,
-            if(isnull(t2.drivers_serv) or t2.drivers_serv<=0, 0, if(t1.drivers_serv>=t2.drivers_serv, 0, t2.drivers_serv-t1.drivers_serv)/t2.drivers_serv) as drivers_serv,
-            if(isnull(t2.drivers_orderable) or t2.drivers_orderable<=0, 0, if(t1.drivers_orderable>=t2.drivers_orderable, 0, t2.drivers_orderable-t1.drivers_orderable)/t2.drivers_orderable) as drivers_orderable,
-            if(isnull(t2.orders_finish) or t2.orders_finish<=0, 0, if(t1.orders_finish>=t2.orders_finish, 0, t2.orders_finish-t1.orders_finish)/t2.orders_finish) as orders_finish,
-            if(isnull(t2.avg_pick) or t2.avg_pick<=0, 0, if(t1.avg_pick>=t2.avg_pick, t1.avg_pick-t2.avg_pick, 0)/t2.avg_pick) as avg_pick,
-            if(isnull(t2.avg_take) or t2.avg_take<=0, 0, if(t1.avg_take>=t2.avg_take, t1.avg_take-t2.avg_take, 0)/t2.avg_take) as avg_take,
-            if(isnull(t2.not_sys_cancel_orders) or t2.not_sys_cancel_orders<=0, 0, if(t1.not_sys_cancel_orders>=t2.not_sys_cancel_orders, 0, t2.not_sys_cancel_orders-t1.not_sys_cancel_orders)/t2.not_sys_cancel_orders) as not_sys_cancel_orders,
-            if(isnull(t2.picked_orders) or t2.picked_orders<=0, 0, if(t1.picked_orders>=t2.picked_orders, 0, t2.picked_orders-t1.picked_orders)/t2.picked_orders) as picked_orders,
-            if(isnull(t2.orders_accept) or t2.orders_accept<=0, 0, if(t1.orders_accept>=t2.orders_accept, 0, t2.orders_accept-t1.orders_accept)/t2.orders_accept) as orders_accept,
-            if(isnull(t2.agg_orders_finish) or t2.agg_orders_finish<=0, 0, if(t1.agg_orders_finish>=t2.agg_orders_finish, 0, t2.agg_orders_finish-t1.agg_orders_finish)/t2.agg_orders_finish) as agg_orders_finish
+            t1.orders as t1orders,
+            if(isnull(t2.orders) or t2.orders<=0, 0, t2.orders) as t2orders,
+            t1.orders_user as t1ousers,
+            if(isnull(t2.orders_user) or t2.orders_user<=0, 0, t2.orders_user) as t2ousers,
+            t1.orders_pick as t1opicks,
+            if(isnull(t2.orders_pick) or t2.orders_pick<=0, 0, t2.orders_pick) as t2opicks,
+            t1.drivers_serv as t1dservs,
+            if(isnull(t2.drivers_serv) or t2.drivers_serv<=0, 0, t2.drivers_serv) as t2dservs,
+            t1.drivers_orderable as t1doables,
+            if(isnull(t2.drivers_orderable) or t2.drivers_orderable<=0, 0, t2.drivers_orderable) as t2doables,
+            t1.orders_finish as t1ofs,
+            if(isnull(t2.orders_finish) or t2.orders_finish<=0, 0, t2.orders_finish) as t2ofs,
+            t1.avg_pick as t1apicks,
+            if(isnull(t2.avg_pick) or t2.avg_pick<=0, 0, t2.avg_pick) as t2apicks,
+            t1.avg_take as t1atakes,
+            if(isnull(t2.avg_take) or t2.avg_take<=0, 0, t2.avg_take) as t2atakes,
+            t1.not_sys_cancel_orders as t1norders,
+            if(isnull(t2.not_sys_cancel_orders) or t2.not_sys_cancel_orders<=0, 0, t2.not_sys_cancel_orders) as t2norders,
+            t1.picked_orders as t1pos,
+            if(isnull(t2.picked_orders) or t2.picked_orders<=0, 0, t2.picked_orders) as t2pos,
+            t1.agg_orders_finish as t1aofs,
+            if(isnull(t2.agg_orders_finish) or t2.agg_orders_finish<=0, 0, t2.agg_orders_finish) as t2aofs
         from
             (select * from oride_orders_status_10min where order_time>=from_unixtime({dsb2})) t1 
         left join 
@@ -114,12 +121,42 @@ def data_monitor(**op_kwargs):
     logging.info(weekly_diff)
     bidb.execute(weekly_diff)
     results = bidb.fetchall()
-    for (city,type,otime,orders,ousers,opicks,dservs,dorders,ofinishs,apicks,atakes,norders,porders,oaccepts,aofinishs) in results:
-        if orders >= 0.5 or ousers >= 0.5 or opicks >= 0.5 or dservs >= 0.5 or dorders >= 0.5 or \
-                norders >= 0.5 or aofinishs >= 0.5 or apicks >= 0.5 or atakes >= 0.5:
-            pass
-            logging.info('10分钟数据{0}数据记录与上周对比异常，请及时排查，谢谢'.format(otime))
-            comwx.postAppMessage('10分钟数据{0}数据记录与上周对比异常，请及时排查，谢谢'.format(otime), '271', '')
+    for (city_id, city_name, serv_type, order_time, t1orders, t2orders, t1ousers, t2ousers, t1opicks, t2opicks,
+         t1dservs, t2dservs, t1doables, t2doables, t1ofs, t2ofs, t1apicks, t2apicks, t1atakes, t2atakes,
+         t1norders, t2norders, t1pos, t2pos, t1aofs, t2aofs) in results:
+        if (t2orders >= 100 and t2orders > t1orders and (t2orders - t1orders)/t2orders > 0.5) or \
+                (t2orders > 0 and t2orders < 100 and (t2orders - t1orders) > 20):
+            comwx.postAppMessage('{0}[{1}]10分钟数据{2}下单数记录与上周同期对比异常，请及时排查，谢谢'.format(city_name, serv_type, order_time),
+                                 '271')
+            return
+
+        #if (t2ofs >= 100 and t2ofs > t1ofs and (t2ofs - t1ofs)/t2ofs > 0.5) or \
+        #        (t2ofs > 0 and t2ofs < 100 and (t2ofs - t1ofs) > 20):
+        #    comwx.postAppMessage('{0}[{1}]10分钟数据{2}下单用户数记录与上周同期对比异常，请及时排查，谢谢'.format(city_name, serv_type, order_time),
+        #                         '271')
+        #    return
+
+        #if (t2opicks >= 100 and t2opicks > t1opicks and (t2opicks - t1opicks)/t2opicks > 0.5) or \
+        #        (t2opicks > 0 and t2opicks < 100 and (t2opicks - t1opicks) > 30):
+        #    comwx.postAppMessage('{0}[{1}]10分钟数据{2}接单数记录与上周同期对比异常，请及时排查，谢谢'.format(city_name, serv_type, order_time),
+        #                         '271')
+        #    return
+
+        if (t2dservs >= 200 and t2dservs > t1dservs and (t2dservs - t1dservs)/t2dservs > 0.5) or \
+                (t2dservs > 0 and t2dservs < 100 and (t2dservs - t1dservs) > 40):
+            comwx.postAppMessage('{0}[{1}]10分钟数据{2}在线司机数记录与上周同期对比异常，请及时排查，谢谢'.format(city_name, serv_type, order_time),
+                                 '271')
+            return
+
+        if (t2doables >= 200 and t2doables > t1doables and (t2doables - t1doables)/t2doables > 0.5) or \
+                (t2doables > 0 and t2doables < 100 and (t2doables - t1doables) > 40):
+            comwx.postAppMessage('{0}[{1}]10分钟数据{2}可接单司机数记录与上周同期对比异常，请及时排查，谢谢'.format(city_name, serv_type, order_time),
+                                 '271')
+            return
+
+        if t2apicks > 0 and t1apicks > t2apicks and (t1apicks - t2apicks)/t2apicks > 0.5:
+            comwx.postAppMessage('{0}[{1}]10分钟数据{2}平均应答时长记录与上周同期对比异常，请及时排查，谢谢'.format(city_name, serv_type, order_time),
+                                 '271')
             return
 
 
