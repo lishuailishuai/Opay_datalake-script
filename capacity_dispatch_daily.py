@@ -1,3 +1,5 @@
+# coding=utf-8
+
 import airflow
 from datetime import datetime, timedelta
 from airflow.operators.bash_operator import BashOperator
@@ -7,6 +9,7 @@ from airflow.utils.email import send_email
 import logging
 from airflow.models import Variable
 from utils.connection_helper import get_hive_cursor
+import utils.validate_metrics_utils as vm
 
 args = {
     'owner': 'linan',
@@ -16,10 +19,71 @@ args = {
     'retry_delay': timedelta(minutes=5),
 }
 
+'''
+    校验字段指标的名称和sql 查询的顺序对应关系map
+'''
+metric_order_and_name_map = {
+    1: 'request_num',
+    2: 'request_rate',
+    3: 'on_ride_num',
+    4: 'on_ride_rate',
+    5: 'on_ride_driver_num',
+    6: 'on_ride_avg',
+    7: 'pick_up_time_avg',
+    8: 'take_time_avg',
+    9: 'sys_cancel_rate',
+    10: 'passanger_before_cancel_rate',
+    11: 'passanger_after_cancel_rate',
+    12: 'validity_ride_num',
+    13: 'validity_on_ride_rate',
+    14: 'cannel_pick_avg',
+    15: 'wait_time_avg',
+    16: 'billing_time_avg',
+    17: 'pay_time_avg',
+}
+
+'''
+指标对应中文指标含义
+'''
+metric_name_map = {
+    'ride_num': '下单量',
+    'request_num': '接单量',
+    'request_rate': '接单率',
+    'on_ride_num': '完单量',
+    'on_ride_rate': '完单率',
+    'on_ride_driver_num': '完单骑手数',
+    'on_ride_avg': '人均完单量',
+    'pick_up_time_avg': '单均接驾时长（分钟）',
+    'take_time_avg': '单均应答时长（分钟）',
+    'sys_cancel_rate': '系统取消率',
+    'passanger_before_cancel_rate': '乘客应答前取消率',
+    'passanger_after_cancel_rate': '乘客应答后取消率',
+    'validity_ride_num': '有效下单量',
+    'validity_on_ride_rate': '完单率(有效订单数)',
+    'cannel_pick_avg': '平均取消接驾时长(分钟)',
+    'wait_time_avg': '平均等待上车时长(分钟)',
+    'billing_time_avg': '平均计费时长(分钟)',
+    'pay_time_avg': '平均支付时长(分钟)',
+}
+
 dag = airflow.DAG(
     'capacity_dispatch_daily',
     schedule_interval="40 01 * * *",
     default_args=args)
+
+validate_partition_data = PythonOperator(
+    task_id='validate_partition_data',
+    python_callable=vm.validate_partition,
+    provide_context=True,
+    op_kwargs={
+        'tables': ['oride_db.data_order',
+                   'oride_bi.server_magic_dispatch_detail',
+                   'oride_bi.server_magic_filter_detail',
+                   'oride_bi.server_magic_push_detail'
+                   ],
+        'dt': airflow.macros.ds},
+    dag=dag
+)
 
 insert_report_metrics = HiveOperator(
     task_id='insert_report_metrics',
@@ -551,7 +615,7 @@ def send_report_email(ds_nodash, ds, **kwargs):
     html_fmt_4_tail = '</table>'
     html += html_fmt_4_head
 
-    #时长指标
+    # 时长指标
     html_fmt_6_time_head = '''
         <table width="95%" class="table">
                                         <caption>
@@ -583,9 +647,9 @@ def send_report_email(ds_nodash, ds, **kwargs):
          sys_cancel_rate, passanger_before_cancel_rate, passanger_after_cancel_rate, validity_ride_num,
          validity_on_ride_rate, cannel_pick_avg, wait_time_avg, billing_time_avg, pay_time_avg
          ] = list(res[i])
-        #list_temp = list(res[i])
-        #validity_on_ride_num = list_temp[len(list_temp) - 2]
-        #validity_on_ride_rate = list_temp[len(list_temp) - 1]
+        # list_temp = list(res[i])
+        # validity_on_ride_num = list_temp[len(list_temp) - 2]
+        # validity_on_ride_rate = list_temp[len(list_temp) - 1]
         html_fmt_4 = '''
 
                                         <tr>
@@ -723,4 +787,4 @@ send_report = PythonOperator(
     dag=dag
 )
 
-insert_report_metrics >> insert_order_metrics >> send_report
+validate_partition_data >> insert_report_metrics >> insert_order_metrics >> send_report
