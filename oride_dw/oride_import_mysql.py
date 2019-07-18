@@ -121,13 +121,17 @@ def run_check_table(db_name, table_name, conn_id, hive_table_name, **kwargs):
         results = mysql_cursor.fetchall()
         rows=[]
         for result in results:
+            if result[0]=='dt':
+                col_name='_dt'
+            else:
+                col_name=result[0]
             if result[1]=='timestamp' or result[1]=='varchar' or result[1]=='char' or result[1]=='text' or result[1]=='datetime':
                 data_type='string'
             elif result[1]=='decimal':
                 data_type=result[1]+"("+str(result[2]) + "," + str(result[3])+")"
             else:
                 data_type=result[1]
-            rows.append("`%s` %s comment '%s'" % (result[0], data_type, result[4]))
+            rows.append("`%s` %s comment '%s'" % (col_name, data_type, result[4]))
         mysql_conn.close()
 
         # hive create table
