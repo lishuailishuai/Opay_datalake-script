@@ -31,7 +31,7 @@ dag = airflow.DAG(
 
 
 def data_monitor(**op_kwargs):
-    time.sleep(60)
+    time.sleep(120)
     prev_timepoint = math.floor(int(time.time())/600)*600 - 600
     prev_timestr = time.strftime('%Y-%m-%d %H:%M:00', time.localtime(prev_timepoint))
     bidbconn = get_db_conn('mysql_bi')
@@ -142,22 +142,22 @@ def data_monitor(**op_kwargs):
         #                         '271')
         #    return
 
-        if (t2dservs >= 200 and t2dservs > t1dservs and (t2dservs - t1dservs)/t2dservs > 0.5) or \
-                (t2dservs > 0 and t2dservs < 100 and (t2dservs - t1dservs) > 40):
+        if serv_type > 0 and ((t2dservs >= 200 and t2dservs > t1dservs and (t2dservs - t1dservs)/t2dservs > 0.5) or \
+                (t2dservs > 0 and t2dservs < 100 and (t2dservs - t1dservs) > 40)):
             comwx.postAppMessage('{0}[{1}]10分钟数据{2}在线司机数记录与上周同期对比异常，请及时排查，谢谢'.format(city_name, serv_type, order_time),
                                  '271')
             return
 
-        if (t2doables >= 200 and t2doables > t1doables and (t2doables - t1doables)/t2doables > 0.5) or \
-                (t2doables > 0 and t2doables < 100 and (t2doables - t1doables) > 40):
+        if serv_type > 0 and ((t2doables >= 200 and t2doables > t1doables and (t2doables - t1doables)/t2doables > 0.5) or \
+                (t2doables > 0 and t2doables < 100 and (t2doables - t1doables) > 40)):
             comwx.postAppMessage('{0}[{1}]10分钟数据{2}可接单司机数记录与上周同期对比异常，请及时排查，谢谢'.format(city_name, serv_type, order_time),
                                  '271')
             return
 
-        if t2apicks > 0 and t1apicks > t2apicks and (t1apicks - t2apicks)/t2apicks > 0.5:
-            comwx.postAppMessage('{0}[{1}]10分钟数据{2}平均应答时长记录与上周同期对比异常，请及时排查，谢谢'.format(city_name, serv_type, order_time),
-                                 '271')
-            return
+        #if t2apicks > 0 and t1apicks > t2apicks and (t1apicks - t2apicks)/t2apicks > 0.5:
+        #    comwx.postAppMessage('{0}[{1}]10分钟数据{2}平均应答时长记录与上周同期对比异常，请及时排查，谢谢'.format(city_name, serv_type, order_time),
+        #                         '271')
+        #    return
 
 
 data_monitor_task = PythonOperator(

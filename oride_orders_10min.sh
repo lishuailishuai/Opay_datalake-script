@@ -244,28 +244,144 @@ $(mysql -h${HOST_RD} -u${USER_RD} -P${PORT_RD} -p${PASS_RD} oride_data --skip-co
 ")
 _eof
 
-
 CURR_TIMESTAMP=$(date +'%s')
 PREV_10MIN=$((CURR_TIMESTAMP - 600))
-PREV_1HOUR=$(date +'%Y-%m-%d %H:00:00' --date="3 hour ago")
-PREV_HOUR_TIMESTAMP=$(date +'%s' --date="${PREV_1HOUR}")
 
-while ((${PREV_HOUR_TIMESTAMP} <= ${PREV_10MIN})); do
-    DAY_10MIN=$(date +'%Y-%m-%d %H:%M:00' --date=@${PREV_HOUR_TIMESTAMP})
-    DAY_DAY=$(date +'%Y-%m-%d 00:00:00' --date=@${PREV_HOUR_TIMESTAMP})
-    PREV_HOUR_TIMESTAMP=$((PREV_HOUR_TIMESTAMP + 600))
+#5. 累计完单数 汇总
+while read type city_id city daytime1 daytime2 day1 day2 agg_orders_finish; do
+    mysql -h${HOST_BI} -u${USER_BI} -P${PORT_BI} -p${PASS_BI} bi -e"
+        insert into ${DATA_TABLE}
+            (city_id, city_name, serv_type, order_time, daily, agg_orders_finish)
+        values
+            ('${city_id}', '${city}', '${type}', '${daytime1} ${daytime2}', '${day1} ${day2}', '${agg_orders_finish}')
+        on duplicate key update
+            city_name=values(city_name),
+            agg_orders_finish=values(agg_orders_finish)"
+done <<_eof
+$(mysql -h${HOST_RD} -u${USER_RD} -P${PORT_RD} -p${PASS_RD} oride_data --skip-column-names -e"
+    set time_zone = '+1:00';
+    select
+        -1,
+        0,
+        'all',
+        date_format(from_unixtime(floor(${PREV_10MIN}/600)*600), '%Y-%m-%d %H:%i:00') as order_time,
+        date_format(from_unixtime(arrive_time), '%Y-%m-%d 00:00:00') as order_day,
+        sum(if(status=4 or status=5,1,0)) as orders_finish
+    from oride_data.data_order
+    where arrive_time>=unix_timestamp(date_format(from_unixtime(${PREV_10MIN}),'%Y-%m-%d 00:00:00')) and
+        arrive_time<floor(${CURR_TIMESTAMP}/600)*600
+    group by order_time, order_day
+")
+_eof
 
-    mysql -h${HOST_BI} -u${USER_BI} -P${PORT_BI} -p${PASS_BI} bi -e "
-        insert into ${DATA_TABLE} (city_id, serv_type, order_time, daily, agg_orders_finish)
-        (select
-            city_id, serv_type, '${DAY_10MIN}', '${DAY_DAY}', sum(orders_finish)
-        from ${DATA_TABLE}
-        where order_time>'${DAY_DAY}' and order_time<='${DAY_10MIN}'
-        group by city_id, serv_type
-        )
-        on duplicate key update agg_orders_finish=values(agg_orders_finish)
-     "
-done
+#6. 累计完单数 城市汇总
+while read type city_id city daytime1 daytime2 day1 day2 agg_orders_finish; do
+    mysql -h${HOST_BI} -u${USER_BI} -P${PORT_BI} -p${PASS_BI} bi -e"
+        insert into ${DATA_TABLE}
+            (city_id, city_name, serv_type, order_time, daily, agg_orders_finish)
+        values
+            ('${city_id}', '${city}', '${type}', '${daytime1} ${daytime2}', '${day1} ${day2}', '${agg_orders_finish}')
+        on duplicate key update
+            city_name=values(city_name),
+            agg_orders_finish=values(agg_orders_finish)"
+done <<_eof
+$(mysql -h${HOST_RD} -u${USER_RD} -P${PORT_RD} -p${PASS_RD} oride_data --skip-column-names -e"
+    set time_zone = '+1:00';
+    select
+        -1,
+        o.city_id,
+        min(c.name),
+        date_format(from_unixtime(floor(${PREV_10MIN}/600)*600), '%Y-%m-%d %H:%i:00') as order_time,
+        date_format(from_unixtime(o.arrive_time), '%Y-%m-%d 00:00:00') as order_day,
+        sum(if(o.status=4 or o.status=5,1,0)) as orders_finish
+    from oride_data.data_order o left join oride_data.data_city_conf c
+    on c.id = o.city_id
+    where o.arrive_time>=unix_timestamp(date_format(from_unixtime(${PREV_10MIN}),'%Y-%m-%d 00:00:00')) and
+        o.arrive_time<floor(${CURR_TIMESTAMP}/600)*600 and
+        c.id < 999000
+    group by o.city_id, order_time, order_day
+")
+_eof
+
+#7. 累计完单数 type汇总
+while read type city_id city daytime1 daytime2 day1 day2 agg_orders_finish; do
+    mysql -h${HOST_BI} -u${USER_BI} -P${PORT_BI} -p${PASS_BI} bi -e"
+        insert into ${DATA_TABLE}
+            (city_id, city_name, serv_type, order_time, daily, agg_orders_finish)
+        values
+            ('${city_id}', '${city}', '${type}', '${daytime1} ${daytime2}', '${day1} ${day2}', '${agg_orders_finish}')
+        on duplicate key update
+            city_name=values(city_name),
+            agg_orders_finish=values(agg_orders_finish)"
+done <<_eof
+$(mysql -h${HOST_RD} -u${USER_RD} -P${PORT_RD} -p${PASS_RD} oride_data --skip-column-names -e"
+    set time_zone = '+1:00';
+    select
+        serv_type,
+        0,
+        'all',
+        date_format(from_unixtime(floor(${PREV_10MIN}/600)*600), '%Y-%m-%d %H:%i:00') as order_time,
+        date_format(from_unixtime(arrive_time), '%Y-%m-%d 00:00:00') as order_day,
+        sum(if(status=4 or status=5,1,0)) as orders_finish
+    from oride_data.data_order
+    where arrive_time>=unix_timestamp(date_format(from_unixtime(${PREV_10MIN}),'%Y-%m-%d 00:00:00')) and
+        arrive_time<floor(${CURR_TIMESTAMP}/600)*600
+    group by serv_type, order_time, order_day
+")
+_eof
+
+#8. 累计完单数, 城市、type汇总
+while read type city_id city daytime1 daytime2 day1 day2 agg_orders_finish; do
+    mysql -h${HOST_BI} -u${USER_BI} -P${PORT_BI} -p${PASS_BI} bi -e"
+        insert into ${DATA_TABLE}
+            (city_id, city_name, serv_type, order_time, daily, agg_orders_finish)
+        values
+            ('${city_id}', '${city}', '${type}', '${daytime1} ${daytime2}', '${day1} ${day2}', '${agg_orders_finish}')
+        on duplicate key update
+            city_name=values(city_name),
+            agg_orders_finish=values(agg_orders_finish)"
+done <<_eof
+$(mysql -h${HOST_RD} -u${USER_RD} -P${PORT_RD} -p${PASS_RD} oride_data --skip-column-names -e"
+    set time_zone = '+1:00';
+    select
+        o.serv_type,
+        o.city_id,
+        min(c.name),
+        date_format(from_unixtime(floor(${PREV_10MIN}/600)*600), '%Y-%m-%d %H:%i:00') as order_time,
+        date_format(from_unixtime(o.arrive_time), '%Y-%m-%d 00:00:00') as order_day,
+        sum(if(o.status=4 or o.status=5,1,0)) as orders_finish
+    from oride_data.data_order o left join oride_data.data_city_conf c
+    on c.id = o.city_id
+    where o.arrive_time>=unix_timestamp(date_format(from_unixtime(${PREV_10MIN}),'%Y-%m-%d 00:00:00')) and
+        o.arrive_time<floor(${CURR_TIMESTAMP}/600)*600 and
+        c.id < 999000
+    group by o.city_id, o.serv_type, order_time, order_day
+")
+_eof
+
+
+
+#CURR_TIMESTAMP=$(date +'%s')
+#PREV_10MIN=$((CURR_TIMESTAMP - 600))
+#PREV_1HOUR=$(date +'%Y-%m-%d %H:00:00' --date="3 hour ago")
+#PREV_HOUR_TIMESTAMP=$(date +'%s' --date="${PREV_1HOUR}")
+
+#while ((${PREV_HOUR_TIMESTAMP} <= ${PREV_10MIN})); do
+#    DAY_10MIN=$(date +'%Y-%m-%d %H:%M:00' --date=@${PREV_HOUR_TIMESTAMP})
+#    DAY_DAY=$(date +'%Y-%m-%d 00:00:00' --date=@${PREV_HOUR_TIMESTAMP})
+#    PREV_HOUR_TIMESTAMP=$((PREV_HOUR_TIMESTAMP + 600))
+
+#    mysql -h${HOST_BI} -u${USER_BI} -P${PORT_BI} -p${PASS_BI} bi -e "
+#        insert into ${DATA_TABLE} (city_id, serv_type, order_time, daily, agg_orders_finish)
+#        (select
+#            city_id, serv_type, '${DAY_10MIN}', '${DAY_DAY}', sum(orders_finish)
+#        from ${DATA_TABLE}
+#        where order_time>'${DAY_DAY}' and order_time<='${DAY_10MIN}'
+#        group by city_id, serv_type
+#        )
+#        on duplicate key update agg_orders_finish=values(agg_orders_finish)
+#     "
+#done
 
 #在线司机数
 CURR_TIMESTAMP=$(date +'%s')
