@@ -525,21 +525,31 @@ insert_oride_global_city_serv_daily_report = HiveOperator(
         ),
         -- 推送数据
         push_data as (
-            SELECT
-                pd.dt,
+            select
+                t.dt,
                 dde.city_id,
                 dde.serv_type,
-                COUNT(DISTINCT pd.order_id) AS push_num,
-                COUNT(DISTINCT pd.driver_id) AS push_drivers
-            FROM
+                sum(t.order_num) push_num, -- 推送订单量
+                count(t.driver_id) push_drivers -- 推送司机数
+                from
                 (
-                    SELECT
-                        *
-                    FROM
-                        oride_bi.server_magic_push_detail
-                    WHERE
-                        success=1 AND dt='{{ ds }}'
-                ) pd
+                    select
+                        s.dt,
+                        s.driver_id driver_id,
+                        count(distinct(s.order_id)) order_num
+                    from
+                    (
+                        select
+                            dt,
+                            order_id,
+                            driver_id
+                        from
+                            oride_bi.server_magic_push_detail
+                        where
+                            dt = '{{ ds }}' and success = 1
+                    ) s
+                    group by s.driver_id,s.dt
+                ) t
                 INNER JOIN
                 (
                     SELECT
@@ -548,8 +558,8 @@ insert_oride_global_city_serv_daily_report = HiveOperator(
                        oride_db.data_driver_extend
                     WHERE
                         dt='{{ ds }}'
-                ) dde on dde.id=pd.driver_id and dde.dt=pd.dt
-            GROUP BY pd.dt,dde.city_id,dde.serv_type
+                ) dde on dde.id=t.driver_id and dde.dt=t.dt
+            GROUP BY t.dt, dde.city_id,dde.serv_type
         )
         INSERT OVERWRITE TABLE oride_global_city_serv_daily_report PARTITION (dt = '{{ ds }}')
         SELECT
