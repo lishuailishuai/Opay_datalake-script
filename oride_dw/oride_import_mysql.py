@@ -42,7 +42,7 @@ table_list = [
     ("opay_spread", "driver_owner_lagos", "opay_spread_mysql", "mass"),
     ("opay_spread", "driver_team", "opay_spread_mysql", "mass"),
     ("opay_spread", "passenger_coupon", "opay_spread_mysql", "mass"),
-    ("opay_spread", "password_resets", "opay_spread_mysql", "mass"),
+    #("opay_spread", "password_resets", "opay_spread_mysql", "mass"),
     ("opay_spread", "promoter_channel_day", "opay_spread_mysql", "mass"),
     ("opay_spread", "promoter_data_day", "opay_spread_mysql", "mass"),
     ("opay_spread", "promoter_data_hour", "opay_spread_mysql", "mass"),
