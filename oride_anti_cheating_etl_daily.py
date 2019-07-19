@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 import airflow
 from airflow.operators.hive_operator import HiveOperator
 from airflow.operators.hive_to_mysql import HiveToMySqlTransfer
+from airflow.operators.mysql_operator import MySqlOperator
 
 args = {
     'owner': 'linan',
@@ -202,6 +203,15 @@ insert_order_location_info = HiveOperator(
     dag=dag)
 
 
+clear_order_location_mysql_data = MySqlOperator(
+    task_id='clear_order_location_mysql_data',
+    sql="""
+        DELETE FROM oride_order_location_info WHERE dt='{{ ds }}';
+    """,
+    mysql_conn_id='mysql_bi',
+    dag=dag)
+
+
 
 order_location_info_to_msyql = HiveToMySqlTransfer(
     task_id='order_location_info_to_msyql',
@@ -235,4 +245,4 @@ order_location_info_to_msyql = HiveToMySqlTransfer(
     mysql_table='oride_order_location_info',
     dag=dag)
 
-insert_order_location_info >> order_location_info_to_msyql
+insert_order_location_info >> clear_order_location_mysql_data >> order_location_info_to_msyql
