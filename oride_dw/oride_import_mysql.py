@@ -34,6 +34,7 @@ db_name,table_name,conn_id,prefix_name
 
 table_list = [
     ("oride_data", "data_city_conf", "sqoop_db", "rd"),
+    # 协会数据
     # 数据库 opay_spread
     ("opay_spread", "driver_data", "opay_spread_mysql", "mass"),
     ("opay_spread", "driver_group", "opay_spread_mysql", "mass"),
@@ -41,26 +42,13 @@ table_list = [
     ("opay_spread", "driver_owner_ibadan", "opay_spread_mysql", "mass"),
     ("opay_spread", "driver_owner_lagos", "opay_spread_mysql", "mass"),
     ("opay_spread", "driver_team", "opay_spread_mysql", "mass"),
-    ("opay_spread", "passenger_coupon", "opay_spread_mysql", "mass"),
-    #("opay_spread", "password_resets", "opay_spread_mysql", "mass"),
-    ("opay_spread", "promoter_channel_day", "opay_spread_mysql", "mass"),
-    ("opay_spread", "promoter_data_day", "opay_spread_mysql", "mass"),
-    ("opay_spread", "promoter_data_hour", "opay_spread_mysql", "mass"),
-    ("opay_spread", "promoter_driver_day", "opay_spread_mysql", "mass"),
-    ("opay_spread", "promoter_logs", "opay_spread_mysql", "mass"),
-    ("opay_spread", "promoter_manager", "opay_spread_mysql", "mass"),
-    ("opay_spread", "promoter_order_day", "opay_spread_mysql", "mass"),
-    ("opay_spread", "promoter_team", "opay_spread_mysql", "mass"),
-    ("opay_spread", "promoter_user", "opay_spread_mysql", "mass"),
-    ("opay_spread", "promoter_user_relat_admin", "opay_spread_mysql", "mass"),
-    ("opay_spread", "promoter_users_device", "opay_spread_mysql", "mass"),
     ("opay_spread", "rider_signup", "opay_spread_mysql", "mass"),
     ("opay_spread", "rider_signups", "opay_spread_mysql", "mass"),
     ("opay_spread", "rider_signups_agents", "opay_spread_mysql", "mass"),
     ("opay_spread", "rider_signups_guarantors", "opay_spread_mysql", "mass"),
     ("opay_spread", "rider_signups_logs", "opay_spread_mysql", "mass"),
-    ("opay_spread", "spread_sign_up", "opay_spread_mysql", "mass"),
-    # 数据库 oride_assets
+    # 数据库：oride_assets
+    ("oride_assets", "oride_assets_transit", "opay_spread_mysql", "mass"),
     ("oride_assets", "oride_categories", "opay_spread_mysql", "mass"),
     ("oride_assets", "oride_my_storage", "opay_spread_mysql", "mass"),
     ("oride_assets", "oride_properties", "opay_spread_mysql", "mass"),
@@ -74,10 +62,23 @@ table_list = [
     ("oride_assets", "oride_vehicles_log", "opay_spread_mysql", "mass"),
     ("oride_assets", "oride_vehicles_transit", "opay_spread_mysql", "mass"),
     ("oride_assets", "oride_warehouses", "opay_spread_mysql", "mass"),
+    # 地推数据源
+    # 数据库：opay_spread
+    ("opay_spread", "promoter_channel_day", "opay_spread_mysql", "promoter"),
+    ("opay_spread", "promoter_data_day", "opay_spread_mysql", "promoter"),
+    ("opay_spread", "promoter_data_hour", "opay_spread_mysql", "promoter"),
+    ("opay_spread", "promoter_driver_day", "opay_spread_mysql", "promoter"),
+    ("opay_spread", "promoter_logs", "opay_spread_mysql", "promoter"),
+    ("opay_spread", "promoter_manager", "opay_spread_mysql", "promoter"),
+    ("opay_spread", "promoter_order_day", "opay_spread_mysql", "promoter"),
+    ("opay_spread", "promoter_team", "opay_spread_mysql", "promoter"),
+    ("opay_spread", "promoter_user", "opay_spread_mysql", "promoter"),
+    ("opay_spread", "promoter_user_relat_admin", "opay_spread_mysql", "promoter"),
+    ("opay_spread", "promoter_users_device", "opay_spread_mysql", "promoter"),
 ]
 HIVE_DB='oride_dw'
 HIVE_TABLE='ods_sqoop_%s_%s_df'
-UFILE_PATH='ufile://opay-datalake/oride_dw_sqoop/%s'
+UFILE_PATH='ufile://opay-datalake/oride_dw_sqoop/%s/%s'
 ODS_CREATE_TABLE_SQL='''
     CREATE EXTERNAL TABLE IF NOT EXISTS {db_name}.`{table_name}`(
         {columns}
@@ -140,7 +141,7 @@ def run_check_table(db_name, table_name, conn_id, hive_table_name, **kwargs):
             db_name=HIVE_DB,
             table_name=hive_table_name,
             columns=",\n".join(rows),
-            ufile_path=UFILE_PATH % hive_table_name
+            ufile_path=UFILE_PATH % (db_name, table_name)
         )
         logging.info('Executing: %s', sql)
         hive_hook.run_cli(sql)
@@ -175,7 +176,7 @@ for db_name, table_name, conn_id, prefix_name in table_list:
             username=conn_conf_dict[conn_id].login,
             password=conn_conf_dict[conn_id].password,
             table=table_name,
-            ufile_path=UFILE_PATH % hive_table_name
+            ufile_path=UFILE_PATH % (db_name, table_name)
         ),
         dag=dag,
     )
