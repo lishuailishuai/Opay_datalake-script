@@ -14,7 +14,7 @@ args = {
 
 dag = airflow.DAG(
     'oride_anti_cheating_etl_daily',
-    schedule_interval="00 02 * * *",
+    schedule_interval="40 02 * * *",
     default_args=args)
 
 
