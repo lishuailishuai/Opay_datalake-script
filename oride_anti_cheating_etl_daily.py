@@ -23,9 +23,9 @@ insert_order_location_info = HiveOperator(
     task_id='insert_order_location_info',
     hql='''
         set hive.execution.engine=mr;
-        set mapreduce.map.java.opts=-Xmx3072m -XX:-UseGCOverheadLimit;
+        set mapreduce.map.java.opts=-Xmx5120m -XX:-UseGCOverheadLimit;
         set mapreduce.reduce.java.opts=-Xmx2048m;
-        set mapreduce.map.memory.mb=3072;
+        set mapreduce.map.memory.mb=5120;
         set mapreduce.reduce.memory.mb=3072;
         with order_data as (
             select 
