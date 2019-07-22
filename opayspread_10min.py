@@ -14,6 +14,7 @@ create table if not exists opayspread_10min (
     orderarrives int unsigned not null default 0 comment '完成订单数',
     driverarrives int unsigned not null default 0 comment '完成订单骑手数',
     driver5arrives int unsigned not null default 0 comment '完成5单骑手数',
+    udt_at timestamp not null default CURRENT_TIMESTAMP on update CURRENT_TIMESTAMP comment '更新时间',
     unique index (daily, city, group_name, team_id)
 )engine=innodb default charset=utf8
 """
@@ -35,7 +36,7 @@ args = {
     'depends_on_past': True,
     'retries': 1,
     'retry_delay': timedelta(minutes=5),
-    'email': ['bigdata@opay-inc.com'],
+    'email': ['bigdata_dw@opay-inc.com'],
     'email_on_failure': True,
     'email_on_retry': False,
 }

@@ -16,7 +16,7 @@ args = {
     'depends_on_past': True,
     'retries': 1,
     'retry_delay': timedelta(minutes=5),
-    'email': ['bigdata@opay-inc.com'],
+    'email': ['bigdata_dw@opay-inc.com'],
     'email_on_failure': True,
     'email_on_retry': False,
 }
@@ -124,23 +124,11 @@ def data_monitor(**op_kwargs):
     for (city_id, city_name, serv_type, order_time, t1orders, t2orders, t1ousers, t2ousers, t1opicks, t2opicks,
          t1dservs, t2dservs, t1doables, t2doables, t1ofs, t2ofs, t1apicks, t2apicks, t1atakes, t2atakes,
          t1norders, t2norders, t1pos, t2pos, t1aofs, t2aofs) in results:
-        if (t2orders >= 100 and t2orders > t1orders and (t2orders - t1orders)/t2orders > 0.5) or \
-                (t2orders > 0 and t2orders < 100 and (t2orders - t1orders) > 20):
+        if serv_type == -1 and ((t2orders >= 100 and t2orders > t1orders and (t2orders - t1orders)/t2orders > 0.5) or \
+                (t2orders > 0 and t2orders < 100 and (t2orders - t1orders) > 20)):
             comwx.postAppMessage('{0}[{1}]10分钟数据{2}下单数记录与上周同期对比异常，请及时排查，谢谢'.format(city_name, serv_type, order_time),
                                  '271')
             return
-
-        #if (t2ofs >= 100 and t2ofs > t1ofs and (t2ofs - t1ofs)/t2ofs > 0.5) or \
-        #        (t2ofs > 0 and t2ofs < 100 and (t2ofs - t1ofs) > 20):
-        #    comwx.postAppMessage('{0}[{1}]10分钟数据{2}下单用户数记录与上周同期对比异常，请及时排查，谢谢'.format(city_name, serv_type, order_time),
-        #                         '271')
-        #    return
-
-        #if (t2opicks >= 100 and t2opicks > t1opicks and (t2opicks - t1opicks)/t2opicks > 0.5) or \
-        #        (t2opicks > 0 and t2opicks < 100 and (t2opicks - t1opicks) > 30):
-        #    comwx.postAppMessage('{0}[{1}]10分钟数据{2}接单数记录与上周同期对比异常，请及时排查，谢谢'.format(city_name, serv_type, order_time),
-        #                         '271')
-        #    return
 
         if serv_type > 0 and ((t2dservs >= 200 and t2dservs > t1dservs and (t2dservs - t1dservs)/t2dservs > 0.5) or \
                 (t2dservs > 0 and t2dservs < 100 and (t2dservs - t1dservs) > 40)):
@@ -153,11 +141,6 @@ def data_monitor(**op_kwargs):
             comwx.postAppMessage('{0}[{1}]10分钟数据{2}可接单司机数记录与上周同期对比异常，请及时排查，谢谢'.format(city_name, serv_type, order_time),
                                  '271')
             return
-
-        #if t2apicks > 0 and t1apicks > t2apicks and (t1apicks - t2apicks)/t2apicks > 0.5:
-        #    comwx.postAppMessage('{0}[{1}]10分钟数据{2}平均应答时长记录与上周同期对比异常，请及时排查，谢谢'.format(city_name, serv_type, order_time),
-        #                         '271')
-        #    return
 
 
 data_monitor_task = PythonOperator(

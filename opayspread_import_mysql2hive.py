@@ -228,14 +228,14 @@ args = {
     'depends_on_past': True,
     'retries': 1,
     'retry_delay': timedelta(minutes=5),
-    'email': ['bigdata@opay-inc.com'],
+    'email': ['bigdata_dw@opay-inc.com'],
     'email_on_failure': True,
     'email_on_retry': False,
 }
 
 dag = airflow.DAG(
     'opayspread_import_mysql2hive',
-    schedule_interval="0 0 * * *",
+    schedule_interval="40 0 * * *",
     concurrency=5,
     max_active_runs=1,
     default_args=args)

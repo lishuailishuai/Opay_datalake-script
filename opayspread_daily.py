@@ -15,12 +15,12 @@ reload(sys)
 import MySQLdb
 
 args = {
-    'owner': 'root',
+    'owner': 'wuduo',
     'start_date': datetime(2019, 6, 22),
     'depends_on_past': True,
     'retries': 1,
     'retry_delay': timedelta(minutes=5),
-    'email': ['bigdata@opay-inc.com'],
+    'email': ['bigdata_dw@opay-inc.com'],
     'email_on_failure': True,
     'email_on_retry': False,
 }
