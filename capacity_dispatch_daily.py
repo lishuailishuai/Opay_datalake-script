@@ -634,7 +634,7 @@ def send_report_email(ds_nodash, ds, **kwargs):
         where dt between '{start_date}' and '{dt}'
         order by dt
 
-    '''.format(dt=ds, start_date=airflow.macros.ds_add(ds, -5))
+    '''.format(dt=ds, start_date=airflow.macros.ds_add(ds, -7))
 
     logging.info(sql)
     cursor.execute(sql)
