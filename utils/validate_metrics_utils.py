@@ -1,12 +1,7 @@
-import airflow
 from datetime import datetime, timedelta
-from airflow.operators.bash_operator import BashOperator
-from airflow.operators.python_operator import PythonOperator
-from airflow.operators.hive_operator import HiveOperator
-from airflow.utils.email import send_email
 import logging
-from airflow.models import Variable
 from utils.connection_helper import get_hive_cursor
+
 from plugins.comwx import ComwxApi
 
 comwx = ComwxApi('wwd26d45f97ea74ad2', 'BLE_v25zCmnZaFUgum93j3zVBDK-DjtRkLisI_Wns4g', '1000011')
@@ -16,7 +11,10 @@ now = datetime.today()
 
 
 # 校验业务表表是否存在所需要的分区
-def validate_partition(table_names, dt):
+def validate_partition(*op_args, **op_kwargs):
+    print (' op_kwargs = ' + str(op_kwargs))
+    dt = op_kwargs['ds']
+    table_names = op_kwargs['table_names']
     for table_name in table_names:
         sql = '''
             show partitions oride_db.{table_name}
@@ -34,10 +32,10 @@ def validate_partition(table_names, dt):
                 break
 
         if not flag:
-            comwx.postAppMessage('{table_name} : {dt} 分区不存在 , 任务终止执行'.format(
-                table_name=table_name,
-                dt=dt
-            ))
+            # comwx.postAppMessage('{table_name} : {dt} 分区不存在 , 任务终止执行'.format(
+            #     table_name=table_name,
+            #     dt=dt
+            # ))
 
             raise Exception('{table_name} : {dt} 分区不存在 , 任务终止执行'.format(
                 table_name=table_name,
@@ -46,7 +44,7 @@ def validate_partition(table_names, dt):
 
 
 # 校验指标正确性
-def validate_metrics(dt, source_name, data_map):
+def validate_metrics(self, dt, source_name, data_map):
     sql = '''
         select 
         o.dt,o.metric_name,o.metric_compare_type,o.metric_deviation_limit
@@ -141,16 +139,16 @@ def validate_metrics(dt, source_name, data_map):
 
     # send mail
     email_subject = '调度算法效果监控指标预警邮件_{}'.format(dt)
-    send_email(
-        'nan.li@opay-inc.com'
-        , email_subject, err_message, mime_charset='utf-8')
+    # send_email(
+    #     'nan.li@opay-inc.com'
+    #     , email_subject, err_message, mime_charset='utf-8')
 
-    comwx.postAppMessage(err_message)
+    # comwx.postAppMessage(err_message)
 
     raise Exception('指标异常，终止计算')
 
 
-def create_validate_data(data_now, data_before_7):
+def create_validate_data(data_now, data_before_7, metric_order_and_name_map):
     # 进行数据验证，拼接数据
     data_map = dict()
 

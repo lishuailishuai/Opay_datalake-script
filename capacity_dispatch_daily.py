@@ -9,7 +9,11 @@ from airflow.utils.email import send_email
 import logging
 from airflow.models import Variable
 from utils.connection_helper import get_hive_cursor
-import utils.validate_metrics_utils as vm
+from plugins.comwx import ComwxApi
+from utils.validate_metrics_utils import create_validate_data
+from utils.validate_metrics_utils import validate_metrics
+
+comwx = ComwxApi('wwd26d45f97ea74ad2', 'BLE_v25zCmnZaFUgum93j3zVBDK-DjtRkLisI_Wns4g', '1000011')
 
 args = {
     'owner': 'linan',
@@ -71,17 +75,63 @@ dag = airflow.DAG(
     schedule_interval="40 01 * * *",
     default_args=args)
 
+cursor = get_hive_cursor()
+
+'''
+校验分区代码
+'''
+
+
+def validate_partition(*op_args, **op_kwargs):
+    print (' op_kwargs = ' + str(op_kwargs))
+    dt = op_kwargs['ds']
+    table_names = op_kwargs['table_names']
+    task_name = op_kwargs['task_name']
+    for table_name in table_names:
+        sql = '''
+            show partitions {table_name}
+        '''.format(
+            table_name=table_name
+        )
+
+        cursor.execute(sql)
+        res = cursor.fetchall()
+
+        flag = False
+        for partition in res:
+            if str(partition[0]).find(dt) > -1:
+                flag = True
+                break
+
+        if not flag:
+            comwx.postAppMessage('{table_name} : {dt} 分区不存在 , {task_name} 任务终止执行'.format(
+                table_name=table_name,
+                dt=dt,
+                task_name=task_name
+            ), '271')
+
+            raise Exception('{table_name} : {dt} 分区不存在 , {task_name} 任务终止执行'.format(
+                table_name=table_name,
+                dt=dt,
+                task_name=task_name
+            ))
+
+
 validate_partition_data = PythonOperator(
     task_id='validate_partition_data',
-    python_callable=vm.validate_partition,
+    python_callable=validate_partition,
     provide_context=True,
     op_kwargs={
-        'tables': ['oride_db.data_order',
-                   'oride_bi.server_magic_dispatch_detail',
-                   'oride_bi.server_magic_filter_detail',
-                   'oride_bi.server_magic_push_detail'
-                   ],
-        'dt': '{{ ds }}'},
+        # 验证table
+        "table_names":
+            ['oride_bi.server_magic_dispatch_detail',
+             'oride_db.data_order',
+             'oride_bi.server_magic_filter_detail',
+             'oride_bi.server_magic_push_detail'
+             ],
+        # 任务名称
+        "task_name": "调度算法效果监控指标"
+    },
     dag=dag
 )
 
@@ -324,7 +374,7 @@ def send_report_email(ds_nodash, ds, **kwargs):
         order  by dt
         
     '''.format(dt=ds,
-               start_date=airflow.macros.ds_add(ds, -5))
+               start_date=airflow.macros.ds_add(ds, -7))
 
     html = ''
 
@@ -378,6 +428,10 @@ def send_report_email(ds_nodash, ds, **kwargs):
     logging.info(sql)
     cursor.execute(sql)
     res = cursor.fetchall()
+
+    data_map = create_validate_data(res[len(res) - 1], res[0], metric_order_and_name_map)
+    print ('data_map = ' + str(data_map))
+    return
 
     html_fmt_1_head = '''
         <table width="95%" class="table">

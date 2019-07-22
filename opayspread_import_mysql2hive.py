@@ -215,6 +215,29 @@ opaySpreadTable = {
             'ufile://opay-datalake/opay-spread/admin_users';
     ''',
 
+    'driver_team': '''
+        CREATE EXTERNAL TABLE IF NOT EXISTS driver_team (
+            id bigint,
+            name string,
+            manager_id bigint,
+            del int,
+            city int,
+            group_id int,
+            admin_id int,
+            update_time string,
+            create_time string,
+            phone_number string,
+            manager_name string
+        )
+        PARTITIONED BY (`dt` string)
+        ROW FORMAT SERDE 'org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe'
+        STORED AS INPUTFORMAT 'org.apache.hadoop.mapred.TextInputFormat'
+        OUTPUTFORMAT 'org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat'
+        LOCATION
+            'ufile://opay-datalake/opay-spread/driver_team';
+        
+    '''
+
 }
 
 
@@ -247,6 +270,7 @@ table_list = [
     "driver_data",
     "driver_group",
     "admin_users",
+    "driver_team"
 ]
 
 '''
