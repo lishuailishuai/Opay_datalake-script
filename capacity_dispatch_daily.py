@@ -81,7 +81,7 @@ validate_partition_data = PythonOperator(
                    'oride_bi.server_magic_filter_detail',
                    'oride_bi.server_magic_push_detail'
                    ],
-        'dt': airflow.macros.ds},
+        'dt': '{{ ds }}'},
     dag=dag
 )
 
