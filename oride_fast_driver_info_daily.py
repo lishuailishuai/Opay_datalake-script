@@ -152,12 +152,14 @@ create_csv_file = BashOperator(
             from 
             (
             select 
-            driver_id,group_id
+            driver_id,
+            association_id
             from
-            opay_spread.driver_data
+            opay_spread.rider_signups 
             where dt = '${dt}'
+            and driver_id <> 0
             ) dd 
-            left join opay_spread.driver_group dg on dd.group_id=dg.id and dg.dt = '${dt}'
+            left join opay_spread.driver_group dg on dd.association_id=dg.id and dg.dt = '${dt}'
             left join oride_db.data_city_conf cc on dg.city = cc.id and cc.dt = '${dt}'
             left join opay_spread.admin_users au on au.id = dg.manager_id and au.dt = '${dt}'
             )
