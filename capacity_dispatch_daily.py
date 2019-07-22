@@ -429,9 +429,9 @@ def send_report_email(ds_nodash, ds, **kwargs):
     cursor.execute(sql)
     res = cursor.fetchall()
 
-    data_map = create_validate_data(res[len(res) - 1], res[0], metric_order_and_name_map)
-    print ('data_map = ' + str(data_map))
-    return
+    # data_map = create_validate_data(res[len(res) - 1], res[0], metric_order_and_name_map)
+    # print ('data_map = ' + str(data_map))
+    # return
 
     html_fmt_1_head = '''
         <table width="95%" class="table">
