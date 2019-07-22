@@ -108,7 +108,11 @@ opaySpreadTable = {
             vehicle_status_note string,
             vehicle_status_time int,
             vehicle_status_admin_id int,
-            record_by string   
+            record_by string,
+            form_pics string,
+            association_id int,
+            team_id int,
+            driver_id int   
         )
         PARTITIONED BY (`dt` string)
         ROW FORMAT SERDE 'org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe'
