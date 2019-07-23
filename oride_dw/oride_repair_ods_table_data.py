@@ -47,12 +47,13 @@ def run_insert_ods(**kwargs):
         INSERT OVERWRITE TABLE oride_dw.`ods_binlog_{table}_hi` partition(dt, hour)
         SELECT
             {columns},
-            substring(get_json_object(after, '$.updated_at'),1,10) as dt,
-            substring(get_json_object(after, '$.updated_at'),12,2) as hour
+            from_unixtime(unix_timestamp(regexp_replace(get_json_object(after, '$.updated_at'), 'T', ' '))+3600, 'yyyy-MM-dd') as dt,
+            from_unixtime(unix_timestamp(regexp_replace(get_json_object(after, '$.updated_at'), 'T', ' '))+3600, 'HH') as hour
         FROM
             oride_source.binlog_{table}
         WHERE
-            dt BETWEEN '{b_st}' AND '{b_et}' AND substring(get_json_object(after, '$.updated_at'),1,10)='{o_dt}'
+            dt BETWEEN '{b_st}' AND '{b_et}'
+            AND from_unixtime(unix_timestamp(regexp_replace(get_json_object(after, '$.updated_at'), 'T', ' '))+3600, 'yyyy-MM-dd')='{o_dt}'
     '''
     hive_hook = HiveCliHook()
     run_sql=sql.format(
