@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 import logging
 from utils.connection_helper import get_hive_cursor
-
+from airflow.utils.email import send_email
 from plugins.comwx import ComwxApi
 
 comwx = ComwxApi('wwd26d45f97ea74ad2', 'BLE_v25zCmnZaFUgum93j3zVBDK-DjtRkLisI_Wns4g', '1000011')
@@ -10,14 +10,14 @@ cursor = get_hive_cursor()
 now = datetime.today()
 
 
-# 校验业务表表是否存在所需要的分区
 def validate_partition(*op_args, **op_kwargs):
     print (' op_kwargs = ' + str(op_kwargs))
     dt = op_kwargs['ds']
     table_names = op_kwargs['table_names']
+    task_name = op_kwargs['task_name']
     for table_name in table_names:
         sql = '''
-            show partitions oride_db.{table_name}
+            show partitions {table_name}
         '''.format(
             table_name=table_name
         )
@@ -32,19 +32,21 @@ def validate_partition(*op_args, **op_kwargs):
                 break
 
         if not flag:
-            # comwx.postAppMessage('{table_name} : {dt} 分区不存在 , 任务终止执行'.format(
-            #     table_name=table_name,
-            #     dt=dt
-            # ))
-
-            raise Exception('{table_name} : {dt} 分区不存在 , 任务终止执行'.format(
+            comwx.postAppMessage('{table_name} : {dt} 分区不存在 , {task_name} 任务终止执行'.format(
                 table_name=table_name,
-                dt=dt
+                dt=dt,
+                task_name=task_name
+            ), '271')
+
+            raise Exception('{table_name} : {dt} 分区不存在 , {task_name} 任务终止执行'.format(
+                table_name=table_name,
+                dt=dt,
+                task_name=task_name
             ))
 
 
 # 校验指标正确性
-def validate_metrics(self, dt, source_name, data_map):
+def validate_metrics(dt, source_name, data_map, metric_name_map):
     sql = '''
         select 
         o.dt,o.metric_name,o.metric_compare_type,o.metric_deviation_limit
@@ -89,11 +91,13 @@ def validate_metrics(self, dt, source_name, data_map):
             else:
                 continue
 
+    print ('error_metric_map = ' + str(error_metric_map))
+
     if len(error_metric_map) == 0:
         return
 
     sql = '''
-        insert into oride_bi.oride_metric_validate_record(dt='{dt}',metric_source_name='{source_name}')
+        insert into table  oride_bi.oride_metric_validate_record partition (dt='{dt}',metric_source_name='{source_name}')
     '''.format(dt=dt, source_name=source_name)
 
     err_message = '指标计算异常，终止计算 \n'
@@ -102,7 +106,7 @@ def validate_metrics(self, dt, source_name, data_map):
     for key, value in error_metric_map.items():
 
         sql += '''
-            select {metric_name},{metric_now_value},{metric_compare_value},{metric_compare_type},{metric_deviation_limit},{timestamp} from default.dual
+            select '{metric_name}',{metric_now_value},{metric_compare_value},'{metric_compare_type}',{metric_deviation_limit},'{timestamp}' from default.dual
         '''.format(
             metric_name=key,
             metric_now_value=value[0],
@@ -125,7 +129,7 @@ def validate_metrics(self, dt, source_name, data_map):
             \n
         '''.format(
             source_name=source_name,
-            metric_name=key,
+            metric_name=metric_name_map[key],
             metric_now_value=value[0],
             metric_compare_value=value[1],
             metric_compare_type=value[2],
@@ -139,30 +143,53 @@ def validate_metrics(self, dt, source_name, data_map):
 
     # send mail
     email_subject = '调度算法效果监控指标预警邮件_{}'.format(dt)
-    # send_email(
-    #     'nan.li@opay-inc.com'
-    #     , email_subject, err_message, mime_charset='utf-8')
+    send_email(
+        'nan.li@opay-inc.com'
+        , email_subject, err_message, mime_charset='utf-8')
 
-    # comwx.postAppMessage(err_message)
+    comwx.postAppMessage(err_message, '271')
 
     raise Exception('指标异常，终止计算')
 
 
+
+'''
+data_now：需要验证的数据
+data_before_7 ： 7日前数据
+metric_order_and_name_map ： 指标的顺序map
+'''
 def create_validate_data(data_now, data_before_7, metric_order_and_name_map):
     # 进行数据验证，拼接数据
     data_map = dict()
 
+    print ('data_now  = ' + str(data_now))
+    print ('data_before_7  = ' + str(data_before_7))
+    print ('metric_order_and_name_map  = ' + str(metric_order_and_name_map))
+
     j = 1
     while j < len(data_now):
         print(j)
-        print(metric_order_and_name_map[j])
-        print(data_now[j])
-        data_map[metric_order_and_name_map[j]] = list(data_now[j])
+        print(type(metric_order_and_name_map[j]))
+        print(type(data_now[j]))
+
+        metric = str(data_now[j])
+        if metric.find('%') > -1:
+            metric = metric.replace('%', '')
+        metric = float(metric)
+        list_tmp = list()
+        list_tmp.append(metric)
+        data_map[metric_order_and_name_map[j]] = list_tmp
         j += 1
 
     j = 1
-    while j < range(len(data_before_7)):
-        data_map[metric_order_and_name_map[j]].append(data_before_7[j])
+    while j < len(data_before_7):
+
+        metric = str(data_before_7[j])
+        if metric.find('%') > -1:
+            metric = metric.replace('%', '')
+        metric = float(metric)
+
+        data_map[metric_order_and_name_map[j]].append(metric)
         j += 1
 
     return data_map

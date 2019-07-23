@@ -12,6 +12,8 @@ from utils.connection_helper import get_hive_cursor
 from plugins.comwx import ComwxApi
 from utils.validate_metrics_utils import create_validate_data
 from utils.validate_metrics_utils import validate_metrics
+from utils.validate_metrics_utils import validate_partition
+from constant.metrics_constant import *
 
 comwx = ComwxApi('wwd26d45f97ea74ad2', 'BLE_v25zCmnZaFUgum93j3zVBDK-DjtRkLisI_Wns4g', '1000011')
 
@@ -23,52 +25,6 @@ args = {
     'retry_delay': timedelta(minutes=5),
 }
 
-'''
-    校验字段指标的名称和sql 查询的顺序对应关系map
-'''
-metric_order_and_name_map = {
-    1: 'request_num',
-    2: 'request_rate',
-    3: 'on_ride_num',
-    4: 'on_ride_rate',
-    5: 'on_ride_driver_num',
-    6: 'on_ride_avg',
-    7: 'pick_up_time_avg',
-    8: 'take_time_avg',
-    9: 'sys_cancel_rate',
-    10: 'passanger_before_cancel_rate',
-    11: 'passanger_after_cancel_rate',
-    12: 'validity_ride_num',
-    13: 'validity_on_ride_rate',
-    14: 'cannel_pick_avg',
-    15: 'wait_time_avg',
-    16: 'billing_time_avg',
-    17: 'pay_time_avg',
-}
-
-'''
-指标对应中文指标含义
-'''
-metric_name_map = {
-    'ride_num': '下单量',
-    'request_num': '接单量',
-    'request_rate': '接单率',
-    'on_ride_num': '完单量',
-    'on_ride_rate': '完单率',
-    'on_ride_driver_num': '完单骑手数',
-    'on_ride_avg': '人均完单量',
-    'pick_up_time_avg': '单均接驾时长（分钟）',
-    'take_time_avg': '单均应答时长（分钟）',
-    'sys_cancel_rate': '系统取消率',
-    'passanger_before_cancel_rate': '乘客应答前取消率',
-    'passanger_after_cancel_rate': '乘客应答后取消率',
-    'validity_ride_num': '有效下单量',
-    'validity_on_ride_rate': '完单率(有效订单数)',
-    'cannel_pick_avg': '平均取消接驾时长(分钟)',
-    'wait_time_avg': '平均等待上车时长(分钟)',
-    'billing_time_avg': '平均计费时长(分钟)',
-    'pay_time_avg': '平均支付时长(分钟)',
-}
 
 dag = airflow.DAG(
     'capacity_dispatch_daily',
@@ -80,42 +36,6 @@ cursor = get_hive_cursor()
 '''
 校验分区代码
 '''
-
-
-def validate_partition(*op_args, **op_kwargs):
-    print (' op_kwargs = ' + str(op_kwargs))
-    dt = op_kwargs['ds']
-    table_names = op_kwargs['table_names']
-    task_name = op_kwargs['task_name']
-    for table_name in table_names:
-        sql = '''
-            show partitions {table_name}
-        '''.format(
-            table_name=table_name
-        )
-
-        cursor.execute(sql)
-        res = cursor.fetchall()
-
-        flag = False
-        for partition in res:
-            if str(partition[0]).find(dt) > -1:
-                flag = True
-                break
-
-        if not flag:
-            comwx.postAppMessage('{table_name} : {dt} 分区不存在 , {task_name} 任务终止执行'.format(
-                table_name=table_name,
-                dt=dt,
-                task_name=task_name
-            ), '271')
-
-            raise Exception('{table_name} : {dt} 分区不存在 , {task_name} 任务终止执行'.format(
-                table_name=table_name,
-                dt=dt,
-                task_name=task_name
-            ))
-
 
 validate_partition_data = PythonOperator(
     task_id='validate_partition_data',
@@ -429,9 +349,10 @@ def send_report_email(ds_nodash, ds, **kwargs):
     cursor.execute(sql)
     res = cursor.fetchall()
 
-    # data_map = create_validate_data(res[len(res) - 1], res[0], metric_order_and_name_map)
-    # print ('data_map = ' + str(data_map))
-    # return
+    # 指标校验部分
+    data_map = create_validate_data(res[len(res) - 1], res[0], capacity_dispatch_report_metric_order_map)
+    print ('data_map = ' + str(data_map))
+    validate_metrics(ds, 'capacity_dispatch_order_metric', data_map, capacity_dispatch_report_metric_name_map)
 
     html_fmt_1_head = '''
         <table width="95%" class="table">
@@ -640,6 +561,10 @@ def send_report_email(ds_nodash, ds, **kwargs):
     cursor.execute(sql)
     res = cursor.fetchall()
 
+    data_map = create_validate_data(res[len(res) - 1], res[0], capacity_dispatch_order_metric_order_map)
+    print ('data_map = ' + str(data_map))
+    validate_metrics(ds, 'capacity_dispatch_order_metric', data_map, capacity_dispatch_order_metric_name_map)
+
     html_fmt_4_head = '''
         <table width="95%" class="table">
                                         <caption>
@@ -828,7 +753,8 @@ def send_report_email(ds_nodash, ds, **kwargs):
     # send mail
     email_subject = '调度算法效果监控指标_{}'.format(ds)
     send_email(
-        Variable.get("oride_metrics_report_receivers").split()
+        # Variable.get("oride_metrics_report_receivers").split()
+        ['nan.li@opay-inc.com']
         , email_subject, html, mime_charset='utf-8')
     cursor.close()
     return

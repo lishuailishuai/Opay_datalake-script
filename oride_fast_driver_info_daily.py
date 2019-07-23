@@ -149,9 +149,9 @@ create_csv_file = BashOperator(
             g.city city,
             g.name  group_name, 
             t.name  admin_user
-            from rider_signups r
-            left join driver_group g on r.association_id = g.id and g.dt = '${dt}'
-            left join driver_team t on r.team_id = t.id and t.dt = '${dt}'
+            from opay_spread.rider_signups r
+            left join opay_spread.driver_group g on r.association_id = g.id and g.dt = '${dt}'
+            left join opay_spread.driver_team t on r.team_id = t.id and t.dt = '${dt}'
             where 
             r.dt = '${dt}'
             and r.driver_type=2 
@@ -244,7 +244,7 @@ def send_csv_file(ds, **kwargs):
     # send mail
     email_to = Variable.get("oride_fast_driver_metrics_report_receivers").split()
     # email_to = ['nan.li@opay-inc.com']
-    email_subject = 'oride快车司机明细附件（测试版）_{dt}'.format(dt=ds)
+    email_subject = 'oride快车司机明细附件_{dt}'.format(dt=ds)
     send_email(email_to, email_subject,
                '快车司机档案数据，请查收。\n 附件中文乱码解决:使用记事本打开CSV文件，“文件”->“另存为”，编码方式选择ANSI，保存完毕后，用EXCEL打开，即可。',
                file_list,
