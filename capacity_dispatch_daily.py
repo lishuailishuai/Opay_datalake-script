@@ -10,9 +10,7 @@ import logging
 from airflow.models import Variable
 from utils.connection_helper import get_hive_cursor
 from plugins.comwx import ComwxApi
-from utils.validate_metrics_utils import create_validate_data
-from utils.validate_metrics_utils import validate_metrics
-from utils.validate_metrics_utils import validate_partition
+from utils.validate_metrics_utils import *
 from constant.metrics_constant import *
 
 comwx = ComwxApi('wwd26d45f97ea74ad2', 'BLE_v25zCmnZaFUgum93j3zVBDK-DjtRkLisI_Wns4g', '1000011')
@@ -24,7 +22,6 @@ args = {
     'retries': 1,
     'retry_delay': timedelta(minutes=5),
 }
-
 
 dag = airflow.DAG(
     'capacity_dispatch_daily',
@@ -271,7 +268,6 @@ insert_order_metrics = HiveOperator(
 
 
 def send_report_email(ds_nodash, ds, **kwargs):
-    cursor = get_hive_cursor()
     sql = '''
         select 
         dt ,
@@ -351,7 +347,7 @@ def send_report_email(ds_nodash, ds, **kwargs):
 
     # 指标校验部分
     data_map = create_validate_data(res[len(res) - 1], res[0], capacity_dispatch_report_metric_order_map)
-    print ('data_map = ' + str(data_map))
+    logging.info('data_map = ' + str(data_map))
     validate_metrics(ds, 'capacity_dispatch_report_metric', data_map, capacity_dispatch_report_metric_name_map)
 
     html_fmt_1_head = '''
@@ -562,7 +558,7 @@ def send_report_email(ds_nodash, ds, **kwargs):
     res = cursor.fetchall()
 
     data_map = create_validate_data(res[len(res) - 1], res[0], capacity_dispatch_order_metric_order_map)
-    print ('data_map = ' + str(data_map))
+    logging.info('data_map = ' + str(data_map))
     validate_metrics(ds, 'capacity_dispatch_order_metric', data_map, capacity_dispatch_order_metric_name_map)
 
     html_fmt_4_head = '''
@@ -753,8 +749,7 @@ def send_report_email(ds_nodash, ds, **kwargs):
     # send mail
     email_subject = '调度算法效果监控指标_{}'.format(ds)
     send_email(
-        # Variable.get("oride_metrics_report_receivers").split()
-        ['nan.li@opay-inc.com']
+        Variable.get("oride_metrics_report_receivers").split()
         , email_subject, html, mime_charset='utf-8')
     cursor.close()
     return

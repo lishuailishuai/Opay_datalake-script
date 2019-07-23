@@ -11,7 +11,6 @@ now = datetime.today()
 
 
 def validate_partition(*op_args, **op_kwargs):
-    print (' op_kwargs = ' + str(op_kwargs))
     dt = op_kwargs['ds']
     table_names = op_kwargs['table_names']
     task_name = op_kwargs['task_name']
@@ -66,7 +65,7 @@ def validate_metrics(dt, source_name, data_map, metric_name_map):
 
     # 没有校验规则
     if res is None or len(res) == 0:
-        print(' {} 没有校验规则'.format(source_name))
+        logging.info(' {} 没有校验规则'.format(source_name))
         return
 
     # 整合校验规则
@@ -90,8 +89,6 @@ def validate_metrics(dt, source_name, data_map, metric_name_map):
                     error_metric_map[data_key] = [data_value[0], data_value[1], rule[0], rule[1]]
             else:
                 continue
-
-    print ('error_metric_map = ' + str(error_metric_map))
 
     if len(error_metric_map) == 0:
         return
@@ -136,15 +133,14 @@ def validate_metrics(dt, source_name, data_map, metric_name_map):
             metric_deviation_limit=value[3]
         )
 
-    print(sql)
-    print(err_message)
+    logging.info(err_message)
 
     cursor.execute(sql)
 
     # send mail
     email_subject = '调度算法效果监控指标预警邮件_{}'.format(dt)
     send_email(
-        'nan.li@opay-inc.com'
+        'bigdata_dw@opay-inc.com'
         , email_subject, err_message, mime_charset='utf-8')
 
     comwx.postAppMessage(err_message, '271')
@@ -152,25 +148,19 @@ def validate_metrics(dt, source_name, data_map, metric_name_map):
     raise Exception('指标异常，终止计算')
 
 
-
 '''
 data_now：需要验证的数据
 data_before_7 ： 7日前数据
 metric_order_and_name_map ： 指标的顺序map
 '''
+
+
 def create_validate_data(data_now, data_before_7, metric_order_and_name_map):
     # 进行数据验证，拼接数据
     data_map = dict()
 
-    print ('data_now  = ' + str(data_now))
-    print ('data_before_7  = ' + str(data_before_7))
-    print ('metric_order_and_name_map  = ' + str(metric_order_and_name_map))
-
     j = 1
     while j < len(data_now):
-        print(j)
-        print(type(metric_order_and_name_map[j]))
-        print(type(data_now[j]))
 
         metric = str(data_now[j])
         if metric.find('%') > -1:
