@@ -91,6 +91,7 @@ def validate_metrics(dt, source_name, data_map, metric_name_map):
                 continue
 
     if len(error_metric_map) == 0:
+        logging.info("{} 校验成功，指标校验没有异常 ".format(source_name))
         return
 
     sql = '''

@@ -684,7 +684,6 @@ def send_report_email(ds_nodash, ds, **kwargs):
         i += 1
 
     html += html_fmt_4_tail
-    html += html_tail
     html_fmt_6_time_head += html_fmt_6_time_tail
 
     html_fmt_5_head = '''
