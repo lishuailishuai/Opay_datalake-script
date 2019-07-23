@@ -402,7 +402,7 @@ def send_report_email(ds_nodash, ds, **kwargs):
         html += html_fmt_1
         i += 1
 
-    html + html_fmt_1_tail
+        html = html + html_fmt_1_tail
 
     html_fmt_2_head = '''
         <table width="95%" class="table">
