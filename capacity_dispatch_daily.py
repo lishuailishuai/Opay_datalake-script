@@ -352,7 +352,7 @@ def send_report_email(ds_nodash, ds, **kwargs):
     # 指标校验部分
     data_map = create_validate_data(res[len(res) - 1], res[0], capacity_dispatch_report_metric_order_map)
     print ('data_map = ' + str(data_map))
-    validate_metrics(ds, 'capacity_dispatch_order_metric', data_map, capacity_dispatch_report_metric_name_map)
+    validate_metrics(ds, 'capacity_dispatch_report_metric', data_map, capacity_dispatch_report_metric_name_map)
 
     html_fmt_1_head = '''
         <table width="95%" class="table">
