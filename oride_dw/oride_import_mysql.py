@@ -33,7 +33,7 @@ db_name,table_name,conn_id,prefix_name
 #
 
 table_list = [
-    ("oride_data", "data_city_conf", "sqoop_db", "rd"),
+    ("oride_data", "data_user", "sqoop_db", "base"),
     # 协会数据
     # 数据库 opay_spread
     ("opay_spread", "driver_data", "opay_spread_mysql", "mass"),

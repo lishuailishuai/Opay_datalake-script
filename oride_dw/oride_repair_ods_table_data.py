@@ -18,6 +18,8 @@ args = {
 dag = airflow.DAG(
     'oride_repair_ods_table_data',
     schedule_interval=None,
+    concurrency=1,
+    max_active_runs=1,
     default_args=args)
 
 def run_insert_ods(**kwargs):
