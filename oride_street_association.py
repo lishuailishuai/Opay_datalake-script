@@ -450,7 +450,7 @@ def send_oride_association_email(ds, **kwargs):
     # send mail
     email_to = Variable.get("oride_street_association_receivers").split()
     email_subject = 'oride快车司机协会数据{dt}'.format(dt=ds)
-    email_body='快车司机协会数据，请查收。 附件中文乱码解决:使用记事本打开CSV文件，“文件”->“另存为”，编码方式选择ANSI，保存完毕后，用EXCEL打开，即可'
+    email_body=''
     send_email(email_to, email_subject, email_body, [file_name], mime_charset='utf-8')
 
 oride_association_email = PythonOperator(
