@@ -6,10 +6,11 @@ from airflow.operators.hive_operator import HiveOperator
 from airflow.hooks.mysql_hook import MySqlHook
 from airflow.hooks.hive_hooks import HiveCliHook
 from airflow.models import Variable
+import logging
 
 """
 新建binlog导入表 && ods表
-airflow trigger_dag oride_init_ods_table  --conf '{"db_name": "oride_data", "table_name": "test"}'
+airflow trigger_dag oride_init_ods_table  --conf '{"db_name": "oride_data", "table_name": "data_order"}'
 """
 
 args = {
@@ -49,6 +50,7 @@ CREATE TABLE IF NOT EXISTS {db_name}.`ods_binlog_{table_name}_hi`(
     `op` string comment '操作类型 c 创建 u 更新 d 删除',
     `ts_ms` bigint comment '事件时间（毫秒）',
     `gtid` string comment '事件唯一标识',
+    `pos` int comment 'binlog pos',
     {columns}
 )
 PARTITIONED BY (
@@ -95,6 +97,7 @@ def run_create_ods_table(**kwargs):
         table_name=kwargs['dag_run'].conf['table_name'],
         columns=",\n".join(rows)
     )
+    logging.info('Executing: %s', sql)
     hive_hook.run_cli(sql)
     # write airflow var
     binlog_table_list=Variable.get(BINLOG_TABLE_LIST_VAR_NAME) if Variable.get(BINLOG_TABLE_LIST_VAR_NAME) is not None else ''

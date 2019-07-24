@@ -7,7 +7,7 @@ import logging
 
 """
 根据binlog updated_at字段修复ods表数据
-airflow trigger_dag oride_repair_ods_table_data  --conf '{"table_name": "data_order", "binlog_start_date":"2019-07-20", "binlog_end_date":"2019-07-22", "ods_date":"2019-07-20"}'
+airflow trigger_dag oride_repair_ods_table_data  --conf '{"table_name": "data_order", "binlog_start_date":"2019-07-18", "binlog_end_date":"2019-07-23", "ods_start_date":"2019-07-18", "ods_end_date":"2019-07-23"}'
 """
 
 args = {
@@ -35,6 +35,8 @@ def run_insert_ods(**kwargs):
             column_rows.append(data[0])
         elif data[0]=='gtid':
             column_rows.append("get_json_object(source, '$.gtid')")
+        elif data[0]=='pos':
+            column_rows.append("get_json_object(source, '$.pos')")
         elif data[0]=='dt':
             break
         else:
@@ -53,7 +55,7 @@ def run_insert_ods(**kwargs):
             oride_source.binlog_{table}
         WHERE
             dt BETWEEN '{b_st}' AND '{b_et}'
-            AND from_unixtime(unix_timestamp(regexp_replace(get_json_object(after, '$.updated_at'), 'T', ' '))+3600, 'yyyy-MM-dd')='{o_dt}'
+            AND from_unixtime(unix_timestamp(regexp_replace(get_json_object(after, '$.updated_at'), 'T', ' '))+3600, 'yyyy-MM-dd') between '{o_st}' and '{o_et}'
     '''
     hive_hook = HiveCliHook()
     run_sql=sql.format(
@@ -61,7 +63,8 @@ def run_insert_ods(**kwargs):
         columns=",\n".join(column_rows),
         b_st=kwargs['dag_run'].conf['binlog_start_date'],
         b_et=kwargs['dag_run'].conf['binlog_end_date'],
-        o_dt=kwargs['dag_run'].conf['ods_date']
+        o_st=kwargs['dag_run'].conf['ods_start_date'],
+        o_et=kwargs['dag_run'].conf['ods_end_date']
     )
     logging.info('Executing: %s', run_sql)
     hive_hook.run_cli(run_sql)
