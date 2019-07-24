@@ -361,27 +361,8 @@ _eof
 
 
 
-#CURR_TIMESTAMP=$(date +'%s')
-#PREV_10MIN=$((CURR_TIMESTAMP - 600))
-#PREV_1HOUR=$(date +'%Y-%m-%d %H:00:00' --date="3 hour ago")
-#PREV_HOUR_TIMESTAMP=$(date +'%s' --date="${PREV_1HOUR}")
 
-#while ((${PREV_HOUR_TIMESTAMP} <= ${PREV_10MIN})); do
-#    DAY_10MIN=$(date +'%Y-%m-%d %H:%M:00' --date=@${PREV_HOUR_TIMESTAMP})
-#    DAY_DAY=$(date +'%Y-%m-%d 00:00:00' --date=@${PREV_HOUR_TIMESTAMP})
-#    PREV_HOUR_TIMESTAMP=$((PREV_HOUR_TIMESTAMP + 600))
 
-#    mysql -h${HOST_BI} -u${USER_BI} -P${PORT_BI} -p${PASS_BI} bi -e "
-#        insert into ${DATA_TABLE} (city_id, serv_type, order_time, daily, agg_orders_finish)
-#        (select
-#            city_id, serv_type, '${DAY_10MIN}', '${DAY_DAY}', sum(orders_finish)
-#        from ${DATA_TABLE}
-#        where order_time>'${DAY_DAY}' and order_time<='${DAY_10MIN}'
-#        group by city_id, serv_type
-#        )
-#        on duplicate key update agg_orders_finish=values(agg_orders_finish)
-#     "
-#done
 
 #在线司机数
 CURR_TIMESTAMP=$(date +'%s')

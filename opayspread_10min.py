@@ -161,7 +161,7 @@ def __getOpaySpreadDrivers():
                     g.name as group_name 
                 from driver_group g left join driver_team t 
                 on g.id = t.group_id 
-                
+                where g.del = 0 
                 ) gt 
             on gt.team_id = r.team_id 
             where r.driver_id > 0 

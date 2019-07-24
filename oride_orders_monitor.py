@@ -125,7 +125,7 @@ def data_monitor(**op_kwargs):
          t1dservs, t2dservs, t1doables, t2doables, t1ofs, t2ofs, t1apicks, t2apicks, t1atakes, t2atakes,
          t1norders, t2norders, t1pos, t2pos, t1aofs, t2aofs) in results:
         if serv_type == -1 and ((t2orders >= 100 and t2orders > t1orders and (t2orders - t1orders)/t2orders > 0.5) or \
-                (t2orders > 0 and t2orders < 100 and (t2orders - t1orders) > 20)):
+                (t2orders > 0 and t2orders < 100 and (t2orders - t1orders) > 40)):
             comwx.postAppMessage('{0}[{1}]10分钟数据{2}下单数记录与上周同期对比异常，请及时排查，谢谢'.format(city_name, serv_type, order_time),
                                  '271')
             return
