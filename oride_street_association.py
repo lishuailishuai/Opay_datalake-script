@@ -460,3 +460,5 @@ oride_association_email = PythonOperator(
     dag=dag
 )
 
+create_oride_street_association_di >> insert_oride_street_association_di >> oride_association_email
+
