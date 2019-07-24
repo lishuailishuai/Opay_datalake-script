@@ -44,6 +44,7 @@ def run_insert_ods(**kwargs):
 
     print(column_rows)
     sql='''
+        msck REPAIR TABLE oride_source.binlog_{table};
         SET hive.exec.dynamic.partition=true;
         SET hive.exec.dynamic.partition.mode=nonstrict;
         INSERT OVERWRITE TABLE oride_dw.`ods_binlog_{table}_hi` partition(dt, hour)

@@ -8,7 +8,7 @@ import logging
 
 args = {
     'owner': 'zhenqian.zhang',
-    'start_date': datetime(2019, 7, 18),
+    'start_date': datetime(2019, 7, 25),
     'depends_on_past': False,
     'retries': 1,
     'retry_delay': timedelta(minutes=5),
