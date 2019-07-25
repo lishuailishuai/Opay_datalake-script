@@ -230,7 +230,7 @@ def __getOrideOrders(st, ed, recover=False):
         ])
     )
     results = orders_all.append(orders_city, ignore_index=True).append(orders_ctype, ignore_index=True).append(orders_type, ignore_index=True)
-    logging.info(results)
+    #logging.info(results)
     __data_to_mysql(
         bidb,
         results.values.tolist(),
@@ -305,9 +305,10 @@ def __getOrideTakes(st, ed):
         ])
     )
     results = takes_all.append(takes_city, ignore_index=True).append(takes_type, ignore_index=True).append(takes_ctype, ignore_index=True)
-    results['take_range'] = results.apply(lambda x: math.floor(x['take_range'] / x['id']) if x['id'] != 0 else 0, axis=1)
+    if len(results) > 0:
+        results['take_range'] = results.apply(lambda x: math.floor(x['take_range'] / x['id']) if x['id'] != 0 else 0, axis=1)
     results['orders_accept'] = results['id']
-    logging.info(results)
+    #logging.info(results)
     __data_to_mysql(
         bidb,
         results.values.tolist(),
@@ -339,9 +340,10 @@ def __getOrideTakes(st, ed):
         ])
     )
     results = takes_dtype.append(takes_dctype, ignore_index=True)
-    results['take_range'] = results.apply(lambda x: math.floor(x['take_range'] / x['id']) if x['id'] != 0 else 0, axis=1)
+    if len(results) > 0:
+        results['take_range'] = results.apply(lambda x: math.floor(x['take_range'] / x['id']) if x['id'] != 0 else 0, axis=1)
     results['orders_accept_dserv'] = results['id']
-    logging.info(results)
+    #logging.info(results)
     __data_to_mysql(
         bidb,
         results.values.tolist(),
@@ -409,7 +411,7 @@ def __getDriversOnline(st, ed):
     drivers_type['city_id'] = drivers_type['online_time'].map(lambda x: 0)
     #城市、类型
     results = drivers.append(drivers_all, ignore_index=True).append(drivers_city, ignore_index=True).append(drivers_type, ignore_index=True)
-    logging.info(results)
+    #logging.info(results)
     __data_to_mysql(
         bidb,
         results.values.tolist(),
@@ -480,7 +482,7 @@ def __getOrderFinished(st, ed):
     )
 
     results = finished_all.append(finished_city, ignore_index=True).append(finished_type, ignore_index=True).append(finished_ctype, ignore_index=True)
-    logging.info(results)
+    #logging.info(results)
     __data_to_mysql(
         bidb,
         results.values.tolist(),
@@ -511,7 +513,7 @@ def __getOrderFinished(st, ed):
         ])
     )
     results = finished_dtype.append(finished_dctype, ignore_index=True)
-    logging.info(results)
+    #logging.info(results)
     __data_to_mysql(
         bidb,
         results.values.tolist(),
@@ -628,8 +630,9 @@ def __getOrderPicks(st, ed):
         ])
     )
     results = picks_all.append(picks_city, ignore_index=True).append(picks_type, ignore_index=True).append(picks_ctype, ignore_index=True)
-    results['pickrange'] = results.apply(lambda x: round(x['pickrange']/x['id']/60, 1) if x['id'] != 0 else 0, axis=1)
-    logging.info(results)
+    if len(results) > 0:
+        results['pickrange'] = results.apply(lambda x: round(x['pickrange']/x['id']/60, 1) if x['id'] != 0 else 0, axis=1)
+    #logging.info(results)
     __data_to_mysql(
         bidb,
         results.values.tolist(),
@@ -662,8 +665,9 @@ def __getOrderPicks(st, ed):
         ])
     )
     results = picks_dtype.append(picks_dctype, ignore_index=True)
-    results['pickrange'] = results.apply(lambda x: round(x['pickrange'] / x['id'] / 60, 1) if x['id'] != 0 else 0, axis=1)
-    logging.info(results)
+    if len(results) > 0:
+        results['pickrange'] = results.apply(lambda x: round(x['pickrange'] / x['id'] / 60, 1) if x['id'] != 0 else 0, axis=1)
+    #logging.info(results)
     __data_to_mysql(
         bidb,
         results.values.tolist(),
@@ -738,7 +742,7 @@ def __getOrderCanel(st, ed):
         ])
     )
     results = canels_all.append(canels_city, ignore_index=True).append(canels_type, ignore_index=True).append(canels_ctype, ignore_index=True)
-    logging.info(results)
+    #logging.info(results)
     __data_to_mysql(
         bidb,
         results.values.tolist(),
@@ -769,7 +773,7 @@ def __getOrderCanel(st, ed):
         ])
     )
     results = canels_dtype.append(canels_dctype, ignore_index=True)
-    logging.info(results)
+    #logging.info(results)
     __data_to_mysql(
         bidb,
         results.values.tolist(),

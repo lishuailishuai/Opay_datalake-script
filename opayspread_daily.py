@@ -33,7 +33,7 @@ dag = airflow.DAG(
     default_args=args)
 
 '''
-预注册司机数hql
+预注册司机数hql know_orider = 4 --20190724 
 '''
 promoter_preregist_sql = '''
 SELECT
@@ -53,8 +53,7 @@ FROM opay_spread.promoter_user as p JOIN
         driver_type 
     FROM opay_spread.rider_signups 
     WHERE from_unixtime(create_time, 'yyyy-MM-dd') = '{ds}' and 
-        dt = '{ds}' and 
-        know_orider = 4 
+        dt = '{ds}' 
     ) as r 
 ON p.name = r.know_orider_extend 
 WHERE  
@@ -75,7 +74,7 @@ GROUP BY from_unixtime(create_time, 'yyyy-MM-dd'), know_orider, driver_type
 
 
 '''
-填写资料司机数
+填写资料司机数 know_orider = 4 --20190724
 '''
 promoter_regist_sql = '''
 SELECT
@@ -97,8 +96,7 @@ FROM opay_spread.promoter_user as p JOIN
     WHERE length(know_orider_extend)>0 and 
         record_by<>'' and 
         from_unixtime(create_time, 'yyyy-MM-dd') = '{ds}' and  
-        dt = '{ds}' and 
-        know_orider = 4
+        dt = '{ds}' 
     ) as r 
 ON p.name = r.know_orider_extend 
 WHERE  
@@ -121,7 +119,7 @@ GROUP BY from_unixtime(create_time, 'yyyy-MM-dd'), know_orider, driver_type
 
 
 '''
-笔试通过司机数
+笔试通过司机数 know_orider = 4 --20190724
 '''
 promoter_onlinetest_sql = '''
 SELECT
@@ -142,8 +140,7 @@ FROM opay_spread.promoter_user as p JOIN
     FROM opay_spread.rider_signups 
     WHERE online_test = 1 and 
         from_unixtime(online_test_time, 'yyyy-MM-dd') = '{ds}' and  
-        dt = '{ds}' and 
-        know_orider = 4
+        dt = '{ds}' 
     ) as r 
 ON p.name = r.know_orider_extend 
 WHERE  
@@ -165,7 +162,7 @@ GROUP BY from_unixtime(online_test_time, 'yyyy-MM-dd'), know_orider, driver_type
 
 
 '''
-驾驶测试通过司机数量
+驾驶测试通过司机数量 know_orider = 4 --20190724
 '''
 promoter_drivertest_sql = '''
 SELECT
@@ -186,8 +183,7 @@ FROM opay_spread.promoter_user as p JOIN
     FROM opay_spread.rider_signups 
     WHERE drivers_test = 1 and 
         from_unixtime(drivers_test_time, 'yyyy-MM-dd') = '{ds}' and  
-        dt = '{ds}' and 
-        know_orider = 4
+        dt = '{ds}' 
     ) as r 
 ON p.name = r.know_orider_extend 
 WHERE  
@@ -209,7 +205,7 @@ GROUP BY from_unixtime(drivers_test_time, 'yyyy-MM-dd'), know_orider, driver_typ
 
 
 '''
-车辆状态检查司机数
+车辆状态检查司机数 know_orider = 4 --20190724
 '''
 promoter_vehicle_sql = '''
 SELECT
@@ -231,8 +227,7 @@ FROM opay_spread.promoter_user as p JOIN
     WHERE driver_type = 2 and 
         vehicle_status = 1 and 
         from_unixtime(vehicle_status_time, 'yyyy-MM-dd') = '{ds}' and  
-        dt = '{ds}' and 
-        know_orider = 4
+        dt = '{ds}' 
     ) as r 
 ON p.name = r.know_orider_extend 
 WHERE  
@@ -255,7 +250,7 @@ GROUP BY from_unixtime(vehicle_status_time, 'yyyy-MM-dd'), know_orider, driver_t
 
 
 '''
-地址验证通过司机数
+地址验证通过司机数 know_orider = 4 --20190724
 '''
 promoter_address_sql = '''
 SELECT
@@ -276,8 +271,7 @@ FROM opay_spread.promoter_user as p JOIN
     FROM opay_spread.rider_signups 
     WHERE address_status = 1 and  
         from_unixtime(adress_status_time, 'yyyy-MM-dd') = '{ds}' and  
-        dt = '{ds}' and 
-        know_orider = 4
+        dt = '{ds}' 
     ) as r 
 ON p.name = r.know_orider_extend 
 WHERE  
@@ -299,7 +293,7 @@ GROUP BY from_unixtime(adress_status_time, 'yyyy-MM-dd'), know_orider, driver_ty
 
 
 '''
-完全通过司机数
+完全通过司机数 know_orider = 4 --20190724
 '''
 promoter_status_sql = '''
 SELECT
@@ -320,8 +314,7 @@ FROM opay_spread.promoter_user as p JOIN
     FROM opay_spread.rider_signups 
     WHERE status = 2 and  
         from_unixtime(veri_time, 'yyyy-MM-dd') = '{ds}' and  
-        dt = '{ds}' and 
-        know_orider = 4
+        dt = '{ds}' 
     ) as r 
 ON p.name = r.know_orider_extend 
 WHERE  
@@ -343,7 +336,7 @@ GROUP BY from_unixtime(veri_time, 'yyyy-MM-dd'), know_orider, driver_type
 
 
 '''
-担保司机数
+担保司机数 r.know_orider = 4 --20190724
 '''
 promoter_guarantors_sql = '''
 SELECT
@@ -367,8 +360,7 @@ FROM opay_spread.promoter_user as p JOIN
         g.rider_id <> NULL and  
         from_unixtime(g.create_time, 'yyyy-MM-dd') = '{ds}' and  
         r.dt = '{ds}' and 
-        g.dt = '{ds}' and  
-        r.know_orider = 4
+        g.dt = '{ds}' 
     ) as r 
 ON p.name = r.know_orider_extend 
 WHERE  
@@ -393,7 +385,7 @@ GROUP BY from_unixtime(g.create_time, 'yyyy-MM-dd'), know_orider, driver_type
 
 
 '''
-当天接单数
+当天接单数 r.know_orider = 4  --20190724
 '''
 promoter_ordertake_hql = '''
 SELECT 
@@ -412,12 +404,11 @@ FROM opay_spread.promoter_user as p JOIN
         if(length(r.know_orider_extend)=10, concat('0', r.know_orider_extend), r.know_orider_extend) as know_orider_extend,
         count(distinct o.id) as orders
     FROM oride_db.data_order as o JOIN opay_spread.rider_signups as r 
-    ON  o.driver_id = r.id 
+    ON  o.driver_id = r.driver_id 
     WHERE  
         from_unixtime(o.take_time, 'yyyy-MM-dd') = '{ds}' AND 
         r.dt = '{ds}' AND 
-        o.dt = '{ds}' AND 
-        r.know_orider = 4 
+        o.dt = '{ds}' 
     GROUP BY from_unixtime(o.take_time, 'yyyy-MM-dd'), r.driver_type, r.know_orider_extend
     ) as tm 
 ON p.name = tm.know_orider_extend 
@@ -430,7 +421,7 @@ SELECT
     r.driver_type,
     count(distinct o.id) as orders
 FROM oride_db.data_order as o JOIN opay_spread.rider_signups as r 
-ON  o.driver_id = r.id 
+ON  o.driver_id = r.driver_id 
 WHERE  
     from_unixtime(o.take_time, 'yyyy-MM-dd') = '{ds}' AND 
     r.dt = '{ds}' AND 
@@ -440,7 +431,7 @@ GROUP BY from_unixtime(o.take_time, 'yyyy-MM-dd'), r.know_orider, r.driver_type
 
 
 '''
-当天邦车活跃
+当天邦车活跃 r.know_orider = 4  --20190724
 '''
 promoter_dirverdau_hql = '''
 SELECT 
@@ -459,12 +450,11 @@ FROM opay_spread.promoter_user as p JOIN
         if(length(r.know_orider_extend)=10, concat('0', r.know_orider_extend), r.know_orider_extend) as know_orider_extend,
         count(distinct r.id) as online 
     FROM opay_spread.rider_signups as r JOIN oride_db.data_driver_extend as d 
-    ON r.id = d.id 
+    ON r.driver_id = d.id 
     WHERE 
         from_unixtime(d.login_time, 'yyyy-MM-dd') = '{ds}' AND 
         r.dt = '{ds}' AND 
-        d.dt = '{ds}' AND 
-        r.know_orider = 4 
+        d.dt = '{ds}' 
     GROUP BY r.driver_type, r.know_orider_extend
     ) as tm 
 ON p.name = tm.know_orider_extend 
@@ -477,7 +467,7 @@ SELECT
     r.driver_type,
     count(distinct r.id) as online 
 FROM opay_spread.rider_signups as r JOIN oride_db.data_driver_extend as d 
-ON r.id = d.id 
+ON r.driver_id = d.id 
 WHERE 
     from_unixtime(d.login_time, 'yyyy-MM-dd') = '{ds}' AND 
     r.dt = '{ds}' AND 
@@ -487,7 +477,7 @@ GROUP BY from_unixtime(d.login_time, 'yyyy-MM-dd'), r.know_orider, r.driver_type
 
 
 '''
-当天邦车司机数
+当天邦车司机数 r.know_orider = 4  --20190724
 '''
 promoter_driverbind_sql = '''
 SELECT 
@@ -506,12 +496,11 @@ FROM opay_spread.promoter_user as p JOIN
         if(length(r.know_orider_extend)=10, concat('0', r.know_orider_extend), r.know_orider_extend) as know_orider_extend,
         count(distinct r.id) as bind
     FROM opay_spread.rider_signups as r JOIN oride_db.data_driver_extend as d 
-    ON r.id = d.id 
+    ON r.driver_id = d.id 
     WHERE  
         from_unixtime(d.first_bind_time, 'yyyy-MM-dd') = '{ds}' AND 
         r.dt = '{ds}' AND 
-        d.dt = '{ds}' AND 
-        r.know_orider = 4 
+        d.dt = '{ds}' 
     GROUP BY r.driver_type, r.know_orider_extend
     ) as tm 
 ON p.name = tm.know_orider_extend 
@@ -524,7 +513,7 @@ SELECT
     r.driver_type,
     count(distinct r.id) as bind
 FROM opay_spread.rider_signups as r JOIN oride_db.data_driver_extend as d 
-ON r.id = d.id 
+ON r.driver_id = d.id 
 WHERE  
     from_unixtime(d.first_bind_time, 'yyyy-MM-dd') = '{ds}' AND 
     r.dt = '{ds}' AND 
@@ -668,7 +657,7 @@ for my_task in hive_channel_tasks:
 
 
 '''
-首次订单数据
+首次订单数据 r.know_orider = 4  --20190724
 '''
 promoter_orderoverview_hql = '''
 SELECT 
@@ -697,12 +686,11 @@ FROM opay_spread.promoter_user as p JOIN
         FROM oride_db.data_order 
         WHERE status in (4,5) AND dt='{ds}'
         ) t JOIN opay_spread.rider_signups as r 
-    ON r.id = t.driver_id 
+    ON r.driver_id = t.driver_id 
     WHERE  
         (t.orders=1 OR t.orders = 10) AND 
         from_unixtime(t.arrive_time, 'yyyy-MM-dd') = '{ds}' AND 
-        r.dt = '{ds}' AND 
-        r.know_orider = 4  
+        r.dt = '{ds}' 
     GROUP BY t.daily, r.know_orider_extend, r.driver_type
     ) as tm 
 ON p.name = tm.know_orider_extend 
@@ -724,7 +712,7 @@ FROM
     FROM oride_db.data_order 
     WHERE status in (4,5) AND dt='{ds}'
     ) t JOIN opay_spread.rider_signups as r 
-ON r.id = t.driver_id 
+ON r.driver_id = t.driver_id 
 WHERE  
     (t.orders=1 OR t.orders = 10) AND 
     from_unixtime(t.arrive_time, 'yyyy-MM-dd') = '{ds}' AND 
