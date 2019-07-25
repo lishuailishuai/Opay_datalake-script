@@ -34,6 +34,7 @@ db_name,table_name,conn_id,prefix_name
 
 table_list = [
     ("oride_data", "data_user", "sqoop_db", "base"),
+    ("bi", "weather_per_10min", "mysql_bi", "base"),
     # 协会数据
     # 数据库 opay_spread
     ("opay_spread", "driver_data", "opay_spread_mysql", "mass"),
