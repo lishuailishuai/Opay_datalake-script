@@ -25,7 +25,8 @@ dispatch_table = HiveOperator(
         get_json_object(event_values, '$.order_id') order_id, 
         get_json_object(event_values, '$.round') as `round`, 
         get_json_object(event_values, '$.user_id') as `user_id`,
-        driver_id
+        driver_id,
+        get_json_object(event_values, '$.city_id') city_id
         from  
         oride_source.server_magic 
         lateral view explode(split(substr(get_json_object(event_values, '$.driver_ids'),1,length(get_json_object(event_values, '$.driver_ids'))-2),',')) driver_ids as driver_id
@@ -44,7 +45,8 @@ filter_table = HiveOperator(
         get_json_object(event_values, '$.round') as `round`, 
         get_json_object(event_values, '$.user_id') as `user_id`,
         get_json_object(event_values, '$.driver_id') as `driver_id`,
-        get_json_object(event_values, '$.reason') as `reason`
+        get_json_object(event_values, '$.reason') as `reason`,
+        get_json_object(event_values, '$.city_id') city_id
         from  
         oride_source.server_magic 
         where  dt = '{{ ds }}' and event_name='dispatch_filter_driver' 
@@ -61,7 +63,8 @@ assign_table = HiveOperator(
         get_json_object(event_values, '$.order_id') order_id, 
         get_json_object(event_values, '$.round') as `round`, 
         get_json_object(event_values, '$.user_id') as `user_id`,
-        driver_id
+        driver_id,
+        get_json_object(event_values, '$.city_id') city_id
         from  
         oride_source.server_magic 
         lateral view explode(split(substr(get_json_object(event_values, '$.driver_ids'),1,length(get_json_object(event_values, '$.driver_ids'))-2),',')) driver_ids as driver_id
@@ -80,7 +83,8 @@ push_table = HiveOperator(
         get_json_object(event_values, '$.round') as `round`, 
         get_json_object(event_values, '$.user_id') as `user_id`,
         get_json_object(event_values, '$.driver_id') as `driver_id`,
-        get_json_object(event_values, '$.success') as `success`
+        get_json_object(event_values, '$.success') as `success`,
+        get_json_object(event_values, '$.city_id') city_id
         from  
         oride_source.server_magic 
         where  dt = '{{ ds }}' and event_name='dispatch_push_driver' 
