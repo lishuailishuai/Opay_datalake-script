@@ -355,6 +355,8 @@ def send_report_email(ds_nodash, ds, **kwargs):
                 <caption>
                     <h2></h2>
                 </caption>
+        </table>
+        <table width="95%" class="table">
                 <thead>
                     <tr>
                         <th colspan="6" style="text-align: center;">订单播报过程点分布</th>
@@ -402,13 +404,15 @@ def send_report_email(ds_nodash, ds, **kwargs):
         html += html_fmt_1
         i += 1
 
-        html = html + html_fmt_1_tail
+    html = html + html_fmt_1_tail
 
     html_fmt_2_head = '''
         <table width="95%" class="table">
                         <caption>
                             <h2></h2>
                         </caption>
+        </table>
+        <table width="95%" class="table">
                         <thead>
                             <tr>
                                 <th colspan="5" style="text-align: center;">司机被过滤原因分布</th>
@@ -467,6 +471,8 @@ def send_report_email(ds_nodash, ds, **kwargs):
                                 <caption>
                                     <h2></h2>
                                 </caption>
+        </table>                       
+        <table width="95%" class="table">
                                 <thead>
                                     <tr>
                                         <th colspan="6" style="text-align: center;">司机指标</th>
@@ -566,6 +572,8 @@ def send_report_email(ds_nodash, ds, **kwargs):
                                         <caption>
                                             <h2></h2>
                                         </caption>
+        </table>
+        <table width="95%" class="table">
                                         <thead>
                                             <tr>
                                                 <th colspan="9" style="text-align: center;">宏观指标</th>
@@ -596,6 +604,8 @@ def send_report_email(ds_nodash, ds, **kwargs):
                                         <caption>
                                             <h2></h2>
                                         </caption>
+        </table>
+        <table width="95%" class="table">
                                         <thead>
                                             <tr>
                                                 <th colspan="7" style="text-align: center;">时长指标</th>
@@ -691,6 +701,8 @@ def send_report_email(ds_nodash, ds, **kwargs):
                                             <caption>
                                                 <h2></h2>
                                             </caption>
+            </table>
+            <table width="95%" class="table">                                
                                             <thead>
                                                 <tr>
                                                     <th colspan="10" style="text-align: center;">乘客指标</th>

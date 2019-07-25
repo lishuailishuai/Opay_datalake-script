@@ -305,6 +305,8 @@ def send_report_email(ds, **kwargs):
                     <caption>
                         <h3>快车指标数据</h3>
                     </caption>
+                </table>
+                <table width="100%" class="table">
                     <thead>
                         <tr>
                             <th></th>
