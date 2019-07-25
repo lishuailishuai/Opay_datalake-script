@@ -595,27 +595,27 @@ def get_serv_row(ds, driver_serv_type, all_completed_num):
     '''
     row_fmt='''
         <!--{}{}-->
-        <th>{}</th>
-        <th>{}</th>
+        <td>{}</td>
+        <td>{}</td>
         <!--关键指标-->
-        <th>{}</th>
-        <th>{}</th>
-        <th>{}</th>
-        <th>{}</th>
+        <td>{}</td>
+        <td>{}</td>
+        <td>{}</td>
+        <td>{}</td>
         <!--供需关系-->
-        <th>{}</th>
-        <th>{}</th>
-        <th>{}</th>
-        <th>{}</th>
-        <th>{}</th>
+        <td>{}</td>
+        <td>{}</td>
+        <td>{}</td>
+        <td>{}</td>
+        <td>{}</td>
         <!--司机指标-->
-        <th>{}</th>
-        <th>{}</th>
-        <th>{}</th>
+        <td>{}</td>
+        <td>{}</td>
+        <td>{}</td>
         <!--体验指标-->
-        <th>{}</th>
-        <th>{}</th>
-        <th>{}</th>
+        <td>{}</td>
+        <td>{}</td>
+        <td>{}</td>
     '''
     sql='''
         with all_data as (
@@ -813,6 +813,8 @@ def send_report_email(ds, **kwargs):
                 <caption>
                     <h3>全部城市</h3>
                 </caption>
+            </table>
+            <table width="100%" class="table">
                 <thead>
                     <tr>
                         <th></th>
@@ -856,12 +858,16 @@ def send_report_email(ds, **kwargs):
                         <th>地图调用次数</th>
                     </tr>
                 </thead>
+                <tbody>
                 {rows}
+                </tbody>
             </table>
             <table width="100%" class="table">
                 <caption>
                     <h3>专车指标</h3>
                 </caption>
+            </table>
+            <table width="100%" class="table">
                 <thead>
                     <tr>
                         <th></th>
@@ -895,12 +901,16 @@ def send_report_email(ds, **kwargs):
                         <th>平均送驾距离（米）</th>
                     </tr>
                 </thead>
+                <tbody>
                 {direct_rows}
+                </tbody>
             </table>
             <table width="100%" class="table">
                 <caption>
                     <h3>快车指标</h3>
                 </caption>
+            </table>
+            <table width="100%" class="table">
                 <thead>
                     <tr>
                         <th></th>
@@ -934,7 +944,9 @@ def send_report_email(ds, **kwargs):
                         <th>平均送驾距离（米）</th>
                     </tr>
                 </thead>
+                <tbody>
                 {street_rows}
+                </tbody>
             </table>
         </body>
         </html>
@@ -956,36 +968,36 @@ def send_report_email(ds, **kwargs):
             <tr style="background:#fff2cc">{row}</tr>
         '''
         row_fmt = '''
-                <th>{dt}</th>
+                <td>{dt}</td>
                 <!--关键指标-->
-                <th>{request_num}</th>
-                <th>{request_num_lfw}</th>
-                <th style="background:#d9d9d9">{completed_num}</th>
-                <th>{completed_num_lfw}</th>
-                <th style="background:#d9d9d9">{c_vs_r}%</th>
-                <th>{c_vs_r_lfw}%</th>
-                <th>{beckoning_num}</th>
+                <td>{request_num}</td>
+                <td>{request_num_lfw}</td>
+                <td style="background:#d9d9d9">{completed_num}</td>
+                <td>{completed_num_lfw}</td>
+                <td style="background:#d9d9d9">{c_vs_r}%</td>
+                <td>{c_vs_r_lfw}%</td>
+                <td>{beckoning_num}</td>
                 <!--供需关系-->
-                <th>{active_users}</th>
-                <th style="background:#d9d9d9">{completed_drivers}</th>
-                <th>{avg_online_time}</th>
-                <th>{btime_vs_otime}</th>
+                <td>{active_users}</td>
+                <td style="background:#d9d9d9">{completed_drivers}</td>
+                <td>{avg_online_time}</td>
+                <td>{btime_vs_otime}</td>
                 <!--司机指标-->
-                <th>{register_drivers}</th>
-                <th>{online_drivers}</th>
-                <th>{c_vs_od}</th>
+                <td>{register_drivers}</td>
+                <td>{online_drivers}</td>
+                <td>{c_vs_od}</td>
                 <!--体验指标-->
-                <th>{avg_take_time}</th>
-                <th>{avg_pickup_time}</th>
-                <th>{avg_distance}</th>
+                <td>{avg_take_time}</td>
+                <td>{avg_pickup_time}</td>
+                <td>{avg_distance}</td>
                 <!--乘客指标-->
-                <th>{register_users}</th>
-                <th>{order_users}</th>
-                <th>{first_completed_users}</th>
-                <th>{fcu_vs_cu}%</th>
-                <th>{old_completed_users}</th>
+                <td>{register_users}</td>
+                <td>{order_users}</td>
+                <td>{first_completed_users}</td>
+                <td>{fcu_vs_cu}%</td>
+                <td>{old_completed_users}</td>
                 <!--财务-->
-                <th>{map_request_num}</th>
+                <td>{map_request_num}</td>
         '''
         row_html = ''
         # 所有完单数
@@ -1134,6 +1146,8 @@ def send_funnel_report_email(ds, **kwargs):
                 <caption>
                     <h2>订单漏斗模型</h2>
                 </caption>
+            </table>
+            <table width="95%" class="table">
                 <thead>
                     <tr>
                         <th></th>
