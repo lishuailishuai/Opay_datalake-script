@@ -4,6 +4,7 @@ from airflow.operators.hive_operator import HiveOperator
 from airflow.hooks.hive_hooks import HiveCliHook,HiveServer2Hook
 from airflow.models import Variable
 from airflow.operators.python_operator import PythonOperator
+from airflow.operators.web_hdfs_plugin import WebHdfsSensor
 import logging
 
 args = {
@@ -64,6 +65,11 @@ def run_insert_ods(ds, execution_date, **kwargs):
 
 BINLOG_TABLE_LIST_VAR_NAME='oride_binlog_table_list'
 binlog_table_list=Variable.get(BINLOG_TABLE_LIST_VAR_NAME) if Variable.get(BINLOG_TABLE_LIST_VAR_NAME) is not None else ''
+
+table_check_list = [
+    "data_order",
+    "data_order_payment"
+]
 if binlog_table_list!='':
     for table in binlog_table_list.split():
         binlog_add_partitions = HiveOperator(
@@ -81,7 +87,13 @@ if binlog_table_list!='':
             params={'table':table},
             dag=dag,
         )
+        if table in table_check_list:
+            check_hdfs=WebHdfsSensor(
+                task_id='hdfs_sense_{}'.format(table),
+                poke_interval=30,
+                timeout=300,
+                filepath='/topics/fullfillment.oride_data.{table}/dt={{{{ ds }}}}/hour={{{{ execution_date.strftime("%H") }}}}'.format(table=table),
+                dag=dag)
+            check_hdfs >> binlog_add_partitions
+
         binlog_add_partitions >> insert_ods
-
-
-
