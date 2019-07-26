@@ -9,12 +9,12 @@ import logging
 from airflow.models import Variable
 
 args = {
-    'owner': 'root',
+    'owner': 'zhenqian.zhang',
     'start_date': datetime(2019, 6, 17),
     'depends_on_past': False,
     'retries': 1,
     'retry_delay': timedelta(minutes=5),
-    'email': ['bigdata@opay-inc.com'],
+    'email': ['bigdata_dw@opay-inc.com'],
     'email_on_failure': True,
     'email_on_retry': False,
 }
@@ -167,6 +167,8 @@ def send_report_email(tomorrow_ds, **kwargs):
                 <caption>
                     <h2>{dt}</h2>
                 </caption>
+            </table>
+            <table width="95%" class="table">
                 <thead>
                     <tr>
                         <th colspan="4" style="text-align: center;">乘客</th>

@@ -40,8 +40,6 @@ table_list = [
     ("opay_spread", "driver_data", "opay_spread_mysql", "mass"),
     ("opay_spread", "driver_group", "opay_spread_mysql", "mass"),
     ("opay_spread", "driver_logs", "opay_spread_mysql", "mass"),
-    ("opay_spread", "driver_owner_ibadan", "opay_spread_mysql", "mass"),
-    ("opay_spread", "driver_owner_lagos", "opay_spread_mysql", "mass"),
     ("opay_spread", "driver_team", "opay_spread_mysql", "mass"),
     ("opay_spread", "rider_signup", "opay_spread_mysql", "mass"),
     ("opay_spread", "rider_signups", "opay_spread_mysql", "mass"),
