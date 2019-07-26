@@ -410,6 +410,347 @@ insert_oride_global_daily_report = HiveOperator(
     schema='oride_bi',
     dag=dag)
 
+insert_oride_order_city_daily_report = HiveOperator(
+    task_id='insert_oride_order_city_daily_report',
+    hql="""
+        ALTER TABLE oride_source.appsflyer_opay_event_log ADD IF NOT EXISTS PARTITION (dt = '{{ ds }}');
+        ALTER TABLE oride_order_city_daily_report DROP IF EXISTS PARTITION (dt = '{{ ds }}');
+
+
+
+        -- 近4周event
+        with lfw_event_data as (
+            SELECT
+                '{{ ds }}' as dt,
+                '' as city_id,
+                SUM(oride_cllick_request_event_counter)/count(DISTINCT dt) as oride_cllick_request_event_counter_lfw,
+                SUM(estimated_price_cllick_request_event_counter)/count(DISTINCT dt) as estimated_price_cllick_request_event_counter_lfw
+            FROM
+                oride_source.appsflyer_opay_event_log
+            WHERE
+                dt BETWEEN '{{ macros.ds_add(ds, -28) }}' AND '{{ macros.ds_add(ds, -1) }}'
+                AND from_unixtime(unix_timestamp(dt, 'yyyy-MM-dd'),'u') = from_unixtime(unix_timestamp('{{ ds }}', 'yyyy-MM-dd'),'u')
+
+        ),
+        -- event数据
+        event_data as (
+            SELECT
+                dt,
+                '' as city_id,
+                SUM(oride_cllick_request_event_counter) as oride_cllick_request_event_counter,
+                SUM(estimated_price_cllick_request_event_counter) as estimated_price_cllick_request_event_counter
+            FROM
+                oride_source.appsflyer_opay_event_log
+            WHERE
+                dt='{{ ds }}'
+            GROUP BY
+                dt
+        ),
+        
+        
+        -- 城市天气数据
+        weather_city_data as (
+            select 
+            '{{ ds }}' dt,
+            t.city city,
+            t.weather weather
+            from 
+            (
+                select 
+                t.city,
+                t.weather,
+                row_number() over(partition by t.city ORDER BY t.counts DESC) order_id
+                from 
+                (
+                    select 
+                    city,
+                    weather,
+                    count(1) counts
+                    from oride_dw.ods_sqoop_base_weather_per_10min_df where dt = '{{ ds }}'
+                    and daliy = '{{ ds }}'
+                    group by city,weather
+                ) t
+            ) t 
+            where t.order_id = 1
+        ),
+        
+        --城市下雨天气订单
+        weather_city_order_data as (
+            select 
+            t.city,
+            substring(t.dt,1,10) dt,
+            sum(if(t.ride_num is null,0,t.ride_num)) rain_order_num
+            from 
+            (
+                select 
+                s.city,
+                s.run_time dt,
+                s.mins,
+                d.ride_num
+                from 
+                (
+                    select 
+                        city,
+                        from_unixtime(unix_timestamp(run_time),'yyyy-MM-dd HH') run_time,
+                        minute(from_unixtime(unix_timestamp(run_time))) mins
+                        from oride_dw.ods_sqoop_base_weather_per_10min_df where dt = '{{ ds }}'
+                    and weather in ('Thundershower','Light rain','Rain','Thunderstorm','A shower')
+                    and daliy = '{{ ds }}'
+                ) s 
+                join 
+                (
+                    select
+                    c.name city_name,
+                    t.time time,
+                    t.mins * 10 mins,
+                    count(t.id) ride_num
+                    from  
+                        (
+                            select
+                            id,
+                            city_id,
+                            from_unixtime(create_time,'yyyy-MM-dd HH') as time, 
+                            floor(cast(minute(from_unixtime(create_time)) as int) / 10) as mins
+                            from oride_db.data_order
+                            where  dt= '{{ ds }}' and from_unixtime(create_time,'yyyy-MM-dd') = '{{ ds }}'
+                        ) t 
+                    join  oride_db.data_city_conf c on c.dt = '{{ ds }}' and t.city_id = c.id 
+                    group by time,t.mins,c.name
+                ) d on lower(s.city) = lower(d.city_name) and s.run_time = d.time
+                    and d.mins = s.mins
+            ) t 
+            group by t.city,substring(t.dt,1,10)
+        ),
+        
+        
+        -- 近4周数据
+        lfw_data as (
+            SELECT
+               dt,
+               city_id,
+               count(
+               if(
+                    datediff(dt, from_unixtime(create_time, 'yyyy-MM-dd'))>0
+                    and datediff(dt, from_unixtime(create_time, 'yyyy-MM-dd'))<=28
+                    and from_unixtime(create_time,'u') = from_unixtime(unix_timestamp(dt, 'yyyy-MM-dd'),'u')
+                , id, null)
+                )/4 as request_num_lfw,
+                count(
+                if(
+                    datediff(dt, from_unixtime(create_time, 'yyyy-MM-dd'))>0
+                    and datediff(dt, from_unixtime(create_time, 'yyyy-MM-dd'))<=28
+                    and from_unixtime(create_time,'u') = from_unixtime(unix_timestamp(dt, 'yyyy-MM-dd'),'u')
+                    and (status=4 or status=5)
+                , id, null)
+                )/4 as completed_num_lfw,
+               count(
+               if(
+                    datediff(dt, from_unixtime(create_time, 'yyyy-MM-dd'))>0
+                    and datediff(dt, from_unixtime(create_time, 'yyyy-MM-dd'))<=28
+                    and from_unixtime(create_time,'u') = from_unixtime(unix_timestamp(dt, 'yyyy-MM-dd'),'u')
+                    and (driver_id>0)
+                , id, null)
+                )/4 as take_num_lfw,
+               count(
+               if(
+                    datediff(dt, from_unixtime(create_time, 'yyyy-MM-dd'))>0
+                    and datediff(dt, from_unixtime(create_time, 'yyyy-MM-dd'))<=28
+                    and from_unixtime(create_time,'u') = from_unixtime(unix_timestamp(dt, 'yyyy-MM-dd'),'u')
+                    and (driver_id=0)
+                    and (status=6)
+                , id, null)
+                )/4 as before_take_cancel_num_lfw,
+               count(
+               if(
+                    datediff(dt, from_unixtime(create_time, 'yyyy-MM-dd'))>0
+                    and datediff(dt, from_unixtime(create_time, 'yyyy-MM-dd'))<=28
+                    and from_unixtime(create_time,'u') = from_unixtime(unix_timestamp(dt, 'yyyy-MM-dd'),'u')
+                    and driver_id>0
+                    and status=6
+                , id, null)
+                )/4 as after_take_cancel_num_lfw,
+               count(
+               if(
+                    datediff(dt, from_unixtime(create_time, 'yyyy-MM-dd'))>0
+                    and datediff(dt, from_unixtime(create_time, 'yyyy-MM-dd'))<=28
+                    and from_unixtime(create_time,'u') = from_unixtime(unix_timestamp(dt, 'yyyy-MM-dd'),'u')
+                    and driver_id>0
+                    and status=6
+                    and cancel_role=2
+                , id, null)
+                )/4 as driver_cancel_num_lfw
+            FROM
+                oride_db.data_order
+            WHERE
+                dt='{{ ds }}' and city_id !=999001
+            GROUP BY dt,city_id
+        ),
+        -- 订单数据
+        order_data as (
+            SELECT
+                do.dt,
+                do.city_id,
+                count(DISTINCT do.id) as request_num,
+                count(DISTINCT if(do.status=4 or do.status=5, do.id, null)) as completed_num,
+                count(DISTINCT if(do.status=4 or do.status=5, do.driver_id, null)) as completed_drivers,
+                avg(if(do.take_time>0 and (do.status=4 or do.status=5), do.take_time-do.create_time, null)) as avg_take_time,
+                avg(if(do.pickup_time>0 and (do.status=4 or do.status=5), do.pickup_time-do.take_time, null)) as avg_pickup_time,
+                avg(if(do.duration>0, do.duration, null)) as avg_duration,
+                round(sum(if(do.status = 4 or do.status =5,do.distance, 0))/count(if(do.status=4 or do.status=5, do.id, null)),0) as avg_distance,
+                SUM(do.duration) as total_duration,
+                count(DISTINCT if(do.status=4 or do.status=5, do.user_id, null)) as completed_users,
+                count(DISTINCT if((do.status=4 or do.status=5) and old_user.user_id is null, do.user_id, null)) as first_completed_users,
+                count(DISTINCT if(do.driver_id>0, do.id, null)) as take_num,
+                count(DISTINCT if(do.driver_id=0 and do.status=6, do.id, null)) as before_take_cancel_num,
+                count(DISTINCT if(do.driver_id>0 and do.status=6, do.id, null)) as after_take_cancel_num,
+                count(DISTINCT if(do.cancel_role=2 and do.status=6, do.id, null)) as driver_cancel_num,
+                count(DISTINCT if(dop.status=1, do.id, null)) as pay_num,
+                SUM(if(dop.status=1, dop.price, 0)) as pay_price_total,
+                SUM(if(dop.status=1, dop.amount, 0)) as pay_amount_total,
+                COUNT(DISTINCT if(dop.status=1 and (dop.mode=2 or dop.mode=3), dop.driver_id, null)) as online_pay_driver_num,
+                COUNT(DISTINCT if(dop.status=1 and (dop.mode=2 or dop.mode=3), dop.id, null)) as online_pay_order_num,
+                SUM(if(do.arrive_time>0, do.arrive_time-do.pickup_time, 0)) as billing_time,
+                count(distinct if(do.serv_type=99 and (do.status=4 or do.status=5), do.id, null)) as beckoning_num,
+                count(distinct if(do.driver_serv_type=1 and (do.status=4 or do.status=5), do.id, null)) as driect_ordernum,
+                count(distinct if(do.driver_serv_type=1 and (do.status=4 or do.status=5), do.driver_id, null)) as driect_drivernum,
+                count(distinct if(do.driver_serv_type=2 and (do.status=4 or do.status=5), do.id, null)) as street_ordernum,
+                count(distinct if(do.driver_serv_type=2 and (do.status=4 or do.status=5), do.driver_id, null)) as street_drivernum,
+                count(distinct do.user_id) as request_usernum
+            FROM
+                (
+                    SELECT
+                        *
+                    FROM
+                        oride_db.data_order
+                    WHERE
+                        dt='{{ ds }}'
+                        AND city_id != 999001
+                        AND from_unixtime(create_time, 'yyyy-MM-dd')=dt
+                ) do
+                LEFT JOIN
+                (
+                    SELECT
+                        distinct user_id
+                    FROM
+                        oride_db.data_order
+                    WHERE
+                        dt='{{ ds }}' and from_unixtime(create_time, 'yyyy-MM-dd')<dt and status in (4,5)
+                ) old_user on old_user.user_id=do.user_id
+                LEFT JOIN oride_db.data_order_payment dop on dop.id=do.id and dop.dt=do.dt
+            GROUP BY do.dt,do.city_id
+        ),
+
+        -- push 数据
+        push_data as (
+            SELECT
+                dt,
+                get_json_object(event_values, '$.city_id') city_id, 
+                count(distinct get_json_object(event_values, '$.order_id')) as push_num
+            FROM
+                oride_source.server_magic
+            WHERE
+                event_name='dispatch_push_driver' and dt='{{ ds }}'
+            GROUP BY dt,get_json_object(event_values, '$.city_id')
+        )
+
+        INSERT OVERWRITE TABLE oride_order_city_daily_report PARTITION (dt = '{{ ds }}')
+        select 
+            t.name,
+            t.weather,
+            t.rain_order_num,
+            t.request_num,
+            t.request_num_lfw,
+            t.completed_num,
+            t.completed_num_lfw,
+            t.completed_drivers,
+            t.completed_users,
+            t.first_completed_users,
+            t.avg_take_time,
+            t.avg_duration,
+            t.avg_distance,
+            t.avg_pickup_time,
+            t.oride_cllick_request_event_counter,
+            t.estimated_price_cllick_request_event_counter,
+            t.oride_cllick_request_event_counter_lfw,
+            t.estimated_price_cllick_request_event_counter_lfw,
+            t.take_num_lfw,
+            t.before_take_cancel_num_lfw,
+            t.after_take_cancel_num_lfw,
+            t.driver_cancel_num_lfw,
+            t.take_num,
+            t.before_take_cancel_num,
+            t.after_take_cancel_num,
+            t.driver_cancel_num,
+            t.pay_num,
+            t.pay_price_total,
+            t.pay_amount_total,
+            t.push_num,
+            t.online_pay_driver_num,
+            t.online_pay_order_num,
+            t.beckoning_num,
+            t.driect_ordernum,
+            t.driect_drivernum,
+            t.street_ordernum,
+            t.street_drivernum,
+            t.request_usernum 
+        
+        from 
+        (
+            SELECT
+                c.name,
+                wcd.weather,
+                nvl(wod.rain_order_num,0) rain_order_num,
+                od.request_num,
+                lf.request_num_lfw,
+                od.completed_num,
+                lf.completed_num_lfw,
+                od.completed_drivers,
+                od.completed_users,
+                od.first_completed_users,
+                od.avg_take_time,
+                od.avg_duration,
+                od.avg_distance,
+                od.avg_pickup_time,
+                ed.oride_cllick_request_event_counter,
+                ed.estimated_price_cllick_request_event_counter,
+                led.oride_cllick_request_event_counter_lfw,
+                led.estimated_price_cllick_request_event_counter_lfw,
+                lf.take_num_lfw,
+                lf.before_take_cancel_num_lfw,
+                lf.after_take_cancel_num_lfw,
+                lf.driver_cancel_num_lfw,
+                od.take_num,
+                od.before_take_cancel_num,
+                od.after_take_cancel_num,
+                od.driver_cancel_num,
+                od.pay_num,
+                od.pay_price_total,
+                od.pay_amount_total,
+                pd.push_num,
+                od.online_pay_driver_num,
+                od.online_pay_order_num,
+                od.beckoning_num,
+                od.driect_ordernum,
+                od.driect_drivernum,
+                od.street_ordernum,
+                od.street_drivernum,
+                od.request_usernum ,
+                row_number() over(partition by c.name order by request_num desc) order_id
+            FROM
+                order_data od
+                join oride_db.data_city_conf c on od.city_id = c.id
+                left join weather_city_data wcd on lower(wcd.city) = lower(c.name) and wcd.dt = od.dt
+                left join weather_city_order_data wod on lower(wod.city) = lower(c.name) and wod.dt = od.dt
+                LEFT JOIN lfw_data lf on lf.dt=od.dt and lf.city_id = od.city_id
+                LEFT JOIN event_data ed on ed.dt=od.dt and ed.city_id = od.city_id
+                LEFT JOIN lfw_event_data led on led.dt=od.dt and led.city_id = od.city_id
+                LEFT JOIN push_data pd on pd.dt=od.dt and pd.city_id = od.city_id
+        ) t 
+        where t.order_id = 1
+        """,
+    schema='oride_bi',
+    dag=dag)
+
 create_oride_global_city_serv_daily_report = HiveOperator(
     task_id='create_oride_global_city_serv_daily_report',
     hql="""
@@ -590,10 +931,10 @@ insert_oride_global_city_serv_daily_report = HiveOperator(
 
 
 def get_serv_row(ds, driver_serv_type, all_completed_num):
-    tr_fmt='''
+    tr_fmt = '''
        <tr>{row}</tr>
     '''
-    row_fmt='''
+    row_fmt = '''
         <!--{}{}-->
         <td>{}</td>
         <td>{}</td>
@@ -617,7 +958,7 @@ def get_serv_row(ds, driver_serv_type, all_completed_num):
         <td>{}</td>
         <td>{}</td>
     '''
-    sql='''
+    sql = '''
         with all_data as (
             SELECT
                 dt,
@@ -718,7 +1059,7 @@ def get_serv_row(ds, driver_serv_type, all_completed_num):
                    dt='{ds}'
             ) td ON td.id=cd.city_id
         ORDER BY order_by ASC, city_id ASC
-    '''.format(ds=ds, driver_serv_type=driver_serv_type,all_completed_num=all_completed_num)
+    '''.format(ds=ds, driver_serv_type=driver_serv_type, all_completed_num=all_completed_num)
     cursor = get_hive_cursor()
     logging.info('Executing: %s', sql)
     cursor.execute(sql)
@@ -730,6 +1071,7 @@ def get_serv_row(ds, driver_serv_type, all_completed_num):
             row = row_fmt.format(*list(data))
             row_html += tr_fmt.format(row=row)
     return row_html
+
 
 def send_report_email(ds, **kwargs):
     logging.info("receivers:%s" % Variable.get("oride_global_daily_report_receivers"))
@@ -1001,7 +1343,7 @@ def send_report_email(ds, **kwargs):
         '''
         row_html = ''
         # 所有完单数
-        all_completed_num=data_list[0][4]
+        all_completed_num = data_list[0][4]
         for data in data_list:
             [dt, week, request_num, request_num_lfw, completed_num, completed_num_lfw, c_vs_r, c_vs_r_lfw, active_users,
              completed_drivers, avg_online_time, btime_vs_otime, register_drivers, online_drivers, c_vs_od,
@@ -1045,7 +1387,8 @@ def send_report_email(ds, **kwargs):
             else:
                 row_html += tr_fmt.format(row=row)
 
-        html = html_fmt.format(rows=row_html, direct_rows=get_serv_row(ds, 1, all_completed_num),street_rows=get_serv_row(ds, 2, all_completed_num))
+        html = html_fmt.format(rows=row_html, direct_rows=get_serv_row(ds, 1, all_completed_num),
+                               street_rows=get_serv_row(ds, 2, all_completed_num))
         # send mail
         email_subject = 'oride全局运营指标_{}'.format(ds)
         send_email(
@@ -1053,12 +1396,14 @@ def send_report_email(ds, **kwargs):
             , email_subject, html, mime_charset='utf-8')
     return
 
+
 send_report = PythonOperator(
     task_id='send_report',
     python_callable=send_report_email,
     provide_context=True,
     dag=dag
 )
+
 
 def send_funnel_report_email(ds, **kwargs):
     sql = '''
@@ -1096,101 +1441,213 @@ def send_funnel_report_email(ds, **kwargs):
         ORDER BY dt DESC
         LIMIT 14
     '''.format(dt=ds)
+
+    sql_city = '''
+        SELECT
+            from_unixtime(unix_timestamp(dt, 'yyyy-MM-dd'),'yyyyMMdd') as dt,
+            from_unixtime(unix_timestamp(dt, 'yyyy-MM-dd'),'u') as week,
+            city ,
+            weather,
+            concat(cast(round(rain_order_num * 100/request_num) as string),'%') as rain_order_rate,
+            oride_cllick_request_event_counter,
+            estimated_price_cllick_request_event_counter,
+            round(estimated_price_cllick_request_event_counter/oride_cllick_request_event_counter*100, 2) as ep_vs_oc,
+            round(estimated_price_cllick_request_event_counter_lfw/oride_cllick_request_event_counter_lfw*100, 2) as ep_vs_oc_lfw,
+            round(request_num/estimated_price_cllick_request_event_counter*100, 2) as rq_vs_ep,
+            round(request_num_lfw/estimated_price_cllick_request_event_counter_lfw*100, 2) as rq_vs_ep_lfw,
+            request_num,
+            request_num_lfw,
+            round((request_num-push_num)/request_num*100, 2) as no_push_rate,
+            round(before_take_cancel_num/request_num*100, 2) as before_take_cancel_rate,
+            round(before_take_cancel_num_lfw/request_num_lfw*100, 2) as before_take_cancel_lfw_rate,
+            round(take_num/request_num*100, 2) as take_rate,
+            round(take_num_lfw/request_num_lfw*100, 2) as take_lfw_rate,
+            round(after_take_cancel_num/request_num*100, 2) as after_take_cancel_rate,
+            round(after_take_cancel_num_lfw/request_num_lfw*100, 2) as after_take_cancel_lfw_rate,
+            round(driver_cancel_num/request_num*100, 2) as driver_cancel_rate,
+            round(driver_cancel_num_lfw/request_num_lfw*100, 2) as driver_cancel_lfw_rate,
+            completed_num,
+            completed_num_lfw,
+            round(completed_num/request_num*100, 2) as completed_rate,
+            round(completed_num_lfw/request_num_lfw*100, 2) as completed_lfw_rate,
+            pay_num,
+            if (dt >= '2019-06-26',  round(pay_price_total/pay_num, 2), ''),
+            if (dt >= '2019-06-26',  round(pay_amount_total/pay_num, 2), '')
+        FROM
+           oride_bi.oride_order_city_daily_report
+        WHERE
+            dt <= '{dt}'
+        ORDER BY dt DESC
+        LIMIT 14
+    '''.format(dt=ds)
+
     cursor = get_hive_cursor()
     logging.info(sql)
     cursor.execute(sql)
     data_list = cursor.fetchall()
+
+    logging.info(sql_city)
+    cursor.execute(sql_city)
+    data_city_list = cursor.fetchall()
+
+    html_fmt = '''
+            <html>
+            <head>
+            <title></title>
+            <style type="text/css">
+                table
+                {{
+                    font-family:'黑体';
+                    border-collapse: collapse;
+                    margin: 0 auto;
+                    text-align: left;
+                    font-size:12px;
+                    color:#29303A;
+                }}
+                table h2
+                {{
+                    font-size:20px;
+                    color:#000000;
+                }}
+                .th_title
+                {{
+                    font-size:16px;
+                    color:#000000;
+                    text-align: center;
+                }}
+                table td, table th
+                {{
+                    border: 1px solid #000000;
+                    color: #000000;
+                    height: 30px;
+                    padding: 5px 10px 5px 5px;
+                }}
+                table thead th
+                {{
+                    background-color: #1DCF9F;
+                    //color: white;
+                    width: 100px;
+                }}
+            </style>
+            </head>
+            <body>
+                <table width="95%" class="table">
+                    <caption>
+                        <h2>订单漏斗模型</h2>
+                    </caption>
+                </table>
+                
+                
+                <table width="100%" class="table">
+                    <caption>
+                        <h3>全部</h3>
+                    </caption>
+                </table>
+                <table width="95%" class="table">
+                    <thead>
+                        <tr>
+                            <th></th>
+                            <th colspan="6" class="th_title">呼叫前</th>
+                            <th colspan="11" class="th_title">呼叫-应答</th>
+                            <th colspan="7" class="th_title">完单-支付</th>
+                        </tr>
+                        <tr>
+                            <th>日期</th>
+                            <!--呼叫前-->
+                            <th>地址选择需求数</th>
+                            <th>估价需求数</th>
+                            <th>地址选择-估价转化率</th>
+                            <th>地址选择-估价转化率（近4周同期均值）</th>
+                            <th>估价-下单转化率</th>
+                            <th>估价-下单转化率（近4周同期均值）</th>
+                            <!--呼叫-应答-->
+                            <th>下单数</th>
+                            <th>下单数（近4周同期均值）</th>
+                            <th>未播率</th>
+                            <th>应答前取消率</th>
+                            <th>应答前取消率（近4周同期均值）</th>
+                            <th>应答率</th>
+                            <th>应答率（近4周同期均值）</th>
+                            <th>应答后取消率</th>
+                            <th>应答后取消率（近4周同期均值）</th>
+                            <th>司机取消率</th>
+                            <th>司机取消率（近4周同期均值）</th>
+                            <!--完单-支付-->
+                            <th>完单数</th>
+                            <th>完单数（近4周同期均值）</th>
+                            <th>完单率</th>
+                            <th>完单率（近4周同期均值）</th>
+                            <th>支付订单数</th>
+                            <th>单均应付</th>
+                            <th>单均实付</th>
+                        </tr>
+                    </thead>
+                    {rows}
+                </table>
+
+                <table width="100%" class="table">
+                    <caption>
+                        <h3>分城市</h3>
+                    </caption>
+                </table>
+
+                 <table width="95%" class="table">
+                    <thead>
+                        <tr>
+                            <th></th>
+                            <th></th>
+                            <th colspan="2" class="th_title">天气指标</th>
+                            <th colspan="6" class="th_title">呼叫前</th>
+                            <th colspan="11" class="th_title">呼叫-应答</th>
+                            <th colspan="7" class="th_title">完单-支付</th>
+                        </tr>
+                        <tr>
+                            <th>日期</th>
+                            <th>城市</th>
+                            <!--天气指标-->
+                            <th>天气</th>
+                            <th>湿单占比</th>
+                            <!--呼叫前-->
+                            <th>地址选择需求数</th>
+                            <th>估价需求数</th>
+                            <th>地址选择-估价转化率</th>
+                            <th>地址选择-估价转化率（近4周同期均值）</th>
+                            <th>估价-下单转化率</th>
+                            <th>估价-下单转化率（近4周同期均值）</th>
+                            <!--呼叫-应答-->
+                            <th>下单数</th>
+                            <th>下单数（近4周同期均值）</th>
+                            <th>未播率</th>
+                            <th>应答前取消率</th>
+                            <th>应答前取消率（近4周同期均值）</th>
+                            <th>应答率</th>
+                            <th>应答率（近4周同期均值）</th>
+                            <th>应答后取消率</th>
+                            <th>应答后取消率（近4周同期均值）</th>
+                            <th>司机取消率</th>
+                            <th>司机取消率（近4周同期均值）</th>
+                            <!--完单-支付-->
+                            <th>完单数</th>
+                            <th>完单数（近4周同期均值）</th>
+                            <th>完单率</th>
+                            <th>完单率（近4周同期均值）</th>
+                            <th>支付订单数</th>
+                            <th>单均应付</th>
+                            <th>单均实付</th>
+                        </tr>
+                    </thead>
+                    {city_rows}
+                </table>
+
+            </body>
+            </html>
+            '''
+
+    row_html = ''
+    city_row_html = ''
+
     if len(data_list) > 0:
-        html_fmt = '''
-        <html>
-        <head>
-        <title></title>
-        <style type="text/css">
-            table
-            {{
-                font-family:'黑体';
-                border-collapse: collapse;
-                margin: 0 auto;
-                text-align: left;
-                font-size:12px;
-                color:#29303A;
-            }}
-            table h2
-            {{
-                font-size:20px;
-                color:#000000;
-            }}
-            .th_title
-            {{
-                font-size:16px;
-                color:#000000;
-                text-align: center;
-            }}
-            table td, table th
-            {{
-                border: 1px solid #000000;
-                color: #000000;
-                height: 30px;
-                padding: 5px 10px 5px 5px;
-            }}
-            table thead th
-            {{
-                background-color: #1DCF9F;
-                //color: white;
-                width: 100px;
-            }}
-        </style>
-        </head>
-        <body>
-            <table width="95%" class="table">
-                <caption>
-                    <h2>订单漏斗模型</h2>
-                </caption>
-            </table>
-            <table width="95%" class="table">
-                <thead>
-                    <tr>
-                        <th></th>
-                        <th colspan="6" class="th_title">呼叫前</th>
-                        <th colspan="11" class="th_title">呼叫-应答</th>
-                        <th colspan="7" class="th_title">完单-支付</th>
-                    </tr>
-                    <tr>
-                        <th>日期</th>
-                        <!--呼叫前-->
-                        <th>地址选择需求数</th>
-                        <th>估价需求数</th>
-                        <th>地址选择-估价转化率</th>
-                        <th>地址选择-估价转化率（近4周同期均值）</th>
-                        <th>估价-下单转化率</th>
-                        <th>估价-下单转化率（近4周同期均值）</th>
-                        <!--呼叫-应答-->
-                        <th>下单数</th>
-                        <th>下单数（近4周同期均值）</th>
-                        <th>未播率</th>
-                        <th>应答前取消率</th>
-                        <th>应答前取消率（近4周同期均值）</th>
-                        <th>应答率</th>
-                        <th>应答率（近4周同期均值）</th>
-                        <th>应答后取消率</th>
-                        <th>应答后取消率（近4周同期均值）</th>
-                        <th>司机取消率</th>
-                        <th>司机取消率（近4周同期均值）</th>
-                        <!--完单-支付-->
-                        <th>完单数</th>
-                        <th>完单数（近4周同期均值）</th>
-                        <th>完单率</th>
-                        <th>完单率（近4周同期均值）</th>
-                        <th>支付订单数</th>
-                        <th>单均应付</th>
-                        <th>单均实付</th>
-                    </tr>
-                </thead>
-                {rows}
-            </table>
-        </body>
-        </html>
-        '''
+
         tr_fmt = '''
             <tr style="background-color:#F5F5F5;">{row}</tr>
         '''
@@ -1198,7 +1655,7 @@ def send_funnel_report_email(ds, **kwargs):
             <tr style="background:#FFD8BF">{row}</tr>
         '''
         row_fmt = '''
-                <td>{0}</td>
+                 <td>{0}</td>
                 <!--呼叫前-->
                 <td><!--{2}--></td>
                 <td><!--{3}--></td>
@@ -1227,7 +1684,7 @@ def send_funnel_report_email(ds, **kwargs):
                 <td>{24}</td>
                 <td>{25}</td>
         '''
-        row_html = ''
+
         for data in data_list:
             row = row_fmt.format(*list(data))
             week = data[1]
@@ -1235,10 +1692,64 @@ def send_funnel_report_email(ds, **kwargs):
                 row_html += weekend_tr_fmt.format(row=row)
             else:
                 row_html += tr_fmt.format(row=row)
-        html = html_fmt.format(rows=row_html)
-        # send mail
-        email_subject = 'oride订单漏斗模型_{}'.format(ds)
-        send_email(Variable.get("oride_funnel_report_receivers").split(), email_subject, html, mime_charset='utf-8')
+
+    if len(data_city_list) > 0:
+
+        tr_fmt = '''
+            <tr style="background-color:#F5F5F5;">{row}</tr>
+        '''
+        weekend_tr_fmt = '''
+            <tr style="background:#FFD8BF">{row}</tr>
+        '''
+        row_fmt = '''
+        
+                <td>{0}</td>
+                <td>{2}</td>
+                <!--天气指标-->
+                <td>{3}</td>
+                <td>{4}</td>
+                <!--呼叫前-->
+                <td><!--{5}--></td>
+                <td><!--{6}--></td>
+                <td><!--{7}%--></td>
+                <td><!--{8}%--></td>
+                <td><!--{9}%--></td>
+                <td><!--{10}%--></td>
+                <!--呼叫-应答-->
+                <td>{11}</td>
+                <td>{12}</td>
+                <td>{13}%</td>
+                <td>{14}%</td>
+                <td>{15}%</td>
+                <td>{16}%</td>
+                <td>{17}%</td>
+                <td>{18}%</td>
+                <td>{19}%</td>
+                <td>{20}%</td>
+                <td>{21}%</td>
+                <!--完单-支付-->
+                <td>{22}</td>
+                <td>{23}</td>
+                <td>{24}%</td>
+                <td>{25}%</td>
+                <td>{26}</td>
+                <td>{27}</td>
+                <td>{28}</td>
+        '''
+        for data in data_city_list:
+            row = row_fmt.format(*list(data))
+            week = data[1]
+            if week == '6' or week == '7':
+                city_row_html += weekend_tr_fmt.format(row=row)
+            else:
+                city_row_html += tr_fmt.format(row=row)
+
+    html = html_fmt.format(rows=row_html, city_rows=city_row_html)
+    # send mail
+    email_subject = 'oride订单漏斗模型_{}'.format(ds)
+    send_email(
+        Variable.get("oride_funnel_report_receivers").split()
+        , email_subject, html, mime_charset='utf-8')
     cursor.close()
     return
 
@@ -1382,7 +1893,6 @@ insert_oride_anti_fraud_daily_report = HiveOperator(
         """,
     schema='oride_bi',
     dag=dag)
-
 
 insert_orider_anti_fraud_daily_report_result = HiveOperator(
     task_id='insert_orider_anti_fraud_daily_report_result',
@@ -1529,7 +2039,7 @@ def send_anti_fraud_report_email(ds, **kwargs):
         </body>
         </html>
     '''
-    #注册策略
+    # 注册策略
     sql = '''
         SELECT 
             day, rule_name, behavior_id, user_regist_num, user_regist_rate, user_regist_1dayring, user_regist_7dayring, dt
@@ -1730,7 +2240,7 @@ def send_anti_fraud_report_email(ds, **kwargs):
         html_mid_fmt = ''
     cursor.close()
 
-    #事后策略
+    # 事后策略
     sql = '''
         SELECT 
             day, rule_name, behavior_id, abnormal_driver_num, abnormal_driver_rate, abnormal_driver_1dayring, abnormal_driver_7dayring, 
@@ -1835,8 +2345,10 @@ def send_anti_fraud_report_email(ds, **kwargs):
             for r in rule_set:
                 if not head_complete:
                     html_rule_title += rule_head.get('rule_title_' + str(r), '<th colspan="13">--</th>')
-                    html_rule_head += rule_head.get('rule_head_' + str(r), '<th>-</th><th>-</th><th>-</th><th>-</th><th>-</th><th>-</th><th>-</th><th>-</th><th>-</th><th>-</th><th>-</th><th>-</th><th>-</th>')
-                row_temp += rule_head.get('rule_data_' + d + str(r), '<td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td>')
+                    html_rule_head += rule_head.get('rule_head_' + str(r),
+                                                    '<th>-</th><th>-</th><th>-</th><th>-</th><th>-</th><th>-</th><th>-</th><th>-</th><th>-</th><th>-</th><th>-</th><th>-</th><th>-</th>')
+                row_temp += rule_head.get('rule_data_' + d + str(r),
+                                          '<td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td>')
             row_html += tr_fmt.format(row=row_temp)
             head_complete = True
 
@@ -1856,7 +2368,7 @@ def send_anti_fraud_report_email(ds, **kwargs):
         send_email(
             Variable.get("oride_anti_fraud_report_receivers").split(),
             email_subject,
-            html_mail_fmt.format(html_content_fmt=html_regist_fmt+'<hr>'+html_mid_fmt + '<hr>' + html_after_fmt),
+            html_mail_fmt.format(html_content_fmt=html_regist_fmt + '<hr>' + html_mid_fmt + '<hr>' + html_after_fmt),
             mime_charset='utf-8')
     return
 
@@ -1946,6 +2458,7 @@ create_oride_anti_fraud_daily_report >> insert_oride_anti_fraud_daily_report
 create_oride_global_daily_report >> insert_oride_global_daily_report
 import_opay_event_log >> insert_oride_global_daily_report
 insert_oride_global_daily_report >> send_funnel_report
+insert_oride_order_city_daily_report >> send_funnel_report
 create_oride_global_city_serv_daily_report >> insert_oride_global_city_serv_daily_report
 insert_oride_global_city_serv_daily_report >> send_report
 insert_oride_global_daily_report >> insert_oride_global_city_serv_daily_report
