@@ -1,11 +1,12 @@
 import airflow
 from airflow.hooks.base_hook import BaseHook
 from airflow.operators.bash_operator import BashOperator
-from airflow.hooks.hive_hooks import HiveCliHook,HiveServer2Hook
+from airflow.hooks.hive_hooks import HiveCliHook, HiveServer2Hook
 from airflow.hooks.mysql_hook import MySqlHook
 from airflow.operators.hive_operator import HiveOperator
 from airflow.operators.python_operator import PythonOperator
 from datetime import datetime, timedelta
+from utils.validate_metrics_utils import *
 import logging
 
 args = {
@@ -34,6 +35,9 @@ db_name,table_name,conn_id,prefix_name
 
 table_list = [
     ("oride_data", "data_user", "sqoop_db", "base"),
+    ("oride_data", "data_order_expired", "sqoop_db", "base"),
+    ("oride_data", "driver_device_extend", "sqoop_db", "base"),
+
     ("bi", "weather_per_10min", "mysql_bi", "base"),
     # 协会数据
     # 数据库 opay_spread
@@ -75,10 +79,11 @@ table_list = [
     ("opay_spread", "promoter_user_relat_admin", "opay_spread_mysql", "promoter"),
     ("opay_spread", "promoter_users_device", "opay_spread_mysql", "promoter"),
 ]
-HIVE_DB='oride_dw'
-HIVE_TABLE='ods_sqoop_%s_%s_df'
-UFILE_PATH='ufile://opay-datalake/oride_dw_sqoop/%s/%s'
-ODS_CREATE_TABLE_SQL='''
+
+HIVE_DB = 'oride_dw'
+HIVE_TABLE = 'ods_sqoop_%s_%s_df'
+UFILE_PATH = 'ufile://opay-datalake/oride_dw_sqoop/%s/%s'
+ODS_CREATE_TABLE_SQL = '''
     CREATE EXTERNAL TABLE IF NOT EXISTS {db_name}.`{table_name}`(
         {columns}
     )
@@ -94,16 +99,28 @@ ODS_CREATE_TABLE_SQL='''
       '{ufile_path}';
 '''
 
+# 需要验证的核心业务表
+table_core_list = [
+    ("oride_data", "data_user", "sqoop_db", "base", "create_time")
+]
+
+# 不需要验证的维度表，暂时为null
+table_dim_list = []
+
+# 需要验证的非核心业务表，根据需求陆续添加
+table_not_core_list = []
+
+
 def run_check_table(db_name, table_name, conn_id, hive_table_name, **kwargs):
     # SHOW TABLES in oride_db LIKE 'data_aa'
-    check_sql='SHOW TABLES in %s LIKE \'%s\'' % (HIVE_DB, hive_table_name)
-    hive2_conn=HiveServer2Hook().get_conn()
+    check_sql = 'SHOW TABLES in %s LIKE \'%s\'' % (HIVE_DB, hive_table_name)
+    hive2_conn = HiveServer2Hook().get_conn()
     cursor = hive2_conn.cursor()
     cursor.execute(check_sql)
-    if len(cursor.fetchall())==0:
+    if len(cursor.fetchall()) == 0:
         logging.info('Create Hive Table: %s.%s', HIVE_DB, hive_table_name)
         # get table column
-        column_sql='''
+        column_sql = '''
             SELECT
                 COLUMN_NAME,
                 DATA_TYPE,
@@ -114,29 +131,30 @@ def run_check_table(db_name, table_name, conn_id, hive_table_name, **kwargs):
             WHERE
                 table_schema='{db_name}' and table_name='{table_name}'
         '''.format(db_name=db_name, table_name=table_name)
-        mysql_hook=MySqlHook(conn_id)
+        mysql_hook = MySqlHook(conn_id)
         mysql_conn = mysql_hook.get_conn()
         mysql_cursor = mysql_conn.cursor()
         mysql_cursor.execute(column_sql)
         results = mysql_cursor.fetchall()
-        rows=[]
+        rows = []
         for result in results:
-            if result[0]=='dt':
-                col_name='_dt'
+            if result[0] == 'dt':
+                col_name = '_dt'
             else:
-                col_name=result[0]
-            if result[1]=='timestamp' or result[1]=='varchar' or result[1]=='char' or result[1]=='text' or result[1]=='datetime':
-                data_type='string'
-            elif result[1]=='decimal':
-                data_type=result[1]+"("+str(result[2]) + "," + str(result[3])+")"
+                col_name = result[0]
+            if result[1] == 'timestamp' or result[1] == 'varchar' or result[1] == 'char' or result[1] == 'text' or \
+                    result[1] == 'datetime':
+                data_type = 'string'
+            elif result[1] == 'decimal':
+                data_type = result[1] + "(" + str(result[2]) + "," + str(result[3]) + ")"
             else:
-                data_type=result[1]
+                data_type = result[1]
             rows.append("`%s` %s comment '%s'" % (col_name, data_type, result[4]))
         mysql_conn.close()
 
         # hive create table
         hive_hook = HiveCliHook()
-        sql=ODS_CREATE_TABLE_SQL.format(
+        sql = ODS_CREATE_TABLE_SQL.format(
             db_name=HIVE_DB,
             table_name=hive_table_name,
             columns=",\n".join(rows),
@@ -146,12 +164,13 @@ def run_check_table(db_name, table_name, conn_id, hive_table_name, **kwargs):
         hive_hook.run_cli(sql)
     return
 
-conn_conf_dict={}
+
+conn_conf_dict = {}
 for db_name, table_name, conn_id, prefix_name in table_list:
     if conn_id not in conn_conf_dict:
-        conn_conf_dict[conn_id]=BaseHook.get_connection(conn_id)
+        conn_conf_dict[conn_id] = BaseHook.get_connection(conn_id)
 
-    hive_table_name=HIVE_TABLE % (prefix_name, table_name)
+    hive_table_name = HIVE_TABLE % (prefix_name, table_name)
     # sqoop import
     import_table = BashOperator(
         task_id='import_table_{}'.format(hive_table_name),
@@ -181,15 +200,15 @@ for db_name, table_name, conn_id, prefix_name in table_list:
     )
 
     # check table
-    check_table=PythonOperator(
+    check_table = PythonOperator(
         task_id='check_table_{}'.format(hive_table_name),
         python_callable=run_check_table,
         provide_context=True,
         op_kwargs={
             'db_name': db_name,
-            'table_name':table_name,
-            'conn_id':conn_id,
-            'hive_table_name':hive_table_name
+            'table_name': table_name,
+            'conn_id': conn_id,
+            'hive_table_name': hive_table_name
         },
         dag=dag
     )
@@ -201,4 +220,19 @@ for db_name, table_name, conn_id, prefix_name in table_list:
             '''.format(table=hive_table_name),
         schema=HIVE_DB,
         dag=dag)
+
+    validate_all_data = PythonOperator(
+        task_id='validate_data_{}'.format(table_name),
+        python_callable=validata_data,
+        provide_context=True,
+        op_kwargs={
+            'db': HIVE_DB,
+            'table_name': table_name,
+            'table_format': HIVE_TABLE,
+            'table_core_list': table_core_list,
+            'table_not_core_list': table_not_core_list
+        },
+        dag=dag
+    )
+
     import_table >> check_table >> add_partitions
