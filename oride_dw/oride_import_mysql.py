@@ -101,7 +101,7 @@ ODS_CREATE_TABLE_SQL = '''
 
 # 需要验证的核心业务表
 table_core_list = [
-    ("oride_data", "data_user", "sqoop_db", "base", "create_time")
+    # ("oride_data", "data_order", "sqoop_db", "base", "create_time")
 ]
 
 # 不需要验证的维度表，暂时为null
