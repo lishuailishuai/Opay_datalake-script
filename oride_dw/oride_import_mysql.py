@@ -36,7 +36,7 @@ db_name,table_name,conn_id,prefix_name
 table_list = [
     ("oride_data", "data_user", "sqoop_db", "base"),
     ("oride_data", "data_order_expired", "sqoop_db", "base"),
-    ("oride_data", "driver_device_extend", "sqoop_db", "base"),
+    ("oride_data", "data_device_extend", "sqoop_db", "base"),
 
     ("bi", "weather_per_10min", "mysql_bi", "base"),
     # 协会数据
