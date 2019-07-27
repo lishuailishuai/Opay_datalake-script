@@ -30,14 +30,14 @@ def validata_data(db, table_name, table_format, table_core_list, table_not_core_
     flag = True
     time_column = ''
 
-    for db_name, table_name, conn_id, prefix_name, column_name in table_core_list:
-        if table_name == table_format % (prefix_name, table_name):
+    for db_name, validate_table_name, conn_id, prefix_name, column_name in table_core_list:
+        if table_name == table_format % (prefix_name, validate_table_name):
             time_column = column_name
             flag = False
             break
 
-    for db_name, table_name, conn_id, prefix_name, column_name in table_not_core_list:
-        if table_name == table_format % (prefix_name, table_name):
+    for db_name, validate_table_name, conn_id, prefix_name, column_name in table_not_core_list:
+        if table_name == table_format % (prefix_name, validate_table_name):
             time_column = column_name
             flag = False
             break
