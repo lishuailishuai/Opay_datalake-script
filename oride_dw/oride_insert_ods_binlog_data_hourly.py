@@ -4,7 +4,7 @@ from airflow.operators.hive_operator import HiveOperator
 from airflow.hooks.hive_hooks import HiveCliHook,HiveServer2Hook
 from airflow.models import Variable
 from airflow.operators.python_operator import PythonOperator
-from airflow.operators.web_hdfs_plugin import WebHdfsSensor
+from airflow.sensors import WebHdfsSensor
 import logging
 
 args = {

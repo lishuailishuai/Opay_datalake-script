@@ -43,6 +43,7 @@ add_partitions = HiveOperator(
             ALTER TABLE server_event ADD IF NOT EXISTS PARTITION (dt = '{{ ds }}', hour = '{{ execution_date.strftime("%H") }}');
             ALTER TABLE server_magic ADD IF NOT EXISTS PARTITION (dt = '{{ ds }}', hour = '{{ execution_date.strftime("%H") }}');
             ALTER TABLE anti_fraud ADD IF NOT EXISTS PARTITION (dt = '{{ ds }}', hour = '{{ execution_date.strftime("%H") }}');
+            ALTER TABLE h5_event ADD IF NOT EXISTS PARTITION (dt = '{{ ds }}', hour = '{{ execution_date.strftime("%H") }}');
         """,
     schema='oride_source',
     dag=dag)
