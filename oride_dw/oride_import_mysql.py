@@ -222,12 +222,12 @@ for db_name, table_name, conn_id, prefix_name in table_list:
         dag=dag)
 
     validate_all_data = PythonOperator(
-        task_id='validate_data_{}'.format(table_name),
+        task_id='validate_data_{}'.format(hive_table_name),
         python_callable=validata_data,
         provide_context=True,
         op_kwargs={
             'db': HIVE_DB,
-            'table_name': table_name,
+            'table_name': hive_table_name,
             'table_format': HIVE_TABLE,
             'table_core_list': table_core_list,
             'table_not_core_list': table_not_core_list
