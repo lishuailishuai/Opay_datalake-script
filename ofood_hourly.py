@@ -177,6 +177,53 @@ refresh_impala = ImpalaOperator(
     dag=dag
 )
 
+
+create_ods_log_client_event_hi = HiveOperator(
+    task_id='create_ods_log_client_event_hi',
+    hql='''
+        CREATE EXTERNAL TABLE if not exists ods_log_client_event_hi (
+            user_id bigint comment'用户ID',
+            user_number string comment '用户no',
+            client_timestamp int comment '客户端时间戳',
+            platform string comment '平台ios/android',
+            os_version string comment '系统版本',
+            app_name string comment'应用名',
+            app_version string comment '应用版本',
+            locale string comment '本地语言',
+            device_id string comment '设备号',
+            device_screen string comment '设备分辨率',
+            device_model string comment '设备类型',
+            device_manufacturer string comment '设备品牌',
+            is_root string comment '是否root',
+            event_name string comment '事件名',
+            page string comment 'page',
+            event_values string comment '事件内容'
+        )
+        PARTITIONED BY (`dt` string, `hour` string) 
+        ROW FORMAT SERDE 'org.openx.data.jsonserde.JsonSerDe' with SERDEPROPERTIES("ignore.malformed.json"="true")
+        LOCATION 'ufile://opay-datalake/ofood/client'
+    ''',
+    schema='ofood_dw',
+    dag=dag)
+
+ods_log_client_event_hi_partition = HiveOperator(
+    task_id='ods_log_client_event_hi_partition',
+    hql="""
+            ALTER TABLE ods_log_client_event_hi ADD IF NOT EXISTS PARTITION (dt = '{{ ds }}', hour = '{{ execution_date.strftime("%H") }}')
+        """,
+    schema='ofood_dw',
+    dag=dag)
+
+refresh_ods_log_client_event_hi = ImpalaOperator(
+    task_id='refresh_ods_log_client_event_hi',
+    hql="""\
+        REFRESH ofood_dw.ods_log_client_event_hi
+    """,
+    schema='ofood_dw',
+    dag=dag)
+
+
+
 create_ofood_dau >> insert_ofood_dau
 create_ofood_dnu >> insert_ofood_dnu
 create_ofood_order_sum >> insert_ofood_order_sum
@@ -186,3 +233,5 @@ user_orders_add_partitions >> insert_ofood_order_sum
 insert_ofood_dau >> refresh_impala
 insert_ofood_dnu >> refresh_impala
 insert_ofood_order_sum >> refresh_impala
+
+create_ods_log_client_event_hi >> ods_log_client_event_hi_partition
