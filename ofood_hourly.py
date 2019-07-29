@@ -214,15 +214,6 @@ ods_log_client_event_hi_partition = HiveOperator(
     schema='ofood_dw',
     dag=dag)
 
-refresh_ods_log_client_event_hi = ImpalaOperator(
-    task_id='refresh_ods_log_client_event_hi',
-    hql="""\
-        REFRESH ofood_dw.ods_log_client_event_hi
-    """,
-    schema='ofood_dw',
-    dag=dag)
-
-
 
 create_ofood_dau >> insert_ofood_dau
 create_ofood_dnu >> insert_ofood_dnu
