@@ -343,14 +343,12 @@ insert_oride_global_daily_report = HiveOperator(
         ),
         -- push 数据
         push_data as (
-            SELECT
+            select 
                 dt,
-                count(distinct get_json_object(event_values, '$.order_id')) as push_num
-            FROM
-                oride_source.server_magic
-            WHERE
-                event_name='dispatch_push_driver' and dt='{{ ds }}'
-            GROUP BY dt
+                count(distinct(order_id)) push_num
+            from oride_bi.server_magic_push_detail
+            where dt = '{{ ds }}' and success = 1
+            group by dt
         )
         INSERT OVERWRITE TABLE oride_global_daily_report PARTITION (dt = '{{ ds }}')
         SELECT
@@ -642,15 +640,13 @@ insert_oride_order_city_daily_report = HiveOperator(
 
         -- push 数据
         push_data as (
-            SELECT
+            select 
                 dt,
-                get_json_object(event_values, '$.city_id') city_id, 
-                count(distinct get_json_object(event_values, '$.order_id')) as push_num
-            FROM
-                oride_source.server_magic
-            WHERE
-                event_name='dispatch_push_driver' and dt='{{ ds }}'
-            GROUP BY dt,get_json_object(event_values, '$.city_id')
+                city_id city_id,
+                count(distinct(order_id)) push_num
+            from oride_bi.server_magic_push_detail
+            where dt = '{{ ds }}' and success = 1
+            group by dt,city_id
         )
 
         INSERT OVERWRITE TABLE oride_order_city_daily_report PARTITION (dt = '{{ ds }}')
@@ -1476,7 +1472,7 @@ def send_funnel_report_email(ds, **kwargs):
         FROM
            oride_bi.oride_order_city_daily_report
         WHERE
-            dt <= '{dt}'
+            dt = '{dt}'
         ORDER BY dt DESC
         LIMIT 14
     '''.format(dt=ds)
