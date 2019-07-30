@@ -25,6 +25,7 @@ add_dw_partitions = HiveOperator(
     hql="""
             ALTER TABLE ods_log_user_track_data_hi ADD IF NOT EXISTS PARTITION (dt = '{{ ds }}', hour = '{{ execution_date.strftime("%H") }}');
             ALTER TABLE ods_log_driver_track_data_hi ADD IF NOT EXISTS PARTITION (dt = '{{ ds }}', hour = '{{ execution_date.strftime("%H") }}');
+            
         """,
     schema='oride_dw',
     dag=dag)
@@ -44,6 +45,7 @@ add_partitions = HiveOperator(
             ALTER TABLE server_magic ADD IF NOT EXISTS PARTITION (dt = '{{ ds }}', hour = '{{ execution_date.strftime("%H") }}');
             ALTER TABLE anti_fraud ADD IF NOT EXISTS PARTITION (dt = '{{ ds }}', hour = '{{ execution_date.strftime("%H") }}');
             ALTER TABLE h5_event ADD IF NOT EXISTS PARTITION (dt = '{{ ds }}', hour = '{{ execution_date.strftime("%H") }}');
+            ALTER TABLE log_anti_ofood_oride_fraud ADD IF NOT EXISTS PARTITION (dt = '{{ ds }}', hour = '{{ execution_date.strftime("%H") }}');
         """,
     schema='oride_source',
     dag=dag)
