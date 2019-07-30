@@ -45,6 +45,9 @@ table_list = [
     ("food_operapay_co", "jh_shop", "ofood_db", "base"),
     ("food_operapay_co", "jh_waimai", "ofood_db", "base"),
 
+    # 地推相关数据
+    ("food_crm", "bd_bd_fence", "ofood_db", "bd"),
+    ("food_crm", "bd_admin_users", "ofood_db", "bd"),
 ]
 HIVE_DB = 'ofood_dw'
 HIVE_TABLE = 'ods_sqoop_%s_%s_df'
