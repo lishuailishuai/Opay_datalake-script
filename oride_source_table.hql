@@ -193,3 +193,40 @@ ROW FORMAT SERDE
 with SERDEPROPERTIES("ignore.malformed.json"="true")
 LOCATION 'ufile://opay-datalake/oride/h5_event'
 
+CREATE EXTERNAL TABLE oride_dw.`ods_log_oride_driver_skyeye_di`(
+    `ver` int,
+    `driver_id` int,
+    `tag_ids` Array<string>
+)
+PARTITIONED BY (
+    `dt` string)
+ROW FORMAT SERDE
+   'org.openx.data.jsonserde.JsonSerDe'
+with SERDEPROPERTIES("ignore.malformed.json"="true")
+LOCATION 'ufile://opay-datalake/oride-research/tags/driver_tags'
+
+
+CREATE EXTERNAL TABLE oride_dw.`ods_log_oride_order_skyeye_di`(
+    `ver` int,
+    `order_id` int,
+    `tag_ids` Array<string>
+)
+PARTITIONED BY (
+    `dt` string)
+ROW FORMAT SERDE
+   'org.openx.data.jsonserde.JsonSerDe'
+with SERDEPROPERTIES("ignore.malformed.json"="true")
+LOCATION 'ufile://opay-datalake/oride-research/tags/order_tags'
+
+CREATE EXTERNAL TABLE oride_dw.`ods_log_oride_passenge_skyeye_di`(
+    `ver` int,
+    `passenge_id` int,
+    `tag_ids` Array<string>
+)
+PARTITIONED BY (
+    `dt` string)
+ROW FORMAT SERDE
+   'org.openx.data.jsonserde.JsonSerDe'
+with SERDEPROPERTIES("ignore.malformed.json"="true")
+LOCATION 'ufile://opay-datalake/oride-research/tags/passenge_tags'
+
