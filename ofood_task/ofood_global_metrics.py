@@ -306,7 +306,7 @@ def send_report_email(ds_nodash, ds, **kwargs):
            <body>
                <table width="100%" class="table">
                    <caption>
-                       <h3></h3>
+                       <h3>ofood全局运营指标</h3>
                    </caption>
                </table>
                <table width="100%" class="table">
