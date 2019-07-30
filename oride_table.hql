@@ -819,7 +819,10 @@ CREATE EXTERNAL TABLE `data_order_payment`(
   `country` string,
   `status` int,
   `modify_time` bigint,
-  `create_time` bigint
+  `create_time` bigint,
+  `serv_type` int,
+  `updated_at` string,
+  `pay_type` int
 )
 PARTITIONED BY (
   `dt` string)
