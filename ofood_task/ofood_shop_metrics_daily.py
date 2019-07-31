@@ -162,7 +162,7 @@ def send_csv_file(ds, ds_nodash, **kwargs):
         f_csv.writerows(rows)
 
     # send mail
-    email_to = Variable.get("oride_global_daily_report_receivers").split()
+    email_to = Variable.get("ofood_metrics_report_receivers").split()
     email_subject = 'ofood餐厅维度每日数据_{dt}'.format(dt=ds)
     email_body = 'ofood餐厅维度每日数据'
     send_email(email_to, email_subject, email_body, [file_name], mime_charset='utf-8')
