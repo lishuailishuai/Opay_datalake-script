@@ -214,25 +214,18 @@ insert_shop_metrics = HiveOperator(
     dag=dag)
 
 
+create_crm_data = BashOperator(
+    task_id='create_crm_data',
+    bash_command="""
+        dt="{{ ds }}"
 
-
-
-def create_crm_data(ds, ds_nodash, **kwargs):
-
-
-    sql =  """
-        
-        create temporary function isInArea as 'com.oride.udf.IsInArea' 
-            USING JAR 'hdfs://node4.datalake.opay.com:8020/tmp/udf-1.0-SNAPSHOT-jar-with-dependencies.jar'
-    """
-
-    cursor.execute(sql)
-
-    sql = """
+        crm_sql="
+            create temporary function isInArea as 'com.oride.udf.IsInArea' 
+            USING JAR 'hdfs://node4.datalake.opay.com:8020/tmp/udf-1.0-SNAPSHOT-jar-with-dependencies.jar';
             
-            insert overwrite table ofood_bi.ofood_area_shop_metrics_info partition(dt = '{dt}')
+            insert overwrite table ofood_bi.ofood_area_shop_metrics_info partition(dt = '${dt}')
             select 
-            t.username,
+            t.name,
             t.area_name,
             nvl(count(if(s.is_open = 1,s.shop_id,null)),0) total_number_of_merchants,
             nvl(count(if(s.is_first_placed_order = 1,s.shop_id,null)),0) total_number_of_new_merchants,
@@ -255,31 +248,23 @@ def create_crm_data(ds, ds_nodash, **kwargs):
             (
                 select 
                 a.dt,
-                a.username,
+                a.name,
                 b.area_name,
                 b.points
                 from ofood_dw.ods_sqoop_bd_bd_bd_fence_df b 
-                join ofood_dw. ods_sqoop_bd_bd_admin_users_df a on a.dt = '{dt}' and b.uid = a.id
-                where b.dt = '{dt}'
+                join ofood_dw. ods_sqoop_bd_bd_admin_users_df a on a.dt = '${dt}' and b.uid = a.id
+                where b.dt = '${dt}'
             ) t 
             left join ofood_bi.ofood_order_shop_metrics_report s on s.dt = t.dt 
             where isInArea(t.points,s.lat/1000000,s.lng/1000000) = 1
-            group by t.dt,t.username,t.area_name
-            
-    
-    
-    """.format(dt=ds)
-
-    cursor.execute(sql)
-
-
-create_crm_data = PythonOperator(
-    task_id='create_crm_data',
-    python_callable=create_crm_data,
-    provide_context=True,
-    dag=dag
+            group by t.dt,t.name,t.area_name
+            ;
+"
+        echo ${crm_sql}
+        hive -e "${crm_sql}" 
+    """,
+    dag=dag,
 )
-
 
 
 insert_crm_metrics = HiveToMySqlTransfer(
@@ -287,6 +272,7 @@ insert_crm_metrics = HiveToMySqlTransfer(
     sql=""" 
         select 
         null,
+        dt,
         username,
         area_name,
         total_number_of_merchants,
