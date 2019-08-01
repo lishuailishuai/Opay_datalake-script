@@ -225,8 +225,11 @@ create_crm_data = BashOperator(
             
             insert overwrite table ofood_bi.ofood_area_shop_metrics_info partition(dt = '${dt}')
             select 
+            t.bd_id,
             t.name,
             t.area_name,
+            s.shop_id,
+            s.title,
             nvl(count(if(s.is_open = 1,s.shop_id,null)),0) total_number_of_merchants,
             nvl(count(if(s.is_first_placed_order = 1,s.shop_id,null)),0) total_number_of_new_merchants,
             nvl(count(if(s.number_of_valid_order > 0,s.shop_id,null)),0) trade_number_of_merchants,
@@ -248,16 +251,17 @@ create_crm_data = BashOperator(
             (
                 select 
                 a.dt,
+                a.id bd_id,
                 a.name,
                 b.area_name,
                 b.points
                 from ofood_dw.ods_sqoop_bd_bd_bd_fence_df b 
-                join ofood_dw. ods_sqoop_bd_bd_admin_users_df a on a.dt = '${dt}' and b.uid = a.id
+                join ofood_dw. ods_sqoop_bd_bd_admin_users_df a on a.dt = '${dt}' and b.uid = a.id and job_id = 4
                 where b.dt = '${dt}'
             ) t 
             left join ofood_bi.ofood_order_shop_metrics_report s on s.dt = t.dt 
             where isInArea(t.points,s.lat/1000000,s.lng/1000000) = 1
-            group by t.dt,t.name,t.area_name
+            group by t.dt,t.bd_id,t.name,t.area_name,s.shop_id,s.title
             ;
 "
         echo ${crm_sql}
@@ -275,6 +279,8 @@ insert_crm_metrics = HiveToMySqlTransfer(
         dt,
         username,
         area_name,
+        shop_id,
+        title,
         total_number_of_merchants,
         total_number_of_new_merchants,
         trade_number_of_merchants,
