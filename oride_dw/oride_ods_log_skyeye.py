@@ -16,7 +16,7 @@ args = {
 
 dag = airflow.DAG(
     'oride_ods_log_skyeye',
-    schedule_interval="00 08 * * *",
+    schedule_interval="00 04 * * *",
     default_args=args)
 
 '''
