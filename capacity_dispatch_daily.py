@@ -12,6 +12,7 @@ from utils.connection_helper import get_hive_cursor
 from plugins.comwx import ComwxApi
 from utils.validate_metrics_utils import *
 from constant.metrics_constant import *
+from airflow.sensors.hive_partition_sensor import HivePartitionSensor
 
 comwx = ComwxApi('wwd26d45f97ea74ad2', 'BLE_v25zCmnZaFUgum93j3zVBDK-DjtRkLisI_Wns4g', '1000011')
 
@@ -30,25 +31,40 @@ dag = airflow.DAG(
 
 cursor = get_hive_cursor()
 
-'''
-校验分区代码
-'''
 
-validate_partition_data = PythonOperator(
-    task_id='validate_partition_data',
-    python_callable=validate_partition,
-    provide_context=True,
-    op_kwargs={
-        # 验证table
-        "table_names":
-            ['oride_bi.server_magic_dispatch_detail',
-             'oride_db.data_order',
-             'oride_bi.server_magic_filter_detail',
-             'oride_bi.server_magic_push_detail'
-             ],
-        # 任务名称
-        "task_name": "调度算法效果监控指标"
-    },
+data_order_validate_task = HivePartitionSensor(
+    task_id="data_order_validate_task",
+    table="data_order",
+    partition="dt='{{ds}}'",
+    schema="oride_db",
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
+dispatch_validate_task = HivePartitionSensor(
+    task_id="dispatch_validate_task",
+    table="server_magic_dispatch_detail",
+    partition="dt='{{ds}}'",
+    schema="oride_bi",
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
+filter_validate_task = HivePartitionSensor(
+    task_id="filter_validate_task",
+    table="server_magic_filter_detail",
+    partition="dt='{{ds}}'",
+    schema="oride_bi",
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
+push_validate_task = HivePartitionSensor(
+    task_id="push_validate_task",
+    table="server_magic_push_detail",
+    partition="dt='{{ds}}'",
+    schema="oride_bi",
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
 
@@ -760,7 +776,8 @@ def send_report_email(ds_nodash, ds, **kwargs):
     # send mail
     email_subject = '调度算法效果监控指标_{}'.format(ds)
     send_email(
-        Variable.get("oride_metrics_report_receivers").split()
+        # Variable.get("oride_metrics_report_receivers").split()
+        ['nan.li@opay-inc.com']
         , email_subject, html, mime_charset='utf-8')
     cursor.close()
     return
@@ -773,4 +790,10 @@ send_report = PythonOperator(
     dag=dag
 )
 
-validate_partition_data >> insert_report_metrics >> insert_order_metrics >> send_report
+data_order_validate_task >> insert_order_metrics
+dispatch_validate_task >> insert_report_metrics
+filter_validate_task >> insert_report_metrics
+push_validate_task >> insert_report_metrics
+insert_report_metrics >> send_report
+insert_order_metrics >> send_report
+
