@@ -12,6 +12,8 @@ import pandas as pd
 import io
 import requests
 import os
+from airflow.sensors.hive_partition_sensor import HivePartitionSensor
+from utils.validate_metrics_utils import *
 
 args = {
     'owner': 'root',
@@ -19,7 +21,7 @@ args = {
     'depends_on_past': False,
     'retries': 1,
     'retry_delay': timedelta(minutes=5),
-    'email': ['bigdata@opay-inc.com'],
+    'email': ['bigdata_dw@opay-inc.com'],
     'email_on_failure': True,
     'email_on_retry': False,
 }
@@ -28,6 +30,176 @@ dag = airflow.DAG(
     'oride_global_daily_report',
     schedule_interval="30 01 * * *",
     default_args=args)
+
+'''
+校验分区代码
+'''
+
+validate_global_partition_data = PythonOperator(
+    task_id='validate_global_partition_data',
+    python_callable=validate_partition,
+    provide_context=True,
+    op_kwargs={
+        # 验证table
+        "table_names":
+            ['oride_db.data_order',
+             'oride_db.data_driver_extend',
+             'oride_db.data_user_extend',
+             'oride_db.data_order_payment',
+             'oride_source.server_magic',
+             'oride_bi.server_magic_push_detail',
+             'oride_bi.oride_driver_timerange'
+             ],
+        # 任务名称
+        "task_name": "oride全局运营报表"
+    },
+    dag=dag
+)
+
+validate_anti_fraud_partition_data = PythonOperator(
+    task_id='validate_anti_fraud_partition_data',
+    python_callable=validate_partition,
+    provide_context=True,
+    op_kwargs={
+        # 验证table
+        "table_names":
+            ['oride_db.data_anti_fraud_strategy',
+             'oride_source.anti_fraud',
+             'oride_db.data_abnormal_order'
+             ],
+        # 任务名称
+        "task_name": "oride反作弊报表"
+    },
+    dag=dag
+)
+
+
+validate_city_and_weather_partition_data = PythonOperator(
+    task_id='validate_city_and_weather_partition_data',
+    python_callable=validate_partition,
+    provide_context=True,
+    op_kwargs={
+        # 验证table
+        "table_names":
+            ['oride_dw.ods_sqoop_base_weather_per_10min_df',
+             'oride_db.data_city_conf',
+             ],
+        # 任务名称
+        "task_name": "oride漏斗模型分城市天气数据报表"
+    },
+    dag=dag
+)
+
+
+data_driver_extend_validate_task = HivePartitionSensor(
+    task_id="data_driver_extend_validate_task",
+    table="data_driver_extend",
+    partition="dt='{{ds}}'",
+    schema="oride_db",
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
+data_order_validate_task = HivePartitionSensor(
+    task_id="data_order_validate_task",
+    table="data_order",
+    partition="dt='{{ds}}'",
+    schema="oride_db",
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
+data_user_extend_validate_task = HivePartitionSensor(
+    task_id="data_user_extend_validate_task",
+    table="data_user_extend",
+    partition="dt='{{ds}}'",
+    schema="oride_db",
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
+data_order_payment_validate_task = HivePartitionSensor(
+    task_id="data_order_payment_validate_task",
+    table="data_order_payment",
+    partition="dt='{{ds}}'",
+    schema="oride_db",
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
+server_magic_push_detail_validate_task = HivePartitionSensor(
+    task_id="server_magic_push_detail_validate_task",
+    table="server_magic_push_detail",
+    partition="dt='{{ds}}'",
+    schema="oride_bi",
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
+oride_driver_timerange_validate_task = HivePartitionSensor(
+    task_id="oride_driver_timerange_validate_task",
+    table="oride_driver_timerange",
+    partition="dt='{{ds}}'",
+    schema="oride_bi",
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
+server_magic_validate_task = HivePartitionSensor(
+    task_id="server_magic_validate_task",
+    table="server_magic",
+    partition="dt='{{ds}}'",
+    schema="oride_source",
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
+anti_fraud_validate_task = HivePartitionSensor(
+    task_id="anti_fraud_validate_task",
+    table="anti_fraud",
+    partition="dt='{{ds}}'",
+    schema="oride_source",
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
+data_anti_fraud_strategy_validate_task = HivePartitionSensor(
+    task_id="server_magic_validate_task",
+    table="data_anti_fraud_strategy",
+    partition="dt='{{ds}}'",
+    schema="oride_db",
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
+data_abnormal_order_validate_task = HivePartitionSensor(
+    task_id="data_abnormal_order_validate_task",
+    table="data_abnormal_order",
+    partition="dt='{{ds}}'",
+    schema="oride_db",
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
+
+weather_validate_task = HivePartitionSensor(
+    task_id="weather_validate_task",
+    table="ods_sqoop_base_weather_per_10min_df",
+    partition="dt='{{ds}}'",
+    schema="oride_dw",
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
+
+data_city_conf_validate_task = HivePartitionSensor(
+    task_id="data_city_conf_validate_task",
+    table="data_city_conf",
+    partition="dt='{{ds}}'",
+    schema="oride_db",
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
 
 
 def import_opay_event(ds, **kwargs):
@@ -2448,13 +2620,35 @@ create_oride_driver_timerange = HiveOperator(
     schema='oride_bi',
     dag=dag)
 
-create_oride_driver_timerange >> import_driver_online_time >> insert_oride_global_daily_report
-insert_oride_global_daily_report >> insert_oride_anti_fraud_daily_report >> insert_orider_anti_fraud_daily_report_result >> send_anti_fraud_report
-create_oride_anti_fraud_daily_report >> insert_oride_anti_fraud_daily_report
-create_oride_global_daily_report >> insert_oride_global_daily_report
+create_oride_driver_timerange >> import_driver_online_time >> validate_global_partition_data
+create_oride_global_daily_report >> validate_global_partition_data
 import_opay_event_log >> insert_oride_global_daily_report
+validate_global_partition_data >> data_driver_extend_validate_task >> insert_oride_global_daily_report
+validate_global_partition_data >> data_order_validate_task >> insert_oride_global_daily_report
+validate_global_partition_data >> data_user_extend_validate_task >> insert_oride_global_daily_report
+validate_global_partition_data >> data_order_payment_validate_task >> insert_oride_global_daily_report
+validate_global_partition_data >> server_magic_push_detail_validate_task >> insert_oride_global_daily_report
+validate_global_partition_data >> oride_driver_timerange_validate_task >> insert_oride_global_daily_report
+validate_global_partition_data >> server_magic_validate_task >> insert_oride_global_daily_report
 insert_oride_global_daily_report >> send_funnel_report
-insert_oride_order_city_daily_report >> send_funnel_report
+
+
+insert_oride_global_daily_report >> validate_anti_fraud_partition_data
+create_oride_anti_fraud_daily_report >> validate_anti_fraud_partition_data
+validate_anti_fraud_partition_data >> anti_fraud_validate_task >> insert_oride_anti_fraud_daily_report
+validate_anti_fraud_partition_data >> data_anti_fraud_strategy_validate_task >> insert_oride_anti_fraud_daily_report
+validate_anti_fraud_partition_data >> data_abnormal_order_validate_task >> insert_oride_anti_fraud_daily_report
+insert_oride_anti_fraud_daily_report >> insert_orider_anti_fraud_daily_report_result >> send_anti_fraud_report
+
+
+
 create_oride_global_city_serv_daily_report >> insert_oride_global_city_serv_daily_report
-insert_oride_global_city_serv_daily_report >> send_report
 insert_oride_global_daily_report >> insert_oride_global_city_serv_daily_report
+insert_oride_global_city_serv_daily_report >> send_report
+
+validate_city_and_weather_partition_data >> weather_validate_task >> insert_oride_order_city_daily_report
+validate_city_and_weather_partition_data >> data_city_conf_validate_task >> insert_oride_order_city_daily_report
+insert_oride_order_city_daily_report >> send_funnel_report
+
+
+

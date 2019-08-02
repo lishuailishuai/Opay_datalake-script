@@ -7,6 +7,8 @@ from airflow.utils.email import send_email
 import logging
 from airflow.models import Variable
 from utils.connection_helper import get_hive_cursor
+from airflow.sensors.hive_partition_sensor import HivePartitionSensor
+from utils.validate_metrics_utils import *
 
 args = {
     'owner': 'linan',
@@ -14,6 +16,7 @@ args = {
     'depends_on_past': False,
     'retries': 1,
     'retry_delay': timedelta(minutes=5),
+    'email': ['bigdata_dw@opay-inc.com'],
 }
 
 dag = airflow.DAG(
@@ -26,6 +29,94 @@ city_list = [
     'lagos',
     'Ibadan'
 ]
+
+
+'''
+校验分区代码
+'''
+
+validate_partition_data = PythonOperator(
+    task_id='validate_partition_data',
+    python_callable=validate_partition,
+    provide_context=True,
+    op_kwargs={
+        # 验证table
+        "table_names":
+            ['oride_db.data_order',
+             'oride_db.data_driver_extend',
+             'oride_db.data_city_conf',
+             'oride_db.data_order_payment',
+             'oride_bi.server_magic_push_detail',
+             'oride_bi.oride_driver_timerange'
+             ],
+        # 任务名称
+        "task_name": "司机运力日报-快车"
+    },
+    dag=dag
+)
+
+
+data_driver_extend_validate_task = HivePartitionSensor(
+    task_id="data_driver_extend_validate_task",
+    table="data_driver_extend",
+    partition="dt='{{ds}}'",
+    schema="oride_db",
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
+
+data_order_validate_task = HivePartitionSensor(
+    task_id="data_order_validate_task",
+    table="data_order",
+    partition="dt='{{ds}}'",
+    schema="oride_db",
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
+
+data_city_conf_validate_task = HivePartitionSensor(
+    task_id="data_city_conf_validate_task",
+    table="data_city_conf",
+    partition="dt='{{ds}}'",
+    schema="oride_db",
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
+data_order_payment_validate_task = HivePartitionSensor(
+    task_id="data_order_payment_validate_task",
+    table="data_order_payment",
+    partition="dt='{{ds}}'",
+    schema="oride_db",
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
+
+server_magic_push_detail_validate_task = HivePartitionSensor(
+    task_id="server_magic_push_detail_validate_task",
+    table="server_magic_push_detail",
+    partition="dt='{{ds}}'",
+    schema="oride_bi",
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
+
+oride_driver_timerange_validate_task = HivePartitionSensor(
+    task_id="oride_driver_timerange_validate_task",
+    table="oride_driver_timerange",
+    partition="dt='{{ds}}'",
+    schema="oride_bi",
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
+
+
+
 
 insert_driver_metrics = HiveOperator(
     task_id='insert_driver_metrics',
@@ -442,4 +533,8 @@ send_report = PythonOperator(
     dag=dag
 )
 
+validate_partition_data >> data_driver_extend_validate_task >> insert_driver_metrics
+validate_partition_data >> data_city_conf_validate_task >> insert_driver_metrics
+validate_partition_data >> data_order_payment_validate_task >> insert_driver_metrics
+validate_partition_data >> data_order_validate_task >> insert_driver_metrics
 insert_driver_metrics >> send_report

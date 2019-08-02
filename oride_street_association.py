@@ -9,6 +9,8 @@ import csv
 import logging
 import codecs
 from airflow.models import Variable
+from airflow.sensors.hive_partition_sensor import HivePartitionSensor
+from utils.validate_metrics_utils import *
 
 args = {
     'owner': 'zhenqian.zhang',
@@ -25,6 +27,102 @@ dag = airflow.DAG(
     'oride_street_association',
     schedule_interval="30 02 * * *",
     default_args=args)
+
+'''
+校验分区代码
+'''
+
+validate_partition_data = PythonOperator(
+    task_id='validate_partition_data',
+    python_callable=validate_partition,
+    provide_context=True,
+    op_kwargs={
+        # 验证table
+        "table_names":
+            ['oride_dw.ods_sqoop_mass_driver_group_df',
+             'oride_dw.ods_sqoop_mass_rider_signups_df',
+             'oride_db.data_driver_extend',
+             'oride_db.data_order',
+             'oride_db.data_order_payment',
+             'oride_db.data_driver_comment',
+             ],
+        # 任务名称
+        "task_name": "快车司机协会数据"
+    },
+    dag=dag
+)
+
+
+
+driver_group_validate_task = HivePartitionSensor(
+    task_id="driver_group_validate_task",
+    table="ods_sqoop_mass_driver_group_df",
+    partition="dt='{{ds}}'",
+    schema="oride_dw",
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
+
+
+
+rider_signups_validate_task = HivePartitionSensor(
+    task_id="rider_signups_validate_task",
+    table="ods_sqoop_mass_rider_signups_df",
+    partition="dt='{{ds}}'",
+    schema="oride_dw",
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
+
+
+data_driver_extend_validate_task = HivePartitionSensor(
+    task_id="data_driver_extend_validate_task",
+    table="data_driver_extend",
+    partition="dt='{{ds}}'",
+    schema="oride_db",
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
+
+
+
+data_order_validate_task = HivePartitionSensor(
+    task_id="data_order_validate_task",
+    table="data_order",
+    partition="dt='{{ds}}'",
+    schema="oride_db",
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
+
+
+
+data_order_payment_validate_task = HivePartitionSensor(
+    task_id="data_order_payment_validate_task",
+    table="data_order_payment",
+    partition="dt='{{ds}}'",
+    schema="oride_db",
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
+
+
+
+data_driver_comment_validate_task = HivePartitionSensor(
+    task_id="data_driver_comment_validate_task",
+    table="data_driver_comment",
+    partition="dt='{{ds}}'",
+    schema="oride_db",
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
+
 
 create_oride_street_association_di = HiveOperator(
     task_id='create_oride_street_association_di',
@@ -61,7 +159,7 @@ create_oride_street_association_di = HiveOperator(
     schema='oride_bi',
     dag=dag)
 
-insert_oride_street_association_di  = HiveOperator (
+insert_oride_street_association_di = HiveOperator(
     task_id='insert_oride_street_association_di',
     hql="""
         -- 协会数据
@@ -278,6 +376,7 @@ insert_oride_street_association_di  = HiveOperator (
     schema='oride_bi',
     dag=dag)
 
+
 def send_oride_association_email(ds, **kwargs):
     cursor = get_hive_cursor()
     query = '''
@@ -323,7 +422,8 @@ def send_oride_association_email(ds, **kwargs):
             SELECT
                 *
             FROM
-                oride_db.data_city_conf
+                
+                
             WHERE
               dt='{dt}'
         )
@@ -385,62 +485,62 @@ def send_oride_association_email(ds, **kwargs):
             INNER JOIN city_data cd ON cd.id=ad.city
             LEFT JOIN l_d ON l_d.association_id=t_d.association_id
             LEFT JOIN l_w ON l_w.association_id=t_d.association_id
-    '''.format(dt=ds, ld= airflow.macros.ds_add(ds, -1), lw=airflow.macros.ds_add(ds, -7))
+    '''.format(dt=ds, ld=airflow.macros.ds_add(ds, -1), lw=airflow.macros.ds_add(ds, -7))
     logging.info('Executing: %s', query)
     cursor.execute(query)
     rows = cursor.fetchall()
     headers = [
-       'group_name',
-       'city',
-       'total_register_drivers',
-       'have_license_drivers',
-       'today_finish_orders',
-       'compare_yesterday',
-       'compare_last_week',
-       'today_average_order_should_pay',
-       'compare_yesterday',
-       'compare_last_week',
-       'today_average_order_actually_pay',
-       'compare_yesterday',
-       'compare_last_week',
-       'today_GMV',
-       'compare_yesterday',
-       'compare_last_week',
-       'today_checkin_drivers',
-       'compare_yesterday',
-       'compare_last_week',
-       'today_approved_drivers',
-       'compare_yesterday',
-       'compare_last_week',
-       'today_tested_drivers',
-       'compare_yesterday',
-       'compare_last_week',
-       'today_register_drivers',
-       'compare_yesterday',
-       'compare_last_week',
-       'today_register&finish_drivers',
-       'compare_yesterday',
-       'compare_last_week',
-       'today_online_drivers',
-       'compare_yesterday',
-       'compare_last_week',
-       'two_days_notonline_drivers',
-       'three_days_notonline_drivers',
-       'today_accept_order_drivers',
-       'compare_yesterday',
-       'compare_last_week',
-       'two_days_notaccept_order_drivers',
-       'three_days_notaccept_order_drivers',
-       'today_finish_order_drivers',
-       'compare_yesterday',
-       'compare_last_week',
-       'two_days_notfinish_5orders_drivers',
-       'today_cancel_order_drivers',
-       'compare_yesterday',
-       'compare_last_week',
-       'today_rate_score≤3_drivers',
-       'compare_yesterday',
-       'compare_last_week',
+        'group_name',
+        'city',
+        'total_register_drivers',
+        'have_license_drivers',
+        'today_finish_orders',
+        'compare_yesterday',
+        'compare_last_week',
+        'today_average_order_should_pay',
+        'compare_yesterday',
+        'compare_last_week',
+        'today_average_order_actually_pay',
+        'compare_yesterday',
+        'compare_last_week',
+        'today_GMV',
+        'compare_yesterday',
+        'compare_last_week',
+        'today_checkin_drivers',
+        'compare_yesterday',
+        'compare_last_week',
+        'today_approved_drivers',
+        'compare_yesterday',
+        'compare_last_week',
+        'today_tested_drivers',
+        'compare_yesterday',
+        'compare_last_week',
+        'today_register_drivers',
+        'compare_yesterday',
+        'compare_last_week',
+        'today_register&finish_drivers',
+        'compare_yesterday',
+        'compare_last_week',
+        'today_online_drivers',
+        'compare_yesterday',
+        'compare_last_week',
+        'two_days_notonline_drivers',
+        'three_days_notonline_drivers',
+        'today_accept_order_drivers',
+        'compare_yesterday',
+        'compare_last_week',
+        'two_days_notaccept_order_drivers',
+        'three_days_notaccept_order_drivers',
+        'today_finish_order_drivers',
+        'compare_yesterday',
+        'compare_last_week',
+        'two_days_notfinish_5orders_drivers',
+        'today_cancel_order_drivers',
+        'compare_yesterday',
+        'compare_last_week',
+        'today_rate_score≤3_drivers',
+        'compare_yesterday',
+        'compare_last_week',
     ]
     file_name = '/tmp/oride_street_association_{dt}.csv'.format(dt=ds)
     with codecs.open(file_name, 'w', 'utf_8_sig') as f:
@@ -450,8 +550,9 @@ def send_oride_association_email(ds, **kwargs):
     # send mail
     email_to = Variable.get("oride_street_association_receivers").split()
     email_subject = 'oride快车司机协会数据{dt}'.format(dt=ds)
-    email_body=''
+    email_body = ''
     send_email(email_to, email_subject, email_body, [file_name], mime_charset='utf-8')
+
 
 oride_association_email = PythonOperator(
     task_id='oride_association_email',
@@ -460,5 +561,13 @@ oride_association_email = PythonOperator(
     dag=dag
 )
 
-create_oride_street_association_di >> insert_oride_street_association_di >> oride_association_email
 
+validate_partition_data >> data_order_validate_task >> create_oride_street_association_di
+validate_partition_data >> data_order_payment_validate_task >> create_oride_street_association_di
+validate_partition_data >> data_driver_extend_validate_task >> create_oride_street_association_di
+validate_partition_data >> data_driver_comment_validate_task >> create_oride_street_association_di
+validate_partition_data >> driver_group_validate_task >> create_oride_street_association_di
+validate_partition_data >> rider_signups_validate_task >> create_oride_street_association_di
+
+
+create_oride_street_association_di >> insert_oride_street_association_di >> oride_association_email
