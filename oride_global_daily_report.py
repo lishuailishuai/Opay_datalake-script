@@ -164,7 +164,7 @@ anti_fraud_validate_task = HivePartitionSensor(
 )
 
 data_anti_fraud_strategy_validate_task = HivePartitionSensor(
-    task_id="server_magic_validate_task",
+    task_id="data_anti_fraud_strategy_validate_task",
     table="data_anti_fraud_strategy",
     partition="dt='{{ds}}'",
     schema="oride_db",
