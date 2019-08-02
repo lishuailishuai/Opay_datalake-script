@@ -817,6 +817,6 @@ validate_partition_data >> data_order_validate_task >> insert_order_metrics
 validate_partition_data >> dispatch_validate_task >> insert_report_metrics
 validate_partition_data >> filter_validate_task >> insert_report_metrics
 validate_partition_data >> push_validate_task >> insert_report_metrics
-validate_partition_data >> insert_report_metrics >> send_report
-validate_partition_data >> insert_order_metrics >> send_report
+insert_report_metrics >> send_report
+insert_order_metrics >> send_report
 
