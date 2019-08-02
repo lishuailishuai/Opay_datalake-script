@@ -537,4 +537,6 @@ validate_partition_data >> data_driver_extend_validate_task >> insert_driver_met
 validate_partition_data >> data_city_conf_validate_task >> insert_driver_metrics
 validate_partition_data >> data_order_payment_validate_task >> insert_driver_metrics
 validate_partition_data >> data_order_validate_task >> insert_driver_metrics
+validate_partition_data >> server_magic_push_detail_validate_task >> insert_driver_metrics
+validate_partition_data >> oride_driver_timerange_validate_task >> insert_driver_metrics
 insert_driver_metrics >> send_report
