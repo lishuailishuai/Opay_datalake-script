@@ -776,8 +776,8 @@ def send_report_email(ds_nodash, ds, **kwargs):
     # send mail
     email_subject = '调度算法效果监控指标_{}'.format(ds)
     send_email(
-        # Variable.get("oride_metrics_report_receivers").split()
-        ['nan.li@opay-inc.com']
+        Variable.get("oride_metrics_report_receivers").split()
+        # ['nan.li@opay-inc.com']
         , email_subject, html, mime_charset='utf-8')
     cursor.close()
     return
