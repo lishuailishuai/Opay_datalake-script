@@ -234,12 +234,6 @@ def validate_partition(*op_args, **op_kwargs):
                 task_name=task_name
             ), '271')
 
-            raise Exception('{table_name} : {dt} 分区不存在 , {task_name} 任务终止执行'.format(
-                table_name=table_name,
-                dt=dt,
-                task_name=task_name
-            ))
-
 
 # 校验指标正确性
 def validate_metrics(dt, source_name, data_map, metric_name_map):

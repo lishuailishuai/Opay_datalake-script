@@ -32,6 +32,29 @@ dag = airflow.DAG(
 cursor = get_hive_cursor()
 
 
+'''
+校验分区代码
+'''
+
+validate_partition_data = PythonOperator(
+    task_id='validate_partition_data',
+    python_callable=validate_partition,
+    provide_context=True,
+    op_kwargs={
+        # 验证table
+        "table_names":
+            ['oride_bi.server_magic_dispatch_detail',
+             'oride_db.data_order',
+             'oride_bi.server_magic_filter_detail',
+             'oride_bi.server_magic_push_detail'
+             ],
+        # 任务名称
+        "task_name": "调度算法效果监控指标"
+    },
+    dag=dag
+)
+
+# 熔断阻塞流程
 data_order_validate_task = HivePartitionSensor(
     task_id="data_order_validate_task",
     table="data_order",
@@ -776,8 +799,8 @@ def send_report_email(ds_nodash, ds, **kwargs):
     # send mail
     email_subject = '调度算法效果监控指标_{}'.format(ds)
     send_email(
-        Variable.get("oride_metrics_report_receivers").split()
-        # ['nan.li@opay-inc.com']
+        # Variable.get("oride_metrics_report_receivers").split()
+        ['nan.li@opay-inc.com']
         , email_subject, html, mime_charset='utf-8')
     cursor.close()
     return
@@ -790,10 +813,10 @@ send_report = PythonOperator(
     dag=dag
 )
 
-data_order_validate_task >> insert_order_metrics
-dispatch_validate_task >> insert_report_metrics
-filter_validate_task >> insert_report_metrics
-push_validate_task >> insert_report_metrics
-insert_report_metrics >> send_report
-insert_order_metrics >> send_report
+validate_partition_data >> data_order_validate_task >> insert_order_metrics
+validate_partition_data >> dispatch_validate_task >> insert_report_metrics
+validate_partition_data >> filter_validate_task >> insert_report_metrics
+validate_partition_data >> push_validate_task >> insert_report_metrics
+validate_partition_data >> insert_report_metrics >> send_report
+validate_partition_data >> insert_order_metrics >> send_report
 

@@ -10,8 +10,10 @@ import logging
 from airflow.models import Variable
 from utils.connection_helper import get_hive_cursor
 from plugins.comwx import ComwxApi
-from utils.validate_metrics_utils import *
 from constant.metrics_constant import *
+from airflow.sensors.hive_partition_sensor import HivePartitionSensor
+from utils.validate_metrics_utils import *
+
 
 comwx = ComwxApi('wwd26d45f97ea74ad2', 'BLE_v25zCmnZaFUgum93j3zVBDK-DjtRkLisI_Wns4g', '1000011')
 
@@ -54,6 +56,69 @@ validate_partition_data = PythonOperator(
     },
     dag=dag
 )
+
+
+# 熔断阻塞流程
+jh_order_validate_task = HivePartitionSensor(
+    task_id="jh_order_validate_task",
+    table="ods_sqoop_base_jh_order_df",
+    partition="dt='{{ds}}'",
+    schema="ofood_dw",
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
+
+jh_order_log_validate_task = HivePartitionSensor(
+    task_id="jh_order_log_validate_task",
+    table="ods_sqoop_base_jh_order_log_df",
+    partition="dt='{{ds}}'",
+    schema="ofood_dw",
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
+
+
+jh_waimai_order_validate_task = HivePartitionSensor(
+    task_id="jh_waimai_order_validate_task",
+    table="ods_sqoop_base_jh_waimai_order_df",
+    partition="dt='{{ds}}'",
+    schema="ofood_dw",
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
+
+jh_shop_validate_task = HivePartitionSensor(
+    task_id="jh_shop_validate_task",
+    table="ods_sqoop_base_jh_shop_df",
+    partition="dt='{{ds}}'",
+    schema="ofood_dw",
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
+
+jh_waimai_validate_task = HivePartitionSensor(
+    task_id="jh_waimai_validate_task",
+    table="ods_sqoop_base_jh_waimai_df",
+    partition="dt='{{ds}}'",
+    schema="ofood_dw",
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
+
+client_event_validate_task = HivePartitionSensor(
+    task_id="client_event_validate_task",
+    table="ods_log_client_event_hi",
+    partition="dt='{{ds}}'",
+    schema="ofood_dw",
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
 
 insert_ofood_global_metrics = HiveOperator(
     task_id='insert_ofood_global_metrics',
@@ -440,4 +505,11 @@ send_report = PythonOperator(
     dag=dag
 )
 
-validate_partition_data >> insert_ofood_global_metrics >> send_report
+
+validate_partition_data >> jh_order_log_validate_task >> insert_ofood_global_metrics
+validate_partition_data >> jh_order_validate_task >> insert_ofood_global_metrics
+validate_partition_data >> jh_shop_validate_task >> insert_ofood_global_metrics
+validate_partition_data >> jh_waimai_order_validate_task >> insert_ofood_global_metrics
+validate_partition_data >> jh_waimai_validate_task >> insert_ofood_global_metrics
+validate_partition_data >> client_event_validate_task >> insert_ofood_global_metrics
+insert_ofood_global_metrics >> send_report

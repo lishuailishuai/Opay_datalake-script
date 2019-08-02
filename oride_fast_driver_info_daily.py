@@ -6,6 +6,8 @@ from airflow.operators.bash_operator import BashOperator
 from airflow.operators.python_operator import PythonOperator
 from airflow.utils.email import send_email
 from airflow.models import Variable
+from airflow.sensors.hive_partition_sensor import HivePartitionSensor
+from utils.validate_metrics_utils import *
 
 args = {
     'owner': 'linan',
@@ -22,6 +24,135 @@ dag = airflow.DAG(
     'oride_fast_driver_info_daily_report',
     schedule_interval="30 03 * * *",
     default_args=args)
+
+
+'''
+校验分区代码
+'''
+
+validate_partition_data = PythonOperator(
+    task_id='validate_partition_data',
+    python_callable=validate_partition,
+    provide_context=True,
+    op_kwargs={
+        # 验证table
+        "table_names":
+            ['oride_db.data_order',
+             'oride_db.data_driver_comment',
+             'oride_db.data_driver_balance_extend',
+             'oride_db.data_driver',
+             'oride_db.data_driver_extend',
+             'oride_bi.server_magic_push_detail',
+             'oride_bi.oride_driver_timerange',
+             'opay_spread.rider_signups',
+             'opay_spread.driver_group',
+             'opay_spread.driver_team'
+             ],
+        # 任务名称
+        "task_name": "快车司机档案数据"
+    },
+    dag=dag
+)
+
+
+
+data_order_validate_task = HivePartitionSensor(
+    task_id="data_order_validate_task",
+    table="data_order",
+    partition="dt='{{ds}}'",
+    schema="oride_db",
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
+
+data_driver_comment_validate_task = HivePartitionSensor(
+    task_id="data_driver_comment_validate_task",
+    table="data_driver_comment",
+    partition="dt='{{ds}}'",
+    schema="oride_db",
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
+data_driver_balance_extend_validate_task = HivePartitionSensor(
+    task_id="data_driver_balance_extend_validate_task",
+    table="data_driver_balance_extend",
+    partition="dt='{{ds}}'",
+    schema="oride_db",
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
+
+data_driver_validate_task = HivePartitionSensor(
+    task_id="data_driver_validate_task",
+    table="data_driver",
+    partition="dt='{{ds}}'",
+    schema="oride_db",
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
+
+data_driver_extend_validate_task = HivePartitionSensor(
+    task_id="data_driver_extend_validate_task",
+    table="data_driver_extend",
+    partition="dt='{{ds}}'",
+    schema="oride_db",
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
+
+server_magic_push_detail_validate_task = HivePartitionSensor(
+    task_id="server_magic_push_detail_validate_task",
+    table="server_magic_push_detail",
+    partition="dt='{{ds}}'",
+    schema="oride_bi",
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
+
+oride_driver_timerange_validate_task = HivePartitionSensor(
+    task_id="oride_driver_timerange_validate_task",
+    table="oride_driver_timerange",
+    partition="dt='{{ds}}'",
+    schema="oride_bi",
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
+
+rider_signups_validate_task = HivePartitionSensor(
+    task_id="rider_signups_timerange_validate_task",
+    table="rider_signups",
+    partition="dt='{{ds}}'",
+    schema="opay_spread",
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
+
+driver_group_validate_task = HivePartitionSensor(
+    task_id="driver_group_timerange_validate_task",
+    table="driver_group",
+    partition="dt='{{ds}}'",
+    schema="opay_spread",
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
+driver_team_validate_task = HivePartitionSensor(
+    task_id="driver_team_timerange_validate_task",
+    table="driver_team",
+    partition="dt='{{ds}}'",
+    schema="opay_spread",
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
 
 create_csv_file = BashOperator(
     task_id='create_csv_file',
@@ -257,5 +388,16 @@ send_file_email = PythonOperator(
     provide_context=True,
     dag=dag
 )
+
+validate_partition_data >> data_order_validate_task >> create_csv_file
+validate_partition_data >> data_driver_balance_extend_validate_task >> create_csv_file
+validate_partition_data >> data_driver_comment_validate_task >> create_csv_file
+validate_partition_data >> data_driver_extend_validate_task >> create_csv_file
+validate_partition_data >> data_driver_validate_task >> create_csv_file
+validate_partition_data >> server_magic_push_detail_validate_task >> create_csv_file
+validate_partition_data >> oride_driver_timerange_validate_task >> create_csv_file
+validate_partition_data >> rider_signups_validate_task >> create_csv_file
+validate_partition_data >> driver_group_validate_task >> create_csv_file
+validate_partition_data >> driver_team_validate_task >> create_csv_file
 
 create_csv_file >> send_file_email
