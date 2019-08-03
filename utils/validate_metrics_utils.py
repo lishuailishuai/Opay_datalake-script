@@ -244,7 +244,7 @@ def is_alert(dt, table_names):
             table_name = str(table_name).split('.')[1]
         table_list += template.format(table_name=table_name)
 
-    table_list = table_list[0:len(table_list) - 2]
+    table_list = table_list[0:len(table_list) - 1]
 
     sql = '''
         select 
