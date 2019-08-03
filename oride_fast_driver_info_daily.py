@@ -25,6 +25,17 @@ dag = airflow.DAG(
     schedule_interval="30 03 * * *",
     default_args=args)
 
+table_names = ['oride_db.data_order',
+               'oride_db.data_driver_comment',
+               'oride_db.data_driver_balance_extend',
+               'oride_db.data_driver',
+               'oride_db.data_driver_extend',
+               'oride_bi.server_magic_push_detail',
+               'oride_bi.oride_driver_timerange',
+               'opay_spread.rider_signups',
+               'opay_spread.driver_group',
+               'opay_spread.driver_team'
+               ]
 
 '''
 校验分区代码
@@ -36,25 +47,12 @@ validate_partition_data = PythonOperator(
     provide_context=True,
     op_kwargs={
         # 验证table
-        "table_names":
-            ['oride_db.data_order',
-             'oride_db.data_driver_comment',
-             'oride_db.data_driver_balance_extend',
-             'oride_db.data_driver',
-             'oride_db.data_driver_extend',
-             'oride_bi.server_magic_push_detail',
-             'oride_bi.oride_driver_timerange',
-             'opay_spread.rider_signups',
-             'opay_spread.driver_group',
-             'opay_spread.driver_team'
-             ],
+        "table_names": table_names,
         # 任务名称
         "task_name": "快车司机档案数据"
     },
     dag=dag
 )
-
-
 
 data_order_validate_task = HivePartitionSensor(
     task_id="data_order_validate_task",
@@ -64,7 +62,6 @@ data_order_validate_task = HivePartitionSensor(
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
-
 
 data_driver_comment_validate_task = HivePartitionSensor(
     task_id="data_driver_comment_validate_task",
@@ -84,7 +81,6 @@ data_driver_balance_extend_validate_task = HivePartitionSensor(
     dag=dag
 )
 
-
 data_driver_validate_task = HivePartitionSensor(
     task_id="data_driver_validate_task",
     table="data_driver",
@@ -93,7 +89,6 @@ data_driver_validate_task = HivePartitionSensor(
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
-
 
 data_driver_extend_validate_task = HivePartitionSensor(
     task_id="data_driver_extend_validate_task",
@@ -104,7 +99,6 @@ data_driver_extend_validate_task = HivePartitionSensor(
     dag=dag
 )
 
-
 server_magic_push_detail_validate_task = HivePartitionSensor(
     task_id="server_magic_push_detail_validate_task",
     table="server_magic_push_detail",
@@ -113,7 +107,6 @@ server_magic_push_detail_validate_task = HivePartitionSensor(
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
-
 
 oride_driver_timerange_validate_task = HivePartitionSensor(
     task_id="oride_driver_timerange_validate_task",
@@ -124,7 +117,6 @@ oride_driver_timerange_validate_task = HivePartitionSensor(
     dag=dag
 )
 
-
 rider_signups_validate_task = HivePartitionSensor(
     task_id="rider_signups_timerange_validate_task",
     table="rider_signups",
@@ -133,7 +125,6 @@ rider_signups_validate_task = HivePartitionSensor(
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
-
 
 driver_group_validate_task = HivePartitionSensor(
     task_id="driver_group_timerange_validate_task",
@@ -152,7 +143,6 @@ driver_team_validate_task = HivePartitionSensor(
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
-
 
 create_csv_file = BashOperator(
     task_id='create_csv_file',
@@ -374,9 +364,14 @@ def send_csv_file(ds, **kwargs):
 
     # send mail
     email_to = Variable.get("oride_fast_driver_metrics_report_receivers").split()
+    result = is_alert(ds, table_names)
+    if result:
+        email_to = ['bigdata@opay-inc.com']
+
     # email_to = ['nan.li@opay-inc.com']
     email_subject = 'oride快车司机明细附件_{dt}'.format(dt=ds)
-    send_email(email_to, email_subject,
+    send_email(email_to,
+               email_subject,
                '快车司机档案数据，请查收。\n 附件中文乱码解决:使用记事本打开CSV文件，“文件”->“另存为”，编码方式选择ANSI，保存完毕后，用EXCEL打开，即可。',
                file_list,
                mime_charset='utf-8')

@@ -30,6 +30,13 @@ city_list = [
     'Ibadan'
 ]
 
+table_names = ['oride_db.data_order',
+               'oride_db.data_driver_extend',
+               'oride_db.data_city_conf',
+               'oride_db.data_order_payment',
+               'oride_bi.server_magic_push_detail',
+               'oride_bi.oride_driver_timerange'
+               ]
 
 '''
 校验分区代码
@@ -41,20 +48,12 @@ validate_partition_data = PythonOperator(
     provide_context=True,
     op_kwargs={
         # 验证table
-        "table_names":
-            ['oride_db.data_order',
-             'oride_db.data_driver_extend',
-             'oride_db.data_city_conf',
-             'oride_db.data_order_payment',
-             'oride_bi.server_magic_push_detail',
-             'oride_bi.oride_driver_timerange'
-             ],
+        "table_names": table_names,
         # 任务名称
         "task_name": "司机运力日报-快车"
     },
     dag=dag
 )
-
 
 data_driver_extend_validate_task = HivePartitionSensor(
     task_id="data_driver_extend_validate_task",
@@ -65,7 +64,6 @@ data_driver_extend_validate_task = HivePartitionSensor(
     dag=dag
 )
 
-
 data_order_validate_task = HivePartitionSensor(
     task_id="data_order_validate_task",
     table="data_order",
@@ -74,7 +72,6 @@ data_order_validate_task = HivePartitionSensor(
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
-
 
 data_city_conf_validate_task = HivePartitionSensor(
     task_id="data_city_conf_validate_task",
@@ -94,7 +91,6 @@ data_order_payment_validate_task = HivePartitionSensor(
     dag=dag
 )
 
-
 server_magic_push_detail_validate_task = HivePartitionSensor(
     task_id="server_magic_push_detail_validate_task",
     table="server_magic_push_detail",
@@ -104,7 +100,6 @@ server_magic_push_detail_validate_task = HivePartitionSensor(
     dag=dag
 )
 
-
 oride_driver_timerange_validate_task = HivePartitionSensor(
     task_id="oride_driver_timerange_validate_task",
     table="oride_driver_timerange",
@@ -113,10 +108,6 @@ oride_driver_timerange_validate_task = HivePartitionSensor(
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
-
-
-
-
 
 insert_driver_metrics = HiveOperator(
     task_id='insert_driver_metrics',
@@ -517,10 +508,15 @@ def send_report_email(ds, **kwargs):
     html = html_fmt.format(rows=row_html, dt=ds)
 
     # send mail
+
+    email_to = Variable.get("oride_driver_transport_metrics_receivers").split()
+    result = is_alert(ds, table_names)
+    if result:
+        email_to = ['bigdata@opay-inc.com']
+
     email_subject = '司机运力日报-快车_{}'.format(ds)
     send_email(
-        Variable.get("oride_driver_transport_metrics_receivers").split()
-        # ['nan.li@opay-inc.com']
+        email_to
         , email_subject, html, mime_charset='utf-8')
     cursor.close()
     return

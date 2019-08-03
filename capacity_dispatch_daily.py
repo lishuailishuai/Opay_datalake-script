@@ -795,13 +795,12 @@ def send_report_email(ds_nodash, ds, **kwargs):
 
     logging.info(html)
 
-    # email_to = Variable.get("oride_metrics_report_receivers").split()
-    email_to = ['nan.li@opay-inc.com']
+    email_to = Variable.get("oride_metrics_report_receivers").split()
+    # email_to = ['nan.li@opay-inc.com']
     result = is_alert(ds, table_names)
     if result:
-        # email_to = ['bigdata@opay-inc.com']
-        print ('进入报警流程')
-        email_to = ['nan.li@opay-inc.com']
+        email_to = ['bigdata@opay-inc.com']
+        # email_to = ['nan.li@opay-inc.com']
 
     # send mail
     email_subject = '调度算法效果监控指标_{}'.format(ds)

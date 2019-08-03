@@ -31,6 +31,41 @@ dag = airflow.DAG(
     schedule_interval="30 01 * * *",
     default_args=args)
 
+global_table_names = [
+    'oride_db.data_order',
+    'oride_db.data_driver_extend',
+    'oride_db.data_user_extend',
+    'oride_db.data_order_payment',
+    'oride_source.server_magic',
+    'oride_bi.server_magic_push_detail',
+    'oride_bi.oride_driver_timerange'
+]
+
+city_and_weather_table_names = [
+    'oride_db.data_order',
+    'oride_db.data_driver_extend',
+    'oride_db.data_user_extend',
+    'oride_db.data_order_payment',
+    'oride_source.server_magic',
+    'oride_bi.server_magic_push_detail',
+    'oride_bi.oride_driver_timerange',
+    'oride_dw.ods_sqoop_base_weather_per_10min_df',
+    'oride_db.data_city_conf',
+]
+
+anti_fraud_table_names = [
+    'oride_db.data_order',
+    'oride_db.data_driver_extend',
+    'oride_db.data_user_extend',
+    'oride_db.data_order_payment',
+    'oride_source.server_magic',
+    'oride_bi.server_magic_push_detail',
+    'oride_bi.oride_driver_timerange',
+    'oride_db.data_anti_fraud_strategy',
+    'oride_source.anti_fraud',
+    'oride_db.data_abnormal_order'
+]
+
 '''
 校验分区代码
 '''
@@ -41,15 +76,7 @@ validate_global_partition_data = PythonOperator(
     provide_context=True,
     op_kwargs={
         # 验证table
-        "table_names":
-            ['oride_db.data_order',
-             'oride_db.data_driver_extend',
-             'oride_db.data_user_extend',
-             'oride_db.data_order_payment',
-             'oride_source.server_magic',
-             'oride_bi.server_magic_push_detail',
-             'oride_bi.oride_driver_timerange'
-             ],
+        "table_names": global_table_names,
         # 任务名称
         "task_name": "oride全局运营报表"
     },
@@ -62,17 +89,12 @@ validate_anti_fraud_partition_data = PythonOperator(
     provide_context=True,
     op_kwargs={
         # 验证table
-        "table_names":
-            ['oride_db.data_anti_fraud_strategy',
-             'oride_source.anti_fraud',
-             'oride_db.data_abnormal_order'
-             ],
+        "table_names": anti_fraud_table_names,
         # 任务名称
         "task_name": "oride反作弊报表"
     },
     dag=dag
 )
-
 
 validate_city_and_weather_partition_data = PythonOperator(
     task_id='validate_city_and_weather_partition_data',
@@ -89,7 +111,6 @@ validate_city_and_weather_partition_data = PythonOperator(
     },
     dag=dag
 )
-
 
 data_driver_extend_validate_task = HivePartitionSensor(
     task_id="data_driver_extend_validate_task",
@@ -181,7 +202,6 @@ data_abnormal_order_validate_task = HivePartitionSensor(
     dag=dag
 )
 
-
 weather_validate_task = HivePartitionSensor(
     task_id="weather_validate_task",
     table="ods_sqoop_base_weather_per_10min_df",
@@ -190,7 +210,6 @@ weather_validate_task = HivePartitionSensor(
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
-
 
 data_city_conf_validate_task = HivePartitionSensor(
     task_id="data_city_conf_validate_task",
@@ -1558,9 +1577,15 @@ def send_report_email(ds, **kwargs):
         html = html_fmt.format(rows=row_html, direct_rows=get_serv_row(ds, 1, all_completed_num),
                                street_rows=get_serv_row(ds, 2, all_completed_num))
         # send mail
+
+        email_to = Variable.get("oride_global_daily_report_receivers").split()
+        result = is_alert(ds, global_table_names)
+        if result:
+            email_to = ['bigdata@opay-inc.com']
+
         email_subject = 'oride全局运营指标_{}'.format(ds)
         send_email(
-            Variable.get("oride_global_daily_report_receivers").split()
+            email_to
             , email_subject, html, mime_charset='utf-8')
     return
 
@@ -1914,9 +1939,15 @@ def send_funnel_report_email(ds, **kwargs):
 
     html = html_fmt.format(rows=row_html, city_rows=city_row_html)
     # send mail
+
+    email_to = Variable.get("oride_funnel_report_receivers").split()
+    result = is_alert(ds, city_and_weather_table_names)
+    if result:
+        email_to = ['bigdata@opay-inc.com']
+
     email_subject = 'oride订单漏斗模型_{}'.format(ds)
     send_email(
-        Variable.get("oride_funnel_report_receivers").split()
+        email_to
         , email_subject, html, mime_charset='utf-8')
     cursor.close()
     return
@@ -2531,10 +2562,16 @@ def send_anti_fraud_report_email(ds, **kwargs):
     cursor.close()
 
     # send mail
+
+    email_to = Variable.get("oride_anti_fraud_report_receivers").split()
+    result = is_alert(ds, anti_fraud_table_names)
+    if result:
+        email_to = ['bigdata@opay-inc.com']
+
     if html_mid_fmt != '' or html_regist_fmt != '' or html_after_fmt != '':
         email_subject = 'oride反作弊报表_{}'.format(ds)
         send_email(
-            Variable.get("oride_anti_fraud_report_receivers").split(),
+            email_to,
             email_subject,
             html_mail_fmt.format(html_content_fmt=html_regist_fmt + '<hr>' + html_mid_fmt + '<hr>' + html_after_fmt),
             mime_charset='utf-8')
@@ -2632,15 +2669,12 @@ validate_global_partition_data >> oride_driver_timerange_validate_task >> insert
 validate_global_partition_data >> server_magic_validate_task >> insert_oride_global_daily_report
 insert_oride_global_daily_report >> send_funnel_report
 
-
 insert_oride_global_daily_report >> validate_anti_fraud_partition_data
 create_oride_anti_fraud_daily_report >> validate_anti_fraud_partition_data
 validate_anti_fraud_partition_data >> anti_fraud_validate_task >> insert_oride_anti_fraud_daily_report
 validate_anti_fraud_partition_data >> data_anti_fraud_strategy_validate_task >> insert_oride_anti_fraud_daily_report
 validate_anti_fraud_partition_data >> data_abnormal_order_validate_task >> insert_oride_anti_fraud_daily_report
 insert_oride_anti_fraud_daily_report >> insert_orider_anti_fraud_daily_report_result >> send_anti_fraud_report
-
-
 
 create_oride_global_city_serv_daily_report >> insert_oride_global_city_serv_daily_report
 insert_oride_global_daily_report >> insert_oride_global_city_serv_daily_report
@@ -2649,6 +2683,3 @@ insert_oride_global_city_serv_daily_report >> send_report
 validate_city_and_weather_partition_data >> weather_validate_task >> insert_oride_order_city_daily_report
 validate_city_and_weather_partition_data >> data_city_conf_validate_task >> insert_oride_order_city_daily_report
 insert_oride_order_city_daily_report >> send_funnel_report
-
-
-

@@ -261,9 +261,7 @@ def is_alert(dt, table_names):
 
     cursor.execute(sql)
     res = cursor.fetchall()
-    logging.info(res)
     result = int(res[0][0])
-    logging.info(result)
 
     return result
 

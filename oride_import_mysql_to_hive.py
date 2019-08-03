@@ -184,12 +184,12 @@ def validate(cursor, table_name, sql, day, day_before_1, day_before_7):
         if day_num == 0:
             is_import = 0
             error_message = '''
-                {table_name}  {day}  日期数据数据量为 0
+                {table_name}  {day}  日期数据数据量为 0 ,请关注相关数据指标
             '''.format(table_name=table_name, day=day)
         elif (day_num - day_before_7_num) < 0 and abs((day_num - day_before_7_num) / day_num) > ods_data_stop_limit:
             is_import = 0
             error_message = '''
-                {table_name} {day} 日期数据数据量达到下降幅度，暂停数据导入：
+                {table_name} {day} 日期数据数据量达到下降幅度，请关注相关数据指标：
                 {day}  ： {day_num}
                 {day_before_7}  ： {day_before_7_num}
             '''.format(
@@ -200,7 +200,7 @@ def validate(cursor, table_name, sql, day, day_before_1, day_before_7):
                 day_before_7_num=day_before_7_num)
         elif (day_num - day_before_7_num) < 0 and abs((day_num - day_before_7_num) / day_num) > ods_data_alert_limit:
             error_message = '''
-                {table_name}  {day} 日期数据数据量超过预警下降幅度：
+                {table_name}  {day} 日期数据数据量超过预警下降幅度 ,请关注相关数据指标：
                 {day}  ： {day_num}
                 {day_before_7}  ： {day_before_7_num}
             '''.format(

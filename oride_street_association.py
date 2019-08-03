@@ -28,6 +28,14 @@ dag = airflow.DAG(
     schedule_interval="30 02 * * *",
     default_args=args)
 
+table_names = ['oride_dw.ods_sqoop_mass_driver_group_df',
+               'oride_dw.ods_sqoop_mass_rider_signups_df',
+               'oride_db.data_driver_extend',
+               'oride_db.data_order',
+               'oride_db.data_order_payment',
+               'oride_db.data_driver_comment',
+               ]
+
 '''
 校验分区代码
 '''
@@ -38,21 +46,12 @@ validate_partition_data = PythonOperator(
     provide_context=True,
     op_kwargs={
         # 验证table
-        "table_names":
-            ['oride_dw.ods_sqoop_mass_driver_group_df',
-             'oride_dw.ods_sqoop_mass_rider_signups_df',
-             'oride_db.data_driver_extend',
-             'oride_db.data_order',
-             'oride_db.data_order_payment',
-             'oride_db.data_driver_comment',
-             ],
+        "table_names": table_names,
         # 任务名称
         "task_name": "快车司机协会数据"
     },
     dag=dag
 )
-
-
 
 driver_group_validate_task = HivePartitionSensor(
     task_id="driver_group_validate_task",
@@ -63,9 +62,6 @@ driver_group_validate_task = HivePartitionSensor(
     dag=dag
 )
 
-
-
-
 rider_signups_validate_task = HivePartitionSensor(
     task_id="rider_signups_validate_task",
     table="ods_sqoop_mass_rider_signups_df",
@@ -74,8 +70,6 @@ rider_signups_validate_task = HivePartitionSensor(
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
-
-
 
 data_driver_extend_validate_task = HivePartitionSensor(
     task_id="data_driver_extend_validate_task",
@@ -86,9 +80,6 @@ data_driver_extend_validate_task = HivePartitionSensor(
     dag=dag
 )
 
-
-
-
 data_order_validate_task = HivePartitionSensor(
     task_id="data_order_validate_task",
     table="data_order",
@@ -97,9 +88,6 @@ data_order_validate_task = HivePartitionSensor(
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
-
-
-
 
 data_order_payment_validate_task = HivePartitionSensor(
     task_id="data_order_payment_validate_task",
@@ -110,9 +98,6 @@ data_order_payment_validate_task = HivePartitionSensor(
     dag=dag
 )
 
-
-
-
 data_driver_comment_validate_task = HivePartitionSensor(
     task_id="data_driver_comment_validate_task",
     table="data_driver_comment",
@@ -121,8 +106,6 @@ data_driver_comment_validate_task = HivePartitionSensor(
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
-
-
 
 create_oride_street_association_di = HiveOperator(
     task_id='create_oride_street_association_di',
@@ -548,7 +531,12 @@ def send_oride_association_email(ds, **kwargs):
         f_csv.writerow(headers)
         f_csv.writerows(rows)
     # send mail
+
     email_to = Variable.get("oride_street_association_receivers").split()
+    result = is_alert(ds, table_names)
+    if result:
+        email_to = ['bigdata@opay-inc.com']
+
     email_subject = 'oride快车司机协会数据{dt}'.format(dt=ds)
     email_body = ''
     send_email(email_to, email_subject, email_body, [file_name], mime_charset='utf-8')
@@ -561,13 +549,11 @@ oride_association_email = PythonOperator(
     dag=dag
 )
 
-
 validate_partition_data >> data_order_validate_task >> create_oride_street_association_di
 validate_partition_data >> data_order_payment_validate_task >> create_oride_street_association_di
 validate_partition_data >> data_driver_extend_validate_task >> create_oride_street_association_di
 validate_partition_data >> data_driver_comment_validate_task >> create_oride_street_association_di
 validate_partition_data >> driver_group_validate_task >> create_oride_street_association_di
 validate_partition_data >> rider_signups_validate_task >> create_oride_street_association_di
-
 
 create_oride_street_association_di >> insert_oride_street_association_di >> oride_association_email
