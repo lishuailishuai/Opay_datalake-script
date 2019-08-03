@@ -183,14 +183,14 @@ def validate(cursor, table_name, sql, day, day_before_1, day_before_7):
 
 
 def write_meta_data(table_name, day, result, msg):
-    if not result:
-        sql = '''
-            ALTER TABLE oride_db.{table_name} DROP IF EXISTS PARTITION(dt='{day}')
-        '''.format(
-            table_name=table_name,
-            day=day)
-
-        cursor.execute(sql)
+    # if not result:
+    #     sql = '''
+    #         ALTER TABLE oride_db.{table_name} DROP IF EXISTS PARTITION(dt='{day}')
+    #     '''.format(
+    #         table_name=table_name,
+    #         day=day)
+    #
+    #     cursor.execute(sql)
 
     sql = '''
         insert into table oride_bi.oride_meta_import_data 
@@ -233,6 +233,39 @@ def validate_partition(*op_args, **op_kwargs):
                 dt=dt,
                 task_name=task_name
             ), '271')
+
+
+def is_alert(dt, table_names):
+    template = "'{table_name}',"
+    table_list = ''
+
+    for table_name in table_names:
+        if str(table_name).find('.') > -1:
+            table_name = str(table_name).split('.')[1]
+        table_list += template.format(table_name=table_name)
+
+    table_list = table_list[0:len(table_list) - 2]
+
+    sql = '''
+        select 
+        count(1)
+        from 
+        oride_bi.oride_meta_import_data
+        where dt = '{dt}'
+        and table_name in ({table_list})
+        and is_import = 0
+    '''.format(dt=dt,
+               table_list=table_list)
+
+    logging.info(sql)
+
+    cursor.execute(sql)
+    res = cursor.fetchall()
+    logging.info(res)
+    result = int(res[0][0])
+    logging.info(result)
+
+    return result
 
 
 # 校验指标正确性

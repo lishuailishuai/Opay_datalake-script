@@ -112,7 +112,6 @@ def validata_data(table_name, ds, **kwargs):
             table_name=table_name,
             day=day)
         send_email(
-            # Variable.get("oride_metrics_report_receivers").split()
             'bigdata@opay-inc.com'
             , email_subject, t[1], mime_charset='utf-8')
         return
@@ -127,7 +126,7 @@ def validata_data(table_name, ds, **kwargs):
                 from_unixtime(create_time,'yyyy-MM-dd') order_day,
                 count(1) counts
                 from 
-                oride_db.data_order
+                oride_db.{table_name}
                 where dt = '{day}' and from_unixtime(create_time,'yyyy-MM-dd') = '{day}'
                 group by from_unixtime(create_time,'yyyy-MM-dd')
                 union all 
@@ -135,7 +134,7 @@ def validata_data(table_name, ds, **kwargs):
                 from_unixtime(create_time,'yyyy-MM-dd') order_day,
                 count(1) counts
                 from 
-                oride_db.data_order
+                oride_db.{table_name}
                 where dt = '{day_before_1}' and from_unixtime(create_time,'yyyy-MM-dd') = '{day_before_7}'
                 group by from_unixtime(create_time,'yyyy-MM-dd')
         ) t
@@ -156,7 +155,6 @@ def validata_data(table_name, ds, **kwargs):
             table_name=table_name,
             day=day)
         send_email(
-            # Variable.get("oride_metrics_report_receivers").split()
             'bigdata@opay-inc.com'
             , email_subject, t[1], mime_charset='utf-8')
         return
@@ -216,14 +214,14 @@ def validate(cursor, table_name, sql, day, day_before_1, day_before_7):
 
 
 def write_meta_data(table_name, day, result, msg):
-    if not result:
-        sql = '''
-            ALTER TABLE oride_db.{table_name} DROP IF EXISTS PARTITION(dt='{day}')
-        '''.format(
-            table_name=table_name,
-            day=day)
-
-        cursor.execute(sql)
+    # if not result:
+    #     sql = '''
+    #         ALTER TABLE oride_db.{table_name} DROP IF EXISTS PARTITION(dt='{day}')
+    #     '''.format(
+    #         table_name=table_name,
+    #         day=day)
+    #
+    #     cursor.execute(sql)
 
     sql = '''
         insert into table oride_bi.oride_meta_import_data 

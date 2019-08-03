@@ -31,7 +31,11 @@ dag = airflow.DAG(
 
 cursor = get_hive_cursor()
 
-
+table_names = ['oride_bi.server_magic_dispatch_detail',
+               'oride_db.data_order',
+               'oride_bi.server_magic_filter_detail',
+               'oride_bi.server_magic_push_detail'
+               ]
 '''
 校验分区代码
 '''
@@ -42,12 +46,7 @@ validate_partition_data = PythonOperator(
     provide_context=True,
     op_kwargs={
         # 验证table
-        "table_names":
-            ['oride_bi.server_magic_dispatch_detail',
-             'oride_db.data_order',
-             'oride_bi.server_magic_filter_detail',
-             'oride_bi.server_magic_push_detail'
-             ],
+        "table_names": table_names,
         # 任务名称
         "task_name": "调度算法效果监控指标"
     },
@@ -796,10 +795,18 @@ def send_report_email(ds_nodash, ds, **kwargs):
 
     logging.info(html)
 
+    # email_to = Variable.get("oride_metrics_report_receivers").split()
+    email_to = ['nan.li@opay-inc.com']
+    result = is_alert(ds, table_names)
+    if result:
+        # email_to = ['bigdata@opay-inc.com']
+        print ('进入报警流程')
+        email_to = ['nan.li@opay-inc.com']
+
     # send mail
     email_subject = '调度算法效果监控指标_{}'.format(ds)
     send_email(
-        Variable.get("oride_metrics_report_receivers").split()
+        email_to
         # ['nan.li@opay-inc.com']
         , email_subject, html, mime_charset='utf-8')
     cursor.close()
@@ -819,4 +826,3 @@ validate_partition_data >> filter_validate_task >> insert_report_metrics
 validate_partition_data >> push_validate_task >> insert_report_metrics
 insert_report_metrics >> send_report
 insert_order_metrics >> send_report
-
