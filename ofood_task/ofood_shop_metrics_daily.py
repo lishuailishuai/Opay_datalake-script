@@ -276,8 +276,8 @@ insert_crm_metrics = HiveToMySqlTransfer(
     sql=""" 
         select 
         null,
-        dt,
         bd_id,
+        dt,
         username,
         area_name,
         shop_id,
