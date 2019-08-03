@@ -422,7 +422,7 @@ def send_oride_association_email(ds, **kwargs):
             SELECT
                 *
             FROM
-                
+                oride_db.data_city_conf
                 
             WHERE
               dt='{dt}'
