@@ -94,8 +94,7 @@ order_tags_info_to_msyql = HiveToMySqlTransfer(
         left outer join
         (select order_id,tag_ids from oride_dw.ods_log_oride_order_skyeye_di where dt='{{ ds }}') eye
         on ord.order_id=eye.order_id
-        ;
-
+        
         """,
     mysql_conn_id='mysql_bi',
     mysql_table='app_oride_order_tagids_detail',
