@@ -158,9 +158,9 @@ def validate(cursor, table_name, sql, day, day_before_1, day_before_7):
         elif (day_num - day_before_7_num) < 0 and abs((day_num - day_before_7_num) / day_num) > ods_data_stop_limit:
             is_import = 0
             error_message = '''
-                {table_name} {day} 日期数据数据量达到下降幅度，暂停数据导入：
-                {day}  ： {day_num}
-                {day_before_7}  ： {day_before_7_num}
+                监控规则：数据量下降幅度超过10%进行预警，数据量下降幅度超过45%发送BI，进行审核。
+                异常说明：表： {table_name} ，{day} 数据量为 {day_num}，{day_before_7}  数据量为 {day_before_7_num}，已达到预警标准。
+                请BI 核查指标数据是否异常，如存在策略调整，请通知相关使用方。
             '''.format(
                 table_name=table_name,
                 day=day,
@@ -169,9 +169,9 @@ def validate(cursor, table_name, sql, day, day_before_1, day_before_7):
                 day_before_7_num=day_before_7_num)
         elif (day_num - day_before_7_num) < 0 and abs((day_num - day_before_7_num) / day_num) > ods_data_alert_limit:
             error_message = '''
-                {table_name}  {day} 日期数据数据量超过预警下降幅度：
-                {day}  ： {day_num}
-                {day_before_7}  ： {day_before_7_num}
+                监控规则：数据量下降幅度超过10%进行预警，数据量下降幅度超过45%发送BI，进行审核。
+                异常说明：表： {table_name} ，{day} 数据量为 {day_num}，{day_before_7}  数据量为 {day_before_7_num}，需要BI审核。
+                请BI 核查指标数据是否异常，如存在策略调整，请通知相关使用方。
             '''.format(
                 table_name=table_name,
                 day=day,

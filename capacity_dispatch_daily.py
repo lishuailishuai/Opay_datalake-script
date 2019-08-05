@@ -102,23 +102,23 @@ insert_report_metrics = HiveOperator(
         
         insert overwrite table oride_bi.report_metrics partition (dt='{{ ds }}')
         select 
-        tt.counts report_times,
-        concat(cast(round(tt.driver_id_not_found * 100/tt.counts,2) as string),'%') not_found_driver_rate,
-        concat(cast(round((tt.counts - tt.push_driver_num) * 100/tt.counts,2) as string),'%') filter_driver_rate,
-        concat(cast(round(tt.push_driver_num * 100/tt.counts,2) as string),'%') push_driver_rate,
-        concat(cast(round(tt.accept_driver_time_num * 100/tt.counts,2) as string),'%') accept_driver_time_rate,
+        nvl(tt.counts,0) report_times,
+        concat(cast(nvl(round(tt.driver_id_not_found * 100/tt.counts,2),0) as string),'%') not_found_driver_rate,
+        concat(cast(nvl(round((tt.counts - tt.push_driver_num) * 100/tt.counts,2),0) as string),'%') filter_driver_rate,
+        concat(cast(nvl(round(tt.push_driver_num * 100/tt.counts,2),0) as string),'%') push_driver_rate,
+        concat(cast(nvl(round(tt.accept_driver_time_num * 100/tt.counts,2),0) as string),'%') accept_driver_time_rate,
 
-        concat(cast(round(tt.not_idle_rate * 100,2) as string),'%') not_idle_rate,
-        concat(cast(round(tt.assigned_another_job_rate * 100,2) as string),'%') assigned_another_job_rate,
-        concat(cast(round(tt.assigned_this_order_rate * 100,2) as string),'%') assigned_this_order_rate,
-        concat(cast(round(tt.not_in_service_mode_rate * 100,2) as string),'%') not_in_service_mode_rate,
+        concat(cast(nvl(round(tt.not_idle_rate * 100,2),0) as string),'%') not_idle_rate,
+        concat(cast(nvl(round(tt.assigned_another_job_rate * 100,2),0) as string),'%') assigned_another_job_rate,
+        concat(cast(nvl(round(tt.assigned_this_order_rate * 100,2),0) as string),'%') assigned_this_order_rate,
+        concat(cast(nvl(round(tt.not_in_service_mode_rate * 100,2),0) as string),'%') not_in_service_mode_rate,
 
 
-        round(pp.push_avg,1) push_avg,
-        round(pp.push_order_avg,1) push_order_avg,
-        round(tt.order_push_driver_avg,1) order_push_driver_avg,
-        round(tt.accept_driver_time_avg,1) accept_driver_time_avg,
-        concat(cast(round(tt.accept_driver_time_avg * 100/pp.push_avg,2) as string),'%') obey_rate
+        nvl(round(pp.push_avg,1),0) push_avg,
+        nvl(round(pp.push_order_avg,1),0) push_order_avg,
+        nvl(round(tt.order_push_driver_avg,1),0) order_push_driver_avg,
+        nvl(round(tt.accept_driver_time_avg,1),0) accept_driver_time_avg,
+        concat(cast(nvl(round(tt.accept_driver_time_avg * 100/pp.push_avg,2),0) as string),'%') obey_rate
 
         from 
         (
@@ -235,7 +235,7 @@ insert_order_metrics = HiveOperator(
         tt.sys_cancel_rate,
         tt.passanger_before_cancel_rate,
         tt.passanger_after_cancel_rate,
-        dd.validity_ride_num,
+        nvl(dd.validity_ride_num,0),
         tt.cannel_pick_avg,
         tt.wait_time_avg,
         tt.billing_time_avg,
@@ -247,22 +247,22 @@ insert_order_metrics = HiveOperator(
             from_unixtime(create_time,'yyyy-MM-dd') dt,
             count(id) ride_num,
             count(if(driver_id <> 0,id,null)) request_num,
-            concat(cast(round(count(if(driver_id <> 0,id,null)) * 100/count(id),2) as string),'%') request_rate,
+            concat(cast(nvl(round(count(if(driver_id <> 0,id,null)) * 100/count(id),2),0) as string),'%') request_rate,
             count(if(status = 5 or status = 4,id,null)) on_ride_num,
-            concat(cast(round(count(if(status = 5 or status = 4,id,null)) * 100/count(id),2) as string),'%') on_ride_rate,
+            concat(cast(nvl(round(count(if(status = 5 or status = 4,id,null)) * 100/count(id),2),0) as string),'%') on_ride_rate,
             count(distinct(if(status = 5 or status = 4,driver_id,null))) on_ride_driver_num,
-            round(count(if(status = 5 or status = 4,id,null))/count(distinct(if(status = 5 or status = 4,driver_id,null))),1) on_ride_avg,
+            nvl(round(count(if(status = 5 or status = 4,id,null))/count(distinct(if(status = 5 or status = 4,driver_id,null))),1),0) on_ride_avg,
             
-            round((sum(if(pickup_time <> 0, pickup_time - take_time,0)/60)/count(if(status = 5 or status = 4,id,null))),1) pick_up_time_avg,
-            round((sum(if(take_time <> 0,take_time - create_time,0))/count(if(driver_id <> 0,id,null)))/60,1) take_time_avg,
-            round((sum(if(cancel_time>0 and take_time>0, abs(cancel_time-take_time), 0))/60)/count(if(driver_id<>0, id, null)), 1) as cannel_pick_avg,
-            round((sum(if(pickup_time>0 and wait_time>0, abs(pickup_time-wait_time), 0))/60)/count(if(status=4 or status=5, id, null)), 1) as wait_time_avg,
-            round((sum(if(arrive_time>0 and pickup_time>0, abs(arrive_time-pickup_time), 0))/60)/count(if(status=4 or status=5, id, null)), 1) as billing_time_avg,
-            round((sum(if(finish_time>0 and arrive_time>0, abs(finish_time-arrive_time), 0))/60)/count(if(status=5, id, null)), 1) as pay_time_avg,
+            nvl(round((sum(if(pickup_time <> 0, pickup_time - take_time,0)/60)/count(if(status = 5 or status = 4,id,null))),1),0) pick_up_time_avg,
+            nvl(round((sum(if(take_time <> 0,take_time - create_time,0))/count(if(driver_id <> 0,id,null)))/60,1),0) take_time_avg,
+            nvl(round((sum(if(cancel_time>0 and take_time>0, abs(cancel_time-take_time), 0))/60)/count(if(driver_id<>0, id, null)), 1),0) as cannel_pick_avg,
+            nvl(round((sum(if(pickup_time>0 and wait_time>0, abs(pickup_time-wait_time), 0))/60)/count(if(status=4 or status=5, id, null)), 1),0) as wait_time_avg,
+            nvl(round((sum(if(arrive_time>0 and pickup_time>0, abs(arrive_time-pickup_time), 0))/60)/count(if(status=4 or status=5, id, null)), 1),0) as billing_time_avg,
+            nvl(round((sum(if(finish_time>0 and arrive_time>0, abs(finish_time-arrive_time), 0))/60)/count(if(status=5, id, null)), 1),0) as pay_time_avg,
         
-            concat(cast(round(count(if(status = 6 and (cancel_role = 3 or cancel_role = 4),id,null)) * 100/count(id),2) as string),'%') sys_cancel_rate,
-            concat(cast(round(count(if(status = 6 and driver_id = 0  and cancel_role = 1,id,null)) * 100/count(id),2) as string),'%') passanger_before_cancel_rate,
-            concat(cast(round(count(if(status = 6 and driver_id <> 0  and cancel_role = 1,id,null)) * 100/count(id),2) as string),'%') passanger_after_cancel_rate
+            concat(cast(nvl(round(count(if(status = 6 and (cancel_role = 3 or cancel_role = 4),id,null)) * 100/count(id),2),0) as string),'%') sys_cancel_rate,
+            concat(cast(nvl(round(count(if(status = 6 and driver_id = 0  and cancel_role = 1,id,null)) * 100/count(id),2),0) as string),'%') passanger_before_cancel_rate,
+            concat(cast(nvl(round(count(if(status = 6 and driver_id <> 0  and cancel_role = 1,id,null)) * 100/count(id),2),0) as string),'%') passanger_after_cancel_rate
         from
             oride_db.data_order where  dt= '{{ ds }}' and from_unixtime(create_time,'yyyy-MM-dd') = '{{ ds }}'
         group by from_unixtime(create_time,'yyyy-MM-dd')
@@ -585,7 +585,7 @@ def send_report_email(ds_nodash, ds, **kwargs):
         passanger_before_cancel_rate , --乘客应答前取消率
         passanger_after_cancel_rate,--乘客应答后取消率
         validity_ride_num, --有效下单量
-        concat(cast(round(on_ride_num * 100/validity_ride_num,2) as string),'%') validity_on_ride_rate, --完单率(有效订单数)
+        concat(cast(nvl(round(on_ride_num * 100/validity_ride_num,2),0) as string),'%') validity_on_ride_rate, --完单率(有效订单数)
         if(cannel_pick_avg is null, '-', cannel_pick_avg) as cannel_pick_avg,      --平均取消接驾时长(分钟)
         if(wait_time_avg is null, '-', wait_time_avg) as wait_time_avg,        --平均等待上车时长(分钟)
         if(billing_time_avg is null, '-', billing_time_avg) as billing_time_avg,     --平均计费时长(分钟)

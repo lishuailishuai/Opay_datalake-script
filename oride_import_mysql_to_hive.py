@@ -1,3 +1,5 @@
+# coding=utf-8
+
 import airflow
 from datetime import datetime, timedelta
 from airflow.hooks.base_hook import BaseHook
@@ -29,7 +31,6 @@ dag = airflow.DAG(
     concurrency=5,
     max_active_runs=1,
     default_args=args)
-
 
 # 导入数据的列表
 
@@ -75,11 +76,12 @@ ods_data_stop_limit = 0.45
     校验全局数据量函数
 """
 
-def validata_data(table_name, ds, **kwargs):
 
+def validata_data(table_name, ds, **kwargs):
     day = ds
     day_before_1 = airflow.macros.ds_add(ds, -1)
-    day_before_7 = airflow.macros.ds_add(ds, -7)
+    # 暂时修改为对比前3天
+    day_before_7 = airflow.macros.ds_add(ds, -3)
 
     if table_name not in table_core_list and table_name not in table_not_core_list:
         write_meta_data(table_name, day, 1, '此表不在校验列表中，导入成功')
@@ -189,9 +191,12 @@ def validate(cursor, table_name, sql, day, day_before_1, day_before_7):
         elif (day_num - day_before_7_num) < 0 and abs((day_num - day_before_7_num) / day_num) > ods_data_stop_limit:
             is_import = 0
             error_message = '''
-                {table_name} {day} 日期数据数据量达到下降幅度，请关注相关数据指标：
-                {day}  ： {day_num}
-                {day_before_7}  ： {day_before_7_num}
+            
+                监控规则：数据量下降幅度超过10%进行预警，数据量下降幅度超过45%发送BI，进行审核。
+                异常说明：表： {table_name} ，{day} 数据量为 {day_num}，{day_before_7}  数据量为 {day_before_7_num}，已达到预警标准。
+                请BI 核查指标数据是否异常，如存在策略调整，请通知相关使用方。
+                
+               
             '''.format(
                 table_name=table_name,
                 day=day,
@@ -200,9 +205,11 @@ def validate(cursor, table_name, sql, day, day_before_1, day_before_7):
                 day_before_7_num=day_before_7_num)
         elif (day_num - day_before_7_num) < 0 and abs((day_num - day_before_7_num) / day_num) > ods_data_alert_limit:
             error_message = '''
-                {table_name}  {day} 日期数据数据量超过预警下降幅度 ,请关注相关数据指标：
-                {day}  ： {day_num}
-                {day_before_7}  ： {day_before_7_num}
+            
+                监控规则：数据量下降幅度超过10%进行预警，数据量下降幅度超过45%发送BI，进行审核。
+                异常说明：表： {table_name} ，{day} 数据量为 {day_num}，{day_before_7}  数据量为 {day_before_7_num}，需要BI审核。
+                请BI 核查指标数据是否异常，如存在策略调整，请通知相关使用方。
+                
             '''.format(
                 table_name=table_name,
                 day=day,
@@ -237,10 +244,11 @@ def write_meta_data(table_name, day, result, msg):
 
     cursor.execute(sql)
 
-conn_conf_dict={}
-for table_name,conn_id in table_list:
+
+conn_conf_dict = {}
+for table_name, conn_id in table_list:
     if conn_id not in conn_conf_dict:
-        conn_conf_dict[conn_id]=BaseHook.get_connection(conn_id)
+        conn_conf_dict[conn_id] = BaseHook.get_connection(conn_id)
     import_table = BashOperator(
         task_id='import_table_{}'.format(table_name),
         bash_command='''
@@ -267,12 +275,12 @@ for table_name,conn_id in table_list:
         dag=dag,
     )
 
-    if conn_id=='sqoop_db':
-        hive_db='oride_db'
-        hive_table=table_name
+    if conn_id == 'sqoop_db':
+        hive_db = 'oride_db'
+        hive_table = table_name
     else:
-        hive_db='oride_dw'
-        hive_table='ods_sqoop_%s_df' % table_name
+        hive_db = 'oride_dw'
+        hive_table = 'ods_sqoop_%s_df' % table_name
 
     add_partitions = HiveOperator(
         task_id='add_partitions_{}'.format(table_name),

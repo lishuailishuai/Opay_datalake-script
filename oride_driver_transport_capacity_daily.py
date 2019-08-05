@@ -262,12 +262,12 @@ insert_driver_metrics = HiveOperator(
         insert overwrite table oride_driver_capacity_metrics_info partition (dt='{{ ds }}')
         select 
         od.city_name,
-        opd.push_order_to_driver_num,
-        opu.push_driver_num,
-        opu.push_order_times_num,
-        opu.push_order_num,
-        oda.online_driver_num,
-        oda.driver_onlinerange_sum,
+        nvl(opd.push_order_to_driver_num,0),
+        nvl(opu.push_driver_num,0),
+        nvl(opu.push_order_times_num,0),
+        nvl(opu.push_order_num,0),
+        nvl(oda.online_driver_num,0),
+        nvl(oda.driver_onlinerange_sum,0),
         od.duration_sum,
         od.onride_num,
         od.accept_driver_num,
@@ -276,11 +276,11 @@ insert_driver_metrics = HiveOperator(
         od.register_and_onride_driver_num,
         od.agg_onride_driver_num,
         od.driver_cancel_num,
-        dr.register_driver_num,
-        dr.agg_register_driver_num,
-        op.order_pay_num,
-        op.price_sum,
-        op.amount_sum
+        nvl(dr.register_driver_num,0),
+        nvl(dr.agg_register_driver_num,0),
+        nvl(op.order_pay_num,0),
+        nvl(op.price_sum,0),
+        nvl(op.amount_sum,0)
 
         from 
         order_data od 
@@ -308,21 +308,21 @@ def send_report_email(ds, **kwargs):
         (
             select 
             city_name,
-            round(sum(push_order_times_num)/sum(push_driver_num),2),
-            round(sum(push_order_num)/sum(push_driver_num),2),
-            round(sum(driver_onlinerange_sum)/3600,2),
-            round(sum(driver_onlinerange_sum)/(3600 * sum(online_driver_num)),2),
-            concat(cast(round((sum(duration_sum) * 100)/sum(driver_onlinerange_sum),2) as string),'%'),
-            round(sum(onride_num)/sum(onride_driver_num),2),
-            sum(online_driver_num),
-            sum(accept_driver_num),
-            sum(onride_driver_num),
-            sum(register_driver_num),
-            sum(register_and_onride_driver_num),
-            sum(agg_register_driver_num),
-            sum(agg_onride_driver_num),
-            round(sum(price_sum)/sum(order_pay_num),2),
-            round(sum(amount_sum)/sum(order_pay_num),2)
+            nvl(round(sum(push_order_times_num)/sum(push_driver_num),2),0),
+            nvl(round(sum(push_order_num)/sum(push_driver_num),2),0),
+            nvl(round(sum(driver_onlinerange_sum)/3600,2),0),
+            nvl(round(sum(driver_onlinerange_sum)/(3600 * sum(online_driver_num)),2),0),
+            concat(cast(nvl(round((sum(duration_sum) * 100)/sum(driver_onlinerange_sum),2),0) as string),'%'),
+            nvl(round(sum(onride_num)/sum(onride_driver_num),2),0),
+            nvl(sum(online_driver_num),0),
+            nvl(sum(accept_driver_num),0),
+            nvl(sum(onride_driver_num),0),
+            nvl(sum(register_driver_num),0),
+            nvl(sum(register_and_onride_driver_num),0),
+            nvl(sum(agg_register_driver_num),0),
+            nvl(sum(agg_onride_driver_num),0),
+            nvl(round(sum(price_sum)/sum(order_pay_num),2),0),
+            nvl(round(sum(amount_sum)/sum(order_pay_num),2),0)
             from 
             oride_bi.oride_driver_capacity_metrics_info
             where dt = '{dt}'
@@ -330,21 +330,21 @@ def send_report_email(ds, **kwargs):
             union all
             select 
             'ALL' city_name,
-            round(sum(push_order_times_num)/sum(push_driver_num),2),
-            round(sum(push_order_num)/sum(push_driver_num),2),
-            round(sum(driver_onlinerange_sum)/3600,2),
-            round(sum(driver_onlinerange_sum)/(3600 * sum(online_driver_num)),2),
-            concat(cast(round((sum(duration_sum) * 100)/sum(driver_onlinerange_sum),2) as string),'%'),
-            round(sum(onride_num)/sum(onride_driver_num),2),
-            sum(online_driver_num),
-            sum(accept_driver_num),
-            sum(onride_driver_num),
-            sum(register_driver_num),
-            sum(register_and_onride_driver_num),
-            sum(agg_register_driver_num),
-            sum(agg_onride_driver_num),
-            round(sum(price_sum)/sum(order_pay_num),2),
-            round(sum(amount_sum)/sum(order_pay_num),2)
+            nvl(round(sum(push_order_times_num)/sum(push_driver_num),2),0),
+            nvl(round(sum(push_order_num)/sum(push_driver_num),2),0),
+            nvl(round(sum(driver_onlinerange_sum)/3600,2),0),
+            nvl(round(sum(driver_onlinerange_sum)/(3600 * sum(online_driver_num)),2),0),
+            concat(cast(nvl(round((sum(duration_sum) * 100)/sum(driver_onlinerange_sum),2),0) as string),'%'),
+            nvl(round(sum(onride_num)/sum(onride_driver_num),2),0),
+            nvl(sum(online_driver_num),0),
+            nvl(sum(accept_driver_num),0),
+            nvl(sum(onride_driver_num),0),
+            nvl(sum(register_driver_num),0),
+            nvl(sum(register_and_onride_driver_num),0),
+            nvl(sum(agg_register_driver_num),0),
+            nvl(sum(agg_onride_driver_num),0),
+            nvl(round(sum(price_sum)/sum(order_pay_num),2),0),
+            nvl(round(sum(amount_sum)/sum(order_pay_num),2),0)
             from 
             oride_bi.oride_driver_capacity_metrics_info
             where dt = '{dt}'
