@@ -885,7 +885,7 @@ insert_oride_order_city_daily_report = HiveOperator(
         (
             SELECT
                 c.name,
-                nvl(wcd.weather,'-'),
+                nvl(wcd.weather,'-') weather,
                 nvl(wod.rain_order_num,0) rain_order_num,
                 od.request_num,
                 lf.request_num_lfw,
