@@ -74,7 +74,7 @@ order_tags_info_to_msyql = HiveToMySqlTransfer(
             ord.price,--（订单应付金额）
             ord.pay_amount,--（订单实付金额）
             ord.reward,--（给司机发放的奖励）
-            nvl(eye.tag_ids,-1) as tag_name,--（命中tag，若有多个用英文逗号隔开,-1 订单未知）
+            nvl(concat_ws(',',eye.tag_ids),-1) as tag_name,--（命中tag，若有多个用英文逗号隔开,-1 订单未知）
             ord.start_name,--（订单起点）
             ord.end_name --（订单终点）
         from 
