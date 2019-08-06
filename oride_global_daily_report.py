@@ -1664,8 +1664,8 @@ def send_funnel_report_email(ds, **kwargs):
             nvl(round(completed_num/request_num*100, 2),0) as completed_rate,
             nvl(nvl(round(completed_num_lfw/request_num_lfw*100, 2),0),0) as completed_lfw_rate,
             pay_num,
-            if (dt >= '2019-06-26',  round(pay_price_total/pay_num, 2), ''),
-            if (dt >= '2019-06-26',  round(pay_amount_total/pay_num, 2), '')
+            if (dt >= '2019-06-26',  nvl(round(pay_price_total/pay_num, 2),0), ''),
+            if (dt >= '2019-06-26',  nvl(round(pay_amount_total/pay_num, 2),0), '')
         FROM
            oride_bi.oride_order_city_daily_report
         WHERE
