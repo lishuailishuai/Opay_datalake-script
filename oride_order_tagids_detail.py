@@ -68,7 +68,7 @@ order_tags_info_to_msyql = HiveToMySqlTransfer(
             ord.dt,
             ord.order_id,
             ord.driver_id,
-            ord.passenge_id,
+            ord.passenger_id,
             ord.product_id,
             ord.city_id,
             ord.price,--（订单应付金额）
@@ -82,7 +82,7 @@ order_tags_info_to_msyql = HiveToMySqlTransfer(
             dt,
             order_id,
             driver_id,
-            passenge_id,
+            passenger_id,
             product_id,
             city_id,
             price,--（订单应付金额）
