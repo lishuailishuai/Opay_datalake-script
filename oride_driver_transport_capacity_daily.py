@@ -24,12 +24,6 @@ dag = airflow.DAG(
     schedule_interval="00 02 * * *",
     default_args=args)
 
-city_list = [
-    'ALL',
-    'lagos',
-    'Ibadan'
-]
-
 table_names = ['oride_db.data_order',
                'oride_db.data_driver_extend',
                'oride_db.data_city_conf',
@@ -259,7 +253,7 @@ insert_driver_metrics = HiveOperator(
         )
 
 
-        insert overwrite table oride_driver_capacity_metrics_info partition (dt='{{ ds }}')
+        insert overwrite table oride_bi.oride_driver_capacity_metrics_info partition (dt='{{ ds }}')
         select 
         od.city_name,
         nvl(opd.push_order_to_driver_num,0),
@@ -300,58 +294,54 @@ insert_driver_metrics = HiveOperator(
 def send_report_email(ds, **kwargs):
     cursor = get_hive_cursor()
     sql = '''
-        
-        select 
-        t.*
-        
-        from 
-        (
+            select 
+            'ALL' city_name,
+            nvl(round(sum(push_order_times_num)/sum(push_driver_num),2),0) push_driver_times_avg,
+            nvl(round(sum(push_order_num)/sum(push_driver_num),2),0) push_driver_order_avg,
+            nvl(round(sum(driver_onlinerange_sum)/3600,2),0) driver_onlinerange_sum,
+            nvl(round(sum(driver_onlinerange_sum)/(3600 * sum(online_driver_num)),2),0) driver_onlinerange_rate,
+            concat(cast(nvl(round((sum(duration_sum) * 100)/sum(driver_onlinerange_sum),2),0) as string),'%') duration_rate,
+            nvl(round(sum(onride_num)/sum(onride_driver_num),2),0) onride_driver_order_avg,
+            nvl(sum(online_driver_num),0) online_driver_num,
+            nvl(sum(accept_driver_num),0) accept_driver_num,
+            nvl(sum(onride_driver_num),0) onride_driver_num,
+            nvl(sum(register_driver_num),0) register_driver_num,
+            nvl(sum(register_and_onride_driver_num),0) register_and_onride_driver_num,
+            nvl(sum(agg_register_driver_num),0) agg_register_driver_num,
+            nvl(sum(agg_onride_driver_num),0) agg_onride_driver_num,
+            nvl(round(sum(price_sum)/sum(order_pay_num),2),0) order_price_avg,
+            nvl(round(sum(amount_sum)/sum(order_pay_num),2),0) order_amount_avg
+            from 
+            oride_bi.oride_driver_capacity_metrics_info
+            where dt = '{dt}'
+            
+
+    '''.format(dt=ds)
+
+    city_sql = '''
             select 
             city_name,
-            nvl(round(sum(push_order_times_num)/sum(push_driver_num),2),0),
-            nvl(round(sum(push_order_num)/sum(push_driver_num),2),0),
-            nvl(round(sum(driver_onlinerange_sum)/3600,2),0),
-            nvl(round(sum(driver_onlinerange_sum)/(3600 * sum(online_driver_num)),2),0),
-            concat(cast(nvl(round((sum(duration_sum) * 100)/sum(driver_onlinerange_sum),2),0) as string),'%'),
-            nvl(round(sum(onride_num)/sum(onride_driver_num),2),0),
-            nvl(sum(online_driver_num),0),
-            nvl(sum(accept_driver_num),0),
-            nvl(sum(onride_driver_num),0),
-            nvl(sum(register_driver_num),0),
-            nvl(sum(register_and_onride_driver_num),0),
-            nvl(sum(agg_register_driver_num),0),
-            nvl(sum(agg_onride_driver_num),0),
-            nvl(round(sum(price_sum)/sum(order_pay_num),2),0),
-            nvl(round(sum(amount_sum)/sum(order_pay_num),2),0)
+            nvl(round(sum(push_order_times_num)/sum(push_driver_num),2),0) push_driver_times_avg,
+            nvl(round(sum(push_order_num)/sum(push_driver_num),2),0) push_driver_order_avg,
+            nvl(round(sum(driver_onlinerange_sum)/3600,2),0) driver_onlinerange_sum,
+            nvl(round(sum(driver_onlinerange_sum)/(3600 * sum(online_driver_num)),2),0) driver_onlinerange_rate,
+            concat(cast(nvl(round((sum(duration_sum) * 100)/sum(driver_onlinerange_sum),2),0) as string),'%') duration_rate,
+            nvl(round(sum(onride_num)/sum(onride_driver_num),2),0) onride_driver_order_avg,
+            nvl(sum(online_driver_num),0) online_driver_num,
+            nvl(sum(accept_driver_num),0) accept_driver_num,
+            nvl(sum(onride_driver_num),0) onride_driver_num,
+            nvl(sum(register_driver_num),0) register_driver_num,
+            nvl(sum(register_and_onride_driver_num),0) register_and_onride_driver_num,
+            nvl(sum(agg_register_driver_num),0) agg_register_driver_num,
+            nvl(sum(agg_onride_driver_num),0) agg_onride_driver_num,
+            nvl(round(sum(price_sum)/sum(order_pay_num),2),0) order_price_avg,
+            nvl(round(sum(amount_sum)/sum(order_pay_num),2),0) order_amount_avg
             from 
             oride_bi.oride_driver_capacity_metrics_info
             where dt = '{dt}'
             group by city_name
-            union all
-            select 
-            'ALL' city_name,
-            nvl(round(sum(push_order_times_num)/sum(push_driver_num),2),0),
-            nvl(round(sum(push_order_num)/sum(push_driver_num),2),0),
-            nvl(round(sum(driver_onlinerange_sum)/3600,2),0),
-            nvl(round(sum(driver_onlinerange_sum)/(3600 * sum(online_driver_num)),2),0),
-            concat(cast(nvl(round((sum(duration_sum) * 100)/sum(driver_onlinerange_sum),2),0) as string),'%'),
-            nvl(round(sum(onride_num)/sum(onride_driver_num),2),0),
-            nvl(sum(online_driver_num),0),
-            nvl(sum(accept_driver_num),0),
-            nvl(sum(onride_driver_num),0),
-            nvl(sum(register_driver_num),0),
-            nvl(sum(register_and_onride_driver_num),0),
-            nvl(sum(agg_register_driver_num),0),
-            nvl(sum(agg_onride_driver_num),0),
-            nvl(round(sum(price_sum)/sum(order_pay_num),2),0),
-            nvl(round(sum(amount_sum)/sum(order_pay_num),2),0)
-            from 
-            oride_bi.oride_driver_capacity_metrics_info
-            where dt = '{dt}'
-        ) t 
-        order by t.city_name
-        
-
+            order by city_name
+    
     '''.format(dt=ds)
 
     html_fmt = '''
@@ -433,6 +423,10 @@ def send_report_email(ds, **kwargs):
     cursor.execute(sql)
     res = cursor.fetchall()
 
+    logging.info(city_sql)
+    cursor.execute(city_sql)
+    city_res = cursor.fetchall()
+
     row_html = ''
     tr_fmt = '''
                 <tr>{row}</tr>
@@ -457,14 +451,48 @@ def send_report_email(ds, **kwargs):
                 <th>{amount_avg}</th>
         '''
 
-    data_map = dict()
     for data in res:
-        data_list = list(data)
-        data_map[data_list[0]] = data_list
+        [
+            city_name,
+            order_time_push_driver_avg,
+            order_push_driver_avg,
+            driver_online_time_sum,
+            driver_online_avg,
+            duration_rate,
+            onride_avg,
+            online_driver_num,
+            accpet_driver_num,
+            onride_driver_num,
+            register_driver_num,
+            register_and_onride_driver_num,
+            agg_register_driver_num,
+            agg_onride_driver_num,
+            price_avg,
+            amount_avg
+        ] = data
 
-    for city in city_list:
-        data = data_map.get(city)
+        row = row_fmt.format(
+            city_name=city_name,
+            order_time_push_driver_avg=order_time_push_driver_avg,
+            order_push_driver_avg=order_push_driver_avg,
+            driver_online_time_sum=driver_online_time_sum,
+            driver_online_avg=driver_online_avg,
+            duration_rate=duration_rate,
+            onride_avg=onride_avg,
+            online_driver_num=online_driver_num,
+            accpet_driver_num=accpet_driver_num,
+            onride_driver_num=onride_driver_num,
+            register_driver_num=register_driver_num,
+            register_and_onride_driver_num=register_and_onride_driver_num,
+            agg_register_driver_num=agg_register_driver_num,
+            agg_onride_driver_num=agg_onride_driver_num,
+            price_avg=price_avg,
+            amount_avg=amount_avg
+        )
 
+        row_html += tr_fmt.format(row=row)
+
+    for data in city_res:
         [
             city_name,
             order_time_push_driver_avg,
@@ -510,6 +538,7 @@ def send_report_email(ds, **kwargs):
     # send mail
 
     email_to = Variable.get("oride_driver_transport_metrics_receivers").split()
+    # email_to = ['nan.li@opay-inc.com']
     result = is_alert(ds, table_names)
     if result:
         email_to = ['bigdata@opay-inc.com']
