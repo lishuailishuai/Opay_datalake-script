@@ -105,7 +105,7 @@ insert_order_location_info = HiveOperator(
             select 
             t.event_name event_name,
             t.order_id order_id,
-            concat(t.event_time,'_',t.lat,'_',t.lng) loc
+            concat(substring(cast(t.event_time as string),0,10),'_',t.lat,'_',t.lng) loc
             from 
             (
                 select
