@@ -609,6 +609,8 @@ insert_oride_global_daily_report = HiveOperator(
 insert_oride_order_city_daily_report = HiveOperator(
     task_id='insert_oride_order_city_daily_report',
     hql="""
+    
+        set hive.auto.convert.join = false;
         ALTER TABLE oride_source.appsflyer_opay_event_log ADD IF NOT EXISTS PARTITION (dt = '{{ ds }}');
         ALTER TABLE oride_order_city_daily_report DROP IF EXISTS PARTITION (dt = '{{ ds }}');
 
