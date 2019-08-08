@@ -978,39 +978,53 @@ insert_oride_global_city_serv_daily_report = HiveOperator(
     task_id='insert_oride_global_city_serv_daily_report',
     hql="""
         ALTER TABLE oride_global_city_serv_daily_report DROP IF EXISTS PARTITION (dt = '{{ ds }}');
+        
+        WITH driver_dim as (
+            select 
+            id,
+            city_id,
+            serv_type
+            from 
+            oride_db.data_driver_extend
+            WHERE
+                dt='{{ ds }}'
+        ),
+        
+        
         -- 近4周数据
-        WITH lfw_data as (
+         lfw_data as (
             SELECT
-               dt,
-               city_id,
-               driver_serv_type,
+               o.dt,
+               o.city_id,
+               d.serv_type,
                count(
                if(
-                    datediff(dt, from_unixtime(create_time, 'yyyy-MM-dd'))>0
-                    and datediff(dt, from_unixtime(create_time, 'yyyy-MM-dd'))<=28
-                    and from_unixtime(create_time,'u') = from_unixtime(unix_timestamp(dt, 'yyyy-MM-dd'),'u')
-                , id, null)
+                    datediff(o.dt, from_unixtime(o.create_time, 'yyyy-MM-dd'))>0
+                    and datediff(o.dt, from_unixtime(o.create_time, 'yyyy-MM-dd'))<=28
+                    and from_unixtime(o.create_time,'u') = from_unixtime(unix_timestamp(o.dt, 'yyyy-MM-dd'),'u')
+                , o.id, null)
                 )/4 as request_num_lfw,
                count(
                 if(
-                    datediff(dt, from_unixtime(create_time, 'yyyy-MM-dd'))>0
-                    and datediff(dt, from_unixtime(create_time, 'yyyy-MM-dd'))<=28
-                    and from_unixtime(create_time,'u') = from_unixtime(unix_timestamp(dt, 'yyyy-MM-dd'),'u')
-                    and status in (4,5)
-                , id, null)
+                    datediff(o.dt, from_unixtime(o.create_time, 'yyyy-MM-dd'))>0
+                    and datediff(o.dt, from_unixtime(o.create_time, 'yyyy-MM-dd'))<=28
+                    and from_unixtime(o.create_time,'u') = from_unixtime(unix_timestamp(o.dt, 'yyyy-MM-dd'),'u')
+                    and o.status in (4,5)
+                , o.id, null)
                 )/4 as completed_num_lfw
             FROM
-                oride_db.data_order
+                oride_db.data_order o
+                inner join driver_dim d on d.city_id = o.city_id and d.id = o.driver_id
             WHERE
-                dt='{{ ds }}' 
-            GROUP BY dt,city_id,driver_serv_type
+                o.dt='{{ ds }}' 
+            GROUP BY o.dt,o.city_id,d.serv_type
         ),
         -- 订单数据
         order_data as (
             SELECT
                 do.dt,
                 do.city_id,
-                do.driver_serv_type,
+                d.serv_type,
                 COUNT(if(do.status in (4,5),do.id,null)) AS completed_num,
                 SUM(if(do.arrive_time>0 and do.status in (4,5), do.arrive_time-do.pickup_time, 0)) as billing_time_total,
                 SUM(if(do.status in (4,5),do.take_time-do.create_time,0)) as take_time_total,
@@ -1026,6 +1040,7 @@ insert_oride_global_city_serv_daily_report = HiveOperator(
                 count(distinct if(dop.id is not null and dop.status=1 and do.serv_type = 3,do.user_id,null)) trike_pay_passengernum
             FROM
                 oride_db.data_order do
+                inner join driver_dim d on d.city_id = do.city_id and d.id = do.driver_id
                 left join 
                 (
                     SELECT
@@ -1041,7 +1056,7 @@ insert_oride_global_city_serv_daily_report = HiveOperator(
                 do.dt='{{ ds }}'
                 and from_unixtime(do.create_time, 'yyyy-MM-dd')=do.dt
                 AND do.city_id != 999001
-            GROUP BY do.dt,do.city_id,do.driver_serv_type
+            GROUP BY do.dt,do.city_id,d.serv_type
         ),
         -- 司机数据
         driver_data as (
@@ -1060,8 +1075,8 @@ insert_oride_global_city_serv_daily_report = HiveOperator(
         online_data as (
             SELECT
                 odt.dt,
-                dde.city_id,
-                dde.serv_type,
+                d.city_id,
+                d.serv_type,
                 count(distinct odt.driver_id) as online_drivers,
                 SUM(odt.driver_onlinerange) as online_time_total
             FROM
@@ -1074,22 +1089,15 @@ insert_oride_global_city_serv_daily_report = HiveOperator(
                         dt='{{ ds }}'
                 ) odt
                 INNER JOIN
-                (
-                    SELECT
-                        *
-                    FROM
-                       oride_db.data_driver_extend
-                    WHERE
-                        dt='{{ ds }}'
-                ) dde on dde.id=odt.driver_id and dde.dt=odt.dt
-            GROUP BY odt.dt,dde.city_id,dde.serv_type
+                driver_dim d on d.id = odt.driver_id
+            GROUP BY odt.dt,d.city_id,d.serv_type
         ),
         -- 推送数据
         push_data as (
             select
                 t.dt,
-                dde.city_id,
-                dde.serv_type,
+                d.city_id,
+                d.serv_type,
                 sum(t.order_num) push_num, -- 推送订单量
                 count(t.driver_id) push_drivers -- 推送司机数
                 from
@@ -1112,20 +1120,13 @@ insert_oride_global_city_serv_daily_report = HiveOperator(
                     group by s.driver_id,s.dt
                 ) t
                 INNER JOIN
-                (
-                    SELECT
-                        *
-                    FROM
-                       oride_db.data_driver_extend
-                    WHERE
-                        dt='{{ ds }}'
-                ) dde on dde.id=t.driver_id and dde.dt=t.dt
-            GROUP BY t.dt, dde.city_id,dde.serv_type
+                driver_dim d on d.id = t.driver_id
+            GROUP BY t.dt, d.city_id,d.serv_type
         )
         INSERT OVERWRITE TABLE oride_global_city_serv_daily_report PARTITION (dt = '{{ ds }}')
         SELECT
             od.city_id,
-            od.driver_serv_type,
+            od.serv_type,
             nvl(od.completed_num,0),
             nvl(ld.completed_num_lfw,0),
             nvl(od.completed_users,0),
@@ -1150,10 +1151,10 @@ insert_oride_global_city_serv_daily_report = HiveOperator(
 
         FROM
             order_data od
-            LEFT JOIN lfw_data ld ON ld.dt=od.dt AND ld.city_id=od.city_id AND ld.driver_serv_type=od.driver_serv_type
-            LEFT JOIN driver_data dd ON dd.dt=od.dt AND dd.city_id=od.city_id AND dd.serv_type=od.driver_serv_type
-            LEFT JOIN online_data old ON old.dt=od.dt AND old.city_id=od.city_id AND old.serv_type=od.driver_serv_type
-            LEFT JOIN push_data pd ON pd.dt=od.dt AND pd.city_id=od.city_id AND pd.serv_type=od.driver_serv_type
+            LEFT JOIN lfw_data ld ON ld.dt=od.dt AND ld.city_id=od.city_id AND ld.serv_type=od.serv_type
+            LEFT JOIN driver_data dd ON dd.dt=od.dt AND dd.city_id=od.city_id AND dd.serv_type=od.serv_type
+            LEFT JOIN online_data old ON old.dt=od.dt AND old.city_id=od.city_id AND old.serv_type=od.serv_type
+            LEFT JOIN push_data pd ON pd.dt=od.dt AND pd.city_id=od.city_id AND pd.serv_type=od.serv_type
         """,
     schema='oride_bi',
     dag=dag)
@@ -1382,12 +1383,12 @@ def get_trike_row(ds, driver_serv_type):
             0 as city_id,
             from_unixtime(unix_timestamp(dt, 'yyyy-MM-dd'),'yyyyMMdd') as dt,
             'All' as name,
-            request_num,
-            request_num_lfw,
+            '-',--request_num,
+            '-',--request_num_lfw,
             completed_num,
             cast(nvl(completed_num_lfw, 0) as int),
-            concat(cast(nvl(round(completed_num * 100/request_num,1),0) as string),'%'),
-            concat(cast(nvl(round(completed_num_lfw * 100/request_num_lfw,1),0) as string),'%'),
+            '-',--concat(cast(nvl(round(completed_num * 100/request_num,1),0) as string),'%'),
+            '-',--concat(cast(nvl(round(completed_num_lfw * 100/request_num_lfw,1),0) as string),'%'),
             completed_drivers,
             nvl(round(online_time_total/online_drivers/3600,1),0),
             concat(cast(nvl(round(billing_time_total/online_time_total*100, 1),0) as string), '%'),
@@ -1399,7 +1400,7 @@ def get_trike_row(ds, driver_serv_type):
             cast(nvl(round(pickup_time_total/completed_num),0) as int),
             cast(nvl(round(distance_total/completed_num),0) as int),
             if(dt>='2019-08-06',nvl(round((trike_complete_passengernum)/(completed_num),1),0),'-') as trike_order_passenger_avg,
-            if(dt>='2019-08-06',(request_usernum),'-') as request_usernum,
+            '-',--if(dt>='2019-08-06',(request_usernum),'-') as request_usernum,
             if(dt>='2019-08-06',(first_completed_users),'-') as first_completed_users,
             if(dt>='2019-08-06',concat(cast(nvl(round((first_completed_users) * 100/(completed_num),2),0) as string),'%'),'-') as first_completed_rate,
             if(dt>='2019-08-06',(completed_num - first_completed_users),'-') as old_completed_users,
@@ -1414,12 +1415,12 @@ def get_trike_row(ds, driver_serv_type):
             td.id as city_id,
             from_unixtime(unix_timestamp(cd.dt, 'yyyy-MM-dd'),'yyyyMMdd') as dt,
             td.name as name,
-            cd.request_num,
-            cd.request_num_lfw,
+            '-', --cd.request_num
+            '-', --cd.request_num_lfw,
             cd.completed_num,
             cast(nvl(cd.completed_num_lfw, 0) as int),
-            concat(cast(nvl(round(cd.completed_num * 100/cd.request_num,1),0) as string),'%'),
-            concat(cast(nvl(round(cd.completed_num_lfw * 100/cd.request_num_lfw,1),0) as string),'%'),
+            '-',--concat(cast(nvl(round(cd.completed_num * 100/cd.request_num,1),0) as string),'%'),
+            '-',--concat(cast(nvl(round(cd.completed_num_lfw * 100/cd.request_num_lfw,1),0) as string),'%'),
             cd.completed_drivers,
             nvl(round(cd.online_time_total/cd.online_drivers/3600,1),0),
             concat(cast(nvl(round(cd.billing_time_total/cd.online_time_total*100, 1),0) as string), '%'),
@@ -1431,7 +1432,7 @@ def get_trike_row(ds, driver_serv_type):
             cast(nvl(round(cd.pickup_time_total/cd.completed_num),0) as int),
             cast(nvl(round(cd.distance_total/cd.completed_num),0) as int),
             if(dt>='2019-08-06',nvl(round((cd.trike_complete_passengernum)/(cd.completed_num),1),0),'-') as trike_order_passenger_avg,
-            if(dt>='2019-08-06',(cd.request_usernum),'-') as request_usernum,
+            '-',--if(dt>='2019-08-06',(cd.request_usernum),'-') as request_usernum,
             if(dt>='2019-08-06',(cd.first_completed_users),'-') as first_completed_users,
             if(dt>='2019-08-06',concat(cast(nvl(round((cd.first_completed_users) * 100/(cd.completed_num),2),0) as string),'%'),'-') as first_completed_rate,
             if(dt>='2019-08-06',(cd.completed_num - cd.first_completed_users),'-') as old_completed_users,
@@ -1843,6 +1844,7 @@ def send_report_email(ds, **kwargs):
         # send mail
 
         email_to = Variable.get("oride_global_daily_report_receivers").split()
+        # email_to = ['nan.li@opay-inc.com']
         result = is_alert(ds, global_table_names)
         if result:
             email_to = ['bigdata@opay-inc.com']
