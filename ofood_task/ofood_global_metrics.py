@@ -134,8 +134,8 @@ insert_ofood_global_metrics = HiveOperator(
         count(distinct(if(o.order_status = 8,o.mobile,null))) complete_user_num,
         count(distinct(if(o.order_status = 8,o.shop_id,null))) complete_merchant_num,
         count(distinct(o.shop_id)) legal_merchant_num,
-        count(distinct if(olm.order_id is not null and o.order_status = '-2',o.order_id,null)) merchant_cancel_num,
-        count(distinct if(olu.order_id is not null and o.order_status = '-2',o.order_id,null)) user_cancel_num,
+        count(distinct if(olm.order_id is not null and o.order_status = -2,o.order_id,null)) merchant_cancel_num,
+        count(distinct if(olu.order_id is not null and o.order_status = -2,o.order_id,null)) user_cancel_num,
         sum(if(wo.order_id is not null and o.order_status = 8,total_price,0)) order_total_price_sum,
         sum(if(wo.order_id is not null and o.order_status = 8,total_price - order_youhui - first_youhui,0)) order_actual_price_sum
         from ofood_dw.ods_sqoop_base_jh_order_df o 
@@ -144,7 +144,7 @@ insert_ofood_global_metrics = HiveOperator(
             from_unixtime(dateline,'yyyyMMdd') day,
             order_id
             from ofood_dw.ods_sqoop_base_jh_order_log_df 
-            where status='-1'
+            where status = -1
             and from_unixtime(dateline,'yyyyMMdd') = '{{ ds_nodash }}'
             and log like '%Merchant cancelling order%'
             and dt = '{{ ds }}'   
@@ -155,7 +155,7 @@ insert_ofood_global_metrics = HiveOperator(
                 order_id
                 from 
                 ofood_dw.ods_sqoop_base_jh_order_log_df
-                where status='-1'
+                where status = -1
                 and (log like '%User cancelling order%' 
                 or log like '%用户取消订单%')
                 and from_unixtime(dateline,'yyyyMMdd') = '{{ ds_nodash }}'
@@ -224,7 +224,8 @@ insert_ofood_global_metrics = HiveOperator(
         count(shop_id) total_alive_merchant_num
         from ofood_dw.ods_sqoop_base_jh_waimai_df
         where  from_unixtime(dateline,'yyyyMMdd') <= '{{ ds_nodash }}'
-        and closed='1' 
+        and closed = 0
+        and  audit = 1
         and dt = '{{ ds }}'
         group by from_unixtime(unix_timestamp('{{ ds_nodash }}', 'yyyyMMdd'),'yyyyMMdd')
         ),
@@ -243,7 +244,7 @@ insert_ofood_global_metrics = HiveOperator(
             mobile,
             DATE_FORMAT(from_unixtime(min(dateline)),'yyyyMMdd') ft 
             from ofood_dw.ods_sqoop_base_jh_order_df
-            where order_status = '8'
+            where order_status = 8
             and dt = '{{ ds }}'
             group by mobile
         ) d
@@ -265,24 +266,24 @@ insert_ofood_global_metrics = HiveOperator(
         
         insert overwrite table  ofood_bi.ofood_order_global_daily_report partition (dt = '{{ ds }}')
         select 
-        od.place_order_num,
-        odl.lfw_place_order_num,
-        od.place_user_num,
-        od.complete_num,
-        odl.lfw_complete_num,
-        od.complete_user_num,
-        od.complete_merchant_num,
-        odl.lfw_complete_merchant_num,
-        od.legal_merchant_num,
-        od.merchant_cancel_num,
-        od.user_cancel_num,
-        od.order_total_price_sum,
-        od.order_actual_price_sum,
-        mn.new_register_merchant_num,
-        ma.total_alive_merchant_num,
-        nu.first_complete_user_num,
-        ed.active_user_num,
-        ed.enter_restaurant_num
+        nvl(od.place_order_num,0),
+        nvl(odl.lfw_place_order_num,0),
+        nvl(od.place_user_num,0),
+        nvl(od.complete_num,0),
+        nvl(odl.lfw_complete_num,0),
+        nvl(od.complete_user_num,0),
+        nvl(od.complete_merchant_num,0),
+        nvl(odl.lfw_complete_merchant_num,0),
+        nvl(od.legal_merchant_num,0),
+        nvl(od.merchant_cancel_num,0),
+        nvl(od.user_cancel_num,0),
+        nvl(od.order_total_price_sum,0),
+        nvl(od.order_actual_price_sum,0),
+        nvl(mn.new_register_merchant_num,0),
+        nvl(ma.total_alive_merchant_num,0),
+        nvl(nu.first_complete_user_num,0),
+        nvl(ed.active_user_num,0),
+        nvl(ed.enter_restaurant_num,0)
         
         from 
         order_data od 
@@ -312,26 +313,26 @@ def send_report_email(ds_nodash, ds, **kwargs):
     lfw_complete_num,
     complete_merchant_num,
     lfw_complete_merchant_num,
-    concat(cast(round(complete_num * 100/place_order_num,2) as string),'%') complete_rate,
+    concat(cast(nvl(round(complete_num * 100/place_order_num,2),0) as string),'%') complete_rate,
     new_register_merchant_num,
     total_alive_merchant_num,
     legal_merchant_num,
-    concat(cast(round(legal_merchant_num * 100/total_alive_merchant_num) as string),'%') legal_merchant_rate,
-    concat(cast(round(enter_restaurant_num * 100/active_user_num,2) as string),'%') restaurant_transfer_rate,
-    concat(cast(round(place_user_num * 100/enter_restaurant_num,2) as string),'%') place_order_transfer_rate,
-    concat(cast(round((place_order_num - complete_num) * 100 / place_order_num,2) as string),'%') cancel_rate,
-    concat(cast(round(merchant_cancel_num * 100 / place_order_num) as string),'%') merchant_cancel_rate,
-    concat(cast(round(user_cancel_num * 100 / place_order_num) as string),'%') user_cancel_rate,
+    concat(cast(nvl(round(legal_merchant_num * 100/total_alive_merchant_num,2),0) as string),'%') legal_merchant_rate,
+    concat(cast(nvl(round(enter_restaurant_num * 100/active_user_num,2),0) as string),'%') restaurant_transfer_rate,
+    concat(cast(nvl(round(place_user_num * 100/enter_restaurant_num,2),0) as string),'%') place_order_transfer_rate,
+    concat(cast(nvl(round((place_order_num - complete_num) * 100 / place_order_num,2),0) as string),'%') cancel_rate,
+    concat(cast(nvl(round(merchant_cancel_num * 100 / place_order_num,2),0) as string),'%') merchant_cancel_rate,
+    concat(cast(nvl(round(user_cancel_num * 100 / place_order_num,2),0) as string),'%') user_cancel_rate,
     active_user_num,
     enter_restaurant_num,
     place_user_num,
     complete_user_num,
     first_complete_user_num,
-    concat(cast(round(first_complete_user_num * 100 /complete_user_num,2) as string),'%') first_complete_user_rate,
+    concat(cast(nvl(round(first_complete_user_num * 100 /complete_user_num,2),0) as string),'%') first_complete_user_rate,
     order_total_price_sum,
-    concat(cast(round((order_total_price_sum - order_actual_price_sum) * 100 / order_total_price_sum,2) as string),'%') subsidy_rate,
-    round(order_total_price_sum/complete_num,2) order_pay_avg,
-    round(order_actual_price_sum/complete_num,2) order_pay_actual_avg
+    concat(cast(nvl(round((order_total_price_sum - order_actual_price_sum) * 100 / order_total_price_sum,2),0) as string),'%') subsidy_rate,
+    nvl(round(order_total_price_sum/complete_num,2),0) order_pay_avg,
+    nvl(round(order_actual_price_sum/complete_num,2),0) order_pay_actual_avg
     
     from ofood_bi.ofood_order_global_daily_report
     where dt between  '{start_date}' and '{dt}'
@@ -493,6 +494,7 @@ def send_report_email(ds_nodash, ds, **kwargs):
     email_subject = 'ofood全局运营指标_{}'.format(ds)
     send_email(
         Variable.get("ofood_metrics_report_receivers").split()
+        # ['nan.li@opay-inc.com']
         , email_subject, html, mime_charset='utf-8')
     cursor.close()
     return
