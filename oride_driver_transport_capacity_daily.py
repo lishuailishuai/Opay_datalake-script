@@ -146,7 +146,8 @@ insert_driver_metrics = HiveOperator(
                 count(distinct if(from_unixtime(do.create_time,'yyyy-MM-dd') = '{{ ds }}' and (do.status = 4 or do.status = 5),do.driver_id,null)) onride_driver_num, -- 完单司机数
                 count(distinct if(do.status = 4 or do.status = 5,do.driver_id,null)) agg_onride_driver_num, -- 累计完单司机数
                 count(distinct if(from_unixtime(do.create_time,'yyyy-MM-dd') = '{{ ds }}' and from_unixtime(d.register_time,'yyyy-MM-dd') = '{{ ds }}' and (do.status = 4 or do.status = 5),do.driver_id,null)) register_and_onride_driver_num, -- 当日注册且完单司机数
-                sum(if(from_unixtime(do.create_time,'yyyy-MM-dd') = '{{ ds }}',duration,0))  duration_sum, -- 计费时长
+                sum(if(from_unixtime(do.create_time,'yyyy-MM-dd') = '{{ ds }}'
+                and do.arrive_time > 0 and do.status in (4,5),do.arrive_time - do.pickup_time,0))  duration_sum, -- 计费时长
                 count(if(from_unixtime(do.create_time,'yyyy-MM-dd') = '{{ ds }}' and do.status = 6 and do.cancel_role = 2,do.id,null)) driver_cancel_num --司机取消订单数
                 from
                 oride_db.data_order do
@@ -189,7 +190,7 @@ insert_driver_metrics = HiveOperator(
             driver_dim 
             group by city_name
         ),
-        
+
         order_push as (
             select 
             t.city_name city_name,
@@ -216,8 +217,8 @@ insert_driver_metrics = HiveOperator(
             ) t
             group by t.city_name
         ),
-        
-        
+
+
         order_push_driver as (
             select 
             o.city_name,
@@ -314,7 +315,7 @@ def send_report_email(ds, **kwargs):
             from 
             oride_bi.oride_driver_capacity_metrics_info
             where dt = '{dt}'
-            
+
 
     '''.format(dt=ds)
 
@@ -341,7 +342,7 @@ def send_report_email(ds, **kwargs):
             where dt = '{dt}'
             group by city_name
             order by city_name
-    
+
     '''.format(dt=ds)
 
     html_fmt = '''
