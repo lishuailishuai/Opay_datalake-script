@@ -256,7 +256,7 @@ create_crm_data = BashOperator(
                 b.area_name,
                 b.points
                 from ofood_dw.ods_sqoop_bd_bd_bd_fence_df b 
-                join ofood_dw. ods_sqoop_bd_bd_admin_users_df a on a.dt = '${dt}' and b.uid = a.id and job_id = 4
+                join ofood_dw.ods_sqoop_bd_bd_admin_users_df a on a.dt = '${dt}' and b.uid = a.id and job_id = 4
                 where b.dt = '${dt}'
             ) t 
             left join ofood_bi.ofood_order_shop_metrics_report s on s.dt = t.dt 
