@@ -92,7 +92,7 @@ dependence_oride_global_city_serv_daily_report = WebHdfsSensor(
 create_result_impala_table = HiveOperator(
     task_id='create_result_impala_table',
     hql="""
-        CREATE EXTERNAL TABLE IF NOT EXISTS oride_dw.app_oride_order_tags_di (
+        CREATE TABLE IF NOT EXISTS oride_dw.app_oride_order_tags_di (
             city_id BIGINT COMMENT '城市ID',   
             city_name STRING COMMENT '城市名称',   
             product_id BIGINT COMMENT '业务线',   
@@ -103,14 +103,7 @@ create_result_impala_table = HiveOperator(
             country_code STRING COMMENT '二位国家码',
             dt STRING COMMENT '日期' 
         ) 
-        ROW FORMAT SERDE 
-            'org.apache.hadoop.hive.ql.io.orc.OrcSerde' 
-        STORED AS INPUTFORMAT 
-            'org.apache.hadoop.hive.ql.io.orc.OrcInputFormat' 
-        OUTPUTFORMAT 
-            'org.apache.hadoop.hive.ql.io.orc.OrcOutputFormat'
-        LOCATION
-            'ufile://opay-datalake/oride/oride_dw/app_oride_order_tags_di'
+        STORED AS PARQUET
        """,
     schema='oride_dw',
     priority_weight=50,
@@ -134,7 +127,7 @@ def drop_partions(*op_args, **op_kwargs):
         dy = matched.groupdict().get('dy', '')
         if dy == dt:
             hql = '''
-                ALTER TABLE oride_dw.app_oride_order_tags_di DROP IF EXISTS PARTITION (country_code='{cc}', dt = '{dt}')
+                ALTER TABLE oride_dw.app_oride_order_tags_di DROP IF EXISTS PARTITION (country_code='{cc}', dt='{dt}')
             '''.format(cc=cc, dt=dt)
             logging.info(hql)
             cursor.execute(hql)
@@ -152,37 +145,118 @@ insert_result_to_impala = HiveOperator(
     task_id='insert_result_to_impala',
     hql="""
         --set hive.execution.engine=tez;
-        with tags_data as (
-        select 
-            nvl(do.city_id,0) as city_id,
-            nvl(do.serv_type,0) as serv_type,
-            t.dt,
-            t.tag,
-            count(distinct t.order_id) as orders 
-        from 
-            (select 
+        with
+        --分城市、分类型 
+        tag_part_data as (
+            select 
+                do.city_id as city_id,
+                'null' as city_name,
+                do.serv_type as serv_type,
+                t.tag,
+                count(distinct t.order_id) as orders 
+            from 
+                (select 
+                    tags.tag as tag,
+                    order_id
+                from ods_log_oride_order_skyeye_di 
+                lateral view posexplode(tag_ids) tags as pos, tag 
+                where dt='{pt}' 
+                ) as t
+            inner join oride_db.data_order as do  
+            where t.order_id = do.id and 
+                do.dt = '{pt}' and 
+                from_unixtime(do.create_time, 'yyyy-MM-dd') = '{pt}'
+            group by 
+                do.city_id, do.serv_type, t.tag
+        ),
+        --城市全部类型
+        tag_city_data as (
+            select 
+                do.city_id as city_id,
+                'null' as city_name,
+                -1 as serv_type,
+                t.tag,
+                count(distinct t.order_id) as orders 
+            from 
+                (select 
+                    tags.tag as tag,
+                    order_id
+                from ods_log_oride_order_skyeye_di 
+                lateral view posexplode(tag_ids) tags as pos, tag 
+                where dt='{pt}' 
+                ) as t
+            inner join oride_db.data_order as do  
+            where t.order_id = do.id and 
+                do.dt = '{pt}' and 
+                from_unixtime(do.create_time, 'yyyy-MM-dd') = '{pt}'
+            group by 
+                do.city_id, t.tag
+        ),
+        --类型全部城市
+        tag_type_data as (
+            select 
+                0 as city_id,
+                'null' as city_name,
+                do.serv_type as serv_type,
+                t.tag,
+                count(distinct t.order_id) as orders 
+            from 
+                (select 
+                    tags.tag as tag,
+                    order_id
+                from ods_log_oride_order_skyeye_di 
+                lateral view posexplode(tag_ids) tags as pos, tag 
+                where dt='{pt}' 
+                ) as t
+            inner join oride_db.data_order as do  
+            where t.order_id = do.id and 
+                do.dt = '{pt}' and 
+                from_unixtime(do.create_time, 'yyyy-MM-dd') = '{pt}'
+            group by 
+                do.serv_type, t.tag
+        ),
+        --全部城市，全部类型
+        tag_all_data as (
+            select 
+                0 as city_id,
+                'null' as city_name,
+                -1 as serv_type,
                 tags.tag as tag,
-                order_id,
-                dt
+                count(distinct order_id) as orders
             from ods_log_oride_order_skyeye_di 
             lateral view posexplode(tag_ids) tags as pos, tag 
             where dt='{pt}' 
-            ) as t
-        left join oride_db.data_order as do on t.order_id = do.id 
-        where do.dt = '{pt}' and 
-            from_unixtime(do.create_time, 'yyyy-MM-dd') = '{pt}'
-        group by 
-            t.dt, nvl(do.city_id,0), nvl(do.serv_type,0), t.tag
+            group by tags.tag  
         )
         insert overwrite table oride_dw.app_oride_order_tags_di PARTITION (country_code='nal', dt='{pt}')
         select 
             city_id,
-            '',
+            city_name,
             serv_type,
             tag,
-            orders 
-        from tags_data 
-        where dt = '{pt}'
+            orders
+        from tag_all_data union 
+        select 
+            city_id,
+            city_name,
+            serv_type,
+            tag,
+            orders
+        from tag_city_data union 
+        select 
+            city_id,
+            city_name,
+            serv_type,
+            tag,
+            orders
+        from tag_part_data union 
+        select 
+            city_id,
+            city_name,
+            serv_type,
+            tag,
+            orders
+        from tag_type_data
     """.format(pt='{{ ds }}'),
     schema='oride_dw',
     priority_weight=50,
