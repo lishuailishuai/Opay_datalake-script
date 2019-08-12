@@ -300,7 +300,7 @@ for opayspreadtable in table_list:
             sqoop import "-Dorg.apache.sqoop.splitter.allow_text_splitter=true" \
             --connect "jdbc:mysql://{host}:{port}/{schema}?tinyInt1isBit=false&useUnicode=true&characterEncoding=utf8" \
             --username {username} \
-            --password {password} \
+            --password \'{password}\' \
             --table {table} \
             --target-dir ufile://opay-datalake/opay-spread/{table}/dt={{{{ ds }}}}/ \
             --fields-terminated-by "\\001" \

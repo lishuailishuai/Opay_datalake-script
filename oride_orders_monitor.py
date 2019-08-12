@@ -65,7 +65,7 @@ def data_monitor(**op_kwargs):
         if city_id >= 999000:
             continue
         metrics_cnt += 1
-        if city_id != 1002 and serv_type != 0 and serv_type != 1 and serv_type != 99 and total <= 0:
+        if city_id == 0 and serv_type == -1 and total <= 0:
             comwx.postAppMessage('{0}[{1}]10分钟数据{2}数据记录指标全部为0异常，请及时排查，谢谢'.format(city_name,serv_type,order_time), '271')
             return
 
@@ -124,20 +124,20 @@ def data_monitor(**op_kwargs):
     for (city_id, city_name, serv_type, order_time, t1orders, t2orders, t1ousers, t2ousers, t1opicks, t2opicks,
          t1dservs, t2dservs, t1doables, t2doables, t1ofs, t2ofs, t1apicks, t2apicks, t1atakes, t2atakes,
          t1norders, t2norders, t1pos, t2pos, t1aofs, t2aofs) in results:
-        if serv_type == -1 and ((t2orders >= 100 and t2orders > t1orders and (t2orders - t1orders)/t2orders > 0.5) or \
+        if serv_type == -1 and ((t2orders >= 100 and t2orders > t1orders and (t2orders - t1orders)/t2orders > 0.8) or \
                 (t2orders > 0 and t2orders < 100 and (t2orders - t1orders) > 40)):
             comwx.postAppMessage('{0}[{1}]10分钟数据{2}下单数记录与上周同期对比异常，请及时排查，谢谢'.format(city_name, serv_type, order_time),
                                  '271')
             return
 
-        if serv_type > 0 and ((t2dservs >= 200 and t2dservs > t1dservs and (t2dservs - t1dservs)/t2dservs > 0.5) or \
-                (t2dservs > 0 and t2dservs < 100 and (t2dservs - t1dservs) > 40)):
+        if serv_type == -1 and ((t2dservs >= 200 and t2dservs > t1dservs and (t2dservs - t1dservs)/t2dservs > 0.8) or \
+                (t2dservs > 0 and t2dservs < 100 and (t2dservs - t1dservs) > 80)):
             comwx.postAppMessage('{0}[{1}]10分钟数据{2}在线司机数记录与上周同期对比异常，请及时排查，谢谢'.format(city_name, serv_type, order_time),
                                  '271')
             return
 
-        if serv_type > 0 and ((t2doables >= 200 and t2doables > t1doables and (t2doables - t1doables)/t2doables > 0.5) or \
-                (t2doables > 0 and t2doables < 100 and (t2doables - t1doables) > 40)):
+        if serv_type == -1 and ((t2doables >= 200 and t2doables > t1doables and (t2doables - t1doables)/t2doables > 0.8) or \
+                (t2doables > 0 and t2doables < 100 and (t2doables - t1doables) > 80)):
             comwx.postAppMessage('{0}[{1}]10分钟数据{2}可接单司机数记录与上周同期对比异常，请及时排查，谢谢'.format(city_name, serv_type, order_time),
                                  '271')
             return
