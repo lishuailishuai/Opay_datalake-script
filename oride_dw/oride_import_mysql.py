@@ -37,6 +37,9 @@ table_list = [
     ("oride_data", "data_user", "sqoop_db", "base"),
     ("oride_data", "data_order_expired", "sqoop_db", "base"),
     ("oride_data", "data_device_extend", "sqoop_db", "base"),
+    ("oride_data", "data_driver_recharge_records", "sqoop_db", "base"),
+    ("oride_data", "data_driver_reward", "sqoop_db", "base"),
+
 
     ("bi", "weather_per_10min", "mysql_bi", "base"),
     # 协会数据
