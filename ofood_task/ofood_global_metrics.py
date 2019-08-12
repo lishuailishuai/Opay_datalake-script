@@ -338,7 +338,7 @@ def send_report_email(ds_nodash, ds, **kwargs):
     where dt between  '{start_date}' and '{dt}'
     ORDER BY dt DESC
     '''.format(dt=ds,
-               start_date=airflow.macros.ds_add(ds, -14))
+               start_date=airflow.macros.ds_add(ds, -13))
 
     html_fmt = '''
            <html>
