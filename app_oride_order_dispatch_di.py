@@ -240,7 +240,7 @@ drop_partitons_from_table = PythonOperator(
 insert_result_to_hive = HiveOperator(
     task_id='insert_result_to_hive',
     hql='''
-        set hive.execution.engine=tez;
+        --set hive.execution.engine=tez;
         WITH 
         push_distance_finished as (
             select 
@@ -592,7 +592,7 @@ insert_result_to_hive = HiveOperator(
                 de.dt = '{pt}'
             group by de.dt, de.city_id, de.serv_type
         ) 
-        insert overwrite table oride_dw.app_oride_order_dispatch_di PARTITION (country_code='nal', dt = '{pt}')
+        insert overwrite table oride_dw.app_oride_order_dispatch_di PARTITION (country_code='nal', dt='{pt}')
         select 
             orders_data.city_id,
             '',
