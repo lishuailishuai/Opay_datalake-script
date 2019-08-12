@@ -2,6 +2,7 @@ import airflow
 from datetime import datetime, timedelta
 from airflow.operators.hive_operator import HiveOperator
 from airflow.sensors import UFileSensor
+from airflow.operators.hive_to_mysql import HiveToMySqlTransfer
 
 args = {
     'owner': 'zhenqian.zhang',
@@ -33,4 +34,20 @@ add_client_partitions = HiveOperator(
     schema='okash_dw',
     dag=dag)
 
-check_client_ufile >> add_client_partitions
+export_to_mysql = HiveToMySqlTransfer(
+    task_id='export_to_mysql',
+    sql="""
+            SELECT
+                *,
+                from_unixtime(unix_timestamp())
+            FROM
+                okash_dw.ods_log_client_hi
+            WHERE
+                dt='{{ ds }}'
+                AND hour='{{ execution_date.strftime("%H") }}'
+        """,
+    mysql_conn_id='mysql_bi',
+    mysql_table='okash_dw.ods_log_client_hi',
+    dag=dag)
+
+check_client_ufile >> add_client_partitions >> export_to_mysql
