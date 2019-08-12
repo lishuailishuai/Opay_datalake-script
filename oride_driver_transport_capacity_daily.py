@@ -24,6 +24,8 @@ dag = airflow.DAG(
     schedule_interval="03 02 * * *",
     default_args=args)
 
+cursor = get_hive_cursor()
+
 table_names = ['oride_db.data_order',
                'oride_db.data_driver_extend',
                'oride_db.data_city_conf',
@@ -117,29 +119,32 @@ insert_driver_metrics = HiveOperator(
             select 
             c.name city_name,
             e.id ,
+            e.serv_type,
             e.register_time
             from 
             oride_db.data_driver_extend e
             join oride_db.data_city_conf c on c.dt = '{{ ds }}' and e.city_id = c.id and c.name <> 'beijing'
-            where e.dt = '{{ ds }}' and e.serv_type = 2
+            where e.dt = '{{ ds }}'
         ),
-
-
-         online_data as (
+        
+        
+        online_data as (
             select 
             d.city_name city_name,
+            d.serv_type serv_type,
             count(d.id) online_driver_num, -- 在线司机数
             sum(if(t.driver_onlinerange is null,0,t.driver_onlinerange)) driver_onlinerange_sum -- 在线时长
             from 
             driver_dim d 
             join oride_bi.oride_driver_timerange t on d.id = t.driver_id and dt = '{{ ds }}'
-            group by d.city_name
+            group by d.city_name,d.serv_type
         ),
-
-
+        
+        
         order_data as (
                 select 
                 d.city_name ,
+                d.serv_type serv_type,
                 count(if(from_unixtime(do.create_time,'yyyy-MM-dd') = '{{ ds }}' ,do.id,null)) accept_num, --当日接单量
                 count(distinct if(from_unixtime(do.create_time,'yyyy-MM-dd') = '{{ ds }}' ,do.driver_id,null)) accept_driver_num, --当日接单司机数
                 count(if(from_unixtime(do.create_time,'yyyy-MM-dd') = '{{ ds }}' and (do.status = 4 or do.status = 5),do.id,null)) onride_num, -- 当日完单量
@@ -153,13 +158,14 @@ insert_driver_metrics = HiveOperator(
                 oride_db.data_order do
                 join driver_dim d on do.driver_id = d.id
                 where dt = '{{ ds }}'
-                group by d.city_name
+                group by d.city_name,d.serv_type
         ),
-
-
+        
+        
         order_pay as (
             select 
             d.city_name city_name,
+            d.serv_type serv_type,
             count(1) order_pay_num, --支付订单数 
             sum(p.price) price_sum, --应付总金额
             sum(p.amount) amount_sum --实付总金额
@@ -175,25 +181,27 @@ insert_driver_metrics = HiveOperator(
                 where dt = '{{ ds }}' and from_unixtime(create_time,'yyyy-MM-dd') = '{{ ds }}'  and status = 1
             ) p 
             join driver_dim d on p.driver_id = d.id
-            group by d.city_name
+            group by d.city_name,d.serv_type
         ),
-
-
-
-
+        
+        
+        
+        
         driver_register as (
             select 
             city_name,
+            serv_type,
             count(if(from_unixtime(register_time,'yyyy-MM-dd') = '{{ ds }}',id,null)) register_driver_num, --注册司机数
             count(id) agg_register_driver_num  -- 累计注册司机数
             from 
             driver_dim 
-            group by city_name
+            group by city_name,serv_type
         ),
-
+        
         order_push as (
             select 
             t.city_name city_name,
+            t.serv_type serv_type,
             sum(t.push_num) push_order_times_num, --推送订单次数 
             sum(t.order_num) push_order_num, -- 推送订单量
             count(t.driver_id)  push_driver_num -- 推送司机数
@@ -201,6 +209,7 @@ insert_driver_metrics = HiveOperator(
             (
                 select 
                 d.city_name city_name,
+                d.serv_type serv_type,
                 s.driver_id driver_id,
                 count(s.order_id) push_num,
                 count(distinct(s.order_id)) order_num
@@ -213,33 +222,37 @@ insert_driver_metrics = HiveOperator(
                     where dt = '{{ ds }}' and success = 1
                 ) s
                 join driver_dim d on d.id = s.driver_id
-                group by d.city_name,s.driver_id
+                group by d.city_name,d.serv_type,s.driver_id
             ) t
-            group by t.city_name
+            group by t.city_name,t.serv_type
         ),
-
-
+        
+        
         order_push_driver as (
             select 
             o.city_name,
-            count(driver_num)  push_driver_num, -- 推送司机数
-            sum(driver_num) push_order_to_driver_num -- 订单推送司机数
+            s.serv_type,
+            count(s.driver_num)  push_driver_num, -- 推送司机数
+            sum(s.driver_num) push_order_to_driver_num -- 订单推送司机数
             from 
             (
                 select 
                 t.order_id,
+                t.serv_type,
                 max(t.driver_num) driver_num
                 from 
                 (
                 select 
-                order_id,
-                round,
+                s.order_id,
+                d.serv_type,
+                s.round,
                 count(driver_id) driver_num
-                from oride_bi.server_magic_push_detail
-                where dt = '{{ ds }}' and success = 1
-                group by order_id,round
+                from oride_bi.server_magic_push_detail s 
+                join driver_dim d on d.id = s.driver_id
+                where s.dt = '{{ ds }}' and s.success = 1
+                group by s.order_id,d.serv_type,s.round
                 ) t
-                group by t.order_id
+                group by t.order_id,t.serv_type
             ) s 
             join 
             (
@@ -250,13 +263,14 @@ insert_driver_metrics = HiveOperator(
                 join oride_db.data_city_conf c on c.dt = '{{ ds }}' and o.city_id = c.id
                 where o.dt = '{{ ds }}' and o.serv_type = 2
             ) o on s.order_id = o.id 
-            group by o.city_name
+            group by o.city_name,s.serv_type
         )
-
-
-        insert overwrite table oride_bi.oride_driver_capacity_metrics_info partition (dt='{{ ds }}')
+        
+        
+        insert overwrite table oride_bi.oride_all_driver_capacity_metrics_info partition (dt='{{ ds }}')
         select 
         od.city_name,
+        od.serv_type,
         nvl(opd.push_order_to_driver_num,0),
         nvl(opu.push_driver_num,0),
         nvl(opu.push_order_times_num,0),
@@ -276,14 +290,14 @@ insert_driver_metrics = HiveOperator(
         nvl(op.order_pay_num,0),
         nvl(op.price_sum,0),
         nvl(op.amount_sum,0)
-
+        
         from 
         order_data od 
-        left join online_data oda on od.city_name = oda.city_name
-        left join order_pay op on od.city_name = op.city_name
-        left join driver_register dr on od.city_name = dr.city_name 
-        left join order_push opu on od.city_name = opu.city_name
-        left join order_push_driver opd on od.city_name = opd.city_name
+        left join online_data oda on od.city_name = oda.city_name and od.serv_type = oda.serv_type
+        left join order_pay op on od.city_name = op.city_name and od.serv_type = op.serv_type
+        left join driver_register dr on od.city_name = dr.city_name and od.serv_type = dr.serv_type
+        left join order_push opu on od.city_name = opu.city_name and od.serv_type = opu.serv_type
+        left join order_push_driver opd on od.city_name = opd.city_name and od.serv_type = opd.serv_type
         ;
 
 
@@ -292,8 +306,7 @@ insert_driver_metrics = HiveOperator(
     dag=dag)
 
 
-def send_report_email(ds, **kwargs):
-    cursor = get_hive_cursor()
+def send_fast_report_email(ds, **kwargs):
     sql = '''
             select 
             'ALL' city_name,
@@ -313,8 +326,8 @@ def send_report_email(ds, **kwargs):
             nvl(round(sum(price_sum)/sum(order_pay_num),2),0) order_price_avg,
             nvl(round(sum(amount_sum)/sum(order_pay_num),2),0) order_amount_avg
             from 
-            oride_bi.oride_driver_capacity_metrics_info
-            where dt = '{dt}'
+            oride_bi.oride_all_driver_capacity_metrics_info
+            where dt = '{dt}' and serv_type = 2
 
 
     '''.format(dt=ds)
@@ -338,8 +351,8 @@ def send_report_email(ds, **kwargs):
             nvl(round(sum(price_sum)/sum(order_pay_num),2),0) order_price_avg,
             nvl(round(sum(amount_sum)/sum(order_pay_num),2),0) order_amount_avg
             from 
-            oride_bi.oride_driver_capacity_metrics_info
-            where dt = '{dt}'
+            oride_bi.oride_all_driver_capacity_metrics_info
+            where dt = '{dt}' and serv_type = 2
             group by city_name
             order by city_name
 
@@ -538,11 +551,12 @@ def send_report_email(ds, **kwargs):
 
     # send mail
 
-    email_to = Variable.get("oride_driver_transport_metrics_receivers").split()
+    email_to = Variable.get("oride_fast_driver_transport_metrics_receivers").split()
     # email_to = ['nan.li@opay-inc.com']
     result = is_alert(ds, table_names)
     if result:
         email_to = ['bigdata@opay-inc.com']
+        # email_to = ['nan.li@opay-inc.com']
 
     email_subject = '司机运力日报-快车_{}'.format(ds)
     send_email(
@@ -552,9 +566,277 @@ def send_report_email(ds, **kwargs):
     return
 
 
-send_report = PythonOperator(
-    task_id='send_report',
-    python_callable=send_report_email,
+send_fast_report = PythonOperator(
+    task_id='send_fast_report',
+    python_callable=send_fast_report_email,
+    provide_context=True,
+    dag=dag
+)
+
+
+def send_otrike_report_email(ds, **kwargs):
+    sql = '''
+            select 
+            'ALL' city_name,
+            nvl(round(sum(push_order_times_num)/sum(push_driver_num),2),0) push_driver_times_avg,
+            nvl(round(sum(push_order_num)/sum(push_driver_num),2),0) push_driver_order_avg,
+            nvl(round(sum(driver_onlinerange_sum)/3600,2),0) driver_onlinerange_sum,
+            nvl(round(sum(driver_onlinerange_sum)/(3600 * sum(online_driver_num)),2),0) driver_onlinerange_rate,
+            concat(cast(nvl(round((sum(duration_sum) * 100)/sum(driver_onlinerange_sum),2),0) as string),'%') duration_rate,
+            nvl(round(sum(onride_num)/sum(onride_driver_num),2),0) onride_driver_order_avg,
+            nvl(sum(online_driver_num),0) online_driver_num,
+            nvl(sum(accept_driver_num),0) accept_driver_num,
+            nvl(sum(onride_driver_num),0) onride_driver_num,
+            nvl(sum(register_driver_num),0) register_driver_num,
+            nvl(sum(register_and_onride_driver_num),0) register_and_onride_driver_num,
+            nvl(sum(agg_register_driver_num),0) agg_register_driver_num,
+            nvl(sum(agg_onride_driver_num),0) agg_onride_driver_num,
+            nvl(round(sum(price_sum)/sum(order_pay_num),2),0) order_price_avg,
+            nvl(round(sum(amount_sum)/sum(order_pay_num),2),0) order_amount_avg
+            from 
+            oride_bi.oride_all_driver_capacity_metrics_info
+            where dt = '{dt}' and serv_type = 3
+
+
+    '''.format(dt=ds)
+
+    city_sql = '''
+            select 
+            city_name,
+            nvl(round(sum(push_order_times_num)/sum(push_driver_num),2),0) push_driver_times_avg,
+            nvl(round(sum(push_order_num)/sum(push_driver_num),2),0) push_driver_order_avg,
+            nvl(round(sum(driver_onlinerange_sum)/3600,2),0) driver_onlinerange_sum,
+            nvl(round(sum(driver_onlinerange_sum)/(3600 * sum(online_driver_num)),2),0) driver_onlinerange_rate,
+            concat(cast(nvl(round((sum(duration_sum) * 100)/sum(driver_onlinerange_sum),2),0) as string),'%') duration_rate,
+            nvl(round(sum(onride_num)/sum(onride_driver_num),2),0) onride_driver_order_avg,
+            nvl(sum(online_driver_num),0) online_driver_num,
+            nvl(sum(accept_driver_num),0) accept_driver_num,
+            nvl(sum(onride_driver_num),0) onride_driver_num,
+            nvl(sum(register_driver_num),0) register_driver_num,
+            nvl(sum(register_and_onride_driver_num),0) register_and_onride_driver_num,
+            nvl(sum(agg_register_driver_num),0) agg_register_driver_num,
+            nvl(sum(agg_onride_driver_num),0) agg_onride_driver_num,
+            nvl(round(sum(price_sum)/sum(order_pay_num),2),0) order_price_avg,
+            nvl(round(sum(amount_sum)/sum(order_pay_num),2),0) order_amount_avg
+            from 
+            oride_bi.oride_all_driver_capacity_metrics_info
+            where dt = '{dt}' and serv_type = 3
+            group by city_name
+            order by city_name
+
+    '''.format(dt=ds)
+
+    html_fmt = '''
+            <html>
+            <head>
+            <title></title>
+            <style type="text/css">
+                table
+                {{
+                    font-family: "Trebuchet MS", Arial, Helvetica, sans-serif;
+                    border-collapse: collapse;
+                    margin: 0 auto;
+                    text-align: left;
+                    align:left;
+                }}
+                table td, table th
+                {{
+                    border: 1px solid #000000;
+                    color: #000000;
+                    height: 30px;
+                    padding: 5px 10px 5px 5px;
+                }}
+                table thead th
+                {{
+                    background-color: #CCE0F1;
+                    //color: white;
+                    width: 100px;
+                }}
+            </style>
+            </head>
+            <body>
+                <table width="100%" class="table">
+                    <caption>
+                        <h3>Otrike指标数据</h3>
+                    </caption>
+                </table>
+                <table width="100%" class="table">
+                    <thead>
+                        <tr>
+                            <th></th>
+                            <th colspan="2" style="text-align: center;">总需求</th>
+                            <th colspan="7" style="text-align: center;">总供给</th>
+                            <th colspan="4" style="text-align: center;">招募</th>
+                            <th colspan="2" style="text-align: center;">财务</th>
+                        </tr>
+                        <tr>
+                            <th>城市</th>
+                            <!--总需求-->
+                            <th>人均推单次数</th>
+                            <th>人均推送订单数</th>
+                            <!--总供给-->
+                            <th>总在线时长</th>
+                            <th>人均在线时长</th>
+                            <th>计费时长占比</th>
+                            <th>人均完单数</th>
+                            <th>在线司机数</th>
+                            <th>接单司机数</th>
+                            <th>完单司机数</th>
+                            <!--招募-->
+                            <th>注册司机数</th>
+                            <th>注册且完单司机数</th>
+                            <th>累计注册司机数</th>
+                            <th>累计完单司机数</th>
+
+                            <!--财务-->
+                            <th>单均应付</th>
+                            <th>单均实付</th>
+                            <!--司机考核-->
+
+                        </tr>
+                    </thead>
+                    {rows}
+                </table>
+            </body>
+            </html>
+            '''
+
+    logging.info(sql)
+    cursor.execute(sql)
+    res = cursor.fetchall()
+
+    logging.info(city_sql)
+    cursor.execute(city_sql)
+    city_res = cursor.fetchall()
+
+    row_html = ''
+    tr_fmt = '''
+                <tr>{row}</tr>
+            '''
+
+    row_fmt = '''
+                <th>{city_name}</th>
+                <th>{order_time_push_driver_avg}</th>
+                <th>{order_push_driver_avg}</th>
+                <th>{driver_online_time_sum}</th>
+                <th>{driver_online_avg}</th>
+                <th>{duration_rate}</th>
+                <th>{onride_avg}</th>
+                <th>{online_driver_num}</th>
+                <th>{accpet_driver_num}</th>
+                <th>{onride_driver_num}</th>
+                <th>{register_driver_num}</th>
+                <th>{register_and_onride_driver_num}</th>
+                <th>{agg_register_driver_num}</th>
+                <th>{agg_onride_driver_num}</th>
+                <th>{price_avg}</th>
+                <th>{amount_avg}</th>
+        '''
+
+    for data in res:
+        [
+            city_name,
+            order_time_push_driver_avg,
+            order_push_driver_avg,
+            driver_online_time_sum,
+            driver_online_avg,
+            duration_rate,
+            onride_avg,
+            online_driver_num,
+            accpet_driver_num,
+            onride_driver_num,
+            register_driver_num,
+            register_and_onride_driver_num,
+            agg_register_driver_num,
+            agg_onride_driver_num,
+            price_avg,
+            amount_avg
+        ] = data
+
+        row = row_fmt.format(
+            city_name=city_name,
+            order_time_push_driver_avg=order_time_push_driver_avg,
+            order_push_driver_avg=order_push_driver_avg,
+            driver_online_time_sum=driver_online_time_sum,
+            driver_online_avg=driver_online_avg,
+            duration_rate=duration_rate,
+            onride_avg=onride_avg,
+            online_driver_num=online_driver_num,
+            accpet_driver_num=accpet_driver_num,
+            onride_driver_num=onride_driver_num,
+            register_driver_num=register_driver_num,
+            register_and_onride_driver_num=register_and_onride_driver_num,
+            agg_register_driver_num=agg_register_driver_num,
+            agg_onride_driver_num=agg_onride_driver_num,
+            price_avg=price_avg,
+            amount_avg=amount_avg
+        )
+
+        row_html += tr_fmt.format(row=row)
+
+    for data in city_res:
+        [
+            city_name,
+            order_time_push_driver_avg,
+            order_push_driver_avg,
+            driver_online_time_sum,
+            driver_online_avg,
+            duration_rate,
+            onride_avg,
+            online_driver_num,
+            accpet_driver_num,
+            onride_driver_num,
+            register_driver_num,
+            register_and_onride_driver_num,
+            agg_register_driver_num,
+            agg_onride_driver_num,
+            price_avg,
+            amount_avg
+        ] = data
+
+        row = row_fmt.format(
+            city_name=city_name,
+            order_time_push_driver_avg=order_time_push_driver_avg,
+            order_push_driver_avg=order_push_driver_avg,
+            driver_online_time_sum=driver_online_time_sum,
+            driver_online_avg=driver_online_avg,
+            duration_rate=duration_rate,
+            onride_avg=onride_avg,
+            online_driver_num=online_driver_num,
+            accpet_driver_num=accpet_driver_num,
+            onride_driver_num=onride_driver_num,
+            register_driver_num=register_driver_num,
+            register_and_onride_driver_num=register_and_onride_driver_num,
+            agg_register_driver_num=agg_register_driver_num,
+            agg_onride_driver_num=agg_onride_driver_num,
+            price_avg=price_avg,
+            amount_avg=amount_avg
+        )
+
+        row_html += tr_fmt.format(row=row)
+
+    html = html_fmt.format(rows=row_html, dt=ds)
+
+    # send mail
+
+    email_to = Variable.get("oride_otrike_driver_transport_metrics_receivers").split()
+    # email_to = ['nan.li@opay-inc.com']
+    result = is_alert(ds, table_names)
+    if result:
+        email_to = ['bigdata@opay-inc.com']
+        # email_to = ['nan.li@opay-inc.com']
+
+    email_subject = '司机运力日报-Otrike_{}'.format(ds)
+    send_email(
+        email_to
+        , email_subject, html, mime_charset='utf-8')
+    cursor.close()
+    return
+
+
+send_otrike_report = PythonOperator(
+    task_id='send_otrike_report',
+    python_callable=send_otrike_report_email,
     provide_context=True,
     dag=dag
 )
@@ -565,4 +847,7 @@ validate_partition_data >> data_order_payment_validate_task >> insert_driver_met
 validate_partition_data >> data_order_validate_task >> insert_driver_metrics
 validate_partition_data >> server_magic_push_detail_validate_task >> insert_driver_metrics
 validate_partition_data >> oride_driver_timerange_validate_task >> insert_driver_metrics
-insert_driver_metrics >> send_report
+
+insert_driver_metrics >> send_fast_report
+insert_driver_metrics >> send_otrike_report
+
