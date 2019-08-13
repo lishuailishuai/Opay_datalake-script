@@ -9,6 +9,8 @@ from airflow.operators.hive_to_mysql import HiveToMySqlTransfer
 from airflow.utils.email import send_email
 from airflow.models import Variable
 from utils.connection_helper import get_hive_cursor
+from airflow.sensors.hive_partition_sensor import HivePartitionSensor
+from utils.validate_metrics_utils import *
 import codecs
 import csv
 import logging
@@ -28,6 +30,132 @@ dag = airflow.DAG(
     'ofood_shop_metrics_daily',
     schedule_interval="10 03 * * *",
     default_args=args)
+
+validate_partition_data = PythonOperator(
+    task_id='validate_partition_data',
+    python_callable=validate_partition,
+    provide_context=True,
+    op_kwargs={
+        # 验证table
+        "table_names":
+            [
+                'ofood_dw.ods_sqoop_base_jh_waimai_df',
+                'ofood_dw.ods_sqoop_base_jh_order_df',
+                'ofood_dw.ods_sqoop_base_jh_order_time_df',
+                'ofood_dw.ods_sqoop_base_jh_waimai_comment_df',
+                'ofood_dw.ods_sqoop_base_jh_waimai_order_df',
+                'ofood_dw.ods_sqoop_base_jh_order_log_df',
+                'ofood_dw.ods_sqoop_bd_bd_admin_users_df',
+                'ofood_dw.ods_sqoop_bd_bd_bd_fence_df',
+                'ofood_dw.ods_sqoop_bd_invitation_info_df',
+                'ofood_dw.ods_sqoop_bd_jh_member_df',
+
+            ],
+        # 任务名称
+        "task_name": "ofood BD指标"
+    },
+    dag=dag
+)
+
+# 熔断阻塞流程
+jh_order_validate_task = HivePartitionSensor(
+    task_id="jh_order_validate_task",
+    table="ods_sqoop_base_jh_order_df",
+    partition="dt='{{ds}}'",
+    schema="ofood_dw",
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
+jh_order_time_validate_task = HivePartitionSensor(
+    task_id="jh_order_time_validate_task",
+    table="ods_sqoop_base_jh_order_time_df",
+    partition="dt='{{ds}}'",
+    schema="ofood_dw",
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
+jh_waimai_comment_validate_task = HivePartitionSensor(
+    task_id="jh_waimai_comment_validate_task",
+    table="ods_sqoop_base_jh_waimai_comment_df",
+    partition="dt='{{ds}}'",
+    schema="ofood_dw",
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
+jh_order_log_validate_task = HivePartitionSensor(
+    task_id="jh_order_log_validate_task",
+    table="ods_sqoop_base_jh_order_log_df",
+    partition="dt='{{ds}}'",
+    schema="ofood_dw",
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
+jh_waimai_order_validate_task = HivePartitionSensor(
+    task_id="jh_waimai_order_validate_task",
+    table="ods_sqoop_base_jh_waimai_order_df",
+    partition="dt='{{ds}}'",
+    schema="ofood_dw",
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
+jh_shop_validate_task = HivePartitionSensor(
+    task_id="jh_shop_validate_task",
+    table="ods_sqoop_base_jh_shop_df",
+    partition="dt='{{ds}}'",
+    schema="ofood_dw",
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
+jh_waimai_validate_task = HivePartitionSensor(
+    task_id="jh_waimai_validate_task",
+    table="ods_sqoop_base_jh_waimai_df",
+    partition="dt='{{ds}}'",
+    schema="ofood_dw",
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
+bd_admin_users_validate_task = HivePartitionSensor(
+    task_id="bd_admin_users_validate_task",
+    table="ods_sqoop_bd_bd_admin_users_df",
+    partition="dt='{{ds}}'",
+    schema="ofood_dw",
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
+bd_bd_fence_validate_task = HivePartitionSensor(
+    task_id="bd_bd_fence_validate_task",
+    table="ods_sqoop_bd_bd_bd_fence_df",
+    partition="dt='{{ds}}'",
+    schema="ofood_dw",
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
+bd_invitation_info_validate_task = HivePartitionSensor(
+    task_id="bd_invitation_info_validate_task",
+    table="ods_sqoop_bd_invitation_info_df",
+    partition="dt='{{ds}}'",
+    schema="ofood_dw",
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
+jh_member_validate_task = HivePartitionSensor(
+    task_id="jh_member_validate_task",
+    table="ods_sqoop_bd_jh_member_df",
+    partition="dt='{{ds}}'",
+    schema="ofood_dw",
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
 
 cursor = get_hive_cursor()
 
@@ -213,7 +341,6 @@ insert_shop_metrics = HiveOperator(
     schema='ofood_bi',
     dag=dag)
 
-
 create_crm_data = BashOperator(
     task_id='create_crm_data',
     bash_command="""
@@ -270,7 +397,6 @@ create_crm_data = BashOperator(
     dag=dag,
 )
 
-
 insert_crm_metrics = HiveToMySqlTransfer(
     task_id='insert_crm_metrics',
     sql=""" 
@@ -307,6 +433,72 @@ insert_crm_metrics = HiveToMySqlTransfer(
         """,
     mysql_conn_id='mysql_bi',
     mysql_table='ofood_area_shop_metrics_info',
+    dag=dag)
+
+insert_crm_bd_metrics = HiveToMySqlTransfer(
+    task_id='insert_crm_bd_metrics',
+    sql=""" 
+        
+        
+        select 
+        null,
+        t.bd_id,
+        t.day,
+        t.username,
+        t.area_name,
+        t.recommended_number_of_users
+        from 
+        (
+            select
+            b.id bd_id,
+            b.dt day,
+            b.name username,
+            f.area_name area_name,
+            count(m.uid) recommended_number_of_users  --我推荐的用户数
+            
+            from 
+            (
+                select 
+                dt,
+                id,
+                name,
+                phone 
+                from ofood_dw.ods_sqoop_bd_bd_admin_users_df
+                where dt = '{{ ds }}' and job_id = 4
+            ) b 
+            join (
+                select 
+                uid,
+                area_name
+                from 
+                ofood_dw.ods_sqoop_bd_bd_bd_fence_df
+                where dt = '{{ ds }}' 
+            ) f on b.id = f.uid
+            left join 
+            (
+                select 
+                bd,
+                uid
+                from ofood_dw.ods_sqoop_bd_invitation_info_df
+                where dt = '{{ ds }}' and from_unixtime(dateline,'yyyy-MM-dd') = '{{ ds }}'
+            ) i on b.phone = i.bd
+            left join 
+            (
+                select 
+                uid
+                from ofood_dw.ods_sqoop_bd_jh_member_df
+                where dt = '{{ ds }}'
+            ) m on i.uid = m.uid
+            group by b.dt,b.id,b.name,f.area_name
+        ) t 
+        
+        
+        
+
+
+        """,
+    mysql_conn_id='mysql_bi',
+    mysql_table='ofood_area_bd_metrics_info',
     dag=dag)
 
 
@@ -375,6 +567,23 @@ send_file_email = PythonOperator(
     provide_context=True,
     dag=dag
 )
+
+validate_partition_data >> jh_waimai_validate_task >> insert_shop_metrics
+validate_partition_data >> jh_waimai_order_validate_task >> insert_shop_metrics
+validate_partition_data >> jh_shop_validate_task >> insert_shop_metrics
+validate_partition_data >> jh_order_validate_task >> insert_shop_metrics
+validate_partition_data >> jh_order_log_validate_task >> insert_shop_metrics
+validate_partition_data >> jh_order_time_validate_task >> insert_shop_metrics
+validate_partition_data >> jh_waimai_comment_validate_task >> insert_shop_metrics
+
+validate_partition_data >> bd_admin_users_validate_task >> insert_shop_metrics
+validate_partition_data >> bd_bd_fence_validate_task >> insert_shop_metrics
+
+bd_bd_fence_validate_task >> insert_crm_bd_metrics
+bd_bd_fence_validate_task >> insert_crm_bd_metrics
+
+validate_partition_data >> bd_invitation_info_validate_task >> insert_crm_bd_metrics
+validate_partition_data >> jh_member_validate_task >> insert_crm_bd_metrics
 
 insert_shop_metrics >> send_file_email
 insert_shop_metrics >> create_crm_data >> insert_crm_metrics
