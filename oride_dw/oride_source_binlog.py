@@ -19,7 +19,7 @@ args = {
 }
 
 dag = airflow.DAG(
-    'oride_insert_ods_binlog_data_hourly',
+    'oride_source_binlog',
     schedule_interval="05 * * * *",
     default_args=args)
 

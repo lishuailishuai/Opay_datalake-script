@@ -15,7 +15,7 @@ args = {
 }
 
 dag = airflow.DAG(
-    'oride_hourly',
+    'oride_source_log',
     schedule_interval="10 * * * *",
     default_args=args)
 

@@ -21,7 +21,7 @@ args = {
 }
 
 dag = airflow.DAG(
-    'oride_import_mysql',
+    'oride_source_sqoop',
     schedule_interval="00 01 * * *",
     concurrency=5,
     max_active_runs=1,
@@ -34,12 +34,23 @@ db_name,table_name,conn_id,prefix_name
 #
 
 table_list = [
+    ("oride_data", "data_order", "sqoop_db", "base"),
+    ("oride_data", "data_order_payment", "sqoop_db", "base"),
     ("oride_data", "data_user", "sqoop_db", "base"),
+    ("oride_data", "data_user_extend", "sqoop_db", "base"),
+    ("oride_data", "data_coupon", "sqoop_db", "base"),
+    ("oride_data", "data_driver", "sqoop_db", "base"),
+    ("oride_data", "data_driver_group", "sqoop_db", "base"),
+    ("oride_data", "data_driver_extend", "sqoop_db", "base"),
+    ("oride_data", "data_driver_comment", "sqoop_db", "base"),
+    ("oride_data", "data_abnormal_order", "sqoop_db", "base"),
+    ("oride_data", "data_anti_fraud_strategy", "sqoop_db", "base"),
+    ("oride_data", "data_city_conf", "sqoop_db", "base"),
+    ("oride_data", "", "sqoop_db", "base"),
     ("oride_data", "data_order_expired", "sqoop_db", "base"),
     ("oride_data", "data_device_extend", "sqoop_db", "base"),
     ("oride_data", "data_driver_recharge_records", "sqoop_db", "base"),
     ("oride_data", "data_driver_reward", "sqoop_db", "base"),
-
 
     ("bi", "weather_per_10min", "mysql_bi", "base"),
     # 协会数据

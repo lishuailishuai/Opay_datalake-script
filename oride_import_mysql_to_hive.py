@@ -35,6 +35,7 @@ dag = airflow.DAG(
 # 导入数据的列表
 
 table_list = [
+    # 以下表已经在oride_dw库每日导入，后续开发请使用oride_dw库
     ("data_order", "sqoop_db"),
     ("data_order_payment", "sqoop_db"),
     ("data_user", "sqoop_db"),

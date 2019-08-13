@@ -19,7 +19,7 @@ args = {
 }
 
 dag = airflow.DAG(
-    'oride_init_ods_table',
+    'oride_binlog_init',
     schedule_interval=None,
     default_args=args)
 
