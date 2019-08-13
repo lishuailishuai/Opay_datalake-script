@@ -32,7 +32,7 @@ table_list = [
 for table in table_list:
     check_ufile=UFileSensor(
         task_id='check_ufile_{}'.format(table),
-        filepath='oride-research/tags/{table}_tags/dt={{{{ ds }}}}'.format(table=table),
+        filepath='oride-research/tags/{table}_tags/dt={{{{ ds }}}}/upload_success.txt'.format(table=table),
         bucket_name='opay-datalake',
         dag=dag)
 
