@@ -30,7 +30,7 @@ args = {
 }
 
 dag = airflow.DAG(
-    'app_oride_order_tags_di',
+    'app_oride_order_tags_d',
     schedule_interval="00 01 * * *",
     default_args=args
 )
@@ -88,11 +88,12 @@ dependence_oride_global_city_serv_daily_report = WebHdfsSensor(
 ##-----end-------##
 """
 
+hive_table = 'oride_dw.app_oride_order_tags_d'
 
 create_result_impala_table = HiveOperator(
     task_id='create_result_impala_table',
-    hql="""
-        CREATE TABLE IF NOT EXISTS oride_dw.app_oride_order_tags_di (
+    hql='''
+        CREATE TABLE IF NOT EXISTS {table_name} (
             city_id BIGINT COMMENT '城市ID',   
             city_name STRING COMMENT '城市名称',   
             product_id BIGINT COMMENT '业务线',   
@@ -104,7 +105,7 @@ create_result_impala_table = HiveOperator(
             dt STRING COMMENT '日期' 
         ) 
         STORED AS PARQUET
-       """,
+       '''.format(table_name=hive_table),
     schema='oride_dw',
     priority_weight=50,
     dag=dag
@@ -115,8 +116,8 @@ def drop_partions(*op_args, **op_kwargs):
     dt = op_kwargs['ds']
     cursor = get_hive_cursor()
     sql = '''
-        show partitions oride_dw.app_oride_order_tags_di
-    '''
+        show partitions {table_name}
+    '''.format(table_name=hive_table)
     cursor.execute(sql)
     res = cursor.fetchall()
     logging.info(res)
@@ -127,8 +128,8 @@ def drop_partions(*op_args, **op_kwargs):
         dy = matched.groupdict().get('dy', '')
         if dy == dt:
             hql = '''
-                ALTER TABLE oride_dw.app_oride_order_tags_di DROP IF EXISTS PARTITION (country_code='{cc}', dt='{dt}')
-            '''.format(cc=cc, dt=dt)
+                ALTER TABLE {table_name} DROP IF EXISTS PARTITION (country_code='{cc}', dt='{dt}')
+            '''.format(cc=cc, dt=dt, table_name=hive_table)
             logging.info(hql)
             cursor.execute(hql)
 
@@ -228,7 +229,7 @@ insert_result_to_impala = HiveOperator(
             where dt='{pt}' 
             group by tags.tag  
         )
-        insert overwrite table oride_dw.app_oride_order_tags_di PARTITION (country_code='nal', dt='{pt}')
+        insert overwrite table {table_name} PARTITION (country_code='nal', dt='{pt}')
         select 
             city_id,
             city_name,
@@ -257,7 +258,7 @@ insert_result_to_impala = HiveOperator(
             tag,
             orders
         from tag_type_data
-    """.format(pt='{{ ds }}'),
+    """.format(pt='{{ ds }}', table_name=hive_table),
     schema='oride_dw',
     priority_weight=50,
     dag=dag
@@ -269,8 +270,8 @@ refresh_impala_table = ImpalaOperator(
         REFRESH oride_bi.oride_global_daily_report;
         REFRESH oride_db.data_city_conf;
         REFRESH oride_bi.oride_global_city_serv_daily_report; 
-        REFRESH oride_dw.app_oride_order_tags_di; 
-    """,
+        REFRESH {table_name}; 
+    """.format(table_name=hive_table),
     schema='oride_bi',
     dag=dag
 )
