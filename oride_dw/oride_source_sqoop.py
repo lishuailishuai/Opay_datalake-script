@@ -10,7 +10,7 @@ from utils.validate_metrics_utils import *
 import logging
 
 args = {
-    'owner': 'root',
+    'owner': 'zhenqian.zhang',
     'start_date': datetime(2019, 7, 17),
     'depends_on_past': False,
     'retries': 1,
