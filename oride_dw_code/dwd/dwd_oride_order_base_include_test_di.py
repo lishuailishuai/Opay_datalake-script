@@ -47,7 +47,7 @@ sleep_time = BashOperator(
 
 # 依赖前一天分区00点
 ods_binlog_data_order_hi_prev_day_tesk = HivePartitionSensor(
-    task_id="ods_binlog_data_order_hi_prev_day_tesk",
+    task_id="ods_binlog_data_order_hi_prev_day_task",
     table="ods_binlog_data_order_hi",
     partition="dt='{{ds}}' and hour='23'",
     schema="oride_dw",
@@ -57,7 +57,7 @@ ods_binlog_data_order_hi_prev_day_tesk = HivePartitionSensor(
 
 # 依赖当天分区00点
 ods_binlog_data_order_hi_now_day_tesk = HivePartitionSensor(
-    task_id="ods_binlog_data_order_hi_now_day_tesk",
+    task_id="ods_binlog_data_order_hi_now_day_task",
     table="ods_binlog_data_order_hi",
     partition="dt='{{macros.ds_add(ds, +1)}}' and hour='00'",
     schema="oride_dw",
@@ -67,7 +67,7 @@ ods_binlog_data_order_hi_now_day_tesk = HivePartitionSensor(
 
 # 依赖前一天分区00点
 ods_binlog_data_order_payment_hi_prev_day_tesk = HivePartitionSensor(
-    task_id="ods_binlog_data_order_payment_hi_prev_day_tesk",
+    task_id="ods_binlog_data_order_payment_hi_prev_day_task",
     table="ods_binlog_data_order_payment_hi",
     partition="dt='{{ds}}' and hour='23'",
     schema="oride_dw",
@@ -77,7 +77,7 @@ ods_binlog_data_order_payment_hi_prev_day_tesk = HivePartitionSensor(
 
 # 依赖当天分区00点
 ods_binlog_data_order_payment_hi_now_day_tesk = HivePartitionSensor(
-    task_id="ods_binlog_data_order_payment_hi_now_day_tesk",
+    task_id="ods_binlog_data_order_payment_hi_now_day_task",
     table="ods_binlog_data_order_payment_hi",
     partition="dt='{{macros.ds_add(ds, +1)}}' and hour='00'",
     schema="oride_dw",

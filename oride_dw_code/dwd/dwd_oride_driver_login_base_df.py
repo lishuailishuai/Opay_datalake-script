@@ -49,7 +49,7 @@ sleep_time = BashOperator(
 
 #依赖前一天分区
 dwd_oride_driver_login_base_df_prev_day_tesk=HivePartitionSensor(
-      task_id="dwd_oride_driver_login_base_df_prev_day_tesk",
+      task_id="dwd_oride_driver_login_base_df_prev_day_task",
       table="oride_client_event_detail",
       partition="dt='{{ds}}'",
       schema="oride_bi",

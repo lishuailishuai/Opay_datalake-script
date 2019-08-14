@@ -49,7 +49,7 @@ sleep_time = BashOperator(
 
 #依赖前一天分区
 dwd_oride_anti_fraud_log_di_prev_day_tesk=HivePartitionSensor(
-      task_id="dwd_oride_anti_fraud_log_di_prev_day_tesk",
+      task_id="dwd_oride_anti_fraud_log_di_prev_day_task",
       table="log_anti_ofood_oride_fraud",
       partition="dt='{{macros.ds_add(ds, +1)}}' and hour='00'",
       schema="oride_source",

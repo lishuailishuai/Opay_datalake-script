@@ -48,7 +48,7 @@ sleep_time = BashOperator(
 
 #依赖前一天分区
 oride_client_event_detail_prev_day_tesk=HivePartitionSensor(
-      task_id="oride_client_event_detail_prev_day_tesk",
+      task_id="oride_client_event_detail_prev_day_task",
       table="oride_client_event_detail",
       partition="dt='{{ds}}'",
       schema="oride_bi",
@@ -58,7 +58,7 @@ oride_client_event_detail_prev_day_tesk=HivePartitionSensor(
 
 #依赖前一天分区
 dim_oride_passenger_base_prev_day_tesk=HivePartitionSensor(
-      task_id="dim_oride_passenger_base_prev_day_tesk",
+      task_id="dim_oride_passenger_base_prev_day_task",
       table="dim_oride_passenger_base",
       partition="dt='{{ds}}'",
       schema="oride_dw",
