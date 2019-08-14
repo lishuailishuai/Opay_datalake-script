@@ -63,6 +63,7 @@ headers = [
     'average_push_orders',
     'average_accept_orders',
     'average_finish_orders',
+    'total_rate_score',
     'total_rate_score≤3',
     'total_average_rate_score',
     'today_online(Y or N)',
@@ -188,7 +189,6 @@ driver_team_validate_task = HivePartitionSensor(
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
-
 
 insert_data = HiveOperator(
     task_id='insert_data',
@@ -453,7 +453,6 @@ def send_fast_csv_file(ds, **kwargs):
     if result:
         email_to = ['bigdata@opay-inc.com']
         # email_to = ['nan.li@opay-inc.com']
-
 
     email_subject = 'oride快车司机明细附件_{dt}'.format(dt=ds)
     email_body = '快车司机档案数据，请查收。\n 附件中文乱码解决:使用记事本打开CSV文件，“文件”->“另存为”，编码方式选择ANSI，保存完毕后，用EXCEL打开，即可。'
