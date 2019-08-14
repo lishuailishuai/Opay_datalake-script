@@ -39,7 +39,7 @@ ROW FORMAT SERDE
 with SERDEPROPERTIES("ignore.malformed.json"="true")
 LOCATION 'ufile://opay-datalake/oride-dev/client_event'
 
-CREATE EXTERNAL TABLE `server_event`(
+CREATE EXTERNAL TABLE oride_source.`server_event`(
     `ip` string,
     `server_ip` string,
     `timestamp` bigint,
@@ -78,10 +78,10 @@ PARTITIONED BY (
 ROW FORMAT SERDE
    'org.openx.data.jsonserde.JsonSerDe'
 with SERDEPROPERTIES("ignore.malformed.json"="true")
-LOCATION 'ufile://opay-datalake/oride/server_event'
+LOCATION 's3a://opay-bi/oride_buried/ordm.server_event'
 
 
-CREATE EXTERNAL TABLE `client_event`(
+CREATE EXTERNAL TABLE oride_source.`client_event`(
     `ip` string,
     `server_ip` string,
     `timestamp` bigint,
@@ -120,10 +120,10 @@ PARTITIONED BY (
 ROW FORMAT SERDE
    'org.openx.data.jsonserde.JsonSerDe'
 with SERDEPROPERTIES("ignore.malformed.json"="true")
-LOCATION 'ufile://opay-datalake/oride/client_event'
+LOCATION 's3a://opay-bi/oride_buried/ordm.client_event'
 
 
-CREATE EXTERNAL TABLE `server_magic`(
+CREATE EXTERNAL TABLE oride_source.`server_magic`(
     `event_name` string,
     `event_values` string
 )
@@ -133,7 +133,7 @@ PARTITIONED BY (
 ROW FORMAT SERDE
    'org.openx.data.jsonserde.JsonSerDe'
 with SERDEPROPERTIES("ignore.malformed.json"="true")
-LOCATION 'ufile://opay-datalake/oride/server_magic'
+LOCATION 's3a://opay-bi/oride_buried/ordm.server_magic'
 
 
 CREATE EXTERNAL TABLE `anti_fraud`(
@@ -152,7 +152,7 @@ with SERDEPROPERTIES("ignore.malformed.json"="true")
 LOCATION 'ufile://opay-datalake/oride-research/anti_fraud'
 
 
-CREATE EXTERNAL TABLE `h5_event`(
+CREATE EXTERNAL TABLE oride_source.`h5_event`(
     `ip` string,
     `server_ip` string,
     `timestamp` bigint,
@@ -191,7 +191,7 @@ PARTITIONED BY (
 ROW FORMAT SERDE
    'org.openx.data.jsonserde.JsonSerDe'
 with SERDEPROPERTIES("ignore.malformed.json"="true")
-LOCATION 'ufile://opay-datalake/oride/h5_event'
+LOCATION 's3a://opay-bi/oride_buried/ordm.h5_event'
 
 CREATE EXTERNAL TABLE oride_dw.`ods_log_oride_driver_skyeye_di`(
     `ver` int,
