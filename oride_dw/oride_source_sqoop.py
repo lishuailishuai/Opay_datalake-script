@@ -46,7 +46,6 @@ table_list = [
     ("oride_data", "data_abnormal_order", "sqoop_db", "base"),
     ("oride_data", "data_anti_fraud_strategy", "sqoop_db", "base"),
     ("oride_data", "data_city_conf", "sqoop_db", "base"),
-    ("oride_data", "", "sqoop_db", "base"),
     ("oride_data", "data_order_expired", "sqoop_db", "base"),
     ("oride_data", "data_device_extend", "sqoop_db", "base"),
     ("oride_data", "data_driver_recharge_records", "sqoop_db", "base"),
