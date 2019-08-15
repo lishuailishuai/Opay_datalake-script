@@ -981,7 +981,7 @@ insert_oride_order_city_daily_report = HiveOperator(
                 row_number() over(partition by c.name order by request_num desc) order_id
             FROM
                 order_data od
-                join oride_db.data_city_conf c on od.city_id = c.id
+                join oride_db.data_city_conf c on od.city_id = c.id and c.dt = od.dt
                 left join weather_city_data wcd on lower(wcd.city) = lower(c.name) and wcd.dt = od.dt
                 left join weather_city_order_data wod on lower(wod.city) = lower(c.name) and wod.dt = od.dt
                 LEFT JOIN lfw_data lf on lf.dt=od.dt and lf.city_id = od.city_id
