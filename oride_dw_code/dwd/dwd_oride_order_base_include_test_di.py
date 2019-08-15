@@ -238,39 +238,49 @@ SELECT base.order_id,
             ELSE 0
         END) AS is_td_finish,
        --当天是否完单
+       
 
        (CASE
             WHEN pickup_time <> 0 THEN pickup_time - take_time
             ELSE 0
         END) AS td_pick_up_dur,
-       --当天接驾时长（分钟）
+       --当天接驾时长（秒）
 
        (CASE
             WHEN take_time <> 0 THEN take_time - create_time
             ELSE 0
         END) AS td_take_dur,
-       --当天应答时长（分钟）
+       --当天应答时长（秒）
 
        (CASE
             WHEN cancel_time>0
                  AND take_time > 0 THEN cancel_time - take_time
             ELSE 0
         END) AS td_cannel_pick_dur,
-       --当天取消接驾时长（分钟）
+       --当天取消接驾时长（秒）
 
        (CASE
             WHEN pickup_time>0
                  AND wait_time > 0 THEN pickup_time - wait_time
             ELSE 0
         END) AS td_wait_dur,
-       --当天等待上车时长（分钟）
+       --当天等待上车时长（秒）
+       
+       
+       (CASE
+            WHEN arrive_time>0
+                 AND take_time > 0 THEN arrive_time - take_time
+            ELSE 0
+        END) AS td_service_dur,
+       --当天服务时长（秒）
+
 
        (CASE
             WHEN arrive_time>0
                  AND pickup_time > 0 THEN arrive_time - pickup_time
             ELSE 0
         END) AS td_billing_dur,
-       --当天计费时长（分钟）
+       --当天计费时长（秒）
 
        (CASE
             WHEN status = 5 
@@ -278,7 +288,7 @@ SELECT base.order_id,
                  AND arrive_time > 0 THEN finish_time - arrive_time
             ELSE 0
         END) AS td_pay_dur,
-       --当天支付时长(分钟)
+       --当天支付时长(秒)
 
        (CASE
             WHEN status = 6
@@ -712,4 +722,11 @@ touchz_data_success = BashOperator(
     ),
     dag=dag)
 
-ods_binlog_data_order_hi_prev_day_tesk >> ods_binlog_data_order_hi_now_day_tesk >> ods_binlog_data_order_payment_hi_prev_day_tesk >> ods_binlog_data_order_payment_hi_now_day_tesk >> sleep_time >> dwd_oride_order_base_include_test_di_task >> task_check_key_data >> touchz_data_success
+ods_binlog_data_order_hi_prev_day_tesk >> \
+ods_binlog_data_order_hi_now_day_tesk >> \
+ods_binlog_data_order_payment_hi_prev_day_tesk >> \
+ods_binlog_data_order_payment_hi_now_day_tesk >> \
+sleep_time >> \
+dwd_oride_order_base_include_test_di_task >> \
+task_check_key_data >> \
+touchz_data_success
