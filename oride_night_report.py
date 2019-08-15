@@ -286,6 +286,7 @@ for table_name in table_list:
         bash_command='''
             #!/usr/bin/env bash
             sqoop import "-Dorg.apache.sqoop.splitter.allow_text_splitter=true" \
+            -D mapred.job.queue.name=users.airflow \
             --connect "jdbc:mysql://{host}:{port}/{schema}?tinyInt1isBit=false&useUnicode=true&characterEncoding=utf8" \
             --username {username} \
             --password {password} \
