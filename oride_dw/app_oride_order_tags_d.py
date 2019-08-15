@@ -24,9 +24,9 @@ args = {
     'depends_on_past': False,
     'retries': 3,
     'retry_delay': timedelta(minutes=5),
-    #'email': ['bigdata_dw@opay-inc.com'],
-    #'email_on_failure': True,
-    #'email_on_retry': False,
+    'email': ['bigdata_dw@opay-inc.com'],
+    'email_on_failure': True,
+    'email_on_retry': False,
 }
 
 dag = airflow.DAG(
@@ -53,6 +53,17 @@ dependence_ods_log_oride_order_skyeye_di = UFileSensor(
     ),
     bucket_name='opay-datalake',
     poke_interval=60,                                           #依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
+dependence_ods_oride_data_order = UFileSensor(
+    task_id='dependence_ods_oride_data_order',
+    filepath='{hdfs_path_str}/dt={pt}'.format(
+        hdfs_path_str="oride/db/data_order",
+        pt='{{ ds }}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,
     dag=dag
 )
 
@@ -145,7 +156,10 @@ drop_partitons_from_table = PythonOperator(
 insert_result_to_impala = HiveOperator(
     task_id='insert_result_to_impala',
     hql="""
-        --set hive.execution.engine=tez;
+        set hive.execution.engine=tez;
+        set hive.prewarm.enabled=true;
+        set hive.prewarm.numcontainers=16;
+        --set hive.exec.parallel=true;
         with
         --分城市、分类型 
         tag_part_data as (
@@ -163,7 +177,7 @@ insert_result_to_impala = HiveOperator(
                 lateral view posexplode(tag_ids) tags as pos, tag 
                 where dt='{pt}' 
                 ) as t
-            inner join oride_db.data_order as do  
+            inner join （select * from oride_db.data_order where dt='{pt}') as do  
             where t.order_id = do.id and 
                 do.dt = '{pt}' and 
                 from_unixtime(do.create_time, 'yyyy-MM-dd') = '{pt}'
@@ -186,7 +200,7 @@ insert_result_to_impala = HiveOperator(
                 lateral view posexplode(tag_ids) tags as pos, tag 
                 where dt='{pt}' 
                 ) as t
-            inner join oride_db.data_order as do  
+            inner join (select * from oride_db.data_order where dt='{pt}') as do  
             where t.order_id = do.id and 
                 do.dt = '{pt}' and 
                 from_unixtime(do.create_time, 'yyyy-MM-dd') = '{pt}'
@@ -209,7 +223,7 @@ insert_result_to_impala = HiveOperator(
                 lateral view posexplode(tag_ids) tags as pos, tag 
                 where dt='{pt}' 
                 ) as t
-            inner join oride_db.data_order as do  
+            inner join (select * from oride_db.data_order where dt='{pt}') as do  
             where t.order_id = do.id and 
                 do.dt = '{pt}' and 
                 from_unixtime(do.create_time, 'yyyy-MM-dd') = '{pt}'
@@ -264,15 +278,23 @@ insert_result_to_impala = HiveOperator(
     dag=dag
 )
 
-refresh_impala_table = ImpalaOperator(
-    task_id='refresh_impala_table',
+refresh_impala_table_other = ImpalaOperator(
+    task_id='refresh_impala_table_other',
     hql="""
         REFRESH oride_bi.oride_global_daily_report;
         REFRESH oride_db.data_city_conf;
         REFRESH oride_bi.oride_global_city_serv_daily_report; 
+    """,
+    schema='oride_bi',
+    dag=dag
+)
+
+refresh_impala_table_self = ImpalaOperator(
+    task_id='refresh_impala_table',
+    hql="""
         REFRESH {table_name}; 
     """.format(table_name=hive_table),
-    schema='oride_bi',
+    schema='oride_dw',
     dag=dag
 )
 
@@ -281,4 +303,6 @@ dependence_oride_global_daily_report >> sleep_time
 dependence_data_city_conf >> sleep_time
 dependence_oride_global_city_serv_daily_report >> sleep_time
 dependence_ods_log_oride_order_skyeye_di >> sleep_time
-sleep_time >> create_result_impala_table >> drop_partitons_from_table >> insert_result_to_impala >> refresh_impala_table
+dependence_ods_oride_data_order >> sleep_time
+sleep_time >> refresh_impala_table_other
+sleep_time >> create_result_impala_table >> drop_partitons_from_table >> insert_result_to_impala >> refresh_impala_table_self

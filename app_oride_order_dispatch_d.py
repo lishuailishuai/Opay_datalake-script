@@ -29,7 +29,7 @@ args = {
 }
 
 dag = airflow.DAG(
-    'app_oride_order_dispatch_di',
+    'app_oride_order_dispatch_d',
     schedule_interval="00 01 * * *",
     default_args=args
 )
@@ -55,14 +55,12 @@ dependence_ods_oride_server_magic = UFileSensor(
     dag=dag
 )
 
-dependence_ods_oride_client_event = UFileSensor(
+dependence_ods_oride_client_event = WebHdfsSensor(
     task_id='dependence_ods_oride_client_event',
     filepath='{hdfs_path_str}/dt={pt}/hour=23'.format(
-        hdfs_path_str="oride/client_event",
+        hdfs_path_str="/user/hive/warehouse/oride_bi.db/oride_client_event_detail",
         pt='{{ ds }}'
     ),
-    bucket_name='opay-datalake',
-    poke_interval=60,
     dag=dag
 )
 
@@ -122,11 +120,12 @@ dependence_ods_oride_driver_timerange = WebHdfsSensor(
 ##-----end-----##
 """
 
+hive_table = 'oride_dw.app_oride_order_dispatch_d'
 
 create_result_table_task = HiveOperator(
     task_id='create_result_table_task',
     hql='''
-        CREATE EXTERNAL TABLE IF NOT EXISTS app_oride_order_dispatch_di (
+        CREATE TABLE IF NOT EXISTS {hive_table} (
             city_id bigint comment '城市ID',
             city_name string comment '城市名称',
             product_id bigint comment '业务线',
@@ -193,15 +192,8 @@ create_result_table_task = HiveOperator(
             `country_code` string COMMENT '二位国家码',  
             `dt` string comment '日期'
             )
-        ROW FORMAT SERDE 
-            'org.apache.hadoop.hive.ql.io.orc.OrcSerde' 
-        STORED AS INPUTFORMAT 
-            'org.apache.hadoop.hive.ql.io.orc.OrcInputFormat' 
-        OUTPUTFORMAT 
-            'org.apache.hadoop.hive.ql.io.orc.OrcOutputFormat'
-        LOCATION
-            'ufile://opay-datalake/oride/oride_dw/app_oride_order_dispatch_di'
-    ''',
+        STORED AS PARQUET
+    '''.format(hive_table=hive_table),
     schema='oride_dw',
     dag=dag
 )
@@ -211,8 +203,8 @@ def drop_partions(*op_args, **op_kwargs):
     dt = op_kwargs['ds']
     cursor = get_hive_cursor()
     sql = '''
-        show partitions oride_dw.app_oride_order_dispatch_di
-    '''
+        show partitions {hive_table}
+    '''.format(hive_table=hive_table)
     cursor.execute(sql)
     res = cursor.fetchall()
     logging.info(res)
@@ -223,8 +215,8 @@ def drop_partions(*op_args, **op_kwargs):
         dy = matched.groupdict().get('dy', '')
         if dy == dt:
             hql = '''
-                ALTER TABLE oride_dw.app_oride_order_dispatch_di DROP IF EXISTS PARTITION (country_code='{cc}', dt = '{dt}')
-            '''.format(cc=cc, dt=dt)
+                ALTER TABLE {hive_table} DROP IF EXISTS PARTITION (country_code='{cc}', dt = '{dt}')
+            '''.format(cc=cc, dt=dt, hive_table=hive_table)
             logging.info(hql)
             cursor.execute(hql)
 
@@ -240,18 +232,21 @@ drop_partitons_from_table = PythonOperator(
 insert_result_to_hive = HiveOperator(
     task_id='insert_result_to_hive',
     hql='''
-        --set hive.execution.engine=tez;
+        set hive.execution.engine=tez;
+        set hive.prewarm.enabled=true;
+        set hive.prewarm.numcontainers=16;
+        --set hive.exec.parallel=true;
         WITH 
         push_distance_finished as (
             select 
                 get_json_object(sm.event_values, '$.city_id') as city_id,
                 nvl(do.serv_type, 0) as serv_type,
 	            sm.dt,
-	            round(sum(get_json_object(event_values, '$.distance'))/count(1), 2) as avg_distance         --平均播单距离 
-            from oride_source.server_magic as sm 
-            left join oride_db.data_order as do 
-            on get_json_object(sm.event_values, '$.order_id') = do.id 
-            where sm.dt = '{pt}' and 
+	            round(sum(get_json_object(event_values, '$.distance'))/count(1), 2) as avg_distance             --平均播单距离 
+            from (select * from oride_source.server_magic where dt='{pt}') as sm 
+            inner join (select * from oride_db.data_order where dt='{pt}') as do  
+            where cast(get_json_object(sm.event_values, '$.order_id') as bigint) = do.id and 
+                sm.dt = '{pt}' and 
                 do.dt = '{pt}' and 
 	            sm.event_name = 'dispatch_push_driver' and 
 	            get_json_object(sm.event_values, '$.success') = 1 
@@ -281,7 +276,7 @@ insert_result_to_hive = HiveOperator(
 				    lateral view posexplode(drivers) d as dpos, driver_id 
 	    			lateral view posexplode(distances) ds as dspos, dis 
 	    			where dpos = dspos
-    			) as m inner join oride_db.data_order as o 
+    			) as m inner join (select * from oride_db.data_order where dt='{pt}') as o 
 			where cast(m.order_id as int) = o.id and 
 				o.dt = '{pt}' and 
 				from_unixtime(o.create_time, 'yyyy-MM-dd') = '{pt}'
@@ -310,17 +305,13 @@ insert_result_to_hive = HiveOperator(
 				    lateral view posexplode(drivers) d as dpos, driver_id 
 				    lateral view posexplode(distances) ds as dspos, dis 
 				    where dpos = dspos
-	    		) as m inner join (select 
-                	distinct get_json_object(event.event_value, '$.order_id') as id 
-            	from 
-                	(select 
-                    	*
-                	from oride_source.client_event 
-                	lateral view posexplode(events) eve as pos, event
-                	where dt='{pt}' and 
-                    	eve.event.event_name = 'accept_order_click'
-                	) as t 
-            	) as o inner join oride_db.data_order do 
+	    		) as m inner join (
+	    		    select 
+                        distinct get_json_object(event_value, '$.order_id') as id 
+                    from oride_bi.oride_client_event_detail 
+                    where dt='{pt}' and 
+                        event_name = 'accept_order_click'
+            	) as o inner join (select * from oride_db.data_order where dt='{pt}') do 
 		    where cast(m.order_id as bigint) = cast(o.id as bigint) and 
 		        cast(m.order_id as bigint) = do.id and 
 		        do.dt = '{pt}'
@@ -331,21 +322,20 @@ insert_result_to_hive = HiveOperator(
                 do.city_id,
                 do.serv_type,
                 do.dt,
-	            count(1) as click_count,                            --司机应答总次数
-	            count(distinct ce.common.user_id) as drivers_clicked,                     --应答司机数
-	            count(1)/count(distinct ce.common.user_id) as avg_clicked             --人均应答次数
+	            count(1) as click_count,                                        --司机应答总次数
+	            count(distinct ce.user_id) as drivers_clicked,                  --应答司机数
+	            count(1)/count(distinct ce.user_id) as avg_clicked              --人均应答次数
             from
                 (select 
-                    cast(get_json_object(eve.event.event_value, '$.order_id') as bigint) as order_id,
-                    common
-                from oride_source.client_event 
-                lateral view posexplode(events) eve as pos, event
+                    cast(get_json_object(event_value, '$.order_id') as bigint) as order_id,
+                    user_id
+                from oride_bi.oride_client_event_detail 
                 where dt = '{pt}' and 
-                    eve.event.event_name = 'accept_order_click'
+                    event_name = 'accept_order_click'
                 ) as ce 
-            left join oride_db.data_order do
-            on ce.order_id = do.id 
-            where do.dt = '{pt}' and 
+            inner join (select * from oride_db.data_order where dt='{pt}') do  
+            where ce.order_id = do.id and 
+                do.dt = '{pt}' and 
                 from_unixtime(do.create_time, 'yyyy-MM-dd') = '{pt}' 
             group by do.dt, do.city_id, do.serv_type
         ),
@@ -369,9 +359,9 @@ insert_result_to_hive = HiveOperator(
 	                event_name='dispatch_push_driver' and  
 	                from_unixtime(cast(get_json_object(event_values, '$.timestamp') as int), 'yyyy-MM-dd')='{pt}'
 	            ) as t 
-            left join oride_db.data_order do 
-            on t.order_id = do.id 
-            where do.dt = '{pt}' and 
+            inner join (select * from oride_db.data_order where dt='{pt}') do  
+            where t.order_id = do.id and 
+                do.dt = '{pt}' and 
                 from_unixtime(do.create_time, 'yyyy-MM-dd') = '{pt}' 
             group by do.dt, do.city_id, do.serv_type
         ),
@@ -392,9 +382,9 @@ insert_result_to_hive = HiveOperator(
 		            get_json_object(event_values, '$.success') = 1
                 group by get_json_object(event_values, '$.order_id'), get_json_object(event_values, '$.round')
                 ) as t 
-            left join oride_db.data_order do 
-            on t.order_id = do.id 
-            where do.dt = '{pt}' and 
+            inner join (select * from oride_db.data_order where dt='{pt}') as do  
+            where t.order_id = do.id and 
+                do.dt = '{pt}' and 
                 from_unixtime(do.create_time, 'yyyy-MM-dd') ='{pt}' 
             group by do.dt, do.city_id, do.serv_type
         ),
@@ -403,21 +393,20 @@ insert_result_to_hive = HiveOperator(
                 do.city_id,
                 do.serv_type,
                 do.dt,
-	            count(1) as click_count,                --订单推送展示次数(推送成功次数)
-                count(distinct t.common.user_id) as drivers_show,         --展示司机数（成功推送司机数）
-                count(1)/count(distinct t.common.user_id) as avg_show --人均展示次数
+	            count(1) as click_count,                        --订单推送展示次数(推送成功次数)
+                count(distinct t.user_id) as drivers_show,      --展示司机数（成功推送司机数）
+                count(1)/count(distinct t.user_id) as avg_show  --人均展示次数
             from (
                 select 
-                    cast(get_json_object(eve.event.event_value, '$.order_id') as bigint) as order_id,
-                    common
-                from oride_source.client_event 
-                lateral view posexplode(events) eve as pos, event
+                    cast(get_json_object(event_value, '$.order_id') as bigint) as order_id,
+                    user_id
+                from oride_bi.oride_client_event_detail 
                 where dt='{pt}' and 
-                    eve.event.event_name = 'accept_order_show'
+                    event_name = 'accept_order_show'
                 ) as t 
-            left join oride_db.data_order as do 
-            on t.order_id = do.id 
-            where do.dt = '{pt}' and 
+            inner join (select * from oride_db.data_order where dt='{pt}') as do  
+            where t.order_id = do.id and 
+                do.dt = '{pt}' and 
                 from_unixtime(do.create_time, 'yyyy-MM-dd') = '{pt}' 
             group by do.dt, do.city_id, do.serv_type
         ),
@@ -478,16 +467,15 @@ insert_result_to_hive = HiveOperator(
 	                lead(do.end_lng,1,0) over(PARTITION BY do.user_id ORDER BY do.create_time) end_lng2,
 	                lead(do.end_lat,1,0) over(PARTITION BY do.user_id ORDER BY do.create_time) end_lat2,
 	                lead(do.id,1,do.id) over(PARTITION BY do.user_id ORDER BY do.create_time) id2
-        	    FROM oride_db.data_order AS do 
-        	    INNER JOIN 
-        	        (SELECT 
+        	    FROM (SELECT 
                         DISTINCT cast(get_json_object(event_values, '$.order_id') AS BIGINT) AS order_id
                     FROM oride_source.server_magic 
                     WHERE dt = '{pt}' AND 
                         event_name = 'dispatch_push_driver' AND 
                         get_json_object(event_values, '$.success') = 1 AND 
                         from_unixtime(cast(get_json_object(event_values, '$.timestamp') as int), 'yyyy-MM-dd') = '{pt}'
-                    ) AS po 
+                    ) AS po  
+        	    INNER JOIN (select * from oride_db.data_order where dt='{pt}') AS do 
         	    WHERE do.id = po.order_id AND 
         	        do.dt = '{pt}' AND  
             	    from_unixtime(do.create_time, 'yyyy-MM-dd') = '{pt}'
@@ -513,7 +501,7 @@ insert_result_to_hive = HiveOperator(
 				    status in (4,5)
 				group by driver_id
 			    ) as do 
-		    left join oride_db.data_driver_records_day as drd 
+		    left join (select * from oride_db.data_driver_records_day where dt='{pt}') as drd 
 		    on drd.driver_id = do.driver_id 
 		    where drd.dt = '{pt}' and 
 			    from_unixtime(day, 'yyyy-MM-dd') = '{pt}' 
@@ -537,8 +525,8 @@ insert_result_to_hive = HiveOperator(
 				    status in (4,5)
 				group by driver_id 
 			    ) as do 
-		    left join oride_db.data_driver_recharge_records as rr on do.driver_id = rr.driver_id 
-		    left join oride_db.data_driver_reward as dr on do.driver_id = dr.driver_id 
+		    left join (select * from oride_db.data_driver_recharge_records where dt='{pt}') as rr on do.driver_id = rr.driver_id 
+		    left join (select * from oride_db.data_driver_reward where dt='{pt}') as dr on do.driver_id = dr.driver_id 
 		    where rr.dt = '{pt}' and 
 			    dr.dt = '{pt}' and 
 			    from_unixtime(dr.create_time, 'yyyy-MM-dd') = '{pt}' and 
@@ -556,9 +544,9 @@ insert_result_to_hive = HiveOperator(
 		            		abs(do.finish_time-do.take_time),
 		            		abs(do.cancel_time-do.take_time)
         				)
-    			)) as do_range,             ---完单司机做单时长
-			    count(distinct do.driver_id) as drivers_finished ---完单司机数
-		    from oride_db.data_order as do 
+    			)) as do_range,                                     ---完单司机做单时长
+			    count(distinct do.driver_id) as drivers_finished    ---完单司机数
+		    from (select * from oride_db.data_order where dt='{pt}') as do 
 		    inner join (select 
         			distinct driver_id 
     		    from oride_db.data_order 
@@ -579,7 +567,7 @@ insert_result_to_hive = HiveOperator(
                 de.dt,
 	            sum(if(isnull(off.driver_id), 0, odt.driver_freerange)) as free_range_dr,           --司机空闲时长
 	            sum(if(odt.driver_onlinerange>0, 1, 0)) as drvers_online                --在线司机数
-            from oride_bi.oride_driver_timerange as odt 
+            from (select * from oride_bi.oride_driver_timerange where dt='{pt}') as odt 
             left join (select 
 		            distinct driver_id 
 	            from oride_db.data_order 
@@ -592,7 +580,7 @@ insert_result_to_hive = HiveOperator(
                 de.dt = '{pt}'
             group by de.dt, de.city_id, de.serv_type
         ) 
-        insert overwrite table oride_dw.app_oride_order_dispatch_di PARTITION (country_code='nal', dt='{pt}')
+        insert overwrite table {hive_table} PARTITION (country_code='nal', dt='{pt}')
         select 
             orders_data.city_id,
             '',
@@ -719,7 +707,7 @@ insert_result_to_hive = HiveOperator(
             on push_distance_finished.dt=driver_online.dt and push_distance_finished.city_id=driver_online.city_id and push_distance_finished.serv_type=driver_online.serv_type
         
     '''.format(
-        pt='{{ ds }}'
+        pt='{{ ds }}', hive_table=hive_table
     ),
     schema='oride_dw',
     dag=dag
