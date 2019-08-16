@@ -28,7 +28,7 @@ dispatch_table = HiveOperator(
         driver_id,
         get_json_object(event_values, '$.city_id') city_id
         from  
-        oride_source.server_magic 
+        oride_source.dispatch_tracker_server_magic 
         lateral view explode(split(substr(get_json_object(event_values, '$.driver_ids'),1,length(get_json_object(event_values, '$.driver_ids'))-2),',')) driver_ids as driver_id
         where  dt = '{{ ds }}' and event_name='dispatch_chose_driver' 
         ''',
@@ -48,7 +48,7 @@ filter_table = HiveOperator(
         get_json_object(event_values, '$.reason') as `reason`,
         get_json_object(event_values, '$.city_id') city_id
         from  
-        oride_source.server_magic 
+        oride_source.dispatch_tracker_server_magic 
         where  dt = '{{ ds }}' and event_name='dispatch_filter_driver' 
         ''',
     schema='oride_source',
@@ -66,7 +66,7 @@ assign_table = HiveOperator(
         driver_id,
         get_json_object(event_values, '$.city_id') city_id
         from  
-        oride_source.server_magic 
+        oride_source.dispatch_tracker_server_magic 
         lateral view explode(split(substr(get_json_object(event_values, '$.driver_ids'),1,length(get_json_object(event_values, '$.driver_ids'))-2),',')) driver_ids as driver_id
         where  dt = '{{ ds }}' and event_name='dispatch_assign_driver' 
         ''',
@@ -86,7 +86,7 @@ push_table = HiveOperator(
         get_json_object(event_values, '$.success') as `success`,
         get_json_object(event_values, '$.city_id') city_id
         from  
-        oride_source.server_magic 
+        oride_source.dispatch_tracker_server_magic 
         where  dt = '{{ ds }}' and event_name='dispatch_push_driver' 
         ''',
     schema='oride_source',
