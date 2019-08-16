@@ -136,6 +136,19 @@ with SERDEPROPERTIES("ignore.malformed.json"="true")
 LOCATION 's3a://opay-bi/oride_buried/ordm.server_magic'
 
 
+CREATE EXTERNAL TABLE oride_source.`dispatch_tracker_server_magic`(
+    `event_name` string,
+    `event_values` string
+)
+PARTITIONED BY (
+    `dt` string,
+    `hour` string)
+ROW FORMAT SERDE
+   'org.openx.data.jsonserde.JsonSerDe'
+with SERDEPROPERTIES("ignore.malformed.json"="true")
+LOCATION 's3a://opay-bi/oride_buried/ordm.dispatch_tracker_server_magic'
+
+
 CREATE EXTERNAL TABLE `anti_fraud`(
     `action` string,
     `driverId` bigint,
