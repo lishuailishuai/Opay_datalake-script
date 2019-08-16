@@ -37,7 +37,7 @@ global_table_names = [
     'oride_db.data_driver_extend',
     'oride_db.data_user_extend',
     'oride_db.data_order_payment',
-    'oride_source.server_magic',
+    'oride_source.dispatch_tracker_server_magic',
     'oride_bi.server_magic_push_detail',
     'oride_bi.oride_driver_timerange'
 ]
@@ -47,7 +47,7 @@ city_and_weather_table_names = [
     'oride_db.data_driver_extend',
     'oride_db.data_user_extend',
     'oride_db.data_order_payment',
-    'oride_source.server_magic',
+    'oride_source.dispatch_tracker_server_magic',
     'oride_bi.server_magic_push_detail',
     'oride_bi.oride_driver_timerange',
     'oride_dw.ods_sqoop_base_weather_per_10min_df',
@@ -59,7 +59,7 @@ anti_fraud_table_names = [
     'oride_db.data_driver_extend',
     'oride_db.data_user_extend',
     'oride_db.data_order_payment',
-    'oride_source.server_magic',
+    'oride_source.dispatch_tracker_server_magic',
     'oride_bi.server_magic_push_detail',
     'oride_bi.oride_driver_timerange',
     'oride_db.data_anti_fraud_strategy',
@@ -169,7 +169,7 @@ oride_driver_timerange_validate_task = HivePartitionSensor(
 
 server_magic_validate_task = HivePartitionSensor(
     task_id="server_magic_validate_task",
-    table="server_magic",
+    table="dispatch_tracker_server_magic",
     partition="dt='{{ds}}'",
     schema="oride_source",
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
@@ -589,7 +589,7 @@ insert_oride_global_daily_report = HiveOperator(
                 dt,
                 count(1) as map_request_num
             FROM
-                 oride_source.server_magic
+                 oride_source.dispatch_tracker_server_magic
             WHERE
                 dt='{{ ds }}' and event_name in ('googlemap_directions', 'googlemap_nearbysearch', 'googlemap_autocomplete', 'googlemap_details', 'googlemap_geocode')
             GROUP BY dt

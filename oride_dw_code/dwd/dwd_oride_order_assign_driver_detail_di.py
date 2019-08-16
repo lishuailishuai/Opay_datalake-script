@@ -50,7 +50,7 @@ sleep_time = BashOperator(
 #依赖前一天分区
 dependence_dwd_oride_order_assign_driver_detail_di_prev_day_tesk=HivePartitionSensor(
       task_id="dwd_oride_order_assign_driver_detail_di_prev_day_task",
-      table="server_magic",
+      table="dispatch_tracker_server_magic",
       partition="dt='{{macros.ds_add(ds, +1)}}' and hour='00'",
       schema="oride_source",
       poke_interval=60, #依赖不满足时，一分钟检查一次依赖状态
@@ -88,7 +88,7 @@ insert overwrite table oride_dw.{table} partition(country_code,dt)
                 'nal' as country_code,
                 dt
         from  
-        oride_source.server_magic 
+        oride_source.dispatch_tracker_server_magic 
         lateral view explode(split(substr(get_json_object(event_values, '$.driver_ids'),1,length(get_json_object(event_values, '$.driver_ids'))-2),',')) driver_ids as driver_id
         where  dt = '{pt}' and event_name='dispatch_assign_driver'
 '''.format(
