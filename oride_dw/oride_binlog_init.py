@@ -28,6 +28,7 @@ ODS_DB='oride_dw'
 BINLOG_TABLE_LIST_VAR_NAME='oride_binlog_table_list'
 
 BINLOG_CREATE_TABLE_SQL='''
+    DROP TABLE IF EXISTS `binlog_{{ dag_run.conf["table_name"] }}`;
     CREATE EXTERNAL TABLE IF NOT EXISTS `binlog_{{ dag_run.conf["table_name"] }}`(
         `before` string,
         `after` string,
@@ -43,7 +44,8 @@ BINLOG_CREATE_TABLE_SQL='''
     WITH SERDEPROPERTIES (
         'ignore.malformed.json'='true')
     LOCATION
-        'hdfs://10.52.17.84/topics/fullfillment.{{ dag_run.conf["db_name"] }}.{{ dag_run.conf["table_name"] }}'
+        's3a://opay-bi/oride_binlog/oride_binlog.{{ dag_run.conf["db_name"] }}.{{ dag_run.conf["table_name"] }}';
+    MSCK REPAIR TABLE `binlog_{{ dag_run.conf["table_name"] }}`;
 '''
 ODS_CREATE_TABLE_SQL='''
 CREATE TABLE IF NOT EXISTS {db_name}.`ods_binlog_{table_name}_hi`(

@@ -4,7 +4,7 @@ from airflow.operators.hive_operator import HiveOperator
 from airflow.hooks.hive_hooks import HiveCliHook,HiveServer2Hook
 from airflow.models import Variable
 from airflow.operators.python_operator import PythonOperator
-from airflow.sensors import WebHdfsSensor
+from airflow.sensors.s3_prefix_sensor import S3PrefixSensor
 import logging
 
 args = {
@@ -88,12 +88,12 @@ if binlog_table_list!='':
             dag=dag,
         )
         if table in table_check_list:
-            check_hdfs=WebHdfsSensor(
-                task_id='hdfs_sense_{}'.format(table),
-                poke_interval=30,
-                timeout=300,
-                filepath='/topics/fullfillment.oride_data.{table}/dt={{{{ ds }}}}/hour={{{{ execution_date.strftime("%H") }}}}'.format(table=table),
+            check_file = S3PrefixSensor(
+                task_id='check_file_{}'.format(table),
+                prefix='oride_binlog/oride_binlog.oride_data.{table}/dt={{{{ ds }}}}/hour={{{{ execution_date.strftime("%H") }}}}'.format(table=table),
+                bucket_name='opay-bi',
                 dag=dag)
-            check_hdfs >> binlog_add_partitions
+
+            check_file >> binlog_add_partitions
 
         binlog_add_partitions >> insert_ods
