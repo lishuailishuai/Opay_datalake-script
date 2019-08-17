@@ -156,7 +156,12 @@ drop_partitons_from_table = PythonOperator(
 insert_result_to_impala = HiveOperator(
     task_id='insert_result_to_impala',
     hql="""
+        set mapred.job.queue.name=root.users.airflow;
         set hive.execution.engine=tez;
+        set hive.mapjoin.hybridgrace.hashtable=false;
+        set hive.vectorized.execution.enabled=false;
+        --set hive.vectorized.execution.enabled = true;
+        --set hive.vectorized.execution.reduce.enabled = true;
         set hive.prewarm.enabled=true;
         set hive.prewarm.numcontainers=16;
         --set hive.exec.parallel=true;
@@ -177,9 +182,8 @@ insert_result_to_impala = HiveOperator(
                 lateral view posexplode(tag_ids) tags as pos, tag 
                 where dt='{pt}' 
                 ) as t
-            inner join （select * from oride_db.data_order where dt='{pt}') as do  
+            inner join (select * from oride_db.data_order where dt='{pt}') as do  
             where t.order_id = do.id and 
-                do.dt = '{pt}' and 
                 from_unixtime(do.create_time, 'yyyy-MM-dd') = '{pt}'
             group by 
                 do.city_id, do.serv_type, t.tag
@@ -202,7 +206,6 @@ insert_result_to_impala = HiveOperator(
                 ) as t
             inner join (select * from oride_db.data_order where dt='{pt}') as do  
             where t.order_id = do.id and 
-                do.dt = '{pt}' and 
                 from_unixtime(do.create_time, 'yyyy-MM-dd') = '{pt}'
             group by 
                 do.city_id, t.tag
@@ -225,7 +228,6 @@ insert_result_to_impala = HiveOperator(
                 ) as t
             inner join (select * from oride_db.data_order where dt='{pt}') as do  
             where t.order_id = do.id and 
-                do.dt = '{pt}' and 
                 from_unixtime(do.create_time, 'yyyy-MM-dd') = '{pt}'
             group by 
                 do.serv_type, t.tag
