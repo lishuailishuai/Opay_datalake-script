@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 sqoop import "-Dorg.apache.sqoop.splitter.allow_text_splitter=true" \
--D mapred.job.queue.name=users.airflow \
+-D mapred.job.queue.name=root.collects \
 --connect "jdbc:mysql://$1/$2?tinyInt1isBit=false&useUnicode=true&characterEncoding=utf8" \
 --username $3 \
 --password $4 \
