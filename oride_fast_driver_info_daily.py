@@ -193,6 +193,8 @@ driver_team_validate_task = HivePartitionSensor(
 insert_data = HiveOperator(
     task_id='insert_data',
     hql='''
+        SET hive.exec.parallel=TRUE;
+        SET hive.exec.dynamic.partition.mode=nonstrict;
         with rider_data as (
             select 
             dd.id id,
@@ -225,6 +227,91 @@ insert_data = HiveOperator(
                 oride_db.data_driver_extend
                 where dt = '{{ ds }}'
             ) dde on dd.id = dde.id 
+        ),
+        
+        
+        
+        -- 订单基础表
+        order_base as (
+            SELECT
+                *
+            FROM
+                oride_db.data_order
+            WHERE
+                dt='{{ ds }}'
+                AND city_id != 999001
+                --AND from_unixtime(create_time, 'yyyy-MM-dd') = dt
+        ),
+        
+        
+        
+        -- 完单司机在线时长
+        completed_driver_online as (
+            SELECT
+                t1.dt,
+                t1.driver_id,
+                SUM(nvl(t1.do_range, 0) + nvl(t2.driver_freerange, 0)) AS do_range
+            FROM
+                (
+                    -- 完单司机做单时长
+                    SELECT
+                        from_unixtime(do.create_time, 'yyyy-MM-dd') dt,
+                        do.driver_id,
+                        sum(
+                            CASE do.status
+                                WHEN 4 THEN abs(do.arrive_time-do.take_time)
+                                WHEN 5 THEN abs(do.finish_time-do.take_time)
+                                WHEN 6 THEN abs(do.cancel_time-do.take_time)
+                                ELSE 0
+                            END
+                         )  as do_range
+                    FROM
+                        (
+                            -- 完单司机
+                            SELECT
+                                from_unixtime(create_time, 'yyyy-MM-dd') dt,
+                                driver_id
+                            FROM
+                                order_base
+                            WHERE
+                                status in (4,5)
+                            group by from_unixtime(create_time, 'yyyy-MM-dd'),driver_id
+                        ) dd
+                        INNER JOIN order_base do ON do.driver_id = dd.driver_id and from_unixtime(do.create_time, 'yyyy-MM-dd') = dd.dt
+                    GROUP BY from_unixtime(do.create_time, 'yyyy-MM-dd'),do.driver_id
+                ) t1
+                INNER JOIN
+                (
+                    -- 空闲时长
+                    SELECT
+                        dt,
+                        driver_id,
+                        driver_freerange
+                    FROM
+                        oride_bi.oride_driver_timerange
+                ) t2 ON t2.driver_id = t1.driver_id and t1.dt = t2.dt
+            GROUP BY t1.dt,t1.driver_id
+        ),
+        
+        
+        driver_his_online as (
+            select 
+            driver_id,
+            sum(do_range) do_range
+            from 
+            completed_driver_online 
+            group by driver_id
+        ),
+        
+        
+        driver_online as (
+            select 
+            dt,
+            driver_id,
+            sum(driver_onlinerange) driver_online_sum
+            from oride_bi.oride_driver_timerange
+            where dt between '{{ macros.ds_add(ds, -2) }}' and '{{ ds }}'
+            group by driver_id,dt
         ),
         
         order_data as (
@@ -274,24 +361,7 @@ insert_data = HiveOperator(
             group by driver_id
         ),
         
-        driver_his_online as (
-            select 
-            driver_id,
-            sum(driver_onlinerange) driver_online_sum
-            from oride_bi.oride_driver_timerange
-            group by driver_id
-        ),
         
-        
-        driver_online as (
-            select 
-            dt,
-            driver_id,
-            sum(driver_onlinerange) driver_online_sum
-            from oride_bi.oride_driver_timerange
-            where dt between '{{ macros.ds_add(ds, -2) }}' and '{{ ds }}'
-            group by driver_id,dt
-        ),
         
         driver_comment as (
             select 
@@ -369,7 +439,7 @@ insert_data = HiveOperator(
         -- nvl(ad.total_income,0) as `total_income`,
         0 ,
         nvl(ad.balance,0) ,
-        nvl(round(dho.driver_online_sum,0),0) ,
+        nvl(round(dho.do_range,0),0) ,
         nvl(round(od.duration_sum,1),0) ,
         
         nvl(rd.regis_days,0),
@@ -384,8 +454,8 @@ insert_data = HiveOperator(
         if(do_today.driver_id is not null , 1,0) ,
         if(do_yesterday.driver_id is not null , 1,0) ,
         if(do_before.driver_id is not null , 1,0) ,
-        if(do_today.driver_id is not null,nvl(round(do_today.driver_online_sum/3600,1),0),0) ,
-        if(do_yesterday.driver_id is not null,nvl(round(do_yesterday.driver_online_sum/3600,1),0),0) ,
+        if(cdo_today.driver_id is not null,nvl(round(cdo_today.do_range/3600,1),0),0) ,
+        if(cdo_yesterday.driver_id is not null,nvl(round(cdo_yesterday.do_range/3600,1),0),0) ,
         
         nvl(pd.push_num_today,0) ,
         nvl(od.accpet_num_today,0) ,
@@ -407,6 +477,8 @@ insert_data = HiveOperator(
         left join driver_online do_today on rd.id = do_today.driver_id and  do_today.dt = '{{ ds }}'
         left join driver_online do_yesterday on rd.id = do_yesterday.driver_id and do_yesterday.dt = '{{ yesterday_ds }}'
         left join driver_online do_before on rd.id = do_before.driver_id and do_before.dt = '{{ macros.ds_add(ds, -2) }}'
+        left join completed_driver_online cdo_today on rd.id = cdo_today.driver_id and cdo_today.dt = '{{ ds }}'
+        left join completed_driver_online cdo_yesterday on rd.id = cdo_yesterday.driver_id and cdo_yesterday.dt = '{{ yesterday_ds }}'
         left join driver_comment dc on rd.id = dc.driver_id
         left join driver_info di on rd.id = di.driver_id
     

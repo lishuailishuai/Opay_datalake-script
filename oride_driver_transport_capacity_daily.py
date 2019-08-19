@@ -146,8 +146,7 @@ insert_driver_metrics = HiveOperator(
             select 
             d.city_name city_name,
             d.serv_type serv_type,
-            count(d.id) online_driver_num, -- 在线司机数
-            sum(if(t.driver_onlinerange is null,0,t.driver_onlinerange)) driver_onlinerange_sum -- 在线时长
+            count(d.id) online_driver_num -- 在线司机数
             from 
             driver_dim d 
             join 
@@ -160,6 +159,66 @@ insert_driver_metrics = HiveOperator(
                 where dt = '{{ ds }}'
             ) t on d.id = t.driver_id
             group by d.city_name,d.serv_type
+        ),
+        
+        
+        -- 订单基础表
+        order_base as (
+            SELECT
+                *
+            FROM
+                oride_db.data_order
+            WHERE
+                dt='{{ ds }}'
+                AND city_id != 999001
+                AND from_unixtime(create_time, 'yyyy-MM-dd')=dt
+        ),
+        
+        -- 完单司机在线时长
+        completed_driver_online as (
+            SELECT
+                d.city_name,
+                d.serv_type,
+                SUM(nvl(t1.do_range, 0) + nvl(t2.driver_freerange, 0)) AS driver_onlinerange_sum
+            FROM
+                (
+                    -- 完单司机做单时长
+                    SELECT
+                        do.dt,
+                        do.driver_id,
+                        sum(
+                            CASE do.status
+                                WHEN 4 THEN abs(do.arrive_time-do.take_time)
+                                WHEN 5 THEN abs(do.finish_time-do.take_time)
+                                WHEN 6 THEN abs(do.cancel_time-do.take_time)
+                                ELSE 0
+                            END
+                         )  as do_range
+                    FROM
+                        (
+                            -- 完单司机
+                            SELECT
+                                distinct driver_id
+                            FROM
+                                order_base
+                            WHERE
+                                status in (4,5)
+                        ) dd
+                        INNER JOIN order_base do ON do.driver_id=dd.driver_id
+                    GROUP BY do.dt,do.driver_id
+                ) t1
+                INNER JOIN
+                (
+                    -- 空闲时长
+                    SELECT
+                        *
+                    FROM
+                        oride_bi.oride_driver_timerange
+                    WHERE
+                        dt='{{ ds }}'
+                ) t2 ON t2.driver_id = t1.driver_id
+                join driver_dim d on d.id = t1.driver_id
+            GROUP BY d.city_name,d.serv_type
         ),
         
         
@@ -180,8 +239,7 @@ insert_driver_metrics = HiveOperator(
                 (
                     select 
                     *
-                    from oride_db.data_order
-                    where dt = '{{ ds }}' 
+                    from order_base
                 ) do
                 join driver_dim d on do.driver_id = d.id
                 group by d.city_name,d.serv_type
@@ -308,7 +366,7 @@ insert_driver_metrics = HiveOperator(
         nvl(opu.push_order_times_num,0),
         nvl(opu.push_order_num,0),
         nvl(oda.online_driver_num,0),
-        nvl(oda.driver_onlinerange_sum,0),
+        nvl(cdo.driver_onlinerange_sum,0),
         od.duration_sum,
         od.onride_num,
         od.accept_driver_num,
@@ -330,6 +388,7 @@ insert_driver_metrics = HiveOperator(
         left join driver_register dr on od.city_name = dr.city_name and od.serv_type = dr.serv_type
         left join order_push opu on od.city_name = opu.city_name and od.serv_type = opu.serv_type
         left join order_push_driver opd on od.city_name = opd.city_name and od.serv_type = opd.serv_type
+        left join completed_driver_online cdo on od.city_name = cdo.city_name and od.serv_type = cdo.serv_type
         ;
 
 
@@ -345,7 +404,7 @@ def send_fast_report_email(ds, **kwargs):
             nvl(round(sum(push_order_times_num)/sum(push_driver_num),2),0) push_driver_times_avg,
             nvl(round(sum(push_order_num)/sum(push_driver_num),2),0) push_driver_order_avg,
             nvl(round(sum(driver_onlinerange_sum)/3600,2),0) driver_onlinerange_sum,
-            nvl(round(sum(driver_onlinerange_sum)/(3600 * sum(online_driver_num)),2),0) driver_onlinerange_rate,
+            nvl(round(sum(driver_onlinerange_sum)/(3600 * sum(onride_driver_num)),2),0) driver_onlinerange_rate,
             concat(cast(nvl(round((sum(duration_sum) * 100)/sum(driver_onlinerange_sum),2),0) as string),'%') duration_rate,
             nvl(round(sum(onride_num)/sum(onride_driver_num),2),0) onride_driver_order_avg,
             nvl(sum(online_driver_num),0) online_driver_num,
@@ -370,7 +429,7 @@ def send_fast_report_email(ds, **kwargs):
             nvl(round(sum(push_order_times_num)/sum(push_driver_num),2),0) push_driver_times_avg,
             nvl(round(sum(push_order_num)/sum(push_driver_num),2),0) push_driver_order_avg,
             nvl(round(sum(driver_onlinerange_sum)/3600,2),0) driver_onlinerange_sum,
-            nvl(round(sum(driver_onlinerange_sum)/(3600 * sum(online_driver_num)),2),0) driver_onlinerange_rate,
+            nvl(round(sum(driver_onlinerange_sum)/(3600 * sum(onride_driver_num)),2),0) driver_onlinerange_rate,
             concat(cast(nvl(round((sum(duration_sum) * 100)/sum(driver_onlinerange_sum),2),0) as string),'%') duration_rate,
             nvl(round(sum(onride_num)/sum(onride_driver_num),2),0) onride_driver_order_avg,
             nvl(sum(online_driver_num),0) online_driver_num,
@@ -613,7 +672,7 @@ def send_otrike_report_email(ds, **kwargs):
             nvl(round(sum(push_order_times_num)/sum(push_driver_num),2),0) push_driver_times_avg,
             nvl(round(sum(push_order_num)/sum(push_driver_num),2),0) push_driver_order_avg,
             nvl(round(sum(driver_onlinerange_sum)/3600,2),0) driver_onlinerange_sum,
-            nvl(round(sum(driver_onlinerange_sum)/(3600 * sum(online_driver_num)),2),0) driver_onlinerange_rate,
+            nvl(round(sum(driver_onlinerange_sum)/(3600 * sum(onride_driver_num)),2),0) driver_onlinerange_rate,
             concat(cast(nvl(round((sum(duration_sum) * 100)/sum(driver_onlinerange_sum),2),0) as string),'%') duration_rate,
             nvl(round(sum(onride_num)/sum(onride_driver_num),2),0) onride_driver_order_avg,
             nvl(sum(online_driver_num),0) online_driver_num,
@@ -638,7 +697,7 @@ def send_otrike_report_email(ds, **kwargs):
             nvl(round(sum(push_order_times_num)/sum(push_driver_num),2),0) push_driver_times_avg,
             nvl(round(sum(push_order_num)/sum(push_driver_num),2),0) push_driver_order_avg,
             nvl(round(sum(driver_onlinerange_sum)/3600,2),0) driver_onlinerange_sum,
-            nvl(round(sum(driver_onlinerange_sum)/(3600 * sum(online_driver_num)),2),0) driver_onlinerange_rate,
+            nvl(round(sum(driver_onlinerange_sum)/(3600 * sum(onride_driver_num)),2),0) driver_onlinerange_rate,
             concat(cast(nvl(round((sum(duration_sum) * 100)/sum(driver_onlinerange_sum),2),0) as string),'%') duration_rate,
             nvl(round(sum(onride_num)/sum(onride_driver_num),2),0) onride_driver_order_avg,
             nvl(sum(online_driver_num),0) online_driver_num,
