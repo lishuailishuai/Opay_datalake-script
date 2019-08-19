@@ -158,9 +158,27 @@ insert_report_metrics = HiveOperator(
                         if (rank() over(partition by order_id order by round desc ) =1, b.driver_id, 0) as driver_id,
                         a.driver_id driver_id_not_found
 
-                    from oride_bi.server_magic_dispatch_detail a
-                    left join oride_db.data_order b ON b.id=a.order_id and b.dt='{{ ds }}' and from_unixtime(b.create_time,'yyyy-MM-dd') = '{{ ds }}'
-                    where a.dt ='{{ ds }}'
+                    from 
+                    (
+                        select 
+                        dt,
+                        order_id,
+                        round,
+                        driver_id
+                        from 
+                        oride_bi.server_magic_dispatch_detail
+                        where dt ='{{ ds }}'
+                    ) a
+                    left join 
+                    (
+                        select 
+                        id,
+                        driver_id
+                        from
+                        oride_db.data_order
+                        where dt='{{ ds }}' and from_unixtime(create_time,'yyyy-MM-dd') = '{{ ds }}'
+                    ) b ON b.id = a.order_id  
+                    
                 ) ofc
                 left join
                 (
@@ -212,7 +230,8 @@ insert_report_metrics = HiveOperator(
                 group by dt,driver_id
             ) p
             group by p.dt
-        ) pp on tt.dt = pp.dt;
+        ) pp on tt.dt = pp.dt
+        ;
         ''',
     schema='oride_bi',
     dag=dag)

@@ -122,9 +122,23 @@ insert_driver_metrics = HiveOperator(
             e.serv_type,
             e.register_time
             from 
-            oride_db.data_driver_extend e
-            join oride_db.data_city_conf c on c.dt = '{{ ds }}' and e.city_id = c.id and c.id not in (999001,999002)
-            where e.dt = '{{ ds }}'
+            (
+                select 
+                id,
+                serv_type,
+                city_id,
+                register_time
+                from 
+                oride_db.data_driver_extend
+                where dt = '{{ ds }}'
+            ) e
+            join 
+            (
+                select 
+                * 
+                from oride_db.data_city_conf
+                where dt = '{{ ds }}' and id not in (999001,999002)
+            ) c on  e.city_id = c.id 
         ),
         
         
@@ -136,7 +150,15 @@ insert_driver_metrics = HiveOperator(
             sum(if(t.driver_onlinerange is null,0,t.driver_onlinerange)) driver_onlinerange_sum -- 在线时长
             from 
             driver_dim d 
-            join oride_bi.oride_driver_timerange t on d.id = t.driver_id and dt = '{{ ds }}'
+            join 
+            (
+                select 
+                driver_id,
+                driver_onlinerange
+                from 
+                oride_bi.oride_driver_timerange
+                where dt = '{{ ds }}'
+            ) t on d.id = t.driver_id
             group by d.city_name,d.serv_type
         ),
         
@@ -155,9 +177,13 @@ insert_driver_metrics = HiveOperator(
                 and do.arrive_time > 0 and do.status in (4,5),do.arrive_time - do.pickup_time,0))  duration_sum, -- 计费时长
                 count(if(from_unixtime(do.create_time,'yyyy-MM-dd') = '{{ ds }}' and do.status = 6 and do.cancel_role = 2,do.id,null)) driver_cancel_num --司机取消订单数
                 from
-                oride_db.data_order do
+                (
+                    select 
+                    *
+                    from oride_db.data_order
+                    where dt = '{{ ds }}' 
+                ) do
                 join driver_dim d on do.driver_id = d.id
-                where dt = '{{ ds }}'
                 group by d.city_name,d.serv_type
         ),
         
@@ -242,15 +268,21 @@ insert_driver_metrics = HiveOperator(
                 max(t.driver_num) driver_num
                 from 
                 (
-                select 
-                s.order_id,
-                d.serv_type,
-                s.round,
-                count(driver_id) driver_num
-                from oride_bi.server_magic_push_detail s 
-                join driver_dim d on d.id = s.driver_id
-                where s.dt = '{{ ds }}' and s.success = 1
-                group by s.order_id,d.serv_type,s.round
+                    select 
+                    s.order_id,
+                    d.serv_type,
+                    s.round,
+                    count(driver_id) driver_num
+                    from 
+                    (
+                        select 
+                        *
+                        from 
+                        oride_bi.server_magic_push_detail
+                        where dt = '{{ ds }}' and success = 1 
+                    ) s 
+                    join driver_dim d on d.id = s.driver_id
+                    group by s.order_id,d.serv_type,s.round
                 ) t
                 group by t.order_id,t.serv_type
             ) s 

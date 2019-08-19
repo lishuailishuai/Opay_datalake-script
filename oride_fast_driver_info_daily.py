@@ -216,7 +216,15 @@ insert_data = HiveOperator(
                 oride_db.data_driver 
                 where dt = '{{ ds }}'
             ) dd 
-            join oride_db.data_driver_extend dde on dd.id = dde.id and dde.dt = '{{ ds }}'
+            join (
+                select 
+                id,
+                serv_type,
+                register_time
+                from
+                oride_db.data_driver_extend
+                where dt = '{{ ds }}'
+            ) dde on dd.id = dde.id 
         ),
         
         order_data as (
@@ -304,15 +312,39 @@ insert_data = HiveOperator(
             r.driver_id driver_id,
             g.city city,
             g.name  group_name, 
-            t.name  admin_user
-            from opay_spread.rider_signups r
-            left join opay_spread.driver_group g on r.association_id = g.id and g.dt = '{{ ds }}'
-            left join opay_spread.driver_team t on r.team_id = t.id and t.dt = '{{ ds }}'
-            where 
-            r.dt = '{{ ds }}'
-            and r.status=2 
-            and r.association_id >0 
-            and r.team_id > 0
+            t.admin_user  admin_user
+            from 
+            (
+                select 
+                driver_id,
+                association_id,
+                team_id
+                from opay_spread.rider_signups
+                where dt = '{{ ds }}'
+                and status=2 
+                and association_id >0 
+                and team_id > 0
+            ) r
+            left join 
+            (
+                select 
+                id,
+                city,
+                name
+                from 
+                opay_spread.driver_group
+                where dt = '{{ ds }}'
+            ) g on r.association_id = g.id 
+            left join 
+            (
+                select 
+                id,
+                name admin_user
+                from 
+                opay_spread.driver_team 
+                where dt = '{{ ds }}'
+            ) t on r.team_id = t.id 
+
         )
         
         
