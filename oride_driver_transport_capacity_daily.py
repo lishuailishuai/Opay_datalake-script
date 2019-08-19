@@ -123,7 +123,7 @@ insert_driver_metrics = HiveOperator(
             e.register_time
             from 
             oride_db.data_driver_extend e
-            join oride_db.data_city_conf c on c.dt = '{{ ds }}' and e.city_id = c.id and c.name <> 'beijing'
+            join oride_db.data_city_conf c on c.dt = '{{ ds }}' and e.city_id = c.id and c.id not in (999001,999002)
             where e.dt = '{{ ds }}'
         ),
         
