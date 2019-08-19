@@ -87,7 +87,7 @@ table_list = [
     ("oride_data", "data_user_whitelist", "sqoop_db", "base"),
     ("oride_data", "data_driver_whitelist", "sqoop_db", "base"),
     ("oride_data", "data_user_blacklist", "sqoop_db", "base"),
-    ("oride_data", "data_driver_blacklist" "sqoop_db", "base"),
+    ("oride_data", "data_driver_blacklist", "sqoop_db", "base"),
 
 
 
