@@ -34,6 +34,7 @@ db_name,table_name,conn_id,prefix_name
 #
 
 table_list = [
+    # oride data
     ("oride_data", "data_order", "sqoop_db", "base"),
     ("oride_data", "data_order_payment", "sqoop_db", "base"),
     ("oride_data", "data_user", "sqoop_db", "base"),
@@ -50,6 +51,45 @@ table_list = [
     ("oride_data", "data_device_extend", "sqoop_db", "base"),
     ("oride_data", "data_driver_recharge_records", "sqoop_db", "base"),
     ("oride_data", "data_driver_reward", "sqoop_db", "base"),
+    ("oride_data", "data_activity", "sqoop_db", "base"),
+    ("oride_data", "data_agenter_motorbike", "sqoop_db", "base"),
+    ("oride_data", "data_app_config", "sqoop_db", "base"),
+    ("oride_data", "data_billboard_config", "sqoop_db", "base"),
+    ("oride_data", "data_coupon_log", "sqoop_db", "base"),
+    ("oride_data", "data_coupon_template", "sqoop_db", "base"),
+    ("oride_data", "data_coupons_template", "sqoop_db", "base"),
+    ("oride_data", "data_device", "sqoop_db", "base"),
+    ("oride_data", "data_driver_balance_extend", "sqoop_db", "base"),
+    ("oride_data", "data_driver_balance_records", "sqoop_db", "base"),
+    ("oride_data", "data_driver_discount", "sqoop_db", "base"),
+    ("oride_data", "data_driver_fee_blacklist", "sqoop_db", "base"),
+    ("oride_data", "data_driver_operation_log", "sqoop_db", "base"),
+    ("oride_data", "data_driver_pay_records", "sqoop_db", "base"),
+    ("oride_data", "data_driver_records_day", "sqoop_db", "base"),
+    ("oride_data", "data_driver_reward_push", "sqoop_db", "base"),
+    ("oride_data", "data_fcm_template", "sqoop_db", "base"),
+    ("oride_data", "data_invite", "sqoop_db", "base"),
+    ("oride_data", "data_invite_conf", "sqoop_db", "base"),
+    ("oride_data", "data_motorbike", "sqoop_db", "base"),
+    ("oride_data", "data_motorbike_extend", "sqoop_db", "base"),
+    ("oride_data", "data_novice_coupons_conf", "sqoop_db", "base"),
+    ("oride_data", "data_opay_transaction", "sqoop_db", "base"),
+    ("oride_data", "data_payconf", "sqoop_db", "base"),
+    ("oride_data", "data_promo_code", "sqoop_db", "base"),
+    ("oride_data", "data_recharge_conf", "sqoop_db", "base"),
+    ("oride_data", "data_recharge_options", "sqoop_db", "base"),
+    ("oride_data", "data_reward_conf", "sqoop_db", "base"),
+    ("oride_data", "data_role_invite", "sqoop_db", "base"),
+    ("oride_data", "data_sms_template", "sqoop_db", "base"),
+    ("oride_data", "data_user_comment", "sqoop_db", "base"),
+    ("oride_data", "data_user_complaint", "sqoop_db", "base"),
+    ("oride_data", "data_user_recharge", "sqoop_db", "base"),
+    ("oride_data", "data_user_whitelist", "sqoop_db", "base"),
+    ("oride_data", "data_driver_whitelist", "sqoop_db", "base"),
+    ("oride_data", "data_user_blacklist", "sqoop_db", "base"),
+    ("oride_data", "data_driver_blacklist" "sqoop_db", "base"),
+
+
 
     ("bi", "weather_per_10min", "mysql_bi", "base"),
     # 协会数据
