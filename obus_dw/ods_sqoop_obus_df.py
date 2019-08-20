@@ -9,6 +9,7 @@ from airflow.hooks.mysql_hook import MySqlHook
 from airflow.operators.hive_operator import HiveOperator
 from airflow.operators.python_operator import PythonOperator
 from airflow.operators.impala_plugin import ImpalaOperator
+from airflow.operators.dummy_operator import DummyOperator
 from datetime import datetime, timedelta
 from utils.connection_helper import get_hive_cursor, get_db_conn, get_db_conf
 from utils.validate_metrics_utils import *
@@ -124,7 +125,8 @@ def create_hive_external_table(db, table, conn, **op_kwargs):
         select 
             COLUMN_NAME, 
             DATA_TYPE, 
-            COLUMN_COMMENT 
+            COLUMN_COMMENT,
+            COLUMN_TYPE 
         from information_schema.COLUMNS 
         where TABLE_SCHEMA='{db}' and 
             TABLE_NAME='{table}' 
@@ -135,8 +137,11 @@ def create_hive_external_table(db, table, conn, **op_kwargs):
     res = mcursor.fetchall()
     logging.info(res)
     columns = []
-    for (name, type, comment) in res:
-        columns.append("%s %s comment '%s'" % (name, mysql_type_to_hive.get(type, 'string'), comment))
+    for (name, type, comment, co_type) in res:
+        if type.upper() == 'DECIMAL':
+            columns.append("`%s` %s comment '%s'" % (name, co_type.replace('unsigned', '').replace('signed', ''), comment))
+        else:
+            columns.append("`%s` %s comment '%s'" % (name, mysql_type_to_hive.get(type.upper(), 'string'), comment))
     #创建hive数据表的sql
     hql = ods_create_table_hql.format(
         db_name=hive_db,
@@ -147,6 +152,8 @@ def create_hive_external_table(db, table, conn, **op_kwargs):
     logging.info(hql)
     hive_cursor.execute(hql)
 
+
+success = DummyOperator(dag=dag, task_id='success')
 
 for obus_table in obus_table_list:
     logging.info(obus_table)
@@ -243,5 +250,5 @@ for obus_table in obus_table_list:
     )
 
     #加入调度队列
-    import_from_mysql >> create_table >> add_partitions >> validate_all_data >> refresh_impala
+    import_from_mysql >> create_table >> add_partitions >> validate_all_data >> refresh_impala >> success
 
