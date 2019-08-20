@@ -112,10 +112,10 @@ dependence_dwd_oride_order_dispatch_chose_detail_di_prev_day_task = UFileSensor(
 )
 
 
-dependence_dwd_oride_driver_accept_order_detail_di_prev_day_task = UFileSensor(
-    task_id='dwd_oride_driver_accept_order_detail_di_prev_day_task',
+dependence_dwd_oride_driver_accept_order_click_detail_di_prev_day_task = UFileSensor(
+    task_id='dwd_oride_driver_accept_order_click_detail_di_prev_day_task',
     filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw/dwd_oride_driver_accept_order_detail_di/country_code=nal",
+        hdfs_path_str="oride/oride_dw/dwd_oride_driver_accept_order_click_detail_di/country_code=nal",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -253,7 +253,7 @@ dm_oride_order_base_d_task = HiveOperator(
         SELECT 
         order_id
         FROM 
-        oride_dw.dwd_oride_driver_accept_order_detail_di
+        oride_dw.dwd_oride_driver_accept_order_click_detail_di
         WHERE dt='{pt}'
         GROUP BY order_id
     )  r1 on ord.order_id = r1.order_id
@@ -301,5 +301,5 @@ dependence_dwd_oride_order_assign_driver_detail_di_prev_day_task >> \
 dependence_dwd_oride_order_push_driver_detail_di_prev_day_task >> \
 dependence_server_magic_dispatch_detail_prev_day_task >> \
 dependence_dwd_oride_order_dispatch_chose_detail_di_prev_day_task >> \
-dependence_dwd_oride_driver_accept_order_detail_di_prev_day_task >> \
+dependence_dwd_oride_driver_accept_order_click_detail_di_prev_day_task >> \
 sleep_time >> dm_oride_order_base_d_task >> touchz_data_success

@@ -32,7 +32,7 @@ args = {
     'email_on_retry': False,
 }
 
-dag = airflow.DAG('dwd_oride_driver_accept_order_detail_di',
+dag = airflow.DAG('dwd_oride_driver_accept_order_click_detail_di',
                   schedule_interval="00 01 * * *",
                   default_args=args,
                   catchup=False)
@@ -46,8 +46,8 @@ sleep_time = BashOperator(
 ##----------------------------------------- 依赖 ---------------------------------------##
 
 # 依赖前一天分区
-dwd_oride_driver_accept_order_detail_di_prev_day_tesk = HivePartitionSensor(
-    task_id="dwd_oride_driver_accept_order_detail_di_prev_day_task",
+dwd_oride_driver_accept_order_click_detail_di_prev_day_task = HivePartitionSensor(
+    task_id="dwd_oride_driver_accept_order_click_detail_di_prev_day_task",
     table="oride_client_event_detail",
     partition="dt='{{ds}}'",
     schema="oride_bi",
@@ -57,14 +57,14 @@ dwd_oride_driver_accept_order_detail_di_prev_day_tesk = HivePartitionSensor(
 
 ##----------------------------------------- 变量 ---------------------------------------##
 
-table_name = "dwd_oride_driver_accept_order_detail_di"
+table_name = "dwd_oride_driver_accept_order_click_detail_di"
 hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
 
 ##----------------------------------------- 脚本 ---------------------------------------##
 
-dwd_oride_driver_accept_order_detail_di_task = HiveOperator(
+dwd_oride_driver_accept_order_click_detail_di_task = HiveOperator(
 
-    task_id='dwd_oride_driver_accept_order_detail_di_task',
+    task_id='dwd_oride_driver_accept_order_click_detail_di_task',
     hql='''
     set hive.exec.parallel=true;
     set hive.exec.dynamic.partition.mode=nonstrict;
@@ -150,7 +150,7 @@ touchz_data_success = BashOperator(
     ),
     dag=dag)
 
-dwd_oride_driver_accept_order_detail_di_prev_day_tesk >> \
+dwd_oride_driver_accept_order_click_detail_di_prev_day_task >> \
 sleep_time >> \
-dwd_oride_driver_accept_order_detail_di_task >> \
+dwd_oride_driver_accept_order_click_detail_di_task >> \
 touchz_data_success
