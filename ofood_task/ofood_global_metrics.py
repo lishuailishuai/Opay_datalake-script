@@ -27,7 +27,7 @@ args = {
 
 dag = airflow.DAG(
     'ofood_global_metrics_report',
-    schedule_interval="50 01 * * *",
+    schedule_interval="20 03 * * *",
     default_args=args)
 
 cursor = get_hive_cursor()

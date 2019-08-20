@@ -28,7 +28,7 @@ args = {
 
 dag = airflow.DAG(
     'ofood_shop_metrics_daily',
-    schedule_interval="10 03 * * *",
+    schedule_interval="10 04 * * *",
     default_args=args)
 
 validate_partition_data = PythonOperator(
