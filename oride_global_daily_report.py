@@ -17,7 +17,7 @@ from airflow.sensors.hive_partition_sensor import HivePartitionSensor
 from utils.validate_metrics_utils import *
 
 args = {
-    'owner': 'root',
+    'owner': 'zhenqian.zhang',
     'start_date': datetime(2019, 7, 16),
     'depends_on_past': False,
     'retries': 1,
@@ -323,7 +323,8 @@ create_oride_global_daily_report = HiveOperator(
             `new_user_completed_num` int,
             `new_user_gmv` int,
             `completed_driver_online_time_total` bigint comment '完单司机在线总时长',
-            `billing_time` bigint comment '总计费时长'
+            `billing_time` bigint comment '总计费时长',
+            `finished_num` int comment '订单状态为5的数量'
         )
         PARTITIONED BY (
             `dt` string)
@@ -510,7 +511,8 @@ insert_oride_global_daily_report = HiveOperator(
                 count(distinct do.user_id) as request_usernum,
                 sum(if((do.status=4 or do.status=5) and do.serv_type = 3,do.pax_num,0)) trike_complete_passengernum,
                 count(distinct if(dop.id is not null and dop.status=1 and (dop.mode = 2 or dop.mode = 3) and do.serv_type = 3,do.user_id,null)) trike_online_pay_passengernum,
-                count(distinct if(dop.id is not null and dop.status=1 and do.serv_type = 3,do.user_id,null)) trike_pay_passengernum
+                count(distinct if(dop.id is not null and dop.status=1 and do.serv_type = 3,do.user_id,null)) trike_pay_passengernum,
+                count(DISTINCT if(do.status=5, do.id, null)) as finished_num
             FROM
                 order_base do
                 LEFT JOIN
@@ -695,7 +697,8 @@ insert_oride_global_daily_report = HiveOperator(
             nud.new_user_completed_num,
             nud.new_user_gmv,
             cdo.do_range,
-            od.billing_time
+            od.billing_time,
+            od.finished_num
         FROM
             order_data od
             LEFT JOIN lfw_data lf on lf.dt=od.dt
@@ -1086,7 +1089,8 @@ create_oride_global_city_serv_daily_report = HiveOperator(
             `pay_price` bigint comment '应付金额',
             `pay_amount` bigint comment '实付金额',
             `b_subsidy` bigint comment 'B端补贴',
-            `completed_driver_online_time_total` bigint comment '完单司机在线总时长'
+            `completed_driver_online_time_total` bigint comment '完单司机在线总时长',
+            `finished_num` int comment '订单状态为5的数量'
         )
         PARTITIONED BY (
             `dt` string)
@@ -1221,7 +1225,8 @@ insert_oride_global_city_serv_daily_report = HiveOperator(
                 count(DISTINCT if(dop.status=1, dop.id, null)) as pay_num,
                 sum(if(dop.status=1, dop.price, 0)) as pay_price,
                 sum(if(dop.status=1, dop.amount, 0)) as pay_amount,
-                sum((nvl(drr.amount,0)+nvl(dr.amount,0))) as b_subsidy
+                sum((nvl(drr.amount,0)+nvl(dr.amount,0))) as b_subsidy,
+                COUNT(if(do.status in (5),do.id,null)) AS finished_num
             FROM
                 order_base do
                 inner join driver_dim d on d.city_id = do.city_id and d.id = do.driver_id
@@ -1403,7 +1408,8 @@ insert_oride_global_city_serv_daily_report = HiveOperator(
             nvl(od.pay_price, 0),
             nvl(od.pay_amount, 0),
             nvl(od.b_subsidy, 0),
-            cdo.do_range
+            cdo.do_range,
+            od.finished_num
         FROM
             order_data od
             LEFT JOIN lfw_data ld ON ld.dt=od.dt AND ld.city_id=od.city_id AND ld.serv_type=od.serv_type
@@ -1426,6 +1432,7 @@ def get_serv_row(ds, driver_serv_type, all_completed_num):
         <td>{}</td>
         <td>{}</td>
         <!--关键指标-->
+        <td>{}</td>
         <td>{}</td>
         <td>{}</td>
         <td>{}</td>
@@ -1477,7 +1484,8 @@ def get_serv_row(ds, driver_serv_type, all_completed_num):
                 SUM(pay_price) as pay_price,
                 SUM(pay_amount) as pay_amount,
                 SUM(b_subsidy) as b_subsidy,
-                SUM(completed_driver_online_time_total) as completed_driver_online_time_total
+                SUM(completed_driver_online_time_total) as completed_driver_online_time_total,
+                SUM(finished_num) as finished_num
             FROM
                 oride_bi.oride_global_city_serv_daily_report
             WHERE
@@ -1511,6 +1519,7 @@ def get_serv_row(ds, driver_serv_type, all_completed_num):
             'All' as name,
             completed_num,
             cast(nvl(completed_num_lfw, 0) as int),
+            nvl(finished_num, '-'),
             concat(cast(nvl(round(completed_num/{all_completed_num}*100, 1),0) as string), '%'),
             '100%',
             completed_users,
@@ -1541,6 +1550,7 @@ def get_serv_row(ds, driver_serv_type, all_completed_num):
             td.name as name,
             cd.completed_num,
             cast(nvl(cd.completed_num_lfw, 0) as int),
+            nvl(cd.finished_num, '-'),
             concat(cast(nvl(round(cd.completed_num/acd.completed_num*100, 1),0) as string), '%'),
             concat(cast(nvl(round(cd.completed_num/ad.completed_num*100, 1),0) as string), '%'),
             cd.completed_users,
@@ -1597,6 +1607,7 @@ def get_trike_row(ds, driver_serv_type):
         <td>{}</td>
         <td>{}</td>
         <!--关键指标-->
+        <td>{}</td>
         <td>{}</td>
         <td>{}</td>
         <td>{}</td>
@@ -1663,7 +1674,8 @@ def get_trike_row(ds, driver_serv_type):
                 SUM(pay_price) as pay_price,
                 SUM(pay_amount) as pay_amount,
                 SUM(b_subsidy) as b_subsidy,
-                SUM(completed_driver_online_time_total) as completed_driver_online_time_total
+                SUM(completed_driver_online_time_total) as completed_driver_online_time_total,
+                SUM(finished_num) as finished_num
             FROM
                 oride_bi.oride_global_city_serv_daily_report
             WHERE
@@ -1690,6 +1702,7 @@ def get_trike_row(ds, driver_serv_type):
             cast(nvl(completed_num_lfw, 0) as int),
             '-',--concat(cast(nvl(round(completed_num * 100/request_num,1),0) as string),'%'),
             '-',--concat(cast(nvl(round(completed_num_lfw * 100/request_num_lfw,1),0) as string),'%'),
+            nvl(finished_num, '--'),
             completed_drivers,
             if(completed_driver_online_time_total is null, '-', round(completed_driver_online_time_total/3600/completed_drivers, 1)),
             concat(cast(nvl(round(billing_time_total/completed_driver_online_time_total*100, 1),0) as string), '%'),
@@ -1728,6 +1741,7 @@ def get_trike_row(ds, driver_serv_type):
             cast(nvl(cd.completed_num_lfw, 0) as int),
             '-',--concat(cast(nvl(round(cd.completed_num * 100/cd.request_num,1),0) as string),'%'),
             '-',--concat(cast(nvl(round(cd.completed_num_lfw * 100/cd.request_num_lfw,1),0) as string),'%'),
+            nvl(cd.finished_num, '--'),
             cd.completed_drivers,
             if(cd.completed_driver_online_time_total is null, '-', round(cd.completed_driver_online_time_total/3600/cd.completed_drivers, 1)),
             concat(cast(nvl(round(cd.billing_time_total/cd.completed_driver_online_time_total*100, 1),0) as string), '%'),
@@ -1819,7 +1833,8 @@ def send_report_email(ds, **kwargs):
             nvl(new_user_request_num, '-') AS new_user_request_num,
             nvl(new_user_completed_num, '-') AS new_user_completed_num,
             nvl(new_user_gmv, '-') AS new_user_gmv,
-            if(completed_driver_online_time_total is null, '-', round(completed_num/(completed_driver_online_time_total/3600), 1)) as tph
+            if(completed_driver_online_time_total is null, '-', round(completed_num/(completed_driver_online_time_total/3600), 1)) as tph,
+            nvl(finished_num, '-') as finished_num
         FROM
            oride_bi.oride_global_daily_report
         WHERE
@@ -1872,7 +1887,7 @@ def send_report_email(ds, **kwargs):
                 <thead>
                     <tr>
                         <th></th>
-                        <th colspan="7" style="text-align: center;">关键指标</th>
+                        <th colspan="8" style="text-align: center;">关键指标</th>
                         <th colspan="4" style="text-align: center;">供需关系</th>
                         <th colspan="4" style="text-align: center;">司机指标</th>
                         <th colspan="3" style="text-align: center;">体验指标</th>
@@ -1888,6 +1903,7 @@ def send_report_email(ds, **kwargs):
                         <th>完单数（近四周均值）</th>
                         <th>完单率</th>
                         <th>完单率（近四周均值）</th>
+                        <th>支付完单数</th>
                         <th>招手停完单数</th>
                         <!--供需关系-->
                         <th>活跃乘客数</th>
@@ -1931,7 +1947,7 @@ def send_report_email(ds, **kwargs):
                     <tr>
                         <th></th>
                         <th></th>
-                        <th colspan="4" style="text-align: center;">关键指标</th>
+                        <th colspan="5" style="text-align: center;">关键指标</th>
                         <th colspan="5" style="text-align: center;">供需关系</th>
                         <th colspan="4" style="text-align: center;">司机指标</th>
                         <th colspan="3" style="text-align: center;">体验指标</th>
@@ -1944,6 +1960,7 @@ def send_report_email(ds, **kwargs):
                         <!--关键指标-->
                         <th>完单数</th>
                         <th>完单数（近四周均值）</th>
+                        <th>支付完单数</th>
                         <th>专快完单占比</th>
                         <th>城市完单占比</th>
                         <!--供需关系-->
@@ -1984,7 +2001,7 @@ def send_report_email(ds, **kwargs):
                     <tr>
                         <th></th>
                         <th></th>
-                        <th colspan="4" style="text-align: center;">关键指标</th>
+                        <th colspan="5" style="text-align: center;">关键指标</th>
                         <th colspan="5" style="text-align: center;">供需关系</th>
                         <th colspan="4" style="text-align: center;">司机指标</th>
                         <th colspan="3" style="text-align: center;">体验指标</th>
@@ -1997,6 +2014,7 @@ def send_report_email(ds, **kwargs):
                         <!--关键指标-->
                         <th>完单数</th>
                         <th>完单数（近四周均值）</th>
+                        <th>支付完单数</th>
                         <th>专快完单占比</th>
                         <th>城市完单占比</th>
                         <!--供需关系-->
@@ -2038,7 +2056,7 @@ def send_report_email(ds, **kwargs):
                     <tr>
                         <th></th>
                         <th></th>
-                        <th colspan="6" style="text-align: center;">关键指标</th>
+                        <th colspan="7" style="text-align: center;">关键指标</th>
                         <th colspan="4" style="text-align: center;">供需关系</th>
                         <th colspan="4" style="text-align: center;">司机指标</th>
                         <th colspan="3" style="text-align: center;">体验指标</th>
@@ -2055,6 +2073,7 @@ def send_report_email(ds, **kwargs):
                         <th>完单数（近四周均值）</th>
                         <th>完单率</th>
                         <th>完单率（近四周均值）</th>
+                        <th>支付完单数</th>
                         <!--供需关系-->
                         <th>完单司机数</th>
                         <th>人均在线时长（时）</th>
@@ -2118,6 +2137,7 @@ def send_report_email(ds, **kwargs):
                 <td>{completed_num_lfw}</td>
                 <td style="background:#d9d9d9">{c_vs_r}%</td>
                 <td>{c_vs_r_lfw}%</td>
+                <td>{finished_num}</td>
                 <td>{beckoning_num}</td>
                 <!--供需关系-->
                 <td>{active_users}</td>
@@ -2154,7 +2174,7 @@ def send_report_email(ds, **kwargs):
              completed_drivers, avg_online_time, btime_vs_otime, register_drivers, online_drivers, c_vs_od,
              avg_take_time, avg_distance, avg_pickup_time, register_users, first_completed_users, fcu_vs_cu,
              old_completed_users, map_request_num, beckoning_num, driect_ordernum, driect_orderate, driect_drivernum,
-             street_ordernum, street_orderate, street_drivernum, request_usernum, trike_online_pay_rate, new_user_request_num,new_user_completed_num,new_user_gmv,tph] = list(data)
+             street_ordernum, street_orderate, street_drivernum, request_usernum, trike_online_pay_rate, new_user_request_num,new_user_completed_num,new_user_gmv,tph, finished_num] = list(data)
             row = row_fmt.format(
                 dt=dt,
                 request_num=request_num,
@@ -2190,7 +2210,8 @@ def send_report_email(ds, **kwargs):
                 new_user_request_num=new_user_request_num,
                 new_user_completed_num=new_user_completed_num,
                 new_user_gmv=new_user_gmv,
-                tph=tph
+                tph=tph,
+                finished_num=finished_num
             )
             if week == '6' or week == '7':
                 row_html += weekend_tr_fmt.format(row=row)
