@@ -11,6 +11,7 @@ from utils.validate_metrics_utils import *
 from airflow.sensors.s3_prefix_sensor import S3PrefixSensor
 from airflow.operators.bash_operator import BashOperator
 from airflow.sensors import UFileSensor
+from plugins.comwx import ComwxApi
 import time
 import logging
 
@@ -272,9 +273,43 @@ get_data_from_impala_task = PythonOperator(
 )
 
 
+comwx = ComwxApi('wwd26d45f97ea74ad2', 'BLE_v25zCmnZaFUgum93j3zVBDK-DjtRkLisI_Wns4g', '1000011')
+
+
+def check_ds_data(**op_kwargs):
+    ds = op_kwargs.get('ds', time.strftime('%Y-%m-%d', time.localtime(time.time() - 86400)))
+    sql = '''
+        select count(1) as cnt from bi.ofood_merchant_offline_tag where from_unixtime(update_time,'%Y-%m-%d')='{pt}'
+    '''.format(pt=ds)
+    mysql_conn = get_db_conn('mysql_bi')
+    mcursor = mysql_conn.cursor()
+    mcursor.execute(sql)
+    res = mcursor.fetchall()
+    logging.info(sql)
+    logging.info(res)
+    logging.info(isinstance(res, tuple))
+    logging.info(len(res))
+    logging.info(res[0])
+    if res is None or not isinstance(res, tuple) or len(res) <= 0:
+        comwx.postAppMessage('ofood商家订单指标缺少{}数据, 请及时排查'.format(ds), '271')
+    else:
+        (cnt,) = res[0]
+        logging.info(cnt)
+        if cnt <= 0:
+            comwx.postAppMessage('ofood商家订单指标缺少{}数据, 请及时排查'.format(ds), '271')
+
+
+check_data = PythonOperator(
+    task_id='check_data',
+    python_callable=check_ds_data,
+    provide_context=True,
+    dag=dag
+)
+
+
 dependence_ods_sqoop_base_jh_order_df >> sleep_time
 dependence_ods_sqoop_base_jh_order_log_df >> sleep_time
 dependence_ods_sqoop_base_jh_waimai_comment_df >> sleep_time
 dependence_ods_sqoop_base_jh_order_time_df >> sleep_time
 
-sleep_time >> get_data_from_impala_task
+sleep_time >> get_data_from_impala_task >> check_data
