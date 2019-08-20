@@ -31,7 +31,7 @@ args = {
 
 dag = airflow.DAG(
     'app_oride_order_dispatch_d',
-    schedule_interval="00 01 * * *",
+    schedule_interval="00 06 * * *",
     default_args=args
 )
 
@@ -86,7 +86,7 @@ dependence_ods_oride_data_order = UFileSensor(
 dependence_ods_oride_data_driver_records_day = UFileSensor(
     task_id='dependence_ods_oride_data_driver_records_day',
     filepath='{hdfs_path_str}/dt={pt}'.format(
-        hdfs_path_str="oride/db/data_driver_records_day",
+        hdfs_path_str="oride_dw_sqoop/oride_data/data_driver_records_day",
         pt='{{ ds }}'
     ),
     bucket_name='opay-datalake',
@@ -97,7 +97,7 @@ dependence_ods_oride_data_driver_records_day = UFileSensor(
 dependence_ods_oride_data_driver_recharge_records = UFileSensor(
     task_id='dependence_ods_oride_data_driver_recharge_records',
     filepath='{hdfs_path_str}/dt={pt}'.format(
-        hdfs_path_str="oride/db/data_driver_recharge_records",
+        hdfs_path_str="oride_dw_sqoop/oride_data/data_driver_recharge_records",
         pt='{{ ds }}'
     ),
     bucket_name='opay-datalake',
@@ -108,7 +108,7 @@ dependence_ods_oride_data_driver_recharge_records = UFileSensor(
 dependence_ods_oride_data_driver_reward = UFileSensor(
     task_id='dependence_ods_oride_data_driver_reward',
     filepath='{hdfs_path_str}/dt={pt}'.format(
-        hdfs_path_str="oride/db/data_driver_reward",
+        hdfs_path_str="oride_dw_sqoop/oride_data/data_driver_reward",
         pt='{{ ds }}'
     ),
     bucket_name='opay-datalake',
@@ -241,14 +241,14 @@ insert_result_to_hive = HiveOperator(
     task_id='insert_result_to_hive',
     hql='''
         set mapred.job.queue.name=root.users.airflow;
-        set hive.execution.engine=tez;
-        set hive.mapjoin.hybridgrace.hashtable=false;
+        --set hive.execution.engine=tez;
+        --set hive.mapjoin.hybridgrace.hashtable=false;
         --set hive.vectorized.execution.enabled=false;
-        set hive.vectorized.execution.enabled = true;
-        set hive.vectorized.execution.reduce.enabled = true;
-        set hive.prewarm.enabled=true;
-        set hive.prewarm.numcontainers=16;
-        set hive.tez.auto.reducer.parallelism=true;
+        --set hive.vectorized.execution.enabled = true;
+        --set hive.vectorized.execution.reduce.enabled = true;
+        --set hive.prewarm.enabled=true;
+        --set hive.prewarm.numcontainers=16;
+        --set hive.tez.auto.reducer.parallelism=true;
         set hive.exec.parallel=true;
         WITH
         --推单距离 
@@ -784,7 +784,7 @@ insert_result_to_hive = HiveOperator(
 		            amount_pay_offline,
 		            driver_id,
 		            dt
-		        from oride_db.data_driver_records_day 
+		        from oride_dw.ods_sqoop_base_data_driver_records_day_df 
 		        where dt='{pt}' and 
 		            from_unixtime(day, 'yyyy-MM-dd') = '{pt}'
 		        ) as drd on drd.driver_id = do.driver_id  
@@ -818,14 +818,14 @@ insert_result_to_hive = HiveOperator(
 		    left join (select 
 		            amount,
 		            driver_id
-		        from oride_db.data_driver_recharge_records 
+		        from oride_dw.ods_sqoop_base_data_driver_recharge_records_df 
 		        where dt='{pt}' and 
 		            from_unixtime(created_at, 'yyyy-MM-dd') = '{pt}'
 		        ) as rr on do.driver_id = rr.driver_id 
 		    left join (select 
 		            amount,
 		            driver_id  
-		        from oride_db.data_driver_reward 
+		        from oride_dw.ods_sqoop_base_data_driver_reward_df 
 		        where dt='{pt}' and 
 		            from_unixtime(create_time, 'yyyy-MM-dd') = '{pt}'
 		        ) as dr on do.driver_id = dr.driver_id 
