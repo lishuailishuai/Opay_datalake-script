@@ -124,6 +124,18 @@ dependence_dwd_oride_driver_accept_order_click_detail_di_prev_day_task = UFileSe
 )
 
 
+dependence_dwd_oride_driver_accept_order_show_detail_di_prev_day_task = UFileSensor(
+    task_id='dwd_oride_driver_accept_order_show_detail_di_prev_day_task',
+    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="oride/oride_dw/dwd_oride_driver_accept_order_show_detail_di/country_code=nal",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
+
 ##----------------------------------------- 变量 ---------------------------------------##
 
 table_name = "dm_oride_order_base_d"
@@ -200,14 +212,16 @@ dm_oride_order_base_d_task = HiveOperator(
            
            count(distinct r1.order_id) as driver_accpet_order_cnt,  --司机应答订单数
     
-           sum (case when ord.order_id=p1.order_id then 1 else 0 end) as dispatch_push_driver_order_cnt, --推送给骑手的订单数
+           sum (case when ord.order_id=p1.order_id then 1 else 0 end) as dispatch_push_driver_order_cnt, --推送给骑手的订单数(push阶段)
            
-           sum (case when ord.order_id=p1.order_id then p1.push_driver_times_cnt else 0 end) as push_driver_times_cnt, --推送成功给司机的总次数
+           sum (case when ord.order_id=p1.order_id then p1.push_driver_times_cnt else 0 end) as push_driver_times_cnt, --推送成功给司机的总次数(push阶段)
             
-           sum (case when ord.order_id=p1.order_id then p1.succ_push_all_times_cnt else 0 end) as succ_push_all_times_cnt, --推送成功的总次数
+           sum (case when ord.order_id=p1.order_id then p1.succ_push_all_times_cnt else 0 end) as succ_push_all_times_cnt, --推送成功的总次数(push阶段)
             
            sum(td_finish_order_dur)+sum(td_cannel_pick_dur) as accept_order_dur,
            --当天做单时长(当天完成做单时长+当天取消接驾时长（分钟）)
+           
+           count(distinct r2.order_id) as push_driver_order_accpet_show_cnt,  --司机被推送订单数(accpet_show阶段)
     
            ord.country_code,
            
@@ -257,6 +271,15 @@ dm_oride_order_base_d_task = HiveOperator(
         WHERE dt='{pt}'
         GROUP BY order_id
     )  r1 on ord.order_id = r1.order_id
+    LEFT OUTER JOIN 
+    (
+        SELECT 
+        order_id
+        FROM 
+        oride_dw.dwd_oride_driver_accept_order_show_detail_di
+        WHERE dt='{pt}'
+        GROUP BY order_id
+    )  r2 on ord.order_id = r2.order_id
       
     
     GROUP BY ord.city_id,
@@ -302,4 +325,5 @@ dependence_dwd_oride_order_push_driver_detail_di_prev_day_task >> \
 dependence_server_magic_dispatch_detail_prev_day_task >> \
 dependence_dwd_oride_order_dispatch_chose_detail_di_prev_day_task >> \
 dependence_dwd_oride_driver_accept_order_click_detail_di_prev_day_task >> \
+dependence_dwd_oride_driver_accept_order_show_detail_di_prev_day_task >> \
 sleep_time >> dm_oride_order_base_d_task >> touchz_data_success

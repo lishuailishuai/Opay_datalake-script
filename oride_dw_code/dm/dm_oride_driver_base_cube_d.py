@@ -22,20 +22,19 @@ import requests
 import os
 
 args = {
-        'owner': 'yangmingze',
-        'start_date': datetime(2019, 5, 20),
-        'depends_on_past': False,
-        'retries': 3,
-        'retry_delay': timedelta(minutes=2),
-        'email': ['bigdata_dw@opay-inc.com'],
-        'email_on_failure': True,
-        'email_on_retry': False,
-} 
+    'owner': 'yangmingze',
+    'start_date': datetime(2019, 5, 20),
+    'depends_on_past': False,
+    'retries': 3,
+    'retry_delay': timedelta(minutes=2),
+    'email': ['bigdata_dw@opay-inc.com'],
+    'email_on_failure': True,
+    'email_on_retry': False,
+}
 
-dag = airflow.DAG( 'dm_oride_driver_base_cube_d', 
-    schedule_interval="00 01 * * *", 
-    default_args=args) 
-
+dag = airflow.DAG('dm_oride_driver_base_cube_d',
+                  schedule_interval="00 01 * * *",
+                  default_args=args)
 
 sleep_time = BashOperator(
     task_id='sleep_id',
@@ -46,69 +45,11 @@ sleep_time = BashOperator(
 ##----------------------------------------- 依赖 ---------------------------------------## 
 
 
-#依赖前一天分区
-dependence_dim_oride_driver_audit_base_prev_day_tesk=UFileSensor(
+# 依赖前一天分区
+dependence_dim_oride_driver_audit_base_prev_day_task = UFileSensor(
     task_id='dim_oride_driver_audit_base_prev_day_task',
     filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
         hdfs_path_str="oride/oride_dw/dim_oride_driver_audit_base/country_code=nal",
-        pt='{{ds}}'
-        ),
-    bucket_name='opay-datalake',
-    poke_interval=60, #依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-        )
-
-dependence_dwd_oride_order_base_include_test_di_prev_day_tesk=UFileSensor(
-    task_id='dwd_oride_order_base_include_test_di_prev_day_task',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw/dwd_oride_order_base_include_test_di/country_code=nal",
-        pt='{{ds}}'
-        ),
-    bucket_name='opay-datalake',
-    poke_interval=60, #依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-        )
-
-
-#依赖前一天分区
-dependence_dwm_oride_driver_audit_third_extend_di_prev_day_tesk=UFileSensor(
-    task_id='dwm_oride_driver_audit_third_extend_di_prev_day_task',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw/dwm_oride_driver_audit_third_extend_di/country_code=nal",
-        pt='{{ds}}'
-        ),
-    bucket_name='opay-datalake',
-    poke_interval=60, #依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-        )
-
-dependence_dwd_oride_order_push_driver_detail_di_prev_day_tesk=UFileSensor(
-    task_id='dwd_oride_order_push_driver_detail_di_prev_day_task',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw/dwd_oride_order_push_driver_detail_di/country_code=nal",
-        pt='{{ds}}'
-        ),
-    bucket_name='opay-datalake',
-    poke_interval=60, #依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-        )
-
-
-#依赖前一天分区
-dependence_oride_driver_timerange_prev_day_tesk=HivePartitionSensor(
-      task_id="oride_driver_timerange_prev_day_task",
-      table="oride_driver_timerange",
-      partition="dt='{{ds}}'",
-      schema="oride_bi",
-      poke_interval=60, #依赖不满足时，一分钟检查一次依赖状态
-      dag=dag
-    )
-
-
-dependence_dwd_oride_driver_accept_order_detail_di_prev_day_task = UFileSensor(
-    task_id='dwd_oride_driver_accept_order_detail_di_prev_day_task',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw/dwd_oride_driver_accept_order_detail_di/country_code=nal",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -116,11 +57,76 @@ dependence_dwd_oride_driver_accept_order_detail_di_prev_day_task = UFileSensor(
     dag=dag
 )
 
+dependence_dwd_oride_order_base_include_test_di_prev_day_task = UFileSensor(
+    task_id='dwd_oride_order_base_include_test_di_prev_day_task',
+    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="oride/oride_dw/dwd_oride_order_base_include_test_di/country_code=nal",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
 
-##----------------------------------------- 变量 ---------------------------------------## 
+# 依赖前一天分区
+dependence_dwm_oride_driver_audit_third_extend_di_prev_day_task = UFileSensor(
+    task_id='dwm_oride_driver_audit_third_extend_di_prev_day_task',
+    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="oride/oride_dw/dwm_oride_driver_audit_third_extend_di/country_code=nal",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
 
-table_name="dm_oride_driver_base_cube_d"
-hdfs_path="ufile://opay-datalake/oride/oride_dw/"+table_name
+dependence_dwd_oride_order_push_driver_detail_di_prev_day_task = UFileSensor(
+    task_id='dwd_oride_order_push_driver_detail_di_prev_day_task',
+    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="oride/oride_dw/dwd_oride_order_push_driver_detail_di/country_code=nal",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
+# 依赖前一天分区
+dependence_oride_driver_timerange_prev_day_task = HivePartitionSensor(
+    task_id="oride_driver_timerange_prev_day_task",
+    table="oride_driver_timerange",
+    partition="dt='{{ds}}'",
+    schema="oride_bi",
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
+dependence_dwd_oride_driver_accept_order_click_detail_di_prev_day_task = UFileSensor(
+    task_id='dwd_oride_driver_accept_order_click_detail_di_prev_day_task',
+    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="oride/oride_dw/dwd_oride_driver_accept_order_click_detail_di/country_code=nal",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
+dependence_dwd_oride_driver_accept_order_show_detail_di_prev_day_task = UFileSensor(
+    task_id='dwd_oride_driver_accept_order_show_detail_di_prev_day_task',
+    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="oride/oride_dw/dwd_oride_driver_accept_order_show_detail_di/country_code=nal",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
+##----------------------------------------- 变量 ---------------------------------------##
+
+table_name = "dm_oride_driver_base_cube_d"
+hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
 
 ##----------------------------------------- 脚本 ---------------------------------------## 
 
@@ -170,7 +176,10 @@ dm_oride_driver_base_cube_d_task = HiveOperator(
     
            finish_order_driver_num,
            --当天完单司机数
-    
+           
+           push_accpet_show_driver_num,
+           --被推送骑手数 （accept_show阶段）
+            
            country_code,
            --国家码字段
     
@@ -210,7 +219,7 @@ dm_oride_driver_base_cube_d_task = HiveOperator(
               --在线司机数
               
               count(DISTINCT (CASE WHEN ord.driver_id=r1.driver_id THEN ord.driver_id ELSE NULL END)) AS driver_accept_take_num,
-              --骑手应答的总次数 （accept阶段）
+              --骑手应答的总次数 （accept_click阶段）
     
               count(DISTINCT (CASE WHEN ord.driver_id=p1.driver_id THEN ord.driver_id ELSE NULL END)) AS driver_take_num,
               --骑手成功应答的总次数 （push阶段）
@@ -220,6 +229,9 @@ dm_oride_driver_base_cube_d_task = HiveOperator(
     
               count(DISTINCT (CASE WHEN is_td_finish=1 THEN ord.driver_id ELSE NULL END)) AS finish_order_driver_num,
               --当天完单司机数
+              
+              count(DISTINCT (CASE WHEN ord.driver_id = r2.driver_id THEN ord.driver_id ELSE NULL END)) AS push_accpet_show_driver_num,
+              --被推送骑手数 （accept_show阶段）
     
               nvl(dri.country_code,-999) AS country_code --(去除with cube为空的BUG) --国家码字段
     
@@ -269,10 +281,23 @@ dm_oride_driver_base_cube_d_task = HiveOperator(
            SELECT 
            driver_id
            FROM 
-           oride_dw.dwd_oride_driver_accept_order_detail_di
+           oride_dw.dwd_oride_driver_accept_order_click_detail_di
            WHERE dt='{pt}'
            group by driver_id 
        ) r1 on r1.driver_id = dri.driver_id
+       LEFT OUTER JOIN 
+       (
+           SELECT 
+           driver_id
+           FROM 
+           oride_dw.dwd_oride_driver_accept_order_show_detail_di
+           WHERE dt='{pt}'
+           group by driver_id 
+       ) r2 on r2.driver_id = dri.driver_id
+       
+       
+       
+       
        GROUP BY dri.product_id,
                 dri.city_id,
                 dri.country_code 
@@ -283,11 +308,10 @@ dm_oride_driver_base_cube_d_task = HiveOperator(
         pt='{{ds}}',
         now_day='{{macros.ds_add(ds, +1)}}',
         table=table_name
-        ),
+    ),
     dag=dag)
 
-
-#生成_SUCCESS
+# 生成_SUCCESS
 touchz_data_success = BashOperator(
 
     task_id='touchz_data_success',
@@ -306,18 +330,17 @@ touchz_data_success = BashOperator(
     """.format(
         pt='{{ds}}',
         now_day='{{macros.ds_add(ds, +1)}}',
-        hdfs_data_dir=hdfs_path+'/country_code=nal/dt={{ds}}'
-        ),
+        hdfs_data_dir=hdfs_path + '/country_code=nal/dt={{ds}}'
+    ),
     dag=dag)
 
-
-
-dependence_dim_oride_driver_audit_base_prev_day_tesk >> \
-dependence_dwd_oride_order_base_include_test_di_prev_day_tesk >> \
-dependence_dwm_oride_driver_audit_third_extend_di_prev_day_tesk >> \
-dependence_dwd_oride_order_push_driver_detail_di_prev_day_tesk >> \
-dependence_oride_driver_timerange_prev_day_tesk >> \
-dependence_dwd_oride_driver_accept_order_detail_di_prev_day_task >> \
+dependence_dim_oride_driver_audit_base_prev_day_task >> \
+dependence_dwd_oride_order_base_include_test_di_prev_day_task >> \
+dependence_dwm_oride_driver_audit_third_extend_di_prev_day_task >> \
+dependence_dwd_oride_order_push_driver_detail_di_prev_day_task >> \
+dependence_oride_driver_timerange_prev_day_task >> \
+dependence_dwd_oride_driver_accept_order_click_detail_di_prev_day_task >> \
+dependence_dwd_oride_driver_accept_order_show_detail_di_prev_day_task >> \
 sleep_time >> \
 dm_oride_driver_base_cube_d_task >> \
 touchz_data_success
