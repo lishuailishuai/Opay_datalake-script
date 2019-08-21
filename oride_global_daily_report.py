@@ -3231,6 +3231,7 @@ for table_name in anti_fraud_table_names:
     )
     anti_fraud_validate_task >> insert_oride_anti_fraud_daily_report
 
+create_oride_global_daily_report >> insert_oride_global_daily_report
 create_oride_driver_timerange >> import_driver_online_time >> insert_oride_global_daily_report
 import_opay_event_log >> insert_oride_global_daily_report
 create_oride_global_city_serv_daily_report >> insert_oride_global_city_serv_daily_report
@@ -3241,5 +3242,8 @@ create_oride_anti_fraud_daily_report >> insert_oride_anti_fraud_daily_report
 insert_oride_global_daily_report >> insert_oride_anti_fraud_daily_report
 insert_oride_anti_fraud_daily_report >> insert_orider_anti_fraud_daily_report_result >> send_anti_fraud_report
 
+import_opay_event_log >> insert_oride_order_city_daily_report
 insert_oride_order_city_daily_report >> send_funnel_report
 insert_oride_global_daily_report >> send_funnel_report
+
+
