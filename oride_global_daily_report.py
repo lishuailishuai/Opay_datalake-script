@@ -33,194 +33,31 @@ dag = airflow.DAG(
     default_args=args)
 
 global_table_names = [
-    'oride_db.data_order',
-    'oride_db.data_driver_extend',
-    'oride_db.data_user_extend',
-    'oride_db.data_order_payment',
-    'oride_source.dispatch_tracker_server_magic',
+    'oride_dw.ods_sqoop_base_data_order_df',
+    'oride_dw.ods_sqoop_base_data_order_payment_df',
+    'oride_dw.ods_sqoop_base_data_user_extend_df',
+    'oride_dw.ods_sqoop_base_data_driver_extend_df',
+    'oride_bi.oride_driver_timerange',
     'oride_bi.server_magic_push_detail',
-    'oride_bi.oride_driver_timerange'
+    'oride_source.server_magic',
+    'oride_dw.ods_sqoop_base_data_driver_recharge_records_df',
+    'oride_dw.ods_sqoop_base_data_driver_reward_df',
+    'oride_dw.ods_sqoop_base_data_city_conf_df',
 ]
 
-city_and_weather_table_names = [
-    'oride_db.data_order',
-    'oride_db.data_driver_extend',
-    'oride_db.data_user_extend',
-    'oride_db.data_order_payment',
-    'oride_source.dispatch_tracker_server_magic',
-    'oride_bi.server_magic_push_detail',
-    'oride_bi.oride_driver_timerange',
+funnel_report_table_names = [
     'oride_dw.ods_sqoop_base_weather_per_10min_df',
-    'oride_db.data_city_conf',
+    'oride_dw.ods_sqoop_base_data_order_df',
+    'oride_dw.ods_sqoop_base_data_city_conf_df',
+    'oride_dw.ods_sqoop_base_data_order_payment_df',
+    'oride_bi.server_magic_push_detail',
 ]
 
 anti_fraud_table_names = [
-    'oride_db.data_order',
-    'oride_db.data_driver_extend',
-    'oride_db.data_user_extend',
-    'oride_db.data_order_payment',
-    'oride_source.dispatch_tracker_server_magic',
-    'oride_bi.server_magic_push_detail',
-    'oride_bi.oride_driver_timerange',
-    'oride_db.data_anti_fraud_strategy',
+    'oride_dw.ods_sqoop_base_data_anti_fraud_strategy_df',
     'oride_source.anti_fraud',
-    'oride_db.data_abnormal_order'
+    'oride_dw.ods_sqoop_base_data_abnormal_order_df',
 ]
-
-'''
-校验分区代码
-'''
-
-validate_global_partition_data = PythonOperator(
-    task_id='validate_global_partition_data',
-    python_callable=validate_partition,
-    provide_context=True,
-    op_kwargs={
-        # 验证table
-        "table_names": global_table_names,
-        # 任务名称
-        "task_name": "oride全局运营报表"
-    },
-    dag=dag
-)
-
-validate_anti_fraud_partition_data = PythonOperator(
-    task_id='validate_anti_fraud_partition_data',
-    python_callable=validate_partition,
-    provide_context=True,
-    op_kwargs={
-        # 验证table
-        "table_names": anti_fraud_table_names,
-        # 任务名称
-        "task_name": "oride反作弊报表"
-    },
-    dag=dag
-)
-
-validate_city_and_weather_partition_data = PythonOperator(
-    task_id='validate_city_and_weather_partition_data',
-    python_callable=validate_partition,
-    provide_context=True,
-    op_kwargs={
-        # 验证table
-        "table_names":
-            ['oride_dw.ods_sqoop_base_weather_per_10min_df',
-             'oride_db.data_city_conf',
-             ],
-        # 任务名称
-        "task_name": "oride漏斗模型分城市天气数据报表"
-    },
-    dag=dag
-)
-
-data_driver_extend_validate_task = HivePartitionSensor(
-    task_id="data_driver_extend_validate_task",
-    table="data_driver_extend",
-    partition="dt='{{ds}}'",
-    schema="oride_db",
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
-
-data_order_validate_task = HivePartitionSensor(
-    task_id="data_order_validate_task",
-    table="data_order",
-    partition="dt='{{ds}}'",
-    schema="oride_db",
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
-
-data_user_extend_validate_task = HivePartitionSensor(
-    task_id="data_user_extend_validate_task",
-    table="data_user_extend",
-    partition="dt='{{ds}}'",
-    schema="oride_db",
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
-
-data_order_payment_validate_task = HivePartitionSensor(
-    task_id="data_order_payment_validate_task",
-    table="data_order_payment",
-    partition="dt='{{ds}}'",
-    schema="oride_db",
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
-
-server_magic_push_detail_validate_task = HivePartitionSensor(
-    task_id="server_magic_push_detail_validate_task",
-    table="server_magic_push_detail",
-    partition="dt='{{ds}}'",
-    schema="oride_bi",
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
-
-oride_driver_timerange_validate_task = HivePartitionSensor(
-    task_id="oride_driver_timerange_validate_task",
-    table="oride_driver_timerange",
-    partition="dt='{{ds}}'",
-    schema="oride_bi",
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
-
-server_magic_validate_task = HivePartitionSensor(
-    task_id="server_magic_validate_task",
-    table="dispatch_tracker_server_magic",
-    partition="dt='{{ds}}'",
-    schema="oride_source",
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
-
-anti_fraud_validate_task = HivePartitionSensor(
-    task_id="anti_fraud_validate_task",
-    table="anti_fraud",
-    partition="dt='{{ds}}'",
-    schema="oride_source",
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
-
-data_anti_fraud_strategy_validate_task = HivePartitionSensor(
-    task_id="data_anti_fraud_strategy_validate_task",
-    table="data_anti_fraud_strategy",
-    partition="dt='{{ds}}'",
-    schema="oride_db",
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
-
-data_abnormal_order_validate_task = HivePartitionSensor(
-    task_id="data_abnormal_order_validate_task",
-    table="data_abnormal_order",
-    partition="dt='{{ds}}'",
-    schema="oride_db",
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
-
-weather_validate_task = HivePartitionSensor(
-    task_id="weather_validate_task",
-    table="ods_sqoop_base_weather_per_10min_df",
-    partition="dt='{{ds}}'",
-    schema="oride_dw",
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
-
-data_city_conf_validate_task = HivePartitionSensor(
-    task_id="data_city_conf_validate_task",
-    table="data_city_conf",
-    partition="dt='{{ds}}'",
-    schema="oride_db",
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
-
 
 def import_opay_event(ds, **kwargs):
     # download report
@@ -324,7 +161,8 @@ create_oride_global_daily_report = HiveOperator(
             `new_user_gmv` int,
             `completed_driver_online_time_total` bigint comment '完单司机在线总时长',
             `billing_time` bigint comment '总计费时长',
-            `finished_num` int comment '订单状态为5的数量'
+            `finished_num` int comment '订单状态为5的数量',
+            `request_users` int comment '下单乘客数'
         )
         PARTITIONED BY (
             `dt` string)
@@ -419,7 +257,7 @@ insert_oride_global_daily_report = HiveOperator(
                 , id, null)
                 )/4 as driver_cancel_num_lfw
             FROM
-                oride_db.data_order
+                oride_dw.ods_sqoop_base_data_order_df
             WHERE
                 dt='{{ ds }}' and city_id !=999001
             GROUP BY dt
@@ -429,7 +267,7 @@ insert_oride_global_daily_report = HiveOperator(
             SELECT
                 *
             FROM
-                oride_db.data_order
+                oride_dw.ods_sqoop_base_data_order_df
             WHERE
                 dt='{{ ds }}'
                 AND city_id != 999001
@@ -520,7 +358,7 @@ insert_oride_global_daily_report = HiveOperator(
                     SELECT
                         distinct user_id
                     FROM
-                        oride_db.data_order
+                        oride_dw.ods_sqoop_base_data_order_df
                     WHERE
                         dt='{{ ds }}' and from_unixtime(create_time, 'yyyy-MM-dd')<dt and status in (4,5)
                 ) old_user on old_user.user_id=do.user_id
@@ -529,7 +367,7 @@ insert_oride_global_daily_report = HiveOperator(
                     SELECT
                         *
                     FROM
-                        oride_db.data_order_payment
+                        oride_dw.ods_sqoop_base_data_order_payment_df
                     WHERE
                         dt='{{ ds }}'
                 ) dop on dop.id=do.id and dop.dt=do.dt
@@ -542,7 +380,7 @@ insert_oride_global_daily_report = HiveOperator(
                 sum(if(from_unixtime(register_time, 'yyyy-MM-dd')=dt, 1, 0)) as register_users,
                 sum(if(from_unixtime(login_time, 'yyyy-MM-dd')=dt, 1, 0)) as active_users
             FROM
-                oride_db.data_user_extend
+                oride_dw.ods_sqoop_base_data_user_extend_df
             WHERE
                 dt='{{ ds }}'
             GROUP BY dt
@@ -554,7 +392,7 @@ insert_oride_global_daily_report = HiveOperator(
                 id,
                 register_time
             FROM
-                oride_db.data_driver_extend
+                oride_dw.ods_sqoop_base_data_driver_extend_df
             WHERE
                 dt='{{ ds }}' AND city_id!=999001
         ),
@@ -619,7 +457,7 @@ insert_oride_global_daily_report = HiveOperator(
                         dt,
                         id as user_id
                     FROM
-                        oride_db.data_user_extend
+                        oride_dw.ods_sqoop_base_data_user_extend_df
                     WHERE
                         dt='{{ ds }}' AND from_unixtime(register_time, 'yyyy-MM-dd')=dt
                 ) u
@@ -630,7 +468,7 @@ insert_oride_global_daily_report = HiveOperator(
                         user_id,
                         status
                     FROM
-                        oride_db.data_order
+                        oride_dw.ods_sqoop_base_data_order_df
                     WHERE
                         dt='{{ ds }}' AND from_unixtime(create_time, 'yyyy-MM-dd')=dt
                 ) o ON o.user_id=u.user_id
@@ -640,7 +478,7 @@ insert_oride_global_daily_report = HiveOperator(
                         id,
                         price
                     FROM
-                        oride_db.data_order_payment
+                        oride_dw.ods_sqoop_base_data_order_payment_df
                     WHERE
                         dt='{{ ds }}'
                 ) p ON p.id=o.id
@@ -698,7 +536,8 @@ insert_oride_global_daily_report = HiveOperator(
             nud.new_user_gmv,
             cdo.do_range,
             od.billing_time,
-            od.finished_num
+            od.finished_num,
+            od.request_usernum
         FROM
             order_data od
             LEFT JOIN lfw_data lf on lf.dt=od.dt
@@ -800,9 +639,12 @@ insert_oride_order_city_daily_report = HiveOperator(
                         city,
                         from_unixtime(unix_timestamp(run_time),'yyyy-MM-dd HH') run_time,
                         minute(from_unixtime(unix_timestamp(run_time))) mins
-                        from oride_dw.ods_sqoop_base_weather_per_10min_df where dt = '{{ ds }}'
-                    and weather in ('Thundershower','Light rain','Rain','Thunderstorm','A shower')
-                    and daliy = '{{ ds }}'
+                    from
+                        oride_dw.ods_sqoop_base_weather_per_10min_df
+                    where
+                        dt = '{{ ds }}'
+                        and weather in ('Thundershower','Light rain','Rain','Thunderstorm','A shower')
+                        and daliy = '{{ ds }}'
                 ) s 
                 join 
                 (
@@ -814,14 +656,25 @@ insert_oride_order_city_daily_report = HiveOperator(
                     from  
                         (
                             select
-                            id,
-                            city_id,
-                            from_unixtime(create_time,'yyyy-MM-dd HH') as time, 
-                            floor(cast(minute(from_unixtime(create_time)) as int) / 10) as mins
-                            from oride_db.data_order
-                            where  dt= '{{ ds }}' and from_unixtime(create_time,'yyyy-MM-dd') = '{{ ds }}'
+                                id,
+                                city_id,
+                                from_unixtime(create_time,'yyyy-MM-dd HH') as time,
+                                floor(cast(minute(from_unixtime(create_time)) as int) / 10) as mins
+                            from
+                                oride_dw.ods_sqoop_base_data_order_df
+                            where
+                                dt= '{{ ds }}' and from_unixtime(create_time,'yyyy-MM-dd') = '{{ ds }}'
                         ) t 
-                    join  oride_db.data_city_conf c on c.dt = '{{ ds }}' and t.city_id = c.id 
+                    join
+                    (
+                        SELECT
+                            *
+                        FROM
+                            oride_dw.ods_sqoop_base_data_city_conf_df
+                        WHERE
+                            dt= '{{ ds }}'
+
+                    ) c on c.dt = '{{ ds }}' and t.city_id = c.id
                     group by time,t.mins,c.name
                 ) d on lower(s.city) = lower(d.city_name) and s.run_time = d.time
                     and d.mins = s.mins
@@ -887,7 +740,7 @@ insert_oride_order_city_daily_report = HiveOperator(
                 , id, null)
                 )/4 as driver_cancel_num_lfw
             FROM
-                oride_db.data_order
+                oride_dw.ods_sqoop_base_data_order_df
             WHERE
                 dt='{{ ds }}' and city_id !=999001
             GROUP BY dt,city_id
@@ -928,7 +781,7 @@ insert_oride_order_city_daily_report = HiveOperator(
                     SELECT
                         *
                     FROM
-                        oride_db.data_order
+                        oride_dw.ods_sqoop_base_data_order_df
                     WHERE
                         dt='{{ ds }}'
                         AND city_id != 999001
@@ -939,11 +792,19 @@ insert_oride_order_city_daily_report = HiveOperator(
                     SELECT
                         distinct user_id
                     FROM
-                        oride_db.data_order
+                        oride_dw.ods_sqoop_base_data_order_df
                     WHERE
                         dt='{{ ds }}' and from_unixtime(create_time, 'yyyy-MM-dd')<dt and status in (4,5)
                 ) old_user on old_user.user_id=do.user_id
-                LEFT JOIN oride_db.data_order_payment dop on dop.id=do.id and dop.dt=do.dt
+                LEFT JOIN
+                (
+                    SELECT
+                        *
+                    FROM
+                        oride_dw.ods_sqoop_base_data_order_payment_df
+                    WHERE
+                       dt='{{ ds }}'
+                ) dop on dop.id=do.id and dop.dt=do.dt
             GROUP BY do.dt,do.city_id
         ),
 
@@ -953,8 +814,10 @@ insert_oride_order_city_daily_report = HiveOperator(
                 dt,
                 city_id city_id,
                 count(distinct(order_id)) push_num
-            from oride_bi.server_magic_push_detail
-            where dt = '{{ ds }}' and success = 1
+            from
+                oride_bi.server_magic_push_detail
+            where
+                dt = '{{ ds }}' and success = 1
             group by dt,city_id
         )
 
@@ -1043,7 +906,15 @@ insert_oride_order_city_daily_report = HiveOperator(
                 row_number() over(partition by c.name order by request_num desc) order_id
             FROM
                 order_data od
-                join oride_db.data_city_conf c on od.city_id = c.id and c.dt = od.dt
+                join
+                (
+                    SELECT
+                        *
+                    FROM
+                        oride_dw.ods_sqoop_base_data_city_conf_df
+                    WHERE
+                        dt='{{ ds }}'
+                ) c on od.city_id = c.id and c.dt = od.dt
                 left join weather_city_data wcd on lower(wcd.city) = lower(c.name) and wcd.dt = od.dt
                 left join weather_city_order_data wod on lower(wod.city) = lower(c.name) and wod.dt = od.dt
                 LEFT JOIN lfw_data lf on lf.dt=od.dt and lf.city_id = od.city_id
@@ -1106,11 +977,11 @@ insert_oride_global_city_serv_daily_report = HiveOperator(
         
         WITH driver_dim as (
             select 
-            id,
-            city_id,
-            serv_type
+                id,
+                city_id,
+                serv_type
             from 
-            oride_db.data_driver_extend
+                oride_dw.ods_sqoop_base_data_driver_extend_df
             WHERE
                 dt='{{ ds }}'
         ),
@@ -1138,10 +1009,15 @@ insert_oride_global_city_serv_daily_report = HiveOperator(
                 , o.id, null)
                 )/4 as completed_num_lfw
             FROM
-                oride_db.data_order o
+                (
+                    SELECT
+                        *
+                    FROM
+                        oride_dw.ods_sqoop_base_data_order_df
+                    WHERE
+                        dt='{{ ds }}'
+                ) o
                 inner join driver_dim d on d.city_id = o.city_id and d.id = o.driver_id
-            WHERE
-                o.dt='{{ ds }}' 
             GROUP BY o.dt,o.city_id,d.serv_type
         ),
         -- 订单基础表
@@ -1149,7 +1025,7 @@ insert_oride_global_city_serv_daily_report = HiveOperator(
             SELECT
                 *
             FROM
-                oride_db.data_order
+                oride_dw.ods_sqoop_base_data_order_df
             WHERE
                 dt='{{ ds }}'
                 AND city_id != 999001
@@ -1235,7 +1111,7 @@ insert_oride_global_city_serv_daily_report = HiveOperator(
                     SELECT
                         distinct user_id
                     FROM
-                        oride_db.data_order
+                        oride_dw.ods_sqoop_base_data_order_df
                     WHERE
                         dt='{{ ds }}' and from_unixtime(create_time, 'yyyy-MM-dd')<'{{ ds }}' and status in (4,5)
                 ) old_user on old_user.user_id=do.user_id
@@ -1244,7 +1120,7 @@ insert_oride_global_city_serv_daily_report = HiveOperator(
                     SELECT
                       *
                     FROM
-                      oride_db.data_order_payment
+                        oride_dw.ods_sqoop_base_data_order_payment_df
                     WHERE
                       dt='{{ ds }}'
 
@@ -1277,7 +1153,7 @@ insert_oride_global_city_serv_daily_report = HiveOperator(
                 serv_type,
                 sum(if(from_unixtime(register_time, 'yyyy-MM-dd')=dt, 1, 0)) as register_drivers
             FROM
-                oride_db.data_driver_extend
+                oride_dw.ods_sqoop_base_data_driver_extend_df
             WHERE
                 dt='{{ ds }}'
             GROUP BY dt,city_id,serv_type
@@ -1348,7 +1224,7 @@ insert_oride_global_city_serv_daily_report = HiveOperator(
                         dt,
                         id as user_id
                     FROM
-                        oride_db.data_user_extend
+                        oride_dw.ods_sqoop_base_data_user_extend_df
                     WHERE
                         dt='{{ ds }}' AND from_unixtime(register_time, 'yyyy-MM-dd')=dt
                 ) u
@@ -1360,7 +1236,7 @@ insert_oride_global_city_serv_daily_report = HiveOperator(
                         status,
                         driver_id
                     FROM
-                        oride_db.data_order
+                        oride_dw.ods_sqoop_base_data_order_df
                     WHERE
                         dt='{{ ds }}' AND from_unixtime(create_time, 'yyyy-MM-dd')=dt
                 ) o ON o.user_id=u.user_id
@@ -1370,7 +1246,7 @@ insert_oride_global_city_serv_daily_report = HiveOperator(
                         id,
                         price
                     FROM
-                        oride_db.data_order_payment
+                        oride_dw.ods_sqoop_base_data_order_payment_df
                     WHERE
                         dt='{{ ds }}'
                 ) p ON p.id=o.id
@@ -1790,6 +1666,8 @@ def get_trike_row(ds, driver_serv_type):
             row = row_fmt.format(*list(data))
             row_html += tr_fmt.format(row=row)
     return row_html
+
+
 
 
 def send_report_email(ds, **kwargs):
@@ -2242,7 +2120,6 @@ send_report = PythonOperator(
     dag=dag
 )
 
-
 def send_funnel_report_email(ds, **kwargs):
     sql = '''
         SELECT
@@ -2271,7 +2148,8 @@ def send_funnel_report_email(ds, **kwargs):
             nvl(round(completed_num_lfw/request_num_lfw*100, 2),0) as completed_lfw_rate,
             nvl(pay_num,0),
             if (dt >= '2019-06-26',  nvl(round(pay_price_total/pay_num, 2),0), ''),
-            if (dt >= '2019-06-26',  nvl(round(pay_amount_total/pay_num, 2),0), '')
+            if (dt >= '2019-06-26',  nvl(round(pay_amount_total/pay_num, 2),0), ''),
+            nvl(request_usernum, '-')
         FROM
            oride_bi.oride_global_daily_report
         WHERE
@@ -2310,7 +2188,8 @@ def send_funnel_report_email(ds, **kwargs):
             nvl(nvl(round(completed_num_lfw/request_num_lfw*100, 2),0),0) as completed_lfw_rate,
             pay_num,
             if (dt >= '2019-06-26',  nvl(round(pay_price_total/pay_num, 2),0), ''),
-            if (dt >= '2019-06-26',  nvl(round(pay_amount_total/pay_num, 2),0), '')
+            if (dt >= '2019-06-26',  nvl(round(pay_amount_total/pay_num, 2),0), ''),
+            nvl(request_usernum, '-')
         FROM
            oride_bi.oride_order_city_daily_report
         WHERE
@@ -2386,7 +2265,7 @@ def send_funnel_report_email(ds, **kwargs):
                         <tr>
                             <th></th>
                             <th colspan="6" class="th_title">呼叫前</th>
-                            <th colspan="11" class="th_title">呼叫-应答</th>
+                            <th colspan="12" class="th_title">呼叫-应答</th>
                             <th colspan="7" class="th_title">完单-支付</th>
                         </tr>
                         <tr>
@@ -2399,6 +2278,7 @@ def send_funnel_report_email(ds, **kwargs):
                             <th>估价-下单转化率</th>
                             <th>估价-下单转化率（近4周同期均值）</th>
                             <!--呼叫-应答-->
+                            <th>下单乘客数</th>
                             <th>下单数</th>
                             <th>下单数（近4周同期均值）</th>
                             <th>未播率</th>
@@ -2436,7 +2316,7 @@ def send_funnel_report_email(ds, **kwargs):
                             <th></th>
                             <th colspan="2" class="th_title">天气指标</th>
                             <th colspan="6" class="th_title">呼叫前</th>
-                            <th colspan="11" class="th_title">呼叫-应答</th>
+                            <th colspan="12" class="th_title">呼叫-应答</th>
                             <th colspan="7" class="th_title">完单-支付</th>
                         </tr>
                         <tr>
@@ -2453,6 +2333,7 @@ def send_funnel_report_email(ds, **kwargs):
                             <th>估价-下单转化率</th>
                             <th>估价-下单转化率（近4周同期均值）</th>
                             <!--呼叫-应答-->
+                            <th>下单乘客数</th>
                             <th>下单数</th>
                             <th>下单数（近4周同期均值）</th>
                             <th>未播率</th>
@@ -2502,6 +2383,7 @@ def send_funnel_report_email(ds, **kwargs):
                 <td><!--{6}%--></td>
                 <td><!--{7}%--></td>
                 <!--呼叫-应答-->
+                <td>{26}</td>
                 <td>{8}</td>
                 <td>{9}</td>
                 <td>{10}%</td>
@@ -2554,6 +2436,7 @@ def send_funnel_report_email(ds, **kwargs):
                 <td><!--{9}%--></td>
                 <td><!--{10}%--></td>
                 <!--呼叫-应答-->
+                <td>{29}</td>
                 <td>{11}</td>
                 <td>{12}</td>
                 <td>{13}%</td>
@@ -2586,7 +2469,7 @@ def send_funnel_report_email(ds, **kwargs):
     # send mail
 
     email_to = Variable.get("oride_funnel_report_receivers").split()
-    result = is_alert(ds, city_and_weather_table_names)
+    result = is_alert(ds, funnel_report_table_names)
     if result:
         email_to = ['bigdata@opay-inc.com']
 
@@ -2678,7 +2561,14 @@ insert_oride_anti_fraud_daily_report = HiveOperator(
             ao.revoked_order_num,
             ao.order_amount
         FROM
-            oride_db.data_anti_fraud_strategy afs
+            (
+              SELECT
+                *
+              FROM
+                oride_dw.ods_sqoop_base_data_anti_fraud_strategy_df
+              WHERE
+                dt='{{ ds }}'
+            ) afs
                 LEFT JOIN (
                     select
                         dt,rule_name, count(distinct driverid) as driver_register_num, count(distinct userid) user_register_num
@@ -2716,7 +2606,7 @@ insert_oride_anti_fraud_daily_report = HiveOperator(
                         count(distinct if(is_revoked=1, order_id, null)) as revoked_order_num,
                         sum(amount) as order_amount
                     from
-                        oride_db.data_abnormal_order
+                        oride_dw.ods_sqoop_base_data_abnormal_order_df
                         lateral view explode(split(behavior_ids, ',')) addtable as behavior
                     where
                         dt = '{{ ds }}'
@@ -3302,29 +3192,54 @@ create_oride_driver_timerange = HiveOperator(
     schema='oride_bi',
     dag=dag)
 
-create_oride_driver_timerange >> import_driver_online_time >> validate_global_partition_data
-create_oride_global_daily_report >> validate_global_partition_data
+'''
+检查global报表依赖数据是否导入成功
+'''
+for table_name in global_table_names:
+    global_report_validate_task = HivePartitionSensor(
+        task_id="global_report_validate_task_{}_{}".format(*table_name.split('.')),
+        table=table_name,
+        partition="dt='{{ds}}'",
+        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+        dag=dag
+    )
+    global_report_validate_task >> insert_oride_global_daily_report
+
+'''
+检查订单漏斗报表依赖数据是否导入成功
+'''
+for table_name in funnel_report_table_names:
+    funnel_report_validate_task = HivePartitionSensor(
+        task_id="funnel_report_validate_task_{}_{}".format(*table_name.split('.')),
+        table=table_name,
+        partition="dt='{{ds}}'",
+        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+        dag=dag
+    )
+    funnel_report_validate_task >> insert_oride_order_city_daily_report
+
+'''
+检查反作弊报表依赖数据是否导入成功
+'''
+for table_name in anti_fraud_table_names:
+    anti_fraud_validate_task = HivePartitionSensor(
+        task_id="anti_fraud_validate_task_{}_{}".format(*table_name.split('.')),
+        table=table_name,
+        partition="dt='{{ds}}'",
+        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+        dag=dag
+    )
+    anti_fraud_validate_task >> insert_oride_anti_fraud_daily_report
+
+create_oride_driver_timerange >> import_driver_online_time >> insert_oride_global_daily_report
 import_opay_event_log >> insert_oride_global_daily_report
-validate_global_partition_data >> data_driver_extend_validate_task >> insert_oride_global_daily_report
-validate_global_partition_data >> data_order_validate_task >> insert_oride_global_daily_report
-validate_global_partition_data >> data_user_extend_validate_task >> insert_oride_global_daily_report
-validate_global_partition_data >> data_order_payment_validate_task >> insert_oride_global_daily_report
-validate_global_partition_data >> server_magic_push_detail_validate_task >> insert_oride_global_daily_report
-validate_global_partition_data >> oride_driver_timerange_validate_task >> insert_oride_global_daily_report
-validate_global_partition_data >> server_magic_validate_task >> insert_oride_global_daily_report
-insert_oride_global_daily_report >> send_funnel_report
-
-insert_oride_global_daily_report >> validate_anti_fraud_partition_data
-create_oride_anti_fraud_daily_report >> validate_anti_fraud_partition_data
-validate_anti_fraud_partition_data >> anti_fraud_validate_task >> insert_oride_anti_fraud_daily_report
-validate_anti_fraud_partition_data >> data_anti_fraud_strategy_validate_task >> insert_oride_anti_fraud_daily_report
-validate_anti_fraud_partition_data >> data_abnormal_order_validate_task >> insert_oride_anti_fraud_daily_report
-insert_oride_anti_fraud_daily_report >> insert_orider_anti_fraud_daily_report_result >> send_anti_fraud_report
-
 create_oride_global_city_serv_daily_report >> insert_oride_global_city_serv_daily_report
 insert_oride_global_daily_report >> insert_oride_global_city_serv_daily_report
 insert_oride_global_city_serv_daily_report >> send_report
 
-validate_city_and_weather_partition_data >> weather_validate_task >> insert_oride_order_city_daily_report
-validate_city_and_weather_partition_data >> data_city_conf_validate_task >> insert_oride_order_city_daily_report
+create_oride_anti_fraud_daily_report >> insert_oride_anti_fraud_daily_report
+insert_oride_global_daily_report >> insert_oride_anti_fraud_daily_report
+insert_oride_anti_fraud_daily_report >> insert_orider_anti_fraud_daily_report_result >> send_anti_fraud_report
+
 insert_oride_order_city_daily_report >> send_funnel_report
+insert_oride_global_daily_report >> send_funnel_report
