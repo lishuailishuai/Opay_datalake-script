@@ -89,7 +89,7 @@ insert overwrite table oride_dw.{table} partition(country_code,dt)
                 dt
         from  
         oride_source.dispatch_tracker_server_magic 
-        lateral view explode(split(substr(get_json_object(event_values, '$.driver_ids'),1,length(get_json_object(event_values, '$.driver_ids'))-2),',')) driver_ids as driver_id
+        lateral view explode(split(substr(get_json_object(event_values, '$.driver_ids'),2,length(get_json_object(event_values, '$.driver_ids'))-2),',')) driver_ids as driver_id
         where  dt = '{pt}' and event_name='dispatch_assign_driver'
 '''.format(
         pt='{{ds}}',
