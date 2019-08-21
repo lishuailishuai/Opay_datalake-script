@@ -80,17 +80,6 @@ dependence_dwd_oride_order_push_driver_detail_di_prev_day_task = UFileSensor(
     dag=dag
 )
 
-dependence_dwd_oride_order_push_driver_detail_di_prev_day_task = UFileSensor(
-    task_id='dwd_oride_order_push_driver_detail_di_prev_day_task',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw/dwd_oride_order_push_driver_detail_di/country_code=nal",
-        pt='{{ds}}'
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
-
 dependence_server_magic_dispatch_detail_prev_day_task = HivePartitionSensor(
     task_id="server_magic_dispatch_detail_prev_day_task",
     table="server_magic_dispatch_detail",
@@ -231,8 +220,6 @@ dm_oride_order_base_d_task = HiveOperator(
          SELECT *
          FROM oride_dw.dwd_oride_order_base_include_test_di
          WHERE dt = '{pt}'
-         AND start_lng < 100 --去除测试数据
-         AND city_id<>'999001' --去除测试数据
        ) ord
     LEFT OUTER JOIN
       (
