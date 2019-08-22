@@ -26,16 +26,17 @@ dag = airflow.DAG(
     schedule_interval="30 03 * * *",
     default_args=args)
 
-table_names = ['oride_db.data_order',
-               'oride_db.data_driver_comment',
-               'oride_db.data_driver_balance_extend',
-               'oride_db.data_driver',
-               'oride_db.data_driver_extend',
-               'oride_bi.server_magic_push_detail',
-               'oride_bi.oride_driver_timerange',
-               'opay_spread.rider_signups',
-               'opay_spread.driver_group',
-               'opay_spread.driver_team'
+table_names = ['oride_dw.ods_sqoop_base_data_driver_df',
+               'oride_dw.ods_sqoop_base_data_driver_extend_df',
+               'oride_dw.ods_sqoop_base_data_order_df',
+               'oride_dw.ods_sqoop_base_data_driver_balance_extend_df',
+               'oride_dw.ods_sqoop_base_data_driver_records_day_df',
+               'oride_dw.dwd_oride_order_push_driver_detail_di',
+               'oride_dw.ods_sqoop_base_data_driver_comment_df',
+               'oride_dw.ods_sqoop_mass_rider_signups_df',
+               'oride_dw.ods_sqoop_mass_driver_group_df',
+               'oride_dw.ods_sqoop_mass_driver_team_df',
+               'oride_bi.oride_driver_timerange'
                ]
 
 headers = [
@@ -102,54 +103,63 @@ validate_partition_data = PythonOperator(
 
 data_order_validate_task = HivePartitionSensor(
     task_id="data_order_validate_task",
-    table="data_order",
+    table="ods_sqoop_base_data_order_df",
     partition="dt='{{ds}}'",
-    schema="oride_db",
+    schema="oride_dw",
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
 
 data_driver_comment_validate_task = HivePartitionSensor(
     task_id="data_driver_comment_validate_task",
-    table="data_driver_comment",
+    table="ods_sqoop_base_data_driver_comment_df",
     partition="dt='{{ds}}'",
-    schema="oride_db",
+    schema="oride_dw",
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
 
 data_driver_balance_extend_validate_task = HivePartitionSensor(
     task_id="data_driver_balance_extend_validate_task",
-    table="data_driver_balance_extend",
+    table="ods_sqoop_base_data_driver_balance_extend_df",
     partition="dt='{{ds}}'",
-    schema="oride_db",
+    schema="oride_dw",
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
 
 data_driver_validate_task = HivePartitionSensor(
     task_id="data_driver_validate_task",
-    table="data_driver",
+    table="ods_sqoop_base_data_driver_df",
     partition="dt='{{ds}}'",
-    schema="oride_db",
+    schema="oride_dw",
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
 
 data_driver_extend_validate_task = HivePartitionSensor(
     task_id="data_driver_extend_validate_task",
-    table="data_driver_extend",
+    table="ods_sqoop_base_data_driver_extend_df",
     partition="dt='{{ds}}'",
-    schema="oride_db",
+    schema="oride_dw",
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
 
-server_magic_push_detail_validate_task = HivePartitionSensor(
-    task_id="server_magic_push_detail_validate_task",
-    table="server_magic_push_detail",
+order_push_driver_detail_validate_task = HivePartitionSensor(
+    task_id="order_push_driver_detail_validate_task",
+    table="dwd_oride_order_push_driver_detail_di",
     partition="dt='{{ds}}'",
-    schema="oride_bi",
+    schema="oride_dw",
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
+data_driver_records_day_validate_task = HivePartitionSensor(
+    task_id="data_driver_records_day_validate_task",
+    table="ods_sqoop_base_data_driver_records_day_df",
+    partition="dt='{{ds}}'",
+    schema="oride_dw",
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
@@ -165,27 +175,27 @@ oride_driver_timerange_validate_task = HivePartitionSensor(
 
 rider_signups_validate_task = HivePartitionSensor(
     task_id="rider_signups_timerange_validate_task",
-    table="rider_signups",
+    table="ods_sqoop_mass_rider_signups_df",
     partition="dt='{{ds}}'",
-    schema="opay_spread",
+    schema="oride_dw",
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
 
 driver_group_validate_task = HivePartitionSensor(
     task_id="driver_group_timerange_validate_task",
-    table="driver_group",
+    table="ods_sqoop_mass_driver_group_df",
     partition="dt='{{ds}}'",
-    schema="opay_spread",
+    schema="oride_dw",
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
 
 driver_team_validate_task = HivePartitionSensor(
     task_id="driver_team_timerange_validate_task",
-    table="driver_team",
+    table="ods_sqoop_mass_driver_team_df",
     partition="dt='{{ds}}'",
-    schema="opay_spread",
+    schema="oride_dw",
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
@@ -215,7 +225,7 @@ insert_data = HiveOperator(
                 phone_number ,
                 birthday
                 from 
-                oride_db.data_driver 
+                oride_dw.ods_sqoop_base_data_driver_df 
                 where dt = '{{ ds }}'
             ) dd 
             join (
@@ -224,7 +234,7 @@ insert_data = HiveOperator(
                 serv_type,
                 register_time
                 from
-                oride_db.data_driver_extend
+                oride_dw.ods_sqoop_base_data_driver_extend_df
                 where dt = '{{ ds }}'
             ) dde on dd.id = dde.id 
         ),
@@ -236,7 +246,7 @@ insert_data = HiveOperator(
             SELECT
                 *
             FROM
-                oride_db.data_order
+                oride_dw.ods_sqoop_base_data_order_df
             WHERE
                 dt='{{ ds }}'
                 AND city_id != 999001
@@ -327,29 +337,30 @@ insert_data = HiveOperator(
             count(if(from_unixtime(create_time,'yyyy-MM-dd') = '{{ ds }}' and (status = 4 or status = 5),id,null)) on_ride_num_today,
             count(if(from_unixtime(create_time,'yyyy-MM-dd') = '{{ yesterday_ds }}' and (status = 4 or status = 5),id,null)) on_ride_num_yesterday,
             count(if(from_unixtime(create_time,'yyyy-MM-dd') = '{{ ds }}' and (status = 6 and cancel_role = 2),id,null)) driver_cancel_num_today
-            from oride_db.data_order 
+            from oride_dw.ods_sqoop_base_data_order_df 
             where dt = '{{ ds }}' 
             group by driver_id
         ),
         
-        -- order_pay as (
-        --     select 
-        --     driver_id driver_id,
-        --     sum(price) price_sum
-        --     from oride_db.data_order_payment
-        --     where dt = '{{ ds }}' and status = 1
-        --     group by driver_id
-        -- ),
-        
+      
         
         account_data as (
             select 
             driver_id,
             balance,
             total_income
-            from oride_db.data_driver_balance_extend
+            from oride_dw.ods_sqoop_base_data_driver_balance_extend_df
             where dt = '{{ ds }}'
         ),
+        
+        driver_income as (
+            select 
+            driver_id,
+            amount_all
+            from oride_dw.ods_sqoop_base_data_driver_records_day_df
+            where dt = '{{ ds }}' and from_unixtime(day,'yyyy-MM-dd') = '{{ ds }}'
+        ),
+        
         
         push_data as (
             select 
@@ -357,7 +368,7 @@ insert_data = HiveOperator(
             count(distinct(order_id)) push_num,
             count(distinct(if(dt='{{ ds }}',order_id,null))) push_num_today
             from 
-            oride_bi.server_magic_push_detail
+            oride_dw.dwd_oride_order_push_driver_detail_di
             group by driver_id
         ),
         
@@ -372,7 +383,7 @@ insert_data = HiveOperator(
             count(if(score <= 3 and from_unixtime(create_time,'yyyy-MM-dd') = '{{ ds }}',id,null)) low_socre_num_today,
             count(if(from_unixtime(create_time,'yyyy-MM-dd') = '{{ ds }}',id,null)) score_num_today,
             round(sum(if(from_unixtime(create_time,'yyyy-MM-dd') = '{{ ds }}',score,0))/count(if(from_unixtime(create_time,'yyyy-MM-dd') = '{{ ds }}',id,null)),2) score_avg_today
-            from oride_db.data_driver_comment 
+            from oride_dw.ods_sqoop_base_data_driver_comment_df 
             where dt = '{{ ds }}'
             group by  driver_id  
         ),
@@ -389,7 +400,7 @@ insert_data = HiveOperator(
                 driver_id,
                 association_id,
                 team_id
-                from opay_spread.rider_signups
+                from oride_dw.ods_sqoop_mass_rider_signups_df
                 where dt = '{{ ds }}'
                 and status=2 
                 and association_id >0 
@@ -402,7 +413,7 @@ insert_data = HiveOperator(
                 city,
                 name
                 from 
-                opay_spread.driver_group
+                oride_dw.ods_sqoop_mass_driver_group_df
                 where dt = '{{ ds }}'
             ) g on r.association_id = g.id 
             left join 
@@ -411,7 +422,7 @@ insert_data = HiveOperator(
                 id,
                 name admin_user
                 from 
-                opay_spread.driver_team 
+                oride_dw.ods_sqoop_mass_driver_team_df 
                 where dt = '{{ ds }}'
             ) t on r.team_id = t.id 
 
@@ -435,9 +446,7 @@ insert_data = HiveOperator(
         
         nvl(round(od.distance_sum/1000,2),0),
         
-        -- nvl(op.price_sum,0) as `total_income`,
-        -- nvl(ad.total_income,0) as `total_income`,
-        0 ,
+        nvl(din.amount_all,0) ,
         nvl(ad.balance,0) ,
         nvl(round(dho.do_range,0),0) ,
         nvl(round(od.duration_sum,1),0) ,
@@ -481,7 +490,7 @@ insert_data = HiveOperator(
         left join completed_driver_online cdo_yesterday on rd.id = cdo_yesterday.driver_id and cdo_yesterday.dt = '{{ yesterday_ds }}'
         left join driver_comment dc on rd.id = dc.driver_id
         left join driver_info di on rd.id = di.driver_id
-    
+        left join driver_income din on rd.id = din.driver_id
     
     ''',
     schema='oride_bi',
@@ -658,7 +667,8 @@ validate_partition_data >> data_driver_balance_extend_validate_task >> insert_da
 validate_partition_data >> data_driver_comment_validate_task >> insert_data
 validate_partition_data >> data_driver_extend_validate_task >> insert_data
 validate_partition_data >> data_driver_validate_task >> insert_data
-validate_partition_data >> server_magic_push_detail_validate_task >> insert_data
+validate_partition_data >> order_push_driver_detail_validate_task >> insert_data
+validate_partition_data >> data_driver_records_day_validate_task >> insert_data
 validate_partition_data >> oride_driver_timerange_validate_task >> insert_data
 validate_partition_data >> rider_signups_validate_task >> insert_data
 validate_partition_data >> driver_group_validate_task >> insert_data
