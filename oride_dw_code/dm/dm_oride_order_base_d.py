@@ -216,7 +216,7 @@ dm_oride_order_base_d_task = HiveOperator(
            
            sum (case when ord.order_id = r1.order_id then r1.driver_click_times else 0 end) as driver_click_times_cnt, --司机应答的总次数(accpet_click阶段)
            
-           sum(if(ord.is_td_finish = 1, ord.take_order_dur,0)) as finish_take_order_dur, --当天完成订单应答时长
+           sum(if(ord.is_td_finish = 1, ord.td_take_dur,0)) as finish_take_order_dur, --当天完成订单应答时长
     
            ord.country_code,
            
