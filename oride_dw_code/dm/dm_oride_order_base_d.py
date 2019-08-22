@@ -211,6 +211,12 @@ dm_oride_order_base_d_task = HiveOperator(
            --当天做单时长(当天完成做单时长+当天取消接驾时长（分钟）)
            
            count(distinct r2.order_id) as push_driver_order_accpet_show_cnt,  --司机被推送订单数(accpet_show阶段)
+           
+           sum(if(ord.is_td_finish = 1, td_service_dur,0)) service_dur, --当天完单服务时长
+           
+           sum (case when ord.order_id = r1.order_id then r1.driver_click_times else 0 end) as driver_click_times_cnt, --司机应答的总次数(accpet_click阶段)
+           
+           sum(if(ord.is_td_finish = 1, ord.take_order_dur,0)) as finish_take_order_dur, --当天完成订单应答时长
     
            ord.country_code,
            
@@ -252,7 +258,8 @@ dm_oride_order_base_d_task = HiveOperator(
     LEFT OUTER JOIN 
     (
         SELECT 
-        order_id
+        order_id,
+        count(1) driver_click_times
         FROM 
         oride_dw.dwd_oride_driver_accept_order_click_detail_di
         WHERE dt='{pt}'
