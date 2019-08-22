@@ -5,6 +5,7 @@ from airflow.hooks.hive_hooks import HiveCliHook, HiveServer2Hook
 from airflow.hooks.mysql_hook import MySqlHook
 from airflow.operators.hive_operator import HiveOperator
 from airflow.operators.python_operator import PythonOperator
+from airflow.sensors.sql_sensor import SqlSensor
 from datetime import datetime, timedelta
 import logging
 
@@ -25,6 +26,18 @@ dag = airflow.DAG(
     concurrency=5,
     max_active_runs=1,
     default_args=args)
+
+import_data_validate = SqlSensor(
+    task_id="import_data_validate",
+    conn_id='ofood_db',
+    sql='''
+        select 
+        count(1)
+        from food_operapay_co.jh_crontab_log
+        where day = '{{ ds_nodash }}' and crontab_status = 'bi-ok'
+    ''',
+    dag=dag
+)
 
 '''
 导入数据的列表
@@ -184,4 +197,4 @@ for db_name, table_name, conn_id, prefix_name in table_list:
             '''.format(table=hive_table_name),
         schema=HIVE_DB,
         dag=dag)
-    import_table >> check_table >> add_partitions
+    import_data_validate >> import_table >> check_table >> add_partitions
