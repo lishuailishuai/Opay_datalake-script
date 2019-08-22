@@ -83,7 +83,7 @@ insert overwrite table ofood_dw.{table} partition(country_code,dt)
 SELECT shop_id, --商铺id
        split(lnglat,'\\\\^')[0] AS lat, --纬度
        split(lnglat,'\\\\^')[1] AS lng, --经度
-       regexp_extract(min_price_event,"(?<=\\w+:)(.*)(?=\\;\\w+)") AS min_price, --最低金额
+       regexp_extract(min_price_event,"(?<=\\:)(.*?)(?=\\;)") AS min_price, --最低金额(起送价)
        area_polygon, --位置数据源(用于数据校验)
        'nal' as country_code,
         dt
