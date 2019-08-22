@@ -208,7 +208,7 @@ def get_data_from_impala(**op_kwargs):
             nvl(order_data.ordersgt90, 0),
             order_7day.orders,
             nvl(order_30day.orderfinish, 0),
-            unix_timestamp()
+            unix_timestamp('{pt}', 'yyyy-MM-dd')
         from order_7day
         left join merchant_data on order_7day.shop_id = merchant_data.shop_id
         left join score_data on order_7day.shop_id = score_data.shop_id 

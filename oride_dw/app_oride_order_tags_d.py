@@ -42,6 +42,13 @@ sleep_time = BashOperator(
     dag=dag
 )
 
+sleep_time2 = BashOperator(
+    task_id='sleep_i2',
+    depends_on_past=False,
+    bash_command='sleep 20',
+    dag=dag
+)
+
 """
 ##----依赖数据源---##
 """
@@ -301,10 +308,10 @@ refresh_impala_table_self = ImpalaOperator(
 )
 
 
-dependence_oride_global_daily_report >> sleep_time
-dependence_data_city_conf >> sleep_time
-dependence_oride_global_city_serv_daily_report >> sleep_time
+dependence_oride_global_daily_report >> sleep_time2
+dependence_data_city_conf >> sleep_time2
+dependence_oride_global_city_serv_daily_report >> sleep_time2
 dependence_ods_log_oride_order_skyeye_di >> sleep_time
 dependence_ods_oride_data_order >> sleep_time
-sleep_time >> refresh_impala_table_other
-sleep_time >> create_result_impala_table >> drop_partitons_from_table >> insert_result_to_impala >> refresh_impala_table_self
+sleep_time2 >> refresh_impala_table_other
+sleep_time2 >> sleep_time >> create_result_impala_table >> drop_partitons_from_table >> insert_result_to_impala >> refresh_impala_table_self
