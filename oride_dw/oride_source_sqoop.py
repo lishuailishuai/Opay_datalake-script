@@ -125,7 +125,7 @@ table_list = [
     ("opay_spread", "promoter_manager", "opay_spread_mysql", "promoter",1),
     ("opay_spread", "promoter_order_day", "opay_spread_mysql", "promoter",1),
     ("opay_spread", "promoter_team", "opay_spread_mysql", "promoter",1),
-    ("opay_spread", "promoter_user", "opay_spread_mysql", "promoter"),
+    ("opay_spread", "promoter_user", "opay_spread_mysql", "promoter",1),
     ("opay_spread", "promoter_user_relat_admin", "opay_spread_mysql", "promoter",1),
     ("opay_spread", "promoter_users_device", "opay_spread_mysql", "promoter",1),
 ]
@@ -151,7 +151,7 @@ ODS_CREATE_TABLE_SQL = '''
 
 # 需要验证的核心业务表
 table_core_list = [
-    # ("oride_data", "data_order", "sqoop_db", "base", "create_time")
+    # ("oride_data", "data_order", "sqoop_db", "base", "create_time","priority_weight")
 ]
 
 # 不需要验证的维度表，暂时为null
