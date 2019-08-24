@@ -211,4 +211,4 @@ touchz_data_success = BashOperator(
         ),
     dag=dag)
 
-ods_binlog_data_driver_extend_hi_last_day_tesk>>sleep_time>>dwm_oride_driver_audit_third_extend_di_task>>task_check_key_data
+ods_binlog_data_driver_extend_hi_last_day_tesk>>sleep_time>>dwm_oride_driver_audit_third_extend_di_task>>task_check_key_data>>touchz_data_success
