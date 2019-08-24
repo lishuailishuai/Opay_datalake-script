@@ -30,7 +30,7 @@ dag = airflow.DAG(
     schedule_interval="20 03 * * *",
     default_args=args)
 
-cursor = get_hive_cursor()
+
 
 '''
 校验分区代码
@@ -302,6 +302,7 @@ insert_ofood_global_metrics = HiveOperator(
 
 
 def send_report_email(ds_nodash, ds, **kwargs):
+    cursor = get_hive_cursor()
     sql = '''
         
     select 

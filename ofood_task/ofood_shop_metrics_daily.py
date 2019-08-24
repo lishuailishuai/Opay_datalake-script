@@ -157,7 +157,7 @@ jh_member_validate_task = HivePartitionSensor(
     dag=dag
 )
 
-cursor = get_hive_cursor()
+
 
 insert_shop_metrics = HiveOperator(
     task_id='insert_shop_metrics',
@@ -503,6 +503,7 @@ insert_crm_bd_metrics = HiveToMySqlTransfer(
 
 
 def send_csv_file(ds, ds_nodash, **kwargs):
+    cursor = get_hive_cursor()
     sql = """
         select  
         dt,

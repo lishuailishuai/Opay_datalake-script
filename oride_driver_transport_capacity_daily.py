@@ -24,7 +24,7 @@ dag = airflow.DAG(
     schedule_interval="45 02 * * *",
     default_args=args)
 
-cursor = get_hive_cursor()
+
 
 table_names = ['oride_db.data_order',
                'oride_db.data_driver_extend',
@@ -398,6 +398,7 @@ insert_driver_metrics = HiveOperator(
 
 
 def send_fast_report_email(ds, **kwargs):
+    cursor = get_hive_cursor()
     sql = '''
             select 
             'ALL' city_name,
@@ -666,6 +667,7 @@ send_fast_report = PythonOperator(
 
 
 def send_otrike_report_email(ds, **kwargs):
+    cursor = get_hive_cursor()
     sql = '''
             select 
             'ALL' city_name,

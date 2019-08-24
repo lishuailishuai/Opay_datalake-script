@@ -29,7 +29,7 @@ dag = airflow.DAG(
     schedule_interval="40 01 * * *",
     default_args=args)
 
-cursor = get_hive_cursor()
+
 
 table_names = ['oride_bi.server_magic_dispatch_detail',
                'oride_db.data_order',
@@ -325,6 +325,7 @@ insert_order_metrics = HiveOperator(
 
 
 def send_report_email(ds_nodash, ds, **kwargs):
+    cursor = get_hive_cursor()
     sql = '''
         select 
         dt ,

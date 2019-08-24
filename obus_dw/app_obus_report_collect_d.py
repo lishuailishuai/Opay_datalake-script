@@ -105,7 +105,7 @@ sleep_time = BashOperator(
 )
 
 
-hive_cursor = get_hive_cursor()
+
 
 
 def get_data_from_impala(**op_kwargs):
@@ -417,6 +417,7 @@ def get_data_from_impala(**op_kwargs):
         pt=ds
     )
     logging.info(sql)
+    hive_cursor = get_hive_cursor()
     hive_cursor.execute(sql)
     result = hive_cursor.fetchall()
 

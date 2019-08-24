@@ -117,7 +117,7 @@ mysql_type_to_hive = {
     "DECIMAL": "decimal"
 }
 
-hive_cursor = get_hive_cursor()
+
 def create_hive_external_table(db, table, conn, **op_kwargs):
     mysql_conn = get_db_conn(conn)
     mcursor = mysql_conn.cursor()
@@ -150,6 +150,7 @@ def create_hive_external_table(db, table, conn, **op_kwargs):
         s3path=s3path.format(bs=table)
     )
     logging.info(hql)
+    hive_cursor = get_hive_cursor()
     hive_cursor.execute(hql)
 
 

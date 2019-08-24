@@ -7,7 +7,7 @@ from plugins.comwx import ComwxApi
 
 comwx = ComwxApi('wwd26d45f97ea74ad2', 'BLE_v25zCmnZaFUgum93j3zVBDK-DjtRkLisI_Wns4g', '1000011')
 
-cursor = get_hive_cursor()
+
 
 now = datetime.today()
 
@@ -23,6 +23,7 @@ ods_data_stop_limit = 0.45
 
 
 def validata_data(db, table_name, table_format, table_core_list, table_not_core_list, ds, **kwargs):
+    cursor = get_hive_cursor()
     day = ds
     day_before_1 = airflow.macros.ds_add(ds, -1)
     day_before_7 = airflow.macros.ds_add(ds, -7)
@@ -183,6 +184,7 @@ def validate(cursor, table_name, sql, day, day_before_1, day_before_7):
 
 
 def write_meta_data(table_name, day, result, msg):
+    cursor = get_hive_cursor()
     # if not result:
     #     sql = '''
     #         ALTER TABLE oride_db.{table_name} DROP IF EXISTS PARTITION(dt='{day}')
@@ -208,6 +210,7 @@ def write_meta_data(table_name, day, result, msg):
 
 
 def validate_partition(*op_args, **op_kwargs):
+    cursor = get_hive_cursor()
     dt = op_kwargs['ds']
     table_names = op_kwargs['table_names']
     task_name = op_kwargs['task_name']
@@ -236,6 +239,7 @@ def validate_partition(*op_args, **op_kwargs):
 
 
 def is_alert(dt, table_names):
+    cursor = get_hive_cursor()
     template = "'{table_name}',"
     table_list = ''
 
@@ -268,6 +272,7 @@ def is_alert(dt, table_names):
 
 # 校验指标正确性
 def validate_metrics(dt, source_name, data_map, metric_name_map):
+    cursor = get_hive_cursor()
     sql = '''
         select 
         o.dt,o.metric_name,o.metric_compare_type,o.metric_deviation_limit
