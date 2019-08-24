@@ -57,6 +57,8 @@ table_list = [
     # 商户信息
     ("food_operapay_co", "jh_shop", "ofood_db", "base"),
     ("food_operapay_co", "jh_waimai", "ofood_db", "base"),
+    ("food_operapay_co", "jh_waimai_product", "ofood_db", "base"),
+    ("food_operapay_co", "jh_shop_account", "ofood_db", "base"),
 
     # 地推相关数据
     ("food_crm", "bd_bd_fence", "ofood_db", "bd"),
