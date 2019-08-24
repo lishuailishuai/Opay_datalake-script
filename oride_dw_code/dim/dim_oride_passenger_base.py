@@ -33,7 +33,7 @@ args = {
 } 
 
 dag = airflow.DAG( 'dim_oride_passenger_base', 
-    schedule_interval="00 01 * * *", 
+    schedule_interval="00 03 * * *", 
     default_args=args) 
 
 
