@@ -65,7 +65,7 @@ table_not_core_list = []
 
 now = datetime.today()
 
-cursor = get_hive_cursor()
+
 
 # 预警阀值
 ods_data_alert_limit = 0.1
@@ -79,6 +79,7 @@ ods_data_stop_limit = 0.45
 
 
 def validata_data(table_name, ds, **kwargs):
+    cursor = get_hive_cursor()
     day = ds
     day_before_1 = airflow.macros.ds_add(ds, -1)
     # 暂时修改为对比前3天
@@ -222,6 +223,7 @@ def validate(cursor, table_name, sql, day, day_before_1, day_before_7):
 
 
 def write_meta_data(table_name, day, result, msg):
+    cursor = get_hive_cursor()
     # if not result:
     #     sql = '''
     #         ALTER TABLE oride_db.{table_name} DROP IF EXISTS PARTITION(dt='{day}')

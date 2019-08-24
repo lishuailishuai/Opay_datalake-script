@@ -157,7 +157,7 @@ jh_member_validate_task = HivePartitionSensor(
     dag=dag
 )
 
-cursor = get_hive_cursor()
+
 
 create_bdm_dim_data = BashOperator(
     task_id='create_bdm_dim_data',
@@ -335,6 +335,7 @@ create_bdm_dim_data = BashOperator(
 
 
 def send_csv_file(ds, ds_nodash, **kwargs):
+    cursor = get_hive_cursor()
     sql = """
         select  
         dt,
