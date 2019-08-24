@@ -155,10 +155,14 @@ def create_hive_external_table(db, table, conn, **op_kwargs):
 
 
 success = DummyOperator(dag=dag, task_id='success')
-
+conn_conf_dict = {}
 for obus_table in obus_table_list:
-    logging.info(obus_table)
-    host, port, schema, login, password = get_db_conf(obus_table.get('conn'))
+    #logging.info(obus_table)
+    conn_id = obus_table.get('conn')
+    if  conn_id not in conn_conf_dict:
+        conn_conf_dict[conn_id] = get_db_conf(conn_id)
+
+    host, port, schema, login, password = conn_conf_dict[conn_id]
     '''
     使用sqoop导入mysql数据到hive
     '''
