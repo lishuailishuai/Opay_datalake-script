@@ -6,6 +6,7 @@ from airflow.operators.hive_operator import HiveOperator
 from airflow.utils.email import send_email
 from airflow.models import Variable
 from airflow.sensors.hive_partition_sensor import HivePartitionSensor
+from utils.connection_helper import get_hive_cursor
 from utils.validate_metrics_utils import *
 import codecs
 import csv
@@ -499,6 +500,7 @@ insert_data = HiveOperator(
 
 
 def send_fast_csv_file(ds, **kwargs):
+    cursor = get_hive_cursor()
     sql = """
             select 
             driver_id,
@@ -570,6 +572,7 @@ def send_fast_csv_file(ds, **kwargs):
     email_subject = 'oride快车司机明细附件_{dt}'.format(dt=ds)
     email_body = '快车司机档案数据，请查收。\n 附件中文乱码解决:使用记事本打开CSV文件，“文件”->“另存为”，编码方式选择ANSI，保存完毕后，用EXCEL打开，即可。'
     send_email(email_to, email_subject, email_body, [file_name], mime_charset='utf-8')
+    cursor.close()
 
 
 send_fast_driver_file_email = PythonOperator(
@@ -581,6 +584,7 @@ send_fast_driver_file_email = PythonOperator(
 
 
 def send_otirke_csv_file(ds, ds_nodash, **kwargs):
+    cursor = get_hive_cursor()
     sql = """
         select 
         driver_id,
@@ -653,6 +657,7 @@ def send_otirke_csv_file(ds, ds_nodash, **kwargs):
     email_subject = 'otrike司机明细附件_{dt}'.format(dt=ds)
     email_body = 'otrike司机档案数据，请查收。\n 附件中文乱码解决:使用记事本打开CSV文件，“文件”->“另存为”，编码方式选择ANSI，保存完毕后，用EXCEL打开，即可。'
     send_email(email_to, email_subject, email_body, [file_name], mime_charset='utf-8')
+    cursor.close()
 
 
 send_otrike_file_email = PythonOperator(
