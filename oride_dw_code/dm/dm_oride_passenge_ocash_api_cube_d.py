@@ -16,14 +16,14 @@ args = {
 }
 
 dag = airflow.DAG(
-    'oride_ocash_api',
+    'dm_oride_passenge_ocash_api_cube_d',
     schedule_interval="30 01 * * *",
     default_args=args)
 
-create_oride_dm_oride_passenge_ocash_api_cube_d = HiveOperator(
-    task_id='create_oride_dm_oride_passenge_ocash_api_cube_d',
+create_dm_oride_passenge_ocash_api_cube_d = HiveOperator(
+    task_id='create_dm_oride_passenge_ocash_api_cube_d',
     hql="""
-        CREATE TABLE IF NOT EXISTS `oride_dm_oride_passenge_ocash_api_cube_d`(
+        CREATE TABLE IF NOT EXISTS `dm_oride_passenge_ocash_api_cube_d`(
             `user_id` bigint comment '乘客id',
             `city_id` int comment '城市id',
             `serv_type` tinyint COMMENT '1 专车 2 快车',
@@ -39,10 +39,10 @@ create_oride_dm_oride_passenge_ocash_api_cube_d = HiveOperator(
     schema='oride_dw',
     dag=dag)
 
-insert_oride_dm_oride_passenge_ocash_api_cube_d = HiveOperator(
-    task_id='insert_oride_dm_oride_passenge_ocash_api_cube_d',
+insert_dm_oride_passenge_ocash_api_cube_d = HiveOperator(
+    task_id='insert_dm_oride_passenge_ocash_api_cube_d',
     hql="""
-        ALTER TABLE oride_dm_oride_passenge_ocash_api_cube_d DROP IF EXISTS PARTITION (dt = '{{ ds }}');
+        ALTER TABLE dm_oride_passenge_ocash_api_cube_d DROP IF EXISTS PARTITION (dt = '{{ ds }}');
         -- 订单信息
         with order_data as (
             SELECT
@@ -71,7 +71,7 @@ insert_oride_dm_oride_passenge_ocash_api_cube_d = HiveOperator(
             WHERE
               dt='{{ ds }}'
         )
-        INSERT OVERWRITE TABLE oride_dm_oride_passenge_ocash_api_cube_d PARTITION (dt = '{{ ds }}')
+        INSERT OVERWRITE TABLE dm_oride_passenge_ocash_api_cube_d PARTITION (dt = '{{ ds }}')
         SELECT
             od.user_id,
             dd.city_id,
@@ -113,12 +113,12 @@ export_to_mysql=HiveToMySqlTransfer(
                 completed_num,
                 amount
             FROM
-                oride_dw.oride_dm_oride_passenge_ocash_api_cube_d
+                oride_dw.dm_oride_passenge_ocash_api_cube_d
             WHERE
                   dt='{{ ds }}'
         """,
     mysql_table='data_user_day_stats',
     dag=dag)
 
-create_oride_dm_oride_passenge_ocash_api_cube_d >> insert_oride_dm_oride_passenge_ocash_api_cube_d >> clear_mysql_data >> export_to_mysql
+create_dm_oride_passenge_ocash_api_cube_d >> insert_dm_oride_passenge_ocash_api_cube_d >> clear_mysql_data >> export_to_mysql
 
