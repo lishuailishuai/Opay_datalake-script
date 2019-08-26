@@ -130,12 +130,14 @@ def drop_partions(*op_args, **op_kwargs):
     cursor.close()
 
 
+"""
 drop_partitons_from_table = PythonOperator(
     task_id='drop_partitons_from_table',
     python_callable=drop_partions,
     provide_context=True,
     dag=dag
 )
+"""
 
 # 不分城市， 不分业务
 count_hql_all = '''
