@@ -1681,7 +1681,7 @@ def send_report_email(ds, **kwargs):
             completed_num,
             completed_num_lfw,
             nvl(round(completed_num/request_num*100, 1),0),
-            nvl(round(completed_num_lfw/request_num*100, 1),0),
+            nvl(round(completed_num_lfw/request_num_lfw*100, 1),0),
             active_users,
             completed_drivers,
             if(completed_driver_online_time_total is null, '-', round(completed_driver_online_time_total/3600/completed_drivers, 1)) as avg_online_time,
