@@ -8,7 +8,6 @@ from airflow.operators.python_operator import PythonOperator
 from airflow.operators.bash_operator import BashOperator
 from airflow.operators.impala_plugin import ImpalaOperator
 from airflow.sensors import UFileSensor
-#from airflow.sensors.hdfs_sensor import HdfsSensor
 from airflow.sensors import WebHdfsSensor
 from utils.connection_helper import get_hive_cursor
 from plugins.comwx import ComwxApi
@@ -20,7 +19,7 @@ comwx = ComwxApi('wwd26d45f97ea74ad2', 'BLE_v25zCmnZaFUgum93j3zVBDK-DjtRkLisI_Wn
 
 args = {
     'owner': 'wuduo',
-    'start_date': datetime(2019, 8, 11),
+    'start_date': datetime(2019, 8, 25),
     'depends_on_past': False,
     'retries': 3,
     'retry_delay': timedelta(minutes=5),
@@ -31,7 +30,7 @@ args = {
 
 dag = airflow.DAG(
     'app_oride_order_tags_d',
-    schedule_interval="00 01 * * *",
+    schedule_interval="30 03 * * *",
     default_args=args
 )
 

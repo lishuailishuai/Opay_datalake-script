@@ -1,4 +1,5 @@
-﻿"""
+﻿# -*- coding: utf-8 -*-
+"""
 obus 业务数据采集
 """
 import airflow
@@ -18,7 +19,7 @@ import logging
 
 args = {
     'owner': 'wuduo',
-    'start_date': datetime(2019, 8, 16),
+    'start_date': datetime(2019, 8, 25),
     'depends_on_past': False,
     'retries': 3,
     'retry_delay': timedelta(minutes=5),
@@ -29,7 +30,7 @@ args = {
 
 dag = airflow.DAG(
     'obus_source_sqoop',
-    schedule_interval="00 01 * * *",
+    schedule_interval="05 04 * * *",
     concurrency=5,
     max_active_runs=1,
     default_args=args
@@ -132,34 +133,36 @@ def create_hive_external_table(db, table, conn, **op_kwargs):
             TABLE_NAME='{table}' 
         order by ORDINAL_POSITION
     '''.format(db=db, table=table)
-    logging.info(sql)
+    # logging.info(sql)
     mcursor.execute(sql)
     res = mcursor.fetchall()
-    logging.info(res)
+    # logging.info(res)
     columns = []
     for (name, type, comment, co_type) in res:
         if type.upper() == 'DECIMAL':
             columns.append("`%s` %s comment '%s'" % (name, co_type.replace('unsigned', '').replace('signed', ''), comment))
         else:
             columns.append("`%s` %s comment '%s'" % (name, mysql_type_to_hive.get(type.upper(), 'string'), comment))
-    #创建hive数据表的sql
+    # 创建hive数据表的sql
     hql = ods_create_table_hql.format(
         db_name=hive_db,
         table_name=hive_table.format(bs=table),
         columns=",\n".join(columns),
         s3path=s3path.format(bs=table)
     )
-    logging.info(hql)
+    # logging.info(hql)
     hive_cursor = get_hive_cursor()
     hive_cursor.execute(hql)
+    mcursor.close()
+    hive_cursor.close()
 
 
 success = DummyOperator(dag=dag, task_id='success')
 conn_conf_dict = {}
 for obus_table in obus_table_list:
-    #logging.info(obus_table)
+    # logging.info(obus_table)
     conn_id = obus_table.get('conn')
-    if  conn_id not in conn_conf_dict:
+    if conn_id not in conn_conf_dict:
         conn_conf_dict[conn_id] = get_db_conf(conn_id)
 
     host, port, schema, login, password = conn_conf_dict[conn_id]
@@ -254,6 +257,6 @@ for obus_table in obus_table_list:
         dag=dag
     )
 
-    #加入调度队列
+    # 加入调度队列
     import_from_mysql >> create_table >> add_partitions >> validate_all_data >> refresh_impala >> success
 

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 obus 汇总/分城市
 """
@@ -7,7 +8,6 @@ from airflow.operators.impala_plugin import ImpalaOperator
 from datetime import datetime, timedelta
 from utils.connection_helper import get_hive_cursor, get_db_conn, get_db_conf
 from utils.validate_metrics_utils import *
-#from airflow.sensors.external_task_sensor import ExternalTaskSensor
 from airflow.sensors.s3_prefix_sensor import S3PrefixSensor
 from airflow.operators.bash_operator import BashOperator
 import time
@@ -15,7 +15,7 @@ import logging
 
 args = {
     'owner': 'wuduo',
-    'start_date': datetime(2019, 8, 18),
+    'start_date': datetime(2019, 8, 25),
     'depends_on_past': False,
     'retries': 3,
     'retry_delay': timedelta(minutes=5),
@@ -26,7 +26,7 @@ args = {
 
 dag = airflow.DAG(
     'app_obus_report_driver_rank_d',
-    schedule_interval="00 01 * * *",
+    schedule_interval="00 05 * * *",
     concurrency=5,
     max_active_runs=1,
     default_args=args
@@ -81,8 +81,6 @@ sleep_time = BashOperator(
     bash_command='sleep 120',
     dag=dag
 )
-
-
 
 
 def get_data_from_impala(**op_kwargs):
@@ -273,6 +271,9 @@ def get_data_from_impala(**op_kwargs):
                         num=values(num)
                     '''
                     )
+
+    hive_cursor.close()
+    mcursor.close()
 
 
 def __data_to_mysql(conn, data, column, update=''):

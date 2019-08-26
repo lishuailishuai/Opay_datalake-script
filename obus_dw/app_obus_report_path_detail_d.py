@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 obus 汇总/分城市
 """
@@ -7,16 +8,14 @@ from airflow.operators.impala_plugin import ImpalaOperator
 from datetime import datetime, timedelta
 from utils.connection_helper import get_hive_cursor, get_db_conn, get_db_conf
 from utils.validate_metrics_utils import *
-#from airflow.sensors.external_task_sensor import ExternalTaskSensor
 from airflow.sensors.s3_prefix_sensor import S3PrefixSensor
 from airflow.operators.bash_operator import BashOperator
 import time
 import logging
 
-
 args = {
     'owner': 'wuduo',
-    'start_date': datetime(2019, 8, 18),
+    'start_date': datetime(2019, 8, 25),
     'depends_on_past': False,
     'retries': 3,
     'retry_delay': timedelta(minutes=5),
@@ -27,7 +26,7 @@ args = {
 
 dag = airflow.DAG(
     'app_obus_report_path_detail_d',
-    schedule_interval="00 01 * * *",
+    schedule_interval="00 05 * * *",
     concurrency=5,
     max_active_runs=1,
     default_args=args
@@ -36,7 +35,7 @@ dag = airflow.DAG(
 """
 依赖采集完成
 """
-#等待采集dag全部任务完成
+# 等待采集dag全部任务完成
 dependence_ods_sqoop_conf_line_df = S3PrefixSensor(
     task_id='dependence_ods_sqoop_conf_line_df',
     prefix='obus_dw/ods_sqoop_conf_line_df/country_code=nal/dt={pt}'.format(pt='{{ ds }}'),
@@ -89,9 +88,6 @@ sleep_time = BashOperator(
     bash_command='sleep 120',
     dag=dag
 )
-
-
-
 
 
 def get_data_from_impala(**op_kwargs):
@@ -227,7 +223,7 @@ def get_data_from_impala(**op_kwargs):
                 from_unixtime(create_time, 'yyyy-MM-dd') = '{pt}' 
             group by city_id, line_id, end_station_id
         )
-        
+
         --结果集
         select 
             station_data.dt,
@@ -275,7 +271,7 @@ def get_data_from_impala(**op_kwargs):
                                 station_data.id = get_off_users.end_station_id 
         left join (select id, name from obus_dw.ods_sqoop_conf_city_df where dt='{pt}' and validate=1) as dc 
             on station_data.city_id = dc.id 
-        
+
     '''.format(
         pt=ds
     )
@@ -287,26 +283,29 @@ def get_data_from_impala(**op_kwargs):
     mysql_conn = get_db_conn('mysql_bi')
     mcursor = mysql_conn.cursor()
     __data_to_mysql(mcursor, result,
-                ['dt','city_id','city','line_id','line_name','station_id',
-                    'station_name','total_drivers','serv_drivers','serv_on_the_road_drivers',
-                    'serv_idle_drivers','no_serv_drivers','lines_orders','station_orders','lines_finished_orders',
-                    'station_finished_orders','new_users','get_on_users','get_off_users','line_gmv_single'],
-                '''
-                    total_drivers=values(total_drivers),
-                    serv_drivers=values(serv_drivers),
-                    serv_on_the_road_drivers=values(serv_on_the_road_drivers),
-                    serv_idle_drivers=values(serv_idle_drivers),
-                    no_serv_drivers=values(no_serv_drivers),
-                    lines_orders=values(lines_orders),
-                    station_orders=values(station_orders),
-                    lines_finished_orders=values(lines_finished_orders),
-                    station_finished_orders=values(station_finished_orders),
-                    new_users=values(new_users),
-                    get_on_users=values(get_on_users),
-                    get_off_users=values(get_off_users),
-                    line_gmv_single=values(line_gmv_single)
-                '''
-    )
+                    ['dt', 'city_id', 'city', 'line_id', 'line_name', 'station_id',
+                     'station_name', 'total_drivers', 'serv_drivers', 'serv_on_the_road_drivers',
+                     'serv_idle_drivers', 'no_serv_drivers', 'lines_orders', 'station_orders', 'lines_finished_orders',
+                     'station_finished_orders', 'new_users', 'get_on_users', 'get_off_users', 'line_gmv_single'],
+                    '''
+                        total_drivers=values(total_drivers),
+                        serv_drivers=values(serv_drivers),
+                        serv_on_the_road_drivers=values(serv_on_the_road_drivers),
+                        serv_idle_drivers=values(serv_idle_drivers),
+                        no_serv_drivers=values(no_serv_drivers),
+                        lines_orders=values(lines_orders),
+                        station_orders=values(station_orders),
+                        lines_finished_orders=values(lines_finished_orders),
+                        station_finished_orders=values(station_finished_orders),
+                        new_users=values(new_users),
+                        get_on_users=values(get_on_users),
+                        get_off_users=values(get_off_users),
+                        line_gmv_single=values(line_gmv_single)
+                    '''
+                    )
+
+    hive_cursor.close()
+    mcursor.close()
 
 
 def __data_to_mysql(conn, data, column, update=''):
@@ -316,14 +315,14 @@ def __data_to_mysql(conn, data, column, update=''):
     cnt = 0
     try:
         for (dt, city_id, name, line_id, lname, station_id, station_name, total_drivers,
-                serv_drivers, serv_on_the_road_drivers, serv_idle_drivers, no_serv_drivers,
-                lines_orders, station_orders, lines_finished_orders, station_finished_orders,
-                new_users, get_on_users, get_off_users, line_gmv_single) in data:
+             serv_drivers, serv_on_the_road_drivers, serv_idle_drivers, no_serv_drivers,
+             lines_orders, station_orders, lines_finished_orders, station_finished_orders,
+             new_users, get_on_users, get_off_users, line_gmv_single) in data:
 
             row = [dt, city_id, name, line_id, lname, station_id, station_name, total_drivers,
-                serv_drivers, serv_on_the_road_drivers, serv_idle_drivers, no_serv_drivers,
-                lines_orders, station_orders, lines_finished_orders, station_finished_orders,
-                new_users, get_on_users, get_off_users, line_gmv_single]
+                   serv_drivers, serv_on_the_road_drivers, serv_idle_drivers, no_serv_drivers,
+                   lines_orders, station_orders, lines_finished_orders, station_finished_orders,
+                   new_users, get_on_users, get_off_users, line_gmv_single]
             if sval == '':
                 sval = '(\'{}\')'.format('\',\''.join([str(x) for x in row]))
             else:
@@ -349,7 +348,6 @@ get_data_from_impala_task = PythonOperator(
     provide_context=True,
     dag=dag
 )
-
 
 dependence_ods_sqoop_conf_line_df >> sleep_time
 dependence_ods_sqoop_conf_station_df >> sleep_time

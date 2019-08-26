@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 obus 线路明细
 """
@@ -7,7 +8,6 @@ from airflow.operators.impala_plugin import ImpalaOperator
 from datetime import datetime, timedelta
 from utils.connection_helper import get_hive_cursor, get_db_conn, get_db_conf
 from utils.validate_metrics_utils import *
-#from airflow.sensors.external_task_sensor import ExternalTaskSensor
 from airflow.sensors.s3_prefix_sensor import S3PrefixSensor
 from airflow.operators.bash_operator import BashOperator
 import time
@@ -15,7 +15,7 @@ import logging
 
 args = {
     'owner': 'wuduo',
-    'start_date': datetime(2019, 8, 18),
+    'start_date': datetime(2019, 8, 25),
     'depends_on_past': False,
     'retries': 3,
     'retry_delay': timedelta(minutes=5),
@@ -26,7 +26,7 @@ args = {
 
 dag = airflow.DAG(
     'app_obus_report_driver_detail_d',
-    schedule_interval="00 01 * * *",
+    schedule_interval="00 05 * * *",
     concurrency=5,
     max_active_runs=1,
     default_args=args
@@ -35,7 +35,7 @@ dag = airflow.DAG(
 """
 依赖采集完成
 """
-#等待采集dag全部任务完成
+# 等待采集dag全部任务完成
 dependence_ods_sqoop_data_driver_df = S3PrefixSensor(
     task_id='dependence_ods_sqoop_data_driver_df',
     prefix='obus_dw/ods_sqoop_data_driver_df/country_code=nal/dt={pt}'.format(pt='{{ ds }}'),
@@ -74,8 +74,6 @@ sleep_time = BashOperator(
     bash_command='sleep 120',
     dag=dag
 )
-
-
 
 
 def get_data_from_impala(**op_kwargs):
@@ -149,7 +147,7 @@ def get_data_from_impala(**op_kwargs):
                 status in (1,2)
             group by driver_id
         )
-        
+
         --结果集
         select 
             *,
@@ -184,7 +182,8 @@ def get_data_from_impala(**op_kwargs):
     mysql_conn = get_db_conn('mysql_bi')
     mcursor = mysql_conn.cursor()
     __data_to_mysql(mcursor, result,
-                    ['dt', 'num', 'driver_id', 'driver_name', 'driver_phone', 'driver_bus_number', 'cycle_id', 'cycle_name',
+                    ['dt', 'num', 'driver_id', 'driver_name', 'driver_phone', 'driver_bus_number', 'cycle_id',
+                     'cycle_name',
                      'number_of_seats', 'mtd_serv_time_today', 'finished_orders_today', 'mtd_gmv_today'],
                     '''
                         num=values(num),
@@ -200,6 +199,9 @@ def get_data_from_impala(**op_kwargs):
                     '''
                     )
 
+    hive_cursor.close()
+    mcursor.close()
+
 
 def __data_to_mysql(conn, data, column, update=''):
     isql = 'insert into obus_dw.app_obus_report_driver_detail_d ({})'.format(','.join(column))
@@ -208,10 +210,10 @@ def __data_to_mysql(conn, data, column, update=''):
     cnt = 0
     try:
         for (dt, driver_id, driver_name, driver_phone, driver_bus_number, cycle_id, cycle_name,
-                number_of_seats, work_dur, orders, mtd_gmv_today, num) in data:
+             number_of_seats, work_dur, orders, mtd_gmv_today, num) in data:
 
             row = [dt, num, driver_id, driver_name, driver_phone, driver_bus_number, cycle_id, cycle_name,
-                        number_of_seats, work_dur, orders, mtd_gmv_today]
+                   number_of_seats, work_dur, orders, mtd_gmv_today]
             if sval == '':
                 sval = '(\'{}\')'.format('\',\''.join([str(x) for x in row]))
             else:
@@ -237,7 +239,6 @@ get_data_from_impala_task = PythonOperator(
     provide_context=True,
     dag=dag
 )
-
 
 dependence_ods_sqoop_data_driver_df >> sleep_time
 dependence_ods_sqoop_conf_cycle_df >> sleep_time

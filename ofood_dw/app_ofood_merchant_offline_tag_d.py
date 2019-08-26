@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 ofood商户排行数据
 """
@@ -7,7 +8,6 @@ from airflow.operators.impala_plugin import ImpalaOperator
 from datetime import datetime, timedelta
 from utils.connection_helper import get_hive_cursor, get_db_conn, get_db_conf
 from utils.validate_metrics_utils import *
-# from airflow.sensors.external_task_sensor import ExternalTaskSensor
 from airflow.sensors.s3_prefix_sensor import S3PrefixSensor
 from airflow.operators.bash_operator import BashOperator
 from airflow.sensors import UFileSensor
