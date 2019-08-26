@@ -92,11 +92,11 @@ table_list = [
     # 协会数据
     # 数据库 opay_spread
     ("opay_spread", "driver_data", "opay_spread_mysql", "mass",1),
-    ("opay_spread", "driver_group", "opay_spread_mysql", "mass",1),
+    ("opay_spread", "driver_group", "opay_spread_mysql", "mass",3),
     ("opay_spread", "driver_logs", "opay_spread_mysql", "mass",1),
-    ("opay_spread", "driver_team", "opay_spread_mysql", "mass",1),
+    ("opay_spread", "driver_team", "opay_spread_mysql", "mass",3),
     ("opay_spread", "rider_signup", "opay_spread_mysql", "mass",1),
-    ("opay_spread", "rider_signups", "opay_spread_mysql", "mass",1),
+    ("opay_spread", "rider_signups", "opay_spread_mysql", "mass",3),
     ("opay_spread", "rider_signups_agents", "opay_spread_mysql", "mass",1),
     ("opay_spread", "rider_signups_guarantors", "opay_spread_mysql", "mass",1),
     ("opay_spread", "rider_signups_logs", "opay_spread_mysql", "mass",1),
