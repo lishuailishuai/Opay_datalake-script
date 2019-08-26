@@ -449,7 +449,7 @@ create_shop_list_data = BashOperator(
             
             select 
             t.shop_id,
-            count(t.product_id) product_num
+            count(t.product_id) product_cnt
             from 
             (
                 select 
@@ -541,7 +541,7 @@ create_shop_list_data = BashOperator(
             nvl(shm.his_order_cnt,0) his_order_cnt,
             nvl(shm.is_new_user_act,0) is_new_user_act,
             nvl(shm.is_promotion_act,0) is_promotion_act,
-            nvl(sp.product_num,0) product_num
+            nvl(sp.product_cnt,0) product_cnt
             from 
             shop_info si 
             left join shop_his_metrics shm on si.shop_id = shm.shop_id
@@ -562,7 +562,7 @@ create_shop_list_data = BashOperator(
             ssm.his_order_cnt,
             ssm.is_new_user_act,
             ssm.is_promotion_act,
-            ssm.product_num,
+            ssm.product_cnt,
             bu.bd_id,
             bu.bd_name,
             bu.bdm_id,
@@ -591,7 +591,7 @@ create_shop_list_data = BashOperator(
             ssm.his_order_cnt,
             ssm.is_new_user_act,
             ssm.is_promotion_act,
-            ssm.product_num,
+            ssm.product_cnt,
             0 bd_id,
             '' bd_name,
             0 bdm_id,
@@ -616,7 +616,7 @@ create_shop_list_data = BashOperator(
             his_order_cnt,
             is_new_user_act,
             is_promotion_act,
-            product_num,
+            product_cnt,
             bd_id,
             bd_name,
             bdm_id,
@@ -637,7 +637,7 @@ create_shop_list_data = BashOperator(
             his_order_cnt,
             is_new_user_act,
             is_promotion_act,
-            product_num,
+            product_cnt,
             bd_id,
             bd_name,
             bdm_id,
@@ -673,7 +673,7 @@ def send_shop_list_file_email(ds, ds_nodash, **kwargs):
         if(is_new_user_act = 1,'Y','N'),
         if(is_promotion_act = 1,'Y','N'),
         yy_peitime,
-        product_num,
+        product_cnt,
         addr,
         account_number
         

@@ -21,7 +21,7 @@ args = {
 }
 
 dag = airflow.DAG(
-    'ofood_import_mysql',
+    'ofood_source_sqoop',
     schedule_interval="30 02 * * *",
     concurrency=5,
     max_active_runs=1,
