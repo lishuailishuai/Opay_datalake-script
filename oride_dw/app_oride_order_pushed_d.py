@@ -27,7 +27,7 @@ args = {
 
 dag = airflow.DAG(
     'app_oride_order_pushed_d',
-    schedule_interval="00 06 * * *",
+    schedule_interval="30 04 * * *",
     default_args=args
 )
 
