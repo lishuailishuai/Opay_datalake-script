@@ -340,7 +340,7 @@ def send_csv_file(ds, ds_nodash, **kwargs):
         select  
         dt,
         area_name,
-        points,
+        --points,
         bdm_name,
         hbdm_name,
         take_time_avg,
@@ -358,7 +358,7 @@ def send_csv_file(ds, ds_nodash, **kwargs):
     headers = [
         'day',
         'area_name',
-        'points',
+        #'points',
         'bdm_name',
         'hbdm_name',
         'take_time_avg',
