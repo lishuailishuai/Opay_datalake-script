@@ -23,7 +23,7 @@ dag = airflow.DAG(
 create_dm_oride_passenge_ocash_api_cube_d = HiveOperator(
     task_id='create_dm_oride_passenge_ocash_api_cube_d',
     hql="""
-        CREATE external TABLE `dm_oride_passenge_ocash_api_cube_d`(
+        CREATE external TABLE IF NOT EXISTS `dm_oride_passenge_ocash_api_cube_d`(
             `user_id` bigint comment '乘客id',
             `city_id` int comment '城市id',
             `serv_type` tinyint COMMENT '1 专车 2 快车',
