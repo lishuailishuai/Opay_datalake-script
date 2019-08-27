@@ -745,6 +745,51 @@ insert_oride_order_city_daily_report = HiveOperator(
                 dt='{{ ds }}' and city_id !=999001
             GROUP BY dt,city_id
         ),
+        -- 当日订单数据
+        order_base as (
+            SELECT
+                *
+            FROM
+                oride_dw.ods_sqoop_base_data_order_df
+            WHERE
+                dt='{{ ds }}'
+                AND city_id != 999001
+                AND from_unixtime(create_time, 'yyyy-MM-dd')=dt
+        ),
+        -- 当日有效订单数据
+        effective_order_data as (
+            SELECT
+               id,
+                if(status in (4,5), 1, if(id=id2, 1,
+                    if(abs(create_time2-create_time)<=1800 and
+                    2*asin(sqrt(pow(sin((start_lat*pi()/180.0-start_lat2*pi()/180.0)/2),2) + cos(start_lat*pi()/180.0)*cos(start_lat2*pi()/180.0)*pow(sin((start_lng*pi()/180.0-start_lng2*pi()/180.0)/2),2)))*6378137 <= 1000 and
+                    2*asin(sqrt(pow(sin((end_lat*pi()/180.0-end_lat2*pi()/180.0)/2),2) + cos(end_lat*pi()/180.0)*cos(end_lat2*pi()/180.0)*pow(sin((end_lng*pi()/180.0-end_lng2*pi()/180.0)/2),2)))*6378137 <= 1000, 0, 1
+                    ))
+                ) as is_effective
+            FROM (
+                SELECT
+                    city_id,
+                    dt,
+                    id,
+                    driver_id,
+                    user_id,
+                    start_lng,
+                    start_lat,
+                    end_lng,
+                    end_lat,
+                    create_time,
+                    arrive_time,
+                    status,
+                    lead(create_time,1,create_time) over(partition by user_id order by create_time) create_time2,
+                    lead(start_lng,1,0) over(PARTITION BY user_id ORDER BY create_time) start_lng2,
+                    lead(start_lat,1,0) over(PARTITION BY user_id ORDER BY create_time) start_lat2,
+                    lead(end_lng,1,0) over(PARTITION BY user_id ORDER BY create_time) end_lng2,
+                    lead(end_lat,1,0) over(PARTITION BY user_id ORDER BY create_time) end_lat2,
+                    lead(id,1,id) over(PARTITION BY user_id ORDER BY create_time) id2
+                FROM
+                    order_base
+                ) as t
+        ),
         -- 订单数据
         order_data as (
             SELECT
@@ -775,18 +820,10 @@ insert_oride_order_city_daily_report = HiveOperator(
                 count(distinct if(do.driver_serv_type=1 and (do.status=4 or do.status=5), do.driver_id, null)) as driect_drivernum,
                 count(distinct if(do.driver_serv_type=2 and (do.status=4 or do.status=5), do.id, null)) as street_ordernum,
                 count(distinct if(do.driver_serv_type=2 and (do.status=4 or do.status=5), do.driver_id, null)) as street_drivernum,
-                count(distinct do.user_id) as request_usernum
+                count(distinct do.user_id) as request_usernum,
+                count(if(eod.is_effective=1, eod.id, null)) as effective_order_num
             FROM
-                (
-                    SELECT
-                        *
-                    FROM
-                        oride_dw.ods_sqoop_base_data_order_df
-                    WHERE
-                        dt='{{ ds }}'
-                        AND city_id != 999001
-                        AND from_unixtime(create_time, 'yyyy-MM-dd')=dt
-                ) do
+                order_base do
                 LEFT JOIN
                 (
                     SELECT
@@ -805,6 +842,7 @@ insert_oride_order_city_daily_report = HiveOperator(
                     WHERE
                        dt='{{ ds }}'
                 ) dop on dop.id=do.id and dop.dt=do.dt
+                LEFT JOIN effective_order_data eod ON eod.id=do.id
             GROUP BY do.dt,do.city_id
         ),
 
@@ -820,6 +858,7 @@ insert_oride_order_city_daily_report = HiveOperator(
                 dt = '{{ ds }}' and success = 1
             group by dt,city_id
         )
+
 
         INSERT OVERWRITE TABLE oride_order_city_daily_report PARTITION (dt = '{{ ds }}')
         select 
@@ -860,9 +899,9 @@ insert_oride_order_city_daily_report = HiveOperator(
             t.driect_drivernum,
             t.street_ordernum,
             t.street_drivernum,
-            t.request_usernum 
-
-        from 
+            t.request_usernum,
+            t.effective_order_num
+        from
         (
             SELECT
                 c.name,
@@ -903,6 +942,7 @@ insert_oride_order_city_daily_report = HiveOperator(
                 od.street_ordernum,
                 od.street_drivernum,
                 od.request_usernum ,
+                od.effective_order_num,
                 row_number() over(partition by c.name order by request_num desc) order_id
             FROM
                 order_data od
