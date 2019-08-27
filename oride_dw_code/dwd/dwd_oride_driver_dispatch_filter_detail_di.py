@@ -22,7 +22,7 @@ import requests
 import os
 
 args = {
-    'owner': 'yangmingze',
+    'owner': 'linan',
     'start_date': datetime(2019, 5, 20),
     'depends_on_past': False,
     'retries': 3,
@@ -32,7 +32,7 @@ args = {
     'email_on_retry': False,
 }
 
-dag = airflow.DAG('dwd_oride_order_dispatch_chose_detail_di',
+dag = airflow.DAG('dwd_oride_order_dispatch_filter_detail_di',
                   schedule_interval="00 01 * * *",
                   default_args=args,
                   catchup=False)
@@ -47,8 +47,8 @@ sleep_time = BashOperator(
 
 
 # 依赖前一天分区
-dependence_dwd_oride_order_dispatch_chose_detail_di_prev_day_task = HivePartitionSensor(
-    task_id="dwd_oride_order_dispatch_chose_detail_di_prev_day_task",
+dependence_dwd_oride_order_dispatch_filter_detail_di_prev_day_task = HivePartitionSensor(
+    task_id="dwd_oride_order_dispatch_filter_detail_di_prev_day_task",
     table="dispatch_tracker_server_magic",
     partition="dt='{{macros.ds_add(ds, +1)}}' and hour='00'",
     schema="oride_source",
@@ -59,33 +59,34 @@ dependence_dwd_oride_order_dispatch_chose_detail_di_prev_day_task = HivePartitio
 ##----------------------------------------- 变量 ---------------------------------------##
 
 
-table_name = "dwd_oride_order_dispatch_chose_detail_di"
+table_name = "dwd_oride_order_dispatch_filter_detail_di"
 hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
 
 ##----------------------------------------- 脚本 ---------------------------------------##
 
-dwd_oride_order_dispatch_chose_detail_di_task = HiveOperator(
-    task_id='dwd_oride_order_dispatch_chose_detail_di_task',
+dwd_oride_order_dispatch_filter_detail_di_task = HiveOperator(
+    task_id='dwd_oride_order_dispatch_filter_detail_di_task',
 
     hql='''
         SET hive.exec.parallel=TRUE;
         SET hive.exec.dynamic.partition.mode=nonstrict;
-        
+
         insert overwrite table oride_dw.{table} partition(country_code,dt)
             select 
             get_json_object(event_values, '$.city_id') as city_id,--下单时所在城市
             get_json_object(event_values, '$.order_id') as order_id, --订单ID
             get_json_object(event_values, '$.user_id') as passenger_id, --乘客ID
-            driver_id,--司机ID
+            get_json_object(event_values, '$.driver_id') as driver_id,--司机ID
             get_json_object(event_values, '$.round') as order_round,--订单轮数
             get_json_object(event_values, '$.config_id') as config_id,--派单配置的id
             get_json_object(event_values, '$.timestamp') as log_timestamp,--埋点时间
+            get_json_object(event_values, '$.reason') as reason,--过滤原因
+            
             'nal' as country_code,
-            dt
+             dt
         from  
         oride_source.dispatch_tracker_server_magic 
-        lateral view explode(split(substr(get_json_object(event_values, '$.driver_ids'),2,length(get_json_object(event_values, '$.driver_ids'))-2),',')) driver_ids as driver_id
-        where  dt = '{pt}' and event_name='dispatch_chose_driver'
+        where  dt = '{pt}' and event_name='dispatch_filter_driver'
 '''.format(
         pt='{{ds}}',
         now_day='{{macros.ds_add(ds, +1)}}',
@@ -117,7 +118,7 @@ touchz_data_success = BashOperator(
     ),
     dag=dag)
 
-dependence_dwd_oride_order_dispatch_chose_detail_di_prev_day_task >> \
+dependence_dwd_oride_order_dispatch_filter_detail_di_prev_day_task >> \
 sleep_time >> \
-dwd_oride_order_dispatch_chose_detail_di_task >> \
+dwd_oride_order_dispatch_filter_detail_di_task >> \
 touchz_data_success
