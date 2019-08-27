@@ -26,11 +26,11 @@ dag = airflow.DAG(
 
 
 
-table_names = ['oride_db.data_order',
-               'oride_db.data_driver_extend',
-               'oride_db.data_city_conf',
-               'oride_db.data_order_payment',
-               'oride_bi.server_magic_push_detail',
+table_names = ['oride_dw.ods_sqoop_base_data_order_df',
+               'oride_dw.ods_sqoop_base_data_device_extend_df',
+               'oride_dw.ods_sqoop_base_data_city_conf_df',
+               'oride_dw.ods_sqoop_base_data_order_payment_df',
+               'oride_dw.dwd_oride_order_push_driver_detail_di',
                'oride_bi.oride_driver_timerange'
                ]
 
@@ -52,46 +52,46 @@ validate_partition_data = PythonOperator(
 )
 
 data_driver_extend_validate_task = HivePartitionSensor(
-    task_id="data_driver_extend_validate_task",
+    task_id="ods_sqoop_base_data_device_extend_df",
     table="data_driver_extend",
     partition="dt='{{ds}}'",
-    schema="oride_db",
+    schema="oride_dw",
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
 
 data_order_validate_task = HivePartitionSensor(
     task_id="data_order_validate_task",
-    table="data_order",
+    table="ods_sqoop_base_data_order_df",
     partition="dt='{{ds}}'",
-    schema="oride_db",
+    schema="oride_dw",
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
 
 data_city_conf_validate_task = HivePartitionSensor(
     task_id="data_city_conf_validate_task",
-    table="data_city_conf",
+    table="ods_sqoop_base_data_city_conf_df",
     partition="dt='{{ds}}'",
-    schema="oride_db",
+    schema="oride_dw",
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
 
 data_order_payment_validate_task = HivePartitionSensor(
     task_id="data_order_payment_validate_task",
-    table="data_order_payment",
+    table="ods_sqoop_base_data_order_payment_df",
     partition="dt='{{ds}}'",
-    schema="oride_db",
+    schema="oride_dw",
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
 
 server_magic_push_detail_validate_task = HivePartitionSensor(
     task_id="server_magic_push_detail_validate_task",
-    table="server_magic_push_detail",
+    table="dwd_oride_order_push_driver_detail_di",
     partition="dt='{{ds}}'",
-    schema="oride_bi",
+    schema="oride_dw",
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
@@ -129,15 +129,15 @@ insert_driver_metrics = HiveOperator(
                 city_id,
                 register_time
                 from 
-                oride_db.data_driver_extend
+                oride_dw.ods_sqoop_base_data_driver_extend_df
                 where dt = '{{ ds }}'
             ) e
             join 
             (
                 select 
                 * 
-                from oride_db.data_city_conf
-                where dt = '{{ ds }}' and id not in (999001,999002)
+                from oride_dw.ods_sqoop_base_data_city_conf_df
+                where dt = '{{ ds }}' and id != 999001
             ) c on  e.city_id = c.id 
         ),
         
@@ -167,7 +167,7 @@ insert_driver_metrics = HiveOperator(
             SELECT
                 *
             FROM
-                oride_db.data_order
+                oride_dw.ods_sqoop_base_data_order_df
             WHERE
                 dt='{{ ds }}'
                 AND city_id != 999001
@@ -261,7 +261,7 @@ insert_driver_metrics = HiveOperator(
                 price,
                 amount
                 from 
-                oride_db.data_order_payment 
+                oride_dw.ods_sqoop_base_data_order_payment_df 
                 where dt = '{{ ds }}' and from_unixtime(create_time,'yyyy-MM-dd') = '{{ ds }}'  and status = 1
             ) p 
             join driver_dim d on p.driver_id = d.id
@@ -302,7 +302,7 @@ insert_driver_metrics = HiveOperator(
                     select 
                     order_id,
                     driver_id
-                    from oride_bi.server_magic_push_detail
+                    from oride_dw.dwd_oride_order_push_driver_detail_di
                     where dt = '{{ ds }}' and success = 1
                 ) s
                 join driver_dim d on d.id = s.driver_id
@@ -329,18 +329,18 @@ insert_driver_metrics = HiveOperator(
                     select 
                     s.order_id,
                     d.serv_type,
-                    s.round,
+                    s.order_round,
                     count(driver_id) driver_num
                     from 
                     (
                         select 
                         *
                         from 
-                        oride_bi.server_magic_push_detail
+                        oride_dw.dwd_oride_order_push_driver_detail_di
                         where dt = '{{ ds }}' and success = 1 
                     ) s 
                     join driver_dim d on d.id = s.driver_id
-                    group by s.order_id,d.serv_type,s.round
+                    group by s.order_id,d.serv_type,s.order_round
                 ) t
                 group by t.order_id,t.serv_type
             ) s 
@@ -349,9 +349,9 @@ insert_driver_metrics = HiveOperator(
                 select 
                 c.name city_name, 
                 o.id
-                from oride_db.data_order o 
-                join oride_db.data_city_conf c on c.dt = '{{ ds }}' and o.city_id = c.id
-                where o.dt = '{{ ds }}' and o.serv_type = 2
+                from oride_dw.ods_sqoop_base_data_order_df o 
+                join oride_dw.ods_sqoop_base_data_city_conf_df c on c.dt = '{{ ds }}' and o.city_id = c.id
+                where o.dt = '{{ ds }}' 
             ) o on s.order_id = o.id 
             group by o.city_name,s.serv_type
         )

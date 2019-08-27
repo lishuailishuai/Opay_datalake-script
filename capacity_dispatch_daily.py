@@ -31,10 +31,10 @@ dag = airflow.DAG(
 
 
 
-table_names = ['oride_bi.server_magic_dispatch_detail',
-               'oride_db.data_order',
-               'oride_bi.server_magic_filter_detail',
-               'oride_bi.server_magic_push_detail'
+table_names = ['oride_dw.dwd_oride_order_dispatch_chose_detail_di',
+               'oride_dw.ods_sqoop_base_data_order_df',
+               'oride_dw.dwd_oride_order_dispatch_filter_detail_di',
+               'oride_dw.dwd_oride_order_push_driver_detail_di'
                ]
 '''
 校验分区代码
@@ -56,36 +56,36 @@ validate_partition_data = PythonOperator(
 # 熔断阻塞流程
 data_order_validate_task = HivePartitionSensor(
     task_id="data_order_validate_task",
-    table="data_order",
+    table="ods_sqoop_base_data_order_df",
     partition="dt='{{ds}}'",
-    schema="oride_db",
+    schema="oride_dw",
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
 
 dispatch_validate_task = HivePartitionSensor(
     task_id="dispatch_validate_task",
-    table="server_magic_dispatch_detail",
+    table="dwd_oride_order_dispatch_chose_detail_di",
     partition="dt='{{ds}}'",
-    schema="oride_bi",
+    schema="oride_dw",
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
 
 filter_validate_task = HivePartitionSensor(
     task_id="filter_validate_task",
-    table="server_magic_filter_detail",
+    table="dwd_oride_order_dispatch_filter_detail_di",
     partition="dt='{{ds}}'",
-    schema="oride_bi",
+    schema="oride_dw",
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
 
 push_validate_task = HivePartitionSensor(
     task_id="push_validate_task",
-    table="server_magic_push_detail",
+    table="dwd_oride_order_push_driver_detail_di",
     partition="dt='{{ds}}'",
-    schema="oride_bi",
+    schema="oride_dw",
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
@@ -140,13 +140,13 @@ insert_report_metrics = HiveOperator(
             select
                 ofc.dt,
                 ofc.order_id,
-                ofc.round,
+                ofc.order_round,
                 sum(if(ofb.reason='assigned_another_job', 1, 0)) as assigned_another_job_num,
                 sum(if(ofb.reason='not_in_service_mode', 1, 0)) as not_in_service_mode_num,
                 sum(if(ofb.reason='not_idle', 1, 0)) as not_idle_num,
                 sum(if(ofb.reason='assigned_this_order_before', 1, 0)) as assigned_this_order_before,
                 max(oa.driver_num) as assign_driver_num,
-                max(oa.round) as assign_time,
+                max(oa.order_round) as assign_time,
                 if(max(ofc.driver_id) is null,0,max(ofc.driver_id)) as driver_id,
                 count(ofc.driver_id_not_found) driver_id_not_found
                 from
@@ -154,8 +154,8 @@ insert_report_metrics = HiveOperator(
                     select
                         a.dt,
                         a.order_id,
-                        a.round,
-                        if (rank() over(partition by order_id order by round desc ) =1, b.driver_id, 0) as driver_id,
+                        a.order_round,
+                        if (rank() over(partition by order_id order by order_round desc ) =1, b.driver_id, 0) as driver_id,
                         a.driver_id driver_id_not_found
 
                     from 
@@ -163,10 +163,10 @@ insert_report_metrics = HiveOperator(
                         select 
                         dt,
                         order_id,
-                        round,
+                        order_round,
                         driver_id
                         from 
-                        oride_bi.server_magic_dispatch_detail
+                        oride_dw.dwd_oride_order_dispatch_chose_detail_di
                         where dt ='{{ ds }}'
                     ) a
                     left join 
@@ -175,7 +175,7 @@ insert_report_metrics = HiveOperator(
                         id,
                         driver_id
                         from
-                        oride_db.data_order
+                        oride_dw.ods_sqoop_base_data_order_df
                         where dt='{{ ds }}' and from_unixtime(create_time,'yyyy-MM-dd') = '{{ ds }}'
                     ) b ON b.id = a.order_id  
                     
@@ -186,29 +186,29 @@ insert_report_metrics = HiveOperator(
                         dt,
                         order_id,
                         reason,
-                        round
-                    from oride_bi.server_magic_filter_detail
+                        order_round
+                    from oride_dw.dwd_oride_order_dispatch_filter_detail_di
                     where dt = '{{ ds }}'
-                ) ofb on ofb.dt=ofc.dt and ofb.order_id=ofc.order_id and ofb.round=ofc.round
+                ) ofb on ofb.dt=ofc.dt and ofb.order_id=ofc.order_id and ofb.order_round=ofc.order_round
                 left join
                 (
-                select
+                    select
                         dt,
-                        round,
+                        order_round,
                         order_id,
                         count(driver_id) driver_num
                     from
-                        oride_bi.server_magic_push_detail
+                        oride_dw.dwd_oride_order_push_driver_detail_di
                         where dt = '{{ ds }}' and success = 1
                         group by dt,
-                        round,
+                        order_round,
                         order_id
-                ) oa on oa.dt=ofc.dt and oa.order_id=ofc.order_id and oa.round=ofc.round
+                ) oa on oa.dt=ofc.dt and oa.order_id=ofc.order_id and oa.order_round=ofc.order_round
                 where ofc.dt = '{{ ds }}'
                 group by
                 ofc.dt,
                 ofc.order_id,
-                ofc.round
+                ofc.order_round
             ) t
             group by t.dt
         ) tt
@@ -225,7 +225,7 @@ insert_report_metrics = HiveOperator(
                     count(order_id) order_num,
                     count(distinct(order_id)) order_num_dis
                 from
-                    oride_bi.server_magic_push_detail
+                    oride_dw.dwd_oride_order_push_driver_detail_di
                 where dt = '{{ ds }}' and success = 1
                 group by dt,driver_id
             ) p
@@ -283,7 +283,7 @@ insert_order_metrics = HiveOperator(
             concat(cast(nvl(round(count(if(status = 6 and driver_id = 0  and cancel_role = 1,id,null)) * 100/count(id),2),0) as string),'%') passanger_before_cancel_rate,
             concat(cast(nvl(round(count(if(status = 6 and driver_id <> 0  and cancel_role = 1,id,null)) * 100/count(id),2),0) as string),'%') passanger_after_cancel_rate
         from
-            oride_db.data_order where  dt= '{{ ds }}' and from_unixtime(create_time,'yyyy-MM-dd') = '{{ ds }}'
+            ods_sqoop_base_data_order_df where  dt= '{{ ds }}' and from_unixtime(create_time,'yyyy-MM-dd') = '{{ ds }}'
         group by from_unixtime(create_time,'yyyy-MM-dd')
         ) tt
         left join 
@@ -309,7 +309,7 @@ insert_order_metrics = HiveOperator(
                     end_name,
                     from_unixtime(create_time,'yyyy-MM-dd HH') as time, 
                     floor(cast(minute(from_unixtime(create_time)) as int) / 30) as mins
-                    from oride_db.data_order
+                    from ods_sqoop_base_data_order_df
                     where  dt= '{{ ds }}' and from_unixtime(create_time,'yyyy-MM-dd') = '{{ ds }}'
                 ) t
                 group by time,t.mins,start_name,end_name,user_id
