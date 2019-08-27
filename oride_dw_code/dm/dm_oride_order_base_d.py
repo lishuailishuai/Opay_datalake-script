@@ -242,7 +242,7 @@ dm_oride_order_base_d_task = HiveOperator(
       (
         SELECT  
         order_id,
-        sum(distance) AS pick_up_distance --接驾距离
+        avg(distance) AS pick_up_distance --接驾距离
         FROM oride_dw.dwd_oride_order_assign_driver_detail_di
         WHERE dt='{pt}'
         GROUP BY order_id
