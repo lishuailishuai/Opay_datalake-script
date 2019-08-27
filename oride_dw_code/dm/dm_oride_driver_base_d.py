@@ -121,6 +121,12 @@ dm_oride_driver_base_d_task = HiveOperator(
     
            finish_driver_online_dur,
             --完单司机在线时长（分钟）
+            
+            driver_click_order_cnt,
+            --司机点击接受订单总数（accpet_click阶段，算法要求此指标为订单总应答）
+            
+            driver_pushed_order_cnt,
+            --司机被推送订单总数（accpet_show阶段，算法要求此指标为订单总推送）
     
            country_code,
            --国家码字段
@@ -140,10 +146,16 @@ dm_oride_driver_base_d_task = HiveOperator(
             sum(nvl(dtr.driver_freerange,0)) AS driver_free_dur,
             --司机空闲时长（秒）
     
-            count(DISTINCT (CASE WHEN ord.driver_id=p1.driver_id THEN ord.order_id ELSE NULL END)) AS succ_push_order_cnt,--成功推送司机的订单数
+            sum(DISTINCT (CASE WHEN ord.driver_id=p1.driver_id THEN ord.succ_push_order_cnt ELSE 0 END)) AS succ_push_order_cnt,--成功推送司机的订单数
     
-            sum(case when ord.is_td_finish=1 then dtr.driver_onlinerange ELSE 0 END) AS finish_driver_online_dur
+            sum(case when ord.is_td_finish > 0 then dtr.driver_onlinerange ELSE 0 END) AS finish_driver_online_dur,
             --完单司机在线时长（秒）
+            
+            sum(nvl(c1.driver_click_order_cnt,0)) as driver_click_order_cnt,
+            --司机点击接受订单总数（accpet_click阶段，算法要求此指标为订单总应答）
+            
+            sum(nvl(s1.driver_pushed_order_cnt,0)) as driver_pushed_order_cnt
+            --司机被推送订单总数（accpet_show阶段，算法要求此指标为订单总推送）
     
        FROM
             (
@@ -154,12 +166,18 @@ dm_oride_driver_base_d_task = HiveOperator(
             ) dri
             LEFT OUTER JOIN
             (
-                SELECT *
+                SELECT 
+                driver_id,
+                sum(is_td_finish) as is_td_finish,
+                count(order_id) as succ_push_order_cnt,
+                sum(td_finish_order_dur) as td_finish_order_dur,
+                sum(td_cannel_pick_dur) as td_cannel_pick_dur
+                
                 FROM oride_dw.dwd_oride_order_base_include_test_di
                 WHERE dt='{pt}'
                 AND city_id<>'999001' --去除测试数据
+                group by driver_id
             ) ord ON dri.driver_id=ord.driver_id
-                AND dri.dt=ord.dt
             LEFT OUTER JOIN
             (
                 SELECT *
@@ -175,6 +193,27 @@ dm_oride_driver_base_d_task = HiveOperator(
                 AND success=1
                 GROUP BY driver_id
             ) p1 ON ord.driver_id=p1.driver_id
+            LEFT OUTER JOIN
+            (
+                SELECT 
+                driver_id,
+                count(distinct(order_id)) driver_click_order_cnt
+                FROM 
+                oride_dw.dwd_oride_driver_accept_order_click_detail_di
+                WHERE dt='{pt}'
+                GROUP BY driver_id
+            ) c1 on dri.driver_id=c1.driver_id
+            LEFT OUTER JOIN
+            (
+                SELECT 
+                driver_id,
+                count(distinct(order_id)) driver_pushed_order_cnt
+                FROM 
+                oride_dw.dwd_oride_driver_accept_order_show_detail_di
+                WHERE dt='{pt}'
+                GROUP BY driver_id
+            ) s1 on dri.driver_id=s1.driver_id
+            
        GROUP BY dri.product_id,
                 dri.city_id,
                 dri.country_code
