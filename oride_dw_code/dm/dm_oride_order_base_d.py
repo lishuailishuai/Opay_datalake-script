@@ -226,6 +226,7 @@ dm_oride_order_base_d_task = HiveOperator(
          SELECT *
          FROM oride_dw.dwd_oride_order_base_include_test_di
          WHERE dt = '{pt}'
+         AND city_id<>'999001' --去除测试数据
        ) ord
     LEFT OUTER JOIN
       (

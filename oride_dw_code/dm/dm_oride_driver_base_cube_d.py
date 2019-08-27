@@ -247,8 +247,7 @@ dm_oride_driver_base_cube_d_task = HiveOperator(
             *
             FROM oride_dw.dwd_oride_order_base_include_test_di
              WHERE dt='{pt}'
-            AND start_lng < 100 --去除测试数据
-            AND city_id<>'999001' --去除测试数据
+             AND city_id<>'999001' --去除测试数据
          ) ord ON dri.driver_id = ord.driver_id
             AND dri.dt = ord.dt
        LEFT OUTER JOIN
@@ -294,9 +293,6 @@ dm_oride_driver_base_cube_d_task = HiveOperator(
            WHERE dt='{pt}'
            group by driver_id 
        ) r2 on r2.driver_id = dri.driver_id
-       
-       
-       
        
        GROUP BY dri.product_id,
                 dri.city_id,

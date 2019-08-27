@@ -135,7 +135,6 @@ from
       FROM oride_dw.dwd_oride_order_base_include_test_di
 WHERE dt = '{pt}'
   and status in (4,5)
-  AND start_lng < 100  --去除测试数据
   AND city_id<>'999001' --去除测试数据
   ) ord
 left outer join

@@ -157,7 +157,6 @@ dm_oride_driver_base_d_task = HiveOperator(
                 SELECT *
                 FROM oride_dw.dwd_oride_order_base_include_test_di
                 WHERE dt='{pt}'
-                AND start_lng < 100 --去除测试数据
                 AND city_id<>'999001' --去除测试数据
             ) ord ON dri.driver_id=ord.driver_id
                 AND dri.dt=ord.dt
