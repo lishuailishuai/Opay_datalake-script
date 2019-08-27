@@ -821,7 +821,8 @@ insert_oride_order_city_daily_report = HiveOperator(
                 count(distinct if(do.driver_serv_type=2 and (do.status=4 or do.status=5), do.id, null)) as street_ordernum,
                 count(distinct if(do.driver_serv_type=2 and (do.status=4 or do.status=5), do.driver_id, null)) as street_drivernum,
                 count(distinct do.user_id) as request_usernum,
-                count(if(eod.is_effective=1, eod.id, null)) as effective_order_num
+                count(if(eod.is_effective=1, eod.id, null)) as effective_order_num,
+                COUNT(DISTINCT if(dop.status=1 and (dop.mode=2 or dop.mode=3), do.user_id, null)) as online_pay_user_num
             FROM
                 order_base do
                 LEFT JOIN
@@ -857,6 +858,19 @@ insert_oride_order_city_daily_report = HiveOperator(
             where
                 dt = '{{ ds }}' and success = 1
             group by dt,city_id
+        ),
+        -- 用户数据
+        user_data as (
+            SELECT
+                dt,
+                city_id,
+                sum(if(from_unixtime(register_time, 'yyyy-MM-dd')=dt, 1, 0)) as register_users,
+                sum(if(from_unixtime(login_time, 'yyyy-MM-dd')=dt, 1, 0)) as active_users
+            FROM
+                oride_dw.ods_sqoop_base_data_user_extend_df
+            WHERE
+                dt='{{ ds }}'
+            GROUP BY dt, city_id
         )
 
 
@@ -900,7 +914,9 @@ insert_oride_order_city_daily_report = HiveOperator(
             t.street_ordernum,
             t.street_drivernum,
             t.request_usernum,
-            t.effective_order_num
+            t.effective_order_num,
+            t.online_pay_user_num,
+            t.active_users
         from
         (
             SELECT
@@ -943,6 +959,8 @@ insert_oride_order_city_daily_report = HiveOperator(
                 od.street_drivernum,
                 od.request_usernum ,
                 od.effective_order_num,
+                od.online_pay_user_num,
+                ud.active_users,
                 row_number() over(partition by c.name order by request_num desc) order_id
             FROM
                 order_data od
@@ -961,6 +979,7 @@ insert_oride_order_city_daily_report = HiveOperator(
                 LEFT JOIN event_data ed on ed.dt=od.dt and ed.city_id = od.city_id
                 LEFT JOIN lfw_event_data led on led.dt=od.dt and led.city_id = od.city_id
                 LEFT JOIN push_data pd on pd.dt=od.dt and pd.city_id = od.city_id
+                LEFT JOIN user_data ud ON ud.dt=od.dt and ud.city_id = od.city_id
         ) t 
         where t.order_id = 1
         """,
@@ -1338,6 +1357,132 @@ insert_oride_global_city_serv_daily_report = HiveOperator(
     schema='oride_bi',
     dag=dag)
 
+def get_city_row(ds, all_completed_num):
+    tr_fmt = '''
+       <tr>{row}</tr>
+    '''
+    row_fmt = '''
+         <!--{}{}-->
+        <td>{}</td>
+        <td>{}</td>
+        <!--天气指标-->
+        <td>{}</td>
+        <td>{}</td>
+        <!--关键指标-->
+        <td>{}</td>
+        <td>{}</td>
+        <td>{}</td>
+        <td>{}</td>
+        <td>{}</td>
+        <td>{}</td>
+        <td>{}</td>
+        <td>{}</td>
+        <td>{}</td>
+        <!--乘客指标-->
+        <td>{}</td>
+        <td>{}</td>
+        <td>{}</td>
+        <td>{}</td>
+    '''
+    sql = '''
+        with all_data as (
+            SELECT
+                dt,
+                SUM(rain_order_num) AS rain_order_num,
+                SUM(request_num) AS request_num,
+                SUM(request_num_lfw) AS request_num_lfw,
+                SUM(effective_order_num) AS effective_order_num,
+                SUM(pay_num) AS pay_num,
+                SUM(completed_num) AS completed_num,
+                SUM(completed_num_lfw) AS completed_num_lfw,
+                SUM(active_users) AS active_users,
+                SUM(request_usernum) AS request_usernum,
+                SUM(completed_users) AS completed_users,
+                SUM(online_pay_user_num) AS online_pay_user_num
+            FROM
+                oride_bi.oride_order_city_daily_report
+            WHERE
+                dt='{ds}'
+            GROUP BY
+                dt
+        ),
+        city_data as (
+            SELECT
+                *
+            FROM
+                oride_bi.oride_order_city_daily_report
+            WHERE
+                dt='{ds}'
+        )
+        -- 全部城市数据
+        SELECT
+            '1' as order_by,
+            0 as city_id,
+            from_unixtime(unix_timestamp(dt, 'yyyy-MM-dd'),'yyyyMMdd') as dt,
+            'All' as name,
+            '-',
+            concat(cast(nvl(round(rain_order_num/request_num*100, 1),0) as string), '%'),
+            request_num,
+            request_num_lfw,
+            effective_order_num,
+            pay_num,
+            completed_num,
+            completed_num_lfw,
+            concat(cast(nvl(round(completed_num/request_num*100, 1),0) as string), '%'),
+            concat(cast(nvl(round(completed_num_lfw/request_num_lfw*100, 1),0) as string), '%'),
+            '100%',
+            active_users,
+            request_usernum,
+            completed_users,
+            concat(cast(nvl(round(online_pay_user_num/completed_users*100, 1),0) as string), '%')
+        FROM
+            all_data
+        -- 分城市数据
+        UNION
+        SELECT
+            '2' as order_by,
+            td.id as city_id,
+            from_unixtime(unix_timestamp(cd.dt, 'yyyy-MM-dd'),'yyyyMMdd') as dt,
+            td.name as name,
+            cd.weather,
+            concat(cast(nvl(round(cd.rain_order_num/cd.request_num*100, 1),0) as string), '%'),
+            cd.request_num,
+            cd.request_num_lfw,
+            cd.effective_order_num,
+            cd.pay_num,
+            cd.completed_num,
+            cd.completed_num_lfw,
+            concat(cast(nvl(round(cd.completed_num/cd.request_num*100, 1),0) as string), '%'),
+            concat(cast(nvl(round(cd.completed_num_lfw/cd.request_num_lfw*100, 1),0) as string), '%'),
+            concat(cast(nvl(round(cd.completed_num/{all_completed_num}*100, 1),0) as string), '%'),
+            cd.active_users,
+            cd.request_usernum,
+            cd.completed_users,
+            concat(cast(nvl(round(cd.online_pay_user_num/cd.completed_users*100, 1),0) as string), '%')
+        FROM
+            city_data cd
+            INNER JOIN
+            (
+                SELECT
+                    *
+                FROM
+                    oride_dw.ods_sqoop_base_data_city_conf_df
+                WHERE
+                   dt='{ds}'
+            ) td ON lower(cd.city) = lower(td.name)
+         ORDER BY order_by ASC, city_id ASC
+    '''.format(ds=ds, all_completed_num=all_completed_num)
+    cursor = get_hive_cursor()
+    logging.info('Executing: %s', sql)
+    cursor.execute(sql)
+    data_list = cursor.fetchall()
+    cursor.close()
+    row_html = ''
+    if len(data_list) > 0:
+        for data in data_list:
+            row = row_fmt.format(*list(data))
+            row_html += tr_fmt.format(row=row)
+    return row_html
 
 def get_serv_row(ds, driver_serv_type, all_completed_num):
     tr_fmt = '''
@@ -1495,7 +1640,7 @@ def get_serv_row(ds, driver_serv_type, all_completed_num):
                 SELECT
                     *
                 FROM
-                    oride_db.data_city_conf
+                    oride_dw.ods_sqoop_base_data_city_conf_df
                 WHERE
                    dt='{ds}'
             ) td ON td.id=cd.city_id
@@ -1512,7 +1657,6 @@ def get_serv_row(ds, driver_serv_type, all_completed_num):
             row = row_fmt.format(*list(data))
             row_html += tr_fmt.format(row=row)
     return row_html
-
 
 def get_trike_row(ds, driver_serv_type):
     tr_fmt = '''
@@ -1689,7 +1833,7 @@ def get_trike_row(ds, driver_serv_type):
                     id,
                     name
                 FROM
-                    oride_db.data_city_conf
+                    oride_dw.ods_sqoop_base_data_city_conf_df
                 WHERE
                    dt='{ds}'
             ) td ON td.id=cd.city_id
@@ -1706,9 +1850,6 @@ def get_trike_row(ds, driver_serv_type):
             row = row_fmt.format(*list(data))
             row_html += tr_fmt.format(row=row)
     return row_html
-
-
-
 
 def send_report_email(ds, **kwargs):
     logging.info("receivers:%s" % Variable.get("oride_global_daily_report_receivers"))
@@ -1853,6 +1994,47 @@ def send_report_email(ds, **kwargs):
                 </thead>
                 <tbody>
                 {rows}
+                </tbody>
+            </table>
+            <table width="100%" class="table">
+                <caption>
+                    <h3>多业务城市汇总</h3>
+                </caption>
+            </table>
+            <table width="100%" class="table">
+                <thead>
+                    <tr>
+                        <th></th>
+                        <th></th>
+                        <th colspan="2" style="text-align: center;">天气指标</th>
+                        <th colspan="9" style="text-align: center;">关键指标</th>
+                        <th colspan="4" style="text-align: center;">乘客指标</th>
+                    </tr>
+                    <tr>
+                        <th>日期</th>
+                        <th>城市</th>
+                        <!--天气指标-->
+                        <th>天气</th>
+                        <th>湿单占比</th>
+                        <!--关键指标-->
+                        <th>下单数</th>
+                        <th>下单数（近4周均值）</th>
+                        <th>有效下单数</th>
+                        <th>支付完单数</th>
+                        <th>完单数</th>
+                        <th>完单数（近4周均值）</th>
+                        <th>完单率</th>
+                        <th>完单率（近4周均值）</th>
+                        <th>城市完单占比</th>
+                        <!--乘客指标-->
+                        <th>活跃乘客数</th>
+                        <th>下单乘客数</th>
+                        <th>完单乘客数</th>
+                        <th>线上支付乘客占比</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {city_rows}
                 </tbody>
             </table>
             <table width="100%" class="table">
@@ -2137,7 +2319,7 @@ def send_report_email(ds, **kwargs):
                 row_html += tr_fmt.format(row=row)
 
         html = html_fmt.format(rows=row_html, direct_rows=get_serv_row(ds, 1, all_completed_num),
-                               street_rows=get_serv_row(ds, 2, all_completed_num), trike_rows=get_trike_row(ds, 3))
+                               street_rows=get_serv_row(ds, 2, all_completed_num), trike_rows=get_trike_row(ds, 3), city_rows=get_city_row(ds, all_completed_num))
         # send mail
 
         email_to = Variable.get("oride_global_daily_report_receivers").split()
