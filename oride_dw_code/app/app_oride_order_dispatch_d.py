@@ -749,8 +749,8 @@ def sendDispatchMail(*op_args, **op_kwargs):
             '-',                            --应答率
             a.take_order_dur_done,                  --平均应答时长完单
             a.take_order_dur_take,                  --平均应答时长应答
-            a.passanger_after_cancel_rate*100,          --乘客应答后取消率
-            a.driver_after_cancel_rate*100,             --司机应答后取消率
+            '-',                                    --乘客应答后取消率
+            '-',                                    --司机应答后取消率
             a.tph_macro,                            --TPH
             a.online_range,                         --人均在线时长
             a.billing_order_dur_rate*100                --计费时长占比
@@ -811,8 +811,8 @@ def sendDispatchMail(*op_args, **op_kwargs):
             '-',                            --应答率
             a.take_order_dur_done,                  --平均应答时长完单
             a.take_order_dur_take,                  --平均应答时长应答
-            a.passanger_after_cancel_rate*100,          --乘客应答后取消率
-            a.driver_after_cancel_rate*100,             --司机应答后取消率
+            '-',                                    --乘客应答后取消率
+            '-',                                    --司机应答后取消率
             a.tph_macro,                            --TPH
             a.online_range,                         --人均在线时长
             a.billing_order_dur_rate*100                --计费时长占比
@@ -873,8 +873,8 @@ def sendDispatchMail(*op_args, **op_kwargs):
             '-',                            --应答率
             a.take_order_dur_done,                  --平均应答时长完单
             a.take_order_dur_take,                  --平均应答时长应答
-            a.passanger_after_cancel_rate*100,          --乘客应答后取消率
-            a.driver_after_cancel_rate*100,             --司机应答后取消率
+            '-',                                    --乘客应答后取消率
+            '-',                                    --司机应答后取消率
             a.tph_macro,                            --TPH
             a.online_range,                         --人均在线时长
             a.billing_order_dur_rate*100                --计费时长占比
