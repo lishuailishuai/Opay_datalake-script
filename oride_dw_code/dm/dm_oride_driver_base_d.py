@@ -127,6 +127,9 @@ dm_oride_driver_base_d_task = HiveOperator(
             
             driver_pushed_order_cnt,
             --司机被推送订单总数（accpet_show阶段，算法要求此指标为订单总推送）
+            
+            driver_billing_dur,
+            --司机订单计费时长
     
            country_code,
            --国家码字段
@@ -154,8 +157,11 @@ dm_oride_driver_base_d_task = HiveOperator(
             sum(nvl(c1.driver_click_order_cnt,0)) as driver_click_order_cnt,
             --司机点击接受订单总数（accpet_click阶段，算法要求此指标为订单总应答）
             
-            sum(nvl(s1.driver_pushed_order_cnt,0)) as driver_pushed_order_cnt
+            sum(nvl(s1.driver_pushed_order_cnt,0)) as driver_pushed_order_cnt,
             --司机被推送订单总数（accpet_show阶段，算法要求此指标为订单总推送）
+            
+            sum(nvl(ord.td_billing_dur,0)) as driver_billing_dur
+            --司机订单计费时长
     
        FROM
             (
@@ -170,6 +176,7 @@ dm_oride_driver_base_d_task = HiveOperator(
                 driver_id,
                 count(order_id) as succ_push_order_cnt,
                 sum(if(is_td_finish = 1,td_finish_order_dur,0)) as td_finish_order_dur,
+                sum(td_billing_dur) as td_billing_dur,
                 sum(td_cannel_pick_dur) as td_cannel_pick_dur
                 
                 FROM oride_dw.dwd_oride_order_base_include_test_di
