@@ -92,6 +92,7 @@ if binlog_table_list!='':
                 task_id='check_file_{}'.format(table),
                 prefix='oride_binlog/oride_binlog.oride_data.{table}/dt={{{{ ds }}}}/hour={{{{ execution_date.strftime("%H") }}}}'.format(table=table),
                 bucket_name='opay-bi',
+                timeout=3600,
                 dag=dag)
 
             check_file >> binlog_add_partitions

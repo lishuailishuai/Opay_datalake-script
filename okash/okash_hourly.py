@@ -24,6 +24,7 @@ check_client_ufile=UFileSensor(
     task_id='check_client_ufile',
     filepath='okash/okash/{table}/dt={{{{ ds }}}}/hour={{{{ execution_date.strftime("%H") }}}}'.format(table='client'),
     bucket_name='okash',
+    timeout=3600,
     dag=dag)
 
 add_client_partitions = HiveOperator(

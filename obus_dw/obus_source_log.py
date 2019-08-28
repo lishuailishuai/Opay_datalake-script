@@ -131,6 +131,7 @@ check_s3_obus_server_event = S3PrefixSensor(
     task_id='check_s3_obus_server_event',
     prefix='obus_buried/obdm.server_event/dt={{ ds }}/hour={{ execution_date.strftime("%H") }}',
     bucket_name='opay-bi',
+    timeout=3600,
     dag=dag)
 
 add_partitions_obus_server_event = HiveOperator(
