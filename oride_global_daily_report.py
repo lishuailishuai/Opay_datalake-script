@@ -350,7 +350,9 @@ insert_oride_global_daily_report = HiveOperator(
                 sum(if((do.status=4 or do.status=5) and do.serv_type = 3,do.pax_num,0)) trike_complete_passengernum,
                 count(distinct if(dop.id is not null and dop.status=1 and (dop.mode = 2 or dop.mode = 3) and do.serv_type = 3,do.user_id,null)) trike_online_pay_passengernum,
                 count(distinct if(dop.id is not null and dop.status=1 and do.serv_type = 3,do.user_id,null)) trike_pay_passengernum,
-                count(DISTINCT if(do.status=5, do.id, null)) as finished_num
+                count(DISTINCT if(do.status=5, do.id, null)) as finished_num,
+                COUNT(DISTINCT if(dop.status in (0,2) and dop.mode=2 , dop.id, null)) as opay_pay_filed_order_num,
+                COUNT(DISTINCT if(dop.mode=2 , dop.id, null)) as opay_pay_order_num
             FROM
                 order_base do
                 LEFT JOIN
@@ -537,7 +539,10 @@ insert_oride_global_daily_report = HiveOperator(
             cdo.do_range,
             od.billing_time,
             od.finished_num,
-            od.request_usernum
+            od.request_usernum,
+            od.opay_pay_filed_order_num,
+            od.opay_pay_order_num
+            
         FROM
             order_data od
             LEFT JOIN lfw_data lf on lf.dt=od.dt
@@ -1893,7 +1898,8 @@ def send_report_email(ds, **kwargs):
             nvl(new_user_completed_num, '-') AS new_user_completed_num,
             nvl(new_user_gmv, '-') AS new_user_gmv,
             if(completed_driver_online_time_total is null, '-', round(completed_num/(completed_driver_online_time_total/3600), 1)) as tph,
-            nvl(finished_num, '-') as finished_num
+            nvl(finished_num, '-') as finished_num,
+            if(dt>='2019-08-27',concat(cast(nvl(round(opay_pay_filed_order_num * 100 / opay_pay_order_num,1),0) as string),'%'),'-') as opay_papy_failed_rate
         FROM
            oride_bi.oride_global_daily_report
         WHERE
@@ -1952,6 +1958,8 @@ def send_report_email(ds, **kwargs):
                         <th colspan="3" style="text-align: center;">体验指标</th>
                         <th colspan="9" style="text-align: center;">乘客指标</th>
                         <th colspan="1" style="text-align: center;">财务</th>
+                        <th colspan="1" style="text-align: center;">系统</th>
+                        
                     </tr>
                     <tr>
                         <th>日期</th>
@@ -1990,6 +1998,8 @@ def send_report_email(ds, **kwargs):
                         <th>新用户GMV</th>
                         <!--财务-->
                         <th>地图调用次数</th>
+                        <!--系统-->
+                        <th>opay支付失败订单占比</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -2265,6 +2275,8 @@ def send_report_email(ds, **kwargs):
                 <td>{new_user_gmv}</td>
                 <!--财务-->
                 <td>{map_request_num}</td>
+                <!--系统-->
+                <td>{opay_papy_failed_rate}</td>
         '''
         row_html = ''
         # 所有完单数
@@ -2274,7 +2286,8 @@ def send_report_email(ds, **kwargs):
              completed_drivers, avg_online_time, btime_vs_otime, register_drivers, online_drivers, c_vs_od,
              avg_take_time, avg_distance, avg_pickup_time, register_users, first_completed_users, fcu_vs_cu,
              old_completed_users, map_request_num, beckoning_num, driect_ordernum, driect_orderate, driect_drivernum,
-             street_ordernum, street_orderate, street_drivernum, request_usernum, trike_online_pay_rate, new_user_request_num,new_user_completed_num,new_user_gmv,tph, finished_num] = list(data)
+             street_ordernum, street_orderate, street_drivernum, request_usernum, trike_online_pay_rate, new_user_request_num,
+             new_user_completed_num,new_user_gmv,tph, finished_num,opay_papy_failed_rate] = list(data)
             row = row_fmt.format(
                 dt=dt,
                 request_num=request_num,
@@ -2311,7 +2324,8 @@ def send_report_email(ds, **kwargs):
                 new_user_completed_num=new_user_completed_num,
                 new_user_gmv=new_user_gmv,
                 tph=tph,
-                finished_num=finished_num
+                finished_num=finished_num,
+                opay_papy_failed_rate=opay_papy_failed_rate
             )
             if week == '6' or week == '7':
                 row_html += weekend_tr_fmt.format(row=row)
