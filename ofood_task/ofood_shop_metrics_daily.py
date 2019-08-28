@@ -555,7 +555,7 @@ def send_csv_file(ds, ds_nodash, **kwargs):
         f_csv.writerows(rows)
 
     # send mail
-    email_to = Variable.get("ofood_metrics_report_receivers").split()
+    email_to = Variable.get("ofood_bd_shop_detail_report_receivers").split()
     # email_to = ['nan.li@opay-inc.com']
     email_subject = 'ofood餐厅维度每日数据_{dt}'.format(dt=ds)
     email_body = 'ofood餐厅维度每日数据'
