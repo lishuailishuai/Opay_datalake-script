@@ -16,7 +16,7 @@ args = {
 
 dag = airflow.DAG(
     'oride_ods_log_skyeye',
-    schedule_interval="00 04 * * *",
+    schedule_interval="00 07 * * *",
     default_args=args)
 
 '''
@@ -34,6 +34,7 @@ for table in table_list:
         task_id='check_ufile_{}'.format(table),
         filepath='oride-research/tags/{table}_tags/dt={{{{ ds }}}}/upload_success.txt'.format(table=table),
         bucket_name='opay-datalake',
+        timeout=86400,
         dag=dag)
 
     # add partitions
