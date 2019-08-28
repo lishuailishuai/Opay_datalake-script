@@ -148,7 +148,7 @@ dm_oride_driver_base_d_task = HiveOperator(
     
             sum(DISTINCT (CASE WHEN ord.driver_id=p1.driver_id THEN ord.succ_push_order_cnt ELSE 0 END)) AS succ_push_order_cnt,--成功推送司机的订单数
     
-            sum(case when ord.is_td_finish > 0 then dtr.driver_onlinerange ELSE 0 END) AS finish_driver_online_dur,
+            sum( nvl(dtr.driver_onlinerange,0) + nvl(ord.td_finish_order_dur,0) + nvl(ord.td_cannel_pick_dur,0)) AS finish_driver_online_dur,
             --完单司机在线时长（秒）
             
             sum(nvl(c1.driver_click_order_cnt,0)) as driver_click_order_cnt,
@@ -168,9 +168,8 @@ dm_oride_driver_base_d_task = HiveOperator(
             (
                 SELECT 
                 driver_id,
-                sum(is_td_finish) as is_td_finish,
                 count(order_id) as succ_push_order_cnt,
-                sum(td_finish_order_dur) as td_finish_order_dur,
+                sum(if(is_td_finish = 1,td_finish_order_dur,0)) as td_finish_order_dur,
                 sum(td_cannel_pick_dur) as td_cannel_pick_dur
                 
                 FROM oride_dw.dwd_oride_order_base_include_test_di
