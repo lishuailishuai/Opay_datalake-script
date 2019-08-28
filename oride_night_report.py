@@ -308,5 +308,4 @@ for table_name in table_list:
         schema='oride_source',
         dag=dag)
 
-    import_table >> send_report
-    add_partitions >> send_report
+    import_table >> add_partitions >> send_report
