@@ -52,8 +52,8 @@ validate_partition_data = PythonOperator(
 )
 
 data_driver_extend_validate_task = HivePartitionSensor(
-    task_id="ods_sqoop_base_data_device_extend_df",
-    table="data_driver_extend",
+    task_id="data_driver_extend_validate_task",
+    table="ods_sqoop_base_data_driver_extend_df",
     partition="dt='{{ds}}'",
     schema="oride_dw",
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
