@@ -78,6 +78,7 @@ insert_oride_order_detail  = HiveOperator (
     schema='dashboard',
     dag=dag)
 
+"""
 def send_order_detail_email(ds, **kwargs):
     cursor = get_hive_cursor()
     query = '''
@@ -122,6 +123,7 @@ order_detail_email = PythonOperator(
     provide_context=True,
     dag=dag
 )
+"""
 
 create_oride_overview = HiveOperator(
     task_id='create_oirde_overview',
@@ -317,6 +319,6 @@ refresh_impala = ImpalaOperator(
     dag=dag
 )
 
-create_oride_order_detail >> insert_oride_order_detail >> order_detail_email >> refresh_impala
+create_oride_order_detail >> insert_oride_order_detail >> refresh_impala
 create_oride_overview >> insert_oride_overview >> refresh_impala
 create_oride_user_behavior >> insert_oride_user_behavior >> refresh_impala
