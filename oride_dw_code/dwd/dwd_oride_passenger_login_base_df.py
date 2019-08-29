@@ -41,7 +41,7 @@ dag = airflow.DAG( 'dwd_oride_passenger_login_base_df',
 sleep_time = BashOperator(
     task_id='sleep_id',
     depends_on_past=False,
-    bash_command='sleep 120',
+    bash_command='sleep 30',
     dag=dag)
 
 ##----------------------------------------- 依赖 ---------------------------------------## 

@@ -41,7 +41,7 @@ dag = airflow.DAG( 'dwm_oride_driver_audit_third_extend_di',
 sleep_time = BashOperator(
     task_id='sleep_id',
     depends_on_past=False,
-    bash_command='sleep 120',
+    bash_command='sleep 30',
     dag=dag)
 
 ##----------------------------------------- 依赖 ---------------------------------------## 
