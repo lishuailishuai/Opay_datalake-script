@@ -23,7 +23,7 @@ args = {
 dag = airflow.DAG(
     'oride_source_sqoop',
     schedule_interval="00 01 * * *",
-    concurrency=5,
+    concurrency=15,
     max_active_runs=1,
     default_args=args)
 

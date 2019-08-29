@@ -31,7 +31,7 @@ args = {
 dag = airflow.DAG(
     'obus_source_sqoop',
     schedule_interval="05 04 * * *",
-    concurrency=5,
+    concurrency=15,
     max_active_runs=1,
     default_args=args
 )
