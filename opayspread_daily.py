@@ -403,7 +403,7 @@ FROM opay_spread.promoter_user as p JOIN
         MAX(r.know_orider) as channel,
         if(length(r.know_orider_extend)=10, concat('0', r.know_orider_extend), r.know_orider_extend) as know_orider_extend,
         count(distinct o.id) as orders
-    FROM oride_db.data_order as o JOIN opay_spread.rider_signups as r 
+    FROM oride_dw.ods_sqoop_base_data_order_df as o JOIN opay_spread.rider_signups as r 
     ON  o.driver_id = r.driver_id 
     WHERE  
         from_unixtime(o.take_time, 'yyyy-MM-dd') = '{ds}' AND 
@@ -420,7 +420,7 @@ SELECT
     r.know_orider as channel,
     r.driver_type,
     count(distinct o.id) as orders
-FROM oride_db.data_order as o JOIN opay_spread.rider_signups as r 
+FROM oride_dw.ods_sqoop_base_data_order_df as o JOIN opay_spread.rider_signups as r 
 ON  o.driver_id = r.driver_id 
 WHERE  
     from_unixtime(o.take_time, 'yyyy-MM-dd') = '{ds}' AND 
@@ -449,7 +449,7 @@ FROM opay_spread.promoter_user as p JOIN
         MAX(r.know_orider) as channel,
         if(length(r.know_orider_extend)=10, concat('0', r.know_orider_extend), r.know_orider_extend) as know_orider_extend,
         count(distinct r.id) as online 
-    FROM opay_spread.rider_signups as r JOIN oride_db.data_driver_extend as d 
+    FROM opay_spread.rider_signups as r JOIN oride_dw.ods_sqoop_base_data_driver_extend_df as d 
     ON r.driver_id = d.id 
     WHERE 
         from_unixtime(d.login_time, 'yyyy-MM-dd') = '{ds}' AND 
@@ -466,7 +466,7 @@ SELECT
     r.know_orider as channel,
     r.driver_type,
     count(distinct r.id) as online 
-FROM opay_spread.rider_signups as r JOIN oride_db.data_driver_extend as d 
+FROM opay_spread.rider_signups as r JOIN oride_dw.ods_sqoop_base_data_driver_extend_df as d 
 ON r.driver_id = d.id 
 WHERE 
     from_unixtime(d.login_time, 'yyyy-MM-dd') = '{ds}' AND 
@@ -495,7 +495,7 @@ FROM opay_spread.promoter_user as p JOIN
         MAX(r.know_orider) as channel,
         if(length(r.know_orider_extend)=10, concat('0', r.know_orider_extend), r.know_orider_extend) as know_orider_extend,
         count(distinct r.id) as bind
-    FROM opay_spread.rider_signups as r JOIN oride_db.data_driver_extend as d 
+    FROM opay_spread.rider_signups as r JOIN oride_dw.ods_sqoop_base_data_driver_extend_df as d 
     ON r.driver_id = d.id 
     WHERE  
         from_unixtime(d.first_bind_time, 'yyyy-MM-dd') = '{ds}' AND 
@@ -512,7 +512,7 @@ SELECT
     r.know_orider as channel,
     r.driver_type,
     count(distinct r.id) as bind
-FROM opay_spread.rider_signups as r JOIN oride_db.data_driver_extend as d 
+FROM opay_spread.rider_signups as r JOIN oride_dw.ods_sqoop_base_data_driver_extend_df as d 
 ON r.driver_id = d.id 
 WHERE  
     from_unixtime(d.first_bind_time, 'yyyy-MM-dd') = '{ds}' AND 
@@ -683,7 +683,7 @@ FROM opay_spread.promoter_user as p JOIN
             arrive_time, 
             from_unixtime(arrive_time, 'yyyy-MM-dd') as daily,
             row_number() over(partition by driver_id order by arrive_time) orders 
-        FROM oride_db.data_order 
+        FROM oride_dw.ods_sqoop_base_data_order_df 
         WHERE status in (4,5) AND dt='{ds}'
         ) t JOIN opay_spread.rider_signups as r 
     ON r.driver_id = t.driver_id 
@@ -709,7 +709,7 @@ FROM
         arrive_time, 
         from_unixtime(arrive_time, 'yyyy-MM-dd') as daily,
         row_number() over(partition by driver_id order by arrive_time) orders 
-    FROM oride_db.data_order 
+    FROM oride_dw.ods_sqoop_base_data_order_df 
     WHERE status in (4,5) AND dt='{ds}'
     ) t JOIN opay_spread.rider_signups as r 
 ON r.driver_id = t.driver_id 
@@ -851,27 +851,27 @@ FROM
         sum(if(b.score is not null, b.score, 0)) as score_sum
 	from
 	(
-		select * from oride_db.data_order
+		select * from oride_dw.ods_sqoop_base_data_order_df
 		where dt = '{ds}'
 		and from_unixtime(create_time, 'yyyy-MM-dd') = '{ds}' 
 	) a
 	left outer join
 	(
-		select * from oride_db.data_driver_comment where dt = '{ds}'
+		select * from oride_dw.ods_sqoop_base_data_driver_comment_df where dt = '{ds}'
 	) b on a.id = b.order_id
 	left outer join
 	(
-		select * from oride_db.data_order_payment where dt = '{ds}' and mode>=0
+		select * from oride_dw.ods_sqoop_base_data_order_payment_df where dt = '{ds}' and mode>=0
 	) c on a.id = c.id
 	group by a.driver_id
 ) TA
 LEFT JOIN 
 (
-    select * from oride_db.data_driver where dt = '{ds}'
+    select * from oride_dw.ods_sqoop_base_data_driver_df where dt = '{ds}'
 ) TB on TA.driver_id = TB.id
 LEFT JOIN 
 (
-    select * from oride_db.data_driver_extend where dt = '{ds}'
+    select * from oride_dw.ods_sqoop_base_data_driver_extend_df where dt = '{ds}'
 ) TC on TA.driver_id = TC.id
 LEFT JOIN 
 (

@@ -65,7 +65,7 @@ dependence_ods_log_oride_order_skyeye_di = UFileSensor(
 dependence_ods_oride_data_order = UFileSensor(
     task_id='dependence_ods_oride_data_order',
     filepath='{hdfs_path_str}/dt={pt}'.format(
-        hdfs_path_str="oride/db/data_order",
+        hdfs_path_str="oride_dw_sqoop/oride_data/data_order",
         pt='{{ ds }}'
     ),
     bucket_name='opay-datalake',
@@ -85,7 +85,7 @@ dependence_oride_global_daily_report = WebHdfsSensor(
 dependence_data_city_conf = UFileSensor(
     task_id='dependence_data_city_conf',
     filepath='{hdfs_path_str}/dt={pt}'.format(
-        hdfs_path_str="oride/db/data_city_conf",
+        hdfs_path_str="oride_dw_sqoop/oride_data/data_city_conf",
         pt='{{ ds }}'
     ),
     bucket_name='opay-datalake',
@@ -188,7 +188,7 @@ insert_result_to_impala = HiveOperator(
                 lateral view posexplode(tag_ids) tags as pos, tag 
                 where dt='{pt}' 
                 ) as t
-            inner join (select * from oride_db.data_order where dt='{pt}') as do  
+            inner join (select * from oride_dw.ods_sqoop_base_data_order_df where dt='{pt}') as do  
             where t.order_id = do.id and 
                 from_unixtime(do.create_time, 'yyyy-MM-dd') = '{pt}'
             group by 
@@ -210,7 +210,7 @@ insert_result_to_impala = HiveOperator(
                 lateral view posexplode(tag_ids) tags as pos, tag 
                 where dt='{pt}' 
                 ) as t
-            inner join (select * from oride_db.data_order where dt='{pt}') as do  
+            inner join (select * from oride_dw.ods_sqoop_base_data_order_df where dt='{pt}') as do  
             where t.order_id = do.id and 
                 from_unixtime(do.create_time, 'yyyy-MM-dd') = '{pt}'
             group by 
@@ -232,7 +232,7 @@ insert_result_to_impala = HiveOperator(
                 lateral view posexplode(tag_ids) tags as pos, tag 
                 where dt='{pt}' 
                 ) as t
-            inner join (select * from oride_db.data_order where dt='{pt}') as do  
+            inner join (select * from oride_dw.ods_sqoop_base_data_order_df where dt='{pt}') as do  
             where t.order_id = do.id and 
                 from_unixtime(do.create_time, 'yyyy-MM-dd') = '{pt}'
             group by 
@@ -290,7 +290,7 @@ refresh_impala_table_other = ImpalaOperator(
     task_id='refresh_impala_table_other',
     hql="""
         REFRESH oride_bi.oride_global_daily_report;
-        REFRESH oride_db.data_city_conf;
+        REFRESH oride_dw.ods_sqoop_base_data_city_conf_df;
         REFRESH oride_bi.oride_global_city_serv_daily_report; 
     """,
     schema='oride_bi',
