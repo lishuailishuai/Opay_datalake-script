@@ -127,7 +127,7 @@ pay_type, -- user auto pay settings(-1: not set 0: manual payment 1: auto paymen
 city_id, -- 注册城市
 LANGUAGE -- 客户端语言
 FROM oride_dw.ods_sqoop_base_data_user_extend_df
-   WHERE dt= '{pt}') t2 ON t1.id=t2.id;
+WHERE dt= '{pt}') t2 ON t1.id=t2.id;
 '''.format(
         pt='{{ds}}',
         now_day='{{macros.ds_add(ds, +1)}}',
