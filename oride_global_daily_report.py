@@ -3473,6 +3473,7 @@ import_opay_event_log >> insert_oride_global_daily_report
 create_oride_global_city_serv_daily_report >> insert_oride_global_city_serv_daily_report
 insert_oride_global_daily_report >> insert_oride_global_city_serv_daily_report
 insert_oride_global_city_serv_daily_report >> send_report
+insert_oride_order_city_daily_report >> send_report
 
 create_oride_anti_fraud_daily_report >> insert_oride_anti_fraud_daily_report
 insert_oride_global_daily_report >> insert_oride_anti_fraud_daily_report
