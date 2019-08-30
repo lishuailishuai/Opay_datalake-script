@@ -178,7 +178,7 @@ ON t1.driver_id=t4.driver_id
 '''.format(
         pt='{{ds}}',
         now_day='{{macros.ds_add(ds, +1)}}',
-        prev_7_day='{{macros.ds_add(ds, -7)}}',
+        prev_6_day='{{macros.ds_add(ds, -6)}}',
         table=table_name
         ),
 schema='oride_dw',
