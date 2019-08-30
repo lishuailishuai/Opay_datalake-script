@@ -79,7 +79,6 @@ SELECT t1.passenger_id, --乘客ID
  t1.last_name, --姓
  t1.promoter_code, --推广员代码
  t1.updated_at, --最后更新时间
- t1.country_code,
  t2.avg_score, -- 平均评分
 t2.total_score, -- 总评分
 t2.score_times, -- 评分次数
@@ -96,6 +95,7 @@ t2.invite_award, --
 t2.pay_type, -- user auto pay settings(-1: not set 0: manual payment 1: auto payment)
 t2.city_id, -- 注册城市
 t2.language, -- 客户端语言
+ t1.country_code,
  '{pt}' AS dt
 FROM
   (SELECT id AS passenger_id, --'乘客ID'
@@ -127,7 +127,7 @@ pay_type, -- user auto pay settings(-1: not set 0: manual payment 1: auto paymen
 city_id, -- 注册城市
 LANGUAGE -- 客户端语言
 FROM oride_dw.ods_sqoop_base_data_user_extend_df
-WHERE dt= '{pt}') t2 ON t1.id=t2.id;
+WHERE dt= '{pt}') t2 ON t1.passenger_id=t2.id;
 '''.format(
         pt='{{ds}}',
         now_day='{{macros.ds_add(ds, +1)}}',
