@@ -292,7 +292,7 @@ income_data AS
     JOIN 
         (SELECT 
             driver_id 
-        FROM oride_dw.dependence_ods_sqoop_base_data_order_df 
+        FROM oride_dw.ods_sqoop_base_data_order_df 
         WHERE dt = '{pt}' AND 
             from_unixtime(create_time, 'yyyy-MM-dd') = '{pt}' AND 
             status IN (4,5)
@@ -316,7 +316,7 @@ reward_data AS
             dt,
             'nal' AS country_code,
             driver_id 
-        FROM oride_dw.dependence_ods_sqoop_base_data_order_df 
+        FROM oride_dw.ods_sqoop_base_data_order_df 
         WHERE dt = '{pt}' AND 
             from_unixtime(create_time, 'yyyy-MM-dd') = '{pt}' AND  
             status IN (4,5)
@@ -363,14 +363,14 @@ driver_range AS
             finish_time,
             cancel_time,
             driver_id
-        FROM oride_dw.dependence_ods_sqoop_base_data_order_df 
+        FROM oride_dw.ods_sqoop_base_data_order_df 
         WHERE dt = '{pt}' AND 
             from_unixtime(create_time, 'yyyy-MM-dd')='{pt}' AND 
             status IN (4,5,6) 
         ) AS do 
     JOIN (SELECT 
             DISTINCT driver_id 
-        FROM oride_dw.dependence_ods_sqoop_base_data_order_df 
+        FROM oride_dw.ods_sqoop_base_data_order_df 
         WHERE dt = '{pt}' AND 
             from_unixtime(create_time, 'yyyy-MM-dd')='{pt}' AND   
             status IN (4,5)
@@ -399,7 +399,7 @@ driver_online AS
         ) AS odt 
     JOIN (SELECT 
             distinct driver_id 
-        FROM oride_dw.dependence_ods_sqoop_base_data_order_df 
+        FROM oride_dw.ods_sqoop_base_data_order_df 
         WHERE dt = '{pt}' AND 
             from_unixtime(create_time, 'yyyy-MM-dd')='{pt}' AND 
             status IN (4,5)
@@ -567,7 +567,7 @@ income_data AS
     FROM 
         (SELECT 
             driver_id 
-        FROM oride_dw.dependence_ods_sqoop_base_data_order_df 
+        FROM oride_dw.ods_sqoop_base_data_order_df 
         WHERE dt = '{pt}' AND 
             from_unixtime(create_time, 'yyyy-MM-dd') = '{pt}' AND 
             status IN (4,5)
@@ -605,7 +605,7 @@ reward_data AS
     FROM 
         (SELECT 
             driver_id 
-        FROM oride_dw.dependence_ods_sqoop_base_data_order_df 
+        FROM oride_dw.ods_sqoop_base_data_order_df 
         WHERE dt = '{pt}' AND 
             from_unixtime(create_time, 'yyyy-MM-dd') = '{pt}' AND  
             status IN (4,5)
@@ -658,14 +658,14 @@ driver_range AS
             finish_time,
             cancel_time,
             driver_id
-        FROM oride_dw.dependence_ods_sqoop_base_data_order_df 
+        FROM oride_dw.ods_sqoop_base_data_order_df 
         WHERE dt = '{pt}' AND 
             from_unixtime(create_time, 'yyyy-MM-dd')='{pt}' AND 
             status IN (4,5,6) 
         ) AS do 
     JOIN (SELECT 
             DISTINCT driver_id 
-        FROM oride_dw.dependence_ods_sqoop_base_data_order_df 
+        FROM oride_dw.ods_sqoop_base_data_order_df 
         WHERE dt = '{pt}' AND 
             from_unixtime(create_time, 'yyyy-MM-dd')='{pt}' AND   
             status IN (4,5)
@@ -699,7 +699,7 @@ driver_online AS
         ) AS odt 
     JOIN (SELECT 
             distinct driver_id 
-        FROM oride_dw.dependence_ods_sqoop_base_data_order_df 
+        FROM oride_dw.ods_sqoop_base_data_order_df 
         WHERE dt = '{pt}' AND 
             from_unixtime(create_time, 'yyyy-MM-dd')='{pt}' AND 
             status IN (4,5)
@@ -877,7 +877,7 @@ income_data AS
     FROM 
         (SELECT 
             driver_id 
-        FROM oride_dw.dependence_ods_sqoop_base_data_order_df 
+        FROM oride_dw.ods_sqoop_base_data_order_df 
         WHERE dt = '{pt}' AND 
             from_unixtime(create_time, 'yyyy-MM-dd') = '{pt}' AND 
             status IN (4,5)
@@ -916,7 +916,7 @@ reward_data AS
     FROM 
         (SELECT 
             driver_id 
-        FROM oride_dw.dependence_ods_sqoop_base_data_order_df 
+        FROM oride_dw.ods_sqoop_base_data_order_df 
         WHERE dt = '{pt}' AND 
             from_unixtime(create_time, 'yyyy-MM-dd') = '{pt}' AND  
             status IN (4,5)
@@ -970,14 +970,14 @@ driver_range AS
             finish_time,
             cancel_time,
             driver_id
-        FROM oride_dw.dependence_ods_sqoop_base_data_order_df 
+        FROM oride_dw.ods_sqoop_base_data_order_df 
         WHERE dt = '{pt}' AND 
             from_unixtime(create_time, 'yyyy-MM-dd')='{pt}' AND 
             status IN (4,5,6) 
         ) AS do 
     JOIN (SELECT 
             DISTINCT driver_id 
-        FROM oride_dw.dependence_ods_sqoop_base_data_order_df 
+        FROM oride_dw.ods_sqoop_base_data_order_df 
         WHERE dt = '{pt}' AND 
             from_unixtime(create_time, 'yyyy-MM-dd')='{pt}' AND   
             status IN (4,5)
@@ -1012,7 +1012,7 @@ driver_online AS
         ) AS odt 
     JOIN (SELECT 
             distinct driver_id 
-        FROM oride_dw.dependence_ods_sqoop_base_data_order_df 
+        FROM oride_dw.ods_sqoop_base_data_order_df 
         WHERE dt = '{pt}' AND 
             from_unixtime(create_time, 'yyyy-MM-dd')='{pt}' AND 
             status IN (4,5)
