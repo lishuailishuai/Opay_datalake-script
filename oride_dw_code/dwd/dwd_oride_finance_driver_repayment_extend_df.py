@@ -132,8 +132,12 @@ SELECT city_id,
        overdue_payment_cnt,
        --违约期数
 
-       date_sub(t1.dt,overdue_payment_cnt) AS last_repayment_time 
+       date_sub(t1.dt,overdue_payment_cnt) AS last_repayment_time, 
        --最后还款时间
+
+       'nal' AS country_code, --国家码字段
+
+        '{pt}' as dt
        
 
 FROM
