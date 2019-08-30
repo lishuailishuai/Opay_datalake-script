@@ -170,7 +170,7 @@ FROM
                 (CASE WHEN balance<0 THEN 1 ELSE 0 END) AS false_id,
                 dt
          FROM oride_dw.ods_sqoop_base_data_driver_balance_extend_df
-         WHERE dt BETWEEN '{prev_7_day}' AND '{pt}') t1) x1
+         WHERE dt BETWEEN '{prev_6_day}' AND '{pt}') t1) x1
    WHERE dt= '{pt}'
      AND false_id=1) t4
 ON t1.driver_id=t4.driver_id
