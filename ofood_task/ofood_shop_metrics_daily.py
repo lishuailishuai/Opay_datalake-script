@@ -352,43 +352,99 @@ create_crm_data = BashOperator(
             
             insert overwrite table ofood_bi.ofood_area_shop_metrics_info partition(dt = '${dt}')
             select 
-            t.bd_id,
-            t.name,
-            t.area_name,
-            s.shop_id,
-            s.title,
-            nvl(count(if(s.is_open = 1,s.shop_id,null)),0) total_number_of_merchants,
-            nvl(count(if(s.is_first_placed_order = 1,s.shop_id,null)),0) total_number_of_new_merchants,
-            nvl(count(if(s.number_of_valid_order > 0,s.shop_id,null)),0) trade_number_of_merchants,
-            nvl(count(if(s.gmv > 0,s.shop_id,null)),0) have_price_number_of_merchants,
-            nvl(count(if(s.is_first_completed_order = 1,s.shop_id,null)),0) number_of_new_merchants,
-            nvl(sum(s.pay_order_num),0) number_of_pay_orders,
-            nvl(sum(s.number_of_new_users),0) number_of_new_users,
-            nvl(sum(s.gmv),0) gmv,
-            nvl(sum(s.amount_price_sum),0) paid_in_amount,
-            nvl(sum(s.cost_price_sum),0) platform_subsidies,
-            nvl(sum(s.amount_and_first_price_sum),0) amount_and_first_price,
-            nvl(sum(s.net_turnover),0) net_turnover,
-            nvl(sum(s.total_number_of_order),0) total_number_of_order,
-            nvl(sum(s.number_of_valid_order),0) number_of_valid_order,
-            nvl(sum(s.before_pay_cancel_num),0) number_of_cancel_order_before_payment,
-            nvl(sum(s.after_pay_cancel_num),0) number_of_cancel_order_after_payment
+            d.bd_id,
+            d.name,
+            d.area_name,
+            d.shop_id,
+            d.title,
+            d.total_number_of_merchants,
+            d.total_number_of_new_merchants,
+            d.trade_number_of_merchants,
+            d.have_price_number_of_merchants,
+            d.number_of_new_merchants,
+            d.number_of_pay_orders,
+            d.number_of_new_users,
+            d.gmv,
+            d.paid_in_amount,
+            d.platform_subsidies,
+            d.amount_and_first_price,
+            d.net_turnover,
+            d.total_number_of_order,
+            d.number_of_valid_order,
+            d.number_of_cancel_order_before_payment,
+            d.number_of_cancel_order_after_payment
             
-            from     
+            from 
             (
                 select 
-                a.dt,
-                a.id bd_id,
-                a.name,
-                b.area_name,
-                b.points
-                from ofood_dw.ods_sqoop_bd_bd_bd_fence_df b 
-                join ofood_dw.ods_sqoop_bd_bd_admin_users_df a on a.dt = '${dt}' and b.uid = a.id and job_id = 4
-                where b.dt = '${dt}'
-            ) t 
-            left join ofood_bi.ofood_order_shop_metrics_report s on s.dt = t.dt 
-            where isInArea(t.points,s.lat/1000000,s.lng/1000000) = 1
-            group by t.dt,t.bd_id,t.name,t.area_name,s.shop_id,s.title
+                d.bd_id,
+                d.name,
+                d.area_id,
+                d.area_name,
+                d.shop_id,
+                d.title,
+                d.total_number_of_merchants,
+                d.total_number_of_new_merchants,
+                d.trade_number_of_merchants,
+                d.have_price_number_of_merchants,
+                d.number_of_new_merchants,
+                d.number_of_pay_orders,
+                d.number_of_new_users,
+                d.gmv,
+                d.paid_in_amount,
+                d.platform_subsidies,
+                d.amount_and_first_price,
+                d.net_turnover,
+                d.total_number_of_order,
+                d.number_of_valid_order,
+                d.number_of_cancel_order_before_payment,
+                d.number_of_cancel_order_after_payment,
+                row_number() over(partition by d.shop_id order by d.area_id) order_by
+                from 
+                (
+                select 
+                t.bd_id,
+                t.name,
+                t.area_id,
+                t.area_name,
+                s.shop_id,
+                s.title,
+                nvl(count(if(s.is_open = 1,s.shop_id,null)),0) total_number_of_merchants,
+                nvl(count(if(s.is_first_placed_order = 1,s.shop_id,null)),0) total_number_of_new_merchants,
+                nvl(count(if(s.number_of_valid_order > 0,s.shop_id,null)),0) trade_number_of_merchants,
+                nvl(count(if(s.gmv > 0,s.shop_id,null)),0) have_price_number_of_merchants,
+                nvl(count(if(s.is_first_completed_order = 1,s.shop_id,null)),0) number_of_new_merchants,
+                nvl(sum(s.pay_order_num),0) number_of_pay_orders,
+                nvl(sum(s.number_of_new_users),0) number_of_new_users,
+                nvl(sum(s.gmv),0) gmv,
+                nvl(sum(s.amount_price_sum),0) paid_in_amount,
+                nvl(sum(s.cost_price_sum),0) platform_subsidies,
+                nvl(sum(s.amount_and_first_price_sum),0) amount_and_first_price,
+                nvl(sum(s.net_turnover),0) net_turnover,
+                nvl(sum(s.total_number_of_order),0) total_number_of_order,
+                nvl(sum(s.number_of_valid_order),0) number_of_valid_order,
+                nvl(sum(s.before_pay_cancel_num),0) number_of_cancel_order_before_payment,
+                nvl(sum(s.after_pay_cancel_num),0) number_of_cancel_order_after_payment
+                
+                from     
+                (
+                    select 
+                    a.dt,
+                    a.id bd_id,
+                    a.name,
+                    b.id area_id,
+                    b.area_name,
+                    b.points
+                    from ofood_dw.ods_sqoop_bd_bd_bd_fence_df b 
+                    join ofood_dw.ods_sqoop_bd_bd_admin_users_df a on a.dt = '${dt}' and b.uid = a.id and job_id = 4
+                    where b.dt = '${dt}'
+                ) t 
+                left join ofood_bi.ofood_order_shop_metrics_report s on s.dt = t.dt 
+                where isInArea(t.points,s.lat/1000000,s.lng/1000000) = 1
+                group by t.dt,t.bd_id,t.name,t.area_id,t.area_name,s.shop_id,s.title
+                ) d 
+            ) d
+            where d.order_by = 1
             ;
 "
         echo ${crm_sql}
