@@ -21,7 +21,7 @@ args = {
 
 dag = airflow.DAG(
     'oride_night_report',
-    schedule_interval="0 23 * * *",
+    schedule_interval="0 22 * * *",
     default_args=args)
 
 table_list = [
@@ -31,9 +31,12 @@ table_list = [
     "data_user_extend",
     "data_driver_extend",
     "data_user_recharge",
+    "data_driver_recharge_records",
+    "data_driver_reward",
 ]
 
-def send_report_email(tomorrow_ds, **kwargs):
+
+def send_report_email(tomorrow_ds, ds, **kwargs):
     sql = '''
         with user_data as (
             SELECT
@@ -125,8 +128,11 @@ def send_report_email(tomorrow_ds, **kwargs):
     logging.info(sql)
     cursor.execute(sql)
     res = cursor.fetchall()
-    if len(res)>0 :
-        [request_users, active_users, new_users, online_pay_users, total_drivers, new_drivers, take_drivers, finish_drivers, request_num,take_num, finish_num, online_pay_orders, total_take_time, total_pickup_time, pickup_num, td_recharge_times, td_recharge_amount, recharge_times, recharge_amount, td_recharge_bonus, recharge_bonus] = list(res[0])
+    if len(res) > 0:
+        [request_users, active_users, new_users, online_pay_users, total_drivers, new_drivers, take_drivers,
+         finish_drivers, request_num, take_num, finish_num, online_pay_orders, total_take_time, total_pickup_time,
+         pickup_num, td_recharge_times, td_recharge_amount, recharge_times, recharge_amount, td_recharge_bonus,
+         recharge_bonus] = list(res[0])
         html_fmt = '''
         <html>
         <head>
@@ -236,9 +242,43 @@ def send_report_email(tomorrow_ds, **kwargs):
                     <td>{recharge_total}</td>
                 </tr>
             </table>
+            
+            
+            
+            <table width="95%" class="table">
+                <caption>
+                    <h2>{dt}</h2>
+                </caption>
+            </table>
+            <table width="95%" class="table">
+                <thead>
+                    <tr>
+                        <th>城市</th>
+                        <th>完单数</th>
+                        <th>gmv</th>
+                        <th>单均应付</th>
+                        <th>单均应付对比昨日</th>
+                        <th>总补贴率</th>
+                        <th>单均补贴</th>
+                        <th>单均补贴对比昨日</th>
+                        <th>b端补贴</th>
+                        <th>b端补贴率</th>
+                        <th>b端单均补贴</th>
+                        <th>c端补贴</th>
+                        <th>c端补贴率</th>
+                        <th>c端单均补贴</th>
+                        <!-- <th>平台抽成</th> -->
+                    </tr>
+                </thead>
+                {rows}
+            </table>
+            
         </body>
         </html>
         '''
+
+        rows = get_city_data(ds, tomorrow_ds)
+
         html = html_fmt.format(
             dt=tomorrow_ds,
             request_users=request_users,
@@ -249,28 +289,32 @@ def send_report_email(tomorrow_ds, **kwargs):
             new_drivers=new_drivers,
             take_drivers=take_drivers,
             finish_drivers=finish_drivers,
-            finish_vs_driver=round(finish_num/finish_drivers, 2),
+            finish_vs_driver=round(finish_num / finish_drivers, 2),
             request_num=request_num,
             take_num=take_num,
             finish_num=finish_num,
-            take_ratio=round(take_num/request_num*100,2),
-            finish_ratio=round(finish_num/request_num*100,2),
+            take_ratio=round(take_num / request_num * 100, 2),
+            finish_ratio=round(finish_num / request_num * 100, 2),
             online_pay_orders=online_pay_orders,
-            take_time_avg=round(total_take_time/take_num),
-            pickup_time_avg=round(total_pickup_time/pickup_num),
+            take_time_avg=round(total_take_time / take_num),
+            pickup_time_avg=round(total_pickup_time / pickup_num),
             td_recharge_times=td_recharge_times,
             td_recharge_amount=td_recharge_amount,
             recharge_times=recharge_times,
             recharge_amount=recharge_amount,
-            td_recharge_total=td_recharge_amount+td_recharge_bonus,
-            recharge_total=recharge_amount+recharge_bonus
+            td_recharge_total=td_recharge_amount + td_recharge_bonus,
+            recharge_total=recharge_amount + recharge_bonus,
+            rows=rows
         )
         # send mail
         email_subject = 'oride晚十一点数据快报_{}'.format(tomorrow_ds)
-        send_email(Variable.get("oride_night_report_receivers").split(), email_subject, html, mime_charset='utf-8')
-        #send_email(['zhenqian.zhang@opay-inc.com'], email_subject, html, mime_charset='utf-8')
+        send_email(
+            Variable.get("oride_night_report_receivers").split()
+            , email_subject, html, mime_charset='utf-8')
+        # send_email(['zhenqian.zhang@opay-inc.com'], email_subject, html, mime_charset='utf-8')
         cursor.close()
         return
+
 
 send_report = PythonOperator(
     task_id='send_report',
@@ -278,6 +322,242 @@ send_report = PythonOperator(
     provide_context=True,
     dag=dag
 )
+
+insert_city_metrics = HiveOperator(
+    task_id='insert_city_metrics',
+    hql=''' 
+    
+        SET hive.exec.parallel=TRUE;
+        SET hive.exec.dynamic.partition.mode=nonstrict;
+        
+        insert overwrite table oride_bi.oride_night_city_metrics_report partition (dt)
+        select 
+        o.city_id,
+        count(if(o.status in (4,5),o.id,null)) as finish_order_cnt,
+        sum(if(o.status in (4,5),p.price,0)) as gmv,
+        
+        sum(if(o.status in (4,5) ,nvl(r.amount,0) + nvl(d.amount,0),0)) as b_subsidy,
+        sum(if(o.status in (4,5),p.price - p.amount,0)) as c_subsidy,
+        from_unixtime(o.create_time,'yyyy-MM-dd') dt
+        
+        -- gmv ods_binlog_data_order_payment_hi price
+        --B端 ods_binlog_data_driver_reward_hi ods_binlog_data_driver_recharge_records_hi amount
+        --C端 pay_price - pay_amount
+        
+        from 
+        (
+            select
+            *
+            from 
+            oride_db.data_order 
+            where dt = '{{ tomorrow_ds }}'
+            and from_unixtime(create_time,'yyyy-MM-dd') = '{{ tomorrow_ds }}'
+        ) o 
+        left join 
+        (   
+            select 
+            order_id,
+            amount
+            from 
+            oride_db.data_driver_recharge_records
+            where dt = '{{ tomorrow_ds }}'
+            and amount>0
+        ) r on o.id = r.order_id
+        left join 
+        (
+            select 
+            order_id,
+            amount
+            from 
+            oride_db.data_driver_reward
+            where dt = '{{ tomorrow_ds }}'
+        ) d on o.id = d.order_id
+        left join 
+        (
+            select 
+            id,
+            price,
+            amount
+            from 
+            oride_db.data_order_payment
+            where dt = '{{ tomorrow_ds }}'
+        ) p on o.id = p.id
+        
+        group by 
+        from_unixtime(o.create_time,'yyyy-MM-dd'),o.city_id
+        ;
+
+        ''',
+    schema='oride_bi',
+    dag=dag)
+
+
+def get_city_data(yesterday, day):
+    sql = '''
+        
+        select 
+            cur.dt,
+            'All',
+            sum(cur.finish_order_cnt), --完单数
+            sum(cur.gmv), --gmv
+            round(nvl(sum(cur.gmv)/sum(cur.finish_order_cnt),0),1) as price_avg, --单均应付
+            concat(cast(round(nvl((sum(cur.gmv)/sum(cur.finish_order_cnt)) * 100/
+            (sum(yesterday.gmv)/sum(yesterday.finish_order_cnt)),0),1) as string),'%') as price_avg_compare, --单均应付对比昨日
+            concat(cast(round(nvl((sum(cur.b_subsidy + cur.c_subsidy)) * 100 / sum(cur.gmv),0),1) as string),'%') as subsidy_rate , --总补贴率
+            round(nvl((sum(yesterday.b_subsidy + yesterday.c_subsidy))  / sum(yesterday.finish_order_cnt),0),1) as subsidy_avg, --单均补贴
+            concat(cast(round(nvl(((sum(cur.b_subsidy + cur.c_subsidy))  / sum(cur.finish_order_cnt)) * 100 /
+            ((sum(yesterday.b_subsidy + yesterday.c_subsidy))  / sum(yesterday.finish_order_cnt)),0),1) as string),'%') as subsidy_avg_compare, -- 单均补贴对比昨日
+            
+            sum(cur.b_subsidy) as b_subsidy, --b端补贴
+            concat(cast(round(nvl(sum(cur.b_subsidy) * 100/ sum(cur.gmv),0),1) as string),'%') as b_subsidy_rate, --b端补贴率
+            round(nvl(sum(cur.b_subsidy) / sum(cur.finish_order_cnt),0),1) as b_subsidy_avg, --b端单均补贴
+            
+            sum(cur.c_subsidy) as c_subsidy, --c端补贴
+            concat(cast(round(nvl(sum(cur.c_subsidy) * 100 / sum(cur.gmv),0),1) as string),'%') as c_subsidy_rate , --c端补贴率
+            round(nvl(sum(cur.c_subsidy) / sum(cur.finish_order_cnt),0),1) as c_subsidy_avg, --c端单均补贴
+            
+            round(sum(cur.gmv) * 0.05,1) as platform_money
+        from 
+        
+        (    
+            select 
+            dt,
+            city_id,
+            finish_order_cnt,
+            gmv,
+            b_subsidy,
+            c_subsidy 
+            from 
+            oride_bi.oride_night_city_metrics_report
+            where dt = '{day}'
+        ) cur
+        left join (
+            select 
+            city_id,
+            finish_order_cnt,
+            gmv,
+            b_subsidy,
+            c_subsidy 
+            from 
+            oride_bi.oride_night_city_metrics_report
+            where dt = '{yesterday}'
+        ) yesterday on cur.city_id = yesterday.city_id
+        group by cur.dt
+        union all 
+        select 
+            cur.dt,
+            c.name,
+            sum(cur.finish_order_cnt), --完单数
+            sum(cur.gmv), --gmv
+            round(nvl(sum(cur.gmv)/sum(cur.finish_order_cnt),0),1) as price_avg, --单均应付
+            concat(cast(round(nvl((sum(cur.gmv)/sum(cur.finish_order_cnt)) * 100/
+            (sum(yesterday.gmv)/sum(yesterday.finish_order_cnt)),0),1) as string),'%') as price_avg_compare, --单均应付对比昨日
+            concat(cast(round(nvl((sum(cur.b_subsidy + cur.c_subsidy)) * 100 / sum(cur.gmv),0),1) as string),'%') as subsidy_rate , --总补贴率
+            round(nvl((sum(yesterday.b_subsidy + yesterday.c_subsidy))  / sum(yesterday.finish_order_cnt),0),1) as subsidy_avg, --单均补贴
+            concat(cast(round(nvl(((sum(cur.b_subsidy + cur.c_subsidy))  / sum(cur.finish_order_cnt)) * 100 /
+            ((sum(yesterday.b_subsidy + yesterday.c_subsidy))  / sum(yesterday.finish_order_cnt)),0),1) as string),'%') as subsidy_avg_compare, -- 单均补贴对比昨日
+            
+            sum(cur.b_subsidy) as b_subsidy, --b端补贴
+            concat(cast(round(nvl(sum(cur.b_subsidy) * 100/ sum(cur.gmv),0),1) as string),'%') as b_subsidy_rate, --b端补贴率
+            round(nvl(sum(cur.b_subsidy) / sum(cur.finish_order_cnt),0),1) as b_subsidy_avg, --b端单均补贴
+            
+            sum(cur.c_subsidy) as c_subsidy, --c端补贴
+            concat(cast(round(nvl(sum(cur.c_subsidy) * 100 / sum(cur.gmv),0),1) as string),'%') as c_subsidy_rate , --c端补贴率
+            round(nvl(sum(cur.c_subsidy) / sum(cur.finish_order_cnt),0),1) as c_subsidy_avg, --c端单均补贴
+            
+            round(sum(cur.gmv) * 0.05,1) as platform_money
+        
+        from 
+        
+        (    
+            select 
+            dt,
+            city_id,
+            finish_order_cnt,
+            gmv,
+            b_subsidy,
+            c_subsidy 
+            from 
+            oride_bi.oride_night_city_metrics_report
+            where dt = '{day}'
+        ) cur
+        join (
+            select 
+            id,
+            name
+            from 
+            oride_db.data_city_conf 
+            where dt = '{yesterday}'
+            and id != 999001
+        ) c on c.id = cur.city_id
+        left join (
+            select 
+            city_id,
+            finish_order_cnt,
+            gmv,
+            b_subsidy,
+            c_subsidy 
+            from 
+            oride_bi.oride_night_city_metrics_report
+            where dt = '{yesterday}'
+        ) yesterday on cur.city_id = yesterday.city_id
+        group by cur.dt,c.name
+    
+    '''.format(yesterday=yesterday, day=day)
+
+    cursor = get_hive_cursor()
+    logging.info(sql)
+    cursor.execute(sql)
+    res = cursor.fetchall()
+
+    row_html = ''
+    if len(res) > 0:
+        # [
+        #     finish_order_cnt,
+        #     gmv,
+        #     price_avg,
+        #     price_avg_compare,
+        #     subsidy_rate,
+        #     subsidy_avg,
+        #     subsidy_avg_compare,
+        #     b_subsidy,
+        #     b_subsidy_rate,
+        #     b_subsidy_avg,
+        #     c_subsidy,
+        #     c_subsidy_rate,
+        #     c_subsidy_avg,
+        #     platform_money
+        #
+        # ] = list(res[0])
+
+        tr_fmt = '''
+               <tr>{row}</tr>
+            '''
+        row_fmt = '''
+                <!--{}-->
+                <td>{}</td>
+                <td>{}</td>
+                <td>{}</td>
+                <td>{}</td>
+                <td>{}</td>
+                <td>{}</td>
+                <td>{}</td>
+                <td>{}</td>
+                <td>{}</td>
+                <td>{}</td>
+                <td>{}</td>
+                <td>{}</td>
+                <td>{}</td>
+                <td>{}</td>
+                <!--<td>{}</td>-->
+                
+            '''
+
+        for data in res:
+            row = row_fmt.format(*list(data))
+            row_html += tr_fmt.format(row=row)
+        return row_html
+
 
 host, port, schema, login, password = get_db_conf('sqoop_db')
 for table_name in table_list:
@@ -297,7 +577,7 @@ for table_name in table_list:
             --hive-delims-replacement " " \
             --delete-target-dir \
             --compression-codec=snappy
-        '''.format(host=host, port=port, schema=schema, username=login, password=password,table=table_name),
+        '''.format(host=host, port=port, schema=schema, username=login, password=password, table=table_name),
         dag=dag,
     )
     add_partitions = HiveOperator(
@@ -305,7 +585,7 @@ for table_name in table_list:
         hql='''
             ALTER TABLE oride_db.{table} ADD IF NOT EXISTS PARTITION (dt = '{{{{ tomorrow_ds }}}}')
         '''.format(table=table_name),
-        schema='oride_source',
+        schema='oride_db',
         dag=dag)
 
-    import_table >> add_partitions >> send_report
+    import_table >> add_partitions >> insert_city_metrics >> send_report
