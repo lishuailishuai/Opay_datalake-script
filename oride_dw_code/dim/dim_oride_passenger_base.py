@@ -84,8 +84,8 @@ t2.total_score, -- 总评分
 t2.score_times, -- 评分次数
 t2.bonus, -- 奖励金
 t2.balance, -- 余额
-t2.register_time, -- 注册时间
-t2.login_time, -- 最后登陆时间
+from_unixtime(t2.register_time,'yyyy-MM-dd hh:mm:ss') as register_time, -- 注册时间
+from_unixtime(t2.login_time,'yyyy-MM-dd hh:mm:ss') as login_time, -- 最后登陆时间
 t2.inviter_role, --
 t2.inviter_id, --
 t2.invite_num, --
