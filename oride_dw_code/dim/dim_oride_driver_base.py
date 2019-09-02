@@ -68,6 +68,18 @@ ods_sqoop_base_data_driver_extend_df_prev_day_tesk=HivePartitionSensor(
       dag=dag
     )
 
+dim_oride_city_prev_day_tesk = UFileSensor(
+    task_id='dim_oride_city_prev_day_tesk',
+    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="oride/oride_dw/dim_oride_city/country_code=nal",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
+
 
 ##----------------------------------------- 变量 ---------------------------------------## 
 
@@ -86,7 +98,7 @@ dim_oride_driver_base_task = HiveOperator(
 INSERT overwrite TABLE oride_dw.{table} partition(country_code,dt)
 
 SELECT dri.driver_id,
-       city_id,
+       ext.city_id,
        --所属城市ID
 
        phone_number,
@@ -116,7 +128,7 @@ SELECT dri.driver_id,
        country,
        --国家
 
-       city_name,
+       cit.city_name,
        --城市名称
 
        black,
@@ -249,7 +261,9 @@ LEFT OUTER JOIN
 FROM oride_dw.ods_sqoop_base_data_driver_extend_df
    WHERE substring(updated_at,1,13)<='{now_day}T00' 
    and dt = '{pt}') ext ON dri.driver_id=ext.driver_id
-
+LEFT OUTER JOIN
+(selct * from oride_dw.dim_oride_city where dt = '{pt}') cit
+ON cit.city_id=ext.city_id
 '''.format(
         pt='{{ds}}',
         now_day='{{macros.ds_add(ds, +1)}}',
@@ -316,4 +330,4 @@ touchz_data_success = BashOperator(
     dag=dag)
 
 
-ods_sqoop_base_data_driver_df_prev_day_tesk>>ods_sqoop_base_data_driver_extend_df_prev_day_tesk>>sleep_time>>dim_oride_driver_base_task>>task_check_key_data>>touchz_data_success
+ods_sqoop_base_data_driver_df_prev_day_tesk>>ods_sqoop_base_data_driver_extend_df_prev_day_tesk>>dim_oride_city_prev_day_tesk>>sleep_time>>dim_oride_driver_base_task>>task_check_key_data>>touchz_data_success
