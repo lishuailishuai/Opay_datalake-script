@@ -92,17 +92,17 @@ SELECT t1.id AS order_id, --订单号
  t1.reward,
  t1.driver_id,
  t1.plate_num,
- t1.take_time, --接单（应答）时间
-t1.wait_time, --到达接送点时间
-t1.pickup_time, --接到乘客时间
-t1.arrive_time, --到达终点时间
-t1.finish_time, --订单（支付）完成时间
+ from_unixtime(t1.take_time,'yyyy-MM-dd hh:mm:ss') as take_time, --接单（应答）时间
+from_unixtime(t1.wait_time,'yyyy-MM-dd hh:mm:ss') as wait_time, --到达接送点时间
+from_unixtime(t1.pickup_time,'yyyy-MM-dd hh:mm:ss') as pickup_time, --接到乘客时间
+from_unixtime(t1.arrive_time,'yyyy-MM-dd hh:mm:ss') as arrive_time, --到达终点时间
+from_unixtime(t1.finish_time,'yyyy-MM-dd hh:mm:ss') as finish_time, --订单（支付）完成时间
 t1.cancel_role, --取消人角色(1: 用户, 2: 司机, 3:系统 4:Admin)
-t1.cancel_time, --取消时间
+from_unixtime(t1.cancel_time,'yyyy-MM-dd hh:mm:ss') as cancel_time, --取消时间
 t1.cancel_type, --取消原因类型
 t1.cancel_reason,
 t1.status, --订单状态 (0: wait assign, 1: pick up passenger, 2: wait passenger, 3: send passenger, 4: arrive destination, 5: finished, 6: cancel)
-t1.create_time, --创建时间
+from_unixtime(t1.create_time,'yyyy-MM-dd hh:mm:ss') as create_time, --创建时间
 t1.fraud, ----是否欺诈(0否1是)
 t1.driver_serv_type, -- 司机服务类型(1: Direct 2:Street )
 t1.refund_before_pay,
