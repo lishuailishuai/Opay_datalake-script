@@ -31,7 +31,7 @@ dag = airflow.DAG(
 
 
 def data_monitor(**op_kwargs):
-    time.sleep(120)
+    time.sleep(180)
     prev_timepoint = math.floor(int(time.time())/600)*600 - 600
     prev_timestr = time.strftime('%Y-%m-%d %H:%M:00', time.localtime(prev_timepoint))
     bidbconn = get_db_conn('mysql_bi')

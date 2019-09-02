@@ -86,6 +86,7 @@ table_list = [
     ("oride_data", "data_user_blacklist", "sqoop_db", "base",1),
     ("oride_data", "data_driver_blacklist", "sqoop_db", "base",1),
     ("oride_data", "data_driver_repayment", "sqoop_db", "base", 1),
+    ("oride_data", "data_trip", "sqoop_db", "base", 1),
 
     ("bi", "weather_per_10min", "mysql_bi", "base",3),
     # 协会数据
