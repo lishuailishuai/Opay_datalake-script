@@ -108,7 +108,7 @@ SELECT base.order_id,
        --所属城市(-999 无效数据)
 
        product_id,
-       --订单车辆类型(0: 专快混合 1:driect[专车] 2: street[快车] 99:招手停)
+       --订单车辆类型(0: 专快混合 1:driect[专车] 2: street[快车] 3:Otrike 99:招手停)
 
        passenger_id,
        --乘客 ID
@@ -201,7 +201,7 @@ SELECT base.order_id,
        --是否欺诈(0否1是)
 
        driver_serv_type,
-       --司机服务类型(1: Direct 2:Street )
+       --司机服务类型(1: Direct 2:Street 3:Otrike)
 
        refund_before_pay,
        --支付前资金调整
@@ -350,6 +350,9 @@ SELECT base.order_id,
         END) AS td_finish_order_dur,
        --当天完成做单时长（分钟）
 
+       trip_id, --'行程 ID'
+       wait_carpool,--'是否在等在拼车',
+
        country_code,
 
        '{pt}' AS dt
@@ -476,6 +479,9 @@ FROM
 
           part_hour,
           --小时分区时间(yyyy-mm-dd HH)
+
+          trip_id, --'行程 ID'
+          wait_carpool,--'是否在等在拼车',
 
           country_code
    FROM
@@ -613,6 +619,9 @@ FROM
 
              'nal' AS country_code,
              --国家码字段
+
+             trip_id, --'行程 ID'
+             wait_carpool,--'是否在等在拼车',
 
              row_number() OVER(partition BY id
                                ORDER BY updated_at desc,pos DESC) AS rn1
