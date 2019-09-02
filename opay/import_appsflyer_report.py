@@ -86,8 +86,8 @@ import_opay_performance_log = PythonOperator(
 add_dw_partitions = HiveOperator(
     task_id='add_dw_partitions',
     hql="""
-            ALTER TABLE appsflyer_opay_performance_log_di ADD IF NOT EXISTS PARTITION (dt = '{{ ds }}');
-            ALTER TABLE appsflyer_opay_install_log_di ADD IF NOT EXISTS PARTITION (dt = '{{ ds }}');
+            ALTER TABLE log_appsflyer_performance_di ADD IF NOT EXISTS PARTITION (dt = '{{ ds }}');
+            ALTER TABLE log_appsflyer_install_di ADD IF NOT EXISTS PARTITION (dt = '{{ ds }}');
 
         """,
     schema='opay_dw',
