@@ -158,8 +158,8 @@ SELECT dri.driver_id,
        block,
        --后台管理司机接单状态(0: 允许 1:不允许)
 
-       product_id,
-       --1 专车 2 快车
+       ext.product_id,
+       --1 专车 2 快车 3 Otrike
 
        local_gov_ids,
        --行会ID,json
@@ -262,7 +262,7 @@ FROM oride_dw.ods_sqoop_base_data_driver_extend_df
    WHERE substring(updated_at,1,13)<='{now_day}T00' 
    and dt = '{pt}') ext ON dri.driver_id=ext.driver_id
 LEFT OUTER JOIN
-(selct * from oride_dw.dim_oride_city where dt = '{pt}') cit
+(select * from oride_dw.dim_oride_city where dt = '{pt}') cit
 ON cit.city_id=ext.city_id
 '''.format(
         pt='{{ds}}',
