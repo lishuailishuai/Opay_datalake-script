@@ -105,7 +105,7 @@ create_dwd_table_task = HiveOperator(
 
 # 清洗数据
 ods_sqoop_base_data_trip_df_task = HiveOperator(
-    task_id='cleaning_data_to_dwd_task',
+    task_id='ods_sqoop_base_data_trip_df_task',
     hql='''
         SET hive.exec.parallel=true;
         SET hive.exec.dynamic.partition=true;
