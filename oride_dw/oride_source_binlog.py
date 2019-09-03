@@ -5,6 +5,8 @@ from airflow.hooks.hive_hooks import HiveCliHook,HiveServer2Hook
 from airflow.models import Variable
 from airflow.operators.python_operator import PythonOperator
 from airflow.sensors.s3_prefix_sensor import S3PrefixSensor
+from airflow.hooks.mysql_hook import MySqlHook
+
 import logging
 
 args = {
@@ -29,25 +31,65 @@ def run_insert_ods(ds, execution_date, **kwargs):
         DESCRIBE oride_dw.ods_binlog_{table}_hi
     '''.format(table=kwargs["params"]["table"])
 
-    print(col_sql)
     hive2_conn=HiveServer2Hook().get_conn()
     cursor = hive2_conn.cursor()
+    logging.info('Executing: %s', col_sql)
     cursor.execute(col_sql)
-    #print(cursor.fetchall())
-    column_rows=[]
+    hive_table_columns=[]
     for data in cursor.fetchall():
-        if data[0]=='op' or data[0]=='ts_ms':
-            column_rows.append(data[0])
-        elif data[0]=='gtid':
-            column_rows.append("get_json_object(source, '$.gtid')")
-        elif data[0]=='pos':
-            column_rows.append("get_json_object(source, '$.pos')")
-        elif data[0]=='dt':
-            break
-        else:
-            column_rows.append("get_json_object(after, '$.{}')".format(data[0]))
+        if data[0]=='dt':
+            break;
+        if data[0] not in ['op', 'ts_ms', 'gtid', 'pos']:
+            hive_table_columns.append(data[0])
+    cursor.close()
 
-    print(column_rows)
+    # get table column
+    column_sql='''
+        SELECT
+            COLUMN_NAME,
+            DATA_TYPE,
+            NUMERIC_PRECISION,
+            NUMERIC_SCALE,COLUMN_COMMENT
+        FROM
+            information_schema.columns
+        WHERE
+            table_schema='{db_name}' and table_name='{table_name}'
+    '''.format(db_name='oride_data', table_name=kwargs["params"]["table"])
+    mysql_hook=MySqlHook('sqoop_db')
+    mysql_conn = mysql_hook.get_conn()
+    mysql_cursor = mysql_conn.cursor()
+    mysql_cursor.execute(column_sql)
+    results = mysql_cursor.fetchall()
+    add_columns=[]
+    for result in results:
+        if result[1]=='timestamp' or result[1]=='varchar' or result[1]=='char' or result[1]=='text':
+            data_type='string'
+        elif result[1]=='decimal':
+            data_type=result[1]+"("+str(result[2]) + "," + str(result[3])+")"
+        else:
+            data_type=result[1]
+        if result[0] not in hive_table_columns:
+            add_columns.append("`%s` %s comment '%s'" % (result[0], data_type, result[4]))
+            hive_table_columns.append(result[0])
+    mysql_conn.close()
+    hive_hook = HiveCliHook()
+    if len(add_columns)>0:
+        add_columns_sql='''
+            ALTER TABLE oride_dw.`ods_binlog_{table}_hi` add columns ({columns})
+
+        '''.format(table=kwargs["params"]["table"], columns=",".join(add_columns))
+        logging.info('Executing: %s', add_columns_sql)
+        hive_hook.run_cli(add_columns_sql)
+    column_rows=[
+        'op',
+        'ts_ms',
+        "get_json_object(source, '$.gtid')",
+        "get_json_object(source, '$.pos')"
+
+    ]
+    for col_name in hive_table_columns:
+        column_rows.append("get_json_object(after, '$.{}')".format(col_name))
+
     sql='''
         INSERT OVERWRITE TABLE oride_dw.`ods_binlog_{table}_hi` partition(dt='{ds}', hour='{hour}')
         SELECT
@@ -57,7 +99,6 @@ def run_insert_ods(ds, execution_date, **kwargs):
         WHERE
             dt='{ds}' AND hour='{hour}'
     '''
-    hive_hook = HiveCliHook()
     run_sql=sql.format(table=kwargs["params"]["table"],ds=ds,hour=execution_date.strftime("%H"), columns=",\n".join(column_rows))
     logging.info('Executing: %s', run_sql)
     hive_hook.run_cli(run_sql)
