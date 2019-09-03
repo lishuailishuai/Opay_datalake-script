@@ -168,7 +168,7 @@ SELECT product_id,
             sum(nvl(ord.td_billing_dur,0)) as driver_billing_dur,
             --司机订单计费时长
             sum(nvl(ord.driver_finish_ord_num,0)) as driver_finish_ord_num
-            --司机完成订单数
+            --司机当日完成订单数
     
        FROM
             (
