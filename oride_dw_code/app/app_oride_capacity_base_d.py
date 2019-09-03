@@ -269,15 +269,14 @@ app_oride_capacity_base_d_task = HiveOperator(
     
     nvl(ord.country_code,-10000) as country_code,
     
-    cast(ord.dt as string)  as dt
+    '{pt}'  as dt
     
     from 
     (
         select 
         nvl(country_code,-10000) as country_code,
         nvl(city_id,-10000) as city_id,
-        dt as dt,
-        product_id,
+        nvl(product_id,-10000) as product_id,
         sum(succ_broadcast_dis) as succ_broadcast_dis,
         sum(succ_push_all_times_cnt) as succ_push_all_times_cnt,
         sum(finish_order_pick_up_dis) as finish_order_pick_up_dis,
@@ -303,7 +302,7 @@ app_oride_capacity_base_d_task = HiveOperator(
         oride_dw.dm_oride_order_base_d
         where 
         dt = '{pt}'
-        group by country_code,city_id,dt,product_id
+        group by country_code,city_id,product_id
         with cube
     ) ord 
     left join 
@@ -311,7 +310,6 @@ app_oride_capacity_base_d_task = HiveOperator(
         select 
         country_code,
         city_id,
-        dt,
         product_id,
         online_driver_num,
         driver_accept_take_num,
@@ -322,14 +320,13 @@ app_oride_capacity_base_d_task = HiveOperator(
     
         from oride_dw.dm_oride_driver_base_cube_d
         where dt = '{pt}'
-    )  odc on ord.country_code = odc.country_code  and ord.city_id = odc.city_id and ord.product_id = odc.product_id and ord.dt = odc.dt
+    )  odc on ord.country_code = odc.country_code  and ord.city_id = odc.city_id and ord.product_id = odc.product_id
     left join 
     (
         select 
         nvl(country_code,-10000) as country_code,
         nvl(city_id,-10000) as city_id,
-        dt ,
-        product_id,
+        nvl(product_id,-10000) as product_id,
         sum(driver_finish_order_dur) as driver_finish_order_dur,
         sum(driver_cannel_pick_dur) as driver_cannel_pick_dur,
         sum(driver_free_dur) as  driver_free_dur,
@@ -340,9 +337,9 @@ app_oride_capacity_base_d_task = HiveOperator(
         sum(driver_billing_dur) as driver_billing_dur
         from oride_dw.dm_oride_driver_base_d
         where dt = '{pt}'
-        group by country_code,city_id,dt,product_id
+        group by country_code,city_id,product_id
         with cube
-    )  odb on ord.country_code = odb.country_code  and ord.city_id = odb.city_id and ord.product_id = odb.product_id and ord.dt = odb.dt
+    )  odb on ord.country_code = odb.country_code  and ord.city_id = odb.city_id and ord.product_id = odb.product_id
     ;
 
 '''.format(
