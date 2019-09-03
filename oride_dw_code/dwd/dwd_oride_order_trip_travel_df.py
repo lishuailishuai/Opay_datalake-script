@@ -49,7 +49,6 @@ sleep_time = BashOperator(
 )
 
 hive_ods_table = 'ods_sqoop_base_data_trip_df'
-hive_ods_db = 'oride_dw'
 """
 /------------------------------- 依赖数据源 --------------------------------/
 """
@@ -57,7 +56,7 @@ dependence_ods_sqoop_base_data_trip_df = HivePartitionSensor(
     task_id='dependence_ods_sqoop_base_data_trip_df',
     table=hive_ods_table,
     partition="dt='{{ds}}'",
-    schema=hive_ods_db,
+    schema='oride_dw',
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
@@ -65,13 +64,13 @@ dependence_ods_sqoop_base_data_trip_df = HivePartitionSensor(
 /---------------------------------- end ----------------------------------/
 """
 
-hive_dwd_table = 'oride_dw.dwd_oride_order_trip_travel_df'
+hive_dwd_table = 'dwd_oride_order_trip_travel_df'
 
 # 创建dwd表
 create_dwd_table_task = HiveOperator(
     task_id='create_dwd_table_task',
     hql='''
-        CREATE EXTERNAL TABLE IF NOT EXISTS {table} (
+        CREATE EXTERNAL TABLE IF NOT EXISTS oride_dw.{table} (
             travel_id           bigint          comment '行程ID',
             driver_id           bigint          comment '司机ID',
             city_id             bigint          comment '所属城市',
@@ -111,7 +110,7 @@ ods_sqoop_base_data_trip_df_task = HiveOperator(
         SET hive.exec.parallel=true;
         SET hive.exec.dynamic.partition=true;
         SET hive.exec.dynamic.partition.mode=nonstrict;
-        INSERT OVERWRITE TABLE {table} PARTITION(country_code, dt) 
+        INSERT OVERWRITE TABLE oride_dw.{table} PARTITION(country_code, dt) 
         SELECT 
             NVL(id, 0) as travel_id,
             NVL(driver_id, 0) as driver_id,
@@ -143,7 +142,7 @@ ods_sqoop_base_data_trip_df_task = HiveOperator(
             LATERAL VIEW posexplode(orders) d AS pos, order_id 
     '''.format(
         table=hive_dwd_table,
-        ods_db=hive_ods_db,
+        ods_db='oride_dw',
         ods_table=hive_ods_table,
         pt='{{ ds }}'
     ),
