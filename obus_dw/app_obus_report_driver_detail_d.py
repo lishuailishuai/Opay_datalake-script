@@ -162,9 +162,9 @@ def get_data_from_impala(**op_kwargs):
                 driver_data.cycle_id,
                 nvl(driver_data.cycle_name, ''),
                 driver_data.number_of_seats,
-                nvl(work_data.work_dur, 0),
-                nvl(order_data.orders, 0),
-                nvl(order_data.mtd_gmv_today, 0)
+                IF(work_data.work_dur IS NULL, 0, work_data.work_dur),
+                IF(order_data.orders IS NULL, 0, order_data.orders),
+                IF(order_data.mtd_gmv_today IS NULL, 0, order_data.mtd_gmv_today)
             from driver_data
             left join work_data on driver_data.dt=work_data.dt and 
                                     driver_data.driver_id=work_data.driver_id 

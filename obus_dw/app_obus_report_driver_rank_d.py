@@ -226,12 +226,12 @@ def get_data_from_impala(**op_kwargs):
                 nvl(dc.name, ''),
                 driver_data.id,
                 driver_data.real_name,
-                nvl(work_data.work_dur, 0),
-                nvl(driver_cycle_data.cycle_cnt, 0),
+                IF(work_data.work_dur IS NULL, 0, work_data.work_dur),
+                IF(driver_cycle_data.cycle_cnt IS NULL, 0, driver_cycle_data.cycle_cnt),
                 round(if(driver_cycle_data.cycle_cnt>0, driver_time.driver_time/driver_cycle_data.cycle_cnt, 0), 2),
-                nvl(income_data.driver_amount, 0) as driver_amount,
-                nvl(income_data.obus_pay_driver_amount, 0),
-                nvl(income_data.tickets_pay_driver_amount, 0)
+                IF(income_data.driver_amount IS NULL, 0, income_data.driver_amount) as driver_amount,
+                IF(income_data.obus_pay_driver_amount IS NULL, 0, income_data.obus_pay_driver_amount),
+                IF(income_data.tickets_pay_driver_amount IS NULL, 0, income_data.tickets_pay_driver_amount)
             from driver_data 
             left join work_data on driver_data.dt=work_data.dt and 
                                     driver_data.city_id=work_data.city_id and 

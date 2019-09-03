@@ -382,18 +382,18 @@ def get_data_from_impala(**op_kwargs):
             cycle_data.total_drivers,
             cycle_data.serv_drivers,
             cycle_data.no_serv_drivers,
-            nvl(order_data.line_orders, 0),
-            nvl(order_data.line_finished_orders, 0),
-            nvl(order_data.line_gmv, 0),
-            nvl(station_data.total_stations, 0),
-            nvl(users_data.users, 0),
-            nvl(app_users_data.obusapp_new_users, 0),
-            nvl(app_users_data.ticket_new_users, 0),
-            nvl(app_users_data.money_ballet_users, 0),
-            nvl(recharge_data.recharge_users, 0),
-            nvl(recharge_data.online_uv, 0),
-            nvl(recharge_data.money_ballet_recharge_users, 0),
-            nvl(ticket_data.tied_tickets, 0) 
+            IF(order_data.line_orders IS NULL, 0, order_data.line_orders),
+            IF(order_data.line_finished_orders IS NULL, 0, order_data.line_finished_orders),
+            IF(order_data.line_gmv IS NULL, 0, order_data.line_gmv),
+            IF(station_data.total_stations IS NULL, 0, station_data.total_stations),
+            IF(users_data.users IS NULL, 0, users_data.users),
+            IF(app_users_data.obusapp_new_users IS NULL, 0, app_users_data.obusapp_new_users),
+            IF(app_users_data.ticket_new_users IS NULL, 0, app_users_data.ticket_new_users),
+            IF(app_users_data.money_ballet_users IS NULL, 0, app_users_data.money_ballet_users),
+            IF(recharge_data.recharge_users IS NULL, 0, recharge_data.recharge_users),
+            IF(recharge_data.online_uv IS NULL, 0, recharge_data.online_uv),
+            IF(recharge_data.money_ballet_recharge_users IS NULL, 0, recharge_data.money_ballet_recharge_users),
+            IF(ticket_data.tied_tickets IS NULL, 0, ticket_data.tied_tickets) 
         from (select * from cycle_data union select * from cycle_data_all) as cycle_data 
         left join (select * from order_data union select * from order_data_all) as order_data 
             on cycle_data.dt = order_data.dt and cycle_data.city_id=order_data.city_id 

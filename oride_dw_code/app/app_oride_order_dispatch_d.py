@@ -235,17 +235,17 @@ insert_result_to_hive = HiveOperator(
             --业务类型
             NVL(a.product_id, NVL(b.product_id, c.product_id)), 
             --平均播单距离
-            NVL(a.avg_pushed_distance, 0.00), 
+            CASE WHEN a.avg_pushed_distance IS NULL THEN 0 ELSE a.avg_pushed_distance END, 
             --平均接驾距离(完单)
-            NVL(a.avg_picked_distance_done, 0.00), 
+            CASE WHEN a.avg_picked_distance_done IS NULL THEN 0 ELSE a.avg_picked_distance_done END, 
             --平均接驾距离(应答)
-            NVL(a.avg_picked_distance_take, 0.00), 
+            CASE WHEN a.avg_picked_distance_take IS NULL THEN 0 ELSE a.avg_picked_distance_take END, 
             --调度服从率
             ROUND(
                 IF(IF(a.drivers_pushed_success>0,
                         NVL(a.drivers_count_pushed,0)/a.drivers_pushed_success,
                     0)>0, 
-                    NVL(b.driver_avg_clicked,0)/(a.drivers_count_pushed/a.drivers_pushed_success), 
+                    IF(b.driver_avg_clicked IS NULL,0,b.driver_avg_clicked)/(a.drivers_count_pushed/a.drivers_pushed_success), 
                     0
                 ), 
             2), 
@@ -325,7 +325,7 @@ insert_result_to_hive = HiveOperator(
             2), 
             --'平均送驾距离', 
             ROUND(IF(NVL(c.orders_f,0)>0, 
-                NVL(c.send_dis,0)/NVL(c.orders_f,0), 
+                IF(c.send_dis IS NULL,0,c.send_dis)/NVL(c.orders_f,0), 
                 0), 
             2), 
             --'平均接驾时长'(分), 
@@ -382,12 +382,12 @@ insert_result_to_hive = HiveOperator(
             2), 
             --'完单司机IPH', 
             ROUND(IF((NVL(b.driver_do_range,0)+NVL(b.driver_free_range,0))>0, 
-                (NVL(b.payed_online,0)+NVL(b.payed_offline,0)+NVL(b.driver_reward,0))/(NVL(b.driver_do_range,0)+NVL(b.driver_free_range,0)), 
+                (IF(b.payed_online IS NULL,0,b.payed_online)+IF(b.payed_offline IS NULL,0,b.payed_offline)+IF(b.driver_reward IS NULL,0,b.driver_reward))/(NVL(b.driver_do_range,0)+NVL(b.driver_free_range,0)), 
                 0), 
             2), 
             --'完单司机日薪', 
             ROUND(IF(NVL(b.drivers_order_finished,0)>0, 
-                (NVL(b.payed_online,0)+NVL(b.payed_offline,0)+NVL(b.driver_reward,0))/NVL(b.drivers_order_finished,0), 
+                (IF(b.payed_online IS NULL,0,b.payed_online)+IF(b.payed_offline IS NULL,0,b.payed_offline)+IF(b.driver_reward IS NULL,0,b.driver_reward))/NVL(b.drivers_order_finished,0), 
                 0), 
             2), 
             --'播报到达率', 
@@ -436,7 +436,7 @@ insert_result_to_hive = HiveOperator(
                 0), 
             2), 
             --'乘客取消订单平均接驾距离',    
-            NVL(a.avg_picked_distance_uscancel, 0), 
+            IF(a.avg_picked_distance_uscancel IS NULL, 0, a.avg_picked_distance_uscancel), 
             --'司机应答后取消数',
             NVL(c.cancel_af_take_dr, 0),  
             --'司机应答后取消平均时长（分）',
@@ -452,7 +452,7 @@ insert_result_to_hive = HiveOperator(
             --'司机应答总次数',
             NVL(b.driver_clicked_count, 0),
             --'司机人均应答次数',
-            NVL(b.driver_avg_clicked, 0),  
+            IF(b.driver_avg_clicked IS NULL, 0, b.driver_avg_clicked),  
             --'有效下单数',
             NVL(c.valid_orders, 0),
             --'有效完单率'
