@@ -25,14 +25,14 @@ import requests
 import os
 
 args = {
-    'owner': 'wuduo',
+    'owner': 'yangmingze',
     'start_date': datetime(2019, 9, 2),
     'depends_on_past': False,
     'retries': 3,
     'retry_delay': timedelta(minutes=5),
-    # 'email': ['bigdata_dw@opay-inc.com'],
-    # 'email_on_failure': True,
-    # 'email_on_retry': False,
+    'email': ['bigdata_dw@opay-inc.com'],
+    'email_on_failure': True,
+    'email_on_retry': False,
 }
 
 dag = airflow.DAG(
@@ -44,7 +44,7 @@ dag = airflow.DAG(
 sleep_time = BashOperator(
     task_id='sleep_id',
     depends_on_past=False,
-    bash_command='sleep 60',
+    bash_command='sleep 30',
     dag=dag
 )
 
@@ -84,7 +84,7 @@ create_dwd_table_task = HiveOperator(
             reward              decimal(38,2)   comment '司机奖励',
             tip                 decimal(38,2)   comment '小费',
             order_id            bigint          comment '订单号',
-            create_time         bigint          comment '创建时间',
+            create_time         string          comment '创建时间',
             start_time          bigint          comment '开始时间',
             finish_time         bigint          comment '完成时间',
             cancel_time         bigint          comment '取消时间',
@@ -125,7 +125,7 @@ cleaning_data_to_dwd_task = HiveOperator(
             (CASE WHEN reward IS NULL THEN 0 ELSE reward END) as  reward,
             (CASE WHEN tip IS NULL THEN 0 ELSE tip END) as  tip,
             NVL(CAST(order_id AS bigint), 0) as order_id,
-            NVL(create_time, 0) as create_time,
+            from_unixtime(create_time,'yyyy-MM-dd hh:mm:ss') as create_time,
             NVL(start_time, 0) as start_time,
             NVL(finish_time, 0) as finish_time,
             NVL(cancel_time, 0) as cancel_time,
@@ -157,7 +157,7 @@ def check_key_data(ds,**kargs):
 
     #主键重复校验
     HQL_DQC='''
-    SELECT count(1)-count(distinct travel_id,driver_id) as cnt
+    SELECT count(1)-count(distinct travel_id,order_id) as cnt
       FROM oride_dw.{table}
       WHERE dt='{pt}'
     '''.format(
