@@ -262,7 +262,7 @@ FROM oride_dw.ods_sqoop_base_data_driver_extend_df
    WHERE substring(updated_at,1,13)<='{now_day}T00' 
    and dt = '{pt}') ext ON dri.driver_id=ext.driver_id
 LEFT OUTER JOIN
-(select * from oride_dw.dim_oride_city where dt = '{pt}') cit
+(select * from oride_dw.dim_oride_city where dt = '{pt}' and country_code='NG') cit
 ON cit.city_id=ext.city_id
 '''.format(
         pt='{{ds}}',

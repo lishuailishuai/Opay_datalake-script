@@ -23,7 +23,7 @@ import os
 
 args = {
         'owner': 'yangmingze',
-        'start_date': datetime(2019, 5, 20),
+        'start_date': datetime(2019,8,31),
         'depends_on_past': False,
         'retries': 3,
         'retry_delay': timedelta(minutes=2),
@@ -47,10 +47,10 @@ sleep_time = BashOperator(
 
 
 # 依赖前一天分区
-dim_oride_driver_audit_base_prev_day_tesk = UFileSensor(
-    task_id='dim_oride_driver_audit_base_prev_day_tesk',
+dim_oride_driver_base_prev_day_tesk = UFileSensor(
+    task_id='dim_oride_driver_base_prev_day_tesk',
     filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw/dim_oride_driver_audit_base/country_code=nal",
+        hdfs_path_str="oride/oride_dw/dim_oride_driver_base/country_code=nal",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -174,7 +174,7 @@ SELECT product_id,
             (
                 SELECT 
                 *
-                FROM oride_dw.dim_oride_driver_audit_base
+                FROM oride_dw.dim_oride_driver_base
                 WHERE dt='{pt}'
             ) dri
             LEFT OUTER JOIN
@@ -265,4 +265,4 @@ touchz_data_success = BashOperator(
         ),
     dag=dag)
 
-dim_oride_driver_audit_base_prev_day_tesk >> dwd_oride_order_base_include_test_di_prev_day_tesk >> dwd_oride_order_push_driver_detail_di_prev_day_tesk >> oride_driver_timerange_prev_day_tesk >> sleep_time >> dwm_oride_driver_base_di_task >> touchz_data_success
+dim_oride_driver_base_prev_day_tesk >> dwd_oride_order_base_include_test_di_prev_day_tesk >> dwd_oride_order_push_driver_detail_di_prev_day_tesk >> oride_driver_timerange_prev_day_tesk >> sleep_time >> dwm_oride_driver_base_di_task >> touchz_data_success
