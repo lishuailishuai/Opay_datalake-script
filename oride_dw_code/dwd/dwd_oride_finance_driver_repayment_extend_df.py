@@ -124,7 +124,7 @@ SELECT city_id,
        numbers,
        --还款次数(分期总数)
 
-       (case when balance is null then 0 else balance) as balance,
+       (case when balance is null then 0 else balance end) as balance,
        --余额
 
        nvl(overdue_payment_cnt,0) as overdue_payment_cnt,
