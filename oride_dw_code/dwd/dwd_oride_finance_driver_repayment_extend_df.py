@@ -112,40 +112,37 @@ SELECT city_id,
        product_id,
        --司机类型
 
-       0 as repayment_all,
-
-       --numbers*amount AS repayment_all,
+       amount*numbers AS repayment_all,
        --还款总额
 
-       '' as start_date,
+       start_date,
        --开始日期
 
-       0 as amount,
+       amount,
        --还款金额
 
-       0 as numbers,
+       numbers,
        --还款次数(分期总数)
 
-       balance,
+       (case when balance is null then 0 else balance) as balance,
        --余额
 
-       overdue_payment_cnt,
-       --违约期数
+       nvl(overdue_payment_cnt,0) as overdue_payment_cnt,
+       --违约期数(天数)
 
-       date_sub(t1.dt,overdue_payment_cnt) AS last_repayment_time, 
+       date_sub(t1.dt,nvl(overdue_payment_cnt,0)) AS last_repayment_time
        --最后还款时间
-
+       
        'nal' AS country_code, --国家码字段
 
         '{pt}' as dt
        
-
 FROM
-  (SELECT driver_id,dt
+  (SELECT *
    FROM oride_dw.ods_sqoop_base_data_driver_repayment_df
    WHERE dt='{pt}'
      AND substring(updated_at,1,13)<='{now_day} 00'
-     group by driver_id,dt) t1
+     and repayment_type=0) t1
 LEFT OUTER JOIN
   (SELECT *
    FROM oride_dw.dim_oride_driver_base

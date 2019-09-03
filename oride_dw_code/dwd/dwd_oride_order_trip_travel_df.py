@@ -20,7 +20,7 @@ args = {
 }
 
 dag = airflow.DAG(
-    'dwd_oride_data_trip_detail_df',
+    'dwd_oride_order_trip_travel_df',
     schedule_interval="30 02 * * *",
     default_args=args
 )
@@ -42,24 +42,24 @@ dependence_ods_sqoop_base_data_trip_df = HivePartitionSensor(
     table=hive_ods_table,
     partition="dt='{{ds}}'",
     schema=hive_ods_db,
-    poke_interval=60,                                             # 依赖不满足时，一分钟检查一次依赖状态
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
 """
 /---------------------------------- end ----------------------------------/
 """
 
-hive_dwd_table = 'oride_dw.dwd_oride_data_trip_detail_df'
+hive_dwd_table = 'oride_dw.dwd_oride_order_trip_travel_df'
 
 # 创建dwd表
 create_dwd_table_task = HiveOperator(
     task_id='create_dwd_table_task',
     hql='''
         CREATE EXTERNAL TABLE IF NOT EXISTS {table} (
-            stroke_id           bigint          comment '行程ID',
+            travel_id           bigint          comment '行程ID',
             driver_id           bigint          comment '司机ID',
             city_id             bigint          comment '所属城市',
-            serv_type           int             comment '订单车辆类型(1:driect 2:street 3:keke)',
+            product_id           int             comment '订单车辆类型(1:driect 2:street 3:keke)',
             pax_num             int             comment '乘客数量',
             pax_max             int             comment '乘客上限',
             duration            bigint          comment '时间',
@@ -81,7 +81,7 @@ create_dwd_table_task = HiveOperator(
             `dt` string comment '日期'
         )
         STORED AS ORC 
-        LOCATION 'ufile://opay-datalake/oride/oride_dw/dwd_oride_data_trip_detail_df' 
+        LOCATION 'ufile://opay-datalake/oride/oride_dw/dwd_oride_order_trip_travel_df' 
         TBLPROPERTIES("orc.compress"="SNAPPY") 
     '''.format(table=hive_dwd_table),
     schema='oride_dw',
@@ -92,31 +92,30 @@ create_dwd_table_task = HiveOperator(
 cleaning_data_to_dwd_task = HiveOperator(
     task_id='cleaning_data_to_dwd_task',
     hql='''
-        SET mapred.job.queue.name=root.users.airflow;
         SET hive.exec.parallel=true;
         SET hive.exec.dynamic.partition=true;
         SET hive.exec.dynamic.partition.mode=nonstrict;
         INSERT OVERWRITE TABLE {table} PARTITION(country_code, dt) 
         SELECT 
-            NVL(id, 0),
-            NVL(driver_id, 0),
-            NVL(city_id, 0),
-            NVL(serv_type, 0),
-            NVL(pax_num, 0),
-            NVL(pax_max, 0),
-            NVL(duration, 0),
-            NVL(distance, 0),
-            CASE WHEN price IS NULL THEN 0 ELSE price END,
-            CASE WHEN reward IS NULL THEN 0 ELSE reward END,
-            CASE WHEN tip IS NULL THEN 0 ELSE tip END,
-            NVL(CAST(order_id AS bigint), 0),
-            NVL(create_time, 0),
-            NVL(start_time, 0),
-            NVL(finish_time, 0),
-            NVL(cancel_time, 0),
-            NVL(status, 0),
-            NVL(pickup_order_id, 0),
-            NVL(count_down, 0), 
+            NVL(id, 0) as travel_id,
+            NVL(driver_id, 0) as driver_id,
+            NVL(city_id, 0) as city_id,
+            NVL(serv_type, 0) as product_id,
+            NVL(pax_num, 0) as pax_num,
+            NVL(pax_max, 0) as pax_max,
+            NVL(duration, 0) as duration,
+            NVL(distance, 0) as distance,
+            (CASE WHEN price IS NULL THEN 0 ELSE price END) as  price,
+            (CASE WHEN reward IS NULL THEN 0 ELSE reward END) as  reward,
+            (CASE WHEN tip IS NULL THEN 0 ELSE tip END) as  tip,
+            NVL(CAST(order_id AS bigint), 0) as order_id,
+            NVL(create_time, 0) as create_time,
+            NVL(start_time, 0) as start_time,
+            NVL(finish_time, 0) as finish_time,
+            NVL(cancel_time, 0) as cancel_time,
+            NVL(status, 0) as status,
+            NVL(pickup_order_id, 0) as pickup_order_id,
+            NVL(count_down, 0) as count_down, 
             'nal' AS country_code, 
             dt 
         FROM (SELECT 
@@ -136,6 +135,40 @@ cleaning_data_to_dwd_task = HiveOperator(
     dag=dag
 )
 
+
+#熔断数据，如果数据重复，报错
+def check_key_data(ds,**kargs):
+
+    #主键重复校验
+    HQL_DQC='''
+    SELECT count(1)-count(distinct travel_id,driver_id) as cnt
+      FROM oride_dw.{table}
+      WHERE dt='{pt}'
+    '''.format(
+        pt=ds,
+        now_day=airflow.macros.ds_add(ds, +1),
+        table=table_name
+        )
+
+    cursor = get_hive_cursor()
+    logging.info('Executing 主键重复校验: %s', HQL_DQC)
+
+    cursor.execute(HQL_DQC)
+    res = cursor.fetchone()
+
+    if res[0] >1:
+        raise Exception ("Error The primary key repeat !", res)
+    else:
+        print("-----> Notice Data Export Success ......")
+    
+ 
+task_check_key_data = PythonOperator(
+    task_id='check_data',
+    python_callable=check_key_data,
+    provide_context=True,
+    dag=dag
+)
+
 # 生成_SUCCESS
 touchz_data_success = BashOperator(
     task_id='touchz_data_success',
@@ -152,12 +185,10 @@ touchz_data_success = BashOperator(
     """.format(
         pt='{{ ds }}',
         now_day='{{ macros.ds_add(ds, +1) }}',
-        hdfs_data_dir='ufile://opay-datalake/oride/oride_dw/dwd_oride_data_trip_detail_df/country_code=nal/dt={{ ds }}'
+        hdfs_data_dir='ufile://opay-datalake/oride/oride_dw/dwd_oride_order_trip_travel_df/country_code=nal/dt={{ ds }}'
     ),
     dag=dag
 )
 
 
-dependence_ods_sqoop_base_data_trip_df >> sleep_time
-create_dwd_table_task >> sleep_time
-sleep_time >> cleaning_data_to_dwd_task >> touchz_data_success
+dependence_ods_sqoop_base_data_trip_df >>create_dwd_table_task>>sleep_time >> cleaning_data_to_dwd_task>>task_check_key_data >> touchz_data_success

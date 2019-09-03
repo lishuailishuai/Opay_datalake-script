@@ -187,7 +187,7 @@ dm_oride_driver_base_cube_d_task = HiveOperator(
     FROM
       (SELECT dri.product_id,
               dri.city_id,
-              count(DISTINCT (CASE WHEN veri_time=dri.driver_id<>0 THEN dri.driver_id ELSE NULL END)) AS reg_driver_num,
+              count(DISTINCT (CASE WHEN dri.driver_id<>0 THEN dri.driver_id ELSE NULL END)) AS reg_driver_num,
               --注册司机数
     
               count(DISTINCT (CASE WHEN dri.driver_id<>0

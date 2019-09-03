@@ -71,7 +71,7 @@ ods_sqoop_base_data_driver_extend_df_prev_day_tesk=HivePartitionSensor(
 dim_oride_city_prev_day_tesk = UFileSensor(
     task_id='dim_oride_city_prev_day_tesk',
     filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw/dim_oride_city/country_code=nal",
+        hdfs_path_str="oride/oride_dw/dim_oride_city/country_code=NG",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
