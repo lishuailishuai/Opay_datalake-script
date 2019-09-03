@@ -143,16 +143,16 @@ SELECT dri.driver_id,
        serv_status,
        --服务状态 (0: wait assign, 1: pick up, 2: send)
 
-       register_time,
+       from_unixtime(register_time,'yyyy-MM-dd hh:mm:ss') as register_time,
        --注册时间
 
-       login_time,
+       from_unixtime(login_time,'yyyy-MM-dd hh:mm:ss') as login_time,
        --最后登陆时间
 
        is_bind,
        --状态 0 未绑定 1 已绑定
 
-       first_bind_time,
+       from_unixtime(first_bind_time,'yyyy-MM-dd hh:mm:ss') as first_bind_time,
        --初次绑定时间
 
        block,

@@ -3,10 +3,26 @@
 oride data_trip数据清洗
 """
 import airflow
-from airflow.operators.hive_operator import HiveOperator
-from airflow.operators.bash_operator import BashOperator
-from airflow.sensors.hive_partition_sensor import HivePartitionSensor
 from datetime import datetime, timedelta
+from airflow.operators.hive_operator import HiveOperator
+from airflow.operators.impala_plugin import ImpalaOperator
+from utils.connection_helper import get_hive_cursor
+from airflow.operators.python_operator import PythonOperator
+from airflow.contrib.hooks.redis_hook import RedisHook
+from airflow.hooks.hive_hooks import HiveCliHook
+from airflow.operators.hive_to_mysql import HiveToMySqlTransfer
+from airflow.operators.mysql_operator import MySqlOperator
+from airflow.operators.dagrun_operator import TriggerDagRunOperator
+from airflow.sensors.external_task_sensor import ExternalTaskSensor
+from airflow.operators.bash_operator import BashOperator
+from airflow.sensors.named_hive_partition_sensor import NamedHivePartitionSensor
+from airflow.sensors.hive_partition_sensor import HivePartitionSensor
+from airflow.sensors import UFileSensor
+import json
+import logging
+from airflow.models import Variable
+import requests
+import os
 
 args = {
     'owner': 'wuduo',
