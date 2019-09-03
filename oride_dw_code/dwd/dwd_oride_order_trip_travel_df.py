@@ -105,7 +105,7 @@ create_dwd_table_task = HiveOperator(
 )
 
 # 清洗数据
-cleaning_data_to_dwd_task = HiveOperator(
+ods_sqoop_base_data_trip_df_task = HiveOperator(
     task_id='cleaning_data_to_dwd_task',
     hql='''
         SET hive.exec.parallel=true;
@@ -163,7 +163,7 @@ def check_key_data(ds,**kargs):
     '''.format(
         pt=ds,
         now_day=airflow.macros.ds_add(ds, +1),
-        table=table_name
+        table=hive_dwd_table
         )
 
     cursor = get_hive_cursor()
@@ -207,4 +207,4 @@ touchz_data_success = BashOperator(
 )
 
 
-dependence_ods_sqoop_base_data_trip_df >>create_dwd_table_task>>sleep_time >> cleaning_data_to_dwd_task>>task_check_key_data >> touchz_data_success
+dependence_ods_sqoop_base_data_trip_df >>create_dwd_table_task>>sleep_time >> ods_sqoop_base_data_trip_df_task>>task_check_key_data >> touchz_data_success
