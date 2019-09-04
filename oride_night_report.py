@@ -404,7 +404,7 @@ def get_city_data(yesterday, day):
             concat(cast(round(nvl((sum(cur.gmv)/sum(cur.finish_order_cnt)) * 100/
             (sum(yesterday.gmv)/sum(yesterday.finish_order_cnt)),0),1) as string),'%') as price_avg_compare, --单均应付对比昨日
             concat(cast(round(nvl((sum(cur.b_subsidy + cur.c_subsidy)) * 100 / sum(cur.gmv),0),1) as string),'%') as subsidy_rate , --总补贴率
-            round(nvl((sum(yesterday.b_subsidy + yesterday.c_subsidy))  / sum(yesterday.finish_order_cnt),0),1) as subsidy_avg, --单均补贴
+            round(nvl((sum(cur.b_subsidy + cur.c_subsidy))  / sum(cur.finish_order_cnt),0),1) as subsidy_avg, --单均补贴
             concat(cast(round(nvl(((sum(cur.b_subsidy + cur.c_subsidy))  / sum(cur.finish_order_cnt)) * 100 /
             ((sum(yesterday.b_subsidy + yesterday.c_subsidy))  / sum(yesterday.finish_order_cnt)),0),1) as string),'%') as subsidy_avg_compare, -- 单均补贴对比昨日
             
@@ -453,7 +453,7 @@ def get_city_data(yesterday, day):
             concat(cast(round(nvl((sum(cur.gmv)/sum(cur.finish_order_cnt)) * 100/
             (sum(yesterday.gmv)/sum(yesterday.finish_order_cnt)),0),1) as string),'%') as price_avg_compare, --单均应付对比昨日
             concat(cast(round(nvl((sum(cur.b_subsidy + cur.c_subsidy)) * 100 / sum(cur.gmv),0),1) as string),'%') as subsidy_rate , --总补贴率
-            round(nvl((sum(yesterday.b_subsidy + yesterday.c_subsidy))  / sum(yesterday.finish_order_cnt),0),1) as subsidy_avg, --单均补贴
+            round(nvl((sum(cur.b_subsidy + cur.c_subsidy))  / sum(cur.finish_order_cnt),0),1) as subsidy_avg, --单均补贴
             concat(cast(round(nvl(((sum(cur.b_subsidy + cur.c_subsidy))  / sum(cur.finish_order_cnt)) * 100 /
             ((sum(yesterday.b_subsidy + yesterday.c_subsidy))  / sum(yesterday.finish_order_cnt)),0),1) as string),'%') as subsidy_avg_compare, -- 单均补贴对比昨日
             
