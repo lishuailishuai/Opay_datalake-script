@@ -139,8 +139,12 @@ SELECT city_id,
            AND bal.balance>=0
            AND red.amount_service>0 THEN 1 
            WHEN dri.product_id<>1
-            then rec.cnt ELSE 0 END),0) AS is_td_valid
+            then rec.cnt ELSE 0 END),0) AS is_td_valid,
        --当天是否有效
+       dri.country_code,
+           --国家码字段
+    
+       '{pt}' AS dt
        
 FROM
 
