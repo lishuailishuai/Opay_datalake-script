@@ -1728,6 +1728,7 @@ def get_trike_row(ds, driver_serv_type):
                 SUM(pickup_time_total) as pickup_time_total,
                 SUM(distance_total) as distance_total,
                 SUM(request_usernum) as request_usernum,
+                SUM(completed_users) as completed_users,
                 SUM(first_completed_users) as first_completed_users,
                 SUM(trike_complete_passengernum) as trike_complete_passengernum,
                 SUM(trike_online_pay_passengernum) as trike_online_pay_passengernum,
