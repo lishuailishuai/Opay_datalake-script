@@ -656,8 +656,8 @@ def send_capacity_report(ds, **kargs):
     )
 
     # send mail
-    email_to = ['bigdata@opay-inc.com']
-    # email_to = ['duo.wu@opay-inc.com']
+    # email_to = ['bigdata@opay-inc.com']
+    email_to = ['nan.li@opay-inc.com']
     email_subject = 'oride调度算法指标-DW数仓模型构建_{}'.format(ds)
     send_email(
         email_to,
