@@ -270,11 +270,11 @@ def send_capacity_report(ds, **kargs):
     all_country_data = cursor.fetchall()
 
     table_rows_all = ''
-    for (day, city_id, city, product, broadcast_distance, pickup_distance_done, pickup_distance_take,
+    for (city_id, city, product, broadcast_distance, pickup_distance_done, pickup_distance_take,
          dispatch_obey_rate, take_rate, take_order_dur_done, take_order_dur_take, passanger_after_cancel_rate,
          driver_after_cancel_rate, tph_macro, online_range, billing_order_dur_rate) in all_country_data:
         table_rows_all += table_rows.format(
-            dt=day,
+            dt=ds,
             city=city,
             product=product,
             broadcast_distance=broadcast_distance,
