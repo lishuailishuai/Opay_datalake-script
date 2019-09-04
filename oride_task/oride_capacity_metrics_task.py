@@ -209,6 +209,7 @@ def send_capacity_report(ds, **kargs):
     """
     all_country_sql = """
         SELECT city_id,
+               'All' as city,
                product_id,
                broadcast_dis_avg,
                --平均播单距离
@@ -296,60 +297,70 @@ def send_capacity_report(ds, **kargs):
 
     """
     city_all_product_sql = """
-        SELECT city_id,
-               product_id,
-               broadcast_dis_avg,
+        SELECT d.city_id,
+               c.city_name,
+               d.product_id,
+               d.broadcast_dis_avg,
                --平均播单距离
 
-               finish_order_pick_up_dis_avg,
+               d.finish_order_pick_up_dis_avg,
                --平均接驾距离(完单)
 
-               request_order_pick_up_dis_avg,
+               d.request_order_pick_up_dis_avg,
                --平均接驾距离(应答)
 
-               obey_rate,
+               d.obey_rate,
                --调度服从率
 
-               request_order_rate,
+               d.request_order_rate,
                --应答率
 
-               finish_order_request_time_avg,
+               d.finish_order_request_time_avg,
                --平均应答时长(完单)
 
-               request_order_request_time_avg,
+               d.request_order_request_time_avg,
                --平均应答时长(应答)
 
-               passanger_after_cancel_order_rate,
+               d.passanger_after_cancel_order_rate,
                --乘客应答后取消率
 
-               driver_after_cancel_order_rate,
+               d.driver_after_cancel_order_rate,
                --司机应答后取消率
 
-               TPH,
+               d.TPH,
                --TPH
 
-               online_time_avg,
+               d.online_time_avg,
                --人均在线时长
 
                billing_time_rate --计费时长占比
-        FROM oride_dw.app_oride_capacity_base_d
-        WHERE dt='{pt}'
-          AND product_id=-10000
-          and country_code='nal'
-        GROUP BY city_id,
-                 product_id,
-                 broadcast_dis_avg,
-                 finish_order_pick_up_dis_avg,
-                 request_order_pick_up_dis_avg,
-                 obey_rate,
-                 request_order_rate,
-                 finish_order_request_time_avg,
-                 request_order_request_time_avg,
-                 passanger_after_cancel_order_rate,
-                 driver_after_cancel_order_rate,
-                 TPH,
-                 online_time_avg,
-                 billing_time_rate
+        FROM oride_dw.app_oride_capacity_base_d as d 
+        join(
+            select 
+            city_id,
+            city_name
+            from oride_dw.dim_oride_city
+            where dt = '{pt}'
+            and city_id <> 999001
+        ) as c on d.city_id = c.city_id
+        WHERE d.dt='{pt}'
+          AND d.product_id=-10000
+          and d.country_code='nal'
+        GROUP BY d.city_id,
+                 c.city_name,
+                 d.product_id,
+                 d.broadcast_dis_avg,
+                 d.finish_order_pick_up_dis_avg,
+                 d.request_order_pick_up_dis_avg,
+                 d.obey_rate,
+                 d.request_order_rate,
+                 d.finish_order_request_time_avg,
+                 d.request_order_request_time_avg,
+                 d.passanger_after_cancel_order_rate,
+                 d.driver_after_cancel_order_rate,
+                 d.TPH,
+                 d.online_time_avg,
+                 d.billing_time_rate
 
         """.format(pt=ds)
 
@@ -357,12 +368,12 @@ def send_capacity_report(ds, **kargs):
     city_all_product_data = cursor.fetchall()
 
     table_rows_city = ''
-    for (day, city_id, city, product, broadcast_distance, pickup_distance_done, pickup_distance_take,
+    for (city_id, city, product, broadcast_distance, pickup_distance_done, pickup_distance_take,
          dispatch_obey_rate, take_rate, take_order_dur_done, take_order_dur_take, passanger_after_cancel_rate,
          driver_after_cancel_rate, tph_macro, online_range, billing_order_dur_rate) in city_all_product_data:
         table_rows_city += table_rows.format(
-            dt=day,
-            city=city,
+            dt=ds,
+            city='All',
             product=product,
             broadcast_distance=broadcast_distance,
             pickup_distance_done=pickup_distance_done,
@@ -383,60 +394,70 @@ def send_capacity_report(ds, **kargs):
 
     """
     city_green_sql = """
-        SELECT city_id,
-               product_id,
-               broadcast_dis_avg,
+        SELECT d.city_id,
+               c.city_name,
+               d.product_id,
+               d.broadcast_dis_avg,
                --平均播单距离
 
-               finish_order_pick_up_dis_avg,
+               d.finish_order_pick_up_dis_avg,
                --平均接驾距离(完单)
 
-               request_order_pick_up_dis_avg,
+               d.request_order_pick_up_dis_avg,
                --平均接驾距离(应答)
 
-               obey_rate,
+               d.obey_rate,
                --调度服从率
 
-               request_order_rate,
+               d.request_order_rate,
                --应答率
 
-               finish_order_request_time_avg,
+               d.finish_order_request_time_avg,
                --平均应答时长(完单)
 
-               request_order_request_time_avg,
+               d.request_order_request_time_avg,
                --平均应答时长(应答)
 
-               passanger_after_cancel_order_rate,
+               d.passanger_after_cancel_order_rate,
                --乘客应答后取消率
 
-               driver_after_cancel_order_rate,
+               d.driver_after_cancel_order_rate,
                --司机应答后取消率
 
-               TPH,
+               d.TPH,
                --TPH
 
-               online_time_avg,
+               d.online_time_avg,
                --人均在线时长
 
-               billing_time_rate --计费时长占比
-        FROM oride_dw.app_oride_capacity_base_d
-        WHERE dt='{pt}'
-          AND product_id=1
-          and country_code='nal'
-        GROUP BY city_id,
-                 product_id,
-                 broadcast_dis_avg,
-                 finish_order_pick_up_dis_avg,
-                 request_order_pick_up_dis_avg,
-                 obey_rate,
-                 request_order_rate,
-                 finish_order_request_time_avg,
-                 request_order_request_time_avg,
-                 passanger_after_cancel_order_rate,
-                 driver_after_cancel_order_rate,
-                 TPH,
-                 online_time_avg,
-                 billing_time_rate
+               d.billing_time_rate --计费时长占比
+        FROM oride_dw.app_oride_capacity_base_d as d
+        join(
+            select 
+            city_id,
+            city_name
+            from oride_dw.dim_oride_city
+            where dt = '{pt}'
+            and city_id <> 999001
+        ) as c on d.city_id = c.city_id
+        WHERE d.dt='{pt}'
+          AND d.product_id=1
+          and d.country_code='nal'
+        GROUP BY d.city_id,
+                 c.city_name,
+                 d.product_id,
+                 d.broadcast_dis_avg,
+                 d.finish_order_pick_up_dis_avg,
+                 d.request_order_pick_up_dis_avg,
+                 d.obey_rate,
+                 d.request_order_rate,
+                 d.finish_order_request_time_avg,
+                 d.request_order_request_time_avg,
+                 d.passanger_after_cancel_order_rate,
+                 d.driver_after_cancel_order_rate,
+                 d.TPH,
+                 d.online_time_avg,
+                 d.billing_time_rate
 
             """.format(pt=ds)
 
@@ -444,11 +465,11 @@ def send_capacity_report(ds, **kargs):
     city_green_product_data = cursor.fetchall()
 
     table_rows_green = ''
-    for (day, city_id, city, product, broadcast_distance, pickup_distance_done, pickup_distance_take,
+    for (city_id, city, product, broadcast_distance, pickup_distance_done, pickup_distance_take,
          dispatch_obey_rate, take_rate, take_order_dur_done, take_order_dur_take, passanger_after_cancel_rate,
          driver_after_cancel_rate, tph_macro, online_range, billing_order_dur_rate) in city_green_product_data:
         table_rows_green += table_rows.format(
-            dt=day,
+            dt=ds,
             city=city,
             product=product,
             broadcast_distance=broadcast_distance,
@@ -471,60 +492,70 @@ def send_capacity_report(ds, **kargs):
     """
 
     city_street_sql = """
-        SELECT city_id,
-               product_id,
-               broadcast_dis_avg,
+        SELECT d.city_id,
+               c.city_name,
+               d.product_id,
+               d.broadcast_dis_avg,
                --平均播单距离
 
-               finish_order_pick_up_dis_avg,
+               d.finish_order_pick_up_dis_avg,
                --平均接驾距离(完单)
 
-               request_order_pick_up_dis_avg,
+               d.request_order_pick_up_dis_avg,
                --平均接驾距离(应答)
 
-               obey_rate,
+               d.obey_rate,
                --调度服从率
 
-               request_order_rate,
+               d.request_order_rate,
                --应答率
 
-               finish_order_request_time_avg,
+               d.finish_order_request_time_avg,
                --平均应答时长(完单)
 
-               request_order_request_time_avg,
+               d.request_order_request_time_avg,
                --平均应答时长(应答)
 
-               passanger_after_cancel_order_rate,
+               d.passanger_after_cancel_order_rate,
                --乘客应答后取消率
 
-               driver_after_cancel_order_rate,
+               d.driver_after_cancel_order_rate,
                --司机应答后取消率
 
-               TPH,
+               d.TPH,
                --TPH
 
-               online_time_avg,
+               d.online_time_avg,
                --人均在线时长
 
                billing_time_rate --计费时长占比
-        FROM oride_dw.app_oride_capacity_base_d
-        WHERE dt='{pt}'
-          AND product_id=2
-          and country_code='nal'
-        GROUP BY city_id,
-                 product_id,
-                 broadcast_dis_avg,
-                 finish_order_pick_up_dis_avg,
-                 request_order_pick_up_dis_avg,
-                 obey_rate,
-                 request_order_rate,
-                 finish_order_request_time_avg,
-                 request_order_request_time_avg,
-                 passanger_after_cancel_order_rate,
-                 driver_after_cancel_order_rate,
-                 TPH,
-                 online_time_avg,
-                 billing_time_rate
+        FROM oride_dw.app_oride_capacity_base_d as d
+        join(
+            select 
+            city_id,
+            city_name
+            from oride_dw.dim_oride_city
+            where dt = '{pt}'
+            and city_id <> 999001
+        ) as c on d.city_id = c.city_id
+        WHERE d.dt='{pt}'
+          AND d.product_id=2
+          and d.country_code='nal'
+        GROUP BY d.city_id,
+                 c.city_name,
+                 d.product_id,
+                 d.broadcast_dis_avg,
+                 d.finish_order_pick_up_dis_avg,
+                 d.request_order_pick_up_dis_avg,
+                 d.obey_rate,
+                 d.request_order_rate,
+                 d.finish_order_request_time_avg,
+                 d.request_order_request_time_avg,
+                 d.passanger_after_cancel_order_rate,
+                 d.driver_after_cancel_order_rate,
+                 d.TPH,
+                 d.online_time_avg,
+                 d.billing_time_rate
 
                 """.format(pt=ds)
 
@@ -532,11 +563,11 @@ def send_capacity_report(ds, **kargs):
     city_street_product_data = cursor.fetchall()
 
     table_rows_street = ''
-    for (day, city_id, city, product, broadcast_distance, pickup_distance_done, pickup_distance_take,
+    for (city_id, city, product, broadcast_distance, pickup_distance_done, pickup_distance_take,
          dispatch_obey_rate, take_rate, take_order_dur_done, take_order_dur_take, passanger_after_cancel_rate,
          driver_after_cancel_rate, tph_macro, online_range, billing_order_dur_rate) in city_street_product_data:
         table_rows_street += table_rows.format(
-            dt=day,
+            dt=ds,
             city=city,
             product=product,
             broadcast_distance=broadcast_distance,
@@ -559,60 +590,70 @@ def send_capacity_report(ds, **kargs):
     """
 
     city_otrike_sql = """
-        SELECT city_id,
-               product_id,
-               broadcast_dis_avg,
+        SELECT d.city_id,
+               c.city_name,
+               d.product_id,
+               d.broadcast_dis_avg,
                --平均播单距离
 
-               finish_order_pick_up_dis_avg,
+               d.finish_order_pick_up_dis_avg,
                --平均接驾距离(完单)
 
-               request_order_pick_up_dis_avg,
+               d.request_order_pick_up_dis_avg,
                --平均接驾距离(应答)
 
-               obey_rate,
+               d.obey_rate,
                --调度服从率
 
-               request_order_rate,
+               d.request_order_rate,
                --应答率
 
-               finish_order_request_time_avg,
+               d.finish_order_request_time_avg,
                --平均应答时长(完单)
 
-               request_order_request_time_avg,
+               d.request_order_request_time_avg,
                --平均应答时长(应答)
 
-               passanger_after_cancel_order_rate,
+               d.passanger_after_cancel_order_rate,
                --乘客应答后取消率
 
-               driver_after_cancel_order_rate,
+               d.driver_after_cancel_order_rate,
                --司机应答后取消率
 
-               TPH,
+               d.TPH,
                --TPH
 
-               online_time_avg,
+               d.online_time_avg,
                --人均在线时长
 
-               billing_time_rate --计费时长占比
-        FROM oride_dw.app_oride_capacity_base_d
-        WHERE dt='{pt}'
-          AND product_id=3
-          and country_code='nal'
-        GROUP BY city_id,
-                 product_id,
-                 broadcast_dis_avg,
-                 finish_order_pick_up_dis_avg,
-                 request_order_pick_up_dis_avg,
-                 obey_rate,
-                 request_order_rate,
-                 finish_order_request_time_avg,
-                 request_order_request_time_avg,
-                 passanger_after_cancel_order_rate,
-                 driver_after_cancel_order_rate,
-                 TPH,
-                 online_time_avg,
-                 billing_time_rate
+               d.billing_time_rate --计费时长占比
+        FROM oride_dw.app_oride_capacity_base_d as d
+        join(
+            select 
+            city_id,
+            city_name
+            from oride_dw.dim_oride_city
+            where dt = '{pt}'
+            and city_id <> 999001
+        ) as c on d.city_id = c.city_id
+        WHERE d.dt='{pt}'
+          AND d.product_id=3
+          and d.country_code='nal'
+        GROUP BY d.city_id,
+                 c.city_name,
+                 d.product_id,
+                 d.broadcast_dis_avg,
+                 d.finish_order_pick_up_dis_avg,
+                 d.request_order_pick_up_dis_avg,
+                 d.obey_rate,
+                 d.request_order_rate,
+                 d.finish_order_request_time_avg,
+                 d.request_order_request_time_avg,
+                 d.passanger_after_cancel_order_rate,
+                 d.driver_after_cancel_order_rate,
+                 d.TPH,
+                 d.online_time_avg,
+                 d.billing_time_rate
 
                     """.format(pt=ds)
 
@@ -620,11 +661,11 @@ def send_capacity_report(ds, **kargs):
     city_otrike_product_data = cursor.fetchall()
 
     table_rows_otrike = ''
-    for (day, city_id, city, product, broadcast_distance, pickup_distance_done, pickup_distance_take,
+    for (city_id, city, product, broadcast_distance, pickup_distance_done, pickup_distance_take,
          dispatch_obey_rate, take_rate, take_order_dur_done, take_order_dur_take, passanger_after_cancel_rate,
          driver_after_cancel_rate, tph_macro, online_range, billing_order_dur_rate) in city_otrike_product_data:
         table_rows_otrike += table_rows.format(
-            dt=day,
+            dt=ds,
             city=city,
             product=product,
             broadcast_distance=broadcast_distance,
