@@ -352,6 +352,7 @@ SELECT base.order_id,
 
        trip_id, --'行程 ID'
        wait_carpool,--'是否在等在拼车',
+       pay_status, --支付类型（0: 支付中, 1: 成功, 2: 失败）
 
        country_code,
 

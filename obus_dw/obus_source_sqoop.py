@@ -15,6 +15,7 @@ from datetime import datetime, timedelta
 from utils.connection_helper import get_hive_cursor, get_db_conn, get_db_conf
 from utils.validate_metrics_utils import *
 import logging
+from plugins.SqoopSchemaUpdate import SqoopSchemaUpdate
 
 
 args = {
@@ -35,6 +36,8 @@ dag = airflow.DAG(
     max_active_runs=1,
     default_args=args
 )
+
+sqoopSchema = SqoopSchemaUpdate()
 
 obus_table_list = [
     {"db": "obus_data", "table": "conf_capped_price",                "conn": "obus_db"},
@@ -120,6 +123,16 @@ mysql_type_to_hive = {
 
 
 def create_hive_external_table(db, table, conn, **op_kwargs):
+    response = sqoopSchema.update_hive_schema(
+        hive_db=hive_db,
+        hive_table=hive_table.format(bs=table),
+        mysql_db=db,
+        mysql_table=table,
+        mysql_conn=conn
+    )
+    if response:
+        return True
+
     mysql_conn = get_db_conn(conn)
     mcursor = mysql_conn.cursor()
     sql = '''

@@ -13,7 +13,7 @@ import csv
 
 args = {
     'owner': 'linan',
-    'start_date': datetime(2019, 7, 11),
+    'start_date': datetime(2019, 9, 4),
     'depends_on_past': False,
     'retries': 1,
     'retry_delay': timedelta(minutes=5),
@@ -23,7 +23,7 @@ args = {
 }
 
 dag = airflow.DAG(
-    'oride_fast_driver_info_daily_report',
+    'oride_fast_driver_info_daily',
     schedule_interval="30 03 * * *",
     default_args=args)
 
@@ -48,6 +48,7 @@ headers = [
     'gender',
     'birth',
     'register_time',
+    'address',
     'city',
     'group_name',
     'team_name',
@@ -57,7 +58,8 @@ headers = [
     'total_onlinetime(h)',
     'total_billtime(h)',
     'average_billtime(min)',
-    'total_billtime(h)',
+    'billtime_ratio',
+    'total_online_day',
     'total_push_orders',
     'total_accept_orders',
     'total_finish_orders',
@@ -206,6 +208,7 @@ insert_data = HiveOperator(
     hql='''
         SET hive.exec.parallel=TRUE;
         SET hive.exec.dynamic.partition.mode=nonstrict;
+        ALTER TABLE oride_bi.oride_driver_record_report DROP IF EXISTS PARTITION (dt = '{{ ds }}');
         with rider_data as (
             select 
             dd.id id,
@@ -394,13 +397,15 @@ insert_data = HiveOperator(
             r.driver_id driver_id,
             g.city city,
             g.name  group_name, 
-            t.admin_user  admin_user
+            t.admin_user  admin_user,
+            r.address address
             from 
             (
                 select 
                 driver_id,
                 association_id,
-                team_id
+                team_id,
+                address
                 from oride_dw.ods_sqoop_mass_rider_signups_df
                 where dt = '{{ ds }}'
                 and status=2 
@@ -427,71 +432,82 @@ insert_data = HiveOperator(
                 where dt = '{{ ds }}'
             ) t on r.team_id = t.id 
 
+        ),
+        all_driver_online_data as (
+            select
+                driver_id,
+                count(distinct dt) as total_online_days
+            from
+                oride_bi.oride_driver_timerange
+            where
+                driver_onlinerange>0
+            group by driver_id
         )
-        
-        
-        
+
         insert overwrite table oride_bi.oride_driver_record_report partition(dt='{{ ds }}')
         select 
-        rd.id ,
-        rd.serv_type ,
-        rd.name ,
-        rd.mobile ,
-        rd.gender ,
-        rd.birthday ,
-        rd.create_time ,
-        
-        nvl(di.city,'') ,
-        nvl(di.group_name,'') ,
-        nvl(di.admin_user,'') ,
-        
-        nvl(round(od.distance_sum/1000,2),0),
-        
-        nvl(din.amount_all,0) ,
-        nvl(ad.balance,0) ,
-        nvl(round(dho.do_range,0),0) ,
-        nvl(round(od.duration_sum,1),0) ,
-        
-        nvl(rd.regis_days,0),
-        nvl(pd.push_num,0) ,
-        nvl(od.accpet_num,0) ,
-        nvl(od.on_ride_num,0) ,
-        nvl(od.driver_cancel_num,0) ,
-        nvl(dc.score_num,0) ,
-        nvl(dc.low_socre_num,0) ,
-        nvl(dc.score_avg,0) ,
-        
-        if(do_today.driver_id is not null , 1,0) ,
-        if(do_yesterday.driver_id is not null , 1,0) ,
-        if(do_before.driver_id is not null , 1,0) ,
-        if(cdo_today.driver_id is not null,nvl(round(cdo_today.do_range/3600,1),0),0) ,
-        if(cdo_yesterday.driver_id is not null,nvl(round(cdo_yesterday.do_range/3600,1),0),0) ,
-        
-        nvl(pd.push_num_today,0) ,
-        nvl(od.accpet_num_today,0) ,
-        nvl(od.accpet_num_yesterday,0) ,
-        nvl(od.on_ride_num_today,0) ,
-        nvl(od.on_ride_num_yesterday,0) ,
-        nvl(od.driver_cancel_num_today,0) ,
-        
-        nvl(dc.low_socre_num_today,0) ,
-        nvl(dc.score_num_today,0) ,
-        nvl(dc.score_avg_today,0) 
-        
+            rd.id ,
+            rd.serv_type ,
+            rd.name ,
+            rd.mobile ,
+            rd.gender ,
+            rd.birthday ,
+            rd.create_time ,
+
+            nvl(di.city,'') ,
+            nvl(di.group_name,'') ,
+            nvl(di.admin_user,'') ,
+
+            nvl(round(od.distance_sum/1000,2),0),
+
+            nvl(din.amount_all,0) ,
+            nvl(ad.balance,0) ,
+            nvl(round(dho.do_range,0),0) ,
+            nvl(round(od.duration_sum,1),0) ,
+
+            nvl(rd.regis_days,0),
+            nvl(pd.push_num,0) ,
+            nvl(od.accpet_num,0) ,
+            nvl(od.on_ride_num,0) ,
+            nvl(od.driver_cancel_num,0) ,
+            nvl(dc.score_num,0) ,
+            nvl(dc.low_socre_num,0) ,
+            nvl(dc.score_avg,0) ,
+
+            if(do_today.driver_online_sum>0, 1,0) ,
+            if(do_yesterday.driver_online_sum>0, 1,0) ,
+            if(do_before.driver_online_sum>0, 1,0) ,
+            if(cdo_today.driver_id is not null,nvl(round(cdo_today.do_range/3600,1),0),0) ,
+            if(cdo_yesterday.driver_id is not null,nvl(round(cdo_yesterday.do_range/3600,1),0),0) ,
+
+            nvl(pd.push_num_today,0) ,
+            nvl(od.accpet_num_today,0) ,
+            nvl(od.accpet_num_yesterday,0) ,
+            nvl(od.on_ride_num_today,0) ,
+            nvl(od.on_ride_num_yesterday,0) ,
+            nvl(od.driver_cancel_num_today,0) ,
+
+            nvl(dc.low_socre_num_today,0) ,
+            nvl(dc.score_num_today,0) ,
+            nvl(dc.score_avg_today,0),
+            di.address,
+            nvl(ado.total_online_days, 0)
+
         from rider_data rd 
-        left join order_data od on rd.id = od.driver_id
-        -- left join order_pay op on rd.id = op.driver_id
-        left join push_data pd on rd.id = pd.driver_id
-        left join account_data ad on rd.id = ad.driver_id
-        left join driver_his_online dho on rd.id = dho.driver_id
-        left join driver_online do_today on rd.id = do_today.driver_id and  do_today.dt = '{{ ds }}'
-        left join driver_online do_yesterday on rd.id = do_yesterday.driver_id and do_yesterday.dt = '{{ yesterday_ds }}'
-        left join driver_online do_before on rd.id = do_before.driver_id and do_before.dt = '{{ macros.ds_add(ds, -2) }}'
-        left join completed_driver_online cdo_today on rd.id = cdo_today.driver_id and cdo_today.dt = '{{ ds }}'
-        left join completed_driver_online cdo_yesterday on rd.id = cdo_yesterday.driver_id and cdo_yesterday.dt = '{{ yesterday_ds }}'
-        left join driver_comment dc on rd.id = dc.driver_id
-        left join driver_info di on rd.id = di.driver_id
-        left join driver_income din on rd.id = din.driver_id
+            left join order_data od on rd.id = od.driver_id
+            -- left join order_pay op on rd.id = op.driver_id
+            left join push_data pd on rd.id = pd.driver_id
+            left join account_data ad on rd.id = ad.driver_id
+            left join driver_his_online dho on rd.id = dho.driver_id
+            left join driver_online do_today on rd.id = do_today.driver_id and  do_today.dt = '{{ ds }}'
+            left join driver_online do_yesterday on rd.id = do_yesterday.driver_id and do_yesterday.dt = '{{ yesterday_ds }}'
+            left join driver_online do_before on rd.id = do_before.driver_id and do_before.dt = '{{ macros.ds_add(ds, -2) }}'
+            left join completed_driver_online cdo_today on rd.id = cdo_today.driver_id and cdo_today.dt = '{{ ds }}'
+            left join completed_driver_online cdo_yesterday on rd.id = cdo_yesterday.driver_id and cdo_yesterday.dt = '{{ yesterday_ds }}'
+            left join driver_comment dc on rd.id = dc.driver_id
+            left join driver_info di on rd.id = di.driver_id
+            left join driver_income din on rd.id = din.driver_id
+            left join all_driver_online_data ado on ado.driver_id=rd.id
     
     ''',
     schema='oride_bi',
@@ -502,7 +518,7 @@ insert_data = HiveOperator(
 def send_fast_csv_file(ds, **kwargs):
     cursor = get_hive_cursor()
     sql = """
-            select 
+          select
             driver_id,
             serv_type,
             driver_name,
@@ -510,6 +526,7 @@ def send_fast_csv_file(ds, **kwargs):
             gender,
             birth,
             register_time,
+            address,
             city,
             group_name,
             team_name,
@@ -520,6 +537,7 @@ def send_fast_csv_file(ds, **kwargs):
             nvl(round(total_billtime/3600,1),0),
             nvl(round(total_billtime/(60 * total_finish_orders),2),0),
             concat(cast(nvl(round((total_billtime * 100)/total_onlinetime,2),0) as string),'%'),
+            total_online_days,
             total_push_orders,
             total_accept_orders,
             total_finish_orders,
@@ -545,9 +563,9 @@ def send_fast_csv_file(ds, **kwargs):
             today_rate_numbers,
             taday_average_rate_score
 
-            from 
+          from
             oride_bi.oride_driver_record_report 
-            where dt = '{dt}' and serv_type = 2
+          where dt = '{dt}' and serv_type = 2
 
         """.format(dt=ds)
 
@@ -563,7 +581,7 @@ def send_fast_csv_file(ds, **kwargs):
 
     # send mail
     email_to = Variable.get("oride_fast_driver_metrics_report_receivers").split()
-    # email_to = ['nan.li@opay-inc.com']
+    #email_to = ['zhenqian.zhang@opay-inc.com']
     result = is_alert(ds, table_names)
     if result:
         email_to = ['bigdata@opay-inc.com']
