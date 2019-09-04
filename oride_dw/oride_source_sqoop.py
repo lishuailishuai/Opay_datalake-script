@@ -28,8 +28,6 @@ dag = airflow.DAG(
     max_active_runs=1,
     default_args=args)
 
-sqoopSchema = SqoopSchemaUpdate()
-
 '''
 导入数据的列表
 db_name,table_name,conn_id,prefix_name,priority_weight
@@ -165,6 +163,7 @@ table_not_core_list = []
 
 
 def run_check_table(db_name, table_name, conn_id, hive_table_name, **kwargs):
+    sqoopSchema = SqoopSchemaUpdate()
     response = sqoopSchema.update_hive_schema(
         hive_db=HIVE_DB,
         hive_table=hive_table_name,

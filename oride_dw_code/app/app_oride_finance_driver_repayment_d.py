@@ -74,12 +74,12 @@ def get_data_from_hive(**op_kwargs):
             CASE WHEN balance IS NULL THEN 0 ELSE balance END,
             CASE WHEN repayment_all IS NULL THEN 0 ELSE repayment_all END,
             NVL(start_date, ''),
-            CASE WHEN amount IS NULL THEN 0 ELSE amount END,
+            CASE WHEN repayment_amount IS NULL THEN 0 ELSE repayment_amount END,
             NVL(numbers, 0),
             0 AS effective_days, 
             NVL(overdue_payment_cnt, 0),
             NVL(last_repayment_time, dt),
-            0 AS today_repayment,
+            is_td_valid AS today_repayment,
             0 AS status 
         FROM {hive_db}.{hive_table} 
         WHERE 

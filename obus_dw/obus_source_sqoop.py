@@ -37,8 +37,6 @@ dag = airflow.DAG(
     default_args=args
 )
 
-sqoopSchema = SqoopSchemaUpdate()
-
 obus_table_list = [
     {"db": "obus_data", "table": "conf_capped_price",                "conn": "obus_db"},
     {"db": "obus_data", "table": "conf_city",                        "conn": "obus_db"},
@@ -123,6 +121,7 @@ mysql_type_to_hive = {
 
 
 def create_hive_external_table(db, table, conn, **op_kwargs):
+    sqoopSchema = SqoopSchemaUpdate()
     response = sqoopSchema.update_hive_schema(
         hive_db=hive_db,
         hive_table=hive_table.format(bs=table),
