@@ -106,7 +106,7 @@ app_oride_capacity_base_d_task = HiveOperator(
     nvl(round((succ_broadcast_dis)/(succ_push_all_times_cnt),1),0) as broadcast_dis_avg,
     --平均播单距离
     
-    nvl(round((finish_order_pick_up_dis)/(finish_order_cnt),1),0) as finish_order_pick_up_dis_avg,
+    nvl(round((finish_order_pick_up_dis)/(finish_order_pick_up_assigned_cnt),1),0) as finish_order_pick_up_dis_avg,
     --平均接驾距离
     
     0 as request_order_pick_up_dis_avg,
@@ -297,7 +297,9 @@ app_oride_capacity_base_d_task = HiveOperator(
         sum(sys_cancel_order_cnt) as sys_cancel_order_cnt,
         sum(service_dur) as service_dur,
         sum(passanger_before_cancel_order_cnt) as passanger_before_cancel_order_cnt,
-        sum(finish_order_onride_dis) as finish_order_onride_dis
+        sum(finish_order_onride_dis) as finish_order_onride_dis,
+        sum(finish_order_pick_up_assigned_cnt) as finish_order_pick_up_assigned_cnt
+        
         from 
         oride_dw.dm_oride_order_base_d
         where 
