@@ -8,6 +8,7 @@ from airflow.operators.python_operator import PythonOperator
 from airflow.sensors.sql_sensor import SqlSensor
 from datetime import datetime, timedelta
 import logging
+from plugins.SqoopSchemaUpdate import SqoopSchemaUpdate
 
 args = {
     'owner': 'root',
@@ -38,6 +39,8 @@ import_data_validate = SqlSensor(
     ''',
     dag=dag
 )
+
+sqoopSchema = SqoopSchemaUpdate()
 
 '''
 导入数据的列表
@@ -88,6 +91,16 @@ ODS_CREATE_TABLE_SQL = '''
 
 
 def run_check_table(db_name, table_name, conn_id, hive_table_name, **kwargs):
+    response = sqoopSchema.update_hive_schema(
+        hive_db=HIVE_DB,
+        hive_table=hive_table_name,
+        mysql_db=db_name,
+        mysql_table=table_name,
+        mysql_conn=conn_id
+    )
+    if response:
+        return True
+
     # SHOW TABLES in oride_db LIKE 'data_aa'
     check_sql = 'SHOW TABLES in %s LIKE \'%s\'' % (HIVE_DB, hive_table_name)
     hive2_conn = HiveServer2Hook().get_conn()
