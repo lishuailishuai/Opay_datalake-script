@@ -10,7 +10,7 @@ import logging
 
 """
 新建binlog导入表 && ods表
-airflow trigger_dag oride_init_ods_table  --conf '{"db_name": "oride_data", "table_name": "data_order"}'
+airflow trigger_dag oride_binlog_init  --conf '{"db_name": "oride_data", "table_name": "data_order"}'
 """
 
 args = {
