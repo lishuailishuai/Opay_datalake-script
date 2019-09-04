@@ -100,77 +100,111 @@ SELECT city_id,
        city_name,
        --城市名称
 
-       t1.driver_id,
-       --司机ID(有手机的骑手)
+       dri.driver_id,
+       --司机ID(非专车有手机的骑手)
 
-       driver_name,
+       dri.driver_name,
        --司机名称
 
-       phone_number,
+       dri.phone_number,
        --手机号
 
        product_id,
        --司机类型
 
-       amount*numbers AS repayment_all,
+       red.amount_service,
+
+       (case when dri.product_id=1 then red.amount_service*365 else rep.amount*rep.numbers end) AS repayment_all,
        --还款总额
 
-       start_date,
+       (case when dri.product_id=1 then null else rep.start_date end) as start_date,
        --开始日期
 
-       amount,
+       (case when dri.product_id=1 then red.amount_service else rep.amount end) as repayment_amount,
        --还款金额
 
-       numbers,
+       (case when dri.product_id=1 then 365 else rep.numbers end) as numbers,
        --还款次数(分期总数)
 
-       (case when balance is null then 0 else balance end) as balance,
+       (case when bal.balance is null then 0 else bal.balance end) as balance,
        --余额
 
-       nvl(overdue_payment_cnt,0) as overdue_payment_cnt,
-       --违约期数(天数)
+       nvl(oer.overdue_payment_cnt,0) as overdue_payment_cnt,
+       --违约期数
 
-       date_sub(t1.dt,nvl(overdue_payment_cnt,0)) AS last_repayment_time,
+       date_sub(dri.dt,nvl(oer.overdue_payment_cnt,0)) AS last_repayment_time,
        --最后还款时间
-       
-       'nal' AS country_code, --国家码字段
 
-        '{pt}' as dt
+       nvl((CASE WHEN dri.product_id=1
+           AND bal.balance>=0
+           AND red.amount_service>0 THEN 1 
+           WHEN dri.product_id<>1
+            then rec.cnt ELSE 0 END),0) AS is_td_valid
+       --当天是否有效
        
 FROM
+
+(SELECT *
+   FROM oride_dw.dim_oride_driver_base
+   WHERE dt='{pt}'
+   and city_id<>'999001') dri
+LEFT OUTER JOIN
   (SELECT *
    FROM oride_dw.ods_sqoop_base_data_driver_repayment_df
    WHERE dt='{pt}'
      AND substring(updated_at,1,13)<='{now_day} 00'
-     and repayment_type=0) t1
-LEFT OUTER JOIN
-  (SELECT *
-   FROM oride_dw.dim_oride_driver_base
-   WHERE dt='{pt}') t2 ON t1.driver_id=t2.driver_id
+     and repayment_type=0) rep
+  ON dri.driver_id=rep.driver_id
 LEFT OUTER JOIN
   (SELECT driver_id,
-          balance,--余额
-          created_at as repayment_time
+          balance--余额
    FROM oride_dw.ods_sqoop_base_data_driver_balance_extend_df
-   WHERE dt='{pt}') t3 ON t1.driver_id=t3.driver_id
+   WHERE dt='{pt}') bal ON dri.driver_id=bal.driver_id
 LEFT OUTER JOIN
+ (SELECT driver_id,
+          amount_service
+   FROM oride_dw.ods_sqoop_base_data_driver_records_day_df
+   WHERE from_unixtime(updated_at,'yyyy-MM-dd HH')<='{now_day} 00'
+     AND dt = '{pt}'
+     AND from_unixtime(DAY, 'yyyy-MM-dd') = dt) red
+ ON dri.driver_id=red.driver_id
+ LEFT OUTER JOIN
+  (SELECT driver_id,
+          count(distinct(case when amount<0 then driver_id else null end)) as cnt
+   FROM oride_dw.ods_sqoop_base_data_driver_recharge_records_df
+   WHERE from_unixtime(updated_at,'yyyy-MM-dd HH')<='{now_day} 00'
+     AND dt = '{pt}'
+     and amount_reason=6
+     group by driver_id) rec ON dri.driver_id=rec.driver_id
+  LEFT OUTER JOIN   
 (SELECT driver_id,
-          overdue_payment_cnt --违约期数
+       overdue_payment_cnt --违约期数
 FROM
+  (SELECT driver_id,
+          false_id,
+          dt,
+          date_sub(dt,rank),
+          row_number() OVER(PARTITION BY driver_id,false_id,date_sub(dt,rank)
+                            ORDER BY dt) AS overdue_payment_cnt
+   FROM
      (SELECT driver_id,
              false_id,
              dt,
              row_number() OVER(PARTITION BY driver_id,false_id
-                               ORDER BY dt) AS overdue_payment_cnt
+                               ORDER BY dt) AS rank
       FROM
         (SELECT driver_id,
                 (CASE WHEN balance<0 THEN 1 ELSE 0 END) AS false_id,
                 dt
          FROM oride_dw.ods_sqoop_base_data_driver_balance_extend_df
-         WHERE dt BETWEEN '{prev_6_day}' AND '{pt}') t1) x1
-   WHERE dt= '{pt}'
-     AND false_id=1) t4
-ON t1.driver_id=t4.driver_id
+         WHERE dt BETWEEN '{prev_6_day}' AND '{pt}'
+         ORDER BY dt) bal
+      GROUP BY driver_id,
+               false_id,
+               dt) a1) x1
+WHERE dt='{pt}'
+  AND false_id=1) oer
+ON dri.driver_id=oer.driver_id;
 
 '''.format(
         pt='{{ds}}',
