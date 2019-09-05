@@ -9,6 +9,7 @@ from airflow.operators.bash_operator import BashOperator
 from airflow.sensors.hive_partition_sensor import HivePartitionSensor
 from utils.connection_helper import get_hive_cursor, get_db_conn
 from datetime import datetime, timedelta
+from airflow.sensors import UFileSensor
 import re
 import logging
 from utils.validate_metrics_utils import *
@@ -44,14 +45,32 @@ hive_table = 'dwd_oride_finance_driver_repayment_extend_df'
 """
 ##----------------------------------依赖数据源------------------------------##
 """
-dependence_dwd_oride_finance_driver_repayment_extend_df = HivePartitionSensor(
-    task_id=hive_table,
-    table="dwd_oride_finance_driver_repayment_extend_df",
-    partition="dt='{{ds}}'",
-    schema=hive_db,
-    poke_interval=60,                                             # 依赖不满足时，一分钟检查一次依赖状态
+
+#依赖前一天数据是否存在
+dwd_oride_finance_driver_repayment_extend_df_tesk = UFileSensor(
+    task_id='dwd_oride_finance_driver_repayment_extend_df_tesk',
+    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="oride/oride_dw/dwd_oride_finance_driver_repayment_extend_df/country_code=nal",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
+
+#依赖前一天数据是否存在
+dwm_oride_driver_base_di_tesk = UFileSensor(
+    task_id='dwm_oride_driver_base_di_tesk',
+    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="oride/oride_dw/dwm_oride_driver_base_di/country_code=nal",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
+
 """
 ##------------------------------------ end --------------------------------##
 """
@@ -63,27 +82,49 @@ mysql_table = 'oride_assets.oride_assets_finance_driver_repayment'
 def get_data_from_hive(**op_kwargs):
     ds = op_kwargs.get('ds', time.strftime('%Y-%m-%d', time.localtime(time.time() - 86400)))
     hql = '''
-        SELECT 
-            dt,
-            NVL(city_id, 0),
+        SELECT t1.dt,
+            NVL(t1.city_id, 0),
             NVL(city_name, ''),
-            NVL(driver_id, 0),
+            NVL(t1.driver_id, 0),
             NVL(driver_name, ''),
             NVL(phone_number, ''),
-            NVL(product_id, 0),
-            CASE WHEN balance IS NULL THEN 0 ELSE balance END,
-            CASE WHEN repayment_all IS NULL THEN 0 ELSE repayment_all END,
+            NVL(t1.product_id, 0),
+            CASE
+                WHEN balance IS NULL THEN 0
+                ELSE balance
+            END,
+            CASE
+                WHEN repayment_all IS NULL THEN 0
+                ELSE repayment_all
+            END,
             NVL(start_date, ''),
-            CASE WHEN repayment_amount IS NULL THEN 0 ELSE repayment_amount END,
+            CASE
+                WHEN repayment_amount IS NULL THEN 0
+                ELSE repayment_amount
+            END,
             NVL(numbers, 0),
-            0 AS effective_days, 
+            0 AS effective_days,
             NVL(overdue_payment_cnt, 0),
             NVL(last_repayment_time, dt),
             is_td_valid AS today_repayment,
-            0 AS status 
-        FROM {hive_db}.{hive_table} 
-        WHERE 
-            dt = '{pt}'
+            0 AS status,
+            nvl(driver_finish_ord_num,0) AS driver_finish_ord_num --司机当天完单数
+        FROM （selct * FROM {hive_db}.{hive_table}
+        WHERE dt = '{pt}') t1
+        
+        LEFT OUTER JOIN
+            
+            (SELECT product_id,
+                    city_id,
+                    driver_id,
+                    driver_finish_ord_num
+             FROM oride_dw.dwm_oride_driver_base_di
+             WHERE dt = '{pt}') t2 
+        ON t1.driver_id=t2.driver_id
+          AND t1.city_id=t2.city_id
+          AND t1.product_id=t2.product_id
+        
+
     '''.format(
         hive_db=hive_db,
         hive_table=hive_table,
@@ -159,5 +200,4 @@ get_data_from_hive_task = PythonOperator(
 )
 
 
-dependence_dwd_oride_finance_driver_repayment_extend_df >> sleep_time
-sleep_time >> get_data_from_hive_task
+dwd_oride_finance_driver_repayment_extend_df_tesk>>dwm_oride_driver_base_di_tesk>>sleep_time >> get_data_from_hive_task
