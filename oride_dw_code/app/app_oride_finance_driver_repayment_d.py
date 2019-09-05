@@ -108,7 +108,7 @@ def get_data_from_hive(**op_kwargs):
             NVL(last_repayment_time, dt),
             is_td_valid AS today_repayment,
             0 AS status,
-            nvl(driver_finish_ord_num,0) AS driver_finish_ord_num --司机当天完单数
+            nvl(driver_finish_ord_num,0) AS driver_finish_ord_num 
         FROM (select * FROM {hive_db}.{hive_table}
         WHERE dt = '{pt}') t1
         
