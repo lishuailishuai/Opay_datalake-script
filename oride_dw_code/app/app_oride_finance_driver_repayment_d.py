@@ -108,7 +108,7 @@ def get_data_from_hive(**op_kwargs):
             NVL(last_repayment_time, dt),
             is_td_valid AS today_repayment,
             0 AS status,
-            nvl(driver_finish_ord_num,0) AS driver_finish_ord_num 
+            nvl(driver_finish_ord_num,0) AS order_numbers 
         FROM (select * FROM {hive_db}.{hive_table}
         WHERE dt = '{pt}') t1
         
@@ -145,7 +145,7 @@ def get_data_from_hive(**op_kwargs):
         [
             'day', 'city_id', 'city_name', 'driver_id', 'driver_name', 'driver_mobile', 'driver_type',
             'balance', 'repayment_total_amount', 'start_date', 'repayment_amount', 'total_numbers',
-            'effective_days', 'lose_numbers', 'last_back_time', 'today_repayment', 'status','driver_finish_ord_num'
+            'effective_days', 'lose_numbers', 'last_back_time', 'today_repayment', 'status','order_numbers'
         ],
         'day=VALUES(day)'
     )
@@ -166,12 +166,12 @@ def __data_to_mysql(conn, data, column, update=''):
     try:
         for (day, city_id, city_name, driver_id, driver_name, driver_mobile, driver_type,
                 balance, repayment_total_amount, start_date, repayment_amount, total_numbers,
-                effective_days, lose_numbers, last_back_time, today_repayment, status,driver_finish_ord_num) in data:
+                effective_days, lose_numbers, last_back_time, today_repayment, status,order_numbers) in data:
 
             row = [
                 day, city_id, city_name, driver_id, driver_name.replace("'", "\\'"), driver_mobile, driver_type,
                 balance, repayment_total_amount, start_date, repayment_amount, total_numbers,
-                effective_days, lose_numbers, last_back_time, today_repayment, status,driver_finish_ord_num
+                effective_days, lose_numbers, last_back_time, today_repayment, status,order_numbers
             ]
             if sval == '':
                 sval = '(\'{}\')'.format('\',\''.join([str(x) for x in row]))
