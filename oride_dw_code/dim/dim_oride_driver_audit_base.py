@@ -52,7 +52,7 @@ ods_sqoop_mass_rider_signups_df_prev_day_tesk=HivePartitionSensor(
       task_id="ods_sqoop_mass_rider_signups_df_prev_day_tesk",
       table="ods_sqoop_mass_rider_signups_df",
       partition="dt='{{ds}}'",
-      schema="oride_dw",
+      schema="oride_dw_ods",
       poke_interval=60, #依赖不满足时，一分钟检查一次依赖状态
       dag=dag
     )
@@ -63,7 +63,7 @@ ods_sqoop_mass_driver_group_df_prev_day_tesk=HivePartitionSensor(
       task_id="ods_sqoop_mass_driver_group_df_prev_day_tesk",
       table="ods_sqoop_mass_driver_group_df",
       partition="dt='{{ds}}'",
-      schema="oride_dw",
+      schema="oride_dw_ods",
       poke_interval=60, #依赖不满足时，一分钟检查一次依赖状态 
       dag=dag
     )
@@ -73,7 +73,7 @@ ods_sqoop_mass_driver_team_df_prev_day_tesk=HivePartitionSensor(
       task_id="ods_sqoop_mass_driver_team_df_prev_day_tesk",
       table="ods_sqoop_mass_driver_team_df",
       partition="dt='{{ds}}'",
-      schema="oride_dw",
+      schema="oride_dw_ods",
       poke_interval=60, #依赖不满足时，一分钟检查一次依赖状态
       dag=dag
     )
@@ -278,15 +278,15 @@ from
   id,  --数据主键
   row_number() OVER(partition BY driver_id,status
                                ORDER BY update_time DESC) AS rn1
-      FROM oride_dw.ods_sqoop_mass_rider_signups_df
+      FROM oride_dw_ods.ods_sqoop_mass_rider_signups_df
       WHERE dt = '{pt}'
  )t1
 where rn1=1) dri
 left outer join
-(select * from oride_dw.ods_sqoop_mass_driver_group_df WHERE dt = '{pt}') driver_group
+(select * from oride_dw_ods.ods_sqoop_mass_driver_group_df WHERE dt = '{pt}') driver_group
 on dri.association_id = driver_group.id
 left outer join
-(select * from oride_dw.ods_sqoop_mass_driver_team_df WHERE dt = '{pt}') driver_team
+(select * from oride_dw_ods.ods_sqoop_mass_driver_team_df WHERE dt = '{pt}') driver_team
 on dri.team_id = driver_team.id
 
 

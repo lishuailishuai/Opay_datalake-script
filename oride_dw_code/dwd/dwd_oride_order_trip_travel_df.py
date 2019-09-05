@@ -56,7 +56,7 @@ dependence_ods_sqoop_base_data_trip_df = HivePartitionSensor(
     task_id='dependence_ods_sqoop_base_data_trip_df',
     table=hive_ods_table,
     partition="dt='{{ds}}'",
-    schema='oride_dw',
+    schema='oride_dw_ods',
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
@@ -142,7 +142,7 @@ ods_sqoop_base_data_trip_df_task = HiveOperator(
             LATERAL VIEW posexplode(orders) d AS pos, order_id 
     '''.format(
         table=hive_dwd_table,
-        ods_db='oride_dw',
+        ods_db='oride_dw_ods',
         ods_table=hive_ods_table,
         pt='{{ ds }}'
     ),

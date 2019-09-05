@@ -52,7 +52,7 @@ ods_sqoop_base_data_city_conf_df_tesk=HivePartitionSensor(
       task_id="ods_sqoop_base_data_city_conf_df_prev_day_tesk",
       table="ods_sqoop_base_data_city_conf_df",
       partition="dt='{{ds}}'",
-      schema="oride_dw",
+      schema="oride_dw_ods",
       poke_interval=60, #依赖不满足时，一分钟检查一次依赖状态
       dag=dag
     )
@@ -126,7 +126,7 @@ FROM
           --可设置避开高速的服务类型[1,2] 1 专车 2 快车
 
           validate --本条数据是否有效 0 无效，1 有效
-FROM oride_dw.ods_sqoop_base_data_city_conf_df
+FROM oride_dw_ods.ods_sqoop_base_data_city_conf_df
    WHERE dt='{pt}') cit
 LEFT OUTER JOIN
   (SELECT country_name_en,

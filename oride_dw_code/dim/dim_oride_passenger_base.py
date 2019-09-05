@@ -52,7 +52,7 @@ ods_sqoop_base_data_user_df_prev_day_tesk=HivePartitionSensor(
       task_id="ods_sqoop_base_data_user_df_prev_day_tesk",
       table="ods_sqoop_base_data_user_df",
       partition="dt='{{ds}}'",
-      schema="oride_dw",
+      schema="oride_dw_ods",
       poke_interval=60, #依赖不满足时，一分钟检查一次依赖状态
       dag=dag
     )
@@ -106,7 +106,7 @@ FROM
  updated_at, --'最后更新时间'
  'nal' AS country_code --国家码字段
 
-   FROM oride_dw.ods_sqoop_base_data_user_df
+   FROM oride_dw_ods.ods_sqoop_base_data_user_df
    WHERE dt= '{pt}' ) t1
 LEFT OUTER JOIN
   (SELECT id, -- 用户 ID
@@ -126,7 +126,7 @@ updated_at, -- 最后更新时间
 pay_type, -- user auto pay settings(-1: not set 0: manual payment 1: auto payment)
 city_id, -- 注册城市
 LANGUAGE -- 客户端语言
-FROM oride_dw.ods_sqoop_base_data_user_extend_df
+FROM oride_dw_ods.ods_sqoop_base_data_user_extend_df
 WHERE dt= '{pt}') t2 ON t1.passenger_id=t2.id;
 '''.format(
         pt='{{ds}}',

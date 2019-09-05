@@ -52,7 +52,7 @@ ods_sqoop_base_data_driver_df_prev_day_tesk=HivePartitionSensor(
       task_id="ods_sqoop_base_data_driver_df_prev_day_tesk",
       table="ods_sqoop_base_data_driver_df",
       partition="dt='{{ds}}'",
-      schema="oride_dw",
+      schema="oride_dw_ods",
       poke_interval=60, #依赖不满足时，一分钟检查一次依赖状态
       dag=dag
     )
@@ -63,7 +63,7 @@ ods_sqoop_base_data_driver_extend_df_prev_day_tesk=HivePartitionSensor(
       task_id="ods_sqoop_base_data_driver_extend_df_prev_day_tesk",
       table="ods_sqoop_base_data_driver_extend_df",
       partition="dt='{{ds}}'",
-      schema="oride_dw",
+      schema="oride_dw_ods",
       poke_interval=60, #依赖不满足时，一分钟检查一次依赖状态 
       dag=dag
     )
@@ -217,7 +217,7 @@ FROM
           --所属组id
 
           updated_at
-   FROM oride_dw.ods_sqoop_base_data_driver_df
+   FROM oride_dw_ods.ods_sqoop_base_data_driver_df
    WHERE substring(updated_at,1,13)<='{now_day} 00'
      AND dt = '{pt}') dri
 LEFT OUTER JOIN
@@ -258,7 +258,7 @@ LEFT OUTER JOIN
           --所属城市ID
 
           LANGUAGE --客户端语言
-FROM oride_dw.ods_sqoop_base_data_driver_extend_df
+FROM oride_dw_ods.ods_sqoop_base_data_driver_extend_df
    WHERE substring(updated_at,1,13)<='{now_day}T00' 
    and dt = '{pt}') ext ON dri.driver_id=ext.driver_id
 LEFT OUTER JOIN
