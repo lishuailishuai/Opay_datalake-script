@@ -154,7 +154,7 @@ FROM
    and city_id<>'999001') dri
 LEFT OUTER JOIN
   (SELECT *
-   FROM oride_dw.ods_sqoop_base_data_driver_repayment_df
+   FROM oride_dw_ods.ods_sqoop_base_data_driver_repayment_df
    WHERE dt='{pt}'
      AND substring(updated_at,1,13)<='{now_day} 00'
      and repayment_type=0) rep
@@ -162,12 +162,12 @@ LEFT OUTER JOIN
 LEFT OUTER JOIN
   (SELECT driver_id,
           balance--余额
-   FROM oride_dw.ods_sqoop_base_data_driver_balance_extend_df
+   FROM oride_dw_ods.ods_sqoop_base_data_driver_balance_extend_df
    WHERE dt='{pt}') bal ON dri.driver_id=bal.driver_id
 LEFT OUTER JOIN
  (SELECT driver_id,
           amount_service
-   FROM oride_dw.ods_sqoop_base_data_driver_records_day_df
+   FROM oride_dw_ods.ods_sqoop_base_data_driver_records_day_df
    WHERE from_unixtime(updated_at,'yyyy-MM-dd HH')<='{now_day} 00'
      AND dt = '{pt}'
      AND from_unixtime(DAY, 'yyyy-MM-dd') = dt) red
@@ -175,7 +175,7 @@ LEFT OUTER JOIN
  LEFT OUTER JOIN
   (SELECT driver_id,
           count(distinct(case when amount<0 then driver_id else null end)) as cnt
-   FROM oride_dw.ods_sqoop_base_data_driver_recharge_records_df
+   FROM oride_dw_ods.ods_sqoop_base_data_driver_recharge_records_df
    WHERE from_unixtime(updated_at,'yyyy-MM-dd HH')<='{now_day} 00'
      AND dt = '{pt}'
      and amount_reason=6
@@ -200,7 +200,7 @@ FROM
         (SELECT driver_id,
                 (CASE WHEN balance<0 THEN 1 ELSE 0 END) AS false_id,
                 dt
-         FROM oride_dw.ods_sqoop_base_data_driver_balance_extend_df
+         FROM oride_dw_ods.ods_sqoop_base_data_driver_balance_extend_df
          WHERE dt BETWEEN '{prev_6_day}' AND '{pt}'
          ORDER BY dt) bal
       GROUP BY driver_id,

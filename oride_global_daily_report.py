@@ -33,30 +33,30 @@ dag = airflow.DAG(
     default_args=args)
 
 global_table_names = [
-    'oride_dw.ods_sqoop_base_data_order_df',
-    'oride_dw.ods_sqoop_base_data_order_payment_df',
-    'oride_dw.ods_sqoop_base_data_user_extend_df',
-    'oride_dw.ods_sqoop_base_data_driver_extend_df',
+    'oride_dw_ods.ods_sqoop_base_data_order_df',
+    'oride_dw_ods.ods_sqoop_base_data_order_payment_df',
+    'oride_dw_ods.ods_sqoop_base_data_user_extend_df',
+    'oride_dw_ods.ods_sqoop_base_data_driver_extend_df',
     'oride_bi.oride_driver_timerange',
     'oride_bi.server_magic_push_detail',
     'oride_source.server_magic',
-    'oride_dw.ods_sqoop_base_data_driver_recharge_records_df',
-    'oride_dw.ods_sqoop_base_data_driver_reward_df',
-    'oride_dw.ods_sqoop_base_data_city_conf_df',
+    'oride_dw_ods.ods_sqoop_base_data_driver_recharge_records_df',
+    'oride_dw_ods.ods_sqoop_base_data_driver_reward_df',
+    'oride_dw_ods.ods_sqoop_base_data_city_conf_df',
 ]
 
 funnel_report_table_names = [
-    'oride_dw.ods_sqoop_base_weather_per_10min_df',
-    'oride_dw.ods_sqoop_base_data_order_df',
-    'oride_dw.ods_sqoop_base_data_city_conf_df',
-    'oride_dw.ods_sqoop_base_data_order_payment_df',
+    'oride_dw_ods.ods_sqoop_base_weather_per_10min_df',
+    'oride_dw_ods.ods_sqoop_base_data_order_df',
+    'oride_dw_ods.ods_sqoop_base_data_city_conf_df',
+    'oride_dw_ods.ods_sqoop_base_data_order_payment_df',
     'oride_bi.server_magic_push_detail',
 ]
 
 anti_fraud_table_names = [
-    'oride_dw.ods_sqoop_base_data_anti_fraud_strategy_df',
+    'oride_dw_ods.ods_sqoop_base_data_anti_fraud_strategy_df',
     'oride_source.anti_fraud',
-    'oride_dw.ods_sqoop_base_data_abnormal_order_df',
+    'oride_dw_ods.ods_sqoop_base_data_abnormal_order_df',
 ]
 
 def import_opay_event(ds, **kwargs):
@@ -257,7 +257,7 @@ insert_oride_global_daily_report = HiveOperator(
                 , id, null)
                 )/4 as driver_cancel_num_lfw
             FROM
-                oride_dw.ods_sqoop_base_data_order_df
+                oride_dw_ods.ods_sqoop_base_data_order_df
             WHERE
                 dt='{{ ds }}' and city_id !=999001
             GROUP BY dt
@@ -267,7 +267,7 @@ insert_oride_global_daily_report = HiveOperator(
             SELECT
                 *
             FROM
-                oride_dw.ods_sqoop_base_data_order_df
+                oride_dw_ods.ods_sqoop_base_data_order_df
             WHERE
                 dt='{{ ds }}'
                 AND city_id != 999001
@@ -360,7 +360,7 @@ insert_oride_global_daily_report = HiveOperator(
                     SELECT
                         distinct user_id
                     FROM
-                        oride_dw.ods_sqoop_base_data_order_df
+                        oride_dw_ods.ods_sqoop_base_data_order_df
                     WHERE
                         dt='{{ ds }}' and from_unixtime(create_time, 'yyyy-MM-dd')<dt and status in (4,5)
                 ) old_user on old_user.user_id=do.user_id
@@ -369,7 +369,7 @@ insert_oride_global_daily_report = HiveOperator(
                     SELECT
                         *
                     FROM
-                        oride_dw.ods_sqoop_base_data_order_payment_df
+                        oride_dw_ods.ods_sqoop_base_data_order_payment_df
                     WHERE
                         dt='{{ ds }}'
                 ) dop on dop.id=do.id and dop.dt=do.dt
@@ -382,7 +382,7 @@ insert_oride_global_daily_report = HiveOperator(
                 sum(if(from_unixtime(register_time, 'yyyy-MM-dd')=dt, 1, 0)) as register_users,
                 sum(if(from_unixtime(login_time, 'yyyy-MM-dd')=dt, 1, 0)) as active_users
             FROM
-                oride_dw.ods_sqoop_base_data_user_extend_df
+                oride_dw_ods.ods_sqoop_base_data_user_extend_df
             WHERE
                 dt='{{ ds }}'
             GROUP BY dt
@@ -394,7 +394,7 @@ insert_oride_global_daily_report = HiveOperator(
                 id,
                 register_time
             FROM
-                oride_dw.ods_sqoop_base_data_driver_extend_df
+                oride_dw_ods.ods_sqoop_base_data_driver_extend_df
             WHERE
                 dt='{{ ds }}' AND city_id!=999001
         ),
@@ -459,7 +459,7 @@ insert_oride_global_daily_report = HiveOperator(
                         dt,
                         id as user_id
                     FROM
-                        oride_dw.ods_sqoop_base_data_user_extend_df
+                        oride_dw_ods.ods_sqoop_base_data_user_extend_df
                     WHERE
                         dt='{{ ds }}' AND from_unixtime(register_time, 'yyyy-MM-dd')=dt
                 ) u
@@ -470,7 +470,7 @@ insert_oride_global_daily_report = HiveOperator(
                         user_id,
                         status
                     FROM
-                        oride_dw.ods_sqoop_base_data_order_df
+                        oride_dw_ods.ods_sqoop_base_data_order_df
                     WHERE
                         dt='{{ ds }}' AND from_unixtime(create_time, 'yyyy-MM-dd')=dt
                 ) o ON o.user_id=u.user_id
@@ -480,7 +480,7 @@ insert_oride_global_daily_report = HiveOperator(
                         id,
                         price
                     FROM
-                        oride_dw.ods_sqoop_base_data_order_payment_df
+                        oride_dw_ods.ods_sqoop_base_data_order_payment_df
                     WHERE
                         dt='{{ ds }}'
                 ) p ON p.id=o.id
@@ -617,7 +617,7 @@ insert_oride_order_city_daily_report = HiveOperator(
                     city,
                     weather,
                     count(1) counts
-                    from oride_dw.ods_sqoop_base_weather_per_10min_df where dt = '{{ ds }}'
+                    from oride_dw_ods.ods_sqoop_base_weather_per_10min_df where dt = '{{ ds }}'
                     and daliy = '{{ ds }}'
                     group by city,weather
                 ) t
@@ -645,7 +645,7 @@ insert_oride_order_city_daily_report = HiveOperator(
                         from_unixtime(unix_timestamp(run_time),'yyyy-MM-dd HH') run_time,
                         minute(from_unixtime(unix_timestamp(run_time))) mins
                     from
-                        oride_dw.ods_sqoop_base_weather_per_10min_df
+                        oride_dw_ods.ods_sqoop_base_weather_per_10min_df
                     where
                         dt = '{{ ds }}'
                         and weather in ('Thundershower','Light rain','Rain','Thunderstorm','A shower')
@@ -666,7 +666,7 @@ insert_oride_order_city_daily_report = HiveOperator(
                                 from_unixtime(create_time,'yyyy-MM-dd HH') as time,
                                 floor(cast(minute(from_unixtime(create_time)) as int) / 10) as mins
                             from
-                                oride_dw.ods_sqoop_base_data_order_df
+                                oride_dw_ods.ods_sqoop_base_data_order_df
                             where
                                 dt= '{{ ds }}' and from_unixtime(create_time,'yyyy-MM-dd') = '{{ ds }}'
                         ) t 
@@ -675,7 +675,7 @@ insert_oride_order_city_daily_report = HiveOperator(
                         SELECT
                             *
                         FROM
-                            oride_dw.ods_sqoop_base_data_city_conf_df
+                            oride_dw_ods.ods_sqoop_base_data_city_conf_df
                         WHERE
                             dt= '{{ ds }}'
 
@@ -745,7 +745,7 @@ insert_oride_order_city_daily_report = HiveOperator(
                 , id, null)
                 )/4 as driver_cancel_num_lfw
             FROM
-                oride_dw.ods_sqoop_base_data_order_df
+                oride_dw_ods.ods_sqoop_base_data_order_df
             WHERE
                 dt='{{ ds }}' and city_id !=999001
             GROUP BY dt,city_id
@@ -755,7 +755,7 @@ insert_oride_order_city_daily_report = HiveOperator(
             SELECT
                 *
             FROM
-                oride_dw.ods_sqoop_base_data_order_df
+                oride_dw_ods.ods_sqoop_base_data_order_df
             WHERE
                 dt='{{ ds }}'
                 AND city_id != 999001
@@ -835,7 +835,7 @@ insert_oride_order_city_daily_report = HiveOperator(
                     SELECT
                         distinct user_id
                     FROM
-                        oride_dw.ods_sqoop_base_data_order_df
+                        oride_dw_ods.ods_sqoop_base_data_order_df
                     WHERE
                         dt='{{ ds }}' and from_unixtime(create_time, 'yyyy-MM-dd')<dt and status in (4,5)
                 ) old_user on old_user.user_id=do.user_id
@@ -844,7 +844,7 @@ insert_oride_order_city_daily_report = HiveOperator(
                     SELECT
                         *
                     FROM
-                        oride_dw.ods_sqoop_base_data_order_payment_df
+                        oride_dw_ods.ods_sqoop_base_data_order_payment_df
                     WHERE
                        dt='{{ ds }}'
                 ) dop on dop.id=do.id and dop.dt=do.dt
@@ -872,7 +872,7 @@ insert_oride_order_city_daily_report = HiveOperator(
                 sum(if(from_unixtime(register_time, 'yyyy-MM-dd')=dt, 1, 0)) as register_users,
                 sum(if(from_unixtime(login_time, 'yyyy-MM-dd')=dt, 1, 0)) as active_users
             FROM
-                oride_dw.ods_sqoop_base_data_user_extend_df
+                oride_dw_ods.ods_sqoop_base_data_user_extend_df
             WHERE
                 dt='{{ ds }}'
             GROUP BY dt, city_id
@@ -974,7 +974,7 @@ insert_oride_order_city_daily_report = HiveOperator(
                     SELECT
                         *
                     FROM
-                        oride_dw.ods_sqoop_base_data_city_conf_df
+                        oride_dw_ods.ods_sqoop_base_data_city_conf_df
                     WHERE
                         dt='{{ ds }}'
                 ) c on od.city_id = c.id and c.dt = od.dt
@@ -1045,7 +1045,7 @@ insert_oride_global_city_serv_daily_report = HiveOperator(
                 city_id,
                 serv_type
             from 
-                oride_dw.ods_sqoop_base_data_driver_extend_df
+                oride_dw_ods.ods_sqoop_base_data_driver_extend_df
             WHERE
                 dt='{{ ds }}'
         ),
@@ -1077,7 +1077,7 @@ insert_oride_global_city_serv_daily_report = HiveOperator(
                     SELECT
                         *
                     FROM
-                        oride_dw.ods_sqoop_base_data_order_df
+                        oride_dw_ods.ods_sqoop_base_data_order_df
                     WHERE
                         dt='{{ ds }}'
                 ) o
@@ -1089,7 +1089,7 @@ insert_oride_global_city_serv_daily_report = HiveOperator(
             SELECT
                 *
             FROM
-                oride_dw.ods_sqoop_base_data_order_df
+                oride_dw_ods.ods_sqoop_base_data_order_df
             WHERE
                 dt='{{ ds }}'
                 AND city_id != 999001
@@ -1175,7 +1175,7 @@ insert_oride_global_city_serv_daily_report = HiveOperator(
                     SELECT
                         distinct user_id
                     FROM
-                        oride_dw.ods_sqoop_base_data_order_df
+                        oride_dw_ods.ods_sqoop_base_data_order_df
                     WHERE
                         dt='{{ ds }}' and from_unixtime(create_time, 'yyyy-MM-dd')<'{{ ds }}' and status in (4,5)
                 ) old_user on old_user.user_id=do.user_id
@@ -1184,7 +1184,7 @@ insert_oride_global_city_serv_daily_report = HiveOperator(
                     SELECT
                       *
                     FROM
-                        oride_dw.ods_sqoop_base_data_order_payment_df
+                        oride_dw_ods.ods_sqoop_base_data_order_payment_df
                     WHERE
                       dt='{{ ds }}'
 
@@ -1194,7 +1194,7 @@ insert_oride_global_city_serv_daily_report = HiveOperator(
                     SELECT
                       *
                     FROM
-                      oride_dw.ods_sqoop_base_data_driver_recharge_records_df
+                      oride_dw_ods.ods_sqoop_base_data_driver_recharge_records_df
                     WHERE
                       dt='{{ ds }}' AND amount>0
                 ) drr on drr.order_id=do.id
@@ -1203,7 +1203,7 @@ insert_oride_global_city_serv_daily_report = HiveOperator(
                     SELECT
                       *
                     FROM
-                      oride_dw.ods_sqoop_base_data_driver_reward_df
+                      oride_dw_ods.ods_sqoop_base_data_driver_reward_df
                     WHERE
                       dt='{{ ds }}'
                 ) dr on dr.order_id=do.id
@@ -1217,7 +1217,7 @@ insert_oride_global_city_serv_daily_report = HiveOperator(
                 serv_type,
                 sum(if(from_unixtime(register_time, 'yyyy-MM-dd')=dt, 1, 0)) as register_drivers
             FROM
-                oride_dw.ods_sqoop_base_data_driver_extend_df
+                oride_dw_ods.ods_sqoop_base_data_driver_extend_df
             WHERE
                 dt='{{ ds }}'
             GROUP BY dt,city_id,serv_type
@@ -1288,7 +1288,7 @@ insert_oride_global_city_serv_daily_report = HiveOperator(
                         dt,
                         id as user_id
                     FROM
-                        oride_dw.ods_sqoop_base_data_user_extend_df
+                        oride_dw_ods.ods_sqoop_base_data_user_extend_df
                     WHERE
                         dt='{{ ds }}' AND from_unixtime(register_time, 'yyyy-MM-dd')=dt
                 ) u
@@ -1300,7 +1300,7 @@ insert_oride_global_city_serv_daily_report = HiveOperator(
                         status,
                         driver_id
                     FROM
-                        oride_dw.ods_sqoop_base_data_order_df
+                        oride_dw_ods.ods_sqoop_base_data_order_df
                     WHERE
                         dt='{{ ds }}' AND from_unixtime(create_time, 'yyyy-MM-dd')=dt
                 ) o ON o.user_id=u.user_id
@@ -1310,7 +1310,7 @@ insert_oride_global_city_serv_daily_report = HiveOperator(
                         id,
                         price
                     FROM
-                        oride_dw.ods_sqoop_base_data_order_payment_df
+                        oride_dw_ods.ods_sqoop_base_data_order_payment_df
                     WHERE
                         dt='{{ ds }}'
                 ) p ON p.id=o.id
@@ -1471,7 +1471,7 @@ def get_city_row(ds, all_completed_num):
                 SELECT
                     *
                 FROM
-                    oride_dw.ods_sqoop_base_data_city_conf_df
+                    oride_dw_ods.ods_sqoop_base_data_city_conf_df
                 WHERE
                    dt='{ds}'
             ) td ON lower(cd.city) = lower(td.name)
@@ -1645,7 +1645,7 @@ def get_serv_row(ds, driver_serv_type, all_completed_num):
                 SELECT
                     *
                 FROM
-                    oride_dw.ods_sqoop_base_data_city_conf_df
+                    oride_dw_ods.ods_sqoop_base_data_city_conf_df
                 WHERE
                    dt='{ds}'
             ) td ON td.id=cd.city_id
@@ -1839,7 +1839,7 @@ def get_trike_row(ds, driver_serv_type):
                     id,
                     name
                 FROM
-                    oride_dw.ods_sqoop_base_data_city_conf_df
+                    oride_dw_ods.ods_sqoop_base_data_city_conf_df
                 WHERE
                    dt='{ds}'
             ) td ON td.id=cd.city_id
@@ -2802,7 +2802,7 @@ insert_oride_anti_fraud_daily_report = HiveOperator(
               SELECT
                 *
               FROM
-                oride_dw.ods_sqoop_base_data_anti_fraud_strategy_df
+                oride_dw_ods.ods_sqoop_base_data_anti_fraud_strategy_df
               WHERE
                 dt='{{ ds }}'
             ) afs
@@ -2843,7 +2843,7 @@ insert_oride_anti_fraud_daily_report = HiveOperator(
                         count(distinct if(is_revoked=1, order_id, null)) as revoked_order_num,
                         sum(amount) as order_amount
                     from
-                        oride_dw.ods_sqoop_base_data_abnormal_order_df
+                        oride_dw_ods.ods_sqoop_base_data_abnormal_order_df
                         lateral view explode(split(behavior_ids, ',')) addtable as behavior
                     where
                         dt = '{{ ds }}'

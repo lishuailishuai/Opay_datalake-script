@@ -28,12 +28,12 @@ dag = airflow.DAG(
     default_args=args)
 
 table_names = [
-    'oride_dw.ods_sqoop_mass_driver_group_df',
-    'oride_dw.ods_sqoop_mass_rider_signups_df',
-    'oride_dw.ods_sqoop_base_data_driver_extend_df',
-    'oride_dw.ods_sqoop_base_data_order_df',
-    'oride_dw.ods_sqoop_base_data_order_payment_df',
-    'oride_dw.ods_sqoop_base_data_driver_comment_df',
+    'oride_dw_ods.ods_sqoop_mass_driver_group_df',
+    'oride_dw_ods.ods_sqoop_mass_rider_signups_df',
+    'oride_dw_ods.ods_sqoop_base_data_driver_extend_df',
+    'oride_dw_ods.ods_sqoop_base_data_order_df',
+    'oride_dw_ods.ods_sqoop_base_data_order_payment_df',
+    'oride_dw_ods.ods_sqoop_base_data_driver_comment_df',
 ]
 
 create_oride_otrike_association_di = HiveOperator(
@@ -79,7 +79,7 @@ insert_oride_otrike_association_di = HiveOperator(
             SELECT
                 *
             FROM
-                oride_dw.ods_sqoop_mass_driver_group_df
+                oride_dw_ods.ods_sqoop_mass_driver_group_df
             WHERE
                 dt='{{ ds }}'
         ),
@@ -98,11 +98,11 @@ insert_oride_otrike_association_di = HiveOperator(
                 MAX(struct(t.create_time, t.record_by)).col2 AS record_by
             FROM
                 (
-                    SELECT * FROM oride_dw.ods_sqoop_mass_rider_signups_df WHERE dt='{{ ds }}' and association_id>0 and driver_id>0
+                    SELECT * FROM oride_dw_ods.ods_sqoop_mass_rider_signups_df WHERE dt='{{ ds }}' and association_id>0 and driver_id>0
                 ) t
                 INNER JOIN
                 (
-                    SELECT * FROM oride_dw.ods_sqoop_base_data_driver_extend_df  WHERE dt='{{ ds }}' and serv_type=3
+                    SELECT * FROM oride_dw_ods.ods_sqoop_base_data_driver_extend_df  WHERE dt='{{ ds }}' and serv_type=3
                 ) t1 ON t1.id=t.driver_id
                 INNER JOIN association_data t2 ON t2.id=t.association_id
             GROUP BY driver_id
@@ -131,7 +131,7 @@ insert_oride_otrike_association_di = HiveOperator(
                     SELECT
                         *
                     FROM
-                        oride_dw.ods_sqoop_base_data_order_df
+                        oride_dw_ods.ods_sqoop_base_data_order_df
                     WHERE
                         dt='{{ ds }}' AND from_unixtime(create_time, 'yyyy-MM-dd') between '{{ macros.ds_add(ds, -2) }}' AND '{{ ds }}'
                 ) t
@@ -141,7 +141,7 @@ insert_oride_otrike_association_di = HiveOperator(
                     SELECT
                         *
                     FROM
-                        oride_dw.ods_sqoop_base_data_order_payment_df
+                        oride_dw_ods.ods_sqoop_base_data_order_payment_df
                     WHERE
                         dt='{{ ds }}' AND from_unixtime(create_time, 'yyyy-MM-dd') between '{{ macros.ds_add(ds, -2) }}' AND '{{ ds }}'
                 ) t2 ON t2.id=t.id
@@ -255,7 +255,7 @@ insert_oride_otrike_association_di = HiveOperator(
                     SELECT
                         distinct driver_id
                     FROM
-                        oride_dw.ods_sqoop_base_data_driver_comment_df
+                        oride_dw_ods.ods_sqoop_base_data_driver_comment_df
                     WHERE
                         from_unixtime(create_time, 'yyyy-MM-dd')='{{ ds }}' and score<=3
 
@@ -335,7 +335,7 @@ def send_oride_association_email(ds, **kwargs):
             SELECT
                 *
             FROM
-                oride_dw.ods_sqoop_mass_driver_group_df
+                oride_dw_ods.ods_sqoop_mass_driver_group_df
             WHERE
                 dt='{dt}'
         ),

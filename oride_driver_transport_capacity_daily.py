@@ -26,10 +26,10 @@ dag = airflow.DAG(
 
 
 
-table_names = ['oride_dw.ods_sqoop_base_data_order_df',
-               'oride_dw.ods_sqoop_base_data_device_extend_df',
-               'oride_dw.ods_sqoop_base_data_city_conf_df',
-               'oride_dw.ods_sqoop_base_data_order_payment_df',
+table_names = ['oride_dw_ods.ods_sqoop_base_data_order_df',
+               'oride_dw_ods.ods_sqoop_base_data_device_extend_df',
+               'oride_dw_ods.ods_sqoop_base_data_city_conf_df',
+               'oride_dw_ods.ods_sqoop_base_data_order_payment_df',
                'oride_dw.dwd_oride_order_push_driver_detail_di',
                'oride_bi.oride_driver_timerange'
                ]
@@ -129,14 +129,14 @@ insert_driver_metrics = HiveOperator(
                 city_id,
                 register_time
                 from 
-                oride_dw.ods_sqoop_base_data_driver_extend_df
+                oride_dw_ods.ods_sqoop_base_data_driver_extend_df
                 where dt = '{{ ds }}'
             ) e
             join 
             (
                 select 
                 * 
-                from oride_dw.ods_sqoop_base_data_city_conf_df
+                from oride_dw_ods.ods_sqoop_base_data_city_conf_df
                 where dt = '{{ ds }}' and id != 999001
             ) c on  e.city_id = c.id 
         ),
@@ -167,7 +167,7 @@ insert_driver_metrics = HiveOperator(
             SELECT
                 *
             FROM
-                oride_dw.ods_sqoop_base_data_order_df
+                oride_dw_ods.ods_sqoop_base_data_order_df
             WHERE
                 dt='{{ ds }}'
                 AND city_id != 999001
@@ -261,7 +261,7 @@ insert_driver_metrics = HiveOperator(
                 price,
                 amount
                 from 
-                oride_dw.ods_sqoop_base_data_order_payment_df 
+                oride_dw_ods.ods_sqoop_base_data_order_payment_df
                 where dt = '{{ ds }}' and from_unixtime(create_time,'yyyy-MM-dd') = '{{ ds }}'  and status = 1
             ) p 
             join driver_dim d on p.driver_id = d.id
@@ -349,8 +349,8 @@ insert_driver_metrics = HiveOperator(
                 select 
                 c.name city_name, 
                 o.id
-                from oride_dw.ods_sqoop_base_data_order_df o 
-                join oride_dw.ods_sqoop_base_data_city_conf_df c on c.dt = '{{ ds }}' and o.city_id = c.id
+                from oride_dw_ods.ods_sqoop_base_data_order_df o
+                join oride_dw_ods.ods_sqoop_base_data_city_conf_df c on c.dt = '{{ ds }}' and o.city_id = c.id
                 where o.dt = '{{ ds }}' 
             ) o on s.order_id = o.id 
             group by o.city_name,s.serv_type

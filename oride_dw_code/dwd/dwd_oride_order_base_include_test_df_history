@@ -86,9 +86,9 @@ if(t1.status IN(4,5)
 if(t1.driver_id <> 0
    AND t1.take_time > 0
    AND t1.finish_time>0,t1.finish_time - t1.take_time,0) AS finish_order_dur -- 完成做单时长（秒）
-from (select * FROM oride_dw.ods_sqoop_base_data_order_expired_df
+from (select * FROM oride_dw_ods.ods_sqoop_base_data_order_expired_df
 WHERE dt='2019-09-01') t1 left outer join
-(select * from oride_dw.ods_sqoop_base_data_order_payment_df
+(select * from oride_dw_ods.ods_sqoop_base_data_order_payment_df
 WHERE dt='2019-09-01') t2
 on t1.id=t2.id
 left outer join

@@ -162,12 +162,12 @@ if(t1.driver_id <> 0
 '{pt}' AS dt
 FROM
   (SELECT *
-   FROM oride_dw.ods_sqoop_base_data_order_df
+   FROM oride_dw_ods.ods_sqoop_base_data_order_df
    WHERE dt = '{pt}'
      AND substring(updated_at,1,13)<='{now_day} 00') t1
 LEFT OUTER JOIN
   (SELECT *
-   FROM oride_dw.ods_sqoop_base_data_order_payment_df
+   FROM oride_dw_ods.ods_sqoop_base_data_order_payment_df
    WHERE dt = '{pt}'
      AND substring(updated_at,1,13)<='{now_day} 00') t2 ON t1.id=t2.id;
 

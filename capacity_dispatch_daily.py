@@ -32,7 +32,7 @@ dag = airflow.DAG(
 
 
 table_names = ['oride_dw.dwd_oride_order_dispatch_chose_detail_di',
-               'oride_dw.ods_sqoop_base_data_order_df',
+               'oride_dw_ods.ods_sqoop_base_data_order_df',
                'oride_dw.dwd_oride_order_dispatch_filter_detail_di',
                'oride_dw.dwd_oride_order_push_driver_detail_di'
                ]
@@ -175,7 +175,7 @@ insert_report_metrics = HiveOperator(
                         id,
                         driver_id
                         from
-                        oride_dw.ods_sqoop_base_data_order_df
+                        oride_dw_ods.ods_sqoop_base_data_order_df
                         where dt='{{ ds }}' and from_unixtime(create_time,'yyyy-MM-dd') = '{{ ds }}'
                     ) b ON b.id = a.order_id  
                     
@@ -283,7 +283,7 @@ insert_order_metrics = HiveOperator(
             concat(cast(nvl(round(count(if(status = 6 and driver_id = 0  and cancel_role = 1,id,null)) * 100/count(id),2),0) as string),'%') passanger_before_cancel_rate,
             concat(cast(nvl(round(count(if(status = 6 and driver_id <> 0  and cancel_role = 1,id,null)) * 100/count(id),2),0) as string),'%') passanger_after_cancel_rate
         from
-            oride_dw.ods_sqoop_base_data_order_df where  dt= '{{ ds }}' and from_unixtime(create_time,'yyyy-MM-dd') = '{{ ds }}'
+            oride_dw_ods.ods_sqoop_base_data_order_df where  dt= '{{ ds }}' and from_unixtime(create_time,'yyyy-MM-dd') = '{{ ds }}'
         group by from_unixtime(create_time,'yyyy-MM-dd')
         ) tt
         left join 
@@ -309,7 +309,7 @@ insert_order_metrics = HiveOperator(
                     end_name,
                     from_unixtime(create_time,'yyyy-MM-dd HH') as time, 
                     floor(cast(minute(from_unixtime(create_time)) as int) / 30) as mins
-                    from oride_dw.ods_sqoop_base_data_order_df
+                    from oride_dw_ods.ods_sqoop_base_data_order_df
                     where  dt= '{{ ds }}' and from_unixtime(create_time,'yyyy-MM-dd') = '{{ ds }}'
                 ) t
                 group by time,t.mins,start_name,end_name,user_id

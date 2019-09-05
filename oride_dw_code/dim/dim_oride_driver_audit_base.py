@@ -278,15 +278,15 @@ from
   id,  --数据主键
   row_number() OVER(partition BY driver_id,status
                                ORDER BY update_time DESC) AS rn1
-      FROM oride_dw.ods_sqoop_mass_rider_signups_df
+      FROM oride_dw_ods.ods_sqoop_mass_rider_signups_df
       WHERE dt = '{pt}'
  )t1
 where rn1=1) dri
 left outer join
-(select * from oride_dw.ods_sqoop_mass_driver_group_df WHERE dt = '{pt}') driver_group
+(select * from oride_dw_ods.ods_sqoop_mass_driver_group_df WHERE dt = '{pt}') driver_group
 on dri.association_id = driver_group.id
 left outer join
-(select * from oride_dw.ods_sqoop_mass_driver_team_df WHERE dt = '{pt}') driver_team
+(select * from oride_dw_ods.ods_sqoop_mass_driver_team_df WHERE dt = '{pt}') driver_team
 on dri.team_id = driver_team.id
 
 
