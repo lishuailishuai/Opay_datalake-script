@@ -240,7 +240,11 @@ pick_distance_finished AS
             id, 
             status, 
             cancel_role 
+<<<<<<< .merge_file_N0NXYT
         FROM oride_dw_ods.ods_sqoop_base_data_order_df 
+=======
+        FROM oride_dw_ods.ods_sqoop_base_data_order_df
+>>>>>>> .merge_file_beXkWX
         WHERE dt = '{pt}' AND 
             from_unixtime(create_time, 'yyyy-MM-dd') = '{pt}'
         ) AS o 
@@ -380,7 +384,11 @@ push_distance_finished AS
             id,  
             city_id,  
             dt 
+<<<<<<< .merge_file_N0NXYT
         FROM oride_dw_ods.ods_sqoop_base_data_driver_extend_df 
+=======
+        FROM oride_dw_ods.ods_sqoop_base_data_driver_extend_df
+>>>>>>> .merge_file_beXkWX
         WHERE dt = '{pt}'
         ) AS de  
     INNER JOIN (SELECT 
@@ -426,14 +434,22 @@ pick_distance_finished AS
             id, 
             status, 
             cancel_role
+<<<<<<< .merge_file_N0NXYT
         FROM oride_dw_ods.ods_sqoop_base_data_order_df 
+=======
+        FROM oride_dw_ods.ods_sqoop_base_data_order_df
+>>>>>>> .merge_file_beXkWX
         WHERE dt = '{pt}' AND 
             from_unixtime(create_time, 'yyyy-MM-dd') = '{pt}'
         ) AS o ON m.order_id = o.id 
     INNER JOIN (SELECT 
             id,  
             city_id 
+<<<<<<< .merge_file_N0NXYT
         FROM oride_dw_ods.ods_sqoop_base_data_driver_extend_df 
+=======
+        FROM oride_dw_ods.ods_sqoop_base_data_driver_extend_df
+>>>>>>> .merge_file_beXkWX
         WHERE dt = '{pt}'
         ) AS de ON m.driver_id = de.id  
     GROUP BY m.country_code, m.dt, de.city_id 
@@ -469,7 +485,11 @@ pick_distance_taked AS
     INNER JOIN (SELECT 
             id, 
             city_id  
+<<<<<<< .merge_file_N0NXYT
         FROM oride_dw_ods.ods_sqoop_base_data_driver_extend_df 
+=======
+        FROM oride_dw_ods.ods_sqoop_base_data_driver_extend_df
+>>>>>>> .merge_file_beXkWX
         WHERE dt = '{pt}'
         ) AS de ON m.driver_id = de.id 
     GROUP BY m.country_code, m.dt, de.city_id
@@ -495,7 +515,11 @@ push_data_chose AS
         SELECT 
             id, 
             city_id 
+<<<<<<< .merge_file_N0NXYT
         FROM oride_dw_ods.ods_sqoop_base_data_driver_extend_df 
+=======
+        FROM oride_dw_ods.ods_sqoop_base_data_driver_extend_df
+>>>>>>> .merge_file_beXkWX
         WHERE dt = '{pt}'
         ) AS de 
     WHERE m.driver_id = de.id 
@@ -529,7 +553,11 @@ dirvers_pushed AS
         INNER JOIN (SELECT 
                 id, 
                 city_id  
+<<<<<<< .merge_file_N0NXYT
             FROM oride_dw_ods.ods_sqoop_base_data_driver_extend_df 
+=======
+            FROM oride_dw_ods.ods_sqoop_base_data_driver_extend_df
+>>>>>>> .merge_file_beXkWX
             WHERE dt = '{pt}'
             ) AS do  
         WHERE sm.driver_id = do.id  
@@ -604,7 +632,11 @@ push_distance_finished AS
             id,  
             city_id, 
             serv_type 
+<<<<<<< .merge_file_N0NXYT
         FROM oride_dw_ods.ods_sqoop_base_data_driver_extend_df 
+=======
+        FROM oride_dw_ods.ods_sqoop_base_data_driver_extend_df
+>>>>>>> .merge_file_beXkWX
         WHERE dt = '{pt}'
         ) AS de  
     INNER JOIN (SELECT 
@@ -650,7 +682,11 @@ pick_distance_finished AS
             id, 
             status, 
             cancel_role
+<<<<<<< .merge_file_N0NXYT
         FROM oride_dw_ods.ods_sqoop_base_data_order_df 
+=======
+        FROM oride_dw_ods.ods_sqoop_base_data_order_df
+>>>>>>> .merge_file_beXkWX
         WHERE dt = '{pt}' AND 
             from_unixtime(create_time, 'yyyy-MM-dd') = '{pt}'
         ) AS o ON m.order_id = o.id 
@@ -658,7 +694,11 @@ pick_distance_finished AS
             id,  
             city_id, 
             serv_type 
+<<<<<<< .merge_file_N0NXYT
         FROM oride_dw_ods.ods_sqoop_base_data_driver_extend_df 
+=======
+        FROM oride_dw_ods.ods_sqoop_base_data_driver_extend_df
+>>>>>>> .merge_file_beXkWX
         WHERE dt = '{pt}'
         ) AS de ON m.driver_id = de.id  
     GROUP BY m.country_code, m.dt, de.city_id, de.serv_type 
@@ -695,7 +735,11 @@ pick_distance_taked AS
             id, 
             city_id, 
             serv_type 
+<<<<<<< .merge_file_N0NXYT
         FROM oride_dw_ods.ods_sqoop_base_data_driver_extend_df 
+=======
+        FROM oride_dw_ods.ods_sqoop_base_data_driver_extend_df
+>>>>>>> .merge_file_beXkWX
         WHERE dt = '{pt}'
         ) AS de ON m.driver_id = de.id  
     GROUP BY m.country_code, m.dt, de.city_id, de.serv_type 
@@ -722,7 +766,11 @@ push_data_chose AS
             id, 
             city_id, 
             serv_type  
+<<<<<<< .merge_file_N0NXYT
         FROM oride_dw_ods.ods_sqoop_base_data_driver_extend_df 
+=======
+        FROM oride_dw_ods.ods_sqoop_base_data_driver_extend_df
+>>>>>>> .merge_file_beXkWX
         WHERE dt = '{pt}'
         ) AS de 
     WHERE m.driver_id = de.id 
@@ -758,7 +806,11 @@ dirvers_pushed AS
                 id, 
                 city_id, 
                 serv_type  
+<<<<<<< .merge_file_N0NXYT
             FROM oride_dw_ods.ods_sqoop_base_data_driver_extend_df 
+=======
+            FROM oride_dw_ods.ods_sqoop_base_data_driver_extend_df
+>>>>>>> .merge_file_beXkWX
             WHERE dt = '{pt}'
             ) AS do  
         WHERE sm.driver_id = do.id  

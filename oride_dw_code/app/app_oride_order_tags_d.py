@@ -188,7 +188,11 @@ insert_result_to_impala = HiveOperator(
                 lateral view posexplode(tag_ids) tags as pos, tag 
                 where dt='{pt}' 
                 ) as t
+<<<<<<< .merge_file_W0bxOb
             inner join (select * from oride_dw_ods.ods_sqoop_base_data_order_df where dt='{pt}') as do  
+=======
+            inner join (select * from oride_dw_ods.ods_sqoop_base_data_order_df where dt='{pt}') as do
+>>>>>>> .merge_file_CAmnPS
             where t.order_id = do.id and 
                 from_unixtime(do.create_time, 'yyyy-MM-dd') = '{pt}'
             group by 
@@ -210,7 +214,11 @@ insert_result_to_impala = HiveOperator(
                 lateral view posexplode(tag_ids) tags as pos, tag 
                 where dt='{pt}' 
                 ) as t
+<<<<<<< .merge_file_W0bxOb
             inner join (select * from oride_dw_ods.ods_sqoop_base_data_order_df where dt='{pt}') as do  
+=======
+            inner join (select * from oride_dw_ods.ods_sqoop_base_data_order_df where dt='{pt}') as do
+>>>>>>> .merge_file_CAmnPS
             where t.order_id = do.id and 
                 from_unixtime(do.create_time, 'yyyy-MM-dd') = '{pt}'
             group by 
@@ -232,7 +240,11 @@ insert_result_to_impala = HiveOperator(
                 lateral view posexplode(tag_ids) tags as pos, tag 
                 where dt='{pt}' 
                 ) as t
+<<<<<<< .merge_file_W0bxOb
             inner join (select * from oride_dw_ods.ods_sqoop_base_data_order_df where dt='{pt}') as do  
+=======
+            inner join (select * from oride_dw_ods.ods_sqoop_base_data_order_df where dt='{pt}') as do
+>>>>>>> .merge_file_CAmnPS
             where t.order_id = do.id and 
                 from_unixtime(do.create_time, 'yyyy-MM-dd') = '{pt}'
             group by 

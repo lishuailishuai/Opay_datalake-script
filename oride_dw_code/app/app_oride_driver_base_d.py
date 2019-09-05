@@ -285,14 +285,22 @@ income_data AS
             driver_id,
             'nal' AS country_code, 
             dt
+<<<<<<< .merge_file_zBcpPM
         FROM oride_dw_ods.ods_sqoop_base_data_driver_records_day_df 
+=======
+        FROM oride_dw_ods.ods_sqoop_base_data_driver_records_day_df
+>>>>>>> .merge_file_WkTF2M
         WHERE dt = '{pt}' AND 
             from_unixtime(day, 'yyyy-MM-dd') = '{pt}'
         ) AS drd 
     JOIN 
         (SELECT 
             driver_id 
+<<<<<<< .merge_file_zBcpPM
         FROM oride_dw_ods.ods_sqoop_base_data_order_df 
+=======
+        FROM oride_dw_ods.ods_sqoop_base_data_order_df
+>>>>>>> .merge_file_WkTF2M
         WHERE dt = '{pt}' AND 
             from_unixtime(create_time, 'yyyy-MM-dd') = '{pt}' AND 
             status IN (4,5)
@@ -316,7 +324,11 @@ reward_data AS
             dt,
             'nal' AS country_code,
             driver_id 
+<<<<<<< .merge_file_zBcpPM
         FROM oride_dw_ods.ods_sqoop_base_data_order_df 
+=======
+        FROM oride_dw_ods.ods_sqoop_base_data_order_df
+>>>>>>> .merge_file_WkTF2M
         WHERE dt = '{pt}' AND 
             from_unixtime(create_time, 'yyyy-MM-dd') = '{pt}' AND  
             status IN (4,5)
@@ -325,14 +337,22 @@ reward_data AS
     JOIN (SELECT 
             amount,
             driver_id
+<<<<<<< .merge_file_zBcpPM
         FROM oride_dw_ods.ods_sqoop_base_data_driver_recharge_records_df 
+=======
+        FROM oride_dw_ods.ods_sqoop_base_data_driver_recharge_records_df
+>>>>>>> .merge_file_WkTF2M
         WHERE dt = '{pt}' AND 
             from_unixtime(created_at, 'yyyy-MM-dd') = '{pt}'
         ) AS rr ON do.driver_id = rr.driver_id 
     JOIN (SELECT 
             amount,
             driver_id  
+<<<<<<< .merge_file_zBcpPM
         FROM oride_dw_ods.ods_sqoop_base_data_driver_reward_df 
+=======
+        FROM oride_dw_ods.ods_sqoop_base_data_driver_reward_df
+>>>>>>> .merge_file_WkTF2M
         WHERE dt = '{pt}' AND 
             from_unixtime(create_time, 'yyyy-MM-dd') = '{pt}'
         ) AS dr ON do.driver_id = dr.driver_id 
@@ -363,14 +383,22 @@ driver_range AS
             finish_time,
             cancel_time,
             driver_id
+<<<<<<< .merge_file_zBcpPM
         FROM oride_dw_ods.ods_sqoop_base_data_order_df 
+=======
+        FROM oride_dw_ods.ods_sqoop_base_data_order_df
+>>>>>>> .merge_file_WkTF2M
         WHERE dt = '{pt}' AND 
             from_unixtime(create_time, 'yyyy-MM-dd')='{pt}' AND 
             status IN (4,5,6) 
         ) AS do 
     JOIN (SELECT 
             DISTINCT driver_id 
+<<<<<<< .merge_file_zBcpPM
         FROM oride_dw_ods.ods_sqoop_base_data_order_df 
+=======
+        FROM oride_dw_ods.ods_sqoop_base_data_order_df
+>>>>>>> .merge_file_WkTF2M
         WHERE dt = '{pt}' AND 
             from_unixtime(create_time, 'yyyy-MM-dd')='{pt}' AND   
             status IN (4,5)
@@ -399,7 +427,11 @@ driver_online AS
         ) AS odt 
     JOIN (SELECT 
             distinct driver_id 
+<<<<<<< .merge_file_zBcpPM
         FROM oride_dw_ods.ods_sqoop_base_data_order_df 
+=======
+        FROM oride_dw_ods.ods_sqoop_base_data_order_df
+>>>>>>> .merge_file_WkTF2M
         WHERE dt = '{pt}' AND 
             from_unixtime(create_time, 'yyyy-MM-dd')='{pt}' AND 
             status IN (4,5)
@@ -482,7 +514,11 @@ sum_driver_click_orders AS
     JOIN (SELECT 
             id, 
             city_id 
+<<<<<<< .merge_file_zBcpPM
         FROM oride_dw_ods.ods_sqoop_base_data_driver_extend_df 
+=======
+        FROM oride_dw_ods.ods_sqoop_base_data_driver_extend_df
+>>>>>>> .merge_file_WkTF2M
         WHERE dt = '{pt}'
         ) AS de 
     ON o.driver_id = de.id  
@@ -513,7 +549,11 @@ click_data AS
     JOIN (SELECT 
             id, 
             city_id 
+<<<<<<< .merge_file_zBcpPM
         FROM oride_dw_ods.ods_sqoop_base_data_driver_extend_df 
+=======
+        FROM oride_dw_ods.ods_sqoop_base_data_driver_extend_df
+>>>>>>> .merge_file_WkTF2M
         WHERE dt = '{pt}'
         ) AS do  
     WHERE ce.driver_id = do.id  
@@ -548,7 +588,11 @@ orders_show AS
     JOIN (SELECT 
             id, 
             city_id 
+<<<<<<< .merge_file_zBcpPM
         FROM oride_dw_ods.ods_sqoop_base_data_driver_extend_df 
+=======
+        FROM oride_dw_ods.ods_sqoop_base_data_driver_extend_df
+>>>>>>> .merge_file_WkTF2M
         WHERE dt = '{pt}'
         ) AS do  
     WHERE t.driver_id = do.id  
@@ -567,7 +611,11 @@ income_data AS
     FROM 
         (SELECT 
             driver_id 
+<<<<<<< .merge_file_zBcpPM
         FROM oride_dw_ods.ods_sqoop_base_data_order_df 
+=======
+        FROM oride_dw_ods.ods_sqoop_base_data_order_df
+>>>>>>> .merge_file_WkTF2M
         WHERE dt = '{pt}' AND 
             from_unixtime(create_time, 'yyyy-MM-dd') = '{pt}' AND 
             status IN (4,5)
@@ -578,7 +626,11 @@ income_data AS
             city_id, 
             'nal' AS country_code, 
             dt 
+<<<<<<< .merge_file_zBcpPM
         FROM oride_dw_ods.ods_sqoop_base_data_driver_extend_df 
+=======
+        FROM oride_dw_ods.ods_sqoop_base_data_driver_extend_df
+>>>>>>> .merge_file_WkTF2M
         WHERE dt = '{pt}'
         ) AS de ON de.id = do.driver_id 
     JOIN (SELECT 
@@ -586,7 +638,11 @@ income_data AS
             amount_pay_offline,
             driver_id,
             dt
+<<<<<<< .merge_file_zBcpPM
         FROM oride_dw_ods.ods_sqoop_base_data_driver_records_day_df 
+=======
+        FROM oride_dw_ods.ods_sqoop_base_data_driver_records_day_df
+>>>>>>> .merge_file_WkTF2M
         WHERE dt = '{pt}' AND 
             from_unixtime(day, 'yyyy-MM-dd') = '{pt}'
         ) AS drd ON drd.driver_id = do.driver_id  
@@ -605,7 +661,11 @@ reward_data AS
     FROM 
         (SELECT 
             driver_id 
+<<<<<<< .merge_file_zBcpPM
         FROM oride_dw_ods.ods_sqoop_base_data_order_df 
+=======
+        FROM oride_dw_ods.ods_sqoop_base_data_order_df
+>>>>>>> .merge_file_WkTF2M
         WHERE dt = '{pt}' AND 
             from_unixtime(create_time, 'yyyy-MM-dd') = '{pt}' AND  
             status IN (4,5)
@@ -616,20 +676,32 @@ reward_data AS
             city_id, 
             'nal' AS country_code, 
             dt 
+<<<<<<< .merge_file_zBcpPM
         FROM oride_dw_ods.ods_sqoop_base_data_driver_extend_df 
+=======
+        FROM oride_dw_ods.ods_sqoop_base_data_driver_extend_df
+>>>>>>> .merge_file_WkTF2M
         WHERE dt = '{pt}'
         ) AS de ON de.id = do.driver_id 
     JOIN (SELECT 
             amount,
             driver_id
+<<<<<<< .merge_file_zBcpPM
         FROM oride_dw_ods.ods_sqoop_base_data_driver_recharge_records_df 
+=======
+        FROM oride_dw_ods.ods_sqoop_base_data_driver_recharge_records_df
+>>>>>>> .merge_file_WkTF2M
         WHERE dt = '{pt}' AND 
             from_unixtime(created_at, 'yyyy-MM-dd') = '{pt}'
         ) AS rr ON do.driver_id = rr.driver_id 
     JOIN (SELECT 
             amount,
             driver_id  
+<<<<<<< .merge_file_zBcpPM
         FROM oride_dw_ods.ods_sqoop_base_data_driver_reward_df 
+=======
+        FROM oride_dw_ods.ods_sqoop_base_data_driver_reward_df
+>>>>>>> .merge_file_WkTF2M
         WHERE dt = '{pt}' AND 
             from_unixtime(create_time, 'yyyy-MM-dd') = '{pt}'
         ) AS dr ON do.driver_id = dr.driver_id 
@@ -658,14 +730,22 @@ driver_range AS
             finish_time,
             cancel_time,
             driver_id
+<<<<<<< .merge_file_zBcpPM
         FROM oride_dw_ods.ods_sqoop_base_data_order_df 
+=======
+        FROM oride_dw_ods.ods_sqoop_base_data_order_df
+>>>>>>> .merge_file_WkTF2M
         WHERE dt = '{pt}' AND 
             from_unixtime(create_time, 'yyyy-MM-dd')='{pt}' AND 
             status IN (4,5,6) 
         ) AS do 
     JOIN (SELECT 
             DISTINCT driver_id 
+<<<<<<< .merge_file_zBcpPM
         FROM oride_dw_ods.ods_sqoop_base_data_order_df 
+=======
+        FROM oride_dw_ods.ods_sqoop_base_data_order_df
+>>>>>>> .merge_file_WkTF2M
         WHERE dt = '{pt}' AND 
             from_unixtime(create_time, 'yyyy-MM-dd')='{pt}' AND   
             status IN (4,5)
@@ -675,7 +755,11 @@ driver_range AS
             city_id, 
             'nal' AS country_code, 
             dt 
+<<<<<<< .merge_file_zBcpPM
         FROM oride_dw_ods.ods_sqoop_base_data_driver_extend_df 
+=======
+        FROM oride_dw_ods.ods_sqoop_base_data_driver_extend_df
+>>>>>>> .merge_file_WkTF2M
         WHERE dt = '{pt}'
         ) AS de ON de.id = do.driver_id 
     GROUP BY de.country_code, de.dt, de.city_id
@@ -699,7 +783,11 @@ driver_online AS
         ) AS odt 
     JOIN (SELECT 
             distinct driver_id 
+<<<<<<< .merge_file_zBcpPM
         FROM oride_dw_ods.ods_sqoop_base_data_order_df 
+=======
+        FROM oride_dw_ods.ods_sqoop_base_data_order_df
+>>>>>>> .merge_file_WkTF2M
         WHERE dt = '{pt}' AND 
             from_unixtime(create_time, 'yyyy-MM-dd')='{pt}' AND 
             status IN (4,5)
@@ -709,7 +797,11 @@ driver_online AS
             city_id, 
             'nal' AS country_code, 
             dt 
+<<<<<<< .merge_file_zBcpPM
         FROM oride_dw_ods.ods_sqoop_base_data_driver_extend_df 
+=======
+        FROM oride_dw_ods.ods_sqoop_base_data_driver_extend_df
+>>>>>>> .merge_file_WkTF2M
         WHERE dt = '{pt}'
         ) AS de ON odt.driver_id = de.id 
     GROUP BY de.country_code, de.dt, de.city_id
@@ -790,7 +882,11 @@ sum_driver_click_orders AS
             id, 
             city_id, 
             serv_type 
+<<<<<<< .merge_file_zBcpPM
         FROM oride_dw_ods.ods_sqoop_base_data_driver_extend_df 
+=======
+        FROM oride_dw_ods.ods_sqoop_base_data_driver_extend_df
+>>>>>>> .merge_file_WkTF2M
         WHERE dt = '{pt}'
         ) AS de 
     ON o.driver_id = de.id  
@@ -822,7 +918,11 @@ click_data AS
             id, 
             city_id,
             serv_type 
+<<<<<<< .merge_file_zBcpPM
         FROM oride_dw_ods.ods_sqoop_base_data_driver_extend_df 
+=======
+        FROM oride_dw_ods.ods_sqoop_base_data_driver_extend_df
+>>>>>>> .merge_file_WkTF2M
         WHERE dt = '{pt}'
         ) AS do  
     WHERE ce.driver_id = do.id  
@@ -858,7 +958,11 @@ orders_show AS
             id, 
             city_id, 
             serv_type  
+<<<<<<< .merge_file_zBcpPM
         FROM oride_dw_ods.ods_sqoop_base_data_driver_extend_df 
+=======
+        FROM oride_dw_ods.ods_sqoop_base_data_driver_extend_df
+>>>>>>> .merge_file_WkTF2M
         WHERE dt = '{pt}'
         ) AS do  
     WHERE t.driver_id = do.id  
@@ -877,7 +981,11 @@ income_data AS
     FROM 
         (SELECT 
             driver_id 
+<<<<<<< .merge_file_zBcpPM
         FROM oride_dw_ods.ods_sqoop_base_data_order_df 
+=======
+        FROM oride_dw_ods.ods_sqoop_base_data_order_df
+>>>>>>> .merge_file_WkTF2M
         WHERE dt = '{pt}' AND 
             from_unixtime(create_time, 'yyyy-MM-dd') = '{pt}' AND 
             status IN (4,5)
@@ -889,7 +997,11 @@ income_data AS
             serv_type, 
             'nal' AS country_code, 
             dt 
+<<<<<<< .merge_file_zBcpPM
         FROM oride_dw_ods.ods_sqoop_base_data_driver_extend_df 
+=======
+        FROM oride_dw_ods.ods_sqoop_base_data_driver_extend_df
+>>>>>>> .merge_file_WkTF2M
         WHERE dt = '{pt}'
         ) AS de ON de.id = do.driver_id 
     JOIN (SELECT 
@@ -897,7 +1009,11 @@ income_data AS
             amount_pay_offline,
             driver_id,
             dt
+<<<<<<< .merge_file_zBcpPM
         FROM oride_dw_ods.ods_sqoop_base_data_driver_records_day_df 
+=======
+        FROM oride_dw_ods.ods_sqoop_base_data_driver_records_day_df
+>>>>>>> .merge_file_WkTF2M
         WHERE dt = '{pt}' AND 
             from_unixtime(day, 'yyyy-MM-dd') = '{pt}'
         ) AS drd ON drd.driver_id = do.driver_id  
@@ -916,7 +1032,11 @@ reward_data AS
     FROM 
         (SELECT 
             driver_id 
+<<<<<<< .merge_file_zBcpPM
         FROM oride_dw_ods.ods_sqoop_base_data_order_df 
+=======
+        FROM oride_dw_ods.ods_sqoop_base_data_order_df
+>>>>>>> .merge_file_WkTF2M
         WHERE dt = '{pt}' AND 
             from_unixtime(create_time, 'yyyy-MM-dd') = '{pt}' AND  
             status IN (4,5)
@@ -928,20 +1048,32 @@ reward_data AS
             serv_type,
             'nal' AS country_code, 
             dt 
+<<<<<<< .merge_file_zBcpPM
         FROM oride_dw_ods.ods_sqoop_base_data_driver_extend_df 
+=======
+        FROM oride_dw_ods.ods_sqoop_base_data_driver_extend_df
+>>>>>>> .merge_file_WkTF2M
         WHERE dt = '{pt}'
         ) AS de ON de.id = do.driver_id 
     JOIN (SELECT 
             amount,
             driver_id
+<<<<<<< .merge_file_zBcpPM
         FROM oride_dw_ods.ods_sqoop_base_data_driver_recharge_records_df 
+=======
+        FROM oride_dw_ods.ods_sqoop_base_data_driver_recharge_records_df
+>>>>>>> .merge_file_WkTF2M
         WHERE dt = '{pt}' AND 
             from_unixtime(created_at, 'yyyy-MM-dd') = '{pt}'
         ) AS rr ON do.driver_id = rr.driver_id 
     JOIN (SELECT 
             amount,
             driver_id  
+<<<<<<< .merge_file_zBcpPM
         FROM oride_dw_ods.ods_sqoop_base_data_driver_reward_df 
+=======
+        FROM oride_dw_ods.ods_sqoop_base_data_driver_reward_df
+>>>>>>> .merge_file_WkTF2M
         WHERE dt = '{pt}' AND 
             from_unixtime(create_time, 'yyyy-MM-dd') = '{pt}'
         ) AS dr ON do.driver_id = dr.driver_id 
@@ -970,14 +1102,22 @@ driver_range AS
             finish_time,
             cancel_time,
             driver_id
+<<<<<<< .merge_file_zBcpPM
         FROM oride_dw_ods.ods_sqoop_base_data_order_df 
+=======
+        FROM oride_dw_ods.ods_sqoop_base_data_order_df
+>>>>>>> .merge_file_WkTF2M
         WHERE dt = '{pt}' AND 
             from_unixtime(create_time, 'yyyy-MM-dd')='{pt}' AND 
             status IN (4,5,6) 
         ) AS do 
     JOIN (SELECT 
             DISTINCT driver_id 
+<<<<<<< .merge_file_zBcpPM
         FROM oride_dw_ods.ods_sqoop_base_data_order_df 
+=======
+        FROM oride_dw_ods.ods_sqoop_base_data_order_df
+>>>>>>> .merge_file_WkTF2M
         WHERE dt = '{pt}' AND 
             from_unixtime(create_time, 'yyyy-MM-dd')='{pt}' AND   
             status IN (4,5)
@@ -988,7 +1128,11 @@ driver_range AS
             serv_type,
             'nal' AS country_code, 
             dt 
+<<<<<<< .merge_file_zBcpPM
         FROM oride_dw_ods.ods_sqoop_base_data_driver_extend_df 
+=======
+        FROM oride_dw_ods.ods_sqoop_base_data_driver_extend_df
+>>>>>>> .merge_file_WkTF2M
         WHERE dt = '{pt}'
         ) AS de ON de.id = do.driver_id 
     GROUP BY de.country_code, de.dt, de.city_id, de.serv_type
@@ -1012,7 +1156,11 @@ driver_online AS
         ) AS odt 
     JOIN (SELECT 
             distinct driver_id 
+<<<<<<< .merge_file_zBcpPM
         FROM oride_dw_ods.ods_sqoop_base_data_order_df 
+=======
+        FROM oride_dw_ods.ods_sqoop_base_data_order_df
+>>>>>>> .merge_file_WkTF2M
         WHERE dt = '{pt}' AND 
             from_unixtime(create_time, 'yyyy-MM-dd')='{pt}' AND 
             status IN (4,5)
@@ -1023,7 +1171,11 @@ driver_online AS
             serv_type, 
             'nal' AS country_code, 
             dt 
+<<<<<<< .merge_file_zBcpPM
         FROM oride_dw_ods.ods_sqoop_base_data_driver_extend_df 
+=======
+        FROM oride_dw_ods.ods_sqoop_base_data_driver_extend_df
+>>>>>>> .merge_file_WkTF2M
         WHERE dt = '{pt}'
         ) AS de ON odt.driver_id = de.id 
     GROUP BY de.country_code, de.dt, de.city_id, de.serv_type

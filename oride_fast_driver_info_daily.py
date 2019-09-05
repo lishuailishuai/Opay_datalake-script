@@ -27,16 +27,16 @@ dag = airflow.DAG(
     schedule_interval="30 03 * * *",
     default_args=args)
 
-table_names = ['oride_dw.ods_sqoop_base_data_driver_df',
-               'oride_dw.ods_sqoop_base_data_driver_extend_df',
-               'oride_dw.ods_sqoop_base_data_order_df',
-               'oride_dw.ods_sqoop_base_data_driver_balance_extend_df',
-               'oride_dw.ods_sqoop_base_data_driver_records_day_df',
+table_names = ['oride_dw_ods.ods_sqoop_base_data_driver_df',
+               'oride_dw_ods.ods_sqoop_base_data_driver_extend_df',
+               'oride_dw_ods.ods_sqoop_base_data_order_df',
+               'oride_dw_ods.ods_sqoop_base_data_driver_balance_extend_df',
+               'oride_dw_ods.ods_sqoop_base_data_driver_records_day_df',
                'oride_dw.dwd_oride_order_push_driver_detail_di',
-               'oride_dw.ods_sqoop_base_data_driver_comment_df',
-               'oride_dw.ods_sqoop_mass_rider_signups_df',
-               'oride_dw.ods_sqoop_mass_driver_group_df',
-               'oride_dw.ods_sqoop_mass_driver_team_df',
+               'oride_dw_ods.ods_sqoop_base_data_driver_comment_df',
+               'oride_dw_ods.ods_sqoop_mass_rider_signups_df',
+               'oride_dw_ods.ods_sqoop_mass_driver_group_df',
+               'oride_dw_ods.ods_sqoop_mass_driver_team_df',
                'oride_bi.oride_driver_timerange'
                ]
 
@@ -229,7 +229,7 @@ insert_data = HiveOperator(
                 phone_number ,
                 birthday
                 from 
-                oride_dw.ods_sqoop_base_data_driver_df 
+                oride_dw_ods.ods_sqoop_base_data_driver_df
                 where dt = '{{ ds }}'
             ) dd 
             join (
@@ -238,7 +238,7 @@ insert_data = HiveOperator(
                 serv_type,
                 register_time
                 from
-                oride_dw.ods_sqoop_base_data_driver_extend_df
+                oride_dw_ods.ods_sqoop_base_data_driver_extend_df
                 where dt = '{{ ds }}'
             ) dde on dd.id = dde.id 
         ),
@@ -250,7 +250,7 @@ insert_data = HiveOperator(
             SELECT
                 *
             FROM
-                oride_dw.ods_sqoop_base_data_order_df
+                oride_dw_ods.ods_sqoop_base_data_order_df
             WHERE
                 dt='{{ ds }}'
                 AND city_id != 999001
@@ -341,7 +341,7 @@ insert_data = HiveOperator(
             count(if(from_unixtime(create_time,'yyyy-MM-dd') = '{{ ds }}' and (status = 4 or status = 5),id,null)) on_ride_num_today,
             count(if(from_unixtime(create_time,'yyyy-MM-dd') = '{{ yesterday_ds }}' and (status = 4 or status = 5),id,null)) on_ride_num_yesterday,
             count(if(from_unixtime(create_time,'yyyy-MM-dd') = '{{ ds }}' and (status = 6 and cancel_role = 2),id,null)) driver_cancel_num_today
-            from oride_dw.ods_sqoop_base_data_order_df 
+            from oride_dw_ods.ods_sqoop_base_data_order_df
             where dt = '{{ ds }}' 
             group by driver_id
         ),
@@ -353,7 +353,7 @@ insert_data = HiveOperator(
             driver_id,
             balance,
             total_income
-            from oride_dw.ods_sqoop_base_data_driver_balance_extend_df
+            from oride_dw_ods.ods_sqoop_base_data_driver_balance_extend_df
             where dt = '{{ ds }}'
         ),
         
@@ -361,7 +361,7 @@ insert_data = HiveOperator(
             select 
             driver_id,
             amount_all
-            from oride_dw.ods_sqoop_base_data_driver_records_day_df
+            from oride_dw_ods.ods_sqoop_base_data_driver_records_day_df
             where dt = '{{ ds }}' and from_unixtime(day,'yyyy-MM-dd') = '{{ ds }}'
         ),
         
@@ -387,7 +387,7 @@ insert_data = HiveOperator(
             count(if(score <= 3 and from_unixtime(create_time,'yyyy-MM-dd') = '{{ ds }}',id,null)) low_socre_num_today,
             count(if(from_unixtime(create_time,'yyyy-MM-dd') = '{{ ds }}',id,null)) score_num_today,
             round(sum(if(from_unixtime(create_time,'yyyy-MM-dd') = '{{ ds }}',score,0))/count(if(from_unixtime(create_time,'yyyy-MM-dd') = '{{ ds }}',id,null)),2) score_avg_today
-            from oride_dw.ods_sqoop_base_data_driver_comment_df 
+            from oride_dw_ods.ods_sqoop_base_data_driver_comment_df
             where dt = '{{ ds }}'
             group by  driver_id  
         ),
@@ -406,7 +406,7 @@ insert_data = HiveOperator(
                 association_id,
                 team_id,
                 address
-                from oride_dw.ods_sqoop_mass_rider_signups_df
+                from oride_dw_ods.ods_sqoop_mass_rider_signups_df
                 where dt = '{{ ds }}'
                 and status=2 
                 and association_id >0 
@@ -419,7 +419,7 @@ insert_data = HiveOperator(
                 city,
                 name
                 from 
-                oride_dw.ods_sqoop_mass_driver_group_df
+                oride_dw_ods.ods_sqoop_mass_driver_group_df
                 where dt = '{{ ds }}'
             ) g on r.association_id = g.id 
             left join 
@@ -428,7 +428,7 @@ insert_data = HiveOperator(
                 id,
                 name admin_user
                 from 
-                oride_dw.ods_sqoop_mass_driver_team_df 
+                oride_dw_ods.ods_sqoop_mass_driver_team_df
                 where dt = '{{ ds }}'
             ) t on r.team_id = t.id 
 

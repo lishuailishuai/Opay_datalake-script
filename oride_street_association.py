@@ -28,8 +28,8 @@ dag = airflow.DAG(
     schedule_interval="30 02 * * *",
     default_args=args)
 
-table_names = ['oride_dw.ods_sqoop_mass_driver_group_df',
-               'oride_dw.ods_sqoop_mass_rider_signups_df',
+table_names = ['oride_dw_ods.ods_sqoop_mass_driver_group_df',
+               'oride_dw_ods.ods_sqoop_mass_rider_signups_df',
                'oride_db.data_driver_extend',
                'oride_db.data_order',
                'oride_db.data_order_payment',
@@ -150,7 +150,7 @@ insert_oride_street_association_di = HiveOperator(
             SELECT
                 *
             FROM
-                oride_dw.ods_sqoop_mass_driver_group_df
+                oride_dw_ods.ods_sqoop_mass_driver_group_df
             WHERE
                 dt='{{ ds }}'
         ),
@@ -169,7 +169,7 @@ insert_oride_street_association_di = HiveOperator(
                 MAX(struct(t.create_time, t.record_by)).col2 AS record_by
             FROM
                 (
-                    SELECT * FROM oride_dw.ods_sqoop_mass_rider_signups_df WHERE dt='{{ ds }}' and association_id>0 and driver_id>0
+                    SELECT * FROM oride_dw_ods.ods_sqoop_mass_rider_signups_df WHERE dt='{{ ds }}' and association_id>0 and driver_id>0
                 ) t
                 INNER JOIN
                 (
@@ -396,7 +396,7 @@ def send_oride_association_email(ds, **kwargs):
             SELECT
                 *
             FROM
-                oride_dw.ods_sqoop_mass_driver_group_df
+                oride_dw_ods.ods_sqoop_mass_driver_group_df
             WHERE
                 dt='{dt}'
         ),

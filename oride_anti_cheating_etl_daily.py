@@ -32,7 +32,7 @@ validate_partition_data = PythonOperator(
             [
              'oride_dw.ods_log_driver_track_data_hi ',
              'oride_bi.oride_client_event_detail',
-             'oride_dw.ods_sqoop_base_data_order_df',
+             'oride_dw_ods.ods_sqoop_base_data_order_df',
              ],
         # 任务名称
         "task_name": "订单反作弊轨迹数据"
@@ -94,7 +94,7 @@ insert_order_location_info = HiveOperator(
             status,
             concat(start_lat,'_',start_lng) start_loc,
             concat(end_lat,'_',end_lng) end_loc
-            from oride_dw.ods_sqoop_base_data_order_df 
+            from oride_dw_ods.ods_sqoop_base_data_order_df
             where dt = '{{ ds }}'
             and from_unixtime(create_time,'yyyy-MM-dd') = '{{ ds }}'
             and (status = 4 or status = 5)

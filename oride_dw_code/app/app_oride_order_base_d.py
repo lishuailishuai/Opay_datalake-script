@@ -174,7 +174,7 @@ orders_data AS
         SUM(IF(status IN (4,5), distance, 0)) AS send_dis,                                                          --总送驾距离(米)
         SUM(IF(status=5, ABS(finish_time-arrive_time), 0)) AS pay_range,                                            --总支付时长(秒)
         SUM(IF(status=5, 1, 0)) AS payed_orders                                                                     --支付订单数
-    FROM oride_dw.ods_sqoop_base_data_order_df 
+    FROM oride_dw_ods.ods_sqoop_base_data_order_df
     WHERE dt = '{pt}' AND 
         from_unixtime(create_time, 'yyyy-MM-dd') = '{pt}'
     GROUP BY dt
@@ -214,7 +214,7 @@ valid_orders AS
             LEAD(end_lng,1,0) OVER(PARTITION BY user_id ORDER BY create_time) end_lng2,
             LEAD(end_lat,1,0) OVER(PARTITION BY user_id ORDER BY create_time) end_lat2,
             LEAD(id,1,id) OVER(PARTITION BY user_id ORDER BY create_time) id2
-        FROM oride_dw.ods_sqoop_base_data_order_df 
+        FROM oride_dw_ods.ods_sqoop_base_data_order_df
         WHERE dt = '{pt}' AND 
             from_unixtime(create_time, 'yyyy-MM-dd') = '{pt}' 
         ) AS t
@@ -307,7 +307,7 @@ orders_data AS
         SUM(IF(status IN (4,5), distance, 0)) AS send_dis,                                                          --总送驾距离(米)
         SUM(IF(status=5, ABS(finish_time-arrive_time), 0)) AS pay_range,                                            --总支付时长(秒)
         SUM(IF(status=5, 1, 0)) AS payed_orders                                                                     --支付订单数
-    FROM oride_dw.ods_sqoop_base_data_order_df 
+    FROM oride_dw_ods.ods_sqoop_base_data_order_df
     WHERE dt = '{pt}' AND 
         from_unixtime(create_time, 'yyyy-MM-dd') = '{pt}'
     GROUP BY dt, city_id
@@ -347,7 +347,7 @@ valid_orders AS
             LEAD(end_lng,1,0) OVER(PARTITION BY user_id ORDER BY create_time) end_lng2,
             LEAD(end_lat,1,0) OVER(PARTITION BY user_id ORDER BY create_time) end_lat2,
             LEAD(id,1,id) OVER(PARTITION BY user_id ORDER BY create_time) id2
-        FROM oride_dw.ods_sqoop_base_data_order_df 
+        FROM oride_dw_ods.ods_sqoop_base_data_order_df
         WHERE dt = '{pt}' AND 
             from_unixtime(create_time, 'yyyy-MM-dd') = '{pt}' 
         ) AS t
@@ -451,7 +451,7 @@ orders_data AS
             distance,
             cancel_time,
             finish_time 
-        FROM oride_dw.ods_sqoop_base_data_order_df 
+        FROM oride_dw_ods.ods_sqoop_base_data_order_df
         WHERE dt = '{pt}' AND 
             from_unixtime(create_time, 'yyyy-MM-dd') = '{pt}' AND 
             driver_id > 0
@@ -462,7 +462,7 @@ orders_data AS
             serv_type,
             'nal' AS country_code, 
             dt 
-        FROM oride_dw.ods_sqoop_base_data_driver_extend_df 
+        FROM oride_dw_ods.ods_sqoop_base_data_driver_extend_df
         WHERE dt = '{pt}'
         ) AS de  
     WHERE o.driver_id = de.id
