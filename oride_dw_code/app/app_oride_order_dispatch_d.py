@@ -694,11 +694,9 @@ def sendDispatchMail(*op_args, **op_kwargs):
         JOIN (SELECT 
                 id,
                 name 
-<<<<<<< .merge_file_HHuCAb
+
             FROM oride_dw_ods.ods_sqoop_base_data_city_conf_df 
-=======
-            FROM oride_dw_ods.ods_sqoop_base_data_city_conf_df
->>>>>>> .merge_file_Mk5ASb
+
             WHERE dt = '{pt}' AND 
                 id < 999000
             ) AS b 
@@ -762,11 +760,9 @@ def sendDispatchMail(*op_args, **op_kwargs):
         JOIN (SELECT 
                 id,
                 name 
-<<<<<<< .merge_file_HHuCAb
+
             FROM oride_dw_ods.ods_sqoop_base_data_city_conf_df 
-=======
-            FROM oride_dw_ods.ods_sqoop_base_data_city_conf_df
->>>>>>> .merge_file_Mk5ASb
+
             WHERE dt = '{pt}' AND 
                 id < 999000
             ) AS b 
@@ -828,11 +824,9 @@ def sendDispatchMail(*op_args, **op_kwargs):
         JOIN (SELECT 
                 id, 
                 name 
-<<<<<<< .merge_file_HHuCAb
+
             FROM oride_dw_ods.ods_sqoop_base_data_city_conf_df 
-=======
-            FROM oride_dw_ods.ods_sqoop_base_data_city_conf_df
->>>>>>> .merge_file_Mk5ASb
+
             WHERE dt = '{pt}' AND 
                 id < 999000
             ) AS b 
@@ -894,11 +888,9 @@ def sendDispatchMail(*op_args, **op_kwargs):
         JOIN (SELECT 
                 id,
                 name 
-<<<<<<< .merge_file_HHuCAb
+
             FROM oride_dw_ods.ods_sqoop_base_data_city_conf_df 
-=======
-            FROM oride_dw_ods.ods_sqoop_base_data_city_conf_df
->>>>>>> .merge_file_Mk5ASb
+
             WHERE dt = '{pt}' AND 
                 id < 999000
             ) AS b 
