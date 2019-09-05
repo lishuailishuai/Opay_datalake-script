@@ -131,7 +131,7 @@ table_list = [
     ("opay_spread", "promoter_users_device", "opay_spread_mysql", "promoter",1),
 ]
 
-HIVE_DB = 'oride_dw'
+HIVE_DB = 'oride_dw_ods'
 HIVE_TABLE = 'ods_sqoop_%s_%s_df'
 UFILE_PATH = 'ufile://opay-datalake/oride_dw_sqoop/%s/%s'
 ODS_CREATE_TABLE_SQL = '''
@@ -148,6 +148,9 @@ ODS_CREATE_TABLE_SQL = '''
       'org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat'
     LOCATION
       '{ufile_path}';
+    MSCK REPAIR TABLE {db_name}.`{table_name}`;
+    -- delete oride_dw table
+    DROP TABLE IF EXISTS oride_dw.`{table_name}`;
 '''
 
 # 需要验证的核心业务表
