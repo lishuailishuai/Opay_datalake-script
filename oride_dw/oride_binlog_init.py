@@ -24,7 +24,7 @@ dag = airflow.DAG(
     default_args=args)
 
 BINLOG_DB='oride_source'
-ODS_DB='oride_dw'
+ODS_DB='oride_dw_ods'
 BINLOG_TABLE_LIST_VAR_NAME='oride_binlog_table_list'
 
 BINLOG_CREATE_TABLE_SQL='''

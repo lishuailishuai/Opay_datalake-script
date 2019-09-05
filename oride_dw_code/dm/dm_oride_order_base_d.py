@@ -220,6 +220,9 @@ dm_oride_order_base_d_task = HiveOperator(
            
            sum(if(ord.is_td_finish = 1, ord.distance,0)) as finish_order_onride_dis, --完单送驾距离(米)
            
+           sum(case when ord.order_id=a1.order_id and is_td_finish=1 then order_assigned_cnt else 0 end) as finish_order_pick_up_assigned_cnt, --订单被分配次数（计算平均接驾距离使用）
+           
+           
            ord.country_code,
            
            ord.dt
@@ -245,7 +248,8 @@ dm_oride_order_base_d_task = HiveOperator(
       (
         SELECT  
         order_id,
-        avg(distance) AS pick_up_distance --接驾距离
+        count(1) as order_assigned_cnt, --订单被分配次数（计算平均接驾距离使用）
+        sum(distance) AS pick_up_distance --接驾总距离
         FROM oride_dw.dwd_oride_order_assign_driver_detail_di
         WHERE dt='{pt}'
         GROUP BY order_id
