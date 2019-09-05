@@ -50,7 +50,7 @@ ods_binlog_data_order_hi_prev_day_tesk = HivePartitionSensor(
     task_id="ods_binlog_data_order_hi_prev_day_task",
     table="ods_binlog_data_order_hi",
     partition="dt='{{ds}}' and hour='23'",
-    schema="oride_dw",
+    schema="oride_dw_ods",
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
@@ -60,7 +60,7 @@ ods_binlog_data_order_hi_now_day_tesk = HivePartitionSensor(
     task_id="ods_binlog_data_order_hi_now_day_task",
     table="ods_binlog_data_order_hi",
     partition="dt='{{macros.ds_add(ds, +1)}}' and hour='00'",
-    schema="oride_dw",
+    schema="oride_dw_ods",
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
@@ -70,7 +70,7 @@ ods_binlog_data_order_payment_hi_prev_day_tesk = HivePartitionSensor(
     task_id="ods_binlog_data_order_payment_hi_prev_day_task",
     table="ods_binlog_data_order_payment_hi",
     partition="dt='{{ds}}' and hour='23'",
-    schema="oride_dw",
+    schema="oride_dw_ods",
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
@@ -80,7 +80,7 @@ ods_binlog_data_order_payment_hi_now_day_tesk = HivePartitionSensor(
     task_id="ods_binlog_data_order_payment_hi_now_day_task",
     table="ods_binlog_data_order_payment_hi",
     partition="dt='{{macros.ds_add(ds, +1)}}' and hour='00'",
-    schema="oride_dw",
+    schema="oride_dw_ods",
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
@@ -626,7 +626,7 @@ FROM
 
              row_number() OVER(partition BY id
                                ORDER BY updated_at desc,pos DESC) AS rn1
-      FROM oride_dw.ods_binlog_data_order_hi
+      FROM oride_dw_ods.ods_binlog_data_order_hi
       WHERE concat_ws(' ',dt,hour) BETWEEN '{pt} 00' AND '{now_day} 00'  --取昨天1天数据与今天早上00数据
         AND from_unixtime(create_time,'yyyy-MM-dd') = '{pt}'
         AND op IN ('c',
@@ -658,7 +658,7 @@ LEFT OUTER JOIN
              concat_ws(' ',dt,hour) AS part_hour, --分区时间(yyyy-mm-dd HH)
              row_number() OVER(partition BY id
                                ORDER BY updated_at desc,pos DESC) AS rn1
-      FROM oride_dw.ods_binlog_data_order_payment_hi
+      FROM oride_dw_ods.ods_binlog_data_order_payment_hi
       WHERE concat_ws(' ',dt,hour) BETWEEN '{pt} 00' AND '{now_day} 00' --取昨天1天数据与今天早上00数据
         AND op IN ('c','u')) t1
    WHERE rn1=1) pay ON base.order_id=pay.order_id

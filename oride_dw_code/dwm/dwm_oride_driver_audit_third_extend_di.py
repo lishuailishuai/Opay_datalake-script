@@ -52,7 +52,7 @@ ods_binlog_data_driver_extend_hi_last_day_tesk=HivePartitionSensor(
       task_id="ods_binlog_data_driver_extend_hi_last_day_tesk",
       table="ods_binlog_data_driver_extend_hi",
       partition="dt='{{ds}}'",
-      schema="oride_dw",
+      schema="oride_dw_ods",
       poke_interval=60, #依赖不满足时，一分钟检查一次依赖状态
       dag=dag
     )
@@ -141,7 +141,7 @@ from
              --国家码字段
   row_number() OVER(partition BY id
                                ORDER BY updated_at desc,pos DESC) AS rn1
-from oride_dw.ods_binlog_data_driver_extend_hi
+from oride_dw_ods.ods_binlog_data_driver_extend_hi
 where concat_ws(' ',dt,hour) BETWEEN '{pt} 00' AND '{now_day} 00'  --取昨天1天数据与今天早上00数据
         AND op IN ('c','u')) t1
 where rn1=1
