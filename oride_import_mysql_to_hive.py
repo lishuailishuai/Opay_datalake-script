@@ -49,9 +49,6 @@ table_list = [
     ("data_anti_fraud_strategy", "sqoop_db"),
     ("data_city_conf", "sqoop_db"),
     ("data_device_extend", "sqoop_db"),
-    ("driver_group", "opay_spread_mysql"),
-    ("driver_team", "opay_spread_mysql"),
-    ("rider_signups", "opay_spread_mysql"),
 ]
 
 # 需要验证的核心业务表
