@@ -1085,9 +1085,7 @@ driver_online AS
             distinct driver_id 
 
         FROM oride_dw_ods.ods_sqoop_base_data_order_df 
-=======
-        FROM oride_dw_ods.ods_sqoop_base_data_order_df
->>>>>>> .merge_file_WkTF2M
+
         WHERE dt = '{pt}' AND 
             from_unixtime(create_time, 'yyyy-MM-dd')='{pt}' AND 
             status IN (4,5)
@@ -1100,9 +1098,7 @@ driver_online AS
             dt 
 
         FROM oride_dw_ods.ods_sqoop_base_data_driver_extend_df 
-=======
-        FROM oride_dw_ods.ods_sqoop_base_data_driver_extend_df
->>>>>>> .merge_file_WkTF2M
+
         WHERE dt = '{pt}'
         ) AS de ON odt.driver_id = de.id 
     GROUP BY de.country_code, de.dt, de.city_id, de.serv_type
