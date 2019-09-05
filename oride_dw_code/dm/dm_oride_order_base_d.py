@@ -222,7 +222,12 @@ dm_oride_order_base_d_task = HiveOperator(
            
            sum(case when ord.order_id=a1.order_id and is_td_finish=1 then order_assigned_cnt else 0 end) as finish_order_pick_up_assigned_cnt, --订单被分配次数（计算平均接驾距离使用）
            
-           
+           sum(if(ord.status in(4,5),ord.price,0.0)) as price,  --当日完单gmv
+           sum(if(ord.status=5,ord.price,0.0)) as pay_price, --当日应付金额
+           sum(if(ord.status=5,ord.pay_amount,0.0)) as pay_amount, --当日实付金额
+           count(if(valid_ord.order_id is not null,ord.order_id,null)) as valid_ord_cnt, --有效订单数
+           sum(if(ord.is_td_finish = 1,ord.td_pick_up_dur,0)) as finish_pick_up_dur, --当日完单接驾时长
+           sum(ord.pax_num) as pax_num,  --乘客数
            ord.country_code,
            
            ord.dt
@@ -281,7 +286,12 @@ dm_oride_order_base_d_task = HiveOperator(
         WHERE dt='{pt}'
         GROUP BY order_id
     )  r2 on ord.order_id = r2.order_id
-      
+    left outer join 
+    (
+        select * from oride_dw.dwd_oride_order_mark_df 
+        where dt='{pt}' and substr(create_time,1,10)='{pt}'
+    )  valid_ord on ord.order_id=valid_ord.order_id
+    
     
     GROUP BY ord.city_id,
              ord.product_id,

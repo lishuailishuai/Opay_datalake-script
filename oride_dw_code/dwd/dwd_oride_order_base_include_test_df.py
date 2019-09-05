@@ -151,13 +151,14 @@ t2.reference, -- opay流水号
 t2.currency, -- opay货币类型
 t2.status AS pay_status, -- 订单支付状态
 t2.pay_type, -- 订单支付类型
-t2.tip, -- 小费
+t1.tip, -- 小费
 if(t1.status IN(4,5)
    AND t1.arrive_time>0
    AND t1.pickup_time > 0,t1.arrive_time - t1.pickup_time,0) AS finish_billing_dur, --完单计费时长（秒）
 if(t1.driver_id <> 0
    AND t1.take_time > 0
    AND t1.finish_time>0,t1.finish_time - t1.take_time,0) AS finish_order_dur, -- 完成做单时长（秒）
+t1.pax_num,  --乘客数
 'nal' AS country_code,
 '{pt}' AS dt
 FROM

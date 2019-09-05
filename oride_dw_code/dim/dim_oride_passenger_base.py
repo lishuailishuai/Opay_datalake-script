@@ -56,6 +56,15 @@ ods_sqoop_base_data_user_df_prev_day_tesk=HivePartitionSensor(
       poke_interval=60, #依赖不满足时，一分钟检查一次依赖状态
       dag=dag
     )
+#依赖前一天分区
+ods_sqoop_base_data_user_extend_df_prev_day_tesk=HivePartitionSensor(
+      task_id="ods_sqoop_base_data_user_extend_df_prev_day_tesk",
+      table="ods_sqoop_base_data_user_extend_df",
+      partition="dt='{{ds}}'",
+      schema="oride_dw_ods",
+      poke_interval=60, #依赖不满足时，一分钟检查一次依赖状态
+      dag=dag
+    )
 
 ##----------------------------------------- 变量 ---------------------------------------## 
 
@@ -192,5 +201,5 @@ touchz_data_success = BashOperator(
         ),
     dag=dag)
 
-ods_sqoop_base_data_user_df_prev_day_tesk>>sleep_time>>dim_oride_passenger_base_task>>task_check_key_data>>touchz_data_success
+ods_sqoop_base_data_user_df_prev_day_tesk>>ods_sqoop_base_data_user_extend_df_prev_day_tesk>>sleep_time>>dim_oride_passenger_base_task>>task_check_key_data>>touchz_data_success
 
