@@ -189,6 +189,7 @@ def __data_to_mysql(conn, data, column, update=''):
             conn.execute(esql.format(isql, sval, update))
     except BaseException as e:
         logging.info(e)
+        sys.exit(1)
         return
 
 
