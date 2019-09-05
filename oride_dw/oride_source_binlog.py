@@ -25,11 +25,12 @@ dag = airflow.DAG(
     schedule_interval="05 * * * *",
     default_args=args)
 
+ODS_DB='oride_dw_ods'
 
 def run_insert_ods(ds, execution_date, **kwargs):
     col_sql='''
-        DESCRIBE oride_dw.ods_binlog_{table}_hi
-    '''.format(table=kwargs["params"]["table"])
+        DESCRIBE {hive_db}.ods_binlog_{table}_hi
+    '''.format(hive_db=ODS_DB, table=kwargs["params"]["table"])
 
     hive2_conn=HiveServer2Hook().get_conn()
     cursor = hive2_conn.cursor()
@@ -75,9 +76,9 @@ def run_insert_ods(ds, execution_date, **kwargs):
     hive_hook = HiveCliHook()
     if len(add_columns)>0:
         add_columns_sql='''
-            ALTER TABLE oride_dw.`ods_binlog_{table}_hi` add columns ({columns})
+            ALTER TABLE {hive_db}.`ods_binlog_{table}_hi` add columns ({columns})
 
-        '''.format(table=kwargs["params"]["table"], columns=",".join(add_columns))
+        '''.format(hive_db=ODS_DB, table=kwargs["params"]["table"], columns=",".join(add_columns))
         logging.info('Executing: %s', add_columns_sql)
         hive_hook.run_cli(add_columns_sql)
     column_rows=[
@@ -91,7 +92,7 @@ def run_insert_ods(ds, execution_date, **kwargs):
         column_rows.append("get_json_object(after, '$.{}')".format(col_name))
 
     sql='''
-        INSERT OVERWRITE TABLE oride_dw.`ods_binlog_{table}_hi` partition(dt='{ds}', hour='{hour}')
+        INSERT OVERWRITE TABLE {hive_db}.`ods_binlog_{table}_hi` partition(dt='{ds}', hour='{hour}')
         SELECT
             {columns}
         FROM
@@ -99,7 +100,7 @@ def run_insert_ods(ds, execution_date, **kwargs):
         WHERE
             dt='{ds}' AND hour='{hour}'
     '''
-    run_sql=sql.format(table=kwargs["params"]["table"],ds=ds,hour=execution_date.strftime("%H"), columns=",\n".join(column_rows))
+    run_sql=sql.format(hive_db=ODS_DB, table=kwargs["params"]["table"],ds=ds,hour=execution_date.strftime("%H"), columns=",\n".join(column_rows))
     logging.info('Executing: %s', run_sql)
     hive_hook.run_cli(run_sql)
 
