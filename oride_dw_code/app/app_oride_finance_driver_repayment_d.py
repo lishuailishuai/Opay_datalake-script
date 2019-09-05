@@ -10,7 +10,7 @@ from airflow.sensors.hive_partition_sensor import HivePartitionSensor
 from utils.connection_helper import get_hive_cursor, get_db_conn
 from datetime import datetime, timedelta
 from airflow.sensors import UFileSensor
-import re
+import re,sys
 import logging
 from utils.validate_metrics_utils import *
 import time
