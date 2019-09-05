@@ -22,10 +22,11 @@ dag = airflow.DAG(
     max_active_runs=1,
     default_args=args)
 
+ODS_DB='oride_dw_ods'
 def run_insert_ods(**kwargs):
     col_sql='''
-        DESCRIBE oride_dw.ods_binlog_{table}_hi
-    '''.format(table=kwargs['dag_run'].conf['table_name'])
+        DESCRIBE {db}.ods_binlog_{table}_hi
+    '''.format(db=ODS_DB, table=kwargs['dag_run'].conf['table_name'])
     logging.info('Executing: %s', col_sql)
     hive2_conn=HiveServer2Hook().get_conn()
     cursor = hive2_conn.cursor()
@@ -49,7 +50,7 @@ def run_insert_ods(**kwargs):
         msck REPAIR TABLE oride_source.binlog_{table};
         SET hive.exec.dynamic.partition=true;
         SET hive.exec.dynamic.partition.mode=nonstrict;
-        INSERT OVERWRITE TABLE oride_dw.`ods_binlog_{table}_hi` partition(dt, hour)
+        INSERT OVERWRITE TABLE {db}.`ods_binlog_{table}_hi` partition(dt, hour)
         SELECT
             {columns},
             from_unixtime(unix_timestamp(regexp_replace(get_json_object(after, '$.updated_at'), 'T', ' '))+3600, 'yyyy-MM-dd') as dt,
@@ -62,6 +63,7 @@ def run_insert_ods(**kwargs):
     '''
     hive_hook = HiveCliHook()
     run_sql=sql.format(
+        db=ODS_DB,
         table=kwargs['dag_run'].conf['table_name'],
         columns=",\n".join(column_rows),
         b_st=kwargs['dag_run'].conf['binlog_start_date'],

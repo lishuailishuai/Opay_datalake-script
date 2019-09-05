@@ -22,6 +22,7 @@ dag = airflow.DAG(
     max_active_runs=1,
     default_args=args)
 
+ODS_DB='oride_dw_ods'
 def run_insert_ods(**kwargs):
     hive2_conn=HiveServer2Hook().get_conn()
     cursor = hive2_conn.cursor()
@@ -30,17 +31,17 @@ def run_insert_ods(**kwargs):
         SELECT
             distinct from_unixtime(unix_timestamp(substr(updated_at, 1, 19), 'yyyy-MM-dd'), 'yyyy-MM-dd') as ut
         FROM
-            oride_db.{table}
+            {db}.ods_sqoop_base_{table}_df
         WHERE
             dt='{end_date}' and updated_at<='{end_date} 23:59:59'
         ORDER BY ut ASC
-    '''.format(table=kwargs['dag_run'].conf['table_name'], end_date=kwargs['dag_run'].conf['end_date'])
+    '''.format(db=ODS_DB, table=kwargs['dag_run'].conf['table_name'], end_date=kwargs['dag_run'].conf['end_date'])
     logging.info('Executing: %s', get_date_sql)
     cursor.execute(get_date_sql)
     date_list=cursor.fetchall()
     col_sql='''
-        DESCRIBE oride_dw.ods_binlog_{table}_hi
-    '''.format(table=kwargs['dag_run'].conf['table_name'])
+        DESCRIBE {db}.ods_binlog_{table}_hi
+    '''.format(db=ODS_DB, table=kwargs['dag_run'].conf['table_name'])
     logging.info('Executing: %s', col_sql)
     cursor.execute(col_sql)
     col_list=cursor.fetchall()
@@ -63,19 +64,20 @@ def run_insert_ods(**kwargs):
         sql='''
             SET hive.exec.dynamic.partition=true;
             SET hive.exec.dynamic.partition.mode=nonstrict;
-            INSERT OVERWRITE TABLE oride_dw.`ods_binlog_{table}_hi` partition(dt, hour)
+            INSERT OVERWRITE TABLE {db}.`ods_binlog_{table}_hi` partition(dt, hour)
             SELECT
                 {columns},
                 from_unixtime(unix_timestamp(substr(updated_at, 1, 19), 'yyyy-MM-dd HH:mm:ss'), 'yyyy-MM-dd') as dt,
                 from_unixtime(unix_timestamp(substr(updated_at, 1, 19), 'yyyy-MM-dd HH:mm:ss'), 'HH') as hour
             FROM
-                oride_db.{table}
+                {db}.ods_sqoop_base_{table}_df
             WHERE
                 dt='{end_date}'
                 AND from_unixtime(unix_timestamp(substr(updated_at, 1, 19), 'yyyy-MM-dd HH:mm:ss'), 'yyyy-MM-dd')='{dt}'
         '''
         hive_hook = HiveCliHook()
         run_sql=sql.format(
+            db=ODS_DB,
             table=kwargs['dag_run'].conf['table_name'],
             columns=",\n".join(column_rows),
             end_date=kwargs['dag_run'].conf['end_date'],
