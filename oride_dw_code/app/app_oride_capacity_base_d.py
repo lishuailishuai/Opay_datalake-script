@@ -376,5 +376,5 @@ touchz_data_success = BashOperator(
 
 dependence_dm_oride_order_base_d_prev_day_task >> \
 dependence_dm_oride_driver_base_cube_d_prev_day_task >>\
-dependence_dm_oride_driver_base_d_prev_day_task
+dependence_dm_oride_driver_base_d_prev_day_task >> \
 sleep_time >> app_oride_capacity_base_d_task >> touchz_data_success
