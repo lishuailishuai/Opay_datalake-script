@@ -21,7 +21,7 @@ comwx = ComwxApi('wwd26d45f97ea74ad2', 'BLE_v25zCmnZaFUgum93j3zVBDK-DjtRkLisI_Wn
 
 args = {
     'owner': 'linan',
-    'start_date': datetime(2019, 8, 25),
+    'start_date': datetime(2019, 9, 4),
     'depends_on_past': False,
     'retries': 3,
     'retry_delay': timedelta(minutes=5),
