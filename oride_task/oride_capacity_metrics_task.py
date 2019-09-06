@@ -241,7 +241,7 @@ def send_capacity_report(ds, **kargs):
                TPH,
                --TPH
         
-               online_time_avg,
+               round(online_time_avg/60,1),
                --人均在线时长
         
                billing_time_rate --计费时长占比
@@ -277,7 +277,7 @@ def send_capacity_report(ds, **kargs):
         table_rows_all += table_rows.format(
             dt=ds,
             city=city,
-            product=product,
+            product='all',
             broadcast_distance=broadcast_distance,
             pickup_distance_done=pickup_distance_done,
             pickup_distance_take=pickup_distance_take,
@@ -330,7 +330,7 @@ def send_capacity_report(ds, **kargs):
                d.TPH,
                --TPH
 
-               d.online_time_avg,
+               round(d.online_time_avg/60,1),
                --人均在线时长
 
                billing_time_rate --计费时长占比
@@ -373,8 +373,8 @@ def send_capacity_report(ds, **kargs):
          driver_after_cancel_rate, tph_macro, online_range, billing_order_dur_rate) in city_all_product_data:
         table_rows_city += table_rows.format(
             dt=ds,
-            city='All',
-            product=product,
+            city=city,
+            product='all',
             broadcast_distance=broadcast_distance,
             pickup_distance_done=pickup_distance_done,
             pickup_distance_take=pickup_distance_take,
@@ -427,7 +427,7 @@ def send_capacity_report(ds, **kargs):
                d.TPH,
                --TPH
 
-               d.online_time_avg,
+               round(d.online_time_avg/60,1),
                --人均在线时长
 
                d.billing_time_rate --计费时长占比
@@ -471,7 +471,7 @@ def send_capacity_report(ds, **kargs):
         table_rows_green += table_rows.format(
             dt=ds,
             city=city,
-            product=product,
+            product='Green',
             broadcast_distance=broadcast_distance,
             pickup_distance_done=pickup_distance_done,
             pickup_distance_take=pickup_distance_take,
@@ -525,7 +525,7 @@ def send_capacity_report(ds, **kargs):
                d.TPH,
                --TPH
 
-               d.online_time_avg,
+               round(d.online_time_avg/60,1),
                --人均在线时长
 
                billing_time_rate --计费时长占比
@@ -569,7 +569,7 @@ def send_capacity_report(ds, **kargs):
         table_rows_street += table_rows.format(
             dt=ds,
             city=city,
-            product=product,
+            product='Street',
             broadcast_distance=broadcast_distance,
             pickup_distance_done=pickup_distance_done,
             pickup_distance_take=pickup_distance_take,
@@ -623,7 +623,7 @@ def send_capacity_report(ds, **kargs):
                d.TPH,
                --TPH
 
-               d.online_time_avg,
+               round(d.online_time_avg/60,1),
                --人均在线时长
 
                d.billing_time_rate --计费时长占比
@@ -667,7 +667,7 @@ def send_capacity_report(ds, **kargs):
         table_rows_otrike += table_rows.format(
             dt=ds,
             city=city,
-            product=product,
+            product='Otrike',
             broadcast_distance=broadcast_distance,
             pickup_distance_done=pickup_distance_done,
             pickup_distance_take=pickup_distance_take,
@@ -697,8 +697,8 @@ def send_capacity_report(ds, **kargs):
     )
 
     # send mail
-    email_to = ['bigdata@opay-inc.com']
-    # email_to = ['nan.li@opay-inc.com']
+    # email_to = ['bigdata@opay-inc.com']
+    email_to = ['nan.li@opay-inc.com']
     email_subject = 'oride调度算法指标-DW数仓模型构建_{}'.format(ds)
     send_email(
         email_to,
@@ -709,7 +709,7 @@ def send_capacity_report(ds, **kargs):
 
 
 send_report = PythonOperator(
-    task_id='send_report',
+        task_id='send_report',
     python_callable=send_capacity_report,
     provide_context=True,
     dag=dag
