@@ -57,7 +57,7 @@ driver_group_validate_task = HivePartitionSensor(
     task_id="driver_group_validate_task",
     table="ods_sqoop_mass_driver_group_df",
     partition="dt='{{ds}}'",
-    schema="oride_dw",
+    schema="oride_dw_ods",
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
@@ -66,43 +66,43 @@ rider_signups_validate_task = HivePartitionSensor(
     task_id="rider_signups_validate_task",
     table="ods_sqoop_mass_rider_signups_df",
     partition="dt='{{ds}}'",
-    schema="oride_dw",
+    schema="oride_dw_ods",
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
 
 data_driver_extend_validate_task = HivePartitionSensor(
     task_id="data_driver_extend_validate_task",
-    table="data_driver_extend",
+    table="ods_sqoop_base_data_driver_extend_df",
     partition="dt='{{ds}}'",
-    schema="oride_db",
+    schema="oride_dw_ods",
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
 
 data_order_validate_task = HivePartitionSensor(
     task_id="data_order_validate_task",
-    table="data_order",
+    table="ods_sqoop_base_data_order_df",
     partition="dt='{{ds}}'",
-    schema="oride_db",
+    schema="oride_dw_ods",
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
 
 data_order_payment_validate_task = HivePartitionSensor(
     task_id="data_order_payment_validate_task",
-    table="data_order_payment",
+    table="ods_sqoop_base_data_order_payment_df",
     partition="dt='{{ds}}'",
-    schema="oride_db",
+    schema="oride_dw_ods",
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
 
 data_driver_comment_validate_task = HivePartitionSensor(
     task_id="data_driver_comment_validate_task",
-    table="data_driver_comment",
+    table="ods_sqoop_base_data_driver_comment_df",
     partition="dt='{{ds}}'",
-    schema="oride_db",
+    schema="oride_dw_ods",
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
