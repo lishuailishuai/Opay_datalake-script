@@ -50,7 +50,7 @@ class SqoopSchemaUpdate(object):
             c = self.mysql_cursor.get(k, None)
             if c:
                 c.close()
-                del self.mysql_cursor[k]
+                # del self.mysql_cursor[k]
                 logging.info("close mysql connect")
 
     """

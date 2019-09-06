@@ -1,12 +1,17 @@
+# -*- coding: utf-8 -*-
+"""
+oride晚10点报表
+"""
 import airflow
 from datetime import datetime, timedelta
 from airflow.operators.python_operator import PythonOperator
 from airflow.utils.email import send_email
 from airflow.operators.bash_operator import BashOperator
-from utils.connection_helper import get_hive_cursor, get_db_conf
+from utils.connection_helper import get_hive_cursor, get_db_conf, get_db_conn
 from airflow.operators.hive_operator import HiveOperator
 import logging
 from airflow.models import Variable
+from plugins.SqoopSchemaUpdate import SqoopSchemaUpdate
 
 args = {
     'owner': 'zhenqian.zhang',
@@ -22,79 +27,175 @@ args = {
 dag = airflow.DAG(
     'oride_night_report',
     schedule_interval="0 22 * * *",
-    default_args=args)
+    default_args=args
+)
 
 table_list = [
-    "data_order",
-    "data_order_payment",
-    "data_user",
-    "data_user_extend",
-    "data_driver_extend",
-    "data_user_recharge",
-    "data_driver_recharge_records",
-    "data_driver_reward",
+    {"db": "oride_data", "table": "data_order",                     "conn": "sqoop_db"},
+    {"db": "oride_data", "table": "data_order_payment",             "conn": "sqoop_db"},
+    {"db": "oride_data", "table": "data_user",                      "conn": "sqoop_db"},
+    {"db": "oride_data", "table": "data_user_extend",               "conn": "sqoop_db"},
+    {"db": "oride_data", "table": "data_driver_extend",             "conn": "sqoop_db"},
+    {"db": "oride_data", "table": "data_user_recharge",             "conn": "sqoop_db"},
+    {"db": "oride_data", "table": "data_driver_recharge_records",   "conn": "sqoop_db"},
+    {"db": "oride_data", "table": "data_driver_reward",             "conn": "sqoop_db"},
+    {"db": "oride_data", "table": "data_driver_records_day",        "conn": "sqoop_db"},
 ]
 
+hive_db = 'oride_dw_ods'
+hive_table = 'ods_sqoop_{bs}_22clock_df'
+s3path = 's3a://opay-bi/obus_dw/ods_sqoop_{bs}_22clock_df'
+ods_create_table_hql = '''
+    CREATE EXTERNAL TABLE IF NOT EXISTS {db_name}.{table_name} (
+        {columns}
+    )
+    PARTITIONED BY (
+        `country_code` string COMMENT '二位国家码',
+        `dt` string comment '日期'
+    )
+    ROW FORMAT SERDE
+      'org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe'
+    STORED AS INPUTFORMAT
+      'org.apache.hadoop.mapred.TextInputFormat'
+    OUTPUTFORMAT
+      'org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat'
+    LOCATION
+      '{s3path}'
+'''
 
+# mysql数据类型 与 hive数据类型影射
+mysql_type_to_hive = {
+    "TINYINT":      "INT",
+    "SMALLINT":     "INT",
+    "MEDIUMINT":    "INT",
+    "INT":          "INT",
+    "INTEGER":      "INT",
+    "BIGINT":       "BIGINT",
+    "FLOAT":        "FLOAT",
+    "DOUBLE":       "DOUBLE",
+    "DECIMAL":      "DECIMAL(38,2)"
+}
+
+
+# 创建 或 更新hive 表元数据
+def create_hive_external_table(db, table, conn, **op_kwargs):
+
+    sqoop_schema = SqoopSchemaUpdate()
+    response = sqoop_schema.update_hive_schema(
+        hive_db=hive_db,
+        hive_table=hive_table.format(bs=table),
+        mysql_db=db,
+        mysql_table=table,
+        mysql_conn=conn
+    )
+    if response:
+        return True
+
+    mysql_conn = get_db_conn(conn)
+    mcursor = mysql_conn.cursor()
+    sql = '''
+        SELECT 
+            COLUMN_NAME, 
+            DATA_TYPE, 
+            COLUMN_COMMENT,
+            COLUMN_TYPE 
+        FROM information_schema.COLUMNS 
+        WHERE TABLE_SCHEMA='{db}' and 
+            TABLE_NAME='{table}' 
+        ORDER BY ORDINAL_POSITION
+    '''.format(db=db, table=table)
+    # logging.info(sql)
+    mcursor.execute(sql)
+    res = mcursor.fetchall()
+    # logging.info(res)
+    columns = []
+    for (name, type, comment, co_type) in res:
+        columns.append("`%s` %s comment '%s'" % (name, mysql_type_to_hive.get(type.upper(), 'string'), comment))
+
+    # 创建hive数据表的sql
+    hql = ods_create_table_hql.format(
+        db_name=hive_db,
+        table_name=hive_table.format(bs=table),
+        columns=",\n".join(columns),
+        s3path=s3path.format(bs=table)
+    )
+    # logging.info(hql)
+    hive_cursor = get_hive_cursor()
+    hive_cursor.execute(hql)
+    mcursor.close()
+    hive_cursor.close()
+
+
+# 发送邮件报表 ods_sqoop_{bs}_22clock_df
 def send_report_email(tomorrow_ds, ds, **kwargs):
     sql = '''
-        with user_data as (
+        WITH 
+        user_data AS (
             SELECT
                 dt,
-                sum(if(from_unixtime(register_time, 'yyyy-MM-dd')=dt, 1, 0)) as new_users,
-                sum(if(from_unixtime(login_time, 'yyyy-MM-dd')=dt, 1, 0)) as active_users
+                SUM(IF(from_unixtime(register_time, 'yyyy-MM-dd')=dt, 1, 0)) AS new_users,      --新增用户数
+                SUM(IF(from_unixtime(login_time, 'yyyy-MM-dd')=dt, 1, 0)) AS active_users       --活跃用户数
             FROM
-                oride_db.data_user_extend
+                oride_dw_ods.ods_sqoop_data_user_extend_22clock_df 
             WHERE
-                dt='{ds}'
-            GROUP BY dt
+                dt = '{ds}' 
+            GROUP BY dt 
         ),
-        driver_data as (
+        driver_data AS (
             SELECT
                 dt,
-                sum(if(from_unixtime(register_time, 'yyyy-MM-dd')=dt, 1, 0)) as new_drivers,
-                count(id) as total_drivers
+                SUM(IF(from_unixtime(register_time, 'yyyy-MM-dd')=dt, 1, 0)) AS new_drivers,    --新注册司机数
+                COUNT(id) AS total_drivers      --累计司机数
             FROM
-                oride_db.data_driver_extend
+                oride_dw_ods.ods_sqoop_data_driver_extend_22clock_df 
             WHERE
-                dt='{ds}'
-            GROUP BY dt
+                dt = '{ds}' 
+            GROUP BY dt 
         ),
-        order_data as (
+        order_data AS (
             SELECT
                 do.dt,
-                COUNT(DISTINCT do.user_id) as request_users,
-                COUNT(DISTINCT if(dop.mode=2 or dop.mode=3, do.user_id, NULL)) as online_pay_users,
-                COUNT(DISTINCT if(do.driver_id>0, do.driver_id, NULL)) as take_drivers,
-                COUNT(DISTINCT if(do.status=4 or do.status=5, do.driver_id, NULL)) as finish_drivers,
-                COUNT(do.id) as request_num,
-                SUM(if(do.driver_id>0, 1, 0)) as take_num,
-                SUM(if(do.status=4 or do.status=5, 1, 0)) as finish_num,
-                COUNT(DISTINCT if(dop.mode=2 or dop.mode=3, do.id, NULL)) as online_pay_orders,
-                SUM(if(do.take_time>0, do.take_time-do.create_time, 0)) as total_take_time,
-                SUM(if(do.pickup_time>0, do.pickup_time-do.take_time, 0)) as total_pickup_time,
-                SUM(if(do.pickup_time>0, 1, 0)) as pickup_num
-            FROM
-                oride_db.data_order do
-                LEFT JOIN oride_db.data_order_payment dop ON dop.id=do.id AND dop.dt=do.dt
-            WHERE
-                do.dt='{ds}' AND from_unixtime(do.create_time, 'yyyy-MM-dd')=do.dt
-            GROUP BY do.dt
+                COUNT(DISTINCT do.user_id) AS request_users,                                            --下单用户数
+                COUNT(DISTINCT IF(dop.mode=2 OR dop.mode=3, do.user_id, NULL)) AS online_pay_users,     --线上支付用户数
+                COUNT(DISTINCT IF(do.driver_id>0, do.driver_id, NULL)) AS take_drivers,                 --接单司机数
+                COUNT(DISTINCT IF(do.status=4 OR do.status=5, do.driver_id, NULL)) AS finish_drivers,   --完单司机数
+                COUNT(do.id) AS request_num,                                                            --下单数
+                SUM(IF(do.driver_id>0, 1, 0)) AS take_num,                                              --接单数
+                SUM(IF(do.status=4 OR do.status=5, 1, 0)) AS finish_num,                                --完单数
+                COUNT(DISTINCT IF(dop.mode=2 OR dop.mode=3, do.id, NULL)) AS online_pay_orders,         --线上支付订单数
+                SUM(IF(do.take_time>0, do.take_time-do.create_time, 0)) AS total_take_time,             --总应单时长(秒)
+                SUM(IF(do.pickup_time>0, do.pickup_time-do.take_time, 0)) AS total_pickup_time,         --总接驾时长(秒)
+                SUM(IF(do.pickup_time>0, 1, 0)) AS pickup_num                                           --成功接驾订单数
+            FROM (SELECT 
+                    * 
+                FROM oride_dw_ods.ods_sqoop_data_order_22clock_df 
+                WHERE dt = '{ds}' AND 
+                    from_unixtime(create_time, 'yyyy-MM-dd') = dt 
+                ) AS do 
+            LEFT JOIN (SELECT 
+                    * 
+                FROM oride_dw_ods.ods_sqoop_data_order_payment_22clock_df 
+                WHERE dt = '{ds}' 
+                ) AS dop 
+            ON dop.id = do.id AND 
+                dop.dt = do.dt 
+            GROUP BY do.dt 
         ),
-        recharge_data as (
+        recharge_data AS (
             SELECT
                 dt,
-                count(if(from_unixtime(create_time, 'yyyy-MM-dd')=dt, id, null)) as td_recharge_times,
-                sum(if(from_unixtime(create_time, 'yyyy-MM-dd')=dt, amount, 0)) as td_recharge_amount,
-                count(id) as recharge_times,
-                sum(amount) as recharge_amount,
-                sum(if(from_unixtime(create_time, 'yyyy-MM-dd')=dt, bonus, 0)) as td_recharge_bonus,
-                sum(bonus) as recharge_bonus
+                COUNT(IF(from_unixtime(create_time, 'yyyy-MM-dd')=dt, id, null)) AS td_recharge_times,      --充值次数
+                SUM(IF(from_unixtime(create_time, 'yyyy-MM-dd')=dt, amount, 0)) AS td_recharge_amount,      --充值金额
+                COUNT(id) AS recharge_times,                                                                --累计充值次数
+                SUM(amount) AS recharge_amount,                                                             --累计充值金额
+                SUM(IF(from_unixtime(create_time, 'yyyy-MM-dd')=dt, bonus, 0)) AS td_recharge_bonus,        --奖励金额
+                SUM(bonus) AS recharge_bonus                                                                --累计奖励金额
             FROM
-                oride_db.data_user_recharge
+                oride_dw_ods.ods_sqoop_data_user_recharge_22clock_df 
             WHERE
-                dt='{ds}' AND status=1
-            GROUP BY dt
+                dt = '{ds}' AND 
+                status = 1 
+            GROUP BY dt 
         )
         SELECT
             od.request_users,
@@ -124,6 +225,7 @@ def send_report_email(tomorrow_ds, ds, **kwargs):
             INNER JOIN order_data od ON od.dt=ud.dt
             LEFT JOIN recharge_data rd on rd.dt=ud.dt
     '''.format(ds=tomorrow_ds)
+
     cursor = get_hive_cursor()
     logging.info(sql)
     cursor.execute(sql)
@@ -254,20 +356,25 @@ def send_report_email(tomorrow_ds, ds, **kwargs):
                 <thead>
                     <tr>
                         <th>城市</th>
+                        <th>业务线</th>
                         <th>完单数</th>
-                        <th>gmv</th>
+                        <th>完单数同比上周同期</th>
+                        <th>GMV</th>
+                        <th>GMV同比上周同期</th>
                         <th>单均应付</th>
-                        <th>单均应付对比昨日</th>
+                        <th>单均应付同比上周同期</th>
+                        <th>总补贴</th>
                         <th>总补贴率</th>
                         <th>单均补贴</th>
-                        <th>单均补贴对比昨日</th>
+                        <th>单均补贴同比上周同期</th>
                         <th>b端补贴</th>
                         <th>b端补贴率</th>
                         <th>b端单均补贴</th>
                         <th>c端补贴</th>
                         <th>c端补贴率</th>
                         <th>c端单均补贴</th>
-                        <!-- <th>平台抽成</th> -->
+                        <th>业务毛利</th>
+                        <th>业务毛利同比上周同期</th>
                     </tr>
                 </thead>
                 {rows}
@@ -277,7 +384,7 @@ def send_report_email(tomorrow_ds, ds, **kwargs):
         </html>
         '''
 
-        rows = get_city_data(ds, tomorrow_ds)
+        rows = get_city_data(kwargs.get('ystd'), kwargs.get('db1'), tomorrow_ds)
 
         html = html_fmt.format(
             dt=tomorrow_ds,
@@ -310,200 +417,362 @@ def send_report_email(tomorrow_ds, ds, **kwargs):
         email_subject = 'oride晚十点数据快报_{}'.format(tomorrow_ds)
         send_email(
             Variable.get("oride_night_report_receivers").split()
-            , email_subject, html, mime_charset='utf-8')
+            # 'duo.wu@opay-inc.com'
+            , email_subject, html, mime_charset='utf-8'
+        )
         # send_email(['zhenqian.zhang@opay-inc.com'], email_subject, html, mime_charset='utf-8')
-        cursor.close()
-        return
+
+    cursor.close()
+    return
 
 
 send_report = PythonOperator(
     task_id='send_report',
     python_callable=send_report_email,
     provide_context=True,
+    op_kwargs={
+        'ystd': '{{macros.ds_add(ds, -6)}}',
+        'db1': '{{ds}}'
+    },
     dag=dag
 )
 
+# 计算分城市、分业务基础数据
 insert_city_metrics = HiveOperator(
     task_id='insert_city_metrics',
     hql=''' 
-    
         SET hive.exec.parallel=TRUE;
+        SET hive.exec.dynamic.partition=true;
         SET hive.exec.dynamic.partition.mode=nonstrict;
         
-        insert overwrite table oride_bi.oride_night_city_metrics_report partition (dt)
-        select 
-        o.city_id,
-        count(if(o.status in (4,5),o.id,null)) as finish_order_cnt,
-        sum(if(o.status in (4,5),p.price,0)) as gmv,
-        
-        sum(if(o.status in (4,5) ,nvl(r.amount,0) + nvl(d.amount,0),0)) as b_subsidy,
-        sum(if(o.status in (4,5),p.price - p.amount,0)) as c_subsidy,
-        from_unixtime(o.create_time,'yyyy-MM-dd') dt
-        
-        -- gmv ods_binlog_data_order_payment_hi price
-        --B端 ods_binlog_data_driver_reward_hi ods_binlog_data_driver_recharge_records_hi amount
-        --C端 pay_price - pay_amount
-        
-        from 
-        (
-            select
-            *
-            from 
-            oride_db.data_order 
-            where dt = '{{ tomorrow_ds }}'
-            and from_unixtime(create_time,'yyyy-MM-dd') = '{{ tomorrow_ds }}'
-        ) o 
-        left join 
-        (   
-            select 
-            order_id,
-            amount
-            from 
-            oride_db.data_driver_recharge_records
-            where dt = '{{ tomorrow_ds }}'
-            and amount>0
-        ) r on o.id = r.order_id
-        left join 
-        (
-            select 
-            order_id,
-            amount
-            from 
-            oride_db.data_driver_reward
-            where dt = '{{ tomorrow_ds }}'
-        ) d on o.id = d.order_id
-        left join 
-        (
-            select 
-            id,
-            price,
-            amount
-            from 
-            oride_db.data_order_payment
-            where dt = '{{ tomorrow_ds }}'
-        ) p on o.id = p.id
-        
-        group by 
-        from_unixtime(o.create_time,'yyyy-MM-dd'),o.city_id
-        ;
-
+        WITH 
+        amount_service AS (
+            SELECT 
+                dr.dt,
+                dr.city_id, 
+                dr.serv_type, 
+                SUM(amount_service) AS amount_service
+            FROM (SELECT 
+                    dt, 
+                    city_id,
+                    serv_type,
+                    id
+                FROM oride_dw_ods.ods_sqoop_data_driver_extend_22clock_df 
+                WHERE dt = '{{ tomorrow_ds }}'
+                ) AS dr 
+            JOIN (SELECT 
+                    driver_id,
+                    amount_service 
+                FROM oride_dw_ods.ods_sqoop_data_driver_records_day_22clock_df 
+                WHERE dt = '{{ tomorrow_ds }}' AND 
+                    from_unixtime(day, 'yyyy-MM-dd') = '{{ tomorrow_ds }}' 
+                ) AS drd 
+            ON dr.id = drd.driver_id 
+            GROUP BY dr.dt, dr.city_id, dr.serv_type 
+        )
+        INSERT OVERWRITE TABLE oride_bi.oride_night_city_metrics_report PARTITION (dt) 
+        SELECT 
+            a.city_id,
+            a.finish_order_cnt, 
+            a.gmv, 
+            a.b_subsidy, 
+            a.c_subsidy, 
+            a.serv_type, 
+            a.b_subsidy2,
+            IF(b.amount_service IS NULL, 0, b.amount_service),           --份子
+            a.dt 
+        FROM (
+            SELECT  
+                o.city_id,                                                                  --城市ID
+                COUNT(1) AS finish_order_cnt,                                               --完单数
+                SUM(IF(p.price IS NULL, 0, p.price)) AS gmv,                                --GMV
+                SUM(IF(r.amount IS NULL OR r.amount<0,0,r.amount) + IF(d.amount IS NULL,0,d.amount)) AS b_subsidy,  --B端补贴
+                SUM(IF(p.price IS NULL,0,p.price) - IF(p.amount IS NULL,0,p.amount)) AS c_subsidy,    --C端补贴 
+                o.serv_type,                                                                --业务类型
+                SUM(IF(r.amount IS NULL OR r.amount>0, 0, r.amount)) AS b_subsidy2,         --B端扣款
+                from_unixtime(o.create_time, 'yyyy-MM-dd') AS dt 
+            FROM 
+            (
+                SELECT 
+                    od.create_time, 
+                    od.id,
+                    dr.city_id, 
+                    dr.serv_type 
+                FROM (SELECT 
+                        create_time, 
+                        id,
+                        driver_id 
+                    FROM 
+                        oride_dw_ods.ods_sqoop_data_order_22clock_df 
+                    WHERE dt = '{{ tomorrow_ds }}' AND 
+                        from_unixtime(create_time, 'yyyy-MM-dd') = '{{ tomorrow_ds }}' AND 
+                        status IN (4,5)
+                    ) AS od 
+                JOIN (SELECT 
+                        city_id,
+                        serv_type,
+                        id
+                    FROM oride_dw_ods.ods_sqoop_data_driver_extend_22clock_df 
+                    WHERE dt = '{{ tomorrow_ds }}'
+                    ) AS dr 
+                ON od.driver_id = dr.id 
+                ) AS o 
+            LEFT JOIN 
+                (   
+                SELECT 
+                    order_id,
+                    amount
+                FROM 
+                    oride_dw_ods.ods_sqoop_data_driver_recharge_records_22clock_df 
+                WHERE dt = '{{ tomorrow_ds }}' 
+                ) AS r ON o.id = r.order_id 
+            LEFT JOIN 
+                (
+                SELECT 
+                    order_id,
+                    amount
+                FROM 
+                    oride_dw_ods.ods_sqoop_data_driver_reward_22clock_df
+                WHERE dt = '{{ tomorrow_ds }}' 
+                ) AS d ON o.id = d.order_id
+            LEFT JOIN 
+                (
+                SELECT 
+                    id,
+                    price,
+                    amount
+                FROM 
+                    oride_dw_ods.ods_sqoop_data_order_payment_22clock_df 
+                WHERE dt = '{{ tomorrow_ds }}'
+                ) AS p ON o.id = p.id 
+            GROUP BY 
+                from_unixtime(o.create_time,'yyyy-MM-dd'), o.city_id, o.serv_type 
+            ) AS a 
+        LEFT JOIN amount_service AS b ON a.dt=b.dt AND a.city_id=b.city_id AND a.serv_type=b.serv_type  
         ''',
     schema='oride_bi',
-    dag=dag)
+    dag=dag
+)
 
 
-def get_city_data(yesterday, day):
+# 获取城市、业务数据
+def get_city_data(yesterday, db1, day):
     sql = '''
-        
-        select 
+        --汇总数据
+        SELECT 
             cur.dt,
-            'All',
-            sum(cur.finish_order_cnt), --完单数
-            sum(cur.gmv), --gmv
-            round(nvl(sum(cur.gmv)/sum(cur.finish_order_cnt),0),1) as price_avg, --单均应付
-            concat(cast(round(nvl((sum(cur.gmv)/sum(cur.finish_order_cnt)) * 100/
-            (sum(yesterday.gmv)/sum(yesterday.finish_order_cnt)),0),1) as string),'%') as price_avg_compare, --单均应付对比昨日
-            concat(cast(round(nvl((sum(cur.b_subsidy + cur.c_subsidy)) * 100 / sum(cur.gmv),0),1) as string),'%') as subsidy_rate , --总补贴率
-            round(nvl((sum(cur.b_subsidy + cur.c_subsidy))  / sum(cur.finish_order_cnt),0),1) as subsidy_avg, --单均补贴
-            concat(cast(round(nvl(((sum(cur.b_subsidy + cur.c_subsidy))  / sum(cur.finish_order_cnt)) * 100 /
-            ((sum(yesterday.b_subsidy + yesterday.c_subsidy))  / sum(yesterday.finish_order_cnt)),0),1) as string),'%') as subsidy_avg_compare, -- 单均补贴对比昨日
-            
-            sum(cur.b_subsidy) as b_subsidy, --b端补贴
-            concat(cast(round(nvl(sum(cur.b_subsidy) * 100/ sum(cur.gmv),0),1) as string),'%') as b_subsidy_rate, --b端补贴率
-            round(nvl(sum(cur.b_subsidy) / sum(cur.finish_order_cnt),0),1) as b_subsidy_avg, --b端单均补贴
-            
-            sum(cur.c_subsidy) as c_subsidy, --c端补贴
-            concat(cast(round(nvl(sum(cur.c_subsidy) * 100 / sum(cur.gmv),0),1) as string),'%') as c_subsidy_rate , --c端补贴率
-            round(nvl(sum(cur.c_subsidy) / sum(cur.finish_order_cnt),0),1) as c_subsidy_avg, --c端单均补贴
-            
-            round(sum(cur.gmv) * 0.05,1) as platform_money
-        from 
+            'All' AS city,
+            '-' AS serv_type,
+            SUM(cur.finish_order_cnt),      --完单数
+            IF(SUM(yesterday.finish_order_cnt)>0, 
+                ROUND(SUM(cur.finish_order_cnt)*100/SUM(yesterday.finish_order_cnt),1), 
+                '-' 
+            ),                          --完单数同比上周同期
+            SUM(cur.gmv),   --gmv
+            IF(SUM(yesterday.gmv)>0, 
+                ROUND(SUM(cur.gmv)*100/SUM(yesterday.gmv),1), 
+                '-'
+            ),                          --GMV同比上周同期
+            IF(SUM(cur.finish_order_cnt)>0, 
+                ROUND(SUM(cur.gmv)/SUM(cur.finish_order_cnt),1), 
+                '-' 
+            ) AS price_avg,             --单均应付
+            IF(IF(SUM(yesterday.finish_order_cnt)>0, SUM(yesterday.gmv)/SUM(yesterday.finish_order_cnt), 0)>0,
+                ROUND(IF(SUM(cur.finish_order_cnt)>0, SUM(cur.gmv)/SUM(cur.finish_order_cnt), 0) * 100 /
+                    (SUM(yesterday.gmv)/SUM(yesterday.finish_order_cnt)), 1), 
+                '-'
+            ) AS price_avg_compare,     --单均应付对比上周同期
+            SUM(cur.b_subsidy + cur.c_subsidy),         --总补贴
+            IF(SUM(cur.gmv)>0, 
+                ROUND((SUM(cur.b_subsidy + cur.c_subsidy)) * 100 / SUM(cur.gmv),1), 
+                '-' 
+            ) AS subsidy_rate,          --总补贴率
+            IF(SUM(cur.finish_order_cnt)>0, 
+                ROUND((SUM(cur.b_subsidy + cur.c_subsidy))  / SUM(cur.finish_order_cnt),1), 
+                '-' 
+            ) AS subsidy_avg,           --单均补贴
+            IF(IF(SUM(yesterday.finish_order_cnt)>0, (SUM(yesterday.b_subsidy + yesterday.c_subsidy))  / SUM(yesterday.finish_order_cnt), 0)>0,
+                ROUND(IF(SUM(cur.finish_order_cnt)>0, (SUM(cur.b_subsidy + cur.c_subsidy))  / SUM(cur.finish_order_cnt), 0) * 100 /
+                    ((SUM(yesterday.b_subsidy + yesterday.c_subsidy))  / SUM(yesterday.finish_order_cnt)),1), 
+                '-'
+            ) AS subsidy_avg_compare,   --单均补贴对比上周同期
+            SUM(cur.b_subsidy) AS b_subsidy, --b端补贴
+            IF(SUM(cur.gmv)>0, 
+                ROUND(SUM(cur.b_subsidy) * 100/ SUM(cur.gmv),1), 
+                '-' 
+            ) AS b_subsidy_rate,        --b端补贴率
+            IF(SUM(cur.finish_order_cnt)>0, 
+                ROUND(SUM(cur.b_subsidy) / SUM(cur.finish_order_cnt),1), 
+                '-' 
+            ) AS b_subsidy_avg,         --b端单均补贴
+            SUM(cur.c_subsidy) AS c_subsidy, --c端补贴
+            IF(SUM(cur.gmv)>0, 
+                ROUND(SUM(cur.c_subsidy) * 100 / SUM(cur.gmv),1), 
+                '-' 
+            ) AS c_subsidy_rate ,       --c端补贴率
+            IF(SUM(cur.finish_order_cnt)>0, 
+                ROUND(SUM(cur.c_subsidy) / SUM(cur.finish_order_cnt),1), 
+                '-' 
+            ) AS c_subsidy_avg,         --c端单均补贴
+            SUM(cur.amount_service + cur.b_deduction - cur.b_subsidy - cur.c_subsidy),      --业务毛利  
+            IF(SUM(yesterday.amount_service+yesterday.b_deduction-yesterday.b_subsidy-yesterday.c_subsidy)<>0 AND 
+                SUM(yesterday.amount_service+yesterday.b_deduction-yesterday.b_subsidy-yesterday.c_subsidy) IS NOT NULL, 
+                ROUND(SUM(cur.amount_service+cur.b_deduction-cur.b_subsidy-cur.c_subsidy) / 
+                    SUM(yesterday.amount_service+yesterday.b_deduction-yesterday.b_subsidy-yesterday.c_subsidy),1), 
+                '-'
+            ),              --业务毛利同步上周同期
+            ROUND(SUM(cur.gmv) * 0.05,1) AS platform_money
+        FROM (    
+            SELECT 
+                dt,
+                city_id,
+                serv_type,
+                finish_order_cnt,
+                gmv,
+                b_subsidy,
+                c_subsidy, 
+                b_deduction, 
+                amount_service 
+            FROM 
+                oride_bi.oride_night_city_metrics_report
+            WHERE dt = '{day}'
+            ) AS cur
+        LEFT JOIN (
+            SELECT 
+                city_id,
+                serv_type,
+                finish_order_cnt,
+                gmv,
+                b_subsidy,
+                c_subsidy, 
+                b_deduction, 
+                amount_service 
+            FROM 
+                oride_bi.oride_night_city_metrics_report
+            WHERE dt = '{bf7day}'
+            ) yesterday 
+        ON cur.city_id = yesterday.city_id AND 
+            cur.serv_type = yesterday.serv_type 
+        GROUP BY cur.dt 
         
-        (    
-            select 
-            dt,
-            city_id,
-            finish_order_cnt,
-            gmv,
-            b_subsidy,
-            c_subsidy 
-            from 
-            oride_bi.oride_night_city_metrics_report
-            where dt = '{day}'
-        ) cur
-        left join (
-            select 
-            city_id,
-            finish_order_cnt,
-            gmv,
-            b_subsidy,
-            c_subsidy 
-            from 
-            oride_bi.oride_night_city_metrics_report
-            where dt = '{yesterday}'
-        ) yesterday on cur.city_id = yesterday.city_id
-        group by cur.dt
-        union all 
-        select 
+        UNION ALL 
+        
+        SELECT 
             cur.dt,
             c.name,
-            sum(cur.finish_order_cnt), --完单数
-            sum(cur.gmv), --gmv
-            round(nvl(sum(cur.gmv)/sum(cur.finish_order_cnt),0),1) as price_avg, --单均应付
-            concat(cast(round(nvl((sum(cur.gmv)/sum(cur.finish_order_cnt)) * 100/
-            (sum(yesterday.gmv)/sum(yesterday.finish_order_cnt)),0),1) as string),'%') as price_avg_compare, --单均应付对比昨日
-            concat(cast(round(nvl((sum(cur.b_subsidy + cur.c_subsidy)) * 100 / sum(cur.gmv),0),1) as string),'%') as subsidy_rate , --总补贴率
-            round(nvl((sum(cur.b_subsidy + cur.c_subsidy))  / sum(cur.finish_order_cnt),0),1) as subsidy_avg, --单均补贴
-            concat(cast(round(nvl(((sum(cur.b_subsidy + cur.c_subsidy))  / sum(cur.finish_order_cnt)) * 100 /
-            ((sum(yesterday.b_subsidy + yesterday.c_subsidy))  / sum(yesterday.finish_order_cnt)),0),1) as string),'%') as subsidy_avg_compare, -- 单均补贴对比昨日
-            
-            sum(cur.b_subsidy) as b_subsidy, --b端补贴
-            concat(cast(round(nvl(sum(cur.b_subsidy) * 100/ sum(cur.gmv),0),1) as string),'%') as b_subsidy_rate, --b端补贴率
-            round(nvl(sum(cur.b_subsidy) / sum(cur.finish_order_cnt),0),1) as b_subsidy_avg, --b端单均补贴
-            
-            sum(cur.c_subsidy) as c_subsidy, --c端补贴
-            concat(cast(round(nvl(sum(cur.c_subsidy) * 100 / sum(cur.gmv),0),1) as string),'%') as c_subsidy_rate , --c端补贴率
-            round(nvl(sum(cur.c_subsidy) / sum(cur.finish_order_cnt),0),1) as c_subsidy_avg, --c端单均补贴
-            
-            round(sum(cur.gmv) * 0.05,1) as platform_money
-        
-        from 
-        
-        (    
-            select 
-            dt,
-            city_id,
-            finish_order_cnt,
-            gmv,
-            b_subsidy,
-            c_subsidy 
-            from 
-            oride_bi.oride_night_city_metrics_report
-            where dt = '{day}'
-        ) cur
-        join (
-            select 
-            id,
-            name
-            from 
-            oride_db.data_city_conf 
-            where dt = '{yesterday}'
-            and id != 999001
-        ) c on c.id = cur.city_id
-        left join (
-            select 
-            city_id,
-            finish_order_cnt,
-            gmv,
-            b_subsidy,
-            c_subsidy 
-            from 
-            oride_bi.oride_night_city_metrics_report
-            where dt = '{yesterday}'
-        ) yesterday on cur.city_id = yesterday.city_id
-        group by cur.dt,c.name
+            CASE 
+                WHEN cur.serv_type=1 THEN 'Green'  
+                WHEN cur.serv_type=2 THEN 'Street' 
+                WHEN cur.serv_type=3 THEN 'OTrike' 
+                ELSE 'Other' 
+                END, 
+            SUM(cur.finish_order_cnt),      --完单数
+            IF(SUM(yesterday.finish_order_cnt)>0, 
+                ROUND(SUM(cur.finish_order_cnt)*100/SUM(yesterday.finish_order_cnt),1), 
+                '-' 
+            ),                          --完单数同比上周同期
+            SUM(cur.gmv),   --gmv
+            IF(SUM(yesterday.gmv)>0, 
+                ROUND(SUM(cur.gmv)*100/SUM(yesterday.gmv),1), 
+                '-'
+            ),                          --GMV同比上周同期
+            IF(SUM(cur.finish_order_cnt)>0, 
+                ROUND(SUM(cur.gmv)/SUM(cur.finish_order_cnt),1), 
+                '-' 
+            ) AS price_avg,             --单均应付
+            IF(IF(SUM(yesterday.finish_order_cnt)>0, SUM(yesterday.gmv)/SUM(yesterday.finish_order_cnt), 0)>0,
+                ROUND(IF(SUM(cur.finish_order_cnt)>0, SUM(cur.gmv)/SUM(cur.finish_order_cnt), 0) * 100 /
+                    (SUM(yesterday.gmv)/SUM(yesterday.finish_order_cnt)), 1), 
+                '-'
+            ) AS price_avg_compare,     --单均应付对比上周同期
+            SUM(cur.b_subsidy + cur.c_subsidy),         --总补贴
+            IF(SUM(cur.gmv)>0, 
+                ROUND((SUM(cur.b_subsidy + cur.c_subsidy)) * 100 / SUM(cur.gmv),1), 
+                '-' 
+            ) AS subsidy_rate,          --总补贴率
+            IF(SUM(cur.finish_order_cnt)>0, 
+                ROUND((SUM(cur.b_subsidy + cur.c_subsidy))  / SUM(cur.finish_order_cnt),1), 
+                '-' 
+            ) AS subsidy_avg,           --单均补贴
+            IF(IF(SUM(yesterday.finish_order_cnt)>0, (SUM(yesterday.b_subsidy + yesterday.c_subsidy))  / SUM(yesterday.finish_order_cnt), 0)>0,
+                ROUND(IF(SUM(cur.finish_order_cnt)>0, (SUM(cur.b_subsidy + cur.c_subsidy))  / SUM(cur.finish_order_cnt), 0) * 100 /
+                    ((SUM(yesterday.b_subsidy + yesterday.c_subsidy))  / SUM(yesterday.finish_order_cnt)),1), 
+                '-'
+            ) AS subsidy_avg_compare,   --单均补贴对比上周同期
+            SUM(cur.b_subsidy) AS b_subsidy, --b端补贴
+            IF(SUM(cur.gmv)>0, 
+                ROUND(SUM(cur.b_subsidy) * 100/ SUM(cur.gmv),1), 
+                '-' 
+            ) AS b_subsidy_rate,        --b端补贴率
+            IF(SUM(cur.finish_order_cnt)>0, 
+                ROUND(SUM(cur.b_subsidy) / SUM(cur.finish_order_cnt),1), 
+                '-' 
+            ) AS b_subsidy_avg,         --b端单均补贴
+            SUM(cur.c_subsidy) AS c_subsidy, --c端补贴
+            IF(SUM(cur.gmv)>0, 
+                ROUND(SUM(cur.c_subsidy) * 100 / SUM(cur.gmv),1), 
+                '-' 
+            ) AS c_subsidy_rate ,       --c端补贴率
+            IF(SUM(cur.finish_order_cnt)>0, 
+                ROUND(SUM(cur.c_subsidy) / SUM(cur.finish_order_cnt),1), 
+                '-' 
+            ) AS c_subsidy_avg,         --c端单均补贴
+            SUM(cur.amount_service + cur.b_deduction - cur.b_subsidy - cur.c_subsidy),      --业务毛利  
+            IF(SUM(yesterday.amount_service+yesterday.b_deduction-yesterday.b_subsidy-yesterday.c_subsidy)<>0 AND 
+                SUM(yesterday.amount_service+yesterday.b_deduction-yesterday.b_subsidy-yesterday.c_subsidy) IS NOT NULL, 
+                ROUND(SUM(cur.amount_service+cur.b_deduction-cur.b_subsidy-cur.c_subsidy) / 
+                    SUM(yesterday.amount_service+yesterday.b_deduction-yesterday.b_subsidy-yesterday.c_subsidy),1), 
+                '-'
+            ),              --业务毛利同步上周同期
+            ROUND(SUM(cur.gmv) * 0.05,1) AS platform_money 
+        FROM 
+            (    
+            SELECT 
+                dt,
+                city_id,
+                serv_type,
+                finish_order_cnt,
+                gmv,
+                b_subsidy,
+                c_subsidy, 
+                b_deduction, 
+                amount_service 
+            FROM 
+                oride_bi.oride_night_city_metrics_report
+            WHERE dt = '{day}'
+            ) AS cur
+        JOIN (
+            SELECT 
+                id,
+                name
+            FROM 
+                oride_dw_ods.ods_sqoop_base_data_city_conf_df 
+            WHERE dt = '{db1}'
+                AND id != 999001
+            ) AS c ON c.id = cur.city_id
+        LEFT JOIN (
+            SELECT 
+                city_id,
+                serv_type,
+                finish_order_cnt,
+                gmv,
+                b_subsidy,
+                c_subsidy, 
+                b_deduction, 
+                amount_service 
+            FROM 
+                oride_bi.oride_night_city_metrics_report
+            WHERE dt = '{bf7day}'
+            ) AS yesterday 
+        ON cur.city_id = yesterday.city_id AND 
+            cur.serv_type = yesterday.serv_type 
+        GROUP BY cur.dt, c.name, cur.serv_type 
     
-    '''.format(yesterday=yesterday, day=day)
+    '''.format(
+        bf7day=yesterday,
+        db1=db1,
+        day=day
+    )
 
     cursor = get_hive_cursor()
     logging.info(sql)
@@ -512,24 +781,6 @@ def get_city_data(yesterday, day):
 
     row_html = ''
     if len(res) > 0:
-        # [
-        #     finish_order_cnt,
-        #     gmv,
-        #     price_avg,
-        #     price_avg_compare,
-        #     subsidy_rate,
-        #     subsidy_avg,
-        #     subsidy_avg_compare,
-        #     b_subsidy,
-        #     b_subsidy_rate,
-        #     b_subsidy_avg,
-        #     c_subsidy,
-        #     c_subsidy_rate,
-        #     c_subsidy_avg,
-        #     platform_money
-        #
-        # ] = list(res[0])
-
         tr_fmt = '''
                <tr>{row}</tr>
             '''
@@ -538,17 +789,23 @@ def get_city_data(yesterday, day):
                 <td>{}</td>
                 <td>{}</td>
                 <td>{}</td>
+                <td>{}%</td>
+                <td>{}</td>
+                <td>{}%</td>
+                <td>{}</td>
+                <td>{}%</td>
                 <td>{}</td>
                 <td>{}</td>
                 <td>{}</td>
+                <td>{}%</td>
+                <td>{}</td>
+                <td>{}%</td>
                 <td>{}</td>
                 <td>{}</td>
+                <td>{}%</td>
                 <td>{}</td>
                 <td>{}</td>
-                <td>{}</td>
-                <td>{}</td>
-                <td>{}</td>
-                <td>{}</td>
+                <td>{}%</td>
                 <!--<td>{}</td>-->
                 
             '''
@@ -559,33 +816,74 @@ def get_city_data(yesterday, day):
         return row_html
 
 
-host, port, schema, login, password = get_db_conf('sqoop_db')
-for table_name in table_list:
+conn_conf_dict = {}
+# host, port, schema, login, password = get_db_conf('sqoop_db')
+for oride_table in table_list:
+    conn_id = oride_table.get('conn')
+    if conn_id not in conn_conf_dict:
+        conn_conf_dict[conn_id] = get_db_conf(conn_id)
+
+    host, port, schema, login, password = conn_conf_dict[conn_id]
+
+    """
+    sqoop导入mysql数据到hive
+    """
     import_table = BashOperator(
-        task_id='import_table_{}'.format(table_name),
+        task_id='import_table_{}'.format(oride_table.get('db') + "_" + oride_table.get('table')),
         bash_command='''
             #!/usr/bin/env bash
             sqoop import "-Dorg.apache.sqoop.splitter.allow_text_splitter=true" \
             -D mapred.job.queue.name=root.collects \
             --connect "jdbc:mysql://{host}:{port}/{schema}?tinyInt1isBit=false&useUnicode=true&characterEncoding=utf8" \
             --username {username} \
-            --password {password} \
+            --password \'{password}\' \
             --table {table} \
-            --target-dir ufile://opay-datalake/oride/db/{table}/dt={{{{ tomorrow_ds }}}}/ \
+            --target-dir {table_path}/country_code=nal/dt={{{{ ds }}}}/ \
             --fields-terminated-by "\\001" \
             --lines-terminated-by "\\n" \
             --hive-delims-replacement " " \
             --delete-target-dir \
             --compression-codec=snappy
-        '''.format(host=host, port=port, schema=schema, username=login, password=password, table=table_name),
+        '''.format(
+            host=host,
+            port=port,
+            schema=schema,
+            username=login,
+            password=password,
+            table=oride_table.get('table'),
+            table_path=s3path.format(bs=oride_table.get('table'))
+        ),
         dag=dag,
     )
-    add_partitions = HiveOperator(
-        task_id='add_partitions_{}'.format(table_name),
-        hql='''
-            ALTER TABLE oride_db.{table} ADD IF NOT EXISTS PARTITION (dt = '{{{{ tomorrow_ds }}}}')
-        '''.format(table=table_name),
-        schema='oride_db',
-        dag=dag)
 
-    import_table >> add_partitions >> insert_city_metrics >> send_report
+    """
+    创建hive数据表任务
+    """
+    create_table = PythonOperator(
+        task_id='create_table_{}'.format(hive_table.format(bs=oride_table.get('table'))),
+        python_callable=create_hive_external_table,
+        provide_context=True,
+        op_kwargs={
+            'db': oride_table.get('db'),
+            'table': oride_table.get('table'),
+            'conn': oride_table.get('conn')
+        },
+        dag=dag
+    )
+
+    """
+    添加hive数据表分区
+    """
+    add_partitions = HiveOperator(
+        task_id='add_partitions_{}'.format(hive_table.format(bs=oride_table.get('table'))),
+        hql='''
+            ALTER TABLE {hive_db}.{hive_table} ADD IF NOT EXISTS PARTITION (country_code='nal', dt='{{{{ tomorrow_ds }}}}')
+        '''.format(
+            hive_db=hive_db,
+            hive_table=hive_table.format(bs=oride_table.get('table'))
+        ),
+        schema=hive_db,
+        dag=dag
+    )
+
+    import_table >> create_table >> add_partitions >> insert_city_metrics >> send_report
