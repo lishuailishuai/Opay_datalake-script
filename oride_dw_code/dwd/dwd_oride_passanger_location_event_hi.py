@@ -146,12 +146,14 @@ def check_key_data(ds, **kargs):
       FROM oride_dw.{table}
 
       WHERE dt='{pt}'
+      and hour = '{now_hour}'
       GROUP BY 
       order_id,user_id 
       HAVING count(1)>1) t1
     '''.format(
         pt=ds,
         now_day=ds,
+        now_hour='{{ execution_date.strftime("%H") }}',
         table=table_name
     )
 
@@ -198,4 +200,4 @@ touchz_data_success = BashOperator(
     ),
     dag=dag)
 
-dependence_dwd_oride_location_user_event_hi_prev_hour_task >> sleep_time >> dwd_oride_location_user_event_hi_task >> touchz_data_success
+dependence_dwd_oride_location_user_event_hi_prev_hour_task >> sleep_time >> dwd_oride_location_user_event_hi_task >> check_key_data >> touchz_data_success

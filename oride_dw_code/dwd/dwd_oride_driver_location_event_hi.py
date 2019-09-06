@@ -155,6 +155,7 @@ def check_key_data(ds, **kargs):
       FROM oride_dw.{table}
 
       WHERE dt='{pt}'
+      and hour = '{now_hour}'
       GROUP BY 
       order_id,
       driver_id 
@@ -162,6 +163,7 @@ def check_key_data(ds, **kargs):
     '''.format(
         pt=ds,
         now_day=ds,
+        now_hour='{{ execution_date.strftime("%H") }}',
         table=table_name
     )
 
