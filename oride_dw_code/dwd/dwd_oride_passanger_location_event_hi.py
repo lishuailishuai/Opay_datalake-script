@@ -205,4 +205,4 @@ touchz_data_success = BashOperator(
     ),
     dag=dag)
 
-dependence_dwd_oride_location_user_event_hi_prev_hour_task >> sleep_time >> dwd_oride_location_user_event_hi_task >> check_key_data >> touchz_data_success
+dependence_dwd_oride_location_user_event_hi_prev_hour_task >> sleep_time >> dwd_oride_location_user_event_hi_task >> task_check_key_data >> touchz_data_success
