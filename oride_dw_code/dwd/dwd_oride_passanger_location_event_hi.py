@@ -32,7 +32,7 @@ args = {
     'email_on_retry': False,
 }
 
-dag = airflow.DAG('dwd_oride_location_user_event_hi',
+dag = airflow.DAG('dwd_oride_passanger_location_event_hi',
                   schedule_interval="30 * * * *",
                   default_args=args,
                   catchup=False)
@@ -59,7 +59,7 @@ dependence_dwd_oride_location_user_event_hi_prev_hour_task = HivePartitionSensor
 ##----------------------------------------- 变量 ---------------------------------------##
 
 
-table_name = "dwd_oride_location_user_event_hi"
+table_name = "dwd_oride_passanger_location_event_hi"
 hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
 
 ##----------------------------------------- 脚本 ---------------------------------------##
@@ -74,17 +74,17 @@ dwd_oride_location_user_event_hi_task = HiveOperator(
         insert overwrite table oride_dw.{table} partition(country_code,dt,hour)
 
         select 
-        t.order_id,
-        t.user_id,
+        t.order_id, --订单id
+        t.user_id, --用户id
         
-        replace(concat_ws(',',collect_set(if(looking_for_a_driver_show_lat is null,'',looking_for_a_driver_show_lat))),',','') as looking_for_a_driver_show_lat,
-        replace(concat_ws(',',collect_set(if(looking_for_a_driver_show_lng is null,'',looking_for_a_driver_show_lng))),',','') as looking_for_a_driver_show_lng,
-        replace(concat_ws(',',collect_set(if(successful_order_show_lat is null,'',successful_order_show_lat))),',','') as successful_order_show_lat,
-        replace(concat_ws(',',collect_set(if(successful_order_show_lng is null,'',successful_order_show_lng))),',','') as successful_order_show_lng,
-        replace(concat_ws(',',collect_set(if(start_ride_show_lat is null,'',start_ride_show_lat))),',','') as start_ride_show_lat,
-        replace(concat_ws(',',collect_set(if(start_ride_show_lng is null,'',start_ride_show_lng))),',','') as start_ride_show_lng,
-        replace(concat_ws(',',collect_set(if(complete_the_order_show_lat is null,'',complete_the_order_show_lat))),',','') as complete_the_order_show_lat,
-        replace(concat_ws(',',collect_set(if(complete_the_order_show_lng is null,'',complete_the_order_show_lng))),',','') as complete_the_order_show_lng,
+        replace(concat_ws(',',collect_set(if(looking_for_a_driver_show_lat is null,'',looking_for_a_driver_show_lat))),',','') as looking_for_a_driver_show_lat, --looking_for_a_driver_show，事件，纬度
+        replace(concat_ws(',',collect_set(if(looking_for_a_driver_show_lng is null,'',looking_for_a_driver_show_lng))),',','') as looking_for_a_driver_show_lng, --looking_for_a_driver_show，事件，经度
+        replace(concat_ws(',',collect_set(if(successful_order_show_lat is null,'',successful_order_show_lat))),',','') as successful_order_show_lat, --successful_order_show，事件，纬度
+        replace(concat_ws(',',collect_set(if(successful_order_show_lng is null,'',successful_order_show_lng))),',','') as successful_order_show_lng, --successful_order_show，事件，经度
+        replace(concat_ws(',',collect_set(if(start_ride_show_lat is null,'',start_ride_show_lat))),',','') as start_ride_show_lat, --start_ride_show，事件，纬度
+        replace(concat_ws(',',collect_set(if(start_ride_show_lng is null,'',start_ride_show_lng))),',','') as start_ride_show_lng, --start_ride_show，事件，经度
+        replace(concat_ws(',',collect_set(if(complete_the_order_show_lat is null,'',complete_the_order_show_lat))),',','') as complete_the_order_show_lat, --complete_the_order_show，事件，纬度
+        replace(concat_ws(',',collect_set(if(complete_the_order_show_lng is null,'',complete_the_order_show_lng))),',','') as complete_the_order_show_lng, --complete_the_order_show，事件，经度
         
         'nal' as country_code,
         '{now_day}' as dt,
@@ -132,6 +132,48 @@ dwd_oride_location_user_event_hi_task = HiveOperator(
     ),
     dag=dag
 )
+
+
+
+def check_key_data(ds, **kargs):
+    # 主键重复校验
+    HQL_DQC = '''
+    SELECT count(1) as nm
+    FROM
+     (SELECT order_id,
+             user_id,
+             count(1) as cnt
+      FROM oride_dw.{table}
+
+      WHERE dt='{pt}'
+      GROUP BY 
+      order_id,user_id 
+      HAVING count(1)>1) t1
+    '''.format(
+        pt=ds,
+        now_day=ds,
+        table=table_name
+    )
+
+    cursor = get_hive_cursor()
+    logging.info('Executing 主键重复校验: %s', HQL_DQC)
+
+    cursor.execute(HQL_DQC)
+    res = cursor.fetchone()
+
+    if res[0] > 1:
+        raise Exception("Error The primary key repeat !", res)
+    else:
+        print("-----> Notice Data Export Success ......")
+
+
+# 主键重复校验
+task_check_key_data = PythonOperator(
+    task_id='check_data',
+    python_callable=check_key_data,
+    provide_context=True,
+    dag=dag)
+
 
 # 生成_SUCCESS
 touchz_data_success = BashOperator(
