@@ -232,6 +232,25 @@ dm_oride_driver_base_cube_d_task = HiveOperator(
               
               count(DISTINCT (CASE WHEN ord.driver_id = r2.driver_id THEN ord.driver_id ELSE NULL END)) AS push_accpet_show_driver_num,
               --被推送骑手数 （accept_show阶段）
+
+              count(DISTINCT (CASE WHEN veri_audit_date=dri.dt and dri.driver_id<>0 THEN dri.driver_id ELSE NULL END)) AS td_reg_driver_num,
+              --当天注册司机数
+    
+              count(DISTINCT (CASE WHEN veri_audit_date=dri.dt and dri.driver_id<>0
+                              AND dri.status=0 THEN dri.driver_id ELSE NULL END)) AS td_wait_audit_driver_num,
+              --当天待审核司机数
+    
+              count(DISTINCT (CASE WHEN veri_audit_date=dri.dt and dri.driver_id<>0
+                              AND dri.status=1 THEN dri.driver_id ELSE NULL END)) AS td_audit_in_driver_num,
+              --当天审核中司机数
+    
+              count(DISTINCT (CASE WHEN veri_audit_date=dri.dt and dri.driver_id<>0
+                              AND dri.status=2 THEN dri.driver_id ELSE NULL END)) AS td_audit_finish_driver_num,
+              --当天审核通过司机数
+    
+              count(DISTINCT (CASE WHEN veri_audit_date=dri.dt and dri.driver_id<>0
+                              AND dri.status=9 THEN dri.driver_id ELSE NULL END)) AS td_audit_fail_driver_num,
+              --当天审核失败司机数
     
               nvl(dri.country_code,-999) AS country_code --(去除with cube为空的BUG) --国家码字段
     

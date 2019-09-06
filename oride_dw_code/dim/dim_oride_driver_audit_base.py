@@ -185,6 +185,8 @@ select
   (case when dri.product_id=2 and dri.status=2 and dri.association_id >0 and dri.team_id > 0 then 1 else 0 end) as is_driver_audit_pass,
    --司机是否审核通过
 
+  from_unixtime(veri_time,'yyyy-MM-dd') AS veri_audit_date,--总审核流程审查通过日期
+
    'nal' AS country_code,
        --国家码字段
 
