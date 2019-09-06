@@ -353,6 +353,8 @@ SELECT base.order_id,
        trip_id, --'行程 ID'
        wait_carpool,--'是否在等在拼车',
        pay_status, --支付类型（0: 支付中, 1: 成功, 2: 失败）
+       pax_num, -- 乘客数量 
+       tip,  --小费
 
        country_code,
 
@@ -483,6 +485,8 @@ FROM
 
           trip_id, --'行程 ID'
           wait_carpool,--'是否在等在拼车',
+          pax_num, -- 乘客数量 
+          tip,  --小费
 
           country_code
    FROM
@@ -623,6 +627,8 @@ FROM
 
              trip_id, --'行程 ID'
              wait_carpool,--'是否在等在拼车',
+             pax_num, -- 乘客数量 
+             tip,  --小费
 
              row_number() OVER(partition BY id
                                ORDER BY updated_at desc,pos DESC) AS rn1

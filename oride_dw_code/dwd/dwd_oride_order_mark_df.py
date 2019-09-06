@@ -59,12 +59,12 @@ SET hive.exec.parallel=TRUE;
 SET hive.exec.dynamic.partition.mode=nonstrict;
 
 INSERT overwrite TABLE oride_dw.{table} partition(country_code,dt)
-SELECT order_id,
-           create_time_s as create_time,
-           passenger_id,
-           status,
-           2*asin(sqrt(pow(sin((start_lat*pi()/180.0-start_lat2*pi()/180.0)/2),2) + cos(start_lat*pi()/180.0)*cos(start_lat2*pi()/180.0)*pow(sin((start_lng*pi()/180.0-start_lng2*pi()/180.0)/2),2)))*6378137 as start_distance,
-           2*asin(sqrt(pow(sin((end_lat*pi()/180.0-end_lat2*pi()/180.0)/2),2) + cos(end_lat*pi()/180.0)*cos(end_lat2*pi()/180.0)*pow(sin((end_lng*pi()/180.0-end_lng2*pi()/180.0)/2),2)))*6378137 as end_distance,
+SELECT order_id,  --订单ID
+           create_time_s as create_time, --下单时间
+           passenger_id,  --乘客ID
+           status,--订单状态 (0: wait assign, 1: pick up passenger, 2: wait passenger, 3: send passenger, 4: arrive destination, 5: finished, 6: cancel)
+           2*asin(sqrt(pow(sin((start_lat*pi()/180.0-start_lat2*pi()/180.0)/2),2) + cos(start_lat*pi()/180.0)*cos(start_lat2*pi()/180.0)*pow(sin((start_lng*pi()/180.0-start_lng2*pi()/180.0)/2),2)))*6378137 as start_distance,--相邻两单起点距离
+           2*asin(sqrt(pow(sin((end_lat*pi()/180.0-end_lat2*pi()/180.0)/2),2) + cos(end_lat*pi()/180.0)*cos(end_lat2*pi()/180.0)*pow(sin((end_lng*pi()/180.0-end_lng2*pi()/180.0)/2),2)))*6378137 as end_distance, --相邻两单终点距离
         IF(status IN (4,5), 1,
             IF(order_id=order_id2, 1,
                 IF(ABS(create_time2-create_time)<=1800 AND
@@ -72,7 +72,7 @@ SELECT order_id,
                     2*asin(sqrt(pow(sin((end_lat*pi()/180.0-end_lat2*pi()/180.0)/2),2) + cos(end_lat*pi()/180.0)*cos(end_lat2*pi()/180.0)*pow(sin((end_lng*pi()/180.0-end_lng2*pi()/180.0)/2),2)))*6378137 <= 1000, 0, 1
                 )
             )
-        ) AS valid_mark,
+        ) AS valid_mark,  --订单有效标志
         'nal' AS country_code,
         '{pt}' AS dt
     FROM (

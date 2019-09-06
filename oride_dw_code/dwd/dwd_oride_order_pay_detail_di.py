@@ -98,7 +98,7 @@ dwd_oride_order_pay_detail_di_task = HiveOperator(
 
 INSERT overwrite TABLE oride_dw.{table} partition(country_code,dt)
 select 
-            ord.order_id,--订单 ID
+            pay.order_id,--订单 ID
             driver_id,--司机ID
             pay_mode,--支付模式（0: 未知, 1: 线下支付, 2: opay, 3: 余额）
             price,-- 价格
@@ -124,20 +124,6 @@ select
             '{pt}' as dt
 from 
 
-(SELECT 
-           order_id,
-           city_id,--所属城市
-            passenger_id,
-             --乘客 ID
-             part_hour,
-             country_code,
-             dt
-      FROM oride_dw.dwd_oride_order_base_include_test_di
-WHERE dt = '{pt}'
-  and status in (4,5)
-  AND city_id<>'999001' --去除测试数据
-  ) ord
-left outer join
 (SELECT 
             order_id,--订单 ID
             driver_id,--司机ID
@@ -195,6 +181,20 @@ left outer join
       WHERE concat_ws(' ',dt,hour) BETWEEN '{pt} 00' AND '{now_day} 00'  --取昨天1天数据与今天早上00数据
         AND op IN ('c','u')) t1
    WHERE rn1=1 ) pay
+left outer join
+(SELECT 
+           order_id,
+           city_id,--所属城市
+            passenger_id,
+             --乘客 ID
+             part_hour,
+             country_code,
+             dt
+      FROM oride_dw.dwd_oride_order_base_include_test_di
+WHERE dt = '{pt}'
+  and status=5
+  AND city_id<>'999001' --去除测试数据
+  ) ord
 on pay.order_id=ord.order_id
 '''.format(
         pt='{{ds}}',
