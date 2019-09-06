@@ -47,7 +47,7 @@ sleep_time = BashOperator(
 
 
 # 依赖前一小时分区
-dwd_oride_location_driver_event_hi_prev_hour_task = HivePartitionSensor(
+dependence_dwd_oride_location_driver_event_hi_prev_hour_task = HivePartitionSensor(
     task_id="dwd_oride_location_driver_event_hi_prev_hour_task",
     table="oride_client_event_detail",
     partition="""dt='{{ ds }}' and hour='{{ execution_date.strftime("%H") }}'""",
@@ -79,8 +79,6 @@ dwd_oride_location_driver_event_hi_task = HiveOperator(
         
         replace(concat_ws(',',collect_set(if(accept_order_click_lat is null,'',accept_order_click_lat))),',','') as accept_order_click_lat, --accept_order_click，事件，纬度
         replace(concat_ws(',',collect_set(if(accept_order_click_lng is null,'',accept_order_click_lng))),',','') as accept_order_click_lng, --accept_order_click，事件，经度
-        replace(concat_ws(',',collect_set(if(rider_arrive_show_lat is null,'',rider_arrive_show_lat))),',','') as rider_arrive_show_lat, --rider_arrive_show，事件，纬度
-        replace(concat_ws(',',collect_set(if(rider_arrive_show_lng is null,'',rider_arrive_show_lng))),',','') as rider_arrive_show_lng, --rider_arrive_show，事件，经度
         replace(concat_ws(',',collect_set(if(confirm_arrive_click_arrived_lat is null,'',confirm_arrive_click_arrived_lat))),',','') as confirm_arrive_click_arrived_lat, --confirm_arrive_click_arrived，事件，纬度
         replace(concat_ws(',',collect_set(if(confirm_arrive_click_arrived_lng is null,'',confirm_arrive_click_arrived_lng))),',','') as confirm_arrive_click_arrived_lng, --confirm_arrive_click_arrived，事件，经度
         replace(concat_ws(',',collect_set(if(pick_up_passengers_sliding_arrived_lat is null,'',pick_up_passengers_sliding_arrived_lat))),',','') as pick_up_passengers_sliding_arrived_lat, --pick_up_passengers_sliding_arrived，事件，纬度
@@ -102,8 +100,6 @@ dwd_oride_location_driver_event_hi_task = HiveOperator(
             user_id as driver_id,
             if(event_name = 'accept_order_click',get_json_object(event_value,'$.lat'),null) as accept_order_click_lat,
             if(event_name = 'accept_order_click',get_json_object(event_value,'$.lng'),null) as accept_order_click_lng,
-            if(event_name = 'rider_arrive_show',get_json_object(event_value,'$.lat'),null) as rider_arrive_show_lat,
-            if(event_name = 'rider_arrive_show',get_json_object(event_value,'$.lng'),null) as rider_arrive_show_lng,
             if(event_name = 'confirm_arrive_click_arrived',get_json_object(event_value,'$.lat'),null) as confirm_arrive_click_arrived_lat,
             if(event_name = 'confirm_arrive_click_arrived',get_json_object(event_value,'$.lng'),null) as confirm_arrive_click_arrived_lng,
             if(event_name = 'pick_up_passengers_sliding_arrived',get_json_object(event_value,'$.lat'),null) as pick_up_passengers_sliding_arrived_lat,
@@ -119,7 +115,6 @@ dwd_oride_location_driver_event_hi_task = HiveOperator(
             and hour = '{now_hour}'
             and event_name in (
                 'accept_order_click',
-                'rider_arrive_show',
                 'confirm_arrive_click_arrived',
                 'pick_up_passengers_sliding_arrived',
                 'start_ride_sliding',
@@ -209,4 +204,4 @@ touchz_data_success = BashOperator(
     ),
     dag=dag)
 
-dwd_oride_location_driver_event_hi_prev_hour_task >> sleep_time >> dwd_oride_location_driver_event_hi_task >> task_check_key_data >> touchz_data_success
+dependence_dwd_oride_location_driver_event_hi_prev_hour_task >> sleep_time >> dwd_oride_location_driver_event_hi_task >> task_check_key_data >> touchz_data_success

@@ -85,6 +85,8 @@ dwd_oride_location_user_event_hi_task = HiveOperator(
         replace(concat_ws(',',collect_set(if(start_ride_show_lng is null,'',start_ride_show_lng))),',','') as start_ride_show_lng, --start_ride_show，事件，经度
         replace(concat_ws(',',collect_set(if(complete_the_order_show_lat is null,'',complete_the_order_show_lat))),',','') as complete_the_order_show_lat, --complete_the_order_show，事件，纬度
         replace(concat_ws(',',collect_set(if(complete_the_order_show_lng is null,'',complete_the_order_show_lng))),',','') as complete_the_order_show_lng, --complete_the_order_show，事件，经度
+        replace(concat_ws(',',collect_set(if(rider_arrive_show_lat is null,'',rider_arrive_show_lat))),',','') as rider_arrive_show_lat, --rider_arrive_show，事件，纬度
+        replace(concat_ws(',',collect_set(if(rider_arrive_show_lng is null,'',rider_arrive_show_lng))),',','') as rider_arrive_show_lng, --rider_arrive_show，事件，经度
         
         'nal' as country_code,
         '{now_day}' as dt,
@@ -103,7 +105,9 @@ dwd_oride_location_user_event_hi_task = HiveOperator(
             if(event_name = 'start_ride_show',get_json_object(event_value,'$.lat'),null) as start_ride_show_lat,
             if(event_name = 'start_ride_show',get_json_object(event_value,'$.lng'),null) as start_ride_show_lng,
             if(event_name = 'complete_the_order_show',get_json_object(event_value,'$.lat'),null) as complete_the_order_show_lat,
-            if(event_name = 'complete_the_order_show',get_json_object(event_value,'$.lng'),null) as complete_the_order_show_lng
+            if(event_name = 'complete_the_order_show',get_json_object(event_value,'$.lng'),null) as complete_the_order_show_lng,
+            if(event_name = 'rider_arrive_show',get_json_object(event_value,'$.lat'),null) as rider_arrive_show_lat,
+            if(event_name = 'rider_arrive_show',get_json_object(event_value,'$.lng'),null) as rider_arrive_show_lng
                     
         
             from oride_bi.oride_client_event_detail
@@ -111,6 +115,7 @@ dwd_oride_location_user_event_hi_task = HiveOperator(
             and hour = '{now_hour}'
             and event_name in (
                 'looking_for_a_driver_show',
+                'rider_arrive_show',
                 'successful_order_show',
                 'start_ride_show',
                 'complete_the_order_show'
