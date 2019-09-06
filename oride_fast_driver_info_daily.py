@@ -108,7 +108,7 @@ data_order_validate_task = HivePartitionSensor(
     task_id="data_order_validate_task",
     table="ods_sqoop_base_data_order_df",
     partition="dt='{{ds}}'",
-    schema="oride_dw",
+    schema="oride_dw_ods",
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
@@ -117,7 +117,7 @@ data_driver_comment_validate_task = HivePartitionSensor(
     task_id="data_driver_comment_validate_task",
     table="ods_sqoop_base_data_driver_comment_df",
     partition="dt='{{ds}}'",
-    schema="oride_dw",
+    schema="oride_dw_ods",
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
@@ -126,7 +126,7 @@ data_driver_balance_extend_validate_task = HivePartitionSensor(
     task_id="data_driver_balance_extend_validate_task",
     table="ods_sqoop_base_data_driver_balance_extend_df",
     partition="dt='{{ds}}'",
-    schema="oride_dw",
+    schema="oride_dw_ods",
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
@@ -135,7 +135,7 @@ data_driver_validate_task = HivePartitionSensor(
     task_id="data_driver_validate_task",
     table="ods_sqoop_base_data_driver_df",
     partition="dt='{{ds}}'",
-    schema="oride_dw",
+    schema="oride_dw_ods",
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
@@ -144,7 +144,7 @@ data_driver_extend_validate_task = HivePartitionSensor(
     task_id="data_driver_extend_validate_task",
     table="ods_sqoop_base_data_driver_extend_df",
     partition="dt='{{ds}}'",
-    schema="oride_dw",
+    schema="oride_dw_ods",
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
@@ -162,7 +162,7 @@ data_driver_records_day_validate_task = HivePartitionSensor(
     task_id="data_driver_records_day_validate_task",
     table="ods_sqoop_base_data_driver_records_day_df",
     partition="dt='{{ds}}'",
-    schema="oride_dw",
+    schema="oride_dw_ods",
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
@@ -180,7 +180,7 @@ rider_signups_validate_task = HivePartitionSensor(
     task_id="rider_signups_timerange_validate_task",
     table="ods_sqoop_mass_rider_signups_df",
     partition="dt='{{ds}}'",
-    schema="oride_dw",
+    schema="oride_dw_ods",
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
@@ -189,7 +189,7 @@ driver_group_validate_task = HivePartitionSensor(
     task_id="driver_group_timerange_validate_task",
     table="ods_sqoop_mass_driver_group_df",
     partition="dt='{{ds}}'",
-    schema="oride_dw",
+    schema="oride_dw_ods",
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
@@ -198,7 +198,7 @@ driver_team_validate_task = HivePartitionSensor(
     task_id="driver_team_timerange_validate_task",
     table="ods_sqoop_mass_driver_team_df",
     partition="dt='{{ds}}'",
-    schema="oride_dw",
+    schema="oride_dw_ods",
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
