@@ -46,7 +46,7 @@ data_order_validate_task = HivePartitionSensor(
     task_id="data_order_validate_task",
     table="ods_sqoop_base_data_order_df",
     partition="dt='{{ds}}'",
-    schema="oride_dw",
+    schema="oride_dw_ods",
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
