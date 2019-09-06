@@ -179,6 +179,17 @@ dm_oride_driver_base_cube_d_task = HiveOperator(
            
            push_accpet_show_driver_num,
            --被推送骑手数 （accept_show阶段）
+
+           td_reg_driver_num,
+           --当天注册司机数
+           td_wait_audit_driver_num,
+           --当天待审核司机数
+           td_audit_in_driver_num,
+           --当天审核中司机数
+           td_audit_finish_driver_num,
+           --当天审核通过司机数
+           td_audit_fail_driver_num,
+           --当天审核失败司机数
             
            country_code,
            --国家码字段
