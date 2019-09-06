@@ -153,7 +153,7 @@ order_push_driver_detail_validate_task = HivePartitionSensor(
     task_id="order_push_driver_detail_validate_task",
     table="dwd_oride_order_push_driver_detail_di",
     partition="dt='{{ds}}'",
-    schema="oride_dw_ods",
+    schema="oride_dw",
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
