@@ -230,34 +230,56 @@ insert_shop_metrics = HiveOperator(
         
         new_data as 
         (
+        
             select 
             from_unixtime(unix_timestamp('{{ ds_nodash }}', 'yyyyMMdd'),'yyyyMMdd') day,
             s.shop_id,
-            nvl(count(distinct if(s.ft = '{{ ds_nodash }}',s.dh,null)),0) new_user_place_num,
-            nvl(count(distinct if(s.ft = '{{ ds_nodash }}' and s.order_status = 8,s.dh,null)),0) new_user_complete_num
+            nvl(count(distinct if(s.ft = '{{ ds_nodash }}',s.uid,null)),0) new_user_place_num,
+            nvl(count(distinct if(s.ft = '{{ ds_nodash }}' and s.is_invitation > 0,s.uid,null)),0) new_user_place_invitation_num,
+            nvl(count(distinct if(s.ft = '{{ ds_nodash }}' and s.order_status = 8,s.uid,null)),0) new_user_complete_num,
+            nvl(count(distinct if(s.ft = '{{ ds_nodash }}' and s.order_status = 8 and s.is_invitation > 0,s.uid,null)),0) new_user_complete_invitation_num
             from 
             (
-            select 
-            t.shop_id,
-            t.dh,
-            t.order_status,
-            t.ft,
-            row_number() over(partition by t.dh,t.order_status order by t.ft) order_id
-            from 
-            (
-            select 
-            o.shop_id,
-            o.mobile dh,
-            o.order_status,
-            from_unixtime(min(dateline),'yyyyMMdd') ft
-            from 
-            ofood_dw_ods.ods_sqoop_base_jh_order_df o
-            where o.dt = '{{ ds }}'
-            group by o.shop_id,o.mobile,o.order_status
-            ) t
+                select 
+                t.shop_id,
+                t.uid,
+                t.order_status,
+                t.is_invitation,
+                t.ft,
+                row_number() over(partition by t.shop_id,t.uid,t.order_status order by t.ft) order_by
+                from 
+                (
+                    select 
+                    o.shop_id,
+                    o.order_status,
+                    o.uid,
+                    count(distinct(i.uid)) is_invitation,
+                    from_unixtime(min(dateline),'yyyyMMdd') ft
+                    from 
+                    (
+                        select 
+                        o.shop_id,
+                        o.order_status,
+                        o.dateline,
+                        o.uid
+                        from 
+                        ofood_dw_ods.ods_sqoop_base_jh_order_df o
+                        where o.dt = '{{ ds }}'
+                    ) o 
+                    left join (
+                        select 
+                        uid
+                        from 
+                        ofood_dw.ods_sqoop_bd_invitation_info_df
+                        where dt = '{{ ds }}'
+                    ) i on i.uid = o.uid 
+                    
+                    group by o.shop_id,o.uid,o.order_status
+                ) t
             ) s
-            where s.order_id = 1 
+            where s.order_by = 1 
             group by s.shop_id
+        
         ),
         
         
@@ -329,7 +351,9 @@ insert_shop_metrics = HiveOperator(
         od.after_pay_cancel_num,
         od.is_open,
         if(ndm.shop_id is not null and ndm.first_place_date = '{{ ds_nodash }}',1,0) is_first_placed_order,
-        if(ndm.shop_id is not null and ndm.first_complete_date = '{{ ds_nodash }}',1,0) is_first_completed_order
+        if(ndm.shop_id is not null and ndm.first_complete_date = '{{ ds_nodash }}',1,0) is_first_completed_order,
+        nvl(nd.new_user_place_invitation_num,0) total_number_of_invitation_new_users,
+        nvl(nd.new_user_complete_invitation_num,0) number_of_invitation_new_users
         
         from 
         order_data od 
@@ -372,7 +396,9 @@ create_crm_data = BashOperator(
             d.total_number_of_order,
             d.number_of_valid_order,
             d.number_of_cancel_order_before_payment,
-            d.number_of_cancel_order_after_payment
+            d.number_of_cancel_order_after_payment,
+            d.total_number_of_invitation_new_users,
+            d.number_of_invitation_new_users
             
             from 
             (
@@ -399,6 +425,8 @@ create_crm_data = BashOperator(
                 d.number_of_valid_order,
                 d.number_of_cancel_order_before_payment,
                 d.number_of_cancel_order_after_payment,
+                d.total_number_of_invitation_new_users,
+                d.number_of_invitation_new_users,
                 row_number() over(partition by d.shop_id order by d.area_id) order_by
                 from 
                 (
@@ -424,7 +452,10 @@ create_crm_data = BashOperator(
                 nvl(sum(s.total_number_of_order),0) total_number_of_order,
                 nvl(sum(s.number_of_valid_order),0) number_of_valid_order,
                 nvl(sum(s.before_pay_cancel_num),0) number_of_cancel_order_before_payment,
-                nvl(sum(s.after_pay_cancel_num),0) number_of_cancel_order_after_payment
+                nvl(sum(s.after_pay_cancel_num),0) number_of_cancel_order_after_payment,
+                nvl(sum(s.total_number_of_invitation_new_users),0) total_number_of_invitation_new_users,
+                nvl(sum(s.number_of_invitation_new_users),0) number_of_invitation_new_users
+                
                 
                 from     
                 (
@@ -479,7 +510,9 @@ insert_crm_metrics = HiveToMySqlTransfer(
         total_number_of_order,
         number_of_valid_order,
         number_of_cancel_order_before_payment,
-        number_of_cancel_order_after_payment
+        number_of_cancel_order_after_payment,
+        total_number_of_invitation_new_users,
+        number_of_invitation_new_users
         
         from 
         ofood_bi.ofood_area_shop_metrics_info
