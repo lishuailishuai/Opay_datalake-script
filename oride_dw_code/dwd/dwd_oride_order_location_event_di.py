@@ -123,7 +123,7 @@ dwd_oride_location_driver_event_di_task = HiveOperator(
         p.rider_arrive_show_lng , --乘客rider_arrive_show，事件，经度
         
         'nal' as country_code,
-        '{now_day}' as dt
+        '{pt}' as dt
         
         from 
         

@@ -93,8 +93,8 @@ dwd_oride_location_user_event_di_task = HiveOperator(
         
         from 
         oride_dw.dwd_oride_passanger_location_event_hi
-        where dt = '${dt}'
-        group by order_id , 
+        where dt = '{pt}'
+        group by order_id ,
         user_id 
 
         ;
