@@ -11,7 +11,7 @@ import logging
 from plugins.SqoopSchemaUpdate import SqoopSchemaUpdate
 
 args = {
-    'owner': 'root',
+    'owner': 'zhenqian.zhang',
     'start_date': datetime(2019, 7, 26),
     'depends_on_past': False,
     'retries': 1,
@@ -24,7 +24,7 @@ args = {
 dag = airflow.DAG(
     'ofood_source_sqoop',
     schedule_interval="30 02 * * *",
-    concurrency=5,
+    concurrency=10,
     max_active_runs=1,
     default_args=args)
 
@@ -68,7 +68,7 @@ table_list = [
     ("food_operapay_co", "jh_member", "ofood_db", "bd"),
 
 ]
-HIVE_DB = 'ofood_dw'
+HIVE_DB = 'ofood_dw_ods'
 HIVE_TABLE = 'ods_sqoop_%s_%s_df'
 UFILE_PATH = 'ufile://opay-datalake/ofood_dw_sqoop/%s/%s'
 ODS_CREATE_TABLE_SQL = '''
@@ -85,6 +85,7 @@ ODS_CREATE_TABLE_SQL = '''
       'org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat'
     LOCATION
       '{ufile_path}';
+    MSCK REPAIR TABLE {db_name}.`{table_name}`;
 '''
 
 
@@ -207,7 +208,8 @@ for db_name, table_name, conn_id, prefix_name in table_list:
     add_partitions = HiveOperator(
         task_id='add_partitions_{}'.format(hive_table_name),
         hql='''
-                ALTER TABLE {table} ADD IF NOT EXISTS PARTITION (dt = '{{{{ ds }}}}')
+                ALTER TABLE ofood_dw.{table} ADD IF NOT EXISTS PARTITION (dt = '{{{{ ds }}}}');
+                ALTER TABLE {table} ADD IF NOT EXISTS PARTITION (dt = '{{{{ ds }}}}');
             '''.format(table=hive_table_name),
         schema=HIVE_DB,
         dag=dag)
