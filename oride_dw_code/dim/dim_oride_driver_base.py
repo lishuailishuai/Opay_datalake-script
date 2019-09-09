@@ -264,6 +264,7 @@ FROM oride_dw_ods.ods_sqoop_base_data_driver_extend_df
 LEFT OUTER JOIN
 (select * from oride_dw.dim_oride_city where dt = '{pt}' and country_code='NG') cit
 ON cit.city_id=ext.city_id
+where ext.city_id<>'999001' --去除测试数据
 '''.format(
         pt='{{ds}}',
         now_day='{{macros.ds_add(ds, +1)}}',
