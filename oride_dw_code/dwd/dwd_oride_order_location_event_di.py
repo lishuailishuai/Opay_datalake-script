@@ -96,6 +96,7 @@ dwd_oride_location_driver_event_di_task = HiveOperator(
 
         insert overwrite table oride_dw.{table} partition(country_code,dt)
 
+         
         select 
         d.order_id , --订单id
         p.user_id , --用户id
@@ -120,12 +121,12 @@ dwd_oride_location_driver_event_di_task = HiveOperator(
         p.complete_the_order_show_lng, --乘客complete_the_order_show，事件，经度
         p.rider_arrive_show_lat ,  --乘客rider_arrive_show，事件，纬度
         p.rider_arrive_show_lng , --乘客rider_arrive_show，事件，经度
-
+        
         'nal' as country_code,
-        '{pt}' as dt
-
+        '{now_day}' as dt
+        
         from 
-
+        
         (
             select 
             order_id , 
@@ -142,12 +143,12 @@ dwd_oride_location_driver_event_di_task = HiveOperator(
             start_ride_sliding_arrived_lng 
             from 
             oride_dw.dwd_oride_driver_location_event_di
-            where dt = '{pt}' 
-
+            where dt = '{pt}'
         ) d 
         left join 
         (	
             select 
+            
             order_id , 
             user_id ,
             looking_for_a_driver_show_lat ,
@@ -155,16 +156,16 @@ dwd_oride_location_driver_event_di_task = HiveOperator(
             successful_order_show_lat ,
             successful_order_show_lng ,
             start_ride_show_lat ,
-            start_ride_show_lat ,
             start_ride_show_lng ,
             complete_the_order_show_lat,
-            complete_the_order_show_lng，
+            complete_the_order_show_lng,
             rider_arrive_show_lat ,
             rider_arrive_show_lng 
             from 
             oride_dw.dwd_oride_passanger_location_event_di
             where dt = '{pt}'
         ) p on d.order_id = p.order_id
+
 
         ;
 

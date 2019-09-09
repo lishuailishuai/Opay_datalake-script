@@ -143,10 +143,9 @@ dwd_oride_location_driver_event_hi_task = HiveOperator(
             successful_order_show_lat ,
             successful_order_show_lng ,
             start_ride_show_lat ,
-            start_ride_show_lat ,
             start_ride_show_lng ,
             complete_the_order_show_lat,
-            complete_the_order_show_lng，
+            complete_the_order_show_lng,
             rider_arrive_show_lat ,
             rider_arrive_show_lng 
             from 
