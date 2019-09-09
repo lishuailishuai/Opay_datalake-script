@@ -2115,7 +2115,7 @@ def send_report_email(ds, **kwargs):
                         <th>在线司机数</th>
                         <th>人均完单数</th>
                         <th>TPH</th>
-                        <th>司机服务分</th>
+                        <th>万单差评率</th>
                         <!--体验指标-->
                         <th>平均应答时长（分）</th>
                         <th>平均接驾时长（分）</th>
@@ -2171,7 +2171,7 @@ def send_report_email(ds, **kwargs):
                         <th>在线司机数</th>
                         <th>人均完单数</th>
                         <th>TPH</th>
-                        <th>司机服务分</th>
+                        <th>万单差评率</th>
                         <!--体验指标-->
                         <th>平均应答时长（分）</th>
                         <th>平均接驾时长（分）</th>
@@ -2229,7 +2229,7 @@ def send_report_email(ds, **kwargs):
                         <th>在线司机数</th>
                         <th>人均完单数</th>
                         <th>TPH</th>
-                        <th>司机服务分</th>
+                        <th>万单差评率</th>
                         <!--体验指标-->
                         <th>平均应答时长（分）</th>
                         <th>平均接驾时长（分）</th>
