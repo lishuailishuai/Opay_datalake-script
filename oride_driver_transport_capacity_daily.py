@@ -381,6 +381,12 @@ insert_driver_metrics = HiveOperator(
                     from_unixtime(day, 'yyyy-MM-dd') = '{{ ds }}'
                 ) as r 
             join driver_dim as d on r.driver_id = d.id 
+            join (select 
+                    driver_id 
+                from order_base 
+                where status in (4,5) 
+                group by driver_id 
+                ) as fd on r.driver_id = fd.driver_id 
             group by d.city_name, d.serv_type 
         )
         
