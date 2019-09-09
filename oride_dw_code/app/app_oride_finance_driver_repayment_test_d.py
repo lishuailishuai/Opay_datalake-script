@@ -75,7 +75,7 @@ dwm_oride_driver_base_di_tesk = UFileSensor(
 ##------------------------------------ end --------------------------------##
 """
 
-mysql_table = 'oride_assets.oride_assets_finance_driver_repayment'
+mysql_table = 'oride_dw.oride_assets_finance_driver_repayment_list'
 
 
 # 从hive读取数据
@@ -146,7 +146,7 @@ def get_data_from_hive(**op_kwargs):
     hive_cursor.execute(hql)
     hive_data = hive_cursor.fetchall()
 
-    mysql_conn = get_db_conn('opay_spread_mysql')
+    mysql_conn = get_db_conn('mysql_bi')
     mcursor = mysql_conn.cursor()
 
     __data_to_mysql(
