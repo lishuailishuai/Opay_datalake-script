@@ -32,8 +32,8 @@ args = {
     'email_on_retry': False,
 }
 
-dag = airflow.DAG('dwd_oride_order_location_event_hi',
-                  schedule_interval="30 * * * *",
+dag = airflow.DAG('dwd_oride_order_location_event_di',
+                  schedule_interval="30 4 * * *",
                   default_args=args,
                   catchup=False)
 
@@ -46,43 +46,56 @@ sleep_time = BashOperator(
 ##----------------------------------------- 依赖 ---------------------------------------##
 
 
-# 依赖前一小时分区
-dependence_dwd_oride_location_driver_event_hi_prev_hour_task = HivePartitionSensor(
-    task_id="dwd_oride_driver_location_event_hi_prev_hour_task",
-    table="dwd_oride_driver_location_event_hi",
-    partition="""dt='{{ ds }}' and hour='{{ execution_date.strftime("%H") }}'""",
+
+dependence_dwd_oride_driver_location_event_hi_prev_day_task = HivePartitionSensor(
+    task_id="dwd_oride_driver_location_event_hi_prev_day_task",
+    table="dwd_oride_order_location_event_hi",
+    partition="""dt='{{ ds }}' and hour='23'""",
     schema="oride_dw",
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
 
-# 依赖前一小时分区
-dependence_dwd_oride_passanger_location_event_hi_prev_hour_task = HivePartitionSensor(
-    task_id="dwd_oride_passanger_location_event_hi_prev_hour_task",
-    table="dwd_oride_passanger_location_event_hi",
-    partition="""dt='{{ ds }}' and hour='{{ execution_date.strftime("%H") }}'""",
+
+# 依赖前一天分区
+dependence_dwd_oride_driver_location_event_hi_prev_day_task = HivePartitionSensor(
+    task_id="dwd_oride_driver_location_event_hi_prev_day_task",
+    table="dwd_oride_driver_location_event_di",
+    partition="""dt='{{ ds }}'""",
     schema="oride_dw",
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
+
+# 依赖前一天分区
+dependence_dwd_oride_passanger_location_event_hi_prev_day_task = HivePartitionSensor(
+    task_id="dwd_oride_passanger_location_event_hi_prev_day_task",
+    table="dwd_oride_passanger_location_event_di",
+    partition="""dt='{{ ds }}'""",
+    schema="oride_dw",
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
+
 
 ##----------------------------------------- 变量 ---------------------------------------##
 
 
-table_name = "dwd_oride_order_location_event_hi"
+table_name = "dwd_oride_order_location_event_di"
 hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
 
 ##----------------------------------------- 脚本 ---------------------------------------##
 
-dwd_oride_location_driver_event_hi_task = HiveOperator(
-    task_id='dwd_oride_location_driver_event_hi_task',
+dwd_oride_location_driver_event_di_task = HiveOperator(
+    task_id='dwd_oride_location_driver_event_di_task',
 
     hql='''
         SET hive.exec.parallel=TRUE;
         SET hive.exec.dynamic.partition.mode=nonstrict;
 
-        insert overwrite table oride_dw.{table} partition(country_code,dt,hour)
-        
+        insert overwrite table oride_dw.{table} partition(country_code,dt)
+
         select 
         d.order_id , --订单id
         p.user_id , --用户id
@@ -107,13 +120,12 @@ dwd_oride_location_driver_event_hi_task = HiveOperator(
         p.complete_the_order_show_lng, --乘客complete_the_order_show，事件，经度
         p.rider_arrive_show_lat ,  --乘客rider_arrive_show，事件，纬度
         p.rider_arrive_show_lng , --乘客rider_arrive_show，事件，经度
-        
+
         'nal' as country_code,
-        '{now_day}' as dt,
-        '{now_hour}' as hour
-        
+        '{pt}' as dt
+
         from 
-        
+
         (
             select 
             order_id , 
@@ -129,13 +141,13 @@ dwd_oride_location_driver_event_hi_task = HiveOperator(
             start_ride_sliding_arrived_lat ,
             start_ride_sliding_arrived_lng 
             from 
-            oride_dw.dwd_oride_driver_location_event_hi
-            where dt = '{now_day}' and hour = '{now_hour}'
+            oride_dw.dwd_oride_driver_location_event_di
+            where dt = '{pt}' 
+
         ) d 
         left join 
         (	
             select 
-            
             order_id , 
             user_id ,
             looking_for_a_driver_show_lat ,
@@ -150,8 +162,8 @@ dwd_oride_location_driver_event_hi_task = HiveOperator(
             rider_arrive_show_lat ,
             rider_arrive_show_lng 
             from 
-            oride_dw.dwd_oride_passanger_location_event_hi
-            where dt = '{now_day}' and hour = '{now_hour}'
+            oride_dw.dwd_oride_passanger_location_event_di
+            where dt = '{pt}'
         ) p on d.order_id = p.order_id
 
         ;
@@ -160,7 +172,6 @@ dwd_oride_location_driver_event_hi_task = HiveOperator(
 '''.format(
         pt='{{ds}}',
         now_day='{{ds}}',
-        now_hour='{{ execution_date.strftime("%H") }}',
         table=table_name
     ),
     dag=dag
@@ -179,7 +190,6 @@ def check_key_data(ds, **kargs):
       FROM oride_dw.{table}
 
       WHERE dt='{pt}'
-      and hour = '{now_hour}'
       GROUP BY 
       order_id,
       user_id,
@@ -188,7 +198,6 @@ def check_key_data(ds, **kargs):
     '''.format(
         pt=ds,
         now_day=ds,
-        now_hour='{{ execution_date.strftime("%H") }}',
         table=table_name
     )
 
@@ -230,10 +239,10 @@ touchz_data_success = BashOperator(
     """.format(
         pt='{{ds}}',
         now_day='{{macros.ds_add(ds, +1)}}',
-        hdfs_data_dir=hdfs_path + '/country_code=nal/dt={{ds}}/hour={{ execution_date.strftime("%H") }}'
+        hdfs_data_dir=hdfs_path + '/country_code=nal/dt={{ds}}'
     ),
     dag=dag)
 
-dependence_dwd_oride_location_driver_event_hi_prev_hour_task >> sleep_time
-dependence_dwd_oride_passanger_location_event_hi_prev_hour_task >> sleep_time
-sleep_time >> dwd_oride_location_driver_event_hi_task >> task_check_key_data >> touchz_data_success
+dependence_dwd_oride_driver_location_event_hi_prev_day_task >> sleep_time
+dependence_dwd_oride_passanger_location_event_hi_prev_day_task >> sleep_time
+sleep_time >> dwd_oride_location_driver_event_di_task >> task_check_key_data >> touchz_data_success
