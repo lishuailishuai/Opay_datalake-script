@@ -1615,9 +1615,9 @@ def get_serv_row(ds, driver_serv_type, all_completed_num):
             nvl(round(completed_num/completed_drivers, 1),0),
             if(completed_driver_online_time_total is null, '-', round(completed_num/(completed_driver_online_time_total/3600), 1)) as tph,
             if(order_score_num is null, '-', concat(cast(nvl(round(order_score_num/completed_num*10000, 1),0) as string), '‱')),
-            cast(nvl(round(take_time_total/completed_num/60, 1),0) as double),
-            cast(nvl(round(pickup_time_total/completed_num/60, 1),0) as double),
-            cast(nvl(round(billing_time_total/completed_num/60, 1),0) as double),
+            cast(nvl(round(take_time_total/completed_num),0) as int),
+            cast(nvl(round(pickup_time_total/completed_num),0) as int),
+            cast(nvl(round(billing_time_total/completed_num),0) as int),
             cast(nvl(round(distance_total/completed_num),0) as int),
             nvl(new_user_completed_num,0),
             nvl(new_user_gmv,0),
@@ -1648,9 +1648,9 @@ def get_serv_row(ds, driver_serv_type, all_completed_num):
             nvl(round(cd.completed_num/cd.completed_drivers, 1),0),
             if(cd.completed_driver_online_time_total is null, '-', round(cd.completed_num/(cd.completed_driver_online_time_total/3600), 1)) as tph,
             if(cd.order_score_num is null, '-', concat(cast(nvl(round(cd.order_score_num/cd.completed_num*10000, 1),0) as string), '‱')),
-            cast(nvl(round(cd.take_time_total/cd.completed_num/60, 1),0) as double),
-            cast(nvl(round(cd.pickup_time_total/cd.completed_num/60, 1),0) as double),
-            cast(nvl(round(cd.billing_time_total/cd.completed_num/60, 1),0) as double),
+            cast(nvl(round(cd.take_time_total/cd.completed_num),0) as int),
+            cast(nvl(round(cd.pickup_time_total/cd.completed_num),0) as int),
+            cast(nvl(round(cd.billing_time_total/cd.completed_num),0) as int),
             cast(nvl(round(cd.distance_total/cd.completed_num),0) as int),
             nvl(cd.new_user_completed_num,0),
             nvl(cd.new_user_gmv,0),
@@ -1802,9 +1802,9 @@ def get_trike_row(ds, driver_serv_type):
             nvl(round(completed_num/completed_drivers, 1),0),
             if(completed_driver_online_time_total is null, '-', round(completed_num/(completed_driver_online_time_total/3600), 1)) as tph,
             if(order_score_num is null, '-', concat(cast(nvl(round(order_score_num/completed_num*10000, 1),0) as string), '‱')),
-            cast(nvl(round(take_time_total/completed_num/60, 1),0) as double),
-            cast(nvl(round(pickup_time_total/completed_num/60, 1),0) as double),
-            cast(nvl(round(billing_time_total/completed_num/60, 1),0) as double),
+            cast(nvl(round(take_time_total/completed_num),0) as int),
+            cast(nvl(round(pickup_time_total/completed_num),0) as int),
+            cast(nvl(round(billing_time_total/completed_num),0) as int),
             cast(nvl(round(distance_total/completed_num),0) as int),
             if(dt>='2019-08-06',nvl(round((trike_complete_passengernum)/(completed_num),1),0),'-') as trike_order_passenger_avg,
             '-',--if(dt>='2019-08-06',(request_usernum),'-') as request_usernum,
@@ -1843,9 +1843,9 @@ def get_trike_row(ds, driver_serv_type):
             nvl(round(cd.completed_num/cd.completed_drivers, 1),0),
             if(cd.completed_driver_online_time_total is null, '-', round(cd.completed_num/(cd.completed_driver_online_time_total/3600), 1)) as tph,
             if(cd.order_score_num is null, '-', concat(cast(nvl(round(cd.order_score_num/cd.completed_num*10000, 1),0) as string), '‱')),
-            cast(nvl(round(cd.take_time_total/cd.completed_num/60, 1),0) as double),
-            cast(nvl(round(cd.pickup_time_total/cd.completed_num/60, 1),0) as double),
-            cast(nvl(round(cd.billing_time_total/cd.completed_num/60, 1),0) as double),
+            cast(nvl(round(cd.take_time_total/cd.completed_num),0) as int),
+            cast(nvl(round(cd.pickup_time_total/cd.completed_num),0) as int),
+            cast(nvl(round(cd.billing_time_total/cd.completed_num),0) as int),
             cast(nvl(round(cd.distance_total/cd.completed_num),0) as int),
             if(dt>='2019-08-06',nvl(round((cd.trike_complete_passengernum)/(cd.completed_num),1),0),'-') as trike_order_passenger_avg,
             '-',--if(dt>='2019-08-06',(cd.request_usernum),'-') as request_usernum,
@@ -1904,9 +1904,9 @@ def send_report_email(ds, **kwargs):
             nvl(register_drivers, 0),
             nvl(online_drivers, ''),
             if(completed_drivers is null, '', nvl(round(completed_num/completed_drivers, 1),0)),
-            round(avg_take_time/60, 1),
+            avg_take_time,
             if(dt>='2019-07-02',avg_distance,'-') avg_distance,
-            round(avg_pickup_time/60, 1),
+            avg_pickup_time,
             register_users,
             first_completed_users,
             nvl(round(first_completed_users/completed_users*100, 1),0),
@@ -1929,7 +1929,7 @@ def send_report_email(ds, **kwargs):
             if(completed_driver_online_time_total is null, '-', round(completed_num/(completed_driver_online_time_total/3600), 1)) as tph,
             nvl(finished_num, '-') as finished_num,
             if(dt>='2019-08-27',concat(cast(nvl(round(opay_pay_filed_order_num * 100 / opay_pay_order_num,1),0) as string),'%'),'-') as opay_papy_failed_rate,
-            if(billing_time is null or completed_num is null, '-', nvl(round(billing_time/completed_num/60, 1),0)) as avg_billtime
+            if(billing_time is null or completed_num is null, '-', nvl(round(billing_time/completed_num),0)) as avg_billtime
         FROM
            oride_bi.oride_global_daily_report
         WHERE
@@ -2013,9 +2013,9 @@ def send_report_email(ds, **kwargs):
                         <th>人均完单数</th>
                         <th>TPH</th>
                         <!--体验指标-->
-                        <th>平均应答时长（分）</th>
-                        <th>平均接驾时长（分）</th>
-                        <th>平均计费时长（分）</th>
+                        <th>平均应答时长（秒）</th>
+                        <th>平均接驾时长（秒）</th>
+                        <th>平均计费时长（秒）</th>
                         <th>平均送驾距离（米）</th>
                         <!--乘客指标-->
                         <th>注册乘客数</th>
@@ -2117,9 +2117,9 @@ def send_report_email(ds, **kwargs):
                         <th>TPH</th>
                         <th>万单差评率</th>
                         <!--体验指标-->
-                        <th>平均应答时长（分）</th>
-                        <th>平均接驾时长（分）</th>
-                        <th>平均计费时长（分）</th>
+                        <th>平均应答时长（秒）</th>
+                        <th>平均接驾时长（秒）</th>
+                        <th>平均计费时长（秒）</th>
                         <th>平均送驾距离（米）</th>
                         <!--乘客指标-->
                         <th>新用户完单数</th>
@@ -2173,9 +2173,9 @@ def send_report_email(ds, **kwargs):
                         <th>TPH</th>
                         <th>万单差评率</th>
                         <!--体验指标-->
-                        <th>平均应答时长（分）</th>
-                        <th>平均接驾时长（分）</th>
-                        <th>平均计费时长（分）</th>
+                        <th>平均应答时长（秒）</th>
+                        <th>平均接驾时长（秒）</th>
+                        <th>平均计费时长（秒）</th>
                         <th>平均送驾距离（米）</th>
                         <!--乘客指标-->
                         <th>新用户完单数</th>
@@ -2231,9 +2231,9 @@ def send_report_email(ds, **kwargs):
                         <th>TPH</th>
                         <th>万单差评率</th>
                         <!--体验指标-->
-                        <th>平均应答时长（分）</th>
-                        <th>平均接驾时长（分）</th>
-                        <th>平均计费时长（分）</th>
+                        <th>平均应答时长（秒）</th>
+                        <th>平均接驾时长（秒）</th>
+                        <th>平均计费时长（秒）</th>
                         <th>平均送驾距离（米）</th>
                         <!--乘客指标-->
                         <th>单均乘客数</th>
