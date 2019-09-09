@@ -102,7 +102,7 @@ def get_data_from_impala(**op_kwargs):
                 city_id,
                 id,
                 name                                    --line_name
-            from obus_dw.ods_sqoop_conf_line_df 
+            from obus_dw_ods.ods_sqoop_conf_line_df 
             where dt='{pt}'   
         ),
         --站点数据
@@ -117,13 +117,13 @@ def get_data_from_impala(**op_kwargs):
                     id,
                     city_id,
                     name 
-                from obus_dw.ods_sqoop_conf_station_df 
+                from obus_dw_ods.ods_sqoop_conf_station_df 
                 where dt='{pt}'
                 ) as cs 
             left join (select 
                     line_id,
                     station_id 
-                from obus_dw.ods_sqoop_conf_line_stations_df 
+                from obus_dw_ods.ods_sqoop_conf_line_stations_df 
                 where dt='{pt}') as cls 
             on cs.id = cls.station_id
         ),
@@ -143,7 +143,7 @@ def get_data_from_impala(**op_kwargs):
                     id,
                     city_id,
                     start_station
-                from obus_dw.ods_sqoop_conf_line_df 
+                from obus_dw_ods.ods_sqoop_conf_line_df 
                 where dt='{pt}'
                 ) as cl 
             join (select 
@@ -151,7 +151,7 @@ def get_data_from_impala(**op_kwargs):
                     line_id,
                     serv_mode,
                     serv_status
-                from obus_dw.ods_sqoop_data_driver_df 
+                from obus_dw_ods.ods_sqoop_data_driver_df 
                 where dt='{pt}' and 
                     from_unixtime(login_time, 'yyyy-MM-dd')='{pt}'
                 ) as dd 
@@ -167,7 +167,7 @@ def get_data_from_impala(**op_kwargs):
                 count(1) as lines_orders,                       ---线路总订单数
                 sum(if(status in (1,2), 1, 0)) as lines_finished_orders,     ---线路总完单数
                 sum(if(status in (1,2), price, 0)) as line_gmv_single       --线路收益（单）
-            from obus_dw.ods_sqoop_data_order_df 
+            from obus_dw_ods.ods_sqoop_data_order_df 
             where dt='{pt}' and 
                 from_unixtime(create_time, 'yyyy-MM-dd') = '{pt}'
             group by city_id, line_id
@@ -182,7 +182,7 @@ def get_data_from_impala(**op_kwargs):
                 count(1) as station_orders,                         --分站点订单数
                 sum(if(status in (1,2), 1, 0)) as station_finished_orders,      ---分站点完单数
                 count(distinct if(start_station_id>0 and status in (0,1,2), user_id, null)) as get_on_users --上车乘客数
-            from obus_dw.ods_sqoop_data_order_df 
+            from obus_dw_ods.ods_sqoop_data_order_df 
             where dt='{pt}' and 
                 from_unixtime(create_time, 'yyyy-MM-dd') = '{pt}' 
             group by city_id, line_id, start_station_id
@@ -202,7 +202,7 @@ def get_data_from_impala(**op_kwargs):
                     create_time,
                     user_id, 
                     row_number() over(partition by user_id order by arrive_time) orders
-                from obus_dw.ods_sqoop_data_order_df 
+                from obus_dw_ods.ods_sqoop_data_order_df 
                 where dt='{pt}' and 
                     status in (1,2) and 
                     user_id>0
@@ -218,7 +218,7 @@ def get_data_from_impala(**op_kwargs):
                 line_id,
                 end_station_id,
                 count(distinct if(end_station_id>0 and status in (0,1,2), user_id, null)) as get_off_users --下车乘客数
-            from obus_dw.ods_sqoop_data_order_df 
+            from obus_dw_ods.ods_sqoop_data_order_df 
             where dt='{pt}' and 
                 from_unixtime(create_time, 'yyyy-MM-dd') = '{pt}' 
             group by city_id, line_id, end_station_id
@@ -269,7 +269,7 @@ def get_data_from_impala(**op_kwargs):
                                 station_data.city_id = get_off_users.city_id and 
                                 station_data.line_id = get_off_users.line_id and 
                                 station_data.id = get_off_users.end_station_id 
-        left join (select id, name from obus_dw.ods_sqoop_conf_city_df where dt='{pt}' and validate=1) as dc 
+        left join (select id, name from obus_dw_ods.ods_sqoop_conf_city_df where dt='{pt}' and validate=1) as dc 
             on station_data.city_id = dc.id 
 
     '''.format(
@@ -309,7 +309,7 @@ def get_data_from_impala(**op_kwargs):
 
 
 def __data_to_mysql(conn, data, column, update=''):
-    isql = 'insert into obus_dw.app_obus_report_path_detail_d ({})'.format(','.join(column))
+    isql = 'insert into obus_dw_ods.app_obus_report_path_detail_d ({})'.format(','.join(column))
     esql = '{0} values {1} on duplicate key update {2}'
     sval = ''
     cnt = 0

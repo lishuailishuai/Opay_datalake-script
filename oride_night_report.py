@@ -838,7 +838,7 @@ for oride_table in table_list:
             --username {username} \
             --password \'{password}\' \
             --table {table} \
-            --target-dir {table_path}/country_code=nal/dt={{{{ ds }}}}/ \
+            --target-dir {table_path}/country_code=nal/dt={{{{ tomorrow_ds }}}}/ \
             --fields-terminated-by "\\001" \
             --lines-terminated-by "\\n" \
             --hive-delims-replacement " " \

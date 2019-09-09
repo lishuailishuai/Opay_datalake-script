@@ -123,14 +123,14 @@ def get_data_from_impala(**op_kwargs):
                     cycle_id, 
                     id, 
                     serv_mode 
-                from obus_dw.ods_sqoop_data_driver_df 
+                from obus_dw_ods.ods_sqoop_data_driver_df 
                 where dt='{pt}' and 
                     from_unixtime(login_time, 'yyyy-MM-dd') = '{pt}'
                 ) as dr
             inner join (select 
                     id,
                     city_id
-                from obus_dw.ods_sqoop_conf_cycle_df 
+                from obus_dw_ods.ods_sqoop_conf_cycle_df 
                 where dt='2019-08-17' and 
                     status = '0'
                 ) as cy 
@@ -151,14 +151,14 @@ def get_data_from_impala(**op_kwargs):
                     cycle_id, 
                     id, 
                     serv_mode 
-                from obus_dw.ods_sqoop_data_driver_df 
+                from obus_dw_ods.ods_sqoop_data_driver_df 
                 where dt='{pt}' and 
                     from_unixtime(login_time, 'yyyy-MM-dd') = '{pt}'
                 ) as dr
             inner join (select 
                     id,
                     city_id
-                from obus_dw.ods_sqoop_conf_cycle_df 
+                from obus_dw_ods.ods_sqoop_conf_cycle_df 
                 where dt='2019-08-17' and 
                     status = 0
                 ) as cy 
@@ -172,7 +172,7 @@ def get_data_from_impala(**op_kwargs):
                 count(1) as line_orders,                                                                --线路总下单数
                 sum(if(status in (1,2), 1, 0)) as line_finished_orders,                                  --线路总完单数
                 sum(if(status in (1,2), price, 0)) as line_gmv                                          --线路收益
-            from obus_dw.ods_sqoop_data_order_df 
+            from obus_dw_ods.ods_sqoop_data_order_df 
             where dt='{pt}' and 
                 from_unixtime(cast(create_time as bigint), 'yyyy-MM-dd') = '{pt}'
             group by city_id
@@ -185,7 +185,7 @@ def get_data_from_impala(**op_kwargs):
                 count(1) as line_orders,
                 sum(if(status in (1,2), 1, 0)) as line_finished_orders,
                 sum(if(status in (1,2), price, 0)) as line_gmv
-            from obus_dw.ods_sqoop_data_order_df 
+            from obus_dw_ods.ods_sqoop_data_order_df 
             where dt='{pt}' and 
                 from_unixtime(cast(create_time as bigint), 'yyyy-MM-dd') = '{pt}'
         ),
@@ -195,7 +195,7 @@ def get_data_from_impala(**op_kwargs):
                 from_unixtime(unix_timestamp('{pt}','yyyy-MM-dd'), 'yyyyMMdd') as dt,
                 city_id,
                 count(distinct id) as total_stations                                                          --总站点数
-            from obus_dw.ods_sqoop_conf_station_df 
+            from obus_dw_ods.ods_sqoop_conf_station_df 
             where dt='{pt}' 
             group by city_id
         ),
@@ -205,7 +205,7 @@ def get_data_from_impala(**op_kwargs):
                 from_unixtime(unix_timestamp('{pt}','yyyy-MM-dd'), 'yyyyMMdd') as dt,
                 0 as city_id,
                 count(distinct id) as total_stations
-            from obus_dw.ods_sqoop_conf_station_df 
+            from obus_dw_ods.ods_sqoop_conf_station_df 
             where dt='{pt}' 
         ),
         --分城市
@@ -219,7 +219,7 @@ def get_data_from_impala(**op_kwargs):
                     user_id,
                     create_time,
                     row_number() over(partition by user_id order by arrive_time) orders
-                from obus_dw.ods_sqoop_data_order_df 
+                from obus_dw_ods.ods_sqoop_data_order_df 
                 where dt='{pt}' and 
                     status in (1,2) and 
                     user_id > 0
@@ -239,7 +239,7 @@ def get_data_from_impala(**op_kwargs):
                     user_id,
                     create_time,
                     row_number() over(partition by user_id order by arrive_time) orders
-                from obus_dw.ods_sqoop_data_order_df 
+                from obus_dw_ods.ods_sqoop_data_order_df 
                 where dt='{pt}' and 
                     status in (1,2) and 
                     user_id > 0
@@ -253,7 +253,6 @@ def get_data_from_impala(**op_kwargs):
                 from_unixtime(unix_timestamp('{pt}','yyyy-MM-dd'), 'yyyyMMdd') as dt,
                 do.city_id,
                 sum(if(dp.mode=1 and do.orders=1, 1, 0)) as obusapp_new_users,                                              ---ObusAPP新用户数量
-                sum(if(dp.mode=2 and do.orders=1, 1, 0)) as ticket_new_users,                                                ---首次使用公交卡新用户数量
                 count(distinct if(dp.mode=1, do.user_id, null)) as money_ballet_users                                       --今日钱包使用人数
             from (select 
                     id,
@@ -261,7 +260,7 @@ def get_data_from_impala(**op_kwargs):
                     create_time,
                     user_id,
                     row_number() over(partition by user_id order by arrive_time) orders
-                from obus_dw.ods_sqoop_data_order_df 
+                from obus_dw_ods.ods_sqoop_data_order_df 
                 where dt='{pt}' and 
                     status in (1,2) and 
                     user_id > 0
@@ -269,7 +268,7 @@ def get_data_from_impala(**op_kwargs):
             join (select 
                     id,
                     mode
-                from obus_dw.ods_sqoop_data_order_payment_df 
+                from obus_dw_ods.ods_sqoop_data_order_payment_df 
                 where dt='{pt}' and 
                     from_unixtime(create_time, 'yyyy-MM-dd')='{pt}'
                 ) as dp 
@@ -283,7 +282,6 @@ def get_data_from_impala(**op_kwargs):
                 from_unixtime(unix_timestamp('{pt}','yyyy-MM-dd'), 'yyyyMMdd') as dt,
                 0 as city_id,
                 sum(if(dp.mode=1 and do.orders=1, 1, 0)) as obusapp_new_users,                                              ---ObusAPP新用户数量
-                sum(if(dp.mode=2 and do.orders=1, 1, 0)) as ticket_new_users,                                                ---首次使用公交卡新用户数量
                 count(distinct if(dp.mode=1, do.user_id, null)) as money_ballet_users                                       --今日钱包使用人数
             from (select 
                     id,
@@ -291,7 +289,7 @@ def get_data_from_impala(**op_kwargs):
                     create_time,
                     user_id,
                     row_number() over(partition by user_id order by arrive_time) orders
-                from obus_dw.ods_sqoop_data_order_df 
+                from obus_dw_ods.ods_sqoop_data_order_df 
                 where dt='{pt}' and 
                     status in (1,2) and 
                     user_id > 0
@@ -299,11 +297,68 @@ def get_data_from_impala(**op_kwargs):
             join (select 
                     id,
                     mode
-                from obus_dw.ods_sqoop_data_order_payment_df 
+                from obus_dw_ods.ods_sqoop_data_order_payment_df 
                 where dt='{pt}' and 
                     from_unixtime(create_time, 'yyyy-MM-dd')='{pt}'
                 ) as dp 
             on do.id = dp.id 
+            where from_unixtime(do.create_time, 'yyyy-MM-dd') = '{pt}'
+        ),
+        --分城市
+        app_ticket_data as (
+            select 
+                from_unixtime(unix_timestamp('{pt}','yyyy-MM-dd'), 'yyyyMMdd') as dt,
+                do.city_id,
+                sum(if(dp.mode=2 and do.orders=1, 1, 0)) as ticket_new_users                                                 ---首次使用公交卡新用户数量
+            from (select 
+                    id,
+                    city_id,
+                    create_time,
+                    ticket_id,
+                    row_number() over(partition by ticket_id order by arrive_time) orders
+                from obus_dw_ods.ods_sqoop_data_order_df 
+                where dt='{pt}' and 
+                    status in (1,2) and 
+                    ticket_id > 0
+                ) as do 
+            join (select 
+                    id,
+                    ticket_id,
+                    mode
+                from obus_dw_ods.ods_sqoop_data_order_payment_df 
+                where dt='{pt}' and 
+                    from_unixtime(create_time, 'yyyy-MM-dd')='{pt}'
+                ) as dp 
+            on do.id = dp.id and do.ticket_id = dp.ticket_id 
+            where from_unixtime(do.create_time, 'yyyy-MM-dd') = '{pt}'
+            group by do.city_id 
+        ),
+        --不分城市
+        app_ticket_data_all as (
+            select 
+                from_unixtime(unix_timestamp('{pt}','yyyy-MM-dd'), 'yyyyMMdd') as dt,
+                0 as city_id,
+                sum(if(dp.mode=2 and do.orders=1, 1, 0)) as ticket_new_users                                                ---首次使用公交卡新用户数量
+            from (select 
+                    id,
+                    city_id,
+                    create_time,
+                    ticket_id,
+                    row_number() over(partition by ticket_id order by arrive_time) orders
+                from obus_dw_ods.ods_sqoop_data_order_df 
+                where dt='{pt}' and 
+                    status in (1,2) and 
+                    ticket_id > 0
+                ) as do 
+            join (select 
+                    id,
+                    ticket_id,
+                    mode
+                from obus_dw_ods.ods_sqoop_data_order_payment_df 
+                where dt='{pt}' and 
+                    from_unixtime(create_time, 'yyyy-MM-dd')='{pt}'
+                ) as dp 
+            on do.id = dp.id and do.ticket_id = dp.ticket_id 
             where from_unixtime(do.create_time, 'yyyy-MM-dd') = '{pt}'
         ),
         --分城市
@@ -319,14 +374,14 @@ def get_data_from_impala(**op_kwargs):
                     status,
                     create_time, 
                     row_number() over(partition by user_id order by create_time) recharge
-                from obus_dw.ods_sqoop_data_user_recharge_df 
+                from obus_dw_ods.ods_sqoop_data_user_recharge_df 
                 where dt='{pt}' and 
                     user_id > 0
                 ) as rc 
             join (select 
                     city_id,
                     id 
-                from obus_dw.ods_sqoop_data_user_df 
+                from obus_dw_ods.ods_sqoop_data_user_df 
                 where dt='{pt}'
                 ) as du 
             on rc.user_id = du.id 
@@ -345,7 +400,7 @@ def get_data_from_impala(**op_kwargs):
                     status,
                     create_time, 
                     row_number() over(partition by user_id order by create_time) recharge
-                from obus_dw.ods_sqoop_data_user_recharge_df 
+                from obus_dw_ods.ods_sqoop_data_user_recharge_df 
                 where dt='{pt}' and 
                     user_id > 0
                 ) as rc 
@@ -356,7 +411,7 @@ def get_data_from_impala(**op_kwargs):
                 from_unixtime(unix_timestamp('{pt}','yyyy-MM-dd'), 'yyyyMMdd') as dt,
                 city_id,
                 count(1) as tied_tickets                                                --绑卡数
-            from obus_dw.ods_sqoop_data_ticket_df 
+            from obus_dw_ods.ods_sqoop_data_ticket_df 
             where dt='{pt}' and 
                 status=0 and 
                 from_unixtime(bind_time, 'yyyy-MM-dd') = '{pt}' 
@@ -368,7 +423,7 @@ def get_data_from_impala(**op_kwargs):
                 from_unixtime(unix_timestamp('{pt}','yyyy-MM-dd'), 'yyyyMMdd') as dt,
                 0 as city_id,
                 count(1) as tied_tickets                                                --绑卡数
-            from obus_dw.ods_sqoop_data_ticket_df 
+            from obus_dw_ods.ods_sqoop_data_ticket_df 
             where dt='{pt}' and 
                 status=0 and 
                 from_unixtime(bind_time, 'yyyy-MM-dd') = '{pt}' 
@@ -388,7 +443,7 @@ def get_data_from_impala(**op_kwargs):
             IF(station_data.total_stations IS NULL, 0, station_data.total_stations),
             IF(users_data.users IS NULL, 0, users_data.users),
             IF(app_users_data.obusapp_new_users IS NULL, 0, app_users_data.obusapp_new_users),
-            IF(app_users_data.ticket_new_users IS NULL, 0, app_users_data.ticket_new_users),
+            IF(app_ticket_data.ticket_new_users IS NULL, 0, app_ticket_data.ticket_new_users),
             IF(app_users_data.money_ballet_users IS NULL, 0, app_users_data.money_ballet_users),
             IF(recharge_data.recharge_users IS NULL, 0, recharge_data.recharge_users),
             IF(recharge_data.online_uv IS NULL, 0, recharge_data.online_uv),
@@ -407,7 +462,9 @@ def get_data_from_impala(**op_kwargs):
             on recharge_data.dt = cycle_data.dt and recharge_data.city_id = cycle_data.city_id 
         left join (select * from ticket_data union select * from ticket_data_all) as ticket_data 
             on ticket_data.dt = cycle_data.dt and ticket_data.city_id = cycle_data.city_id 
-        left join (select id, name from obus_dw.ods_sqoop_conf_city_df where dt='{pt}' and validate=1) as dc 
+        left join (select * from app_ticket_data union select * from app_ticket_data_all) as app_ticket_data 
+            on app_ticket_data.dt = cycle_data.dt and app_ticket_data.city_id = cycle_data.city_id 
+        left join (select id, name from obus_dw_ods.ods_sqoop_conf_city_df where dt='{pt}' and validate=1) as dc 
             on cycle_data.city_id = dc.id
             
     '''.format(
@@ -450,7 +507,7 @@ def get_data_from_impala(**op_kwargs):
 
 
 def __data_to_mysql(conn, data, column, update=''):
-    isql = 'insert into obus_dw.app_obus_report_collect_d ({})'.format(','.join(column))
+    isql = 'insert into obus_dw_ods.app_obus_report_collect_d ({})'.format(','.join(column))
     esql = '{0} values {1} on duplicate key update {2}'
     sval = ''
     cnt = 0

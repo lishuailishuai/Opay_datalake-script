@@ -95,7 +95,7 @@ def get_data_from_impala(**op_kwargs):
                 city_id,
                 id,
                 real_name                                    --司机名字
-            from obus_dw.ods_sqoop_data_driver_df 
+            from obus_dw_ods.ods_sqoop_data_driver_df 
             where dt='{pt}' 
         ),
         --工作数据
@@ -112,14 +112,14 @@ def get_data_from_impala(**op_kwargs):
                     create_time,
                     lead(serv_mode,1,0) over(partition by driver_id order by create_time) serv_mode1,
                     lead(create_time,1,unix_timestamp('{pt} 23:59:59','yyyy-MM-dd HH:mm:ss')) over(partition by driver_id order by create_time) create_time2
-                from obus_dw.ods_sqoop_data_driver_work_log_df 
+                from obus_dw_ods.ods_sqoop_data_driver_work_log_df 
                 where dt='{pt}' and 
                     from_unixtime(create_time, 'yyyy-MM-dd')='{pt}'
                 ) as dw 
             join (select 
                     id, 
                     city_id 
-                from obus_dw.ods_sqoop_data_driver_df 
+                from obus_dw_ods.ods_sqoop_data_driver_df 
                 where dt='{pt}'
                 ) as dr 
             on dw.driver_id = dr.id 
@@ -129,62 +129,27 @@ def get_data_from_impala(**op_kwargs):
         driver_cycle_data as (
             select 
                 from_unixtime(unix_timestamp('{pt}','yyyy-MM-dd'), 'yyyyMMdd') as dt,
-                ddt.city_id,
-                ddt.driver_id,
-                count(1)-1 as cycle_cnt                             --司机圈数
-            from (select 
-                    city_id,
-                    line_id,
-                    driver_id,
-                    current_station_id
-                from obus_dw.ods_sqoop_data_driver_trip_df 
-                where dt='{pt}' and 
-                    from_unixtime(end_time, 'yyyy-MM-dd')='{pt}' and 
-                    status=1
-                ) as ddt 
-            join (
-                select 
-                    line_id,
-                    station_id,
-                    station_sort
-                from obus_dw.ods_sqoop_conf_line_stations_df 
-                where dt='{pt}' and 
-                    station_sort=1
-                ) as cls 
-            on ddt.line_id = cls.line_id and 
-                ddt.current_station_id = cls.station_id 
-            group by ddt.city_id, ddt.driver_id
+                city_id,
+                driver_id,
+                count(distinct id)/2 as cycle_cnt                             --司机圈数
+            from obus_dw_ods.ods_sqoop_data_driver_trip_df 
+            where dt = '{pt}' and 
+                from_unixtime(end_time, 'yyyy-MM-dd') = '{pt}' and 
+                status = 1 
+            group by city_id, driver_id 
         ),
         --司机驾驶时长
         driver_time as (
             select 
                 from_unixtime(unix_timestamp('{pt}','yyyy-MM-dd'), 'yyyyMMdd') as dt,
-                dd.city_id,
-                dd.id,
-                sum(if(dwl.serv_mode=1 and dwl.serv_status=1, round(abs(create_time2-create_time)/3600,2), 0)) as driver_time
-            from 
-                (select 
-                    line_id,
-                    driver_id,
-                    create_time,
-                    serv_mode,
-                    serv_status,
-                    lead(create_time,1,create_time) over(partition by driver_id order by create_time) create_time2,
-                    lead(serv_mode) over(partition by driver_id order by create_time) serv_mode2,
-                    lead(serv_status) over(partition by driver_id order by create_time) serv_status2
-                from obus_dw.ods_sqoop_data_driver_work_log_df 
-                where dt='{pt}' and 
-                    from_unixtime(create_time, 'yyyy-MM-dd')='{pt}'
-                ) as dwl 
-            join (select 
-                    id,
-                    city_id,
-                    line_id
-                from obus_dw.ods_sqoop_data_driver_df 
-                where dt='{pt}'
-                ) as dd
-            on dwl.line_id = dd.line_id and dwl.driver_id=dd.id 
-            group by dd.city_id, dd.id
+                city_id,
+                driver_id,
+                round(sum(end_time - start_time)/3600, 2) as driver_time            --司机驾驶时长
+            from obus_dw_ods.ods_sqoop_data_driver_trip_df 
+            where dt = '{pt}' and 
+                from_unixtime(end_time, 'yyyy-MM-dd') = '{pt}' and 
+                status = 1
+            group by city_id, driver_id
         ),
         --收入数据
         income_data as (
@@ -192,23 +157,22 @@ def get_data_from_impala(**op_kwargs):
                 from_unixtime(unix_timestamp('{pt}','yyyy-MM-dd'), 'yyyyMMdd') as dt,
                 dd.city_id,
                 dd.id,
-                sum(ddrd.amount_true) as driver_amount,                    ---司机收入
-                sum(ddrd.amount_pay_obus) as obus_pay_driver_amount,            ---Obus支付司机收入
-                sum(ddrd.amount_pay_ticket) as tickets_pay_driver_amount         --公交卡支付司机收入
+                sum(ddrd.amount_true) as driver_amount,                             ---司机收入
+                sum(ddrd.amount_pay_obus) as obus_pay_driver_amount,                ---Obus支付司机收入
+                sum(ddrd.amount_pay_ticket) as tickets_pay_driver_amount            --公交卡支付司机收入
             from (select 
                     driver_id,
                     amount_true,
                     amount_pay_obus,
                     amount_pay_ticket
-                from obus_dw.ods_sqoop_data_driver_records_day_df 
+                from obus_dw_ods.ods_sqoop_data_driver_records_day_df 
                 where dt='{pt}' and 
-                    `day`=from_unixtime(unix_timestamp('{pt}','yyyy-MM-dd'),'yyyyMMdd') and 
-                    balance_status=1
+                    `day`=unix_timestamp('{pt}','yyyy-MM-dd') 
                 ) as ddrd 
             join (select 
                     id,
                     city_id
-                from obus_dw.ods_sqoop_data_driver_df 
+                from obus_dw_ods.ods_sqoop_data_driver_df 
                 where dt='{pt}'
                 ) as dd 
             on ddrd.driver_id = dd.id 
@@ -245,7 +209,7 @@ def get_data_from_impala(**op_kwargs):
             left join income_data on driver_data.dt = income_data.dt and 
                                     driver_data.city_id = income_data.city_id and 
                                     driver_data.id = income_data.id
-            left join (select id, name from obus_dw.ods_sqoop_conf_city_df where dt='{pt}' and validate=1) as dc 
+            left join (select id, name from obus_dw_ods.ods_sqoop_conf_city_df where dt='{pt}' and validate=1) as dc 
                 on driver_data.city_id = dc.id 
             ) as t
     '''.format(
@@ -277,7 +241,7 @@ def get_data_from_impala(**op_kwargs):
 
 
 def __data_to_mysql(conn, data, column, update=''):
-    isql = 'insert into obus_dw.app_obus_report_driver_rank_d ({})'.format(','.join(column))
+    isql = 'insert into obus_dw_ods.app_obus_report_driver_rank_d ({})'.format(','.join(column))
     esql = '{0} values {1} on duplicate key update {2}'
     sval = ''
     cnt = 0

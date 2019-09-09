@@ -63,7 +63,7 @@ create_obus_client_event = HiveOperator(
         with SERDEPROPERTIES("ignore.malformed.json"="true")
         LOCATION 's3a://opay-bi/obus_buried/obdm.client_event'
     """,
-    schema='obus_dw',
+    schema='obus_dw_ods',
     dag=dag)
 
 check_s3_obus_client_event = S3PrefixSensor(
@@ -77,7 +77,7 @@ add_partitions_obus_client_event = HiveOperator(
     hql="""
             ALTER TABLE ods_log_client_event ADD IF NOT EXISTS PARTITION (dt = '{{ ds }}', hour = '{{ execution_date.strftime("%H") }}');
         """,
-    schema='obus_dw',
+    schema='obus_dw_ods',
     dag=dag)
 
 create_obus_server_event = HiveOperator(
@@ -124,7 +124,7 @@ create_obus_server_event = HiveOperator(
         with SERDEPROPERTIES("ignore.malformed.json"="true")
         LOCATION 's3a://opay-bi/obus_buried/obdm.server_event'
     """,
-    schema='obus_dw',
+    schema='obus_dw_ods',
     dag=dag)
 
 check_s3_obus_server_event = S3PrefixSensor(
@@ -139,7 +139,7 @@ add_partitions_obus_server_event = HiveOperator(
     hql="""
             ALTER TABLE ods_log_server_event ADD IF NOT EXISTS PARTITION (dt = '{{ ds }}', hour = '{{ execution_date.strftime("%H") }}');
         """,
-    schema='obus_dw',
+    schema='obus_dw_ods',
     dag=dag)
 
 create_obus_client_event >> check_s3_obus_client_event >> add_partitions_obus_client_event
