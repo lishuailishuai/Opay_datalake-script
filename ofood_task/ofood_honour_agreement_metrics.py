@@ -39,18 +39,18 @@ validate_partition_data = PythonOperator(
         # 验证table
         "table_names":
             [
-                'ofood_dw.ods_sqoop_base_jh_waimai_df',
-                'ofood_dw.ods_sqoop_base_jh_order_df',
-                'ofood_dw.ods_sqoop_base_jh_order_time_df',
-                'ofood_dw.ods_sqoop_base_jh_waimai_comment_df',
-                'ofood_dw.ods_sqoop_base_jh_waimai_order_df',
-                'ofood_dw.ods_sqoop_base_jh_order_log_df',
-                'ofood_dw.ods_sqoop_bd_bd_admin_users_df',
-                'ofood_dw.ods_sqoop_bd_bd_bd_fence_df',
-                'ofood_dw.ods_sqoop_bd_invitation_info_df',
-                'ofood_dw.ods_sqoop_bd_jh_member_df',
-                'ofood_dw.ods_sqoop_base_jh_shop_account_df',
-                'ofood_dw.ods_sqoop_base_jh_waimai_product_df',
+                'ofood_dw_ods.ods_sqoop_base_jh_waimai_df',
+                'ofood_dw_ods.ods_sqoop_base_jh_order_df',
+                'ofood_dw_ods.ods_sqoop_base_jh_order_time_df',
+                'ofood_dw_ods.ods_sqoop_base_jh_waimai_comment_df',
+                'ofood_dw_ods.ods_sqoop_base_jh_waimai_order_df',
+                'ofood_dw_ods.ods_sqoop_base_jh_order_log_df',
+                'ofood_dw_ods.ods_sqoop_bd_bd_admin_users_df',
+                'ofood_dw_ods.ods_sqoop_bd_bd_bd_fence_df',
+                'ofood_dw_ods.ods_sqoop_bd_invitation_info_df',
+                'ofood_dw_ods.ods_sqoop_bd_jh_member_df',
+                'ofood_dw_ods.ods_sqoop_base_jh_shop_account_df',
+                'ofood_dw_ods.ods_sqoop_base_jh_waimai_product_df',
 
             ],
         # 任务名称
@@ -64,7 +64,7 @@ jh_order_validate_task = HivePartitionSensor(
     task_id="jh_order_validate_task",
     table="ods_sqoop_base_jh_order_df",
     partition="dt='{{ds}}'",
-    schema="ofood_dw",
+    schema="ofood_dw_ods",
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
@@ -73,7 +73,7 @@ jh_order_time_validate_task = HivePartitionSensor(
     task_id="jh_order_time_validate_task",
     table="ods_sqoop_base_jh_order_time_df",
     partition="dt='{{ds}}'",
-    schema="ofood_dw",
+    schema="ofood_dw_ods",
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
@@ -82,7 +82,7 @@ jh_waimai_comment_validate_task = HivePartitionSensor(
     task_id="jh_waimai_comment_validate_task",
     table="ods_sqoop_base_jh_waimai_comment_df",
     partition="dt='{{ds}}'",
-    schema="ofood_dw",
+    schema="ofood_dw_ods",
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
@@ -91,7 +91,7 @@ jh_order_log_validate_task = HivePartitionSensor(
     task_id="jh_order_log_validate_task",
     table="ods_sqoop_base_jh_order_log_df",
     partition="dt='{{ds}}'",
-    schema="ofood_dw",
+    schema="ofood_dw_ods",
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
@@ -100,7 +100,7 @@ jh_waimai_order_validate_task = HivePartitionSensor(
     task_id="jh_waimai_order_validate_task",
     table="ods_sqoop_base_jh_waimai_order_df",
     partition="dt='{{ds}}'",
-    schema="ofood_dw",
+    schema="ofood_dw_ods",
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
@@ -109,7 +109,7 @@ jh_shop_validate_task = HivePartitionSensor(
     task_id="jh_shop_validate_task",
     table="ods_sqoop_base_jh_shop_df",
     partition="dt='{{ds}}'",
-    schema="ofood_dw",
+    schema="ofood_dw_ods",
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
@@ -118,7 +118,7 @@ jh_waimai_validate_task = HivePartitionSensor(
     task_id="jh_waimai_validate_task",
     table="ods_sqoop_base_jh_waimai_df",
     partition="dt='{{ds}}'",
-    schema="ofood_dw",
+    schema="ofood_dw_ods",
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
@@ -127,7 +127,7 @@ bd_admin_users_validate_task = HivePartitionSensor(
     task_id="bd_admin_users_validate_task",
     table="ods_sqoop_bd_bd_admin_users_df",
     partition="dt='{{ds}}'",
-    schema="ofood_dw",
+    schema="ofood_dw_ods",
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
@@ -136,7 +136,7 @@ bd_bd_fence_validate_task = HivePartitionSensor(
     task_id="bd_bd_fence_validate_task",
     table="ods_sqoop_bd_bd_bd_fence_df",
     partition="dt='{{ds}}'",
-    schema="ofood_dw",
+    schema="ofood_dw_ods",
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
@@ -145,7 +145,7 @@ bd_invitation_info_validate_task = HivePartitionSensor(
     task_id="bd_invitation_info_validate_task",
     table="ods_sqoop_bd_invitation_info_df",
     partition="dt='{{ds}}'",
-    schema="ofood_dw",
+    schema="ofood_dw_ods",
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
@@ -154,7 +154,7 @@ jh_member_validate_task = HivePartitionSensor(
     task_id="jh_member_validate_task",
     table="ods_sqoop_bd_jh_member_df",
     partition="dt='{{ds}}'",
-    schema="ofood_dw",
+    schema="ofood_dw_ods",
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
@@ -164,7 +164,7 @@ jh_shop_account_validate_task = HivePartitionSensor(
     task_id="jh_shop_account_validate_task",
     table="ods_sqoop_base_jh_shop_account_df",
     partition="dt='{{ds}}'",
-    schema="ofood_dw",
+    schema="ofood_dw_ods",
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
@@ -174,7 +174,7 @@ jh_waimai_product_validate_task = HivePartitionSensor(
     task_id="jh_waimai_product_validate_task",
     table="ods_sqoop_base_jh_waimai_product_df",
     partition="dt='{{ds}}'",
-    schema="ofood_dw",
+    schema="ofood_dw_ods",
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
@@ -202,7 +202,7 @@ create_bdm_dim_data = BashOperator(
                 lat,
                 lng
             from 
-            ofood_dw.ods_sqoop_base_jh_shop_df 
+            ofood_dw_ods.ods_sqoop_base_jh_shop_df
             where dt = '${dt}'
         ),
         
@@ -228,7 +228,7 @@ create_bdm_dim_data = BashOperator(
                 order_id,
                 order_status
                 from 
-                ofood_dw.ods_sqoop_base_jh_order_df
+                ofood_dw_ods.ods_sqoop_base_jh_order_df
                 where dt = '${dt}'
                 and day = '${ds}'
             ) o 
@@ -239,7 +239,7 @@ create_bdm_dim_data = BashOperator(
                 shop_jiedan_time,
                 order_compltet_time
                 from 
-                ofood_dw.ods_sqoop_base_jh_order_time_df
+                ofood_dw_ods.ods_sqoop_base_jh_order_time_df
                 where dt = '${dt}'
                 and from_unixtime(create_time,'yyyyMMdd') = '${ds}'
             ) t on o.order_id = t.order_id
@@ -248,7 +248,7 @@ create_bdm_dim_data = BashOperator(
                 order_id,
                 score_peisong
                 from 
-                ofood_dw.ods_sqoop_base_jh_waimai_comment_df
+                ofood_dw_ods.ods_sqoop_base_jh_waimai_comment_df
                 where dt = '${dt}'
             ) w on o.order_id = w.order_id
             left join (
@@ -258,7 +258,7 @@ create_bdm_dim_data = BashOperator(
                             or log like '%用户取消订单%',1,0) user_reason,
                 if(log like '%Merchant cancelling order%',1,0) merchant_reason
                 from 
-                ofood_dw.ods_sqoop_base_jh_order_log_df
+                ofood_dw_ods.ods_sqoop_base_jh_order_log_df
                 where dt = '${dt}'
                 and status = -1 
             ) ol on o.order_id = ol.order_id
@@ -306,14 +306,14 @@ create_bdm_dim_data = BashOperator(
                 name,
                 leader_id
         
-                from ofood_dw.ods_sqoop_bd_bd_admin_users_df 
+                from ofood_dw_ods.ods_sqoop_bd_bd_admin_users_df
                 where dt = '${dt}' and job_id = 3 
             ) bdm
             left join (
                 select 
                 id,
                 name
-                from ofood_dw.ods_sqoop_bd_bd_admin_users_df 
+                from ofood_dw_ods.ods_sqoop_bd_bd_admin_users_df
                 where dt = '${dt}'
             ) hbdm on bdm.leader_id = hbdm.id
             left join (
@@ -321,7 +321,7 @@ create_bdm_dim_data = BashOperator(
                 uid,
                 area_name,
                 points
-                from ofood_dw.ods_sqoop_bd_bd_bd_fence_df
+                from ofood_dw_ods.ods_sqoop_bd_bd_bd_fence_df
                 where dt = '${dt}'
             ) b on bdm.id = b.uid 
         )
@@ -393,7 +393,7 @@ create_shop_list_data = BashOperator(
                 lat,
                 lng
                 from 
-                ofood_dw.ods_sqoop_base_jh_shop_df
+                ofood_dw_ods.ods_sqoop_base_jh_shop_df
                 where dt = '${dt}'
             ) s 
             left join (
@@ -403,7 +403,7 @@ create_shop_list_data = BashOperator(
                 addr,
                 yy_peitime
                 from 
-                ofood_dw.ods_sqoop_base_jh_waimai_df 
+                ofood_dw_ods.ods_sqoop_base_jh_waimai_df
                 where dt = '${dt}'
             ) w on s.shop_id = w.shop_id
             left join (
@@ -411,7 +411,7 @@ create_shop_list_data = BashOperator(
                 shop_id,
                 account_number 
                 from 
-                ofood_dw.ods_sqoop_base_jh_shop_account_df
+                ofood_dw_ods.ods_sqoop_base_jh_shop_account_df
                 where dt = '${dt}'
             ) a on s.shop_id = a.shop_id
         ),
@@ -428,7 +428,7 @@ create_shop_list_data = BashOperator(
                 shop_id,
                 order_id
                 from 
-                ofood_dw.ods_sqoop_base_jh_order_df
+                ofood_dw_ods.ods_sqoop_base_jh_order_df
                 where dt = '${dt}'
             ) o 
             left join (
@@ -439,7 +439,7 @@ create_shop_list_data = BashOperator(
                 first_shop,
                 first_roof
                 from 
-                ofood_dw.ods_sqoop_base_jh_waimai_order_df 
+                ofood_dw_ods.ods_sqoop_base_jh_waimai_order_df
                 where dt = '${dt}'
             ) w on w.order_id = o.order_id
             group by o.shop_id 
@@ -456,7 +456,7 @@ create_shop_list_data = BashOperator(
                 product_id,
                 shop_id,
                 row_number() over(partition by product_id,shop_id order by dateline desc) order_by_id
-                from ofood_dw.ods_sqoop_base_jh_waimai_product_df
+                from ofood_dw_ods.ods_sqoop_base_jh_waimai_product_df
                 where dt = '${dt}' and is_onsale = 1
             ) t 
             where t.order_by_id = 1
@@ -471,7 +471,7 @@ create_shop_list_data = BashOperator(
             name,
             leader_id,
             job_id
-            from ofood_dw.ods_sqoop_bd_bd_admin_users_df 
+            from ofood_dw_ods.ods_sqoop_bd_bd_admin_users_df
             where dt = '${dt}'
         ),
         
@@ -521,7 +521,7 @@ create_shop_list_data = BashOperator(
                 points
         
                 from 
-                ofood_dw.ods_sqoop_bd_bd_bd_fence_df
+                ofood_dw_ods.ods_sqoop_bd_bd_bd_fence_df
                 where dt = '${dt}'
             ) f on f.uid = bd.id
         ),

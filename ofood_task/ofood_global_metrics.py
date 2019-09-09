@@ -44,11 +44,11 @@ validate_partition_data = PythonOperator(
         # 验证table
         "table_names":
             [
-                'ofood_dw.ods_sqoop_base_jh_order_df',
-                'ofood_dw.ods_sqoop_base_jh_order_log_df ',
-                'ofood_dw.ods_sqoop_base_jh_waimai_order_df',
-                'ofood_dw.ods_sqoop_base_jh_shop_df',
-                'ofood_dw.ods_sqoop_base_jh_waimai_df',
+                'ofood_dw_ods.ods_sqoop_base_jh_order_df',
+                'ofood_dw_ods.ods_sqoop_base_jh_order_log_df ',
+                'ofood_dw_ods.ods_sqoop_base_jh_waimai_order_df',
+                'ofood_dw_ods.ods_sqoop_base_jh_shop_df',
+                'ofood_dw_ods.ods_sqoop_base_jh_waimai_df',
                 'ofood_dw.ods_log_client_event_hi'
             ],
         # 任务名称
@@ -63,7 +63,7 @@ jh_order_validate_task = HivePartitionSensor(
     task_id="jh_order_validate_task",
     table="ods_sqoop_base_jh_order_df",
     partition="dt='{{ds}}'",
-    schema="ofood_dw",
+    schema="ofood_dw_ods",
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
@@ -73,7 +73,7 @@ jh_order_log_validate_task = HivePartitionSensor(
     task_id="jh_order_log_validate_task",
     table="ods_sqoop_base_jh_order_log_df",
     partition="dt='{{ds}}'",
-    schema="ofood_dw",
+    schema="ofood_dw_ods",
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
@@ -84,7 +84,7 @@ jh_waimai_order_validate_task = HivePartitionSensor(
     task_id="jh_waimai_order_validate_task",
     table="ods_sqoop_base_jh_waimai_order_df",
     partition="dt='{{ds}}'",
-    schema="ofood_dw",
+    schema="ofood_dw_ods",
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
@@ -94,7 +94,7 @@ jh_shop_validate_task = HivePartitionSensor(
     task_id="jh_shop_validate_task",
     table="ods_sqoop_base_jh_shop_df",
     partition="dt='{{ds}}'",
-    schema="ofood_dw",
+    schema="ofood_dw_ods",
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
@@ -104,7 +104,7 @@ jh_waimai_validate_task = HivePartitionSensor(
     task_id="jh_waimai_validate_task",
     table="ods_sqoop_base_jh_waimai_df",
     partition="dt='{{ds}}'",
-    schema="ofood_dw",
+    schema="ofood_dw_ods",
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
@@ -138,12 +138,12 @@ insert_ofood_global_metrics = HiveOperator(
         count(distinct if(olu.order_id is not null and o.order_status = -2,o.order_id,null)) user_cancel_num,
         sum(if(wo.order_id is not null and o.order_status = 8,total_price,0)) order_total_price_sum,
         sum(if(wo.order_id is not null and o.order_status = 8,total_price - order_youhui - first_youhui,0)) order_actual_price_sum
-        from ofood_dw.ods_sqoop_base_jh_order_df o 
+        from ofood_dw_ods.ods_sqoop_base_jh_order_df o
         left join (
             select 
             from_unixtime(dateline,'yyyyMMdd') day,
             order_id
-            from ofood_dw.ods_sqoop_base_jh_order_log_df 
+            from ofood_dw_ods.ods_sqoop_base_jh_order_log_df
             where status = -1
             and from_unixtime(dateline,'yyyyMMdd') = '{{ ds_nodash }}'
             and log like '%Merchant cancelling order%'
@@ -154,7 +154,7 @@ insert_ofood_global_metrics = HiveOperator(
                 from_unixtime(dateline,'yyyyMMdd') day,
                 order_id
                 from 
-                ofood_dw.ods_sqoop_base_jh_order_log_df
+                ofood_dw_ods.ods_sqoop_base_jh_order_log_df
                 where status = -1
                 and (log like '%User cancelling order%' 
                 or log like '%用户取消订单%')
@@ -165,7 +165,7 @@ insert_ofood_global_metrics = HiveOperator(
             select 
             order_id
             from 
-            ofood_dw.ods_sqoop_base_jh_waimai_order_df
+            ofood_dw_ods.ods_sqoop_base_jh_waimai_order_df
             where dt = '{{ ds }}'
         ) wo on wo.order_id = o.order_id
         where o.dt = '{{ ds }}' and o.day = '{{ ds_nodash }}'
@@ -198,7 +198,7 @@ insert_ofood_global_metrics = HiveOperator(
             shop_id,null
             ))/4,0) lfw_complete_merchant_num
         
-            from ofood_dw.ods_sqoop_base_jh_order_df o
+            from ofood_dw_ods.ods_sqoop_base_jh_order_df o
             where dt = '{{ ds }}' 
             group by from_unixtime(unix_timestamp('{{ ds_nodash }}', 'yyyyMMdd'),'yyyyMMdd')
         ),
@@ -211,7 +211,7 @@ insert_ofood_global_metrics = HiveOperator(
         select 
         from_unixtime(dateline,'yyyyMMdd') day,
         count(shop_id) new_register_merchant_num
-        from ofood_dw.ods_sqoop_base_jh_shop_df
+        from ofood_dw_ods.ods_sqoop_base_jh_shop_df
         where  from_unixtime(dateline,'yyyyMMdd') = '{{ ds_nodash }}'
         and dt = '{{ ds }}'
         group by from_unixtime(dateline,'yyyyMMdd')
@@ -222,7 +222,7 @@ insert_ofood_global_metrics = HiveOperator(
         select 
         from_unixtime(unix_timestamp('{{ ds_nodash }}', 'yyyyMMdd'),'yyyyMMdd') day,
         count(shop_id) total_alive_merchant_num
-        from ofood_dw.ods_sqoop_base_jh_waimai_df
+        from ofood_dw_ods.ods_sqoop_base_jh_waimai_df
         where  from_unixtime(dateline,'yyyyMMdd') <= '{{ ds_nodash }}'
         and closed = 0
         and  audit = 1
@@ -243,7 +243,7 @@ insert_ofood_global_metrics = HiveOperator(
             select 
             mobile,
             DATE_FORMAT(from_unixtime(min(dateline)),'yyyyMMdd') ft 
-            from ofood_dw.ods_sqoop_base_jh_order_df
+            from ofood_dw_ods.ods_sqoop_base_jh_order_df
             where order_status = 8
             and dt = '{{ ds }}'
             group by mobile

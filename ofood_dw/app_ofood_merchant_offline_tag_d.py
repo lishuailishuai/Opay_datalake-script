@@ -110,14 +110,14 @@ def get_data_from_impala(**op_kwargs):
             from (select 
                     shop_id,
                     order_id 
-                from ofood_dw.ods_sqoop_base_jh_order_df 
+                from ofood_dw_ods.ods_sqoop_base_jh_order_df
                 where dt='{pt}' and 
                     order_status='-2' and 
                     from_unixtime(dateline,'yyyy-MM-dd') between date_sub('{pt}', 6) and '{pt}'
                 ) as a1
             join (select 
                     order_id
-                from ofood_dw.ods_sqoop_base_jh_order_log_df 
+                from ofood_dw_ods.ods_sqoop_base_jh_order_log_df
                 where dt='{pt}' and 
                     log like '%Merchant cancelling order%'
                 ) as a2
@@ -132,14 +132,14 @@ def get_data_from_impala(**op_kwargs):
             from (select 
                     shop_id,
                     order_id
-                from ofood_dw.ods_sqoop_base_jh_order_df 
+                from ofood_dw_ods.ods_sqoop_base_jh_order_df
                 where dt='{pt}' and 
                     order_status='8' and 
                     from_unixtime(dateline,'yyyy-MM-dd') between date_sub('{pt}', 6) and '{pt}'
                 ) as a1
             join (select 
                     order_id
-                from ofood_dw.ods_sqoop_base_jh_waimai_comment_df 
+                from ofood_dw_ods.ods_sqoop_base_jh_waimai_comment_df
                 where dt='{pt}' and 
                     score_peisong<=2
                 ) as a2
@@ -160,7 +160,7 @@ def get_data_from_impala(**op_kwargs):
                         shop_id,
                         order_id,
                         pay_time
-                    from ofood_dw.ods_sqoop_base_jh_order_df 
+                    from ofood_dw_ods.ods_sqoop_base_jh_order_df
                     where dt='{pt}' and 
                         order_status = '8' and 
                         from_unixtime(dateline,'yyyy-MM-dd')  between date_sub('{pt}', 6) and '{pt}'
@@ -168,7 +168,7 @@ def get_data_from_impala(**op_kwargs):
                 join (select 
                         order_id,
                         order_compltet_time
-                    from ofood_dw.ods_sqoop_base_jh_order_time_df 
+                    from ofood_dw_ods.ods_sqoop_base_jh_order_time_df
                     where dt='{pt}'
                     ) as b
                 on a.order_id=b.order_id
@@ -183,7 +183,7 @@ def get_data_from_impala(**op_kwargs):
             select 
                 shop_id, 
                 count(distinct order_id) as orders 
-            from ofood_dw.ods_sqoop_base_jh_order_df 
+            from ofood_dw_ods.ods_sqoop_base_jh_order_df
             where dt='{pt}' and 
                 from_unixtime(dateline,'yyyy-MM-dd')  between date_sub('{pt}', 6) and '{pt}'
             group by shop_id
@@ -193,7 +193,7 @@ def get_data_from_impala(**op_kwargs):
             select 
                 shop_id, 
                 count(distinct order_id) as orderfinish
-            from ofood_dw.ods_sqoop_base_jh_order_df 
+            from ofood_dw_ods.ods_sqoop_base_jh_order_df
             where dt='{pt}' and 
                 from_unixtime(dateline,'yyyy-MM-dd')  between date_sub('{pt}', 29) and '{pt}' and 
                 order_status = '8'
