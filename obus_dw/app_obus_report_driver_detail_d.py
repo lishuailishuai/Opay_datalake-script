@@ -98,13 +98,13 @@ def get_data_from_impala(**op_kwargs):
                     phone_number,
                     plate_number,
                     cycle_id
-                from obus_dw.ods_sqoop_data_driver_df 
+                from obus_dw_ods.ods_sqoop_data_driver_df 
                 where dt='{pt}'
                 ) as dd 
             left join (select 
                     id,
                     `name`
-                from obus_dw.ods_sqoop_conf_cycle_df 
+                from obus_dw_ods.ods_sqoop_conf_cycle_df 
                 where dt='{pt}'
                 ) as cc 
             on dd.cycle_id = cc.id
@@ -122,13 +122,13 @@ def get_data_from_impala(**op_kwargs):
                     create_time,
                     lead(serv_mode,1,0) over(partition by driver_id order by create_time) serv_mode1,
                     lead(create_time,1,unix_timestamp('{pt} 23:59:59','yyyy-MM-dd HH:mm:ss')) over(partition by driver_id order by create_time) create_time2
-                from obus_dw.ods_sqoop_data_driver_work_log_df 
+                from obus_dw_ods.ods_sqoop_data_driver_work_log_df 
                 where dt='{pt}' and 
                     from_unixtime(create_time, 'yyyy-MM-dd')='{pt}'
                 ) as dw 
             join (select 
                     id
-                from obus_dw.ods_sqoop_data_driver_df 
+                from obus_dw_ods.ods_sqoop_data_driver_df 
                 where dt='{pt}'
                 ) as dr 
             on dw.driver_id = dr.id 
@@ -141,7 +141,7 @@ def get_data_from_impala(**op_kwargs):
                 driver_id,
                 count(1) as orders,                                         ---本日已经完成的订单数
                 sum(price) as mtd_gmv_today                                 ---本日累计交易额
-            from obus_dw.ods_sqoop_data_order_df 
+            from obus_dw_ods.ods_sqoop_data_order_df 
             where dt='{pt}' and 
                 from_unixtime(create_time, 'yyyy-MM-dd') = '{pt}' and 
                 status in (1,2)
@@ -204,7 +204,7 @@ def get_data_from_impala(**op_kwargs):
 
 
 def __data_to_mysql(conn, data, column, update=''):
-    isql = 'insert into obus_dw.app_obus_report_driver_detail_d ({})'.format(','.join(column))
+    isql = 'insert into obus_dw_ods.app_obus_report_driver_detail_d ({})'.format(','.join(column))
     esql = '{0} values {1} on duplicate key update {2}'
     sval = ''
     cnt = 0

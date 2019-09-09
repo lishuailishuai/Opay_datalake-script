@@ -31,7 +31,8 @@ table_names = ['oride_dw_ods.ods_sqoop_base_data_order_df',
                'oride_dw_ods.ods_sqoop_base_data_city_conf_df',
                'oride_dw_ods.ods_sqoop_base_data_order_payment_df',
                'oride_dw.dwd_oride_order_push_driver_detail_di',
-               'oride_bi.oride_driver_timerange'
+               'oride_bi.oride_driver_timerange',
+               'oride_dw_ods.ods_sqoop_base_data_driver_records_day_df'
                ]
 
 '''
@@ -104,6 +105,16 @@ oride_driver_timerange_validate_task = HivePartitionSensor(
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
+
+data_driver_records_day_validate_task = HivePartitionSensor(
+    task_id="data_driver_records_day_validate_task",
+    table="ods_sqoop_base_data_driver_records_day_df",
+    partition="dt='{{ds}}'",
+    schema="oride_dw_ods",
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
 
 insert_driver_metrics = HiveOperator(
     task_id='insert_driver_metrics',
@@ -354,6 +365,23 @@ insert_driver_metrics = HiveOperator(
                 where o.dt = '{{ ds }}' 
             ) o on s.order_id = o.id 
             group by o.city_name,s.serv_type
+        ), 
+        
+        driver_income as (
+            select 
+                d.city_name,
+                d.serv_type,
+                sum(r.amount_all) as amount_all                   --司机总实际收入
+            from 
+                (select 
+                    driver_id,
+                    amount_all 
+                from oride_dw_ods.ods_sqoop_base_data_driver_records_day_df 
+                where dt = '{{ ds }}' and 
+                    from_unixtime(day, 'yyyy-MM-dd') = '{{ ds }}'
+                ) as r 
+            join driver_dim as d on r.driver_id = d.id 
+            group by d.city_name, d.serv_type 
         )
         
         
@@ -379,7 +407,8 @@ insert_driver_metrics = HiveOperator(
         nvl(dr.agg_register_driver_num,0),
         nvl(op.order_pay_num,0),
         nvl(op.price_sum,0),
-        nvl(op.amount_sum,0)
+        nvl(op.amount_sum,0),
+        cast(case when di.amount_all is null then 0 else di.amount_all end as double)               --司机当日总收入
         
         from 
         order_data od 
@@ -388,7 +417,8 @@ insert_driver_metrics = HiveOperator(
         left join driver_register dr on od.city_name = dr.city_name and od.serv_type = dr.serv_type
         left join order_push opu on od.city_name = opu.city_name and od.serv_type = opu.serv_type
         left join order_push_driver opd on od.city_name = opd.city_name and od.serv_type = opd.serv_type
-        left join completed_driver_online cdo on od.city_name = cdo.city_name and od.serv_type = cdo.serv_type
+        left join completed_driver_online cdo on od.city_name = cdo.city_name and od.serv_type = cdo.serv_type 
+        left join driver_income di on od.city_name = di.city_name and od.serv_type = di.serv_type 
         ;
 
 
@@ -416,7 +446,8 @@ def send_fast_report_email(ds, **kwargs):
             nvl(sum(agg_register_driver_num),0) agg_register_driver_num,
             nvl(sum(agg_onride_driver_num),0) agg_onride_driver_num,
             nvl(round(sum(price_sum)/sum(order_pay_num),2),0) order_price_avg,
-            nvl(round(sum(amount_sum)/sum(order_pay_num),2),0) order_amount_avg
+            nvl(round(sum(amount_sum)/sum(order_pay_num),2),0) order_amount_avg,
+            if(sum(onride_driver_num)>0, round(sum(amount_all)/sum(onride_driver_num),2), 0) as amount_all_avg 
             from 
             oride_bi.oride_all_driver_capacity_metrics_info
             where dt = '{dt}' and serv_type = 2
@@ -441,7 +472,8 @@ def send_fast_report_email(ds, **kwargs):
             nvl(sum(agg_register_driver_num),0) agg_register_driver_num,
             nvl(sum(agg_onride_driver_num),0) agg_onride_driver_num,
             nvl(round(sum(price_sum)/sum(order_pay_num),2),0) order_price_avg,
-            nvl(round(sum(amount_sum)/sum(order_pay_num),2),0) order_amount_avg
+            nvl(round(sum(amount_sum)/sum(order_pay_num),2),0) order_amount_avg, 
+            if(sum(onride_driver_num)>0, round(sum(amount_all)/sum(onride_driver_num),2), 0) as amount_all_avg 
             from 
             oride_bi.oride_all_driver_capacity_metrics_info
             where dt = '{dt}' and serv_type = 2
@@ -491,7 +523,7 @@ def send_fast_report_email(ds, **kwargs):
                             <th colspan="2" style="text-align: center;">总需求</th>
                             <th colspan="7" style="text-align: center;">总供给</th>
                             <th colspan="4" style="text-align: center;">招募</th>
-                            <th colspan="2" style="text-align: center;">财务</th>
+                            <th colspan="3" style="text-align: center;">财务</th>
                         </tr>
                         <tr>
                             <th>城市</th>
@@ -515,6 +547,7 @@ def send_fast_report_email(ds, **kwargs):
                             <!--财务-->
                             <th>单均应付</th>
                             <th>单均实付</th>
+                            <th>人均实际收入</th>
                             <!--司机考核-->
 
                         </tr>
@@ -555,6 +588,7 @@ def send_fast_report_email(ds, **kwargs):
                 <th>{agg_onride_driver_num}</th>
                 <th>{price_avg}</th>
                 <th>{amount_avg}</th>
+                <th>{amount_all_avg}</th>
         '''
 
     for data in res:
@@ -574,7 +608,8 @@ def send_fast_report_email(ds, **kwargs):
             agg_register_driver_num,
             agg_onride_driver_num,
             price_avg,
-            amount_avg
+            amount_avg,
+            amount_all_avg
         ] = data
 
         row = row_fmt.format(
@@ -593,7 +628,8 @@ def send_fast_report_email(ds, **kwargs):
             agg_register_driver_num=agg_register_driver_num,
             agg_onride_driver_num=agg_onride_driver_num,
             price_avg=price_avg,
-            amount_avg=amount_avg
+            amount_avg=amount_avg,
+            amount_all_avg=amount_all_avg
         )
 
         row_html += tr_fmt.format(row=row)
@@ -615,7 +651,8 @@ def send_fast_report_email(ds, **kwargs):
             agg_register_driver_num,
             agg_onride_driver_num,
             price_avg,
-            amount_avg
+            amount_avg,
+            amount_all_avg
         ] = data
 
         row = row_fmt.format(
@@ -634,7 +671,8 @@ def send_fast_report_email(ds, **kwargs):
             agg_register_driver_num=agg_register_driver_num,
             agg_onride_driver_num=agg_onride_driver_num,
             price_avg=price_avg,
-            amount_avg=amount_avg
+            amount_avg=amount_avg,
+            amount_all_avg=amount_all_avg
         )
 
         row_html += tr_fmt.format(row=row)
@@ -650,6 +688,7 @@ def send_fast_report_email(ds, **kwargs):
         email_to = ['bigdata@opay-inc.com']
         # email_to = ['nan.li@opay-inc.com']
 
+    # email_to = ['duo.wu@opay-inc.com']
     email_subject = '司机运力日报-快车_{}'.format(ds)
     send_email(
         email_to
@@ -940,6 +979,7 @@ validate_partition_data >> data_order_payment_validate_task >> insert_driver_met
 validate_partition_data >> data_order_validate_task >> insert_driver_metrics
 validate_partition_data >> server_magic_push_detail_validate_task >> insert_driver_metrics
 validate_partition_data >> oride_driver_timerange_validate_task >> insert_driver_metrics
+validate_partition_data >> data_driver_records_day_validate_task >> insert_driver_metrics
 
 insert_driver_metrics >> send_fast_report
 insert_driver_metrics >> send_otrike_report

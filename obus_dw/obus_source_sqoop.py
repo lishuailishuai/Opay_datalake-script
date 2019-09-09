@@ -86,7 +86,7 @@ obus_table_list = [
     {"db": "obus_data", "table": "log_ticket_bind",                  "conn": "obus_db"}
 ]
 
-hive_db = 'obus_dw'
+hive_db = 'obus_dw_ods'
 hive_table = 'ods_sqoop_{bs}_df'
 s3path = 's3a://opay-bi/obus_dw/ods_sqoop_{bs}_df'
 ods_create_table_hql = '''
