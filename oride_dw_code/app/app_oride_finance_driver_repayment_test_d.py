@@ -16,7 +16,7 @@ from utils.validate_metrics_utils import *
 import time
 
 args = {
-    'owner': 'wuduo',
+    'owner': 'yangmingze',
     'start_date': datetime(2019, 8, 31),
     'depends_on_past': False,
     'retries': 3,
@@ -103,7 +103,7 @@ def get_data_from_hive(**op_kwargs):
                 ELSE repayment_amount
             END) as repayment_amount, --每次还款金额
             NVL(numbers, 0) as total_numbers,  --分期总数
-            0 AS effective_days as effective_days, --有效天数：计算骑手正常还款的天数 
+            0 AS effective_days, --有效天数：计算骑手正常还款的天数 
             NVL(overdue_payment_cnt, 0) as lose_numbers, --违约期数
             NVL(last_repayment_time, dt) as last_back_time, -- 最后一次还款时间
             is_td_valid AS today_repayment as today_repayment, -- 今日是否还款：1已还款
