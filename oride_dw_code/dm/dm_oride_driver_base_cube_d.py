@@ -227,7 +227,7 @@ dm_oride_driver_base_cube_d_task = HiveOperator(
     
               count(DISTINCT (CASE WHEN dri.driver_id=dtr.driver_id
                               AND dri.status=2 THEN dtr.driver_id ELSE NULL END)) AS online_driver_num,
-              --在线司机数
+              --当天在线司机数
               
               count(DISTINCT (CASE WHEN ord.driver_id=r1.driver_id THEN ord.driver_id ELSE NULL END)) AS driver_accept_take_num,
               --骑手应答的总次数 （accept_click阶段）
