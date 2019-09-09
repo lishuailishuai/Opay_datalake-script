@@ -51,7 +51,7 @@ dependence_dwd_oride_location_driver_event_hi_prev_hour_task = HivePartitionSens
     task_id="dwd_oride_driver_location_event_hi_prev_hour_task",
     table="dwd_oride_driver_location_event_hi",
     partition="""dt='{{ ds }}' and hour='{{ execution_date.strftime("%H") }}'""",
-    schema="oride_bi",
+    schema="oride_dw",
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
@@ -61,7 +61,7 @@ dependence_dwd_oride_passanger_location_event_hi_prev_hour_task = HivePartitionS
     task_id="dwd_oride_passanger_location_event_hi_prev_hour_task",
     table="dwd_oride_passanger_location_event_hi",
     partition="""dt='{{ ds }}' and hour='{{ execution_date.strftime("%H") }}'""",
-    schema="oride_bi",
+    schema="oride_dw",
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
