@@ -80,7 +80,7 @@ mysql_table = 'oride_dw.app_oride_finance_driver_repayment_test_d'
 
 # 从hive读取数据
 def get_data_from_hive(**op_kwargs):
-    ds = op_kwargs.get('ds', time.strftime('%Y-%m-%d', time.localtime(time.time() - 86400)))
+    # ds = op_kwargs.get('ds', time.strftime('%Y-%m-%d', time.localtime(time.time() - 86400)))
     hql = '''
         SELECT t1.dt as day, --日期
             NVL(t1.city_id, 0) as city_id, --城市
@@ -136,7 +136,7 @@ def get_data_from_hive(**op_kwargs):
     '''.format(
         hive_db=hive_db,
         hive_table=hive_table,
-        pt=ds,
+        pt='{ds}',
         now_day='{{macros.ds_add(ds, +1)}}',
         prev_4_day='{{macros.ds_add(ds, -4)}}',
     )
