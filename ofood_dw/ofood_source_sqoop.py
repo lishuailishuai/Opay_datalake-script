@@ -208,7 +208,6 @@ for db_name, table_name, conn_id, prefix_name in table_list:
     add_partitions = HiveOperator(
         task_id='add_partitions_{}'.format(hive_table_name),
         hql='''
-                ALTER TABLE ofood_dw.{table} ADD IF NOT EXISTS PARTITION (dt = '{{{{ ds }}}}');
                 ALTER TABLE {table} ADD IF NOT EXISTS PARTITION (dt = '{{{{ ds }}}}');
             '''.format(table=hive_table_name),
         schema=HIVE_DB,
