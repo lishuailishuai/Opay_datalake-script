@@ -144,7 +144,7 @@ dm_oride_passenger_base_cube_d_task = HiveOperator(
         
         right join
         
-        (SELECT country_code as country_code,
+        (SELECT nvl(country_code,'-10000') as country_code,
                nvl(city_id,-10000) as city_id,
                nvl(product_id,-10000) as product_id, --招手停订单数限定具体业务线
          count(DISTINCT passenger_id) AS ord_users, --当日下单乘客数
@@ -162,11 +162,12 @@ dm_oride_passenger_base_cube_d_task = HiveOperator(
          count(distinct(IF (pay_status=1
                             AND pay_mode IN(2,3),passenger_id,NULL))) AS online_paid_users --当日线上支付乘客数
         FROM order_base_data
-        group by country_code,
+        group by nvl(country_code,'-10000'),
                nvl(city_id,-10000),
                nvl(product_id,-10000)
         with cube) t2
-        on t1.country_code=t2.country_code and t1.city_id=t2.city_id and t1.product_id=t2.city_id
+        on t1.country_code=t2.country_code and t1.city_id=nvl(t2.city_id,-10000) and t1.product_id=nvl(t2.product_id,-10000)
+        where nvl(t2.country_code,'-10000')<>'-10000';
 '''.format(
         pt='{{ds}}',
         now_day='{{macros.ds_add(ds, +1)}}',
