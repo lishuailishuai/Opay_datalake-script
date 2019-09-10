@@ -417,6 +417,7 @@ SELECT nvl(city_id,-10000) as city_id,
        sum(driver_billing_dur) as driver_billing_dur, --当日司机计费时长
        sum(driver_pushed_order_cnt) as driver_pushed_order_cnt,  --司机被推送订单数
        sum(map_request_num) as map_request_num,  --地图调用次数
+       sum(recharge_amount) as recharge_amount, --充值金额
        sum(reward_amount) AS reward_amount, --奖励金额
        sum(amount_pay_online) AS amount_pay_online, --当日总收入-线上支付金额
        sum(amount_pay_offline) AS amount_pay_offline, --当日总收入-线下支付金额 
