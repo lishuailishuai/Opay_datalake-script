@@ -199,7 +199,7 @@ app_oride_global_operate_report_d_task = HiveOperator(
     with order_data as
     (
 --订单相关,只过滤当日的
-select t.country_code as country_code,
+select nvl(t.country_code,'-10000') as country_code,
        nvl(t.city_id,-10000) as city_id,
        nvl(t.product_id,-10000) as product_id,
        sum(ride_order_cnt) as ride_order_cnt, --当日下单量
@@ -248,7 +248,7 @@ group by dt,country_code,
 			 city_id,
 			 product_id) t
 where t.dt='{pt}'
-group by t.country_code,
+group by nvl(t.country_code,'-10000'),
        nvl(t.city_id,-10000),  --with cube时，默认值无效
        nvl(t.product_id,-10000)
 with cube),
@@ -424,13 +424,13 @@ SELECT nvl(city_id,-10000) as city_id,
        sum(user_recharge_succ_balance) as user_recharge_succ_balance,  --每天用户充值真实金额
        nvl(country_code,'nal') as country_code,
        '{pt}' as dt
-FROM (select * from order_data where country_code<>'-10000'
+FROM (select * from order_data where nvl(country_code,'-10000')<>'-10000'
 UNION ALL 
 select * from passenger_data
 UNION ALL 
 select * from driver_cube_data 
 UNION ALL 
-select * from driver_data where country_code<>'-10000'
+select * from driver_data where nvl(country_code,'-10000')<>'-10000'
 UNION ALL 
 select * from map_data
 union all 

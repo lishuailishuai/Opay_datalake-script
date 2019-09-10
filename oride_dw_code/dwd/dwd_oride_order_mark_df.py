@@ -72,7 +72,7 @@ SELECT order_id,  --订单ID
                     2*asin(sqrt(pow(sin((end_lat*pi()/180.0-end_lat2*pi()/180.0)/2),2) + cos(end_lat*pi()/180.0)*cos(end_lat2*pi()/180.0)*pow(sin((end_lng*pi()/180.0-end_lng2*pi()/180.0)/2),2)))*6378137 <= 1000, 0, 1
                 )
             )
-        ) AS valid_mark,  --订单有效标志
+        ) AS valid_mark,  --订单有效标志:1有效 0无效
         'nal' AS country_code,
         '{pt}' AS dt
     FROM (

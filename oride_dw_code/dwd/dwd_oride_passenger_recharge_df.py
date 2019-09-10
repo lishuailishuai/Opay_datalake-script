@@ -89,12 +89,12 @@ def check_key_data(ds, **kargs):
     HQL_DQC = '''
     SELECT count(1) as nm
     FROM
-     (SELECT order_id,
+     (SELECT user_id,create_date,
              count(1) as cnt
       FROM oride_dw.{table}
 
       WHERE dt='{pt}'
-      GROUP BY order_id HAVING count(1)>1) t1
+      GROUP BY user_id,create_date HAVING count(1)>1) t1
     '''.format(
         pt=ds,
         now_day=airflow.macros.ds_add(ds, +1),
