@@ -290,7 +290,8 @@ on dri.association_id = driver_group.id
 left outer join
 (select * from oride_dw_ods.ods_sqoop_mass_driver_team_df WHERE dt = '{pt}') driver_team
 on dri.team_id = driver_team.id
-
+where dri.driver_id<>1
+and city_id<>'999001' --去除测试数据
 
 '''.format(
         pt='{{ds}}',

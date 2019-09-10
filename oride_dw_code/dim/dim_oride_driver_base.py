@@ -265,6 +265,7 @@ LEFT OUTER JOIN
 (select * from oride_dw.dim_oride_city where dt = '{pt}' and country_code='NG') cit
 ON cit.city_id=ext.city_id
 where ext.city_id<>'999001' --去除测试数据
+and dri.driver_id<>1
 '''.format(
         pt='{{ds}}',
         now_day='{{macros.ds_add(ds, +1)}}',

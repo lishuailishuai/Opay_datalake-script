@@ -270,7 +270,9 @@ dm_oride_driver_base_cube_d_task = HiveOperator(
             SELECT 
             *
             FROM oride_dw.dim_oride_driver_audit_base
-            WHERE dt='{pt}') dri
+            WHERE dt='{pt}'
+            AND city_id<>'999001' --去除测试数据
+             and driver_id<>1) dri
        LEFT OUTER JOIN
          (
             SELECT 
@@ -278,6 +280,7 @@ dm_oride_driver_base_cube_d_task = HiveOperator(
             FROM oride_dw.dwd_oride_order_base_include_test_di
              WHERE dt='{pt}'
              AND city_id<>'999001' --去除测试数据
+             and driver_id<>1
          ) ord ON dri.driver_id = ord.driver_id
             AND dri.dt = ord.dt
        LEFT OUTER JOIN
