@@ -179,7 +179,8 @@ from
     
       FROM oride_dw_ods.ods_binlog_data_order_payment_hi
       WHERE concat_ws(' ',dt,hour) BETWEEN '{pt} 00' AND '{now_day} 00'  --取昨天1天数据与今天早上00数据
-        AND op IN ('c','u')) t1
+        AND (op IN ('c',
+                   'u') or op is null)) t1
    WHERE rn1=1 ) pay
 left outer join
 (SELECT 

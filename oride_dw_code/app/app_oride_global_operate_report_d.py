@@ -139,7 +139,7 @@ order_data_null="""
        null as valid_ord_cnt,  --当日有效订单量
        null as finish_take_order_dur,  --当日完单应答时长
        null as finish_pick_up_dur,  --当日完单接驾时长
-       null as billing_order_dur,  --计费时长
+       null as finish_billing_dur,  --当日完单计费时长【跟计费时长有点差异】
        null as finish_order_onride_dis,  --当日完单送驾距离
        null as pax_num,  --乘客数
        null as price, --当日完单gmv,订单状态4，5
@@ -199,7 +199,7 @@ app_oride_global_operate_report_d_task = HiveOperator(
     with order_data as
     (
 --订单相关,只过滤当日的
-select t.country_code as country_code,
+select nvl(t.country_code,'-10000') as country_code,
        nvl(t.city_id,-10000) as city_id,
        nvl(t.product_id,-10000) as product_id,
        sum(ride_order_cnt) as ride_order_cnt, --当日下单量
@@ -208,7 +208,7 @@ select t.country_code as country_code,
        sum(valid_ord_cnt) as valid_ord_cnt,  --当日有效订单量
        sum(finish_take_order_dur) as finish_take_order_dur,  --当日完单应答时长
        sum(finish_pick_up_dur) as finish_pick_up_dur,  --当日完单接驾时长
-       sum(billing_order_dur) as billing_order_dur,  --计费时长
+       sum(finish_billing_dur) as finish_billing_dur,  --当日完单计费时长【跟计费时长有点差异】
        sum(finish_order_onride_dis) as finish_order_onride_dis,  --当日完单送驾距离
        sum(pax_num) as pax_num,  --乘客数
        sum(price) as price, --当日完单gmv,订单状态4，5
@@ -231,7 +231,7 @@ from (SELECT dt,country_code,
        sum(valid_ord_cnt) as valid_ord_cnt,  --当日有效订单量
        sum(finish_take_order_dur) as finish_take_order_dur,  --当日完单应答时长
        sum(finish_pick_up_dur) as finish_pick_up_dur,  --当日完单接驾时长
-       sum(billing_order_dur) as billing_order_dur,  --计费时长
+       sum(finish_billing_dur) as finish_billing_dur,  --当日完单计费时长【跟计费时长有点差异】
        sum(finish_order_onride_dis) as finish_order_onride_dis,  --当日完单送驾距离
        sum(pax_num) as pax_num,  --乘客数
        sum(price) as price, --当日完单gmv,订单状态4，5
@@ -248,7 +248,7 @@ group by dt,country_code,
 			 city_id,
 			 product_id) t
 where t.dt='{pt}'
-group by t.country_code,
+group by nvl(t.country_code,'-10000'),
        nvl(t.city_id,-10000),  --with cube时，默认值无效
        nvl(t.product_id,-10000)
 with cube),
@@ -309,7 +309,7 @@ select nvl(country_code,'-10000') as country_code,
        {passenger_data_null},
        {driver_cube_data_null},
        sum(finish_driver_online_dur) as finish_driver_online_dur,  --当日完单司机在线时长
-       sum(driver_billing_dur) as driver_billing_dur, --当日司机计费时长
+       sum(driver_billing_dur) as driver_billing_dur, --当日司机计费时长[！！！不准确]
        sum(driver_pushed_order_cnt) as driver_pushed_order_cnt,  --司机被推送订单数
        null as map_request_num,
        {finance_data_null},
@@ -389,7 +389,7 @@ SELECT nvl(city_id,-10000) as city_id,
        sum(valid_ord_cnt) as valid_ord_cnt,  --当日有效订单量
        sum(finish_take_order_dur) as finish_take_order_dur,  --当日完单应答时长
        sum(finish_pick_up_dur) as finish_pick_up_dur,  --当日完单接驾时长
-       sum(billing_order_dur) as billing_order_dur,  --计费时长
+       sum(finish_billing_dur) as finish_billing_dur,  --当日完单计费时长【跟计费时长有差异】
        sum(finish_order_onride_dis) as finish_order_onride_dis,  --当日完单送驾距离
        sum(pax_num) as pax_num,  --乘客数
        sum(price) as price, --当日完单gmv,订单状态4，5
@@ -417,6 +417,7 @@ SELECT nvl(city_id,-10000) as city_id,
        sum(driver_billing_dur) as driver_billing_dur, --当日司机计费时长
        sum(driver_pushed_order_cnt) as driver_pushed_order_cnt,  --司机被推送订单数
        sum(map_request_num) as map_request_num,  --地图调用次数
+       sum(recharge_amount) as recharge_amount, --充值金额
        sum(reward_amount) AS reward_amount, --奖励金额
        sum(amount_pay_online) AS amount_pay_online, --当日总收入-线上支付金额
        sum(amount_pay_offline) AS amount_pay_offline, --当日总收入-线下支付金额 
@@ -424,13 +425,13 @@ SELECT nvl(city_id,-10000) as city_id,
        sum(user_recharge_succ_balance) as user_recharge_succ_balance,  --每天用户充值真实金额
        nvl(country_code,'nal') as country_code,
        '{pt}' as dt
-FROM (select * from order_data where country_code<>'-10000'
+FROM (select * from order_data where nvl(country_code,'-10000')<>'-10000'
 UNION ALL 
 select * from passenger_data
 UNION ALL 
 select * from driver_cube_data 
 UNION ALL 
-select * from driver_data where country_code<>'-10000'
+select * from driver_data where nvl(country_code,'-10000')<>'-10000'
 UNION ALL 
 select * from map_data
 union all 

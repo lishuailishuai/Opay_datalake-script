@@ -19,7 +19,7 @@ import json
 import logging
 from airflow.models import Variable
 import requests
-import os
+import os 
 
 args = {
     'owner': 'yangmingze',
@@ -167,7 +167,7 @@ dm_oride_driver_base_d_task = HiveOperator(
             (
                 SELECT 
                 *
-                FROM oride_dw.dim_oride_driver_audit_base
+                FROM oride_dw.dim_oride_driver_base
                 WHERE dt='{pt}'
             ) dri
             LEFT OUTER JOIN

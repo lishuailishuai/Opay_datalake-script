@@ -635,8 +635,8 @@ FROM
       FROM oride_dw_ods.ods_binlog_data_order_hi
       WHERE concat_ws(' ',dt,hour) BETWEEN '{pt} 00' AND '{now_day} 00'  --取昨天1天数据与今天早上00数据
         AND from_unixtime(create_time,'yyyy-MM-dd') = '{pt}'
-        AND op IN ('c',
-                   'u')) t1
+        AND (op IN ('c',
+                   'u') or op is null)) t1
    WHERE rn1=1) base
 LEFT OUTER JOIN
   (SELECT order_id,
@@ -666,7 +666,8 @@ LEFT OUTER JOIN
                                ORDER BY updated_at desc,pos DESC) AS rn1
       FROM oride_dw_ods.ods_binlog_data_order_payment_hi
       WHERE concat_ws(' ',dt,hour) BETWEEN '{pt} 00' AND '{now_day} 00' --取昨天1天数据与今天早上00数据
-        AND op IN ('c','u')) t1
+        AND (op IN ('c',
+                   'u') or op is null)) t1
    WHERE rn1=1) pay ON base.order_id=pay.order_id
 AND base.part_hour=pay.part_hour;
 
