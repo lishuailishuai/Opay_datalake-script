@@ -93,12 +93,36 @@ dependence_dm_oride_driver_base_d_prev_day_task = UFileSensor(
     dag=dag
 )
 
-# 依赖当天分区00点???
+# 依赖当天分区00点
 dependence_server_magic_now_day_task = HivePartitionSensor(
     task_id="server_magic_now_day_task",
     table="server_magic",
     partition="dt='{{macros.ds_add(ds, +1)}}' and hour='00'",
     schema="oride_source",
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
+# 依赖前一天分区
+dependence_dwd_oride_order_finance_df_prev_day_task = UFileSensor(
+    task_id='dwd_oride_order_finance_df_prev_day_task',
+    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="oride/oride_dw/dwd_oride_order_finance_df/country_code=nal",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
+# 依赖前一天分区
+dependence_dwd_oride_passenger_recharge_df_prev_day_task = UFileSensor(
+    task_id='dwd_oride_passenger_recharge_df',
+    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="oride/oride_dw/dwd_oride_passenger_recharge_df/country_code=nal",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
@@ -330,7 +354,7 @@ select country_code,
        sum(amount_pay_online) AS amount_pay_online, --当日总收入-线上支付金额
        sum(amount_pay_offline) AS amount_pay_offline, --当日总收入-线下支付金额 
        {passenger_recharge_data_null} 
-from oride_dw.dwd_oride_order_finan_df 
+from oride_dw.dwd_oride_order_finance_df 
 where dt='{pt}'
 and create_date='{pt}'
 group by country_code
@@ -457,6 +481,8 @@ dependence_dm_oride_passenger_base_cube_d_prev_day_task >> \
 dependence_dm_oride_driver_base_cube_d_prev_day_task >> \
 dependence_dm_oride_driver_base_d_prev_day_task >>\
 dependence_server_magic_now_day_task >>\
+dependence_dwd_oride_order_finance_df_prev_day_task >>\
+dependence_dwd_oride_passenger_recharge_df_prev_day_task >>\
 sleep_time >> \
 app_oride_global_operate_report_d_task >> \
 touchz_data_success

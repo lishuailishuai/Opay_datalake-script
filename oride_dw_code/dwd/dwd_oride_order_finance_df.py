@@ -7,6 +7,7 @@ from airflow.operators.bash_operator import BashOperator
 from airflow.operators.hive_operator import HiveOperator
 from airflow.operators.python_operator import PythonOperator
 from airflow.sensors.hive_partition_sensor import HivePartitionSensor
+from airflow.sensors import UFileSensor
 
 from utils.connection_helper import get_hive_cursor
 
@@ -21,7 +22,7 @@ args = {
     'email_on_retry': False,
 }
 
-dag = airflow.DAG('dwd_oride_order_finan_df',
+dag = airflow.DAG('dwd_oride_order_finance_df',
                   schedule_interval="00 01 * * *",
                   default_args=args,
                   catchup=False)
@@ -78,13 +79,13 @@ ods_sqoop_base_data_driver_records_day_df_prev_day_task = HivePartitionSensor(
 
 ##----------------------------------------- 变量 ---------------------------------------##
 
-table_name = "dwd_oride_order_finan_df"
+table_name = "dwd_oride_order_finance_df"
 hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
 
 ##----------------------------------------- 脚本 ---------------------------------------##
 
-dwd_oride_order_finan_df_task = HiveOperator(
-    task_id='dwd_oride_order_finan_df_task',
+dwd_oride_order_finance_df_task = HiveOperator(
+    task_id='dwd_oride_order_finance_df_task',
 
     hql='''
 SET hive.exec.parallel=TRUE;
@@ -200,6 +201,6 @@ ods_sqoop_base_data_driver_recharge_records_df_prev_day_task >> \
 ods_sqoop_base_data_driver_reward_df_prev_day_task >>\
 ods_sqoop_base_data_driver_records_day_df_prev_day_task >>\
 sleep_time >> \
-dwd_oride_order_finan_df_task >> \
+dwd_oride_order_finance_df_task >> \
 task_check_key_data >> \
 touchz_data_success
