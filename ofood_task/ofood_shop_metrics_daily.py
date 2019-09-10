@@ -258,13 +258,23 @@ insert_shop_metrics = HiveOperator(
                     from 
                     (
                         select 
-                        o.shop_id,
-                        o.order_status,
-                        o.dateline,
-                        o.uid
+                        t.shop_id,
+                        t.order_status,
+                        t.dateline,
+                        t.uid
                         from 
-                        ofood_dw_ods.ods_sqoop_base_jh_order_df o
-                        where o.dt = '{{ ds }}'
+                        (
+                            select 
+                            o.shop_id,
+                            o.order_status,
+                            o.dateline,
+                            o.uid,
+                            row_number() over(partition by o.uid,o.order_status order by o.dateline) order_by
+                            from 
+                            ofood_dw_ods.ods_sqoop_base_jh_order_df o
+                            where o.dt = '{{ ds }}'
+                        ) t 
+                        where t.order_by = 1
                     ) o 
                     left join (
                         select 
