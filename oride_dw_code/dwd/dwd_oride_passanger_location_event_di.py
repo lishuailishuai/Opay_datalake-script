@@ -59,7 +59,7 @@ dependence_dwd_oride_location_user_event_di_prev_day_task = HivePartitionSensor(
 ##----------------------------------------- 变量 ---------------------------------------##
 
 
-table_name = "dwd_oride_passanger_location_event_hi"
+table_name = "dwd_oride_passanger_location_event_di"
 hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
 
 ##----------------------------------------- 脚本 ---------------------------------------##

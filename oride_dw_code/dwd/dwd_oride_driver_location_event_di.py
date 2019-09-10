@@ -86,7 +86,7 @@ dwd_oride_location_driver_event_di_task = HiveOperator(
         replace(concat_ws(',',collect_set(start_ride_sliding_lat)),',','')  ,
         replace(concat_ws(',',collect_set(start_ride_sliding_lng)),',','') ,
         replace(concat_ws(',',collect_set(start_ride_sliding_arrived_lat)),',','')  ,
-        replace(concat_ws(',',collect_set(start_ride_sliding_arrived_lng)),',','') ，
+        replace(concat_ws(',',collect_set(start_ride_sliding_arrived_lng)),',','') ,
         'nal' as country_code,
         '{pt}' as dt
         
