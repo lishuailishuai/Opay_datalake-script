@@ -205,7 +205,7 @@ def get_data_from_impala(**op_kwargs):
                                     driver_data.id = driver_cycle_data.driver_id 
             left join driver_time on driver_data.dt = driver_time.dt and 
                                     driver_data.city_id = driver_time.city_id and 
-                                    driver_data.id = driver_time.id  
+                                    driver_data.id = driver_time.driver_id  
             left join income_data on driver_data.dt = income_data.dt and 
                                     driver_data.city_id = income_data.city_id and 
                                     driver_data.id = income_data.id
