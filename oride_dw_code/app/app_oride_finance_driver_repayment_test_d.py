@@ -105,8 +105,8 @@ def get_data_from_hive(**op_kwargs):
             NVL(numbers, 0) as total_numbers,  --分期总数
             0 AS effective_days, --有效天数：计算骑手正常还款的天数 
             NVL(overdue_payment_cnt, 0) as lose_numbers, --违约期数
-            NVL(last_repayment_time, t1.dt) as last_back_time, -- 最后一次还款时间
-            is_td_valid AS today_repayment, -- 今日是否还款：1已还款
+            NVL(last_date, t1.dt) as last_back_time, -- 最后一次还款时间
+            0 AS today_repayment, -- 今日是否还款：1已还款
             0 AS status, -- 状态
             nvl(driver_finish_ord_num,0) AS order_numbers, -- 完成订单数量
             nvl(t3.order_agv,0) AS order_agv -- 3日平均
