@@ -241,7 +241,7 @@ def get_data_from_impala(**op_kwargs):
 
 
 def __data_to_mysql(conn, data, column, update=''):
-    isql = 'insert into obus_dw_ods.app_obus_report_driver_rank_d ({})'.format(','.join(column))
+    isql = 'insert into obus_dw.app_obus_report_driver_rank_d ({})'.format(','.join(column))
     esql = '{0} values {1} on duplicate key update {2}'
     sval = ''
     cnt = 0
