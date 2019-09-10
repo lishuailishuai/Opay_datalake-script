@@ -139,7 +139,7 @@ order_data_null="""
        null as valid_ord_cnt,  --当日有效订单量
        null as finish_take_order_dur,  --当日完单应答时长
        null as finish_pick_up_dur,  --当日完单接驾时长
-       null as billing_order_dur,  --计费时长
+       null as finish_billing_dur,  --当日完单计费时长【跟计费时长有点差异】
        null as finish_order_onride_dis,  --当日完单送驾距离
        null as pax_num,  --乘客数
        null as price, --当日完单gmv,订单状态4，5
@@ -208,7 +208,7 @@ select nvl(t.country_code,'-10000') as country_code,
        sum(valid_ord_cnt) as valid_ord_cnt,  --当日有效订单量
        sum(finish_take_order_dur) as finish_take_order_dur,  --当日完单应答时长
        sum(finish_pick_up_dur) as finish_pick_up_dur,  --当日完单接驾时长
-       sum(billing_order_dur) as billing_order_dur,  --计费时长
+       sum(finish_billing_dur) as finish_billing_dur,  --当日完单计费时长【跟计费时长有点差异】
        sum(finish_order_onride_dis) as finish_order_onride_dis,  --当日完单送驾距离
        sum(pax_num) as pax_num,  --乘客数
        sum(price) as price, --当日完单gmv,订单状态4，5
@@ -231,7 +231,7 @@ from (SELECT dt,country_code,
        sum(valid_ord_cnt) as valid_ord_cnt,  --当日有效订单量
        sum(finish_take_order_dur) as finish_take_order_dur,  --当日完单应答时长
        sum(finish_pick_up_dur) as finish_pick_up_dur,  --当日完单接驾时长
-       sum(billing_order_dur) as billing_order_dur,  --计费时长
+       sum(finish_billing_dur) as finish_billing_dur,  --当日完单计费时长【跟计费时长有点差异】
        sum(finish_order_onride_dis) as finish_order_onride_dis,  --当日完单送驾距离
        sum(pax_num) as pax_num,  --乘客数
        sum(price) as price, --当日完单gmv,订单状态4，5
@@ -309,7 +309,7 @@ select nvl(country_code,'-10000') as country_code,
        {passenger_data_null},
        {driver_cube_data_null},
        sum(finish_driver_online_dur) as finish_driver_online_dur,  --当日完单司机在线时长
-       sum(driver_billing_dur) as driver_billing_dur, --当日司机计费时长
+       sum(driver_billing_dur) as driver_billing_dur, --当日司机计费时长[！！！不准确]
        sum(driver_pushed_order_cnt) as driver_pushed_order_cnt,  --司机被推送订单数
        null as map_request_num,
        {finance_data_null},
@@ -389,7 +389,7 @@ SELECT nvl(city_id,-10000) as city_id,
        sum(valid_ord_cnt) as valid_ord_cnt,  --当日有效订单量
        sum(finish_take_order_dur) as finish_take_order_dur,  --当日完单应答时长
        sum(finish_pick_up_dur) as finish_pick_up_dur,  --当日完单接驾时长
-       sum(billing_order_dur) as billing_order_dur,  --计费时长
+       sum(finish_billing_dur) as finish_billing_dur,  --当日完单计费时长【跟计费时长有差异】
        sum(finish_order_onride_dis) as finish_order_onride_dis,  --当日完单送驾距离
        sum(pax_num) as pax_num,  --乘客数
        sum(price) as price, --当日完单gmv,订单状态4，5

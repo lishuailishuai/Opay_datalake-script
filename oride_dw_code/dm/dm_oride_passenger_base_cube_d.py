@@ -167,7 +167,7 @@ dm_oride_passenger_base_cube_d_task = HiveOperator(
                nvl(product_id,-10000)
         with cube) t2
         on t1.country_code=t2.country_code and t1.city_id=nvl(t2.city_id,-10000) and t1.product_id=nvl(t2.product_id,-10000)
-        where nvl(t2.country_code,'-10000')<>'-10000';
+        where nvl(t2.country_code,'-10000')<>'-10000' and nvl(t2.city_id,-10000)<>999001;
 '''.format(
         pt='{{ds}}',
         now_day='{{macros.ds_add(ds, +1)}}',
