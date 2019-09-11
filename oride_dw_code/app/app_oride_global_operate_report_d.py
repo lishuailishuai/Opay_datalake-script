@@ -137,6 +137,7 @@ order_data_null="""
        null as finish_order_cnt, --当日完单量
        null as finish_pay, --当日完成支付量
        null as valid_ord_cnt,  --当日有效订单量
+       null as beckoning_num, --当日招手停完单数
        null as finish_take_order_dur,  --当日完单应答时长
        null as finish_pick_up_dur,  --当日完单接驾时长
        null as finish_billing_dur,  --当日完单计费时长【跟计费时长有点差异】
@@ -145,6 +146,8 @@ order_data_null="""
        null as price, --当日完单gmv,订单状态4，5
        null as pay_price,  --当日应付金额，订单状态5
        null as pay_amount,  --当日实付金额，订单状态5
+       null as opay_pay_cnt, --opay支付订单数,pay_mode=2
+       null as opay_pay_failed_cnt, --opay支付失败订单数,pay_mode=2 and pay_status in(0,2)
        null as order_cnt_lfw, --近四周同期下单数据
        null as finish_order_cnt_lfw  --近四周同期完单数据
        """
@@ -206,6 +209,7 @@ select nvl(t.country_code,'-10000') as country_code,
        sum(finish_order_cnt) as finish_order_cnt, --当日完单量
        sum(finish_pay) as finish_pay, --当日完成支付量
        sum(valid_ord_cnt) as valid_ord_cnt,  --当日有效订单量
+       sum(beckoning_num) as beckoning_num,  --当日招手停完单数
        sum(finish_take_order_dur) as finish_take_order_dur,  --当日完单应答时长
        sum(finish_pick_up_dur) as finish_pick_up_dur,  --当日完单接驾时长
        sum(finish_billing_dur) as finish_billing_dur,  --当日完单计费时长【跟计费时长有点差异】
@@ -214,6 +218,8 @@ select nvl(t.country_code,'-10000') as country_code,
        sum(price) as price, --当日完单gmv,订单状态4，5
        sum(pay_price) as pay_price,  --当日应付金额，订单状态5
        sum(pay_amount) as pay_amount,  --当日实付金额，订单状态5
+       sum(opay_pay_cnt) as opay_pay_cnt, --opay支付订单数,pay_mode=2
+       sum(opay_pay_failed_cnt) as opay_pay_failed_cnt, --opay支付失败订单数,pay_mode=2 and pay_status in(0,2)
        sum(order_cnt_lfw) as order_cnt_lfw,  --近四周同期下单数据 
        sum(finish_order_cnt_lfw) as finish_order_cnt_lfw,  --近四周同期完单数据
        {passenger_data_null},
@@ -229,6 +235,7 @@ from (SELECT dt,country_code,
        sum(finish_order_cnt) as finish_order_cnt, --当日完单量
        sum(finish_pay) as finish_pay, --当日完成支付量
        sum(valid_ord_cnt) as valid_ord_cnt,  --当日有效订单量
+       sum(if(product_id=99,finish_order_cnt,0)) as beckoning_num, --招手停完单数
        sum(finish_take_order_dur) as finish_take_order_dur,  --当日完单应答时长
        sum(finish_pick_up_dur) as finish_pick_up_dur,  --当日完单接驾时长
        sum(finish_billing_dur) as finish_billing_dur,  --当日完单计费时长【跟计费时长有点差异】
@@ -237,6 +244,8 @@ from (SELECT dt,country_code,
        sum(price) as price, --当日完单gmv,订单状态4，5
        sum(pay_price) as pay_price,  --当日应付金额，订单状态5
        sum(pay_amount) as pay_amount,  --当日实付金额，订单状态5
+       sum(opay_pay_cnt) as opay_pay_cnt, --opay支付订单数,pay_mode=2
+       sum(opay_pay_failed_cnt) as opay_pay_failed_cnt, --opay支付失败订单数,pay_mode=2 and pay_status in(0,2)
        sum(if(dt>=date_add('{pt}',-28) and dt<'{pt}' and
        from_unixtime(unix_timestamp(dt,'yyyy-MM-dd'),'u')=from_unixtime(unix_timestamp('{pt}', 'yyyy-MM-dd'),'u'),ride_order_cnt,0))/4 as order_cnt_lfw, --近四周同期下单数据
        sum(if(dt>=date_add('{pt}',-28) and dt<'{pt}' and
@@ -387,6 +396,7 @@ SELECT nvl(city_id,-10000) as city_id,
        sum(finish_order_cnt) as finish_order_cnt, --当日完单量
        sum(finish_pay) as finish_pay, --当日完成支付量
        sum(valid_ord_cnt) as valid_ord_cnt,  --当日有效订单量
+       sum(beckoning_num) as beckoning_num, --当日招手停完单数
        sum(finish_take_order_dur) as finish_take_order_dur,  --当日完单应答时长
        sum(finish_pick_up_dur) as finish_pick_up_dur,  --当日完单接驾时长
        sum(finish_billing_dur) as finish_billing_dur,  --当日完单计费时长【跟计费时长有差异】
@@ -395,6 +405,8 @@ SELECT nvl(city_id,-10000) as city_id,
        sum(price) as price, --当日完单gmv,订单状态4，5
        sum(pay_price) as pay_price,  --当日应付金额，订单状态5
        sum(pay_amount) as pay_amount,  --当日实付金额，订单状态5
+       sum(opay_pay_cnt) as opay_pay_cnt, --opay支付订单数,pay_mode=2
+       sum(opay_pay_failed_cnt) as opay_pay_failed_cnt, --opay支付失败订单数,pay_mode=2 and pay_status in(0,2)
        sum(order_cnt_lfw) as order_cnt_lfw,  --近四周同期下单数据 
        sum(finish_order_cnt_lfw) as finish_order_cnt_lfw,  --近四周同期完单数据
        sum(new_users) as new_users,  --当天注册乘客数

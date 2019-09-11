@@ -157,7 +157,7 @@ dm_oride_passenger_base_cube_d_task = HiveOperator(
          count(IF (new_reg_user_mark=1
                    AND status IN(4,5),order_id,NULL)) AS new_user_finished_cnt, --当日新注册乘客完单量
          sum(IF (new_reg_user_mark=1
-                   AND status=5,price,0.0)) AS new_user_gmv, --当日注册乘客完单gmv
+                   AND status in(4,5),price,0.0)) AS new_user_gmv, --当日注册乘客完单gmv
          count(distinct(IF (pay_status=1,passenger_id,NULL))) AS paid_users, --当日所有支付乘客数
          count(distinct(IF (pay_status=1
                             AND pay_mode IN(2,3),passenger_id,NULL))) AS online_paid_users --当日线上支付乘客数
