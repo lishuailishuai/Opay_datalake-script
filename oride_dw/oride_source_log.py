@@ -84,7 +84,9 @@ create_oride_client_event_detail = HiveOperator(
         PARTITIONED BY (
             `dt` string,
             `hour` string)
-        STORED AS PARQUET
+        STORED AS ORC
+        LOCATION 's3a://opay-bi/oride_dw_ods/oride_client_event_detail'
+        TBLPROPERTIES ("orc.compress"="SNAPPY")
         """,
     schema='oride_bi',
     dag=dag)
@@ -163,7 +165,9 @@ create_oride_server_event_detail = HiveOperator(
         PARTITIONED BY (
             `dt` string,
             `hour` string)
-        STORED AS PARQUET
+        STORED AS ORC
+        LOCATION 's3a://opay-bi/oride_dw_ods/oride_server_event_detail'
+        TBLPROPERTIES ("orc.compress"="SNAPPY")
         """,
     schema='oride_bi',
     dag=dag)

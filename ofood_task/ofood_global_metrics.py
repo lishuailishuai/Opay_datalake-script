@@ -136,8 +136,8 @@ insert_ofood_global_metrics = HiveOperator(
         count(distinct(o.shop_id)) legal_merchant_num,
         count(distinct if(olm.order_id is not null and o.order_status = -2,o.order_id,null)) merchant_cancel_num,
         count(distinct if(olu.order_id is not null and o.order_status = -2,o.order_id,null)) user_cancel_num,
-        sum(if(wo.order_id is not null and o.order_status = 8,total_price,0)) order_total_price_sum,
-        sum(if(wo.order_id is not null and o.order_status = 8,total_price - order_youhui - first_youhui,0)) order_actual_price_sum
+        sum(if(wo.order_id is not null and o.order_status = 8,wo.origin_product + wo.origin_package + wo.origin_delivery,0)) order_total_price_sum,
+        sum(if(wo.order_id is not null and o.order_status = 8,wo.origin_product + wo.origin_package + wo.origin_delivery - order_youhui - first_youhui,0)) order_actual_price_sum
         from ofood_dw_ods.ods_sqoop_base_jh_order_df o
         left join (
             select 
@@ -163,7 +163,10 @@ insert_ofood_global_metrics = HiveOperator(
         ) olu on  o.day = olu.day and o.order_id = olu.order_id
         left join (
             select 
-            order_id
+            order_id,
+            origin_product,
+            origin_package,
+            origin_delivery 
             from 
             ofood_dw_ods.ods_sqoop_base_jh_waimai_order_df
             where dt = '{{ ds }}'

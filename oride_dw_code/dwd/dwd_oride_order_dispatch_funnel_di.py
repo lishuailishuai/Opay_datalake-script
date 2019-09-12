@@ -71,7 +71,6 @@ dwd_oride_order_dispatch_funnel_di_task = HiveOperator(
         SET hive.exec.parallel=TRUE;
         SET hive.exec.dynamic.partition.mode=nonstrict;
         
-        
         with order_dispatch as (
             select 
             event_name,
@@ -82,19 +81,19 @@ dwd_oride_order_dispatch_funnel_di_task = HiveOperator(
             and event_name in ('dispatch_chose_driver','dispatch_filter_driver','dispatch_assign_driver','dispatch_push_driver')
         )
         
-
-        insert overwrite table oride_dw.{table} partition(country_code,dt)
+        
+        insert overwrite table oride_dw.dwd_oride_order_dispatch_funnel_di partition(country_code,dt)
         
         select 
-            get_json_object(event_values, '$.city_id') as city_id,--下单时所在城市
-            get_json_object(event_values, '$.order_id') as order_id, --订单ID
-            get_json_object(event_values, '$.user_id') as passenger_id, --乘客ID
-            driver_id,--司机ID
-            get_json_object(event_values, '$.round') as order_round,--订单轮数
-            get_json_object(event_values, '$.config_id') as config_id,--派单配置的id
-            get_json_object(event_values, '$.timestamp') as log_timestamp,--埋点时间
+            cast(get_json_object(event_values, '$.city_id') as bigint) as city_id,--下单时所在城市
+            cast(get_json_object(event_values, '$.order_id') as bigint) as order_id, --订单ID
+            cast(get_json_object(event_values, '$.user_id') as bigint) as passenger_id, --乘客ID
+            cast(driver_id as bigint) as driver_id,--司机ID
+            cast(get_json_object(event_values, '$.round') as bigint) as order_round,--订单轮数
+            cast(get_json_object(event_values, '$.config_id') as bigint) as config_id,--派单配置的id
+            cast(get_json_object(event_values, '$.timestamp') as string) as log_timestamp,--埋点时间
             0 as success,--是否成功（1，0）
-            0 as dis,--司机的接驾距离(米)(订单分配给司机时司机所处的位置)
+            0 as distance,--司机的接驾距离(米)(订单分配给司机时司机所处的位置)
             '' as wait_time,--司机收到推送信息时有多久没有订单
             '' as push_mode,--是派单方式（目前只有全局优化和直接发单）
             '' as reason,--过滤原因
@@ -108,15 +107,15 @@ dwd_oride_order_dispatch_funnel_di_task = HiveOperator(
         union all
         
         select 
-            get_json_object(event_values, '$.city_id') as city_id,--下单时所在城市
-            get_json_object(event_values, '$.order_id') as order_id, --订单ID
-            get_json_object(event_values, '$.user_id') as passenger_id, --乘客ID
-            get_json_object(event_values, '$.driver_id') as driver_id,--司机ID
-            get_json_object(event_values, '$.round') as order_round,--订单轮数
-            get_json_object(event_values, '$.config_id') as config_id,--派单配置的id
-            get_json_object(event_values, '$.timestamp') as log_timestamp,--埋点时间
+            cast(get_json_object(event_values, '$.city_id') as bigint) as city_id,--下单时所在城市
+            cast(get_json_object(event_values, '$.order_id') as bigint) as order_id, --订单ID
+            cast(get_json_object(event_values, '$.user_id') as bigint) as passenger_id, --乘客ID
+            cast(get_json_object(event_values, '$.driver_id') as bigint) as driver_id,--司机ID
+            cast(get_json_object(event_values, '$.round') as bigint) as order_round,--订单轮数
+            cast(get_json_object(event_values, '$.config_id') as bigint) as config_id,--派单配置的id
+            cast(get_json_object(event_values, '$.timestamp') as string) as log_timestamp,--埋点时间
             0 as success,--是否成功（1，0）
-            0 as dis,--司机的接驾距离(米)(订单分配给司机时司机所处的位置)
+            0 as distance,--司机的接驾距离(米)(订单分配给司机时司机所处的位置)
             '' as wait_time,--司机收到推送信息时有多久没有订单
             '' as push_mode,--是派单方式（目前只有全局优化和直接发单）
             get_json_object(event_values, '$.reason') as reason,--过滤原因
@@ -129,21 +128,21 @@ dwd_oride_order_dispatch_funnel_di_task = HiveOperator(
         union all
         
         select 
-            d.city_id ,--下单时所在城市
-            d.order_id, --订单ID
-            d.passenger_id,--乘客ID
-            d.driver_id,--司机ID
-            d.order_round,--订单轮数
-            d.config_id,--派单配置的id
-            d.log_timestamp,--埋点时间
-            d.success,--是否成功（1，0）
-            d.dis,--司机的接驾距离(米)(订单分配给司机时司机所处的位置)
-            d.wait_time,--司机收到推送信息时有多久没有订单
-            d.push_mode,--是派单方式（目前只有全局优化和直接发单）
+            cast(d.city_id as bigint) as city_id,--下单时所在城市
+            cast(d.order_id as bigint) as order_id, --订单ID
+            cast(d.passenger_id as bigint) as passenger_id,--乘客ID
+            cast(d.driver_id as bigint) as driver_id,--司机ID
+            cast(d.order_round as bigint) as order_round,--订单轮数
+            cast(d.config_id as bigint) as config_id,--派单配置的id
+            cast(d.log_timestamp as string) as log_timestamp,--埋点时间
+            cast(nvl(d.success,0) as bigint) as success,--是否成功（1，0）
+            cast(nvl(d.distance,0) as bigint) as distance,--司机的接驾距离(米)(订单分配给司机时司机所处的位置)
+            cast(d.wait_time as string) as wait_time,--司机收到推送信息时有多久没有订单
+            cast(d.push_mode as string) as push_mode,--是派单方式（目前只有全局优化和直接发单）
             '' as reason,--过滤原因
             'nal' as country_code, 
             '{pt}' dt
-
+        
         from 
         (
             select
@@ -162,37 +161,39 @@ dwd_oride_order_dispatch_funnel_di_task = HiveOperator(
                 get_json_object(event_values, '$.timestamp') as log_timestamp,
                 get_json_object(event_values, '$.wait_time') as wait_time,
                 get_json_object(event_values, '$.mode') as push_mode
-
+        
                 from order_dispatch
                 where 
                 event_name='dispatch_assign_driver' and 
                 from_unixtime(cast(get_json_object(event_values, '$.timestamp') as int), 'yyyy-MM-dd')='{pt}'
             ) as t 
             lateral view posexplode(drivers) d as dpos, driver_id 
-            lateral view posexplode(distances) ds as dspos, dis 
+            lateral view posexplode(distances) ds as dspos, distance 
             where dpos = dspos
         ) d
         
         union all
         
         select 
-            get_json_object(event_values, '$.city_id') as city_id,--下单时所在城市
-            get_json_object(event_values, '$.order_id') as order_id, --订单ID
-            get_json_object(event_values, '$.user_id') as passenger_id, --乘客ID
-            get_json_object(event_values, '$.driver_id') as driver_id,--司机ID
-            get_json_object(event_values, '$.round') as order_round,--订单轮数
-            get_json_object(event_values, '$.config_id') as config_id,--派单配置的id
-            get_json_object(event_values, '$.timestamp') as log_timestamp,--埋点时间
-            get_json_object(event_values, '$.success') as success,--是否成功（1，0）
-            get_json_object(event_values, '$.distance') as distance,--司机的接驾距离(米)(订单播给司机时司机所处的位置)
-            get_json_object(event_values, '$.wait_time') as wait_time,--司机收到推送信息时有多久没有订单
-            get_json_object(event_values, '$.mode') as push_mode, --是派单方式（目前只有全局优化和直接发单）
+            cast(get_json_object(event_values, '$.city_id') as bigint) as city_id,--下单时所在城市
+            cast(get_json_object(event_values, '$.order_id') as bigint) as order_id, --订单ID
+            cast(get_json_object(event_values, '$.user_id') as bigint) as passenger_id, --乘客ID
+            cast(get_json_object(event_values, '$.driver_id') as bigint) as driver_id,--司机ID
+            cast(get_json_object(event_values, '$.round') as bigint) as order_round,--订单轮数
+            cast(get_json_object(event_values, '$.config_id') as bigint) as config_id,--派单配置的id
+            cast(get_json_object(event_values, '$.timestamp') as string) as log_timestamp,--埋点时间
+            cast(nvl(get_json_object(event_values, '$.success'),0) as bigint) as success,--是否成功（1，0）
+            cast(nvl(get_json_object(event_values, '$.distance'),0) as bigint) as distance,--司机的接驾距离(米)(订单播给司机时司机所处的位置)
+            cast(get_json_object(event_values, '$.wait_time') as string) as wait_time,--司机收到推送信息时有多久没有订单
+            cast(get_json_object(event_values, '$.mode') as string) as push_mode, --是派单方式（目前只有全局优化和直接发单）
             '' as reason,--过滤原因
             'nal' as country_code,
             '{pt}' dt
         from
             order_dispatch 
         where  event_name='dispatch_push_driver' 
+        
+        ;
         
 
 '''.format(

@@ -228,6 +228,8 @@ dm_oride_order_base_d_task = HiveOperator(
            count(if(valid_ord.valid_mark=1,ord.order_id,null)) as valid_ord_cnt, --有效订单数
            sum(if(ord.is_td_finish = 1,ord.td_pick_up_dur,0)) as finish_pick_up_dur, --当日完单接驾时长
            sum(if(ord.is_td_finish = 1,ord.pax_num,0)) as pax_num,  --当日完单乘客数
+           count(if(ord.pay_mode=2,ord.order_id,null)) as opay_pay_cnt, --opay支付订单数
+           count(if(ord.pay_mode=2 and ord.pay_status in(0,2),ord.order_id,null)) as opay_pay_failed_cnt, --opay支付失败订单数
            ord.country_code,
            
            ord.dt
