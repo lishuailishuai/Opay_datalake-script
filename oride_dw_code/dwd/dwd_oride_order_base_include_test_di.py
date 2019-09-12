@@ -304,7 +304,7 @@ SELECT base.order_id,
        nvl(pay_mode,0) as pay_mode,
        --支付方式（0: 未知, 1: 线下支付, 2: opay, 3: 余额）,
 
-       pay.part_hour, --小时分区时间(yyyy-mm-dd HH)
+       '' as part_hour, --小时分区时间(yyyy-mm-dd HH)
 
        (CASE
             WHEN status = 6
@@ -460,9 +460,6 @@ FROM
              nvl(city_id,-999) AS city_id,
              --所属城市(-999 无效数据)
 
-             concat_ws(' ',dt,hour) AS part_hour,
-             --小时分区时间(yyyy-mm-dd HH)
-
              'nal' AS country_code,
              --国家码字段
 
@@ -487,17 +484,13 @@ LEFT OUTER JOIN
        amount AS pay_amount,
        --实付金额
 
-       `mode` AS pay_mode,
+       `mode` AS pay_mode
        --支付方式（0: 未知, 1: 线下支付, 2: opay, 3: 余额）
 
-       driver_id,
-       concat_ws(' ',dt,hour) AS part_hour
-       --分区时间(yyyy-mm-dd HH)
 
 FROM oride_dw_ods.ods_sqoop_base_data_order_payment_df
 WHERE dt = '{pt}'
   AND substring(updated_at,1,13)<='{now_day} 00') pay ON base.order_id=pay.order_id
-AND base.part_hour=pay.part_hour;
 
 '''.format(
         pt='{{ds}}',
