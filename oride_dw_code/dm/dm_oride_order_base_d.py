@@ -336,7 +336,6 @@ touchz_data_success = BashOperator(
 dependence_dwd_oride_order_base_include_test_di_prev_day_task >> \
 dependence_dwd_oride_order_assign_driver_detail_di_prev_day_task >> \
 dependence_dwd_oride_order_push_driver_detail_di_prev_day_task >> \
-dependence_server_magic_dispatch_detail_prev_day_task >> \
 dependence_dwd_oride_order_dispatch_chose_detail_di_prev_day_task >> \
 dependence_dwd_oride_driver_accept_order_click_detail_di_prev_day_task >> \
 dependence_dwd_oride_driver_accept_order_show_detail_di_prev_day_task >> \
