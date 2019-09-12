@@ -280,7 +280,7 @@ insert_shop_metrics = HiveOperator(
                         select 
                         uid
                         from 
-                        ofood_dw.ods_sqoop_bd_invitation_info_df
+                        ofood_dw_ods.ods_sqoop_bd_invitation_info_df
                         where dt = '{{ ds }}'
                     ) i on i.uid = o.uid 
                     
