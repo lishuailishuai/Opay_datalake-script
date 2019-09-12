@@ -470,7 +470,6 @@ FROM
 
       FROM oride_dw_ods.ods_sqoop_base_data_order_df
       WHERE dt = '{pt}'
-         AND substring(updated_at,1,13)<='{now_day} 00'
          AND from_unixtime(create_time,'yyyy-MM-dd') = '{pt}'
          ) base
 LEFT OUTER JOIN
@@ -489,8 +488,7 @@ LEFT OUTER JOIN
 
 
 FROM oride_dw_ods.ods_sqoop_base_data_order_payment_df
-WHERE dt = '{pt}'
-  AND substring(updated_at,1,13)<='{now_day} 00') pay ON base.order_id=pay.order_id
+WHERE dt = '{pt}') pay ON base.order_id=pay.order_id
 
 '''.format(
         pt='{{ds}}',
