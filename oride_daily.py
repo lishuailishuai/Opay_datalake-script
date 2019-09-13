@@ -71,7 +71,7 @@ insert_oride_driver_overview  = HiveOperator(
                 SELECT
                     *
                 FROM
-                    oride_dw_ods.ds_sqoop_base_data_order_df
+                    oride_dw_ods.ods_sqoop_base_data_order_df
                 WHERE
                     dt = '{{ ds }}' and from_unixtime(create_time,'yyyy-MM-dd')='{{ ds }}'
             ) o
@@ -154,7 +154,7 @@ insert_oride_user_overview  = HiveOperator(
                     SELECT
                         *
                     FROM
-                        oride_dw_ods.ds_sqoop_base_data_order_df
+                        oride_dw_ods.ods_sqoop_base_data_order_df
                     WHERE
                         dt = '{{ ds }}' and from_unixtime(create_time,'yyyy-MM-dd')='{{ ds }}'
                 ) o
@@ -218,7 +218,7 @@ insert_oride_user_label  = HiveOperator(
               count(if(status=6, 1, null)) as cancel_num,
               count(if(status=5, 1, null)) as finished_num
             FROM
-              oride_dw_ods.ds_sqoop_base_data_order_df
+              oride_dw_ods.ods_sqoop_base_data_order_df
             WHERE
               dt = '{{ ds }}' AND from_unixtime(create_time,'yyyy-MM-dd') BETWEEN '{{ macros.ds_add(ds, -7) }}' AND '{{ ds }}'
             GROUP BY
@@ -233,8 +233,8 @@ insert_oride_user_label  = HiveOperator(
           if(nvl(wo.cancel_num, 0) > nvl(wo.finished_num,0), true, false),
           du.phone_number
         FROM
-          oride_dw_ods.ds_sqoop_base_data_user_extend_df ue
-          INNER JOIN oride_dw_ods.ds_sqoop_base_data_user_df du ON du.id=ue.id AND du.dt=ue.dt
+          oride_dw_ods.ods_sqoop_base_data_user_extend_df ue
+          INNER JOIN oride_dw_ods.ods_sqoop_base_data_user_df du ON du.id=ue.id AND du.dt=ue.dt
           LEFT JOIN week_login wl ON wl.user_id = ue.id
           LEFT JOIN week_order wo ON wo.user_id = ue.id
         WHERE
@@ -453,7 +453,7 @@ insert_coupon_summary  = HiveOperator(
             count(distinct if (from_unixtime(used_time, 'yyyy-MM-dd')=dt, user_id, null)) as used_users,
             sum(if (from_unixtime(used_time, 'yyyy-MM-dd')=dt, 1, 0)) as used_times
         FROM
-            oride_dw_ods.ds_sqoop_base_data_coupon_df
+            oride_dw_ods.ods_sqoop_base_data_coupon_df
         WHERE
             dt = '{{ ds }}'
         GROUP BY template_id
@@ -546,7 +546,7 @@ insert_oride_driver_daily_summary  = HiveOperator(
                 count(id) as comment_times,
                 sum(score) as comment_scores
             from
-                oride_dw_ods.ds_sqoop_base_data_driver_comment_df where dt='{{ ds }}' and from_unixtime(create_time,'yyyy-MM-dd')='{{ ds }}' group by driver_id
+                oride_dw_ods.ods_sqoop_base_data_driver_comment_df where dt='{{ ds }}' and from_unixtime(create_time,'yyyy-MM-dd')='{{ ds }}' group by driver_id
         ),
         driver_app_version as (
             select
@@ -568,7 +568,7 @@ insert_oride_driver_daily_summary  = HiveOperator(
                 sum(if(status=5, distance, 0)) as distance_total,
                 sum(if(status=5 and cast(from_unixtime(create_time,'HH') as int)>=16 and cast(from_unixtime(create_time,'HH') as int)<20, 1, 0)) as peak_time_order_num
             from
-                oride_dw_ods.ds_sqoop_base_data_order_df
+                oride_dw_ods.ods_sqoop_base_data_order_df
             where
                 dt='{{ ds }}' and from_unixtime(create_time,'yyyy-MM-dd')='{{ ds }}'
             group by driver_id
@@ -592,11 +592,11 @@ insert_oride_driver_daily_summary  = HiveOperator(
             nvl(od.peak_time_order_num, 0),
             dav.app_version
         FROM
-            oride_dw_ods.ds_sqoop_base_data_driver_df dd
+            oride_dw_ods.ods_sqoop_base_data_driver_df dd
             left join online_time ot on ot.driver_id=dd.id
             left join driver_comment dc on dc.driver_id=dd.id
             left join order_data od on od.driver_id=dd.id
-            left join oride_dw_ods.ds_sqoop_base_data_driver_group_df ddg on ddg.id=dd.group_id AND ddg.dt=dd.dt
+            left join oride_dw_ods.ods_sqoop_base_data_driver_group_df ddg on ddg.id=dd.group_id AND ddg.dt=dd.dt
             left join driver_app_version dav on dav.driver_id=dd.id
         WHERE
             dd.dt='{{ ds }}'
