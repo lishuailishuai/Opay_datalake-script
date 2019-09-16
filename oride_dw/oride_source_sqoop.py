@@ -62,6 +62,7 @@ table_list = [
     ("oride_data", "data_driver_discount", "sqoop_db", "base",1),
     ("oride_data", "data_driver_fee_blacklist", "sqoop_db", "base",1),
     ("oride_data", "data_driver_operation_log", "sqoop_db", "base",1),
+    ("oride_data", "data_driver_bind_logs", "sqoop_db", "base",1),
     ("oride_data", "data_driver_pay_records", "sqoop_db", "base",1),
     ("oride_data", "data_driver_records_day", "sqoop_db", "base",1),
     ("oride_data", "data_driver_reward_push", "sqoop_db", "base",1),

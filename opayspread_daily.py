@@ -521,6 +521,66 @@ WHERE
 GROUP BY from_unixtime(d.first_bind_time, 'yyyy-MM-dd'), r.know_orider, r.driver_type
 '''
 
+"""
+vehicles， presignup
+"""
+promoter_vehicles_sql = '''
+SELECT 
+    tm.daily as day,
+    tm.driver_type as driver_type,
+    tm.channel as channel,
+    p.user_name as name,
+    p.name as mobile,
+    p.code as code,
+    tm.vehicles 
+FROM opay_spread.promoter_user as p JOIN 
+    (SELECT 
+        from_unixtime(o.operate_time, 'yyyy-MM-dd') as daily,
+        r.driver_type,
+        MAX(r.know_orider) as channel,
+        if(length(r.know_orider_extend)=10, concat('0', r.know_orider_extend), r.know_orider_extend) as know_orider_extend,
+        count(1) as vehicles 
+    FROM oride_dw_ods.ods_sqoop_base_data_driver_bind_logs_df as o JOIN opay_spread.rider_signups as r
+    ON  o.driver_id = r.driver_id 
+    WHERE  
+        from_unixtime(o.operate_time, 'yyyy-MM-dd') = '{ds}' AND 
+        r.dt = '{ds}' AND 
+        o.dt = '{ds}' AND 
+        o.operate = 0 
+    GROUP BY from_unixtime(o.operate_time, 'yyyy-MM-dd'), r.driver_type, r.know_orider_extend
+    ) as tm 
+ON p.name = tm.know_orider_extend 
+WHERE p.dt = '{ds}'
+'''
+
+promoter_presignup_sql = '''
+SELECT
+    r.daily as daily,
+    r.driver_type as driver_type, 
+    r.know_orider as channel, 
+    MAX(p.user_name) as name,
+    MAX(p.name) as mobile,
+    p.code as code,
+    count(distinct r.driver_id) as presignup  
+FROM opay_spread.promoter_user as p JOIN 
+    (SELECT 
+        from_unixtime(create_time, 'yyyy-MM-dd') as daily, 
+        if(length(know_orider_extend)=10, concat('0', know_orider_extend), know_orider_extend) as know_orider_extend, 
+        driver_id, 
+        know_orider, 
+        driver_type 
+    FROM opay_spread.rider_signups 
+    WHERE way_know = 10 and 
+        address <> '' and 
+        from_unixtime(create_time, 'yyyy-MM-dd') = '{ds}' and  
+        dt = '{ds}' 
+    ) as r 
+ON p.name = r.know_orider_extend 
+WHERE  
+    p.dt = '{ds}' 
+GROUP BY r.daily, r.know_orider, p.code, r.driver_type
+'''
+
 
 hive_tasks = [
     {'task': 'preregist', 'sql': promoter_preregist_sql, 'sql_insert': 'INSERT INTO promoter_driver_day (day, name, mobile, code, channel, driver_type, allusers) VALUES', 'sql_ext': 'ON DUPLICATE KEY UPDATE allusers = values(allusers)'},
@@ -532,7 +592,9 @@ hive_tasks = [
     {'task': 'status', 'sql': promoter_status_sql, 'sql_insert': 'INSERT INTO promoter_driver_day (day, name, mobile, code, channel, driver_type, status) VALUES', 'sql_ext': 'ON DUPLICATE KEY UPDATE status = values(status)'},
     {'task': 'guarantors', 'sql': promoter_guarantors_sql, 'sql_insert': 'INSERT INTO promoter_driver_day (day, name, mobile, code, channel, driver_type, guarantor) VALUES', 'sql_ext': 'ON DUPLICATE KEY UPDATE guarantor = values(guarantor)'},
     {'task': 'take', 'sql': promoter_ordertake_hql, 'sql_insert': 'INSERT INTO promoter_driver_day (day, name, mobile, code, channel, driver_type, KPI) VALUES', 'sql_ext': 'ON DUPLICATE KEY UPDATE KPI = if(driver_type=2, values(KPI), KPI)'},
-    {'task': 'bind', 'sql': promoter_driverbind_sql, 'sql_insert': 'INSERT INTO promoter_driver_day (day, name, mobile, code, channel, driver_type, KPI) VALUES', 'sql_ext': 'ON DUPLICATE KEY UPDATE KPI = if(driver_type=1, values(KPI), KPI)'}
+    {'task': 'bind', 'sql': promoter_driverbind_sql, 'sql_insert': 'INSERT INTO promoter_driver_day (day, name, mobile, code, channel, driver_type, KPI) VALUES', 'sql_ext': 'ON DUPLICATE KEY UPDATE KPI = if(driver_type=1, values(KPI), KPI)'},
+    {'task': 'bind', 'sql': promoter_vehicles_sql, 'sql_insert': 'INSERT INTO promoter_driver_day (day, name, mobile, code, channel, driver_type, vehicles) VALUES', 'sql_ext': 'ON DUPLICATE KEY UPDATE vehicles = values(vehicles)'},
+    {'task': 'bind', 'sql': promoter_presignup_sql, 'sql_insert': 'INSERT INTO promoter_driver_day (day, name, mobile, code, channel, driver_type, presignup) VALUES', 'sql_ext': 'ON DUPLICATE KEY UPDATE presignup = values(presignup)'}
 ]
 
 
