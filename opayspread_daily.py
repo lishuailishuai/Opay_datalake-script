@@ -593,8 +593,8 @@ hive_tasks = [
     {'task': 'guarantors', 'sql': promoter_guarantors_sql, 'sql_insert': 'INSERT INTO promoter_driver_day (day, name, mobile, code, channel, driver_type, guarantor) VALUES', 'sql_ext': 'ON DUPLICATE KEY UPDATE guarantor = values(guarantor)'},
     {'task': 'take', 'sql': promoter_ordertake_hql, 'sql_insert': 'INSERT INTO promoter_driver_day (day, name, mobile, code, channel, driver_type, KPI) VALUES', 'sql_ext': 'ON DUPLICATE KEY UPDATE KPI = if(driver_type=2, values(KPI), KPI)'},
     {'task': 'bind', 'sql': promoter_driverbind_sql, 'sql_insert': 'INSERT INTO promoter_driver_day (day, name, mobile, code, channel, driver_type, KPI) VALUES', 'sql_ext': 'ON DUPLICATE KEY UPDATE KPI = if(driver_type=1, values(KPI), KPI)'},
-    {'task': 'bind', 'sql': promoter_vehicles_sql, 'sql_insert': 'INSERT INTO promoter_driver_day (day, name, mobile, code, channel, driver_type, vehicles) VALUES', 'sql_ext': 'ON DUPLICATE KEY UPDATE vehicles = values(vehicles)'},
-    {'task': 'bind', 'sql': promoter_presignup_sql, 'sql_insert': 'INSERT INTO promoter_driver_day (day, name, mobile, code, channel, driver_type, presignup) VALUES', 'sql_ext': 'ON DUPLICATE KEY UPDATE presignup = values(presignup)'}
+    {'task': 'vehicles', 'sql': promoter_vehicles_sql, 'sql_insert': 'INSERT INTO promoter_driver_day (day, name, mobile, code, channel, driver_type, vehicles) VALUES', 'sql_ext': 'ON DUPLICATE KEY UPDATE vehicles = values(vehicles)'},
+    {'task': 'presignup', 'sql': promoter_presignup_sql, 'sql_insert': 'INSERT INTO promoter_driver_day (day, name, mobile, code, channel, driver_type, presignup) VALUES', 'sql_ext': 'ON DUPLICATE KEY UPDATE presignup = values(presignup)'}
 ]
 
 
