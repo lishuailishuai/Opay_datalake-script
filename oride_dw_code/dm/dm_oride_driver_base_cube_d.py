@@ -33,7 +33,7 @@ args = {
 }
 
 dag = airflow.DAG('dm_oride_driver_base_cube_d',
-                  schedule_interval="00 03 * * *",
+                  schedule_interval="30 01 * * *",
                   default_args=args)
 
 sleep_time = BashOperator(
