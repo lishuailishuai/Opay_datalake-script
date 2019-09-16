@@ -29,6 +29,11 @@ dag = airflow.DAG(
     schedule_interval="00 09 * * *",
     default_args=args)
 
+global_table_names = [
+    'oride_dw.app_oride_global_operate_report_d',
+    'oride_dw_ods.ods_sqoop_base_data_city_conf_df',
+]
+
 # 熔断阻塞流程,配置依赖
 app_oride_global_operate_report_d_task = HivePartitionSensor(
     task_id="app_oride_global_operate_report_d_task",
@@ -344,7 +349,7 @@ def send_report_email(ds, **kwargs):
                                 <th>完单数（近四周均值）</th>
                                 <th>完单率</th>
                                 <th>完单率（近四周均值）</th>
-                                <th>专快完单占比</th>
+                                <th>业务完单占比</th>
                                 <th>城市完单占比</th>
                                 <!--乘客指标-->
                                 <th>完单乘客数</th>
@@ -369,7 +374,7 @@ def send_report_email(ds, **kwargs):
                                 <th>平均送驾距离（米）</th>                         
                                 <!--财务指标-->
                                 <th>GMV</th>
-                                <th>当日注册乘客完单GMV</th>
+                                <th>当日注册且完单乘客GMV</th>
                                 <th>B端补贴率</th>
                                 <th>C端补贴率</th>
                                 <th>单均应付</th>
@@ -399,7 +404,7 @@ def send_report_email(ds, **kwargs):
                                     <th>完单数（近四周均值）</th>
                                     <th>完单率</th>
                                     <th>完单率（近四周均值）</th>
-                                    <th>专快完单占比</th>
+                                    <th>业务完单占比</th>
                                     <th>城市完单占比</th>
                                     <!--乘客指标-->
                                     <th>完单乘客数</th>
@@ -425,7 +430,7 @@ def send_report_email(ds, **kwargs):
                                     <th>平均送驾距离（米）</th>                         
                                     <!--财务指标-->
                                     <th>GMV</th>
-                                    <th>当日注册乘客完单GMV</th>
+                                    <th>当日注册且完单乘客GMV</th>
                                     <th>B端补贴率</th>
                                     <th>C端补贴率</th>
                                     <th>单均应付</th>
@@ -507,7 +512,7 @@ def send_report_email(ds, **kwargs):
                             <th>完单司机数</th>
                             <!--财务指标-->
                             <th>GMV</th>
-                            <th>当日注册乘客完单GMV</th>
+                            <th>当日注册且完单乘客GMV</th>
                             <th>B端补贴率</th>
                             <th>C端补贴率</th>
                             <th>每日充值真实金额</th>
@@ -579,13 +584,10 @@ def send_report_email(ds, **kwargs):
     logging.info("==============")
     #logging.info(html)
 
-    # send mail
-    result = is_alert(ds, 'oride_dw.app_oride_global_operate_report_d')
-    if result:
-        email_to = Variable.get("oride_global_operate_report_receivers").split()
-    #email_to = ['lili.chen@opay-inc.com']
+    email_to = Variable.get("oride_global_operate_report_receivers").split()
 
     # send mail
+
     email_subject = 'oride全局运营日报_{}'.format(ds)
     send_email(
         email_to
