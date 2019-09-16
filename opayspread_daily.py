@@ -535,7 +535,7 @@ SELECT
     tm.vehicles 
 FROM opay_spread.promoter_user as p JOIN 
     (SELECT 
-        from_unixtime(o.operate_time, 'yyyy-MM-dd') as daily,
+        '{ds}' as daily,
         r.driver_type,
         MAX(r.know_orider) as channel,
         if(length(r.know_orider_extend)=10, concat('0', r.know_orider_extend), r.know_orider_extend) as know_orider_extend,
@@ -543,11 +543,12 @@ FROM opay_spread.promoter_user as p JOIN
     FROM oride_dw_ods.ods_sqoop_base_data_driver_bind_logs_df as o JOIN opay_spread.rider_signups as r
     ON  o.driver_id = r.driver_id 
     WHERE  
-        from_unixtime(o.operate_time, 'yyyy-MM-dd') = '{ds}' AND 
+        o.operate_time >= '{ds} 00:00:00' AND 
+        o.operate_time <= '{ds} 23:59:59' AND
         r.dt = '{ds}' AND 
         o.dt = '{ds}' AND 
         o.operate = 0 
-    GROUP BY from_unixtime(o.operate_time, 'yyyy-MM-dd'), r.driver_type, r.know_orider_extend
+    GROUP BY '{ds}', r.driver_type, r.know_orider_extend
     ) as tm 
 ON p.name = tm.know_orider_extend 
 WHERE p.dt = '{ds}'
