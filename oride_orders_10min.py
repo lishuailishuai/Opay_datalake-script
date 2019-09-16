@@ -20,7 +20,7 @@ import math
 args = {
     'owner': 'wuduo',
     'start_date': datetime(2019, 5, 11),
-    'depends_on_past': True,
+    'depends_on_past': False,
     'retries': 1,
     'retry_delay': timedelta(minutes=5),
     'email': ['bigdata_dw@opay-inc.com'],

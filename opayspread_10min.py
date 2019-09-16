@@ -33,7 +33,7 @@ from collections import OrderedDict
 args = {
     'owner': 'wuduo',
     'start_date': datetime(2019, 7, 18),
-    'depends_on_past': True,
+    'depends_on_past': False,
     'retries': 1,
     'retry_delay': timedelta(minutes=5),
     'email': ['bigdata_dw@opay-inc.com'],
