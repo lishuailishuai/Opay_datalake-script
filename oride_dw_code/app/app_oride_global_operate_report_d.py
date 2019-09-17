@@ -351,8 +351,8 @@ SELECT 'nal' as country_code,
 finance_data as
 (
 select country_code,
-       -10000 as city_id,
-       -10000 as product_id,
+       nvl(city_id,-10000) as city_id,
+       nvl(product_id,-10000) as product_id,
        {order_data_null},
        {passenger_data_null},
        {driver_cube_data_null},
@@ -366,7 +366,9 @@ select country_code,
 from oride_dw.dwd_oride_order_finance_df 
 where dt='{pt}'
 and create_date='{pt}'
-group by country_code
+group by country_code,
+         nvl(city_id,-10000),
+         nvl(product_id,-10000)
 ),
 
 --用户充值相关

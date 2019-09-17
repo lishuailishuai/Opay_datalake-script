@@ -93,7 +93,9 @@ SET hive.exec.dynamic.partition.mode=nonstrict;
 
 
 INSERT overwrite TABLE oride_dw.{table} partition(country_code,dt)
-SELECT ord.order_id, --订单号
+SELECT ord.city_id,
+ord.product_id,
+ ord.order_id, --订单号
  ord.create_date,--订单日期
  ord.driver_id, --司机id
  sum(nvl(recharge.amount,0.0)) AS recharge_amount, --充值金额
@@ -124,7 +126,9 @@ LEFT JOIN
    FROM oride_dw_ods.ods_sqoop_base_data_driver_records_day_df
    WHERE dt='{pt}') records ON ord.driver_id=records.driver_id
 AND ord.create_date=records.day
-GROUP BY ord.order_id, --订单号
+GROUP BY ord.city_id,
+ord.product_id,
+ord.order_id, --订单号
  ord.create_date,--订单日期
  ord.driver_id;
 '''.format(
