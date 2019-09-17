@@ -4,7 +4,7 @@ from airflow.operators.hive_operator import HiveOperator
 from airflow.operators.impala_plugin import ImpalaOperator
 
 args = {
-    'owner': 'root',
+    'owner': 'yangmingze',
     'start_date': datetime(2019, 4, 20),
     'depends_on_past': False,
     'retries': 1,
