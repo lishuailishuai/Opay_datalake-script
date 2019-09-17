@@ -4,9 +4,11 @@ from airflow.operators.hive_operator import HiveOperator
 from airflow.hooks.hive_hooks import HiveCliHook,HiveServer2Hook
 from airflow.models import Variable
 from airflow.operators.python_operator import PythonOperator
-from airflow.sensors.s3_prefix_sensor import S3PrefixSensor
 from airflow.hooks.mysql_hook import MySqlHook
-
+from plugins.comwx import ComwxApi
+from airflow.hooks.S3_hook import S3Hook
+from airflow.exceptions import AirflowException
+import time
 import logging
 
 args = {
@@ -26,6 +28,7 @@ dag = airflow.DAG(
     default_args=args)
 
 ODS_DB='oride_dw_ods'
+BUCKET_NAME='opay-bi'
 
 def run_insert_ods(ds, execution_date, **kwargs):
     col_sql='''
@@ -108,10 +111,29 @@ def run_insert_ods(ds, execution_date, **kwargs):
 BINLOG_TABLE_LIST_VAR_NAME='oride_binlog_table_list'
 binlog_table_list=Variable.get(BINLOG_TABLE_LIST_VAR_NAME) if Variable.get(BINLOG_TABLE_LIST_VAR_NAME) is not None else ''
 
-table_check_list = [
-    "data_order",
-    "data_order_payment"
-]
+def check_s3_prefix(ds, execution_date, **kwargs):
+    table=kwargs["params"]["table"]
+    hour=execution_date.strftime("%H")
+    hook = S3Hook(aws_conn_id='aws_default', verify=None)
+    prefix='oride_binlog/oride_binlog.oride_data.{table}/dt={ds}/hour={hour}'.format(
+        table=table,
+        ds=ds,
+        hour=hour)
+    poke_interval=30
+    try_max_num=10
+    num=1
+    while not hook.check_for_prefix(prefix=prefix, delimiter='/', bucket_name=BUCKET_NAME):
+        logging.info('Check s3 prefix : %s in bucket s3://%s', prefix, BUCKET_NAME)
+        if num >= try_max_num:
+            comwx = ComwxApi('wwd26d45f97ea74ad2', 'BLE_v25zCmnZaFUgum93j3zVBDK-DjtRkLisI_Wns4g', '1000011')
+            comwx.postAppMessage('oride binlog 数据采集，table:{0} date:{1} hour:{2} 数据记录为0，请及时排查，谢谢'.format(table, ds, hour), '271')
+            raise AirflowException("check s3 prefix failed!")
+        else:
+            time.sleep(poke_interval)
+            num+=1
+    logging.info("Success criteria met. Exiting.")
+
+
 if binlog_table_list!='':
     for table in binlog_table_list.split():
         binlog_add_partitions = HiveOperator(
@@ -129,14 +151,13 @@ if binlog_table_list!='':
             params={'table':table},
             dag=dag,
         )
-        if table in table_check_list:
-            check_file = S3PrefixSensor(
-                task_id='check_file_{}'.format(table),
-                prefix='oride_binlog/oride_binlog.oride_data.{table}/dt={{{{ ds }}}}/hour={{{{ execution_date.strftime("%H") }}}}'.format(table=table),
-                bucket_name='opay-bi',
-                timeout=3600,
-                dag=dag)
+        check_file = PythonOperator(
+            task_id='check_file_{}'.format(table),
+            provide_context=True,
+            python_callable=check_s3_prefix,
+            params={'table':table},
+            dag=dag,
+        )
 
-            check_file >> binlog_add_partitions
-
+        check_file >> binlog_add_partitions
         binlog_add_partitions >> insert_ods
