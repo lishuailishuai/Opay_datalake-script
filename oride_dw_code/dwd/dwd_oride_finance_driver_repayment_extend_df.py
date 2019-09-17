@@ -142,7 +142,7 @@ SELECT city_id,
             then rec.cnt ELSE 0 END),0) AS is_td_valid,
        --当天是否有效
 
-       dir.fault,
+       dri.fault,
        --骑手状态
        
        dri.country_code,

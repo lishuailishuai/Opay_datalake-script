@@ -166,7 +166,7 @@ SELECT dri.city_id,
         END),0) AS status,
        --0还完 1未还完
 
-       dir.fault,
+       dri.fault,
        --骑手状态
 
        dri.country_code,
