@@ -51,7 +51,7 @@ replace into bi.driver_timerange (`Daily`,`driver_id`,`driver_onlinerange`,`driv
 '''
 
 
-def get_driver_online_time(ds, **op_kwargs):
+def get_driver_online_times(ds, **op_kwargs):
     dt = op_kwargs["ds_nodash"]
     redis = get_redis_connection()
     conn = get_db_conn('mysql_oride_data_readonly')
@@ -88,6 +88,43 @@ def get_driver_online_time(ds, **op_kwargs):
         mcursor.close()
         conn.close()
 
+
+def get_driver_online_time(ds, **op_kwargs):
+    dt = op_kwargs["ds_nodash"]
+    redis = get_redis_connection()
+    conn = get_db_conn('mysql_oride_data_readonly')
+    mcursor = conn.cursor()
+    mcursor.execute(get_driver_id)
+    result = mcursor.fetchone()
+    conn.commit()
+    mcursor.close()
+    conn.close()
+    rows = []
+    res = []
+    for i in range(1, result[0] + 1):
+        online_time = redis.get(KeyDriverOnlineTime % (i, dt))
+        order_time = redis.get(KeyDriverOrderTime % (i, dt))
+        if online_time is not None:
+            if order_time is None:
+                order_time = 0
+            free_time = int(online_time) - int(order_time)
+            res.append([dt + '000000', int(i), int(online_time), int(free_time)])
+            rows.append('(' + str(i) + ',' + str(online_time, 'utf-8') + ',' + str(free_time) + ')')
+    if rows:
+        query = """
+            INSERT OVERWRITE TABLE oride_dw_ods.ods_log_oride_driver_timerange PARTITION (dt='{dt}')
+            VALUES {value}
+        """.format(dt=ds, value=','.join(rows))
+        logging.info('import_driver_online_time run sql:%s' % query)
+        hive_hook = HiveCliHook()
+        hive_hook.run_cli(query)
+        # insert bi mysql
+        # conn = get_db_conn('mysql_bi')
+        # mcursor = conn.cursor()
+        # mcursor.executemany(insert_timerange, res)
+        # conn.commit()
+        mcursor.close()
+        conn.close()
 
 import_ods_log_oride_driver_timerange = PythonOperator(
     task_id='import_ods_log_oride_driver_timerange',
