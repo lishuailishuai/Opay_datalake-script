@@ -110,7 +110,8 @@ def get_data_from_hive(ds,**op_kwargs):
             0 AS today_repayment, -- 今日是否还款：1已还款
             0 AS status, -- 状态
             nvl(driver_finish_ord_num,0) AS order_numbers, -- 完成订单数量
-            nvl(t3.order_agv,0) AS order_agv -- 3日平均
+            nvl(t3.order_agv,0) AS order_agv, -- 3日平均
+            fault
         FROM (select * FROM {hive_db}.{hive_table}
         WHERE dt = '{pt}') t1
         
@@ -156,7 +157,7 @@ def get_data_from_hive(ds,**op_kwargs):
         [
             'day', 'city_id', 'city_name', 'driver_id', 'driver_name', 'driver_mobile', 'driver_type',
             'balance', 'repayment_total_amount', 'start_date', 'repayment_amount', 'total_numbers',
-            'effective_days', 'lose_numbers', 'last_back_time', 'today_repayment', 'status','order_numbers','order_agv'
+            'effective_days', 'lose_numbers', 'last_back_time', 'today_repayment', 'status','order_numbers','order_agv','fault'
         ],
         'day=VALUES(day)'
     )
@@ -177,12 +178,12 @@ def __data_to_mysql(conn, data, column, update=''):
     try:
         for (day, city_id, city_name, driver_id, driver_name, driver_mobile, driver_type,
                 balance, repayment_total_amount, start_date, repayment_amount, total_numbers,
-                effective_days, lose_numbers, last_back_time, today_repayment, status,order_numbers,order_agv) in data:
+                effective_days, lose_numbers, last_back_time, today_repayment, status,order_numbers,order_agv,fault) in data:
 
             row = [
                 day, city_id, city_name, driver_id, driver_name.replace("'", "\\'"), driver_mobile, driver_type,
                 balance, repayment_total_amount, start_date, repayment_amount, total_numbers,
-                effective_days, lose_numbers, last_back_time, today_repayment, status,order_numbers,order_agv
+                effective_days, lose_numbers, last_back_time, today_repayment, status,order_numbers,order_agv,fault
             ]
             if sval == '':
                 sval = '(\'{}\')'.format('\',\''.join([str(x) for x in row]))
