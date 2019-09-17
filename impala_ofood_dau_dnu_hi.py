@@ -15,7 +15,7 @@ args = {
 }
 
 dag = airflow.DAG(
-    'dashboard_ofood_dau_dnu_hi',
+    'impala_ofood_dau_dnu_hi',
     schedule_interval="15 * * * *",
     default_args=args)
 
