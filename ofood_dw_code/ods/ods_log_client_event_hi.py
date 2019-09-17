@@ -57,4 +57,6 @@ ods_log_client_event_hi_partition = HiveOperator(
     dag=dag)
 
 
-create_ods_log_client_event_hi >> ods_log_client_event_hi_partition
+#create_ods_log_client_event_hi >> ods_log_client_event_hi_partition
+
+ods_log_client_event_hi_partition
