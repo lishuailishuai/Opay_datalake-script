@@ -33,7 +33,7 @@ args = {
 } 
 
 dag = airflow.DAG( 'dwm_oride_order_pay_finish_di', 
-    schedule_interval="00 03 * * *", 
+    schedule_interval="00 02 * * *", 
     default_args=args,
     catchup=False) 
 

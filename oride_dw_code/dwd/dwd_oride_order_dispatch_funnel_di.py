@@ -33,7 +33,7 @@ args = {
 }
 
 dag = airflow.DAG('dwd_oride_order_dispatch_funnel_di',
-                  schedule_interval="00 03 * * *",
+                  schedule_interval="30 01 * * *",
                   default_args=args,
                   catchup=False)
 
