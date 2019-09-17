@@ -143,4 +143,4 @@ create_create_ods_log_oride_driver_timerange = HiveOperator(
     schema='oride_dw_ods',
     dag=dag)
 
-create_create_ods_log_oride_driver_timerange >> import_driver_online_time
+create_create_ods_log_oride_driver_timerange >> import_ods_log_oride_driver_timerange
