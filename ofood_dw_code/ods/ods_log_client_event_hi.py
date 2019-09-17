@@ -5,7 +5,7 @@ from airflow.operators.impala_plugin import ImpalaOperator
 
 args = {
     'owner': 'yangmingze',
-    'start_date': datetime(2019, 9, 17),
+    'start_date': datetime(2019, 4, 20),
     'depends_on_past': False,
     'retries': 1,
     'retry_delay': timedelta(minutes=5),
