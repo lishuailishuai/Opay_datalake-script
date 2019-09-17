@@ -16,6 +16,29 @@ import os
 from airflow.sensors.hive_partition_sensor import HivePartitionSensor
 from utils.validate_metrics_utils import *
 
+args = {
+        'owner': 'yangmingze',
+        'start_date': datetime(2019, 6, 20),
+        'depends_on_past': False,
+        'retries': 3,
+        'retry_delay': timedelta(minutes=2),
+        'email': ['bigdata_dw@opay-inc.com'],
+        'email_on_failure': True,
+        'email_on_retry': False,
+} 
+
+dag = airflow.DAG( 'ods_log_oride_driver_timerange', 
+    schedule_interval="00 01 * * *", 
+    default_args=args,
+    catchup=False) 
+
+
+sleep_time = BashOperator(
+    task_id='sleep_id',
+    depends_on_past=False,
+    bash_command='sleep 30',
+    dag=dag)
+
 
 KeyDriverOnlineTime = "driver:ont:%d:%s"
 KeyDriverOrderTime = "driver:ort:%d:%s"
