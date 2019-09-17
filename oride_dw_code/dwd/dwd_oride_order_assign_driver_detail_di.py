@@ -82,7 +82,7 @@ dwd_oride_order_assign_driver_detail_di_task = HiveOperator(
         d.config_id,--派单配置的id
         d.success,--是否成功（1，0）
         d.log_timestamp,--埋点时间
-        d.dis,--司机的接驾距离(米)(订单分配给司机时司机所处的位置)
+        d.dis,--司机的接驾距离(米)(订单分配给司机时司机所处的位置)(预估)
         d.wait_time,--司机收到推送信息时有多久没有订单
         d.push_mode,--是派单方式（目前只有全局优化和直接发单）
         'nal' as country_code, 

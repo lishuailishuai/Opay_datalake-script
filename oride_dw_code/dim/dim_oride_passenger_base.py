@@ -82,61 +82,147 @@ dim_oride_passenger_base_task = HiveOperator(
     set hive.exec.dynamic.partition.mode=nonstrict;
 
 INSERT overwrite TABLE oride_dw.{table} partition(country_code,dt)
-SELECT t1.passenger_id, --乘客ID
- t1.phone_number, --手机号
- t1.first_name, --名
- t1.last_name, --姓
- t1.promoter_code, --推广员代码
- t1.updated_at, --最后更新时间
- t2.avg_score, -- 平均评分
-t2.total_score, -- 总评分
-t2.score_times, -- 评分次数
-t2.bonus, -- 奖励金
-t2.balance, -- 余额
-from_unixtime(t2.register_time,'yyyy-MM-dd hh:mm:ss') as register_time, -- 注册时间
-from_unixtime(t2.login_time,'yyyy-MM-dd hh:mm:ss') as login_time, -- 最后登陆时间
-t2.inviter_role, --
-t2.inviter_id, --
-t2.invite_num, --
-t2.invite_complete_num, --
-t2.invite_award, --
+SELECT t1.passenger_id,
+       --乘客ID
+
+       t1.phone_number,
+       --手机号
+
+       t1.first_name,
+       --名
+
+       t1.last_name,
+       --姓
+
+       t1.promoter_code,
+       --推广员代码
+
+       t1.updated_at,
+       --最后更新时间
+
+       t2.avg_score,
+       -- 平均评分
+
+       t2.total_score,
+       -- 总评分
+
+       t2.score_times,
+       -- 评分次数
+
+       t2.bonus,
+       -- 奖励金
+
+       t2.balance,
+       -- 余额
+
+       from_unixtime(t2.register_time,'yyyy-MM-dd hh:mm:ss') AS register_time,
+       -- 注册时间
+
+       from_unixtime(t2.login_time,'yyyy-MM-dd hh:mm:ss') AS login_time,
+       -- 最后登陆时间
+
+       t2.inviter_role,
+       --
+
+       t2.inviter_id,
+       --
+
+       t2.invite_num,
+       --
+
+       t2.invite_complete_num,
+       --
+
+       t2.invite_award,
+       --
 --t2.updated_at, -- 最后更新时间,可以精确到时间
-t2.pay_type, -- user auto pay settings(-1: not set 0: manual payment 1: auto payment)
-t2.city_id, -- 注册城市
-t2.language, -- 客户端语言
- t1.country_code,
- '{pt}' AS dt
+
+       t2.pay_type,
+       -- user auto pay settings(-1: not set 0: manual payment 1: auto payment)
+
+       t2.city_id,
+       -- 注册城市
+
+       t2.language,
+       -- 客户端语言
+
+       t1.country_code,
+       '{pt}' AS dt
 FROM
-  (SELECT id AS passenger_id, --'乘客ID'
- phone_number, -- '手机号'
- first_name, -- '名'
- last_name, -- '姓'
- promoter_code, --'推广员代码'
- updated_at, --'最后更新时间'
- 'nal' AS country_code --国家码字段
+  (SELECT id AS passenger_id,
+          --'乘客ID'
+
+          phone_number,
+          -- '手机号'
+
+          first_name,
+          -- '名'
+
+          last_name,
+          -- '姓'
+
+          promoter_code,
+          --'推广员代码'
+
+          updated_at,
+          --'最后更新时间'
+
+          'nal' AS country_code --国家码字段
 
    FROM oride_dw_ods.ods_sqoop_base_data_user_df
-   WHERE dt= '{pt}' ) t1
+   WHERE dt= '{pt}') t1
 LEFT OUTER JOIN
-  (SELECT id, -- 用户 ID
-avg_score, -- 平均评分
-total_score, -- 总评分
-score_times, -- 评分次数
-bonus, -- 奖励金
-balance, -- 余额
-register_time, -- 注册时间
-login_time, -- 最后登陆时间
-inviter_role, --
-inviter_id, --
-invite_num, --
-invite_complete_num, --
-invite_award, --
-updated_at, -- 最后更新时间
-pay_type, -- user auto pay settings(-1: not set 0: manual payment 1: auto payment)
-city_id, -- 注册城市
-LANGUAGE -- 客户端语言
+  (SELECT id,
+          -- 用户 ID
+
+          avg_score,
+          -- 平均评分
+
+          total_score,
+          -- 总评分
+
+          score_times,
+          -- 评分次数
+
+          bonus,
+          -- 奖励金
+
+          balance,
+          -- 余额
+
+          register_time,
+          -- 注册时间
+
+          login_time,
+          -- 最后登陆时间
+
+          inviter_role,
+          --
+
+          inviter_id,
+          --
+
+          invite_num,
+          --
+
+          invite_complete_num,
+          --
+
+          invite_award,
+          --
+
+          updated_at,
+          -- 最后更新时间
+
+          pay_type,
+          -- user auto pay settings(-1: not set 0: manual payment 1: auto payment)
+
+          city_id,
+          -- 注册城市
+
+          LANGUAGE -- 客户端语言
 FROM oride_dw_ods.ods_sqoop_base_data_user_extend_df
-WHERE dt= '{pt}') t2 ON t1.passenger_id=t2.id;
+   WHERE dt= '{pt}') t2 ON t1.passenger_id=t2.id;
 '''.format(
         pt='{{ds}}',
         now_day='{{macros.ds_add(ds, +1)}}',

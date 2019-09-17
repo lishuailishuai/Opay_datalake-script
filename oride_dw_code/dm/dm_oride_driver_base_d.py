@@ -45,18 +45,6 @@ sleep_time = BashOperator(
 ##----------------------------------------- 依赖 ---------------------------------------##
 
 
-# 依赖前一天分区
-dim_oride_driver_audit_base_prev_day_tesk = UFileSensor(
-    task_id='dim_oride_driver_audit_base_prev_day_tesk',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw/dim_oride_driver_audit_base/country_code=nal",
-        pt='{{ds}}'
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
-
 dwd_oride_order_base_include_test_di_prev_day_tesk = UFileSensor(
     task_id='dwd_oride_order_base_include_test_di_prev_day_tesk',
     filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
@@ -256,4 +244,4 @@ touchz_data_success = BashOperator(
     ),
     dag=dag)
 
-dim_oride_driver_audit_base_prev_day_tesk >> dwd_oride_order_base_include_test_di_prev_day_tesk >> dwd_oride_order_push_driver_detail_di_prev_day_tesk >> oride_driver_timerange_prev_day_tesk >> sleep_time >> dm_oride_driver_base_d_task >> touchz_data_success
+dwd_oride_order_base_include_test_di_prev_day_tesk >> dwd_oride_order_push_driver_detail_di_prev_day_tesk >> oride_driver_timerange_prev_day_tesk >> sleep_time >> dm_oride_driver_base_d_task >> touchz_data_success

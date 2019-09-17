@@ -218,8 +218,7 @@ FROM
 
           updated_at
    FROM oride_dw_ods.ods_sqoop_base_data_driver_df
-   WHERE substring(updated_at,1,13)<='{now_day} 00'
-     AND dt = '{pt}') dri
+   WHERE  dt = '{pt}') dri
 LEFT OUTER JOIN
   (SELECT id AS driver_id,
           --司机 ID
@@ -259,8 +258,7 @@ LEFT OUTER JOIN
 
           LANGUAGE --客户端语言
 FROM oride_dw_ods.ods_sqoop_base_data_driver_extend_df
-   WHERE substring(updated_at,1,13)<='{now_day}T00' 
-   and dt = '{pt}') ext ON dri.driver_id=ext.driver_id
+   WHERE dt = '{pt}') ext ON dri.driver_id=ext.driver_id
 LEFT OUTER JOIN
 (select * from oride_dw.dim_oride_city where dt = '{pt}' and country_code='NG') cit
 ON cit.city_id=ext.city_id

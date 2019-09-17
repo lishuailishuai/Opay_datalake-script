@@ -49,7 +49,7 @@ validate_partition_data = PythonOperator(
                 'ofood_dw_ods.ods_sqoop_base_jh_waimai_order_df',
                 'ofood_dw_ods.ods_sqoop_base_jh_shop_df',
                 'ofood_dw_ods.ods_sqoop_base_jh_waimai_df',
-                'ofood_dw.ods_log_client_event_hi'
+                'ofood_dw_ods.ods_log_client_event_hi'
             ],
         # 任务名称
         "task_name": "ofood全局运营指标"
@@ -114,7 +114,7 @@ client_event_validate_task = HivePartitionSensor(
     task_id="client_event_validate_task",
     table="ods_log_client_event_hi",
     partition="dt='{{ds}}'",
-    schema="ofood_dw",
+    schema="ofood_dw_ods",
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
@@ -261,7 +261,7 @@ insert_ofood_global_metrics = HiveOperator(
             from_unixtime(unix_timestamp(dt,'yyyy-MM-dd'),'yyyyMMdd') day,
             count(distinct(if(event_name = 'ofood_show' ,user_id,null))) active_user_num,
             count(distinct(if(event_name = 'restaurant_detail_show' ,user_id,null))) enter_restaurant_num
-            from ofood_dw.ods_log_client_event_hi
+            from ofood_dw_ods.ods_log_client_event_hi
             where dt = '{{ ds }}'
             and (event_name = 'ofood_show' or event_name = 'restaurant_detail_show')
             group by from_unixtime(unix_timestamp(dt,'yyyy-MM-dd'),'yyyyMMdd')
