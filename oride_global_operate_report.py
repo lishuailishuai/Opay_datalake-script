@@ -114,7 +114,7 @@ def get_all_data_row(ds):
                 act_users, --当日活跃乘客数
                 ord_users, --当日下单乘客数
                 first_finished_users,  --当日首次完单乘客数
-                finished_users,  --当日完单老客数
+                old_finished_users,  --当日完单老客数
                 new_user_ord_cnt, --当日注册乘客下单量
                 new_user_finished_cnt, --当日注册乘客完单量
                 concat(cast(nvl(round(online_paid_users*100/paid_users,1),0) as string),'%') as online_paid_users_rate,  --当日线上支付乘客占比
@@ -261,7 +261,7 @@ def get_product_rows(ds, all_completed_num,product_id):
             SELECT t1.dt,
                  t1.city_id,
                  if(t1.city_id=-10000,'All',t2.name) AS city_name,
-                 t1.ride_order_cnt, --当日下单数
+                 nvl(t1.ride_order_cnt,0) as ride_order_cnt, --当日下单数
                  '-' AS order_cnt_lfw, --近四周同期下单数据
                  nvl(t1.valid_ord_cnt,0) as valid_ord_cnt, --有效下单量
                  nvl(t1.finish_pay,0) as finish_pay, --当日支付完单数
