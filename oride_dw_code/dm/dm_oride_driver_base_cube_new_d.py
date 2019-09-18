@@ -42,7 +42,7 @@ sleep_time = BashOperator(
     bash_command='sleep 30',
     dag=dag)
 
-##----------------------------------------- 依赖 ---------------------------------------## 
+##----------------------------------------- 依赖 ---------------------------------------##
 
 
 # 依赖前一天分区
@@ -128,7 +128,7 @@ dependence_dwd_oride_driver_accept_order_show_detail_di_prev_day_task = UFileSen
 table_name = "dm_oride_driver_base_cube_d"
 hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
 
-##----------------------------------------- 脚本 ---------------------------------------## 
+##----------------------------------------- 脚本 ---------------------------------------##
 
 dm_oride_driver_base_cube_d_task = HiveOperator(
 
@@ -138,141 +138,85 @@ dm_oride_driver_base_cube_d_task = HiveOperator(
     set hive.exec.dynamic.partition.mode=nonstrict;
 
     INSERT overwrite TABLE oride_dw.{table} partition(country_code,dt)
-    
+
     SELECT nvl(product_id,-10000) AS product_id,
            nvl(city_id,-10000) AS city_id,
-           reg_driver_num,
-           --注册司机数
-    
-           wait_audit_driver_num,
-           --待审核司机数
-    
-           audit_in_driver_num,
-           --审核中司机数
-    
            audit_finish_driver_num,
-           --审核通过司机数
-    
-           audit_fail_driver_num,
-           --审核失败司机数
-    
+              --注册司机数，审核通过司机数，但是注册司机数理论用该表统计不太准确
+
            bind_finish_driver_num,
-           --绑定成功司机数
+              --绑定成功司机数
     
            n_bind_driver_num,
-           --未绑定司机数
-    
-           online_driver_num,
-           --在线司机数
-           
-           driver_accept_take_num,
-            --骑手应答的总次数 （accept阶段）
-            
-           driver_take_num,
-           --骑手成功应答的总次数 （push阶段）
-    
-           request_driver_num,
-           --当天接单司机数
-    
-           finish_order_driver_num,
-           --当天完单司机数
-           
-           push_accpet_show_driver_num,
-           --被推送骑手数 （accept_show阶段）
+              --未绑定司机数
 
-           td_reg_driver_num,
-           --当天注册司机数
-           td_wait_audit_driver_num,
-           --当天待审核司机数
-           td_audit_in_driver_num,
-           --当天审核中司机数
+           online_driver_num,
+              --当天在线司机数
+
+           driver_accept_take_num,
+              --骑手应答的总次数 （accept_click阶段）
+
+           driver_take_num,
+              --骑手成功应答的总次数 （push阶段）
+
+           request_driver_num,
+              --当天接单司机数
+
+           finish_order_driver_num,
+              --当天完单司机数
+
+           push_accpet_show_driver_num,
+              --被推送骑手数 （accept_show阶段）
+
            td_audit_finish_driver_num,
-           --当天审核通过司机数
-           td_audit_fail_driver_num,
-           --当天审核失败司机数
-            
+              --当天注册司机数,当天审核通过司机数
+
            country_code,
            --国家码字段
-    
+
            '{pt}' AS dt
     FROM
       (SELECT dri.product_id,
               dri.city_id,
-              count(DISTINCT (CASE WHEN dri.driver_id<>0 THEN dri.driver_id ELSE NULL END)) AS reg_driver_num,
-              --注册司机数
+              count(dri.driver_id) AS audit_finish_driver_num,
+              --注册司机数，审核通过司机数，但是注册司机数理论用该表统计不太准确
     
-              count(DISTINCT (CASE WHEN dri.driver_id<>0
-                              AND dri.status=0 THEN dri.driver_id ELSE NULL END)) AS wait_audit_driver_num,
-              --待审核司机数
-    
-              count(DISTINCT (CASE WHEN dri.driver_id<>0
-                              AND dri.status=1 THEN dri.driver_id ELSE NULL END)) AS audit_in_driver_num,
-              --审核中司机数
-    
-              count(DISTINCT (CASE WHEN dri.driver_id<>0
-                              AND dri.status=2 THEN dri.driver_id ELSE NULL END)) AS audit_finish_driver_num,
-              --审核通过司机数
-    
-              count(DISTINCT (CASE WHEN dri.driver_id<>0
-                              AND dri.status=9 THEN dri.driver_id ELSE NULL END)) AS audit_fail_driver_num,
-              --审核失败司机数
-    
-              count(DISTINCT (CASE WHEN dri.driver_id=ext.driver_id
-                              AND is_bind=1 THEN ext.driver_id ELSE NULL END)) AS bind_finish_driver_num,
+              count(if(is_bind=1,dri.driver_id,null)) AS bind_finish_driver_num,
               --绑定成功司机数
     
-              count(DISTINCT (CASE WHEN dri.driver_id=ext.driver_id
-                              AND is_bind=0 THEN ext.driver_id ELSE NULL END)) AS n_bind_driver_num,
+              count(if(is_bind=0,dri.driver_id,null)) AS n_bind_driver_num,
               --未绑定司机数
-    
-              count(DISTINCT (CASE WHEN dri.driver_id=dtr.driver_id
-                              AND dri.status=2 THEN dtr.driver_id ELSE NULL END)) AS online_driver_num,
+
+              count(if(dri.driver_id=dtr.driver_id,dtr.driver_id,NULL)) AS online_driver_num,
               --当天在线司机数
-              
+
               count(DISTINCT (CASE WHEN ord.driver_id=r1.driver_id THEN ord.driver_id ELSE NULL END)) AS driver_accept_take_num,
               --骑手应答的总次数 （accept_click阶段）
-    
+
               count(DISTINCT (CASE WHEN ord.driver_id=p1.driver_id THEN ord.driver_id ELSE NULL END)) AS driver_take_num,
               --骑手成功应答的总次数 （push阶段）
-    
+
               count(DISTINCT (CASE WHEN is_td_request=1 THEN ord.driver_id ELSE NULL END)) AS request_driver_num,
               --当天接单司机数
-    
+
               count(DISTINCT (CASE WHEN is_td_finish=1 THEN ord.driver_id ELSE NULL END)) AS finish_order_driver_num,
               --当天完单司机数
-              
+
               count(DISTINCT (CASE WHEN ord.driver_id = r2.driver_id THEN ord.driver_id ELSE NULL END)) AS push_accpet_show_driver_num,
               --被推送骑手数 （accept_show阶段）
 
-              count(DISTINCT (CASE WHEN veri_audit_date=dri.dt and dri.driver_id<>0 THEN dri.driver_id ELSE NULL END)) AS td_reg_driver_num,
-              --当天注册司机数
-    
-              count(DISTINCT (CASE WHEN veri_audit_date=dri.dt and dri.driver_id<>0
-                              AND dri.status=0 THEN dri.driver_id ELSE NULL END)) AS td_wait_audit_driver_num,
-              --当天待审核司机数
-    
-              count(DISTINCT (CASE WHEN veri_audit_date=dri.dt and dri.driver_id<>0
-                              AND dri.status=1 THEN dri.driver_id ELSE NULL END)) AS td_audit_in_driver_num,
-              --当天审核中司机数
-    
-              count(DISTINCT (CASE WHEN veri_audit_date=dri.dt and dri.driver_id<>0
-                              AND dri.status=2 THEN dri.driver_id ELSE NULL END)) AS td_audit_finish_driver_num,
-              --当天审核通过司机数
-    
-              count(DISTINCT (CASE WHEN veri_audit_date=dri.dt and dri.driver_id<>0
-                              AND dri.status=9 THEN dri.driver_id ELSE NULL END)) AS td_audit_fail_driver_num,
-              --当天审核失败司机数
-    
+              count(if(substr(register_time,1,10)=dri.dt and dri.driver_id<>0,dri.driver_id,NULL)) AS td_audit_finish_driver_num,
+              --当天注册司机数,当天审核通过司机数
+
               nvl(dri.country_code,-999) AS country_code --(去除with cube为空的BUG) --国家码字段
-    
+
        FROM
          (
             SELECT 
             *
-            FROM oride_dw.dim_oride_driver_audit_base
+            FROM oride_dw.dim_oride_driver_base  --已经去除了测试数据
             WHERE dt='{pt}'
-            AND city_id<>'999001' --去除测试数据
-             and driver_id<>1) dri
+         ) dri
        LEFT OUTER JOIN
          (
             SELECT 
@@ -283,14 +227,6 @@ dm_oride_driver_base_cube_d_task = HiveOperator(
              and driver_id<>1
          ) ord ON dri.driver_id = ord.driver_id
             AND dri.dt = ord.dt
-       LEFT OUTER JOIN
-         (
-            SELECT 
-            *
-            FROM oride_dw.dwm_oride_driver_audit_third_extend_di
-            WHERE dt='{pt}'
-          ) ext ON dri.driver_id = ext.driver_id
-       AND dri.dt=ext.dt
        LEFT OUTER JOIN
          (
             SELECT 
@@ -326,13 +262,13 @@ dm_oride_driver_base_cube_d_task = HiveOperator(
            WHERE dt='{pt}'
            group by driver_id 
        ) r2 on r2.driver_id = dri.driver_id
-       
+
        GROUP BY dri.product_id,
                 dri.city_id,
                 dri.country_code 
                 WITH CUBE) x
     WHERE x.country_code IN ('nal')
- 
+
 '''.format(
         pt='{{ds}}',
         now_day='{{macros.ds_add(ds, +1)}}',
@@ -347,7 +283,7 @@ touchz_data_success = BashOperator(
 
     bash_command="""
     line_num=`$HADOOP_HOME/bin/hadoop fs -du -s {hdfs_data_dir} | tail -1 | awk '{{print $1}}'`
-    
+
     if [ $line_num -eq 0 ]
     then
         echo "FATAL {hdfs_data_dir} is empty"

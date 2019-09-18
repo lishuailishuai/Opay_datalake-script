@@ -164,13 +164,12 @@ t1.pax_num,  --乘客数
 FROM
   (SELECT *
    FROM oride_dw_ods.ods_sqoop_base_data_order_df
-   WHERE dt = '{pt}'
-     AND substring(updated_at,1,13)<='{now_day} 00') t1
+   WHERE dt = '{pt}') t1
 LEFT OUTER JOIN
   (SELECT *
    FROM oride_dw_ods.ods_sqoop_base_data_order_payment_df
    WHERE dt = '{pt}'
-     AND substring(updated_at,1,13)<='{now_day} 00') t2 ON t1.id=t2.id;
+     ) t2 ON t1.id=t2.id;
 
 '''.format(
         pt='{{ds}}',

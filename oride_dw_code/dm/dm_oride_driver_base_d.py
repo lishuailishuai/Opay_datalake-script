@@ -175,7 +175,7 @@ dm_oride_driver_base_d_task = HiveOperator(
             LEFT OUTER JOIN
             (
                 SELECT *
-                FROM oride_bi.oride_driver_timerange
+                FROM oride_dw_ods.ods_log_oride_driver_timerange
                 WHERE dt='{pt}'
             ) dtr ON dri.driver_id=dtr.driver_id
             AND dri.dt=dtr.dt

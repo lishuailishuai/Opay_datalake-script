@@ -155,7 +155,7 @@ dm_oride_order_base_d_task = HiveOperator(
           ord.city_id,
            --所属城市
     
-           ord.product_id,
+           if(ord.city_id=1001,driver.product_id,ord.product_id) as product_id,
            --订单车辆类型(0: 专快混合 1:driect[专车] 2: street[快车] 99:招手停)
     
            count(ord.order_id) AS ride_order_cnt,
@@ -304,10 +304,13 @@ dm_oride_order_base_d_task = HiveOperator(
         select * from oride_dw.dwd_oride_order_mark_df 
         where dt='{pt}' and substr(create_time,1,10)='{pt}'
     )  valid_ord on ord.order_id=valid_ord.order_id
-    
+    left outer join 
+    (select * from oride_dw.dim_oride_driver_base 
+    where dt='{pt}') driver
+    on ord.driver_id=driver.driver_id
     
     GROUP BY ord.city_id,
-             ord.product_id,
+             if(ord.city_id=1001,driver.product_id,ord.product_id),
              ord.country_code,
              ord.dt;
     ;
