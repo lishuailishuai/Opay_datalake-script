@@ -117,8 +117,8 @@ def get_driver_online_time(ds, **op_kwargs):
         # mcursor = conn.cursor()
         # mcursor.executemany(insert_timerange, res)
         # conn.commit()
-        mcursor.close()
-        conn.close()
+        #mcursor.close()
+        #conn.close()
 
 import_ods_log_oride_driver_timerange = PythonOperator(
     task_id='import_ods_log_oride_driver_timerange',
@@ -130,7 +130,7 @@ import_ods_log_oride_driver_timerange = PythonOperator(
 create_create_ods_log_oride_driver_timerange = HiveOperator(
     task_id='create_ods_log_oride_driver_timerange',
     hql="""
-        CREATE TABLE IF NOT EXISTS ods_log_oride_driver_timerange (
+        CREATE EXTERNAL TABLE IF NOT EXISTS ods_log_oride_driver_timerange (
           driver_id int,
           driver_onlinerange int,
           driver_freerange int
@@ -139,6 +139,9 @@ create_create_ods_log_oride_driver_timerange = HiveOperator(
             dt STRING
         )
         STORED AS PARQUET
+        LOCATION
+        'ufile://opay-datalake/oride/oride_dw_ods/ods_log_oride_driver_timerange'
+
     """,
     schema='oride_dw_ods',
     dag=dag)
