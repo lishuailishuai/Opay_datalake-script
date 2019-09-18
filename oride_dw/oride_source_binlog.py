@@ -8,6 +8,7 @@ from airflow.hooks.mysql_hook import MySqlHook
 from plugins.comwx import ComwxApi
 from airflow.hooks.S3_hook import S3Hook
 from airflow.exceptions import AirflowException
+from airflow.operators.bash_operator import BashOperator
 import time
 import logging
 
@@ -134,6 +135,7 @@ def check_s3_prefix(ds, execution_date, **kwargs):
     logging.info("Success criteria met. Exiting.")
 
 
+HDFS_PATH = "/user/hive/warehouse/oride_dw_ods.db/ods_binlog_{table}_hi/dt={dt}/hour={hour}"
 if binlog_table_list!='':
     for table in binlog_table_list.split():
         binlog_add_partitions = HiveOperator(
@@ -158,6 +160,24 @@ if binlog_table_list!='':
             params={'table':table},
             dag=dag,
         )
+        touchz_data_success = BashOperator(
+            task_id='touchz_data_success_{}'.format(table),
+            bash_command="""
+                line_num=`$HADOOP_HOME/bin/hadoop fs -du -s {hdfs_data_dir} | tail -1 | awk '{{print $1}}'`
+
+                if [ $line_num -eq 0 ]
+                then
+                    echo "FATAL {hdfs_data_dir} is empty"
+                    exit 1
+                else
+                    echo "DATA EXPORT Successed ......"
+                    $HADOOP_HOME/bin/hadoop fs -touchz {hdfs_data_dir}/_SUCCESS
+                fi
+            """.format(
+                hdfs_data_dir=HDFS_PATH.format(table=table, dt='{{ds}}', hour='{{execution_date.strftime("%H")}}')
+            ),
+            dag=dag)
 
         check_file >> binlog_add_partitions
         binlog_add_partitions >> insert_ods
+        insert_ods >> touchz_data_success

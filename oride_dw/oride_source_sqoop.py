@@ -306,4 +306,22 @@ for db_name, table_name, conn_id, prefix_name,priority_weight_nm in table_list:
         dag=dag
     )
 
+    touchz_data_success = BashOperator(
+        task_id='touchz_data_success_{}'.format(hive_table_name),
+        bash_command="""
+                line_num=`$HADOOP_HOME/bin/hadoop fs -du -s {hdfs_data_dir} | tail -1 | awk '{{print $1}}'`
+
+                if [ $line_num -eq 0 ]
+                then
+                    echo "FATAL {hdfs_data_dir} is empty"
+                    exit 1
+                else
+                    echo "DATA EXPORT Successed ......"
+                    $HADOOP_HOME/bin/hadoop fs -touchz {hdfs_data_dir}/_SUCCESS
+                fi
+            """.format(
+            hdfs_data_dir=UFILE_PATH % (db_name, table_name)+"/dt={{ds}}"
+        ),
+        dag=dag)
+
     import_table >> check_table >> add_partitions >> validate_all_data
