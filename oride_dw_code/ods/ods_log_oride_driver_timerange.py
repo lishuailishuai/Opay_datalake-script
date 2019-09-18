@@ -136,7 +136,7 @@ touchz_data_success = BashOperator(
     """.format(
         pt='{{ds}}',
         now_day='{{macros.ds_add(ds, +1)}}',
-        hdfs_data_dir=hdfs_path + '/country_code=nal/dt={{ds}}'
+        hdfs_data_dir=hdfs_path + '/dt={{ds}}'
     ),
     dag=dag)
 
