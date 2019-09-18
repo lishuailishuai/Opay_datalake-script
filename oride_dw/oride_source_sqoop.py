@@ -324,4 +324,4 @@ for db_name, table_name, conn_id, prefix_name,priority_weight_nm in table_list:
         ),
         dag=dag)
 
-    import_table >> check_table >> add_partitions >> validate_all_data
+    import_table >> check_table >> add_partitions >> validate_all_data >> touchz_data_success
