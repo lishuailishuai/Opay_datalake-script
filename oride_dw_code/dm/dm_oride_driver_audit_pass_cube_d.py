@@ -32,7 +32,7 @@ args = {
     'email_on_retry': False,
 }
 
-dag = airflow.DAG('dm_oride_driver_base_cube_d',
+dag = airflow.DAG('dm_oride_driver_audit_pass_cube_d',
                   schedule_interval="30 01 * * *",
                   default_args=args)
 
@@ -46,10 +46,10 @@ sleep_time = BashOperator(
 
 
 # 依赖前一天分区
-dependence_dim_oride_driver_audit_base_prev_day_task = UFileSensor(
-    task_id='dim_oride_driver_audit_base_prev_day_task',
+dependence_dim_oride_driver_base_prev_day_task = UFileSensor(
+    task_id='dim_oride_driver_base_prev_day_task',
     filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw/dim_oride_driver_audit_base/country_code=nal",
+        hdfs_path_str="oride/oride_dw/dim_oride_driver_base/country_code=nal",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -61,18 +61,6 @@ dependence_dwd_oride_order_base_include_test_di_prev_day_task = UFileSensor(
     task_id='dwd_oride_order_base_include_test_di_prev_day_task',
     filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
         hdfs_path_str="oride/oride_dw/dwd_oride_order_base_include_test_di/country_code=nal",
-        pt='{{ds}}'
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
-
-# 依赖前一天分区
-dependence_dwm_oride_driver_audit_third_extend_di_prev_day_task = UFileSensor(
-    task_id='dwm_oride_driver_audit_third_extend_di_prev_day_task',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw/dwm_oride_driver_audit_third_extend_di/country_code=nal",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -92,11 +80,13 @@ dependence_dwd_oride_order_push_driver_detail_di_prev_day_task = UFileSensor(
 )
 
 # 依赖前一天分区
-dependence_oride_driver_timerange_prev_day_task = HivePartitionSensor(
-    task_id="oride_driver_timerange_prev_day_task",
-    table="oride_driver_timerange",
-    partition="dt='{{ds}}'",
-    schema="oride_bi",
+dependence_ods_log_oride_driver_timerange_prev_day_task = UFileSensor(
+    task_id='ods_log_oride_driver_timerange_prev_day_task',
+    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="oride/oride_dw_ods/ods_log_oride_driver_timerange",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
@@ -125,14 +115,14 @@ dependence_dwd_oride_driver_accept_order_show_detail_di_prev_day_task = UFileSen
 
 ##----------------------------------------- 变量 ---------------------------------------##
 
-table_name = "dm_oride_driver_base_cube_d"
+table_name = "dm_oride_driver_audit_pass_cube_d"
 hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
 
 ##----------------------------------------- 脚本 ---------------------------------------##
 
-dm_oride_driver_base_cube_d_task = HiveOperator(
+dm_oride_driver_audit_pass_cube_d_task = HiveOperator(
 
-    task_id='dm_oride_driver_base_cube_d_task',
+    task_id='dm_oride_driver_audit_pass_cube_d_task',
     hql='''
     set hive.exec.parallel=true;
     set hive.exec.dynamic.partition.mode=nonstrict;
@@ -144,28 +134,28 @@ dm_oride_driver_base_cube_d_task = HiveOperator(
            audit_finish_driver_num,
               --注册司机数，审核通过司机数，但是注册司机数理论用该表统计不太准确
 
-           bind_finish_driver_num,
+           bind_driver_num,
               --绑定成功司机数
     
            n_bind_driver_num,
               --未绑定司机数
 
-           online_driver_num,
+           td_online_driver_num,
               --当天在线司机数
 
-           driver_accept_take_num,
+           td_driver_accept_take_num,
               --骑手应答的总次数 （accept_click阶段）
 
-           driver_take_num,
+           td_driver_take_num,
               --骑手成功应答的总次数 （push阶段）
 
-           request_driver_num,
+           td_request_driver_num,
               --当天接单司机数
 
-           finish_order_driver_num,
+           td_finish_order_driver_num,
               --当天完单司机数
 
-           push_accpet_show_driver_num,
+           td_push_accpet_show_driver_num,
               --被推送骑手数 （accept_show阶段）
 
            td_audit_finish_driver_num,
@@ -178,31 +168,31 @@ dm_oride_driver_base_cube_d_task = HiveOperator(
     FROM
       (SELECT dri.product_id,
               dri.city_id,
-              count(dri.driver_id) AS audit_finish_driver_num,
+              count(distinct dri.driver_id) AS audit_finish_driver_num,
               --注册司机数，审核通过司机数，但是注册司机数理论用该表统计不太准确
     
-              count(if(is_bind=1,dri.driver_id,null)) AS bind_finish_driver_num,
+              count(distinct if(is_bind=1,dri.driver_id,null)) AS bind_driver_num,
               --绑定成功司机数
     
-              count(if(is_bind=0,dri.driver_id,null)) AS n_bind_driver_num,
+              count(distinct if(is_bind=0,dri.driver_id,null)) AS n_bind_driver_num,
               --未绑定司机数
 
-              count(if(dri.driver_id=dtr.driver_id,dtr.driver_id,NULL)) AS online_driver_num,
+              count(distinct if(dri.driver_id=dtr.driver_id,dtr.driver_id,NULL)) AS td_online_driver_num,
               --当天在线司机数
 
-              count(DISTINCT (CASE WHEN ord.driver_id=r1.driver_id THEN ord.driver_id ELSE NULL END)) AS driver_accept_take_num,
+              count(DISTINCT (CASE WHEN ord.driver_id=r1.driver_id THEN ord.driver_id ELSE NULL END)) AS td_driver_accept_take_num,
               --骑手应答的总次数 （accept_click阶段）
 
-              count(DISTINCT (CASE WHEN ord.driver_id=p1.driver_id THEN ord.driver_id ELSE NULL END)) AS driver_take_num,
+              count(DISTINCT (CASE WHEN ord.driver_id=p1.driver_id THEN ord.driver_id ELSE NULL END)) AS td_driver_take_num,
               --骑手成功应答的总次数 （push阶段）
 
-              count(DISTINCT (CASE WHEN is_td_request=1 THEN ord.driver_id ELSE NULL END)) AS request_driver_num,
+              count(DISTINCT (CASE WHEN is_td_request=1 THEN ord.driver_id ELSE NULL END)) AS td_request_driver_num,
               --当天接单司机数
 
-              count(DISTINCT (CASE WHEN is_td_finish=1 THEN ord.driver_id ELSE NULL END)) AS finish_order_driver_num,
+              count(DISTINCT (CASE WHEN is_td_finish=1 THEN ord.driver_id ELSE NULL END)) AS td_finish_order_driver_num,
               --当天完单司机数
 
-              count(DISTINCT (CASE WHEN ord.driver_id = r2.driver_id THEN ord.driver_id ELSE NULL END)) AS push_accpet_show_driver_num,
+              count(DISTINCT (CASE WHEN ord.driver_id = r2.driver_id THEN ord.driver_id ELSE NULL END)) AS td_push_accpet_show_driver_num,
               --被推送骑手数 （accept_show阶段）
 
               count(if(substr(register_time,1,10)=dri.dt and dri.driver_id<>0,dri.driver_id,NULL)) AS td_audit_finish_driver_num,
@@ -299,13 +289,12 @@ touchz_data_success = BashOperator(
     ),
     dag=dag)
 
-dependence_dim_oride_driver_audit_base_prev_day_task >> \
+dependence_dim_oride_driver_base_prev_day_task >> \
 dependence_dwd_oride_order_base_include_test_di_prev_day_task >> \
-dependence_dwm_oride_driver_audit_third_extend_di_prev_day_task >> \
 dependence_dwd_oride_order_push_driver_detail_di_prev_day_task >> \
-dependence_oride_driver_timerange_prev_day_task >> \
+dependence_ods_log_oride_driver_timerange_prev_day_task >> \
 dependence_dwd_oride_driver_accept_order_click_detail_di_prev_day_task >> \
 dependence_dwd_oride_driver_accept_order_show_detail_di_prev_day_task >> \
 sleep_time >> \
-dm_oride_driver_base_cube_d_task >> \
+dm_oride_driver_audit_pass_cube_d_task >> \
 touchz_data_success
