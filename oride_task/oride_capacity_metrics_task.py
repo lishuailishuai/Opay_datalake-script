@@ -32,7 +32,7 @@ args = {
 
 dag = airflow.DAG(
     'oride_capacity_metrics_task',
-    schedule_interval="30 04 * * *",
+    schedule_interval="30 01 * * *",
     default_args=args
 )
 
