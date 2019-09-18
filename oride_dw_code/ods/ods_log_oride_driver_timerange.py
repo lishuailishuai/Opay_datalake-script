@@ -79,7 +79,7 @@ def get_driver_online_time(ds, **op_kwargs):
             INSERT OVERWRITE TABLE oride_dw_ods.{tab_name} PARTITION (dt='{dt}')
             VALUES {value}
         """.format(dt=ds, value=','.join(rows),tab_name=table_name)
-        #logging.info('import_driver_online_time run sql:%s' % query)
+        logging.info('import_driver_online_time run sql:%s' % query)
         hive_hook = HiveCliHook()
         hive_hook.run_cli(query)
         # insert bi mysql
