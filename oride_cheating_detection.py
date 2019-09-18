@@ -168,22 +168,63 @@ promoter_hour_to_msyql = HiveToMySqlTransfer(
 
 promoter_day_to_msyql = HiveToMySqlTransfer(
     task_id='promoter_day_to_msyql',
+    # sql="""
+    #        SELECT
+    #            null as id,
+    #            get_json_object(event_value, '$.bind_refferal_code') as code,
+    #            from_unixtime(unix_timestamp(dt,'yyyy-MM-dd'), 'yyyyMMdd'),
+    #            COUNT(DISTINCT get_json_object(event_value, '$.bind_number')) as users_count,
+    #            COUNT(DISTINCT if (length(get_json_object(event_value, '$.bind_device_id'))>0, get_json_object(event_value, '$.bind_device_id'), NULL)) as device_count,
+    #            unix_timestamp()
+    #        FROM
+    #            oride_bi.cheating_detection_detail
+    #        WHERE
+    #            dt='{{ ds }}'
+    #        GROUP BY
+    #            get_json_object(event_value, '$.bind_refferal_code'),
+    #            dt
+    #    """,
     sql="""
-            SELECT
-                null as id,
+        SELECT 
+            NULL as id,
+            NVL(a.code, b.code),
+            NVL(a.day, b.day),
+            NVL(a.users_count, 0),
+            NVL(a.device_count, 0),
+            unix_timestamp(), 
+            NVL(b.orders_f, 0) 
+        FROM (SELECT
                 get_json_object(event_value, '$.bind_refferal_code') as code,
-                from_unixtime(unix_timestamp(dt,'yyyy-MM-dd'), 'yyyyMMdd'),
+                from_unixtime(unix_timestamp(dt,'yyyy-MM-dd'), 'yyyyMMdd') as day,
                 COUNT(DISTINCT get_json_object(event_value, '$.bind_number')) as users_count,
-                COUNT(DISTINCT if (length(get_json_object(event_value, '$.bind_device_id'))>0, get_json_object(event_value, '$.bind_device_id'), NULL)) as device_count,
-                unix_timestamp()
-            FROM
-                oride_bi.cheating_detection_detail
-            WHERE
-                dt='{{ ds }}'
-            GROUP BY
-                get_json_object(event_value, '$.bind_refferal_code'),
-                dt
-        """,
+                COUNT(DISTINCT if (length(get_json_object(event_value, '$.bind_device_id'))>0, get_json_object(event_value, '$.bind_device_id'), NULL)) as device_count
+            FROM oride_bi.cheating_detection_detail
+            WHERE dt = '{{ ds }}'
+            GROUP BY get_json_object(event_value, '$.bind_refferal_code'), dt
+            ) AS a 
+        FULL OUTER JOIN (SELECT
+                c.code,
+                from_unixtime(unix_timestamp(o.dt,'yyyy-MM-dd'), 'yyyyMMdd') AS day,
+                COUNT(DISTINCT o.orders_f) as orders_f 
+            FROM (SELECT 
+                    user_id,
+                    get_json_object(event_value, '$.bind_refferal_code') AS code 
+                FROM oride_bi.cheating_detection_detail 
+                ) AS c 
+            JOIN (SELECT 
+                    dt,
+                    user_id,
+                    id as orders_f 
+                FROM oride_dw_ods.ods_binlog_data_order_hi 
+                WHERE dt = '{{ ds }}' AND 
+                    status IN (4,5) AND 
+                    from_unixtime(arrive_time, 'yyyy-MM-dd') = '{{ ds }}' 
+                ) AS o 
+            ON c.user_id = o.user_id 
+            GROUP BY c.code, o.dt 
+            ) AS b 
+        ON a.code = b.code AND a.day = b.day 
+    """,
     mysql_conn_id='opay_spread_mysql',
     mysql_table='promoter_data_day',
     dag=dag)
