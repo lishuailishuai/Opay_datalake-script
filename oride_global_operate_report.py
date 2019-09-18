@@ -119,9 +119,9 @@ def get_all_data_row(ds):
                 new_user_finished_cnt, --当日注册乘客完单量
                 concat(cast(nvl(round(online_paid_users*100/paid_users,1),0) as string),'%') as online_paid_users_rate,  --当日线上支付乘客占比
                 td_audit_finish_driver_num, --当日审核通过司机数
-                online_driver_num, --当日在线司机数
-                request_driver_num, --当日接单司机数
-                finish_order_driver_num, --当日完单司机数
+                td_online_driver_num, --当日在线司机数
+                td_request_driver_num, --当日接单司机数
+                td_finish_order_driver_num, --当日完单司机数
                 price,  --订单应付总额,状态4，5
                 new_user_gmv, -- 当日新注册乘客完单gmv，状态4，5
                 concat(cast(nvl(round((recharge_amount+reward_amount)*100/price,1),0) as string),'%') as b_subsidy_rate,  --b端补贴率
@@ -277,13 +277,13 @@ def get_product_rows(ds, all_completed_num,product_id):
                  if(product_id=3,nvl(round(t1.pax_num/t1.finish_order_cnt,0),0),0) as passenger_indictor_4,
                  concat(cast(nvl(round(t1.online_paid_users/t1.paid_users,1),0) AS string),'%') AS online_paid_user_rate, --当日线上支付乘客占比
                  nvl(t1.td_audit_finish_driver_num,0) as td_audit_finish_driver_num, --当日审核通过司机数
-                 nvl(t1.online_driver_num,0) as online_driver_num, --当日在线司机数
-                 nvl(t1.request_driver_num,0) as request_driver_num, --当日接单司机数
-                 nvl(t1.finish_order_driver_num,0) as finish_order_driver_num, --当日完单司机数
-                 nvl(round(t1.finish_order_cnt/t1.finish_order_driver_num,0),0) AS avg_finish_order_cnt, --人均完单数
-                 nvl(round(t1.finish_driver_online_dur/t1.finish_order_driver_num/3600,1),0) AS avg_driver_online_dur, --人均在线时长
+                 nvl(t1.td_online_driver_num,0) as td_online_driver_num, --当日在线司机数
+                 nvl(t1.td_request_driver_num,0) as td_request_driver_num, --当日接单司机数
+                 nvl(t1.td_finish_order_driver_num,0) as td_finish_order_driver_num, --当日完单司机数
+                 nvl(round(t1.finish_order_cnt/t1.td_finish_order_driver_num,0),0) AS avg_finish_order_cnt, --人均完单数
+                 nvl(round(t1.finish_driver_online_dur/t1.td_finish_order_driver_num/3600,1),0) AS avg_driver_online_dur, --人均在线时长
                  concat(cast(nvl(round(t1.driver_billing_dur/t1.finish_driver_online_dur,1),0) AS string),'%') AS billing_dur_rate, --计费时长占比
-                 nvl(round(t1.driver_pushed_order_cnt/t1.push_accpet_show_driver_num,0),0) AS avg_pushed_order_cnt, --人均推送订单数
+                 nvl(round(t1.driver_pushed_order_cnt/t1.td_push_accpet_show_driver_num,0),0) AS avg_pushed_order_cnt, --人均推送订单数
                  nvl(round(t1.finish_order_cnt/t1.finish_driver_online_dur,1),0) AS TPH,
                  nvl(round((t1.amount_pay_online+t1.amount_pay_offline+t1.recharge_amount+t1.reward_amount)/t1.finish_driver_online_dur,1),0) AS IPH,
                  nvl(round(t1.finish_take_order_dur/t1.finish_order_cnt,0),0) AS avg_take_order_dur,--平均应答时长

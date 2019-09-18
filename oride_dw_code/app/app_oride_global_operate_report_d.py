@@ -70,10 +70,10 @@ dependence_dm_oride_passenger_base_cube_d_prev_day_task = UFileSensor(
 )
 
 # 依赖前一天分区
-dependence_dm_oride_driver_base_cube_d_prev_day_task = UFileSensor(
-    task_id='dm_oride_driver_base_cube_d_prev_day_task',
+dependence_dm_oride_driver_audit_pass_cube_d_prev_day_task = UFileSensor(
+    task_id='dm_oride_driver_audit_pass_cube_d_prev_day_task',
     filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw/dm_oride_driver_base_cube_d/country_code=nal",
+        hdfs_path_str="oride/oride_dw/dm_oride_driver_audit_pass_cube_d/country_code=nal",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -168,10 +168,10 @@ passenger_data_null="""
 
 driver_cube_data_null="""
        null as td_audit_finish_driver_num,  --当日审核通过司机数
-       null as online_driver_num,  --当日在线司机数
-       null as request_driver_num, --当日接单司机数
-       null as finish_order_driver_num,  --当日完单司机数
-       null as push_accpet_show_driver_num --被推送骑手数
+       null as td_online_driver_num,  --当日在线司机数
+       null as td_request_driver_num, --当日接单司机数
+       null as td_finish_order_driver_num,  --当日完单司机数
+       null as td_push_accpet_show_driver_num --被推送骑手数
 """
 
 driver_data_null="""
@@ -297,15 +297,15 @@ select country_code,
        {order_data_null},
        {passenger_data_null},
        td_audit_finish_driver_num,  --当日审核通过司机数
-       online_driver_num,  --当日在线司机数
-       request_driver_num, --当日接单司机数
-       finish_order_driver_num,  --当日完单司机数
-       push_accpet_show_driver_num, --被推送骑手数
+       td_online_driver_num,  --当日在线司机数
+       td_request_driver_num, --当日接单司机数
+       td_finish_order_driver_num,  --当日完单司机数
+       td_push_accpet_show_driver_num, --被推送骑手数
        {driver_data_null},
        null as map_request_num,
        {finance_data_null},
        {passenger_recharge_data_null} 
-from oride_dw.dm_oride_driver_base_cube_d   --已经去除了with cube产生的country_code为空的数据
+from oride_dw.dm_oride_driver_audit_pass_cube_d   --已经去除了with cube产生的country_code为空的数据
 where dt='{pt}'),
 
 --司机相关
@@ -423,10 +423,10 @@ SELECT nvl(city_id,-10000) as city_id,
        sum(online_paid_users) as online_paid_users,  --当日线上支付乘客数
        sum(new_user_gmv) as new_user_gmv,  --当日新注册乘客完单gmv 
        sum(td_audit_finish_driver_num) as td_audit_finish_driver_num,  --当日审核通过司机数
-       sum(online_driver_num) as online_driver_num,  --当日在线司机数
-       sum(request_driver_num) as request_driver_num, --当日接单司机数
-       sum(finish_order_driver_num) as finish_order_driver_num,  --当日完单司机数
-       sum(push_accpet_show_driver_num) as push_accpet_show_driver_num, --被推送骑手数 
+       sum(td_nline_driver_num) as td_online_driver_num,  --当日在线司机数
+       sum(td_request_driver_num) as td_request_driver_num, --当日接单司机数
+       sum(td_finish_order_driver_num) as td_finish_order_driver_num,  --当日完单司机数
+       sum(td_push_accpet_show_driver_num) as td_push_accpet_show_driver_num, --被推送骑手数 
        sum(finish_driver_online_dur) as finish_driver_online_dur,  --当日完单司机在线时长
        sum(driver_billing_dur) as driver_billing_dur, --当日司机计费时长
        sum(driver_pushed_order_cnt) as driver_pushed_order_cnt,  --司机被推送订单数
@@ -493,7 +493,7 @@ touchz_data_success = BashOperator(
 
 dependence_dm_oride_order_base_d_prev_day_task >> \
 dependence_dm_oride_passenger_base_cube_d_prev_day_task >> \
-dependence_dm_oride_driver_base_cube_d_prev_day_task >> \
+dependence_dm_oride_driver_audit_pass_cube_d_prev_day_task >> \
 dependence_dm_oride_driver_base_d_prev_day_task >>\
 dependence_server_magic_now_day_task >>\
 dependence_dwd_oride_order_finance_df_prev_day_task >>\
