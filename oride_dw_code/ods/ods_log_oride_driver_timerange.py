@@ -141,4 +141,4 @@ touchz_data_success = BashOperator(
     dag=dag)
 
 
-create_ods_log_oride_driver_timerange >> import_ods_log_oride_driver_timerange
+create_ods_log_oride_driver_timerange >> import_ods_log_oride_driver_timerange>>touchz_data_success
