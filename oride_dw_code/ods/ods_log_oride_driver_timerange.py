@@ -127,7 +127,7 @@ import_ods_log_oride_driver_timerange = PythonOperator(
     dag=dag
 )
 
-create_create_ods_log_oride_driver_timerange = HiveOperator(
+create_ods_log_oride_driver_timerange = HiveOperator(
     task_id='create_ods_log_oride_driver_timerange',
     hql="""
         CREATE EXTERNAL TABLE IF NOT EXISTS ods_log_oride_driver_timerange (
@@ -146,4 +146,4 @@ create_create_ods_log_oride_driver_timerange = HiveOperator(
     schema='oride_dw_ods',
     dag=dag)
 
-create_create_ods_log_oride_driver_timerange >> import_ods_log_oride_driver_timerange
+create_ods_log_oride_driver_timerange >> import_ods_log_oride_driver_timerange
