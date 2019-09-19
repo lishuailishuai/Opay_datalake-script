@@ -344,7 +344,7 @@ def send_oride_association_email(ds, **kwargs):
             SELECT
                 *
             FROM
-                oride_dw_ods.ods_sqoop_base_data_city_conf
+                oride_dw_ods.ods_sqoop_base_data_city_conf_df
             WHERE
               dt='{dt}'
         )

@@ -65,6 +65,17 @@ ods_sqoop_base_data_order_payment_df_prev_day_task = HivePartitionSensor(
     dag=dag
 )
 
+
+# 依赖前一天分区
+oride_client_event_detail_prev_day_task = HivePartitionSensor(
+    task_id="oride_client_event_detail_prev_day_task",
+    table="oride_client_event_detail",
+    partition="dt='{{ds}}'",
+    schema="oride_bi",
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
 ##----------------------------------------- 变量 ---------------------------------------##
 
 table_name = "dwd_oride_order_base_include_test_di"
@@ -329,11 +340,13 @@ SELECT base.order_id,
        --当天完成做单时长（分钟）
 
        trip_id, --'行程 ID'
-       wait_carpool,--'是否在等在拼车',
+       wait_carpool,--'是否在等在拼车'
        pay_status, --支付类型（0: 支付中, 1: 成功, 2: 失败）
        pax_num, -- 乘客数量 
        tip,  --小费
-
+       nvl(ep.estimated_price,-1) as estimated_price,
+        --预估价格区间（最小值,最大值,-1 未知）
+        
        country_code,
 
        '{pt}' AS dt
@@ -489,6 +502,18 @@ LEFT OUTER JOIN
 
 FROM oride_dw_ods.ods_sqoop_base_data_order_payment_df
 WHERE dt = '{pt}') pay ON base.order_id=pay.order_id
+LEFT OUTER JOIN
+(SELECT get_json_object(event_value, '$.order_id') AS order_id,
+       get_json_object(event_value, '$.estimated_price') AS estimated_price --预估价格区间（最小值,最大值）
+FROM oride_bi.oride_client_event_detail
+WHERE event_name='successful_order_show'
+  AND dt='{pt}'
+  AND length(get_json_object(event_value, '$.estimated_price'))>1
+GROUP BY get_json_object(event_value, '$.order_id'),
+         get_json_object(event_value, '$.estimated_price')) ep
+ON base.order_id=ep.order_id
+
+
 
 '''.format(
         pt='{{ds}}',
@@ -560,6 +585,7 @@ touchz_data_success = BashOperator(
 
 ods_sqoop_base_data_order_df_prev_day_task >> \
 ods_sqoop_base_data_order_payment_df_prev_day_task >> \
+oride_client_event_detail_prev_day_task >> \
 sleep_time >> \
 dwd_oride_order_base_include_test_di_task >> \
 task_check_key_data >> \

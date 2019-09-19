@@ -100,8 +100,8 @@ app_oride_capacity_base_d_task = HiveOperator(
     insert overwrite TABLE oride_dw.{table} partition(country_code,dt)
     select 
     
-    nvl(ord.city_id,-10000) as city_id,
-    nvl(ord.product_id,-10000) as product_id,
+    nvl(ord.city_id,-10000) as city_id,--(-10000 代表 不区分城市）
+    nvl(ord.product_id,-10000) as product_id, --(-10000 代表 不区分业务线）
     
     nvl(round((succ_broadcast_dis)/(succ_push_all_times_cnt),1),0) as broadcast_dis_avg,
     --平均播单距离
