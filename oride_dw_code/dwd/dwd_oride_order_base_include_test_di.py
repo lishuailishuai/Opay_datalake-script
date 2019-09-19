@@ -344,7 +344,9 @@ SELECT base.order_id,
        pay_status, --支付类型（0: 支付中, 1: 成功, 2: 失败）
        pax_num, -- 乘客数量 
        tip,  --小费
-       nvl(ep.estimated_price,-1) as estimated_price --预估价格区间（最小值,最大值,-1 未知）
+       nvl(ep.estimated_price,-1) as estimated_price,
+        --预估价格区间（最小值,最大值,-1 未知）
+        
        country_code,
 
        '{pt}' AS dt
