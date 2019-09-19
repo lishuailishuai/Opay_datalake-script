@@ -175,8 +175,8 @@ insert_shop_metrics = HiveOperator(
             nvl(count(if(o.pay_status = 1 and o.shop_id is not null,o.order_id,null)),0) pay_order_num,
             nvl(sum(if(o.order_status = 8 and o.shop_id is not null and d.order_id is not null,d.origin_product + d.origin_package + d.origin_delivery,0)),0) trade_price_sum,
             nvl(sum(if(o.order_status = 8 and o.shop_id is not null and d.order_id is not null,d.origin_product + d.origin_package + d.origin_delivery - o.order_youhui - o.first_youhui,0)),0) actual_trade_price_sum,
-            nvl(sum(if(o.order_status = 8 and o.shop_id is not null,o.order_youhui + o.first_youhui,0)),0) cost_price_sum,
-            nvl(sum(if(d.order_id is not null,d.shop_amount + d.first_shop,0)),0) amount_and_first_price_sum,
+            nvl(sum(if(o.order_status = 8 and o.shop_id is not null and d.order_id is not null, d.first_roof + d.roof_mj + d.roof_delivery + d.roof_capped ,0)),0) cost_price_sum,
+            nvl(sum(if(o.order_status = 8 and o.shop_id is not null and d.order_id is not null,d.first_shop + d.shop_mj + d.shop_delivery + d.shop_capped,0)),0) amount_and_first_price_sum,
             nvl(sum(if(o.order_status = 8 and o.shop_id is not null,o.amount,0)),0) amount_price_sum,
             nvl(count(if(o.order_status = 8 and t.order_id is not null and  (t.order_compltet_time - o.pay_time)/60 <= 40,o.order_id,null)),0) in_time_order_num,
             nvl(count(if(o.order_status = 8 and t.order_id is not null and w.order_id is not null 
