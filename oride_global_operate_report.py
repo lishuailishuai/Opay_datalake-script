@@ -254,8 +254,13 @@ def get_product_rows(ds, all_completed_num,product_id):
 
     if product_id == 3:
         row_fmt= row_fmt1
+        product_id_1_limit=''
+    elif product_id == 1:
+        row_fmt = row_fmt2
+        product_id_1_limit = 't1.city_id not in(1002,1005)'
     else:
         row_fmt = row_fmt2
+        product_id_1_limit = ''
 
     sql = '''
             SELECT t1.dt,
@@ -269,8 +274,8 @@ def get_product_rows(ds, all_completed_num,product_id):
                  '-' AS finish_order_cnt_lfw, --完单数（近四周同期均值）
                  concat(cast(nvl(round(t1.finish_order_cnt*100/t1.ride_order_cnt,1),0) AS string),'%') AS finish_order_rate, --完单率
                  '-' AS finish_order_rate_lfw, --完单率（近四周）
-                 concat(cast(nvl(round(if(t1.city_id=-10000,t1.finish_order_cnt,0)/{all_completed_num},1),0) AS string),'%') AS product_finish_order_rate,--业务完单占比
-                 concat(cast(nvl(round(if(t1.city_id<>-10000,t1.finish_order_cnt,0)/if(t1.city_id=-10000,t1.finish_order_cnt,0),1),0) AS string),'%') AS city_finish_order_rate, --城市完单占比
+                 concat(cast(nvl(round(if(t1.city_id=-10000,t1.finish_order_cnt/153485,t1.finish_order_cnt/t1.city_total),1),0) AS string),'%') AS product_finish_order_rate,--业务完单占比
+                 concat(cast(nvl(round(if(t1.city_id=-10000,t1.finish_order_cnt/t1.finish_order_cnt,t1.finish_order_cnt*2/sum(t1.finish_order_cnt) over(partition BY t1.product_id)),1),0) AS string),'%') AS city_finish_order_rate, --城市完单
                  nvl(t1.finished_users,0) as finished_users,--当日完单乘客数
                  nvl(if(product_id=3,t1.new_user_ord_cnt,t1.first_finished_users),0) as passenger_indictor_2, --1,2当日首次完单乘客数;3当日注册乘客下单数
                  nvl(t1.new_user_finished_cnt,0) as new_user_finished_cnt, --当日新注册乘客完单数
@@ -296,20 +301,20 @@ def get_product_rows(ds, all_completed_num,product_id):
                 concat(cast(nvl(round((t1.price-t1.pay_amount)*100/t1.price,1),0) AS string),'%') AS c_subsidy_rate, --c端补贴率【gmv状态4，5；实付金额状态5】
                 nvl(round(t1.pay_price/t1.finish_pay,1),0) AS avg_pay_price, --单均应付
                 nvl(round(t1.pay_amount/t1.finish_pay,1),0) AS avg_pay_amount --单均实付
-                FROM (
-                SELECT *
-                FROM oride_dw.app_oride_global_operate_report_d
-                WHERE dt='{dt}'
-                AND country_code='nal' --某个业务线汇总及城市明细
-                     AND product_id={product_id}) t1
-                LEFT JOIN
+                from (SELECT sum(finish_order_cnt) over(partition BY city_id)/2 AS city_total,*
+                      FROM oride_dw.app_oride_global_operate_report_d WHERE dt='{dt}') t1
+                   LEFT JOIN
                   (SELECT id,
                           name
                    FROM oride_dw_ods.ods_sqoop_base_data_city_conf_df
                    WHERE dt='{dt}') t2 ON t1.city_id=t2.id
+                   where {product_id_1_limit}
+                     AND t1.country_code='nal' --某个业务线汇总及城市明细
+                     AND t1.product_id={product_id}
                 ORDER BY t1.city_id ASC
         '''.format(dt=ds,
                    all_completed_num=all_completed_num,
+                   product_id_1_limit=product_id_1_limit,
                    product_id=product_id,
                    start_date=airflow.macros.ds_add(ds, -14))
     cursor = get_hive_cursor()

@@ -98,6 +98,7 @@ dm_oride_passenger_base_cube_d_task = HiveOperator(
     with order_base_data as (
           SELECT if(t2.passenger_id IS NULL,1,0) AS is_first_order_mark,--准确说历史没有完单的是否本日首次
              if(t3.passenger_id IS NOT NULL,1,0) AS new_reg_user_mark, --是否当日新注册乘客
+             if(t1.city_id=1001 and driver.product_id is not null and t1.product_id!=99,driver.product_id,t1.product_id) as product_id1,
              t1.*
             FROM
               (SELECT *
@@ -116,6 +117,10 @@ dm_oride_passenger_base_cube_d_task = HiveOperator(
                FROM oride_dw.dim_oride_passenger_base
                WHERE dt='{pt}'
                  AND substr(register_time,1,10)=dt) t3 ON t1.passenger_id=t3.passenger_id
+            left outer join 
+               (select * from oride_dw.dim_oride_driver_base 
+                where dt='{pt}') driver
+                on t1.driver_id=driver.driver_id
                     )
     INSERT overwrite TABLE oride_dw.{table} partition(country_code,dt)
     select 
@@ -146,7 +151,7 @@ dm_oride_passenger_base_cube_d_task = HiveOperator(
         
         (SELECT nvl(country_code,'-10000') as country_code,
                nvl(city_id,-10000) as city_id,
-               nvl(product_id,-10000) as product_id, --招手停订单数限定具体业务线
+               nvl(product_id1,-10000) as product_id, --招手停订单数限定具体业务线
          count(DISTINCT passenger_id) AS ord_users, --当日下单乘客数
          count(DISTINCT (if(status IN(4,5),passenger_id,NULL))) AS finished_users, --当日完单乘客数
          count(DISTINCT (IF (status IN(4,5)
@@ -164,9 +169,9 @@ dm_oride_passenger_base_cube_d_task = HiveOperator(
         FROM order_base_data
         group by nvl(country_code,'-10000'),
                nvl(city_id,-10000),
-               nvl(product_id,-10000)
+               nvl(product_id1,-10000)
         with cube) t2
-        on t1.country_code=t2.country_code and t1.city_id=nvl(t2.city_id,-10000) and t1.product_id=nvl(t2.product_id,-10000)
+        on t1.country_code=t2.country_code and t1.city_id=nvl(t2.city_id,-10000) and t1.product_id=nvl(t2.product_id1,-10000)
         where nvl(t2.country_code,'-10000')<>'-10000' and nvl(t2.city_id,-10000)<>999001;
 '''.format(
         pt='{{ds}}',
