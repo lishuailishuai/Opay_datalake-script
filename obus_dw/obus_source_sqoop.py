@@ -291,5 +291,5 @@ for obus_table in obus_table_list:
         dag=dag)
 
     # 加入调度队列
-    import_from_mysql >> create_table >> add_partitions >> validate_all_data >> refresh_impala >> success >> touchz_data_success
+    import_from_mysql >> create_table >> add_partitions >> validate_all_data >> refresh_impala >> touchz_data_success >> success
 
