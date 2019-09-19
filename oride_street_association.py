@@ -173,7 +173,7 @@ insert_oride_street_association_di = HiveOperator(
                 ) t
                 INNER JOIN
                 (
-                    SELECT * FROM oride_db.data_driver_extend  WHERE dt='{{ ds }}' and serv_type=2
+                    SELECT * FROM oride_dw_ods.ods_sqoop_base_data_driver_extend_df  WHERE dt='{{ ds }}' and serv_type=2
                 ) t1 ON t1.id=t.driver_id
                 INNER JOIN association_data t2 ON t2.id=t.association_id
             GROUP BY driver_id
