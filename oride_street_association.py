@@ -30,10 +30,10 @@ dag = airflow.DAG(
 
 table_names = ['oride_dw_ods.ods_sqoop_mass_driver_group_df',
                'oride_dw_ods.ods_sqoop_mass_rider_signups_df',
-               'oride_db.data_driver_extend',
-               'oride_db.data_order',
-               'oride_db.data_order_payment',
-               'oride_db.data_driver_comment',
+               'oride_dw_ods.ods_sqoop_base_data_driver_extend_df',
+               'oride_dw_ods.ods_sqoop_base_data_order_df',
+               'oride_dw_ods.ods_sqoop_base_data_order_payment_df',
+               'oride_dw_ods.ods_sqoop_base_data_driver_comment_df',
                ]
 
 '''
@@ -199,12 +199,12 @@ insert_oride_street_association_di = HiveOperator(
                 nvl(t2.amount, 0) as payment_amount
             FROM
                 (
-                    SELECT * FROM oride_db.data_order WHERE dt='{{ ds }}' AND from_unixtime(create_time, 'yyyy-MM-dd') between '{{ macros.ds_add(ds, -2) }}' AND '{{ ds }}'
+                    SELECT * FROM oride_dw_ods.ods_sqoop_base_data_order_df WHERE dt='{{ ds }}' AND from_unixtime(create_time, 'yyyy-MM-dd') between '{{ macros.ds_add(ds, -2) }}' AND '{{ ds }}'
                 ) t
                 INNER JOIN driver_data t1 ON t1.driver_id=t.driver_id
                 LEFT JOIN
                 (
-                    SELECT * FROM oride_db.data_order_payment WHERE dt='{{ ds }}' AND from_unixtime(create_time, 'yyyy-MM-dd') between '{{ macros.ds_add(ds, -2) }}' AND '{{ ds }}'
+                    SELECT * FROM oride_dw_ods.ods_sqoop_base_data_order_payment_df WHERE dt='{{ ds }}' AND from_unixtime(create_time, 'yyyy-MM-dd') between '{{ macros.ds_add(ds, -2) }}' AND '{{ ds }}'
                 ) t2 ON t2.id=t.id
         ),
         order_data_today as (
@@ -316,7 +316,7 @@ insert_oride_street_association_di = HiveOperator(
                     SELECT
                         distinct driver_id
                     FROM
-                        oride_db.data_driver_comment
+                        oride_dw_ods.ods_sqoop_base_data_driver_comment_df
                     WHERE
                         from_unixtime(create_time, 'yyyy-MM-dd')='{{ ds }}' and score<=3
 
@@ -405,7 +405,7 @@ def send_oride_association_email(ds, **kwargs):
             SELECT
                 *
             FROM
-                oride_db.data_city_conf
+                oride_dw_ods.ods_sqoop_base_data_city_conf_df
                 
             WHERE
               dt='{dt}'
