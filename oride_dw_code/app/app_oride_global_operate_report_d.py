@@ -352,7 +352,7 @@ finance_data as
 (
 select country_code,
        nvl(city_id,-10000) as city_id,
-       nvl(product_id,-10000) as product_id,
+       nvl(if(t1.city_id=1001 and driver.product_id is not null and t1.product_id!=99,driver.product_id,t1.product_id),-10000) as product_id,
        {order_data_null},
        {passenger_data_null},
        {driver_cube_data_null},
@@ -363,12 +363,16 @@ select country_code,
        sum(amount_pay_online) AS amount_pay_online, --当日总收入-线上支付金额
        sum(amount_pay_offline) AS amount_pay_offline, --当日总收入-线下支付金额 
        {passenger_recharge_data_null} 
-from oride_dw.dwd_oride_order_finance_df 
+from (select * from oride_dw.dwd_oride_order_finance_df 
 where dt='{pt}'
-and create_date='{pt}'
+and create_date='{pt}') t1
+left outer join 
+(select driver_id,product_id from oride_dw.dim_oride_driver_base 
+    where dt='{pt}') driver
+    on t1.driver_id=driver.driver_id 
 group by country_code,
          nvl(city_id,-10000),
-         nvl(product_id,-10000)
+         nvl(if(t1.city_id=1001 and driver.product_id is not null and t1.product_id!=99,driver.product_id,t1.product_id),-10000)
 ),
 
 --用户充值相关
