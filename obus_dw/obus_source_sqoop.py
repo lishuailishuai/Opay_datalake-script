@@ -286,7 +286,7 @@ for obus_table in obus_table_list:
                     $HADOOP_HOME/bin/hadoop fs -touchz {hdfs_data_dir}/_SUCCESS
                 fi
             """.format(
-            hdfs_data_dir=s3path.format(bs=obus_table.get('table'))+"country_code=nal/dt={{ds}}"
+            hdfs_data_dir=s3path.format(bs=obus_table.get('table'))+"/country_code=nal/dt={{ds}}"
         ),
         dag=dag)
 
