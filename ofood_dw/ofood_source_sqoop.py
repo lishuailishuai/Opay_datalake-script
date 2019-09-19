@@ -54,6 +54,7 @@ table_list = [
     ("food_operapay_co", "jh_waimai_comment", "ofood_db", "base"),
     ("food_operapay_co", "jh_order_time", "ofood_db", "base"),
     ("food_operapay_co", "jh_order_log", "ofood_db", "base"),
+    ("food_operapay_co", "jh_waimai_order_refund", "ofood_db", "base"),
 
     # 商户信息
     ("food_operapay_co", "jh_shop", "ofood_db", "base"),

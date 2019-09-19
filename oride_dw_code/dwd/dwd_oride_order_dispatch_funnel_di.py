@@ -92,11 +92,12 @@ dwd_oride_order_dispatch_funnel_di_task = HiveOperator(
             cast(get_json_object(event_values, '$.round') as bigint) as order_round,--订单轮数
             cast(get_json_object(event_values, '$.config_id') as bigint) as config_id,--派单配置的id
             cast(get_json_object(event_values, '$.timestamp') as string) as log_timestamp,--埋点时间
-            0 as success,--是否成功（1，0）
+            0 as success,--是否成功（1，0）                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         
             0 as distance,--司机的接驾距离(米)(订单分配给司机时司机所处的位置)
             '' as wait_time,--司机收到推送信息时有多久没有订单
             '' as push_mode,--是派单方式（目前只有全局优化和直接发单）
             '' as reason,--过滤原因
+            event_name as event_name, --事件类型
             'nal' as country_code,
             '{pt}' dt
         from  
@@ -119,6 +120,7 @@ dwd_oride_order_dispatch_funnel_di_task = HiveOperator(
             '' as wait_time,--司机收到推送信息时有多久没有订单
             '' as push_mode,--是派单方式（目前只有全局优化和直接发单）
             get_json_object(event_values, '$.reason') as reason,--过滤原因
+            event_name as event_name, --事件类型
             'nal' as country_code,
             '{pt}' dt
         from  
@@ -139,6 +141,7 @@ dwd_oride_order_dispatch_funnel_di_task = HiveOperator(
             cast(nvl(d.distance,0) as bigint) as distance,--司机的接驾距离(米)(订单分配给司机时司机所处的位置)
             cast(d.wait_time as string) as wait_time,--司机收到推送信息时有多久没有订单
             cast(d.push_mode as string) as push_mode,--是派单方式（目前只有全局优化和直接发单）
+            d.event_name as event_name, --事件类型
             '' as reason,--过滤原因
             'nal' as country_code, 
             '{pt}' dt
@@ -160,7 +163,8 @@ dwd_oride_order_dispatch_funnel_di_task = HiveOperator(
                 get_json_object(event_values, '$.success') as success,
                 get_json_object(event_values, '$.timestamp') as log_timestamp,
                 get_json_object(event_values, '$.wait_time') as wait_time,
-                get_json_object(event_values, '$.mode') as push_mode
+                get_json_object(event_values, '$.mode') as push_mode,
+                event_name as event_name
         
                 from order_dispatch
                 where 
@@ -186,6 +190,7 @@ dwd_oride_order_dispatch_funnel_di_task = HiveOperator(
             cast(nvl(get_json_object(event_values, '$.distance'),0) as bigint) as distance,--司机的接驾距离(米)(订单播给司机时司机所处的位置)
             cast(get_json_object(event_values, '$.wait_time') as string) as wait_time,--司机收到推送信息时有多久没有订单
             cast(get_json_object(event_values, '$.mode') as string) as push_mode, --是派单方式（目前只有全局优化和直接发单）
+            event_name as event_name, --事件类型
             '' as reason,--过滤原因
             'nal' as country_code,
             '{pt}' dt
