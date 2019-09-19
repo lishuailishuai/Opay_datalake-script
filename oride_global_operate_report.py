@@ -261,9 +261,9 @@ def get_product_rows(ds, all_completed_num,product_id):
             SELECT t1.dt,
                  t1.city_id,
                  if(t1.city_id=-10000,'All',t2.name) AS city_name,
-                 nvl(t1.ride_order_cnt,0) as ride_order_cnt, --当日下单数
+                 if(t1.city_id=1001,'-',nvl(t1.ride_order_cnt,0)) as ride_order_cnt, --当日下单数
                  '-' AS order_cnt_lfw, --近四周同期下单数据
-                 nvl(t1.valid_ord_cnt,0) as valid_ord_cnt, --有效下单量
+                 if(t1.city_id=1001,'-',nvl(t1.valid_ord_cnt,0)) as valid_ord_cnt, --有效下单量
                  nvl(t1.finish_pay,0) as finish_pay, --当日支付完单数
                  nvl(t1.finish_order_cnt,0) as finish_order_cnt, --当日完单量
                  '-' AS finish_order_cnt_lfw, --完单数（近四周同期均值）
