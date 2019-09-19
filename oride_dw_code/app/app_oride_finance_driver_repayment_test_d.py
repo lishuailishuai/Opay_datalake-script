@@ -131,7 +131,7 @@ def get_data_from_hive(ds,**op_kwargs):
                 ROUND(sum(driver_finish_ord_num)/3) AS order_agv --3日平均完单数
         
          FROM oride_dw.dwm_oride_driver_base_di
-         WHERE dt BETWEEN '{prev_4_day}' AND '{pt}'
+         WHERE dt BETWEEN '{prev_3_day}' AND '{pt}'
            AND city_id<>'999001'
         GROUP BY driver_id) t3
         ON t1.driver_id=t3.driver_id
@@ -140,7 +140,7 @@ def get_data_from_hive(ds,**op_kwargs):
         hive_table=hive_table,
         pt=ds,
         now_day=airflow.macros.ds_add(ds, +1),
-        prev_4_day=airflow.macros.ds_add(ds, -4),
+        prev_3_day=airflow.macros.ds_add(ds, -2),
     )
 
     logging.info(hql)
