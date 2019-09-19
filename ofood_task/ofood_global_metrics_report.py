@@ -137,7 +137,8 @@ insert_ofood_global_metrics = HiveOperator(
         count(distinct if(olm.order_id is not null and o.order_status = -2,o.order_id,null)) merchant_cancel_num,
         count(distinct if(olu.order_id is not null and o.order_status = -2,o.order_id,null)) user_cancel_num,
         sum(if(wo.order_id is not null and o.order_status = 8,wo.origin_product + wo.origin_package + wo.origin_delivery,0)) order_total_price_sum,
-        sum(if(wo.order_id is not null and o.order_status = 8,wo.origin_product + wo.origin_package + wo.origin_delivery - order_youhui - first_youhui,0)) order_actual_price_sum
+        sum(if(wo.order_id is not null and o.order_status = 8,wo.origin_product + wo.origin_package + wo.origin_delivery - order_youhui - first_youhui,0)) order_actual_price_sum,
+        sum(if(wo.order_id is not null and o.order_status = 8,wo.first_roof + wo.roof_mj + wo.roof_delivery + wo.roof_capped,0)) c_subsidy_price_sum
         from ofood_dw_ods.ods_sqoop_base_jh_order_df o
         left join (
             select 
@@ -166,7 +167,11 @@ insert_ofood_global_metrics = HiveOperator(
             order_id,
             origin_product,
             origin_package,
-            origin_delivery 
+            origin_delivery,
+            first_roof,
+            roof_mj,
+            roof_delivery,
+            roof_capped 
             from 
             ofood_dw_ods.ods_sqoop_base_jh_waimai_order_df
             where dt = '{{ ds }}'
@@ -286,7 +291,8 @@ insert_ofood_global_metrics = HiveOperator(
         nvl(ma.total_alive_merchant_num,0),
         nvl(nu.first_complete_user_num,0),
         nvl(ed.active_user_num,0),
-        nvl(ed.enter_restaurant_num,0)
+        nvl(ed.enter_restaurant_num,0),
+        nvl(od.c_subsidy_price_sum,0)
         
         from 
         order_data od 
@@ -334,7 +340,7 @@ def send_report_email(ds_nodash, ds, **kwargs):
     first_complete_user_num,
     concat(cast(nvl(round(first_complete_user_num * 100 /complete_user_num,2),0) as string),'%') first_complete_user_rate,
     order_total_price_sum,
-    concat(cast(nvl(round((order_total_price_sum - order_actual_price_sum) * 100 / order_total_price_sum,2),0) as string),'%') subsidy_rate,
+    concat(cast(nvl(round((c_subsidy_price_sum) * 100 / order_total_price_sum,2),0) as string),'%') subsidy_rate,
     nvl(round(order_total_price_sum/complete_num,2),0) order_pay_avg,
     nvl(round(order_actual_price_sum/complete_num,2),0) order_pay_actual_avg
     
