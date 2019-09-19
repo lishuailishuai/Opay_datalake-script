@@ -65,6 +65,17 @@ ods_sqoop_base_data_order_payment_df_prev_day_task = HivePartitionSensor(
     dag=dag
 )
 
+
+# 依赖前一天分区
+oride_client_event_detail_prev_day_task = HivePartitionSensor(
+    task_id="oride_client_event_detail_prev_day_task",
+    table="oride_client_event_detail",
+    partition="dt='{{ds}}'",
+    schema="oride_bi",
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
 ##----------------------------------------- 变量 ---------------------------------------##
 
 table_name = "dwd_oride_order_base_include_test_di"
@@ -572,6 +583,7 @@ touchz_data_success = BashOperator(
 
 ods_sqoop_base_data_order_df_prev_day_task >> \
 ods_sqoop_base_data_order_payment_df_prev_day_task >> \
+oride_client_event_detail_prev_day_task >> \
 sleep_time >> \
 dwd_oride_order_base_include_test_di_task >> \
 task_check_key_data >> \
