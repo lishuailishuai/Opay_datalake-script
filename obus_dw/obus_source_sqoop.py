@@ -269,6 +269,27 @@ for obus_table in obus_table_list:
         dag=dag
     )
 
+    '''
+    打标_SUCCESS
+    '''
+    touchz_data_success = BashOperator(
+        task_id='touchz_data_success_{}'.format(obus_table.get('table')),
+        bash_command="""
+                line_num=`$HADOOP_HOME/bin/hadoop fs -du -s {hdfs_data_dir} | tail -1 | awk '{{print $1}}'`
+
+                if [ $line_num -eq 0 ]
+                then
+                    echo "FATAL {hdfs_data_dir} is empty"
+                    exit 1
+                else
+                    echo "DATA EXPORT Successed ......"
+                    $HADOOP_HOME/bin/hadoop fs -touchz {hdfs_data_dir}/_SUCCESS
+                fi
+            """.format(
+            hdfs_data_dir=s3path.format(bs=obus_table.get('table'))+"country_code=nal/dt={{ds}}"
+        ),
+        dag=dag)
+
     # 加入调度队列
-    import_from_mysql >> create_table >> add_partitions >> validate_all_data >> refresh_impala >> success
+    import_from_mysql >> create_table >> add_partitions >> validate_all_data >> refresh_impala >> success >> touchz_data_success
 
