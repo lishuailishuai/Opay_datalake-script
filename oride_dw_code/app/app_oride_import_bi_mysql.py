@@ -105,7 +105,7 @@ def create_bi_mysql_table(conn, db, table, columns):
                 "type": "varchar",
                 "ext": "(64) not null default ''"
             })
-            cols.append("{name} {type}{ext} comment '{comment}'".format(
+            cols.append("`{name}` {type}{ext} comment '{comment}'".format(
                 name=v['name'],
                 type=types['type'],
                 ext=types['ext'],
@@ -141,13 +141,13 @@ def create_bi_mysql_table(conn, db, table, columns):
         mysql_coltype = mysql_columns.get(v['name'], None)
         if not mysql_coltype:
             if k == 0:
-                alter_sql = "add {name} {type} comment '{comment}' first".format(
+                alter_sql = "add `{name}` {type} comment '{comment}' first".format(
                     name=v['name'],
                     type=types['type'] + types['ext'],
                     comment=v['comment']
                 )
             else:
-                alter_sql = "add {name} {type} comment '{comment}' after {prev}".format(
+                alter_sql = "add `{name}` {type} comment '{comment}' after {prev}".format(
                     name=v['name'],
                     type=types['type'] + types['ext'],
                     comment=v['comment'],
@@ -157,7 +157,7 @@ def create_bi_mysql_table(conn, db, table, columns):
             mcursor.execute(sql + alter_sql)
         else:
             if types['type'] != mysql_coltype:
-                alter_sql = "change {name} {name} {type} comment '{comment}'".format(
+                alter_sql = "change `{name}` `{name}` {type} comment '{comment}'".format(
                     name=name,
                     type=types['type'] + types['ext'],
                     comment=v['comment']
@@ -221,7 +221,7 @@ def init_mysql_table(**op_kwargs):
     cols = []
     mcols = []
     for v in hive_columns:
-        cols.append("if({} is NULL, 0, {})".format(v['name'].lower(), v['name'].lower()))
+        cols.append("if(`{}` is NULL, 0, `{}`)".format(v['name'].lower(), v['name'].lower()))
         mcols.append(v['name'].lower())
     new_table = create_bi_mysql_table(mysql_cursor, hive_db, hive_table, hive_columns)
     if new_table:       # 新表 全量
@@ -257,10 +257,10 @@ def __data_to_mysql(conn, db, table, data, column, dt):
     mcursor = mysql_connectors[conn]
     mcursor.execute("DELETE FROM {db}.{table} WHERE dt = '{dt}'".format(db=db, table=table, dt=dt))
 
-    isql = 'replace into {db}.{table} ({cols})'.format(
+    isql = 'replace into {db}.{table} (`{cols}`)'.format(
         db=db,
         table=table,
-        cols=','.join(column)
+        cols='`,`'.join(column)
     )
     esql = '{0} values {1}'
     sval = ''
