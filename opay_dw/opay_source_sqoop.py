@@ -174,7 +174,7 @@ def run_check_table(db_name, table_name, conn_id, hive_table_name, **kwargs):
                 col_name = '_dt'
             else:
                 col_name = result[0]
-            if result[1] == 'timestamp' or result[1] == 'varchar' or result[1] == 'char' or result[1] == 'text' or \
+            if result[1] == 'timestamp' or result[1] == 'varchar' or result[1] == 'char' or result[1] == 'text' or result[1] == 'longtext' or \
                     result[1] == 'datetime':
                 data_type = 'string'
             elif result[1] == 'decimal':
