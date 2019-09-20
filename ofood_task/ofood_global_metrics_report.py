@@ -245,16 +245,16 @@ insert_ofood_global_metrics = HiveOperator(
         (
         select 
         d.ft day,
-        count(d.mobile) first_complete_user_num
+        count(d.uid) first_complete_user_num
         from 
         (
             select 
-            mobile,
+            uid,
             DATE_FORMAT(from_unixtime(min(dateline)),'yyyyMMdd') ft 
             from ofood_dw_ods.ods_sqoop_base_jh_order_df
             where order_status = 8
             and dt = '{{ ds }}'
-            group by mobile
+            group by uid
         ) d
         where d.ft = '{{ ds_nodash }}'
         group by d.ft
