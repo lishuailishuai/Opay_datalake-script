@@ -254,13 +254,13 @@ def get_product_rows(ds, all_completed_num,product_id):
 
     if product_id == 3:
         row_fmt= row_fmt1
-        product_id_1_limit=''
-    elif product_id == 1:
-        row_fmt = row_fmt2
-        product_id_1_limit = 't1.city_id not in(1002,1005)'
+        #product_id_1_limit=''
+   # elif product_id == 1:
+        #row_fmt = row_fmt2
+        #product_id_1_limit = 't1.city_id not in(1002,1005) and'
     else:
         row_fmt = row_fmt2
-        product_id_1_limit = ''
+        #product_id_1_limit = ''
 
     sql = '''
             SELECT t1.dt,
@@ -274,22 +274,22 @@ def get_product_rows(ds, all_completed_num,product_id):
                  '-' AS finish_order_cnt_lfw, --完单数（近四周同期均值）
                  concat(cast(nvl(round(t1.finish_order_cnt*100/t1.ride_order_cnt,1),0) AS string),'%') AS finish_order_rate, --完单率
                  '-' AS finish_order_rate_lfw, --完单率（近四周）
-                 concat(cast(nvl(round(if(t1.city_id=-10000,t1.finish_order_cnt/153485,t1.finish_order_cnt/t1.city_total),1),0) AS string),'%') AS product_finish_order_rate,--业务完单占比
-                 concat(cast(nvl(round(if(t1.city_id=-10000,t1.finish_order_cnt/t1.finish_order_cnt,t1.finish_order_cnt*2/sum(t1.finish_order_cnt) over(partition BY t1.product_id)),1),0) AS string),'%') AS city_finish_order_rate, --城市完单
+                 concat(cast(nvl(round(if(t1.city_id=-10000,t1.finish_order_cnt*100/{all_completed_num},t1.finish_order_cnt*100/t1.city_total),1),0) AS string),'%') AS product_finish_order_rate,--业务完单占比
+                 concat(cast(nvl(round(if(t1.city_id=-10000,t1.finish_order_cnt*100/t1.finish_order_cnt,t1.finish_order_cnt*2*100/sum(t1.finish_order_cnt) over(partition BY t1.product_id)),1),0) AS string),'%') AS city_finish_order_rate, --城市完单
                  nvl(t1.finished_users,0) as finished_users,--当日完单乘客数
                  nvl(if(product_id=3,t1.new_user_ord_cnt,t1.first_finished_users),0) as passenger_indictor_2, --1,2当日首次完单乘客数;3当日注册乘客下单数
                  nvl(t1.new_user_finished_cnt,0) as new_user_finished_cnt, --当日新注册乘客完单数
                  if(product_id=3,nvl(round(t1.pax_num/t1.finish_order_cnt,0),0),0) as passenger_indictor_4,
-                 concat(cast(nvl(round(t1.online_paid_users/t1.paid_users,1),0) AS string),'%') AS online_paid_user_rate, --当日线上支付乘客占比
+                 concat(cast(nvl(round(t1.online_paid_users*100/t1.paid_users,1),0) AS string),'%') AS online_paid_user_rate, --当日线上支付乘客占比
                  nvl(t1.td_audit_finish_driver_num,0) as td_audit_finish_driver_num, --当日审核通过司机数
                  nvl(t1.td_online_driver_num,0) as td_online_driver_num, --当日在线司机数
                  nvl(t1.td_request_driver_num,0) as td_request_driver_num, --当日接单司机数
                  nvl(t1.td_finish_order_driver_num,0) as td_finish_order_driver_num, --当日完单司机数
                  nvl(round(t1.finish_order_cnt/t1.td_finish_order_driver_num,0),0) AS avg_finish_order_cnt, --人均完单数
                  nvl(round(t1.finish_driver_online_dur/t1.td_finish_order_driver_num/3600,1),0) AS avg_driver_online_dur, --人均在线时长
-                 concat(cast(nvl(round(t1.driver_billing_dur/t1.finish_driver_online_dur,1),0) AS string),'%') AS billing_dur_rate, --计费时长占比
+                 concat(cast(nvl(round(t1.driver_billing_dur*100/t1.finish_driver_online_dur,1),0) AS string),'%') AS billing_dur_rate, --计费时长占比
                  nvl(round(t1.driver_pushed_order_cnt/t1.td_push_accpet_show_driver_num,0),0) AS avg_pushed_order_cnt, --人均推送订单数
-                 nvl(round(t1.finish_order_cnt/t1.finish_driver_online_dur,1),0) AS TPH,
+                 nvl(round(t1.finish_order_cnt/t1.finish_driver_online_dur*3600,1),0) AS TPH,
                  nvl(round((t1.amount_pay_online+t1.amount_pay_offline+t1.recharge_amount+t1.reward_amount)/t1.finish_driver_online_dur,1),0) AS IPH,
                  nvl(round(t1.finish_take_order_dur/t1.finish_order_cnt,0),0) AS avg_take_order_dur,--平均应答时长
                  nvl(round(t1.finish_pick_up_dur/t1.finish_order_cnt,0),0) AS avg_pick_up_dur, --平均接驾时长
@@ -308,13 +308,11 @@ def get_product_rows(ds, all_completed_num,product_id):
                           name
                    FROM oride_dw_ods.ods_sqoop_base_data_city_conf_df
                    WHERE dt='{dt}') t2 ON t1.city_id=t2.id
-                   where {product_id_1_limit}
-                     AND t1.country_code='nal' --某个业务线汇总及城市明细
+                   where t1.country_code='nal' --某个业务线汇总及城市明细
                      AND t1.product_id={product_id}
                 ORDER BY t1.city_id ASC
         '''.format(dt=ds,
                    all_completed_num=all_completed_num,
-                   product_id_1_limit=product_id_1_limit,
                    product_id=product_id,
                    start_date=airflow.macros.ds_add(ds, -14))
     cursor = get_hive_cursor()
@@ -590,7 +588,7 @@ def send_report_email(ds, **kwargs):
     #logging.info(html)
 
     email_to = Variable.get("oride_global_operate_report_receivers").split()
-
+    #email_to = ['lili.chen@opay-inc.com']
     # send mail
 
     email_subject = 'oride全局运营日报_{}'.format(ds)

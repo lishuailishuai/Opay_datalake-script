@@ -373,7 +373,7 @@ left outer join
 group by country_code,
          nvl(city_id,-10000),
          nvl(if(t1.city_id=1001 and driver.product_id is not null and t1.product_id!=99,driver.product_id,t1.product_id),-10000)
-),
+with cube),
 
 --用户充值相关
 passenger_recharge_data as
@@ -453,7 +453,7 @@ select * from driver_data where nvl(country_code,'-10000')<>'-10000'
 UNION ALL 
 select * from map_data
 union all 
-select * from finance_data
+select * from finance_data where nvl(country_code,'-10000')<>'-10000'
 union all 
 select * from passenger_recharge_data) t
 GROUP BY nvl(country_code,'nal'),
