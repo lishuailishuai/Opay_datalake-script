@@ -127,7 +127,7 @@ LEFT JOIN
    WHERE dt='{pt}') records ON ord.driver_id=records.driver_id
 AND ord.create_date=records.day
 where ord.city_id<>999001
-and driver_id<>1
+and ord.driver_id<>1
 GROUP BY ord.city_id,
 ord.product_id,
 ord.order_id, --订单号
