@@ -591,7 +591,7 @@ def send_report_email(ds, **kwargs):
     #email_to = ['lili.chen@opay-inc.com']
     # send mail
 
-    email_subject = 'oride全局运营日报_{}'.format(ds)
+    email_subject = 'oride全局运营日报_DW数仓模型构建_{}'.format(ds)
     send_email(
         email_to
         , email_subject, html, mime_charset='utf-8')

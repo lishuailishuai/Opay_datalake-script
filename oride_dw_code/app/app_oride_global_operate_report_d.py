@@ -350,7 +350,7 @@ SELECT 'nal' as country_code,
 --gmv相关  
 finance_data as
 (
-select country_code,
+select nvl(country_code,-10000) as country_code,
        nvl(city_id,-10000) as city_id,
        nvl(if(t1.city_id=1001 and driver.product_id is not null and t1.product_id!=99,driver.product_id,t1.product_id),-10000) as product_id,
        {order_data_null},
