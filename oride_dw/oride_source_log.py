@@ -27,7 +27,7 @@ add_dw_partitions = HiveOperator(
             ALTER TABLE ods_log_driver_track_data_hi ADD IF NOT EXISTS PARTITION (dt = '{{ ds }}', hour = '{{ execution_date.strftime("%H") }}');
             
         """,
-    schema='oride_dw',
+    schema='oride_dw_ods',
     dag=dag)
 
 add_partitions = HiveOperator(

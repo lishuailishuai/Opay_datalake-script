@@ -43,7 +43,7 @@ for table in table_list:
         hql='''
                 ALTER TABLE oride_dw.`ods_log_oride_{table}_skyeye_di` ADD IF NOT EXISTS PARTITION (dt = '{{{{ ds }}}}')
             '''.format(table=table),
-        schema='oride_dw',
+        schema='oride_dw_ods',
         dag=dag)
 
     check_ufile >> add_partitions
