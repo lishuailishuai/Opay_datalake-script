@@ -471,7 +471,7 @@ insert_city_metrics = HiveOperator(
             a.dt 
         FROM (SELECT  
                 o.city_id,                                                                  --城市ID
-                COUNT(1) AS finish_order_cnt,                                               --完单数
+                COUNT(DISTINCT o.id) AS finish_order_cnt,                                               --完单数
                 SUM(IF(p.price IS NULL, 0, p.price)) AS gmv,                                --GMV
                 SUM(IF(r.amount IS NULL OR r.amount<0,0,r.amount) + IF(d.amount IS NULL,0,d.amount)) AS b_subsidy,  --B端补贴
                 SUM(IF(p.price IS NULL,0,p.price) - IF(p.amount IS NULL,0,p.amount)) AS c_subsidy,    --C端补贴 
