@@ -308,6 +308,7 @@ for db_name, table_name, conn_id, prefix_name,priority_weight_nm in table_list:
 
     touchz_data_success = BashOperator(
         task_id='touchz_data_success_{}'.format(hive_table_name),
+        priority_weight=priority_weight_nm,
         bash_command="""
                 line_num=`$HADOOP_HOME/bin/hadoop fs -du -s {hdfs_data_dir} | tail -1 | awk '{{print $1}}'`
 
