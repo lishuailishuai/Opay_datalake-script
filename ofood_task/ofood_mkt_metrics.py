@@ -27,7 +27,7 @@ args = {
 }
 
 dag = airflow.DAG(
-    'ofood_shop_metrics_daily',
+    'ofood_mkt_metrics',
     schedule_interval="10 04 * * *",
     default_args=args)
 
