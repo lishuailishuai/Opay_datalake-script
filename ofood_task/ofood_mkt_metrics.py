@@ -86,8 +86,8 @@ create_mkt_metrics = HiveOperator(
 
         insert overwrite table ofood_bi.ofood_mkt_daily_metrics_info partition(dt='{{ ds }}')
         select 
-        t.name,
-        t.phone,
+        t.mkt_id,
+        t.mkt_phone,
         t.bd_id,
         t.bd_name,
         count(if(o.uid is null,null,o.uid)) as new_user_cnt,
@@ -96,13 +96,15 @@ create_mkt_metrics = HiveOperator(
         (
 
             select 
+            a.id as mkt_id,
             a.name,
-            a.phone,
+            a.phone as mkt_phone,
             u.id as bd_id,
             u.name as bd_name
             from 
             (	 
                 select 
+                id,
                 name,
                 phone,
                 leader_id
@@ -129,7 +131,7 @@ create_mkt_metrics = HiveOperator(
             dateline
             from ofood_dw_ods.ods_sqoop_bd_invitation_info_df
             where dt = '{{ ds }}'
-        ) i on t.phone = i.bd
+        ) i on t.mkt_phone = i.bd
         left join (
             select 
             o.uid
@@ -160,7 +162,7 @@ create_mkt_metrics = HiveOperator(
             and from_unixtime(lasttime,'yyyy-MM-dd') = '{{ ds }}'
             group by uid,from_unixtime(lasttime,'yyyy-MM-dd')
         ) p on p.uid = i.uid and p.lasttime = from_unixtime(i.dateline,'yyyy-MM-dd')
-        group by t.name,t.phone,t.bd_id,t.bd_name
+        group by t.mkt_id,t.mkt_phone,t.bd_id,t.bd_name
         ;
 
         ''',
@@ -173,13 +175,14 @@ insert_mkt_metrics = HiveToMySqlTransfer(
 
         select 
         null,
-        t.bd_id,
-        t.day,
-        t.username,
-        t.area_name,
-        t.recommended_number_of_users
+        mkt_id,
+        mkt_phone,
+        bdm_id,
+        bdm_name,
+        new_user_cnt,
+        pay_order_cnt
         from 
-        ofood_mkt_daily_metrics_info
+        ofood_bi.ofood_mkt_daily_metrics_info
         where dt = '{{ ds }}'
 
         """,
