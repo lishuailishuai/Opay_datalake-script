@@ -46,23 +46,32 @@ sleep_time = BashOperator(
 
 ##----------------------------------------- 依赖 ---------------------------------------## 
 
+#依赖前一天分区00点
+ods_binlog_data_order_payment_hi_prev_day_tesk=HivePartitionSensor(
+      task_id="ods_binlog_data_order_payment_hi_prev_day_task",
+      table="ods_binlog_data_order_payment_hi",
+      partition="dt='{{ds}}' and hour='23'",
+      schema="oride_dw_ods",
+      poke_interval=60, #依赖不满足时，一分钟检查一次依赖状态
+      dag=dag
+    )
+
+#依赖当天分区00点
+ods_binlog_data_order_payment_hi_now_day_tesk=HivePartitionSensor(
+      task_id="ods_binlog_data_order_payment_hi_now_day_task",
+      table="ods_binlog_data_order_payment_hi",
+      partition="dt='{{macros.ds_add(ds, +1)}}' and hour='00'",
+      schema="oride_dw_ods",
+      poke_interval=60, #依赖不满足时，一分钟检查一次依赖状态
+      dag=dag
+    )
+
+
 #依赖前一天分区
 dwd_oride_order_base_include_test_di_prev_day_tesk=UFileSensor(
     task_id='dwd_oride_order_base_include_test_di_prev_day_task',
     filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
         hdfs_path_str="oride/oride_dw/dwd_oride_order_base_include_test_di/country_code=nal",
-        pt='{{ds}}'
-        ),
-    bucket_name='opay-datalake',
-    poke_interval=60, #依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-        )
-
-#依赖前一天分区
-ods_sqoop_base_data_order_payment_df_prev_day_task=UFileSensor(
-    task_id='ods_sqoop_base_data_order_payment_df_prev_day_task',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride_dw_sqoop/oride_data/data_order_payment",
         pt='{{ds}}'
         ),
     bucket_name='opay-datalake',
@@ -114,8 +123,37 @@ select
             country_code,
             '{pt}' as dt
 from 
+
+(SELECT 
+            order_id,--订单 ID
+            driver_id,--司机ID
+            mode as pay_mode,--支付模式（0: 未知, 1: 线下支付, 2: opay, 3: 余额）
+            price,-- 价格
+            coupon_id,--使用的优惠券 ID
+            coupon_name ,--优惠券名称
+            coupon_amount,-- 使用的优惠券金额
+            amount as pay_amount,--实付金额
+            bonus,-- 使用的奖励金
+            balance,--使用的余额
+            opay_amount,--opay 支付的金额
+            reference,-- opay 流水号
+            currency,--货币类型
+            country,--国家
+            status,--支付模式（0: 支付中, 1: 成功, 2: 失败）
+            modify_time,--最后修改时间
+            create_time,--创建时间
+            product_id,--订单业务类型(0: all 1:driect 2: street)
+            updated_time,--最后更新时间
+            pay_type, --支付类型(0:手动支付 1:自动支付)
+            part_hour
+   FROM
      (SELECT 
-            
+             row_number() OVER(partition BY id
+                               ORDER BY updated_at desc,pos DESC) AS rn1,
+
+            op,--操作类型 (c 创建 u 更新 d 删除)
+            ts_ms,-- 事件时间（毫秒）
+            gtid,--事件唯一标识
             id as order_id,--订单 ID
             driver_id,--司机ID
             mode,--支付模式（0: 未知, 1: 线下支付, 2: opay, 3: 余额）
@@ -135,10 +173,15 @@ from
             create_time,--创建时间
             serv_type as product_id,--订单业务类型(0: all 1:driect 2: street)
             updated_at as updated_time,--最后更新时间
-            pay_type --支付类型(0:手动支付 1:自动支付)
-
-      FROM oride_dw_ods.ods_sqoop_base_data_order_payment_df
-      WHERE dt={pt}) pay
+            pay_type, --支付类型(0:手动支付 1:自动支付)
+            concat_ws(' ',dt,hour) AS part_hour
+             --小时分区时间(yyyy-mm-dd HH)
+    
+      FROM oride_dw_ods.ods_binlog_data_order_payment_hi
+      WHERE concat_ws(' ',dt,hour) BETWEEN '{pt} 00' AND '{now_day} 00'  --取昨天1天数据与今天早上00数据
+        AND (op IN ('c',
+                   'u') or op is null)) t1
+   WHERE rn1=1 ) pay
 left outer join
 (SELECT 
            order_id,
@@ -225,4 +268,4 @@ touchz_data_success = BashOperator(
     dag=dag)
 
 
-ods_sqoop_base_data_order_payment_df_prev_day_task>>dwd_oride_order_base_include_test_di_prev_day_tesk>>sleep_time>>dwd_oride_order_pay_detail_di_task>>task_check_key_data>>touchz_data_success
+ods_binlog_data_order_payment_hi_prev_day_tesk>>ods_binlog_data_order_payment_hi_now_day_tesk>>dwd_oride_order_base_include_test_di_prev_day_tesk>>sleep_time>>dwd_oride_order_pay_detail_di_task>>task_check_key_data>>touchz_data_success

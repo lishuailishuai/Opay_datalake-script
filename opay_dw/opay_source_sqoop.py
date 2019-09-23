@@ -12,7 +12,7 @@ from plugins.SqoopSchemaUpdate import SqoopSchemaUpdate
 
 args = {
     'owner': 'zhenqian.zhang',
-    'start_date': datetime(2019, 7, 17),
+    'start_date': datetime(2019, 9, 19),
     'depends_on_past': False,
     'retries': 1,
     'retry_delay': timedelta(minutes=5),
@@ -22,8 +22,8 @@ args = {
 }
 
 dag = airflow.DAG(
-    'oride_source_sqoop',
-    schedule_interval="00 01 * * *",
+    'opay_source_sqoop',
+    schedule_interval="00 02 * * *",
     concurrency=15,
     max_active_runs=1,
     default_args=args)
@@ -35,106 +35,72 @@ db_name,table_name,conn_id,prefix_name,priority_weight
 #
 
 table_list = [
-    # oride data
-    ("oride_data", "data_order", "sqoop_db", "base",3),
-    ("oride_data", "data_order_payment", "sqoop_db", "base",3),
-    ("oride_data", "data_user", "sqoop_db", "base",3),
-    ("oride_data", "data_user_extend", "sqoop_db", "base",3),
-    ("oride_data", "data_coupon", "sqoop_db", "base",1),
-    ("oride_data", "data_driver", "sqoop_db", "base",1),
-    ("oride_data", "data_driver_group", "sqoop_db", "base",1),
-    ("oride_data", "data_driver_extend", "sqoop_db", "base",3),
-    ("oride_data", "data_driver_comment", "sqoop_db", "base",1),
-    ("oride_data", "data_abnormal_order", "sqoop_db", "base",3),
-    ("oride_data", "data_anti_fraud_strategy", "sqoop_db", "base",3),
-    ("oride_data", "data_city_conf", "sqoop_db", "base",3),
-    ("oride_data", "data_order_expired", "sqoop_db", "base",1),
-    ("oride_data", "data_device_extend", "sqoop_db", "base",1),
-    ("oride_data", "data_driver_recharge_records", "sqoop_db", "base",3),
-    ("oride_data", "data_driver_reward", "sqoop_db", "base",3),
-    ("oride_data", "data_activity", "sqoop_db", "base",1),
-    ("oride_data", "data_agenter_motorbike", "sqoop_db", "base",1),
-    ("oride_data", "data_billboard_config", "sqoop_db", "base",1),
-    ("oride_data", "data_coupon_template", "sqoop_db", "base",1),
-    ("oride_data", "data_device", "sqoop_db", "base",1),
-    ("oride_data", "data_driver_balance_extend", "sqoop_db", "base",1),
-    ("oride_data", "data_driver_balance_records", "sqoop_db", "base",1),
-    ("oride_data", "data_driver_discount", "sqoop_db", "base",1),
-    ("oride_data", "data_driver_fee_blacklist", "sqoop_db", "base",1),
-    ("oride_data", "data_driver_operation_log", "sqoop_db", "base",1),
-    ("oride_data", "data_driver_bind_logs", "sqoop_db", "base",1),
-    ("oride_data", "data_driver_pay_records", "sqoop_db", "base",1),
-    ("oride_data", "data_driver_records_day", "sqoop_db", "base",1),
-    ("oride_data", "data_driver_reward_push", "sqoop_db", "base",1),
-    ("oride_data", "data_fcm_template", "sqoop_db", "base",1),
-    ("oride_data", "data_invite", "sqoop_db", "base",1),
-    ("oride_data", "data_invite_conf", "sqoop_db", "base",1),
-    ("oride_data", "data_motorbike", "sqoop_db", "base",1),
-    ("oride_data", "data_motorbike_extend", "sqoop_db", "base",1),
-    ("oride_data", "data_novice_coupons_conf", "sqoop_db", "base",1),
-    ("oride_data", "data_opay_transaction", "sqoop_db", "base",1),
-    ("oride_data", "data_payconf", "sqoop_db", "base",1),
-    ("oride_data", "data_promo_code", "sqoop_db", "base",1),
-    ("oride_data", "data_recharge_conf", "sqoop_db", "base",1),
-    ("oride_data", "data_recharge_options", "sqoop_db", "base",1),
-    ("oride_data", "data_reward_conf", "sqoop_db", "base",1),
-    ("oride_data", "data_role_invite", "sqoop_db", "base",1),
-    ("oride_data", "data_sms_template", "sqoop_db", "base",1),
-    ("oride_data", "data_user_comment", "sqoop_db", "base",1),
-    ("oride_data", "data_user_complaint", "sqoop_db", "base",1),
-    ("oride_data", "data_user_recharge", "sqoop_db", "base",1),
-    ("oride_data", "data_user_whitelist", "sqoop_db", "base",1),
-    ("oride_data", "data_driver_whitelist", "sqoop_db", "base",1),
-    ("oride_data", "data_user_blacklist", "sqoop_db", "base",1),
-    ("oride_data", "data_driver_blacklist", "sqoop_db", "base",1),
-    ("oride_data", "data_driver_repayment", "sqoop_db", "base", 1),
-    ("oride_data", "data_trip", "sqoop_db", "base", 1),
-
-    ("bi", "weather_per_10min", "mysql_bi", "base",3),
-    # 协会数据
-    # 数据库 opay_spread
-    ("opay_spread", "driver_data", "opay_spread_mysql", "mass",1),
-    ("opay_spread", "driver_group", "opay_spread_mysql", "mass",3),
-    ("opay_spread", "driver_logs", "opay_spread_mysql", "mass",1),
-    ("opay_spread", "driver_team", "opay_spread_mysql", "mass",3),
-    ("opay_spread", "rider_signup", "opay_spread_mysql", "mass",1),
-    ("opay_spread", "rider_signups", "opay_spread_mysql", "mass",3),
-    ("opay_spread", "rider_signups_agents", "opay_spread_mysql", "mass",1),
-    ("opay_spread", "rider_signups_guarantors", "opay_spread_mysql", "mass",1),
-    ("opay_spread", "rider_signups_logs", "opay_spread_mysql", "mass",1),
-    # 数据库：oride_assets
-    ("oride_assets", "oride_assets_transit", "opay_spread_mysql", "mass",1),
-    ("oride_assets", "oride_categories", "opay_spread_mysql", "mass",1),
-    ("oride_assets", "oride_my_storage", "opay_spread_mysql", "mass",1),
-    ("oride_assets", "oride_properties", "opay_spread_mysql", "mass",1),
-    ("oride_assets", "oride_property_customs", "opay_spread_mysql", "mass",1),
-    ("oride_assets", "oride_repair", "opay_spread_mysql", "mass",1),
-    ("oride_assets", "oride_retrieve", "opay_spread_mysql", "mass",1),
-    ("oride_assets", "oride_storage", "opay_spread_mysql", "mass",1),
-    ("oride_assets", "oride_storage_logs", "opay_spread_mysql", "mass",1),
-    ("oride_assets", "oride_user_ware", "opay_spread_mysql", "mass",1),
-    ("oride_assets", "oride_vehicles", "opay_spread_mysql", "mass",1),
-    ("oride_assets", "oride_vehicles_log", "opay_spread_mysql", "mass",1),
-    ("oride_assets", "oride_vehicles_transit", "opay_spread_mysql", "mass",1),
-    ("oride_assets", "oride_warehouses", "opay_spread_mysql", "mass",1),
-    # 地推数据源
-    # 数据库：opay_spread
-    ("opay_spread", "promoter_channel_day", "opay_spread_mysql", "promoter",1),
-    ("opay_spread", "promoter_data_day", "opay_spread_mysql", "promoter",1),
-    ("opay_spread", "promoter_data_hour", "opay_spread_mysql", "promoter",1),
-    ("opay_spread", "promoter_driver_day", "opay_spread_mysql", "promoter",1),
-    ("opay_spread", "promoter_logs", "opay_spread_mysql", "promoter",1),
-    ("opay_spread", "promoter_manager", "opay_spread_mysql", "promoter",1),
-    ("opay_spread", "promoter_order_day", "opay_spread_mysql", "promoter",1),
-    ("opay_spread", "promoter_team", "opay_spread_mysql", "promoter",1),
-    ("opay_spread", "promoter_user", "opay_spread_mysql", "promoter",1),
-    ("opay_spread", "promoter_user_relat_admin", "opay_spread_mysql", "promoter",1),
-    ("opay_spread", "promoter_users_device", "opay_spread_mysql", "promoter",1),
+    ("opay_transaction","adjustment_decrease_record", "opay_transaction_db", "base",3),
+    ("opay_transaction","adjustment_increase_record", "opay_transaction_db", "base",3),
+    ("opay_transaction","airtime_topup_record", "opay_transaction_db", "base",3),
+    ("opay_transaction","betting_topup_record", "opay_transaction_db", "base",3),
+    ("opay_transaction","electricity_topup_record", "opay_transaction_db", "base",3),
+    ("opay_transaction","merchant_acquiring_record", "opay_transaction_db", "base",3),
+    ("opay_transaction","merchant_pos_transaction_record", "opay_transaction_db", "base",3),
+    ("opay_transaction","merchant_receive_money_record", "opay_transaction_db", "base",3),
+    ("opay_transaction","merchant_topup_record", "opay_transaction_db", "base",3),
+    ("opay_transaction","merchant_transfer_card_record", "opay_transaction_db", "base",3),
+    ("opay_transaction","merchant_transfer_user_record", "opay_transaction_db", "base",3),
+    ("opay_transaction","mobiledata_topup_record", "opay_transaction_db", "base",3),
+    ("opay_transaction","payment_authorization_record", "opay_transaction_db", "base",3),
+    ("opay_transaction","payment_token_record", "opay_transaction_db", "base",3),
+    ("opay_transaction","receive_money_request_record", "opay_transaction_db", "base",3),
+    ("opay_transaction","transfer_not_register_record", "opay_transaction_db", "base",3),
+    ("opay_transaction","tv_topup_record", "opay_transaction_db", "base",3),
+    ("opay_transaction","user_easycash_record", "opay_transaction_db", "base",3),
+    ("opay_transaction","user_pos_transaction_record", "opay_transaction_db", "base",3),
+    ("opay_transaction","user_receive_money_record", "opay_transaction_db", "base",3),
+    ("opay_transaction","user_topup_record", "opay_transaction_db", "base",3),
+    ("opay_transaction","user_transfer_card_record", "opay_transaction_db", "base",3),
+    ("opay_transaction","user_transfer_user_record", "opay_transaction_db", "base",3),
+    ("opay_bigorder","big_order", "opay_bigorder_db", "base",3),
+    ("opay_bigorder","merchant_order", "opay_bigorder_db", "base",3),
+    ("opay_bigorder","user_order", "opay_bigorder_db", "base",3),
+    ("opay_account","account_merchant", "opay_account_db", "base",3),
+    ("opay_account","account_user", "opay_account_db", "base",3),
+    ("opay_account","accounting_merchant_record", "opay_account_db", "base",3),
+    ("opay_account","accounting_record", "opay_account_db", "base",3),
+    ("opay_account","accounting_request_record", "opay_account_db", "base",3),
+    ("opay_merchant","merchant", "opay_merchant_db", "base",3),
+    ("opay_merchant","merchant_email_setting", "opay_merchant_db", "base",3),
+    ("opay_merchant","merchant_key", "opay_merchant_db", "base",3),
+    ("opay_merchant","merchant_operator", "opay_merchant_db", "base",3),
+    ("opay_merchant","merchant_pos_limit", "opay_merchant_db", "base",3),
+    ("opay_merchant","merchant_remittance_limit", "opay_merchant_db", "base",3),
+    ("opay_merchant","merchant_reseller", "opay_merchant_db", "base",3),
+    ("opay_channel","card_token", "opay_channel_db", "base",3),
+    ("opay_channel","channel_response_code", "opay_channel_db", "base",3),
+    ("opay_channel","channel_router_rule", "opay_channel_db", "base",3),
+    ("opay_channel","channel_transaction", "opay_channel_db", "base",3),
+    ("opay_channel","channel_transaction_mq_record", "opay_channel_db", "base",3),
+    ("opay_channel","channel_transaction_record", "opay_channel_db", "base",3),
+    ("opay_channel","channel_transaction_retry", "opay_channel_db", "base",3),
+    ("opay_recon","collect_diff_detail", "opay_recon_db", "base",3),
+    ("opay_recon","collect_record", "opay_recon_db", "base",3),
+    ("opay_recon","exception_log", "opay_recon_db", "base",3),
+    ("opay_recon","external_record", "opay_recon_db", "base",3),
+    ("opay_recon","external_request_record", "opay_recon_db", "base",3),
+    ("opay_recon","internal_record", "opay_recon_db", "base",3),
+    ("opay_recon","internal_request_record", "opay_recon_db", "base",3),
+    ("opay_user","upload_file", "opay_user_db", "base",3),
+    ("opay_user","user", "opay_user_db", "base",3),
+    ("opay_user","user_bvn", "opay_user_db", "base",3),
+    ("opay_user","user_kyc", "opay_user_db", "base",3),
+    ("opay_user","user_kyc_upload", "opay_user_db", "base",3),
+    ("opay_user","user_limit", "opay_user_db", "base",3),
+    ("opay_user","user_operator", "opay_user_db", "base",3),
+    ("opay_user","user_payment_instrument", "opay_user_db", "base",3),
+    ("opay_user","user_upgrade", "opay_user_db", "base",3),
 ]
 
-HIVE_DB = 'oride_dw_ods'
+HIVE_DB = 'opay_dw_ods'
 HIVE_TABLE = 'ods_sqoop_%s_%s_df'
-UFILE_PATH = 'ufile://opay-datalake/oride_dw_sqoop/%s/%s'
+UFILE_PATH = 'ufile://opay-datalake/opay_dw_ods/%s/%s'
 ODS_CREATE_TABLE_SQL = '''
     CREATE EXTERNAL TABLE IF NOT EXISTS {db_name}.`{table_name}`(
         {columns}
@@ -150,8 +116,8 @@ ODS_CREATE_TABLE_SQL = '''
     LOCATION
       '{ufile_path}';
     MSCK REPAIR TABLE {db_name}.`{table_name}`;
-    -- delete oride_dw table
-    DROP TABLE IF EXISTS oride_dw.`{table_name}`;
+    -- delete opay_dw table
+    DROP TABLE IF EXISTS opay_dw.`{table_name}`;
 '''
 
 # 需要验证的核心业务表
@@ -208,7 +174,7 @@ def run_check_table(db_name, table_name, conn_id, hive_table_name, **kwargs):
                 col_name = '_dt'
             else:
                 col_name = result[0]
-            if result[1] == 'timestamp' or result[1] == 'varchar' or result[1] == 'char' or result[1] == 'text' or \
+            if result[1] == 'timestamp' or result[1] == 'varchar' or result[1] == 'char' or result[1] == 'text' or result[1] == 'longtext' or \
                     result[1] == 'datetime':
                 data_type = 'string'
             elif result[1] == 'decimal':
@@ -308,7 +274,6 @@ for db_name, table_name, conn_id, prefix_name,priority_weight_nm in table_list:
 
     touchz_data_success = BashOperator(
         task_id='touchz_data_success_{}'.format(hive_table_name),
-        priority_weight=priority_weight_nm,
         bash_command="""
                 line_num=`$HADOOP_HOME/bin/hadoop fs -du -s {hdfs_data_dir} | tail -1 | awk '{{print $1}}'`
 

@@ -30,7 +30,7 @@ validate_partition_data = PythonOperator(
         # 验证table
         "table_names":
             [
-             'oride_dw.ods_log_driver_track_data_hi ',
+             'oride_dw_ods.ods_log_driver_track_data_hi ',
              'oride_bi.oride_client_event_detail',
              'oride_dw_ods.ods_sqoop_base_data_order_df',
              ],
@@ -69,7 +69,7 @@ driver_track_validate_task = HivePartitionSensor(
     task_id="driver_track_validate_task",
     table="ods_log_driver_track_data_hi",
     partition="dt='{{ds}}'",
-    schema="oride_dw",
+    schema="oride_dw_ods",
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
@@ -258,7 +258,7 @@ insert_order_loc_list_0_0 = HiveOperator(
             select 
             order_id,
             concat_ws(',',collect_list(concat(`timestamp`,'_',lat,'_',lng))) loc_list
-            from oride_dw.ods_log_driver_track_data_hi 
+            from oride_dw_ods.ods_log_driver_track_data_hi 
             where dt = '{{ ds }}' and hour between '00' and '00'
             group by order_id
         )
@@ -324,7 +324,7 @@ insert_order_loc_list_1_1 = HiveOperator(
             select 
             order_id,
             concat_ws(',',collect_list(concat(`timestamp`,'_',lat,'_',lng))) loc_list
-            from oride_dw.ods_log_driver_track_data_hi 
+            from oride_dw_ods.ods_log_driver_track_data_hi 
             where dt = '{{ ds }}' and hour between '01' and '01'
             group by order_id
         )
@@ -390,7 +390,7 @@ insert_order_loc_list_2_2 = HiveOperator(
             select 
             order_id,
             concat_ws(',',collect_list(concat(`timestamp`,'_',lat,'_',lng))) loc_list
-            from oride_dw.ods_log_driver_track_data_hi 
+            from oride_dw_ods.ods_log_driver_track_data_hi 
             where dt = '{{ ds }}' and hour between '02' and '02'
             group by order_id
         )
@@ -456,7 +456,7 @@ insert_order_loc_list_3_3 = HiveOperator(
             select 
             order_id,
             concat_ws(',',collect_list(concat(`timestamp`,'_',lat,'_',lng))) loc_list
-            from oride_dw.ods_log_driver_track_data_hi 
+            from oride_dw_ods.ods_log_driver_track_data_hi 
             where dt = '{{ ds }}' and hour between '03' and '03'
             group by order_id
         )
@@ -522,7 +522,7 @@ insert_order_loc_list_4_4 = HiveOperator(
             select 
             order_id,
             concat_ws(',',collect_list(concat(`timestamp`,'_',lat,'_',lng))) loc_list
-            from oride_dw.ods_log_driver_track_data_hi 
+            from oride_dw_ods.ods_log_driver_track_data_hi 
             where dt = '{{ ds }}' and hour between '04' and '04'
             group by order_id
         )
@@ -588,7 +588,7 @@ insert_order_loc_list_5_5 = HiveOperator(
             select 
             order_id,
             concat_ws(',',collect_list(concat(`timestamp`,'_',lat,'_',lng))) loc_list
-            from oride_dw.ods_log_driver_track_data_hi 
+            from oride_dw_ods.ods_log_driver_track_data_hi 
             where dt = '{{ ds }}' and hour between '05' and '05'
             group by order_id
         )
@@ -654,7 +654,7 @@ insert_order_loc_list_6_6 = HiveOperator(
             select 
             order_id,
             concat_ws(',',collect_list(concat(`timestamp`,'_',lat,'_',lng))) loc_list
-            from oride_dw.ods_log_driver_track_data_hi 
+            from oride_dw_ods.ods_log_driver_track_data_hi 
             where dt = '{{ ds }}' and hour between '06' and '06'
             group by order_id
         )
@@ -720,7 +720,7 @@ insert_order_loc_list_7_7 = HiveOperator(
             select 
             order_id,
             concat_ws(',',collect_list(concat(`timestamp`,'_',lat,'_',lng))) loc_list
-            from oride_dw.ods_log_driver_track_data_hi 
+            from oride_dw_ods.ods_log_driver_track_data_hi 
             where dt = '{{ ds }}' and hour between '07' and '07'
             group by order_id
         )
@@ -786,7 +786,7 @@ insert_order_loc_list_8_8 = HiveOperator(
             select 
             order_id,
             concat_ws(',',collect_list(concat(`timestamp`,'_',lat,'_',lng))) loc_list
-            from oride_dw.ods_log_driver_track_data_hi 
+            from oride_dw_ods.ods_log_driver_track_data_hi 
             where dt = '{{ ds }}' and hour between '08' and '08'
             group by order_id
         )
@@ -852,7 +852,7 @@ insert_order_loc_list_9_9 = HiveOperator(
             select 
             order_id,
             concat_ws(',',collect_list(concat(`timestamp`,'_',lat,'_',lng))) loc_list
-            from oride_dw.ods_log_driver_track_data_hi 
+            from oride_dw_ods.ods_log_driver_track_data_hi 
             where dt = '{{ ds }}' and hour between '09' and '09'
             group by order_id
         )
@@ -918,7 +918,7 @@ insert_order_loc_list_10_10 = HiveOperator(
             select 
             order_id,
             concat_ws(',',collect_list(concat(`timestamp`,'_',lat,'_',lng))) loc_list
-            from oride_dw.ods_log_driver_track_data_hi 
+            from oride_dw_ods.ods_log_driver_track_data_hi 
             where dt = '{{ ds }}' and hour between '10' and '10'
             group by order_id
         )
@@ -984,7 +984,7 @@ insert_order_loc_list_11_11 = HiveOperator(
             select 
             order_id,
             concat_ws(',',collect_list(concat(`timestamp`,'_',lat,'_',lng))) loc_list
-            from oride_dw.ods_log_driver_track_data_hi 
+            from oride_dw_ods.ods_log_driver_track_data_hi 
             where dt = '{{ ds }}' and hour between '11' and '11'
             group by order_id
         )
@@ -1050,7 +1050,7 @@ insert_order_loc_list_12_12 = HiveOperator(
             select 
             order_id,
             concat_ws(',',collect_list(concat(`timestamp`,'_',lat,'_',lng))) loc_list
-            from oride_dw.ods_log_driver_track_data_hi 
+            from oride_dw_ods.ods_log_driver_track_data_hi 
             where dt = '{{ ds }}' and hour between '12' and '12'
             group by order_id
         )
@@ -1116,7 +1116,7 @@ insert_order_loc_list_13_13 = HiveOperator(
             select 
             order_id,
             concat_ws(',',collect_list(concat(`timestamp`,'_',lat,'_',lng))) loc_list
-            from oride_dw.ods_log_driver_track_data_hi 
+            from oride_dw_ods.ods_log_driver_track_data_hi 
             where dt = '{{ ds }}' and hour between '13' and '13'
             group by order_id
         )
@@ -1182,7 +1182,7 @@ insert_order_loc_list_14_14 = HiveOperator(
             select 
             order_id,
             concat_ws(',',collect_list(concat(`timestamp`,'_',lat,'_',lng))) loc_list
-            from oride_dw.ods_log_driver_track_data_hi 
+            from oride_dw_ods.ods_log_driver_track_data_hi 
             where dt = '{{ ds }}' and hour between '14' and '14'
             group by order_id
         )
@@ -1248,7 +1248,7 @@ insert_order_loc_list_15_15 = HiveOperator(
             select 
             order_id,
             concat_ws(',',collect_list(concat(`timestamp`,'_',lat,'_',lng))) loc_list
-            from oride_dw.ods_log_driver_track_data_hi 
+            from oride_dw_ods.ods_log_driver_track_data_hi 
             where dt = '{{ ds }}' and hour between '15' and '15'
             group by order_id
         )
@@ -1314,7 +1314,7 @@ insert_order_loc_list_16_16 = HiveOperator(
             select 
             order_id,
             concat_ws(',',collect_list(concat(`timestamp`,'_',lat,'_',lng))) loc_list
-            from oride_dw.ods_log_driver_track_data_hi 
+            from oride_dw_ods.ods_log_driver_track_data_hi 
             where dt = '{{ ds }}' and hour between '16' and '16'
             group by order_id
         )
@@ -1383,7 +1383,7 @@ insert_order_loc_list_17_17 = HiveOperator(
             select 
             order_id,
             concat_ws(',',collect_list(concat(`timestamp`,'_',lat,'_',lng))) loc_list
-            from oride_dw.ods_log_driver_track_data_hi 
+            from oride_dw_ods.ods_log_driver_track_data_hi 
             where dt = '{{ ds }}' and hour between '17' and '17'
             group by order_id
         )
@@ -1451,7 +1451,7 @@ insert_order_loc_list_18_18 = HiveOperator(
             select 
             order_id,
             concat_ws(',',collect_list(concat(`timestamp`,'_',lat,'_',lng))) loc_list
-            from oride_dw.ods_log_driver_track_data_hi 
+            from oride_dw_ods.ods_log_driver_track_data_hi 
             where dt = '{{ ds }}' and hour between '18' and '18'
             group by order_id
         )
@@ -1520,7 +1520,7 @@ insert_order_loc_list_19_19 = HiveOperator(
             select 
             order_id,
             concat_ws(',',collect_list(concat(`timestamp`,'_',lat,'_',lng))) loc_list
-            from oride_dw.ods_log_driver_track_data_hi 
+            from oride_dw_ods.ods_log_driver_track_data_hi 
             where dt = '{{ ds }}' and hour between '19' and '19'
             group by order_id
         )
@@ -1588,7 +1588,7 @@ insert_order_loc_list_20_20 = HiveOperator(
             select 
             order_id,
             concat_ws(',',collect_list(concat(`timestamp`,'_',lat,'_',lng))) loc_list
-            from oride_dw.ods_log_driver_track_data_hi 
+            from oride_dw_ods.ods_log_driver_track_data_hi 
             where dt = '{{ ds }}' and hour between '20' and '20'
             group by order_id
         )
@@ -1656,7 +1656,7 @@ insert_order_loc_list_21_21 = HiveOperator(
             select 
             order_id,
             concat_ws(',',collect_list(concat(`timestamp`,'_',lat,'_',lng))) loc_list
-            from oride_dw.ods_log_driver_track_data_hi 
+            from oride_dw_ods.ods_log_driver_track_data_hi 
             where dt = '{{ ds }}' and hour between '21' and '21'
             group by order_id
         )
@@ -1726,7 +1726,7 @@ insert_order_loc_list_22_22 = HiveOperator(
             select 
             order_id,
             concat_ws(',',collect_list(concat(`timestamp`,'_',lat,'_',lng))) loc_list
-            from oride_dw.ods_log_driver_track_data_hi 
+            from oride_dw_ods.ods_log_driver_track_data_hi 
             where dt = '{{ ds }}' and hour between '22' and '22'
             group by order_id
         )
@@ -1794,7 +1794,7 @@ insert_order_loc_list_23_23 = HiveOperator(
             select 
             order_id,
             concat_ws(',',collect_list(concat(`timestamp`,'_',lat,'_',lng))) loc_list
-            from oride_dw.ods_log_driver_track_data_hi 
+            from oride_dw_ods.ods_log_driver_track_data_hi 
             where dt = '{{ ds }}' and hour between '23' and '23'
             group by order_id
         )

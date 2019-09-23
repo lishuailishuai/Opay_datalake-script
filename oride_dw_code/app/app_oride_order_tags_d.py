@@ -287,7 +287,7 @@ insert_result_to_impala = HiveOperator(
             orders
         from tag_type_data
     """.format(pt='{{ ds }}', table_name=hive_table),
-    schema='oride_dw',
+    schema='oride_dw_ods',
     priority_weight=50,
     dag=dag
 )
