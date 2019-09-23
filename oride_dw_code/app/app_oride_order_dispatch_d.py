@@ -972,5 +972,86 @@ dependence_app_oride_order_pushed_d >> sleep_time
 dependence_app_oride_driver_base_d >> sleep_time
 dependence_app_oride_order_base_d >> sleep_time
 
-sleep_time >> create_result_table_task
+
+# 检查统计结果是否正确
+def check_result(**op_kwargs):
+    dt = op_kwargs.get('ds', time.strftime('%Y-%m-%d', time.localtime(time.time() - 86400)))
+    sql = '''
+        WITH
+        --推单数据 
+        app_oride_order_pushed_d AS (
+            SELECT 
+                * 
+            FROM oride_dw.app_oride_order_pushed_d 
+            WHERE dt = '{pt}' AND 
+                city_id < 999000
+        ), 
+        --司机数据
+        app_oride_driver_base_d AS (
+            SELECT 
+                * 
+            FROM oride_dw.app_oride_driver_base_d 
+            WHERE dt = '{pt}' AND 
+                city_id < 999000
+        ),
+        --订单数据
+        app_oride_order_base_d AS (
+            SELECT 
+                * 
+            FROM oride_dw.app_oride_order_base_d 
+            WHERE dt = '{pt}' AND 
+                city_id < 999000
+        )
+
+        ---写入结果表
+        SELECT 
+            *
+        FROM app_oride_order_base_d AS c 
+        LEFT JOIN app_oride_driver_base_d AS b ON b.country_code=c.country_code AND b.dt=c.dt AND b.city_id=c.city_id AND b.product_id=c.product_id 
+        LEFT JOIN app_oride_order_pushed_d AS a ON c.country_code=a.country_code AND c.dt=a.dt AND c.city_id=a.city_id AND c.product_id=a.product_id
+    '''.format(pt=dt)
+    cursor = get_hive_cursor()
+    logging.info(sql)
+    cursor.execute(sql)
+    res = cursor.fetchall()
+    for line in res:
+        if 'null' in line or 'NULL' in line or None in line:
+            logging.info(line)
+            cursor.close()
+            comwx.postAppMessage('重要重要重要：oride调度算法_{pt}数据错误，停止发送'.format(pt=dt), '271')
+            raise Exception('data record error !!!')
+            return
+
+    cursor.close()
+
+
+check_result_task = PythonOperator(
+    task_id='check_result_task',
+    python_callable=check_result,
+    provide_context=True,
+    dag=dag
+)
+
+
+# driver_base_fillback = BashOperator(
+#    task_id='driver_base_fillback',
+#    bash_command='''
+#        #!/usr/bin/env bash
+#        . /data/venv/bin/activate && [[ "{op}" == "False" ]] && airflow backfill -s {{{{ ds }}}} -e {{{{ tomorrow_ds }}}} app_oride_driver_base_d -sd /root/airflow/dags/oride_dw_code/app/app_oride_driver_base_d.py
+#    '''.format(op=CONTINUE_TASK),
+#    dag=dag
+# )
+
+sleep_time2 = BashOperator(
+    task_id='sleep_time2',
+    depends_on_past=False,
+    bash_command='sleep 2',
+    dag=dag
+)
+
+sleep_time >> check_result_task >> sleep_time2
+sleep_time >> check_result_task >> sleep_time2
+sleep_time >> check_result_task >> sleep_time2
+
+sleep_time2 >> create_result_table_task
 create_result_table_task >> insert_result_to_hive >> validate_partition_data >> send_report
