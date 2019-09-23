@@ -1204,20 +1204,24 @@ insert_oride_global_city_serv_daily_report = HiveOperator(
                 LEFT JOIN
                 (
                     SELECT
-                      *
+                      order_id,
+                      sum(amount) as amount
                     FROM
                       oride_dw_ods.ods_sqoop_base_data_driver_recharge_records_df
                     WHERE
                       dt='{{ ds }}' AND amount>0
+                    group by order_id
                 ) drr on drr.order_id=do.id
                 LEFT JOIN
                 (
                     SELECT
-                      *
+                      order_id,
+                      sum(amount) as amount
                     FROM
                       oride_dw_ods.ods_sqoop_base_data_driver_reward_df
                     WHERE
                       dt='{{ ds }}'
+                      group by order_id
                 ) dr on dr.order_id=do.id
                 LEFT JOIN order_comment oc ON oc.order_id=do.id
             GROUP BY do.dt,do.city_id,d.serv_type
