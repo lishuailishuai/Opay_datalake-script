@@ -118,12 +118,12 @@ from
             
             id as order_id,--订单 ID
             driver_id,--司机ID
-            mode,--支付模式（0: 未知, 1: 线下支付, 2: opay, 3: 余额）
+            mode as pay_mode,--支付模式（0: 未知, 1: 线下支付, 2: opay, 3: 余额）
             price,-- 价格
             coupon_id,--使用的优惠券 ID
             coupon_name ,--优惠券名称
             coupon_amount,-- 使用的优惠券金额
-            amount,--实付金额
+            amount as pay_amount,--实付金额
             bonus,-- 使用的奖励金
             balance,--使用的余额
             opay_amount,--opay 支付的金额
@@ -138,7 +138,7 @@ from
             pay_type --支付类型(0:手动支付 1:自动支付)
 
       FROM oride_dw_ods.ods_sqoop_base_data_order_payment_df
-      WHERE dt={pt}) pay
+      WHERE dt='{pt}') pay
 left outer join
 (SELECT 
            order_id,
