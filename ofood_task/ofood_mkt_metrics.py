@@ -175,6 +175,7 @@ insert_mkt_metrics = HiveToMySqlTransfer(
 
         select 
         null,
+        dt,
         mkt_id,
         mkt_phone,
         bdm_id,
