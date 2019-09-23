@@ -76,7 +76,7 @@ dwm_oride_driver_base_di_tesk = UFileSensor(
 ##------------------------------------ end --------------------------------##
 """
 
-mysql_table = 'oride_dw.app_oride_finance_driver_repayment_d'
+mysql_table = 'oride_dw.app_oride_finance_driver_repayment_test_d'
 
 
 # 从hive读取数据
