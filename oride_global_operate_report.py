@@ -153,7 +153,8 @@ def get_all_data_row(ds):
                 row_html += weekend_tr_fmt.format(row=row)
             else:
                 row_html += tr_fmt.format(row=row)
-            all_completed_num = data_list[0][5]
+            all_completed_num = data_list[0][6]-data_list[0][10]
+
     return row_html,all_completed_num
 
 
@@ -301,7 +302,7 @@ def get_product_rows(ds, all_completed_num,product_id):
                 concat(cast(nvl(round((t1.price-t1.pay_amount)*100/t1.price,1),0) AS string),'%') AS c_subsidy_rate, --c端补贴率【gmv状态4，5；实付金额状态5】
                 nvl(round(t1.pay_price/t1.finish_pay,1),0) AS avg_pay_price, --单均应付
                 nvl(round(t1.pay_amount/t1.finish_pay,1),0) AS avg_pay_amount --单均实付
-                from (SELECT sum(finish_order_cnt) over(partition BY city_id)/2 AS city_total,*
+                from (SELECT sum(if(product_id not in(99,-10000),finish_order_cnt,0)) over(partition BY city_id) AS city_total,*
                       FROM oride_dw.app_oride_global_operate_report_d WHERE dt='{dt}') t1
                    LEFT JOIN
                   (SELECT id,
@@ -578,6 +579,7 @@ def send_report_email(ds, **kwargs):
     #print (len(result))
     rows=result[0]
     all_completed_num=result[1]
+    print (all_completed_num)
     html = html_fmt.format(rows=rows,
                            product_html_table_fmt=product_html_table_fmt,
                            product_html_table_fmt_otrike=product_html_table_fmt_otrike,
