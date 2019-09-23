@@ -96,7 +96,7 @@ dwd_oride_finance_driver_repayment_extend_df_task = HiveOperator(
 
 INSERT overwrite TABLE oride_dw.{table} partition(country_code,dt)
 
-SELECT city_id,
+SELECT dri.city_id,
        city_name,
        --城市名称
 
@@ -109,110 +109,129 @@ SELECT city_id,
        dri.phone_number,
        --手机号
 
-       product_id,
+       dri.product_id,
        --司机类型
 
-       red.amount_service,
-
-       (case when dri.product_id=1 then red.amount_service*365 else rep.amount*rep.numbers end) AS repayment_all,
+       (CASE
+            WHEN dri.product_id=1 THEN ogreen.total_ * ogreen.amount_service
+            ELSE ostreet.total_ * ostreet.amount_service
+        END) AS repayment_all,
        --还款总额
 
-       (case when dri.product_id=1 then null else rep.start_date end) as start_date,
-       --开始日期
-
-       (case when dri.product_id=1 then red.amount_service else rep.amount end) as repayment_amount,
-       --还款金额
-
-       (case when dri.product_id=1 then 365 else rep.numbers end) as numbers,
+       (CASE
+            WHEN dri.product_id=1 THEN ogreen.total_
+            ELSE ostreet.total_
+        END) AS numbers,
        --还款次数(分期总数)
 
-       (case when bal.balance is null then 0 else bal.balance end) as balance,
+       (CASE
+            WHEN dri.product_id=1 THEN ogreen.first_
+            ELSE ostreet.first_
+        END) AS start_date,
+       --开始日期
+
+       (CASE
+            WHEN dri.product_id=1 THEN ogreen.last_
+            ELSE ostreet.last_
+        END) AS last_date,
+       --最后还款
+
+       (CASE
+            WHEN dri.product_id=1 THEN ogreen.amount_service
+            ELSE ostreet.amount_service
+        END) AS repayment_amount,
+       --还款金额
+
+       (CASE
+            WHEN bal.balance IS NULL THEN 0
+            ELSE bal.balance
+        END) AS balance,
        --余额
 
-       nvl(oer.overdue_payment_cnt,0) as overdue_payment_cnt,
+       (CASE
+            WHEN dri.product_id=1 THEN nvl(ogreen.settled_,0)
+            ELSE nvl(ostreet.settled_,0)
+        END) AS settled_numbers,
+       --还款期数
+
+       nvl(oer.overdue_payment_cnt,0) AS overdue_payment_cnt,
        --违约期数
 
-       date_sub(dri.dt,nvl(oer.overdue_payment_cnt,0)) AS last_repayment_time,
-       --最后还款时间
-
-       nvl((CASE WHEN dri.product_id=1
-           AND bal.balance>=0
-           AND red.amount_service>0 THEN 1 
-           WHEN dri.product_id<>1
-            then rec.cnt ELSE 0 END),0) AS is_td_valid,
-       --当天是否有效
+       nvl((CASE
+            WHEN ((dri.product_id=1
+                   AND ogreen.settled_=ogreen.total_)
+                  OR (dri.product_id=2
+                      AND ostreet.settled_=ostreet.total_)) THEN 0
+            ELSE 1
+        END),0) AS status,
+       --0还完 1未还完
 
        dri.fault,
        --骑手状态
-       
-       dri.country_code,
-           --国家码字段
-    
-       '{pt}' AS dt
-       
-FROM
 
-(SELECT *
+       dri.country_code,
+       --国家码字段
+
+       '{pt}' AS dt
+FROM  
+
+  (SELECT *
    FROM oride_dw.dim_oride_driver_base
    WHERE dt='{pt}'
-   and city_id<>'999001') dri
-LEFT OUTER JOIN
-  (SELECT *
-   FROM oride_dw_ods.ods_sqoop_base_data_driver_repayment_df
-   WHERE dt='{pt}'
-     AND substring(updated_at,1,13)<='{now_day} 00'
-     and repayment_type=0) rep
-  ON dri.driver_id=rep.driver_id
-LEFT OUTER JOIN
+     AND city_id<>'999001') dri
+LEFT OUTER JOIN --所有骑手的余额表
+
   (SELECT driver_id,
           balance--余额
+
    FROM oride_dw_ods.ods_sqoop_base_data_driver_balance_extend_df
    WHERE dt='{pt}') bal ON dri.driver_id=bal.driver_id
-LEFT OUTER JOIN
- (SELECT driver_id,
-          amount_service
+LEFT OUTER JOIN --专车司机扣款记录
+
+  (SELECT driver_id,
+          from_unixtime(min(DAY)) AS first_,
+          from_unixtime(max(DAY)) AS last_,
+          count(1) AS settled_,
+          365 AS total_ ,
+          max(amount_service) AS amount_service
    FROM oride_dw_ods.ods_sqoop_base_data_driver_records_day_df
-   WHERE from_unixtime(updated_at,'yyyy-MM-dd HH')<='{now_day} 00'
-     AND dt = '{pt}'
-     AND from_unixtime(DAY, 'yyyy-MM-dd') = dt) red
- ON dri.driver_id=red.driver_id
- LEFT OUTER JOIN
+   WHERE amount_service>0
+     AND dt='{pt}'
+   GROUP BY driver_id) ogreen ON dri.driver_id = ogreen.driver_id
+LEFT OUTER JOIN --快车司机扣款记录
+  (SELECT ta.driver_id,
+          from_unixtime(min(ta.created_at)) AS first_,
+          from_unixtime(max(ta.created_at)) AS last_,
+          count(1) AS settled_,
+          min(tb.numbers) AS total_ ,
+          abs(min(ta.amount)) AS amount_service
+   FROM (select *
+         FROM oride_dw_ods.ods_sqoop_base_data_driver_recharge_records_df
+         WHERE dt = '{pt}'
+           AND from_unixtime(updated_at,'yyyy-MM-dd HH')<='{now_day} 00'
+           AND amount_reason=6
+           AND amount<>0) ta
+   LEFT OUTER JOIN
+     (SELECT *
+      FROM oride_dw_ods.ods_sqoop_base_data_driver_repayment_df
+      WHERE dt='{pt}'
+        AND substring(updated_at,1,13)<='{now_day} 00'
+        AND repayment_type=0) tb ON ta.driver_id = tb.driver_id
+   GROUP BY ta.driver_id ) ostreet ON dri.driver_id = ostreet.driver_id
+LEFT OUTER JOIN --所有骑手的违约期数
+
   (SELECT driver_id,
-          count(distinct(case when amount<0 then driver_id else null end)) as cnt
-   FROM oride_dw_ods.ods_sqoop_base_data_driver_recharge_records_df
-   WHERE from_unixtime(updated_at,'yyyy-MM-dd HH')<='{now_day} 00'
-     AND dt = '{pt}'
-     and amount_reason=6
-     group by driver_id) rec ON dri.driver_id=rec.driver_id
-  LEFT OUTER JOIN   
-(SELECT driver_id,
-       overdue_payment_cnt --违约期数
-FROM
-  (SELECT driver_id,
-          false_id,
-          dt,
-          date_sub(dt,rank),
-          row_number() OVER(PARTITION BY driver_id,false_id,date_sub(dt,rank)
-                            ORDER BY dt) AS overdue_payment_cnt
+          IF(INSTR(concat_ws('',collect_list(false_id)),'0')=0, LENGTH(concat_ws('',collect_list(false_id))), INSTR(concat_ws('',collect_list(false_id)),'0')-1) AS overdue_payment_cnt --违约期数
+
    FROM
      (SELECT driver_id,
-             false_id,
              dt,
-             row_number() OVER(PARTITION BY driver_id,false_id
-                               ORDER BY dt) AS rank
-      FROM
-        (SELECT driver_id,
-                (CASE WHEN balance<0 THEN 1 ELSE 0 END) AS false_id,
-                dt
-         FROM oride_dw_ods.ods_sqoop_base_data_driver_balance_extend_df
-         WHERE dt BETWEEN '{prev_6_day}' AND '{pt}'
-         ORDER BY dt) bal
-      GROUP BY driver_id,
-               false_id,
-               dt) a1) x1
-WHERE dt='{pt}'
-  AND false_id=1) oer
-ON dri.driver_id=oer.driver_id;
+             (CASE WHEN balance<0 THEN '1' ELSE '0' END) AS false_id
+      FROM oride_dw_ods.ods_sqoop_base_data_driver_balance_extend_df
+      WHERE dt BETWEEN DATE_ADD('{pt}', -15) AND DATE_ADD('{pt}',0)
+      ORDER BY driver_id,
+               dt DESC) AS slack_det
+   GROUP BY driver_id) oer ON dri.driver_id=oer.driver_id
 
 '''.format(
         pt='{{ds}}',

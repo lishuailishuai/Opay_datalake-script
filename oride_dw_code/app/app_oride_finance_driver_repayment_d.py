@@ -10,13 +10,14 @@ from airflow.sensors.hive_partition_sensor import HivePartitionSensor
 from utils.connection_helper import get_hive_cursor, get_db_conn
 from datetime import datetime, timedelta
 from airflow.sensors import UFileSensor
+from airflow.operators.impala_plugin import ImpalaOperator
 import re,sys
 import logging
 from utils.validate_metrics_utils import *
 import time
 
 args = {
-    'owner': 'wuduo',
+    'owner': 'yangmingze',
     'start_date': datetime(2019, 8, 31),
     'depends_on_past': False,
     'retries': 3,
@@ -48,7 +49,7 @@ hive_table = 'dwd_oride_finance_driver_repayment_extend_df'
 
 #依赖前一天数据是否存在
 dwd_oride_finance_driver_repayment_extend_df_tesk = UFileSensor(
-    task_id='dwd_oride_finance_driver_repayment_extend_df_tesk',
+    task_id='dwd_oride_finance_driver_repayment_extend_df',
     filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
         hdfs_path_str="oride/oride_dw/dwd_oride_finance_driver_repayment_extend_df/country_code=nal",
         pt='{{ds}}'
@@ -75,41 +76,42 @@ dwm_oride_driver_base_di_tesk = UFileSensor(
 ##------------------------------------ end --------------------------------##
 """
 
-mysql_table = 'oride_assets.oride_assets_finance_driver_repayment'
+mysql_table = 'oride_dw.app_oride_finance_driver_repayment_d'
 
 
 # 从hive读取数据
-def get_data_from_hive(**op_kwargs):
-    ds = op_kwargs.get('ds', time.strftime('%Y-%m-%d', time.localtime(time.time() - 86400)))
+def get_data_from_hive(ds,**op_kwargs):
+    # ds = op_kwargs.get('ds', time.strftime('%Y-%m-%d', time.localtime(time.time() - 86400)))
     hql = '''
-        SELECT t1.dt,
-            NVL(t1.city_id, 0),
-            NVL(city_name, ''),
-            NVL(t1.driver_id, 0),
-            NVL(driver_name, ''),
-            NVL(phone_number, ''),
-            NVL(t1.product_id, 0),
-            CASE
+        SELECT t1.dt as day, --日期
+            NVL(t1.city_id, 0) as city_id, --城市
+            NVL(city_name, '') as city_name, --城市名称
+            NVL(t1.driver_id, 0) as driver_id, --司机Id
+            NVL(driver_name, '') as driver_name, --司机姓名
+            NVL(phone_number, '') as driver_mobile, --司机手机号码
+            NVL(t1.product_id, 0) as driver_type,--骑手类型：1 ORide-Green, 2 ORide-Street, 3 OTrike
+            (CASE
                 WHEN balance IS NULL THEN 0
                 ELSE balance
-            END,
-            CASE
+            END) as balance, --余额
+            (CASE
                 WHEN repayment_all IS NULL THEN 0
                 ELSE repayment_all
-            END,
-            NVL(start_date, ''),
-            CASE
+            END) as repayment_total_amount, --还款总额
+            NVL(start_date, '') as start_date, --开始还款日期
+            (CASE
                 WHEN repayment_amount IS NULL THEN 0
                 ELSE repayment_amount
-            END,
-            NVL(numbers, 0),
-            0 AS effective_days,
-            NVL(overdue_payment_cnt, 0),
-            NVL(last_repayment_time, dt),
-            is_td_valid AS today_repayment,
-            0 AS status,
-            nvl(driver_finish_ord_num,0) AS order_numbers,
-            fault 
+            END) as repayment_amount, --每次还款金额
+            NVL(numbers, 0) as total_numbers,  --分期总数
+            0 AS effective_days, --有效天数：计算骑手正常还款的天数 
+            NVL(overdue_payment_cnt, 0) as lose_numbers, --违约期数
+            NVL(last_date, t1.dt) as last_back_time, -- 最后一次还款时间
+            0 AS today_repayment, -- 今日是否还款：1已还款
+            0 AS status, -- 状态
+            nvl(driver_finish_ord_num,0) AS order_numbers, -- 完成订单数量
+            nvl(t3.order_agv,0) AS order_agv, -- 3日平均
+            fault
         FROM (select * FROM {hive_db}.{hive_table}
         WHERE dt = '{pt}') t1
         
@@ -124,12 +126,21 @@ def get_data_from_hive(**op_kwargs):
         ON t1.driver_id=t2.driver_id
           AND t1.city_id=t2.city_id
           AND t1.product_id=t2.product_id
+        LEFT OUTER JOIN --所有骑手的3日平均接单数
+        (SELECT driver_id,
+                ROUND(sum(driver_finish_ord_num)/3) AS order_agv --3日平均完单数
         
-
+         FROM oride_dw.dwm_oride_driver_base_di
+         WHERE dt BETWEEN '{prev_3_day}' AND '{pt}'
+           AND city_id<>'999001'
+        GROUP BY driver_id) t3
+        ON t1.driver_id=t3.driver_id
     '''.format(
         hive_db=hive_db,
         hive_table=hive_table,
-        pt=ds
+        pt=ds,
+        now_day=airflow.macros.ds_add(ds, +1),
+        prev_3_day=airflow.macros.ds_add(ds, -2),
     )
 
     logging.info(hql)
@@ -137,7 +148,7 @@ def get_data_from_hive(**op_kwargs):
     hive_cursor.execute(hql)
     hive_data = hive_cursor.fetchall()
 
-    mysql_conn = get_db_conn('opay_spread_mysql')
+    mysql_conn = get_db_conn('mysql_bi')
     mcursor = mysql_conn.cursor()
 
     __data_to_mysql(
@@ -146,7 +157,7 @@ def get_data_from_hive(**op_kwargs):
         [
             'day', 'city_id', 'city_name', 'driver_id', 'driver_name', 'driver_mobile', 'driver_type',
             'balance', 'repayment_total_amount', 'start_date', 'repayment_amount', 'total_numbers',
-            'effective_days', 'lose_numbers', 'last_back_time', 'today_repayment', 'status','order_numbers','fault'
+            'effective_days', 'lose_numbers', 'last_back_time', 'today_repayment', 'status','order_numbers','order_agv','fault'
         ],
         'day=VALUES(day)'
     )
@@ -167,12 +178,12 @@ def __data_to_mysql(conn, data, column, update=''):
     try:
         for (day, city_id, city_name, driver_id, driver_name, driver_mobile, driver_type,
                 balance, repayment_total_amount, start_date, repayment_amount, total_numbers,
-                effective_days, lose_numbers, last_back_time, today_repayment, status,order_numbers,fault) in data:
+                effective_days, lose_numbers, last_back_time, today_repayment, status,order_numbers,order_agv,fault) in data:
 
             row = [
                 day, city_id, city_name, driver_id, driver_name.replace("'", "\\'"), driver_mobile, driver_type,
                 balance, repayment_total_amount, start_date, repayment_amount, total_numbers,
-                effective_days, lose_numbers, last_back_time, today_repayment, status,order_numbers,fault
+                effective_days, lose_numbers, last_back_time, today_repayment, status,order_numbers,order_agv,fault
             ]
             if sval == '':
                 sval = '(\'{}\')'.format('\',\''.join([str(x) for x in row]))
