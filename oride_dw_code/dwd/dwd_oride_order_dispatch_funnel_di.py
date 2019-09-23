@@ -141,8 +141,8 @@ dwd_oride_order_dispatch_funnel_di_task = HiveOperator(
             cast(nvl(d.distance,0) as bigint) as distance,--司机的接驾距离(米)(订单分配给司机时司机所处的位置)
             cast(d.wait_time as string) as wait_time,--司机收到推送信息时有多久没有订单
             cast(d.push_mode as string) as push_mode,--是派单方式（目前只有全局优化和直接发单）
-            d.event_name as event_name, --事件类型
             '' as reason,--过滤原因
+            d.event_name as event_name, --事件类型
             'nal' as country_code, 
             '{pt}' dt
         
