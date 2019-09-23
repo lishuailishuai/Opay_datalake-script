@@ -138,7 +138,7 @@ from
             pay_type --支付类型(0:手动支付 1:自动支付)
 
       FROM oride_dw_ods.ods_sqoop_base_data_order_payment_df
-      WHERE dt={pt}) pay
+      WHERE dt='{pt}') pay
 left outer join
 (SELECT 
            order_id,
