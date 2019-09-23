@@ -107,7 +107,7 @@ select
              --国家码字段
   '{pt}' as dt
 from oride_dw_ods.ods_sqoop_base_data_driver_extend_df
-where dt='{pt}') t1
+where dt='{pt}'
 '''.format(
         pt='{{ds}}',
         now_day='{{macros.ds_add(ds, +1)}}',
