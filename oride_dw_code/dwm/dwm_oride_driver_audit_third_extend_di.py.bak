@@ -48,16 +48,14 @@ sleep_time = BashOperator(
 
 
 #依赖前一天分区
-ods_sqoop_base_data_driver_extend_df_prev_day_task=UFileSensor(
-    task_id='ods_sqoop_base_data_driver_extend_df_prev_day_task',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride_dw_sqoop/oride_data/data_driver_extend",
-        pt='{{ds}}'
-        ),
-    bucket_name='opay-datalake',
-    poke_interval=60, #依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-        )
+ods_binlog_data_driver_extend_hi_last_day_tesk=HivePartitionSensor(
+      task_id="ods_binlog_data_driver_extend_hi_last_day_tesk",
+      table="ods_binlog_data_driver_extend_hi",
+      partition="dt='{{ds}}'",
+      schema="oride_dw_ods",
+      poke_interval=60, #依赖不满足时，一分钟检查一次依赖状态
+      dag=dag
+    )
 
 ##----------------------------------------- 变量 ---------------------------------------## 
 
@@ -75,6 +73,42 @@ dwm_oride_driver_audit_third_extend_di_task = HiveOperator(
 
 INSERT overwrite TABLE oride_dw.{table} partition(country_code,dt)
 select 
+    driver_id,--司机 ID
+    city_id,--所属城市ID
+    product_id,--1 专车 2 快车
+    serv_mode,--服务模式 (0: no service, 1: in service)
+    serv_status,--服务状态 (0: wait assign, 1: pick up, 2: send)
+    order_rate,--接单率
+    assign_order,--派单数量
+    take_order,--接单数量
+    avg_score,--平均评分
+    total_score,--总评分
+    score_times,--评分次数
+    last_order_id,--最近一个订单的ID
+    register_time,--注册时间
+    login_time,--最后登陆时间
+    is_bind ,--状态 0 未绑定 1 已绑定
+    first_bind_time,--初次绑定时间
+    total_pay,--总计-已打款收入
+    inviter_role,--邀请者角色
+    inviter_id,--邀请者ID
+    block,--后台管理司机接单状态(0: 允许 1:不允许)
+    serv_score,--司机服务分
+    local_gov_ids,--行会ID,json
+    updated_at,--最后更新时间
+    fault,--正常0(停运)修理1(停运)无资料2(停运)事故3(停运)扣除4(欠缴)5
+    language,--客户端语言
+    end_service_time,--专车司机结束收份子钱时间
+    last_online_time,--最后上线时间
+    last_offline_time,
+    country_code, --国家码字段
+    '{pt}' as dt
+from 
+(select 
+  op,--操作类型 c 创建 u 更新 d 删除
+  ts_ms,--事件时间（毫秒）
+  gtid,--事件唯一标识
+  pos,--binlog pos
   id as driver_id,--司机 ID
   serv_mode,--服务模式 (0: no service, 1: in service)
   serv_status,--服务状态 (0: wait assign, 1: pick up, 2: send)
@@ -105,9 +139,12 @@ select
   last_offline_time, --最后下线时间
   'nal' AS country_code,
              --国家码字段
-  '{pt}' as dt
-from oride_dw_ods.ods_sqoop_base_data_driver_extend_df
-where dt='{pt}') t1
+  row_number() OVER(partition BY id
+                               ORDER BY updated_at desc,pos DESC) AS rn1
+from oride_dw_ods.ods_binlog_data_driver_extend_hi
+where concat_ws(' ',dt,hour) BETWEEN '{pt} 00' AND '{now_day} 00'  --取昨天1天数据与今天早上00数据
+        AND op IN ('c','u')) t1
+where rn1=1
 '''.format(
         pt='{{ds}}',
         now_day='{{macros.ds_add(ds, +1)}}',
@@ -174,4 +211,4 @@ touchz_data_success = BashOperator(
         ),
     dag=dag)
 
-ods_sqoop_base_data_driver_extend_df_prev_day_task>>sleep_time>>dwm_oride_driver_audit_third_extend_di_task>>task_check_key_data>>touchz_data_success
+ods_binlog_data_driver_extend_hi_last_day_tesk>>sleep_time>>dwm_oride_driver_audit_third_extend_di_task>>task_check_key_data>>touchz_data_success
