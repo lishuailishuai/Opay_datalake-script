@@ -226,7 +226,7 @@ def check_key_data(ds, **kargs):
      (SELECT order_id,
              count(1) as cnt
       FROM oride_dw.{table}
-
+      where dt in('his','{{ds}}')
       GROUP BY order_id HAVING count(1)>1) t1
     '''.format(
         now_day=airflow.macros.ds_add(ds, +1),
