@@ -101,6 +101,7 @@ SELECT order_id,  --订单ID
             end_lat,
             unix_timestamp(create_time) as create_time,
             create_time as create_time_s,
+            create_date,
             status,
             LEAD(unix_timestamp(create_time),1,unix_timestamp(create_time)) OVER(PARTITION BY passenger_id ORDER BY unix_timestamp(create_time)) create_time2,
             LEAD(start_lng,1,0) OVER(PARTITION BY passenger_id ORDER BY create_time) start_lng2,
