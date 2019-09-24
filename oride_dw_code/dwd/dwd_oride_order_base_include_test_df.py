@@ -26,8 +26,14 @@ dag = airflow.DAG('dwd_oride_order_base_include_test_df',
                   default_args=args,
                   catchup=False)
 
-sleep_time = BashOperator(
-    task_id='sleep_id',
+sleep_time_normal = BashOperator(
+    task_id='sleep_id_normal',
+    depends_on_past=False,
+    bash_command='sleep 30',
+    dag=dag)
+
+sleep_time_his = BashOperator(
+    task_id='sleep_id_his',
     depends_on_past=False,
     bash_command='sleep 30',
     dag=dag)
@@ -64,6 +70,21 @@ ods_sqoop_base_data_order_payment_df_prev_day_task = HivePartitionSensor(
     dag=dag
 )
 
+# 依赖前一天分区
+dependence_dwd_oride_order_base_include_test_df_result_task = UFileSensor(
+    task_id='dwd_oride_order_base_include_test_df_result_task',
+    filepath1='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="oride/oride_dw/dwd_oride_order_base_include_test_df/country_code=nal",
+        pt='nal'
+    ),
+    filepath2='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+            hdfs_path_str="oride/oride_dw/dwd_oride_order_base_include_test_df/country_code=nal",
+            pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
 
 ##----------------------------------------- 变量 ---------------------------------------##
 
@@ -269,8 +290,17 @@ touchz_data_success = BashOperator(
     ),
     dag=dag)
 
-ods_sqoop_base_data_order_df_prev_day_task >>ods_sqoop_base_data_order_payment_df_prev_day_task >>sleep_time >>dwd_oride_order_base_include_test_df_task
 
-ods_sqoop_base_data_order_expired_df_prev_day_task >>ods_sqoop_base_data_order_payment_df_prev_day_task >>sleep_time >>dwd_oride_order_base_include_test_his_df_task
 
-task_check_key_data >>touchz_data_success
+ods_sqoop_base_data_order_df_prev_day_task >> \
+ods_sqoop_base_data_order_payment_df_prev_day_task >> \
+sleep_time_normal >> \
+dwd_oride_order_base_include_test_df_task
+
+ods_sqoop_base_data_order_expired_df_prev_day_task >> \
+ods_sqoop_base_data_order_payment_df_prev_day_task >> \
+sleep_time_his >> \
+dwd_oride_order_base_include_test_his_df_task
+
+dependence_dwd_oride_order_base_include_test_df_result_task>>task_check_key_data >> \
+touchz_data_success
