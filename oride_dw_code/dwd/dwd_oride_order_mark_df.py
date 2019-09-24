@@ -22,7 +22,7 @@ args = {
 }
 
 dag = airflow.DAG('dwd_oride_order_mark_df',
-                  schedule_interval="30 01 * * *",
+                  schedule_interval="20 01 * * *",
                   default_args=args,
                   catchup=False)
 
@@ -35,11 +35,13 @@ sleep_time = BashOperator(
 ##----------------------------------------- 依赖 ---------------------------------------##
 
 # 依赖前一天分区
-dwd_oride_order_base_include_test_df_prev_day_task = HivePartitionSensor(
-    task_id="dwd_oride_order_base_include_test_df_prev_day_task",
-    table="dwd_oride_order_base_include_test_df",
-    partition="dt='{{ds}}'",
-    schema="oride_dw",
+dwd_oride_order_base_include_test_df_prev_day_task = UFileSensor(
+    task_id='dwd_oride_order_base_include_test_df_prev_day_task',
+    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="oride/oride_dw/dwd_oride_order_base_include_test_df/country_code=nal",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
