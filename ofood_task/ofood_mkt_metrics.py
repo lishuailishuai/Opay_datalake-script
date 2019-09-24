@@ -161,7 +161,7 @@ create_mkt_metrics = HiveOperator(
             and pay_status = 1
             and from_unixtime(lasttime,'yyyy-MM-dd') = '{{ ds }}'
             group by uid,from_unixtime(lasttime,'yyyy-MM-dd')
-        ) p on p.uid = i.uid and p.lasttime = from_unixtime(i.dateline,'yyyy-MM-dd')
+        ) p on p.uid = i.uid 
         group by t.mkt_id,t.mkt_phone,t.bd_id,t.bd_name
         ;
 
