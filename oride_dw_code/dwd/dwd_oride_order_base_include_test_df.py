@@ -272,12 +272,12 @@ touchz_data_success = BashOperator(
 ods_sqoop_base_data_order_df_prev_day_task >> \
 ods_sqoop_base_data_order_payment_df_prev_day_task >> \
 sleep_time >> \
-dwd_oride_order_base_include_test_df_task
+dwd_oride_order_base_include_test_df_task \
 
 ods_sqoop_base_data_order_expired_df_prev_day_task >> \
 ods_sqoop_base_data_order_payment_df_prev_day_task >> \
 sleep_time >> \
-dwd_oride_order_base_include_test_his_df_task
+dwd_oride_order_base_include_test_his_df_task \
 
 task_check_key_data >> \
 touchz_data_success
