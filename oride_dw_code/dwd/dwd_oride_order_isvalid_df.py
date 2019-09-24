@@ -11,8 +11,8 @@ from airflow.sensors.hive_partition_sensor import HivePartitionSensor
 from utils.connection_helper import get_hive_cursor
 
 args = {
-    'owner': 'chenlili',
-    'start_date': datetime(2019, 8, 30),
+    'owner': 'lili.chen',
+    'start_date': datetime(2019, 9, 23),
     'depends_on_past': False,
     'retries': 3,
     'retry_delay': timedelta(minutes=2),
@@ -21,7 +21,7 @@ args = {
     'email_on_retry': False,
 }
 
-dag = airflow.DAG('dwd_oride_order_mark_df',
+dag = airflow.DAG('dwd_oride_order_isvalid_df',
                   schedule_interval="20 01 * * *",
                   default_args=args,
                   catchup=False)
@@ -48,13 +48,13 @@ dwd_oride_order_base_include_test_df_prev_day_task = UFileSensor(
 
 ##----------------------------------------- 变量 ---------------------------------------##
 
-table_name = "dwd_oride_order_mark_df"
+table_name = "dwd_oride_order_isvalid_df"
 hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
 
 ##----------------------------------------- 脚本 ---------------------------------------##
 
-dwd_oride_order_mark_df_task = HiveOperator(
-    task_id='dwd_oride_order_mark_df_task',
+dwd_oride_order_isvalid_df_task = HiveOperator(
+    task_id='dwd_oride_order_isvalid_df_task',
 
     hql='''
 SET hive.exec.parallel=TRUE;
@@ -74,7 +74,7 @@ SELECT order_id,  --订单ID
                     2*asin(sqrt(pow(sin((end_lat*pi()/180.0-end_lat2*pi()/180.0)/2),2) + cos(end_lat*pi()/180.0)*cos(end_lat2*pi()/180.0)*pow(sin((end_lng*pi()/180.0-end_lng2*pi()/180.0)/2),2)))*6378137 <= 1000, 0, 1
                 )
             )
-        ) AS valid_mark,  --订单有效标志:1有效 0无效
+        ) AS is_valid,  --订单有效标志:1有效 0无效
         'nal' AS country_code,
         '{pt}' AS dt
     FROM (
@@ -171,6 +171,6 @@ touchz_data_success = BashOperator(
 
 dwd_oride_order_base_include_test_df_prev_day_task >> \
 sleep_time >> \
-dwd_oride_order_mark_df_task >> \
+dwd_oride_order_isvalid_df_task >> \
 task_check_key_data >> \
 touchz_data_success

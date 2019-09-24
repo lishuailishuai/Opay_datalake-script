@@ -125,9 +125,9 @@ dependence_dwd_oride_driver_accept_order_show_detail_di_prev_day_task = UFileSen
 )
 
 # 依赖前一天分区
-dependence_dwd_oride_order_mark_df_prev_day_task = HivePartitionSensor(
-    task_id="dwd_oride_order_mark_df_prev_day_task",
-    table="dwd_oride_order_mark_df",
+dependence_dwd_oride_order_isvalid_df_prev_day_task = HivePartitionSensor(
+    task_id="dwd_oride_order_isvalid_df_prev_day_task",
+    table="dwd_oride_order_isvalid_df",
     partition="dt='{{ds}}'",
     schema="oride_dw",
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
@@ -235,7 +235,7 @@ dm_oride_order_base_d_task = HiveOperator(
            sum(if(ord.status in(4,5),ord.price,0.0)) as price,  --当日完单gmv
            sum(if(ord.status=5,ord.price,0.0)) as pay_price, --当日应付金额
            sum(if(ord.status=5,ord.pay_amount,0.0)) as pay_amount, --当日实付金额
-           count(if(valid_ord.valid_mark=1,ord.order_id,null)) as valid_ord_cnt, --有效订单数
+           count(if(valid_ord.is_valid=1,ord.order_id,null)) as valid_ord_cnt, --有效订单数
            sum(if(ord.is_td_finish = 1,ord.td_pick_up_dur,0)) as finish_pick_up_dur, --当日完单接驾时长
            sum(if(ord.is_td_finish = 1,ord.pax_num,0)) as pax_num,  --当日完单乘客数
            count(if(ord.pay_mode=2,ord.order_id,null)) as opay_pay_cnt, --opay支付订单数
@@ -301,7 +301,7 @@ dm_oride_order_base_d_task = HiveOperator(
     )  r2 on ord.order_id = r2.order_id
     left outer join 
     (
-        select * from oride_dw.dwd_oride_order_mark_df 
+        select * from oride_dw.dwd_oride_order_isvalid_df 
         where dt='{pt}' and substr(create_time,1,10)='{pt}'
     )  valid_ord on ord.order_id=valid_ord.order_id
     left outer join 
@@ -352,5 +352,5 @@ dependence_dwd_oride_order_push_driver_detail_di_prev_day_task >> \
 dependence_dwd_oride_order_dispatch_chose_detail_di_prev_day_task >> \
 dependence_dwd_oride_driver_accept_order_click_detail_di_prev_day_task >> \
 dependence_dwd_oride_driver_accept_order_show_detail_di_prev_day_task >> \
-dependence_dwd_oride_order_mark_df_prev_day_task >>\
+dependence_dwd_oride_order_isvalid_df_prev_day_task >>\
 sleep_time >> dm_oride_order_base_d_task >> touchz_data_success
