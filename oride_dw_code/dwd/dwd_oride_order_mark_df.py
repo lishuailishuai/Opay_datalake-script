@@ -22,7 +22,7 @@ args = {
     'email_on_retry': False,
 }
 
-dag = airflow.DAG('dwd_oride_order_isvalid_df',
+dag = airflow.DAG('dwd_oride_order_mark_df',
                   schedule_interval="20 01 * * *",
                   default_args=args,
                   catchup=False)
@@ -47,15 +47,25 @@ dwd_oride_order_base_include_test_df_prev_day_task = UFileSensor(
     dag=dag
 )
 
+# 依赖前一天分区
+ods_log_oride_order_skyeye_di_prev_day_task = HivePartitionSensor(
+    task_id="ods_log_oride_order_skyeye_di_prev_day_task",
+    table="ods_log_oride_order_skyeye_di",
+    partition="dt='{{ds}}'",
+    schema="oride_dw_ods",
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
 ##----------------------------------------- 变量 ---------------------------------------##
 
-table_name = "dwd_oride_order_isvalid_df"
+table_name = "dwd_oride_order_mark_df"
 hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
 
 ##----------------------------------------- 脚本 ---------------------------------------##
 
-dwd_oride_order_isvalid_df_task = HiveOperator(
-    task_id='dwd_oride_order_isvalid_df_task',
+dwd_oride_order_mark_df_task = HiveOperator(
+    task_id='dwd_oride_order_mark_df_task',
 
     hql='''
 SET hive.exec.parallel=TRUE;
@@ -76,11 +86,14 @@ SELECT order_id,  --订单ID
                 )
             )
         ) AS is_valid,  --订单有效标志:1有效 0无效
+        if(ord_skyeye.is_fraud=1,1,0) as is_fraud, --是否疑似作弊订单
+        driver_id, --司机ID
         'nal' AS country_code,
         '{pt}' AS dt
     FROM (
         SELECT
             order_id,
+            driver_id,
             passenger_id,
             start_lng,
             start_lat,
@@ -88,6 +101,7 @@ SELECT order_id,  --订单ID
             end_lat,
             unix_timestamp(create_time) as create_time,
             create_time as create_time_s,
+            create_date,
             status,
             LEAD(unix_timestamp(create_time),1,unix_timestamp(create_time)) OVER(PARTITION BY passenger_id ORDER BY unix_timestamp(create_time)) create_time2,
             LEAD(start_lng,1,0) OVER(PARTITION BY passenger_id ORDER BY create_time) start_lng2,
@@ -96,9 +110,20 @@ SELECT order_id,  --订单ID
             LEAD(end_lat,1,0) OVER(PARTITION BY passenger_id ORDER BY create_time) end_lat2,
             LEAD(order_id,1,order_id) OVER(PARTITION BY passenger_id ORDER BY create_time) order_id2
         FROM oride_dw.dwd_oride_order_base_include_test_df
-        WHERE dt in ('{pt}','his') AND
-            create_date = '{pt}' 
-        ) AS t
+        WHERE dt in ('{pt}','his') 
+            AND create_date = '{pt}' 
+            AND city_id<>'999001' --去除测试数据
+             and driver_id<>1
+        ) t
+        left join 
+        (SELECT *,
+                size(tag_ids) as tag_size, --长度
+                array_contains(tag_ids,'T102') as flag1, --判断标志1
+                array_contains(tag_ids,'T412') as flag2, --判断标志2
+                if (size(tag_ids)>=3 or (array_contains(tag_ids,'T102') and array_contains(tag_ids,'T412')),1,0) as is_fraud 
+        FROM oride_dw_ods.ods_log_oride_order_skyeye_di
+        WHERE dt='{pt}' and order_id is not null) ord_skyeye
+        on t.order_id=ord_skyeye.order_id and t.create_date=ord_skyeye.dt
 
 '''.format(
         pt='{{ds}}',
@@ -171,7 +196,8 @@ touchz_data_success = BashOperator(
     dag=dag)
 
 dwd_oride_order_base_include_test_df_prev_day_task >> \
+ods_log_oride_order_skyeye_di_prev_day_task >> \
 sleep_time >> \
-dwd_oride_order_isvalid_df_task >> \
+dwd_oride_order_mark_df_task >> \
 task_check_key_data >> \
 touchz_data_success

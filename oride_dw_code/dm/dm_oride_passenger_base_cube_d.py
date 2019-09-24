@@ -99,6 +99,7 @@ dm_oride_passenger_base_cube_d_task = HiveOperator(
           SELECT if(t2.passenger_id IS NULL,1,0) AS is_first_order_mark,--准确说历史没有完单的是否本日首次
              if(t3.passenger_id IS NOT NULL,1,0) AS new_reg_user_mark, --是否当日新注册乘客
              if(t1.city_id=1001 and driver.product_id is not null and t1.product_id!=99,driver.product_id,t1.product_id) as product_id1,
+             if(mark_ord.is_fraud=1,1,0) as is_fraud, --是否疑似作弊订单
              t1.*
             FROM
               (SELECT *
@@ -109,7 +110,7 @@ dm_oride_passenger_base_cube_d_task = HiveOperator(
             LEFT JOIN
               (SELECT passenger_id
                FROM oride_dw.dwd_oride_order_base_include_test_df
-               WHERE dt='{pt}'
+               WHERE dt in('{pt}','his')
                  AND create_date<dt
                  AND status IN(4,
                                5)
@@ -123,6 +124,11 @@ dm_oride_passenger_base_cube_d_task = HiveOperator(
                (select * from oride_dw.dim_oride_driver_base 
                 where dt='{pt}') driver
                 on t1.driver_id=driver.driver_id
+            left outer join 
+               (
+                select * from oride_dw.dwd_oride_order_mark_df 
+                where dt='{pt}'
+               )  mark_ord on t1.order_id=mark_ord.order_id
                     )
     INSERT overwrite TABLE oride_dw.{table} partition(country_code,dt)
     select 
@@ -167,7 +173,8 @@ dm_oride_passenger_base_cube_d_task = HiveOperator(
                    AND status in(4,5),price,0.0)) AS new_user_gmv, --当日注册乘客完单gmv
          count(distinct(IF (pay_status=1,passenger_id,NULL))) AS paid_users, --当日所有支付乘客数
          count(distinct(IF (pay_status=1
-                            AND pay_mode IN(2,3),passenger_id,NULL))) AS online_paid_users --当日线上支付乘客数
+                            AND pay_mode IN(2,3),passenger_id,NULL))) AS online_paid_users, --当日线上支付乘客数
+         count(distinct (if(is_fraud=1,passenger_id,null))) as fraud_user_cnt --疑似作弊订单乘客数
         FROM order_base_data
         group by nvl(country_code,'-10000'),
                nvl(city_id,-10000),
