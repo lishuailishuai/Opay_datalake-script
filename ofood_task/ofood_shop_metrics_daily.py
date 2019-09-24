@@ -534,71 +534,6 @@ insert_crm_metrics = HiveToMySqlTransfer(
     mysql_table='ofood_area_shop_metrics_info',
     dag=dag)
 
-insert_crm_bd_metrics = HiveToMySqlTransfer(
-    task_id='insert_crm_bd_metrics',
-    sql=""" 
-        
-        
-        select 
-        null,
-        t.bd_id,
-        t.day,
-        t.username,
-        t.area_name,
-        t.recommended_number_of_users
-        from 
-        (
-            select
-            b.id bd_id,
-            b.dt day,
-            b.name username,
-            f.area_name area_name,
-            count(m.uid) recommended_number_of_users  --我推荐的用户数
-            
-            from 
-            (
-                select 
-                dt,
-                id,
-                name,
-                phone 
-                from ofood_dw_ods.ods_sqoop_bd_bd_admin_users_df
-                where dt = '{{ ds }}' and job_id = 4
-            ) b 
-            join (
-                select 
-                uid,
-                area_name
-                from 
-                ofood_dw_ods.ods_sqoop_bd_bd_bd_fence_df
-                where dt = '{{ ds }}' 
-            ) f on b.id = f.uid
-            left join 
-            (
-                select 
-                bd,
-                uid
-                from ofood_dw_ods.ods_sqoop_bd_invitation_info_df
-                where dt = '{{ ds }}' and from_unixtime(dateline,'yyyy-MM-dd') = '{{ ds }}'
-            ) i on b.phone = i.bd
-            left join 
-            (
-                select 
-                uid
-                from ofood_dw_ods.ods_sqoop_bd_jh_member_df
-                where dt = '{{ ds }}'
-            ) m on i.uid = m.uid
-            group by b.dt,b.id,b.name,f.area_name
-        ) t 
-        
-        
-        
-
-
-        """,
-    mysql_conn_id='mysql_bi',
-    mysql_table='ofood_area_bd_metrics_info',
-    dag=dag)
 
 
 def send_csv_file(ds, ds_nodash, **kwargs):
@@ -679,11 +614,7 @@ validate_partition_data >> jh_waimai_comment_validate_task >> insert_shop_metric
 validate_partition_data >> bd_admin_users_validate_task >> insert_shop_metrics
 validate_partition_data >> bd_bd_fence_validate_task >> insert_shop_metrics
 
-bd_bd_fence_validate_task >> insert_crm_bd_metrics
-bd_bd_fence_validate_task >> insert_crm_bd_metrics
 
-validate_partition_data >> bd_invitation_info_validate_task >> insert_crm_bd_metrics
-validate_partition_data >> jh_member_validate_task >> insert_crm_bd_metrics
 
 insert_shop_metrics >> send_file_email
 insert_shop_metrics >> create_crm_data >> insert_crm_metrics
