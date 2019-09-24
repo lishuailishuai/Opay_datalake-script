@@ -54,6 +54,13 @@ hive_sync_db = [
 
 mysql_connectors = {}
 
+# 被排除同步表列表
+exclude_tables = [
+    "app_oride_order_dispatch_d",
+    "app_oride_order_realtime_10min_serv_base_d",
+    "app_oride_order_realtime_10min_driver_serv_base_d"
+]
+
 
 # 关闭mysql连接
 def close_db_conn(**op_kwargs):
@@ -296,7 +303,8 @@ for hive_db_info in hive_sync_db:
     hive_tables = hive_cursor.fetchall()
 
     for (table, ) in hive_tables:
-        if table == 'app_oride_order_dispatch_d':
+        # if table == 'app_oride_order_dispatch_d':
+        if table in exclude_tables:
             continue
         # 依赖hive表分区
         table_validate_task = HivePartitionSensor(
