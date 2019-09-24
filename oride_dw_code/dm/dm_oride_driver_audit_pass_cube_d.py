@@ -160,6 +160,7 @@ dm_oride_driver_audit_pass_cube_d_task = HiveOperator(
 
            td_audit_finish_driver_num,
               --当天注册司机数,当天审核通过司机数
+           fraud_driver_cnt, --疑似作弊订单涉及司机数
 
            country_code,
            --国家码字段
@@ -198,6 +199,7 @@ dm_oride_driver_audit_pass_cube_d_task = HiveOperator(
               count(distinct (if(substr(register_time,1,10)=dri.dt and dri.driver_id<>0,dri.driver_id,NULL))) AS td_audit_finish_driver_num,
               --当天注册司机数,当天审核通过司机数
 
+              count(distinct (if(mark_ord.driver_id<>0 and mark_ord.is_fraud=1,dri.driver_id,NULL))) as fraud_driver_cnt, --疑似作弊订单涉及司机数
               nvl(dri.country_code,-999) AS country_code --(去除with cube为空的BUG) --国家码字段
 
        FROM
@@ -252,6 +254,11 @@ dm_oride_driver_audit_pass_cube_d_task = HiveOperator(
            WHERE dt='{pt}'
            group by driver_id 
        ) r2 on r2.driver_id = dri.driver_id
+       left outer join 
+       (
+        select * from oride_dw.dwd_oride_order_mark_df 
+        where dt='{pt}' and substr(create_time,1,10)='{pt}'
+       )  mark_ord on dri.driver_id=mark_ord.driver_id 
 
        GROUP BY dri.product_id,
                 dri.city_id,
