@@ -103,7 +103,9 @@ dm_oride_passenger_base_cube_d_task = HiveOperator(
             FROM
               (SELECT *
                FROM oride_dw.dwd_oride_order_base_include_test_di
-               WHERE dt='{pt}') t1
+               WHERE dt='{pt}'
+               and city_id<>'999001' --去除测试数据
+               and driver_id<>1) t1
             LEFT JOIN
               (SELECT passenger_id
                FROM oride_dw.dwd_oride_order_base_include_test_df

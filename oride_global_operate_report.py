@@ -102,13 +102,13 @@ def get_all_data_row(ds):
                 select dt,
                 from_unixtime(unix_timestamp(dt, 'yyyy-MM-dd'),'u') as week,
                 ride_order_cnt, --当日下单数
-                '-' as order_cnt_lfw, --下单数（近四周同期均值）
+                if(dt>'2019-10-10',order_cnt_lfw,'-') as order_cnt_lfw, --下单数（近四周同期均值）
                 valid_ord_cnt,  --当日有效下单量
                 finish_pay, --当日支付完单数
                 finish_order_cnt, --当日完单量
-                '-' as finish_order_cnt_lfw, --完单数（近四周同期均值）
+                if(dt>'2019-10-10',finish_order_cnt_lfw,'-') as finish_order_cnt_lfw, --完单数（近四周同期均值）
                 concat(cast(nvl(round(finish_order_cnt*100/ride_order_cnt,1),0) as string),'%') as finish_order_rate, --完单率
-                '-' as finish_order_rate_lfw, --完单率（近四周）
+                if(dt>'2019-10-10',concat(cast(nvl(round(finish_order_cnt_lfw*100/order_cnt_lfw,1),0) as string),'%'),'-') as finish_order_rate_lfw, --完单率（近四周）
                 beckoning_num, --当日招手停完单数
                 new_users, --当日注册乘客数
                 act_users, --当日活跃乘客数
@@ -268,13 +268,13 @@ def get_product_rows(ds, all_completed_num,product_id):
                  t1.city_id,
                  if(t1.city_id=-10000,'All',t2.name) AS city_name,
                  if(t1.city_id=1001,'-',nvl(t1.ride_order_cnt,0)) as ride_order_cnt, --当日下单数
-                 '-' AS order_cnt_lfw, --近四周同期下单数据
+                 if(dt>'2019-10-10',order_cnt_lfw,'-') AS order_cnt_lfw, --近四周同期下单数据
                  if(t1.city_id=1001,'-',nvl(t1.valid_ord_cnt,0)) as valid_ord_cnt, --有效下单量
                  nvl(t1.finish_pay,0) as finish_pay, --当日支付完单数
                  nvl(t1.finish_order_cnt,0) as finish_order_cnt, --当日完单量
-                 '-' AS finish_order_cnt_lfw, --完单数（近四周同期均值）
+                 if(dt>'2019-10-10',finish_order_cnt_lfw,'-') AS finish_order_cnt_lfw, --完单数（近四周同期均值）
                  concat(cast(nvl(round(t1.finish_order_cnt*100/t1.ride_order_cnt,1),0) AS string),'%') AS finish_order_rate, --完单率
-                 '-' AS finish_order_rate_lfw, --完单率（近四周）
+                 if(dt>'2019-10-10',concat(cast(nvl(round(finish_order_cnt_lfw*100/order_cnt_lfw,1),0) as string),'%'),'-') AS finish_order_rate_lfw, --完单率（近四周）
                  concat(cast(nvl(round(if(t1.city_id=-10000,t1.finish_order_cnt*100/{all_completed_num},t1.finish_order_cnt*100/t1.city_total),1),0) AS string),'%') AS product_finish_order_rate,--业务完单占比
                  concat(cast(nvl(round(if(t1.city_id=-10000,t1.finish_order_cnt*100/t1.finish_order_cnt,t1.finish_order_cnt*2*100/sum(t1.finish_order_cnt) over(partition BY t1.product_id)),1),0) AS string),'%') AS city_finish_order_rate, --城市完单
                  nvl(t1.finished_users,0) as finished_users,--当日完单乘客数

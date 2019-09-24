@@ -247,7 +247,7 @@ from (SELECT dt,country_code,
        sum(opay_pay_cnt) as opay_pay_cnt, --opay支付订单数,pay_mode=2
        sum(opay_pay_failed_cnt) as opay_pay_failed_cnt, --opay支付失败订单数,pay_mode=2 and pay_status in(0,2)
        sum(if(dt>=date_add('{pt}',-28) and dt<'{pt}' and
-       from_unixtime(unix_timestamp(dt,'yyyy-MM-dd'),'u')=from_unixtime(unix_timestamp('{pt}', 'yyyy-MM-dd'),'u'),ride_order_cnt,0))/4 as order_cnt_lfw, --近四周同期下单数据
+       from_unixtime(unix_timestamp(dt,'yyyy-MM-dd'),'u')=from_unixtime(unix_timestamp('{pt}', 'yyyy-MM-dd'),'u'),ride_order_cnt,0))/4 as order_cnt_lfw, --近四周同期下单数据均值
        sum(if(dt>=date_add('{pt}',-28) and dt<'{pt}' and
        from_unixtime(unix_timestamp(dt,'yyyy-MM-dd'),'u')=from_unixtime(unix_timestamp('{pt}', 'yyyy-MM-dd'),'u'),finish_order_cnt,0))/4 as finish_order_cnt_lfw  --近四周同期完单数据
        
