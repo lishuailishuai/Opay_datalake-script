@@ -7,6 +7,7 @@ from airflow.operators.bash_operator import BashOperator
 from airflow.operators.hive_operator import HiveOperator
 from airflow.operators.python_operator import PythonOperator
 from airflow.sensors.hive_partition_sensor import HivePartitionSensor
+from airflow.sensors import UFileSensor
 
 from utils.connection_helper import get_hive_cursor
 
