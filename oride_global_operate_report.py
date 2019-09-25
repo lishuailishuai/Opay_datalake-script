@@ -255,13 +255,8 @@ def get_product_rows(ds, all_completed_num,product_id):
 
     if product_id == 3:
         row_fmt= row_fmt1
-        product_id_1_limit=''
-    elif product_id == 1:
-        row_fmt = row_fmt2
-        product_id_1_limit = 't1.city_id not in(1002,1005) and'
     else:
         row_fmt = row_fmt2
-        product_id_1_limit = ''
 
     sql = '''
             SELECT t1.dt,
@@ -309,13 +304,11 @@ def get_product_rows(ds, all_completed_num,product_id):
                           name
                    FROM oride_dw_ods.ods_sqoop_base_data_city_conf_df
                    WHERE dt='{dt}') t2 ON t1.city_id=t2.id
-                   where {product_id_1_limit}
-                     t1.country_code='nal' --某个业务线汇总及城市明细
+                   where t1.country_code='nal' --某个业务线汇总及城市明细
                      AND t1.product_id={product_id}
                 ORDER BY t1.city_id ASC
         '''.format(dt=ds,
                    all_completed_num=all_completed_num,
-                   product_id_1_limit=product_id_1_limit,
                    product_id=product_id,
                    start_date=airflow.macros.ds_add(ds, -14))
     cursor = get_hive_cursor()
