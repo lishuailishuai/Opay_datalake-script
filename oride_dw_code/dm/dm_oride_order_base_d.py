@@ -240,8 +240,8 @@ dm_oride_order_base_d_task = HiveOperator(
            sum(if(ord.is_td_finish = 1,ord.pax_num,0)) as pax_num,  --当日完单乘客数
            count(if(ord.pay_mode=2,ord.order_id,null)) as opay_pay_cnt, --opay支付订单数
            count(if(ord.pay_mode=2 and ord.pay_status in(0,2),ord.order_id,null)) as opay_pay_failed_cnt, --opay支付失败订单数
-           count(if(mark_ord.is_fraud=1,ord.order_id,null)) as fraud_ord_cnt, --疑似作弊订单量
-           count(if(mark_ord.is_fraud=1 and ord.pay_mode in(2,3),ord.order_id,null)) as fraud_ord_online_pay_cnt, --疑似作弊订单线上支付量
+           null as fraud_ord_cnt, --疑似作弊订单量
+           null as fraud_ord_online_pay_cnt, --疑似作弊订单线上支付量
            ord.country_code,
            
            ord.dt

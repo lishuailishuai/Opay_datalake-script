@@ -23,7 +23,7 @@ args = {
 }
 
 dag = airflow.DAG('dwd_oride_order_mark_df',
-                  schedule_interval="20 1,7 * * *",
+                  schedule_interval="20 1 * * *",
                   default_args=args,
                   catchup=False)
 
@@ -43,16 +43,6 @@ dwd_oride_order_base_include_test_df_prev_day_task = UFileSensor(
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
-
-# 依赖前一天分区
-ods_log_oride_order_skyeye_di_prev_day_task = HivePartitionSensor(
-    task_id="ods_log_oride_order_skyeye_di_prev_day_task",
-    table="ods_log_oride_order_skyeye_di",
-    partition="dt='{{ds}}'",
-    schema="oride_dw_ods",
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
@@ -86,7 +76,7 @@ SELECT t.order_id,  --订单ID
                 )
             )
         ) AS is_valid,  --订单有效标志:1有效 0无效
-        if(ord_skyeye.is_fraud=1,1,0) as is_fraud, --是否疑似作弊订单
+        null as is_fraud, --是否疑似作弊订单
         driver_id, --司机ID
         'nal' AS country_code,
         '{pt}' AS dt
@@ -115,16 +105,6 @@ SELECT t.order_id,  --订单ID
             AND city_id<>'999001' --去除测试数据
              and driver_id<>1
         ) t
-        left join 
-        (SELECT *,
-                size(tag_ids) as tag_size, --长度
-                array_contains(tag_ids,'T102') as flag1, --判断标志1
-                array_contains(tag_ids,'T412') as flag2, --判断标志2
-                if (size(tag_ids)>=3 or (array_contains(tag_ids,'T102') and array_contains(tag_ids,'T412')),1,0) as is_fraud 
-        FROM oride_dw_ods.ods_log_oride_order_skyeye_di
-        WHERE dt='{pt}' and order_id is not null) ord_skyeye
-        on t.order_id=ord_skyeye.order_id and t.create_date=ord_skyeye.dt
-
 '''.format(
         pt='{{ds}}',
         now_day='{{macros.ds_add(ds, +1)}}',
@@ -196,7 +176,6 @@ touchz_data_success = BashOperator(
     dag=dag)
 
 dwd_oride_order_base_include_test_df_prev_day_task >> \
-ods_log_oride_order_skyeye_di_prev_day_task >> \
 sleep_time >> \
 dwd_oride_order_mark_df_task >> \
 task_check_key_data >> \
