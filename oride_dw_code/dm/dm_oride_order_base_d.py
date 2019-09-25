@@ -260,8 +260,8 @@ dm_oride_order_base_d_task = HiveOperator(
         sum(if (success=1, distance,0)) AS succ_broadcast_distance, --成功播单距离
         count(concat(order_id,'_',order_round)) AS push_driver_times_cnt, -- 推送成功给司机的总次数
         count(if (success=1,1,null)) AS succ_push_all_times_cnt --推送成功的总次数
-        FROM oride_dw.dwd_oride_order_push_driver_detail_di
-        WHERE dt='{pt}'
+        FROM oride_dw.dwd_oride_order_dispatch_funnel_di
+        WHERE dt='{pt}' and event_name='dispatch_push_driver' 
         GROUP BY order_id
         ) p1 ON ord.order_id=p1.order_id
     LEFT OUTER JOIN
@@ -270,15 +270,15 @@ dm_oride_order_base_d_task = HiveOperator(
         order_id,
         count(1) as order_assigned_cnt, --订单被分配次数（计算平均接驾距离使用）
         sum(distance) AS pick_up_distance --接驾总距离
-        FROM oride_dw.dwd_oride_order_assign_driver_detail_di
-        WHERE dt='{pt}'
+        FROM oride_dw.dwd_oride_order_dispatch_funnel_di
+        WHERE dt='{pt}' and event_name='dispatch_assign_driver'
         GROUP BY order_id
        ) a1 ON ord.order_id=a1.order_id
     LEFT OUTER JOIN
       (
         SELECT order_id
-        FROM oride_bi.server_magic_dispatch_detail --播单
-        WHERE dt='{pt}'
+        FROM oride_dw.dwd_oride_order_dispatch_funnel_di --播单
+        WHERE dt='{pt}' and event_name='dispatch_chose_driver'
         GROUP BY order_id
       ) d1 ON ord.order_id=d1.order_id
     
