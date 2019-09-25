@@ -263,7 +263,16 @@ LEFT OUTER JOIN
 (select * from oride_dw.dim_oride_city where dt = '{pt}' and country_code='NG') cit
 ON cit.city_id=ext.city_id
 where ext.city_id<>'999001' --去除测试数据
-and dri.driver_id<>1
+and dri.driver_id not in(3835,
+3963,
+3970,
+4702,
+5559,
+5902,
+7669,
+29105, --以上都是录错城市的司机
+10722, --测试数据
+1)    --北京城市测试数据
 '''.format(
         pt='{{ds}}',
         now_day='{{macros.ds_add(ds, +1)}}',
