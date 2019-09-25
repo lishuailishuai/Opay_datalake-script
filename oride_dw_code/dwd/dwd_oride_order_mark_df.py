@@ -101,7 +101,6 @@ SELECT t.order_id,  --订单ID
             LEAD(order_id,1,order_id) OVER(PARTITION BY passenger_id ORDER BY create_time) order_id2
         FROM oride_dw.dwd_oride_order_base_include_test_df
         WHERE dt in ('{pt}','his') 
-            AND create_date = '{pt}' 
             AND city_id<>'999001' --去除测试数据
              and driver_id<>1
         ) t
