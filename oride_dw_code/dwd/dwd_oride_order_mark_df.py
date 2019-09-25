@@ -23,7 +23,7 @@ args = {
 }
 
 dag = airflow.DAG('dwd_oride_order_mark_df',
-                  schedule_interval="20 01 * * *",
+                  schedule_interval="20 1,7 * * *",
                   default_args=args,
                   catchup=False)
 
@@ -47,7 +47,15 @@ dwd_oride_order_base_include_test_df_prev_day_task = UFileSensor(
     dag=dag
 )
 
-
+# 依赖前一天分区
+ods_log_oride_order_skyeye_di_prev_day_task = HivePartitionSensor(
+    task_id="ods_log_oride_order_skyeye_di_prev_day_task",
+    table="ods_log_oride_order_skyeye_di",
+    partition="dt='{{ds}}'",
+    schema="oride_dw_ods",
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
 
 ##----------------------------------------- 变量 ---------------------------------------##
 
@@ -188,6 +196,7 @@ touchz_data_success = BashOperator(
     dag=dag)
 
 dwd_oride_order_base_include_test_df_prev_day_task >> \
+ods_log_oride_order_skyeye_di_prev_day_task >> \
 sleep_time >> \
 dwd_oride_order_mark_df_task >> \
 task_check_key_data >> \
