@@ -134,33 +134,26 @@ create_mkt_metrics = HiveOperator(
         ) i on t.mkt_phone = i.bd
         left join (
             select 
-            o.uid
+            uid
             from 
-            (
-                select 
-                uid,
-                lasttime,
-                row_number() over(partition by uid,lasttime order by lasttime) as order_by
-                from 
-                ofood_dw_ods.ods_sqoop_base_jh_order_df
-                where dt = '{{ ds }}'
-                and order_status = 8 
-                group by uid,lasttime
-            ) o 
-            where o.order_by = 1 
-            and from_unixtime(o.lasttime,'yyyy-MM-dd') = '{{ ds }}'
+            ofood_dw_ods.ods_sqoop_base_jh_order_df
+            where dt = '{{ ds }}'
+            and day = '{{ ds_nodash }}'
+            and order_status = 8
+            and first_order = 1
+            group by uid
         ) o on i.uid = o.uid
         left join (
             select 
             uid,
-            from_unixtime(lasttime,'yyyy-MM-dd') as lasttime,
+            day,
             count(order_id) as pay_order_cnt
             from 
             ofood_dw_ods.ods_sqoop_base_jh_order_df
             where dt = '{{ ds }}'
             and pay_status = 1
-            and from_unixtime(lasttime,'yyyy-MM-dd') = '{{ ds }}'
-            group by uid,from_unixtime(lasttime,'yyyy-MM-dd')
+            and day = '{{ ds_nodash }}'
+            group by uid,day
         ) p on p.uid = i.uid 
         group by t.mkt_id,t.mkt_phone,t.bd_id,t.bd_name
         ;
