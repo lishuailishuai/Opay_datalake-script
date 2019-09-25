@@ -196,7 +196,6 @@ touchz_data_success = BashOperator(
     dag=dag)
 
 dwd_oride_order_base_include_test_df_prev_day_task >> \
-ods_log_oride_order_skyeye_di_prev_day_task >> \
 sleep_time >> \
 dwd_oride_order_mark_df_task >> \
 task_check_key_data >> \
