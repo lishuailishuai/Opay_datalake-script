@@ -103,7 +103,7 @@ dwd_oride_order_dispatch_funnel_di_task = HiveOperator(
         from  
         order_dispatch 
         lateral view explode(split(substr(get_json_object(event_values, '$.driver_ids'),2,length(get_json_object(event_values, '$.driver_ids'))-2),',')) driver_ids as driver_id
-        where event_name='dispatch_chose_driver'
+        where event_name='dispatch_chose_driver'  --圈选订单范围内的司机
         
         union all
         
@@ -125,7 +125,7 @@ dwd_oride_order_dispatch_funnel_di_task = HiveOperator(
             '{pt}' dt
         from  
         order_dispatch 
-        where  event_name='dispatch_filter_driver'
+        where  event_name='dispatch_filter_driver' --过滤未派单的司机，并标明被过滤的原因
         
         union all
         
@@ -168,12 +168,12 @@ dwd_oride_order_dispatch_funnel_di_task = HiveOperator(
         
                 from order_dispatch
                 where 
-                event_name='dispatch_assign_driver' and 
-                from_unixtime(cast(get_json_object(event_values, '$.timestamp') as int), 'yyyy-MM-dd')='{pt}'
+                event_name='dispatch_assign_driver' --订单分配给司机的过程
+                and from_unixtime(cast(get_json_object(event_values, '$.timestamp') as int), 'yyyy-MM-dd')='{pt}'
             ) as t 
             lateral view posexplode(drivers) d as dpos, driver_id 
             lateral view posexplode(distances) ds as dspos, distance 
-            where dpos = dspos
+            where dpos = dspos  
         ) d
         
         union all
@@ -196,7 +196,7 @@ dwd_oride_order_dispatch_funnel_di_task = HiveOperator(
             '{pt}' dt
         from
             order_dispatch 
-        where  event_name='dispatch_push_driver' 
+        where  event_name='dispatch_push_driver'   --订单成功发送给司机的过程
         
         ;
         
