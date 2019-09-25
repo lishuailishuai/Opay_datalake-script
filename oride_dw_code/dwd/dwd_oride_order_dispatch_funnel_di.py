@@ -98,6 +98,7 @@ dwd_oride_order_dispatch_funnel_di_task = HiveOperator(
             '' as push_mode,--是派单方式（目前只有全局优化和直接发单）
             '' as reason,--过滤原因
             event_name as event_name, --事件类型
+            0 as assign_type, --0=非强派单，1=强派单
             'nal' as country_code,
             '{pt}' dt
         from  
@@ -121,6 +122,7 @@ dwd_oride_order_dispatch_funnel_di_task = HiveOperator(
             '' as push_mode,--是派单方式（目前只有全局优化和直接发单）
             get_json_object(event_values, '$.reason') as reason,--过滤原因
             event_name as event_name, --事件类型
+            0 as assign_type, --0=非强派单，1=强派单
             'nal' as country_code,
             '{pt}' dt
         from  
@@ -143,6 +145,7 @@ dwd_oride_order_dispatch_funnel_di_task = HiveOperator(
             cast(d.push_mode as string) as push_mode,--是派单方式（目前只有全局优化和直接发单）
             '' as reason,--过滤原因
             d.event_name as event_name, --事件类型
+            0 as assign_type,--0=非强派单，1=强派单
             'nal' as country_code, 
             '{pt}' dt
         
@@ -192,6 +195,7 @@ dwd_oride_order_dispatch_funnel_di_task = HiveOperator(
             cast(get_json_object(event_values, '$.mode') as string) as push_mode, --是派单方式（目前只有全局优化和直接发单）
             '' as reason,--过滤原因
             event_name as event_name, --事件类型
+            cast(get_json_object(event_values, '$.assign_type') as bigint) as assign_type, --0=非强派单，1=强派单
             'nal' as country_code,
             '{pt}' dt
         from
