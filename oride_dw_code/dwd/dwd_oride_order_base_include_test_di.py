@@ -346,7 +346,8 @@ SELECT base.order_id,
        tip,  --小费
        nvl(ep.estimated_price,-1) as estimated_price,
         --预估价格区间（最小值,最大值,-1 未知）
-        
+       if(push_ord.order_id is not null,1,0) as is_strong_dispatch,  
+       --是否强制派单1:是，0:否
        country_code,
 
        '{pt}' AS dt
@@ -512,6 +513,13 @@ WHERE event_name='successful_order_show'
 GROUP BY get_json_object(event_value, '$.order_id'),
          get_json_object(event_value, '$.estimated_price')) ep
 ON base.order_id=ep.order_id
+left outer join
+(select order_id from oride_dw.dwd_oride_order_dispatch_funnel_di
+   WHERE dt='{pt}'
+     AND event_name='dispatch_push_driver'
+     AND assign_type=1
+     group by order_id) push_ord
+on base.order_id=push_ord.order_id
 
 
 
