@@ -143,8 +143,8 @@ class TaskTimeoutMonitor(object):
 
         while sum_timeout <= int(timeout):
 
-            logging.info(sum_timeout)
-            logging.info(timeout)
+            logging.info("sum_timeout："+str(sum_timeout))
+            logging.info("timeout："+str(timeout))
             logging.info(command)
 
             yield from asyncio.sleep(int(timeout_step))
@@ -152,7 +152,7 @@ class TaskTimeoutMonitor(object):
             sum_timeout += timeout_step
             out = os.popen(command, 'r')
             res = out.readlines()
-            logging.info(res)
+            logging.info("数据标识的返回值："+res)
 
             #res 获取返回值_SUCCESS是否存在(1 存在)
             res = 0 if res is None else res[0].lower().strip()
