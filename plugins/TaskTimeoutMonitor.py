@@ -136,7 +136,7 @@ class TaskTimeoutMonitor(object):
 
             commands.append({
                 'cmd': '''
-                        hadoop fs -ls {path}{partition}/_SUCCESS >/dev/null 2>/dev/null && echo 1 || echo 0
+                        hadoop fs -ls {path}/{partition}/_SUCCESS >/dev/null 2>/dev/null && echo 1 || echo 0
                     '''.format(
                         timeout=timeout,
                         path=location,
