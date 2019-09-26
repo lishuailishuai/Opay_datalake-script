@@ -155,7 +155,7 @@ class TaskTimeoutMonitor(object):
                 out = os.popen(command, 'r')
                 res = out.readlines()
     
-            --res 获取返回值_SUCCESS是否存在(1 存在)
+                --res 获取返回值_SUCCESS是否存在(1 存在)
                 res = 0 if res is None else res[0].lower().strip()
                 out.close()
     
