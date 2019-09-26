@@ -131,3 +131,88 @@ class TaskTimeoutMonitor(object):
         tasks = [self.task_trigger(item['cmd'], item['table'], item['partition'], item['timeout']) for item in commands]
         loop.run_until_complete(asyncio.wait(tasks))
         loop.close()
+
+
+
+    @asyncio.coroutine
+    def task_trigger_new(self,command,dag_id_name, timeout):
+
+        sum_timeout = 0
+        timeout_step = 30
+        command = command.strip()
+
+        while sum_timeout <= int(timeout):
+            logging.info(command)
+            yield from asyncio.sleep(int(timeout_step))
+
+            sum_timeout += timeout_step
+            out = os.popen(command, 'r')
+            res = out.readlines()
+            logging.info(res)
+            res = 0 if res is None else res[0].lower().strip()
+            out.close()
+
+            if res == '' or res == 'None' or res == '0':
+                if sum_timeout >= int(timeout):
+                    self.comwx.postAppMessage(
+                        '测试 ：任务 {dag_id} 超时'.format(
+                            dag_id=dag_id_name,
+                            timeout=timeout
+                        ),
+                        '271'
+                    )
+                    break
+            else:
+                break
+
+
+    """
+    设置任务监控
+    @:param list 
+    [{"db":"", "table":"table", "partition":"partition", "timeout":"timeout"},]
+    """
+    def set_task_monitor_new(self, tables):
+        commands = []
+        for item in tables:
+            table = item.get('table', None)
+            db = item.get('db', None)
+            partition = item.get('partition', None)
+            timeout = item.get('timeout', None)
+
+            if table is None or db is None or partition is None or timeout is None:
+                return None
+
+            location = None
+            hql = '''
+                DESCRIBE FORMATTED {db}.{table}
+            '''.format(table=table, db=db)
+            logging.info(hql)
+            self.hive_cursor.execute(hql)
+            res = self.hive_cursor.fetchall()
+            for (col_name, col_type, col_comment) in res:
+                col_name = col_name.lower().strip()
+                if col_name == 'location:':
+                    location = col_type
+                    break
+
+            if location is None:
+                return None
+
+            commands.append({
+                'cmd': '''
+                        hadoop fs -ls {path}/{partition}/_SUCCESS >/dev/null 2>/dev/null && echo 1 || echo 0
+                    '''.format(
+                        timeout=timeout,
+                        path=location,
+                        partition=partition
+                    ),
+                'partition': partition,
+                'timeout': timeout,
+                'table': table
+                }
+            )
+
+        loop = asyncio.get_event_loop()
+        tasks = [self.task_trigger_new(items['cmd'], items['table'], items['timeout']) for items in commands]
+        loop.run_until_complete(asyncio.wait(tasks))
+        loop.close()
