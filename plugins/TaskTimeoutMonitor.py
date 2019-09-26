@@ -137,11 +137,11 @@ class TaskTimeoutMonitor(object):
     @asyncio.coroutine
     def task_trigger_new(self,command,dag_id_name, timeout):
 
-        sum_timeout = 0
-        timeout_step = 120 --任务监控间隔时间(秒)
-        command = command.strip()
-
         try:
+
+            sum_timeout = 0
+            timeout_step = 120 --任务监控间隔时间(秒)
+            command = command.strip()
 
             while sum_timeout <= int(timeout):
     
