@@ -158,7 +158,7 @@ class TaskTimeoutMonitor(object):
       
     @provide_session
     @asyncio.coroutine
-    def task_trigger(self,task, execution_date, dag, session=None, timeout):
+    def task_trigger(self,task, execution_date, dag, session=None, timeout,**_):
 
         try:
 
