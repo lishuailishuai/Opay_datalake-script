@@ -59,8 +59,7 @@ exclude_tables = [
     "app_oride_order_dispatch_d",
     "app_oride_order_realtime_10min_serv_base_d",
     "app_oride_order_realtime_10min_driver_serv_base_d",
-    "app_oride_users_tags_w",
-    "app_oride_order_skyeye_tableau_d"
+    "app_oride_users_tags_w"
 ]
 
 
