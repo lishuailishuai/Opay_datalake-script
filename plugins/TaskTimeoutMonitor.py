@@ -138,7 +138,7 @@ class TaskTimeoutMonitor(object):
     def task_trigger_new(self,command,dag_id_name, timeout):
 
         sum_timeout = 0
-        timeout_step = 30 --任务监控间隔时间(秒)
+        timeout_step = 30 #任务监控间隔时间(秒)
         command = command.strip()
 
         while sum_timeout <= int(timeout):
