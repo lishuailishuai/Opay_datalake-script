@@ -138,7 +138,7 @@ class TaskTimeoutMonitor(object):
     def task_trigger_new(self,command,dag_id_name, timeout):
 
         sum_timeout = 0
-        timeout_step = 30 
+        timeout_step = 30 --任务监控间隔时间(秒)
         command = command.strip()
 
         while sum_timeout <= int(timeout):
@@ -146,6 +146,7 @@ class TaskTimeoutMonitor(object):
             print(sum_timeout)
             print(timeout)
             logging.info(command)
+
             yield from asyncio.sleep(int(timeout_step))
 
             sum_timeout += timeout_step
@@ -159,14 +160,16 @@ class TaskTimeoutMonitor(object):
 
             if res == '' or res == 'None' or res == '0':
                 if sum_timeout >= int(timeout):
-                    self.comwx.postAppMessage(
-                        '测试 ：任务 {dag_id} 超时'.format(
-                            dag_id=dag_id_name,
-                            timeout=timeout
-                        ),
-                        '271'
-                    )
-                    break
+                    # self.comwx.postAppMessage(
+                    #     '测试 ：任务 {dag_id} 超时'.format(
+                    #         dag_id=dag_id_name,
+                    #         timeout=timeout
+                    #     ),
+                    #     '271'
+                    # )
+
+                    print("任务超时。。。。。")
+                    sum_timeout=0
             else:
                 break
 
