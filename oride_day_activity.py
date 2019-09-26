@@ -24,7 +24,7 @@ args = {
 
 dag = airflow.DAG(
     'oride_day_activity',
-    schedule_interval="0 0,11,15 * * *",
+    schedule_interval="0 0,10,11,12,14,15,16 * * *",
     default_args=args
 )
 
