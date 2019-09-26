@@ -141,38 +141,45 @@ class TaskTimeoutMonitor(object):
         timeout_step = 120 #任务监控间隔时间(秒)
         command = command.strip()
 
-        while sum_timeout <= int(timeout):
+        try:
 
-            logging.info("sum_timeout："+str(sum_timeout))
-            logging.info("timeout："+str(timeout))
-            logging.info(command)
+            while sum_timeout <= int(timeout):
+    
+                logging.info("sum_timeout："+str(sum_timeout))
+                logging.info("timeout："+str(timeout))
+                logging.info(command)
+    
+                yield from asyncio.sleep(int(timeout_step))
+    
+                sum_timeout += timeout_step
+                out = os.popen(command, 'r')
+                res = out.readlines()
+    
+            --res 获取返回值_SUCCESS是否存在(1 存在)
+                res = 0 if res is None else res[0].lower().strip()
+                out.close()
+    
+                logging.info("数据标识的返回值："+str(res))
+    
+                #判断数据文件是否生成
+                if res == '' or res == 'None' or res == '0':
+                    if sum_timeout >= int(timeout):
+                        # self.comwx.postAppMessage(
+                        #     '测试 ：任务 {dag_id} 超时'.format(
+                        #         dag_id=dag_id_name,
+                        #         timeout=timeout
+                        #     ),
+                        #     '271'
+                        # )
+    
+                        logging.info("任务超时。。。。。")
+                        sum_timeout=0
+                else:
+                    break
 
-            yield from asyncio.sleep(int(timeout_step))
+        except Exception as e:
 
-            sum_timeout += timeout_step
-            out = os.popen(command, 'r')
-            res = out.readlines()
-            logging.info("数据标识的返回值："+str(res))
-
-            #res 获取返回值_SUCCESS是否存在(1 存在)
-            res = 0 if res is None else res[0].lower().strip()
-            out.close()
-
-            #判断数据文件是否生成
-            if res == '' or res == 'None' or res == '0':
-                if sum_timeout >= int(timeout):
-                    # self.comwx.postAppMessage(
-                    #     '测试 ：任务 {dag_id} 超时'.format(
-                    #         dag_id=dag_id_name,
-                    #         timeout=timeout
-                    #     ),
-                    #     '271'
-                    # )
-
-                    logging.info("任务超时。。。。。")
-                    sum_timeout=0
-            else:
-                break
+            logging.info(e)
 
 
     """
