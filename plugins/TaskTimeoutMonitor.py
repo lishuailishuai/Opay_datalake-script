@@ -138,7 +138,7 @@ class TaskTimeoutMonitor(object):
     def task_trigger_new(self,command,dag_id_name, timeout):
 
         sum_timeout = 0
-        timeout_step = 120 #任务监控间隔时间(秒)
+        timeout_step = 120 --任务监控间隔时间(秒)
         command = command.strip()
 
         try:
@@ -155,7 +155,7 @@ class TaskTimeoutMonitor(object):
                 out = os.popen(command, 'r')
                 res = out.readlines()
     
-                --res 获取返回值_SUCCESS是否存在(1 存在)
+                #res 获取返回值_SUCCESS是否存在(1 存在)
                 res = 0 if res is None else res[0].lower().strip()
                 out.close()
     
