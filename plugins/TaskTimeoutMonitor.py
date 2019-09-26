@@ -179,6 +179,8 @@ class TaskTimeoutMonitor(object):
 
         except Exception as e:
 
+            sys.exit(1)
+
             logging.info(e)
 
 
