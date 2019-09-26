@@ -2,6 +2,8 @@
 """
 监控任务执行是否超时
 """
+
+import airflow
 from utils.connection_helper import get_hive_cursor
 from plugins.comwx import ComwxApi
 import logging
@@ -52,7 +54,7 @@ class TaskTimeoutMonitor(object):
     """
 
     @asyncio.coroutine
-    def task_trigger(self,command,dag_id_name, timeout):
+    def task_trigger_old(self,command,dag_id_name, timeout):
 
         try:
 
@@ -149,6 +151,72 @@ class TaskTimeoutMonitor(object):
             )
 
         loop = asyncio.get_event_loop()
-        tasks = [self.task_trigger(items['cmd'], items['table'], items['timeout']) for items in commands]
+        tasks = [self.task_trigger_old(items['cmd'], items['table'], items['timeout']) for items in commands]
         loop.run_until_complete(asyncio.wait(tasks))
         loop.close()
+
+      
+    @provide_session
+    @asyncio.coroutine
+    def task_trigger(self,task, execution_date, dag, session=None, timeout):
+
+        try:
+
+            sum_timeout = 0
+            timeout_step = 120 #任务监控间隔时间(秒)
+
+            print(task)
+            print(execution_date)
+            print(dag)
+
+
+            upstream_task_instances = (
+            session.query(TaskInstance)
+            .filter(
+                TaskInstance.dag_id == dag.dag_id,
+                TaskInstance.execution_date == execution_date,
+                TaskInstance.task_id.in_(task.upstream_task_ids),
+            )
+            .all()
+            )
+
+
+            while sum_timeout <= int(timeout):
+    
+                logging.info("sum_timeout："+str(sum_timeout))
+                logging.info("timeout："+str(timeout))
+    
+                yield from asyncio.sleep(int(timeout_step))
+    
+                sum_timeout += timeout_step
+
+
+                upstream_states = [ti.state for ti in upstream_task_instances]
+                fail_this_task = State.FAILED in upstream_states
+    
+                print("Do logic here...")
+    
+                if fail_this_task:
+            
+                    if sum_timeout >= int(timeout):
+
+                        # self.comwx.postAppMessage(
+                        #     'DW调度任务 {dag_id} 产出超时'.format(
+                        #         dag_id=dag_id_name,
+                        #         timeout=timeout
+                        #     ),
+                        #     '271'
+                        # )
+
+                        raise AirflowException("Failing task because one or more upstream tasks failed.")
+    
+                        logging.info("任务超时。。。。。")
+                        sum_timeout=0
+                else:
+                    break
+
+        except Exception as e:
+
+            sys.exit(1)
+
+            logging.info(e)
