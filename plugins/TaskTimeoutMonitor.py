@@ -5,7 +5,7 @@
 from utils.connection_helper import get_hive_cursor
 from plugins.comwx import ComwxApi
 import logging
-import os
+import os,sys
 import asyncio
 
 
