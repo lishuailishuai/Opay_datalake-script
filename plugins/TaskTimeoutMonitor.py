@@ -138,10 +138,13 @@ class TaskTimeoutMonitor(object):
     def task_trigger_new(self,command,dag_id_name, timeout):
 
         sum_timeout = 0
-        timeout_step = 30
+        timeout_step = 30 
         command = command.strip()
 
         while sum_timeout <= int(timeout):
+
+            print(sum_timeout)
+            print(timeout)
             logging.info(command)
             yield from asyncio.sleep(int(timeout_step))
 
@@ -151,6 +154,8 @@ class TaskTimeoutMonitor(object):
             logging.info(res)
             res = 0 if res is None else res[0].lower().strip()
             out.close()
+
+            print("======"+res)
 
             if res == '' or res == 'None' or res == '0':
                 if sum_timeout >= int(timeout):
