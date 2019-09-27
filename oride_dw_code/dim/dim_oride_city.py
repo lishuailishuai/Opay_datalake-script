@@ -198,27 +198,21 @@ task_check_key_data = PythonOperator(
 )
 
 #生成_SUCCESS
-touchz_data_success = BashOperator(
+def check_success(ds,dag,**op_kwargs):
 
+    dag_ids=dag.dag_id
+
+    tb = [
+        {"table":"{dag_name}".format(dag_name=dag_ids),"hdfs_path": "{hdfs_path}/country_code=NG/dt={pt}".format(pt=ds,hdfs_path=hdfs_path)}
+    ]
+
+    TaskTouchzSuccess().touchz_data_success(tb)
+
+touchz_data_success= PythonOperator(
     task_id='touchz_data_success',
-
-    bash_command="""
-    line_num=`$HADOOP_HOME/bin/hadoop fs -du -s {hdfs_data_dir} | tail -1 | awk '{{print $1}}'`
-    
-    if [ $line_num -eq 0 ]
-    then
-        echo "FATAL {hdfs_data_dir} is empty"
-        exit 1
-    else
-        echo "DATA EXPORT Successed ......"
-        $HADOOP_HOME/bin/hadoop fs -touchz {hdfs_data_dir}/_SUCCESS
-    fi
-    """.format(
-        pt='{{ds}}',
-        now_day='{{macros.ds_add(ds, +1)}}',
-        hdfs_data_dir=hdfs_path+'/country_code=NG/dt={{ds}}'
-        ),
-    dag=dag)
-
+    python_callable=check_success,
+    provide_context=True,
+    dag=dag
+)
 
 ods_sqoop_base_data_city_conf_df_tesk>>sleep_time>>dim_oride_city_task>>task_check_key_data>>touchz_data_success

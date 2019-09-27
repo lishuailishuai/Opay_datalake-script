@@ -43,6 +43,8 @@ class TaskTouchzSuccess(object):
     
         #判断数据文件是否为0
         line_str="$HADOOP_HOME/bin/hadoop fs -du -s {hdfs_data_dir} | tail -1 | awk \'{{print $1}}\'".format(hdfs_data_dir=hdfs_data_dir_str)
+
+        logging.info(line_str)
     
         with os.popen(line_str) as p:
             line_num=p.read()
@@ -57,6 +59,8 @@ class TaskTouchzSuccess(object):
     
         else:  
             succ_str="$HADOOP_HOME/bin/hadoop fs -touchz {hdfs_data_dir}/_SUCCESS".format(hdfs_data_dir=hdfs_data_dir_str)
+
+            logging.info(succ_str)
     
             os.popen(succ_str)
     
