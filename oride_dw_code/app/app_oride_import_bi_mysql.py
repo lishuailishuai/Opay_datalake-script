@@ -255,10 +255,10 @@ def init_mysql_table(**op_kwargs):
     wxapi = ComwxApi('wwd26d45f97ea74ad2', 'BLE_v25zCmnZaFUgum93j3zVBDK-DjtRkLisI_Wns4g', '1000011')
     try:
         mcursor = mysql_connectors[mysql_cursor]
-        mcursor.execute("DELETE FROM {db}.{table} WHERE dt = '{dt}'".format(db=db, table=table, dt=dt))
+        mcursor.execute("DELETE FROM {db}.{table} WHERE dt = '{dt}'".format(db=db, table=hive_table, dt=dt))
         isql = 'replace into {db}.{table} (`{cols}`) values '.format(
             db=db,
-            table=table,
+            table=hive_table,
             cols='`,`'.join(mcols)
         )
 
