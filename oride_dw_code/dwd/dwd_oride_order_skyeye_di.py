@@ -19,7 +19,7 @@ import json
 
 args = {
     'owner': 'lijialong',
-    'start_date': datetime(2019, 9, 20),
+    'start_date': datetime(2019, 9, 25),
     'depends_on_past': False,
     'retries': 3,
     'retry_delay': timedelta(minutes=2),
@@ -108,4 +108,4 @@ touchz_data_success = BashOperator(
     ),
     dag=dag)
 
-dwd_oride_order_skyeye_di_prev_day_task >> dwd_oride_order_skyeye_di_task >> touchz_data_success
+dwd_oride_order_skyeye_di_prev_day_task >> sleep_time>>dwd_oride_order_skyeye_di_task >> touchz_data_success
