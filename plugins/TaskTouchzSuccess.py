@@ -34,7 +34,7 @@ class TaskTouchzSuccess(object):
         self.comwx = ComwxApi('wwd26d45f97ea74ad2', 'BLE_v25zCmnZaFUgum93j3zVBDK-DjtRkLisI_Wns4g', '1000011')
 
 
-    def touchz_data_success(self,tables):
+    def set_touchz_success(self,tables):
 
         for item in tables:
 

@@ -71,11 +71,11 @@ def fun_task_timeout_monitor(ds,dag,**op_kwargs):
 
     dag_ids=dag.dag_id
 
-    tb = [
+    msg = [
         {"db": "oride_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=NG/dt={pt}".format(pt=ds), "timeout": "400"}
     ]
 
-    TaskTimeoutMonitor().set_task_monitor(tb)
+    TaskTimeoutMonitor().set_task_monitor(msg)
 
 task_timeout_monitor= PythonOperator(
     task_id='task_timeout_monitor',
@@ -202,11 +202,11 @@ def check_success(ds,dag,**op_kwargs):
 
     dag_ids=dag.dag_id
 
-    tb = [
+    msg = [
         {"table":"{dag_name}".format(dag_name=dag_ids),"hdfs_path": "{hdfs_path}/country_code=NG/dt={pt}".format(pt=ds,hdfs_path=hdfs_path)}
     ]
 
-    TaskTouchzSuccess().touchz_data_success(tb)
+    TaskTouchzSuccess().set_touchz_success(msg)
 
 touchz_data_success= PythonOperator(
     task_id='touchz_data_success',
