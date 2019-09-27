@@ -159,10 +159,13 @@ class TaskTimeoutMonitor(object):
         loop.run_until_complete(asyncio.wait(tasks))
         loop.close()
 
+
+    def task_trigger(self,**_):
+        print("task_trigger")
       
     @provide_session
     @asyncio.coroutine
-    def task_trigger(self,task, execution_date, dag,timeout, session=None,**_):
+    def task_triggers(self,task, execution_date, dag,timeout, session=None,**_):
 
         print("========")
 
