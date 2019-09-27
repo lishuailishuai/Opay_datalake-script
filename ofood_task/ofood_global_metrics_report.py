@@ -134,8 +134,8 @@ insert_ofood_global_metrics = HiveOperator(
             count(distinct(if(o.order_status = 8,o.uid,null))) complete_user_num,
             count(distinct(if(o.order_status = 8,o.shop_id,null))) complete_merchant_num,
             count(distinct(o.shop_id)) legal_merchant_num,
-            count(distinct if(olm.order_id is not null and o.order_status = -2,o.order_id,null)) merchant_cancel_num,
-            count(distinct if(olu.order_id is not null and o.order_status = -2,o.order_id,null)) user_cancel_num,
+            count(distinct if(olm.order_id is not null and o.order_status in (-1,-2,-3) and o.pay_status <> 0 and o.refund_status <> 0,o.order_id,null)) merchant_cancel_num,
+            count(distinct if(olu.order_id is null and o.order_status in (-1,-2,-3) and o.pay_status <> 0 and o.refund_status <> 0,o.order_id,null)) user_cancel_num,
             sum(if(wo.order_id is not null and o.order_status = 8,wo.origin_product + wo.origin_package + wo.origin_delivery,0)) order_total_price_sum,
             sum(if(wo.order_id is not null and o.order_status = 8,wo.origin_product + wo.origin_package + wo.origin_delivery - order_youhui - first_youhui,0)) order_actual_price_sum,
             sum(if(wo.order_id is not null and o.order_status = 8,wo.first_roof + wo.roof_mj + wo.roof_delivery + wo.roof_capped,0)) c_subsidy_price_sum
@@ -147,20 +147,19 @@ insert_ofood_global_metrics = HiveOperator(
                 from ofood_dw_ods.ods_sqoop_base_jh_order_log_df
                 where status = -1
                 and from_unixtime(dateline,'yyyyMMdd') = '{{ ds_nodash }}'
-                and log like '%Merchant cancelling order%'
+                and `from`='shop'
                 and dt = '{{ ds }}'   
             ) olm on  o.day = olm.day and o.order_id = olm.order_id
             left join (
                 select 
-                    from_unixtime(dateline,'yyyyMMdd') day,
-                    order_id
-                    from 
-                    ofood_dw_ods.ods_sqoop_base_jh_order_log_df
-                    where status = -1
-                    and (log like '%User cancelling order%' 
-                    or log like '%用户取消订单%')
-                    and from_unixtime(dateline,'yyyyMMdd') = '{{ ds_nodash }}'
-                    and dt = '{{ ds }}'   
+                from_unixtime(dateline,'yyyyMMdd') day,
+                order_id
+                from 
+                ofood_dw_ods.ods_sqoop_base_jh_order_log_df
+                where status = -1
+                and `from` in('system','shop','admin')
+                and from_unixtime(dateline,'yyyyMMdd') = '{{ ds_nodash }}'
+                and dt = '{{ ds }}'   
             ) olu on  o.day = olu.day and o.order_id = olu.order_id
             left join (
                 select 

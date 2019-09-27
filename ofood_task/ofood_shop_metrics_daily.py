@@ -181,11 +181,12 @@ insert_shop_metrics = HiveOperator(
             nvl(count(if(o.order_status = 8 and t.order_id is not null and  (t.order_compltet_time - o.pay_time)/60 <= 40,o.order_id,null)),0) in_time_order_num,
             nvl(count(if(o.order_status = 8 and t.order_id is not null and w.order_id is not null 
             and  (t.order_compltet_time - o.pay_time)/60 <= 40 and w.score_peisong <= 2,o.order_id,null)),0) in_time_negative_order_num,
-            nvl(count(if(o.order_status = -1 and o.pay_status = 0,o.order_id,null)),0) cancel_num,
-            nvl(count(if(o.pay_status = 0,o.order_id,null)),0) before_pay_cancel_num,
-            nvl(count(if(o.order_status = -2,o.order_id,null)),0) after_pay_cancel_num,
-            nvl(count(if(o.order_status = -2 and lu.order_id is not null,o.order_id,null)),0) user_cancel_num,
-            nvl(count(if(o.order_status = -2 and lm.order_id is not null,o.order_id,null)),0) merchant_cancel_num,
+            --nvl(count(if(o.order_status = -1 and o.pay_status = 0,o.order_id,null)),0) cancel_num,
+            nvl(count(if(o.pay_status = 0 and o.order_status in (-1,-2,-3),o.order_id,null)),0) before_pay_cancel_num,
+            nvl(count(if(o.pay_status <> 0 and o.refund_status <> 0 and o.order_status in (-1,-2,-3),o.order_id,null)),0) after_pay_cancel_num,
+            nvl(count(if(o.pay_status <> 0 and o.refund_status <> 0 and o.order_status in (-1,-2,-3) and lu.order_id is null,o.order_id,null)),0) user_cancel_num,
+            nvl(count(if(o.pay_status <> 0 and o.refund_status <> 0 and o.order_status in (-1,-2,-3) and lm.order_id is not null,o.order_id,null)),0) merchant_cancel_num,
+            nvl(count(if(o.pay_status <> 0 and o.refund_status <> 0 and o.order_status in (-1,-2,-3) and ls.order_id is not null,o.order_id,null)),0) as sys_cancel_num,
             1 is_open
             from 
             (
@@ -210,19 +211,27 @@ insert_shop_metrics = HiveOperator(
                 from 
                 ofood_dw_ods.ods_sqoop_base_jh_order_log_df
                 where dt = '{{ ds }}' and status = -1 
-                and (
-                    log like '%User cancelling order%'
-                    or log like '%用户取消订单%'
-                )
+                and `from` in('system','shop','admin') 
+                and from_unixtime(dateline,'yyyyMMdd') = '{{ ds_nodash }}'
             ) lu on o.order_id = lu.order_id
-            left join (
+            left join ( 
                 select 
                 order_id
                 from 
                 ofood_dw_ods.ods_sqoop_base_jh_order_log_df
                 where dt = '{{ ds }}' and status = -1 
-                and log like '%Merchant cancelling order%'
+                and `from`='shop'
+                and from_unixtime(dateline,'yyyyMMdd') = '{{ ds_nodash }}'
             ) lm on o.order_id = lm.order_id
+            left join ( 
+                select 
+                order_id
+                from 
+                ofood_dw_ods.ods_sqoop_base_jh_order_log_df
+                where dt = '{{ ds }}' and status = -1 
+                and `from`='system'
+                and from_unixtime(dateline,'yyyyMMdd') = '{{ ds_nodash }}'
+            ) ls on o.order_id = ls.order_id
             group by from_unixtime(unix_timestamp('{{ ds_nodash }}', 'yyyyMMdd'),'yyyyMMdd'),s.title,s.shop_id,s.lat,s.lng
         ),
         
@@ -353,8 +362,9 @@ insert_shop_metrics = HiveOperator(
         od.in_time_order_num punctual_arrival_number_of_order,
         od.in_time_negative_order_num negative_comment_number_of_order,
         od.order_num total_number_of_order,
-        od.cancel_num number_of_cancel_order_before_payment,
-        (od.order_num - od.success_order_num - od.cancel_num - od.user_cancel_num - od.merchant_cancel_num) number_of_cancel_order_auto,
+        --od.cancel_num number_of_cancel_order_before_payment,
+        0 as number_of_cancel_order_before_payment , --字段已弃用，占位使用
+        od.sys_cancel_num number_of_cancel_order_auto,
         od.user_cancel_num number_of_cancel_order_user,
         od.merchant_cancel_num number_of_cancel_order_shop,
         od.before_pay_cancel_num,
@@ -551,7 +561,7 @@ def send_csv_file(ds, ds_nodash, **kwargs):
         punctual_arrival_number_of_order,
         negative_comment_number_of_order,
         total_number_of_order,
-        number_of_cancel_order_before_payment,
+        before_pay_cancel_num,
         number_of_cancel_order_auto,
         number_of_cancel_order_user,
         number_of_cancel_order_shop
