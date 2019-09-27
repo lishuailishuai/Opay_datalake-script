@@ -88,7 +88,10 @@ hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
 dm_dm_oride_order_strong_base_cube_d_task = HiveOperator(
 
     task_id='dm_oride_order_strong_base_cube_d_task',
-    hql='''
+    hql='''set hive.exec.parallel=true;
+    set hive.exec.dynamic.partition.mode=nonstrict;
+
+    INSERT overwrite TABLE oride_dw.{table} partition(country_code,dt)
           select nvl(b.city_id,-10000) as city_id,
                  nvl(b.product_id,-10000) as product_id,
                  sum(a.strong_dispatch_driver_cnt) as strong_dispatch_driver_cnt, --强派单司机数
