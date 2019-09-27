@@ -66,7 +66,7 @@ dependence_dwd_oride_skyeye_di_prev_day_task = UFileSensor(
 ##----------------------------------------- 变量 ---------------------------------------##
 
 table_name = "app_oride_order_skyeye_tableau_d"
-hdfs_path = "ufile://opay-datalake/oride/oride_dw" + table_name
+hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
 
 ##----------------------------------------- 脚本 ---------------------------------------##
 
