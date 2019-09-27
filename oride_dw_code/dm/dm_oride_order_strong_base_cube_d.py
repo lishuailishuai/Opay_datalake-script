@@ -108,6 +108,7 @@ dm_dm_oride_order_strong_base_cube_d_task = HiveOperator(
                  sum(b.strong_paid_order_cnt) as strong_paid_order_cnt, --强派单支付订单数
                  sum(b.strong_paid_price) as strong_paid_price,  --强派单应付金额
                  sum(b.strong_paid_amount) as strong_paid_amount,  --强派单实付金额
+                 'nal' as country_code,
                  '{pt}' as dt
                 from (SELECT city_id,-10000 as product_id,count(distinct driver_id) as strong_dispatch_driver_cnt, --强派单司机数
                 count(distinct order_id) as strong_dispatch_order_cnt --强派单调度推单数
