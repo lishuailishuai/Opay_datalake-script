@@ -126,58 +126,58 @@ insert_ofood_global_metrics = HiveOperator(
         with 
         order_data as 
         (
-        select 
-        o.day ,
-        count(o.order_id) place_order_num,
-        count(distinct(o.mobile)) place_user_num,
-        count(if(o.order_status = 8,o.order_id,null)) complete_num,
-        count(distinct(if(o.order_status = 8,o.mobile,null))) complete_user_num,
-        count(distinct(if(o.order_status = 8,o.shop_id,null))) complete_merchant_num,
-        count(distinct(o.shop_id)) legal_merchant_num,
-        count(distinct if(olm.order_id is not null and o.order_status = -2,o.order_id,null)) merchant_cancel_num,
-        count(distinct if(olu.order_id is not null and o.order_status = -2,o.order_id,null)) user_cancel_num,
-        sum(if(wo.order_id is not null and o.order_status = 8,wo.origin_product + wo.origin_package + wo.origin_delivery,0)) order_total_price_sum,
-        sum(if(wo.order_id is not null and o.order_status = 8,wo.origin_product + wo.origin_package + wo.origin_delivery - order_youhui - first_youhui,0)) order_actual_price_sum,
-        sum(if(wo.order_id is not null and o.order_status = 8,wo.first_roof + wo.roof_mj + wo.roof_delivery + wo.roof_capped,0)) c_subsidy_price_sum
-        from ofood_dw_ods.ods_sqoop_base_jh_order_df o
-        left join (
             select 
-            from_unixtime(dateline,'yyyyMMdd') day,
-            order_id
-            from ofood_dw_ods.ods_sqoop_base_jh_order_log_df
-            where status = -1
-            and from_unixtime(dateline,'yyyyMMdd') = '{{ ds_nodash }}'
-            and log like '%Merchant cancelling order%'
-            and dt = '{{ ds }}'   
-        ) olm on  o.day = olm.day and o.order_id = olm.order_id
-        left join (
-            select 
+            o.day ,
+            count(o.order_id) place_order_num,
+            count(distinct(o.uid)) place_user_num,
+            count(if(o.order_status = 8,o.order_id,null)) complete_num,
+            count(distinct(if(o.order_status = 8,o.uid,null))) complete_user_num,
+            count(distinct(if(o.order_status = 8,o.shop_id,null))) complete_merchant_num,
+            count(distinct(o.shop_id)) legal_merchant_num,
+            count(distinct if(olm.order_id is not null and o.order_status = -2,o.order_id,null)) merchant_cancel_num,
+            count(distinct if(olu.order_id is not null and o.order_status = -2,o.order_id,null)) user_cancel_num,
+            sum(if(wo.order_id is not null and o.order_status = 8,wo.origin_product + wo.origin_package + wo.origin_delivery,0)) order_total_price_sum,
+            sum(if(wo.order_id is not null and o.order_status = 8,wo.origin_product + wo.origin_package + wo.origin_delivery - order_youhui - first_youhui,0)) order_actual_price_sum,
+            sum(if(wo.order_id is not null and o.order_status = 8,wo.first_roof + wo.roof_mj + wo.roof_delivery + wo.roof_capped,0)) c_subsidy_price_sum
+            from ofood_dw_ods.ods_sqoop_base_jh_order_df o
+            left join (
+                select 
                 from_unixtime(dateline,'yyyyMMdd') day,
                 order_id
-                from 
-                ofood_dw_ods.ods_sqoop_base_jh_order_log_df
+                from ofood_dw_ods.ods_sqoop_base_jh_order_log_df
                 where status = -1
-                and (log like '%User cancelling order%' 
-                or log like '%用户取消订单%')
                 and from_unixtime(dateline,'yyyyMMdd') = '{{ ds_nodash }}'
+                and log like '%Merchant cancelling order%'
                 and dt = '{{ ds }}'   
-        ) olu on  o.day = olu.day and o.order_id = olu.order_id
-        left join (
-            select 
-            order_id,
-            origin_product,
-            origin_package,
-            origin_delivery,
-            first_roof,
-            roof_mj,
-            roof_delivery,
-            roof_capped 
-            from 
-            ofood_dw_ods.ods_sqoop_base_jh_waimai_order_df
-            where dt = '{{ ds }}'
-        ) wo on wo.order_id = o.order_id
-        where o.dt = '{{ ds }}' and o.day = '{{ ds_nodash }}'
-        group by o.day
+            ) olm on  o.day = olm.day and o.order_id = olm.order_id
+            left join (
+                select 
+                    from_unixtime(dateline,'yyyyMMdd') day,
+                    order_id
+                    from 
+                    ofood_dw_ods.ods_sqoop_base_jh_order_log_df
+                    where status = -1
+                    and (log like '%User cancelling order%' 
+                    or log like '%用户取消订单%')
+                    and from_unixtime(dateline,'yyyyMMdd') = '{{ ds_nodash }}'
+                    and dt = '{{ ds }}'   
+            ) olu on  o.day = olu.day and o.order_id = olu.order_id
+            left join (
+                select 
+                order_id,
+                origin_product,
+                origin_package,
+                origin_delivery,
+                first_roof,
+                roof_mj,
+                roof_delivery,
+                roof_capped 
+                from 
+                ofood_dw_ods.ods_sqoop_base_jh_waimai_order_df
+                where dt = '{{ ds }}'
+            ) wo on wo.order_id = o.order_id
+            where o.dt = '{{ ds }}' and o.day = '{{ ds_nodash }}'
+            group by o.day
         ),
         
         
@@ -216,26 +216,26 @@ insert_ofood_global_metrics = HiveOperator(
         --商户指标
         
         merchant_new as (
-        select 
-        from_unixtime(dateline,'yyyyMMdd') day,
-        count(shop_id) new_register_merchant_num
-        from ofood_dw_ods.ods_sqoop_base_jh_shop_df
-        where  from_unixtime(dateline,'yyyyMMdd') = '{{ ds_nodash }}'
-        and dt = '{{ ds }}'
-        group by from_unixtime(dateline,'yyyyMMdd')
+            select 
+            from_unixtime(dateline,'yyyyMMdd') day,
+            count(shop_id) new_register_merchant_num
+            from ofood_dw_ods.ods_sqoop_base_jh_shop_df
+            where  from_unixtime(dateline,'yyyyMMdd') = '{{ ds_nodash }}'
+            and dt = '{{ ds }}'
+            group by from_unixtime(dateline,'yyyyMMdd')
         ),
         
         
         merchant_alive as (
-        select 
-        from_unixtime(unix_timestamp('{{ ds_nodash }}', 'yyyyMMdd'),'yyyyMMdd') day,
-        count(shop_id) total_alive_merchant_num
-        from ofood_dw_ods.ods_sqoop_base_jh_waimai_df
-        where  from_unixtime(dateline,'yyyyMMdd') <= '{{ ds_nodash }}'
-        and closed = 0
-        and  audit = 1
-        and dt = '{{ ds }}'
-        group by from_unixtime(unix_timestamp('{{ ds_nodash }}', 'yyyyMMdd'),'yyyyMMdd')
+            select 
+            from_unixtime(unix_timestamp('{{ ds_nodash }}', 'yyyyMMdd'),'yyyyMMdd') day,
+            count(shop_id) total_alive_merchant_num
+            from ofood_dw_ods.ods_sqoop_base_jh_waimai_df
+            where  from_unixtime(dateline,'yyyyMMdd') <= '{{ ds_nodash }}'
+            and closed = 0
+            and  audit = 1
+            and dt = '{{ ds }}'
+            group by from_unixtime(unix_timestamp('{{ ds_nodash }}', 'yyyyMMdd'),'yyyyMMdd')
         ),
         
         
@@ -243,21 +243,21 @@ insert_ofood_global_metrics = HiveOperator(
         
         new_user as 
         (
-        select 
-        d.ft day,
-        count(d.uid) first_complete_user_num
-        from 
-        (
             select 
-            uid,
-            DATE_FORMAT(from_unixtime(min(dateline)),'yyyyMMdd') ft 
-            from ofood_dw_ods.ods_sqoop_base_jh_order_df
-            where order_status = 8
-            and dt = '{{ ds }}'
-            group by uid
-        ) d
-        where d.ft = '{{ ds_nodash }}'
-        group by d.ft
+            d.ft day,
+            count(d.uid) first_complete_user_num
+            from 
+            (
+                select 
+                uid,
+                DATE_FORMAT(from_unixtime(min(dateline)),'yyyyMMdd') ft 
+                from ofood_dw_ods.ods_sqoop_base_jh_order_df
+                where order_status = 8
+                and dt = '{{ ds }}'
+                group by uid
+            ) d
+            where d.ft = '{{ ds_nodash }}'
+            group by d.ft
         ),
         
         
