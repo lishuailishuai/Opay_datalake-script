@@ -29,14 +29,13 @@ tb = [
 """
 
 
-
 class TaskTouchzSuccess(object):
 
     def __init__(self):
         self.comwx = ComwxApi('wwd26d45f97ea74ad2', 'BLE_v25zCmnZaFUgum93j3zVBDK-DjtRkLisI_Wns4g', '1000011')
 
 
-    def check_ds_data(self,tables):
+    def touchz_data_success(self,tables):
 
         for item in tables:
 
@@ -64,11 +63,3 @@ class TaskTouchzSuccess(object):
             os.popen(succ_str)
     
             logging.info("DATA EXPORT Successed ......")
-    
-    
-    touchz_data_success = PythonOperator(
-        task_id='check_data',
-        python_callable=check_ds_data,
-        provide_context=True,
-        dag=dag
-    )
