@@ -145,4 +145,5 @@ touchz_data_success = BashOperator(
 dependence_dwd_oride_order_base_include_test_di_prev_day_task >> \
 dependence_dwd_oride_skyeye_di_prev_day_task >> \
 sleep_time >> \
-app_oride_order_skyeye_tableau_d_task
+app_oride_order_skyeye_tableau_d_task >> \
+touchz_data_success
