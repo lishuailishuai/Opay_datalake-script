@@ -130,6 +130,7 @@ table_list = [
     ("opay_spread", "promoter_user", "opay_spread_mysql", "promoter",1),
     ("opay_spread", "promoter_user_relat_admin", "opay_spread_mysql", "promoter",1),
     ("opay_spread", "promoter_users_device", "opay_spread_mysql", "promoter",1),
+    ("opay_spread", "spread_sign_up", "opay_spread_mysql", "promoter",1),
 ]
 
 HIVE_DB = 'oride_dw_ods'
