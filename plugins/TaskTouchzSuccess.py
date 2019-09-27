@@ -22,9 +22,9 @@ from airflow.utils.trigger_rule import TriggerRule
 
 """
 tb = [
-        {"db": "oride_dw", "table": "app_oride_driver_base_d", "partition": "aaaaa", "timeout": "60"},
-        {"db": "oride_dw", "table": "app_oride_order_base_d", "partition": "type=all/country_code=nal/dt=2019-09-20", "timeout": "120"}
+        {"table":"test_airflow_test".format(dag_name=dag_ids),"hdfs_path": "{hdfs_path}/country_code=lan/dt={pt}".format(pt=ds,hdfs_path=hdfspath)}
     ]
+
 """
 
 
@@ -41,7 +41,6 @@ class TaskTouchzSuccess(object):
             table_name = item.get('table', None)
             hdfs_data_dir_str = item.get('hdfs_path', None)
     
-    
         #判断数据文件是否为0
         line_str="$HADOOP_HOME/bin/hadoop fs -du -s {hdfs_data_dir} | tail -1 | awk \'{{print $1}}\'".format(hdfs_data_dir=hdfs_data_dir_str)
     
@@ -51,7 +50,7 @@ class TaskTouchzSuccess(object):
         #数据为0，发微信报警通知
         if line_num[0] == str(0):
             
-            #comwx.postAppMessage('测试：DW调度系统任务 {jobname} 数据产出异常，对应时间:{pt}'.format(jobname=table_name,pt=ds), '271')
+            comwx.postAppMessage('DW调度系统任务 {jobname} 数据产出异常，对应时间:{pt}'.format(jobname=table_name,pt=ds), '271')
     
             logging.info("Error : {hdfs_data_dir} is empty".format(hdfs_data_dir=hdfs_data_dir_str))
             sys.exit(1)
