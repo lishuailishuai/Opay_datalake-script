@@ -46,7 +46,7 @@ class TaskTouchzSuccess(object):
                 self.hdfs_data_dir_str = item.get('hdfs_path', None)
         
             #判断数据文件是否为0
-            line_str="$HADOOP_HOME/bin/hadoop fs -du -s {hdfs_data_dir} | tail -1 | awk \'{{print $1}}\'".format(hdfs_data_dir=hdfs_data_dir_str)
+            line_str="$HADOOP_HOME/bin/hadoop fs -du -s {hdfs_data_dir} | tail -1 | awk \'{{print $1}}\'".format(hdfs_data_dir=self.hdfs_data_dir_str)
     
             logging.info(line_str)
         
