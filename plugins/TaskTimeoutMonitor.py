@@ -165,7 +165,7 @@ class TaskTimeoutMonitor(object):
       
     @provide_session
     @asyncio.coroutine
-    def task_triggers(self,task, execution_date, dag,timeout, session=None,**_):
+    def task_triggers(self,tasks, date, dag_name,timeout, session=None,**_):
 
         print("========")
 
@@ -176,17 +176,17 @@ class TaskTimeoutMonitor(object):
             sum_timeout = 0
             timeout_step = 120 #任务监控间隔时间(秒)
 
-            print(task)
-            print(execution_date)
-            print(dag)
+            print(tasks)
+            print(date)
+            print(dag_name)
 
 
             upstream_task_instances = (
             session.query(TaskInstance)
             .filter(
-                TaskInstance.dag_id == dag.dag_id,
-                TaskInstance.execution_date == execution_date,
-                TaskInstance.task_id.in_(task.upstream_task_ids),
+                TaskInstance.dag_id == dag_name.dag_id,
+                TaskInstance.execution_date == date,
+                TaskInstance.task_id.in_(tasks.upstream_task_ids),
             )
             .all()
             )
