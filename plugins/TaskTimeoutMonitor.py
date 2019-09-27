@@ -88,13 +88,13 @@ class TaskTimeoutMonitor(object):
                 if res == '' or res == 'None' or res == '0':
                     if sum_timeout >= int(timeout):
 
-                        # self.comwx.postAppMessage(
-                        #     'DW调度任务 {dag_id} 产出超时'.format(
-                        #         dag_id=dag_id_name,
-                        #         timeout=timeout
-                        #     ),
-                        #     '271'
-                        # )
+                        self.comwx.postAppMessage(
+                            'DW调度任务 {dag_id} 产出超时'.format(
+                                dag_id=dag_id_name,
+                                timeout=timeout
+                            ),
+                            '271'
+                        )
     
                         logging.info("任务超时。。。。。")
                         sum_timeout=0

@@ -95,6 +95,26 @@ oride_driver_timerange_prev_day_tesk = HivePartitionSensor(
 table_name="dwm_oride_driver_base_di"
 hdfs_path="ufile://opay-datalake/oride/oride_dw/"+table_name
 
+##----------------------------------------- 任务超时监控 ---------------------------------------## 
+
+def fun_task_timeout_monitor(ds,dag,**op_kwargs):
+
+    dag_ids=dag.dag_id
+
+    
+    tb = [
+        {"db": "oride_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=lan/dt={pt}".format(pt=ds), "timeout": "120"}
+    ]
+
+    TaskTimeoutMonitor().set_task_monitor(tb)
+
+task_timeout_monitor= PythonOperator(
+    task_id='task_timeout_monitor',
+    python_callable=fun_task_timeout_monitor,
+    provide_context=True,
+    dag=dag
+)
+
 ##----------------------------------------- 脚本 ---------------------------------------## 
 
 dwm_oride_driver_base_di_task = HiveOperator(
