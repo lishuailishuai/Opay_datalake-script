@@ -52,10 +52,10 @@ dependence_dwd_oride_order_base_include_test_di_prev_day_task = UFileSensor(
     dag=dag
 )
 
-dependence_dwd_oride_skyeye_di_prev_day_task = UFileSensor(
-    task_id='dwd_oride_skyeye_di_prev_day_task',
+dependence_dwd_oride_order_skyeye_di_prev_day_task = UFileSensor(
+    task_id='dwd_oride_order_skyeye_di_prev_day_task',
     filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw/dwd_oride_skyeye_di/country_code=nal",
+        hdfs_path_str="oride/oride_dw/dwd_oride_order_skyeye_di/country_code=nal",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -143,7 +143,7 @@ touchz_data_success = BashOperator(
 # 执行依赖顺序
 
 dependence_dwd_oride_order_base_include_test_di_prev_day_task >> \
-dependence_dwd_oride_skyeye_di_prev_day_task >> \
+dependence_dwd_oride_order_skyeye_di_prev_day_task >> \
 sleep_time >> \
 app_oride_order_skyeye_tableau_d_task >> \
 touchz_data_success
