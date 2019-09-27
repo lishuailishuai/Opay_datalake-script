@@ -103,9 +103,11 @@ class TaskTimeoutMonitor(object):
 
         except Exception as e:
 
-            sys.exit(1)
+            self.comwx.postAppMessage('DW调度任务 {dag_id} code 异常'.format(dag_id=dag_id_name),'271')
 
             logging.info(e)
+
+            sys.exit(1)
 
 
     """

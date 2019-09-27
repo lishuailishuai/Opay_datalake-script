@@ -32,36 +32,51 @@ class TaskTouchzSuccess(object):
 
     def __init__(self):
         self.comwx = ComwxApi('wwd26d45f97ea74ad2', 'BLE_v25zCmnZaFUgum93j3zVBDK-DjtRkLisI_Wns4g', '1000011')
+        self.table_name=""
+        self.hdfs_data_dir_str=""
 
 
     def set_touchz_success(self,tables):
 
-        for item in tables:
+        try:
 
-            table_name = item.get('table', None)
-            hdfs_data_dir_str = item.get('hdfs_path', None)
+            for item in tables:
     
-        #判断数据文件是否为0
-        line_str="$HADOOP_HOME/bin/hadoop fs -du -s {hdfs_data_dir} | tail -1 | awk \'{{print $1}}\'".format(hdfs_data_dir=hdfs_data_dir_str)
+                self.table_name = item.get('table', None)
+                self.hdfs_data_dir_str = item.get('hdfs_path', None)
+        
+            #判断数据文件是否为0
+            line_str="$HADOOP_HOME/bin/hadoop fs -du -s {hdfs_data_dir} | tail -1 | awk \'{{print $1}}\'".format(hdfs_data_dir=hdfs_data_dir_str)
+    
+            logging.info(line_str)
+        
+            with os.popen(line_str) as p:
+                line_num=p.read()
+        
+            #数据为0，发微信报警通知
+            if line_num[0] == str(0):
+                
+                comwx.postAppMessage('DW调度系统任务 {jobname} 数据产出异常，对应时间:{pt}'.format(jobname=self.table_name,pt=ds), '271')
+        
+                logging.info("Error : {hdfs_data_dir} is empty".format(hdfs_data_dir=self.hdfs_data_dir_str))
+                sys.exit(1)
+        
+            else:  
+                succ_str="$HADOOP_HOME/bin/hadoop fs -touchz {hdfs_data_dir}/_SUCCESS".format(hdfs_data_dir=self.hdfs_data_dir_str)
+    
+                logging.info(succ_str)
+        
+                os.popen(succ_str)
+        
+                logging.info("DATA EXPORT Successed ......")
+    
+    
+        except Exception as e:
 
-        logging.info(line_str)
-    
-        with os.popen(line_str) as p:
-            line_num=p.read()
-    
-        #数据为0，发微信报警通知
-        if line_num[0] == str(0):
-            
-            comwx.postAppMessage('DW调度系统任务 {jobname} 数据产出异常，对应时间:{pt}'.format(jobname=table_name,pt=ds), '271')
-    
-            logging.info("Error : {hdfs_data_dir} is empty".format(hdfs_data_dir=hdfs_data_dir_str))
+            comwx.postAppMessage('DW调度系统任务 {jobname} 数据产出异常，对应时间:{pt}'.format(jobname=self.table_name,pt=ds),'271')
+
+            logging.info(e)
+
             sys.exit(1)
-    
-        else:  
-            succ_str="$HADOOP_HOME/bin/hadoop fs -touchz {hdfs_data_dir}/_SUCCESS".format(hdfs_data_dir=hdfs_data_dir_str)
 
-            logging.info(succ_str)
-    
-            os.popen(succ_str)
-    
-            logging.info("DATA EXPORT Successed ......")
+            
