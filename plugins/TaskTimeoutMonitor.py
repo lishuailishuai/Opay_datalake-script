@@ -58,7 +58,7 @@ class TaskTimeoutMonitor(object):
     """
 
     @asyncio.coroutine
-    def task_trigger_old(self,command,dag_id_name, timeout):
+    def task_trigger(self,command,dag_id_name, timeout):
 
         try:
 
@@ -88,13 +88,13 @@ class TaskTimeoutMonitor(object):
                 if res == '' or res == 'None' or res == '0':
                     if sum_timeout >= int(timeout):
 
-                        self.comwx.postAppMessage(
-                            'DW调度任务 {dag_id} 产出超时'.format(
-                                dag_id=dag_id_name,
-                                timeout=timeout
-                            ),
-                            '271'
-                        )
+                        # self.comwx.postAppMessage(
+                        #     'DW调度任务 {dag_id} 产出超时'.format(
+                        #         dag_id=dag_id_name,
+                        #         timeout=timeout
+                        #     ),
+                        #     '271'
+                        # )
     
                         logging.info("任务超时。。。。。")
                         sum_timeout=0
@@ -155,81 +155,6 @@ class TaskTimeoutMonitor(object):
             )
 
         loop = asyncio.get_event_loop()
-        tasks = [self.task_trigger_old(items['cmd'], items['table'], items['timeout']) for items in commands]
+        tasks = [self.task_trigger(items['cmd'], items['table'], items['timeout']) for items in commands]
         loop.run_until_complete(asyncio.wait(tasks))
         loop.close()
-
-
-    def task_trigger(self,**_):
-        print("task_trigger")
-      
-    @provide_session
-    @asyncio.coroutine
-    def task_triggers(self,tasks, date, dag_name,timeout, session=None,**_):
-
-        print("========")
-
-        try:
-
-            print("========")
-
-            sum_timeout = 0
-            timeout_step = 120 #任务监控间隔时间(秒)
-
-            print(tasks)
-            print(date)
-            print(dag_name)
-
-
-            upstream_task_instances = (
-            session.query(TaskInstance)
-            .filter(
-                TaskInstance.dag_id == dag_name.dag_id,
-                TaskInstance.execution_date == date,
-                TaskInstance.task_id.in_(tasks.upstream_task_ids),
-            )
-            .all()
-            )
-
-
-            while sum_timeout <= int(timeout):
-    
-                logging.info("sum_timeout："+str(sum_timeout))
-                logging.info("timeout："+str(timeout))
-    
-                yield from asyncio.sleep(int(timeout_step))
-    
-                sum_timeout += timeout_step
-
-
-                upstream_states = [ti.state for ti in upstream_task_instances]
-                fail_this_task = State.FAILED in upstream_states
-    
-                print("Do logic here...")
-    
-                if fail_this_task:
-            
-                    if sum_timeout >= int(timeout):
-
-                        # self.comwx.postAppMessage(
-                        #     'DW调度任务 {dag_id} 产出超时'.format(
-                        #         dag_id=dag_id_name,
-                        #         timeout=timeout
-                        #     ),
-                        #     '271'
-                        # )
-
-                        raise AirflowException("Failing task because one or more upstream tasks failed.")
-    
-                        logging.info("任务超时。。。。。")
-                        sum_timeout=0
-                else:
-                    break
-
-        except Exception as e:
-
-            print("++++++++++")
-
-            sys.exit(1)
-
-            logging.info(e)
