@@ -195,7 +195,9 @@ create_bdm_dim_data = BashOperator(
         create temporary function isInArea as 'com.oride.udf.IsInArea' 
                     USING JAR 'hdfs://node4.datalake.opay.com:8020/tmp/udf-1.0-SNAPSHOT-jar-with-dependencies.jar';
         
-        with shop_dim as (
+        with 
+        
+        shop_dim as (
             select 
                 city_id,
                 shop_id,
@@ -211,22 +213,25 @@ create_bdm_dim_data = BashOperator(
             select  
             o.city_id as city_id,
             o.shop_id as shop_id,
-            nvl(t.shop_jiedan_time ,0) as shop_jiedan_time,
-            nvl(t.pay_time,0) as pay_time,
-            nvl(t.order_compltet_time,0) as order_compltet_time,
-            nvl(o.order_status,0) as order_status,
-            nvl(w.score_peisong,0) as score_peisong,
-            if(o.order_status = -2,1,0) as is_cancel,
-            nvl(user_reason,0) as user_reason,
-            nvl(merchant_reason,0) as merchant_reason
-        
+            count(if(t.order_id is not null and t.pay_time > 0 and t.shop_jiedan_time > 0,o.order_id,null)) as accept_order_cnt,
+            count(if(o.order_status = 8 ,o.order_id ,null)) as complete_order_cnt,
+            sum(if(t.order_id is not null and t.pay_time > 0 and t.shop_jiedan_time > 0 ,t.shop_jiedan_time - t.pay_time,0)) as request_time_sum,
+            sum(if(t.order_id is not null and t.order_compltet_time > 0 and t.shop_jiedan_time > 0,t.order_compltet_time - t.shop_jiedan_time,0)) as delivery_time_sum
+            sum(if(o.order_status = 8,w.score_peisong,0)) as score_peisong_sum,
+            count(if(o.order_status in (-1,-2,-3) and o.pay_status <> 0 and o.refund_status <> 0,o.order_id,null)) as after_pay_cancel_order_cnt,
+            count(if(o.order_status in (-1,-2,-3) and o.pay_status <> 0 and o.refund_status <> 0 and ol.cancel_from = 'system',o.order_id,null )) as sys_cancel_order_cnt,
+            count(if(o.order_status in (-1,-2,-3) and o.pay_status <> 0 and o.refund_status <> 0 and ol.cancel_from = 'shop',o.order_id,null )) as merchant_cancel_order_cnt,
+            count(if(o.order_status in (-1,-2,-3) and o.pay_status <> 0 and o.refund_status <> 0 and ol.cancel_from not in ( 'system','shop','admin'),o.order_id,null )) as user_cancel_order_cnt
+            
             from 
             (
                 select 
                 city_id,
                 shop_id,
                 order_id,
-                order_status
+                order_status,
+                pay_status,
+                refund_status
                 from 
                 ofood_dw_ods.ods_sqoop_base_jh_order_df
                 where dt = '${dt}'
@@ -254,14 +259,19 @@ create_bdm_dim_data = BashOperator(
             left join (
                 select 
                 order_id,
-                if(log like '%User cancelling order%'
-                            or log like '%用户取消订单%',1,0) user_reason,
-                if(log like '%Merchant cancelling order%',1,0) merchant_reason
+                `from` as cancel_from
                 from 
                 ofood_dw_ods.ods_sqoop_base_jh_order_log_df
                 where dt = '${dt}'
                 and status = -1 
+                and from_unixtime(dateline,'yyyyMMdd') = '${ds}'
             ) ol on o.order_id = ol.order_id
+            
+            group by o.city_id as city_id,
+            o.shop_id as shop_id
+            
+            
+            
         ),
         
         
@@ -273,14 +283,16 @@ create_bdm_dim_data = BashOperator(
             sd.shop_id,
             sd.lat,
             sd.lng,
-            sm.shop_jiedan_time,
-            sm.pay_time,
-            sm.order_compltet_time,
-            sm.order_status,
-            sm.score_peisong,
-            sm.is_cancel,
-            sm.user_reason,
-            sm.merchant_reason
+            
+            sm.accept_order_cnt,
+            sm.complete_order_cnt,
+            sm.request_time_sum,
+            sm.delivery_time_sum,
+            sm.score_peisong_sum,
+            sm.after_pay_cancel_order_cnt,
+            sm.sys_cancel_order_cnt,
+            sm.merchant_cancel_order_cnt,
+            sm.user_cancel_order_cnt
             
             from 
             shop_dim sd 
@@ -334,13 +346,14 @@ create_bdm_dim_data = BashOperator(
         u.id,
         u.bdm_name,
         u.hbdm_name,
-        nvl(round(avg(if(s.shop_jiedan_time > 0 and s.pay_time > 0 ,s.shop_jiedan_time - s.pay_time,0))/60,1),0),
-        nvl(round(avg(if(s.order_status = 8 and s.order_compltet_time > 0 and s.shop_jiedan_time > 0,s.order_compltet_time - s.shop_jiedan_time,0))/60,1),1),
-        nvl(round(sum(if(s.order_status = 8 ,s.score_peisong,0))/sum(if(s.order_status = 8 and s.score_peisong > 0,1,0)),1),0),
-        sum(if(is_cancel = 1,1,0)) ,
-        sum(if(s.user_reason = 1,1,0)),
-        sum(if(s.merchant_reason = 1,1,0))
-        
+        nvl(round((sum(request_time_sum) /60) / sum(accept_order_cnt),1),0),
+        nvl(round((sum(delivery_time_sum)/60)/ sum(complete_order_cnt),1),0),
+        nvl(round(sum(score_peisong_sum) / sum(complete_order_cnt),1),0),
+        sum(after_pay_cancel_order_cnt),
+        sum(user_cancel_order_cnt),
+        sum(merchant_cancel_order_cnt),
+        sum(sys_cancel_order_cnt)
+    
         from 
         bd_user_data u 
         left join 
