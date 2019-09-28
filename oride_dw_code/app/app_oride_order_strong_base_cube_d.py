@@ -95,8 +95,8 @@ app_oride_order_strong_base_cube_d_task = HiveOperator(
                  sum(a.strong_paid_order_cnt) as strong_paid_order_cnt, --强派单支付订单数
                  sum(a.strong_paid_price) as strong_paid_price,  --强派单应付金额
                  sum(a.strong_paid_amount) as strong_paid_amount,  --强派单实付金额
-                 b.finish_driver_online_dur, --当日完单司机在线时长
-                 b.strong_finish_driver_online_dur, --当日强制派单完单司机在线时长
+                 sum(b.finish_driver_online_dur) as finish_driver_online_dur, --当日完单司机在线时长
+                 sum(b.strong_finish_driver_online_dur) as strong_finish_driver_online_dur, --当日强制派单完单司机在线时长
                  'nal' as country_code,
                  '{pt}' as dt
 FROM
@@ -116,6 +116,7 @@ FROM oride_dw.dm_oride_driver_base_d
             nvl(product_id,-10000) WITH CUBE) b ON a.city_id=nvl(b.city_id,-10000)
 AND a.product_id=nvl(b.product_id,-10000)
 AND a.country_code=nvl(b.country_code,-10000)
+group by nvl(a.city_id,-10000),nvl(a.product_id,-10000)
                  '''.format(
         pt='{{ds}}',
         now_day='{{macros.ds_add(ds, +1)}}',
