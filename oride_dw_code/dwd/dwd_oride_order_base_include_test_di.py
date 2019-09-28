@@ -539,7 +539,7 @@ FROM oride_dw_ods.ods_sqoop_base_data_order_payment_df
 WHERE dt = '{pt}') pay ON base.order_id=pay.order_id
 LEFT OUTER JOIN
 (SELECT get_json_object(event_value, '$.order_id') AS order_id,
-       max(get_json_object(event_value, '$.estimated_price')) AS estimated_price --预估价格区间（最小值,最大值）
+       min(get_json_object(event_value, '$.estimated_price')) AS estimated_price --预估价格区间（最小值,最大值）
 FROM oride_bi.oride_client_event_detail
 WHERE event_name='successful_order_show'
   AND dt='{pt}'
