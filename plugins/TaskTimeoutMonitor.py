@@ -60,9 +60,13 @@ class TaskTimeoutMonitor(object):
     @asyncio.coroutine
     def task_trigger(self,command,dag_id_name, timeout):
 
+        # timeout --时间偏移量
+        # 时间偏移量= 任务正常执行结束时间(秒)+允许任务延迟的最大时间(秒)
+        # 正常执行结束时间300秒+ 允许任务延迟的最大120秒=时间偏移量420 秒
+
         try:
 
-            sum_timeout = 0
+            sum_timeout = 0 
             timeout_step = 120 #任务监控间隔时间(秒)
             command = command.strip()
 
