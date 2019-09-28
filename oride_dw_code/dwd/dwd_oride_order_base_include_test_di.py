@@ -92,6 +92,27 @@ dependence_dwd_oride_order_dispatch_funnel_di_prev_day_task = UFileSensor(
 table_name = "dwd_oride_order_base_include_test_di"
 hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
 
+
+
+##----------------------------------------- 任务超时监控 ---------------------------------------## 
+
+def fun_task_timeout_monitor(ds,dag,**op_kwargs):
+
+    dag_ids=dag.dag_id
+
+    tb = [
+        {"db": "oride_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=lan/dt={pt}".format(pt=ds), "timeout": "1800"}
+    ]
+
+    TaskTimeoutMonitor().set_task_monitor(tb)
+
+task_timeout_monitor= PythonOperator(
+    task_id='task_timeout_monitor',
+    python_callable=fun_task_timeout_monitor,
+    provide_context=True,
+    dag=dag
+)
+
 ##----------------------------------------- 脚本 ---------------------------------------## 
 
 dwd_oride_order_base_include_test_di_task = HiveOperator(
@@ -516,13 +537,12 @@ FROM oride_dw_ods.ods_sqoop_base_data_order_payment_df
 WHERE dt = '{pt}') pay ON base.order_id=pay.order_id
 LEFT OUTER JOIN
 (SELECT get_json_object(event_value, '$.order_id') AS order_id,
-       get_json_object(event_value, '$.estimated_price') AS estimated_price --预估价格区间（最小值,最大值）
+       max(get_json_object(event_value, '$.estimated_price')) AS estimated_price --预估价格区间（最小值,最大值）
 FROM oride_bi.oride_client_event_detail
 WHERE event_name='successful_order_show'
   AND dt='{pt}'
   AND length(get_json_object(event_value, '$.estimated_price'))>1
-GROUP BY get_json_object(event_value, '$.order_id'),
-         get_json_object(event_value, '$.estimated_price')) ep
+GROUP BY get_json_object(event_value, '$.order_id')) ep
 ON base.order_id=ep.order_id
 left outer join
 (select order_id from oride_dw.dwd_oride_order_dispatch_funnel_di
@@ -579,28 +599,24 @@ task_check_key_data = PythonOperator(
     provide_context=True,
     dag=dag)
 
-# 生成_SUCCESS
-touchz_data_success = BashOperator(
 
+#生成_SUCCESS
+def check_success(ds,dag,**op_kwargs):
+
+    dag_ids=dag.dag_id
+
+    msg = [
+        {"table":"{dag_name}".format(dag_name=dag_ids),"hdfs_path": "{hdfsPath}/country_code=nal/dt={pt}".format(pt=ds,hdfsPath=hdfs_path)}
+    ]
+
+    TaskTouchzSuccess().set_touchz_success(msg)
+
+touchz_data_success= PythonOperator(
     task_id='touchz_data_success',
-
-    bash_command="""
-    line_num=`$HADOOP_HOME/bin/hadoop fs -du -s {hdfs_data_dir} | tail -1 | awk '{{print $1}}'`
-    
-    if [ $line_num -eq 0 ]
-    then
-        echo "FATAL {hdfs_data_dir} is empty"
-        exit 1
-    else
-        echo "DATA EXPORT Successed ......"
-        $HADOOP_HOME/bin/hadoop fs -touchz {hdfs_data_dir}/_SUCCESS
-    fi
-    """.format(
-        pt='{{ds}}',
-        now_day='{{macros.ds_add(ds, +1)}}',
-        hdfs_data_dir=hdfs_path + '/country_code=nal/dt={{ds}}'
-    ),
-    dag=dag)
+    python_callable=check_success,
+    provide_context=True,
+    dag=dag
+)
 
 ods_sqoop_base_data_order_df_prev_day_task >> \
 ods_sqoop_base_data_order_payment_df_prev_day_task >> \
