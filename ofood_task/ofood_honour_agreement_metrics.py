@@ -195,6 +195,7 @@ create_bdm_dim_data = BashOperator(
         create temporary function isInArea as 'com.oride.udf.IsInArea' 
                     USING JAR 'hdfs://node4.datalake.opay.com:8020/tmp/udf-1.0-SNAPSHOT-jar-with-dependencies.jar';
         
+        
         with 
         
         shop_dim as (
@@ -213,15 +214,15 @@ create_bdm_dim_data = BashOperator(
             select  
             o.city_id as city_id,
             o.shop_id as shop_id,
-            count(if(t.order_id is not null and t.pay_time > 0 and t.shop_jiedan_time > 0,o.order_id,null)) as accept_order_cnt,
-            count(if(o.order_status = 8 ,o.order_id ,null)) as complete_order_cnt,
-            sum(if(t.order_id is not null and t.pay_time > 0 and t.shop_jiedan_time > 0 ,t.shop_jiedan_time - t.pay_time,0)) as request_time_sum,
-            sum(if(t.order_id is not null and t.order_compltet_time > 0 and t.shop_jiedan_time > 0,t.order_compltet_time - t.shop_jiedan_time,0)) as delivery_time_sum
-            sum(if(o.order_status = 8,w.score_peisong,0)) as score_peisong_sum,
+
             count(if(o.order_status in (-1,-2,-3) and o.pay_status <> 0 and o.refund_status <> 0,o.order_id,null)) as after_pay_cancel_order_cnt,
             count(if(o.order_status in (-1,-2,-3) and o.pay_status <> 0 and o.refund_status <> 0 and ol.cancel_from = 'system',o.order_id,null )) as sys_cancel_order_cnt,
             count(if(o.order_status in (-1,-2,-3) and o.pay_status <> 0 and o.refund_status <> 0 and ol.cancel_from = 'shop',o.order_id,null )) as merchant_cancel_order_cnt,
-            count(if(o.order_status in (-1,-2,-3) and o.pay_status <> 0 and o.refund_status <> 0 and ol.cancel_from not in ( 'system','shop','admin'),o.order_id,null )) as user_cancel_order_cnt
+            count(if(o.order_status in (-1,-2,-3) and o.pay_status <> 0 and o.refund_status <> 0 and ol.cancel_from not in ( 'system','shop','admin'),o.order_id,null )) as user_cancel_order_cnt,
+            avg((if(t.order_id is not null and t.pay_time > 0 and t.shop_jiedan_time > 0 ,t.shop_jiedan_time - t.pay_time,0)) /60) as accept_time_avg,
+            avg((if(t.order_id is not null and t.order_compltet_time > 0 and t.shop_jiedan_time > 0,t.order_compltet_time - t.shop_jiedan_time,0)) / 60) as delivery_time_avg,
+            avg(if(o.order_status = 8,w.score_peisong,null)) as score_peisong_avg
+            
             
             from 
             (
@@ -259,7 +260,7 @@ create_bdm_dim_data = BashOperator(
             left join (
                 select 
                 order_id,
-                `from` as cancel_from
+                \`from\` as cancel_from
                 from 
                 ofood_dw_ods.ods_sqoop_base_jh_order_log_df
                 where dt = '${dt}'
@@ -267,8 +268,8 @@ create_bdm_dim_data = BashOperator(
                 and from_unixtime(dateline,'yyyyMMdd') = '${ds}'
             ) ol on o.order_id = ol.order_id
             
-            group by o.city_id as city_id,
-            o.shop_id as shop_id
+            group by o.city_id ,
+            o.shop_id
             
             
             
@@ -284,15 +285,14 @@ create_bdm_dim_data = BashOperator(
             sd.lat,
             sd.lng,
             
-            sm.accept_order_cnt,
-            sm.complete_order_cnt,
-            sm.request_time_sum,
-            sm.delivery_time_sum,
-            sm.score_peisong_sum,
             sm.after_pay_cancel_order_cnt,
             sm.sys_cancel_order_cnt,
             sm.merchant_cancel_order_cnt,
-            sm.user_cancel_order_cnt
+            sm.user_cancel_order_cnt,
+            
+            sm.accept_time_avg,
+            sm.delivery_time_avg,
+            sm.score_peisong_avg
             
             from 
             shop_dim sd 
@@ -346,13 +346,15 @@ create_bdm_dim_data = BashOperator(
         u.id,
         u.bdm_name,
         u.hbdm_name,
-        nvl(round((sum(request_time_sum) /60) / sum(accept_order_cnt),1),0),
-        nvl(round((sum(delivery_time_sum)/60)/ sum(complete_order_cnt),1),0),
-        nvl(round(sum(score_peisong_sum) / sum(complete_order_cnt),1),0),
-        sum(after_pay_cancel_order_cnt),
-        sum(user_cancel_order_cnt),
-        sum(merchant_cancel_order_cnt),
-        sum(sys_cancel_order_cnt)
+
+        nvl(round(avg(s.accept_time_avg),1),0),
+        nvl(round(avg(s.delivery_time_avg),1),0),
+        nvl(round(avg(s.score_peisong_avg),1),0),
+        
+        nvl(sum(s.after_pay_cancel_order_cnt),0),
+        nvl(sum(s.user_cancel_order_cnt),0),
+        nvl(sum(s.merchant_cancel_order_cnt),0),
+        nvl(sum(s.sys_cancel_order_cnt),0)
     
         from 
         bd_user_data u 
@@ -751,9 +753,10 @@ def send_bdm_dim_file_email(ds, ds_nodash, **kwargs):
         delivery_time_avg,
         score_peisong_avg,
         cancel_order_cnt,
-        cancel_order_cnt - user_cancel_order_cnt - merchant_cancel_order_cnt,
-        user_cancel_order_cnt,
-        merchant_cancel_order_cnt
+        concat(cast(nvl(round(sys_cancel_order_cnt * 100 / cancel_order_cnt,1),0) as string),'%'),
+        concat(cast(nvl(round(user_cancel_order_cnt * 100/cancel_order_cnt,1),0) as string),'%'),
+        concat(cast(nvl(round(merchant_cancel_order_cnt * 100/cancel_order_cnt,1),0) as string),'%')
+        
         from ofood_bi.ofood_bdm_area_metrics_report 
         where dt = '{dt}' 
 
@@ -765,13 +768,13 @@ def send_bdm_dim_file_email(ds, ds_nodash, **kwargs):
         #'points',
         'bdm_name',
         'hbdm_name',
-        'take_time_avg',
-        'delivery_time_avg',
-        'score_peisong_avg',
-        'cancel_order_cnt',
-        'sys_cancel_order_cnt',
-        'user_cancel_order_cnt',
-        'merchant_cancel_order_cnt'
+        'time_pick',
+        'time_peisong',
+        'score_peisong',
+        'total_cancle',
+        'total_auto_cancle',
+        'total_merchant_cancle',
+        'total_user_cancle'
     ]
 
     logging.info('Executing: %s', sql)
