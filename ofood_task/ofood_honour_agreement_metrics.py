@@ -802,6 +802,66 @@ send_bdm_dim_file_email = PythonOperator(
     dag=dag
 )
 
+insert_bdm_dim_metrics = HiveToMySqlTransfer(
+    task_id='insert_bdm_dim_metrics',
+    sql=""" 
+        
+        select  
+        null,
+        dt,
+        area_name,
+        bdm_id, 
+        bdm_name, 
+        hbdm_name, 
+        take_time_avg, 
+        delivery_time_avg, 
+        score_peisong_avg,
+        cancel_order_cnt, 
+        user_cancel_order_cnt, 
+        merchant_cancel_order_cnt, 
+        sys_cancel_order_cnt 
+        
+        from ofood_bi.ofood_bdm_area_metrics_report 
+        where dt = '{{ ds }}'
+
+
+        """,
+    mysql_conn_id='mysql_bi',
+    mysql_table='ofood_bdm_area_metrics_report',
+    dag=dag)
+
+
+
+insert_shop_list_metrics = HiveToMySqlTransfer(
+    task_id='insert_shop_list_metrics',
+    sql=""" 
+
+        select  
+        null,
+        dt,
+        bd_id,
+        bdm_id,
+        hbdm_id,
+        city_id,
+        shop_id,
+        title,
+        closed,
+        addr,
+        yy_peitime,
+        account_number,
+        his_order_cnt,
+        is_new_user_act,
+        is_promotion_act,
+        product_cnt
+
+        from ofood_bi.ofood_shop_list_metrics_report 
+        where dt = '{{ ds }}'
+
+        """,
+    mysql_conn_id='mysql_bi',
+    mysql_table='ofood_shop_list_metrics_report',
+    dag=dag)
+
 # bdm维度数据
 validate_partition_data >> jh_waimai_validate_task >> create_bdm_dim_data
 validate_partition_data >> jh_waimai_order_validate_task >> create_bdm_dim_data
@@ -814,6 +874,7 @@ validate_partition_data >> jh_waimai_comment_validate_task >> create_bdm_dim_dat
 validate_partition_data >> bd_admin_users_validate_task >> create_bdm_dim_data
 validate_partition_data >> bd_bd_fence_validate_task >> create_bdm_dim_data
 create_bdm_dim_data >> send_bdm_dim_file_email
+create_bdm_dim_data >> insert_bdm_dim_metrics
 
 
 # 商户明细list数据
@@ -829,5 +890,5 @@ validate_partition_data >> jh_shop_validate_task >> create_shop_list_data
 
 
 create_shop_list_data >> send_shop_list_file_email
-
+create_shop_list_data >> insert_shop_list_metrics
 
