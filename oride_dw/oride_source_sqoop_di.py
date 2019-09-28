@@ -12,7 +12,7 @@ from plugins.SqoopSchemaUpdate import SqoopSchemaUpdate
 
 args = {
     'owner': 'zhenqian.zhang',
-    'start_date': datetime(2019, 7, 17),
+    'start_date': datetime(2019, 9, 26),
     'depends_on_past': False,
     'retries': 1,
     'retry_delay': timedelta(minutes=5),
@@ -22,8 +22,8 @@ args = {
 }
 
 dag = airflow.DAG(
-    'oride_source_sqoop',
-    schedule_interval="00 01 * * *",
+    'oride_source_sqoop_di',
+    schedule_interval="20 01 * * *",
     concurrency=15,
     max_active_runs=1,
     default_args=args)
@@ -38,104 +38,11 @@ table_list = [
     # oride data
     ("oride_data", "data_order", "sqoop_db", "base",3),
     ("oride_data", "data_order_payment", "sqoop_db", "base",3),
-    ("oride_data", "data_user", "sqoop_db", "base",3),
-    ("oride_data", "data_user_extend", "sqoop_db", "base",3),
-    ("oride_data", "data_coupon", "sqoop_db", "base",1),
-    ("oride_data", "data_driver", "sqoop_db", "base",1),
-    ("oride_data", "data_driver_group", "sqoop_db", "base",1),
-    ("oride_data", "data_driver_extend", "sqoop_db", "base",3),
-    ("oride_data", "data_driver_comment", "sqoop_db", "base",1),
-    ("oride_data", "data_abnormal_order", "sqoop_db", "base",3),
-    ("oride_data", "data_anti_fraud_strategy", "sqoop_db", "base",3),
-    ("oride_data", "data_city_conf", "sqoop_db", "base",3),
-    ("oride_data", "data_order_expired", "sqoop_db", "base",1),
-    ("oride_data", "data_device_extend", "sqoop_db", "base",1),
-    ("oride_data", "data_driver_recharge_records", "sqoop_db", "base",3),
-    ("oride_data", "data_driver_reward", "sqoop_db", "base",3),
-    ("oride_data", "data_activity", "sqoop_db", "base",1),
-    ("oride_data", "data_agenter_motorbike", "sqoop_db", "base",1),
-    ("oride_data", "data_billboard_config", "sqoop_db", "base",1),
-    ("oride_data", "data_coupon_template", "sqoop_db", "base",1),
-    ("oride_data", "data_device", "sqoop_db", "base",1),
-    ("oride_data", "data_driver_balance_extend", "sqoop_db", "base",1),
-    ("oride_data", "data_driver_balance_records", "sqoop_db", "base",1),
-    ("oride_data", "data_driver_discount", "sqoop_db", "base",1),
-    ("oride_data", "data_driver_fee_blacklist", "sqoop_db", "base",1),
-    ("oride_data", "data_driver_operation_log", "sqoop_db", "base",1),
-    ("oride_data", "data_driver_bind_logs", "sqoop_db", "base",1),
-    ("oride_data", "data_driver_pay_records", "sqoop_db", "base",1),
-    ("oride_data", "data_driver_records_day", "sqoop_db", "base",1),
-    ("oride_data", "data_driver_reward_push", "sqoop_db", "base",1),
-    ("oride_data", "data_fcm_template", "sqoop_db", "base",1),
-    ("oride_data", "data_invite", "sqoop_db", "base",1),
-    ("oride_data", "data_invite_conf", "sqoop_db", "base",1),
-    ("oride_data", "data_motorbike", "sqoop_db", "base",1),
-    ("oride_data", "data_motorbike_extend", "sqoop_db", "base",1),
-    ("oride_data", "data_novice_coupons_conf", "sqoop_db", "base",1),
-    ("oride_data", "data_opay_transaction", "sqoop_db", "base",1),
-    ("oride_data", "data_payconf", "sqoop_db", "base",1),
-    ("oride_data", "data_promo_code", "sqoop_db", "base",1),
-    ("oride_data", "data_recharge_conf", "sqoop_db", "base",1),
-    ("oride_data", "data_recharge_options", "sqoop_db", "base",1),
-    ("oride_data", "data_reward_conf", "sqoop_db", "base",1),
-    ("oride_data", "data_role_invite", "sqoop_db", "base",1),
-    ("oride_data", "data_sms_template", "sqoop_db", "base",1),
-    ("oride_data", "data_user_comment", "sqoop_db", "base",1),
-    ("oride_data", "data_user_complaint", "sqoop_db", "base",1),
-    ("oride_data", "data_user_recharge", "sqoop_db", "base",1),
-    ("oride_data", "data_user_whitelist", "sqoop_db", "base",1),
-    ("oride_data", "data_driver_whitelist", "sqoop_db", "base",1),
-    ("oride_data", "data_user_blacklist", "sqoop_db", "base",1),
-    ("oride_data", "data_driver_blacklist", "sqoop_db", "base",1),
-    ("oride_data", "data_driver_repayment", "sqoop_db", "base", 1),
-    ("oride_data", "data_trip", "sqoop_db", "base", 1),
-
-    ("bi", "weather_per_10min", "mysql_bi", "base",3),
-    # 协会数据
-    # 数据库 opay_spread
-    ("opay_spread", "driver_data", "opay_spread_mysql", "mass",1),
-    ("opay_spread", "driver_group", "opay_spread_mysql", "mass",3),
-    ("opay_spread", "driver_logs", "opay_spread_mysql", "mass",1),
-    ("opay_spread", "driver_team", "opay_spread_mysql", "mass",3),
-    ("opay_spread", "rider_signup", "opay_spread_mysql", "mass",1),
-    ("opay_spread", "rider_signups", "opay_spread_mysql", "mass",3),
-    ("opay_spread", "rider_signups_agents", "opay_spread_mysql", "mass",1),
-    ("opay_spread", "rider_signups_guarantors", "opay_spread_mysql", "mass",1),
-    ("opay_spread", "rider_signups_logs", "opay_spread_mysql", "mass",1),
-    # 数据库：oride_assets
-    ("oride_assets", "oride_assets_transit", "opay_spread_mysql", "mass",1),
-    ("oride_assets", "oride_categories", "opay_spread_mysql", "mass",1),
-    ("oride_assets", "oride_my_storage", "opay_spread_mysql", "mass",1),
-    ("oride_assets", "oride_properties", "opay_spread_mysql", "mass",1),
-    ("oride_assets", "oride_property_customs", "opay_spread_mysql", "mass",1),
-    ("oride_assets", "oride_repair", "opay_spread_mysql", "mass",1),
-    ("oride_assets", "oride_retrieve", "opay_spread_mysql", "mass",1),
-    ("oride_assets", "oride_storage", "opay_spread_mysql", "mass",1),
-    ("oride_assets", "oride_storage_logs", "opay_spread_mysql", "mass",1),
-    ("oride_assets", "oride_user_ware", "opay_spread_mysql", "mass",1),
-    ("oride_assets", "oride_vehicles", "opay_spread_mysql", "mass",1),
-    ("oride_assets", "oride_vehicles_log", "opay_spread_mysql", "mass",1),
-    ("oride_assets", "oride_vehicles_transit", "opay_spread_mysql", "mass",1),
-    ("oride_assets", "oride_warehouses", "opay_spread_mysql", "mass",1),
-    # 地推数据源
-    # 数据库：opay_spread
-    ("opay_spread", "promoter_channel_day", "opay_spread_mysql", "promoter",1),
-    ("opay_spread", "promoter_data_day", "opay_spread_mysql", "promoter",1),
-    ("opay_spread", "promoter_data_hour", "opay_spread_mysql", "promoter",1),
-    ("opay_spread", "promoter_driver_day", "opay_spread_mysql", "promoter",1),
-    ("opay_spread", "promoter_logs", "opay_spread_mysql", "promoter",1),
-    ("opay_spread", "promoter_manager", "opay_spread_mysql", "promoter",1),
-    ("opay_spread", "promoter_order_day", "opay_spread_mysql", "promoter",1),
-    ("opay_spread", "promoter_team", "opay_spread_mysql", "promoter",1),
-    ("opay_spread", "promoter_user", "opay_spread_mysql", "promoter",1),
-    ("opay_spread", "promoter_user_relat_admin", "opay_spread_mysql", "promoter",1),
-    ("opay_spread", "promoter_users_device", "opay_spread_mysql", "promoter",1),
-    ("opay_spread", "spread_sign_up", "opay_spread_mysql", "promoter",1),
 ]
 
 HIVE_DB = 'oride_dw_ods'
-HIVE_TABLE = 'ods_sqoop_%s_%s_df'
-UFILE_PATH = 'ufile://opay-datalake/oride_dw_sqoop/%s/%s'
+HIVE_TABLE = 'ods_sqoop_%s_%s_di'
+UFILE_PATH = 'ufile://opay-datalake/oride_dw_sqoop_di/%s/%s'
 ODS_CREATE_TABLE_SQL = '''
     CREATE EXTERNAL TABLE IF NOT EXISTS {db_name}.`{table_name}`(
         {columns}
@@ -150,9 +57,6 @@ ODS_CREATE_TABLE_SQL = '''
       'org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat'
     LOCATION
       '{ufile_path}';
-    MSCK REPAIR TABLE {db_name}.`{table_name}`;
-    -- delete oride_dw table
-    DROP TABLE IF EXISTS oride_dw.`{table_name}`;
 '''
 
 # 需要验证的核心业务表
@@ -249,13 +153,15 @@ for db_name, table_name, conn_id, prefix_name,priority_weight_nm in table_list:
             --connect "jdbc:mysql://{host}:{port}/{schema}?tinyInt1isBit=false&useUnicode=true&characterEncoding=utf8" \
             --username {username} \
             --password {password} \
-            --table {table} \
+            --query 'select * from {table} where FROM_UNIXTIME(create_time, "%Y-%m-%d")="{{{{ ds }}}}" and FROM_UNIXTIME(UNIX_TIMESTAMP(updated_at), "%Y-%m-%d")="{{{{ ds }}}}" AND $CONDITIONS' \
+            --split-by id \
             --target-dir {ufile_path}/dt={{{{ ds }}}}/ \
             --fields-terminated-by "\\001" \
             --lines-terminated-by "\\n" \
             --hive-delims-replacement " " \
             --delete-target-dir \
-            --compression-codec=snappy
+            --compression-codec=snappy \
+            -m 12
         '''.format(
             host=conn_conf_dict[conn_id].host,
             port=conn_conf_dict[conn_id].port,
