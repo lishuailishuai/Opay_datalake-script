@@ -173,6 +173,7 @@ def check_key_data(ds,**kargs):
     SELECT count(1)-count(distinct city_id) as cnt
       FROM oride_dw.{table}
       WHERE dt='{pt}'
+      and country_code in ('NG')
     '''.format(
         pt=ds,
         now_day=airflow.macros.ds_add(ds, +1),
