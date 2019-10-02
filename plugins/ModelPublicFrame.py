@@ -26,6 +26,7 @@ class ModelPublicFrame(object):
     comwx = None
 
     def __init__(self,execution_date):
+
         self.hive_cursor = get_hive_cursor()
         self.comwx = ComwxApi('wwd26d45f97ea74ad2', 'BLE_v25zCmnZaFUgum93j3zVBDK-DjtRkLisI_Wns4g', '1000011')
 
@@ -33,6 +34,11 @@ class ModelPublicFrame(object):
         self.ds_date_hour=execution_date.strftime("%Y-%m-%d %H") #日期(%Y-%m-%d %H)
         self.ds_date_minute=execution_date.strftime("%Y-%m-%d %H:%M") #日期(%Y-%m-%d %H:%M)
         self.ds_date_second=execution_date.strftime("%Y-%m-%d %H:%M:%S") #日期(%Y-%m-%d %H:%M:%S)
+
+        print(self.ds_date)
+        print(self.ds_date_hour)
+        print(self.ds_date_minute)
+        print(self.ds_date_second)
         
 
     def __del__(self):
