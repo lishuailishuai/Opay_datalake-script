@@ -25,7 +25,7 @@ class ModelPublicFrame(object):
     hive_cursor = None
     comwx = None
 
-    def __init__(self,execution_date):
+    def __init__(self,execution_date,dag):
 
         self.hive_cursor = get_hive_cursor()
         self.comwx = ComwxApi('wwd26d45f97ea74ad2', 'BLE_v25zCmnZaFUgum93j3zVBDK-DjtRkLisI_Wns4g', '1000011')
@@ -34,6 +34,8 @@ class ModelPublicFrame(object):
         self.ds_date_hour=execution_date.strftime("%Y-%m-%d %H") #日期(%Y-%m-%d %H)
         self.ds_date_minute=execution_date.strftime("%Y-%m-%d %H:%M") #日期(%Y-%m-%d %H:%M)
         self.ds_date_second=execution_date.strftime("%Y-%m-%d %H:%M:%S") #日期(%Y-%m-%d %H:%M:%S)
+
+        self.dag=dag
 
         logging.info(self.ds_date_second)
         
@@ -261,7 +263,7 @@ class ModelPublicFrame(object):
     [{"db":"db_name", "table":"table_name", "partitions":"country_code=nal"]
     """
 
-    def tesk_dependence(self,tables,dag,**op_kwargs):
+    def tesk_dependence(self,tables,**op_kwargs):
 
         for item in tables:
 
@@ -310,7 +312,7 @@ class ModelPublicFrame(object):
                     partition="dt='"+self.ds_date+"'",
                     schema=db,
                     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-                    dag=dag
+                    dag=self.dag
                 )
     
             else:
@@ -325,7 +327,7 @@ class ModelPublicFrame(object):
                     ),
                     bucket_name='opay-datalake',
                     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-                    dag=dag
+                    dag=self.dag
                     )
     
             # 加入调度队列
