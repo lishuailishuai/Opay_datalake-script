@@ -18,7 +18,7 @@ import requests
 import os,sys,time
 from plugins.UFilePlugin import UFileSensor
 from plugins.comwx import ComwxApi
-
+import asyncio
 
 class ModelPublicFrame(object):
 
