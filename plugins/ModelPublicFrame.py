@@ -30,14 +30,16 @@ class ModelPublicFrame(object):
         self.hive_cursor = get_hive_cursor()
         self.comwx = ComwxApi('wwd26d45f97ea74ad2', 'BLE_v25zCmnZaFUgum93j3zVBDK-DjtRkLisI_Wns4g', '1000011')
 
-        self.ds_date=execution_date.strftime("%Y-%m-%d") #日期(%Y-%m-%d)
-        self.ds_date_hour=execution_date.strftime("%Y-%m-%d %H") #日期(%Y-%m-%d %H)
-        self.ds_date_minute=execution_date.strftime("%Y-%m-%d %H:%M") #日期(%Y-%m-%d %H:%M)
-        self.ds_date_second=execution_date.strftime("%Y-%m-%d %H:%M:%S") #日期(%Y-%m-%d %H:%M:%S)
+        # self.ds_date=execution_date.strftime("%Y-%m-%d") #日期(%Y-%m-%d)
+        # self.ds_date_hour=execution_date.strftime("%Y-%m-%d %H") #日期(%Y-%m-%d %H)
+        # self.ds_date_minute=execution_date.strftime("%Y-%m-%d %H:%M") #日期(%Y-%m-%d %H:%M)
+        # self.ds_date_second=execution_date.strftime("%Y-%m-%d %H:%M:%S") #日期(%Y-%m-%d %H:%M:%S)
+
+        self.ds_date=execution_date
 
         #self.dag=dag
 
-        logging.info(self.ds_date_second)
+        #logging.info(self.ds_date_second)
         
 
     def __del__(self):
