@@ -16,7 +16,7 @@ import logging
 from airflow.models import Variable
 import requests
 import os,sys,time
-from airflow.sensors.UFileSensor import UFileSensor
+from plugins.UFilePlugin import UFileSensor
 from plugins.comwx import ComwxApi
 
 
