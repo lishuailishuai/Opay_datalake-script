@@ -273,7 +273,7 @@ class ModelPublicFrame(object):
             db = item.get('db', None)
             partition = item.get('partitions', None)
         
-            if table is None or db is None or partition is None or job_date is None:
+            if table is None or db is None or partition is None:
                 return None
         
             location = None
