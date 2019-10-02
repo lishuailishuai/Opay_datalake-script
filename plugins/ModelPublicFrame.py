@@ -42,7 +42,7 @@ class ModelPublicFrame(object):
         self.hive_cursor = None
 
 
-    def get_init_date(self,execution_date):
+    def get_init_date(self,execution_date,**kwargs):
 
         self.ds_date=execution_date.strftime("%Y-%m-%d") #日期(%Y-%m-%d)
         self.ds_date_hour=execution_date.strftime("%Y-%m-%d %H") #日期(%Y-%m-%d %H)
