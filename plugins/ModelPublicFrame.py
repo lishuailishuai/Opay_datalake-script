@@ -263,7 +263,7 @@ class ModelPublicFrame(object):
     [{"db":"db_name", "table":"table_name", "partitions":"country_code=nal"]
     """
 
-    def tesk_dependence(self,tables,**op_kwargs):
+    def tesk_dependence(self,tables,ds,dag,**op_kwargs):
 
         dependence=[]
 
@@ -313,38 +313,31 @@ class ModelPublicFrame(object):
                     dependence_task_flag= HivePartitionSensor(
                         task_id='dependence_{task_id_name}'.format(task_id_name=task_id_flag),
                         table=table,
-                        partition="dt='"+self.ds_date+"'",
+                        partition="dt='{pt}'".format(pt=ds),
                         schema=db,
                         poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-                        dag=self.dag
+                        dag=dag
                     )
         
                 else:
             
                     # 配置依赖关系(前一天分区)
                     dependence_task_flag = UFileSensor(
-                        task_id='{task_id_name}'.format(task_id_name=task_id_flag),
+                        task_id='dependence_{task_id_name}'.format(task_id_name=task_id_flag),
                         filepath='{hdfs_path_name}/{partition_name}/dt={pt}/_SUCCESS'.format(
                             hdfs_path_name=location,
                             partition_name=partition,
-                            pt=self.ds_date
+                            pt=ds
                         ),
                         bucket_name='opay-datalake',
                         poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-                        dag=self.dag
+                        dag=dag
                         )
-        
-                print("++++++++++++++")
-                # 加入调度队列
-                #print(dependence_task_flag)
 
-                #return dependence_task_flag
+                dependence_task_flag
+                #dependence.append(dependence_task_flag)
 
-                print("==============")
-    
-                dependence.append(dependence_task_flag)
-
-            return dependence 
+            #return dependence 
 
         except Exception as e:
 
