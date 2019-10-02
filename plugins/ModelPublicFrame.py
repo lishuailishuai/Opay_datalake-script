@@ -35,10 +35,7 @@ class ModelPublicFrame(object):
         self.ds_date_minute=execution_date.strftime("%Y-%m-%d %H:%M") #日期(%Y-%m-%d %H:%M)
         self.ds_date_second=execution_date.strftime("%Y-%m-%d %H:%M:%S") #日期(%Y-%m-%d %H:%M:%S)
 
-        print(self.ds_date)
-        print(self.ds_date_hour)
-        print(self.ds_date_minute)
-        print(self.ds_date_second)
+        logging.info(self.ds_date_second)
         
 
     def __del__(self):
@@ -264,7 +261,7 @@ class ModelPublicFrame(object):
     [{"db":"db_name", "table":"table_name", "partitions":"country_code=nal"]
     """
 
-    def tesk_dependence(self,tables):
+    def tesk_dependence(self,tables,dag,**op_kwargs):
 
         for item in tables:
 
