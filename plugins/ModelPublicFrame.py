@@ -336,7 +336,9 @@ class ModelPublicFrame(object):
         
                 print("++++++++++++++")
                 # 加入调度队列
-                dependence_task_flag
+                print(dependence_task_flag)
+
+                return dependence_task_flag
 
                 print("==============")
     
