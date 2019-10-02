@@ -334,10 +334,10 @@ class ModelPublicFrame(object):
                         dag=dag
                         )
 
-                dependence_task_flag
-                #dependence.append(dependence_task_flag)
+                print(ds)
+                print("========")
 
-            #return dependence 
+                dependence_task_flag
 
         except Exception as e:
 
