@@ -265,70 +265,87 @@ class ModelPublicFrame(object):
 
     def tesk_dependence(self,tables,**op_kwargs):
 
-        for item in tables:
+        dependence=[]
 
-            #读取 db、table、partition
-            table = item.get('table', None)
-            db = item.get('db', None)
-            partition = item.get('partitions', None)
-        
-            if table is None or db is None or partition is None:
-                return None
-        
-            location = None
-        
-            # hql = '''
-            #     DESCRIBE FORMATTED {db}.{table}
-            # '''.format(table=table, db=db)
+        try:
 
-            # self.hive_cursor.execute(hql)
-            # res = self.hive_cursor.fetchall()
+            for item in tables:
     
-            # for (col_name, col_type, col_comment) in res:
-            #     col_name = col_name.lower().strip()
-            #     if col_name == 'location:':
-            #         location = col_type
-            #         break
+                #读取 db、table、partition
+                table = item.get('table', None)
+                db = item.get('db', None)
+                partition = item.get('partitions', None)
+            
+                if table is None or db is None or partition is None:
+                    return None
+            
+                location = None
+            
+                # hql = '''
+                #     DESCRIBE FORMATTED {db}.{table}
+                # '''.format(table=table, db=db)
+    
+                # self.hive_cursor.execute(hql)
+                # res = self.hive_cursor.fetchall()
         
-            # if location is None:
-            #     return None
-
-            #读取hive location地址
-            location=self.get_hive_location(db,table)
+                # for (col_name, col_type, col_comment) in res:
+                #     col_name = col_name.lower().strip()
+                #     if col_name == 'location:':
+                #         location = col_type
+                #         break
+            
+                # if location is None:
+                #     return None
     
-            #替换原有bucket
-            location=location.replace('ufile://opay-datalake/','')
-    
-            #task_id 名称
-            task_id_flag=table+"_task"
-    
-            #区分ods的依赖路径
-            if db[-3:].lower()=='ods' or db[-2:].lower()=='bi':
-    
-                # 配置依赖关系(前一天分区)
-                dependence_task_flag= HivePartitionSensor(
-                    task_id='dependence_{task_id_name}'.format(task_id_name=task_id_flag),
-                    table=table,
-                    partition="dt='"+self.ds_date+"'",
-                    schema=db,
-                    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-                    dag=self.dag
-                )
-    
-            else:
+                #读取hive location地址
+                location=self.get_hive_location(db,table)
         
-                # 配置依赖关系(前一天分区)
-                dependence_task_flag = UFileSensor(
-                    task_id='{task_id_name}'.format(task_id_name=task_id_flag),
-                    filepath='{hdfs_path_name}/{partition_name}/dt={pt}/_SUCCESS'.format(
-                        hdfs_path_name=location,
-                        partition_name=partition,
-                        pt=self.ds_date
-                    ),
-                    bucket_name='opay-datalake',
-                    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-                    dag=self.dag
+                #替换原有bucket
+                location=location.replace('ufile://opay-datalake/','')
+        
+                #task_id 名称
+                task_id_flag=table+"_task"
+        
+                #区分ods的依赖路径
+                if db[-3:].lower()=='ods' or db[-2:].lower()=='bi':
+        
+                    # 配置依赖关系(前一天分区)
+                    dependence_task_flag= HivePartitionSensor(
+                        task_id='dependence_{task_id_name}'.format(task_id_name=task_id_flag),
+                        table=table,
+                        partition="dt='"+self.ds_date+"'",
+                        schema=db,
+                        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+                        dag=self.dag
                     )
+        
+                else:
+            
+                    # 配置依赖关系(前一天分区)
+                    dependence_task_flag = UFileSensor(
+                        task_id='{task_id_name}'.format(task_id_name=task_id_flag),
+                        filepath='{hdfs_path_name}/{partition_name}/dt={pt}/_SUCCESS'.format(
+                            hdfs_path_name=location,
+                            partition_name=partition,
+                            pt=self.ds_date
+                        ),
+                        bucket_name='opay-datalake',
+                        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+                        dag=self.dag
+                        )
+        
+                print("++++++++++++++")
+                # 加入调度队列
+                dependence_task_flag
+
+                print("==============")
     
-            # 加入调度队列
-            dependence_task_flag    
+                #dependence.append(task_id_flag) 
+
+        except Exception as e:
+
+            #self.comwx.postAppMessage('DW调度系统任务 {jobname} 任务依赖列表产出异常，对应时间:{pt}'.format(jobname=self.dag.dag_id,pt=self.ds_date),'271')
+
+            logging.info(e)
+
+            sys.exit(1)
