@@ -336,13 +336,15 @@ class ModelPublicFrame(object):
         
                 print("++++++++++++++")
                 # 加入调度队列
-                print(dependence_task_flag)
+                #print(dependence_task_flag)
 
-                return dependence_task_flag
+                #return dependence_task_flag
 
                 print("==============")
     
-                #dependence.append(task_id_flag) 
+                dependence.append(dependence_task_flag)
+
+            return dependence 
 
         except Exception as e:
 
