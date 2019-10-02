@@ -49,16 +49,6 @@ sleep_time = BashOperator(
 ##----------------------------------------- 依赖 ---------------------------------------## 
 
 
-#依赖前一天分区
-ods_sqoop_base_data_city_conf_df_tesk=HivePartitionSensor(
-      task_id="ods_sqoop_base_data_city_conf_df_prev_day_tesk",
-      table="ods_sqoop_base_data_city_conf_df",
-      partition="dt='{{ds}}'",
-      schema="oride_dw_ods",
-      poke_interval=60, #依赖不满足时，一分钟检查一次依赖状态
-      dag=dag
-    )
-
 ods_sqoop_base_data_city_conf_df_tesk = UFileSensor(
     task_id='ods_sqoop_base_data_city_conf_df_prev_day_tesk',
     filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
