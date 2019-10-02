@@ -179,7 +179,7 @@ class ModelPublicFrame(object):
             #     return None
 
             #读取hive location地址
-            location=get_hive_location(db,table)
+            location=self.get_hive_location(db,table)
 
             commands.append({
                 'cmd': '''
@@ -220,7 +220,7 @@ class ModelPublicFrame(object):
                 partition = item.get('partitions', None) #分区地址
 
             #读取hive location地址
-            location=get_hive_location(db,table)
+            location=self.get_hive_location(db,table)
 
             hdfs_data_dir_str=location+'/'+partition+'/dt='+self.ds_date
         
@@ -295,7 +295,7 @@ class ModelPublicFrame(object):
             #     return None
 
             #读取hive location地址
-            location=get_hive_location(db,table)
+            location=self.get_hive_location(db,table)
     
             #替换原有bucket
             location=location.replace('ufile://opay-datalake/','')
