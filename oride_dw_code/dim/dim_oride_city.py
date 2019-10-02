@@ -59,6 +59,17 @@ ods_sqoop_base_data_city_conf_df_tesk=HivePartitionSensor(
       dag=dag
     )
 
+ods_sqoop_base_data_city_conf_df_tesk = UFileSensor(
+    task_id='ods_sqoop_base_data_city_conf_df_prev_day_tesk',
+    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="oride_dw_sqoop/oride_data/data_city_conf",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
 
 ##----------------------------------------- 变量 ---------------------------------------## 
 

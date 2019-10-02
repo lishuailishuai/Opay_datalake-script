@@ -9,27 +9,15 @@
 import airflow
 from datetime import datetime, timedelta
 from airflow.operators.hive_operator import HiveOperator
-from airflow.operators.impala_plugin import ImpalaOperator
 from utils.connection_helper import get_hive_cursor
-from airflow.operators.python_operator import PythonOperator
-from airflow.contrib.hooks.redis_hook import RedisHook
-from airflow.hooks.hive_hooks import HiveCliHook
-from airflow.operators.hive_to_mysql import HiveToMySqlTransfer
-from airflow.operators.mysql_operator import MySqlOperator
-from airflow.operators.dagrun_operator import TriggerDagRunOperator
 from airflow.sensors.hive_partition_sensor import HivePartitionSensor
-from airflow.operators.bash_operator import BashOperator
-from airflow.sensors.named_hive_partition_sensor import NamedHivePartitionSensor
-from plugins.comwx import ComwxApi
 import json
 import logging
 from airflow.models import Variable
 import requests
 import os,sys,time
-from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
-from plugins.TaskTouchzSuccess import TaskTouchzSuccess
-from airflow.operators.dummy_operator import DummyOperator
 from airflow.sensors import UFileSensor
+from plugins.comwx import ComwxApi
 
 
 class ModelPublicFrame(execution_date):
@@ -50,14 +38,17 @@ class ModelPublicFrame(execution_date):
         self.hive_cursor = None
 
 
+    #读取hive location地址
+    def get_hive_location(self,db,table):
 
-    def get_hive_metadata(self,db,table):
+        location = None
 
         try:
 
             hql = '''
                 DESCRIBE FORMATTED {db}.{table}
             '''.format(table=table, db=db)
+
             logging.info(hql)
             self.hive_cursor.execute(hql)
             res = self.hive_cursor.fetchall()
@@ -69,11 +60,14 @@ class ModelPublicFrame(execution_date):
     
             if location is None:
                 return None
+
+            else:
+                return location
     
 
         except Exception as e:
 
-            self.comwx.postAppMessage('Error: '+db.table+'数据开发模板--元数据获取异常','271')
+            self.comwx.postAppMessage('Error: '+db.table+'数据开发模板--读取hive location地址 异常','271')
 
             logging.info(e)
 
@@ -145,7 +139,7 @@ class ModelPublicFrame(execution_date):
     """
     设置任务超时监控
     @:param list 
-    [{"db":"", "table":"table", "partitions":"country_code=nal/dt=2019-09-30", "timeout":"timeout"},]
+    [{"db":"", "table":"table", "partitions":"country_code=nal", "timeout":"timeout"},]
     """
     def task_timeout_monitor(self, tables):
         commands = []
@@ -158,27 +152,32 @@ class ModelPublicFrame(execution_date):
             if table is None or db is None or partition is None or timeout is None:
                 return None
 
+            #表的location
             location = None
-            hql = '''
-                DESCRIBE FORMATTED {db}.{table}
-            '''.format(table=table, db=db)
-            logging.info(hql)
-            self.hive_cursor.execute(hql)
-            res = self.hive_cursor.fetchall()
-            for (col_name, col_type, col_comment) in res:
-                col_name = col_name.lower().strip()
-                if col_name == 'location:':
-                    location = col_type
-                    break
 
-            if location is None:
-                return None
+            # hql = '''
+            #     DESCRIBE FORMATTED {db}.{table}
+            # '''.format(table=table, db=db)
+            # logging.info(hql)
+            # self.hive_cursor.execute(hql)
+            # res = self.hive_cursor.fetchall()
+            # for (col_name, col_type, col_comment) in res:
+            #     col_name = col_name.lower().strip()
+            #     if col_name == 'location:':
+            #         location = col_type
+            #         break
+
+            # if location is None:
+            #     return None
+
+            #读取hive location地址
+            location=get_hive_location(db,table)
 
             commands.append({
                 'cmd': '''
-                        hadoop fs -ls {path}/{partition}/_SUCCESS >/dev/null 2>/dev/null && echo 1 || echo 0
+                        hadoop fs -ls {path}/{partition}/dt={pt}/_SUCCESS >/dev/null 2>/dev/null && echo 1 || echo 0
                     '''.format(
-                        timeout=timeout,
+                        pt=self.ds_date,
                         path=location,
                         partition=partition
                     ),
@@ -196,22 +195,29 @@ class ModelPublicFrame(execution_date):
     """
     任务完成标识_SUCCESS
     @:param list 
-    [{"db":"", "table":"table", "partitions":"country_code=nal/dt=2019-09-30"]
+    [{"db":"", "table":"table", "partitions":"country_code=nal"]
     """
     def task_touchz_success(self,tables):
 
-        table_name="";
-        hdfs_data_dir_str="";
+      
+        #表的location
+        location = None
 
         try:
 
             for item in tables:
     
-                self.table_name = item.get('table', None)
-                self.hdfs_data_dir_str = item.get('hdfs_path', None)
+                table = item.get('table', None)
+                db = item.get('db', None)
+                partition = item.get('partitions', None) #分区地址
+
+            #读取hive location地址
+            location=get_hive_location(db,table)
+
+            hdfs_data_dir_str=location+'/'+partition+'/dt='+self.ds_date
         
             #判断数据文件是否为0
-            line_str="$HADOOP_HOME/bin/hadoop fs -du -s {hdfs_data_dir} | tail -1 | awk \'{{print $1}}\'".format(hdfs_data_dir=self.hdfs_data_dir_str)
+            line_str="$HADOOP_HOME/bin/hadoop fs -du -s {hdfs_data_dir} | tail -1 | awk \'{{print $1}}\'".format(hdfs_data_dir=hdfs_data_dir_str)
     
             logging.info(line_str)
         
@@ -221,13 +227,13 @@ class ModelPublicFrame(execution_date):
             #数据为0，发微信报警通知
             if line_num[0] == str(0):
                 
-                comwx.postAppMessage('DW调度系统任务 {jobname} 数据产出异常，对应时间:{pt}'.format(jobname=self.table_name,pt=ds), '271')
+                self.comwx.postAppMessage('DW调度系统任务 {jobname} 数据产出异常，对应时间:{pt}'.format(jobname=table,pt=self.ds_date), '271')
         
-                logging.info("Error : {hdfs_data_dir} is empty".format(hdfs_data_dir=self.hdfs_data_dir_str))
+                logging.info("Error : {hdfs_data_dir} is empty".format(hdfs_data_dir=hdfs_data_dir_str))
                 sys.exit(1)
         
             else:  
-                succ_str="$HADOOP_HOME/bin/hadoop fs -touchz {hdfs_data_dir}/_SUCCESS".format(hdfs_data_dir=self.hdfs_data_dir_str)
+                succ_str="$HADOOP_HOME/bin/hadoop fs -touchz {hdfs_data_dir}/_SUCCESS".format(hdfs_data_dir=hdfs_data_dir_str)
     
                 logging.info(succ_str)
         
@@ -238,7 +244,7 @@ class ModelPublicFrame(execution_date):
     
         except Exception as e:
 
-            comwx.postAppMessage('DW调度系统任务 {jobname} 数据产出异常，对应时间:{pt}'.format(jobname=self.table_name,pt=ds),'271')
+            self.comwx.postAppMessage('DW调度系统任务 {jobname} 数据产出异常，对应时间:{pt}'.format(jobname=table,pt=self.ds_date),'271')
 
             logging.info(e)
 
@@ -247,41 +253,46 @@ class ModelPublicFrame(execution_date):
     """
     任务完成标识_SUCCESS
     @:param list 
-    [{"db":"", "table":"table", "partition":"partition", "timeout":"timeout"},]
+    [{"db":"db_name", "table":"table_name", "partitions":"country_code=nal"]
     """
 
     def tesk_dependence(self,tables):
 
         for item in tables:
+
+            #读取 db、table、partition
             table = item.get('table', None)
             db = item.get('db', None)
             partition = item.get('partitions', None)
-            job_date = item.get('job_date', None)
         
             if table is None or db is None or partition is None or job_date is None:
                 return None
         
-            location = ""
+            location = None
         
-            hql = '''
-                DESCRIBE FORMATTED {db}.{table}
-            '''.format(table=table, db=db)
-            #logging.info(hql)
-            self.hive_cursor.execute(hql)
-            res = self.hive_cursor.fetchall()
+            # hql = '''
+            #     DESCRIBE FORMATTED {db}.{table}
+            # '''.format(table=table, db=db)
+
+            # self.hive_cursor.execute(hql)
+            # res = self.hive_cursor.fetchall()
     
-            for (col_name, col_type, col_comment) in res:
-                col_name = col_name.lower().strip()
-                if col_name == 'location:':
-                    location = col_type
-                    break
+            # for (col_name, col_type, col_comment) in res:
+            #     col_name = col_name.lower().strip()
+            #     if col_name == 'location:':
+            #         location = col_type
+            #         break
         
-            if location is None:
-                return None
+            # if location is None:
+            #     return None
+
+            #读取hive location地址
+            location=get_hive_location(db,table)
     
             #替换原有bucket
             location=location.replace('ufile://opay-datalake/','')
     
+            #task_id 名称
             task_id_flag=table+"_task"
     
             #区分ods的依赖路径
@@ -291,7 +302,7 @@ class ModelPublicFrame(execution_date):
                 dependence_task_flag= HivePartitionSensor(
                     task_id='dependence_{task_id_name}'.format(task_id_name=task_id_flag),
                     table=table,
-                    partition="dt='"+job_date+"'",
+                    partition="dt='"+self.ds_date+"'",
                     schema=db,
                     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
                     dag=dag
@@ -305,7 +316,7 @@ class ModelPublicFrame(execution_date):
                     filepath='{hdfs_path_name}/{partition_name}/dt={pt}/_SUCCESS'.format(
                         hdfs_path_name=location,
                         partition_name=partition,
-                        pt=job_date
+                        pt=self.ds_date
                     ),
                     bucket_name='opay-datalake',
                     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
