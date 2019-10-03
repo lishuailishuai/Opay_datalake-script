@@ -114,6 +114,8 @@ class ModelPublicFrame(object):
             #判断数据文件是否生成
             if res == '1':
                 logging.info("任务正常产出 ... ... ")
+                logging.info(out)
+                break
                 sys.exit(0)
 
             while sum_timeout <= int(timeout):
