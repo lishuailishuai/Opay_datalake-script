@@ -186,7 +186,7 @@ class ModelPublicFrame(object):
             #读取hive location地址
             location=self.get_hive_location(db,table)
 
-            print(location)
+            print("=============="+location)
 
             commands.append({
                 'cmd': '''
@@ -208,6 +208,7 @@ class ModelPublicFrame(object):
         #loop.close()
 
         for items in commands:
+            print("yangmz")
             self.task_trigger(items['cmd'], items['table'], items['timeout']) 
 
 
