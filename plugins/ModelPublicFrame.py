@@ -101,6 +101,21 @@ class ModelPublicFrame(object):
             timeout_step = 120 #任务监控间隔时间(秒)
             command = command.strip()
 
+            #先检查数据目录中是否存在完成标识
+            out = os.popen(command, 'r')
+            res = out.readlines()
+    
+            #res 获取返回值_SUCCESS是否存在(1 存在)
+            res = 0 if res is None else res[0].lower().strip()
+            out.close()
+    
+            logging.info("数据标识的返回值："+str(res))
+    
+            #判断数据文件是否生成
+            if res == '1':
+                logging.info("任务正常产出 ... ... ")
+                sys.exit(0)
+
             while sum_timeout <= int(timeout):
     
                 logging.info("sum_timeout："+str(sum_timeout))
@@ -133,7 +148,7 @@ class ModelPublicFrame(object):
                         #     '271'
                         # )
     
-                        logging.info("任务超时。。。。。")
+                        logging.info("任务超时 ... ... ")
                         sum_timeout=0
                 else:
                     break
