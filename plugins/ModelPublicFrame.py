@@ -156,9 +156,6 @@ class ModelPublicFrame(object):
                     res_str=res
                     break
 
-
-            return res_str
-
         except Exception as e:
 
             #self.comwx.postAppMessage('DW调度任务 {dag_id} code 异常'.format(dag_id=dag_id_name),'271')
