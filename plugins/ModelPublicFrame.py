@@ -108,6 +108,8 @@ class ModelPublicFrame(object):
                 logging.info(command)
     
                 yield from asyncio.sleep(int(timeout_step))
+
+                #time.sleep(timeout_step)
     
                 sum_timeout += timeout_step
                 out = os.popen(command, 'r')
@@ -196,10 +198,14 @@ class ModelPublicFrame(object):
                 }
             )
 
-        loop = asyncio.get_event_loop()
-        tasks = [self.task_trigger(items['cmd'], items['table'], items['timeout']) for items in commands]
-        loop.run_until_complete(asyncio.wait(tasks))
-        loop.close()
+        #loop = asyncio.get_event_loop()
+        #tasks = [self.task_trigger(items['cmd'], items['table'], items['timeout']) for items in commands]
+        #loop.run_until_complete(asyncio.wait(tasks))
+        #loop.close()
+
+        for items in commands:
+            self.task_trigger(items['cmd'], items['table'], items['timeout']) 
+
 
     """
     任务完成标识_SUCCESS
