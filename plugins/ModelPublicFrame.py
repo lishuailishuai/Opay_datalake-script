@@ -95,6 +95,9 @@ class ModelPublicFrame(object):
         # 时间偏移量= 任务正常执行结束时间(秒)+允许任务延迟的最大时间(秒)
         # 正常执行结束时间300秒+ 允许任务延迟的最大120秒=时间偏移量420 秒
 
+        print(command)
+        print(dag_id_name)
+        print(timeout)
         try:
 
             sum_timeout = 0 
@@ -211,6 +214,7 @@ class ModelPublicFrame(object):
 
         for items in commands:
             print("yangmz")
+            print(items)
             self.task_trigger(items['cmd'], items['table'], items['timeout']) 
 
 
