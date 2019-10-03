@@ -101,7 +101,9 @@ class ModelPublicFrame(object):
             timeout_step = 120 #任务监控间隔时间(秒)
             command = command.strip()
 
-            print("0000000000000000000000")
+            print(timeout)
+
+            print("0000000000000000000000"+command)
 
             while sum_timeout <= int(timeout):
     
