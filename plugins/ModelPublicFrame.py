@@ -101,22 +101,22 @@ class ModelPublicFrame(object):
             timeout_step = 120 #任务监控间隔时间(秒)
             command = command.strip()
 
+            res=0
+
             #先检查数据目录中是否存在完成标识
             out = os.popen(command, 'r')
             res = out.readlines()
     
             #res 获取返回值_SUCCESS是否存在(1 存在)
-            res = 0 if res is None else res[0].lower().strip()
+            if res is None else res[0].lower().strip()
             out.close()
     
             logging.info("数据标识的返回值："+str(res))
     
             #判断数据文件是否生成
             if res == '1':
-                logging.info("任务正常产出 ... ... ")
                 logging.info(out)
-                break
-                sys.exit(0)
+                return res
 
             while sum_timeout <= int(timeout):
     
@@ -133,7 +133,7 @@ class ModelPublicFrame(object):
                 res = out.readlines()
     
                 #res 获取返回值_SUCCESS是否存在(1 存在)
-                res = 0 if res is None else res[0].lower().strip()
+                if res is None else res[0].lower().strip()
                 out.close()
     
                 logging.info("数据标识的返回值："+str(res))
@@ -154,6 +154,9 @@ class ModelPublicFrame(object):
                         sum_timeout=0
                 else:
                     break
+
+
+            return res
 
         except Exception as e:
 
@@ -203,7 +206,11 @@ class ModelPublicFrame(object):
         #loop.close()
 
         for items in commands:
-            self.task_trigger(items['cmd'], items['table'], items['timeout']) 
+            tasks=self.task_trigger(items['cmd'], items['table'], items['timeout']) 
+
+        if tasks=='1':
+            logging.info("任务正常产出 ... ... ")
+            sys.exit(0)
 
 
     """
