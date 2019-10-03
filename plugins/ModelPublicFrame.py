@@ -95,18 +95,11 @@ class ModelPublicFrame(object):
         # 时间偏移量= 任务正常执行结束时间(秒)+允许任务延迟的最大时间(秒)
         # 正常执行结束时间300秒+ 允许任务延迟的最大120秒=时间偏移量420 秒
 
-        print(command)
-        print(dag_id_name)
-        print(timeout)
         try:
 
             sum_timeout = 0 
             timeout_step = 120 #任务监控间隔时间(秒)
             command = command.strip()
-
-            print(timeout)
-
-            print("0000000000000000000000"+command)
 
             while sum_timeout <= int(timeout):
     
@@ -132,13 +125,13 @@ class ModelPublicFrame(object):
                 if res == '' or res == 'None' or res == '0':
                     if sum_timeout >= int(timeout):
 
-                        self.comwx.postAppMessage(
-                            'DW调度任务 {dag_id} 产出超时'.format(
-                                dag_id=dag_id_name,
-                                timeout=timeout
-                            ),
-                            '271'
-                        )
+                        # self.comwx.postAppMessage(
+                        #     'DW调度任务 {dag_id} 产出超时'.format(
+                        #         dag_id=dag_id_name,
+                        #         timeout=timeout
+                        #     ),
+                        #     '271'
+                        # )
     
                         logging.info("任务超时。。。。。")
                         sum_timeout=0
@@ -170,28 +163,8 @@ class ModelPublicFrame(object):
             if table is None or db is None or partition is None or timeout is None:
                 return None
 
-            #表的location
-            location = None
-
-            # hql = '''
-            #     DESCRIBE FORMATTED {db}.{table}
-            # '''.format(table=table, db=db)
-            # logging.info(hql)
-            # self.hive_cursor.execute(hql)
-            # res = self.hive_cursor.fetchall()
-            # for (col_name, col_type, col_comment) in res:
-            #     col_name = col_name.lower().strip()
-            #     if col_name == 'location:':
-            #         location = col_type
-            #         break
-
-            # if location is None:
-            #     return None
-
-            #读取hive location地址
+            #读取hive 表的location
             location=self.get_hive_location(db,table)
-
-            print("=============="+location)
 
             commands.append({
                 'cmd': '''
@@ -213,8 +186,6 @@ class ModelPublicFrame(object):
         #loop.close()
 
         for items in commands:
-            print("yangmz")
-            print(items)
             self.task_trigger(items['cmd'], items['table'], items['timeout']) 
 
 
@@ -301,24 +272,6 @@ class ModelPublicFrame(object):
             
                 if table is None or db is None or partition is None:
                     return None
-            
-                location = None
-            
-                # hql = '''
-                #     DESCRIBE FORMATTED {db}.{table}
-                # '''.format(table=table, db=db)
-    
-                # self.hive_cursor.execute(hql)
-                # res = self.hive_cursor.fetchall()
-        
-                # for (col_name, col_type, col_comment) in res:
-                #     col_name = col_name.lower().strip()
-                #     if col_name == 'location:':
-                #         location = col_type
-                #         break
-            
-                # if location is None:
-                #     return None
     
                 #读取hive location地址
                 location=self.get_hive_location(db,table)
@@ -356,9 +309,6 @@ class ModelPublicFrame(object):
                         poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
                         dag=dag
                         )
-
-                print(ds)
-                print("========")
 
                 dependence_task_flag
 
