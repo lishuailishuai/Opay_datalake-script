@@ -101,14 +101,14 @@ class ModelPublicFrame(object):
             timeout_step = 120 #任务监控间隔时间(秒)
             command = command.strip()
 
-            res=0
+            res_str=""
 
             #先检查数据目录中是否存在完成标识
             out = os.popen(command, 'r')
             res = out.readlines()
     
             #res 获取返回值_SUCCESS是否存在(1 存在)
-            if res is None else res[0].lower().strip()
+            res=0 if res is None else res[0].lower().strip()
             out.close()
     
             logging.info("数据标识的返回值："+str(res))
@@ -153,10 +153,11 @@ class ModelPublicFrame(object):
                         logging.info("任务超时 ... ... ")
                         sum_timeout=0
                 else:
+                    res_str=res
                     break
 
 
-            return res
+            return res_str
 
         except Exception as e:
 
