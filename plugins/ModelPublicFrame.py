@@ -116,7 +116,7 @@ class ModelPublicFrame(object):
             #判断数据文件是否生成
             if res == '1':
                 logging.info(out)
-                #return res
+                sys.exit(0)
 
             while sum_timeout <= int(timeout):
     
@@ -153,7 +153,7 @@ class ModelPublicFrame(object):
                         logging.info("任务超时 ... ... ")
                         sum_timeout=0
                 else:
-                    res_str=res
+                    #res_str=res
                     break
 
         except Exception as e:
@@ -204,11 +204,11 @@ class ModelPublicFrame(object):
         #loop.close()
 
         for items in commands:
-            tasks=self.task_trigger(items['cmd'], items['table'], items['timeout']) 
+            self.task_trigger(items['cmd'], items['table'], items['timeout']) 
 
-        if tasks=='1':
-            logging.info("任务正常产出 ... ... ")
-            sys.exit(0)
+        # if tasks=='1':
+        #     logging.info("任务正常产出 ... ... ")
+        #     sys.exit(0)
 
 
     """
