@@ -155,8 +155,7 @@ class ModelPublicFrame(object):
                         logging.info("任务超时 ... ... ")
                         sum_timeout=0
                 else:
-                    #break
-                    return res
+                    break
 
         except Exception as e:
 
