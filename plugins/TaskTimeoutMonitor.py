@@ -7,7 +7,7 @@ import airflow
 from utils.connection_helper import get_hive_cursor
 from plugins.comwx import ComwxApi
 import logging
-import os,sys
+import os,sys,time
 import asyncio
 from airflow.utils.db import provide_session
 from airflow.utils.state import State
