@@ -101,45 +101,44 @@ class ModelPublicFrame(object):
             timeout_step = 120 #任务监控间隔时间(秒)
             command = command.strip()
 
-            # while sum_timeout <= int(timeout):
+            while sum_timeout <= int(timeout):
     
-            #     logging.info("sum_timeout："+str(sum_timeout))
-            #     logging.info("timeout："+str(timeout))
-            #     logging.info(command)
+                logging.info("sum_timeout："+str(sum_timeout))
+                logging.info("timeout："+str(timeout))
+                logging.info(command)
     
-            #     #yield from asyncio.sleep(int(timeout_step))
+                #yield from asyncio.sleep(int(timeout_step))
 
-            #     time.sleep(timeout_step)
+                time.sleep(timeout_step)
     
-            #     sum_timeout += timeout_step
-            #     out = os.popen(command, 'r')
-            #     res = out.readlines()
+                sum_timeout += timeout_step
+                out = os.popen(command, 'r')
+                res = out.readlines()
     
                 
-            #     #res 获取返回值_SUCCESS是否存在(1 存在)
-            #     res = 0 if res is None else res[0].lower().strip()
-            #     out.close()
+                #res 获取返回值_SUCCESS是否存在(1 存在)
+                res = 0 if res is None else res[0].lower().strip()
+                out.close()
     
-            #     logging.info("数据标识的返回值："+str(res))
+                logging.info("数据标识的返回值："+str(res))
     
-            #     #判断数据文件是否生成
-            #     if res == '' or res == 'None' or res == '0':
+                #判断数据文件是否生成
+                if res == '' or res == 'None' or res == '0':
 
-            #         if sum_timeout >= int(timeout):
+                    if sum_timeout >= int(timeout):
 
-            #             # self.comwx.postAppMessage(
-            #             #     'DW调度任务 {dag_id} 产出超时'.format(
-            #             #         dag_id=dag_id_name,
-            #             #         timeout=timeout
-            #             #     ),
-            #             #     '271'
-            #             # )
+                        # self.comwx.postAppMessage(
+                        #     'DW调度任务 {dag_id} 产出超时'.format(
+                        #         dag_id=dag_id_name,
+                        #         timeout=timeout
+                        #     ),
+                        #     '271'
+                        # )
     
-            #             logging.info("任务超时 ... ... ")
-            #             sum_timeout=0
-            #     else:
-            #         sys.exit(1)
-            #         #break
+                        logging.info("任务超时 ... ... ")
+                        sum_timeout=0
+                else:
+                    break
 
         except Exception as e:
 
@@ -191,10 +190,6 @@ class ModelPublicFrame(object):
         for items in commands:
 
             self.task_trigger(items['cmd'], items['table'], items['timeout']) 
-
-        # if tasks=='1':
-        #     logging.info("任务正常产出 ... ... ")
-        #     sys.exit(0)
 
 
     """
