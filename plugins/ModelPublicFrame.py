@@ -88,7 +88,7 @@ class ModelPublicFrame(object):
     检查文件，协程多个调用并发执行
     """
 
-    @asyncio.coroutine
+    #@asyncio.coroutine
     def task_trigger(self,command,dag_id_name, timeout):
 
         # timeout --时间偏移量
@@ -114,9 +114,9 @@ class ModelPublicFrame(object):
                 logging.info("timeout："+str(timeout))
                 logging.info(command)
     
-                yield from asyncio.sleep(int(timeout_step))
+                #yield from asyncio.sleep(int(timeout_step))
 
-                #time.sleep(timeout_step)
+                time.sleep(timeout_step)
     
                 sum_timeout += timeout_step
                 out = os.popen(command, 'r')
