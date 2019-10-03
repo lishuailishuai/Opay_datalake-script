@@ -57,7 +57,7 @@ class TaskTimeoutMonitor(object):
     检查文件，协程多个调用并发执行
     """
 
-    @asyncio.coroutine
+    #@asyncio.coroutine
     def task_trigger(self,command,dag_id_name, timeout):
 
         # timeout --时间偏移量
@@ -75,8 +75,10 @@ class TaskTimeoutMonitor(object):
                 logging.info("sum_timeout："+str(sum_timeout))
                 logging.info("timeout："+str(timeout))
                 logging.info(command)
+
+                time.sleep(timeout_step)
     
-                yield from asyncio.sleep(int(timeout_step))
+                #yield from asyncio.sleep(int(timeout_step))
     
                 sum_timeout += timeout_step
                 out = os.popen(command, 'r')
@@ -160,7 +162,11 @@ class TaskTimeoutMonitor(object):
                 }
             )
 
-        loop = asyncio.get_event_loop()
-        tasks = [self.task_trigger(items['cmd'], items['table'], items['timeout']) for items in commands]
-        loop.run_until_complete(asyncio.wait(tasks))
-        loop.close()
+        # loop = asyncio.get_event_loop()
+        # tasks = [self.task_trigger(items['cmd'], items['table'], items['timeout']) for items in commands]
+        # loop.run_until_complete(asyncio.wait(tasks))
+        # loop.close()
+
+        for items in commands:
+
+            self.task_trigger(items['cmd'], items['table'], items['timeout']) 
