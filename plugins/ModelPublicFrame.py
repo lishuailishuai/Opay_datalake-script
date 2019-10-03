@@ -133,7 +133,7 @@ class ModelPublicFrame(object):
                 res = out.readlines()
     
                 #res 获取返回值_SUCCESS是否存在(1 存在)
-                if res is None else res[0].lower().strip()
+                res=0 if res is None else res[0].lower().strip()
                 out.close()
     
                 logging.info("数据标识的返回值："+str(res))
