@@ -102,22 +102,6 @@ class ModelPublicFrame(object):
             command = command.strip()
 
 
-            res_str=""
-
-            #先检查数据目录中是否存在完成标识
-            out = os.popen(command, 'r')
-            res = out.readlines()
-    
-            #res 获取返回值_SUCCESS是否存在(1 存在)
-            res=0 if res is None else res[0].lower().strip()
-            out.close()
-    
-            logging.info("数据标识的返回值："+str(res))
-    
-            #判断数据文件是否生成
-            if res == '1':
-                return res
-
             while sum_timeout <= int(timeout):
     
                 logging.info("sum_timeout："+str(sum_timeout))
@@ -127,17 +111,19 @@ class ModelPublicFrame(object):
                 #yield from asyncio.sleep(int(timeout_step))
 
                 time.sleep(timeout_step)
-    
+
+                
                 sum_timeout += timeout_step
                 out = os.popen(command, 'r')
                 res = out.readlines()
-    
+
                 
                 #res 获取返回值_SUCCESS是否存在(1 存在)
                 res = 0 if res is None else res[0].lower().strip()
                 out.close()
     
                 logging.info("数据标识的返回值："+str(res))
+
     
                 #判断数据文件是否生成
                 if res == '' or res == 'None' or res == '0':
@@ -206,13 +192,20 @@ class ModelPublicFrame(object):
 
         for items in commands:
 
-            tesks=self.task_trigger(items['cmd'], items['table'], items['timeout'])
+            command = items['cmd'].strip()
 
-        if tesks == '1':
-            print("任务完成")
-            sys.exit()
+            out = os.popen(command, 'r')
+            res = out.readlines()
+    
+            #res 获取返回值_SUCCESS是否存在(1 存在)
+            res = 0 if res is None else res[0].lower().strip()
+            out.close()
 
-
+            if res=='1':
+                print("999999")
+                break
+            else:
+                self.task_trigger(items['cmd'], items['table'], items['timeout'])
 
 
     """
