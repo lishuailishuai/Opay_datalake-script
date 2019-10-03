@@ -101,6 +101,8 @@ class ModelPublicFrame(object):
             timeout_step = 120 #任务监控间隔时间(秒)
             command = command.strip()
 
+            print("0000000000000000000000")
+
             while sum_timeout <= int(timeout):
     
                 logging.info("sum_timeout："+str(sum_timeout))
@@ -140,7 +142,7 @@ class ModelPublicFrame(object):
 
         except Exception as e:
 
-            self.comwx.postAppMessage('DW调度任务 {dag_id} code 异常'.format(dag_id=dag_id_name),'271')
+            #self.comwx.postAppMessage('DW调度任务 {dag_id} code 异常'.format(dag_id=dag_id_name),'271')
 
             logging.info(e)
 
@@ -183,6 +185,8 @@ class ModelPublicFrame(object):
 
             #读取hive location地址
             location=self.get_hive_location(db,table)
+
+            print(location)
 
             commands.append({
                 'cmd': '''
