@@ -210,7 +210,8 @@ class ModelPublicFrame(object):
             tesks=self.task_trigger(items['cmd'], items['table'], items['timeout'])
 
         if tesks == '1':
-            sys.exit(0)
+            print("任务完成")
+            sys.exit()
 
 
 
