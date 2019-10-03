@@ -58,7 +58,7 @@ class ModelPublicFrame(object):
                 DESCRIBE FORMATTED {db}.{table}
             '''.format(table=table, db=db)
 
-            logging.info(hql)
+            #logging.info(hql)
             self.hive_cursor.execute(hql)
             res = self.hive_cursor.fetchall()
             for (col_name, col_type, col_comment) in res:
