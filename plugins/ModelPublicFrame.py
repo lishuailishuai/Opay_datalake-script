@@ -220,7 +220,11 @@ class ModelPublicFrame(object):
 
         try:
 
+            print(tables)
+
             for item in tables:
+
+                print(item)
     
                 table = item.get('table', None)
                 db = item.get('db', None)
@@ -242,7 +246,7 @@ class ModelPublicFrame(object):
             #数据为0，发微信报警通知
             if line_num[0] == str(0):
                 
-                self.comwx.postAppMessage('DW调度系统任务 {jobname} 数据产出异常，对应时间:{pt}'.format(jobname=table,pt=self.ds_date), '271')
+                #self.comwx.postAppMessage('DW调度系统任务 {jobname} 数据产出异常，对应时间:{pt}'.format(jobname=table,pt=self.ds_date), '271')
         
                 logging.info("Error : {hdfs_data_dir} is empty".format(hdfs_data_dir=hdfs_data_dir_str))
                 sys.exit(1)
@@ -259,7 +263,7 @@ class ModelPublicFrame(object):
     
         except Exception as e:
 
-            self.comwx.postAppMessage('DW调度系统任务 {jobname} 数据产出异常，对应时间:{pt}'.format(jobname=table,pt=self.ds_date),'271')
+            #self.comwx.postAppMessage('DW调度系统任务 {jobname} 数据产出异常，对应时间:{pt}'.format(jobname=table,pt=self.ds_date),'271')
 
             logging.info(e)
 
