@@ -115,14 +115,16 @@ class ModelPublicFrame(object):
                 out = os.popen(command, 'r')
                 res = out.readlines()
     
+                
                 #res 获取返回值_SUCCESS是否存在(1 存在)
-                res=0 if res is None else res[0].lower().strip()
+                res = 0 if res is None else res[0].lower().strip()
                 out.close()
     
                 logging.info("数据标识的返回值："+str(res))
     
                 #判断数据文件是否生成
                 if res == '' or res == 'None' or res == '0':
+
                     if sum_timeout >= int(timeout):
 
                         # self.comwx.postAppMessage(
@@ -186,7 +188,7 @@ class ModelPublicFrame(object):
         #loop.close()
 
         for items in commands:
-            
+
             self.task_trigger(items['cmd'], items['table'], items['timeout']) 
 
         # if tasks=='1':
