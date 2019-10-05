@@ -103,8 +103,7 @@ class ModelPublicFrame(object):
 
 
             while sum_timeout <= int(timeout):
-    
-                logging.info("sum_timeout："+str(sum_timeout))
+  
                 logging.info("timeout："+str(timeout))
                 logging.info(command)
     
@@ -112,12 +111,11 @@ class ModelPublicFrame(object):
 
                 time.sleep(timeout_step)
 
-                
                 sum_timeout += timeout_step
                 out = os.popen(command, 'r')
                 res = out.readlines()
 
-                
+
                 #res 获取返回值_SUCCESS是否存在(1 存在)
                 res = 0 if res is None else res[0].lower().strip()
                 out.close()
@@ -202,7 +200,7 @@ class ModelPublicFrame(object):
             out.close()
 
             if res=='1':
-                print("999999")
+                logging.info("任务成功 ... ... ")
                 break
             else:
                 self.task_trigger(items['cmd'], items['table'], items['timeout'])
@@ -220,13 +218,9 @@ class ModelPublicFrame(object):
         location = None
 
         try:
-
-            print(tables)
-
+            
             for item in tables:
 
-                print(item)
-    
                 table = item.get('table', None)
                 db = item.get('db', None)
                 partition = item.get('partitions', None) #分区地址

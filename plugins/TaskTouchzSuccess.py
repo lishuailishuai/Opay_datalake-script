@@ -69,6 +69,8 @@ class TaskTouchzSuccess(object):
                 os.popen(succ_str)
         
                 logging.info("DATA EXPORT Successed ......")
+
+                time.sleep(10)
     
     
         except Exception as e:
