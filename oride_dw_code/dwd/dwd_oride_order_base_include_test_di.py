@@ -79,16 +79,15 @@ oride_client_event_detail_prev_day_task = HivePartitionSensor(
 )
 
 # 依赖前一天分区
-dependence_dwd_oride_order_dispatch_funnel_di_prev_day_task = UFileSensor(
-    task_id='dwd_oride_order_dispatch_funnel_di_prev_day_task',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw/dwd_oride_order_dispatch_funnel_di/country_code=nal",
-        pt='{{ds}}'
-    ),
-    bucket_name='opay-datalake',
+dependence_dispatch_tracker_server_magic_task = HivePartitionSensor(
+    task_id="dispatch_tracker_server_magic_task",
+    table="dispatch_tracker_server_magic",
+    partition="dt='{{macros.ds_add(ds, +1)}}' and hour='00'",
+    schema="oride_source",
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
+
 ##----------------------------------------- 变量 ---------------------------------------##
 
 table_name = "dwd_oride_order_base_include_test_di"
@@ -547,13 +546,27 @@ WHERE event_name='successful_order_show'
 GROUP BY get_json_object(event_value, '$.order_id')) ep
 ON base.order_id=ep.order_id
 left outer join
-(select order_id from oride_dw.dwd_oride_order_dispatch_funnel_di
-   WHERE dt='{pt}'
-     AND event_name='dispatch_push_driver'
-     AND assign_type=1
-     group by order_id) push_ord
-on base.order_id=push_ord.order_id
 
+--(select order_id from oride_dw.dwd_oride_order_dispatch_funnel_di
+--   WHERE dt='{pt}'
+--     AND event_name='dispatch_push_driver'
+--     AND assign_type=1
+--     group by order_id) push_ord
+
+(SELECT order_id
+FROM
+  (SELECT get_json_object(event_values, '$.order_id') AS order_id,
+          --订单ID
+
+          cast(get_json_object(event_values, '$.assign_type') AS bigint) AS assign_type
+          --0=非强派单，1=强派单
+
+   FROM oride_source.dispatch_tracker_server_magic
+   WHERE dt = '{pt}'
+     AND event_name='dispatch_push_driver') a1
+WHERE assign_type=1
+GROUP BY order_id) push_ord
+on base.order_id=push_ord.order_id
 
 
 '''.format(
