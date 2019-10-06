@@ -636,7 +636,7 @@ touchz_data_success= PythonOperator(
 ods_sqoop_base_data_order_df_prev_day_task >> \
 ods_sqoop_base_data_order_payment_df_prev_day_task >> \
 oride_client_event_detail_prev_day_task >> \
-dependence_dwd_oride_order_dispatch_funnel_di_prev_day_task >>\
+dependence_dispatch_tracker_server_magic_task >>\
 sleep_time >> \
 dwd_oride_order_base_include_test_di_task >> \
 task_check_key_data >> \

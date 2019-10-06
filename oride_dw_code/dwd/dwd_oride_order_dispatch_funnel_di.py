@@ -236,4 +236,4 @@ touchz_data_success = BashOperator(
     ),
     dag=dag)
 
-dependence_dwd_oride_order_dispatch_funnel_di_prev_day_task >> sleep_time >> dwd_oride_order_dispatch_funnel_di_task >> touchz_data_success
+dependence_dispatch_tracker_server_magic_task >> sleep_time >> dwd_oride_order_dispatch_funnel_di_task >> touchz_data_success
