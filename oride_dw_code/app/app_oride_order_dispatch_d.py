@@ -694,9 +694,7 @@ def sendDispatchMail(*op_args, **op_kwargs):
         JOIN (SELECT 
                 id,
                 name 
-
             FROM oride_dw_ods.ods_sqoop_base_data_city_conf_df 
-
             WHERE dt = '{pt}' AND 
                 id < 999000
             ) AS b 
@@ -760,9 +758,7 @@ def sendDispatchMail(*op_args, **op_kwargs):
         JOIN (SELECT 
                 id,
                 name 
-
             FROM oride_dw_ods.ods_sqoop_base_data_city_conf_df 
-
             WHERE dt = '{pt}' AND 
                 id < 999000
             ) AS b 
@@ -824,9 +820,7 @@ def sendDispatchMail(*op_args, **op_kwargs):
         JOIN (SELECT 
                 id, 
                 name 
-
             FROM oride_dw_ods.ods_sqoop_base_data_city_conf_df 
-
             WHERE dt = '{pt}' AND 
                 id < 999000
             ) AS b 
@@ -888,9 +882,7 @@ def sendDispatchMail(*op_args, **op_kwargs):
         JOIN (SELECT 
                 id,
                 name 
-
             FROM oride_dw_ods.ods_sqoop_base_data_city_conf_df 
-
             WHERE dt = '{pt}' AND 
                 id < 999000
             ) AS b 
