@@ -164,7 +164,6 @@ if binlog_table_list!='':
                 if [ $line_num -eq 0 ]
                 then
                     echo "FATAL {hdfs_data_dir} is empty"
-                    exit 1
                 else
                     echo "DATA EXPORT Successed ......"
                     $HADOOP_HOME/bin/hadoop fs -touchz {hdfs_data_dir}/_SUCCESS
@@ -182,5 +181,6 @@ if binlog_table_list!='':
                 dag=dag,
             )
             check_file >> binlog_add_partitions
+
         binlog_add_partitions >> insert_ods
         insert_ods >> touchz_data_success
