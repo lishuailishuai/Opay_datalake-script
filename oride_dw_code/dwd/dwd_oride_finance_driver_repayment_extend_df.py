@@ -78,12 +78,32 @@ dim_oride_driver_base_prev_day_task = UFileSensor(
     bucket_name='opay-datalake',
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
-)
+) 
 
 ##----------------------------------------- 变量 ---------------------------------------## 
 
 table_name="dwd_oride_finance_driver_repayment_extend_df"
 hdfs_path="ufile://opay-datalake/oride/oride_dw/"+table_name
+
+##----------------------------------------- 任务超时监控 ---------------------------------------## 
+
+def fun_task_timeout_monitor(ds,dag,**op_kwargs):
+
+    dag_ids=dag.dag_id
+
+    tb = [
+        {"db": "oride_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "2400"}
+    ]
+
+    TaskTimeoutMonitor().set_task_monitor(tb)
+
+task_timeout_monitor= PythonOperator(
+    task_id='task_timeout_monitor',
+    python_callable=fun_task_timeout_monitor,
+    provide_context=True,
+    dag=dag
+)
+
 
 ##----------------------------------------- 脚本 ---------------------------------------## 
 
