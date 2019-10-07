@@ -964,6 +964,8 @@ dependence_app_oride_order_pushed_d >> sleep_time
 dependence_app_oride_driver_base_d >> sleep_time
 dependence_app_oride_order_base_d >> sleep_time
 
+exclude_city = Variable.get("app_oride_order_dispatch_d_exclude")
+
 
 # 检查统计结果是否正确
 def check_result(**op_kwargs):
@@ -976,7 +978,8 @@ def check_result(**op_kwargs):
                 * 
             FROM oride_dw.app_oride_order_pushed_d 
             WHERE dt = '{pt}' AND 
-                city_id < 999000
+                city_id < 999000 AND 
+                city_id not in ({citys})
         ), 
         --司机数据
         app_oride_driver_base_d AS (
@@ -984,7 +987,8 @@ def check_result(**op_kwargs):
                 * 
             FROM oride_dw.app_oride_driver_base_d 
             WHERE dt = '{pt}' AND 
-                city_id < 999000
+                city_id < 999000 AND 
+                city_id not in ({citys})
         ),
         --订单数据
         app_oride_order_base_d AS (
@@ -992,7 +996,8 @@ def check_result(**op_kwargs):
                 * 
             FROM oride_dw.app_oride_order_base_d 
             WHERE dt = '{pt}' AND 
-                city_id < 999000
+                city_id < 999000 AND 
+                city_id not in ({citys})
         )
 
         ---写入结果表
@@ -1001,7 +1006,7 @@ def check_result(**op_kwargs):
         FROM app_oride_order_base_d AS c 
         LEFT JOIN app_oride_driver_base_d AS b ON b.country_code=c.country_code AND b.dt=c.dt AND b.city_id=c.city_id AND b.product_id=c.product_id 
         LEFT JOIN app_oride_order_pushed_d AS a ON c.country_code=a.country_code AND c.dt=a.dt AND c.city_id=a.city_id AND c.product_id=a.product_id
-    '''.format(pt=dt)
+    '''.format(pt=dt, citys=exclude_city)
     cursor = get_hive_cursor()
     logging.info(sql)
     cursor.execute(sql)
