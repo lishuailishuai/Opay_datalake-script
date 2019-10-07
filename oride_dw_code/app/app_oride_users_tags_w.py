@@ -46,7 +46,7 @@ sleep_time = BashOperator(
 dependence_table_data_user_extend_task = HivePartitionSensor(
     task_id="dependence_table_data_user_extend_task",
     table="ods_sqoop_base_data_user_extend_df",
-    partition="dt='{{ds}}'",
+    partition="dt='{{ macros.ds_add(ds, 6) }}'",
     schema="oride_dw_ods",
     poke_interval=60,
     dag=dag
@@ -55,7 +55,7 @@ dependence_table_data_user_extend_task = HivePartitionSensor(
 dependence_table_data_user_task = HivePartitionSensor(
     task_id="dependence_table_data_user_task",
     table="ods_sqoop_base_data_user_df",
-    partition="dt='{{ds}}'",
+    partition="dt='{{ macros.ds_add(ds, 6) }}'",
     schema="oride_dw_ods",
     poke_interval=60,
     dag=dag
@@ -64,7 +64,7 @@ dependence_table_data_user_task = HivePartitionSensor(
 dependence_table_data_order_task = HivePartitionSensor(
     task_id="dependence_table_data_order_task",
     table="ods_sqoop_base_data_order_df",
-    partition="dt='{{ds}}'",
+    partition="dt='{{ macros.ds_add(ds, 6) }}'",
     schema="oride_dw_ods",
     poke_interval=60,
     dag=dag
@@ -261,7 +261,7 @@ user_unorders14 AS (
     ON uf.user_id = ui.id 
     WHERE uo.user_id IS NULL
 )
-'''.format(dt='{{ ds }}')
+'''.format(dt='{{ macros.ds_add(ds, 6) }}')
 
 insert_result_to_hive = HiveOperator(
     task_id='insert_result_to_hive',
@@ -291,7 +291,7 @@ insert_result_to_hive = HiveOperator(
             *,
             '{pt}' AS dt 
         FROM user_unorders14 
-    '''.format(sql=count_sql, table=hive_table, pt='{{ ds }}'),
+    '''.format(sql=count_sql, table=hive_table, pt='{{ macros.ds_add(ds, 6) }}'),
     schema='oride_dw',
     dag=dag
 )
@@ -371,7 +371,7 @@ sync_task = PythonOperator(
     python_callable=sync_result_to_mysql,
     provide_context=True,
     op_kwargs={
-        "ds": '{{ ds }}'
+        "ds": '{{ macros.ds_add(ds, 6) }}'
     },
     dag=dag
 )

@@ -229,14 +229,14 @@ insert_result_to_hive_all = HiveOperator(
         SET hive.exec.parallel=true;
         SET hive.exec.dynamic.partition=true;
         SET hive.exec.dynamic.partition.mode=nonstrict;
-        SET hive.execution.engine=tez;
-        SET hive.mapjoin.hybridgrace.hashtable=false;
+        --SET hive.execution.engine=tez;
+        --SET hive.mapjoin.hybridgrace.hashtable=false;
         --set hive.vectorized.execution.enabled=false;
-        SET hive.vectorized.execution.enabled=true;
-        SET hive.vectorized.execution.reduce.enabled=true;
-        SET hive.prewarm.enabled=true;
-        SET hive.prewarm.numcontainers=16;
-        SET hive.tez.auto.reducer.parallelism=true;
+        --SET hive.vectorized.execution.enabled=true;
+        --SET hive.vectorized.execution.reduce.enabled=true;
+        --SET hive.prewarm.enabled=true;
+        --SET hive.prewarm.numcontainers=16;
+        --SET hive.tez.auto.reducer.parallelism=true;
         WITH {sql} 
         INSERT OVERWRITE TABLE {table} PARTITION (type, country_code, dt) 
         SELECT 
@@ -362,14 +362,14 @@ insert_result_to_hive_city = HiveOperator(
         SET hive.exec.parallel=true;
         SET hive.exec.dynamic.partition=true;
         SET hive.exec.dynamic.partition.mode=nonstrict;
-        SET hive.execution.engine=tez;
-        SET hive.mapjoin.hybridgrace.hashtable=false;
+        --SET hive.execution.engine=tez;
+        --SET hive.mapjoin.hybridgrace.hashtable=false;
         --set hive.vectorized.execution.enabled=false;
-        SET hive.vectorized.execution.enabled=true;
-        SET hive.vectorized.execution.reduce.enabled=true;
-        SET hive.prewarm.enabled=true;
-        SET hive.prewarm.numcontainers=16;
-        SET hive.tez.auto.reducer.parallelism=true;
+        --SET hive.vectorized.execution.enabled=true;
+        --SET hive.vectorized.execution.reduce.enabled=true;
+        --SET hive.prewarm.enabled=true;
+        --SET hive.prewarm.numcontainers=16;
+        --SET hive.tez.auto.reducer.parallelism=true;
         WITH {sql} 
         INSERT OVERWRITE TABLE {table} PARTITION (type, country_code, dt) 
         SELECT 
@@ -477,14 +477,14 @@ insert_result_to_hive_city_type = HiveOperator(
         SET hive.exec.parallel=true;
         SET hive.exec.dynamic.partition=true;
         SET hive.exec.dynamic.partition.mode=nonstrict;
-        SET hive.execution.engine=tez;
-        SET hive.mapjoin.hybridgrace.hashtable=false;
+        --SET hive.execution.engine=tez;
+        --SET hive.mapjoin.hybridgrace.hashtable=false;
         --set hive.vectorized.execution.enabled=false;
-        SET hive.vectorized.execution.enabled=true;
-        SET hive.vectorized.execution.reduce.enabled=true;
-        SET hive.prewarm.enabled=true;
-        SET hive.prewarm.numcontainers=16;
-        SET hive.tez.auto.reducer.parallelism=true;
+        --SET hive.vectorized.execution.enabled=true;
+        --SET hive.vectorized.execution.reduce.enabled=true;
+        --SET hive.prewarm.enabled=true;
+        --SET hive.prewarm.numcontainers=16;
+        --SET hive.tez.auto.reducer.parallelism=true;
         WITH {sql} 
         INSERT OVERWRITE TABLE {table} PARTITION (type, country_code, dt) 
         SELECT 

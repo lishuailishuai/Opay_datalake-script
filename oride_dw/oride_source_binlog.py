@@ -136,6 +136,9 @@ def check_s3_prefix(ds, execution_date, **kwargs):
 
 
 HDFS_PATH = "/user/hive/warehouse/oride_dw_ods.db/ods_binlog_{table}_hi/dt={dt}/hour={hour}"
+IGNORE_TABLE_LIST = [
+    'data_driver'
+]
 if binlog_table_list!='':
     for table in binlog_table_list.split():
         binlog_add_partitions = HiveOperator(
@@ -153,13 +156,6 @@ if binlog_table_list!='':
             params={'table':table},
             dag=dag,
         )
-        check_file = PythonOperator(
-            task_id='check_file_{}'.format(table),
-            provide_context=True,
-            python_callable=check_s3_prefix,
-            params={'table':table},
-            dag=dag,
-        )
         touchz_data_success = BashOperator(
             task_id='touchz_data_success_{}'.format(table),
             bash_command="""
@@ -168,7 +164,6 @@ if binlog_table_list!='':
                 if [ $line_num -eq 0 ]
                 then
                     echo "FATAL {hdfs_data_dir} is empty"
-                    exit 1
                 else
                     echo "DATA EXPORT Successed ......"
                     $HADOOP_HOME/bin/hadoop fs -touchz {hdfs_data_dir}/_SUCCESS
@@ -177,7 +172,15 @@ if binlog_table_list!='':
                 hdfs_data_dir=HDFS_PATH.format(table=table, dt='{{ds}}', hour='{{execution_date.strftime("%H")}}')
             ),
             dag=dag)
+        if table not in IGNORE_TABLE_LIST:
+            check_file = PythonOperator(
+                task_id='check_file_{}'.format(table),
+                provide_context=True,
+                python_callable=check_s3_prefix,
+                params={'table':table},
+                dag=dag,
+            )
+            check_file >> binlog_add_partitions
 
-        check_file >> binlog_add_partitions
         binlog_add_partitions >> insert_ods
         insert_ods >> touchz_data_success
