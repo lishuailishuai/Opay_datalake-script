@@ -156,7 +156,7 @@ dm_dm_oride_order_strong_base_cube_d_task = HiveOperator(
                 group by nvl(ord.city_id,-10000),
                 nvl(if(ord.city_id=1001 and driver.product_id is not null,driver.product_id,ord.product_id),-10000)
                 with cube) b
-                on a.city_id=b.city_id and a.product_id=nvl(b.product_id,-10000)
+                on nvl(a.city_id,-10000)=nvl(b.city_id,-10000) and nvl(a.product_id,-10000)=nvl(b.product_id,-10000)
                 group by nvl(b.city_id,-10000),
                  nvl(b.product_id,-10000);
                  '''.format(
