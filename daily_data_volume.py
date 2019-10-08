@@ -76,10 +76,16 @@ def get_s3_dir_size(path, dt):
     logging.info("path:%s, total size:%s", path, getSizeInNiceString(total_size))
     return total_size
 
-MODEL_PATH = "ufile://opay-datalake/oride/oride_dw"
-BURIED_PATH = "s3a://opay-bi/oride_buried"
-BINLOG_PATH = "s3a://opay-bi/oride_binlog"
-SQOOP_PATH = "ufile://opay-datalake/oride_dw_sqoop"
+ORIDE_MODEL_PATH = "ufile://opay-datalake/oride/oride_dw"
+ORIDE_BURIED_PATH = "s3a://opay-bi/oride_buried"
+ORIDE_BINLOG_PATH = "s3a://opay-bi/oride_binlog"
+ORIDE_SQOOP_PATH = "ufile://opay-datalake/oride_dw_sqoop"
+
+OFOOD_MODEL_PATH = "ufile://opay-datalake/oride/ofood_dw"
+OFOOD_BURIED_PATH = "ufile://opay-datalake/ofood/client"
+OFOOD_SQOOP_PATH = "ufile://opay-datalake/ofood_dw_sqoop"
+
+OPAY_SQOOP_PATH = "ufile://opay-datalake/opay_dw_ods"
 
 def send_report_email(ds, **kwargs):
     email_to=['bigdata_dw@opay-inc.com']
@@ -87,14 +93,27 @@ def send_report_email(ds, **kwargs):
     html="""
         日期：{dt}<br>
         业务：oride<br>
-        模型日数据量:{model_size}<br>
-        采集日数据量:{collect_size}<br>
-        埋点日数据量:{buried_size}<br>
+        模型日数据量:{oride_model_size}<br>
+        采集日数据量:{oride_collect_size}<br>
+        埋点日数据量:{oride_buried_size}<br><br>
+
+        业务：ofood<br>
+        模型日数据量:{ofood_model_size}<br>
+        采集日数据量:{ofood_collect_size}<br>
+        埋点日数据量:{ofood_buried_size}<br><br>
+
+        业务：opay<br>
+        采集日数据量:{opay_collect_size}<br>
+
     """.format(
         dt=ds,
-        model_size=getSizeInNiceString(get_dir_size(MODEL_PATH, ds)),
-        collect_size=getSizeInNiceString(get_s3_dir_size(BINLOG_PATH, ds)+get_dir_size(SQOOP_PATH, ds)),
-        buried_size=getSizeInNiceString(get_s3_dir_size(BURIED_PATH, ds))
+        oride_model_size=getSizeInNiceString(get_dir_size(ORIDE_MODEL_PATH, ds)),
+        oride_collect_size=getSizeInNiceString(get_s3_dir_size(ORIDE_BINLOG_PATH, ds)+get_dir_size(ORIDE_SQOOP_PATH, ds)),
+        oride_buried_size=getSizeInNiceString(get_s3_dir_size(ORIDE_BURIED_PATH, ds)),
+        ofood_model_size=getSizeInNiceString(get_dir_size(OFOOD_MODEL_PATH, ds)),
+        ofood_collect_size=getSizeInNiceString(get_dir_size(OFOOD_SQOOP_PATH, ds)),
+        ofood_buried_size=getSizeInNiceString(get_dir_size(OFOOD_BURIED_PATH, ds)),
+        opay_collect_size=getSizeInNiceString(get_dir_size(OPAY_SQOOP_PATH, ds))
     )
     send_email(
         email_to
