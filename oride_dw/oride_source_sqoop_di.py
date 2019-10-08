@@ -38,6 +38,7 @@ table_list = [
     # oride data
     ("oride_data", "data_order", "sqoop_db", "base",3),
     ("oride_data", "data_order_payment", "sqoop_db", "base",3),
+    ("oride_data", "data_driver_assign_info", "sqoop_db", "base",3),
 ]
 
 HIVE_DB = 'oride_dw_ods'
