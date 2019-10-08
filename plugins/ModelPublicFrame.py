@@ -300,7 +300,6 @@ class ModelPublicFrame(object):
                     dependence_task_flag= HivePartitionSensor(
                         task_id='dependence_{task_id_name}'.format(task_id_name=task_id_flag),
                         table=table,
-                        #partition="dt='{ds}'".format(pt=self.ds_date),
                         partition="dt='{pt}'".format(pt=ds),
                         schema=db,
                         poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
@@ -315,7 +314,6 @@ class ModelPublicFrame(object):
                         filepath='{hdfs_path_name}/{partition_name}/dt={pt}/_SUCCESS'.format(
                             hdfs_path_name=location,
                             partition_name=partition,
-                            #pt=self.ds_date
                             pt=ds
                         ),
                         bucket_name='opay-datalake',
