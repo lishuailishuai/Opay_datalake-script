@@ -612,6 +612,7 @@ def send_otirke_csv_file(ds, ds_nodash, **kwargs):
         gender,
         birth,
         register_time,
+        address,
         city,
         group_name,
         team_name,
