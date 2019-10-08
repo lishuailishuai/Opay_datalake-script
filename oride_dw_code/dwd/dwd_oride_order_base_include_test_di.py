@@ -182,7 +182,7 @@ SELECT base.order_id,
        reward,
        -- 司机奖励
 
-       driver_id,
+       base.driver_id,
        --司机 ID
 
        plate_num,
@@ -249,7 +249,7 @@ SELECT base.order_id,
        --创建日期(转换自create_time,yyyy-MM-dd)
 
        (CASE
-            WHEN driver_id <> 0 THEN 1
+            WHEN base.driver_id <> 0 THEN 1
             ELSE 0
         END) AS is_td_request,
        --当天是否接单(应答)
@@ -322,7 +322,7 @@ SELECT base.order_id,
 
        (CASE
             WHEN status = 6
-                 AND driver_id = 0
+                 AND base.driver_id = 0
                  AND cancel_role = 1 THEN 1
             ELSE 0
         END) AS is_td_passanger_before_cancel,
@@ -330,7 +330,7 @@ SELECT base.order_id,
 
        (CASE
             WHEN status = 6
-                 AND driver_id <> 0
+                 AND base.driver_id <> 0
                  AND cancel_role = 1 THEN 1
             ELSE 0
         END) AS is_td_passanger_after_cancel,
@@ -352,7 +352,7 @@ SELECT base.order_id,
 
        (CASE
             WHEN status = 6
-                 AND driver_id <> 0
+                 AND base.driver_id <> 0
                  AND cancel_role = 2 THEN 1
             ELSE 0
         END) AS is_td_driver_after_cancel,
@@ -366,7 +366,7 @@ SELECT base.order_id,
        --当天完单计费时长（分钟）
 
        (CASE
-            WHEN driver_id <> 0 
+            WHEN base.driver_id <> 0 
             and take_time > 0 and finish_time>0 THEN finish_time - take_time
             ELSE 0
         END) AS td_finish_order_dur,
