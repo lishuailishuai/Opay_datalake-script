@@ -179,10 +179,6 @@ class ModelPublicFrame(object):
                 }
             )
 
-        #loop = asyncio.get_event_loop()
-        #tasks = [self.task_trigger(items['cmd'], items['table'], items['timeout']) for items in commands]
-        #loop.run_until_complete(asyncio.wait(tasks))
-        #loop.close()
 
         for items in commands:
 
@@ -275,8 +271,6 @@ class ModelPublicFrame(object):
         try:
 
             for item in tables:
-
-                print("^&^&&************")
     
                 #读取 db、table、partition
                 table = item.get('table', None)
@@ -302,7 +296,6 @@ class ModelPublicFrame(object):
                     dependence_task_flag= HivePartitionSensor(
                         task_id='dependence_{task_id_name}'.format(task_id_name=task_id_flag),
                         table=table,
-                        #partition="dt='{pt}'".format(pt=ds),
                         partition="dt='{{ds}}'",
                         schema=db,
                         poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
@@ -329,7 +322,7 @@ class ModelPublicFrame(object):
 
         except Exception as e:
 
-            #self.comwx.postAppMessage('DW调度系统任务 {jobname} 任务依赖列表产出异常，对应时间:{pt}'.format(jobname=dag.dag_id,pt=self.ds_date),'271')
+            #self.comwx.postAppMessage('DW调度系统任务 {jobname} 任务依赖列表产出异常，对应时间:{pt}'.format(jobname=dag.dag_id,pt=ds_date),'271')
 
             logging.info(e)
 
