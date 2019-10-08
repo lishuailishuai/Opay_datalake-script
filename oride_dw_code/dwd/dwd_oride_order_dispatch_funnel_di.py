@@ -99,6 +99,7 @@ dwd_oride_order_dispatch_funnel_di_task = HiveOperator(
             '' as reason,--过滤原因
             event_name as event_name, --事件类型
             0 as assign_type, --0=非强派单，1=强派单
+            cast(get_json_object(event_values, '$.serv_type') as int) as product_id, --业务线ID
             'nal' as country_code,
             '{pt}' dt
         from  
@@ -123,6 +124,7 @@ dwd_oride_order_dispatch_funnel_di_task = HiveOperator(
             get_json_object(event_values, '$.reason') as reason,--过滤原因
             event_name as event_name, --事件类型
             0 as assign_type, --0=非强派单，1=强派单
+            cast(get_json_object(event_values, '$.serv_type') as int) as product_id, --业务线ID
             'nal' as country_code,
             '{pt}' dt
         from  
@@ -146,6 +148,7 @@ dwd_oride_order_dispatch_funnel_di_task = HiveOperator(
             '' as reason,--过滤原因
             d.event_name as event_name, --事件类型
             0 as assign_type,--0=非强派单，1=强派单
+            cast(d.product_id as int) as product_id, --业务线ID
             'nal' as country_code, 
             '{pt}' dt
         
@@ -167,6 +170,7 @@ dwd_oride_order_dispatch_funnel_di_task = HiveOperator(
                 get_json_object(event_values, '$.timestamp') as log_timestamp,
                 get_json_object(event_values, '$.wait_time') as wait_time,
                 get_json_object(event_values, '$.mode') as push_mode,
+                get_json_object(event_values, '$.serv_type') as product_id, --业务线ID
                 event_name as event_name
         
                 from order_dispatch
@@ -196,6 +200,7 @@ dwd_oride_order_dispatch_funnel_di_task = HiveOperator(
             '' as reason,--过滤原因
             event_name as event_name, --事件类型
             cast(get_json_object(event_values, '$.assign_type') as bigint) as assign_type, --0=非强派单，1=强派单
+            cast(get_json_object(event_values, '$.serv_type') as int) as product_id, --业务线ID
             'nal' as country_code,
             '{pt}' dt
         from

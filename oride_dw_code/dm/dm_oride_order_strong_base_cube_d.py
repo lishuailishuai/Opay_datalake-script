@@ -110,14 +110,15 @@ dm_dm_oride_order_strong_base_cube_d_task = HiveOperator(
                  sum(b.strong_paid_amount) as strong_paid_amount,  --强派单实付金额
                  'nal' as country_code,
                  '{pt}' as dt
-                from (SELECT city_id,-10000 as product_id,count(distinct driver_id) as strong_dispatch_driver_cnt, --强派单司机数
+                from (SELECT nvl(city_id,-10000) as city_id,-10000 as product_id,count(distinct driver_id) as strong_dispatch_driver_cnt, --强派单司机数
                 count(distinct order_id) as strong_dispatch_order_cnt --强派单调度推单数
                    FROM oride_dw.dwd_oride_order_dispatch_funnel_di
                    WHERE dt='{pt}'
                      AND event_name='dispatch_push_driver'
                      AND assign_type=1
                      and city_id<>999001
-                     group by city_id) a
+                     group by nvl(city_id,-10000) --,nvl(product_id,-10000)
+                     with cube) a
                 right join     
                      
                 (SELECT nvl(ord.city_id,-10000) as city_id,
@@ -155,7 +156,7 @@ dm_dm_oride_order_strong_base_cube_d_task = HiveOperator(
                 group by nvl(ord.city_id,-10000),
                 nvl(if(ord.city_id=1001 and driver.product_id is not null,driver.product_id,ord.product_id),-10000)
                 with cube) b
-                on a.city_id=b.city_id and a.product_id=nvl(b.product_id,-10000)
+                on nvl(a.city_id,-10000)=nvl(b.city_id,-10000) and nvl(a.product_id,-10000)=nvl(b.product_id,-10000)
                 group by nvl(b.city_id,-10000),
                  nvl(b.product_id,-10000);
                  '''.format(
