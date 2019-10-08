@@ -268,7 +268,7 @@ class ModelPublicFrame(object):
     [{"db":"db_name", "table":"table_name", "partitions":"country_code=nal"]
     """
 
-    def tesk_dependence(self,tables,ds):
+    def tesk_dependence(self,tables,ds,dag):
 
         dependence=[]
 
@@ -304,7 +304,7 @@ class ModelPublicFrame(object):
                         partition="dt='{{ds}}'"
                         schema=db,
                         poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-                        dag=self.dag
+                        dag=dag
                     )
         
                 else:
@@ -320,7 +320,7 @@ class ModelPublicFrame(object):
                         ),
                         bucket_name='opay-datalake',
                         poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-                        dag=self.dag
+                        dag=dag
                         )
 
                 dependence.append(dependence_task_flag)
@@ -329,7 +329,7 @@ class ModelPublicFrame(object):
 
         except Exception as e:
 
-            #self.comwx.postAppMessage('DW调度系统任务 {jobname} 任务依赖列表产出异常，对应时间:{pt}'.format(jobname=self.dag.dag_id,pt=self.ds_date),'271')
+            #self.comwx.postAppMessage('DW调度系统任务 {jobname} 任务依赖列表产出异常，对应时间:{pt}'.format(jobname=dag.dag_id,pt=self.ds_date),'271')
 
             logging.info(e)
 
