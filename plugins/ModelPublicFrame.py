@@ -268,7 +268,7 @@ class ModelPublicFrame(object):
     [{"db":"db_name", "table":"table_name", "partitions":"country_code=nal"]
     """
 
-    def tesk_dependence(self,tables,dag):
+    def tesk_dependence(self,tables,dag,ds):
 
         dependence=[]
 
@@ -302,7 +302,7 @@ class ModelPublicFrame(object):
                     dependence_task_flag= HivePartitionSensor(
                         task_id='dependence_{task_id_name}'.format(task_id_name=task_id_flag),
                         table=table,
-                        partition="dt='{pt}'".format(pt={{ds}}),
+                        partition="dt='{pt}'".format(pt=ds),
                         schema=db,
                         poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
                         dag=dag
@@ -316,7 +316,7 @@ class ModelPublicFrame(object):
                         filepath='{hdfs_path_name}/{partition_name}/dt={pt}/_SUCCESS'.format(
                             hdfs_path_name=location,
                             partition_name=partition,
-                            pt={{ds}}
+                            pt=ds
                         ),
                         bucket_name='opay-datalake',
                         poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
