@@ -379,7 +379,7 @@ SELECT base.order_id,
        tip,  --小费
        nvl(ep.estimated_price,-1) as estimated_price,
         --预估价格区间（最小值,最大值,-1 未知）
-       if(push_ord.order_id is not null,1,0) as is_strong_dispatch,  
+       if(push_ord.order_id is not null and push_ord.driver_id is not null,1,0) as is_strong_dispatch,  
        --是否强制派单1:是，0:否
        country_code,
 
@@ -553,11 +553,11 @@ left outer join
 --     AND assign_type=1
 --     group by order_id) push_ord
 
-(SELECT order_id
+(SELECT order_id,driver_id
 FROM
   (SELECT get_json_object(event_values, '$.order_id') AS order_id,
           --订单ID
-
+          cast(get_json_object(event_values, '$.driver_id') as bigint) as driver_id,
           cast(get_json_object(event_values, '$.assign_type') AS bigint) AS assign_type
           --0=非强派单，1=强派单
 
@@ -565,8 +565,9 @@ FROM
    WHERE dt = '{pt}'
      AND event_name='dispatch_push_driver') a1
 WHERE assign_type=1
-GROUP BY order_id) push_ord
+GROUP BY order_id,driver_id) push_ord
 on base.order_id=push_ord.order_id
+and base.driver_id=push_ord.driver_id
 
 
 '''.format(
