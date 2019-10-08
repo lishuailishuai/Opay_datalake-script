@@ -87,6 +87,8 @@ OFOOD_SQOOP_PATH = "ufile://opay-datalake/ofood_dw_sqoop"
 
 OPAY_SQOOP_PATH = "ufile://opay-datalake/opay_dw_ods"
 
+OBUS_SQOOP_PATH = "s3a://opay-bi/obus_dw"
+
 def send_report_email(ds, **kwargs):
     email_to=['bigdata_dw@opay-inc.com']
     email_subject="每日数据量统计%s" % ds
@@ -103,7 +105,10 @@ def send_report_email(ds, **kwargs):
         埋点日数据量:{ofood_buried_size}<br><br>
 
         业务：opay<br>
-        采集日数据量:{opay_collect_size}<br>
+        采集日数据量:{opay_collect_size}<br><br>
+
+        业务：obus<br>
+        采集日数据量:{obus_collect_size}<br><br>
 
     """.format(
         dt=ds,
@@ -113,7 +118,8 @@ def send_report_email(ds, **kwargs):
         ofood_model_size=getSizeInNiceString(get_dir_size(OFOOD_MODEL_PATH, ds)),
         ofood_collect_size=getSizeInNiceString(get_dir_size(OFOOD_SQOOP_PATH, ds)),
         ofood_buried_size=getSizeInNiceString(get_dir_size(OFOOD_BURIED_PATH, ds)),
-        opay_collect_size=getSizeInNiceString(get_dir_size(OPAY_SQOOP_PATH, ds))
+        opay_collect_size=getSizeInNiceString(get_dir_size(OPAY_SQOOP_PATH, ds)),
+        obus_collect_size=getSizeInNiceString(get_dir_size(OBUS_SQOOP_PATH, ds))
     )
     send_email(
         email_to
