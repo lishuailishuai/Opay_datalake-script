@@ -25,21 +25,20 @@ class ModelPublicFrame(object):
     hive_cursor = None
     comwx = None
 
-    def __init__(self,execution_date):
+    def __init__(self,execution_date,dag):
 
         self.hive_cursor = get_hive_cursor()
         self.comwx = ComwxApi('wwd26d45f97ea74ad2', 'BLE_v25zCmnZaFUgum93j3zVBDK-DjtRkLisI_Wns4g', '1000011')
 
-        # self.ds_date=execution_date.strftime("%Y-%m-%d") #日期(%Y-%m-%d)
-        # self.ds_date_hour=execution_date.strftime("%Y-%m-%d %H") #日期(%Y-%m-%d %H)
-        # self.ds_date_minute=execution_date.strftime("%Y-%m-%d %H:%M") #日期(%Y-%m-%d %H:%M)
-        # self.ds_date_second=execution_date.strftime("%Y-%m-%d %H:%M:%S") #日期(%Y-%m-%d %H:%M:%S)
+        self.ds_date=execution_date.strftime("%Y-%m-%d") #日期(%Y-%m-%d)
+        self.ds_date_hour=execution_date.strftime("%Y-%m-%d %H") #日期(%Y-%m-%d %H)
+        self.ds_date_minute=execution_date.strftime("%Y-%m-%d %H:%M") #日期(%Y-%m-%d %H:%M)
+        self.ds_date_second=execution_date.strftime("%Y-%m-%d %H:%M:%S") #日期(%Y-%m-%d %H:%M:%S)
 
-        self.ds_date=execution_date
+       
+        self.dag=dag
 
-        #self.dag=dag
-
-        #logging.info(self.ds_date_second)
+        logging.info(self.ds_date_second)
         
 
     def __del__(self):
@@ -252,6 +251,8 @@ class ModelPublicFrame(object):
                 logging.info(succ_str)
         
                 os.popen(succ_str)
+
+                time.sleep(10)
         
                 logging.info("DATA EXPORT Successed ......")
     
@@ -270,7 +271,7 @@ class ModelPublicFrame(object):
     [{"db":"db_name", "table":"table_name", "partitions":"country_code=nal"]
     """
 
-    def tesk_dependence(self,tables,ds,dag,**op_kwargs):
+    def tesk_dependence(self,tables):
 
         dependence=[]
 
@@ -302,10 +303,10 @@ class ModelPublicFrame(object):
                     dependence_task_flag= HivePartitionSensor(
                         task_id='dependence_{task_id_name}'.format(task_id_name=task_id_flag),
                         table=table,
-                        partition="dt='{pt}'".format(pt=ds),
+                        partition="dt='{pt}'".format(pt=self.ds_date),
                         schema=db,
                         poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-                        dag=dag
+                        dag=self.dag
                     )
         
                 else:
@@ -316,14 +317,16 @@ class ModelPublicFrame(object):
                         filepath='{hdfs_path_name}/{partition_name}/dt={pt}/_SUCCESS'.format(
                             hdfs_path_name=location,
                             partition_name=partition,
-                            pt=ds
+                            pt=self.ds_date
                         ),
                         bucket_name='opay-datalake',
                         poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-                        dag=dag
+                        dag=self.dag
                         )
 
-                dependence_task_flag
+                dependence.append(dependence_task_flag)
+
+            return dependence
 
         except Exception as e:
 
