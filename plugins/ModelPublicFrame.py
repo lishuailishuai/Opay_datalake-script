@@ -25,21 +25,18 @@ class ModelPublicFrame(object):
     hive_cursor = None
     comwx = None
 
-    def __init__(self,execution_date,dag):
+    def __init__(self):
 
         self.hive_cursor = get_hive_cursor()
         self.comwx = ComwxApi('wwd26d45f97ea74ad2', 'BLE_v25zCmnZaFUgum93j3zVBDK-DjtRkLisI_Wns4g', '1000011')
 
-        self.ds_date=execution_date.strftime("%Y-%m-%d") #日期(%Y-%m-%d)
-        self.ds_date_hour=execution_date.strftime("%Y-%m-%d %H") #日期(%Y-%m-%d %H)
-        self.ds_date_minute=execution_date.strftime("%Y-%m-%d %H:%M") #日期(%Y-%m-%d %H:%M)
-        self.ds_date_second=execution_date.strftime("%Y-%m-%d %H:%M:%S") #日期(%Y-%m-%d %H:%M:%S)
+        # self.ds_date=execution_date.strftime("%Y-%m-%d") #日期(%Y-%m-%d)
+        # self.ds_date_hour=execution_date.strftime("%Y-%m-%d %H") #日期(%Y-%m-%d %H)
+        # self.ds_date_minute=execution_date.strftime("%Y-%m-%d %H:%M") #日期(%Y-%m-%d %H:%M)
+        # self.ds_date_second=execution_date.strftime("%Y-%m-%d %H:%M:%S") #日期(%Y-%m-%d %H:%M:%S)
 
        
-        self.dag=dag
-
-        logging.info(self.ds_date_second)
-        
+        # self.dag=dag
 
     def __del__(self):
         self.hive_cursor.close()
@@ -154,7 +151,7 @@ class ModelPublicFrame(object):
     @:param list 
     [{"db":"", "table":"table", "partitions":"country_code=nal", "timeout":"timeout"},]
     """
-    def task_timeout_monitor(self, tables):
+    def task_timeout_monitor(self, tables,ds):
         commands = []
         for item in tables:
             table = item.get('table', None)
@@ -172,7 +169,7 @@ class ModelPublicFrame(object):
                 'cmd': '''
                         hadoop fs -ls {path}/{partition}/dt={pt}/_SUCCESS >/dev/null 2>/dev/null && echo 1 || echo 0
                     '''.format(
-                        pt=self.ds_date,
+                        pt=ds,
                         path=location,
                         partition=partition
                     ),
@@ -210,7 +207,7 @@ class ModelPublicFrame(object):
     @:param list 
     [{"db":"", "table":"table", "partitions":"country_code=nal"]
     """
-    def task_touchz_success(self,tables):
+    def task_touchz_success(self,tables,ds):
 
       
         #表的location
@@ -227,7 +224,7 @@ class ModelPublicFrame(object):
             #读取hive location地址
             location=self.get_hive_location(db,table)
 
-            hdfs_data_dir_str=location+'/'+partition+'/dt='+self.ds_date
+            hdfs_data_dir_str=location+'/'+partition+'/dt='+ds
         
             #判断数据文件是否为0
             line_str="$HADOOP_HOME/bin/hadoop fs -du -s {hdfs_data_dir} | tail -1 | awk \'{{print $1}}\'".format(hdfs_data_dir=hdfs_data_dir_str)
@@ -240,7 +237,7 @@ class ModelPublicFrame(object):
             #数据为0，发微信报警通知
             if line_num[0] == str(0):
                 
-                #self.comwx.postAppMessage('DW调度系统任务 {jobname} 数据产出异常，对应时间:{pt}'.format(jobname=table,pt=self.ds_date), '271')
+                #self.comwx.postAppMessage('DW调度系统任务 {jobname} 数据产出异常，对应时间:{pt}'.format(jobname=table,pt=ds), '271')
         
                 logging.info("Error : {hdfs_data_dir} is empty".format(hdfs_data_dir=hdfs_data_dir_str))
                 sys.exit(1)
@@ -259,7 +256,7 @@ class ModelPublicFrame(object):
     
         except Exception as e:
 
-            #self.comwx.postAppMessage('DW调度系统任务 {jobname} 数据产出异常，对应时间:{pt}'.format(jobname=table,pt=self.ds_date),'271')
+            #self.comwx.postAppMessage('DW调度系统任务 {jobname} 数据产出异常，对应时间:{pt}'.format(jobname=table,pt=ds),'271')
 
             logging.info(e)
 
@@ -271,7 +268,7 @@ class ModelPublicFrame(object):
     [{"db":"db_name", "table":"table_name", "partitions":"country_code=nal"]
     """
 
-    def tesk_dependence(self,tables):
+    def tesk_dependence(self,tables,ds):
 
         dependence=[]
 
@@ -303,7 +300,8 @@ class ModelPublicFrame(object):
                     dependence_task_flag= HivePartitionSensor(
                         task_id='dependence_{task_id_name}'.format(task_id_name=task_id_flag),
                         table=table,
-                        partition="dt='{pt}'".format(pt=self.ds_date),
+                        #partition="dt='{ds}'".format(pt=self.ds_date),
+                        partition="dt='{{ds}}'"
                         schema=db,
                         poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
                         dag=self.dag
@@ -317,7 +315,8 @@ class ModelPublicFrame(object):
                         filepath='{hdfs_path_name}/{partition_name}/dt={pt}/_SUCCESS'.format(
                             hdfs_path_name=location,
                             partition_name=partition,
-                            pt=self.ds_date
+                            #pt=self.ds_date
+                            pt=ds
                         ),
                         bucket_name='opay-datalake',
                         poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
