@@ -124,13 +124,13 @@ class ModelPublicFrame(object):
 
                     if sum_timeout >= int(timeout):
 
-                        # self.comwx.postAppMessage(
-                        #     'DW调度任务 {dag_id} 产出超时'.format(
-                        #         dag_id=dag_id_name,
-                        #         timeout=timeout
-                        #     ),
-                        #     '271'
-                        # )
+                        self.comwx.postAppMessage(
+                            'DW调度任务 {dag_id} 产出超时'.format(
+                                dag_id=dag_id_name,
+                                timeout=timeout
+                            ),
+                            '271'
+                        )
     
                         logging.info("任务超时 ... ... ")
                         sum_timeout=0
@@ -139,7 +139,7 @@ class ModelPublicFrame(object):
 
         except Exception as e:
 
-            #self.comwx.postAppMessage('DW调度任务 {dag_id} code 异常'.format(dag_id=dag_id_name),'271')
+            self.comwx.postAppMessage('DW调度任务 {dag_id} code 异常'.format(dag_id=dag_id_name),'271')
 
             logging.info(e)
 
@@ -233,7 +233,7 @@ class ModelPublicFrame(object):
             #数据为0，发微信报警通知
             if line_num[0] == str(0):
                 
-                #self.comwx.postAppMessage('DW调度系统任务 {jobname} 数据产出异常，对应时间:{pt}'.format(jobname=table,pt=ds), '271')
+                self.comwx.postAppMessage('DW调度系统任务 {jobname} 数据为 0，未生成 _SUCCESS 标识，对应时间:{pt}'.format(jobname=table,pt=ds), '271')
         
                 logging.info("Error : {hdfs_data_dir} is empty".format(hdfs_data_dir=hdfs_data_dir_str))
                 sys.exit(1)
@@ -252,7 +252,7 @@ class ModelPublicFrame(object):
     
         except Exception as e:
 
-            #self.comwx.postAppMessage('DW调度系统任务 {jobname} 数据产出异常，对应时间:{pt}'.format(jobname=table,pt=ds),'271')
+            self.comwx.postAppMessage('DW调度系统任务 {jobname} _SUCCESS 产出异常，对应时间:{pt}'.format(jobname=table,pt=ds),'271')
 
             logging.info(e)
 
@@ -322,7 +322,7 @@ class ModelPublicFrame(object):
 
         except Exception as e:
 
-            #self.comwx.postAppMessage('DW调度系统任务 {jobname} 任务依赖列表产出异常，对应时间:{pt}'.format(jobname=dag.dag_id,pt=ds_date),'271')
+            self.comwx.postAppMessage('DW调度系统任务 {jobname} 任务依赖列表产出异常'.format(jobname=dag.dag_id),'271')
 
             logging.info(e)
 
