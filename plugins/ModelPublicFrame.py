@@ -275,6 +275,8 @@ class ModelPublicFrame(object):
         try:
 
             for item in tables:
+
+                print("^&^&&************")
     
                 #读取 db、table、partition
                 table = item.get('table', None)
