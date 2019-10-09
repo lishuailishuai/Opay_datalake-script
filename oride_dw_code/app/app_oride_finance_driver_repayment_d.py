@@ -88,7 +88,7 @@ def get_data_from_hive(ds,**op_kwargs):
             NVL(city_name, '') as city_name, --城市名称
             NVL(t1.driver_id, 0) as driver_id, --司机Id
             NVL(driver_name, '') as driver_name, --司机姓名
-            NVL(regexp_replace(phone_number,'\\\\',''), '') as driver_mobile, --司机手机号码
+            NVL(regexp_replace(phone_number,'\\\\\',''), '') as driver_mobile, --司机手机号码
             NVL(t1.product_id, 0) as driver_type,--骑手类型：1 ORide-Green, 2 ORide-Street, 3 OTrike
             (CASE
                 WHEN balance IS NULL THEN 0
