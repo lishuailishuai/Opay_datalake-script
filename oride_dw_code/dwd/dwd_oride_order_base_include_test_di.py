@@ -381,6 +381,26 @@ SELECT base.order_id,
         --预估价格区间（最小值,最大值,-1 未知）
        if(push_ord.order_id is not null and push_ord.driver_id is not null,1,0) as is_strong_dispatch,  
        --是否强制派单1:是，0:否
+       (CASE
+            WHEN (status = 6 AND base.driver_id <> 0)
+                THEN 1
+            ELSE 0
+        END) AS is_td_after_cancel,
+       --是否当天应答后取消
+
+       (CASE
+           WHEN status =6   AND cancel_role = 1 AND base.driver_id != 0
+                THEN cancel_time - take_time
+            ELSE 0
+        END) AS td_passanger_after_cancel_time_dur,
+       --当天乘客应答后取消时长(秒)
+
+       (CASE
+           WHEN status =6   AND cancel_role = 2 
+                THEN cancel_time - take_time
+            ELSE 0
+        END) AS td_driver_after_cancel_time_dur,
+       --当天司机应答后取消平均时长（秒） 
        country_code,
 
        '{pt}' AS dt
@@ -567,7 +587,7 @@ FROM
 WHERE assign_type=1
 GROUP BY order_id,driver_id) push_ord
 on base.order_id=push_ord.order_id
-and base.driver_id=push_ord.driver_id
+and base.driver_id=push_ord.driver_id;
 
 
 '''.format(
