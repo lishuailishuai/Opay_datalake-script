@@ -197,7 +197,7 @@ def __data_to_mysql(conn, data, column, update=''):
                 sval = ''
 
         if cnt > 0 and sval != '':
-            # logging.info(esql.format(isql, sval, update))
+            logging.info(esql.format(isql, sval, update))
             conn.execute(esql.format(isql, sval, update))
     except BaseException as e:
         logging.info(e)
