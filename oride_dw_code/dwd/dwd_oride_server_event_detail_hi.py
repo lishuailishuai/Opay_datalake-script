@@ -118,49 +118,6 @@ dwd_oride_server_event_detail_hi_task = HiveOperator(
     dag=dag
 )
 
-
-def check_key_data(ds, **kargs):
-    # 主键重复校验
-    HQL_DQC = '''
-    SELECT count(1) as nm
-    FROM
-     (SELECT order_id,
-             driver_id,
-             count(1) as cnt
-      FROM oride_dw.{table}
-
-      WHERE dt='{pt}'
-      and hour = '{now_hour}'
-      GROUP BY 
-      order_id,
-      driver_id 
-      HAVING count(1)>1) t1
-    '''.format(
-        pt=ds,
-        now_day=ds,
-        now_hour='{{ execution_date.strftime("%H") }}',
-        table=table_name
-    )
-
-    cursor = get_hive_cursor()
-    logging.info('Executing 主键重复校验: %s', HQL_DQC)
-
-    cursor.execute(HQL_DQC)
-    res = cursor.fetchone()
-
-    if res[0] > 1:
-        raise Exception("Error The primary key repeat !", res)
-    else:
-        print("-----> Notice Data Export Success ......")
-
-
-# 主键重复校验
-task_check_key_data = PythonOperator(
-    task_id='check_data',
-    python_callable=check_key_data,
-    provide_context=True,
-    dag=dag)
-
 # 生成_SUCCESS
 touchz_data_success = BashOperator(
 
@@ -184,4 +141,4 @@ touchz_data_success = BashOperator(
     ),
     dag=dag)
 
-dependence_server_event_prev_hour_task >> sleep_time >> dwd_oride_server_event_detail_hi_task >> task_check_key_data >> touchz_data_success
+dependence_server_event_prev_hour_task >> sleep_time >> dwd_oride_server_event_detail_hi_task >> touchz_data_success
