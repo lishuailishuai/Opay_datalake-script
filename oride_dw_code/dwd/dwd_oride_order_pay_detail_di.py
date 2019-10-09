@@ -51,7 +51,7 @@ sleep_time = BashOperator(
 table_name="dwd_oride_order_pay_detail_di"
 
 table_list = [
-        {"db": "test_db", "table":table_name, "partitions": "country_code=nal", "timeout": "1600"}
+        {"db": "oride_dw", "table":table_name, "partitions": "country_code=nal", "timeout": "1600"}
     ]
 
 ##----------------------------------------- 任务超时监控 ---------------------------------------## 
