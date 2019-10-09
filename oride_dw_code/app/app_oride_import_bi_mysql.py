@@ -255,9 +255,9 @@ def init_mysql_table(**op_kwargs):
     wxapi = ComwxApi('wwd26d45f97ea74ad2', 'BLE_v25zCmnZaFUgum93j3zVBDK-DjtRkLisI_Wns4g', '1000011')
     try:
         mcursor = mysql_connectors[mysql_cursor]
-        mcursor.execute("DELETE FROM {db}.{table} WHERE dt = '{dt}'".format(db=db, table=hive_table, dt=dt))
+        mcursor.execute("DELETE FROM {db}.{table} WHERE dt = '{dt}'".format(db=hive_db, table=hive_table, dt=dt))
         isql = 'replace into {db}.{table} (`{cols}`) values '.format(
-            db=db,
+            db=hive_db,
             table=hive_table,
             cols='`,`'.join(mcols)
         )
@@ -273,7 +273,7 @@ def init_mysql_table(**op_kwargs):
             # logging.info(record)
             if not record:
                 break
-            rows.append("('{}')".format("','".join([str(x) for x in record])))
+            rows.append("('{}')".format("','".join([str(x).replace("'", "\\'") for x in record])))
             # logging.info(rows)
             cnt += 1
             if cnt >= 1000:
