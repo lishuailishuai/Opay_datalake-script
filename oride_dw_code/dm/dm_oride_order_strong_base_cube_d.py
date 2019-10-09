@@ -108,19 +108,13 @@ dm_dm_oride_order_strong_base_cube_d_task = HiveOperator(
                  sum(b.strong_paid_order_cnt) as strong_paid_order_cnt, --强派单支付订单数
                  sum(b.strong_paid_price) as strong_paid_price,  --强派单应付金额
                  sum(b.strong_paid_amount) as strong_paid_amount,  --强派单实付金额
+                 sum(c.push_show_ord_cnt) as push_show_ord_cnt, --push到达单数（派单）
+                 sum(c.accept_show_ord_cnt) as accept_show_ord_cnt, --展示单数（派单）
+                 sum(c.show_ord_cnt) as show_ord_cnt, --推送订单数（派单）
+                 sum(c.accept_click_ord_cnt) as accept_click_ord_cnt, --接单数（派单）
                  'nal' as country_code,
                  '{pt}' as dt
-                from (SELECT nvl(city_id,-10000) as city_id,-10000 as product_id,count(distinct driver_id) as strong_dispatch_driver_cnt, --强派单司机数
-                count(distinct order_id) as strong_dispatch_order_cnt --强派单调度推单数
-                   FROM oride_dw.dwd_oride_order_dispatch_funnel_di
-                   WHERE dt='{pt}'
-                     AND event_name='dispatch_push_driver'
-                     AND assign_type=1
-                     and city_id<>999001
-                     group by nvl(city_id,-10000) --,nvl(product_id,-10000)
-                     with cube) a
-                right join     
-                     
+                from 
                 (SELECT nvl(ord.city_id,-10000) as city_id,
                 nvl(if(ord.city_id=1001 and driver.product_id is not null,driver.product_id,ord.product_id),-10000) as product_id,
                 count(distinct (if(ord.status in(4,5),ord.driver_id,null))) as finished_driver_cnt, --完单司机数
@@ -156,9 +150,36 @@ dm_dm_oride_order_strong_base_cube_d_task = HiveOperator(
                 group by nvl(ord.city_id,-10000),
                 nvl(if(ord.city_id=1001 and driver.product_id is not null,driver.product_id,ord.product_id),-10000)
                 with cube) b
+                left join
+                (SELECT nvl(city_id,-10000) as city_id,-10000 as product_id,count(distinct driver_id) as strong_dispatch_driver_cnt, --强派单司机数
+                count(distinct order_id) as strong_dispatch_order_cnt --强派单调度推单数
+                   FROM oride_dw.dwd_oride_order_dispatch_funnel_di
+                   WHERE dt='{pt}'
+                     AND event_name='dispatch_push_driver'
+                     AND assign_type=1
+                     and city_id<>999001
+                     group by nvl(city_id,-10000) --,nvl(product_id,-10000)
+                     with cube) a
                 on nvl(a.city_id,-10000)=nvl(b.city_id,-10000) and nvl(a.product_id,-10000)=nvl(b.product_id,-10000)
+                left join 
+                (SELECT nvl(city_id,-10000) AS city_id,
+                       nvl(product_id,-10000) AS product_id,
+                      -- nvl(country_code,-10000) AS country_code,
+                       count(DISTINCT (if(event_name='order_push_show',order_id,NULL))) AS push_show_ord_cnt, --push到达单数（派单）
+                       count(DISTINCT (if(event_name='accept_order_show',order_id,NULL))) AS accept_show_ord_cnt, --展示单数（派单）
+                       count(DISTINCT (if(event_name IN('order_push_show','accept_order_show'),order_id,NULL))) AS show_ord_cnt, --推送订单数（派单）
+                       count(DISTINCT (if(event_name='accept_order_click',order_id,NULL))) AS accept_click_ord_cnt --接单数（派单）
+                
+                FROM oride_dw.dwd_oride_driver_accept_order_funnel_di
+                WHERE dt='{pt}'
+                  AND isAssign=1
+                GROUP BY nvl(city_id,-10000),
+                         nvl(product_id,-10000)
+                       --  nvl(country_code,-10000)
+                WITH CUBE) c
+                on nvl(a.city_id,-10000)=nvl(c.city_id,-10000) and nvl(a.product_id,-10000)=nvl(c.product_id,-10000)
                 group by nvl(b.city_id,-10000),
-                 nvl(b.product_id,-10000);
+                         nvl(b.product_id,-10000);
                  '''.format(
         pt='{{ds}}',
         now_day='{{macros.ds_add(ds, +1)}}',

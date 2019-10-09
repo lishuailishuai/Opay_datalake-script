@@ -97,6 +97,10 @@ app_oride_order_strong_base_cube_d_task = HiveOperator(
                  sum(a.strong_paid_amount) as strong_paid_amount,  --强派单实付金额
                  sum(b.finish_driver_online_dur) as finish_driver_online_dur, --当日完单司机在线时长
                  sum(b.strong_finish_driver_online_dur) as strong_finish_driver_online_dur, --当日强制派单完单司机在线时长
+                 sum(a.push_show_ord_cnt) as push_show_ord_cnt, --push到达单数（派单）
+                 sum(a.accept_show_ord_cnt) as accept_show_ord_cnt, --展示单数（派单）
+                 sum(a.show_ord_cnt) as show_ord_cnt, --推送订单数（派单）
+                 sum(a.accept_click_ord_cnt) as accept_click_ord_cnt, --接单数（派单）
                  'nal' as country_code,
                  '{pt}' as dt
 FROM
