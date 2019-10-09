@@ -240,8 +240,8 @@ task_touchz_success= PythonOperator(
     dag=dag
 )
 
-
+#依赖关系配置
 for tasks_dependence in ModelPublicFrame().tesk_dependence(dependence_table_lists,dag):
-    tasks_dependence>>sleep_time>>task_check_key_data>>task_touchz_success
+    tasks_dependence>>dwd_oride_order_pay_detail_di_task>>sleep_time>>task_check_key_data>>task_touchz_success
 
 #ods_sqoop_base_data_order_payment_df_prev_day_task>>dwd_oride_order_base_include_test_di_prev_day_tesk>>sleep_time>>dwd_oride_order_pay_detail_di_task>>task_check_key_data>>touchz_data_success
