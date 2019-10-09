@@ -624,7 +624,4 @@ validate_partition_data >> jh_waimai_comment_validate_task >> insert_shop_metric
 validate_partition_data >> bd_admin_users_validate_task >> insert_shop_metrics
 validate_partition_data >> bd_bd_fence_validate_task >> insert_shop_metrics
 
-
-
-insert_shop_metrics >> send_file_email
 insert_shop_metrics >> create_crm_data >> insert_crm_metrics
