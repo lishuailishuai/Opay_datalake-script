@@ -22,7 +22,7 @@ import requests
 import os
 
 args = {
-    'owner': 'linan',
+    'owner': 'yangmingze',
     'start_date': datetime(2019, 10, 8),
     'depends_on_past': False,
     'retries': 3,
@@ -32,7 +32,7 @@ args = {
     'email_on_retry': False,
 }
 
-dag = airflow.DAG('dwd_oride_driver_location_event_hi',
+dag = airflow.DAG('dwd_oride_client_event_detail_hi',
                   schedule_interval="30 * * * *",
                   default_args=args,
                   catchup=False)

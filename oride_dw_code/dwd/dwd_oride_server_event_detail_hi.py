@@ -32,7 +32,7 @@ args = {
     'email_on_retry': False,
 }
 
-dag = airflow.DAG('dwd_oride_driver_location_event_hi',
+dag = airflow.DAG('dwd_oride_server_event_detail_hi',
                   schedule_interval="30 * * * *",
                   default_args=args,
                   catchup=False)
