@@ -273,7 +273,7 @@ def init_mysql_table(**op_kwargs):
             # logging.info(record)
             if not record:
                 break
-            rows.append("('{}')".format("','".join([str(x) for x in record])))
+            rows.append("('{}')".format("','".join([str(x).replace("'", "\\'") for x in record])))
             # logging.info(rows)
             cnt += 1
             if cnt >= 1000:
