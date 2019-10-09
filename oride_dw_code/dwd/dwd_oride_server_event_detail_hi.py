@@ -23,7 +23,7 @@ import os
 
 args = {
     'owner': 'linan',
-    'start_date': datetime(2019, 10, 8),
+    'start_date': datetime(2019, 10, 7),
     'depends_on_past': False,
     'retries': 3,
     'retry_delay': timedelta(minutes=2),
