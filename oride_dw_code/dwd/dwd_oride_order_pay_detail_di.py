@@ -50,6 +50,10 @@ sleep_time = BashOperator(
 
 table_name="dwd_oride_order_pay_detail_di"
 
+table_list = [
+        {"db": "test_db", "table":table_name, "partitions": "country_code=nal", "timeout": "1600"}
+    ]
+
 ##----------------------------------------- 任务超时监控 ---------------------------------------## 
 
 def fun_task_timeout_monitor(ds,**op_kwargs):
@@ -65,34 +69,6 @@ task_timeout_monitor= PythonOperator(
 
 ##----------------------------------------- 依赖 ---------------------------------------## 
 
-# #依赖前一天分区
-# dwd_oride_order_base_include_test_di_prev_day_tesk=UFileSensor(
-#     task_id='dwd_oride_order_base_include_test_di_prev_day_task',
-#     filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-#         hdfs_path_str="oride/oride_dw/dwd_oride_order_base_include_test_di/country_code=nal",
-#         pt='{{ds}}'
-#         ),
-#     bucket_name='opay-datalake',
-#     poke_interval=60, #依赖不满足时，一分钟检查一次依赖状态
-#     dag=dag
-#         )
-
-# #依赖前一天分区
-# ods_sqoop_base_data_order_payment_df_prev_day_task=UFileSensor(
-#     task_id='ods_sqoop_base_data_order_payment_df_prev_day_task',
-#     filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-#         hdfs_path_str="oride_dw_sqoop/oride_data/data_order_payment",
-#         pt='{{ds}}'
-#         ),
-#     bucket_name='opay-datalake',
-#     poke_interval=60, #依赖不满足时，一分钟检查一次依赖状态
-#     dag=dag
-#         )
-
-
-table_list = [
-        {"db": "test_db", "table":"dwd_oride_order_pay_detail_di", "partitions": "country_code=nal", "timeout": "1600"}
-    ]
 
 dependence_table_lists = [
 
@@ -226,8 +202,8 @@ task_check_key_data = PythonOperator(
 )
 
 
+##----------------------------------------- 生成_SUCCESS ---------------------------------------## 
 
-#生成_SUCCESS
 def fun_task_touchz_success(ds,**op_kwargs):
 
     #生成_SUCCESS
@@ -243,5 +219,3 @@ task_touchz_success= PythonOperator(
 #依赖关系配置
 for tasks_dependence in ModelPublicFrame().tesk_dependence(dependence_table_lists,dag):
     tasks_dependence>>dwd_oride_order_pay_detail_di_task>>sleep_time>>task_check_key_data>>task_touchz_success
-
-#ods_sqoop_base_data_order_payment_df_prev_day_task>>dwd_oride_order_base_include_test_di_prev_day_tesk>>sleep_time>>dwd_oride_order_pay_detail_di_task>>task_check_key_data>>touchz_data_success
