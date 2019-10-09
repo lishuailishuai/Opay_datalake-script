@@ -159,7 +159,7 @@ def get_data_from_hive(ds,**op_kwargs):
             'balance', 'repayment_total_amount', 'start_date', 'repayment_amount', 'total_numbers',
             'effective_days', 'lose_numbers', 'last_back_time', 'today_repayment', 'status','order_numbers','order_agv','fault'
         ],
-        'day=day'
+        'day=VALUES(day)'
     )
 
     hive_cursor.close()
