@@ -29,7 +29,7 @@ args = {
 
 dag = airflow.DAG(
     'app_oride_finance_driver_repayment_d',
-    schedule_interval="30 05 * * *",
+    schedule_interval="40 03 * * *",
     default_args=args
 )
 
@@ -78,6 +78,9 @@ dwm_oride_driver_base_di_tesk = UFileSensor(
 
 mysql_table = 'oride_dw.app_oride_finance_driver_repayment_test_d'
 #mysql_table = 'test_db.test_oride_finance_driver_repayment_test_d'
+
+
+##------------------------------------ SQL --------------------------------##
 
 # 从hive读取数据
 def get_data_from_hive(ds,**op_kwargs):
