@@ -286,7 +286,8 @@ def get_product_rows(ds, all_completed_num,product_id):
                  concat(cast(nvl(round(t1.driver_billing_dur*100/t1.finish_driver_online_dur,1),0) AS string),'%') AS billing_dur_rate, --计费时长占比
                  nvl(round(t1.driver_pushed_order_cnt/t1.td_push_accpet_show_driver_num,0),0) AS avg_pushed_order_cnt, --人均推送订单数
                  nvl(round(t1.finish_order_cnt/t1.finish_driver_online_dur*3600,1),0) AS TPH,
-                 nvl(round((t1.amount_pay_online+t1.amount_pay_offline+t1.recharge_amount+t1.reward_amount)/t1.finish_driver_online_dur,1),0) AS IPH,
+                 '-' as IPH,
+                 --nvl(round((t1.amount_pay_online+t1.amount_pay_offline+t1.recharge_amount+t1.reward_amount)/t1.finish_driver_online_dur,1),0) AS IPH,
                  nvl(round(t1.finish_take_order_dur/t1.finish_order_cnt,0),0) AS avg_take_order_dur,--平均应答时长
                  nvl(round(t1.finish_pick_up_dur/t1.finish_order_cnt,0),0) AS avg_pick_up_dur, --平均接驾时长
                  nvl(round(t1.billing_order_dur/t1.finish_order_cnt,0),0) AS avg_billing_order_dur,--平均计费时长

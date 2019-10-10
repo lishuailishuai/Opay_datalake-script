@@ -48,31 +48,25 @@ dependence_dwd_oride_order_base_include_test_df_prev_day_task = UFileSensor(
 )
 
 # 依赖前一天分区
-ods_sqoop_base_data_driver_recharge_records_df_prev_day_task = HivePartitionSensor(
-    task_id="ods_sqoop_base_data_driver_recharge_records_df_prev_day_task",
-    table="ods_sqoop_base_data_driver_recharge_records_df",
-    partition="dt='{{ds}}'",
-    schema="oride_dw_ods",
+ods_sqoop_base_data_driver_recharge_records_df_prev_day_task = UFileSensor(
+    task_id='ods_sqoop_base_data_driver_recharge_records_df_prev_day_task',
+    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="ufile://opay-datalake/oride_dw_sqoop/oride_data/data_driver_recharge_records",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
 
 # 依赖前一天分区
-ods_sqoop_base_data_driver_reward_df_prev_day_task = HivePartitionSensor(
-    task_id="ods_sqoop_base_data_driver_reward_df_prev_day_task",
-    table="ods_sqoop_base_data_driver_reward_df",
-    partition="dt='{{ds}}'",
-    schema="oride_dw_ods",
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
-
-# 依赖前一天分区
-ods_sqoop_base_data_driver_records_day_df_prev_day_task = HivePartitionSensor(
-    task_id="ods_sqoop_base_data_driver_records_day_df_prev_day_task",
-    table="ods_sqoop_base_data_driver_records_day_df",
-    partition="dt='{{ds}}'",
-    schema="oride_dw_ods",
+ods_sqoop_base_data_driver_reward_df_prev_day_task = UFileSensor(
+    task_id='ods_sqoop_base_data_driver_reward_df_prev_day_task',
+    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="ufile://opay-datalake/oride_dw_sqoop/oride_data/data_driver_reward",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
