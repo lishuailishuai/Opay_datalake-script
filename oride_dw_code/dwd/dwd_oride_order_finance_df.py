@@ -51,7 +51,7 @@ dependence_dwd_oride_order_base_include_test_df_prev_day_task = UFileSensor(
 ods_sqoop_base_data_driver_recharge_records_df_prev_day_task = UFileSensor(
     task_id='ods_sqoop_base_data_driver_recharge_records_df_prev_day_task',
     filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="ufile://opay-datalake/oride_dw_sqoop/oride_data/data_driver_recharge_records",
+        hdfs_path_str="oride_dw_sqoop/oride_data/data_driver_recharge_records",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -63,7 +63,7 @@ ods_sqoop_base_data_driver_recharge_records_df_prev_day_task = UFileSensor(
 ods_sqoop_base_data_driver_reward_df_prev_day_task = UFileSensor(
     task_id='ods_sqoop_base_data_driver_reward_df_prev_day_task',
     filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="ufile://opay-datalake/oride_dw_sqoop/oride_data/data_driver_reward",
+        hdfs_path_str="oride_dw_sqoop/oride_data/data_driver_reward",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',

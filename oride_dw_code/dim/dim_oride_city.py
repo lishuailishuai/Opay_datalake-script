@@ -125,6 +125,7 @@ SELECT city_id,
 
        cty.country_code,
        --二位国家码
+       weather.weather, --该城市当天的天气
 
        '{pt}' AS dt
 FROM
@@ -156,6 +157,26 @@ LEFT OUTER JOIN
   (SELECT country_name_en,
           country_code
    FROM oride_dw.dim_oride_country_base) cty ON cit.country_name=cty.country_name_en
+left outer join
+(SELECT '{pt}' dt,
+              t.city AS city,
+              t.weather AS weather
+FROM
+  ( SELECT t.city,
+           t.weather,
+           row_number() over(partition BY t.city
+                             ORDER BY t.counts DESC) row_num  --城市一天的天气状况取一天当中某种天气持续最长时间的
+   FROM
+     ( SELECT city,
+              weather,
+              count(1) counts
+      FROM oride_dw_ods.ods_sqoop_base_weather_per_10min_df
+      WHERE dt = '{pt}'
+        AND daliy = '{pt}'
+      GROUP BY city,
+               weather ) t ) t
+WHERE t.row_num = 1) weather
+on cit.city_name=weather.city
 
 '''.format(
         pt='{{ds}}',
