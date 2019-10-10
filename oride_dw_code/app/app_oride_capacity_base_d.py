@@ -98,7 +98,7 @@ app_oride_capacity_base_d_task = HiveOperator(
 
     
     insert overwrite TABLE oride_dw.{table} partition(country_code,dt)
-    select 
+select 
     
     nvl(ord.city_id,-10000) as city_id,--(-10000 代表 不区分城市）
     nvl(ord.product_id,-10000) as product_id, --(-10000 代表 不区分业务线）
@@ -109,14 +109,10 @@ app_oride_capacity_base_d_task = HiveOperator(
     nvl(round((finish_order_pick_up_dis)/(finish_order_pick_up_assigned_cnt),1),0) as finish_order_pick_up_dis_avg,
     --平均接驾距离
     
-    0 as request_order_pick_up_dis_avg,
-    --缺少 应答单接驾距离
+     nvl(round((accept_order_pick_up_dis)/(accept_order_pick_up_assigned_cnt),1),0)  as request_order_pick_up_dis_avg,
+    -- 平均接驾距离（应答单）
     
-    
-    --nvl(round((finish_order_pick_up_dis)/(ride_order_cnt),1),0) as request_order_pick_up_dis_avg,
-    --平均接驾距离（应答单）
-    
-    0 as obey_rate,
+    round(((driver_accpet_order_cnt)/ (driver_accept_take_num) ) / ((succ_push_all_times_cnt)/(driver_take_num)),1) as obey_rate,
     --调度服从率 司机平均应答次数/人均推单次数
     
     (request_order_cnt) as request_order_cnt,
@@ -149,7 +145,7 @@ app_oride_capacity_base_d_task = HiveOperator(
     (ride_order_cnt) as ride_order_cnt,
     --下单数
     
-    0 as legal_ride_order_cnt, 
+    valid_ord_cnt as legal_ride_order_cnt, 
     --有效下单数
     
     (succ_broadcast_cnt) as succ_broadcast_cnt,
@@ -167,13 +163,13 @@ app_oride_capacity_base_d_task = HiveOperator(
     round((finish_order_cnt) * 100 / (ride_order_cnt),1) as finish_order_rate,
     --完单率
     
-    0 as legal_finish_order_rate,
+    round((finish_order_cnt) * 100 / (valid_ord_cnt),1) as legal_finish_order_rate,
     --有效完单率
     
     round((finish_order_cnt) * 100 / (broadcast_cnt),1) as capacity_finish_order_rate,
     --调度完单率
     
-    0  as take_time_avg,
+    round(((finish_take_order_dur + finish_pick_up_dur)/60) / (finish_order_cnt),1) as take_time_avg,
     --平均接驾时长（分）
     
     round((finish_order_onride_dis)/(finish_order_cnt),1) as finish_order_onride_dis_avg,
@@ -203,19 +199,19 @@ app_oride_capacity_base_d_task = HiveOperator(
     round((odb.driver_click_order_cnt) / (driver_accept_take_num),1) as driver_click_order_avg,
     --人均应答订单数
     
-    round(((odb.driver_click_order_cnt) / (odc.push_accpet_show_driver_num)) * 100 / ((odb.driver_pushed_order_cnt) / (driver_accept_take_num)),1) as driver_obey_rate,
+    nvl(round(((odb.driver_click_order_cnt) / (odc.push_accpet_show_driver_num)) * 100 / ((odb.driver_pushed_order_cnt) / (driver_accept_take_num)),1),0) as driver_obey_rate,
     --司机服从率 司机服从率=人均应答订单数/人均推送订单数
     
     round((service_dur/60) / (finish_order_cnt),1) as service_dur_avg,
     --平均服务时长（分）
     
     0 as finish_order_driver_IPH,
-    --完单司机IPH
+    --完单司机IPH （保留，dwd_finance数据暂时有问题）
     
     0 as finish_order_driver_day_salary,
-    --完单司机日薪
+    --完单司机日薪 （保留，dwd_finance数据暂时有问题）
     
-    0 as chose_broadcast_cnt,
+    broadcast_cnt as chose_broadcast_cnt,
     --播单数
     
     
@@ -226,7 +222,7 @@ app_oride_capacity_base_d_task = HiveOperator(
     --人均推单次数
     
     0 as push_driver_time_avg,
-    --平均推送司机数(chose阶段数据，无法介入漏斗模型)
+    --平均推送司机数(保留，chose阶段数据，无法介入漏斗模型)
     
     (driver_accpet_order_cnt) as driver_accpet_order_cnt,
     --司机总应答次数
@@ -249,22 +245,22 @@ app_oride_capacity_base_d_task = HiveOperator(
     round((passanger_before_cancel_order_cnt) * 100/(ride_order_cnt),1) as passanger_before_cancel_order_rate,
     --乘客应答前取消率
     
-    0 as before_cancel_order_cnt,
+    (after_cancel_order_cnt) as before_cancel_order_cnt,
     --应答后取消数
     
     (passanger_after_cancel_order_cnt) as passanger_after_cancel_order_cnt,
     --乘客应答后取消数
     
-    0 as passanger_after_cancel_order_time_avg,
+    round(((passanger_after_cancel_time_dur/60) / request_order_cnt),1) as passanger_after_cancel_order_time_avg,
     --乘客应答后取消平均时长（分）
     
-    0 as passanger_after_cancel_order_dis_avg,
-    --乘客取消订单平均接驾距离
+    nvl(round(passanger_cancel_order_dis / (passanger_before_cancel_order_cnt + passanger_after_cancel_order_cnt ),1),0) as passanger_after_cancel_order_dis_avg,
+    --乘客取消订单平均接驾距离  乘客取消订单接驾距离/乘客取消订单数（应答前+应答后）
     
     (driver_after_cancel_order_cnt) as driver_after_cancel_order_cnt,
     --司机应答后取消数
     
-    0 as driver_after_cancel_order_time_avg,
+    round((driver_after_cancel_time_dur/60) /  request_order_cnt ,1) as driver_after_cancel_order_time_avg,
     --司机应答后取消平均时长（分）
     
     nvl(ord.country_code,-10000) as country_code,
@@ -281,11 +277,14 @@ app_oride_capacity_base_d_task = HiveOperator(
         sum(succ_push_all_times_cnt) as succ_push_all_times_cnt,
         sum(finish_order_pick_up_dis) as finish_order_pick_up_dis,
         sum(finish_order_cnt) as finish_order_cnt,
+        sum(valid_ord_cnt) as valid_ord_cnt,
         sum(request_order_cnt) as request_order_cnt,
         sum(ride_order_cnt) as ride_order_cnt,
         sum(finish_take_order_dur) as finish_take_order_dur,
+        sum(finish_pick_up_dur) as finish_pick_up_dur,
         sum(take_order_dur) as take_order_dur,
         sum(passanger_after_cancel_order_cnt) as passanger_after_cancel_order_cnt,
+        sum(after_cancel_order_cnt) as after_cancel_order_cnt,
         sum(driver_after_cancel_order_cnt) as driver_after_cancel_order_cnt,
         sum(succ_broadcast_cnt) as succ_broadcast_cnt,
         sum(broadcast_cnt) as broadcast_cnt,
@@ -298,7 +297,12 @@ app_oride_capacity_base_d_task = HiveOperator(
         sum(service_dur) as service_dur,
         sum(passanger_before_cancel_order_cnt) as passanger_before_cancel_order_cnt,
         sum(finish_order_onride_dis) as finish_order_onride_dis,
-        sum(finish_order_pick_up_assigned_cnt) as finish_order_pick_up_assigned_cnt
+        sum(finish_order_pick_up_assigned_cnt) as finish_order_pick_up_assigned_cnt,
+        sum(accept_order_pick_up_dis) as accept_order_pick_up_dis,
+        sum(accept_order_pick_up_assigned_cnt) as accept_order_pick_up_assigned_cnt,
+        sum(passanger_after_cancel_time_dur) as passanger_after_cancel_time_dur,
+        sum(passanger_cancel_order_dis) as passanger_cancel_order_dis,
+        sum(driver_after_cancel_time_dur) as driver_after_cancel_time_dur
         
         from 
         oride_dw.dm_oride_order_base_d
@@ -343,7 +347,6 @@ app_oride_capacity_base_d_task = HiveOperator(
         with cube
     )  odb on ord.country_code = odb.country_code  and ord.city_id = odb.city_id and ord.product_id = odb.product_id
     ;
-
 '''.format(
         pt='{{ds}}',
         table=table_name
