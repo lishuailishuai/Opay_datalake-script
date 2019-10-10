@@ -34,8 +34,8 @@ dag = airflow.DAG(
     default_args=args
 )
 
-active_a_driver = "active_driver:a:%s"
-active_no_driver = "active_driver:no:%s"
+active_a_driver = "algo:active_driver:a:%s"    # "active_driver:a:%s"
+active_no_driver = "algo:active_driver:no:%s"   # "active_driver:no:%s"
 
 insert_driver_num = """
 replace into bi.driver_online values (%s,%s,%s,%s,%s)
@@ -858,7 +858,7 @@ def get_driver_num(**op_kwargs):
     conn.close()
     for data in results:
         driver_dic[data[0]] = ",".join([str(data[1]), str(data[2])])
-    redis_conn = RedisHook(redis_conn_id='pika').get_conn()
+    redis_conn = RedisHook(redis_conn_id='pika_85').get_conn()
     ts = op_kwargs['ts']
     dt, h = ts.split('T')
     dt = dt + ' ' + h.split('+')[0]
