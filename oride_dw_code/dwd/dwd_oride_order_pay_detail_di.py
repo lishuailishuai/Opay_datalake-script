@@ -15,6 +15,7 @@ from airflow.operators.bash_operator import BashOperator
 from airflow.sensors.named_hive_partition_sensor import NamedHivePartitionSensor
 from airflow.sensors.hive_partition_sensor import HivePartitionSensor
 from airflow.sensors import UFileSensor
+from plugins.ModelPublicFrame import ModelPublicFrame
 import json
 import logging
 from airflow.models import Variable
@@ -44,39 +45,38 @@ sleep_time = BashOperator(
     bash_command='sleep 30',
     dag=dag)
 
-##----------------------------------------- 依赖 ---------------------------------------## 
-
-#依赖前一天分区
-dwd_oride_order_base_include_test_di_prev_day_tesk=UFileSensor(
-    task_id='dwd_oride_order_base_include_test_di_prev_day_task',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw/dwd_oride_order_base_include_test_di/country_code=nal",
-        pt='{{ds}}'
-        ),
-    bucket_name='opay-datalake',
-    poke_interval=60, #依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-        )
-
-#依赖前一天分区
-ods_sqoop_base_data_order_payment_df_prev_day_task=UFileSensor(
-    task_id='ods_sqoop_base_data_order_payment_df_prev_day_task',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride_dw_sqoop/oride_data/data_order_payment",
-        pt='{{ds}}'
-        ),
-    bucket_name='opay-datalake',
-    poke_interval=60, #依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-        )
-
 
 ##----------------------------------------- 变量 ---------------------------------------##
 
-
 table_name="dwd_oride_order_pay_detail_di"
-hdfs_path="ufile://opay-datalake/oride/oride_dw/"+table_name
 
+table_list = [
+        {"db": "oride_dw", "table":table_name, "partitions": "country_code=nal", "timeout": "1600"}
+    ]
+
+##----------------------------------------- 任务超时监控 ---------------------------------------## 
+
+def fun_task_timeout_monitor(ds,**op_kwargs):
+
+    ModelPublicFrame().task_timeout_monitor(table_list,ds)
+
+task_timeout_monitor= PythonOperator(
+    task_id='task_timeout_monitor',
+    python_callable=fun_task_timeout_monitor,
+    provide_context=True,
+    dag=dag
+)
+
+##----------------------------------------- 依赖 ---------------------------------------## 
+
+
+dependence_table_lists = [
+
+{"db": "oride_dw", "table": "dwd_oride_order_base_include_test_di", "partitions": "country_code=nal"},
+
+{"db": "oride_dw_ods", "table": "ods_sqoop_base_data_order_payment_df", "partitions": "country_code=nal"}
+
+]
 
 ##----------------------------------------- 脚本 ---------------------------------------## 
 
@@ -201,28 +201,21 @@ task_check_key_data = PythonOperator(
     dag=dag
 )
 
-#生成_SUCCESS
-touchz_data_success = BashOperator(
 
-    task_id='touchz_data_success',
+##----------------------------------------- 生成_SUCCESS ---------------------------------------## 
 
-    bash_command="""
-    line_num=`$HADOOP_HOME/bin/hadoop fs -du -s {hdfs_data_dir} | tail -1 | awk '{{print $1}}'`
-    
-    if [ $line_num -eq 0 ]
-    then
-        echo "FATAL {hdfs_data_dir} is empty"
-        exit 1
-    else
-        echo "DATA EXPORT Successed ......"
-        $HADOOP_HOME/bin/hadoop fs -touchz {hdfs_data_dir}/_SUCCESS
-    fi
-    """.format(
-        pt='{{ds}}',
-        now_day='{{macros.ds_add(ds, +1)}}',
-        hdfs_data_dir=hdfs_path+'/country_code=nal/dt={{ds}}'
-        ),
-    dag=dag)
+def fun_task_touchz_success(ds,**op_kwargs):
 
+    #生成_SUCCESS
+    ModelPublicFrame().task_touchz_success(table_list,ds)
 
-ods_sqoop_base_data_order_payment_df_prev_day_task>>dwd_oride_order_base_include_test_di_prev_day_tesk>>sleep_time>>dwd_oride_order_pay_detail_di_task>>task_check_key_data>>touchz_data_success
+task_touchz_success= PythonOperator(
+    task_id='task_touchz_success',
+    python_callable=fun_task_touchz_success,
+    provide_context=True,
+    dag=dag
+)
+
+#依赖关系配置
+for tasks_dependence in ModelPublicFrame().tesk_dependence(dependence_table_lists,dag):
+    tasks_dependence>>dwd_oride_order_pay_detail_di_task>>sleep_time>>task_check_key_data>>task_touchz_success

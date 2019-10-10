@@ -124,13 +124,13 @@ class ModelPublicFrame(object):
 
                     if sum_timeout >= int(timeout):
 
-                        # self.comwx.postAppMessage(
-                        #     'DW调度任务 {dag_id} 产出超时'.format(
-                        #         dag_id=dag_id_name,
-                        #         timeout=timeout
-                        #     ),
-                        #     '271'
-                        # )
+                        self.comwx.postAppMessage(
+                            'DW调度任务 {dag_id} 产出超时'.format(
+                                dag_id=dag_id_name,
+                                timeout=timeout
+                            ),
+                            '271'
+                        )
     
                         logging.info("任务超时 ... ... ")
                         sum_timeout=0
@@ -139,7 +139,7 @@ class ModelPublicFrame(object):
 
         except Exception as e:
 
-            #self.comwx.postAppMessage('DW调度任务 {dag_id} code 异常'.format(dag_id=dag_id_name),'271')
+            self.comwx.postAppMessage('DW调度任务 {dag_id} code 异常'.format(dag_id=dag_id_name),'271')
 
             logging.info(e)
 
@@ -179,10 +179,6 @@ class ModelPublicFrame(object):
                 }
             )
 
-        #loop = asyncio.get_event_loop()
-        #tasks = [self.task_trigger(items['cmd'], items['table'], items['timeout']) for items in commands]
-        #loop.run_until_complete(asyncio.wait(tasks))
-        #loop.close()
 
         for items in commands:
 
@@ -237,7 +233,7 @@ class ModelPublicFrame(object):
             #数据为0，发微信报警通知
             if line_num[0] == str(0):
                 
-                #self.comwx.postAppMessage('DW调度系统任务 {jobname} 数据产出异常，对应时间:{pt}'.format(jobname=table,pt=ds), '271')
+                self.comwx.postAppMessage('DW调度系统任务 {jobname} 数据为 0，未生成 _SUCCESS 标识，对应时间:{pt}'.format(jobname=table,pt=ds), '271')
         
                 logging.info("Error : {hdfs_data_dir} is empty".format(hdfs_data_dir=hdfs_data_dir_str))
                 sys.exit(1)
@@ -256,7 +252,7 @@ class ModelPublicFrame(object):
     
         except Exception as e:
 
-            #self.comwx.postAppMessage('DW调度系统任务 {jobname} 数据产出异常，对应时间:{pt}'.format(jobname=table,pt=ds),'271')
+            self.comwx.postAppMessage('DW调度系统任务 {jobname} _SUCCESS 产出异常，对应时间:{pt}'.format(jobname=table,pt=ds),'271')
 
             logging.info(e)
 
@@ -275,8 +271,6 @@ class ModelPublicFrame(object):
         try:
 
             for item in tables:
-
-                print("^&^&&************")
     
                 #读取 db、table、partition
                 table = item.get('table', None)
@@ -302,7 +296,6 @@ class ModelPublicFrame(object):
                     dependence_task_flag= HivePartitionSensor(
                         task_id='dependence_{task_id_name}'.format(task_id_name=task_id_flag),
                         table=table,
-                        #partition="dt='{pt}'".format(pt=ds),
                         partition="dt='{{ds}}'",
                         schema=db,
                         poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
@@ -329,7 +322,7 @@ class ModelPublicFrame(object):
 
         except Exception as e:
 
-            #self.comwx.postAppMessage('DW调度系统任务 {jobname} 任务依赖列表产出异常，对应时间:{pt}'.format(jobname=dag.dag_id,pt=self.ds_date),'271')
+            self.comwx.postAppMessage('DW调度系统任务 {jobname} 任务依赖列表产出异常'.format(jobname=dag.dag_id),'271')
 
             logging.info(e)
 

@@ -29,7 +29,7 @@ args = {
 
 dag = airflow.DAG(
     'app_oride_finance_driver_repayment_d',
-    schedule_interval="00 02 * * *",
+    schedule_interval="30 05 * * *",
     default_args=args
 )
 
@@ -77,7 +77,7 @@ dwm_oride_driver_base_di_tesk = UFileSensor(
 """
 
 mysql_table = 'oride_dw.app_oride_finance_driver_repayment_test_d'
-
+#mysql_table = 'test_db.test_oride_finance_driver_repayment_test_d'
 
 # 从hive读取数据
 def get_data_from_hive(ds,**op_kwargs):
@@ -87,8 +87,8 @@ def get_data_from_hive(ds,**op_kwargs):
             NVL(t1.city_id, 0) as city_id, --城市
             NVL(city_name, '') as city_name, --城市名称
             NVL(t1.driver_id, 0) as driver_id, --司机Id
-            NVL(driver_name, '') as driver_name, --司机姓名
-            NVL(phone_number, '') as driver_mobile, --司机手机号码
+            NVL(regexp_replace(driver_name,'\\\\\\\\',''), '') as driver_name, --司机姓名
+            NVL(regexp_replace(phone_number,'\\\\\\\\',''), '') as driver_mobile, --司机手机号码
             NVL(t1.product_id, 0) as driver_type,--骑手类型：1 ORide-Green, 2 ORide-Street, 3 OTrike
             (CASE
                 WHEN balance IS NULL THEN 0
@@ -191,13 +191,13 @@ def __data_to_mysql(conn, data, column, update=''):
                 sval += ',(\'{}\')'.format('\',\''.join([str(x) for x in row]))
             cnt += 1
             if cnt >= 1000:
-                # logging.info(esql.format(isql, sval, update))
+                #logging.info(esql.format(isql, sval, update))
                 conn.execute(esql.format(isql, sval, update))
                 cnt = 0
                 sval = ''
 
         if cnt > 0 and sval != '':
-            # logging.info(esql.format(isql, sval, update))
+            #logging.info(esql.format(isql, sval, update))
             conn.execute(esql.format(isql, sval, update))
     except BaseException as e:
         logging.info(e)
