@@ -262,6 +262,7 @@ dm_oride_order_base_d_task = HiveOperator(
     (
         SELECT 
         order_id,
+        count(distinct order_id) as accept_order_assigned_cnt, --应答订单被分配次数（计算平均接驾距离（应答单）使用）
         count(1) driver_click_times
         FROM 
         oride_dw.dwd_oride_driver_accept_order_click_detail_di
