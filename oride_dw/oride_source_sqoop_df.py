@@ -5,6 +5,7 @@ from airflow.hooks.hive_hooks import HiveCliHook, HiveServer2Hook
 from airflow.hooks.mysql_hook import MySqlHook
 from airflow.operators.hive_operator import HiveOperator
 from airflow.operators.python_operator import PythonOperator
+from airflow.sensors.sql_sensor import SqlSensor
 from datetime import datetime, timedelta
 from utils.validate_metrics_utils import *
 import logging
@@ -27,6 +28,21 @@ dag = airflow.DAG(
     concurrency=15,
     max_active_runs=1,
     default_args=args)
+
+
+check_data_driver_records_finish = SqlSensor(
+    task_id="check_data_driver_records_finish",
+    conn_id='sqoop_db',
+    sql='''
+        select
+            count(1)
+        from
+            oride_data.data_driver_records_finish
+        where
+            from_unixtime(day, "%Y-%m-%d") = '{{ ds }}'
+    ''',
+    dag=dag
+)
 
 '''
 导入数据的列表
@@ -87,6 +103,8 @@ table_list = [
     ("oride_data", "data_driver_blacklist", "sqoop_db", "base",1),
     ("oride_data", "data_driver_repayment", "sqoop_db", "base", 1),
     ("oride_data", "data_trip", "sqoop_db", "base", 1),
+    ("oride_data", "data_driver_records_day", "sqoop_db", "base",1),
+    ("oride_data", "data_driver_balance_extend", "sqoop_db", "base",1),
 
     ("bi", "weather_per_10min", "mysql_bi", "base",3),
     # 协会数据
@@ -324,5 +342,8 @@ for db_name, table_name, conn_id, prefix_name,priority_weight_nm in table_list:
             hdfs_data_dir=UFILE_PATH % (db_name, table_name)+"/dt={{ds}}"
         ),
         dag=dag)
+
+    if table_name in ['data_driver_records_day', 'data_driver_balance_extend']:
+        check_data_driver_records_finish >> import_table
 
     import_table >> check_table >> add_partitions >> validate_all_data >> touchz_data_success
