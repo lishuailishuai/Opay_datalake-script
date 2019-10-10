@@ -15,7 +15,7 @@ args = {
 }
 
 dag = airflow.DAG(
-    'ods_log_client_event_hi',
+    'ods_ofood_log_client_event_hi',
     schedule_interval="15 * * * *",
     concurrency=15,
     default_args=args)

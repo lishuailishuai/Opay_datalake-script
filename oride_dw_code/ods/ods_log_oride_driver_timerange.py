@@ -28,7 +28,7 @@ args = {
         'email_on_retry': False,
 } 
 
-dag = airflow.DAG( 'ods_log_oride_driver_timerange', 
+dag = airflow.DAG( 'ods_oride_log_driver_timerange', 
     schedule_interval="00 01 * * *", 
     default_args=args,
     catchup=False) 

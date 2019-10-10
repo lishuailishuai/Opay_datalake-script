@@ -67,11 +67,11 @@ class TaskTouchzSuccess(object):
                 logging.info(succ_str)
         
                 os.popen(succ_str)
+
+                time.sleep(10)
         
                 logging.info("DATA EXPORT Successed ......")
 
-                time.sleep(10)
-    
     
         except Exception as e:
 

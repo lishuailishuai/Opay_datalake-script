@@ -216,6 +216,6 @@ task_touchz_success= PythonOperator(
     dag=dag
 )
 
-#依赖关系配置
+##----------------------------------------- 依赖关系配置 ---------------------------------------## 
 for tasks_dependence in ModelPublicFrame().tesk_dependence(dependence_table_lists,dag):
     tasks_dependence>>dwd_oride_order_pay_detail_di_task>>sleep_time>>task_check_key_data>>task_touchz_success
