@@ -199,7 +199,6 @@ touchz_data_success = BashOperator(
 dependence_dwd_oride_order_base_include_test_df_prev_day_task >> \
 ods_sqoop_base_data_driver_recharge_records_df_prev_day_task >> \
 ods_sqoop_base_data_driver_reward_df_prev_day_task >>\
-ods_sqoop_base_data_driver_records_day_df_prev_day_task >>\
 sleep_time >> \
 dwd_oride_order_finance_df_task >> \
 task_check_key_data >> \
