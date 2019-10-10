@@ -210,6 +210,14 @@ dm_oride_order_base_d_task = HiveOperator(
            count(if(ord.pay_mode=2 and ord.pay_status in(0,2),ord.order_id,null)) as opay_pay_failed_cnt, --opay支付失败订单数
            null as fraud_ord_cnt, --疑似作弊订单量
            null as fraud_ord_online_pay_cnt, --疑似作弊订单线上支付量
+           
+           count(if(is_td_after_cancel = 1 ,ord.order_id,null)) as after_cancel_order_cnt,--应答后取消订单数
+           sum(td_passanger_after_cancel_time_dur) AS passanger_after_cancel_time_dur,--乘客应答后取消时长（秒）
+           sum(td_driver_after_cancel_time_dur) AS driver_after_cancel_time_dur,--司机应答后取消时长（秒）
+           sum(if((ord.status = 6 and cancel_role =2),ord.distance,0.0)) as  passanger_cancel_order_dis,   --乘客取消订单接驾距离
+           sum(a1.pick_up_distance) as accept_order_pick_up_dis, --应答单接驾距离(米)（计算平均接驾距离（应答单使用））
+           sum(r1.accept_order_assigned_cnt) as  accept_order_pick_up_assigned_cnt, --应答单分配次数（应答单接驾距离(米)（计算平均接驾距离（应答单使用）））
+
            ord.country_code,
            
            ord.dt
