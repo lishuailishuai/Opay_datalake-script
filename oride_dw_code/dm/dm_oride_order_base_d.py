@@ -208,8 +208,8 @@ dm_oride_order_base_d_task = HiveOperator(
            sum(if(ord.is_td_finish = 1,ord.pax_num,0)) as pax_num,  --当日完单乘客数
            count(if(ord.pay_mode=2,ord.order_id,null)) as opay_pay_cnt, --opay支付订单数
            count(if(ord.pay_mode=2 and ord.pay_status in(0,2),ord.order_id,null)) as opay_pay_failed_cnt, --opay支付失败订单数
-           null as fraud_ord_cnt, --疑似作弊订单量
-           null as fraud_ord_online_pay_cnt, --疑似作弊订单线上支付量
+           count(if(mark_ord.is_wet_order=1,ord.order_id,null)) as wet_ord_cnt, --湿单订单量
+           count(if(mark_ord.score in(1,2) and ord.is_td_finish=1,ord.order_id,null)) as bad_feedback_finish_ord_cnt, --差评完单量
            
            count(if(is_td_after_cancel = 1 ,ord.order_id,null)) as after_cancel_order_cnt,--应答后取消订单数
            sum(td_passanger_after_cancel_time_dur) AS passanger_after_cancel_time_dur,--乘客应答后取消时长（秒）

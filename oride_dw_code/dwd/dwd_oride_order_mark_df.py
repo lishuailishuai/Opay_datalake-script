@@ -47,6 +47,40 @@ dwd_oride_order_base_include_test_df_prev_day_task = UFileSensor(
     dag=dag
 )
 
+# 依赖前一天分区
+dim_oride_city_prev_day_task = HivePartitionSensor(
+    task_id="dim_oride_city_prev_day_task",
+    table="dim_oride_city",
+    partition="dt='{{ds}}'",
+    schema="oride_dw",
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
+# 依赖前一天分区
+ods_sqoop_base_weather_per_10min_df_prev_day_task = UFileSensor(
+    task_id='ods_sqoop_base_weather_per_10min_df_prev_day_task',
+    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="oride_dw_sqoop/bi/weather_per_10min",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
+# 依赖前一天分区
+ods_sqoop_base_data_user_comment_df_prev_day_task = UFileSensor(
+    task_id='ods_sqoop_base_data_user_comment_df_prev_day_task',
+    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="oride_dw_sqoop/oride_data/data_user_comment",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
 ##----------------------------------------- 变量 ---------------------------------------##
 
 table_name = "dwd_oride_order_mark_df"
@@ -63,21 +97,22 @@ SET hive.exec.dynamic.partition.mode=nonstrict;
 
 INSERT overwrite TABLE oride_dw.{table} partition(country_code,dt)
 SELECT t.order_id,  --订单ID
-           create_time_s as create_time, --下单时间
+           t.create_time_s as create_time, --下单时间
            passenger_id,  --乘客ID
            status,--订单状态 (0: wait assign, 1: pick up passenger, 2: wait passenger, 3: send passenger, 4: arrive destination, 5: finished, 6: cancel)
            2*asin(sqrt(pow(sin((start_lat*pi()/180.0-start_lat2*pi()/180.0)/2),2) + cos(start_lat*pi()/180.0)*cos(start_lat2*pi()/180.0)*pow(sin((start_lng*pi()/180.0-start_lng2*pi()/180.0)/2),2)))*6378137 as start_distance,--相邻两单起点距离
            2*asin(sqrt(pow(sin((end_lat*pi()/180.0-end_lat2*pi()/180.0)/2),2) + cos(end_lat*pi()/180.0)*cos(end_lat2*pi()/180.0)*pow(sin((end_lng*pi()/180.0-end_lng2*pi()/180.0)/2),2)))*6378137 as end_distance, --相邻两单终点距离
         IF(status IN (4,5), 1,
             IF(t.order_id=order_id2, 1,
-                IF(ABS(create_time2-create_time)<=1800 AND
+                IF(ABS(t.create_time2-t.create_time)<=1800 AND
                     2*asin(sqrt(pow(sin((start_lat*pi()/180.0-start_lat2*pi()/180.0)/2),2) + cos(start_lat*pi()/180.0)*cos(start_lat2*pi()/180.0)*pow(sin((start_lng*pi()/180.0-start_lng2*pi()/180.0)/2),2)))*6378137 <= 1000 AND
                     2*asin(sqrt(pow(sin((end_lat*pi()/180.0-end_lat2*pi()/180.0)/2),2) + cos(end_lat*pi()/180.0)*cos(end_lat2*pi()/180.0)*pow(sin((end_lng*pi()/180.0-end_lng2*pi()/180.0)/2),2)))*6378137 <= 1000, 0, 1
                 )
             )
         ) AS is_valid,  --订单有效标志:1有效 0无效
-        null as is_fraud, --是否疑似作弊订单
-        driver_id, --司机ID
+        if(weather.city is not null and weather.run_time_hour is not null and weather.mins is not null,1,0) as is_wet_order, --是否湿单
+        t.driver_id, --司机ID
+        com.score, -- 该订单的评分
         'nal' AS country_code,
         '{pt}' AS dt
     FROM (
@@ -85,12 +120,15 @@ SELECT t.order_id,  --订单ID
             order_id,
             driver_id,
             passenger_id,
+            city_id,
             start_lng,
             start_lat,
             end_lng,
             end_lat,
             unix_timestamp(create_time) as create_time,
             create_time as create_time_s,
+            substr(create_time,1,13) as create_time_hour,  --订单所在小时，为了获取天气状况
+            floor(cast(minute(create_time) as int) / 10)*10 as create_time_mins, --订单所在十分钟采集时间，为了获取天气状况
             create_date,
             status,
             LEAD(unix_timestamp(create_time),1,unix_timestamp(create_time)) OVER(PARTITION BY passenger_id ORDER BY unix_timestamp(create_time)) create_time2,
@@ -104,6 +142,28 @@ SELECT t.order_id,  --订单ID
             AND city_id<>'999001' --去除测试数据
              and driver_id<>1
         ) t
+        left join 
+        (select * from oride_dw.dim_oride_city where dt='{pt}') cit
+        on t.city_id=cit.city_id
+        left join
+        (SELECT city,
+                from_unixtime(unix_timestamp(run_time),'yyyy-MM-dd HH') run_time_hour,
+                minute(from_unixtime(unix_timestamp(run_time))) mins
+         FROM oride_dw_ods.ods_sqoop_base_weather_per_10min_df
+         WHERE dt = '{pt}'
+          AND weather IN ('Thundershower',
+                          'Light rain',
+                          'Rain',
+                          'Thunderstorm',
+                          'A shower')
+          AND daliy = '{pt}') weather
+          on lower(cit.city_name)=lower(weather.city)
+          and weather.run_time_hour=t.create_time_hour
+          and weather.mins=t.create_time_mins
+          left join
+          (select * from oride_dw_ods.ods_sqoop_base_data_user_comment_df
+          where dt='{pt}') com
+          on t.order_id=com.order_id
 '''.format(
         pt='{{ds}}',
         now_day='{{macros.ds_add(ds, +1)}}',
@@ -175,6 +235,9 @@ touchz_data_success = BashOperator(
     dag=dag)
 
 dwd_oride_order_base_include_test_df_prev_day_task >> \
+dim_oride_city_prev_day_task >> \
+ods_sqoop_base_weather_per_10min_df_prev_day_task >> \
+ods_sqoop_base_data_user_comment_df_prev_day_task >> \
 sleep_time >> \
 dwd_oride_order_mark_df_task >> \
 task_check_key_data >> \

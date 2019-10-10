@@ -137,6 +137,8 @@ order_data_null="""
        null as finish_order_cnt, --当日完单量
        null as finish_pay, --当日完成支付量
        null as valid_ord_cnt,  --当日有效订单量
+       null as wet_ord_cnt, --当日湿单订单量
+       null as bad_feedback_finish_ord_cnt, --当日差评完单量
        null as beckoning_num, --当日招手停完单数
        null as finish_take_order_dur,  --当日完单应答时长
        null as finish_pick_up_dur,  --当日完单接驾时长
@@ -209,6 +211,8 @@ select nvl(t.country_code,'-10000') as country_code,
        sum(finish_order_cnt) as finish_order_cnt, --当日完单量
        sum(finish_pay) as finish_pay, --当日完成支付量
        sum(valid_ord_cnt) as valid_ord_cnt,  --当日有效订单量
+       sum(wet_ord_cnt) as wet_ord_cnt, --当日湿单订单量
+       sum(bad_feedback_finish_ord_cnt) as bad_feedback_finish_ord_cnt,  --当日差评完单量
        sum(beckoning_num) as beckoning_num,  --当日招手停完单数
        sum(finish_take_order_dur) as finish_take_order_dur,  --当日完单应答时长
        sum(finish_pick_up_dur) as finish_pick_up_dur,  --当日完单接驾时长
@@ -235,6 +239,8 @@ from (SELECT dt,country_code,
        sum(finish_order_cnt) as finish_order_cnt, --当日完单量
        sum(finish_pay) as finish_pay, --当日完成支付量
        sum(valid_ord_cnt) as valid_ord_cnt,  --当日有效订单量
+       sum(wet_ord_cnt) as wet_ord_cnt, --当日湿单订单量
+       sum(bad_feedback_finish_ord_cnt) as bad_feedback_finish_ord_cnt,--当日差评完单量
        sum(if(product_id=99,finish_order_cnt,0)) as beckoning_num, --招手停完单数
        sum(finish_take_order_dur) as finish_take_order_dur,  --当日完单应答时长
        sum(finish_pick_up_dur) as finish_pick_up_dur,  --当日完单接驾时长
@@ -441,6 +447,8 @@ SELECT nvl(city_id,-10000) as city_id,
        sum(amount_pay_offline) AS amount_pay_offline, --当日总收入-线下支付金额 
        sum(recharge_users) as recharge_users, --每天充值用户数
        sum(user_recharge_succ_balance) as user_recharge_succ_balance,  --每天用户充值真实金额
+       sum(wet_ord_cnt) as wet_ord_cnt, --当日湿单订单量
+       sum(bad_feedback_finish_ord_cnt) as bad_feedback_finish_ord_cnt, --当日差评完单量
        nvl(country_code,'nal') as country_code,
        '{pt}' as dt
 FROM (select * from order_data where nvl(country_code,'-10000')<>'-10000'

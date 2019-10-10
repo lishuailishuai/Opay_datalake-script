@@ -60,6 +60,17 @@ ods_sqoop_base_data_city_conf_df_tesk = UFileSensor(
     dag=dag
 )
 
+# 依赖前一天分区
+ods_sqoop_base_weather_per_10min_df_prev_day_task = UFileSensor(
+    task_id='ods_sqoop_base_weather_per_10min_df_prev_day_task',
+    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="oride_dw_sqoop/bi/weather_per_10min",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
 
 ##----------------------------------------- 变量 ---------------------------------------## 
 
@@ -122,11 +133,11 @@ SELECT city_id,
 
        validate,
        --本条数据是否有效 0 无效，1 有效
+       weather.weather, --该城市当天的天气
 
        cty.country_code,
        --二位国家码
-       weather.weather, --该城市当天的天气
-
+       
        '{pt}' AS dt
 FROM
   (SELECT id AS city_id,
@@ -158,8 +169,7 @@ LEFT OUTER JOIN
           country_code
    FROM oride_dw.dim_oride_country_base) cty ON cit.country_name=cty.country_name_en
 left outer join
-(SELECT '{pt}' dt,
-              t.city AS city,
+(SELECT t.city AS city,
               t.weather AS weather
 FROM
   ( SELECT t.city,
@@ -176,7 +186,7 @@ FROM
       GROUP BY city,
                weather ) t ) t
 WHERE t.row_num = 1) weather
-on cit.city_name=weather.city
+on lower(cit.city_name)=lower(weather.city)
 
 '''.format(
         pt='{{ds}}',
@@ -239,4 +249,4 @@ touchz_data_success= PythonOperator(
     dag=dag
 )
 
-ods_sqoop_base_data_city_conf_df_tesk>>sleep_time>>dim_oride_city_task>>task_check_key_data>>touchz_data_success
+ods_sqoop_base_data_city_conf_df_tesk>>ods_sqoop_base_weather_per_10min_df_prev_day_task>>sleep_time>>dim_oride_city_task>>task_check_key_data>>touchz_data_success
