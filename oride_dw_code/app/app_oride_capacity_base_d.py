@@ -112,7 +112,7 @@ select
      nvl(round((accept_order_pick_up_dis)/(accept_order_pick_up_assigned_cnt),1),0)  as request_order_pick_up_dis_avg,
     -- 平均接驾距离（应答单）
     
-    round(((driver_accpet_order_cnt)/ (driver_accept_take_num) ) / ((succ_push_all_times_cnt)/(driver_take_num)),1) as obey_rate,
+    nvl(round(((driver_accpet_order_cnt)/ (driver_accept_take_num) ) / ((succ_push_all_times_cnt)/(driver_take_num)),1),0) as obey_rate,
     --调度服从率 司机平均应答次数/人均推单次数
     
     (request_order_cnt) as request_order_cnt,
@@ -121,10 +121,10 @@ select
     nvl(round((request_order_cnt) * 100 / (ride_order_cnt),1),0) as request_order_rate,
     --应答率
     
-    round((finish_take_order_dur/60)/(finish_order_cnt),1) as finish_order_request_time_avg,
+    nvl(round((finish_take_order_dur/60)/(finish_order_cnt),1),0) as finish_order_request_time_avg,
     --平均应答时长（分）
     
-    round((take_order_dur/60)/(request_order_cnt),1) as  request_order_request_time_avg,
+    nvl( round((take_order_dur/60)/(request_order_cnt),1),0) as  request_order_request_time_avg,
     --平均应答时长（应答单）（分）
     
     nvl(round((passanger_after_cancel_order_cnt) * 100 /(ride_order_cnt),1),0) as passanger_after_cancel_order_rate,
@@ -142,67 +142,67 @@ select
     nvl(round((driver_billing_dur) * 100/(finish_driver_online_dur),1),0) as billing_time_rate,
     --计费时长占比
     
-    (ride_order_cnt) as ride_order_cnt,
+    nvl((ride_order_cnt),0) as ride_order_cnt,
     --下单数
     
-    valid_ord_cnt as legal_ride_order_cnt, 
+    nvl(valid_ord_cnt ,0) as legal_ride_order_cnt, 
     --有效下单数
     
-    (succ_broadcast_cnt) as succ_broadcast_cnt,
+    nvl((succ_broadcast_cnt),0) as succ_broadcast_cnt,
     --成功播单数
     
-    round((succ_broadcast_cnt) * 100/ (ride_order_cnt),1) as succ_broadcast_rate,
+    nvl(round((succ_broadcast_cnt) * 100/ (ride_order_cnt),1),0) as succ_broadcast_rate,
     --播单率
     
-    round((request_order_cnt) * 100/ (succ_broadcast_cnt),1) as capacity_request_order_rate,
+    nvl(round((request_order_cnt) * 100/ (succ_broadcast_cnt),1),0) as capacity_request_order_rate,
     --调度接单率
     
-    (finish_order_cnt) as finish_order_cnt,
+    nvl((finish_order_cnt),0) as finish_order_cnt,
     --完单数
     
-    round((finish_order_cnt) * 100 / (ride_order_cnt),1) as finish_order_rate,
+    nvl(round((finish_order_cnt) * 100 / (ride_order_cnt),1),0) as finish_order_rate,
     --完单率
     
-    round((finish_order_cnt) * 100 / (valid_ord_cnt),1) as legal_finish_order_rate,
+    nvl(round((finish_order_cnt) * 100 / (valid_ord_cnt),1),0) as legal_finish_order_rate,
     --有效完单率
     
-    round((finish_order_cnt) * 100 / (broadcast_cnt),1) as capacity_finish_order_rate,
+    nvl(round((finish_order_cnt) * 100 / (broadcast_cnt),1),0) as capacity_finish_order_rate,
     --调度完单率
     
-    round(((finish_take_order_dur + finish_pick_up_dur)/60) / (finish_order_cnt),1) as take_time_avg,
+    nvl(round(((finish_take_order_dur + finish_pick_up_dur)/60) / (finish_order_cnt),1),0) as take_time_avg,
     --平均接驾时长（分）
     
-    round((finish_order_onride_dis)/(finish_order_cnt),1) as finish_order_onride_dis_avg,
+    nvl(round((finish_order_onride_dis)/(finish_order_cnt),1),0) as finish_order_onride_dis_avg,
     --平均送驾距离
     
-    round((finish_billing_dur/60)/(finish_order_cnt),1) as finish_order_billing_time_avg,
+    nvl(round((finish_billing_dur/60)/(finish_order_cnt),1),0) as finish_order_billing_time_avg,
     --平均计费时长（分）
     
-    round((pay_order_dur/60) / (finish_pay),1) as pay_order_paytime_avg,
+    nvl(round((pay_order_dur/60) / (finish_pay),1),0) as pay_order_paytime_avg,
     --平均支付时长（分）
     
-    (online_driver_num) as online_driver_num,
+    nvl((online_driver_num),0) as online_driver_num,
     --在线司机数
     
-    (request_driver_num) as request_driver_num,
+    nvl((request_driver_num),0) as request_driver_num,
     --接单司机数
     
-    (finish_order_driver_num) as finish_order_driver_num,
+    nvl((finish_order_driver_num),0) as finish_order_driver_num,
     --完单司机数
     
-    round((finish_order_cnt)/(finish_order_driver_num),1) as finish_order_driver_order_avg,
+    nvl(round((finish_order_cnt)/(finish_order_driver_num),1),0) as finish_order_driver_order_avg,
     --人均完单数
     
-    round((odb.driver_pushed_order_cnt) / (odc.push_accpet_show_driver_num),1) as  push_driver_order_avg,
+    nvl(round((odb.driver_pushed_order_cnt) / (odc.push_accpet_show_driver_num),1),0) as  push_driver_order_avg,
     --人均推送订单数
     
-    round((odb.driver_click_order_cnt) / (driver_accept_take_num),1) as driver_click_order_avg,
+    nvl(round((odb.driver_click_order_cnt) / (driver_accept_take_num),1),0) as driver_click_order_avg,
     --人均应答订单数
     
     nvl(round(((odb.driver_click_order_cnt) / (odc.push_accpet_show_driver_num)) * 100 / ((odb.driver_pushed_order_cnt) / (driver_accept_take_num)),1),0) as driver_obey_rate,
     --司机服从率 司机服从率=人均应答订单数/人均推送订单数
     
-    round((service_dur/60) / (finish_order_cnt),1) as service_dur_avg,
+    nvl(round((service_dur/60) / (finish_order_cnt),1),0) as service_dur_avg,
     --平均服务时长（分）
     
     0 as finish_order_driver_IPH,
@@ -211,56 +211,56 @@ select
     0 as finish_order_driver_day_salary,
     --完单司机日薪 （保留，dwd_finance数据暂时有问题）
     
-    broadcast_cnt as chose_broadcast_cnt,
+    nvl(broadcast_cnt,0) as chose_broadcast_cnt,
     --播单数
     
     
-    round((succ_push_all_times_cnt) * 100 /(push_driver_times_cnt),1) as broadcast_success_rrate,
+    nvl(round((succ_push_all_times_cnt) * 100 /(push_driver_times_cnt),1),0) as broadcast_success_rrate,
     --播报到达率
     
-    round((succ_push_all_times_cnt)/(driver_take_num),1) as succ_push_driver_avg,
+    nvl(round((succ_push_all_times_cnt)/(driver_take_num),1) ,0)as succ_push_driver_avg,
     --人均推单次数
     
     0 as push_driver_time_avg,
     --平均推送司机数(保留，chose阶段数据，无法介入漏斗模型)
     
-    (driver_accpet_order_cnt) as driver_accpet_order_cnt,
+    nvl((driver_accpet_order_cnt),0) as driver_accpet_order_cnt,
     --司机总应答次数
     
-    round((driver_accpet_order_cnt)/ (driver_accept_take_num),1) as driver_accpet_order_avg,
+    nvl(round((driver_accpet_order_cnt)/ (driver_accept_take_num),1),0) as driver_accpet_order_avg,
     -- 司机平均应答次数
     
-    (sys_cancel_order_cnt + passanger_before_cancel_order_cnt + passanger_after_cancel_order_cnt + driver_after_cancel_order_cnt) as cancel_order_cnt,
+    nvl((sys_cancel_order_cnt + passanger_before_cancel_order_cnt + passanger_after_cancel_order_cnt + driver_after_cancel_order_cnt),0) as cancel_order_cnt,
     --取消订单数
     
-    (sys_cancel_order_cnt) as sys_cancel_order_cnt,
+    nvl((sys_cancel_order_cnt),0) as sys_cancel_order_cnt,
     --系统取消订单数
     
-    round((sys_cancel_order_cnt) * 100/(ride_order_cnt),1) as sys_cancel_order_rate,
+    nvl(round((sys_cancel_order_cnt) * 100/(ride_order_cnt),1),0) as sys_cancel_order_rate,
     --系统取消率
     
-    (passanger_before_cancel_order_cnt) as passanger_before_cancel_order_cnt,
+    nvl((passanger_before_cancel_order_cnt),0) as passanger_before_cancel_order_cnt,
     --乘客应答前取消数
     
-    round((passanger_before_cancel_order_cnt) * 100/(ride_order_cnt),1) as passanger_before_cancel_order_rate,
+    nvl(round((passanger_before_cancel_order_cnt) * 100/(ride_order_cnt),1),0) as passanger_before_cancel_order_rate,
     --乘客应答前取消率
     
-    (after_cancel_order_cnt) as before_cancel_order_cnt,
+    nvl((after_cancel_order_cnt),0) as before_cancel_order_cnt,
     --应答后取消数
     
-    (passanger_after_cancel_order_cnt) as passanger_after_cancel_order_cnt,
+    nvl((passanger_after_cancel_order_cnt),0) as passanger_after_cancel_order_cnt,
     --乘客应答后取消数
     
-    round(((passanger_after_cancel_time_dur/60) / request_order_cnt),1) as passanger_after_cancel_order_time_avg,
+    nvl(round(((passanger_after_cancel_time_dur/60) / request_order_cnt),1),0) as passanger_after_cancel_order_time_avg,
     --乘客应答后取消平均时长（分）
     
     nvl(round(passanger_cancel_order_dis / (passanger_before_cancel_order_cnt + passanger_after_cancel_order_cnt ),1),0) as passanger_after_cancel_order_dis_avg,
     --乘客取消订单平均接驾距离  乘客取消订单接驾距离/乘客取消订单数（应答前+应答后）
     
-    (driver_after_cancel_order_cnt) as driver_after_cancel_order_cnt,
+    nvl((driver_after_cancel_order_cnt),0) as driver_after_cancel_order_cnt,
     --司机应答后取消数
     
-    round((driver_after_cancel_time_dur/60) /  request_order_cnt ,1) as driver_after_cancel_order_time_avg,
+    nvl(round((driver_after_cancel_time_dur/60) /  request_order_cnt ,1),0) as driver_after_cancel_order_time_avg,
     --司机应答后取消平均时长（分）
     
     nvl(ord.country_code,-10000) as country_code,
