@@ -38,7 +38,7 @@ global_table_names = [
     'oride_dw_ods.ods_sqoop_base_data_user_extend_df',
     'oride_dw_ods.ods_sqoop_base_data_driver_extend_df',
     'oride_bi.oride_driver_timerange',
-    'oride_bi.server_magic_push_detail',
+    'oride_dw.dwd_oride_order_push_driver_detail_di',
     'oride_source.server_magic',
     'oride_dw_ods.ods_sqoop_base_data_driver_recharge_records_df',
     'oride_dw_ods.ods_sqoop_base_data_driver_reward_df',
@@ -50,7 +50,7 @@ funnel_report_table_names = [
     'oride_dw_ods.ods_sqoop_base_data_order_df',
     'oride_dw_ods.ods_sqoop_base_data_city_conf_df',
     'oride_dw_ods.ods_sqoop_base_data_order_payment_df',
-    'oride_bi.server_magic_push_detail',
+    'oride_dw.dwd_oride_order_push_driver_detail_di',
 ]
 
 anti_fraud_table_names = [
@@ -442,7 +442,7 @@ insert_oride_global_daily_report = HiveOperator(
             select 
                 dt,
                 count(distinct(order_id)) push_num
-            from oride_bi.server_magic_push_detail
+            from oride_dw.dwd_oride_order_push_driver_detail_di
             where dt = '{{ ds }}' and success = 1
             group by dt
         ),
@@ -859,7 +859,7 @@ insert_oride_order_city_daily_report = HiveOperator(
                 city_id city_id,
                 count(distinct(order_id)) push_num
             from
-                oride_bi.server_magic_push_detail
+                oride_dw.dwd_oride_order_push_driver_detail_di
             where
                 dt = '{{ ds }}' and success = 1
             group by dt,city_id
@@ -1281,7 +1281,7 @@ insert_oride_global_city_serv_daily_report = HiveOperator(
                             order_id,
                             driver_id
                         from
-                            oride_bi.server_magic_push_detail
+                            oride_dw.dwd_oride_order_push_driver_detail_di
                         where
                             dt = '{{ ds }}' and success = 1
                     ) s
