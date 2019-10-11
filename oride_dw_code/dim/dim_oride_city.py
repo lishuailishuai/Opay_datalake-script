@@ -133,7 +133,13 @@ SELECT city_id,
 
        validate,
        --本条数据是否有效 0 无效，1 有效
-       weather.weather, --该城市当天的天气
+       
+       weather.weather, 
+       --该城市当天的天气
+
+       opening_time,--开启时间       
+
+       assign_type, --强派的服务类型[1,2,3] 1 专车 2 快车 3 keke车
 
        cty.country_code,
        --二位国家码
@@ -161,7 +167,11 @@ FROM
           avoid_highway_type,
           --可设置避开高速的服务类型[1,2] 1 专车 2 快车
 
-          validate --本条数据是否有效 0 无效，1 有效
+          validate, --本条数据是否有效 0 无效，1 有效
+
+          opening_time,--开启时间                
+          assign_type --强派的服务类型[1,2,3] 1 专车 2 快车 3 keke车
+
 FROM oride_dw_ods.ods_sqoop_base_data_city_conf_df
    WHERE dt='{pt}') cit
 LEFT OUTER JOIN
