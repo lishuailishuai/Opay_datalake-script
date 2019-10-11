@@ -1051,4 +1051,4 @@ sleep_time >> check_result_task >> sleep_time2
 sleep_time >> check_result_task >> sleep_time2
 
 sleep_time2 >> create_result_table_task
-create_result_table_task >> insert_result_to_hive >> validate_partition_data >> send_report
+create_result_table_task >> insert_result_to_hive >> validate_partition_data

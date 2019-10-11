@@ -613,7 +613,7 @@ def hiveresult_to_mysql(ds, **kwargs):
     for day, driver_type, channel, name, mobile, code, drivers in results:
         sql_tmp = "('{day}', '{name}', '{mobile}',  '{code}', '{channel}', '{driver_type}', '{dirvers}')".format(
             day=day,
-            name=name.replace("'", "\\'"),
+            name=name.replace("\\", "").replace("'", "\\'"),
             code=code,
             mobile=mobile if (len(mobile) < 20) else '',
             channel=channel,
@@ -799,7 +799,7 @@ def order_result_to_mysql(ds, **kwargs):
     for day, driver_type, channel, name, mobile, code, first, ten in results:
         sql_tmp = "('{day}', '{name}', '{mobile}',  '{code}', '{channel}', '{driver_type}', '{firstbill}')".format(
             day=day,
-            name=name.replace("'", "\\'"),
+            name=name.replace("\\", "").replace("'", "\\'"),
             mobile=mobile if (len(mobile) < 20) else '',
             code=code,
             channel=channel,
@@ -969,7 +969,7 @@ def csresult_channel_to_mysql(ds, **kwargs):
             dt=dt,
             driver_id=driver_id,
             driver_type=type,
-            name=name.replace("'", "\\'"),
+            name=name.replace("\\", "").replace("'", "\\'"),
             mobile=phone,
             city_id=city,
             distance=distance,
