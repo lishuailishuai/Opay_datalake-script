@@ -65,6 +65,7 @@ table_list = [
     ("oride_data", "data_anti_fraud_strategy", "sqoop_db", "base",3),
     ("oride_data", "data_city_conf", "sqoop_db", "base",3),
     ("oride_data", "data_order_expired", "sqoop_db", "base",1),
+    ("oride_data", "data_coupon_expired", "sqoop_db", "base",1),
     ("oride_data", "data_device_extend", "sqoop_db", "base",1),
     ("oride_data", "data_driver_recharge_records", "sqoop_db", "base",3),
     ("oride_data", "data_driver_reward", "sqoop_db", "base",3),
@@ -105,6 +106,11 @@ table_list = [
     ("oride_data", "data_trip", "sqoop_db", "base", 1),
     ("oride_data", "data_driver_records_day", "sqoop_db", "base",1),
     ("oride_data", "data_driver_balance_extend", "sqoop_db", "base",1),
+
+    #2019.10.20上线
+    #("oride_data", "data_coupon_history", "sqoop_db", "base",1),
+    #("oride_data", "data_order_history", "sqoop_db", "base",1),
+    #("oride_data", "data_order_payment_history", "sqoop_db", "base",1),
 
     ("bi", "weather_per_10min", "mysql_bi", "base",3),
     # 协会数据
