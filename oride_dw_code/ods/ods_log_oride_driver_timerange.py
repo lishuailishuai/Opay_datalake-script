@@ -19,7 +19,7 @@ from airflow.operators.bash_operator import BashOperator
 
 args = {
         'owner': 'yangmingze',
-        'start_date': datetime(2019, 6, 20),
+        'start_date': datetime(2019, 10, 10),
         'depends_on_past': False,
         'retries': 3,
         'retry_delay': timedelta(minutes=2),
