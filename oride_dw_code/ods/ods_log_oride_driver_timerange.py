@@ -42,8 +42,11 @@ hdfs_path = "ufile://opay-datalake/oride/oride_dw_ods/" + table_name
 
 ##----------------------------------------- 脚本 ---------------------------------------##
 
-KeyDriverOnlineTime = "driver:ont:%d:%s"
+
 KeyDriverOrderTime = "driver:ort:%d:%s"
+
+#键 algo:driver:online:%d:%s 司机id 时间yyyymmdd
+KeyDriverOnlineTime = "algo:driver:online:%d:%s"
 
 get_driver_id = '''
 select max(id) from oride_data.data_driver
@@ -55,7 +58,7 @@ replace into bi.driver_timerange (`Daily`,`driver_id`,`driver_onlinerange`,`driv
 
 def get_driver_online_time(ds, **op_kwargs):
     dt = op_kwargs["ds_nodash"]
-    redis = get_redis_connection()
+    redis = get_redis_connection('pika_85')
     conn = get_db_conn('mysql_oride_data_readonly')
     mcursor = conn.cursor()
     mcursor.execute(get_driver_id)
@@ -66,14 +69,18 @@ def get_driver_online_time(ds, **op_kwargs):
     rows = []
     res = []
     for i in range(1, result[0] + 1):
-        online_time = redis.get(KeyDriverOnlineTime % (i, dt))
-        order_time = redis.get(KeyDriverOrderTime % (i, dt))
-        if online_time is not None:
-            if order_time is None:
-                order_time = 0
-            free_time = int(online_time) - int(order_time)
-            res.append([dt + '000000', int(i), int(online_time), int(free_time)])
-            rows.append('(' + str(i) + ',' + str(online_time, 'utf-8') + ',' + str(free_time) + ')')
+        online_time_dict = redis.hgetall(KeyDriverOnlineTime % (i, dt))
+        if online_time_dict:
+            online_time=0
+            order_time=0
+            for value in  online_time_dict.values():
+                tmp_list = str(value, 'utf-8').split('|')
+                online_time += int(tmp_list[0])*60
+                order_time += int(tmp_list[1])*60
+
+            #print('driver_id:%d, online_time_total:%d' % (i, online_time))
+            free_time = online_time - order_time
+            rows.append('(' + str(i) + ',' + str(online_time) + ',' + str(free_time) + ')')
     if rows:
         query = """
             INSERT OVERWRITE TABLE oride_dw_ods.{tab_name} PARTITION (dt='{dt}')
