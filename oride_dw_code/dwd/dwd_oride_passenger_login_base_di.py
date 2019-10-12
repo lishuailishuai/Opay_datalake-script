@@ -125,7 +125,7 @@ SELECT user_id AS passenger_id,
        --国家码字段
 
        dt
-FROM oride_bi.oride_client_event_detail
+FROM oride_dw.dwd_oride_client_event_detail_hi
 WHERE dt='{pt}'
   AND event_name='oride_show'
   AND app_name='oride'
