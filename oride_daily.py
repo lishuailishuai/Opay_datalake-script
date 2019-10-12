@@ -553,7 +553,7 @@ insert_oride_driver_daily_summary  = HiveOperator(
                 user_id as driver_id,
                 MAX(struct(`timestamp`, app_version)).col2 as app_version
             from
-                oride_bi.oride_client_event_detail
+                oride_dw.dwd_oride_client_event_detail_hi
             where
                 app_name='ORide Driver' and dt='{{ ds }}' and event_name='active'
             group by user_id

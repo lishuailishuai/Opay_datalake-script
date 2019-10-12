@@ -31,7 +31,7 @@ validate_partition_data = PythonOperator(
         "table_names":
             [
              'oride_dw_ods.ods_log_driver_track_data_hi ',
-             'oride_bi.oride_client_event_detail',
+             'oride_dw.dwd_oride_client_event_detail_hi',
              'oride_dw_ods.ods_sqoop_base_data_order_df',
              ],
         # 任务名称
@@ -55,9 +55,9 @@ data_order_validate_task = HivePartitionSensor(
 
 client_event_data_order_validate_task = HivePartitionSensor(
     task_id="data_order_validate_task",
-    table="oride_client_event_detail",
-    partition="dt='{{ds}}'",
-    schema="oride_bi",
+    table="dwd_oride_client_event_detail_hi",
+    partition="""dt='{{ ds }}' and hour='23'""",
+    schema="oride_dw",
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
@@ -114,7 +114,7 @@ insert_order_location_info = HiveOperator(
                 get_json_object(event_value,'$.order_id') order_id,
                 get_json_object(event_value,'$.lat') lat,
                 get_json_object(event_value,'$.lng') lng
-                from oride_bi.oride_client_event_detail
+                from oride_dw.dwd_oride_client_event_detail_hi
                 where dt = '{{ ds }}'
                 and event_name in (
                     'looking_for_a_driver_show',

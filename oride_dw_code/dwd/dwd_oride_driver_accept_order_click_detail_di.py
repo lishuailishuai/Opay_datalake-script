@@ -48,9 +48,9 @@ sleep_time = BashOperator(
 # 依赖前一天分区
 dwd_oride_driver_accept_order_click_detail_di_prev_day_task = HivePartitionSensor(
     task_id="dwd_oride_driver_accept_order_click_detail_di_prev_day_task",
-    table="oride_client_event_detail",
-    partition="dt='{{ds}}'",
-    schema="oride_bi",
+    table="dwd_oride_client_event_detail_hi",
+    partition="""dt='{{ ds }}' and hour='23'""",
+    schema="oride_dw",
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
@@ -112,7 +112,7 @@ dwd_oride_driver_accept_order_click_detail_di_task = HiveOperator(
               get_json_object(event_value, '$.startLat') AS startLat,
               get_json_object(event_value, '$.startLng') AS startLng,
               event_time AS log_timestamp
-       FROM oride_bi.oride_client_event_detail
+       FROM oride_dw.dwd_oride_client_event_detail_hi
        WHERE dt='{pt}'
          AND event_name='accept_order_click'
        ) t 

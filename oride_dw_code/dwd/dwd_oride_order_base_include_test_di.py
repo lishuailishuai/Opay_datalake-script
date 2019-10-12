@@ -71,9 +71,9 @@ ods_sqoop_base_data_order_payment_df_prev_day_task = HivePartitionSensor(
 # 依赖前一天分区
 oride_client_event_detail_prev_day_task = HivePartitionSensor(
     task_id="oride_client_event_detail_prev_day_task",
-    table="oride_client_event_detail",
-    partition="dt='{{ds}}'",
-    schema="oride_bi",
+    table="dwd_oride_client_event_detail_hi",
+    partition="""dt='{{ ds }}' and hour='23'""",
+    schema="oride_dw",
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
@@ -559,7 +559,7 @@ WHERE dt = '{pt}') pay ON base.order_id=pay.order_id
 LEFT OUTER JOIN
 (SELECT get_json_object(event_value, '$.order_id') AS order_id,
        min(get_json_object(event_value, '$.estimated_price')) AS estimated_price --预估价格区间（最小值,最大值）
-FROM oride_bi.oride_client_event_detail
+FROM oride_dw.dwd_oride_client_event_detail_hi
 WHERE event_name='successful_order_show'
   AND dt='{pt}'
   AND length(get_json_object(event_value, '$.estimated_price'))>1
