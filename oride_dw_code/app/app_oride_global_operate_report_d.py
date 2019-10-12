@@ -233,8 +233,8 @@ select nvl(t.country_code,'-10000') as country_code,
        {finance_data_null},
        {passenger_recharge_data_null}  
 from (SELECT dt,country_code,
-			 city_id,
-			 product_id,
+       city_id,
+       product_id,
        sum(ride_order_cnt) as ride_order_cnt, --当日下单量
        sum(finish_order_cnt) as finish_order_cnt, --当日完单量
        sum(finish_pay) as finish_pay, --当日完成支付量
@@ -252,17 +252,25 @@ from (SELECT dt,country_code,
        sum(pay_amount) as pay_amount,  --当日实付金额，订单状态5
        sum(opay_pay_cnt) as opay_pay_cnt, --opay支付订单数,pay_mode=2
        sum(opay_pay_failed_cnt) as opay_pay_failed_cnt, --opay支付失败订单数,pay_mode=2 and pay_status in(0,2)
-       sum(if(dt>=date_add('{pt}',-28) and dt<'{pt}' and
-       from_unixtime(unix_timestamp(dt,'yyyy-MM-dd'),'u')=from_unixtime(unix_timestamp('{pt}', 'yyyy-MM-dd'),'u'),ride_order_cnt,0))/4 as order_cnt_lfw, --近四周同期下单数据均值
-       sum(if(dt>=date_add('{pt}',-28) and dt<'{pt}' and
-       from_unixtime(unix_timestamp(dt,'yyyy-MM-dd'),'u')=from_unixtime(unix_timestamp('{pt}', 'yyyy-MM-dd'),'u'),finish_order_cnt,0))/4 as finish_order_cnt_lfw  --近四周同期完单数据
+       order_cnt_lfw, --近四周同期下单数据均值
+       finish_order_cnt_lfw  --近四周同期完单数据
        
+FROM (SELECT sum(if(dt>=date_add('{pt}',-28)
+              AND dt<'{pt}'
+              AND from_unixtime(unix_timestamp(dt,'yyyy-MM-dd'),'u')=from_unixtime(unix_timestamp('{pt}', 'yyyy-MM-dd'),'u'),ride_order_cnt,0)) over (partition BY '{pt}',country_code, city_id, product_id)/4 AS order_cnt_lfw,--近四周同期下单数据均值
+       sum(if(dt>=date_add('{pt}',-28)
+              AND dt<'{pt}'
+              AND from_unixtime(unix_timestamp(dt,'yyyy-MM-dd'),'u')=from_unixtime(unix_timestamp('{pt}', 'yyyy-MM-dd'),'u'),finish_order_cnt,0)) over (partition BY '{pt}',country_code, city_id, product_id)/4 AS finish_order_cnt_lfw,--近四周同期完单数据
+       *
 FROM oride_dw.dm_oride_order_base_d
-WHERE dt>=date_add('{pt}',-28) and dt<='{pt}'
-group by dt,country_code,
-			 city_id,
-			 product_id) t
-where t.dt='{pt}'
+WHERE dt>=date_add('{pt}',-28)
+  AND dt<='{pt}') m 
+  where m.dt='{pt}'
+  group by m.dt,m.country_code,
+             m.city_id,
+             m.product_id,
+             m.order_cnt_lfw,
+             m.finish_order_cnt_lfw) t
 group by nvl(t.country_code,'-10000'),
        nvl(t.city_id,-10000),  --with cube时，默认值无效
        nvl(t.product_id,-10000)

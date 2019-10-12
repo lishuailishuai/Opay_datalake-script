@@ -123,11 +123,11 @@ def get_all_data_row(ds):
                 td_online_driver_num, --当日在线司机数
                 td_request_driver_num, --当日接单司机数
                 td_finish_order_driver_num, --当日完单司机数
-                price,  --订单应付总额,状态4，5
-                new_user_gmv, -- 当日新注册乘客完单gmv，状态4，5
+                cast(price as bigint) as gmv,  --订单应付总额,状态4，5
+                cast(new_user_gmv as bigint) as new_user_gmv, -- 当日新注册乘客完单gmv，状态4，5
                 concat(cast(nvl(round((recharge_amount+reward_amount)*100/price,1),0) as string),'%') as b_subsidy_rate,  --b端补贴率
                 concat(cast(nvl(round((price-pay_amount)*100/price,1),0) as string),'%') as c_subsidy_rate, --c端补贴率【gmv状态4，5；实付金额状态5】
-                user_recharge_succ_balance, --每日用户充值真实金额
+                cast(user_recharge_succ_balance as bigint) as user_recharge_succ_balance, --每日用户充值真实金额
                 recharge_users, --每日充值客户数
                 map_request_num,  --地图调用次数
                 concat(cast(nvl(round(opay_pay_failed_cnt*100/opay_pay_cnt,1),0) as string),'%') as opay_pay_failed_rate --opay支付失败占比
@@ -154,12 +154,13 @@ def get_all_data_row(ds):
                 row_html += weekend_tr_fmt.format(row=row)
             else:
                 row_html += tr_fmt.format(row=row)
-            all_completed_num = data_list[0][6] - data_list[0][10]
+            all_completed_num_nobeckon = data_list[0][6] - data_list[0][10]
+            all_completed_num = data_list[0][6]
 
-    return row_html, all_completed_num
+    return row_html, all_completed_num_nobeckon,all_completed_num
 
 
-def get_product_rows(ds, all_completed_num, product_id):
+def get_product_rows(ds, all_completed_num_nobeckon, product_id):
     tr_fmt = '''
            <tr>{row}</tr>
         '''
@@ -241,7 +242,7 @@ def get_product_rows(ds, all_completed_num, product_id):
                             <td>{}</td>
                             <td>{}</td>
                             <td>{}</td>
-                            <!--{}-->
+                            <td>{}</td>
                             <!--体验指标-->
                             <td>{}</td>
                             <td>{}</td>
@@ -273,7 +274,7 @@ def get_product_rows(ds, all_completed_num, product_id):
                  if(dt>'2019-10-10',finish_order_cnt_lfw,'-') AS finish_order_cnt_lfw, --完单数（近四周同期均值）
                  concat(cast(nvl(round(t1.finish_order_cnt*100/t1.ride_order_cnt,1),0) AS string),'%') AS finish_order_rate, --完单率
                  if(dt>'2019-10-10',concat(cast(nvl(round(finish_order_cnt_lfw*100/order_cnt_lfw,1),0) as string),'%'),'-') AS finish_order_rate_lfw, --完单率（近四周）
-                 concat(cast(nvl(round(if(t1.city_id=-10000,t1.finish_order_cnt*100/{all_completed_num},t1.finish_order_cnt*100/t1.city_total),1),0) AS string),'%') AS product_finish_order_rate,--业务完单占比
+                 concat(cast(nvl(round(if(t1.city_id=-10000,t1.finish_order_cnt*100/{all_completed_num_nobeckon},t1.finish_order_cnt*100/t1.city_total),1),0) AS string),'%') AS product_finish_order_rate,--业务完单占比
                  concat(cast(nvl(round(if(t1.city_id=-10000,t1.finish_order_cnt*100/t1.finish_order_cnt,t1.finish_order_cnt*2*100/sum(t1.finish_order_cnt) over(partition BY t1.product_id)),1),0) AS string),'%') AS city_finish_order_rate, --城市完单
                  nvl(t1.finished_users,0) as finished_users,--当日完单乘客数
                  nvl(if(product_id=3,t1.new_user_ord_cnt,t1.first_finished_users),0) as passenger_indictor_2, --1,2当日首次完单乘客数;3当日注册乘客下单数
@@ -291,20 +292,20 @@ def get_product_rows(ds, all_completed_num, product_id):
                  nvl(round(t1.finish_order_cnt/t1.finish_driver_online_dur*3600,1),0) AS TPH,
                  '-' as IPH,
                  --nvl(round((t1.amount_pay_online+t1.amount_pay_offline+t1.recharge_amount+t1.reward_amount)/t1.finish_driver_online_dur,1),0) AS IPH,
-                 if(t1.finish_order_cnt>=10000,concat(cast(nvl(round(t1.bad_feedback_finish_ord_cnt*10000/t1.finish_order_cnt,1),0) AS string),'‱'),'-') as bad_feedback_finish_rate, --万单完单差评率
-                 nvl(round(t1.finish_take_order_dur/t1.finish_order_cnt,0),0) AS avg_take_order_dur,--平均应答时长
-                 nvl(round(t1.finish_pick_up_dur/t1.finish_order_cnt,0),0) AS avg_pick_up_dur, --平均接驾时长
-                 nvl(round(t1.billing_order_dur/t1.finish_order_cnt,0),0) AS avg_billing_order_dur,--平均计费时长
-                 nvl(round(t1.finish_order_onride_dis/t1.finish_order_cnt,0),0) AS avg_order_onride_dis,--平均送驾距离
-                 nvl(t1.price,0.0) AS gmv,
-                 nvl(t1.new_user_gmv,0.0) as new_user_gmv, --当日注册乘客完单gmv
+                 if(t1.finish_order_cnt>=10000,concat(cast(nvl(round(t1.bad_feedback_finish_ord_cnt*10000/t1.finish_order_cnt,0),0) AS string),'‱'),'-') as bad_feedback_finish_rate, --万单完单差评率
+                 nvl(cast(round(t1.finish_take_order_dur/t1.finish_order_cnt,0) as bigint),0) AS avg_take_order_dur,--平均应答时长
+                 nvl(cast(round(t1.finish_pick_up_dur/t1.finish_order_cnt,0) as bigint),0) AS avg_pick_up_dur, --平均接驾时长
+                 nvl(cast(round(t1.billing_order_dur/t1.finish_order_cnt,0) as bigint),0) AS avg_billing_order_dur,--平均计费时长
+                 nvl(cast(round(t1.finish_order_onride_dis/t1.finish_order_cnt,0) as bigint),0) AS avg_order_onride_dis,--平均送驾距离
+                 nvl(cast(t1.price as bigint),0) AS gmv,
+                 nvl(cast(t1.new_user_gmv as bigint),0) as new_user_gmv, --当日注册乘客完单gmv
                 concat(cast(nvl(round((t1.recharge_amount+t1.reward_amount)*100/t1.price,1),0) AS string),'%') AS b_subsidy_rate, --b端补贴率
                 concat(cast(nvl(round((t1.price-t1.pay_amount)*100/t1.price,1),0) AS string),'%') AS c_subsidy_rate, --c端补贴率【gmv状态4，5；实付金额状态5】
                 nvl(round(t1.pay_price/t1.finish_pay,1),0) AS avg_pay_price, --单均应付
                 nvl(round(t1.pay_amount/t1.finish_pay,1),0) AS avg_pay_amount --单均实付
                 from (SELECT sum(if(product_id not in(99,-10000),finish_order_cnt,0)) over(partition BY city_id) AS city_total,*
                       FROM oride_dw.app_oride_global_operate_report_d WHERE dt='{dt}') t1
-                   LEFT JOIN
+                   left JOIN
                   (SELECT id,
                           name
                    FROM oride_dw_ods.ods_sqoop_base_data_city_conf_df
@@ -313,7 +314,7 @@ def get_product_rows(ds, all_completed_num, product_id):
                      AND t1.product_id={product_id}
                 ORDER BY t1.city_id ASC
         '''.format(dt=ds,
-                   all_completed_num=all_completed_num,
+                   all_completed_num_nobeckon=all_completed_num_nobeckon,
                    product_id=product_id,
                    start_date=airflow.macros.ds_add(ds, -14))
     cursor = get_hive_cursor()
@@ -355,13 +356,11 @@ def get_all_product_rows(ds, all_completed_num):
                             <td>{}</td>
                             <td>{}</td>
                             <td>{}</td>
-                            <td>{}</td>
                             <!--各业务完单占比-->
                             <td>{}</td>
                             <td>{}</td>
-                            <td>{}</td>
                             <td>{}</td> 
-                            <td>{}</td>      
+                            <td>{}</td>                             
                     '''
     sql = '''SELECT t1.dt,
          t1.city_id,
@@ -370,21 +369,20 @@ def get_all_product_rows(ds, all_completed_num):
          concat(cast(nvl(round(nvl(t1.wet_ord_cnt,0)*100/nvl(t1.ride_order_cnt,0),1),0) AS string),'%') AS wet_order_rate, --湿单占比
          nvl(t1.ride_order_cnt,0) AS ride_order_cnt, --当日下单数
          if(t1.dt>'2019-10-10',order_cnt_lfw,'-') AS order_cnt_lfw, --近四周同期下单数据
-         if(t1.city_id=1001,'-',nvl(t1.valid_ord_cnt,0)) AS valid_ord_cnt, --有效下单量
+         nvl(t1.valid_ord_cnt,0) AS valid_ord_cnt, --有效下单量
          nvl(t1.finish_pay,0) AS finish_pay, --当日支付完单数
          nvl(t1.finish_order_cnt,0) AS finish_order_cnt, --当日完单量
          if(t1.dt>'2019-10-10',finish_order_cnt_lfw,'-') AS finish_order_cnt_lfw, --完单数（近四周同期均值）
          concat(cast(nvl(round(t1.finish_order_cnt*100/t1.ride_order_cnt,1),0) AS string),'%') AS finish_order_rate, --完单率
          if(t1.dt>'2019-10-10',concat(cast(nvl(round(finish_order_cnt_lfw*100/order_cnt_lfw,1),0) AS string),'%'),'-') AS finish_order_rate_lfw, --完单率（近四周）
          concat(cast(nvl(round(nvl(t1.finish_order_cnt,0)*100/{all_completed_num},1),0) AS string),'%') AS city_fininsh_ord_rate, --城市完单占比
-         nvl(t1.act_users,0) as act_users, --当日活跃乘客数
+         --nvl(t1.act_users,0) as act_users, --当日活跃乘客数
          nvl(t1.ord_users,0) AS ord_users, --当日下单乘客数
          nvl(t1.finished_users,0) AS finished_users,--当日完单乘客数
          concat(cast(nvl(round(t1.online_paid_users*100/t1.paid_users,1),0) AS string),'%') AS online_paid_user_rate, --当日线上支付乘客占比
         concat(cast(nvl(round(nvl(t2.finish_order_cnt,0)*100/nvl(t1.finish_order_cnt,0),1),0) AS string),'%') AS direct_finish_rate, --专车完单占比
         concat(cast(nvl(round(nvl(t3.finish_order_cnt,0)*100/nvl(t1.finish_order_cnt,0),1),0) AS string),'%') AS street_finish_rate, --快车完单占比
         concat(cast(nvl(round(nvl(t4.finish_order_cnt,0)*100/nvl(t1.finish_order_cnt,0),1),0) AS string),'%') AS otrike_finish_rate, --otrike完单占比        
-        concat(cast(nvl(round(nvl(t6.finish_order_cnt,0)*100/nvl(t1.finish_order_cnt,0),1),0) AS string),'%') AS simulring_finish_rate, --同时呼叫完单占比
         concat(cast(nvl(round(nvl(t5.finish_order_cnt,0)*100/nvl(t1.finish_order_cnt,0),1),0) AS string),'%') AS beckoning_finish_rate --招手停完单占比       
         FROM
           (SELECT *
@@ -452,8 +450,8 @@ def send_report_email(ds, **kwargs):
                                 <th></th>
                                 <th colspan="2" style="text-align: center;">天气指标</th>
                                 <th colspan="9" style="text-align: center;">关键指标</th>
-                                <th colspan="4" style="text-align: center;">乘客指标</th>
-                                <th colspan="5" style="text-align: center;">各业务完单占比</th>
+                                <th colspan="3" style="text-align: center;">乘客指标</th>
+                                <th colspan="4" style="text-align: center;">各业务完单占比</th>
                             </tr>
                             <tr>
                                 <th>日期</th>
@@ -472,7 +470,6 @@ def send_report_email(ds, **kwargs):
                                 <th>完单率（近四周均值）</th>
                                 <th>城市完单占比</th>
                                 <!--乘客指标-->
-                                <th>活跃乘客数</th>
                                 <th>下单乘客数</th>
                                 <th>完单乘客数</th>
                                 <th>线上支付乘客占比</th>
@@ -480,7 +477,6 @@ def send_report_email(ds, **kwargs):
                                 <th>专车</th>
                                 <th>快车</th>
                                 <th>Otrike</th>
-                                <th>同时呼叫</th>  
                                 <th>招手停</th>                                                      
                             </tr>
     '''
@@ -490,7 +486,7 @@ def send_report_email(ds, **kwargs):
                                 <th></th>
                                 <th colspan="10" style="text-align: center;">关键指标</th>
                                 <th colspan="4" style="text-align: center;">乘客指标</th>
-                                <th colspan="10" style="text-align: center;">司机指标</th>
+                                <th colspan="11" style="text-align: center;">司机指标</th>
                                 <th colspan="4" style="text-align: center;">体验指标</th>
                                 <th colspan="6" style="text-align: center;">财务指标</th>
                             </tr>
@@ -524,6 +520,7 @@ def send_report_email(ds, **kwargs):
                                 <th>人均推送订单数</th>
                                 <th>TPH</th>
                                 <th>IPH</th>
+                                <th>万单差评率</th>
                                 <!--体验指标-->
                                 <th>平均应答时长（秒）</th>
                                 <th>平均接驾时长（秒）</th>
@@ -744,15 +741,16 @@ def send_report_email(ds, **kwargs):
     # print (result)
     # print (len(result))
     rows = result[0]
-    all_completed_num = result[1]
-    print (all_completed_num)
+    all_completed_num_nobeckon=result[1]
+    all_completed_num=result[2]
+    print (all_completed_num_nobeckon,all_completed_num)
     html = html_fmt.format(rows=rows,
                            all_product_city_total_fmt=all_product_city_total_fmt,
                            product_html_table_fmt=product_html_table_fmt,
                            product_html_table_fmt_otrike=product_html_table_fmt_otrike,
-                           direct_rows=get_product_rows(ds, all_completed_num, 1),
-                           street_rows=get_product_rows(ds, all_completed_num, 2),
-                           otrike_rows=get_product_rows(ds, all_completed_num, 3),
+                           direct_rows=get_product_rows(ds, all_completed_num_nobeckon, 1),
+                           street_rows=get_product_rows(ds, all_completed_num_nobeckon, 2),
+                           otrike_rows=get_product_rows(ds, all_completed_num_nobeckon, 3),
                            all_product_city_total_rows=get_all_product_rows(ds, all_completed_num)
                            )  #
 
@@ -760,8 +758,7 @@ def send_report_email(ds, **kwargs):
     # logging.info(html)
 
     email_to = Variable.get("oride_global_operate_report_receivers").split()
-    #email_to = ['lili
-    # .chen@opay-inc.com']
+    #email_to = ['lili.chen@opay-inc.com']
     # send mail
 
     email_subject = 'oride全局运营日报_DW数仓模型构建_{}'.format(ds)
