@@ -49,9 +49,9 @@ sleep_time = BashOperator(
 #依赖前一天分区
 dwd_oride_driver_pick_up_location_di_prev_day_tesk=HivePartitionSensor(
       task_id="dwd_oride_driver_pick_up_location_di_prev_day_task",
-      table="oride_client_event_detail",
-      partition="dt='{{ds}}'",
-      schema="oride_bi",
+      table="dwd_oride_client_event_detail_hi",
+      partition="""dt='{{ ds }}' and hour='23'""",
+      schema="oride_dw",
       poke_interval=60, #依赖不满足时，一分钟检查一次依赖状态
       dag=dag
     )
@@ -100,7 +100,7 @@ FROM
           get_json_object(event_value, '$.city_id') AS city_id,
           get_json_object(event_value, '$.serv_type') AS product_id,
           1 AS pick_up_status
-   FROM oride_bi.oride_client_event_detail
+   FROM oride_dw.dwd_oride_client_event_detail_hi
    WHERE dt='{pt}'
      AND event_name='start_ride_sliding'
    UNION ALL SELECT user_id AS driver_id,
@@ -109,7 +109,7 @@ FROM
                     get_json_object(event_value, '$.city_id') AS city_id,
                     get_json_object(event_value, '$.serv_type') AS product_id,
                     2 AS pick_up_status
-   FROM oride_bi.oride_client_event_detail
+   FROM oride_dw.dwd_oride_client_event_detail_hi
    WHERE dt='{pt}'
      AND event_name='start_ride_sliding_arrived') t1
 GROUP BY driver_id,

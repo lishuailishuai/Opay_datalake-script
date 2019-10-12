@@ -48,9 +48,9 @@ sleep_time = BashOperator(
 # 依赖前一天分区
 dwd_oride_driver_accept_order_funnel_di_prev_day_task = HivePartitionSensor(
     task_id="dwd_oride_driver_accept_order_funnel_di_prev_day_task",
-    table="oride_client_event_detail",
-    partition="dt='{{ds}}'",
-    schema="oride_bi",
+    table="dwd_oride_client_event_detail_hi",
+    partition="""dt='{{ ds }}' and hour='23'""",
+    schema="oride_dw",
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
@@ -116,7 +116,7 @@ dwd_oride_driver_accept_order_funnel_di_task = HiveOperator(
               from_unixtime(cast (event_time as bigint),'yyyy-MM-dd hh:mm:ss') AS log_time, --埋点时间
               get_json_object(event_value, '$.isAssign') AS isAssign,  --是否强派单
               event_name  --事件类型
-       FROM oride_bi.oride_client_event_detail
+       FROM oride_dw.dwd_oride_client_event_detail_hi
        lateral view explode(split(substr(get_json_object(event_value, '$.order_ids'),2,length(get_json_object(event_value, '$.order_ids'))-2),',')) order_ids as order_id
        WHERE dt='{pt}'
          AND event_name in('accept_order_show','order_push_show','accept_order_click')
@@ -133,7 +133,7 @@ dwd_oride_driver_accept_order_funnel_di_task = HiveOperator(
               from_unixtime(cast (event_time as bigint),'yyyy-MM-dd hh:mm:ss') AS log_time, --埋点时间
               get_json_object(event_value, '$.isAssign') AS isAssign,  --是否强派单
               event_name  --事件类型
-       FROM oride_bi.oride_client_event_detail
+       FROM oride_dw.dwd_oride_client_event_detail_hi
        WHERE dt='{pt}'
          AND event_name in('accept_order_show','order_push_show','accept_order_click')
        ) t 

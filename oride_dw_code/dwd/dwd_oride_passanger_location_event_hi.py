@@ -49,9 +49,9 @@ sleep_time = BashOperator(
 # 依赖前一小时分区
 dependence_dwd_oride_location_user_event_hi_prev_hour_task = HivePartitionSensor(
     task_id="dwd_oride_location_user_event_hi_prev_hour_task",
-    table="oride_client_event_detail",
+    table="dwd_oride_client_event_detail_hi",
     partition="""dt='{{ ds }}' and hour='{{ execution_date.strftime("%H") }}'""",
-    schema="oride_bi",
+    schema="oride_dw",
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
@@ -110,7 +110,7 @@ dwd_oride_location_user_event_hi_task = HiveOperator(
             if(event_name = 'rider_arrive_show',get_json_object(event_value,'$.lng'),null) as rider_arrive_show_lng
                     
         
-            from oride_bi.oride_client_event_detail
+            from oride_dw.dwd_oride_client_event_detail_hi
             where dt = '{now_day}'
             and hour = '{now_hour}'
             and event_name in (
