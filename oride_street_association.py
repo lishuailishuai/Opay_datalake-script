@@ -107,6 +107,16 @@ data_driver_comment_validate_task = HivePartitionSensor(
     dag=dag
 )
 
+oride_driver_timerange_validate_task = HivePartitionSensor(
+    task_id="oride_driver_timerange_validate_task",
+    table="ods_log_oride_driver_timerange",
+    partition="dt='{{ds}}'",
+    schema="oride_dw_ods",
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
+
 create_oride_street_association_di = HiveOperator(
     task_id='create_oride_street_association_di',
     hql="""
@@ -228,7 +238,7 @@ insert_oride_street_association_di = HiveOperator(
                 t1.association_id,
                 count(t.driver_id) as online_drivers -- 在线司机数
             FROM
-                oride_bi.oride_driver_timerange t
+                oride_dw_ods.ods_log_oride_driver_timerange t
                 INNER JOIN driver_data t1 ON t1.driver_id=t.driver_id
             WHERE
                 t.dt='{{ ds }}'
@@ -248,7 +258,7 @@ insert_oride_street_association_di = HiveOperator(
                         driver_id,
                         MAX(dt) as l_dt
                     FROM
-                        oride_bi.oride_driver_timerange
+                        oride_dw_ods.ods_log_oride_driver_timerange
                     WHERE
                         dt between '{{ macros.ds_add(ds, -2) }}' and '{{ ds }}'
                     GROUP BY
@@ -555,5 +565,7 @@ validate_partition_data >> data_driver_extend_validate_task >> create_oride_stre
 validate_partition_data >> data_driver_comment_validate_task >> create_oride_street_association_di
 validate_partition_data >> driver_group_validate_task >> create_oride_street_association_di
 validate_partition_data >> rider_signups_validate_task >> create_oride_street_association_di
+validate_partition_data >> oride_driver_timerange_validate_task >> create_oride_street_association_di
+
 
 create_oride_street_association_di >> insert_oride_street_association_di >> oride_association_email

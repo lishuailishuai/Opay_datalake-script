@@ -85,9 +85,9 @@ dwd_oride_order_push_driver_detail_di_prev_day_tesk = UFileSensor(
 # 依赖前一天分区
 oride_driver_timerange_prev_day_tesk = HivePartitionSensor(
     task_id="oride_driver_timerange_prev_day_tesk",
-    table="oride_driver_timerange",
+    table="ods_log_oride_driver_timerange",
     partition="dt='{{ds}}'",
-    schema="oride_bi",
+    schema="oride_dw_ods",
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )

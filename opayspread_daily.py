@@ -938,7 +938,7 @@ LEFT JOIN
 ) TC on TA.driver_id = TC.id
 LEFT JOIN 
 (
-    select * from oride_bi.oride_driver_timerange where dt = '{ds}'
+    select * from oride_dw_ods.ods_log_oride_driver_timerange where dt = '{ds}'
 ) TD on TA.driver_id = TD.driver_id
 WHERE TA.driver_id>0 AND TC.serv_type=2
 '''

@@ -37,7 +37,7 @@ table_names = ['oride_dw_ods.ods_sqoop_base_data_driver_df',
                'oride_dw_ods.ods_sqoop_mass_rider_signups_df',
                'oride_dw_ods.ods_sqoop_mass_driver_group_df',
                'oride_dw_ods.ods_sqoop_mass_driver_team_df',
-               'oride_bi.oride_driver_timerange'
+               'oride_dw_ods.ods_log_oride_driver_timerange'
                ]
 
 headers = [
@@ -169,9 +169,9 @@ data_driver_records_day_validate_task = HivePartitionSensor(
 
 oride_driver_timerange_validate_task = HivePartitionSensor(
     task_id="oride_driver_timerange_validate_task",
-    table="oride_driver_timerange",
+    table="ods_log_oride_driver_timerange",
     partition="dt='{{ds}}'",
-    schema="oride_bi",
+    schema="oride_dw_ods",
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
@@ -302,7 +302,7 @@ insert_data = HiveOperator(
                         driver_id,
                         driver_freerange
                     FROM
-                        oride_bi.oride_driver_timerange
+                        oride_dw_ods.ods_log_oride_driver_timerange
                 ) t2 ON t2.driver_id = t1.driver_id and t1.dt = t2.dt
             GROUP BY t1.dt,t1.driver_id
         ),
@@ -323,7 +323,7 @@ insert_data = HiveOperator(
             dt,
             driver_id,
             sum(driver_onlinerange) driver_online_sum
-            from oride_bi.oride_driver_timerange
+            from oride_dw_ods.ods_log_oride_driver_timerange
             where dt between '{{ macros.ds_add(ds, -2) }}' and '{{ ds }}'
             group by driver_id,dt
         ),
@@ -438,7 +438,7 @@ insert_data = HiveOperator(
                 driver_id,
                 count(distinct dt) as total_online_days
             from
-                oride_bi.oride_driver_timerange
+                oride_dw_ods.ods_log_oride_driver_timerange
             where
                 driver_onlinerange>0
             group by driver_id

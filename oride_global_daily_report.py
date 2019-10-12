@@ -37,7 +37,7 @@ global_table_names = [
     'oride_dw_ods.ods_sqoop_base_data_order_payment_df',
     'oride_dw_ods.ods_sqoop_base_data_user_extend_df',
     'oride_dw_ods.ods_sqoop_base_data_driver_extend_df',
-    'oride_bi.oride_driver_timerange',
+    'oride_dw_ods.ods_log_oride_driver_timerange',
     'oride_dw.dwd_oride_order_push_driver_detail_di',
     'oride_source.server_magic',
     'oride_dw_ods.ods_sqoop_base_data_driver_recharge_records_df',
@@ -311,7 +311,7 @@ insert_oride_global_daily_report = HiveOperator(
                     SELECT
                         *
                     FROM
-                        oride_bi.oride_driver_timerange
+                        oride_dw_ods.ods_log_oride_driver_timerange
                     WHERE
                         dt='{{ ds }}'
                 ) t2 ON t2.driver_id=t1.driver_id
@@ -418,7 +418,7 @@ insert_oride_global_daily_report = HiveOperator(
                     SELECT
                         *
                     FROM
-                        oride_bi.oride_driver_timerange
+                        oride_dw_ods.ods_log_oride_driver_timerange
                     WHERE
                         dt='{{ ds }}'
                 ) odt
@@ -1137,7 +1137,7 @@ insert_oride_global_city_serv_daily_report = HiveOperator(
                     SELECT
                         *
                     FROM
-                        oride_bi.oride_driver_timerange
+                        oride_dw_ods.ods_log_oride_driver_timerange
                     WHERE
                         dt='{{ ds }}'
                 ) t2 ON t2.driver_id=t1.driver_id
@@ -1252,7 +1252,7 @@ insert_oride_global_city_serv_daily_report = HiveOperator(
                     SELECT
                         *
                     FROM
-                        oride_bi.oride_driver_timerange
+                        oride_dw_ods.ods_log_oride_driver_timerange
                     WHERE
                         dt='{{ ds }}'
                 ) odt
@@ -3399,77 +3399,7 @@ send_anti_fraud_report = PythonOperator(
     dag=dag
 )
 
-KeyDriverOnlineTime = "driver:ont:%d:%s"
-KeyDriverOrderTime = "driver:ort:%d:%s"
 
-get_driver_id = '''
-select max(id) from oride_data.data_driver
-'''
-insert_timerange = '''
-replace into bi.driver_timerange (`Daily`,`driver_id`,`driver_onlinerange`,`driver_freerange`) values (%s,%s,%s,%s)
-'''
-
-
-def get_driver_online_time(ds, **op_kwargs):
-    dt = op_kwargs["ds_nodash"]
-    redis = get_redis_connection()
-    conn = get_db_conn('mysql_oride_data_readonly')
-    mcursor = conn.cursor()
-    mcursor.execute(get_driver_id)
-    result = mcursor.fetchone()
-    conn.commit()
-    mcursor.close()
-    conn.close()
-    rows = []
-    res = []
-    for i in range(1, result[0] + 1):
-        online_time = redis.get(KeyDriverOnlineTime % (i, dt))
-        order_time = redis.get(KeyDriverOrderTime % (i, dt))
-        if online_time is not None:
-            if order_time is None:
-                order_time = 0
-            free_time = int(online_time) - int(order_time)
-            res.append([dt + '000000', int(i), int(online_time), int(free_time)])
-            rows.append('(' + str(i) + ',' + str(online_time, 'utf-8') + ',' + str(free_time) + ')')
-    if rows:
-        query = """
-            INSERT OVERWRITE TABLE oride_bi.oride_driver_timerange PARTITION (dt='{dt}')
-            VALUES {value}
-        """.format(dt=ds, value=','.join(rows))
-        logging.info('import_driver_online_time run sql:%s' % query)
-        hive_hook = HiveCliHook()
-        hive_hook.run_cli(query)
-        # insert bi mysql
-        conn = get_db_conn('mysql_bi')
-        mcursor = conn.cursor()
-        mcursor.executemany(insert_timerange, res)
-        conn.commit()
-        mcursor.close()
-        conn.close()
-
-
-import_driver_online_time = PythonOperator(
-    task_id='import_driver_online_time',
-    python_callable=get_driver_online_time,
-    provide_context=True,
-    dag=dag
-)
-
-create_oride_driver_timerange = HiveOperator(
-    task_id='create_oride_driver_timerange',
-    hql="""
-        CREATE TABLE IF NOT EXISTS oride_driver_timerange (
-          driver_id int,
-          driver_onlinerange int,
-          driver_freerange int
-        )
-        PARTITIONED BY (
-            dt STRING
-        )
-        STORED AS PARQUET
-    """,
-    schema='oride_bi',
-    dag=dag)
 
 '''
 检查global报表依赖数据是否导入成功
@@ -3511,7 +3441,6 @@ for table_name in anti_fraud_table_names:
     anti_fraud_validate_task >> insert_oride_anti_fraud_daily_report
 
 create_oride_global_daily_report >> insert_oride_global_daily_report
-create_oride_driver_timerange >> import_driver_online_time >> insert_oride_global_daily_report
 import_opay_event_log >> insert_oride_global_daily_report
 create_oride_global_city_serv_daily_report >> insert_oride_global_city_serv_daily_report
 insert_oride_global_daily_report >> insert_oride_global_city_serv_daily_report

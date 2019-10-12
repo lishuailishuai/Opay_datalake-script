@@ -31,7 +31,7 @@ table_names = ['oride_dw_ods.ods_sqoop_base_data_order_df',
                'oride_dw_ods.ods_sqoop_base_data_city_conf_df',
                'oride_dw_ods.ods_sqoop_base_data_order_payment_df',
                'oride_dw.dwd_oride_order_push_driver_detail_di',
-               'oride_bi.oride_driver_timerange',
+               'oride_dw_ods.ods_log_oride_driver_timerange',
                'oride_dw_ods.ods_sqoop_base_data_driver_records_day_df'
                ]
 
@@ -99,9 +99,9 @@ server_magic_push_detail_validate_task = HivePartitionSensor(
 
 oride_driver_timerange_validate_task = HivePartitionSensor(
     task_id="oride_driver_timerange_validate_task",
-    table="oride_driver_timerange",
+    table="ods_log_oride_driver_timerange",
     partition="dt='{{ds}}'",
-    schema="oride_bi",
+    schema="oride_dw_ods",
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
@@ -166,7 +166,7 @@ insert_driver_metrics = HiveOperator(
                 driver_id,
                 driver_onlinerange
                 from 
-                oride_bi.oride_driver_timerange
+                oride_dw_ods.ods_log_oride_driver_timerange
                 where dt = '{{ ds }}'
             ) t on d.id = t.driver_id
             group by d.city_name,d.serv_type
@@ -224,7 +224,7 @@ insert_driver_metrics = HiveOperator(
                     SELECT
                         *
                     FROM
-                        oride_bi.oride_driver_timerange
+                        oride_dw_ods.ods_log_oride_driver_timerange
                     WHERE
                         dt='{{ ds }}'
                 ) t2 ON t2.driver_id = t1.driver_id

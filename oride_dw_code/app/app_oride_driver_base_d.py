@@ -9,6 +9,7 @@ from airflow.operators.bash_operator import BashOperator
 from airflow.sensors import UFileSensor
 from airflow.sensors import WebHdfsSensor
 from airflow.sensors.s3_prefix_sensor import S3PrefixSensor
+from airflow.sensors.hive_partition_sensor import HivePartitionSensor
 from utils.connection_helper import get_hive_cursor
 from datetime import datetime, timedelta
 import re
@@ -118,12 +119,13 @@ dependence_ods_oride_data_driver_reward = UFileSensor(
     dag=dag
 )
 
-dependence_ods_oride_driver_timerange = WebHdfsSensor(
-    task_id='dependence_ods_oride_driver_timerange',
-    filepath='{hdfs_path_str}/dt={pt}'.format(
-        hdfs_path_str="/user/hive/warehouse/oride_bi.db/oride_driver_timerange",
-        pt='{{ ds }}'
-    ),
+# 依赖前一天分区
+dependence_oride_driver_timerange = HivePartitionSensor(
+    task_id="dependence_oride_driver_timerange",
+    table="ods_log_oride_driver_timerange",
+    partition="dt='{{ds}}'",
+    schema="oride_dw_ods",
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
 """
@@ -408,7 +410,7 @@ driver_online AS
             driver_onlinerange,
             driver_freerange,
             driver_id 
-        FROM oride_bi.oride_driver_timerange 
+        FROM oride_dw_ods.ods_log_oride_driver_timerange
         WHERE dt = '{pt}'
         ) AS odt 
     JOIN (SELECT 
@@ -736,7 +738,7 @@ driver_online AS
             driver_onlinerange,
             driver_freerange,
             driver_id 
-        FROM oride_bi.oride_driver_timerange 
+        FROM oride_dw_ods.ods_log_oride_driver_timerange
         WHERE dt = '{pt}'
         ) AS odt 
     JOIN (SELECT 
@@ -1078,7 +1080,7 @@ driver_online AS
             driver_onlinerange,
             driver_freerange,
             driver_id 
-        FROM oride_bi.oride_driver_timerange 
+        FROM oride_dw_ods.ods_log_oride_driver_timerange
         WHERE dt = '{pt}'
         ) AS odt 
     JOIN (SELECT 
@@ -1162,7 +1164,7 @@ dependence_ods_oride_data_order >> sleep_time
 dependence_ods_oride_data_driver_records_day >> sleep_time
 dependence_ods_oride_data_driver_recharge_records >> sleep_time
 dependence_ods_oride_data_driver_reward >> sleep_time
-dependence_ods_oride_driver_timerange >> sleep_time
+dependence_oride_driver_timerange >> sleep_time
 
 create_result_table_task >> sleep_time
 

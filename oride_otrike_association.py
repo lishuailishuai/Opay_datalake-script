@@ -34,6 +34,7 @@ table_names = [
     'oride_dw_ods.ods_sqoop_base_data_order_df',
     'oride_dw_ods.ods_sqoop_base_data_order_payment_df',
     'oride_dw_ods.ods_sqoop_base_data_driver_comment_df',
+    'oride_dw_ods.ods_log_oride_driver_timerange'
 ]
 
 create_oride_otrike_association_di = HiveOperator(
@@ -167,7 +168,7 @@ insert_oride_otrike_association_di = HiveOperator(
                 t1.association_id,
                 count(t.driver_id) as online_drivers -- 在线司机数
             FROM
-                oride_bi.oride_driver_timerange t
+                oride_dw_ods.ods_log_oride_driver_timerange t
                 INNER JOIN driver_data t1 ON t1.driver_id=t.driver_id
             WHERE
                 t.dt='{{ ds }}'
@@ -187,7 +188,7 @@ insert_oride_otrike_association_di = HiveOperator(
                         driver_id,
                         MAX(dt) as l_dt
                     FROM
-                        oride_bi.oride_driver_timerange
+                        oride_dw_ods.ods_log_oride_driver_timerange
                     WHERE
                         dt between '{{ macros.ds_add(ds, -2) }}' and '{{ ds }}'
                     GROUP BY
