@@ -243,3 +243,250 @@ ROW FORMAT SERDE
 with SERDEPROPERTIES("ignore.malformed.json"="true")
 LOCATION 'ufile://opay-datalake/oride-research/tags/passenge_tags'
 
+CREATE EXTERNAL TABLE oride_source.`algo_accept_order_hook`(
+    `event_type` int,
+    `ts` bigint,
+    `user_role` int,
+    `city_id` bigint,
+    `trip_id` bigint,
+    `order_ids` Array<bigint>,
+    `driver_id` bigint,
+    `driver_location` Struct<lng:float, lat:float>,
+    `passenger_id` bigint,
+    `extra` string
+)
+PARTITIONED BY (
+    `dt` string,
+    `hour` string)
+ROW FORMAT SERDE
+   'org.openx.data.jsonserde.JsonSerDe'
+with SERDEPROPERTIES("ignore.malformed.json"="true")
+LOCATION 's3a://opay-bi/algorithm_buried/algo.accept_order_hook'
+
+CREATE EXTERNAL TABLE oride_source.`algo_arrive_order_dest_hook`(
+    `event_type` int,
+    `ts` bigint,
+    `user_role` int,
+    `city_id` bigint,
+    `trip_id` bigint,
+    `order_ids` Array<bigint>,
+    `driver_id` bigint,
+    `driver_location` Struct<lng:float, lat:float>,
+    `passenger_id` bigint,
+    `extra` string
+)
+PARTITIONED BY (
+    `dt` string,
+    `hour` string)
+ROW FORMAT SERDE
+   'org.openx.data.jsonserde.JsonSerDe'
+with SERDEPROPERTIES("ignore.malformed.json"="true")
+LOCATION 's3a://opay-bi/algorithm_buried/algo.arrive_order_dest_hook';
+
+CREATE EXTERNAL TABLE oride_source.`algo_arrive_order_start_hook`(
+    `event_type` int,
+    `ts` bigint,
+    `user_role` int,
+    `city_id` bigint,
+    `trip_id` bigint,
+    `order_ids` Array<bigint>,
+    `driver_id` bigint,
+    `driver_location` Struct<lng:float, lat:float>,
+    `passenger_id` bigint,
+    `extra` string
+)
+PARTITIONED BY (
+    `dt` string,
+    `hour` string)
+ROW FORMAT SERDE
+   'org.openx.data.jsonserde.JsonSerDe'
+with SERDEPROPERTIES("ignore.malformed.json"="true")
+LOCATION 's3a://opay-bi/algorithm_buried/algo.arrive_order_start_hook';
+
+
+CREATE EXTERNAL TABLE oride_source.`algo_assign_sheet_hook`(
+    `event_type` int,
+    `ts` bigint,
+    `user_role` int,
+    `city_id` bigint,
+    `trip_id` bigint,
+    `order_ids` Array<bigint>,
+    `driver_id` bigint,
+    `driver_location` Struct<lng:float, lat:float>,
+    `passenger_id` bigint,
+    `extra` string
+)
+PARTITIONED BY (
+    `dt` string,
+    `hour` string)
+ROW FORMAT SERDE
+   'org.openx.data.jsonserde.JsonSerDe'
+with SERDEPROPERTIES("ignore.malformed.json"="true")
+LOCATION 's3a://opay-bi/algorithm_buried/algo.assign_sheet_hook';
+
+
+CREATE EXTERNAL TABLE oride_source.`algo_assign_sheet_timeout_hook`(
+    `event_type` int,
+    `ts` bigint,
+    `user_role` int,
+    `city_id` bigint,
+    `trip_id` bigint,
+    `order_ids` Array<bigint>,
+    `driver_id` bigint,
+    `driver_location` Struct<lng:float, lat:float>,
+    `passenger_id` bigint,
+    `extra` string
+)
+PARTITIONED BY (
+    `dt` string,
+    `hour` string)
+ROW FORMAT SERDE
+   'org.openx.data.jsonserde.JsonSerDe'
+with SERDEPROPERTIES("ignore.malformed.json"="true")
+LOCATION 's3a://opay-bi/algorithm_buried/algo.assign_sheet_timeout_hook';
+
+
+CREATE EXTERNAL TABLE oride_source.`algo_cancel_order_hook`(
+    `event_type` int,
+    `ts` bigint,
+    `user_role` int,
+    `city_id` bigint,
+    `trip_id` bigint,
+    `order_ids` Array<bigint>,
+    `driver_id` bigint,
+    `driver_location` Struct<lng:float, lat:float>,
+    `passenger_id` bigint,
+    `extra` string
+)
+PARTITIONED BY (
+    `dt` string,
+    `hour` string)
+ROW FORMAT SERDE
+   'org.openx.data.jsonserde.JsonSerDe'
+with SERDEPROPERTIES("ignore.malformed.json"="true")
+LOCATION 's3a://opay-bi/algorithm_buried/algo.cancel_order_hook';
+
+CREATE EXTERNAL TABLE oride_source.`algo_create_order_hook`(
+    `event_type` int,
+    `ts` bigint,
+    `user_role` int,
+    `city_id` bigint,
+    `trip_id` bigint,
+    `order_ids` Array<bigint>,
+    `driver_id` bigint,
+    `driver_location` Struct<lng:float, lat:float>,
+    `passenger_id` bigint,
+    `extra` string
+)
+PARTITIONED BY (
+    `dt` string,
+    `hour` string)
+ROW FORMAT SERDE
+   'org.openx.data.jsonserde.JsonSerDe'
+with SERDEPROPERTIES("ignore.malformed.json"="true")
+LOCATION 's3a://opay-bi/algorithm_buried/algo.create_order_hook';
+
+
+CREATE EXTERNAL TABLE oride_source.`algo_estimate_order_hook`(
+    `event_type` int,
+    `ts` bigint,
+    `user_role` int,
+    `city_id` bigint,
+    `trip_id` bigint,
+    `order_ids` Array<bigint>,
+    `driver_id` bigint,
+    `driver_location` Struct<lng:float, lat:float>,
+    `passenger_id` bigint,
+    `extra` string
+)
+PARTITIONED BY (
+    `dt` string,
+    `hour` string)
+ROW FORMAT SERDE
+   'org.openx.data.jsonserde.JsonSerDe'
+with SERDEPROPERTIES("ignore.malformed.json"="true")
+LOCATION 's3a://opay-bi/algorithm_buried/algo.estimate_order_hook';
+
+
+CREATE EXTERNAL TABLE oride_source.`algo_finish_order_hook`(
+    `event_type` int,
+    `ts` bigint,
+    `user_role` int,
+    `city_id` bigint,
+    `trip_id` bigint,
+    `order_ids` Array<bigint>,
+    `driver_id` bigint,
+    `driver_location` Struct<lng:float, lat:float>,
+    `passenger_id` bigint,
+    `extra` string
+)
+PARTITIONED BY (
+    `dt` string,
+    `hour` string)
+ROW FORMAT SERDE
+   'org.openx.data.jsonserde.JsonSerDe'
+with SERDEPROPERTIES("ignore.malformed.json"="true")
+LOCATION 's3a://opay-bi/algorithm_buried/algo.finish_order_hook';
+
+CREATE EXTERNAL TABLE oride_source.`algo_refuse_order_hook`(
+    `event_type` int,
+    `ts` bigint,
+    `user_role` int,
+    `city_id` bigint,
+    `trip_id` bigint,
+    `order_ids` Array<bigint>,
+    `driver_id` bigint,
+    `driver_location` Struct<lng:float, lat:float>,
+    `passenger_id` bigint,
+    `extra` string
+)
+PARTITIONED BY (
+    `dt` string,
+    `hour` string)
+ROW FORMAT SERDE
+   'org.openx.data.jsonserde.JsonSerDe'
+with SERDEPROPERTIES("ignore.malformed.json"="true")
+LOCATION 's3a://opay-bi/algorithm_buried/algo.refuse_order_hook';
+
+CREATE EXTERNAL TABLE oride_source.`algo_send_hook`(
+    `event_type` int,
+    `ts` bigint,
+    `user_role` int,
+    `city_id` bigint,
+    `trip_id` bigint,
+    `order_ids` Array<bigint>,
+    `driver_id` bigint,
+    `driver_location` Struct<lng:float, lat:float>,
+    `passenger_id` bigint,
+    `extra` string
+)
+PARTITIONED BY (
+    `dt` string,
+    `hour` string)
+ROW FORMAT SERDE
+   'org.openx.data.jsonserde.JsonSerDe'
+with SERDEPROPERTIES("ignore.malformed.json"="true")
+LOCATION 's3a://opay-bi/algorithm_buried/algo.send_hook';
+
+CREATE EXTERNAL TABLE oride_source.`algo_send_order_hook`(
+    `event_type` int,
+    `ts` bigint,
+    `user_role` int,
+    `city_id` bigint,
+    `trip_id` bigint,
+    `order_ids` Array<bigint>,
+    `driver_id` bigint,
+    `driver_location` Struct<lng:float, lat:float>,
+    `passenger_id` bigint,
+    `extra` string
+)
+PARTITIONED BY (
+    `dt` string,
+    `hour` string)
+ROW FORMAT SERDE
+   'org.openx.data.jsonserde.JsonSerDe'
+with SERDEPROPERTIES("ignore.malformed.json"="true")
+LOCATION 's3a://opay-bi/algorithm_buried/algo.send_order_hook';
+
+
+
