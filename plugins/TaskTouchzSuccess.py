@@ -56,8 +56,8 @@ class TaskTouchzSuccess(object):
             #数据为0，发微信报警通知
             if line_num[0] == str(0):
                 
-                self.comwx.postAppMessage('DW调度系统任务 {jobname} 数据产出异常，对应时间:{pt}'.format(jobname=self.table_name,pt=ds), '271')
-        
+                self.comwx.postAppMessage('DW调度系统任务 {jobname} 数据产出异常'.format(jobname=self.table_name), '271')
+
                 logging.info("Error : {hdfs_data_dir} is empty".format(hdfs_data_dir=self.hdfs_data_dir_str))
                 sys.exit(1)
         
@@ -75,7 +75,7 @@ class TaskTouchzSuccess(object):
     
         except Exception as e:
 
-            self.comwx.postAppMessage('DW调度系统任务 {jobname} 数据产出异常，对应时间:{pt}'.format(jobname=self.table_name,pt=ds),'271')
+            self.comwx.postAppMessage('DW调度系统任务 {jobname} 数据产出异常'.format(jobname=self.table_name),'271')
 
             logging.info(e)
 
