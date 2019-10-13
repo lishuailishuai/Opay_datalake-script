@@ -392,7 +392,7 @@ create_crm_data = BashOperator(
 
         crm_sql="
             create temporary function isInArea as 'com.oride.udf.IsInArea' 
-            USING JAR 'hdfs://node4.datalake.opay.com:8020/tmp/udf-1.0-SNAPSHOT-jar-with-dependencies.jar';
+            USING JAR 'hdfs://warehourse:8020/tmp/udf-1.0-SNAPSHOT-jar-with-dependencies.jar';
             
             insert overwrite table ofood_bi.ofood_area_shop_metrics_info partition(dt = '${dt}')
             select 

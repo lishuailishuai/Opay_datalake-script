@@ -193,7 +193,7 @@ create_bdm_dim_data = BashOperator(
         set hive.exec.dynamic.partition.mode=nonstrict;
             
         create temporary function isInArea as 'com.oride.udf.IsInArea' 
-                    USING JAR 'hdfs://node4.datalake.opay.com:8020/tmp/udf-1.0-SNAPSHOT-jar-with-dependencies.jar';
+                    USING JAR 'hdfs://warehourse:8020/tmp/udf-1.0-SNAPSHOT-jar-with-dependencies.jar';
         
         
         with 
@@ -382,7 +382,7 @@ create_shop_list_data = BashOperator(
         set hive.exec.dynamic.partition.mode=nonstrict;
         
         create temporary function isInArea as 'com.oride.udf.IsInArea' 
-                    USING JAR 'hdfs://node4.datalake.opay.com:8020/tmp/udf-1.0-SNAPSHOT-jar-with-dependencies.jar';
+                    USING JAR 'hdfs://warehourse:8020/tmp/udf-1.0-SNAPSHOT-jar-with-dependencies.jar';
         
         
         
