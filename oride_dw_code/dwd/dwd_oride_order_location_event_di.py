@@ -47,8 +47,8 @@ sleep_time = BashOperator(
 
 
 
-dependence_dwd_oride_driver_location_event_hi_prev_day_task = HivePartitionSensor(
-    task_id="dwd_oride_driver_location_event_hi_prev_day_task",
+dependence_dwd_oride_order_location_event_hi_prev_day_task = HivePartitionSensor(
+    task_id="dwd_oride_order_location_event_hi_prev_day_task",
     table="dwd_oride_order_location_event_hi",
     partition="""dt='{{ ds }}' and hour='23'""",
     schema="oride_dw",
@@ -244,6 +244,4 @@ touchz_data_success = BashOperator(
     ),
     dag=dag)
 
-dependence_dwd_oride_driver_location_event_hi_prev_day_task >> sleep_time
-dependence_dwd_oride_passanger_location_event_hi_prev_day_task >> sleep_time
-sleep_time >> dwd_oride_location_driver_event_di_task >> task_check_key_data >> touchz_data_success
+dependence_dwd_oride_order_location_event_hi_prev_day_task>>dependence_dwd_oride_driver_location_event_hi_prev_day_task >>dependence_dwd_oride_passanger_location_event_hi_prev_day_task>>sleep_time >> dwd_oride_location_driver_event_di_task >> task_check_key_data >> touchz_data_success
