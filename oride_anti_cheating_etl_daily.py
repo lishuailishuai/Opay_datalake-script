@@ -21,7 +21,6 @@ dag = airflow.DAG(
     schedule_interval="40 02 * * *",
     default_args=args)
 
-
 validate_partition_data = PythonOperator(
     task_id='validate_partition_data',
     python_callable=validate_partition,
@@ -30,17 +29,15 @@ validate_partition_data = PythonOperator(
         # 验证table
         "table_names":
             [
-             'oride_dw_ods.ods_log_driver_track_data_hi ',
-             'oride_dw.dwd_oride_client_event_detail_hi',
-             'oride_dw_ods.ods_sqoop_base_data_order_df',
-             ],
+                'oride_dw_ods.ods_log_driver_track_data_hi ',
+                'oride_dw.dwd_oride_client_event_detail_hi',
+                'oride_dw_ods.ods_sqoop_base_data_order_df',
+            ],
         # 任务名称
         "task_name": "订单反作弊轨迹数据"
     },
     dag=dag
 )
-
-
 
 data_order_validate_task = HivePartitionSensor(
     task_id="data_order_validate_task",
@@ -51,8 +48,6 @@ data_order_validate_task = HivePartitionSensor(
     dag=dag
 )
 
-
-
 client_event_data_order_validate_task = HivePartitionSensor(
     task_id="data_order_validate_task",
     table="dwd_oride_client_event_detail_hi",
@@ -61,9 +56,6 @@ client_event_data_order_validate_task = HivePartitionSensor(
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
-
-
-
 
 driver_track_validate_task = HivePartitionSensor(
     task_id="driver_track_validate_task",
@@ -74,16 +66,11 @@ driver_track_validate_task = HivePartitionSensor(
     dag=dag
 )
 
-
-
 insert_order_location_info = HiveOperator(
     task_id='insert_order_location_info',
     hql='''
-        set hive.execution.engine=mr;
-        set mapreduce.map.java.opts=-Xmx3072m -XX:-UseGCOverheadLimit;
-        set mapreduce.reduce.java.opts=-Xmx2048m;
-        set mapreduce.map.memory.mb=3072;
-        set mapreduce.reduce.memory.mb=3072;
+        SET hive.exec.parallel=TRUE;
+        SET hive.exec.dynamic.partition.mode=nonstrict;
 
         with order_data as (
             select 
@@ -238,20 +225,26 @@ insert_order_location_info = HiveOperator(
             ) sta on m.id = sta.order_id
         )
 
-        insert overwrite table oride_bi.oride_order_location_info partition(dt='{{ ds }}')
+        insert overwrite table oride_dw.dwd_oride_order_location_di partition(country_code,dt)
         select 
         m.*,
-        ''
+        '',
+        'nal' as country_code,
+        '{{ ds }}' as dt
         from middle_data_2 m 
         ;
 
         ''',
-    schema='oride_bi',
+    schema='oride_dw',
     dag=dag)
 
-insert_order_loc_list_0_0 = HiveOperator(
-    task_id='insert_order_loc_list_0_0',
+insert_order_loc_list_0_10 = HiveOperator(
+    task_id='insert_order_loc_list_0_10',
     hql='''
+
+        SET hive.exec.parallel=TRUE;
+        SET hive.exec.dynamic.partition.mode=nonstrict;
+
 
         with 
         driver_location as (
@@ -259,12 +252,12 @@ insert_order_loc_list_0_0 = HiveOperator(
             order_id,
             concat_ws(',',collect_list(concat(`timestamp`,'_',lat,'_',lng))) loc_list
             from oride_dw_ods.ods_log_driver_track_data_hi 
-            where dt = '{{ ds }}' and hour between '00' and '00'
+            where dt = '{{ ds }}' and hour between '00' and '10'
             and order_id <> 0
             group by order_id
         )
 
-        insert overwrite table oride_bi.oride_order_location_info partition(dt='{{ ds }}')
+        insert overwrite table oride_dw.dwd_oride_order_location_di partition(country_code,dt)
         select 
         m.order_id,
         m.user_id,
@@ -283,7 +276,9 @@ insert_order_loc_list_0_0 = HiveOperator(
         m.start_ride_sliding,
         m.complete_the_order_show,
         m.start_ride_sliding_arrived,
-        if(d.order_id is null,m.loc_list,d.loc_list)
+        if(d.order_id is null,m.loc_list,d.loc_list),
+        m.country_code as country_code,
+        m.dt as dt
         from 
         (   
             select 
@@ -304,21 +299,26 @@ insert_order_loc_list_0_0 = HiveOperator(
             m.start_ride_sliding,
             m.complete_the_order_show,
             m.start_ride_sliding_arrived,
-            m.loc_list
+            m.loc_list,
+            m.country_code,
+            m.dt 
             from
-            oride_bi.oride_order_location_info m
+            oride_dw.dwd_oride_order_location_di m
             where m.dt = '{{ ds }}'
         ) m 
         left join driver_location d on m.order_id = d.order_id
         ;
 
         ''',
-    schema='oride_bi',
+    schema='oride_dw',
     dag=dag)
 
-insert_order_loc_list_1_1 = HiveOperator(
-    task_id='insert_order_loc_list_1_1',
+insert_order_loc_list_11_15 = HiveOperator(
+    task_id='insert_order_loc_list_11_15',
     hql='''
+
+        SET hive.exec.parallel=TRUE;
+        SET hive.exec.dynamic.partition.mode=nonstrict;
 
         with 
         driver_location as (
@@ -326,12 +326,12 @@ insert_order_loc_list_1_1 = HiveOperator(
             order_id,
             concat_ws(',',collect_list(concat(`timestamp`,'_',lat,'_',lng))) loc_list
             from oride_dw_ods.ods_log_driver_track_data_hi 
-            where dt = '{{ ds }}' and hour between '01' and '01'
+            where dt = '{{ ds }}' and hour between '11' and '15'
             and order_id <> 0
             group by order_id
         )
 
-        insert overwrite table oride_bi.oride_order_location_info partition(dt='{{ ds }}')
+        insert overwrite table oride_dw.dwd_oride_order_location_di partition(country_code,dt)
         select 
         m.order_id,
         m.user_id,
@@ -350,7 +350,9 @@ insert_order_loc_list_1_1 = HiveOperator(
         m.start_ride_sliding,
         m.complete_the_order_show,
         m.start_ride_sliding_arrived,
-        if(d.order_id is null,m.loc_list,d.loc_list)
+        if(d.order_id is null,m.loc_list,d.loc_list),
+        m.country_code as country_code,
+        m.dt as dt
         from 
         (   
             select 
@@ -371,21 +373,26 @@ insert_order_loc_list_1_1 = HiveOperator(
             m.start_ride_sliding,
             m.complete_the_order_show,
             m.start_ride_sliding_arrived,
-            m.loc_list
+            m.loc_list,
+            m.country_code,
+            m.dt 
             from
-            oride_bi.oride_order_location_info m
+            oride_dw.dwd_oride_order_location_di m
             where m.dt = '{{ ds }}'
         ) m 
         left join driver_location d on m.order_id = d.order_id
         ;
 
         ''',
-    schema='oride_bi',
+    schema='oride_dw',
     dag=dag)
 
-insert_order_loc_list_2_2 = HiveOperator(
-    task_id='insert_order_loc_list_2_2',
+insert_order_loc_list_16_19 = HiveOperator(
+    task_id='insert_order_loc_list_16_19',
     hql='''
+
+        SET hive.exec.parallel=TRUE;
+        SET hive.exec.dynamic.partition.mode=nonstrict;
 
         with 
         driver_location as (
@@ -393,12 +400,12 @@ insert_order_loc_list_2_2 = HiveOperator(
             order_id,
             concat_ws(',',collect_list(concat(`timestamp`,'_',lat,'_',lng))) loc_list
             from oride_dw_ods.ods_log_driver_track_data_hi 
-            where dt = '{{ ds }}' and hour between '02' and '02'
+            where dt = '{{ ds }}' and hour between '16' and '19'
             and order_id <> 0
             group by order_id
         )
 
-        insert overwrite table oride_bi.oride_order_location_info partition(dt='{{ ds }}')
+        insert overwrite table oride_dw.dwd_oride_order_location_di partition(country_code,dt)
         select 
         m.order_id,
         m.user_id,
@@ -417,7 +424,9 @@ insert_order_loc_list_2_2 = HiveOperator(
         m.start_ride_sliding,
         m.complete_the_order_show,
         m.start_ride_sliding_arrived,
-        if(d.order_id is null,m.loc_list,d.loc_list)
+        if(d.order_id is null,m.loc_list,d.loc_list),
+        m.country_code as country_code,
+        m.dt as dt
         from 
         (   
             select 
@@ -438,21 +447,26 @@ insert_order_loc_list_2_2 = HiveOperator(
             m.start_ride_sliding,
             m.complete_the_order_show,
             m.start_ride_sliding_arrived,
-            m.loc_list
+            m.loc_list,
+            m.country_code,
+            m.dt 
             from
-            oride_bi.oride_order_location_info m
+            oride_dw.dwd_oride_order_location_di m
             where m.dt = '{{ ds }}'
         ) m 
         left join driver_location d on m.order_id = d.order_id
         ;
 
         ''',
-    schema='oride_bi',
+    schema='oride_dw',
     dag=dag)
 
-insert_order_loc_list_3_3 = HiveOperator(
-    task_id='insert_order_loc_list_3_3',
+insert_order_loc_list_20_23 = HiveOperator(
+    task_id='insert_order_loc_list_20_23',
     hql='''
+
+        SET hive.exec.parallel=TRUE;
+        SET hive.exec.dynamic.partition.mode=nonstrict;
 
         with 
         driver_location as (
@@ -460,12 +474,12 @@ insert_order_loc_list_3_3 = HiveOperator(
             order_id,
             concat_ws(',',collect_list(concat(`timestamp`,'_',lat,'_',lng))) loc_list
             from oride_dw_ods.ods_log_driver_track_data_hi 
-            where dt = '{{ ds }}' and hour between '03' and '03'
+            where dt = '{{ ds }}' and hour between '20' and '23'
             and order_id <> 0
             group by order_id
         )
 
-        insert overwrite table oride_bi.oride_order_location_info partition(dt='{{ ds }}')
+        insert overwrite table oride_dw.dwd_oride_order_location_di partition(country_code,dt)
         select 
         m.order_id,
         m.user_id,
@@ -484,7 +498,9 @@ insert_order_loc_list_3_3 = HiveOperator(
         m.start_ride_sliding,
         m.complete_the_order_show,
         m.start_ride_sliding_arrived,
-        if(d.order_id is null,m.loc_list,d.loc_list)
+        if(d.order_id is null,m.loc_list,d.loc_list),
+        m.country_code as country_code,
+        m.dt as dt
         from 
         (   
             select 
@@ -505,1382 +521,28 @@ insert_order_loc_list_3_3 = HiveOperator(
             m.start_ride_sliding,
             m.complete_the_order_show,
             m.start_ride_sliding_arrived,
-            m.loc_list
+            m.loc_list,
+            m.country_code,
+            m.dt 
             from
-            oride_bi.oride_order_location_info m
+            oride_dw.dwd_oride_order_location_di m
             where m.dt = '{{ ds }}'
         ) m 
         left join driver_location d on m.order_id = d.order_id
         ;
 
         ''',
-    schema='oride_bi',
+    schema='oride_dw',
     dag=dag)
-
-insert_order_loc_list_4_4 = HiveOperator(
-    task_id='insert_order_loc_list_4_4',
-    hql='''
-
-        with 
-        driver_location as (
-            select 
-            order_id,
-            concat_ws(',',collect_list(concat(`timestamp`,'_',lat,'_',lng))) loc_list
-            from oride_dw_ods.ods_log_driver_track_data_hi 
-            where dt = '{{ ds }}' and hour between '04' and '04'
-            and order_id <> 0
-            group by order_id
-        )
-
-        insert overwrite table oride_bi.oride_order_location_info partition(dt='{{ ds }}')
-        select 
-        m.order_id,
-        m.user_id,
-        m.driver_id,
-        m.create_time,
-        m.status,
-        m.start_loc,
-        m.end_loc,
-        m.looking_for_a_driver_show,
-        m.successful_order_show,
-        m.accept_order_click,
-        m.rider_arrive_show,
-        m.confirm_arrive_click_arrived,
-        m.pick_up_passengers_sliding_arrived,
-        m.start_ride_show,
-        m.start_ride_sliding,
-        m.complete_the_order_show,
-        m.start_ride_sliding_arrived,
-        if(d.order_id is null,m.loc_list,d.loc_list)
-        from 
-        (   
-            select 
-            m.order_id,
-            m.user_id,
-            m.driver_id,
-            m.create_time,
-            m.status,
-            m.start_loc,
-            m.end_loc,
-            m.looking_for_a_driver_show,
-            m.successful_order_show,
-            m.accept_order_click,
-            m.rider_arrive_show,
-            m.confirm_arrive_click_arrived,
-            m.pick_up_passengers_sliding_arrived,
-            m.start_ride_show,
-            m.start_ride_sliding,
-            m.complete_the_order_show,
-            m.start_ride_sliding_arrived,
-            m.loc_list
-            from
-            oride_bi.oride_order_location_info m
-            where m.dt = '{{ ds }}'
-        ) m 
-        left join driver_location d on m.order_id = d.order_id
-        ;
-
-        ''',
-    schema='oride_bi',
-    dag=dag)
-
-insert_order_loc_list_5_5 = HiveOperator(
-    task_id='insert_order_loc_list_5_5',
-    hql='''
-
-        with 
-        driver_location as (
-            select 
-            order_id,
-            concat_ws(',',collect_list(concat(`timestamp`,'_',lat,'_',lng))) loc_list
-            from oride_dw_ods.ods_log_driver_track_data_hi 
-            where dt = '{{ ds }}' and hour between '05' and '05'
-            and order_id <> 0
-            group by order_id
-        )
-
-        insert overwrite table oride_bi.oride_order_location_info partition(dt='{{ ds }}')
-        select 
-        m.order_id,
-        m.user_id,
-        m.driver_id,
-        m.create_time,
-        m.status,
-        m.start_loc,
-        m.end_loc,
-        m.looking_for_a_driver_show,
-        m.successful_order_show,
-        m.accept_order_click,
-        m.rider_arrive_show,
-        m.confirm_arrive_click_arrived,
-        m.pick_up_passengers_sliding_arrived,
-        m.start_ride_show,
-        m.start_ride_sliding,
-        m.complete_the_order_show,
-        m.start_ride_sliding_arrived,
-        if(d.order_id is null,m.loc_list,d.loc_list)
-        from 
-        (   
-            select 
-            m.order_id,
-            m.user_id,
-            m.driver_id,
-            m.create_time,
-            m.status,
-            m.start_loc,
-            m.end_loc,
-            m.looking_for_a_driver_show,
-            m.successful_order_show,
-            m.accept_order_click,
-            m.rider_arrive_show,
-            m.confirm_arrive_click_arrived,
-            m.pick_up_passengers_sliding_arrived,
-            m.start_ride_show,
-            m.start_ride_sliding,
-            m.complete_the_order_show,
-            m.start_ride_sliding_arrived,
-            m.loc_list
-            from
-            oride_bi.oride_order_location_info m
-            where m.dt = '{{ ds }}'
-        ) m 
-        left join driver_location d on m.order_id = d.order_id
-        ;
-
-        ''',
-    schema='oride_bi',
-    dag=dag)
-
-insert_order_loc_list_6_6 = HiveOperator(
-    task_id='insert_order_loc_list_6_6',
-    hql='''
-
-        with 
-        driver_location as (
-            select 
-            order_id,
-            concat_ws(',',collect_list(concat(`timestamp`,'_',lat,'_',lng))) loc_list
-            from oride_dw_ods.ods_log_driver_track_data_hi 
-            where dt = '{{ ds }}' and hour between '06' and '06'
-            and order_id <> 0
-            group by order_id
-        )
-
-        insert overwrite table oride_bi.oride_order_location_info partition(dt='{{ ds }}')
-        select 
-        m.order_id,
-        m.user_id,
-        m.driver_id,
-        m.create_time,
-        m.status,
-        m.start_loc,
-        m.end_loc,
-        m.looking_for_a_driver_show,
-        m.successful_order_show,
-        m.accept_order_click,
-        m.rider_arrive_show,
-        m.confirm_arrive_click_arrived,
-        m.pick_up_passengers_sliding_arrived,
-        m.start_ride_show,
-        m.start_ride_sliding,
-        m.complete_the_order_show,
-        m.start_ride_sliding_arrived,
-        if(d.order_id is null,m.loc_list,d.loc_list)
-        from 
-        (   
-            select 
-            m.order_id,
-            m.user_id,
-            m.driver_id,
-            m.create_time,
-            m.status,
-            m.start_loc,
-            m.end_loc,
-            m.looking_for_a_driver_show,
-            m.successful_order_show,
-            m.accept_order_click,
-            m.rider_arrive_show,
-            m.confirm_arrive_click_arrived,
-            m.pick_up_passengers_sliding_arrived,
-            m.start_ride_show,
-            m.start_ride_sliding,
-            m.complete_the_order_show,
-            m.start_ride_sliding_arrived,
-            m.loc_list
-            from
-            oride_bi.oride_order_location_info m
-            where m.dt = '{{ ds }}'
-        ) m 
-        left join driver_location d on m.order_id = d.order_id
-        ;
-
-        ''',
-    schema='oride_bi',
-    dag=dag)
-
-insert_order_loc_list_7_7 = HiveOperator(
-    task_id='insert_order_loc_list_7_7',
-    hql='''
-
-        with 
-        driver_location as (
-            select 
-            order_id,
-            concat_ws(',',collect_list(concat(`timestamp`,'_',lat,'_',lng))) loc_list
-            from oride_dw_ods.ods_log_driver_track_data_hi 
-            where dt = '{{ ds }}' and hour between '07' and '07'
-            and order_id <> 0
-            group by order_id
-        )
-
-        insert overwrite table oride_bi.oride_order_location_info partition(dt='{{ ds }}')
-        select 
-        m.order_id,
-        m.user_id,
-        m.driver_id,
-        m.create_time,
-        m.status,
-        m.start_loc,
-        m.end_loc,
-        m.looking_for_a_driver_show,
-        m.successful_order_show,
-        m.accept_order_click,
-        m.rider_arrive_show,
-        m.confirm_arrive_click_arrived,
-        m.pick_up_passengers_sliding_arrived,
-        m.start_ride_show,
-        m.start_ride_sliding,
-        m.complete_the_order_show,
-        m.start_ride_sliding_arrived,
-        if(d.order_id is null,m.loc_list,d.loc_list)
-        from 
-        (   
-            select 
-            m.order_id,
-            m.user_id,
-            m.driver_id,
-            m.create_time,
-            m.status,
-            m.start_loc,
-            m.end_loc,
-            m.looking_for_a_driver_show,
-            m.successful_order_show,
-            m.accept_order_click,
-            m.rider_arrive_show,
-            m.confirm_arrive_click_arrived,
-            m.pick_up_passengers_sliding_arrived,
-            m.start_ride_show,
-            m.start_ride_sliding,
-            m.complete_the_order_show,
-            m.start_ride_sliding_arrived,
-            m.loc_list
-            from
-            oride_bi.oride_order_location_info m
-            where m.dt = '{{ ds }}'
-        ) m 
-        left join driver_location d on m.order_id = d.order_id
-        ;
-
-        ''',
-    schema='oride_bi',
-    dag=dag)
-
-insert_order_loc_list_8_8 = HiveOperator(
-    task_id='insert_order_loc_list_8_8',
-    hql='''
-
-        with 
-        driver_location as (
-            select 
-            order_id,
-            concat_ws(',',collect_list(concat(`timestamp`,'_',lat,'_',lng))) loc_list
-            from oride_dw_ods.ods_log_driver_track_data_hi 
-            where dt = '{{ ds }}' and hour between '08' and '08'
-            and order_id <> 0
-            group by order_id
-        )
-
-        insert overwrite table oride_bi.oride_order_location_info partition(dt='{{ ds }}')
-        select 
-        m.order_id,
-        m.user_id,
-        m.driver_id,
-        m.create_time,
-        m.status,
-        m.start_loc,
-        m.end_loc,
-        m.looking_for_a_driver_show,
-        m.successful_order_show,
-        m.accept_order_click,
-        m.rider_arrive_show,
-        m.confirm_arrive_click_arrived,
-        m.pick_up_passengers_sliding_arrived,
-        m.start_ride_show,
-        m.start_ride_sliding,
-        m.complete_the_order_show,
-        m.start_ride_sliding_arrived,
-        if(d.order_id is null,m.loc_list,d.loc_list)
-        from 
-        (   
-            select 
-            m.order_id,
-            m.user_id,
-            m.driver_id,
-            m.create_time,
-            m.status,
-            m.start_loc,
-            m.end_loc,
-            m.looking_for_a_driver_show,
-            m.successful_order_show,
-            m.accept_order_click,
-            m.rider_arrive_show,
-            m.confirm_arrive_click_arrived,
-            m.pick_up_passengers_sliding_arrived,
-            m.start_ride_show,
-            m.start_ride_sliding,
-            m.complete_the_order_show,
-            m.start_ride_sliding_arrived,
-            m.loc_list
-            from
-            oride_bi.oride_order_location_info m
-            where m.dt = '{{ ds }}'
-        ) m 
-        left join driver_location d on m.order_id = d.order_id
-        ;
-
-        ''',
-    schema='oride_bi',
-    dag=dag)
-
-insert_order_loc_list_9_9 = HiveOperator(
-    task_id='insert_order_loc_list_9_9',
-    hql='''
-
-        with 
-        driver_location as (
-            select 
-            order_id,
-            concat_ws(',',collect_list(concat(`timestamp`,'_',lat,'_',lng))) loc_list
-            from oride_dw_ods.ods_log_driver_track_data_hi 
-            where dt = '{{ ds }}' and hour between '09' and '09'
-            and order_id <> 0
-            group by order_id
-        )
-
-        insert overwrite table oride_bi.oride_order_location_info partition(dt='{{ ds }}')
-        select 
-        m.order_id,
-        m.user_id,
-        m.driver_id,
-        m.create_time,
-        m.status,
-        m.start_loc,
-        m.end_loc,
-        m.looking_for_a_driver_show,
-        m.successful_order_show,
-        m.accept_order_click,
-        m.rider_arrive_show,
-        m.confirm_arrive_click_arrived,
-        m.pick_up_passengers_sliding_arrived,
-        m.start_ride_show,
-        m.start_ride_sliding,
-        m.complete_the_order_show,
-        m.start_ride_sliding_arrived,
-        if(d.order_id is null,m.loc_list,d.loc_list)
-        from 
-        (   
-            select 
-            m.order_id,
-            m.user_id,
-            m.driver_id,
-            m.create_time,
-            m.status,
-            m.start_loc,
-            m.end_loc,
-            m.looking_for_a_driver_show,
-            m.successful_order_show,
-            m.accept_order_click,
-            m.rider_arrive_show,
-            m.confirm_arrive_click_arrived,
-            m.pick_up_passengers_sliding_arrived,
-            m.start_ride_show,
-            m.start_ride_sliding,
-            m.complete_the_order_show,
-            m.start_ride_sliding_arrived,
-            m.loc_list
-            from
-            oride_bi.oride_order_location_info m
-            where m.dt = '{{ ds }}'
-        ) m 
-        left join driver_location d on m.order_id = d.order_id
-        ;
-
-        ''',
-    schema='oride_bi',
-    dag=dag)
-
-insert_order_loc_list_10_10 = HiveOperator(
-    task_id='insert_order_loc_list_10_10',
-    hql='''
-
-        with 
-        driver_location as (
-            select 
-            order_id,
-            concat_ws(',',collect_list(concat(`timestamp`,'_',lat,'_',lng))) loc_list
-            from oride_dw_ods.ods_log_driver_track_data_hi 
-            where dt = '{{ ds }}' and hour between '10' and '10'
-            and order_id <> 0
-            group by order_id
-        )
-
-        insert overwrite table oride_bi.oride_order_location_info partition(dt='{{ ds }}')
-        select 
-        m.order_id,
-        m.user_id,
-        m.driver_id,
-        m.create_time,
-        m.status,
-        m.start_loc,
-        m.end_loc,
-        m.looking_for_a_driver_show,
-        m.successful_order_show,
-        m.accept_order_click,
-        m.rider_arrive_show,
-        m.confirm_arrive_click_arrived,
-        m.pick_up_passengers_sliding_arrived,
-        m.start_ride_show,
-        m.start_ride_sliding,
-        m.complete_the_order_show,
-        m.start_ride_sliding_arrived,
-        if(d.order_id is null,m.loc_list,d.loc_list)
-        from 
-        (   
-            select 
-            m.order_id,
-            m.user_id,
-            m.driver_id,
-            m.create_time,
-            m.status,
-            m.start_loc,
-            m.end_loc,
-            m.looking_for_a_driver_show,
-            m.successful_order_show,
-            m.accept_order_click,
-            m.rider_arrive_show,
-            m.confirm_arrive_click_arrived,
-            m.pick_up_passengers_sliding_arrived,
-            m.start_ride_show,
-            m.start_ride_sliding,
-            m.complete_the_order_show,
-            m.start_ride_sliding_arrived,
-            m.loc_list
-            from
-            oride_bi.oride_order_location_info m
-            where m.dt = '{{ ds }}'
-        ) m 
-        left join driver_location d on m.order_id = d.order_id
-        ;
-
-        ''',
-    schema='oride_bi',
-    dag=dag)
-
-insert_order_loc_list_11_11 = HiveOperator(
-    task_id='insert_order_loc_list_11_11',
-    hql='''
-
-        with 
-        driver_location as (
-            select 
-            order_id,
-            concat_ws(',',collect_list(concat(`timestamp`,'_',lat,'_',lng))) loc_list
-            from oride_dw_ods.ods_log_driver_track_data_hi 
-            where dt = '{{ ds }}' and hour between '11' and '11'
-            and order_id <> 0
-            group by order_id
-        )
-
-        insert overwrite table oride_bi.oride_order_location_info partition(dt='{{ ds }}')
-        select 
-        m.order_id,
-        m.user_id,
-        m.driver_id,
-        m.create_time,
-        m.status,
-        m.start_loc,
-        m.end_loc,
-        m.looking_for_a_driver_show,
-        m.successful_order_show,
-        m.accept_order_click,
-        m.rider_arrive_show,
-        m.confirm_arrive_click_arrived,
-        m.pick_up_passengers_sliding_arrived,
-        m.start_ride_show,
-        m.start_ride_sliding,
-        m.complete_the_order_show,
-        m.start_ride_sliding_arrived,
-        if(d.order_id is null,m.loc_list,d.loc_list)
-        from 
-        (   
-            select 
-            m.order_id,
-            m.user_id,
-            m.driver_id,
-            m.create_time,
-            m.status,
-            m.start_loc,
-            m.end_loc,
-            m.looking_for_a_driver_show,
-            m.successful_order_show,
-            m.accept_order_click,
-            m.rider_arrive_show,
-            m.confirm_arrive_click_arrived,
-            m.pick_up_passengers_sliding_arrived,
-            m.start_ride_show,
-            m.start_ride_sliding,
-            m.complete_the_order_show,
-            m.start_ride_sliding_arrived,
-            m.loc_list
-            from
-            oride_bi.oride_order_location_info m
-            where m.dt = '{{ ds }}'
-        ) m 
-        left join driver_location d on m.order_id = d.order_id
-        ;
-
-        ''',
-    schema='oride_bi',
-    dag=dag)
-
-insert_order_loc_list_12_12 = HiveOperator(
-    task_id='insert_order_loc_list_12_12',
-    hql='''
-
-        with 
-        driver_location as (
-            select 
-            order_id,
-            concat_ws(',',collect_list(concat(`timestamp`,'_',lat,'_',lng))) loc_list
-            from oride_dw_ods.ods_log_driver_track_data_hi 
-            where dt = '{{ ds }}' and hour between '12' and '12'
-            and order_id <> 0
-            group by order_id
-        )
-
-        insert overwrite table oride_bi.oride_order_location_info partition(dt='{{ ds }}')
-        select 
-        m.order_id,
-        m.user_id,
-        m.driver_id,
-        m.create_time,
-        m.status,
-        m.start_loc,
-        m.end_loc,
-        m.looking_for_a_driver_show,
-        m.successful_order_show,
-        m.accept_order_click,
-        m.rider_arrive_show,
-        m.confirm_arrive_click_arrived,
-        m.pick_up_passengers_sliding_arrived,
-        m.start_ride_show,
-        m.start_ride_sliding,
-        m.complete_the_order_show,
-        m.start_ride_sliding_arrived,
-        if(d.order_id is null,m.loc_list,d.loc_list)
-        from 
-        (   
-            select 
-            m.order_id,
-            m.user_id,
-            m.driver_id,
-            m.create_time,
-            m.status,
-            m.start_loc,
-            m.end_loc,
-            m.looking_for_a_driver_show,
-            m.successful_order_show,
-            m.accept_order_click,
-            m.rider_arrive_show,
-            m.confirm_arrive_click_arrived,
-            m.pick_up_passengers_sliding_arrived,
-            m.start_ride_show,
-            m.start_ride_sliding,
-            m.complete_the_order_show,
-            m.start_ride_sliding_arrived,
-            m.loc_list
-            from
-            oride_bi.oride_order_location_info m
-            where m.dt = '{{ ds }}'
-        ) m 
-        left join driver_location d on m.order_id = d.order_id
-        ;
-
-        ''',
-    schema='oride_bi',
-    dag=dag)
-
-insert_order_loc_list_13_13 = HiveOperator(
-    task_id='insert_order_loc_list_13_13',
-    hql='''
-
-        with 
-        driver_location as (
-            select 
-            order_id,
-            concat_ws(',',collect_list(concat(`timestamp`,'_',lat,'_',lng))) loc_list
-            from oride_dw_ods.ods_log_driver_track_data_hi 
-            where dt = '{{ ds }}' and hour between '13' and '13'
-            and order_id <> 0
-            group by order_id
-        )
-
-        insert overwrite table oride_bi.oride_order_location_info partition(dt='{{ ds }}')
-        select 
-        m.order_id,
-        m.user_id,
-        m.driver_id,
-        m.create_time,
-        m.status,
-        m.start_loc,
-        m.end_loc,
-        m.looking_for_a_driver_show,
-        m.successful_order_show,
-        m.accept_order_click,
-        m.rider_arrive_show,
-        m.confirm_arrive_click_arrived,
-        m.pick_up_passengers_sliding_arrived,
-        m.start_ride_show,
-        m.start_ride_sliding,
-        m.complete_the_order_show,
-        m.start_ride_sliding_arrived,
-        if(d.order_id is null,m.loc_list,d.loc_list)
-        from 
-        (   
-            select 
-            m.order_id,
-            m.user_id,
-            m.driver_id,
-            m.create_time,
-            m.status,
-            m.start_loc,
-            m.end_loc,
-            m.looking_for_a_driver_show,
-            m.successful_order_show,
-            m.accept_order_click,
-            m.rider_arrive_show,
-            m.confirm_arrive_click_arrived,
-            m.pick_up_passengers_sliding_arrived,
-            m.start_ride_show,
-            m.start_ride_sliding,
-            m.complete_the_order_show,
-            m.start_ride_sliding_arrived,
-            m.loc_list
-            from
-            oride_bi.oride_order_location_info m
-            where m.dt = '{{ ds }}'
-        ) m 
-        left join driver_location d on m.order_id = d.order_id
-        ;
-
-        ''',
-    schema='oride_bi',
-    dag=dag)
-
-insert_order_loc_list_14_14 = HiveOperator(
-    task_id='insert_order_loc_list_14_14',
-    hql='''
-
-        with 
-        driver_location as (
-            select 
-            order_id,
-            concat_ws(',',collect_list(concat(`timestamp`,'_',lat,'_',lng))) loc_list
-            from oride_dw_ods.ods_log_driver_track_data_hi 
-            where dt = '{{ ds }}' and hour between '14' and '14'
-            and order_id <> 0
-            group by order_id
-        )
-
-        insert overwrite table oride_bi.oride_order_location_info partition(dt='{{ ds }}')
-        select 
-        m.order_id,
-        m.user_id,
-        m.driver_id,
-        m.create_time,
-        m.status,
-        m.start_loc,
-        m.end_loc,
-        m.looking_for_a_driver_show,
-        m.successful_order_show,
-        m.accept_order_click,
-        m.rider_arrive_show,
-        m.confirm_arrive_click_arrived,
-        m.pick_up_passengers_sliding_arrived,
-        m.start_ride_show,
-        m.start_ride_sliding,
-        m.complete_the_order_show,
-        m.start_ride_sliding_arrived,
-        if(d.order_id is null,m.loc_list,d.loc_list)
-        from 
-        (   
-            select 
-            m.order_id,
-            m.user_id,
-            m.driver_id,
-            m.create_time,
-            m.status,
-            m.start_loc,
-            m.end_loc,
-            m.looking_for_a_driver_show,
-            m.successful_order_show,
-            m.accept_order_click,
-            m.rider_arrive_show,
-            m.confirm_arrive_click_arrived,
-            m.pick_up_passengers_sliding_arrived,
-            m.start_ride_show,
-            m.start_ride_sliding,
-            m.complete_the_order_show,
-            m.start_ride_sliding_arrived,
-            m.loc_list
-            from
-            oride_bi.oride_order_location_info m
-            where m.dt = '{{ ds }}'
-        ) m 
-        left join driver_location d on m.order_id = d.order_id
-        ;
-
-        ''',
-    schema='oride_bi',
-    dag=dag)
-
-insert_order_loc_list_15_15 = HiveOperator(
-    task_id='insert_order_loc_list_15_15',
-    hql='''
-
-        with 
-        driver_location as (
-            select 
-            order_id,
-            concat_ws(',',collect_list(concat(`timestamp`,'_',lat,'_',lng))) loc_list
-            from oride_dw_ods.ods_log_driver_track_data_hi 
-            where dt = '{{ ds }}' and hour between '15' and '15'
-            and order_id <> 0
-            group by order_id
-        )
-
-        insert overwrite table oride_bi.oride_order_location_info partition(dt='{{ ds }}')
-        select 
-        m.order_id,
-        m.user_id,
-        m.driver_id,
-        m.create_time,
-        m.status,
-        m.start_loc,
-        m.end_loc,
-        m.looking_for_a_driver_show,
-        m.successful_order_show,
-        m.accept_order_click,
-        m.rider_arrive_show,
-        m.confirm_arrive_click_arrived,
-        m.pick_up_passengers_sliding_arrived,
-        m.start_ride_show,
-        m.start_ride_sliding,
-        m.complete_the_order_show,
-        m.start_ride_sliding_arrived,
-        if(d.order_id is null,m.loc_list,d.loc_list)
-        from 
-        (   
-            select 
-            m.order_id,
-            m.user_id,
-            m.driver_id,
-            m.create_time,
-            m.status,
-            m.start_loc,
-            m.end_loc,
-            m.looking_for_a_driver_show,
-            m.successful_order_show,
-            m.accept_order_click,
-            m.rider_arrive_show,
-            m.confirm_arrive_click_arrived,
-            m.pick_up_passengers_sliding_arrived,
-            m.start_ride_show,
-            m.start_ride_sliding,
-            m.complete_the_order_show,
-            m.start_ride_sliding_arrived,
-            m.loc_list
-            from
-            oride_bi.oride_order_location_info m
-            where m.dt = '{{ ds }}'
-        ) m 
-        left join driver_location d on m.order_id = d.order_id
-        ;
-
-        ''',
-    schema='oride_bi',
-    dag=dag)
-
-insert_order_loc_list_16_16 = HiveOperator(
-    task_id='insert_order_loc_list_16_16',
-    hql='''
-
-        with 
-        driver_location as (
-            select 
-            order_id,
-            concat_ws(',',collect_list(concat(`timestamp`,'_',lat,'_',lng))) loc_list
-            from oride_dw_ods.ods_log_driver_track_data_hi 
-            where dt = '{{ ds }}' and hour between '16' and '16'
-            and order_id <> 0
-            group by order_id
-        )
-
-        insert overwrite table oride_bi.oride_order_location_info partition(dt='{{ ds }}')
-        select 
-        m.order_id,
-        m.user_id,
-        m.driver_id,
-        m.create_time,
-        m.status,
-        m.start_loc,
-        m.end_loc,
-        m.looking_for_a_driver_show,
-        m.successful_order_show,
-        m.accept_order_click,
-        m.rider_arrive_show,
-        m.confirm_arrive_click_arrived,
-        m.pick_up_passengers_sliding_arrived,
-        m.start_ride_show,
-        m.start_ride_sliding,
-        m.complete_the_order_show,
-        m.start_ride_sliding_arrived,
-        if(d.order_id is null,m.loc_list,d.loc_list)
-        from 
-        (   
-            select 
-            m.order_id,
-            m.user_id,
-            m.driver_id,
-            m.create_time,
-            m.status,
-            m.start_loc,
-            m.end_loc,
-            m.looking_for_a_driver_show,
-            m.successful_order_show,
-            m.accept_order_click,
-            m.rider_arrive_show,
-            m.confirm_arrive_click_arrived,
-            m.pick_up_passengers_sliding_arrived,
-            m.start_ride_show,
-            m.start_ride_sliding,
-            m.complete_the_order_show,
-            m.start_ride_sliding_arrived,
-            m.loc_list
-            from
-            oride_bi.oride_order_location_info m
-            where m.dt = '{{ ds }}'
-        ) m 
-        left join driver_location d on m.order_id = d.order_id
-        ;
-
-        ''',
-    schema='oride_bi',
-    dag=dag)
-
-
-
-
-insert_order_loc_list_17_17 = HiveOperator(
-    task_id='insert_order_loc_list_17_17',
-    hql='''
-
-        with 
-        driver_location as (
-            select 
-            order_id,
-            concat_ws(',',collect_list(concat(`timestamp`,'_',lat,'_',lng))) loc_list
-            from oride_dw_ods.ods_log_driver_track_data_hi 
-            where dt = '{{ ds }}' and hour between '17' and '17'
-            and order_id <> 0
-            group by order_id
-        )
-
-        insert overwrite table oride_bi.oride_order_location_info partition(dt='{{ ds }}')
-        select 
-        m.order_id,
-        m.user_id,
-        m.driver_id,
-        m.create_time,
-        m.status,
-        m.start_loc,
-        m.end_loc,
-        m.looking_for_a_driver_show,
-        m.successful_order_show,
-        m.accept_order_click,
-        m.rider_arrive_show,
-        m.confirm_arrive_click_arrived,
-        m.pick_up_passengers_sliding_arrived,
-        m.start_ride_show,
-        m.start_ride_sliding,
-        m.complete_the_order_show,
-        m.start_ride_sliding_arrived,
-        if(d.order_id is null,m.loc_list,d.loc_list)
-        from 
-        (   
-            select 
-            m.order_id,
-            m.user_id,
-            m.driver_id,
-            m.create_time,
-            m.status,
-            m.start_loc,
-            m.end_loc,
-            m.looking_for_a_driver_show,
-            m.successful_order_show,
-            m.accept_order_click,
-            m.rider_arrive_show,
-            m.confirm_arrive_click_arrived,
-            m.pick_up_passengers_sliding_arrived,
-            m.start_ride_show,
-            m.start_ride_sliding,
-            m.complete_the_order_show,
-            m.start_ride_sliding_arrived,
-            m.loc_list
-            from
-            oride_bi.oride_order_location_info m
-            where m.dt = '{{ ds }}'
-        ) m 
-        left join driver_location d on m.order_id = d.order_id
-        ;
-
-        ''',
-    schema='oride_bi',
-    dag=dag)
-
-
-
-insert_order_loc_list_18_18 = HiveOperator(
-    task_id='insert_order_loc_list_18_18',
-    hql='''
-
-        with 
-        driver_location as (
-            select 
-            order_id,
-            concat_ws(',',collect_list(concat(`timestamp`,'_',lat,'_',lng))) loc_list
-            from oride_dw_ods.ods_log_driver_track_data_hi 
-            where dt = '{{ ds }}' and hour between '18' and '18'
-            and order_id <> 0
-            group by order_id
-        )
-
-        insert overwrite table oride_bi.oride_order_location_info partition(dt='{{ ds }}')
-        select 
-        m.order_id,
-        m.user_id,
-        m.driver_id,
-        m.create_time,
-        m.status,
-        m.start_loc,
-        m.end_loc,
-        m.looking_for_a_driver_show,
-        m.successful_order_show,
-        m.accept_order_click,
-        m.rider_arrive_show,
-        m.confirm_arrive_click_arrived,
-        m.pick_up_passengers_sliding_arrived,
-        m.start_ride_show,
-        m.start_ride_sliding,
-        m.complete_the_order_show,
-        m.start_ride_sliding_arrived,
-        if(d.order_id is null,m.loc_list,d.loc_list)
-        from 
-        (   
-            select 
-            m.order_id,
-            m.user_id,
-            m.driver_id,
-            m.create_time,
-            m.status,
-            m.start_loc,
-            m.end_loc,
-            m.looking_for_a_driver_show,
-            m.successful_order_show,
-            m.accept_order_click,
-            m.rider_arrive_show,
-            m.confirm_arrive_click_arrived,
-            m.pick_up_passengers_sliding_arrived,
-            m.start_ride_show,
-            m.start_ride_sliding,
-            m.complete_the_order_show,
-            m.start_ride_sliding_arrived,
-            m.loc_list
-            from
-            oride_bi.oride_order_location_info m
-            where m.dt = '{{ ds }}'
-        ) m 
-        left join driver_location d on m.order_id = d.order_id
-        ;
-
-        ''',
-    schema='oride_bi',
-    dag=dag)
-
-
-
-
-insert_order_loc_list_19_19 = HiveOperator(
-    task_id='insert_order_loc_list_19_19',
-    hql='''
-
-        with 
-        driver_location as (
-            select 
-            order_id,
-            concat_ws(',',collect_list(concat(`timestamp`,'_',lat,'_',lng))) loc_list
-            from oride_dw_ods.ods_log_driver_track_data_hi 
-            where dt = '{{ ds }}' and hour between '19' and '19'
-            and order_id <> 0
-            group by order_id
-        )
-
-        insert overwrite table oride_bi.oride_order_location_info partition(dt='{{ ds }}')
-        select 
-        m.order_id,
-        m.user_id,
-        m.driver_id,
-        m.create_time,
-        m.status,
-        m.start_loc,
-        m.end_loc,
-        m.looking_for_a_driver_show,
-        m.successful_order_show,
-        m.accept_order_click,
-        m.rider_arrive_show,
-        m.confirm_arrive_click_arrived,
-        m.pick_up_passengers_sliding_arrived,
-        m.start_ride_show,
-        m.start_ride_sliding,
-        m.complete_the_order_show,
-        m.start_ride_sliding_arrived,
-        if(d.order_id is null,m.loc_list,d.loc_list)
-        from 
-        (   
-            select 
-            m.order_id,
-            m.user_id,
-            m.driver_id,
-            m.create_time,
-            m.status,
-            m.start_loc,
-            m.end_loc,
-            m.looking_for_a_driver_show,
-            m.successful_order_show,
-            m.accept_order_click,
-            m.rider_arrive_show,
-            m.confirm_arrive_click_arrived,
-            m.pick_up_passengers_sliding_arrived,
-            m.start_ride_show,
-            m.start_ride_sliding,
-            m.complete_the_order_show,
-            m.start_ride_sliding_arrived,
-            m.loc_list
-            from
-            oride_bi.oride_order_location_info m
-            where m.dt = '{{ ds }}'
-        ) m 
-        left join driver_location d on m.order_id = d.order_id
-        ;
-
-        ''',
-    schema='oride_bi',
-    dag=dag)
-
-
-
-insert_order_loc_list_20_20 = HiveOperator(
-    task_id='insert_order_loc_list_20_20',
-    hql='''
-
-        with 
-        driver_location as (
-            select 
-            order_id,
-            concat_ws(',',collect_list(concat(`timestamp`,'_',lat,'_',lng))) loc_list
-            from oride_dw_ods.ods_log_driver_track_data_hi 
-            where dt = '{{ ds }}' and hour between '20' and '20'
-            and order_id <> 0
-            group by order_id
-        )
-
-        insert overwrite table oride_bi.oride_order_location_info partition(dt='{{ ds }}')
-        select 
-        m.order_id,
-        m.user_id,
-        m.driver_id,
-        m.create_time,
-        m.status,
-        m.start_loc,
-        m.end_loc,
-        m.looking_for_a_driver_show,
-        m.successful_order_show,
-        m.accept_order_click,
-        m.rider_arrive_show,
-        m.confirm_arrive_click_arrived,
-        m.pick_up_passengers_sliding_arrived,
-        m.start_ride_show,
-        m.start_ride_sliding,
-        m.complete_the_order_show,
-        m.start_ride_sliding_arrived,
-        if(d.order_id is null,m.loc_list,d.loc_list)
-        from 
-        (   
-            select 
-            m.order_id,
-            m.user_id,
-            m.driver_id,
-            m.create_time,
-            m.status,
-            m.start_loc,
-            m.end_loc,
-            m.looking_for_a_driver_show,
-            m.successful_order_show,
-            m.accept_order_click,
-            m.rider_arrive_show,
-            m.confirm_arrive_click_arrived,
-            m.pick_up_passengers_sliding_arrived,
-            m.start_ride_show,
-            m.start_ride_sliding,
-            m.complete_the_order_show,
-            m.start_ride_sliding_arrived,
-            m.loc_list
-            from
-            oride_bi.oride_order_location_info m
-            where m.dt = '{{ ds }}'
-        ) m 
-        left join driver_location d on m.order_id = d.order_id
-        ;
-
-        ''',
-    schema='oride_bi',
-    dag=dag)
-
-
-
-insert_order_loc_list_21_21 = HiveOperator(
-    task_id='insert_order_loc_list_21_21',
-    hql='''
-
-        with 
-        driver_location as (
-            select 
-            order_id,
-            concat_ws(',',collect_list(concat(`timestamp`,'_',lat,'_',lng))) loc_list
-            from oride_dw_ods.ods_log_driver_track_data_hi 
-            where dt = '{{ ds }}' and hour between '21' and '21'
-            and order_id <> 0
-            group by order_id
-        )
-
-        insert overwrite table oride_bi.oride_order_location_info partition(dt='{{ ds }}')
-        select 
-        m.order_id,
-        m.user_id,
-        m.driver_id,
-        m.create_time,
-        m.status,
-        m.start_loc,
-        m.end_loc,
-        m.looking_for_a_driver_show,
-        m.successful_order_show,
-        m.accept_order_click,
-        m.rider_arrive_show,
-        m.confirm_arrive_click_arrived,
-        m.pick_up_passengers_sliding_arrived,
-        m.start_ride_show,
-        m.start_ride_sliding,
-        m.complete_the_order_show,
-        m.start_ride_sliding_arrived,
-        if(d.order_id is null,m.loc_list,d.loc_list)
-        from 
-        (   
-            select 
-            m.order_id,
-            m.user_id,
-            m.driver_id,
-            m.create_time,
-            m.status,
-            m.start_loc,
-            m.end_loc,
-            m.looking_for_a_driver_show,
-            m.successful_order_show,
-            m.accept_order_click,
-            m.rider_arrive_show,
-            m.confirm_arrive_click_arrived,
-            m.pick_up_passengers_sliding_arrived,
-            m.start_ride_show,
-            m.start_ride_sliding,
-            m.complete_the_order_show,
-            m.start_ride_sliding_arrived,
-            m.loc_list
-            from
-            oride_bi.oride_order_location_info m
-            where m.dt = '{{ ds }}'
-        ) m 
-        left join driver_location d on m.order_id = d.order_id
-        ;
-
-        ''',
-    schema='oride_bi',
-    dag=dag)
-
-
-
-
-
-insert_order_loc_list_22_22 = HiveOperator(
-    task_id='insert_order_loc_list_22_22',
-    hql='''
-
-        with 
-        driver_location as (
-            select 
-            order_id,
-            concat_ws(',',collect_list(concat(`timestamp`,'_',lat,'_',lng))) loc_list
-            from oride_dw_ods.ods_log_driver_track_data_hi 
-            where dt = '{{ ds }}' and hour between '22' and '22'
-            and order_id <> 0
-            group by order_id
-        )
-
-        insert overwrite table oride_bi.oride_order_location_info partition(dt='{{ ds }}')
-        select 
-        m.order_id,
-        m.user_id,
-        m.driver_id,
-        m.create_time,
-        m.status,
-        m.start_loc,
-        m.end_loc,
-        m.looking_for_a_driver_show,
-        m.successful_order_show,
-        m.accept_order_click,
-        m.rider_arrive_show,
-        m.confirm_arrive_click_arrived,
-        m.pick_up_passengers_sliding_arrived,
-        m.start_ride_show,
-        m.start_ride_sliding,
-        m.complete_the_order_show,
-        m.start_ride_sliding_arrived,
-        if(d.order_id is null,m.loc_list,d.loc_list)
-        from 
-        (   
-            select 
-            m.order_id,
-            m.user_id,
-            m.driver_id,
-            m.create_time,
-            m.status,
-            m.start_loc,
-            m.end_loc,
-            m.looking_for_a_driver_show,
-            m.successful_order_show,
-            m.accept_order_click,
-            m.rider_arrive_show,
-            m.confirm_arrive_click_arrived,
-            m.pick_up_passengers_sliding_arrived,
-            m.start_ride_show,
-            m.start_ride_sliding,
-            m.complete_the_order_show,
-            m.start_ride_sliding_arrived,
-            m.loc_list
-            from
-            oride_bi.oride_order_location_info m
-            where m.dt = '{{ ds }}'
-        ) m 
-        left join driver_location d on m.order_id = d.order_id
-        ;
-
-        ''',
-    schema='oride_bi',
-    dag=dag)
-
-
-
-insert_order_loc_list_23_23 = HiveOperator(
-    task_id='insert_order_loc_list_23_23',
-    hql='''
-
-        with 
-        driver_location as (
-            select 
-            order_id,
-            concat_ws(',',collect_list(concat(`timestamp`,'_',lat,'_',lng))) loc_list
-            from oride_dw_ods.ods_log_driver_track_data_hi 
-            where dt = '{{ ds }}' and hour between '23' and '23'
-            and order_id <> 0
-            group by order_id
-        )
-
-        insert overwrite table oride_bi.oride_order_location_info partition(dt='{{ ds }}')
-        select 
-        m.order_id,
-        m.user_id,
-        m.driver_id,
-        m.create_time,
-        m.status,
-        m.start_loc,
-        m.end_loc,
-        m.looking_for_a_driver_show,
-        m.successful_order_show,
-        m.accept_order_click,
-        m.rider_arrive_show,
-        m.confirm_arrive_click_arrived,
-        m.pick_up_passengers_sliding_arrived,
-        m.start_ride_show,
-        m.start_ride_sliding,
-        m.complete_the_order_show,
-        m.start_ride_sliding_arrived,
-        if(d.order_id is null,m.loc_list,d.loc_list)
-        from 
-        (   
-            select 
-            m.order_id,
-            m.user_id,
-            m.driver_id,
-            m.create_time,
-            m.status,
-            m.start_loc,
-            m.end_loc,
-            m.looking_for_a_driver_show,
-            m.successful_order_show,
-            m.accept_order_click,
-            m.rider_arrive_show,
-            m.confirm_arrive_click_arrived,
-            m.pick_up_passengers_sliding_arrived,
-            m.start_ride_show,
-            m.start_ride_sliding,
-            m.complete_the_order_show,
-            m.start_ride_sliding_arrived,
-            m.loc_list
-            from
-            oride_bi.oride_order_location_info m
-            where m.dt = '{{ ds }}'
-        ) m 
-        left join driver_location d on m.order_id = d.order_id
-        ;
-
-        ''',
-    schema='oride_bi',
-    dag=dag)
-
 
 order_distinct = HiveOperator(
     task_id='order_distinct',
     hql='''
 
-        insert overwrite table oride_bi.oride_order_location_info partition(dt='{{ ds }}')
+        SET hive.exec.parallel=TRUE;
+        SET hive.exec.dynamic.partition.mode=nonstrict;
+
+        insert overwrite table oride_dw.dwd_oride_order_location_di partition(country_code,dt)
         select
         m.order_id,
         m.user_id,
@@ -1899,38 +561,42 @@ order_distinct = HiveOperator(
         m.start_ride_sliding,
         m.complete_the_order_show,
         m.start_ride_sliding_arrived,
-        m.loc_list
+        m.loc_list,
+        m.country_code as country_code,
+        m.dt as dt
         from 
         (
-        select 
-        row_number() over(partition by m.order_id ORDER BY m.create_time DESC) id,
-        m.order_id,
-        m.user_id,
-        m.driver_id,
-        m.create_time,
-        m.status,
-        m.start_loc,
-        m.end_loc,
-        m.looking_for_a_driver_show,
-        m.successful_order_show,
-        m.accept_order_click,
-        m.rider_arrive_show,
-        m.confirm_arrive_click_arrived,
-        m.pick_up_passengers_sliding_arrived,
-        m.start_ride_show,
-        m.start_ride_sliding,
-        m.complete_the_order_show,
-        m.start_ride_sliding_arrived,
-        m.loc_list
-        from oride_bi.oride_order_location_info m 
-        where 
-        m.dt = '{{ ds }}'
+            select 
+            row_number() over(partition by m.order_id ORDER BY m.create_time DESC) id,
+            m.order_id,
+            m.user_id,
+            m.driver_id,
+            m.create_time,
+            m.status,
+            m.start_loc,
+            m.end_loc,
+            m.looking_for_a_driver_show,
+            m.successful_order_show,
+            m.accept_order_click,
+            m.rider_arrive_show,
+            m.confirm_arrive_click_arrived,
+            m.pick_up_passengers_sliding_arrived,
+            m.start_ride_show,
+            m.start_ride_sliding,
+            m.complete_the_order_show,
+            m.start_ride_sliding_arrived,
+            m.loc_list,
+            m.country_code,
+            m.dt 
+            from oride_dw.dwd_oride_order_location_di m 
+            where 
+            m.dt = '{{ ds }}'
         ) m
         where id = 1
         ;
 
         ''',
-    schema='oride_bi',
+    schema='oride_dw',
     dag=dag)
 
 clear_order_location_mysql_data = MySqlOperator(
@@ -1964,44 +630,22 @@ order_location_info_to_msyql = HiveToMySqlTransfer(
             start_ride_sliding ,
             complete_the_order_show ,
             start_ride_sliding_arrived ,
-            loc_list string
-            from oride_bi.oride_order_location_info
-            where dt='{{ ds }}'
+            loc_list 
+            from oride_dw.dwd_oride_order_location_di
+            where country_code = 'nal' and dt='{{ ds }}'
 
         """,
     mysql_conn_id='mysql_bi',
     mysql_table='oride_order_location_info',
     dag=dag)
 
-
-
 validate_partition_data >> data_order_validate_task >> insert_order_location_info
 validate_partition_data >> client_event_data_order_validate_task >> insert_order_location_info
 validate_partition_data >> driver_track_validate_task >> insert_order_location_info
 insert_order_location_info >> \
-insert_order_loc_list_0_0 >> \
-insert_order_loc_list_1_1 >> \
-insert_order_loc_list_2_2 >> \
-insert_order_loc_list_3_3 >> \
-insert_order_loc_list_4_4 >> \
-insert_order_loc_list_5_5 >> \
-insert_order_loc_list_6_6 >> \
-insert_order_loc_list_7_7 >> \
-insert_order_loc_list_8_8 >> \
-insert_order_loc_list_9_9 >> \
-insert_order_loc_list_10_10 >> \
-insert_order_loc_list_11_11 >> \
-insert_order_loc_list_12_12 >> \
-insert_order_loc_list_13_13 >> \
-insert_order_loc_list_14_14 >> \
-insert_order_loc_list_15_15 >> \
-insert_order_loc_list_16_16 >> \
-insert_order_loc_list_17_17 >> \
-insert_order_loc_list_18_18 >> \
-insert_order_loc_list_19_19 >> \
-insert_order_loc_list_20_20 >> \
-insert_order_loc_list_21_21 >> \
-insert_order_loc_list_22_22 >> \
-insert_order_loc_list_23_23 >> \
+insert_order_loc_list_0_10 >> \
+insert_order_loc_list_11_15 >> \
+insert_order_loc_list_16_19 >> \
+insert_order_loc_list_20_23 >> \
 order_distinct >> \
 clear_order_location_mysql_data >> order_location_info_to_msyql
