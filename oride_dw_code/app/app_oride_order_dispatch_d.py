@@ -945,12 +945,12 @@ def sendDispatchMail(*op_args, **op_kwargs):
         email_to = ['bigdata@opay-inc.com']
     # email_to = ['duo.wu@opay-inc.com']
     email_subject = 'oride调度算法指标_{}'.format(dt)
-    send_email(
-        email_to,
-        email_subject,
-        mail_html_content,
-        mime_charset='utf-8'
-    )
+    #send_email(
+    #    email_to,
+    #    email_subject,
+    #    mail_html_content,
+    #    mime_charset='utf-8'
+    #)
 
 
 send_report = PythonOperator(
