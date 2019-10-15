@@ -57,7 +57,7 @@ test_dwd_oride_finance_driver_repayment_extend_df_task = HiveOperator(
     set hive.exec.parallel=true;
     set hive.exec.dynamic.partition.mode=nonstrict;
 
-INSERT overwrite TABLE oride_dw.{table} partition(country_code,dt)
+INSERT overwrite TABLE test_db.{table} partition(country_code,dt)
 
 SELECT dri.city_id,
        city_name,
