@@ -9,6 +9,7 @@ from airflow.operators.bash_operator import BashOperator
 from airflow.operators.impala_plugin import ImpalaOperator
 from airflow.sensors import UFileSensor
 from airflow.sensors import WebHdfsSensor
+from airflow.sensors.hive_partition_sensor import HivePartitionSensor
 from utils.connection_helper import get_hive_cursor
 from plugins.comwx import ComwxApi
 from datetime import datetime, timedelta
@@ -51,54 +52,48 @@ sleep_time2 = BashOperator(
 """
 ##----依赖数据源---##
 """
-dependence_ods_log_oride_order_skyeye_di = UFileSensor(
-    task_id='dependence_ods_log_oride_order_skyeye_di',
-    filepath='{hdfs_path_str}/dt={pt}'.format(
-        hdfs_path_str="oride-research/tags/order_tags",
-        pt='{{ ds }}'
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60,                                           #依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
-
-dependence_ods_oride_data_order = UFileSensor(
-    task_id='dependence_ods_oride_data_order',
-    filepath='{hdfs_path_str}/dt={pt}'.format(
-        hdfs_path_str="oride_dw_sqoop/oride_data/data_order",
-        pt='{{ ds }}'
-    ),
-    bucket_name='opay-datalake',
+dependence_ods_log_oride_order_skyeye_di = HivePartitionSensor(
+    task_id="dependence_ods_log_oride_order_skyeye_di",
+    table="ods_log_oride_order_skyeye_di",
+    partition="dt='{{ ds }}'",
+    schema="oride_dw_ods",
     poke_interval=60,
     dag=dag
 )
 
-dependence_oride_global_daily_report = WebHdfsSensor(
-    task_id='dependence_oride_global_daily_report',
-    filepath='{hdfs_path_str}/dt={pt}'.format(
-        hdfs_path_str="/user/hive/warehouse/oride_bi.db/oride_global_daily_report",
-        pt='{{ ds }}'
-    ),
+dependence_ods_oride_data_order = HivePartitionSensor(
+    task_id="dependence_ods_oride_data_order",
+    table="ods_sqoop_base_data_order_df",
+    partition="dt='{{ ds }}'",
+    schema="oride_dw_ods",
+    poke_interval=60,
     dag=dag
 )
 
-dependence_data_city_conf = UFileSensor(
-    task_id='dependence_data_city_conf',
-    filepath='{hdfs_path_str}/dt={pt}'.format(
-        hdfs_path_str="oride_dw_sqoop/oride_data/data_city_conf",
-        pt='{{ ds }}'
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60,                                           #依赖不满足时，一分钟检查一次依赖状态
+dependence_oride_global_daily_report = HivePartitionSensor(
+    task_id="dependence_oride_global_daily_report",
+    table="oride_global_daily_report",
+    partition="dt='{{ ds }}'",
+    schema="oride_bi",
+    poke_interval=60,
     dag=dag
 )
 
-dependence_oride_global_city_serv_daily_report = WebHdfsSensor(
-    task_id='dependence_oride_global_city_serv_daily_report',
-    filepath='{hdfs_path_str}/dt={pt}'.format(
-        hdfs_path_str="/user/hive/warehouse/oride_bi.db/oride_global_city_serv_daily_report",
-        pt='{{ ds }}'
-    ),
+dependence_data_city_conf = HivePartitionSensor(
+    task_id="dependence_data_city_conf",
+    table="ods_sqoop_base_data_city_conf_df",
+    partition="dt='{{ ds }}'",
+    schema="oride_dw_ods",
+    poke_interval=60,
+    dag=dag
+)
+
+dependence_oride_global_city_serv_daily_report = HivePartitionSensor(
+    task_id="dependence_oride_global_city_serv_daily_report",
+    table="oride_global_city_serv_daily_report",
+    partition="dt='{{ ds }}'",
+    schema="oride_bi",
+    poke_interval=60,
     dag=dag
 )
 """
@@ -188,9 +183,7 @@ insert_result_to_impala = HiveOperator(
                 lateral view posexplode(tag_ids) tags as pos, tag 
                 where dt='{pt}' 
                 ) as t
-
             inner join (select * from oride_dw_ods.ods_sqoop_base_data_order_df where dt='{pt}') as do  
-
             where t.order_id = do.id and 
                 from_unixtime(do.create_time, 'yyyy-MM-dd') = '{pt}'
             group by 
@@ -212,9 +205,7 @@ insert_result_to_impala = HiveOperator(
                 lateral view posexplode(tag_ids) tags as pos, tag 
                 where dt='{pt}' 
                 ) as t
-
             inner join (select * from oride_dw_ods.ods_sqoop_base_data_order_df where dt='{pt}') as do  
-
             where t.order_id = do.id and 
                 from_unixtime(do.create_time, 'yyyy-MM-dd') = '{pt}'
             group by 
@@ -236,9 +227,7 @@ insert_result_to_impala = HiveOperator(
                 lateral view posexplode(tag_ids) tags as pos, tag 
                 where dt='{pt}' 
                 ) as t
-
             inner join (select * from oride_dw_ods.ods_sqoop_base_data_order_df where dt='{pt}') as do  
-
             where t.order_id = do.id and 
                 from_unixtime(do.create_time, 'yyyy-MM-dd') = '{pt}'
             group by 
