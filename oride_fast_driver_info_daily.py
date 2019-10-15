@@ -623,6 +623,7 @@ def send_otirke_csv_file(ds, ds_nodash, **kwargs):
         nvl(round(total_billtime/3600,1),0),
         nvl(round(total_billtime/(60 * total_finish_orders),2),0),
         concat(cast(nvl(round((total_billtime * 100)/total_onlinetime,2),0) as string),'%'),
+        total_online_days,
         total_push_orders,
         total_accept_orders,
         total_finish_orders,
