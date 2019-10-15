@@ -45,24 +45,7 @@ dag = airflow.DAG( 'test_dwd_oride_finance_driver_repayment_extend_df',
 table_name="test_dwd_oride_finance_driver_repayment_extend_df"
 hdfs_path="hdfs://warehourse/user/hive/warehouse/test_db.db/"+table_name
 
-##----------------------------------------- 任务超时监控 ---------------------------------------## 
 
-def fun_task_timeout_monitor(ds,dag,**op_kwargs):
-
-    dag_ids=dag.dag_id
-
-    tb = [
-        {"db": "oride_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "2400"}
-    ]
-
-    TaskTimeoutMonitor().set_task_monitor(tb)
-
-task_timeout_monitor= PythonOperator(
-    task_id='task_timeout_monitor',
-    python_callable=fun_task_timeout_monitor,
-    provide_context=True,
-    dag=dag
-)
 
 
 ##----------------------------------------- 脚本 ---------------------------------------## 
