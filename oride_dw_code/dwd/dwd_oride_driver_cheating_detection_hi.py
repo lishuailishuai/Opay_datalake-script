@@ -8,7 +8,7 @@ from airflow.operators.bash_operator import BashOperator
 
 args = {
     'owner': 'linan',
-    'start_date': datetime(2019, 10, 14),
+    'start_date': datetime(2019, 10, 15),
     'depends_on_past': True,
     'retries': 1,
     'retry_delay': timedelta(minutes=5),
