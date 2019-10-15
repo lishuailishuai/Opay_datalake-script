@@ -48,16 +48,15 @@ hive_table = 'test_dwd_oride_finance_driver_repayment_extend_df'
 """
 
 #依赖前一天数据是否存在
-dwd_oride_finance_driver_repayment_extend_df_tesk = UFileSensor(
-    task_id='dwd_oride_finance_driver_repayment_extend_df',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw/dwd_oride_finance_driver_repayment_extend_df/country_code=nal",
-        pt='{{ds}}'
-    ),
-    bucket_name='opay-datalake',
+dependence_test_dwd_oride_finance_driver_repayment_extend_df = HivePartitionSensor(
+    task_id="dependence_test_dwd_oride_finance_driver_repayment_extend_df",
+    table="test_dwd_oride_finance_driver_repayment_extend_df",
+    partition="dt='{{ds}}'",
+    schema="test_db",
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
+
 
 #依赖前一天数据是否存在
 dwm_oride_driver_base_di_tesk = UFileSensor(
@@ -216,4 +215,4 @@ get_data_from_hive_task = PythonOperator(
 )
 
 
-dwd_oride_finance_driver_repayment_extend_df_tesk>>dwm_oride_driver_base_di_tesk>>sleep_time >> get_data_from_hive_task
+dependence_test_dwd_oride_finance_driver_repayment_extend_df>>dwm_oride_driver_base_di_tesk>>sleep_time >> get_data_from_hive_task
