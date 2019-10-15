@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 from airflow.operators.hive_operator import HiveOperator
 from airflow.operators.hive_to_mysql import HiveToMySqlTransfer
 from airflow.operators.mysql_operator import MySqlOperator
+from airflow.sensors import UFileSensor
 
 args = {
     'owner': 'zhenqian.zhang',
@@ -20,93 +21,23 @@ dag = airflow.DAG(
     schedule_interval="30 * * * *",
     default_args=args)
 
-add_partitions = HiveOperator(
-    task_id='add_partitions',
-    hql="""
-            ALTER TABLE server_event ADD IF NOT EXISTS PARTITION (dt = '{{ ds }}', hour = '{{ execution_date.strftime("%H") }}');
-        """,
-    schema='oride_source',
-    dag=dag)
 
-create_oride_cheating_detection_detail = HiveOperator(
-    task_id='create_oride_cheating_detection_detail',
-    hql="""
-        CREATE TABLE IF NOT EXISTS `cheating_detection_detail`(
-            `ip` string,
-            `server_ip` string,
-            `timestamp` bigint,
-            `user_id` string,
-            `user_number` string,
-            `client_timestamp` string,
-            `platform` string,
-            `os_version` string,
-            `app_name` string,
-            `app_version` string,
-            `locale` string,
-            `device_id` string,
-            `device_screen` string,
-            `device_model` string,
-            `device_manufacturer` string,
-            `is_root` string,
-            `channel` string,
-            `subchannel` string,
-            `gaid` string,
-            `appsflyer_id` string,
-            `event_time` string,
-            `event_name` string,
-            `page` string,
-            `source` string,
-            `event_value` string --{"bind_time":"1560639705","bind_device_id":"97B22A1F2BFDC3F3976C3734244AE12A","bind_ip":"105.112.11.30","bind_net_type":"","bind_number":"+2348144397432","bind_refferal_code":"159274"}
-        )
-        PARTITIONED BY (
-            `dt` string,
-            `hour` string)
-        STORED AS PARQUET
-        """,
-    schema='oride_bi',
-    dag=dag)
 
-insert_oride_cheating_detection_detail = HiveOperator(
-    task_id='insert_oride_cheating_detection_detail',
-    hql="""
-        -- 删除数据
-        ALTER TABLE cheating_detection_detail DROP IF EXISTS PARTITION (dt = '{{ ds }}', hour = '{{ execution_date.strftime("%H") }}');
-        INSERT OVERWRITE TABLE cheating_detection_detail PARTITION (dt = '{{ ds }}', hour = '{{ execution_date.strftime("%H") }}')
-        SELECT
-            ip,
-            server_ip,
-            `timestamp`,
-            common.user_id,
-            common.user_number,
-            common.client_timestamp,
-            common.platform,
-            common.os_version,
-            common.app_name,
-            common.app_version,
-            common.locale,
-            common.device_id,
-            common.device_screen,
-            common.device_model,
-            common.device_manufacturer,
-            common.is_root,
-            common.channel,
-            common.subchannel,
-            common.gaid,
-            common.appsflyer_id,
-            e.event_time,
-            e.event_name,
-            e.page,
-            e.source,
-            e.event_value
-        FROM
-            oride_source.server_event LATERAL VIEW EXPLODE(events) es AS e
-        WHERE
-            dt='{{ ds }}'
-            AND hour='{{ execution_date.strftime("%H") }}'
-            AND e.event_name='invitation_code_click_confirm'
-        """,
-    schema='oride_bi',
-    dag=dag)
+
+# 依赖前一天分区
+dwd_oride_driver_cheating_detection_hi_prev_hour_task = UFileSensor(
+    task_id='dwd_oride_driver_cheating_detection_hi_prev_hour_task',
+    filepath='{hdfs_path_str}/dt={pt}/hour={hour}/_SUCCESS'.format(
+        hdfs_path_str="oride/oride_dw/dwd_oride_driver_cheating_detection_hi/country_code=nal",
+        pt='{{ds}}',
+        hour='{{ execution_date.strftime("%H") }}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
+
 
 clear_promoter_mysql_data = MySqlOperator(
     task_id='clear_promoter_mysql_data',
@@ -132,7 +63,7 @@ promoter_detail_to_msyql = HiveToMySqlTransfer(
                 {{ execution_date.hour}},
                 ip
             FROM
-                oride_bi.cheating_detection_detail
+                oride_dw.dwd_oride_driver_cheating_detection_hi
             WHERE
                   dt='{{ ds }}'
                   AND hour='{{ execution_date.strftime("%H") }}'
@@ -153,7 +84,7 @@ promoter_hour_to_msyql = HiveToMySqlTransfer(
                 COUNT(DISTINCT if (length(get_json_object(event_value, '$.bind_device_id'))>0, get_json_object(event_value, '$.bind_device_id'), NULL)) as device_count,
                 unix_timestamp()
             FROM
-                oride_bi.cheating_detection_detail
+                oride_dw.dwd_oride_driver_cheating_detection_hi
             WHERE
                 dt='{{ ds }}'
                 AND hour='{{ execution_date.strftime("%H") }}'
@@ -177,7 +108,7 @@ promoter_day_to_msyql = HiveToMySqlTransfer(
     #            COUNT(DISTINCT if (length(get_json_object(event_value, '$.bind_device_id'))>0, get_json_object(event_value, '$.bind_device_id'), NULL)) as device_count,
     #            unix_timestamp()
     #        FROM
-    #            oride_bi.cheating_detection_detail
+    #            oride_dw.dwd_oride_driver_cheating_detection_hi
     #        WHERE
     #            dt='{{ ds }}'
     #        GROUP BY
@@ -198,7 +129,7 @@ promoter_day_to_msyql = HiveToMySqlTransfer(
                 from_unixtime(unix_timestamp(dt,'yyyy-MM-dd'), 'yyyyMMdd') as day,
                 COUNT(DISTINCT get_json_object(event_value, '$.bind_number')) as users_count,
                 COUNT(DISTINCT if (length(get_json_object(event_value, '$.bind_device_id'))>0, get_json_object(event_value, '$.bind_device_id'), NULL)) as device_count
-            FROM oride_bi.cheating_detection_detail
+            FROM oride_dw.dwd_oride_driver_cheating_detection_hi
             WHERE dt = '{{ ds }}'
             GROUP BY get_json_object(event_value, '$.bind_refferal_code'), dt
             ) AS a 
@@ -209,7 +140,7 @@ promoter_day_to_msyql = HiveToMySqlTransfer(
             FROM (SELECT 
                     user_id,
                     get_json_object(event_value, '$.bind_refferal_code') AS code 
-                FROM oride_bi.cheating_detection_detail 
+                FROM oride_dw.dwd_oride_driver_cheating_detection_hi 
                 ) AS c 
             JOIN (SELECT 
                     dt,
@@ -229,11 +160,9 @@ promoter_day_to_msyql = HiveToMySqlTransfer(
     mysql_table='promoter_data_day',
     dag=dag)
 
-add_partitions >> insert_oride_cheating_detection_detail
-create_oride_cheating_detection_detail >> insert_oride_cheating_detection_detail
-insert_oride_cheating_detection_detail >> promoter_detail_to_msyql
-insert_oride_cheating_detection_detail >> promoter_day_to_msyql
-insert_oride_cheating_detection_detail >> promoter_hour_to_msyql
+dwd_oride_driver_cheating_detection_hi_prev_hour_task >> promoter_detail_to_msyql
+dwd_oride_driver_cheating_detection_hi_prev_hour_task >> promoter_day_to_msyql
+dwd_oride_driver_cheating_detection_hi_prev_hour_task >> promoter_hour_to_msyql
 clear_promoter_mysql_data >> promoter_detail_to_msyql
 clear_promoter_mysql_data >> promoter_day_to_msyql
 clear_promoter_mysql_data >> promoter_hour_to_msyql
