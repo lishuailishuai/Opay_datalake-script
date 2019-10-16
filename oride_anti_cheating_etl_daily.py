@@ -23,8 +23,8 @@ dag = airflow.DAG(
     default_args=args)
 
 
-dwd_oride_driver_cheating_detection_hi_prev_hour_task = UFileSensor(
-    task_id='dwd_oride_driver_cheating_detection_hi_prev_hour_task',
+dwd_oride_order_location_di_prev_day_task = UFileSensor(
+    task_id='dwd_oride_order_location_di_prev_day_task',
     filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
         hdfs_path_str="oride/oride_dw/dwd_oride_order_location_di/country_code=nal",
         pt='{{ds}}'
@@ -75,4 +75,4 @@ order_location_info_to_msyql = HiveToMySqlTransfer(
     dag=dag)
 
 
-clear_order_location_mysql_data >> order_location_info_to_msyql
+dwd_oride_order_location_di_prev_day_task >> clear_order_location_mysql_data >> order_location_info_to_msyql
