@@ -22,7 +22,7 @@ import requests
 import os
 
 args = {
-    'owner': 'linan',
+    'owner': 'yangmingze',
     'start_date': datetime(2019, 10, 14),
     'depends_on_past': False,
     'retries': 3,
@@ -40,7 +40,7 @@ dag = airflow.DAG('dwd_oride_abnormal_order_di',
 sleep_time = BashOperator(
     task_id='sleep_id',
     depends_on_past=False,
-    bash_command='sleep 30',
+    bash_command='sleep 10',
     dag=dag)
 
 ##----------------------------------------- 依赖 ---------------------------------------##
