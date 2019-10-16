@@ -123,7 +123,9 @@ promoter_day_to_msyql = HiveToMySqlTransfer(
             NVL(a.users_count, 0),
             NVL(a.device_count, 0),
             unix_timestamp(), 
-            NVL(b.orders_f, 0) 
+            NVL(b.orders_f, 0) ,
+            0,
+            0
         FROM (SELECT
                 get_json_object(event_value, '$.bind_refferal_code') as code,
                 from_unixtime(unix_timestamp(dt,'yyyy-MM-dd'), 'yyyyMMdd') as day,
