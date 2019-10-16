@@ -114,7 +114,22 @@ dwd_oride_driver_accept_order_show_detail_di_task = HiveOperator(
               event_time AS log_timestamp
        FROM oride_dw.dwd_oride_client_event_detail_hi
        WHERE dt='{pt}'
-         AND event_name='accept_order_show'
+         AND event_name in('accept_order_show','order_push_show')
+         union all
+         SELECT 
+              user_id AS driver_id,
+              order_id,
+              get_json_object(event_value, '$.city_id') AS city_id,
+              get_json_object(event_value, '$.serv_type') AS product_id,
+              get_json_object(event_value, '$.lat') AS lat,
+              get_json_object(event_value, '$.lng') AS lng,
+              get_json_object(event_value, '$.startLat') AS startLat,
+              get_json_object(event_value, '$.startLng') AS startLng,
+              event_time AS log_timestamp
+       FROM oride_dw.dwd_oride_client_event_detail_hi
+       lateral view explode(split(substr(get_json_object(event_value, '$.order_ids'),2,length(get_json_object(event_value, '$.order_ids'))-2),',')) order_ids as order_id
+       WHERE dt='{pt}'
+         AND event_name in('accept_order_show','order_push_show')
        ) t 
        ;
 
