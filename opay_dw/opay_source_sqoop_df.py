@@ -221,7 +221,7 @@ for db_name, table_name, conn_id, prefix_name,priority_weight_nm in table_list:
             --hive-delims-replacement " " \
             --delete-target-dir \
             --compression-codec=snappy \
-            -m 12
+            -m {m}12
         '''.format(
             host=conn_conf_dict[conn_id].host,
             port=conn_conf_dict[conn_id].port,
@@ -229,8 +229,9 @@ for db_name, table_name, conn_id, prefix_name,priority_weight_nm in table_list:
             username=conn_conf_dict[conn_id].login,
             password=conn_conf_dict[conn_id].password,
             table=table_name,
-            ufile_path=UFILE_PATH % (db_name, table_name)
-        ),
+            ufile_path=UFILE_PATH % (db_name, table_name),
+            m=1 if table_name=='channel_response_code' else 12
+    ),
         dag=dag,
     )
 
