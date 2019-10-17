@@ -401,7 +401,7 @@ SELECT base.order_id,
             ELSE 0
         END) AS td_driver_after_cancel_time_dur,
        --当天司机应答后取消平均时长（秒） 
-       serv_union_type  --业务类型，下单类型+司机类型(serv_type+driver_serv_type)
+       serv_union_type,  --业务类型，下单类型+司机类型(serv_type+driver_serv_type)
        country_code,
 
        '{pt}' AS dt
