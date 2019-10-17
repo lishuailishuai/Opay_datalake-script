@@ -365,7 +365,7 @@ def get_all_product_rows(ds, all_completed_num):
     sql = '''SELECT t1.dt,
          t1.city_id,
          if(t1.city_id=-10000,'All',cit.city_name) AS city_name,
-         if(t1.city_id=-10000,'-',cit.weather) AS weather, --当日该城市天气
+         if(t1.city_id=-10000,'-',nvl(cit.weather,'-')) AS weather, --当日该城市天气
          concat(cast(nvl(round(nvl(t1.wet_ord_cnt,0)*100/nvl(t1.ride_order_cnt,0),1),0) AS string),'%') AS wet_order_rate, --湿单占比
          nvl(t1.ride_order_cnt,0) AS ride_order_cnt, --当日下单数
          if(t1.dt>'2019-10-10',order_cnt_lfw,'-') AS order_cnt_lfw, --近四周同期下单数据

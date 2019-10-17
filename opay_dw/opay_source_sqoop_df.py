@@ -12,7 +12,7 @@ from plugins.SqoopSchemaUpdate import SqoopSchemaUpdate
 
 args = {
     'owner': 'zhenqian.zhang',
-    'start_date': datetime(2019, 9, 19),
+    'start_date': datetime(2019, 10, 16),
     'depends_on_past': False,
     'retries': 1,
     'retry_delay': timedelta(minutes=5),
@@ -22,9 +22,9 @@ args = {
 }
 
 dag = airflow.DAG(
-    'opay_source_sqoop',
+    'opay_source_sqoop_df',
     schedule_interval="00 02 * * *",
-    concurrency=15,
+    concurrency=10,
     max_active_runs=1,
     default_args=args)
 
@@ -220,7 +220,8 @@ for db_name, table_name, conn_id, prefix_name,priority_weight_nm in table_list:
             --lines-terminated-by "\\n" \
             --hive-delims-replacement " " \
             --delete-target-dir \
-            --compression-codec=snappy
+            --compression-codec=snappy \
+            -m {m}
         '''.format(
             host=conn_conf_dict[conn_id].host,
             port=conn_conf_dict[conn_id].port,
@@ -228,8 +229,9 @@ for db_name, table_name, conn_id, prefix_name,priority_weight_nm in table_list:
             username=conn_conf_dict[conn_id].login,
             password=conn_conf_dict[conn_id].password,
             table=table_name,
-            ufile_path=UFILE_PATH % (db_name, table_name)
-        ),
+            ufile_path=UFILE_PATH % (db_name, table_name),
+            m=1 if table_name=='channel_response_code' else 12
+    ),
         dag=dag,
     )
 
