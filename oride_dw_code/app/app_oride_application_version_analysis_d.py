@@ -145,7 +145,7 @@ app_oride_application_version_analysis_d_task = HiveOperator(
                 app_version,--版本号
                 platform, --操作系统
                 user_id, --用户id
-                min(if(event_time > '1546297200000',event_time,null)) over(partition by app_name,app_version,platform) as event_time,
+                min(if(event_time > '1546297200000' and length(event_time) >= 10 ,event_time,null)) over(partition by app_name,app_version,platform) as event_time,
                 --2019-01-01 时间戳有负数， 0 、1 、2（但是这样的数据又不是脏数据）10位错误数据1230739718
                 country_code,
                 dt
