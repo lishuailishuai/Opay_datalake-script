@@ -141,6 +141,7 @@ touchz_data_success = BashOperator(
     if [ $line_num -eq 0 ]
     then
         echo "FATAL {hdfs_data_dir} is empty"
+        $HADOOP_HOME/bin/hadoop fs -mkdir {hdfs_data_dir}
         $HADOOP_HOME/bin/hadoop fs -touchz {hdfs_data_dir}/_SUCCESS
     else
         echo "DATA EXPORT Successed ......"
