@@ -401,6 +401,7 @@ SELECT base.order_id,
             ELSE 0
         END) AS td_driver_after_cancel_time_dur,
        --当天司机应答后取消平均时长（秒） 
+       serv_union_type  --业务类型，下单类型+司机类型(serv_type+driver_serv_type)
        country_code,
 
        '{pt}' AS dt
@@ -533,7 +534,8 @@ FROM
              trip_id, --'行程 ID'
              wait_carpool,--'是否在等在拼车',
              pax_num, -- 乘客数量 
-             tip  --小费
+             tip,  --小费
+             concat(serv_type,'_',driver_serv_type) as serv_union_type  --业务类型，下单类型+司机类型(serv_type+driver_serv_type)
 
       FROM oride_dw_ods.ods_sqoop_base_data_order_df
       WHERE dt = '{pt}'

@@ -173,6 +173,7 @@ def insert_sql(pt,ds):
        AND t1.take_time > 0
        AND t1.finish_time>0,t1.finish_time - t1.take_time,0) AS finish_order_dur, -- 完成做单时长（秒）
     t1.pax_num,  --乘客数
+    concat(t1.serv_type,'_',t1.driver_serv_type) as serv_union_type,  --业务类型，下单类型+司机类型(serv_type+driver_serv_type)
     'nal' AS country_code,
     '{pt}' AS dt
     FROM

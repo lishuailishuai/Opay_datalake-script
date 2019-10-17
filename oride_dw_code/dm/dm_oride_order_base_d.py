@@ -217,6 +217,7 @@ dm_oride_order_base_d_task = HiveOperator(
            sum(if((ord.status = 6 and cancel_role =2),ord.distance,0.0)) as  passanger_cancel_order_dis,   --乘客取消订单接驾距离
            sum(a1.pick_up_distance) as accept_order_pick_up_dis, --应答单接驾距离(米)（计算平均接驾距离（应答单使用））
            sum(r1.accept_order_assigned_cnt) as  accept_order_pick_up_assigned_cnt, --应答单分配次数（应答单接驾距离(米)（计算平均接驾距离（应答单使用）））
+           ord.serv_union_type,  --业务类型，下单类型+司机类型(serv_type+driver_serv_type)
 
            ord.country_code,
            
@@ -291,7 +292,8 @@ dm_oride_order_base_d_task = HiveOperator(
     GROUP BY ord.city_id,
              if(ord.city_id=1001 and driver.product_id is not null and ord.product_id!=99,driver.product_id,ord.product_id),
              ord.country_code,
-             ord.dt;
+             ord.dt,
+             ord.serv_union_type  --业务类型，下单类型+司机类型(serv_type+driver_serv_type)
     ;
 
 '''.format(

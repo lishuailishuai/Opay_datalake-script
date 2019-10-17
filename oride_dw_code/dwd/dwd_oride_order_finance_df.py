@@ -119,7 +119,7 @@ LEFT JOIN
           amount_pay_offline   --线下支付金额
    FROM oride_dw_ods.ods_sqoop_base_data_driver_records_day_df
    WHERE dt='{pt}') records ON ord.driver_id=records.driver_id
-AND ord.create_date=records.day
+AND substr(ord.finish_time,1,10)=records.day
 where ord.city_id<>999001
 and ord.driver_id<>1
 GROUP BY ord.city_id,
