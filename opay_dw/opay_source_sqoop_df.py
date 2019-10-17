@@ -221,7 +221,7 @@ for db_name, table_name, conn_id, prefix_name,priority_weight_nm in table_list:
             --hive-delims-replacement " " \
             --delete-target-dir \
             --compression-codec=snappy \
-            -m {m}12
+            -m {m}
         '''.format(
             host=conn_conf_dict[conn_id].host,
             port=conn_conf_dict[conn_id].port,
