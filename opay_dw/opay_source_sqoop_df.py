@@ -220,7 +220,7 @@ for db_name, table_name, conn_id, prefix_name,priority_weight_nm in table_list:
             --lines-terminated-by "\\n" \
             --hive-delims-replacement " " \
             --delete-target-dir \
-            --compression-codec=snappy
+            --compression-codec=snappy \
             -m 12
         '''.format(
             host=conn_conf_dict[conn_id].host,
