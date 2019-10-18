@@ -322,7 +322,7 @@ class ModelPublicFrame(object):
 
         except Exception as e:
 
-            self.comwx.postAppMessage('DW调度系统任务 {jobname} 任务依赖列表产出异常'.format(jobname=dag.dag_id),'271')
+            #self.comwx.postAppMessage('DW调度系统任务 {jobname} 任务依赖列表产出异常'.format(jobname=dag.dag_id),'271')
 
             logging.info(e)
 
