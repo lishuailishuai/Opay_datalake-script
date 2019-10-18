@@ -33,7 +33,7 @@ args = {
 }
 
 dag = airflow.DAG('app_oride_cohort_w',
-                  schedule_interval="30 01 * * *",
+                  schedule_interval="30 01 ? * MON",
                   default_args=args)
 
 sleep_time = BashOperator(

@@ -37,8 +37,11 @@ dwd_oride_order_location_di_prev_day_task = UFileSensor(
 clear_order_location_mysql_data = MySqlOperator(
     task_id='clear_order_location_mysql_data',
     sql="""
-        DELETE FROM oride_order_location_info WHERE dt='{{ ds }}';
-    """,
+        DELETE FROM oride_order_location_info WHERE dt='{ds}' or dt = '{before_30_day}';
+    """.format(
+        ds='{{ds}}',
+        before_30_day ='{{ macros.ds_add(ds, -30) }}'
+    ),
     mysql_conn_id='mysql_bi',
     dag=dag)
 
