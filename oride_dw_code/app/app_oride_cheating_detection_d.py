@@ -151,7 +151,8 @@ def finish_data(**op_kwargs):
         SELECT
             c.code,
             from_unixtime(unix_timestamp(o.dt,'yyyy-MM-dd'), 'yyyyMMdd') AS day,
-            COUNT(DISTINCT o.orders_f) as orders_f 
+            COUNT(DISTINCT o.orders_f) as orders_f, 
+            unix_timestamp() 
         FROM (SELECT 
                 user_id,
                 get_json_object(event_value, '$.bind_refferal_code') AS code 
@@ -174,14 +175,15 @@ def finish_data(**op_kwargs):
     res = cursor.fetchall()
     mconn = get_db_conn('opay_spread_mysql')
     mysql = mconn.cursor()
-    sql = 'insert into promoter_data_day (code, day, order_numbers) values '
-    ext = ' on duplicate key update order_numbers=values(order_numbers)'
+    sql = 'insert into promoter_data_day (code, day, order_numbers, create_time) values '
+    ext = ' on duplicate key update order_numbers=values(order_numbers), create_time=values(create_time)'
     vals = []
-    for (c, d, o) in res:
-        vals.append("('{c}', '{d}', '{o}')".format(
+    for (c, d, o, t) in res:
+        vals.append("('{c}', '{d}', '{o}', '{t}')".format(
             c=c,
             d=d,
-            o=o
+            o=o,
+            t=t
         ))
         if len(vals) >= 1000:
             # logging.info(sql + ",".join(vals) + ext)
@@ -216,7 +218,8 @@ def first_user_data(**op_kwargs):
         SELECT 
             uc.code,
             from_unixtime(unix_timestamp(uo.dt,'yyyy-MM-dd'), 'yyyyMMdd') AS day,
-            COUNT(DISTINCT uo.user_id) AS u 
+            COUNT(DISTINCT uo.user_id) AS u, 
+            unix_timestamp() 
         FROM (SELECT 
                 user_id,
                 get_json_object(event_value, '$.bind_refferal_code') AS code 
@@ -241,14 +244,15 @@ def first_user_data(**op_kwargs):
     res = cursor.fetchall()
     mconn = get_db_conn('opay_spread_mysql')
     mysql = mconn.cursor()
-    sql = 'insert into promoter_data_day (code, day, pft) values '
-    ext = ' on duplicate key update pft=values(pft)'
+    sql = 'insert into promoter_data_day (code, day, pft, create_time) values '
+    ext = ' on duplicate key update pft=values(pft), create_time=values(create_time)'
     vals = []
-    for (c, d, p) in res:
-        vals.append("('{c}', '{d}', '{p}')".format(
+    for (c, d, p, t) in res:
+        vals.append("('{c}', '{d}', '{p}', '{t}')".format(
             c=c,
             d=d,
-            p=p
+            p=p,
+            t=t
         ))
         if len(vals) >= 1000:
             # logging.info(sql + ",".join(vals) + ext)
@@ -283,7 +287,8 @@ def first_driver_data(**op_kwargs):
         SELECT 
             uc.code,
             from_unixtime(unix_timestamp(ro.dt,'yyyy-MM-dd'), 'yyyyMMdd') AS day,
-            COUNT(distinct ro.driver_id) as u
+            COUNT(distinct ro.driver_id) as u, 
+            unix_timestamp() 
         FROM (SELECT  
                 r.driver_id,
                 p.code 
@@ -321,14 +326,15 @@ def first_driver_data(**op_kwargs):
     res = cursor.fetchall()
     mconn = get_db_conn('opay_spread_mysql')
     mysql = mconn.cursor()
-    sql = 'insert into promoter_data_day (code, day, dft) values '
-    ext = ' on duplicate key update dft=values(dft)'
+    sql = 'insert into promoter_data_day (code, day, dft, create_time) values '
+    ext = ' on duplicate key update dft=values(dft), create_time=values(create_time)'
     vals = []
-    for (c, d, f) in res:
-        vals.append("('{c}', '{d}', '{f}')".format(
+    for (c, d, f, t) in res:
+        vals.append("('{c}', '{d}', '{f}', '{t}')".format(
             c=c,
             d=d,
-            f=f
+            f=f,
+            t=t
         ))
         if len(vals) >= 1000:
             # logging.info(sql + ",".join(vals) + ext)
