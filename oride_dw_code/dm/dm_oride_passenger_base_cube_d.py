@@ -136,7 +136,7 @@ dm_oride_passenger_base_cube_d_task = HiveOperator(
         nvl(t2.paid_users,0) as paid_users,  --当日所有支付乘客数
         nvl(t2.online_paid_users,0) as online_paid_users,--当日线上支付乘客数
         nvl(t2.fraud_user_cnt,0) as fraud_user_cnt, --疑似作弊订单乘客数
-        nvl(t2.driver_serv_type) as driver_serv_type, --订单表中司机业务类型
+        nvl(t2.driver_serv_type,-10000) as driver_serv_type, --订单表中司机业务类型
         nvl(t2.country_code,'nal') as country_code,
         '{pt}' dt     
         from (SELECT 'nal' AS country_code,
