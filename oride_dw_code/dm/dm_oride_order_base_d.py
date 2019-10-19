@@ -123,7 +123,7 @@ dm_oride_order_base_d_task = HiveOperator(
           ord.city_id,
            --所属城市
     
-           if(ord.city_id=1001 and driver.product_id is not null and ord.product_id!=99,driver.product_id,ord.product_id) as product_id,
+           ord.product_id as product_id,
            --订单车辆类型(0: 专快混合 1:driect[专车] 2: street[快车] 99:招手停)
     
            count(ord.order_id) AS ride_order_cnt,
@@ -217,7 +217,7 @@ dm_oride_order_base_d_task = HiveOperator(
            sum(if((ord.status = 6 and cancel_role =2),ord.distance,0.0)) as  passanger_cancel_order_dis,   --乘客取消订单接驾距离
            sum(a1.pick_up_distance) as accept_order_pick_up_dis, --应答单接驾距离(米)（计算平均接驾距离（应答单使用））
            sum(r1.accept_order_assigned_cnt) as  accept_order_pick_up_assigned_cnt, --应答单分配次数（应答单接驾距离(米)（计算平均接驾距离（应答单使用）））
-           ord.serv_union_type,  --业务类型，下单类型+司机类型(serv_type+driver_serv_type)
+           ord.driver_serv_type,  --业务类型，订单表中司机类型
 
            ord.country_code,
            
@@ -284,16 +284,12 @@ dm_oride_order_base_d_task = HiveOperator(
         select * from oride_dw.dwd_oride_order_mark_df 
         where dt='{pt}' and substr(create_time,1,10)='{pt}'
     )  mark_ord on ord.order_id=mark_ord.order_id
-    left outer join 
-    (select * from oride_dw.dim_oride_driver_base 
-    where dt='{pt}') driver
-    on ord.driver_id=driver.driver_id
     
     GROUP BY ord.city_id,
-             if(ord.city_id=1001 and driver.product_id is not null and ord.product_id!=99,driver.product_id,ord.product_id),
+             ord.product_id,
              ord.country_code,
              ord.dt,
-             ord.serv_union_type  --业务类型，下单类型+司机类型(serv_type+driver_serv_type)
+             ord.driver_serv_type  --业务类型，司机业务类型
     ;
 
 '''.format(

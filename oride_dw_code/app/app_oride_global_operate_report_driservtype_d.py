@@ -23,7 +23,7 @@ import os
 
 args = {
     'owner': 'lili.chen',
-    'start_date': datetime(2019, 9, 9),
+    'start_date': datetime(2019, 10, 18),
     'depends_on_past': False,
     'retries': 3,
     'retry_delay': timedelta(minutes=2),
@@ -32,7 +32,7 @@ args = {
     'email_on_retry': False,
 }
 
-dag = airflow.DAG('app_oride_global_operate_report_d',
+dag = airflow.DAG('app_oride_global_operate_report_driservtype_d',
                   schedule_interval="50 01 * * *",
                   default_args=args)
 
@@ -70,10 +70,10 @@ dependence_dm_oride_passenger_base_cube_d_prev_day_task = UFileSensor(
 )
 
 # 依赖前一天分区
-dependence_dm_oride_driver_audit_pass_cube_d_prev_day_task = UFileSensor(
-    task_id='dm_oride_driver_audit_pass_cube_d_prev_day_task',
+dependence_dm_oride_driver_order_base_cube_d_prev_day_task = UFileSensor(
+    task_id='dm_oride_driver_order_base_cube_d_prev_day_task',
     filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw/dm_oride_driver_audit_pass_cube_d/country_code=nal",
+        hdfs_path_str="oride/oride_dw/dm_oride_driver_order_base_cube_d/country_code=nal",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -82,23 +82,13 @@ dependence_dm_oride_driver_audit_pass_cube_d_prev_day_task = UFileSensor(
 )
 
 # 依赖前一天分区
-dependence_dm_oride_driver_base_d_prev_day_task = UFileSensor(
-    task_id='dm_oride_driver_base_d_prev_day_task',
+dependence_dm_oride_driver_order_base_d_prev_day_task = UFileSensor(
+    task_id='dm_oride_driver_order_base_d_prev_day_task',
     filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw/dm_oride_driver_base_d/country_code=nal",
+        hdfs_path_str="oride/oride_dw/dm_oride_driver_order_base_d/country_code=nal",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
-
-# 依赖当天分区00点
-dependence_server_magic_now_day_task = HivePartitionSensor(
-    task_id="server_magic_now_day_task",
-    table="server_magic",
-    partition="dt='{{macros.ds_add(ds, +1)}}' and hour='00'",
-    schema="oride_source",
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
@@ -114,25 +104,13 @@ dependence_dwd_oride_order_finance_df_prev_day_task = UFileSensor(
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
-
-# 依赖前一天分区
-dependence_dwd_oride_passenger_recharge_df_prev_day_task = UFileSensor(
-    task_id='dwd_oride_passenger_recharge_df',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw/dwd_oride_passenger_recharge_df/country_code=nal",
-        pt='{{ds}}'
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
 ##----------------------------------------- 变量 ---------------------------------------##
 
-table_name = "app_oride_global_operate_report_d"
+table_name = "app_oride_global_operate_report_driservtype_d"
 hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
 
 ##----------------------------------------- 脚本 ---------------------------------------##
-order_data_null="""
+order_data_null = """
        null as ride_order_cnt, --当日下单量
        null as finish_order_cnt, --当日完单量
        null as finish_pay, --当日完成支付量
@@ -154,7 +132,7 @@ order_data_null="""
        null as finish_order_cnt_lfw  --近四周同期完单数据
        """
 
-passenger_data_null="""
+passenger_data_null = """
        null as new_users,  --当天注册乘客数
        null as act_users,  --当天活跃乘客数
        null as ord_users,  --当日下单乘客数
@@ -168,45 +146,40 @@ passenger_data_null="""
        null as new_user_gmv  --当日新注册乘客完单gmv
 """
 
-driver_cube_data_null="""
-       null as td_audit_finish_driver_num,  --当日审核通过司机数
+driver_cube_data_null = """
        null as td_online_driver_num,  --当日在线司机数
        null as td_request_driver_num, --当日接单司机数
        null as td_finish_order_driver_num,  --当日完单司机数
        null as td_push_accpet_show_driver_num --被推送骑手数
 """
 
-driver_data_null="""
+driver_data_null = """
        null as finish_driver_online_dur,  --当日完单司机在线时长
        null as driver_billing_dur, --当日司机计费时长
        null as driver_pushed_order_cnt  --司机被推送订单数
 """
 
-finance_data_null="""
+finance_data_null = """
        null AS recharge_amount, --充值金额
        null AS reward_amount, --奖励金额
        null AS amount_pay_online, --当日总收入-线上支付金额
        null AS amount_pay_offline --当日总收入-线下支付金额 
 """
-passenger_recharge_data_null="""
-       null as recharge_users, --每天充值用户数
-       null as user_recharge_succ_balance  --每天用户充值真实金额
-"""
 
-app_oride_global_operate_report_d_task = HiveOperator(
+app_oride_global_operate_report_driservtype_d_task = HiveOperator(
 
-    task_id='app_oride_global_operate_report_d_task',
+    task_id='app_oride_global_operate_report_driservtype_d_task',
     hql='''
     SET hive.exec.parallel=true;
     SET hive.exec.dynamic.partition=true;
     SET hive.exec.dynamic.partition.mode=nonstrict;
-    
+
     with order_data as
     (
 --订单相关,只过滤当日的
 select nvl(t.country_code,'-10000') as country_code,
        nvl(t.city_id,-10000) as city_id,
-       nvl(t.product_id,-10000) as product_id,
+       nvl(t.driver_serv_type,-10000) as driver_serv_type, --订单表司机业务类型
        sum(ride_order_cnt) as ride_order_cnt, --当日下单量
        sum(finish_order_cnt) as finish_order_cnt, --当日完单量
        sum(finish_pay) as finish_pay, --当日完成支付量
@@ -229,12 +202,10 @@ select nvl(t.country_code,'-10000') as country_code,
        {passenger_data_null},
        {driver_cube_data_null},
        {driver_data_null},
-       null as map_request_num,
-       {finance_data_null},
-       {passenger_recharge_data_null}  
+       {finance_data_null}
 from (SELECT dt,country_code,
        city_id,
-       product_id,
+       driver_serv_type, --订单表司机业务类型
        sum(ride_order_cnt) as ride_order_cnt, --当日下单量
        sum(finish_order_cnt) as finish_order_cnt, --当日完单量
        sum(finish_pay) as finish_pay, --当日完成支付量
@@ -254,7 +225,7 @@ from (SELECT dt,country_code,
        sum(opay_pay_failed_cnt) as opay_pay_failed_cnt, --opay支付失败订单数,pay_mode=2 and pay_status in(0,2)
        order_cnt_lfw, --近四周同期下单数据均值
        finish_order_cnt_lfw  --近四周同期完单数据
-       
+
 FROM (SELECT sum(if(dt>=date_add('{pt}',-28)
               AND dt<'{pt}'
               AND from_unixtime(unix_timestamp(dt,'yyyy-MM-dd'),'u')=from_unixtime(unix_timestamp('{pt}', 'yyyy-MM-dd'),'u'),ride_order_cnt,0)) over (partition BY '{pt}',country_code, city_id, product_id)/4 AS order_cnt_lfw,--近四周同期下单数据均值
@@ -268,12 +239,12 @@ WHERE dt>=date_add('{pt}',-28)
   where m.dt='{pt}'
   group by m.dt,m.country_code,
              m.city_id,
-             m.product_id,
+             m.driver_serv_type,
              m.order_cnt_lfw,
              m.finish_order_cnt_lfw) t
 group by nvl(t.country_code,'-10000'),
        nvl(t.city_id,-10000),  --with cube时，默认值无效
-       nvl(t.product_id,-10000)
+       nvl(t.driver_serv_type,-10000)
 with cube),
 
 --乘客相关
@@ -281,7 +252,7 @@ passenger_data as
 (
 select country_code,
        city_id,
-       product_id,   --乘客和订单相关的指标通过订单表的下单业务类型区分业务类型维度
+       driver_serv_type,   --乘客和订单相关的指标通过订单表的司机业务类型区分业务类型维度
        {order_data_null},
        new_users,  --当天注册乘客数
        act_users,  --当天活跃乘客数
@@ -296,115 +267,70 @@ select country_code,
        new_user_gmv,  --当日新注册乘客完单gmv  
        {driver_cube_data_null},
        {driver_data_null},
-       null as map_request_num,
-       {finance_data_null},
-       {passenger_recharge_data_null} 
+       {finance_data_null}
 from oride_dw.dm_oride_passenger_base_cube_d 
-where dt='{pt}' and nvl(driver_serv_type,'-10000')='-10000'),     
-        
+where dt='{pt}' and nvl(product_id,'-10000')='-10000'),     
+
 --司机相关cube
 driver_cube_data as
 (
 select country_code,
        cast(city_id as bigint) as city_id,
-       product_id,
+       driver_serv_type,  --司机与订单相关的指标用订单表的司机业务类型driver_serv_type作为业务类型
        {order_data_null},
        {passenger_data_null},
-       td_audit_finish_driver_num,  --当日审核通过司机数
+       --td_audit_finish_driver_num,  --当日审核通过司机数
        td_online_driver_num,  --当日在线司机数
        td_request_driver_num, --当日接单司机数
        td_finish_order_driver_num,  --当日完单司机数
        td_push_accpet_show_driver_num, --被推送骑手数
        {driver_data_null},
-       null as map_request_num,
-       {finance_data_null},
-       {passenger_recharge_data_null} 
-from oride_dw.dm_oride_driver_audit_pass_cube_d   --已经去除了with cube产生的country_code为空的数据
-where dt='{pt}'),
+       {finance_data_null}
+from oride_dw.dm_oride_driver_order_base_cube_d   --已经去除了with cube产生的country_code为空的数据
+where dt='{pt}' and nvl(product_id,'-10000')='-10000'),
 
 --司机相关
 driver_data as
 (
 select nvl(country_code,'-10000') as country_code,
        nvl(cast(city_id as bigint),-10000) as city_id,
-       nvl(product_id,-10000) as product_id,
+       nvl(driver_serv_type,-10000) as driver_serv_type, --司机与订单相关的指标用订单表的司机业务类型driver_serv_type作为业务类型
        {order_data_null},
        {passenger_data_null},
        {driver_cube_data_null},
        sum(finish_driver_online_dur) as finish_driver_online_dur,  --当日完单司机在线时长
        sum(driver_billing_dur) as driver_billing_dur, --当日司机计费时长[！！！不准确]
-       sum(driver_pushed_order_cnt) as driver_pushed_order_cnt,  --司机被推送订单数
-       null as map_request_num,
-       {finance_data_null},
-       {passenger_recharge_data_null} 
-from oride_dw.dm_oride_driver_base_d
+       sum(driver_pushed_order_cnt) as driver_pushed_order_cnt,  --司机被推送订单数,可累计指标
+       {finance_data_null}
+from oride_dw.dm_oride_driver_order_base_d
 where dt='{pt}'
 group by nvl(country_code,'-10000'),
        nvl(cast(city_id as bigint),-10000),
-       nvl(product_id,-10000)
+       nvl(driver_serv_type,-10000)
 with cube),
-        
---地图调用相关
-map_data as
-(
-SELECT 'nal' as country_code,
-       -10000 as city_id,
-       -10000 as product_id,
-       {order_data_null},
-       {passenger_data_null},
-       {driver_cube_data_null},
-       {driver_data_null},
-       count(1) as map_request_num,  --地图调用次数
-       {finance_data_null},
-       {passenger_recharge_data_null} 
-       FROM oride_source.server_magic
-       WHERE dt='{pt}'
-       and event_name in ('googlemap_directions', 'googlemap_nearbysearch', 'googlemap_autocomplete', 'googlemap_details', 'googlemap_geocode')),
 
 --gmv相关  
 finance_data as
 (
 select nvl(country_code,-10000) as country_code,
        nvl(city_id,-10000) as city_id,
-       nvl(product_id,-10000) as product_id,
+       nvl(driver_serv_type,-10000) as driver_serv_type,
        {order_data_null},
        {passenger_data_null},
        {driver_cube_data_null},
        {driver_data_null},
-       null as map_request_num,  --地图调用次数
        sum(recharge_amount) AS recharge_amount, --充值金额
        sum(reward_amount) AS reward_amount, --奖励金额
        sum(amount_pay_online) AS amount_pay_online, --当日总收入-线上支付金额
-       sum(amount_pay_offline) AS amount_pay_offline, --当日总收入-线下支付金额 
-       {passenger_recharge_data_null} 
+       sum(amount_pay_offline) AS amount_pay_offline --当日总收入-线下支付金额 
 from (select * from oride_dw.dwd_oride_order_finance_df 
 where dt='{pt}'
-and create_date='{pt}') t1 
+and create_date='{pt}') t1
 group by country_code,
          nvl(city_id,-10000),
-         nvl(product_id,-10000)
-with cube),
+         nvl(driver_serv_type,-10000)
+with cube)
 
---用户充值相关
-passenger_recharge_data as
-(
-select country_code,
-       -10000 as city_id,
-       -10000 as product_id,
-       {order_data_null},
-       {passenger_data_null},
-       {driver_cube_data_null},
-       {driver_data_null},
-       null as map_request_num,  --地图调用次数
-       {finance_data_null},
-       count(distinct user_id) as recharge_users, --每天充值用户数
-       sum(user_recharge_succ_balance) as user_recharge_succ_balance  --每天用户充值真实金额
-from oride_dw.dwd_oride_passenger_recharge_df
-where dt='{pt}'
-and create_date='{pt}'
-group by country_code
-)
-       
 INSERT overwrite TABLE oride_dw.{table} partition(country_code,dt)       
 SELECT nvl(city_id,-10000) as city_id,
        nvl(product_id,-10000) as product_id,
@@ -477,7 +403,6 @@ GROUP BY nvl(country_code,'nal'),
         driver_cube_data_null=driver_cube_data_null,
         driver_data_null=driver_data_null,
         finance_data_null=finance_data_null,
-        passenger_recharge_data_null=passenger_recharge_data_null,
         pt='{{ds}}',
         now_day='{{macros.ds_add(ds, +1)}}',
         table=table_name
@@ -509,11 +434,9 @@ touchz_data_success = BashOperator(
 
 dependence_dm_oride_order_base_d_prev_day_task >> \
 dependence_dm_oride_passenger_base_cube_d_prev_day_task >> \
-dependence_dm_oride_driver_audit_pass_cube_d_prev_day_task >> \
-dependence_dm_oride_driver_base_d_prev_day_task >>\
-dependence_server_magic_now_day_task >>\
-dependence_dwd_oride_order_finance_df_prev_day_task >>\
-dependence_dwd_oride_passenger_recharge_df_prev_day_task >>\
+dependence_dm_oride_driver_order_base_cube_d_prev_day_task >> \
+dependence_dm_oride_driver_order_base_d_prev_day_task >> \
+dependence_dwd_oride_order_finance_df_prev_day_task >> \
 sleep_time >> \
-app_oride_global_operate_report_d_task >> \
+app_oride_global_operate_report_driservtype_d_task >> \
 touchz_data_success
