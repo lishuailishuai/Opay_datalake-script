@@ -40,14 +40,14 @@ dag = airflow.DAG('dwd_oride_driver_location_event_di',
 sleep_time = BashOperator(
     task_id='sleep_id',
     depends_on_past=False,
-    bash_command='sleep 30',
+    bash_command='sleep 10',
     dag=dag)
 
 ##----------------------------------------- 依赖 ---------------------------------------##
 
 
 # 依赖前一小时分区
-dependence_dwd_oride_location_driver_event_di_prev_day_task = HivePartitionSensor(
+dwd_oride_driver_location_event_hi_prev_day_task = HivePartitionSensor(
     task_id="dwd_oride_location_driver_event_di_prev_day_task",
     table="dwd_oride_driver_location_event_hi",
     partition="""dt='{{ ds }}' and hour='23'""",
@@ -64,8 +64,8 @@ hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
 
 ##----------------------------------------- 脚本 ---------------------------------------##
 
-dwd_oride_location_driver_event_di_task = HiveOperator(
-    task_id='dwd_oride_location_driver_event_di_task',
+dwd_oride_driver_location_event_di_task = HiveOperator(
+    task_id='dwd_oride_driver_location_event_di_task',
 
     hql='''
         
@@ -169,4 +169,4 @@ touchz_data_success = BashOperator(
     ),
     dag=dag)
 
-dependence_dwd_oride_location_driver_event_di_prev_day_task >> sleep_time >> dwd_oride_location_driver_event_di_task >> task_check_key_data >> touchz_data_success
+dwd_oride_driver_location_event_hi_prev_day_task >> sleep_time >> dwd_oride_driver_location_event_di_task >> task_check_key_data >> touchz_data_success
