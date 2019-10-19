@@ -96,6 +96,7 @@ ord.product_id,
  sum(nvl(reward.amount,0.0)) AS reward_amount, --奖励金额
  sum(nvl(records.amount_pay_online,0.0)) AS amount_pay_online, --当日总收入-线上支付金额
  sum(nvl(records.amount_pay_offline,0.0)) AS amount_pay_offline, --当日总收入-线下支付金额
+ ord.driver_serv_type, --订单表中司机业务类型字段
  'nal' as country_code,
  '{pt}' as dt
 FROM
@@ -126,7 +127,8 @@ GROUP BY ord.city_id,
 ord.product_id,
 ord.order_id, --订单号
  ord.create_date,--订单日期
- ord.driver_id;
+ ord.driver_id,
+ ord.driver_serv_type;
 '''.format(
         pt='{{ds}}',
         now_day='{{macros.ds_add(ds, +1)}}',
