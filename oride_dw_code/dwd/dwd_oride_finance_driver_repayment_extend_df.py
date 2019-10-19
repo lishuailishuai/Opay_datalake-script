@@ -43,27 +43,45 @@ dag = airflow.DAG( 'dwd_oride_finance_driver_repayment_extend_df',
 sleep_time = BashOperator(
     task_id='sleep_id',
     depends_on_past=False,
-    bash_command='sleep 30',
+    bash_command='sleep 10',
     dag=dag)
 
 ##----------------------------------------- 依赖 ---------------------------------------## 
 
+#依赖前一天分区
+ods_sqoop_base_data_driver_balance_extend_df_prev_day_tesk=HivePartitionSensor(
+      task_id="ods_sqoop_base_data_driver_balance_extend_df_prev_day_tesk",
+      table="ods_sqoop_base_data_driver_balance_extend_df",
+      partition="dt='{{ds}}'",
+      schema="oride_dw_ods",
+      poke_interval=60, #依赖不满足时，一分钟检查一次依赖状态 
+      dag=dag
+    )
+
+#依赖前一天分区
+ods_sqoop_base_data_driver_records_day_df_prev_day_tesk=HivePartitionSensor(
+      task_id="ods_sqoop_base_data_driver_records_day_df_prev_day_tesk",
+      table="ods_sqoop_base_data_driver_records_day_df",
+      partition="dt='{{ds}}'",
+      schema="oride_dw_ods",
+      poke_interval=60, #依赖不满足时，一分钟检查一次依赖状态 
+      dag=dag
+    )
+
+#依赖前一天分区
+ods_sqoop_base_data_driver_recharge_records_df_prev_day_tesk=HivePartitionSensor(
+      task_id="ods_sqoop_base_data_driver_recharge_records_df_prev_day_tesk",
+      table="ods_sqoop_base_data_driver_recharge_records_df",
+      partition="dt='{{ds}}'",
+      schema="oride_dw_ods",
+      poke_interval=60, #依赖不满足时，一分钟检查一次依赖状态 
+      dag=dag
+    )
 
 #依赖前一天分区
 ods_sqoop_base_data_driver_repayment_df_prev_day_tesk=HivePartitionSensor(
       task_id="ods_sqoop_base_data_driver_repayment_df_prev_day_tesk",
-      table="ods_sqoop_base_data_driver_df",
-      partition="dt='{{ds}}'",
-      schema="oride_dw_ods",
-      poke_interval=60, #依赖不满足时，一分钟检查一次依赖状态
-      dag=dag
-    )
-
-
-#依赖前一天分区
-ods_sqoop_base_data_driver_balance_extend_df_prev_day_tesk=HivePartitionSensor(
-      task_id="ods_sqoop_base_data_driver_balance_extend_df_prev_day_tesk",
-      table="ods_sqoop_base_data_driver_extend_df",
+      table="ods_sqoop_base_data_driver_repayment_df",
       partition="dt='{{ds}}'",
       schema="oride_dw_ods",
       poke_interval=60, #依赖不满足时，一分钟检查一次依赖状态 
@@ -322,4 +340,8 @@ touchz_data_success = BashOperator(
     dag=dag)
 
 
-ods_sqoop_base_data_driver_repayment_df_prev_day_tesk>>ods_sqoop_base_data_driver_balance_extend_df_prev_day_tesk>>dim_oride_driver_base_prev_day_task>>sleep_time>>dwd_oride_finance_driver_repayment_extend_df_task>>task_check_key_data>>touchz_data_success
+ods_sqoop_base_data_driver_balance_extend_df_prev_day_tesk>> \
+ods_sqoop_base_data_driver_records_day_df_prev_day_tesk>> \
+ods_sqoop_base_data_driver_recharge_records_df_prev_day_tesk>> \
+ods_sqoop_base_data_driver_repayment_df_prev_day_tesk>> \
+dim_oride_driver_base_prev_day_task>>sleep_time>>dwd_oride_finance_driver_repayment_extend_df_task>>task_check_key_data>>touchz_data_success
