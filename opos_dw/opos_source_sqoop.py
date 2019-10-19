@@ -57,12 +57,12 @@ table_list = [
     ("opay_crm", "bd_shop_visitor_record", "opos_opay_crm", "base"),
 
     # opay订单数据
-    ("ptsp_db", "agents", "ptsp_db", "base"),
-    ("ptsp_db", "authorizations", "ptsp_db", "base"),
-    ("ptsp_db", "serials", "ptsp_db", "base"),
-    ("ptsp_db", "terminal_histories", "ptsp_db", "base"),
-    ("ptsp_db", "terminals", "ptsp_db", "base"),
-    ("ptsp_db", "transactions", "ptsp_db", "base"),
+    ("ptsp_db", "agents", "opos_ptsp_db", "base"),
+    ("ptsp_db", "authorizations", "opos_ptsp_db", "base"),
+    ("ptsp_db", "serials", "opos_ptsp_db", "base"),
+    ("ptsp_db", "terminal_histories", "opos_ptsp_db", "base"),
+    ("ptsp_db", "terminals", "opos_ptsp_db", "base"),
+    ("ptsp_db", "transactions", "opos_ptsp_db", "base"),
 
 ]
 HIVE_DB = 'opos_dw_ods'
