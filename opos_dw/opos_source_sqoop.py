@@ -39,22 +39,7 @@ db_name,table_name,conn_id,prefix_name
 table_list = [
 
     # crm数据
-    ("opay_crm", "admin_users_2fa", "opos_opay_crm", "base"),
-    ("opay_crm", "bd_admin_menu", "opos_opay_crm", "base"),
-    ("opay_crm", "bd_admin_operation_log", "opos_opay_crm", "base"),
-    ("opay_crm", "bd_admin_permissions", "opos_opay_crm", "base"),
-    ("opay_crm", "bd_admin_role_menu", "opos_opay_crm", "base"),
-    ("opay_crm", "bd_admin_role_permissions", "opos_opay_crm", "base"),
-    ("opay_crm", "bd_admin_role_users", "opos_opay_crm", "base"),
-    ("opay_crm", "bd_admin_roles", "opos_opay_crm", "base"),
-    ("opay_crm", "bd_admin_user_permissions", "opos_opay_crm", "base"),
-    ("opay_crm", "bd_admin_users", "opos_opay_crm", "base"),
-    ("opay_crm", "bd_attendance", "opos_opay_crm", "base"),
-    ("opay_crm", "bd_bd_fence", "opos_opay_crm", "base"),
     ("opay_crm", "bd_shop", "opos_opay_crm", "base"),
-    ("opay_crm", "bd_shop_photos", "opos_opay_crm", "base"),
-    ("opay_crm", "bd_shop_relation", "opos_opay_crm", "base"),
-    ("opay_crm", "bd_shop_visitor_record", "opos_opay_crm", "base"),
 
     # opay订单数据
     ("ptsp_db", "agents", "opos_ptsp_db", "base"),
