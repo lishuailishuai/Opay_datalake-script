@@ -333,7 +333,7 @@ with cube)
 
 INSERT overwrite TABLE oride_dw.{table} partition(country_code,dt)       
 SELECT nvl(city_id,-10000) as city_id,
-       nvl(product_id,-10000) as product_id,
+       nvl(driver_serv_type,-10000) as driver_serv_type,
        sum(ride_order_cnt) as ride_order_cnt, --当日下单量
        sum(finish_order_cnt) as finish_order_cnt, --当日完单量
        sum(finish_pay) as finish_pay, --当日完成支付量
@@ -362,7 +362,6 @@ SELECT nvl(city_id,-10000) as city_id,
        sum(paid_users) as paid_users,  --当日总支付乘客数
        sum(online_paid_users) as online_paid_users,  --当日线上支付乘客数
        sum(new_user_gmv) as new_user_gmv,  --当日新注册乘客完单gmv 
-       sum(td_audit_finish_driver_num) as td_audit_finish_driver_num,  --当日审核通过司机数
        sum(td_online_driver_num) as td_online_driver_num,  --当日在线司机数
        sum(td_request_driver_num) as td_request_driver_num, --当日接单司机数
        sum(td_finish_order_driver_num) as td_finish_order_driver_num,  --当日完单司机数
@@ -370,13 +369,10 @@ SELECT nvl(city_id,-10000) as city_id,
        sum(finish_driver_online_dur) as finish_driver_online_dur,  --当日完单司机在线时长
        sum(driver_billing_dur) as driver_billing_dur, --当日司机计费时长
        sum(driver_pushed_order_cnt) as driver_pushed_order_cnt,  --司机被推送订单数
-       sum(map_request_num) as map_request_num,  --地图调用次数
        sum(recharge_amount) as recharge_amount, --充值金额
        sum(reward_amount) AS reward_amount, --奖励金额
        sum(amount_pay_online) AS amount_pay_online, --当日总收入-线上支付金额
        sum(amount_pay_offline) AS amount_pay_offline, --当日总收入-线下支付金额 
-       sum(recharge_users) as recharge_users, --每天充值用户数
-       sum(user_recharge_succ_balance) as user_recharge_succ_balance,  --每天用户充值真实金额
        sum(wet_ord_cnt) as wet_ord_cnt, --当日湿单订单量
        sum(bad_feedback_finish_ord_cnt) as bad_feedback_finish_ord_cnt, --当日差评完单量
        nvl(country_code,'nal') as country_code,
@@ -388,15 +384,12 @@ UNION ALL
 select * from driver_cube_data 
 UNION ALL 
 select * from driver_data where nvl(country_code,'-10000')<>'-10000'
-UNION ALL 
-select * from map_data
 union all 
 select * from finance_data where nvl(country_code,'-10000')<>'-10000'
-union all 
-select * from passenger_recharge_data) t
+) t
 GROUP BY nvl(country_code,'nal'),
        nvl(city_id,-10000),
-       nvl(product_id,-10000);
+       nvl(driver_serv_type,-10000);
 '''.format(
         order_data_null=order_data_null,
         passenger_data_null=passenger_data_null,
