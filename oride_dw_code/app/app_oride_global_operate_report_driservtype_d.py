@@ -403,7 +403,6 @@ GROUP BY nvl(country_code,'nal'),
         driver_cube_data_null=driver_cube_data_null,
         driver_data_null=driver_data_null,
         finance_data_null=finance_data_null,
-        passenger_recharge_data_null=passenger_recharge_data_null,
         pt='{{ds}}',
         now_day='{{macros.ds_add(ds, +1)}}',
         table=table_name
