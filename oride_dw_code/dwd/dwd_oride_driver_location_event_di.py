@@ -48,7 +48,7 @@ sleep_time = BashOperator(
 
 # 依赖前一小时分区
 dwd_oride_driver_location_event_hi_prev_day_task = HivePartitionSensor(
-    task_id="dwd_oride_location_driver_event_di_prev_day_task",
+    task_id="dwd_oride_driver_location_event_hi_prev_day_task",
     table="dwd_oride_driver_location_event_hi",
     partition="""dt='{{ ds }}' and hour='23'""",
     schema="oride_dw",
