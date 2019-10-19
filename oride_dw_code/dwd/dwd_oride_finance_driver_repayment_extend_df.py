@@ -268,7 +268,7 @@ LEFT OUTER JOIN --所有骑手的违约期数
              dt,
              (CASE WHEN balance<0 THEN '1' ELSE '0' END) AS false_id
       FROM oride_dw_ods.ods_sqoop_base_data_driver_balance_extend_df
-      WHERE dt BETWEEN DATE_ADD('{pt}', -60) AND DATE_ADD('{pt}',0)
+      WHERE dt BETWEEN DATE_ADD('{pt}', -15) AND DATE_ADD('{pt}',0)
       ORDER BY driver_id,
                dt DESC) AS slack_det
    GROUP BY driver_id) oer ON dri.driver_id=oer.driver_id
