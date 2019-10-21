@@ -303,6 +303,8 @@ def init_mysql_table(**op_kwargs):
 # 遍历同步的数据库
 hive_cursor = get_hive_cursor()
 hive_sync_db = Variable.get("app_oride_import_bi_mysql").split("\n")
+
+
 for hive_db_info in hive_sync_db:
     table_info = json.loads(hive_db_info)
     table = table_info.get('hive_table', None)
@@ -320,14 +322,48 @@ for hive_db_info in hive_sync_db:
         continue
 
     # 依赖hive表分区
+    # 检查执行时间知否与配置时间匹配
+    def get_check_date(context):
+        # logging.info(context)
+        ds = context.get('ds')
+        dt = datetime.strptime(ds, '%Y-%m-%d')
+        (y, w, wd) = datetime.strptime(ds, '%Y-%m-%d').isocalendar()
+
+        params = context['params']
+        schedule = params.get('scheduling', 0)
+        start = params.get('start', 0)
+        if schedule > 0:
+            sub_n = (7 + (wd - schedule)) % 7
+        else:
+            sub_n = 0
+        sdt = timedelta(days=sub_n)
+        chk_d = datetime.strftime(dt - sdt, '%Y-%m-%d')
+        chk_d2 = datetime.strftime(dt - sdt, '%Y%m%d')
+        # logging.info(context["ti"].task_id)
+        logging.info(dt)
+        logging.info(chk_d)
+        logging.info(start)
+
+        partition = "dt='{}'".format(chk_d if int(chk_d2) > int(start) else datetime.strftime(datetime.strptime(start, '%Y%m%d'), '%Y-%m-%d'))
+        logging.info(
+            'Poking for table %s.%s, partition %s', params.get('hive_db'), params.get('hive_table'), partition
+        )
+        from airflow.hooks.hive_hooks import HiveMetastoreHook
+        hook = HiveMetastoreHook(metastore_conn_id="metastore_default")
+        return hook.check_for_partition(params.get('hive_db'), params.get('hive_table'), partition)
+
+
     table_validate_task = HivePartitionSensor(
         task_id="table_validate_task_{}_{}".format(db, table),
         table=table,
-        partition="dt='{{ds}}'",
+        partition="dt='{{ ds }}'",
         schema=db,
         poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
         dag=dag
     )
+    # table_validate_task.pre_execute = get_check_date
+    table_validate_task.params = table_info
+    table_validate_task.poke = get_check_date
 
     # 同步hive与mysql表结构
     sync_table_schema = PythonOperator(
@@ -345,6 +381,7 @@ for hive_db_info in hive_sync_db:
     )
 
     table_validate_task >> sync_table_schema >> sleep_time
+
 
 # 关闭hive连接
 close_hive_connectors = PythonOperator(
