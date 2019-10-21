@@ -151,7 +151,7 @@ for db_name, table_name, conn_id, prefix_name,priority_weight_nm in table_list:
             --connect "jdbc:mysql://{host}:{port}/{schema}?tinyInt1isBit=false&useUnicode=true&characterEncoding=utf8" \
             --username {username} \
             --password {password} \
-            --query 'select * from {table} where (DATE_FORMAT(created,'%Y-%m-%d')="{{{{ ds }}}}" OR DATE_FORMAT(report_time,'%Y-%m-%d')="{{{{ ds }}}}") AND $CONDITIONS' \
+            --query 'select * from {table} where (DATE_FORMAT(created,"%Y-%m-%d")="{{{{ ds }}}}" OR DATE_FORMAT(report_time,"%Y-%m-%d")="{{{{ ds }}}}") AND $CONDITIONS' \
             --split-by id \
             --target-dir {ufile_path}/dt={{{{ ds }}}}/ \
             --fields-terminated-by "\\001" \
