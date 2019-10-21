@@ -9,6 +9,8 @@ from datetime import datetime, timedelta
 from utils.validate_metrics_utils import *
 import logging
 from plugins.SqoopSchemaUpdate import SqoopSchemaUpdate
+from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
+from plugins.TaskTouchzSuccess import TaskTouchzSuccess
 
 args = {
     'owner': 'zhenqian.zhang',
