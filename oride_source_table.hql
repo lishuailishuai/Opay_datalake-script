@@ -488,5 +488,19 @@ ROW FORMAT SERDE
 with SERDEPROPERTIES("ignore.malformed.json"="true")
 LOCATION 's3a://opay-bi/algorithm_buried/algo.send_order_hook';
 
+CREATE EXTERNAL TABLE oride_source.`uops_user_user_tag`(
+    `user_id` bigint,
+    `tag_id` bigint,
+    `city_id` bigint,
+    `ts` bigint
+)
+PARTITIONED BY (
+    `dt` string,
+    `hour` string)
+ROW FORMAT SERDE
+   'org.openx.data.jsonserde.JsonSerDe'
+with SERDEPROPERTIES("ignore.malformed.json"="true")
+LOCATION 's3a://opay-bi/algorithm_buried/uops_user.user_tag';
+
 
 
