@@ -143,4 +143,5 @@ add_partitions_obus_server_event = HiveOperator(
     dag=dag)
 
 create_obus_client_event >> check_s3_obus_client_event >> add_partitions_obus_client_event
-create_obus_server_event >> check_s3_obus_server_event >> add_partitions_obus_server_event
+#create_obus_server_event >> check_s3_obus_server_event >> add_partitions_obus_server_event
+create_obus_server_event >> add_partitions_obus_server_event
