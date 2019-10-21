@@ -5,14 +5,14 @@ from airflow.hooks.hive_hooks import HiveCliHook, HiveServer2Hook
 from airflow.hooks.mysql_hook import MySqlHook
 from airflow.operators.hive_operator import HiveOperator
 from airflow.operators.python_operator import PythonOperator
-from airflow.sensors.sql_sensor import SqlSensor
 from datetime import datetime, timedelta
+from utils.validate_metrics_utils import *
 import logging
 from plugins.SqoopSchemaUpdate import SqoopSchemaUpdate
 
 args = {
     'owner': 'linan',
-    'start_date': datetime(2019, 10, 18),
+    'start_date': datetime(2019, 10, 20),
     'depends_on_past': False,
     'retries': 1,
     'retry_delay': timedelta(minutes=5),
@@ -22,37 +22,25 @@ args = {
 }
 
 dag = airflow.DAG(
-    'opos_source_sqoop',
-    schedule_interval="00 01 * * *",
-    concurrency=10,
+    'opos_source_sqoop_di',
+    schedule_interval="20 01 * * *",
+    concurrency=15,
     max_active_runs=1,
     default_args=args)
 
-
-
 '''
 导入数据的列表
-db_name,table_name,conn_id,prefix_name
+db_name,table_name,conn_id,prefix_name,priority_weight
 '''
 #
 
 table_list = [
-
-    # crm数据
-    ("opay_crm", "bd_shop", "opos_opay_crm", "base"),
-
-    # opay订单数据
-    ("ptsp_db", "agents", "opos_ptsp_db", "base"),
-    ("ptsp_db", "authorizations", "opos_ptsp_db", "base"),
-    ("ptsp_db", "serials", "opos_ptsp_db", "base"),
-    ("ptsp_db", "terminal_histories", "opos_ptsp_db", "base"),
-    ("ptsp_db", "terminals", "opos_ptsp_db", "base"),
-    ("ptsp_db", "transactions", "opos_ptsp_db", "base"),
-
+    ("ptsp_db", "transactions", "opos_ptsp_db", "base",3),
 ]
+
 HIVE_DB = 'opos_dw_ods'
-HIVE_TABLE = 'ods_sqoop_%s_%s_df'
-UFILE_PATH = 'ufile://opay-datalake/opos_dw_sqoop/%s/%s'
+HIVE_TABLE = 'ods_sqoop_%s_%s_di'
+UFILE_PATH = 'ufile://opay-datalake/oride_dw_sqoop_di/%s/%s'
 ODS_CREATE_TABLE_SQL = '''
     CREATE EXTERNAL TABLE IF NOT EXISTS {db_name}.`{table_name}`(
         {columns}
@@ -67,8 +55,18 @@ ODS_CREATE_TABLE_SQL = '''
       'org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat'
     LOCATION
       '{ufile_path}';
-    MSCK REPAIR TABLE {db_name}.`{table_name}`;
 '''
+
+# 需要验证的核心业务表
+table_core_list = [
+    # ("oride_data", "data_order", "sqoop_db", "base", "create_time","priority_weight")
+]
+
+# 不需要验证的维度表，暂时为null
+table_dim_list = []
+
+# 需要验证的非核心业务表，根据需求陆续添加
+table_not_core_list = []
 
 
 def run_check_table(db_name, table_name, conn_id, hive_table_name, **kwargs):
@@ -114,12 +112,10 @@ def run_check_table(db_name, table_name, conn_id, hive_table_name, **kwargs):
             else:
                 col_name = result[0]
             if result[1] == 'timestamp' or result[1] == 'varchar' or result[1] == 'char' or result[1] == 'text' or \
-                    result[1] == 'datetime' or result[1] == 'mediumtext' or result[1] == 'enum' or result[1] == 'longtext':
+                    result[1] == 'datetime':
                 data_type = 'string'
             elif result[1] == 'decimal':
                 data_type = result[1] + "(" + str(result[2]) + "," + str(result[3]) + ")"
-            elif result[1] == 'mediumint':
-                data_type = 'int'
             else:
                 data_type = result[1]
             rows.append("`%s` %s comment '%s'" % (col_name, data_type, result[4]))
@@ -139,7 +135,7 @@ def run_check_table(db_name, table_name, conn_id, hive_table_name, **kwargs):
 
 
 conn_conf_dict = {}
-for db_name, table_name, conn_id, prefix_name in table_list:
+for db_name, table_name, conn_id, prefix_name,priority_weight_nm in table_list:
     if conn_id not in conn_conf_dict:
         conn_conf_dict[conn_id] = BaseHook.get_connection(conn_id)
 
@@ -147,6 +143,7 @@ for db_name, table_name, conn_id, prefix_name in table_list:
     # sqoop import
     import_table = BashOperator(
         task_id='import_table_{}'.format(hive_table_name),
+        priority_weight=priority_weight_nm,
         bash_command='''
             #!/usr/bin/env bash
             sqoop import "-Dorg.apache.sqoop.splitter.allow_text_splitter=true" \
@@ -154,13 +151,15 @@ for db_name, table_name, conn_id, prefix_name in table_list:
             --connect "jdbc:mysql://{host}:{port}/{schema}?tinyInt1isBit=false&useUnicode=true&characterEncoding=utf8" \
             --username {username} \
             --password {password} \
-            --table {table} \
+            --query 'select * from {table} where (DATE_FORMAT(created,'%Y-%m-%d')="{{{{ ds }}}}" OR DATE_FORMAT(report_time,'%Y-%m-%d')="{{{{ ds }}}}") AND $CONDITIONS' \
+            --split-by id \
             --target-dir {ufile_path}/dt={{{{ ds }}}}/ \
             --fields-terminated-by "\\001" \
             --lines-terminated-by "\\n" \
             --hive-delims-replacement " " \
             --delete-target-dir \
-            --compression-codec=snappy
+            --compression-codec=snappy \
+            -m 12
         '''.format(
             host=conn_conf_dict[conn_id].host,
             port=conn_conf_dict[conn_id].port,
@@ -176,6 +175,7 @@ for db_name, table_name, conn_id, prefix_name in table_list:
     # check table
     check_table = PythonOperator(
         task_id='check_table_{}'.format(hive_table_name),
+        priority_weight=priority_weight_nm,
         python_callable=run_check_table,
         provide_context=True,
         op_kwargs={
@@ -189,17 +189,31 @@ for db_name, table_name, conn_id, prefix_name in table_list:
     # add partitions
     add_partitions = HiveOperator(
         task_id='add_partitions_{}'.format(hive_table_name),
+        priority_weight=priority_weight_nm,
         hql='''
-                ALTER TABLE {table} ADD IF NOT EXISTS PARTITION (dt = '{{{{ ds }}}}');
+                ALTER TABLE {table} ADD IF NOT EXISTS PARTITION (dt = '{{{{ ds }}}}')
             '''.format(table=hive_table_name),
         schema=HIVE_DB,
         dag=dag)
 
-    '''
-    打标_SUCCESS
-    '''
+    validate_all_data = PythonOperator(
+        task_id='validate_data_{}'.format(hive_table_name),
+        priority_weight=priority_weight_nm,
+        python_callable=validata_data,
+        provide_context=True,
+        op_kwargs={
+            'db': HIVE_DB,
+            'table_name': hive_table_name,
+            'table_format': HIVE_TABLE,
+            'table_core_list': table_core_list,
+            'table_not_core_list': table_not_core_list
+        },
+        dag=dag
+    )
+
     touchz_data_success = BashOperator(
         task_id='touchz_data_success_{}'.format(hive_table_name),
+        priority_weight=priority_weight_nm,
         bash_command="""
                 line_num=`$HADOOP_HOME/bin/hadoop fs -du -s {hdfs_data_dir} | tail -1 | awk '{{print $1}}'`
 
@@ -216,4 +230,4 @@ for db_name, table_name, conn_id, prefix_name in table_list:
         ),
         dag=dag)
 
-    import_table >> check_table >> add_partitions >> touchz_data_success
+    import_table >> check_table >> add_partitions >> validate_all_data >> touchz_data_success
