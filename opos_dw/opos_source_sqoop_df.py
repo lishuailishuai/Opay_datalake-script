@@ -22,7 +22,7 @@ args = {
 }
 
 dag = airflow.DAG(
-    'opos_source_sqoop',
+    'opos_source_sqoop_df',
     schedule_interval="00 01 * * *",
     concurrency=10,
     max_active_runs=1,
