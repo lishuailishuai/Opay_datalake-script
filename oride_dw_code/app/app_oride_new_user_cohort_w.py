@@ -50,7 +50,7 @@ dependence_dwd_oride_order_base_include_test_df_prev_day_task = UFileSensor(
     task_id='dwd_oride_order_base_include_test_df_prev_day_task',
     filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
         hdfs_path_str="oride/oride_dw/dwd_oride_order_base_include_test_df/country_code=nal",
-        pt='{{ds}}'
+        pt='{{macros.ds_add(ds, +6)}}'
     ),
     bucket_name='opay-datalake',
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
@@ -112,7 +112,7 @@ create_oride_cohort_mid_task = HiveOperator(
             where dt='{pt}' and create_date>='2019-05-27'
             and status in(4,5)) t ;
             '''.format(
-            pt='{{ds}}'
+            pt='{{macros.ds_add(ds, +6)}}'
     ),
     dag=dag)
 
@@ -160,7 +160,7 @@ app_oride_new_user_cohort_w_task = HiveOperator(
         with cube) m
         where !(nvl(m.week_create_date,-10000)=-10000 or nvl(m.weeks,-10000)=-10000); 
                  '''.format(
-        pt='{{ds}}',
+        pt='{{macros.ds_add(ds, +6)}}',
         now_day='{{macros.ds_add(ds, +1)}}',
         table=get_table_info(0)[0]
     ),
@@ -210,7 +210,7 @@ app_oride_new_driver_cohort_w_task = HiveOperator(
         with cube) m
         where !(nvl(m.week_create_date,-10000)=-10000 or nvl(m.weeks,-10000)=-10000); 
                  '''.format(
-        pt='{{ds}}',
+        pt='{{macros.ds_add(ds, +6)}}',
         now_day='{{macros.ds_add(ds, +1)}}',
         table=get_table_info(1)[0]
     ),
@@ -258,7 +258,7 @@ app_oride_act_user_cohort_w_task = HiveOperator(
         with cube) m
         where !(nvl(m.week_create_date,-10000)=-10000 or nvl(m.weeks,-10000)=-10000); 
                  '''.format(
-        pt='{{ds}}',
+        pt='{{macros.ds_add(ds, +6)}}',
         now_day='{{macros.ds_add(ds, +1)}}',
         table=get_table_info(2)[0]
     ),
@@ -306,7 +306,7 @@ app_oride_act_driver_cohort_w_task = HiveOperator(
         with cube) m
         where !(nvl(m.week_create_date,-10000)=-10000 or nvl(m.weeks,-10000)=-10000); 
                  '''.format(
-        pt='{{ds}}',
+        pt='{{macros.ds_add(ds, +6)}}',
         now_day='{{macros.ds_add(ds, +1)}}',
         table=get_table_info(3)[0]
     ),
@@ -328,7 +328,7 @@ oride_cohort_mid_success = BashOperator(
         echo "DATA EXPORT Successed ......"
     fi
     """.format(
-        pt='{{ds}}'),
+        pt='{{macros.ds_add(ds, +6)}}'),
     dag=dag)
 
 new_user_cohort_touchz_success = BashOperator(
@@ -347,7 +347,7 @@ new_user_cohort_touchz_success = BashOperator(
         $HADOOP_HOME/bin/hadoop fs -touchz {hdfs_data_dir}/_SUCCESS
     fi
     """.format(
-        pt='{{ds}}',
+        pt='{{macros.ds_add(ds, +6)}}',
         now_day='{{macros.ds_add(ds, +1)}}',
         hdfs_data_dir=get_table_info(0)[1] + '/country_code=nal/dt={{ds}}'
     ),
@@ -369,7 +369,7 @@ new_driver_cohort_touchz_success = BashOperator(
         $HADOOP_HOME/bin/hadoop fs -touchz {hdfs_data_dir}/_SUCCESS
     fi
     """.format(
-        pt='{{ds}}',
+        pt='{{macros.ds_add(ds, +6)}}',
         now_day='{{macros.ds_add(ds, +1)}}',
         hdfs_data_dir=get_table_info(1)[1] + '/country_code=nal/dt={{ds}}'
     ),
@@ -391,7 +391,7 @@ act_user_cohort_touchz_success = BashOperator(
         $HADOOP_HOME/bin/hadoop fs -touchz {hdfs_data_dir}/_SUCCESS
     fi
     """.format(
-        pt='{{ds}}',
+        pt='{{macros.ds_add(ds, +6)}}',
         now_day='{{macros.ds_add(ds, +1)}}',
         hdfs_data_dir=get_table_info(2)[1] + '/country_code=nal/dt={{ds}}'
     ),
@@ -413,7 +413,7 @@ act_driver_cohort_touchz_success = BashOperator(
         $HADOOP_HOME/bin/hadoop fs -touchz {hdfs_data_dir}/_SUCCESS
     fi
     """.format(
-        pt='{{ds}}',
+        pt='{{macros.ds_add(ds, +6)}}',
         now_day='{{macros.ds_add(ds, +1)}}',
         hdfs_data_dir=get_table_info(3)[1] + '/country_code=nal/dt={{ds}}'
     ),
