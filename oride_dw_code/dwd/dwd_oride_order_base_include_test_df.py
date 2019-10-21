@@ -52,9 +52,9 @@ ods_sqoop_base_data_order_df_prev_day_task = HivePartitionSensor(
 )
 
 # 依赖前一天分区
-ods_sqoop_base_data_order_expired_df_prev_day_task = HivePartitionSensor(
-    task_id="ods_sqoop_base_data_order_expired_df_prev_day_task",
-    table="ods_sqoop_base_data_order_expired_df",
+ods_sqoop_base_data_order_history_df_prev_day_task = HivePartitionSensor(
+    task_id="ods_sqoop_base_data_order_history_df_prev_day_task",
+    table="ods_sqoop_base_data_order_history_df",
     partition="dt='{{ds}}'",
     schema="oride_dw_ods",
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
@@ -65,6 +65,15 @@ ods_sqoop_base_data_order_expired_df_prev_day_task = HivePartitionSensor(
 ods_sqoop_base_data_order_payment_df_prev_day_task = HivePartitionSensor(
     task_id="ods_sqoop_base_data_order_payment_df_prev_day_task",
     table="ods_sqoop_base_data_order_payment_df",
+    partition="dt='{{ds}}'",
+    schema="oride_dw_ods",
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+# 依赖前一天分区
+ods_sqoop_base_data_order_payment_history_df_prev_day_task = HivePartitionSensor(
+    task_id="ods_sqoop_base_data_order_payment_history_df_prev_day_task",
+    table="ods_sqoop_base_data_order_payment_history_df",
     partition="dt='{{ds}}'",
     schema="oride_dw_ods",
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
@@ -182,24 +191,27 @@ def insert_sql(pt,ds):
        WHERE dt = '{dt}') t1
     LEFT OUTER JOIN
       (SELECT *
-       FROM oride_dw_ods.ods_sqoop_base_data_order_payment_df
+       FROM {data_payment}}
        WHERE dt = '{dt}'
          ) t2 ON t1.id=t2.id;
 
     '''
 
     if pt == 'his':
-        data_order='oride_dw_ods.ods_sqoop_base_data_order_expired_df'
+        data_order='oride_dw_ods.ods_sqoop_base_data_order_history_df'
+        data_payment='oride_dw_ods.ods_sqoop_base_data_order_payment_history_df'
         pt='his'
         dt=ds
     else:
         data_order='oride_dw_ods.ods_sqoop_base_data_order_df'
+        data_payment='oride_dw_ods.ods_sqoop_base_data_order_payment_df'
         pt=ds
         dt=ds
     hql_re=hql.format(
         pt=pt,
         dt=ds,
         data_order=data_order,
+        data_payment=data_payment,
         now_day='{{macros.ds_add(ds, +1)}}',
         table=table_name
     )
@@ -283,8 +295,8 @@ sleep_time_normal >> \
 dwd_oride_order_base_include_test_df_task>>task_check_key_data >> \
 touchz_data_success
 
-ods_sqoop_base_data_order_payment_df_prev_day_task >> \
-ods_sqoop_base_data_order_expired_df_prev_day_task >> \
+ods_sqoop_base_data_order_payment_history_df_prev_day_task >> \
+ods_sqoop_base_data_order_history_df_prev_day_task >> \
 sleep_time_his >> \
 dwd_oride_order_base_include_test_his_df_task>>task_check_key_data >> \
 touchz_data_success
