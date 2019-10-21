@@ -191,7 +191,7 @@ def insert_sql(pt,ds):
        WHERE dt = '{dt}') t1
     LEFT OUTER JOIN
       (SELECT *
-       FROM {data_payment}}
+       FROM {data_payment}
        WHERE dt = '{dt}'
          ) t2 ON t1.id=t2.id;
 
