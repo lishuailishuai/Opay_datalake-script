@@ -182,7 +182,7 @@ select
   nvl(driver_group.city,-1) as driver_group_city, --协会城市(-1 没有协会)
   nvl(driver_group.name,-1) as driver_group_name, --协会名称(-1 没有协会)
   nvl(driver_team.name,-1) as driver_team_name,  --团队名称(-1 没有司管团队)
-  (case when dri.product_id=2 and dri.status=2 and dri.association_id >0 and dri.team_id > 0 then 1 else 0 end) as is_driver_audit_pass,
+  (case when dri.status=2 and dri.association_id >0 and dri.team_id > 0 then 1 else 0 end) as is_driver_audit_pass,
    --司机是否审核通过
 
   from_unixtime(veri_time,'yyyy-MM-dd') AS veri_audit_date,--总审核流程审查通过日期
