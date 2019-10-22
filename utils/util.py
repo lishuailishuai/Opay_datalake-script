@@ -2,6 +2,7 @@
 from utils.connection_helper import get_hive_cursor
 from datetime import datetime, timedelta
 from plugins.comwx import ComwxApi
+import pendulum
 
 repair_table_query = '''
 MSCK REPAIR TABLE %s
