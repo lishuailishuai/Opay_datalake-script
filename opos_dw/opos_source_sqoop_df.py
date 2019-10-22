@@ -9,6 +9,8 @@ from airflow.sensors.sql_sensor import SqlSensor
 from datetime import datetime, timedelta
 import logging
 from plugins.SqoopSchemaUpdate import SqoopSchemaUpdate
+from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
+from plugins.TaskTouchzSuccess import TaskTouchzSuccess
 
 args = {
     'owner': 'linan',
@@ -28,7 +30,24 @@ dag = airflow.DAG(
     max_active_runs=1,
     default_args=args)
 
+##----------------------------------------- 任务超时监控 ---------------------------------------##
 
+def fun_task_timeout_monitor(ds, db_name, table_name, **op_kwargs):
+    tb = [
+        {"db": db_name, "table":table_name, "partition": "dt={pt}".format(pt=ds), "timeout": "7200"}
+    ]
+
+    TaskTimeoutMonitor().set_task_monitor(tb)
+
+
+#生成_SUCCESS
+def check_success(ds, table_name, hdfs_path, **op_kwargs):
+
+    msg = [
+        {"table":table_name,"hdfs_path": "{hdfsPath}/dt={pt}".format(pt=ds,hdfsPath=hdfs_path)}
+    ]
+
+    TaskTouchzSuccess().set_touchz_success(msg)
 
 '''
 导入数据的列表
@@ -194,25 +213,31 @@ for db_name, table_name, conn_id, prefix_name in table_list:
         schema=HIVE_DB,
         dag=dag)
 
-    '''
-    打标_SUCCESS
-    '''
-    touchz_data_success = BashOperator(
-        task_id='touchz_data_success_{}'.format(hive_table_name),
-        bash_command="""
-                line_num=`$HADOOP_HOME/bin/hadoop fs -du -s {hdfs_data_dir} | tail -1 | awk '{{print $1}}'`
+    # 超时监控
+    task_timeout_monitor= PythonOperator(
+        task_id='task_timeout_monitor_{}'.format(hive_table_name),
+        priority_weight=priority_weight_nm,
+        python_callable=fun_task_timeout_monitor,
+        provide_context=True,
+        op_kwargs={
+            'db_name': HIVE_DB,
+            'table_name': hive_table_name,
+        },
+        dag=dag
+    )
 
-                if [ $line_num -eq 0 ]
-                then
-                    echo "FATAL {hdfs_data_dir} is empty"
-                    exit 1
-                else
-                    echo "DATA EXPORT Successed ......"
-                    $HADOOP_HOME/bin/hadoop fs -touchz {hdfs_data_dir}/_SUCCESS
-                fi
-            """.format(
-            hdfs_data_dir=UFILE_PATH % (db_name, table_name)+"/dt={{ds}}"
-        ),
-        dag=dag)
+    #生成_SUCCESS
+    touchz_data_success= PythonOperator(
+        task_id='touchz_data_success_{}'.format(hive_table_name),
+        priority_weight=priority_weight_nm,
+        python_callable=check_success,
+        provide_context=True,
+        op_kwargs={
+            'db_name': HIVE_DB,
+            'table_name': hive_table_name,
+            'hdfs_path': UFILE_PATH % (db_name, table_name)
+        },
+        dag=dag
+    )
 
     import_table >> check_table >> add_partitions >> touchz_data_success

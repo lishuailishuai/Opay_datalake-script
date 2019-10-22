@@ -16,6 +16,8 @@ from utils.connection_helper import get_hive_cursor, get_db_conn, get_db_conf
 from utils.validate_metrics_utils import *
 import logging
 from plugins.SqoopSchemaUpdate import SqoopSchemaUpdate
+from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
+from plugins.TaskTouchzSuccess import TaskTouchzSuccess
 
 
 args = {
@@ -36,6 +38,25 @@ dag = airflow.DAG(
     max_active_runs=1,
     default_args=args
 )
+
+##----------------------------------------- 任务超时监控 ---------------------------------------##
+
+def fun_task_timeout_monitor(ds, db_name, table_name, **op_kwargs):
+    tb = [
+        {"db": db_name, "table":table_name, "partition": "dt={pt}".format(pt=ds), "timeout": "7200"}
+    ]
+
+    TaskTimeoutMonitor().set_task_monitor(tb)
+
+
+#生成_SUCCESS
+def check_success(ds, table_name, hdfs_path, **op_kwargs):
+
+    msg = [
+        {"table":table_name,"hdfs_path": "{hdfsPath}/dt={pt}".format(pt=ds,hdfsPath=hdfs_path)}
+    ]
+
+    TaskTouchzSuccess().set_touchz_success(msg)
 
 obus_table_list = [
     {"db": "obus_data", "table": "conf_capped_price",                "conn": "obus_db"},
@@ -269,26 +290,30 @@ for obus_table in obus_table_list:
         dag=dag
     )
 
-    '''
-    打标_SUCCESS
-    '''
-    touchz_data_success = BashOperator(
-        task_id='touchz_data_success_{}'.format(obus_table.get('table')),
-        bash_command="""
-                line_num=`$HADOOP_HOME/bin/hadoop fs -du -s {hdfs_data_dir} | tail -1 | awk '{{print $1}}'`
+    # 超时监控
+    task_timeout_monitor= PythonOperator(
+        task_id='task_timeout_monitor_{}'.format(hive_table.format(bs=obus_table.get('table'))),
+        python_callable=fun_task_timeout_monitor,
+        provide_context=True,
+        op_kwargs={
+            'db_name': hive_db,
+            'table_name': hive_table.format(bs=obus_table.get('table')),
+        },
+        dag=dag
+    )
 
-                if [ $line_num -eq 0 ]
-                then
-                    echo "FATAL {hdfs_data_dir} is empty"
-                    exit 1
-                else
-                    echo "DATA EXPORT Successed ......"
-                    $HADOOP_HOME/bin/hadoop fs -touchz {hdfs_data_dir}/_SUCCESS
-                fi
-            """.format(
-            hdfs_data_dir=s3path.format(bs=obus_table.get('table'))+"/country_code=nal/dt={{ds}}"
-        ),
-        dag=dag)
+    #生成_SUCCESS
+    touchz_data_success= PythonOperator(
+        task_id='touchz_data_success_{}'.format(hive_table.format(bs=obus_table.get('table'))),
+        python_callable=check_success,
+        provide_context=True,
+        op_kwargs={
+            'db_name': hive_db,
+            'table_name': hive_table.format(bs=obus_table.get('table')),
+            'hdfs_path': s3path.format(bs=obus_table.get('table'))+"/country_code=nal"
+        },
+        dag=dag
+    )
 
     # 加入调度队列
     import_from_mysql >> create_table >> add_partitions >> validate_all_data >> refresh_impala >> touchz_data_success >> success
