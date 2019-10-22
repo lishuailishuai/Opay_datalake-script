@@ -11,6 +11,7 @@ import logging
 from plugins.SqoopSchemaUpdate import SqoopSchemaUpdate
 from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
 from plugins.TaskTouchzSuccess import TaskTouchzSuccess
+from utils.util import on_success_callback
 
 args = {
     'owner': 'zhenqian.zhang',
@@ -21,6 +22,7 @@ args = {
     'email': ['bigdata@opay-inc.com'],
     'email_on_failure': True,
     'email_on_retry': False,
+    'on_success_callback':on_success_callback,
 }
 
 dag = airflow.DAG(

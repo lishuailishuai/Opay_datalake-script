@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from utils.connection_helper import get_hive_cursor
 from datetime import datetime, timedelta
+from plugins.comwx import ComwxApi
 
 repair_table_query = '''
 MSCK REPAIR TABLE %s
@@ -65,3 +66,28 @@ def time_transfer(seconds):
     elif sec > 0:
         res = "{sec}s".format(sec=str(sec))
     return res
+
+def on_success_callback(context):
+    # 定时最大执行延时12小时
+    max_delayed_time=43200
+    # 正常执行时间
+    next_execution_dt = pendulum.parse(str(context['next_execution_date']))
+    next_execution_ts = next_execution_dt.int_timestamp
+    # 当前时间
+    now_dt = pendulum.parse('now')
+    now_ts = now_dt.int_timestamp
+
+    time_diff = now_ts - next_execution_ts
+
+    if time_diff >= max_delayed_time:
+        # 微信报警
+        comwx = ComwxApi('wwd26d45f97ea74ad2', 'BLE_v25zCmnZaFUgum93j3zVBDK-DjtRkLisI_Wns4g', '1000011')
+        task = "{dag}.{task}".format(dag=context['task_instance'].dag_id, task=context['task_instance'].task_id)
+        msg='''
+            任务执行异常{task},计划执行时间：{ne},当前执行时间：{nt}
+        '''.format(
+            task=task,
+            ne=next_execution_dt,
+            nt=now_dt
+        )
+        comwx.postAppMessage(msg,'271')
