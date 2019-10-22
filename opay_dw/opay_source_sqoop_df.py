@@ -27,7 +27,7 @@ args = {
 
 dag = airflow.DAG(
     'opay_source_sqoop_df',
-    schedule_interval="00 02 * * *",
+    schedule_interval="00 12 * * *",
     concurrency=10,
     max_active_runs=1,
     default_args=args)
