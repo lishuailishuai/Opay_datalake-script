@@ -216,7 +216,6 @@ for db_name, table_name, conn_id, prefix_name in table_list:
     # 超时监控
     task_timeout_monitor= PythonOperator(
         task_id='task_timeout_monitor_{}'.format(hive_table_name),
-        priority_weight=priority_weight_nm,
         python_callable=fun_task_timeout_monitor,
         provide_context=True,
         op_kwargs={
@@ -229,7 +228,6 @@ for db_name, table_name, conn_id, prefix_name in table_list:
     #生成_SUCCESS
     touchz_data_success= PythonOperator(
         task_id='touchz_data_success_{}'.format(hive_table_name),
-        priority_weight=priority_weight_nm,
         python_callable=check_success,
         provide_context=True,
         op_kwargs={
