@@ -57,18 +57,6 @@ dependence_dwd_oride_order_base_include_test_di_prev_day_task = UFileSensor(
     dag=dag
 )
 
-# 依赖前一天分区
-dependence_ods_log_oride_driver_timerange_prev_day_task = UFileSensor(
-    task_id='ods_log_oride_driver_timerange_prev_day_task',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw_ods/ods_log_oride_driver_timerange",
-        pt='{{ds}}'
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
-
 dependence_dwd_oride_order_push_driver_detail_di_prev_day_task = UFileSensor(
     task_id='dwd_oride_order_push_driver_detail_di_prev_day_task',
     filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
@@ -122,9 +110,6 @@ dm_oride_driver_order_base_cube_d_task = HiveOperator(
            nvl(driver_serv_type,-10000) as driver_serv_type,
            nvl(city_id,-10000) AS city_id,
 
-           td_online_driver_num,
-              --当天在线司机数
-            
            td_driver_take_num,
               --骑手成功应答的总次数 （push阶段）
               
@@ -148,10 +133,6 @@ dm_oride_driver_order_base_cube_d_task = HiveOperator(
       (SELECT ord.product_id,
               ord.city_id,
               ord.driver_serv_type, -- 订单表司机业务类型
-              
-
-              count(distinct dtr.driver_id) AS td_online_driver_num,
-              --当天在线司机数
               
               count(DISTINCT p1.driver_id) AS td_driver_take_num,
               --骑手成功应答的总次数 （push阶段）
@@ -179,13 +160,6 @@ dm_oride_driver_order_base_cube_d_task = HiveOperator(
              AND city_id<>'999001' --去除测试数据
              and driver_id<>1
          ) ord 
-       LEFT OUTER JOIN
-         (
-            SELECT 
-            *
-            FROM oride_dw_ods.ods_log_oride_driver_timerange
-            WHERE dt='{pt}'
-         ) dtr ON ord.driver_id = dtr.driver_id
          LEFT OUTER JOIN
       (
            SELECT 
@@ -251,7 +225,6 @@ touchz_data_success = BashOperator(
     dag=dag)
 
 dependence_dwd_oride_order_base_include_test_di_prev_day_task >> \
-dependence_ods_log_oride_driver_timerange_prev_day_task >> \
 dependence_dwd_oride_order_push_driver_detail_di_prev_day_task >> \
 dependence_dwd_oride_driver_accept_order_show_detail_di_prev_day_task >> \
 dependence_dwd_oride_driver_accept_order_click_detail_di_prev_day_task >> \
