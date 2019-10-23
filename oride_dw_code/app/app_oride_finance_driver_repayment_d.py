@@ -49,7 +49,7 @@ hive_table = 'dwd_oride_finance_driver_repayment_extend_df'
 
 #依赖前一天数据是否存在
 dwd_oride_finance_driver_repayment_extend_df_tesk = UFileSensor(
-    task_id='dwd_oride_finance_driver_repayment_extend_df',
+    task_id='dwd_oride_finance_driver_repayment_extend_df_tesk',
     filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
         hdfs_path_str="oride/oride_dw/dwd_oride_finance_driver_repayment_extend_df/country_code=nal",
         pt='{{ds}}'
@@ -156,7 +156,6 @@ def get_data_from_hive(ds,**op_kwargs):
 
 
     __data_only_mysql(
-
         mcursor,
         'day=VALUES(day)'
         )
@@ -182,33 +181,9 @@ def __data_only_mysql(conn, column):
         table=mysql_table,
         where_dt='where'+' '+column
     )
-    #esql = '{0} values {1} on duplicate key update {2}'
-    sval = ''
-    cnt = 0
     try:
-        for (day, city_id, city_name, driver_id, driver_name, driver_mobile, driver_type,
-                balance, repayment_total_amount, start_date, repayment_amount, total_numbers,
-                effective_days, lose_numbers, last_back_time, today_repayment, status,order_numbers,order_agv,fault) in data:
-
-            row = [
-                day, city_id, city_name, driver_id, driver_name.replace("'", "\\'"), driver_mobile, driver_type,
-                balance, repayment_total_amount, start_date, repayment_amount, total_numbers,
-                effective_days, lose_numbers, last_back_time, today_repayment, status,order_numbers,order_agv,fault
-            ]
-            if sval == '':
-                sval = '(\'{}\')'.format('\',\''.join([str(x) for x in row]))
-            else:
-                sval += ',(\'{}\')'.format('\',\''.join([str(x) for x in row]))
-            cnt += 1
-            if cnt >= 1000:
-                logging.info(isql)
-                conn.execute(isql)
-                cnt = 0
-                sval = ''
-
-        if cnt > 0 and sval != '':
-            #logging.info(esql.format(isql, sval, update))
-            conn.execute(esql.format(isql, sval, update))
+        logging.info(isql)
+        conn.execute(isql)
     except BaseException as e:
         logging.info(e)
         sys.exit(1)
