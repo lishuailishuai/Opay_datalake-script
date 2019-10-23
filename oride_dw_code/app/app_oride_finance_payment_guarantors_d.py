@@ -28,7 +28,7 @@ args = {
 }
 
 dag = airflow.DAG(
-    'app_oride_finance_driver_repayment_d',
+    'app_oride_finance_payment_guarantors_d',
     schedule_interval="40 02 * * *",
     default_args=args
 )
