@@ -76,8 +76,8 @@ dwm_oride_driver_base_di_tesk = UFileSensor(
 ##------------------------------------ end --------------------------------##
 """
 
-#mysql_table = 'oride_dw.app_oride_finance_driver_repayment_test_d'
-mysql_table = 'test_db.test_oride_finance_driver_repayment_test_d'
+mysql_table = 'oride_dw.app_oride_finance_driver_repayment_test_d'
+#mysql_table = 'test_db.test_oride_finance_driver_repayment_test_d'
 
 
 ##------------------------------------ SQL --------------------------------##
@@ -157,7 +157,7 @@ def get_data_from_hive(ds,**op_kwargs):
 
     __data_only_mysql(
         mcursor,
-        "day='{pt}'".format(pt={ds})
+        "day='{pt}'".format(pt=ds)
         )
 
     __data_to_mysql(
@@ -177,7 +177,7 @@ def get_data_from_hive(ds,**op_kwargs):
 
 # 数据集写入mysql前删除之前数据，保证数据唯一
 def __data_only_mysql(conn, column):
-    isql = 'delete from {table} ({where_dt})'.format(
+    isql = 'delete from {table} {where_dt} ;'.format(
         table=mysql_table,
         where_dt='where'+' '+column
     )
