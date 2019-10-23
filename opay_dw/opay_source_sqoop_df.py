@@ -119,6 +119,8 @@ table_list = [
     ("opay_user","user_operator", "opay_db", "base",3),
     ("opay_user","user_payment_instrument", "opay_db", "base",3),
     ("opay_user","user_upgrade", "opay_db", "base",3),
+    ("opay_user","user_token", "opay_db", "base",3),
+    ("opay_user","user_kyc_record", "opay_db", "base",3),
 ]
 
 HIVE_DB = 'opay_dw_ods'
