@@ -84,7 +84,7 @@ def on_success_callback(context):
         # 微信报警
         comwx = ComwxApi('wwd26d45f97ea74ad2', 'BLE_v25zCmnZaFUgum93j3zVBDK-DjtRkLisI_Wns4g', '1000011')
         task = "{dag}.{task}".format(dag=context['task_instance'].dag_id, task=context['task_instance'].task_id)
-        msg="任务执行异常{task},计划执行时间：{ne},当前执行时间：{nt}".format(
+        msg="任务回溯操作{task},计划执行时间：{ne},当前执行时间：{nt}".format(
             task=task,
             ne=next_execution_dt,
             nt=now_dt

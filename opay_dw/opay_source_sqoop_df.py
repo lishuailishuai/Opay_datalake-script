@@ -27,26 +27,26 @@ args = {
 
 dag = airflow.DAG(
     'opay_source_sqoop_df',
-    schedule_interval="00 12 * * *",
-    concurrency=10,
+    schedule_interval="00 02 * * *",
+    concurrency=15,
     max_active_runs=1,
     default_args=args)
 
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
 
-def fun_task_timeout_monitor(ds, db_name, table_name, **op_kwargs):
+def fun_task_timeout_monitor(yesterday_ds, db_name, table_name, **op_kwargs):
     tb = [
-        {"db": db_name, "table":table_name, "partition": "dt={pt}".format(pt=ds), "timeout": "7200"}
+        {"db": db_name, "table":table_name, "partition": "dt={pt}".format(pt=yesterday_ds), "timeout": "7200"}
     ]
 
     TaskTimeoutMonitor().set_task_monitor(tb)
 
 
 #生成_SUCCESS
-def check_success(ds, table_name, hdfs_path, **op_kwargs):
+def check_success(yesterday_ds, table_name, hdfs_path, **op_kwargs):
 
     msg = [
-        {"table":table_name,"hdfs_path": "{hdfsPath}/dt={pt}".format(pt=ds,hdfsPath=hdfs_path)}
+        {"table":table_name,"hdfs_path": "{hdfsPath}/dt={pt}".format(pt=yesterday_ds,hdfsPath=hdfs_path)}
     ]
 
     TaskTouchzSuccess().set_touchz_success(msg)
@@ -238,7 +238,7 @@ for db_name, table_name, conn_id, prefix_name,priority_weight_nm in table_list:
             --username {username} \
             --password {password} \
             --table {table} \
-            --target-dir {ufile_path}/dt={{{{ ds }}}}/ \
+            --target-dir {ufile_path}/dt={{{{ yesterday_ds }}}}/ \
             --fields-terminated-by "\\001" \
             --lines-terminated-by "\\n" \
             --hive-delims-replacement " " \
@@ -277,7 +277,7 @@ for db_name, table_name, conn_id, prefix_name,priority_weight_nm in table_list:
         task_id='add_partitions_{}'.format(hive_table_name),
         priority_weight=priority_weight_nm,
         hql='''
-                ALTER TABLE {table} ADD IF NOT EXISTS PARTITION (dt = '{{{{ ds }}}}')
+                ALTER TABLE {table} ADD IF NOT EXISTS PARTITION (dt = '{{{{ yesterday_ds }}}}')
             '''.format(table=hive_table_name),
         schema=HIVE_DB,
         dag=dag)
