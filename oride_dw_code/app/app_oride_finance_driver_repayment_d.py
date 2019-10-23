@@ -157,7 +157,7 @@ def get_data_from_hive(ds,**op_kwargs):
 
     __data_only_mysql(
         mcursor,
-        'day=VALUES(day)'
+        "day='{pt}'".format(pt={ds})
         )
 
     __data_to_mysql(
