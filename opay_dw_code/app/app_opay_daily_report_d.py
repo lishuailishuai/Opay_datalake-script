@@ -347,7 +347,7 @@ insert_result_to_impala = HiveOperator(
             from opay_dw_ods.ods_sqoop_base_user_topup_record_df
             where dt = '{pt}' and date_format(create_time, 'yyyy-MM-dd')='{pt}' and order_status='SUCCESS'
         )
-        insert overwrite table {table_name} PARTITION (dt='{pt}')
+        insert overwrite table {table_name} PARTITION (dt='{schedule_pt}')
         select 
             t1.*,
             
@@ -395,7 +395,7 @@ insert_result_to_impala = HiveOperator(
         join agent_ordered_data t8 on t1.state_date=t8.state_date
         join agent_cnt_data t9 on t1.state_date=t9.state_date
         join bind_card_data t10 on t1.state_date=t10.state_date
-    """.format(pt='{{ yesterday_ds }}', table_name=hive_table),
+    """.format(pt='{{ yesterday_ds }}', schedule_pt='{{ ds }}', table_name=hive_table),
     schema='opay',
     priority_weight=50,
     dag=dag
