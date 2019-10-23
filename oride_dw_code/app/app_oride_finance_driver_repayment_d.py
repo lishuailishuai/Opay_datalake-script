@@ -76,8 +76,8 @@ dwm_oride_driver_base_di_tesk = UFileSensor(
 ##------------------------------------ end --------------------------------##
 """
 
-mysql_table = 'oride_dw.app_oride_finance_driver_repayment_test_d'
-#mysql_table = 'test_db.test_oride_finance_driver_repayment_test_d'
+#mysql_table = 'oride_dw.app_oride_finance_driver_repayment_test_d'
+mysql_table = 'test_db.test_oride_finance_driver_repayment_test_d'
 
 
 ##------------------------------------ SQL --------------------------------##
@@ -154,6 +154,13 @@ def get_data_from_hive(ds,**op_kwargs):
     mysql_conn = get_db_conn('mysql_bi')
     mcursor = mysql_conn.cursor()
 
+
+    __data_only_mysql(
+
+        mcursor,
+        'day=VALUES(day)'
+        )
+
     __data_to_mysql(
         mcursor,
         hive_data,
@@ -167,6 +174,45 @@ def get_data_from_hive(ds,**op_kwargs):
 
     hive_cursor.close()
     mcursor.close()
+
+
+# 数据集写入mysql前删除之前数据，保证数据唯一
+def __data_only_mysql(conn, column):
+    isql = 'delete from {table} ({where_dt})'.format(
+        table=mysql_table,
+        where_dt='where'+' '+column
+    )
+    #esql = '{0} values {1} on duplicate key update {2}'
+    sval = ''
+    cnt = 0
+    try:
+        for (day, city_id, city_name, driver_id, driver_name, driver_mobile, driver_type,
+                balance, repayment_total_amount, start_date, repayment_amount, total_numbers,
+                effective_days, lose_numbers, last_back_time, today_repayment, status,order_numbers,order_agv,fault) in data:
+
+            row = [
+                day, city_id, city_name, driver_id, driver_name.replace("'", "\\'"), driver_mobile, driver_type,
+                balance, repayment_total_amount, start_date, repayment_amount, total_numbers,
+                effective_days, lose_numbers, last_back_time, today_repayment, status,order_numbers,order_agv,fault
+            ]
+            if sval == '':
+                sval = '(\'{}\')'.format('\',\''.join([str(x) for x in row]))
+            else:
+                sval += ',(\'{}\')'.format('\',\''.join([str(x) for x in row]))
+            cnt += 1
+            if cnt >= 1000:
+                logging.info(isql)
+                conn.execute(isql)
+                cnt = 0
+                sval = ''
+
+        if cnt > 0 and sval != '':
+            #logging.info(esql.format(isql, sval, update))
+            conn.execute(esql.format(isql, sval, update))
+    except BaseException as e:
+        logging.info(e)
+        sys.exit(1)
+        return
 
 
 # 数据集写入mysql
@@ -200,7 +246,6 @@ def __data_to_mysql(conn, data, column, update=''):
                 sval = ''
 
         if cnt > 0 and sval != '':
-            #logging.info(esql.format(isql, sval, update))
             conn.execute(esql.format(isql, sval, update))
     except BaseException as e:
         logging.info(e)
