@@ -66,7 +66,7 @@ hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
 
 ##----------------------------------------- 任务超时监控 ---------------------------------------## 
 
-def fun_task_timeout_monitor(ds,dag,**op_kwargs):
+def fun_task_timeout_monitor(ds,dag,execution_date,**op_kwargs):
 
     dag_ids=dag.dag_id
 
