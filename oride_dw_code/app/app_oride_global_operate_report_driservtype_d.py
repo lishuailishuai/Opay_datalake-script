@@ -147,7 +147,6 @@ passenger_data_null = """
 """
 
 driver_cube_data_null = """
-       null as td_online_driver_num,  --当日在线司机数
        null as td_request_driver_num, --当日接单司机数
        null as td_finish_order_driver_num,  --当日完单司机数
        null as td_push_accpet_show_driver_num --被推送骑手数
@@ -280,7 +279,7 @@ select country_code,
        {order_data_null},
        {passenger_data_null},
        --td_audit_finish_driver_num,  --当日审核通过司机数
-       td_online_driver_num,  --当日在线司机数
+       --td_online_driver_num,  --当日在线司机数
        td_request_driver_num, --当日接单司机数
        td_finish_order_driver_num,  --当日完单司机数
        td_push_accpet_show_driver_num, --被推送骑手数
@@ -362,7 +361,6 @@ SELECT nvl(city_id,-10000) as city_id,
        sum(paid_users) as paid_users,  --当日总支付乘客数
        sum(online_paid_users) as online_paid_users,  --当日线上支付乘客数
        sum(new_user_gmv) as new_user_gmv,  --当日新注册乘客完单gmv 
-       sum(td_online_driver_num) as td_online_driver_num,  --当日在线司机数
        sum(td_request_driver_num) as td_request_driver_num, --当日接单司机数
        sum(td_finish_order_driver_num) as td_finish_order_driver_num,  --当日完单司机数
        sum(td_push_accpet_show_driver_num) as td_push_accpet_show_driver_num, --被推送骑手数 

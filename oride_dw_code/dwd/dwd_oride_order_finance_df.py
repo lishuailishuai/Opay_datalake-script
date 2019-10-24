@@ -71,6 +71,18 @@ ods_sqoop_base_data_driver_reward_df_prev_day_task = UFileSensor(
     dag=dag
 )
 
+# 依赖前一天分区
+ods_sqoop_base_data_driver_records_day_df_prev_day_task = UFileSensor(
+    task_id='ods_sqoop_base_data_driver_records_day_df_prev_day_task',
+    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="oride_dw_sqoop/oride_data/data_driver_records_day",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
 ##----------------------------------------- 变量 ---------------------------------------##
 
 table_name = "dwd_oride_order_finance_df"
@@ -201,6 +213,7 @@ touchz_data_success = BashOperator(
 dependence_dwd_oride_order_base_include_test_df_prev_day_task >> \
 ods_sqoop_base_data_driver_recharge_records_df_prev_day_task >> \
 ods_sqoop_base_data_driver_reward_df_prev_day_task >>\
+ods_sqoop_base_data_driver_records_day_df_prev_day_task >>\
 sleep_time >> \
 dwd_oride_order_finance_df_task >> \
 task_check_key_data >> \

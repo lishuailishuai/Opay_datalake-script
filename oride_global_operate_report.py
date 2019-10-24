@@ -121,8 +121,8 @@ def get_all_data_row(ds):
                 concat(cast(nvl(round(online_paid_users*100/paid_users,1),0) as string),'%') as online_paid_users_rate,  --当日线上支付乘客占比
                 td_audit_finish_driver_num, --当日审核通过司机数
                 td_online_driver_num, --当日在线司机数
-                td_request_driver_num, --当日接单司机数
-                td_finish_order_driver_num, --当日完单司机数
+                td_request_driver_num_inSimulRing, --当日接单司机数
+                td_finish_order_driver_num_inSimulRing, --当日完单司机数
                 cast(price as bigint) as gmv,  --订单应付总额,状态4，5
                 cast(new_user_gmv as bigint) as new_user_gmv, -- 当日新注册乘客完单gmv，状态4，5
                 concat(cast(nvl(round((recharge_amount+reward_amount)*100/price,1),0) as string),'%') as b_subsidy_rate,  --b端补贴率
@@ -266,15 +266,15 @@ def get_product_rows(ds, all_completed_num_nobeckon, product_id):
             SELECT t1.dt,
                  t1.city_id,
                  if(t1.city_id=-10000,'All',t2.name) AS city_name,
-                 if(t1.city_id=1001,'-',nvl(t1.ride_order_cnt,0)) as ride_order_cnt, --当日下单数
+                 nvl(t1.ride_order_cnt,0) as ride_order_cnt, --当日下单数
                  if(dt>'2019-10-10',order_cnt_lfw,'-') AS order_cnt_lfw, --近四周同期下单数据
-                 if(t1.city_id=1001,'-',nvl(t1.valid_ord_cnt,0)) as valid_ord_cnt, --有效下单量
+                 nvl(t1.valid_ord_cnt,0) as valid_ord_cnt, --有效下单量
                  nvl(t1.finish_pay,0) as finish_pay, --当日支付完单数
                  nvl(t1.finish_order_cnt,0) as finish_order_cnt, --当日完单量
                  if(dt>'2019-10-10',finish_order_cnt_lfw,'-') AS finish_order_cnt_lfw, --完单数（近四周同期均值）
                  concat(cast(nvl(round(t1.finish_order_cnt*100/t1.ride_order_cnt,1),0) AS string),'%') AS finish_order_rate, --完单率
                  if(dt>'2019-10-10',concat(cast(nvl(round(finish_order_cnt_lfw*100/order_cnt_lfw,1),0) as string),'%'),'-') AS finish_order_rate_lfw, --完单率（近四周）
-                 concat(cast(nvl(round(if(t1.city_id=-10000,t1.finish_order_cnt*100/{all_completed_num_nobeckon},t1.finish_order_cnt*100/t1.city_total),1),0) AS string),'%') AS product_finish_order_rate,--业务完单占比
+                 concat(cast(nvl(round(if(t1.city_id=-10000,t1.finish_order_cnt*2*100/t1.total,t1.finish_order_cnt*100/t1.city_total),1),0) AS string),'%') AS product_finish_order_rate,--业务完单占比
                  concat(cast(nvl(round(if(t1.city_id=-10000,t1.finish_order_cnt*100/t1.finish_order_cnt,t1.finish_order_cnt*2*100/sum(t1.finish_order_cnt) over(partition BY t1.product_id)),1),0) AS string),'%') AS city_finish_order_rate, --城市完单
                  nvl(t1.finished_users,0) as finished_users,--当日完单乘客数
                  nvl(if(product_id=3,t1.new_user_ord_cnt,t1.first_finished_users),0) as passenger_indictor_2, --1,2当日首次完单乘客数;3当日注册乘客下单数
@@ -283,15 +283,15 @@ def get_product_rows(ds, all_completed_num_nobeckon, product_id):
                  concat(cast(nvl(round(t1.online_paid_users*100/t1.paid_users,1),0) AS string),'%') AS online_paid_user_rate, --当日线上支付乘客占比
                  nvl(t1.td_audit_finish_driver_num,0) as td_audit_finish_driver_num, --当日审核通过司机数
                  nvl(t1.td_online_driver_num,0) as td_online_driver_num, --当日在线司机数
-                 nvl(t1.td_request_driver_num,0) as td_request_driver_num, --当日接单司机数
-                 nvl(t1.td_finish_order_driver_num,0) as td_finish_order_driver_num, --当日完单司机数
+                 nvl(t1.td_request_driver_num,0) as td_request_driver_num, --当日接单司机数(不包含同时呼叫)
+                 nvl(t1.td_finish_order_driver_num,0) as td_finish_order_driver_num, --当日完单司机数(不包含同时呼叫)
                  nvl(round(t1.finish_order_cnt/t1.td_finish_order_driver_num,0),0) AS avg_finish_order_cnt, --人均完单数
                  nvl(round(t1.finish_driver_online_dur/t1.td_finish_order_driver_num/3600,1),0) AS avg_driver_online_dur, --人均在线时长
                  concat(cast(nvl(round(t1.driver_billing_dur*100/t1.finish_driver_online_dur,1),0) AS string),'%') AS billing_dur_rate, --计费时长占比
                  nvl(round(t1.driver_pushed_order_cnt/t1.td_push_accpet_show_driver_num,0),0) AS avg_pushed_order_cnt, --人均推送订单数
-                 nvl(round(t1.finish_order_cnt/t1.finish_driver_online_dur*3600,1),0) AS TPH,
-                 '-' as IPH,
-                 --nvl(round((t1.amount_pay_online+t1.amount_pay_offline+t1.recharge_amount+t1.reward_amount)/t1.finish_driver_online_dur,1),0) AS IPH,
+                 nvl(round(t1.finish_order_cnt_inSimulRing/t1.finish_driver_online_dur*3600,1),0) AS TPH, --分子完单量用（包含同时呼叫的）
+                 -- '-' as IPH,
+                 nvl(round(t1.iph_fenzi_inSimulRing/t1.finish_driver_online_dur,1),0) AS IPH, --分子（包含同时呼叫）
                  if(t1.finish_order_cnt>=10000,concat(cast(nvl(round(t1.bad_feedback_finish_ord_cnt*10000/t1.finish_order_cnt,0),0) AS string),'‱'),'-') as bad_feedback_finish_rate, --万单完单差评率
                  nvl(cast(round(t1.finish_take_order_dur/t1.finish_order_cnt,0) as bigint),0) AS avg_take_order_dur,--平均应答时长
                  nvl(cast(round(t1.finish_pick_up_dur/t1.finish_order_cnt,0) as bigint),0) AS avg_pick_up_dur, --平均接驾时长
@@ -303,8 +303,10 @@ def get_product_rows(ds, all_completed_num_nobeckon, product_id):
                 concat(cast(nvl(round((t1.price-t1.pay_amount)*100/t1.price,1),0) AS string),'%') AS c_subsidy_rate, --c端补贴率【gmv状态4，5；实付金额状态5】
                 nvl(round(t1.pay_price/t1.finish_pay,1),0) AS avg_pay_price, --单均应付
                 nvl(round(t1.pay_amount/t1.finish_pay,1),0) AS avg_pay_amount --单均实付
-                from (SELECT sum(if(product_id not in(99,-10000),finish_order_cnt,0)) over(partition BY city_id) AS city_total,*
-                      FROM oride_dw.app_oride_global_operate_report_d WHERE dt='{dt}') t1
+                from (SELECT sum(finish_order_cnt) over(partition BY city_id) AS city_total,
+                             sum(finish_order_cnt) over(partition BY dt) AS total,
+                             *
+                      FROM oride_dw.app_oride_global_operate_report_d WHERE dt='{dt}' and product_id not in(0,99,-10000)) t1
                    left JOIN
                   (SELECT id,
                           name
@@ -360,7 +362,6 @@ def get_all_product_rows(ds, all_completed_num):
                             <td>{}</td>
                             <td>{}</td>
                             <td>{}</td> 
-                            <td>{}</td>                             
                     '''
     sql = '''SELECT t1.dt,
          t1.city_id,
@@ -382,43 +383,30 @@ def get_all_product_rows(ds, all_completed_num):
          concat(cast(nvl(round(t1.online_paid_users*100/t1.paid_users,1),0) AS string),'%') AS online_paid_user_rate, --当日线上支付乘客占比
         concat(cast(nvl(round(nvl(t2.finish_order_cnt,0)*100/nvl(t1.finish_order_cnt,0),1),0) AS string),'%') AS direct_finish_rate, --专车完单占比
         concat(cast(nvl(round(nvl(t3.finish_order_cnt,0)*100/nvl(t1.finish_order_cnt,0),1),0) AS string),'%') AS street_finish_rate, --快车完单占比
-        concat(cast(nvl(round(nvl(t4.finish_order_cnt,0)*100/nvl(t1.finish_order_cnt,0),1),0) AS string),'%') AS otrike_finish_rate, --otrike完单占比        
-        concat(cast(nvl(round(nvl(t5.finish_order_cnt,0)*100/nvl(t1.finish_order_cnt,0),1),0) AS string),'%') AS beckoning_finish_rate --招手停完单占比       
+        concat(cast(nvl(round(nvl(t4.finish_order_cnt,0)*100/nvl(t1.finish_order_cnt,0),1),0) AS string),'%') AS otrike_finish_rate --otrike完单占比        
         FROM
           (SELECT *
-           FROM oride_dw.app_oride_global_operate_report_d
+           FROM oride_dw.app_oride_global_operate_report_driservtype_d
            WHERE dt='{dt}'
-             AND product_id=-10000) t1
+             AND driver_serv_type=-10000) t1
         LEFT JOIN
           (SELECT city_id,
                   finish_order_cnt
-           FROM oride_dw.app_oride_global_operate_report_d
+           FROM oride_dw.app_oride_global_operate_report_driservtype_d
            WHERE dt='{dt}'
-             AND product_id=1) t2 ON t1.city_id=t2.city_id
+             AND driver_serv_type=1) t2 ON t1.city_id=t2.city_id
         LEFT JOIN
           (SELECT city_id,
                   finish_order_cnt
-           FROM oride_dw.app_oride_global_operate_report_d
+           FROM oride_dw.app_oride_global_operate_report_driservtype_d
            WHERE dt='{dt}'
-             AND product_id=2) t3 ON t1.city_id=t3.city_id
+             AND driver_serv_type=2) t3 ON t1.city_id=t3.city_id
         LEFT JOIN
           (SELECT city_id,
                   finish_order_cnt
-           FROM oride_dw.app_oride_global_operate_report_d
+           FROM oride_dw.app_oride_global_operate_report_driservtype_d
            WHERE dt='{dt}'
-             AND product_id=3) t4 ON t1.city_id=t4.city_id
-        LEFT JOIN
-          (SELECT city_id,
-                  finish_order_cnt
-           FROM oride_dw.app_oride_global_operate_report_d
-           WHERE dt='{dt}'
-             AND product_id=99) t5 ON t1.city_id=t5.city_id
-        LEFT JOIN
-          (SELECT city_id,
-                  finish_order_cnt
-           FROM oride_dw.app_oride_global_operate_report_d
-           WHERE dt='{dt}'
-             AND product_id=0) t6 ON t1.city_id=t6.city_id
+             AND driver_serv_type=3) t4 ON t1.city_id=t4.city_id
         LEFT JOIN
           (SELECT *
            FROM oride_dw.dim_oride_city
@@ -451,7 +439,7 @@ def send_report_email(ds, **kwargs):
                                 <th colspan="2" style="text-align: center;">天气指标</th>
                                 <th colspan="9" style="text-align: center;">关键指标</th>
                                 <th colspan="3" style="text-align: center;">乘客指标</th>
-                                <th colspan="4" style="text-align: center;">各业务完单占比</th>
+                                <th colspan="3" style="text-align: center;">各业务完单占比</th>
                             </tr>
                             <tr>
                                 <th>日期</th>
@@ -477,7 +465,6 @@ def send_report_email(ds, **kwargs):
                                 <th>专车</th>
                                 <th>快车</th>
                                 <th>Otrike</th>
-                                <th>招手停</th>                                                      
                             </tr>
     '''
     product_html_table_fmt = '''

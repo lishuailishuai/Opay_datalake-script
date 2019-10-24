@@ -22,7 +22,7 @@ import requests
 import os
 
 args = {
-        'owner': 'yangmingze',
+        'owner': 'lili.chen',
         'start_date': datetime(2019, 5, 20),
         'depends_on_past': False,
         'retries': 3,
@@ -145,6 +145,8 @@ SELECT t1.passenger_id,
 
        t2.language,
        -- 客户端语言
+       
+       null as device_id, --设备ID
 
        t1.country_code,
        '{pt}' AS dt
