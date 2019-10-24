@@ -127,8 +127,9 @@ SELECT t.order_id,  --订单ID
             end_lat,
             unix_timestamp(create_time) as create_time,
             create_time as create_time_s,
-            substr(from_unixtime(create_time,'yyyy-MM-dd HH:mm:ss'),1,13) as create_time_hour,  --订单所在小时，为了获取天气状况
-            floor(cast(minute(from_unixtime(create_time)) as int) / 10)*10 as create_time_mins, --订单所在十分钟采集时间，为了获取天气状况
+            
+            substr(create_time,1,13) as create_time_hour,  --订单所在小时，为了获取天气状况
+            floor(cast(minute(create_time) as int) / 10)*10 as create_time_mins, --订单所在十分钟采集时间，为了获取天气状况git
             create_date,
             status,
             LEAD(unix_timestamp(create_time),1,unix_timestamp(create_time)) OVER(PARTITION BY passenger_id ORDER BY unix_timestamp(create_time)) create_time2,
