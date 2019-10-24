@@ -32,8 +32,8 @@ args = {
     'email_on_retry': False,
 }
 
-dag = airflow.DAG('dwd_oride_driver_timerange_di',
-                  schedule_interval="30 * * * *",
+dag = airflow.DAG('dwd_oride_data_driver_extend_df',
+                  schedule_interval="20 01 * * *",
                   default_args=args,
                   catchup=False)
 
@@ -47,10 +47,10 @@ sleep_time = BashOperator(
 
 
 # 依赖前一天分区
-ods_log_oride_driver_timerange_task = UFileSensor(
-    task_id='ods_log_oride_driver_timerange_task',
+ods_sqoop_base_data_driver_extend_df_task = UFileSensor(
+    task_id='ods_sqoop_base_data_driver_extend_df_task',
     filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw_ods/ods_log_oride_driver_timerange",
+        hdfs_path_str="oride_dw_sqoop/oride_data/data_driver_extend",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -61,13 +61,32 @@ ods_log_oride_driver_timerange_task = UFileSensor(
 ##----------------------------------------- 变量 ---------------------------------------##
 
 
-table_name = "dwd_oride_driver_timerange_di"
+table_name = "dwd_oride_data_driver_extend_df"
 hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
+
+##----------------------------------------- 任务超时监控 ---------------------------------------## 
+
+def fun_task_timeout_monitor(ds,dag,**op_kwargs):
+
+    dag_ids=dag.dag_id
+
+    tb = [
+        {"db": "oride_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "3600"}
+    ]
+
+    TaskTimeoutMonitor().set_task_monitor(tb)
+
+task_timeout_monitor= PythonOperator(
+    task_id='task_timeout_monitor',
+    python_callable=fun_task_timeout_monitor,
+    provide_context=True,
+    dag=dag
+)
 
 ##----------------------------------------- 脚本 ---------------------------------------##
 
-dwd_oride_driver_timerange_di_task = HiveOperator(
-    task_id='dwd_oride_driver_timerange_di_task',
+dwd_oride_data_driver_extend_df_task = HiveOperator(
+    task_id='dwd_oride_data_driver_extend_df_task',
 
     hql='''
         SET hive.exec.parallel=TRUE;
@@ -76,13 +95,44 @@ dwd_oride_driver_timerange_di_task = HiveOperator(
         insert overwrite table oride_dw.{table} partition(country_code,dt)
 
         SELECT
-            driver_id,
-            driver_onlinerange,
-            driver_freerange,
+            id,--司机 ID, 
+            serv_mode,--服务模式 (0: no service, 1: in service, 99:招手停), 
+            serv_status,--服务状态 (0: wait assign, 1: pick up, 2:wait, 3: send, 4:arrive, 5:pick order), 
+            order_rate,--接单率, 
+            assign_order,--派单数量, 
+            take_order,--接单数量, 
+            avg_score,--平均评分, 
+            total_score,--总评分, 
+            score_times,--评分次数, 
+            last_order_id,--最近一个订单的ID, 
+            register_time,--注册时间, 
+            login_time,--最后登陆时间, 
+            is_bind,--状态 0 未绑定 1 已绑定, 
+            first_bind_time,--初次绑定时间, 
+            total_pay,--总计-已打款收入, 
+            inviter_role,--, 
+            inviter_id,--, 
+            block,--后台管理司机接单状态(0: 允许 1:不允许), 
+            serv_type,--1 专车 2 快车, 
+            serv_score,--司机服务分, 
+            local_gov_ids,--行会ID,json, 
+            updated_at,--最后更新时间, 
+            fault,--正常0(停运)修理1(停运)无资料2(停运)事故3(停运)扣除4(欠缴)5, 
+            city_id,--所属城市ID, 
+            language,--客户端语言, 
+            end_service_time,--专车司机结束收份子钱时间, 
+            last_online_time,--最后上线时间, 
+            last_offline_time,--最后下线时间, 
+            avoid_highway,--避开高速 (0: 禁用 1: 启用), 
+            rongcloud_token,--融云token, 
+            support_carpool,--是否支持拼车, 
+            last_trip_id,--最近一个行程的ID, 
+            assign_mode,--强派模式 (0: 禁用 1: 启用), 
+            auto_start,--自动开始 (0: 禁用 1: 启用)
             'nal' as country_code,
             '{pt}' as dt
         FROM
-            oride_dw_ods.ods_log_oride_driver_timerange
+            oride_dw_ods.ods_sqoop_base_data_driver_extend_df
         WHERE
             dt='{pt}'
         ;
@@ -112,4 +162,4 @@ touchz_data_success= PythonOperator(
     dag=dag
 )
 
-ods_log_oride_driver_timerange_task >> sleep_time >> dwd_oride_driver_timerange_di_task >> touchz_data_success
+ods_sqoop_base_data_driver_extend_df_task >> sleep_time >> dwd_oride_data_driver_extend_df_task >> touchz_data_success
