@@ -34,7 +34,7 @@ args = {
     'email_on_retry': False,
 }
 
-dag = airflow.DAG('dwd_oride_data_driver_reward_di',
+dag = airflow.DAG('dwd_oride_driver_reward_di',
                   schedule_interval="20 01 * * *",
                   default_args=args,
                   catchup=False)
@@ -63,7 +63,7 @@ ods_sqoop_base_data_driver_reward_df_task = UFileSensor(
 ##----------------------------------------- 变量 ---------------------------------------##
 
 
-table_name = "dwd_oride_data_driver_reward_di"
+table_name = "dwd_oride_driver_reward_di"
 hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
 
 ##----------------------------------------- 任务超时监控 ---------------------------------------## 
@@ -87,8 +87,8 @@ task_timeout_monitor= PythonOperator(
 
 ##----------------------------------------- 脚本 ---------------------------------------##
 
-dwd_oride_data_driver_reward_di_task = HiveOperator(
-    task_id='dwd_oride_data_driver_reward_di_task',
+dwd_oride_driver_reward_di_task = HiveOperator(
+    task_id='dwd_oride_driver_reward_di_task',
 
     hql='''
         SET hive.exec.parallel=TRUE;
@@ -139,4 +139,4 @@ touchz_data_success= PythonOperator(
     dag=dag
 )
 
-ods_sqoop_base_data_driver_reward_df_task >> sleep_time >> dwd_oride_data_driver_reward_di_task >> touchz_data_success
+ods_sqoop_base_data_driver_reward_df_task >> sleep_time >> dwd_oride_driver_reward_di_task >> touchz_data_success
