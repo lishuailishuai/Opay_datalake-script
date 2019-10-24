@@ -145,6 +145,8 @@ SELECT t1.passenger_id,
 
        t2.language,
        -- 客户端语言
+       
+       null as device_id, --设备ID
 
        t1.country_code,
        '{pt}' AS dt
