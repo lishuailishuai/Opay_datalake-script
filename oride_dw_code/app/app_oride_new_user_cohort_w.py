@@ -111,7 +111,7 @@ create_oride_cohort_mid_task = HiveOperator(
             --min(unix_timestamp(create_time)) over (partition by driver_id) as driver_first_time,--司机第一次完单时间
             from oride_dw.dwd_oride_order_base_include_test_df
             where dt in('{pt}','his') and create_date>='2019-06-17'
-            and status in(4,5) and city_id<>999001 and driver_id<>0) t ;
+            and status in(4,5) and city_id<>999001 and driver_id<>1) t ;
             '''.format(
             pt='{{macros.ds_add(ds, +6)}}'
     ),
