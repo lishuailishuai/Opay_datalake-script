@@ -17,7 +17,7 @@ import logging
 
 args = {
     'owner': 'linan',
-    'start_date': datetime(2019, 10, 24),
+    'start_date': datetime(2019, 10, 25),
     'depends_on_past': False,
     'retries': 1,
     'retry_delay': timedelta(minutes=5),
@@ -37,7 +37,7 @@ insert_shop_dim_data = BashOperator(
     bash_command="""
         mysql -uroot -p78c5f1142124334 -h10.52.149.112 opos_dw  -e "
         
-            insert into opos_agent_shop_dim (agent_id,opay_id,shop_id,bd_id,city_id)
+            insert into opos_dw.opos_agent_shop_dim (agent_id,opay_id,shop_id,bd_id,city_id)
             select
             a.id,
             a.agent_id,
@@ -47,7 +47,7 @@ insert_shop_dim_data = BashOperator(
             from
             opos_dw.agents a
             join
-            opos_dw.bd_shop s on a.agent_id = s.opay_id
+            opos_dw.bd_shop s on a.agent_id = concat(s.opay_id,'')
             ON DUPLICATE KEY
             UPDATE
             opay_id=VALUES(opay_id),
