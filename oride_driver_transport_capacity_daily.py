@@ -24,8 +24,6 @@ dag = airflow.DAG(
     schedule_interval="45 02 * * *",
     default_args=args)
 
-
-
 table_names = ['oride_dw_ods.ods_sqoop_base_data_order_df',
                'oride_dw_ods.ods_sqoop_base_data_device_extend_df',
                'oride_dw_ods.ods_sqoop_base_data_city_conf_df',
@@ -115,7 +113,6 @@ data_driver_records_day_validate_task = HivePartitionSensor(
     dag=dag
 )
 
-
 insert_driver_metrics = HiveOperator(
     task_id='insert_driver_metrics',
     hql='''
@@ -151,8 +148,8 @@ insert_driver_metrics = HiveOperator(
                 where dt = '{{ ds }}' and id != 999001
             ) c on  e.city_id = c.id 
         ),
-        
-        
+
+
         online_data as (
             select 
             d.city_name city_name,
@@ -171,8 +168,8 @@ insert_driver_metrics = HiveOperator(
             ) t on d.id = t.driver_id
             group by d.city_name,d.serv_type
         ),
-        
-        
+
+
         -- 订单基础表
         order_base as (
             SELECT
@@ -184,7 +181,22 @@ insert_driver_metrics = HiveOperator(
                 AND city_id != 999001
                 AND from_unixtime(create_time, 'yyyy-MM-dd')=dt
         ),
-        
+        -- 订单基础表近7天数据
+
+        order_base_seven_day as (
+            select
+                driver_id,
+                create_time,
+                status,
+                dt
+            from  oride_dw_ods.ods_sqoop_base_data_order_df
+            where dt = '{{ds}}'
+                and city_id != 999001
+                and from_unixtime(create_time, 'yyyy-MM-dd') <= dt 
+                and from_unixtime(create_time, 'yyyy-MM-dd') >= date_sub(dt,7)
+        ),
+
+
         -- 完单司机在线时长
         completed_driver_online as (
             SELECT
@@ -231,8 +243,8 @@ insert_driver_metrics = HiveOperator(
                 join driver_dim d on d.id = t1.driver_id
             GROUP BY d.city_name,d.serv_type
         ),
-        
-        
+
+
         order_data as (
                 select 
                 d.city_name ,
@@ -245,8 +257,7 @@ insert_driver_metrics = HiveOperator(
                 count(distinct if(from_unixtime(do.create_time,'yyyy-MM-dd') = '{{ ds }}' and from_unixtime(d.register_time,'yyyy-MM-dd') = '{{ ds }}' and (do.status = 4 or do.status = 5),do.driver_id,null)) register_and_onride_driver_num, -- 当日注册且完单司机数
                 sum(if(from_unixtime(do.create_time,'yyyy-MM-dd') = '{{ ds }}'
                 and do.arrive_time > 0 and do.status in (4,5),do.arrive_time - do.pickup_time,0))  duration_sum, -- 计费时长
-                count(if(from_unixtime(do.create_time,'yyyy-MM-dd') = '{{ ds }}' and do.status = 6 and do.cancel_role = 2,do.id,null)) driver_cancel_num, --司机取消订单数
-                count(distinct if(from_unixtime(do.create_time,'yyyy-MM-dd') <= '{{ ds }}' and from_unixtime(do.create_time,'yyyy-MM-dd') >= date_sub('{{ ds }}',7) and do.status in (4,5),do.driver_id,null)) seven_day_onride_driver_num --近7日完单司机数
+                count(if(from_unixtime(do.create_time,'yyyy-MM-dd') = '{{ ds }}' and do.status = 6 and do.cancel_role = 2,do.id,null)) driver_cancel_num --司机取消订单数
 
                 from
                 (
@@ -257,8 +268,25 @@ insert_driver_metrics = HiveOperator(
                 join driver_dim d on do.driver_id = d.id
                 group by d.city_name,d.serv_type
         ),
-        
-        
+
+        order_data_seven_day as (
+                select 
+                d.city_name ,
+                d.serv_type serv_type,
+                count(distinct if( do.status in (4,5),do.driver_id,null)) seven_day_onride_driver_num --近7日完单司机数
+                from
+                (
+                    select 
+                    *
+                    from order_base_seven_day
+                ) do
+                join driver_dim d on do.driver_id = d.id
+                group by d.city_name,d.serv_type
+        ),
+
+
+
+
         order_pay as (
             select 
             d.city_name city_name,
@@ -280,10 +308,10 @@ insert_driver_metrics = HiveOperator(
             join driver_dim d on p.driver_id = d.id
             group by d.city_name,d.serv_type
         ),
-        
-        
-        
-        
+
+
+
+
         driver_register as (
             select 
             city_name,
@@ -294,7 +322,7 @@ insert_driver_metrics = HiveOperator(
             driver_dim 
             group by city_name,serv_type
         ),
-        
+
         order_push as (
             select 
             t.city_name city_name,
@@ -323,8 +351,8 @@ insert_driver_metrics = HiveOperator(
             ) t
             group by t.city_name,t.serv_type
         ),
-        
-        
+
+
         order_push_driver as (
             select 
             o.city_name,
@@ -368,7 +396,7 @@ insert_driver_metrics = HiveOperator(
             ) o on s.order_id = o.id 
             group by o.city_name,s.serv_type
         ), 
-        
+
         driver_income as (
             select 
                 d.city_name,
@@ -391,8 +419,8 @@ insert_driver_metrics = HiveOperator(
                 ) as fd on r.driver_id = fd.driver_id 
             group by d.city_name, d.serv_type 
         )
-        
-        
+
+
         insert overwrite table oride_bi.oride_all_driver_capacity_metrics_info partition (dt='{{ ds }}')
         select 
         od.city_name,
@@ -417,7 +445,7 @@ insert_driver_metrics = HiveOperator(
         nvl(op.price_sum,0),
         nvl(op.amount_sum,0),
         cast(case when di.amount_all is null then 0 else di.amount_all end as double),              --司机当日总收入
-        od.seven_day_onride_driver_num  --近7日完单司机数 需要在表新增字段
+        odsd.seven_day_onride_driver_num  --近7日完单司机数 需要在表新增字段
 
         from 
         order_data od 
@@ -428,6 +456,7 @@ insert_driver_metrics = HiveOperator(
         left join order_push_driver opd on od.city_name = opd.city_name and od.serv_type = opd.serv_type
         left join completed_driver_online cdo on od.city_name = cdo.city_name and od.serv_type = cdo.serv_type 
         left join driver_income di on od.city_name = di.city_name and od.serv_type = di.serv_type 
+        left join order_data_seven_day odsd on od.city_name = odsd.city_name and od.serv_type = odsd.serv_type
         ;
 
 
@@ -454,11 +483,11 @@ def send_fast_report_email(ds, **kwargs):
             nvl(sum(register_and_onride_driver_num),0) register_and_onride_driver_num,
             nvl(sum(agg_register_driver_num),0) agg_register_driver_num,
             nvl(sum(agg_onride_driver_num),0) agg_onride_driver_num,
+            cast(nvl(sum(seven_day_onride_driver_num),0) as bigint) seven_day_onride_driver_num, --近7日完单司机数
             nvl(round(sum(price_sum)/sum(order_pay_num),2),0) order_price_avg,
             nvl(round(sum(amount_sum)/sum(order_pay_num),2),0) order_amount_avg,
-            if(sum(onride_driver_num)>0, round(sum(amount_all)/sum(onride_driver_num),2), 0) as amount_all_avg,
-            nvl(sum(seven_day_onride_driver_num),0) seven_day_onride_driver_num --近7日完单司机数
-            
+            if(sum(onride_driver_num)>0, round(sum(amount_all)/sum(onride_driver_num),2), 0) as amount_all_avg
+
             from 
             oride_bi.oride_all_driver_capacity_metrics_info
             where dt = '{dt}' and serv_type = 2
@@ -482,12 +511,11 @@ def send_fast_report_email(ds, **kwargs):
             nvl(sum(register_and_onride_driver_num),0) register_and_onride_driver_num,
             nvl(sum(agg_register_driver_num),0) agg_register_driver_num,
             nvl(sum(agg_onride_driver_num),0) agg_onride_driver_num,
+            cast(nvl(sum(seven_day_onride_driver_num),0) as bigint) seven_day_onride_driver_num,  --近7日完单司机数
             nvl(round(sum(price_sum)/sum(order_pay_num),2),0) order_price_avg,
             nvl(round(sum(amount_sum)/sum(order_pay_num),2),0) order_amount_avg, 
-            if(sum(onride_driver_num)>0, round(sum(amount_all)/sum(onride_driver_num),2), 0) as amount_all_avg,
-            nvl(sum(seven_day_onride_driver_num),0) seven_day_onride_driver_num  --近7日完单司机数
-            
-            
+            if(sum(onride_driver_num)>0, round(sum(amount_all)/sum(onride_driver_num),2), 0) as amount_all_avg
+
             from 
             oride_bi.oride_all_driver_capacity_metrics_info
             where dt = '{dt}' and serv_type = 2
@@ -604,7 +632,7 @@ def send_fast_report_email(ds, **kwargs):
                 <th>{price_avg}</th>
                 <th>{amount_avg}</th>
                 <th>{amount_all_avg}</th>
-                
+
         '''
 
     for data in res:
@@ -706,8 +734,8 @@ def send_fast_report_email(ds, **kwargs):
     result = is_alert(ds, table_names)
     if result:
         email_to = ['bigdata@opay-inc.com']
-        #email_to = ['nan.li@opay-inc.com']
-        #email_to = ['jialong.li@opay-inc.com']
+        # email_to = ['nan.li@opay-inc.com']
+        # email_to = ['jialong.li@opay-inc.com']
     # email_to = ['duo.wu@opay-inc.com']
     email_subject = '司机运力日报-快车_{}'.format(ds)
     send_email(
@@ -743,9 +771,9 @@ def send_otrike_report_email(ds, **kwargs):
             nvl(sum(register_and_onride_driver_num),0) register_and_onride_driver_num,
             nvl(sum(agg_register_driver_num),0) agg_register_driver_num,
             nvl(sum(agg_onride_driver_num),0) agg_onride_driver_num,
+            cast(nvl(sum(seven_day_onride_driver_num),0) as bigint) seven_day_onride_driver_num, --近7日完单司机数
             nvl(round(sum(price_sum)/sum(order_pay_num),2),0) order_price_avg,
-            nvl(round(sum(amount_sum)/sum(order_pay_num),2),0) order_amount_avg,
-            nvl(sum(seven_day_onride_driver_num),0) seven_day_onride_driver_num  --近7日完单司机数
+            nvl(round(sum(amount_sum)/sum(order_pay_num),2),0) order_amount_avg
 
             from 
             oride_bi.oride_all_driver_capacity_metrics_info
@@ -770,11 +798,11 @@ def send_otrike_report_email(ds, **kwargs):
             nvl(sum(register_and_onride_driver_num),0) register_and_onride_driver_num,
             nvl(sum(agg_register_driver_num),0) agg_register_driver_num,
             nvl(sum(agg_onride_driver_num),0) agg_onride_driver_num,
+            cast(nvl(sum(seven_day_onride_driver_num),0) as bigint) seven_day_onride_driver_num, --近7日完单司机数
             nvl(round(sum(price_sum)/sum(order_pay_num),2),0) order_price_avg,
-            nvl(round(sum(amount_sum)/sum(order_pay_num),2),0) order_amount_avg,
-            nvl(sum(seven_day_onride_driver_num),0) seven_day_onride_driver_num --近7日完单司机数
-            
-            
+            nvl(round(sum(amount_sum)/sum(order_pay_num),2),0) order_amount_avg
+
+
             from 
             oride_bi.oride_all_driver_capacity_metrics_info
             where dt = '{dt}' and serv_type = 3
@@ -986,7 +1014,7 @@ def send_otrike_report_email(ds, **kwargs):
     result = is_alert(ds, table_names)
     if result:
         email_to = ['bigdata@opay-inc.com']
-        #email_to = ['nan.li@opay-inc.com']
+        # email_to = ['nan.li@opay-inc.com']
         #email_to = ['jialong.li@opay-inc.com']
     email_subject = '司机运力日报-Otrike_{}'.format(ds)
     send_email(
