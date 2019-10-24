@@ -95,16 +95,14 @@ dwd_oride_driver_assign_info_di_task = HiveOperator(
         SET hive.exec.parallel=TRUE;
         SET hive.exec.dynamic.partition.mode=nonstrict;
 
-        insert overwrite table oride_dw.{table} partition(country_code,dt)
+        insert overwrite table oride_dw.{table} partition(country_code='nal',dt='{pt}')
 
         SELECT
             id,--序号, 
             driver_id,--司机 ID, 
             order_id,--订单 ID, 
             type,--类型 (1 展示 2 超时 3 拒绝), 
-            timestamp,--客户端记录的发生事件
-            'nal' as country_code,
-            '{pt}' as dt
+            `timestamp`--客户端记录的发生事件
         FROM
             oride_dw_ods.ods_sqoop_base_data_driver_assign_info_df
         WHERE
