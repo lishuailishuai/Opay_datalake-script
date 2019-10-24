@@ -138,6 +138,10 @@ table_list = [
     ("oride_data", "data_order_history", "sqoop_db", "base",1),
     ("oride_data", "data_order_payment_history", "sqoop_db", "base",1),
 
+    ("oride_data", "data_coupon_activity", "sqoop_db", "base",1),
+    ("oride_data", "data_push_coupons", "sqoop_db", "base",1),
+    ("oride_data", "data_share_conf", "sqoop_db", "base",1),
+
     ("bi", "weather_per_10min", "mysql_bi", "base",3),
     # 协会数据
     # 数据库 opay_spread
