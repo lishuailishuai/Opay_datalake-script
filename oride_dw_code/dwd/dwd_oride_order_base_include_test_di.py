@@ -402,6 +402,32 @@ SELECT base.order_id,
         END) AS td_driver_after_cancel_time_dur,
        --当天司机应答后取消平均时长（秒） 
        serv_union_type,  --业务类型，下单类型+司机类型(serv_type+driver_serv_type)
+
+       case when (product_id = 3 and pax_num < 3 )
+                then 1
+            else 0
+       end as is_carpool, --'是否拼车'
+        
+       case when (product_id = 3 and pax_num = 3 )
+                then 1
+            else 0
+       end as is_chartered_bus,--'是否包车'
+        
+       case when carpool_success.order_id is not null
+            then 1
+            else 0 
+       end as is_carpool_success, --'是否拼车成功'
+       
+       case when (product_id = 3 and pax_num < 3 and base.driver_id > 0 )
+            then 1
+            else 0
+        end as is_carpool_accept, --是否拼车应答单(司机)
+       
+       case when carpool_success.order_id is not null and status in (4,5)
+            then 1 
+            else 0 
+        end as is_carpool_success_and_finish, --拼车成功且订单完成
+
        country_code,
 
        '{pt}' AS dt
@@ -589,9 +615,24 @@ FROM
 WHERE assign_type=1
 GROUP BY order_id,driver_id) push_ord
 on base.order_id=push_ord.order_id
-and base.driver_id=push_ord.driver_id;
+and base.driver_id=push_ord.driver_id
 
-
+left OUTER JOIN
+(--拼车成功的订单   trip对应id数量 > 1的 id 
+    select 
+        id as order_id
+    from
+    (
+        select 
+            trip_id,
+            id,
+            count(trip_id) OVER(PARTITION BY trip_id ) AS cn 
+        from oride_dw_ods.ods_sqoop_base_data_order_df
+        where  dt ='{pt}' and serv_type = 3 and pax_num < 3
+            AND from_unixtime(create_time,'yyyy-MM-dd') = '{pt}'
+    )base
+    where base.cn > 1
+)carpool_success on carpool_success.order_id = base.order_id;
 '''.format(
         pt='{{ds}}',
         now_day='{{macros.ds_add(ds, +1)}}',
