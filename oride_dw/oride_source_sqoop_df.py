@@ -11,7 +11,6 @@ from utils.validate_metrics_utils import *
 import logging
 from plugins.SqoopSchemaUpdate import SqoopSchemaUpdate
 from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
-from plugins.TaskTouchzSuccess import TaskTouchzSuccess
 from utils.util import on_success_callback
 
 
@@ -57,16 +56,6 @@ def fun_task_timeout_monitor(ds, db_name, table_name, **op_kwargs):
     ]
 
     TaskTimeoutMonitor().set_task_monitor(tb)
-
-
-#生成_SUCCESS
-def check_success(ds, table_name, hdfs_path, **op_kwargs):
-
-    msg = [
-        {"table":table_name,"hdfs_path": "{hdfsPath}/dt={pt}".format(pt=ds,hdfsPath=hdfs_path)}
-    ]
-
-    TaskTouchzSuccess().set_touchz_success(msg)
 
 
 '''
@@ -373,21 +362,7 @@ for db_name, table_name, conn_id, prefix_name,priority_weight_nm in table_list:
         dag=dag
     )
 
-    #生成_SUCCESS
-    touchz_data_success= PythonOperator(
-        task_id='touchz_data_success_{}'.format(hive_table_name),
-        priority_weight=priority_weight_nm,
-        python_callable=check_success,
-        provide_context=True,
-        op_kwargs={
-            'db_name': HIVE_DB,
-            'table_name': hive_table_name,
-            'hdfs_path': UFILE_PATH % (db_name, table_name)
-        },
-        dag=dag
-    )
-
     if table_name in ['data_driver_records_day', 'data_driver_balance_extend']:
         check_data_driver_records_finish >> import_table
 
-    import_table >> check_table >> add_partitions >> validate_all_data >> touchz_data_success
+    import_table >> check_table >> add_partitions >> validate_all_data
