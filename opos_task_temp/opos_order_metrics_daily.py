@@ -398,3 +398,5 @@ ods_sqoop_base_bd_shop_df_dependence_task >> insert_opos_active_user_detail_metr
 
 insert_opos_active_user_detail_metrics >> insert_opos_active_user_metrics
 
+insert_opos_order_metrics >> insert_crm_metrics
+insert_opos_active_user_metrics >> insert_crm_metrics
