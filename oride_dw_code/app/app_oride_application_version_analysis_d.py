@@ -98,7 +98,7 @@ app_oride_application_version_analysis_d_task = HiveOperator(
 
 
     insert overwrite TABLE oride_dw.{table} partition(country_code,dt)
-    select 
+        select 
 
         base_info.app_name,--app名称 oride为乘客端，oride driver 为司机端
         base_info.app_version,--版本号
@@ -107,24 +107,24 @@ app_oride_application_version_analysis_d_task = HiveOperator(
         
         count(distinct if(passenger_info.login_time is not null,passenger_info.passenger_id,null)) as active_passenger_cnt,--累积活跃乘客数
         count(distinct if(driver_info.login_time is not null,driver_info.driver_id,null)) as active_driver_cnt,--累积活跃司机数
-        count(distinct if(passenger_info.login_time = date_sub('{pt}',1),passenger_info.passenger_id,null)) as yesterday_active_passenger_cnt,--昨日活跃乘客数、
-        count(distinct if(driver_info.login_time = date_sub('{pt}',1),driver_info.driver_id,null)) as yesterday_active_driver_cnt,--昨日活跃司机数、
+        count(distinct if(passenger_info.login_time = '{pt}',passenger_info.passenger_id,null)) as yesterday_active_passenger_cnt,--昨日活跃乘客数、
+        count(distinct if(driver_info.login_time = '{pt}',driver_info.driver_id,null)) as yesterday_active_driver_cnt,--昨日活跃司机数、
         count(distinct if(passenger_info.login_time = date_sub('{pt}',7),passenger_info.passenger_id,null)) as lastweek_active_passenger_cnt,--上周同期活跃乘客数、
         count(distinct if(driver_info.login_time = date_sub('{pt}',7),driver_info.driver_id,null)) as lastweek_active_driver_cnt,--上周同期活跃司机数、
     
-        count(distinct if(passenger_info.login_time <= date_sub('{pt}',1) and passenger_info.login_time >= date_sub('{pt}',4),passenger_info.passenger_id,null)) as three_day_active_passenger_cnt,
+        count(distinct if(passenger_info.login_time <= '{pt}' and passenger_info.login_time >= date_sub('{pt}',3),passenger_info.passenger_id,null)) as three_day_active_passenger_cnt,
         --近3日活跃乘客数
-        count(distinct if(driver_info.login_time <= date_sub('{pt}',1) and driver_info.login_time >= date_sub('{pt}',4),driver_info.driver_id,null)) as three_day_active_driver_cnt,
+        count(distinct if(driver_info.login_time <= '{pt}' and driver_info.login_time >= date_sub('{pt}',3),driver_info.driver_id,null)) as three_day_active_driver_cnt,
         --近3日活跃司机数
         
-        count(distinct if(passenger_info.login_time <= date_sub('{pt}',1) and passenger_info.login_time >= date_sub('{pt}',8),passenger_info.passenger_id,null)) as seven_day_active_passenger_cnt,
+        count(distinct if(passenger_info.login_time <= '{pt}' and passenger_info.login_time >= date_sub('{pt}',7),passenger_info.passenger_id,null)) as seven_day_active_passenger_cnt,
         --近7日活跃乘客数
-        count(distinct if(driver_info.login_time <= date_sub('{pt}',1) and driver_info.login_time >= date_sub('{pt}',8),driver_info.driver_id,null)) as seven_day_active_driver_cnt,
+        count(distinct if(driver_info.login_time <= '{pt}' and driver_info.login_time >= date_sub('{pt}',7),driver_info.driver_id,null)) as seven_day_active_driver_cnt,
         --近7日活跃司机数
         
-        count(distinct if(passenger_info.login_time <= date_sub('{pt}',1) and passenger_info.login_time >= date_sub('{pt}',31),passenger_info.passenger_id,null)) as seven_day_active_passenger_cnt,
+        count(distinct if(passenger_info.login_time <= '{pt}' and passenger_info.login_time >= date_sub('{pt}',30),passenger_info.passenger_id,null)) as seven_day_active_passenger_cnt,
         --近30日活跃乘客数
-        count(distinct if(driver_info.login_time <= date_sub('{pt}',1) and driver_info.login_time >= date_sub('{pt}',31),driver_info.driver_id,null)) as seven_day_active_driver_cnt,
+        count(distinct if(driver_info.login_time <= '{pt}' and driver_info.login_time >= date_sub('{pt}',30),driver_info.driver_id,null)) as seven_day_active_driver_cnt,
         --近30日活跃司机数
         base_info.country_code,
         '{pt}'  as dt
@@ -145,14 +145,33 @@ app_oride_application_version_analysis_d_task = HiveOperator(
                 app_version,--版本号
                 platform, --操作系统
                 user_id, --用户id
-                min(if(event_time > '1546297200000' and length(event_time) >= 10 ,event_time,null)) over(partition by app_name,app_version,platform) as event_time,
-                --2019-01-01 时间戳有负数， 0 、1 、2（但是这样的数据又不是脏数据）10位错误数据1230739718
+                min(if(event_name in('request_a_ride_click','accept_order_click') and event_time >='1569884400000' ,event_time,null)) over(partition by app_name,app_version,platform) as event_time,
+                --min(if(event_time > '1546297200000' and length(event_time) >= 10 ,event_time,null)) over(partition by app_name,app_version,platform) as event_time,
+                --2019-10-01 以后的数据不要  时间戳有负数， 0 、1 、2（但是这样的数据又不是脏数据）10位错误数据1230739718
                 country_code,
                 dt
             from oride_dw.dwd_oride_client_event_detail_hi base
-            where event_name in ('open_oride_click_banner','open_oride_click_takearide','open_car_click_banner','open_oride_click_otrike','oride_show')
-                and app_name in ('oride','ORide Driver') 
+            where event_name in ('oride_show','request_a_ride_click','accept_order_click')
+                and app_name in ( 'oride','ORide Driver')
                 and user_id != 0 
+                and dt >= '2019-10-01'
+            --union all
+            --select 
+            --    app_name,--oride为乘客端，oride driver 为司机端
+            --    app_version,--版本号
+            --    platform, --操作系统
+            --    user_id, --用户id
+            --    min(if(event_name in('accept_order_click') and event_time >='1569884400000' ,event_time,null)) over(partition by app_name,app_version,platform) as event_time,
+                --min(if(event_time > '1546297200000' and length(event_time) >= 10 ,event_time,null)) over(partition by app_name,app_version,platform) as event_time,
+                --2019-01-01 时间戳有负数， 0 、1 、2（但是这样的数据又不是脏数据）10位错误数据1230739718
+            --    country_code,
+            --    dt
+            --from oride_dw.dwd_oride_client_event_detail_hi base
+            --where event_name in ('oride_show','accept_order_click')
+            --    and app_name = 'ORide Driver'
+            --    and user_id != 0 
+            --    and dt >= '2019-10-01'
+            
         )t_base
         group by 
             t_base.app_name,
@@ -172,6 +191,7 @@ app_oride_application_version_analysis_d_task = HiveOperator(
             dt
         from  oride_dw.dim_oride_passenger_base 
         where passenger_id != 0  and city_id != '999001' --测试数据。
+        and dt >= '2019-10-01'
     )passenger_info on base_info.user_id = passenger_info.passenger_id and passenger_info.app_name = base_info.app_name and base_info.dt = passenger_info.dt
     left join
     (--司机信息
@@ -182,7 +202,9 @@ app_oride_application_version_analysis_d_task = HiveOperator(
             dt
         from oride_dw.dim_oride_driver_base
         where  driver_id != 0 and city_id != '999001' --测试数据，driver_id = 0 是北京的,过滤掉
+            and dt >= '2019-10-01'
     )driver_info on base_info.user_id = driver_info.driver_id and driver_info.app_name = base_info.app_name and  base_info.dt = driver_info.dt
+    where base_info.version_time is not null --过滤vesrion_time 为null值
     group by
             base_info.app_name, 
             base_info.app_version,

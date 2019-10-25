@@ -75,7 +75,7 @@ create_oride_cohort_mid_task = HiveOperator(
            select weekofyear(to_date(dt)) as week_now, --当前所在周
             weekofyear(to_date(create_date)) as week_create_date, --下单时间所在周
             city_id,
-            product_id,
+            driver_serv_type as product_id,
             order_id, 
             passenger_id,
             driver_id,
@@ -97,6 +97,7 @@ create_oride_cohort_mid_task = HiveOperator(
             (select dt,
             city_id,
             product_id,
+            driver_serv_type,
             order_id,
             passenger_id,
             driver_id,
@@ -109,8 +110,8 @@ create_oride_cohort_mid_task = HiveOperator(
             --min(unix_timestamp(create_time)) over (partition by passenger_id) as user_first_time,--乘客第一次完单时间
             --min(unix_timestamp(create_time)) over (partition by driver_id) as driver_first_time,--司机第一次完单时间
             from oride_dw.dwd_oride_order_base_include_test_df
-            where dt in('{pt}','his') and create_date>='2019-05-27'
-            and status in(4,5)) t ;
+            where dt in('{pt}','his') and create_date>='2019-06-17'
+            and status in(4,5) and city_id<>999001 and driver_id<>1) t ;
             '''.format(
             pt='{{macros.ds_add(ds, +6)}}'
     ),
@@ -249,7 +250,9 @@ app_oride_act_user_cohort_w_task = HiveOperator(
         (select week_create_date,city_id,product_id,passenger_id 
         from oride_dw.oride_cohort_mid 
         group by week_create_date,city_id,product_id,passenger_id) act_user
-        on a.passenger_id=act_user.passenger_id
+        on a.city_id=act_user.city_id
+        and a.product_id=act_user.product_id
+        and a.passenger_id=act_user.passenger_id
         where a.week_create_date>=act_user.week_create_date
         group by nvl(a.week_create_date,-10000),
         nvl((a.week_create_date-act_user.week_create_date),-10000),
@@ -297,7 +300,9 @@ app_oride_act_driver_cohort_w_task = HiveOperator(
         (select week_create_date,city_id,product_id,driver_id 
         from oride_dw.oride_cohort_mid 
         group by week_create_date,city_id,product_id,driver_id) act_driver
-        on a.driver_id=act_driver.driver_id
+        on a.city_id=act_driver.city_id
+        and a.product_id=act_driver.product_id
+        and a.driver_id=act_driver.driver_id
         where a.week_create_date>=act_driver.week_create_date
         group by nvl(a.week_create_date,-10000),
         nvl((a.week_create_date-act_driver.week_create_date),-10000),
