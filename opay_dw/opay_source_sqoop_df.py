@@ -10,7 +10,6 @@ from utils.validate_metrics_utils import *
 import logging
 from plugins.SqoopSchemaUpdate import SqoopSchemaUpdate
 from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
-from plugins.TaskTouchzSuccess import TaskTouchzSuccess
 from utils.util import on_success_callback
 
 args = {
@@ -34,22 +33,13 @@ dag = airflow.DAG(
 
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
 
-def fun_task_timeout_monitor(yesterday_ds, db_name, table_name, **op_kwargs):
+def fun_task_timeout_monitor(ds, db_name, table_name, **op_kwargs):
     tb = [
-        {"db": db_name, "table":table_name, "partition": "dt={pt}".format(pt=yesterday_ds), "timeout": "7200"}
+        {"db": db_name, "table":table_name, "partition": "dt={pt}".format(pt=ds), "timeout": "7200"}
     ]
 
     TaskTimeoutMonitor().set_task_monitor(tb)
 
-
-#生成_SUCCESS
-def check_success(yesterday_ds, table_name, hdfs_path, **op_kwargs):
-
-    msg = [
-        {"table":table_name,"hdfs_path": "{hdfsPath}/dt={pt}".format(pt=yesterday_ds,hdfsPath=hdfs_path)}
-    ]
-
-    TaskTouchzSuccess().set_touchz_success(msg)
 
 '''
 导入数据的列表
@@ -240,7 +230,7 @@ for db_name, table_name, conn_id, prefix_name,priority_weight_nm in table_list:
             --username {username} \
             --password {password} \
             --table {table} \
-            --target-dir {ufile_path}/dt={{{{ yesterday_ds }}}}/ \
+            --target-dir {ufile_path}/dt={{{{ ds }}}}/ \
             --fields-terminated-by "\\001" \
             --lines-terminated-by "\\n" \
             --hive-delims-replacement " " \
@@ -279,7 +269,7 @@ for db_name, table_name, conn_id, prefix_name,priority_weight_nm in table_list:
         task_id='add_partitions_{}'.format(hive_table_name),
         priority_weight=priority_weight_nm,
         hql='''
-                ALTER TABLE {table} ADD IF NOT EXISTS PARTITION (dt = '{{{{ yesterday_ds }}}}')
+                ALTER TABLE {table} ADD IF NOT EXISTS PARTITION (dt = '{{{{ ds }}}}')
             '''.format(table=hive_table_name),
         schema=HIVE_DB,
         dag=dag)
@@ -312,18 +302,4 @@ for db_name, table_name, conn_id, prefix_name,priority_weight_nm in table_list:
         dag=dag
     )
 
-    #生成_SUCCESS
-    touchz_data_success= PythonOperator(
-        task_id='touchz_data_success_{}'.format(hive_table_name),
-        priority_weight=priority_weight_nm,
-        python_callable=check_success,
-        provide_context=True,
-        op_kwargs={
-            'db_name': HIVE_DB,
-            'table_name': hive_table_name,
-            'hdfs_path': UFILE_PATH % (db_name, table_name)
-        },
-        dag=dag
-    )
-
-    import_table >> check_table >> add_partitions >> validate_all_data >> touchz_data_success
+    import_table >> check_table >> add_partitions >> validate_all_data

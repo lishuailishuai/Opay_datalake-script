@@ -17,7 +17,6 @@ from utils.validate_metrics_utils import *
 import logging
 from plugins.SqoopSchemaUpdate import SqoopSchemaUpdate
 from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
-from plugins.TaskTouchzSuccess import TaskTouchzSuccess
 from utils.util import on_success_callback
 
 
@@ -51,15 +50,6 @@ def fun_task_timeout_monitor(ds, db_name, table_name, **op_kwargs):
 
     TaskTimeoutMonitor().set_task_monitor(tb)
 
-
-#生成_SUCCESS
-def check_success(ds, table_name, hdfs_path, **op_kwargs):
-
-    msg = [
-        {"table":table_name,"hdfs_path": "{hdfsPath}/dt={pt}".format(pt=ds,hdfsPath=hdfs_path)}
-    ]
-
-    TaskTouchzSuccess().set_touchz_success(msg)
 
 obus_table_list = [
     {"db": "obus_data", "table": "conf_capped_price",                "conn": "obus_db"},
@@ -305,19 +295,6 @@ for obus_table in obus_table_list:
         dag=dag
     )
 
-    #生成_SUCCESS
-    touchz_data_success= PythonOperator(
-        task_id='touchz_data_success_{}'.format(hive_table.format(bs=obus_table.get('table'))),
-        python_callable=check_success,
-        provide_context=True,
-        op_kwargs={
-            'db_name': hive_db,
-            'table_name': hive_table.format(bs=obus_table.get('table')),
-            'hdfs_path': s3path.format(bs=obus_table.get('table'))+"/country_code=nal"
-        },
-        dag=dag
-    )
-
     # 加入调度队列
-    import_from_mysql >> create_table >> add_partitions >> validate_all_data >> refresh_impala >> touchz_data_success >> success
+    import_from_mysql >> create_table >> add_partitions >> validate_all_data >> refresh_impala >> success
 
