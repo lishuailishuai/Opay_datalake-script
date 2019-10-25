@@ -49,7 +49,7 @@ db_name,table_name,conn_id,prefix_name,priority_weight
 #
 
 table_list = [
-    ("ptsp_db", "opos_payment_order", "opos_ptsp_db", "base", 3, True),
+    ("ptsp_db", "opos_payment_order", "opos_ptsp_db", "base", 3),
 ]
 
 HIVE_DB = 'opos_dw_ods'
@@ -83,21 +83,11 @@ table_dim_list = []
 table_not_core_list = []
 
 conn_conf_dict = {}
-for db_name, table_name, conn_id, prefix_name, priority_weight_nm, is_time_partition in table_list:
+for db_name, table_name, conn_id, prefix_name, priority_weight_nm in table_list:
     if conn_id not in conn_conf_dict:
         conn_conf_dict[conn_id] = BaseHook.get_connection(conn_id)
 
     hive_table_name = HIVE_TABLE % (prefix_name, table_name)
-
-    import_table_name = ''
-    if is_time_partition:
-        # 时间分区表特殊处理
-        day = '{{ ds }}'
-        year = datetime.strptime(day, "%Y-%m-%d").strftime("%Y")
-        week = datetime.strptime(day, "%Y-%m-%d").strftime("%W")
-        import_table_name = table_name + '_' + year + '_' + week
-    else:
-        import_table_name = table_name
 
     # sqoop import
     import_table = BashOperator(
@@ -125,7 +115,7 @@ for db_name, table_name, conn_id, prefix_name, priority_weight_nm, is_time_parti
             schema=db_name,
             username=conn_conf_dict[conn_id].login,
             password=conn_conf_dict[conn_id].password,
-            table=import_table_name,
+            table=table_name + '_' + '{{ execution_date.strftime("%Y") }}' + '_' + '{{ execution_date.strftime("%W") }}',
             ufile_path=UFILE_PATH % (db_name, table_name)
         ),
         dag=dag,
