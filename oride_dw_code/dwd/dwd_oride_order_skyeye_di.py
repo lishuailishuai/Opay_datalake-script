@@ -35,7 +35,7 @@ args = {
 }
 
 dag = airflow.DAG('dwd_oride_order_skyeye_di',
-                  schedule_interval="00 03 * * *",
+                  schedule_interval="30 08 * * *",
                   default_args=args,
                   catchup=False)
 
