@@ -213,6 +213,19 @@ for db_name, table_name, conn_id, prefix_name,priority_weight_nm in table_list:
         schema=HIVE_DB,
         dag=dag)
 
+    # 数据量监控
+    volume_monitoring = PythonOperator(
+        task_id='volume_monitorin_{}'.format(hive_table_name),
+        python_callable=data_volume_monitoring,
+        provide_context=True,
+        op_kwargs={
+            'db_name': HIVE_DB,
+            'table_name': hive_table_name,
+        },
+        dag=dag
+    )
+    add_partitions >> volume_monitoring >> validate_all_data
+
     validate_all_data = PythonOperator(
         task_id='validate_data_{}'.format(hive_table_name),
         priority_weight=priority_weight_nm,
@@ -241,4 +254,4 @@ for db_name, table_name, conn_id, prefix_name,priority_weight_nm in table_list:
         dag=dag
     )
 
-    import_table >> check_table >> add_partitions >> validate_all_data
+    import_table >> check_table >> add_partitions
