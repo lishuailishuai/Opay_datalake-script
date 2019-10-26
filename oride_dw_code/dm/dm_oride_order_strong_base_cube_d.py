@@ -190,9 +190,27 @@ dm_dm_oride_order_strong_base_cube_d_task = HiveOperator(
                        count(DISTINCT (if(event_name IN('order_push_show','accept_order_show'),order_id,NULL))) AS show_ord_cnt, --推送订单数（派单）
                        count(DISTINCT (if(event_name='accept_order_click',order_id,NULL))) AS accept_click_ord_cnt --接单数（派单）
                 
-                FROM oride_dw.dwd_oride_driver_accept_order_funnel_di
+                FROM 
+                (select city_id,
+                       product_id,
+                       country_code,
+                       event_name,
+                       order_id
+                from 
+                oride_dw.dwd_oride_driver_accept_order_click_detail_di
+                                WHERE dt='{pt}'
+                                  AND isAssign=1
+                union all
+                
+                select city_id,
+                       product_id,
+                       country_code,
+                       event_name,
+                       order_id
+                from 
+                oride_dw.dwd_oride_driver_accept_order_show_detail_di
                 WHERE dt='{pt}'
-                  AND isAssign=1
+                  AND isAssign=1) m
                 GROUP BY nvl(city_id,-10000),
                          nvl(product_id,-10000)
                        --  nvl(country_code,-10000)
