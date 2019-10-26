@@ -13,7 +13,7 @@ from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
 from plugins.TaskTouchzSuccess import TaskTouchzSuccess
 
 args = {
-    'owner': 'hui.cheng',
+    'owner': 'chenghui',
     'start_date': datetime(2019, 9, 9),
     'depends_on_past': False,
     'retries': 3,
