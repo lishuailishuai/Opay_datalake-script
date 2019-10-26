@@ -427,6 +427,7 @@ def data_volume_monitoring(ds, db_name, table_name, **op_kwargs):
     cursor.execute(sql)
     logging.info("execute sql:%s", sql)
     res = cursor.fetchone()
+    print(res)
     row_num = int(res[0])
     logging.info("import data {db}.{table}, row_num:{row_num}".format(db=db_name, table=table_name, row_num=row_num))
     if row_num <= 0:
