@@ -98,7 +98,7 @@ dim_oride_passenger_whitelist_base_task = HiveOperator(
 
         SELECT
             id,--'自增id' 
-            passenger_id,--'用户id' 
+            user_id as passenger_id,--'用户id' 
             is_white,--'是否为白名单成员，1是，0否' 
             create_time,--'创建时间' 
             update_time,--'更新时间' 
