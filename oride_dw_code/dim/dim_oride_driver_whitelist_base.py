@@ -34,7 +34,7 @@ args = {
     'email_on_retry': False,
 }
 
-dag = airflow.DAG('dim_oride_passenger_whitelist_base',
+dag = airflow.DAG('dim_oride_driver_whitelist_base',
                   schedule_interval="20 01 * * *",
                   default_args=args,
                   catchup=False)
@@ -49,10 +49,10 @@ sleep_time = BashOperator(
 
 
 # 依赖前一天分区
-ods_sqoop_base_data_user_whitelist_df_task = UFileSensor(
-    task_id='ods_sqoop_base_data_user_whitelist_df_task',
+ods_sqoop_base_data_driver_whitelist_df_task = UFileSensor(
+    task_id='ods_sqoop_base_data_driver_whitelist_df_task',
     filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride_dw_sqoop/oride_data/data_user_whitelist",
+        hdfs_path_str="oride_dw_sqoop/oride_data/data_driver_whitelist",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -63,7 +63,7 @@ ods_sqoop_base_data_user_whitelist_df_task = UFileSensor(
 ##----------------------------------------- 变量 ---------------------------------------##
 
 
-table_name = "dim_oride_passenger_whitelist_base"
+table_name = "dim_oride_driver_whitelist_base"
 hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
 
 ##----------------------------------------- 任务超时监控 ---------------------------------------## 
@@ -87,8 +87,8 @@ task_timeout_monitor= PythonOperator(
 
 ##----------------------------------------- 脚本 ---------------------------------------##
 
-dim_oride_passenger_whitelist_base_task = HiveOperator(
-    task_id='dim_oride_passenger_whitelist_base_task',
+dim_oride_driver_whitelist_base_task = HiveOperator(
+    task_id='dim_oride_driver_whitelist_base_task',
 
     hql='''
         SET hive.exec.parallel=TRUE;
@@ -98,7 +98,7 @@ dim_oride_passenger_whitelist_base_task = HiveOperator(
 
         SELECT
             id,--'自增id', 
-            passenger_id,--'用户id', 
+            driver_id,--'司机id', 
             is_white,--'是否为白名单成员，1是，0否', 
             create_time,--'创建时间', 
             update_time,--'更新时间', 
@@ -106,7 +106,7 @@ dim_oride_passenger_whitelist_base_task = HiveOperator(
             'nal' as country_code,
             '{pt}' as dt
         FROM
-            oride_dw_ods.ods_sqoop_base_data_user_whitelist_df
+            oride_dw_ods.dim_oride_driver_whitelist_base
         WHERE
             dt='{pt}'
         ;
@@ -136,4 +136,4 @@ touchz_data_success= PythonOperator(
     dag=dag
 )
 
-ods_sqoop_base_data_user_whitelist_df_task >> sleep_time >> dim_oride_passenger_whitelist_base_task >> touchz_data_success
+ods_sqoop_base_data_driver_whitelist_df_task >> sleep_time >> dim_oride_driver_whitelist_base_task >> touchz_data_success
