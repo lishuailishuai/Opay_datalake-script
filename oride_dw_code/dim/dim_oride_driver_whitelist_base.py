@@ -102,7 +102,7 @@ dim_oride_driver_whitelist_base_task = HiveOperator(
             is_white,--'是否为白名单成员，1是，0否', 
             create_time,--'创建时间', 
             update_time,--'更新时间', 
-            reason string COMMENT '添加原因'
+            reason,--'添加原因'
             'nal' as country_code,
             '{pt}' as dt
         FROM
