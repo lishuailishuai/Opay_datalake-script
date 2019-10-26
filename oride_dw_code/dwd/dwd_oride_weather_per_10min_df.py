@@ -104,7 +104,7 @@ dwd_oride_weather_per_10min_df_task = HiveOperator(
             temp, 
             weather, 
             rain, 
-            other
+            other,
             'nal' as country_code,
             '{pt}' as dt
         FROM
