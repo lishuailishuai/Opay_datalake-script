@@ -227,10 +227,10 @@ from (SELECT dt,country_code,
 
 FROM (SELECT sum(if(dt>=date_add('{pt}',-28)
               AND dt<'{pt}'
-              AND from_unixtime(unix_timestamp(dt,'yyyy-MM-dd'),'u')=from_unixtime(unix_timestamp('{pt}', 'yyyy-MM-dd'),'u'),ride_order_cnt,0)) over (partition BY '{pt}',country_code, city_id, product_id)/4 AS order_cnt_lfw,--近四周同期下单数据均值
+              AND from_unixtime(unix_timestamp(dt,'yyyy-MM-dd'),'u')=from_unixtime(unix_timestamp('{pt}', 'yyyy-MM-dd'),'u'),ride_order_cnt,0)) over (partition BY '{pt}',country_code, city_id, driver_serv_type)/4 AS order_cnt_lfw,--近四周同期下单数据均值
        sum(if(dt>=date_add('{pt}',-28)
               AND dt<'{pt}'
-              AND from_unixtime(unix_timestamp(dt,'yyyy-MM-dd'),'u')=from_unixtime(unix_timestamp('{pt}', 'yyyy-MM-dd'),'u'),finish_order_cnt,0)) over (partition BY '{pt}',country_code, city_id, product_id)/4 AS finish_order_cnt_lfw,--近四周同期完单数据
+              AND from_unixtime(unix_timestamp(dt,'yyyy-MM-dd'),'u')=from_unixtime(unix_timestamp('{pt}', 'yyyy-MM-dd'),'u'),finish_order_cnt,0)) over (partition BY '{pt}',country_code, city_id, driver_serv_type)/4 AS finish_order_cnt_lfw,--近四周同期完单数据
        *
 FROM oride_dw.dm_oride_order_base_d
 WHERE dt>=date_add('{pt}',-28)
