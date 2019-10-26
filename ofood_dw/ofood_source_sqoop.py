@@ -11,6 +11,7 @@ import logging
 from plugins.SqoopSchemaUpdate import SqoopSchemaUpdate
 from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
 from utils.util import on_success_callback
+from utils.validate_metrics_utils import *
 
 
 args = {
@@ -228,6 +229,19 @@ for db_name, table_name, conn_id, prefix_name in table_list:
             '''.format(table=hive_table_name),
         schema=HIVE_DB,
         dag=dag)
+
+    # 数据量监控
+    volume_monitoring = PythonOperator(
+        task_id='volume_monitorin_{}'.format(hive_table_name),
+        python_callable=data_volume_monitoring,
+        provide_context=True,
+        op_kwargs={
+            'db_name': HIVE_DB,
+            'table_name': hive_table_name,
+        },
+        dag=dag
+    )
+    add_partitions >> volume_monitoring
 
     # 超时监控
     task_timeout_monitor= PythonOperator(
