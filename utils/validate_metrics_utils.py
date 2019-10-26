@@ -418,14 +418,14 @@ def create_validate_data(data_now, data_before_7, metric_order_and_name_map):
 def data_volume_monitoring(ds, db_name, table_name, **op_kwargs):
     cursor = get_hive_cursor()
     sql = """
-        SELECT count(1) FROM {db_name}.{table_name} WHERE dt={dt}
+        SELECT count(1) FROM {db_name}.{table_name} WHERE dt='{dt}'
     """.format(
         db_name=db_name,
         table_name=table_name,
         dt=ds
     )
-    cursor.execute(sql)
     logging.info("execute sql:%s", sql)
+    cursor.execute(sql)
     res = cursor.fetchone()
     print(res)
     row_num = int(res[0])
