@@ -219,7 +219,14 @@ dm_oride_order_base_d_task = HiveOperator(
            sum(r1.accept_order_assigned_cnt) as  accept_order_pick_up_assigned_cnt, --应答单分配次数（应答单接驾距离(米)（计算平均接驾距离（应答单使用）））
            null as column1, --预留字段
            ord.driver_serv_type,  --业务类型，订单表中司机类型
-
+           
+           --------拼车相关数据---------
+           count(if(ord.is_carpool =1, ord.order_id, null)) as carpool_num,--'拼车订单数'
+           count(if(ord.is_chartered_bus = 1, ord.order_id, null)) as chartered_bus_num, --包车订单数
+           count(if(ord.is_carpool_success = 1, ord.order_id, null)) as carpool_success_num,--'拼车成功订单数'
+           count(if(ord.is_carpool_accept = 1, ord.order_id, null)) as carpool_accept_num, --'拼车应答订单数'
+           count(if(ord.is_carpool_success_and_finish = 1, ord.order_id, null)) as carpool_success_and_finish_num,--'拼车成功且完单数'
+           
            ord.country_code,
            
            ord.dt
