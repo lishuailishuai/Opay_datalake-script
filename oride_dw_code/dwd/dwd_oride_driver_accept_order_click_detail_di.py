@@ -122,6 +122,8 @@ dwd_oride_driver_accept_order_click_detail_di_task = HiveOperator(
            
            log_timestamp,
            --埋点时间
+           isAssign, --是否强派单,1强派单,0非强派单
+           event_name,  --事件类型
     
            'nal' AS country_code,
            --国家码字段
@@ -137,7 +139,9 @@ dwd_oride_driver_accept_order_click_detail_di_task = HiveOperator(
               get_json_object(event_value, '$.lng') AS lng,
               get_json_object(event_value, '$.startLat') AS startLat,
               get_json_object(event_value, '$.startLng') AS startLng,
-              event_time AS log_timestamp
+              event_time AS log_timestamp,
+              get_json_object(event_value, '$.isAssign') AS isAssign,  --是否强派单
+              event_name  --事件类型
        FROM oride_dw.dwd_oride_client_event_detail_hi
        WHERE dt='{pt}'
          AND event_name ='accept_order_click'
@@ -151,7 +155,9 @@ dwd_oride_driver_accept_order_click_detail_di_task = HiveOperator(
               get_json_object(event_value, '$.lng') AS lng,
               get_json_object(event_value, '$.startLat') AS startLat,
               get_json_object(event_value, '$.startLng') AS startLng,
-              event_time AS log_timestamp
+              event_time AS log_timestamp,
+              get_json_object(event_value, '$.isAssign') AS isAssign,  --是否强派单
+              event_name  --事件类型
        FROM oride_dw.dwd_oride_client_event_detail_hi
        lateral view explode(split(substr(get_json_object(event_value, '$.order_ids'),2,length(get_json_object(event_value, '$.order_ids'))-2),',')) order_ids as order_id
        WHERE dt='{pt}'

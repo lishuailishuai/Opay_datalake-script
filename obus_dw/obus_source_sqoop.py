@@ -283,6 +283,20 @@ for obus_table in obus_table_list:
         dag=dag
     )
 
+    # 数据量监控
+    volume_monitoring = PythonOperator(
+        task_id='volume_monitorin_{}'.format(hive_table.format(bs=obus_table.get('table'))),
+        python_callable=data_volume_monitoring,
+        provide_context=True,
+        op_kwargs={
+            'db_name': hive_db,
+            'table_name': hive_table.format(bs=obus_table.get('table')),
+        },
+        dag=dag
+    )
+    add_partitions >> volume_monitoring >> validate_all_data
+
+
     # 超时监控
     task_timeout_monitor= PythonOperator(
         task_id='task_timeout_monitor_{}'.format(hive_table.format(bs=obus_table.get('table'))),
@@ -296,5 +310,6 @@ for obus_table in obus_table_list:
     )
 
     # 加入调度队列
-    import_from_mysql >> create_table >> add_partitions >> validate_all_data >> refresh_impala >> success
+    import_from_mysql >> create_table >> add_partitions
+    validate_all_data >> refresh_impala >> success
 

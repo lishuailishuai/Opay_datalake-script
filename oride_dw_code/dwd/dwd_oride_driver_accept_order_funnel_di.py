@@ -20,6 +20,8 @@ import logging
 from airflow.models import Variable
 import requests
 import os
+from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
+from plugins.TaskTouchzSuccess import TaskTouchzSuccess
 
 args = {
     'owner': 'lili.chen',
@@ -52,6 +54,24 @@ dwd_oride_driver_accept_order_funnel_di_prev_day_task = HivePartitionSensor(
     partition="""dt='{{ ds }}' and hour='23'""",
     schema="oride_dw",
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+##----------------------------------------- 任务超时监控 ---------------------------------------##
+
+def fun_task_timeout_monitor(ds,dag,**op_kwargs):
+
+    dag_ids=dag.dag_id
+
+    msg = [
+        {"db": "oride_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "600"}
+    ]
+
+    TaskTimeoutMonitor().set_task_monitor(msg)
+
+task_timeout_monitor= PythonOperator(
+    task_id='task_timeout_monitor',
+    python_callable=fun_task_timeout_monitor,
+    provide_context=True,
     dag=dag
 )
 
