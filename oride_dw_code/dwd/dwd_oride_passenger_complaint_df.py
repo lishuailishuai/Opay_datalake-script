@@ -149,6 +149,7 @@ touchz_data_success = BashOperator(
     task_id='touchz_data_success',
 
     bash_command="""
+    $HADOOP_HOME/bin/hadoop fs -mkdir {hdfs_data_dir}
     line_num=`$HADOOP_HOME/bin/hadoop fs -du -s {hdfs_data_dir} | tail -1 | awk '{{print $1}}'`
 
     if [ $line_num -eq 0 ]
