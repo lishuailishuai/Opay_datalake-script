@@ -51,7 +51,7 @@ sleep_time = BashOperator(
 # 依赖前一小时分区
 dwd_oride_client_event_detail_hi_hour_task = UFileSensor(
     task_id='dwd_oride_client_event_detail_hi_hour_task',
-    filepath='{hdfs_path_str}/dt={pt}/hour={hour}/_SUCCESS'.format(
+    filepath='{hdfs_path_str}/country_code=nal/dt={pt}/hour={hour}/_SUCCESS'.format(
         hdfs_path_str="oride/oride_dw/dwd_oride_client_event_detail_hi",
         pt='{{ds}}',
         hour='{{ execution_date.strftime("%H") }}'
