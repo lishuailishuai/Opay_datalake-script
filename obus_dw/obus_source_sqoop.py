@@ -292,7 +292,7 @@ for obus_table in obus_table_list:
         dag=dag
     )
 
-    if obus_table in IGNORED_TABLE_LIST:
+    if obus_table.get('table') in IGNORED_TABLE_LIST:
         add_partitions >> validate_all_data
     else:
         # 数据量监控
