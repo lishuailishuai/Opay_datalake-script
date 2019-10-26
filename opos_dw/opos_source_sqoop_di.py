@@ -181,7 +181,7 @@ for db_name, table_name, conn_id, prefix_name, priority_weight_nm in table_list:
             --username {username} \
             --password {password} \
             --query 'select * from {table} where (DATE_FORMAT(create_time,"%Y-%m-%d")="{{{{ ds }}}}" OR DATE_FORMAT(modify_time,"%Y-%m-%d")="{{{{ ds }}}}") AND $CONDITIONS' \
-            --split-by id \
+            --split-by order_id \
             --target-dir {ufile_path}/dt={{{{ ds }}}}/ \
             --fields-terminated-by "\\001" \
             --lines-terminated-by "\\n" \
