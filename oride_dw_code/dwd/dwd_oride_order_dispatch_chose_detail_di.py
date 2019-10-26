@@ -20,6 +20,8 @@ import logging
 from airflow.models import Variable
 import requests
 import os
+from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
+from plugins.TaskTouchzSuccess import TaskTouchzSuccess
 
 args = {
     'owner': 'linan',
@@ -62,6 +64,28 @@ dependence_dwd_oride_order_dispatch_chose_detail_di_prev_day_task = HivePartitio
 table_name = "dwd_oride_order_dispatch_chose_detail_di"
 hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
 
+
+
+##----------------------------------------- 任务超时监控 ---------------------------------------##
+
+def fun_task_timeout_monitor(ds, dag, **op_kwargs):
+    dag_ids = dag.dag_id
+
+    tb = [
+        {"db": "oride_dw", "table": "{dag_name}".format(dag_name=dag_ids),
+         "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "600"}
+    ]
+
+    TaskTimeoutMonitor().set_task_monitor(tb)
+
+
+task_timeout_monitor = PythonOperator(
+    task_id='task_timeout_monitor',
+    python_callable=fun_task_timeout_monitor,
+    provide_context=True,
+    dag=dag
+)
+
 ##----------------------------------------- 脚本 ---------------------------------------##
 
 dwd_oride_order_dispatch_chose_detail_di_task = HiveOperator(
@@ -95,27 +119,23 @@ dwd_oride_order_dispatch_chose_detail_di_task = HiveOperator(
 )
 
 # 生成_SUCCESS
-touchz_data_success = BashOperator(
+def check_success(ds, dag, **op_kwargs):
+    dag_ids = dag.dag_id
 
+    msg = [
+        {"table": "{dag_name}".format(dag_name=dag_ids),
+         "hdfs_path": "{hdfsPath}/country_code=nal/dt={pt}".format(pt=ds, hdfsPath=hdfs_path)}
+    ]
+
+    TaskTouchzSuccess().set_touchz_success(msg)
+
+
+touchz_data_success = PythonOperator(
     task_id='touchz_data_success',
-
-    bash_command="""
-    line_num=`$HADOOP_HOME/bin/hadoop fs -du -s {hdfs_data_dir} | tail -1 | awk '{{print $1}}'`
-
-    if [ $line_num -eq 0 ]
-    then
-        echo "FATAL {hdfs_data_dir} is empty"
-        exit 1
-    else
-        echo "DATA EXPORT Successed ......"
-        $HADOOP_HOME/bin/hadoop fs -touchz {hdfs_data_dir}/_SUCCESS
-    fi
-    """.format(
-        pt='{{ds}}',
-        now_day='{{macros.ds_add(ds, +1)}}',
-        hdfs_data_dir=hdfs_path + '/country_code=nal/dt={{ds}}'
-    ),
-    dag=dag)
+    python_callable=check_success,
+    provide_context=True,
+    dag=dag
+)
 
 dependence_dwd_oride_order_dispatch_chose_detail_di_prev_day_task >> \
 sleep_time >> \

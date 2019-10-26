@@ -20,23 +20,25 @@ import logging
 from airflow.models import Variable
 import requests
 import os
+from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
+from plugins.TaskTouchzSuccess import TaskTouchzSuccess
+
 
 args = {
-        'owner': 'yangmingze',
-        'start_date': datetime(2019, 5, 20),
-        'depends_on_past': False,
-        'retries': 3,
-        'retry_delay': timedelta(minutes=2),
-        'email': ['bigdata_dw@opay-inc.com'],
-        'email_on_failure': True,
-        'email_on_retry': False,
-} 
+    'owner': 'yangmingze',
+    'start_date': datetime(2019, 5, 20),
+    'depends_on_past': False,
+    'retries': 3,
+    'retry_delay': timedelta(minutes=2),
+    'email': ['bigdata_dw@opay-inc.com'],
+    'email_on_failure': True,
+    'email_on_retry': False,
+}
 
-dag = airflow.DAG( 'dwd_oride_order_push_driver_detail_di', 
-    schedule_interval="00 01 * * *", 
-    default_args=args,
-    catchup=False) 
-
+dag = airflow.DAG('dwd_oride_order_push_driver_detail_di',
+                  schedule_interval="00 01 * * *",
+                  default_args=args,
+                  catchup=False)
 
 sleep_time = BashOperator(
     task_id='sleep_id',
@@ -47,32 +49,53 @@ sleep_time = BashOperator(
 ##----------------------------------------- 依赖 ---------------------------------------## 
 
 
-#依赖前一天分区
-dependence_dwd_oride_order_push_driver_detail_di_prev_day_tesk=HivePartitionSensor(
-      task_id="dwd_oride_order_push_driver_detail_di_prev_day_task",
-      table="dispatch_tracker_server_magic",
-      partition="dt='{{macros.ds_add(ds, +1)}}' and hour='00'",
-      schema="oride_source",
-      poke_interval=60, #依赖不满足时，一分钟检查一次依赖状态
-      dag=dag
-    )
+# 依赖前一天分区
+dependence_dwd_oride_order_push_driver_detail_di_prev_day_tesk = HivePartitionSensor(
+    task_id="dependence_dwd_oride_order_push_driver_detail_di_prev_day_tesk",
+    table="dispatch_tracker_server_magic",
+    partition="dt='{{macros.ds_add(ds, +1)}}' and hour='00'",
+    schema="oride_source",
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
 
-##----------------------------------------- 变量 ---------------------------------------## 
+##----------------------------------------- 变量 ---------------------------------------##
 
 
-table_name="dwd_oride_order_push_driver_detail_di"
-hdfs_path="ufile://opay-datalake/oride/oride_dw/"+table_name
+table_name = "dwd_oride_order_push_driver_detail_di"
+hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
+
+
+##----------------------------------------- 任务超时监控 ---------------------------------------##
+
+def fun_task_timeout_monitor(ds, dag, **op_kwargs):
+    dag_ids = dag.dag_id
+
+    tb = [
+        {"db": "oride_dw", "table": "{dag_name}".format(dag_name=dag_ids),
+         "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "600"}
+    ]
+
+    TaskTimeoutMonitor().set_task_monitor(tb)
+
+
+task_timeout_monitor = PythonOperator(
+    task_id='task_timeout_monitor',
+    python_callable=fun_task_timeout_monitor,
+    provide_context=True,
+    dag=dag
+)
 
 ##----------------------------------------- 脚本 ---------------------------------------## 
 
 dwd_oride_order_push_driver_detail_di_task = HiveOperator(
-task_id='dwd_oride_order_push_driver_detail_di_task',
+    task_id='dwd_oride_order_push_driver_detail_di_task',
 
-hql='''
-SET hive.exec.parallel=TRUE;
-SET hive.exec.dynamic.partition.mode=nonstrict;
-
-insert overwrite table oride_dw.{table} partition(country_code,dt)
+    hql='''
+        SET hive.exec.parallel=TRUE;
+        SET hive.exec.dynamic.partition.mode=nonstrict;
+        
+        insert overwrite table oride_dw.{table} partition(country_code,dt)
         select 
                 get_json_object(event_values, '$.city_id') as city_id,--下单时所在城市
                 get_json_object(event_values, '$.order_id') as order_id, --订单ID
@@ -95,32 +118,28 @@ insert overwrite table oride_dw.{table} partition(country_code,dt)
         pt='{{ds}}',
         now_day='{{macros.ds_add(ds, +1)}}',
         table=table_name
-        ),
+    ),
     dag=dag
-    )
+)
 
-#生成_SUCCESS
-touchz_data_success = BashOperator(
 
+# 生成_SUCCESS
+def check_success(ds, dag, **op_kwargs):
+    dag_ids = dag.dag_id
+
+    msg = [
+        {"table": "{dag_name}".format(dag_name=dag_ids),
+         "hdfs_path": "{hdfsPath}/country_code=nal/dt={pt}".format(pt=ds, hdfsPath=hdfs_path)}
+    ]
+
+    TaskTouchzSuccess().set_touchz_success(msg)
+
+
+touchz_data_success = PythonOperator(
     task_id='touchz_data_success',
+    python_callable=check_success,
+    provide_context=True,
+    dag=dag
+)
 
-    bash_command="""
-    line_num=`$HADOOP_HOME/bin/hadoop fs -du -s {hdfs_data_dir} | tail -1 | awk '{{print $1}}'`
-    
-    if [ $line_num -eq 0 ]
-    then
-        echo "FATAL {hdfs_data_dir} is empty"
-        exit 1
-    else
-        echo "DATA EXPORT Successed ......"
-        $HADOOP_HOME/bin/hadoop fs -touchz {hdfs_data_dir}/_SUCCESS
-    fi
-    """.format(
-        pt='{{ds}}',
-        now_day='{{macros.ds_add(ds, +1)}}',
-        hdfs_data_dir=hdfs_path+'/country_code=nal/dt={{ds}}'
-        ),
-    dag=dag)
- 
-
-dependence_dwd_oride_order_push_driver_detail_di_prev_day_tesk>>sleep_time>>dwd_oride_order_push_driver_detail_di_task>>touchz_data_success
+dependence_dwd_oride_order_push_driver_detail_di_prev_day_tesk >> sleep_time >> dwd_oride_order_push_driver_detail_di_task >> touchz_data_success
