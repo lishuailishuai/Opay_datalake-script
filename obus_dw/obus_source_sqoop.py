@@ -51,6 +51,15 @@ def fun_task_timeout_monitor(ds, db_name, table_name, **op_kwargs):
     TaskTimeoutMonitor().set_task_monitor(tb)
 
 
+# 忽略数据量检查的table
+IGNORED_TABLE_LIST = [
+    'data_driver_feedback',
+    'data_order_copy',
+    'log_balance',
+    'data_driver_recharge_records',
+    'data_device_extend',
+]
+
 obus_table_list = [
     {"db": "obus_data", "table": "conf_capped_price",                "conn": "obus_db"},
     {"db": "obus_data", "table": "conf_city",                        "conn": "obus_db"},
@@ -283,18 +292,21 @@ for obus_table in obus_table_list:
         dag=dag
     )
 
-    # 数据量监控
-    volume_monitoring = PythonOperator(
-        task_id='volume_monitorin_{}'.format(hive_table.format(bs=obus_table.get('table'))),
-        python_callable=data_volume_monitoring,
-        provide_context=True,
-        op_kwargs={
-            'db_name': hive_db,
-            'table_name': hive_table.format(bs=obus_table.get('table')),
-        },
-        dag=dag
-    )
-    add_partitions >> volume_monitoring >> validate_all_data
+    if obus_table.get('table') in IGNORED_TABLE_LIST:
+        add_partitions >> validate_all_data
+    else:
+        # 数据量监控
+        volume_monitoring = PythonOperator(
+            task_id='volume_monitorin_{}'.format(hive_table.format(bs=obus_table.get('table'))),
+            python_callable=data_volume_monitoring,
+            provide_context=True,
+            op_kwargs={
+                'db_name': hive_db,
+                'table_name': hive_table.format(bs=obus_table.get('table')),
+            },
+            dag=dag
+        )
+        add_partitions >> volume_monitoring >> validate_all_data
 
 
     # 超时监控

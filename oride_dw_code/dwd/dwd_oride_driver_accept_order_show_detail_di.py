@@ -50,8 +50,8 @@ sleep_time = BashOperator(
 # 依赖前一天分区
 dwd_oride_driver_accept_order_show_detail_di_prev_day_task = UFileSensor(
     task_id='dwd_oride_driver_accept_order_show_detail_di_prev_day_task',
-    filepath='{hdfs_path_str}/country_code=nal/dt={pt}/hour={hour}/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw/dwd_oride_client_event_detail_hi",
+    filepath='{hdfs_path_str}/dt={pt}/hour={hour}/_SUCCESS'.format(
+        hdfs_path_str="oride/oride_dw/dwd_oride_client_event_detail_hi/country_code=nal",
         pt='{{ds}}',
         hour='23'
     ),
