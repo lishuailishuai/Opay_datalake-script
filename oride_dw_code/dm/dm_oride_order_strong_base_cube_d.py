@@ -21,9 +21,7 @@ import json
 import logging
 from airflow.models import Variable
 import requests
-import os,sys
-reload(sys)
-sys.setdefaultencoding('utf8')
+import os
 
 args = {
     'owner': 'lili.chen',
