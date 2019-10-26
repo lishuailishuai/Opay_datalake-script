@@ -369,13 +369,13 @@ def get_all_product_rows(ds, all_completed_num):
          if(t1.city_id=-10000,'-',nvl(cit.weather,'-')) AS weather, --当日该城市天气
          concat(cast(nvl(round(nvl(t1.wet_ord_cnt,0)*100/nvl(t1.ride_order_cnt,0),1),0) AS string),'%') AS wet_order_rate, --湿单占比
          nvl(t1.ride_order_cnt,0) AS ride_order_cnt, --当日下单数
-         if(t1.dt>'2019-10-10',order_cnt_lfw,'-') AS order_cnt_lfw, --近四周同期下单数据
+         if(t1.dt>'2019-11-21',order_cnt_lfw,'-') AS order_cnt_lfw, --近四周同期下单数据
          nvl(t1.valid_ord_cnt,0) AS valid_ord_cnt, --有效下单量
          nvl(t1.finish_pay,0) AS finish_pay, --当日支付完单数
          nvl(t1.finish_order_cnt,0) AS finish_order_cnt, --当日完单量
-         if(t1.dt>'2019-10-10',finish_order_cnt_lfw,'-') AS finish_order_cnt_lfw, --完单数（近四周同期均值）
+         if(t1.dt>'2019-11-21',finish_order_cnt_lfw,'-') AS finish_order_cnt_lfw, --完单数（近四周同期均值）
          concat(cast(nvl(round(t1.finish_order_cnt*100/t1.ride_order_cnt,1),0) AS string),'%') AS finish_order_rate, --完单率
-         if(t1.dt>'2019-10-10',concat(cast(nvl(round(finish_order_cnt_lfw*100/order_cnt_lfw,1),0) AS string),'%'),'-') AS finish_order_rate_lfw, --完单率（近四周）
+         if(t1.dt>'2019-11-21',concat(cast(nvl(round(finish_order_cnt_lfw*100/order_cnt_lfw,1),0) AS string),'%'),'-') AS finish_order_rate_lfw, --完单率（近四周）
          concat(cast(nvl(round(nvl(t1.finish_order_cnt,0)*100/{all_completed_num},1),0) AS string),'%') AS city_fininsh_ord_rate, --城市完单占比
          --nvl(t1.act_users,0) as act_users, --当日活跃乘客数
          nvl(t1.ord_users,0) AS ord_users, --当日下单乘客数
