@@ -52,7 +52,7 @@ sleep_time = BashOperator(
 ods_sqoop_base_weather_per_10min_df_task = UFileSensor(
     task_id='ods_sqoop_base_weather_per_10min_df_task',
     filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="ufile://opay-datalake/oride_dw_sqoop/bi/weather_per_10min",
+        hdfs_path_str="oride_dw_sqoop/bi/weather_per_10min",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
