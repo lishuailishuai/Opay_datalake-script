@@ -15,6 +15,13 @@ from airflow.operators.bash_operator import BashOperator
 from airflow.sensors.named_hive_partition_sensor import NamedHivePartitionSensor
 from airflow.sensors.hive_partition_sensor import HivePartitionSensor
 from airflow.sensors import UFileSensor
+from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
+from plugins.TaskTouchzSuccess import TaskTouchzSuccess
+import json
+import logging
+from airflow.models import Variable
+import requests
+import os
 
 args = {
     'owner': 'lijialong',
@@ -28,7 +35,7 @@ args = {
 }
 
 dag = airflow.DAG('app_oride_order_skyeye_tableau_d',
-                  schedule_interval="00 02 * * *",
+                  schedule_interval="30 08 * * *",
                   default_args=args,
                   catchup=False)
 
@@ -67,6 +74,26 @@ dependence_dwd_oride_order_skyeye_di_prev_day_task = UFileSensor(
 
 table_name = "app_oride_order_skyeye_tableau_d"
 hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
+
+
+##----------------------------------------- 任务超时监控 ---------------------------------------##
+
+def fun_task_timeout_monitor(ds,dag,**op_kwargs):
+
+    dag_ids=dag.dag_id
+
+    tb = [
+        {"db": "oride_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "2400"}
+    ]
+
+    TaskTimeoutMonitor().set_task_monitor(tb)
+
+task_timeout_monitor= PythonOperator(
+    task_id='task_timeout_monitor',
+    python_callable=fun_task_timeout_monitor,
+    provide_context=True,
+    dag=dag
+)
 
 ##----------------------------------------- 脚本 ---------------------------------------##
 
