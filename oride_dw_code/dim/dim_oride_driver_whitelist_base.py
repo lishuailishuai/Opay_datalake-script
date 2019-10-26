@@ -106,7 +106,7 @@ dim_oride_driver_whitelist_base_task = HiveOperator(
             'nal' as country_code,
             '{pt}' as dt
         FROM
-            oride_dw_ods.dim_oride_driver_whitelist_base
+            oride_dw_ods.ods_sqoop_base_data_driver_whitelist_df
         WHERE
             dt='{pt}'
         ;
