@@ -62,7 +62,7 @@ dependence_dwd_oride_driver_location_event_hi_prev_day_task = UFileSensor(
 # 依赖前一天分区
 dependence_dwd_oride_passanger_location_event_hi_prev_day_task = UFileSensor(
     task_id='dependence_dwd_oride_passanger_location_event_hi_prev_day_task',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+    filepath='{hdfs_path_str}/country_code=nal/dt={pt}/_SUCCESS'.format(
         hdfs_path_str="oride/oride_dw/dwd_oride_passanger_location_event_di",
         pt='{{ds}}'
     ),
