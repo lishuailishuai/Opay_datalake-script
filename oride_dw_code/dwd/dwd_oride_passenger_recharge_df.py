@@ -24,7 +24,7 @@ args = {
 }
 
 dag = airflow.DAG('dwd_oride_passenger_recharge_df',
-                  schedule_interval="30 01 * * *",
+                  schedule_interval="40 03 * * *",
                   default_args=args,
                   catchup=False)
 
