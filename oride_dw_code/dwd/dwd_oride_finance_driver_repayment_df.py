@@ -34,7 +34,7 @@ args = {
     'email_on_retry': False,
 }
 
-dag = airflow.DAG('dwd_oride_rider_signups_guarantors_df',
+dag = airflow.DAG('dwd_oride_finance_driver_repayment_df',
                   schedule_interval="20 03 * * *",
                   default_args=args,
                   catchup=False)
@@ -49,10 +49,10 @@ sleep_time = BashOperator(
 
 
 # 依赖前一天分区
-ods_sqoop_mass_rider_signups_guarantors_df_task = UFileSensor(
-    task_id='ods_sqoop_mass_rider_signups_guarantors_df_task',
+ods_sqoop_base_data_driver_repayment_df_task = UFileSensor(
+    task_id='ods_sqoop_base_data_driver_repayment_df_task',
     filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride_dw_sqoop/opay_spread/rider_signups_guarantors",
+        hdfs_path_str="oride_dw_sqoop/oride_data/data_driver_repayment",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -63,7 +63,7 @@ ods_sqoop_mass_rider_signups_guarantors_df_task = UFileSensor(
 ##----------------------------------------- 变量 ---------------------------------------##
 
 
-table_name = "dwd_oride_rider_signups_guarantors_df"
+table_name = "dwd_oride_finance_driver_repayment_df"
 hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
 
 ##----------------------------------------- 任务超时监控 ---------------------------------------## 
@@ -87,8 +87,8 @@ task_timeout_monitor= PythonOperator(
 
 ##----------------------------------------- 脚本 ---------------------------------------##
 
-dwd_oride_rider_signups_guarantors_df_task = HiveOperator(
-    task_id='dwd_oride_rider_signups_guarantors_df_task',
+dwd_oride_finance_driver_repayment_df_task = HiveOperator(
+    task_id='dwd_oride_finance_driver_repayment_df_task',
 
     hql='''
         SET hive.exec.parallel=TRUE;
@@ -97,33 +97,19 @@ dwd_oride_rider_signups_guarantors_df_task = HiveOperator(
         insert overwrite table oride_dw.{table} partition(country_code,dt)
 
         SELECT
-            id, 
-            rider_id as driver_id,--骑手id, 
-            name,--'担保人姓名', 
-            gender,--'1-male,2-female', 
-            country,--'国家', 
-            state,--'州', 
-            city,--'城市', 
-            address,--'地址', 
-            address_photo,--'', 
-            address_status,--'', 
-            address_status_note,--'地址验证未通过原因', 
-            mobile,--'', 
-            n_passport,--'未验证护照照片地址', 
-            y_passport,--'验证护照照片.', 
-            passport_status,--'', 
-            passport_status_note,--'证件验证未通过原因', 
-            address_admin_id,--'地址验证人ID.', 
-            address_admin_time, 
-            passport_admin_id,--'护照验证人ID.', 
-            passport_admin_time,--'passport pass time.', 
-            note,--'审核备注', 
-            update_time, 
-            create_time,
+            id,--'ID', 
+            driver_id,--'司机ID', 
+            repayment_type,--'类型:0手机还贷', 
+            start_date,--'开始日期', 
+            amount,--'还款金额', 
+            numbers,--'还款次数', 
+            repaid_numbers,--'已还款次数', 
+            created_at,--'创建时间', 
+            updated_at,--'更新时间',
             'nal' as country_code,
             '{pt}' as dt
         FROM
-            oride_dw_ods.ods_sqoop_mass_rider_signups_guarantors_df
+            oride_dw_ods.ods_sqoop_base_data_driver_repayment_df
         WHERE
             dt='{pt}'
         ;
@@ -153,4 +139,4 @@ touchz_data_success= PythonOperator(
     dag=dag
 )
 
-ods_sqoop_mass_rider_signups_guarantors_df_task >> sleep_time >> dwd_oride_rider_signups_guarantors_df_task >> touchz_data_success
+ods_sqoop_base_data_driver_repayment_df_task >> sleep_time >> dwd_oride_finance_driver_repayment_df_task >> touchz_data_success
