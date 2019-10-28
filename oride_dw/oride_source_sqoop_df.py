@@ -61,7 +61,7 @@ def fun_task_timeout_monitor(ds, db_name, table_name, **op_kwargs):
 IGNORED_TABLE_LIST = [
     'oride_vehicles_transit',
     'oride_property_customs',
-    'data_user_complaint_df',
+    'data_user_complaint',
 ]
 
 
