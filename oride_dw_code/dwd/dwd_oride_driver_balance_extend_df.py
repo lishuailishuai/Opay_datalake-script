@@ -108,8 +108,7 @@ dwd_oride_driver_balance_extend_df_task = HiveOperator(
             payed_at,--上一次结算时间,结算操作完后记录    
             checked_at,--上一次帐户状态审核时间,正常/异常操作 
             success_checked_at,--上一次成功到帐的时间，成功到帐后记录  
-            created_at ,--创建时间                
-            country_code,--二位国家码    
+            created_at ,--创建时间                 
             'nal' as country_code,
             '{pt}' as dt
         FROM
