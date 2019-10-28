@@ -292,19 +292,22 @@ touchz_data_success = BashOperator(
 
     bash_command="""
     line_num=`$HADOOP_HOME/bin/hadoop fs -du -s {hdfs_data_dir} | tail -1 | awk '{{print $1}}'`
+    line_num_his=`$HADOOP_HOME/bin/hadoop fs -du -s {hdfs_data_dir_his} | tail -1 | awk '{{print $1}}'`
 
-    if [ $line_num -eq 0 ]
+    if [[ $line_num -eq 0 && $line_num_his -eq 0 ]]
     then
         echo "FATAL {hdfs_data_dir} is empty"
         exit 1
     else
         echo "DATA EXPORT Successed ......"
         $HADOOP_HOME/bin/hadoop fs -touchz {hdfs_data_dir}/_SUCCESS
+        $HADOOP_HOME/bin/hadoop fs -touchz {hdfs_data_dir_his}/_SUCCESS
     fi
     """.format(
         pt='{{ds}}',
         now_day='{{macros.ds_add(ds, +1)}}',
-        hdfs_data_dir=hdfs_path + '/country_code=nal/dt={{ds}}'
+        hdfs_data_dir=hdfs_path + '/country_code=nal/dt={{ds}}',
+        hdfs_data_dir_his=hdfs_path + '/country_code=nal/dt=his'
     ),
     dag=dag)
 
