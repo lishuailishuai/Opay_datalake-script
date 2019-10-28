@@ -389,8 +389,9 @@ create_crm_data = BashOperator(
     task_id='create_crm_data',
     bash_command="""
         dt="{{ ds }}"
-
+        
         crm_sql="
+
             create temporary function isInArea as 'com.oride.udf.IsInArea' 
             USING JAR 'hdfs://warehourse:8020/tmp/udf-1.0-SNAPSHOT-jar-with-dependencies.jar';
             
@@ -499,7 +500,7 @@ create_crm_data = BashOperator(
             ;
 "
         echo ${crm_sql}
-        hive -e "${crm_sql}" 
+        beeline -u "jdbc:hive2://10.52.17.84:10000" -n airflow -e  "${crm_sql}" 
     """,
     dag=dag,
 )

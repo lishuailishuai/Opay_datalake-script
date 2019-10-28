@@ -211,7 +211,7 @@ create_bd_data = BashOperator(
         "
         
         echo ${bd_sql}
-        hive -e "${bd_sql}" 
+        beeline -u "jdbc:hive2://10.52.17.84:10000" -n airflow -e   "${bd_sql}" 
         
         """,
     dag=dag)
