@@ -17,7 +17,7 @@ import logging
 
 args = {
     'owner': 'linan',
-    'start_date': datetime(2019, 10, 20),
+    'start_date': datetime(2019, 10, 28),
     'depends_on_past': False,
     'retries': 1,
     'retry_delay': timedelta(minutes=5),
@@ -64,107 +64,81 @@ ods_sqoop_base_agents_df_dependence_task = HivePartitionSensor(
 insert_opos_order_metrics = HiveOperator(
     task_id='insert_opos_order_metrics',
     hql=''' 
-        with 
-        shop_dim as (
         
+        set hive.exec.parallel=true;
+        set hive.exec.dynamic.partition.mode=nonstrict;
+        
+        with merchant_data as (
             select 
+            '{dt}' as dt,
+            bd_id,
+            city_id,
+            count(id) as merchant_cnt,
+            0 as pos_merchant_cnt,
+            count(if(substr(created_at,1,10) = '{dt}',id,null)) as new_merchant_cnt,
+            0 as new_pos_merchant_cnt
+            from 
+            opos_dw_ods.ods_sqoop_base_bd_shop_df
+            where dt = '{dt}'
+            group by bd_id,city_id
+        ),
+        
+        order_data as (
+            select 
+            '{dt}' as dt,
             s.bd_id,
             s.city_id,
-            s.opay_id,
-            a.agent_id
+            count(if(p.order_type = 'pos' and p.trade_status = 'SUCCESS',p.order_id,null)) as pos_complete_order_cnt,
+            count(if(p.order_type = 'qrcode' and p.trade_status = 'SUCCESS',p.order_id,null)) as qr_complete_order_cnt,
+            count(if(p.trade_status = 'SUCCESS',p.order_id,null)) as complete_order_cnt,
+            sum(if(p.trade_status = 'SUCCESS',p.org_payment_amount,0)) as gmv,
+            sum(if(p.trade_status = 'SUCCESS',p.pay_amount,0)) as actual_amount
+            
             from 
             (
                 select 
-                id,
+                receipt_id,
+                order_id,
+                order_type,
+                trade_status,
+                org_payment_amount,
+                pay_amount
+                from 
+                opos_dw_ods.ods_sqoop_base_pre_opos_payment_order_di
+                where dt = '{dt}'
+            ) p 
+            join (
+                select 
                 bd_id,
-                opay_id,
-                city_id
+                city_id,
+                opay_id
                 from 
                 opos_dw_ods.ods_sqoop_base_bd_shop_df
                 where dt = '{dt}'
-            ) s 
-            join (
-                select 
-                id as agent_id,
-                agent_id as opay_id
-                from 
-                opos_dw_ods.ods_sqoop_base_agents_df
-                where dt = '{dt}'
-            ) a on s.opay_id = a.opay_id
-            
-        ),
+            ) s on p.receipt_id = s.opay_id
+            group by s.bd_id,s.city_id
+        ) 
         
-        order_metrcis as (
-            select 
-            t.dt,
-            s.bd_id,
-            s.city_id,
-            count(if(t.status_code = '00' ,t.id,null)) as complete_order_cnt,
-            count(distinct(t.agent_id)) as accept_agent_cnt,
-            count(distinct(t.card_hash)) as place_user_cnt,--有单用户数
-            count(distinct(if(t.status_code = '00' , t.agent_id,null))) as complete_agent_cnt,
-            sum(t.amount) as gmv
-            
-            from 
-            
-            (   
-                select
-                dt,
-                id,
-                agent_id,
-                status_code,
-                amount,
-                card_hash
-                from 
-                opos_dw_ods.ods_sqoop_base_transactions_di
-                where dt = '{dt}'
-                and substr(created,1,10) = '{dt}'
-            ) t 
-            join shop_dim s on  t.agent_id = s.agent_id
-            group by t.dt,s.bd_id,s.city_id
-        ),
-        
-        
-        agent_metrics as (
-            select 
-            a.dt,
-            s.bd_id,
-            s.city_id,
-            count(distinct(a.agent_id)) as all_agent_cnt,
-            count(distinct(if(a.status = '00', a.agent_id,null))) as pos_agent_cnt,
-            count(distinct(if(substr(a.created,1,10) = '{dt}',a.agent_id,null))) as new_agent_cnt
-            from 
-            (
-                select 
-                dt,
-                id as agent_id, 
-                status,
-                created
-                from 
-                opos_dw_ods.ods_sqoop_base_agents_df
-                where dt = '{dt}'
-            ) a 
-            join shop_dim s on  a.agent_id = s.agent_id
-            group by a.dt,s.bd_id,s.city_id
-        )
-        
-        
-        insert overwrite table opos_temp.opos_metrcis_report partition (dt = '{dt}')
+        insert overwrite table opos_temp.opos_metrcis_report partition (country_code,dt)
         select 
-        am.bd_id,
-        am.city_id,
-        am.all_agent_cnt,
-        am.pos_agent_cnt,
-        am.new_agent_cnt,
-        nvl(om.complete_order_cnt,0),
-        nvl(om.accept_agent_cnt,0),
-        nvl(om.place_user_cnt,0),
-        nvl(om.complete_agent_cnt,0),
-        nvl(om.gmv,0)
+        md.bd_id,
+        md.city_id,
+        md.merchant_cnt,
+        md.pos_merchant_cnt,
+        md.new_merchant_cnt,
+        md.new_pos_merchant_cnt,
+        nvl(od.pos_complete_order_cnt,0),
+        nvl(od.qr_complete_order_cnt,0),
+        nvl(od.complete_order_cnt,0),
+        nvl(od.gmv,0),
+        nvl(od.actual_amount,0),
+        'nal' as country_code,
+        md.dt as dt
+        
         from 
-        agent_metrics am 
+        merchant_data md 
         left join 
-        order_metrcis om on am.dt = om.dt and am.bd_id = om.bd_id and am.city_id = om.city_id
+        order_data od on md.dt = od.dt and md.bd_id = od.bd_id and md.city_id = od.city_id
         ;
 
         '''.format(
@@ -177,57 +151,38 @@ insert_opos_active_user_detail_metrics = HiveOperator(
     task_id='insert_opos_active_user_detail_metrics',
     hql=''' 
     
-        with 
-        shop_dim as (
-        
-            select 
-            s.bd_id,
-            s.city_id,
-            s.opay_id,
-            a.agent_id
-            from 
-            (
-                select 
-                id,
-                bd_id,
-                opay_id,
-                city_id
-                
-                from 
-                opos_dw_ods.ods_sqoop_base_bd_shop_df
-                where dt = '{dt}'
-            ) s 
-            join (
-                select 
-                id as agent_id,
-                agent_id as opay_id
-                from 
-                opos_dw_ods.ods_sqoop_base_agents_df
-                where dt = '{dt}'
-            ) a on s.opay_id = a.opay_id
-            
-        )
-        
-        insert overwrite table opos_temp.opos_active_user_detail_daily partition (dt = '{dt}')
+        set hive.exec.parallel=true;
+        set hive.exec.dynamic.partition.mode=nonstrict;
+    
+        insert overwrite table opos_temp.opos_active_user_detail_daily partition (country_code,dt)
         select 
+        s.bd_id,
+        s.city_id,
+        p.sender_id,
+        p.receipt_id,
+        p.order_type,
+        'nal' as country_code,
+        '{dt}' as dt
         
-        sd.bd_id,
-        sd.city_id,
-        t.card_hash
         from 
-        (   
+        (
             select 
-            agent_id,
-            card_hash
+            sender_id,
+            order_type,
+            receipt_id
             from 
-            opos_dw_ods.ods_sqoop_base_transactions_di
+            opos_dw_ods.ods_sqoop_base_pre_opos_payment_order_di
+            where dt = '{dt}' and trade_status = 'SUCCESS'
+        ) p 
+        join (
+            select 
+            bd_id,
+            city_id,
+            opay_id
+            from 
+            opos_dw_ods.ods_sqoop_base_bd_shop_df
             where dt = '{dt}'
-            and substr(created,1,10) = '{dt}'
-            and status_code = '00'
-        ) t 
-        join 
-        shop_dim sd on t.agent_id = sd.agent_id
-        group by sd.bd_id,sd.city_id,t.card_hash
+        ) s on p.receipt_id = s.opay_id
         
         ;
         '''.format(
@@ -239,11 +194,15 @@ insert_opos_active_user_detail_metrics = HiveOperator(
 insert_opos_active_user_metrics = HiveOperator(
     task_id='insert_opos_active_user_metrics',
     hql='''
+        set hive.exec.parallel=true;
+        set hive.exec.dynamic.partition.mode=nonstrict;
+    
         with user_base as (
             select 
             bd_id,
             city_id,
-            card_hash,
+            sender_id,
+            order_type,
             sum(if(dt = '{dt}',1,0)) as is_current_day,
             sum(if(dt = '{before_1_day}',1,0)) as is_before_1_day,
             sum(if(dt = '{before_7_day}',1,0)) as is_before_7_day,
@@ -251,10 +210,11 @@ insert_opos_active_user_metrics = HiveOperator(
             sum(if(dt = '{before_30_day}',1,0)) as is_before_30_day
             from 
             opos_temp.opos_active_user_detail_daily
-            where dt in ('{dt}','{before_1_day}','{before_7_day}','{before_15_day}','{before_30_day}')
+            where country_code = 'nal' and dt in ('{dt}','{before_1_day}','{before_7_day}','{before_15_day}','{before_30_day}')
             group by bd_id,
             city_id,
-            card_hash
+            sender_id,
+            order_type
         ),
         
         current_user as (
@@ -262,7 +222,9 @@ insert_opos_active_user_metrics = HiveOperator(
             '{dt}' as dt,
             bd_id,
             city_id,
-            count(card_hash) as user_active_cnt
+            count(if(order_type = 'pos',sender_id,null)) as pos_user_active_cnt,
+            count(if(order_type = 'qrcode',sender_id,null)) as qr_user_active_cnt
+            
             from 
             user_base 
             where is_current_day > 0
@@ -278,7 +240,7 @@ insert_opos_active_user_metrics = HiveOperator(
             '{dt}' as dt,
             bd_id,
             city_id,
-            count(card_hash) as user_active_cnt
+            count(distinct sender_id) as user_active_cnt
             from 
             user_base 
             where is_current_day > 0 and is_before_1_day > 0
@@ -293,7 +255,7 @@ insert_opos_active_user_metrics = HiveOperator(
             '{dt}' as dt,
             bd_id,
             city_id,
-            count(card_hash) as user_active_cnt
+            count(distinct sender_id) as user_active_cnt
             from 
             user_base 
             where is_current_day > 0 and is_before_7_day > 0
@@ -307,7 +269,7 @@ insert_opos_active_user_metrics = HiveOperator(
             '{dt}' as dt,
             bd_id,
             city_id,
-            count(card_hash) as user_active_cnt
+            count(distinct sender_id) as user_active_cnt
             from 
             user_base 
             where is_current_day > 0 and is_before_15_day > 0
@@ -321,30 +283,114 @@ insert_opos_active_user_metrics = HiveOperator(
             '{dt}' as dt,
             bd_id,
             city_id,
-            count(card_hash) as user_active_cnt
+            count(distinct sender_id) as user_active_cnt
             from 
             user_base 
             where is_current_day > 0 and is_before_30_day > 0
             group by 
             bd_id,
             city_id
+        ),
+        
+        order_merchant_data as (
+            select 
+            '{dt}' as dt,
+            bd_id,
+            city_id,
+            count(distinct(receipt_id)) as order_merchant_cnt,
+            count(distinct(if(order_type = 'pos',receipt_id,null))) as pos_order_merchant_cnt
+            from 
+            opos_temp.opos_active_user_detail_daily 
+            where country_code = 'nal' and dt = '{dt}'
+            group by bd_id,
+            city_id
+        ),
+        
+        time_dim as (
+            select 
+            *
+            from 
+            public_dw_dim.dim_date
+            where dt = '{dt}'
+        ),
+        
+        
+        week_data as (
+            select 
+            '{dt}' as dt,
+            u.bd_id,
+            u.city_id,
+            t.monday_of_year,
+            count(distinct(if(order_type = 'pos',sender_id,null))) as pos_user_active_cnt,
+            count(distinct(if(order_type = 'qrcode',sender_id,null))) as qr_user_active_cnt
+            
+            
+            from 
+            (
+                select 
+                *
+                from 
+                opos_temp.opos_active_user_detail_daily 
+                where country_code = 'nal' 
+            ) u join
+            time_dim t on u.dt = t.dt
+            group by t.monday_of_year,u.bd_id,u.city_id
+        ),
+        
+        month_data as (
+            select 
+            '{dt}' as dt,
+            u.bd_id,
+            u.city_id,
+            t.month,
+            count(distinct(if(order_type = 'pos',sender_id,null))) as pos_user_active_cnt,
+            count(distinct(if(order_type = 'qrcode',sender_id,null))) as qr_user_active_cnt
+            
+            from 
+            (
+                select 
+                *
+                from 
+                opos_temp.opos_active_user_detail_daily 
+                where country_code = 'nal' 
+            ) u join
+            time_dim t on u.dt = t.dt
+            group by t.month,u.bd_id,u.city_id
         )
         
-        insert overwrite table opos_temp.opos_active_user_daily partition(dt = '{dt}')
+        
+        insert overwrite table opos_temp.opos_active_user_daily partition(country_code,dt)
         select 
         cu.bd_id,
         cu.city_id,
-        cu.user_active_cnt,
+        cu.pos_user_active_cnt,
+        cu.qr_user_active_cnt,
         nvl(dr1.user_active_cnt,0),
         nvl(dr7.user_active_cnt,0),
         nvl(dr15.user_active_cnt,0),
-        nvl(dr30.user_active_cnt,0)
+        nvl(dr30.user_active_cnt,0),
+        nvl(omd.order_merchant_cnt,0),
+        nvl(omd.pos_order_merchant_cnt,0),
+        nvl(wd.pos_user_active_cnt,0),
+        nvl(wd.qr_user_active_cnt,0),
+        nvl(md.pos_user_active_cnt,0),
+        nvl(md.qr_user_active_cnt,0),
+        
+        'nal' as country_code,
+        '{dt}' as dt
+        
         from 
         current_user cu
         left join day_1_remain dr1 on cu.dt = dr1.dt and cu.bd_id = dr1.bd_id and cu.city_id = dr1.city_id
         left join day_7_remain dr7 on cu.dt = dr7.dt and cu.bd_id = dr7.bd_id and cu.city_id = dr7.city_id
         left join day_15_remain dr15 on cu.dt = dr15.dt and cu.bd_id = dr15.bd_id and cu.city_id = dr15.city_id
         left join day_30_remain dr30 on cu.dt = dr30.dt and cu.bd_id = dr30.bd_id and cu.city_id = dr30.city_id
+        left join order_merchant_data omd on cu.dt = omd.dt and cu.bd_id = omd.bd_id and cu.city_id = omd.city_id
+        left join week_data wd on cu.dt = wd.dt and cu.bd_id = wd.bd_id and cu.city_id = wd.city_id
+        left join month_data md on cu.dt = md.dt and cu.bd_id = md.bd_id and cu.city_id = md.city_id
+        
+        
+        
         ;
 
         '''.format(
@@ -363,26 +409,34 @@ insert_crm_metrics = HiveToMySqlTransfer(
         select 
         null,
         a.dt,
-        a.bd_id,
-        a.city_id,
-        a.all_agent_cnt,
-        a.pos_agent_cnt,
-        a.new_agent_cnt,
-        a.complete_order_cnt,
-        a.accept_agent_cnt,
-        a.place_user_cnt,
-        a.complete_agent_cnt,
-        a.gmv,
-        nvl(b.current_day_user_active_cnt,0),
+        a.bd_id , 
+        a.city_id , 
+        a.merchant_cnt , 
+        a.pos_merchant_cnt , 
+        a.new_merchant_cnt , 
+        a.new_pos_merchant_cnt , 
+        a.pos_complete_order_cnt , 
+        a.qr_complete_order_cnt , 
+        a.complete_order_cnt , 
+        a.gmv ,
+        a.actual_amount ,
+        nvl(b.pos_user_active_cnt,0),
+        nvl(b.qr_user_active_cnt,0),
         nvl(b.before_1_day_user_active_cnt,0),
         nvl(b.before_7_day_user_active_cnt,0),
         nvl(b.before_15_day_user_active_cnt,0),
-        nvl(b.before_30_day_user_active_cnt,0)
+        nvl(b.before_30_day_user_active_cnt,0),
+        nvl(b.order_merchant_cnt,0),
+        nvl(b.pos_order_merchant_cnt,0),
+        nvl(b.week_pos_user_active_cnt,0),
+        nvl(b.week_qr_user_active_cnt,0),
+        nvl(b.month_pos_user_active_cnt,0),
+        nvl(b.month_qr_user_active_cnt,0)
         
         from 
         opos_temp.opos_metrcis_report a 
-        left join opos_temp.opos_active_user_daily b on a.dt = b.dt and a.bd_id = b.bd_id and a.city_id = b.city_id       
-        where a.dt = '{{ ds }}'
+        left join opos_temp.opos_active_user_daily b on  a.country_code = b.country_code and a.dt = b.dt and a.bd_id = b.bd_id and a.city_id = b.city_id       
+        where a.country_code = 'nal' and  a.dt = '{{ ds }}'
 
         """,
     mysql_conn_id='mysql_dw',
