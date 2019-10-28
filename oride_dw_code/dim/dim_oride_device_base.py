@@ -24,7 +24,7 @@ import requests
 import os
 
 args = {
-    'owner': 'yangmingze',
+    'owner': 'lijialong',
     'start_date': datetime(2019, 10, 1),
     'depends_on_past': False,
     'retries': 3,
@@ -34,8 +34,8 @@ args = {
     'email_on_retry': False,
 }
 
-dag = airflow.DAG('dwd_oride_driver_reward_di',
-                  schedule_interval="50 01 * * *",
+dag = airflow.DAG('dim_oride_device_base',
+                  schedule_interval="20 01 * * *",
                   default_args=args,
                   catchup=False)
 
@@ -49,21 +49,21 @@ sleep_time = BashOperator(
 
 
 # 依赖前一天分区
-ods_sqoop_base_data_driver_reward_df_task = UFileSensor(
-    task_id='ods_sqoop_base_data_driver_reward_df_task',
+ods_sqoop_base_data_device_df_task = UFileSensor(
+    task_id='ods_sqoop_base_data_device_df_task',
     filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride_dw_sqoop/oride_data/data_driver_reward",
+        hdfs_path_str="oride_dw_sqoop/oride_data/data_device",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
-) 
+)
 
 ##----------------------------------------- 变量 ---------------------------------------##
 
 
-table_name = "dwd_oride_driver_reward_di"
+table_name = "dim_oride_device_base"
 hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
 
 ##----------------------------------------- 任务超时监控 ---------------------------------------## 
@@ -87,8 +87,8 @@ task_timeout_monitor= PythonOperator(
 
 ##----------------------------------------- 脚本 ---------------------------------------##
 
-dwd_oride_driver_reward_di_task = HiveOperator(
-    task_id='dwd_oride_driver_reward_di_task',
+dim_oride_device_base_task = HiveOperator(
+    task_id='dim_oride_device_base_task',
 
     hql='''
         SET hive.exec.parallel=TRUE;
@@ -97,19 +97,23 @@ dwd_oride_driver_reward_di_task = HiveOperator(
         insert overwrite table oride_dw.{table} partition(country_code,dt)
 
         SELECT
-            id,--奖励 ID, 
-            driver_id,--司机 ID, 
-            order_id,--订单 ID, 
-            reward_type,--奖励类型, 
-            reward_id,--奖励 ID, 
-            reward_name,--奖励名称, 
-            order_num,--订单数量, 
-            amount,--奖励金额, 
-            create_time,--奖励时间
+            role,--'角色', 
+            role_id,--'角色 ID', 
+            device_id,--'设备 ID', 
+            platform,--'平台 (0 安卓, 1 ios)', 
+            os_version,--'系统版本', 
+            app_name,--'包名', 
+            app_version,--'应用版本', 
+            language,--'语言', 
+            notification_token,--'通知 token', 
+            is_root,--'0 不是root 1 是root', 
+            is_virtual,--'0 不是virtual 1 是virtual', 
+            create_time,--'创建时间', 
+            update_time,--'更新时间'
             'nal' as country_code,
             '{pt}' as dt
         FROM
-            oride_dw_ods.ods_sqoop_base_data_driver_reward_df
+            oride_dw_ods.ods_sqoop_base_data_device_df
         WHERE
             dt='{pt}'
         ;
@@ -139,4 +143,4 @@ touchz_data_success= PythonOperator(
     dag=dag
 )
 
-ods_sqoop_base_data_driver_reward_df_task >> sleep_time >> dwd_oride_driver_reward_di_task >> touchz_data_success
+ods_sqoop_base_data_device_df_task >> sleep_time >> dim_oride_device_base_task >> touchz_data_success

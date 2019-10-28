@@ -11,18 +11,18 @@ import logging
 from plugins.SqoopSchemaUpdate import SqoopSchemaUpdate
 from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
 from utils.util import on_success_callback
-
+from airflow.sensors.sql_sensor import SqlSensor
 
 args = {
     'owner': 'linan',
-    'start_date': datetime(2019, 10, 20),
+    'start_date': datetime(2019, 10, 25),
     'depends_on_past': False,
     'retries': 1,
     'retry_delay': timedelta(minutes=5),
     'email': ['bigdata_dw@opay-inc.com'],
     'email_on_failure': True,
     'email_on_retry': False,
-    'on_success_callback':on_success_callback,
+    'on_success_callback': on_success_callback,
 }
 
 dag = airflow.DAG(
@@ -32,15 +32,29 @@ dag = airflow.DAG(
     max_active_runs=1,
     default_args=args)
 
+##----------------------------------------- 数据采集前元数据校验 ---------------------------------------##
+import_data_validate = SqlSensor(
+    task_id="import_data_validate",
+    conn_id='mysql_pre_ptsp_db',
+    sql='''
+        select 
+        count(1)
+        from 
+        pre_ptsp_db.pre_opos_payment_order_sync_status
+        where DATE_FORMAT(sync_date,"%Y-%m-%d") = '{{ ds }}' and sync_status = 1
+    ''',
+    dag=dag
+)
+
+
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
 
 def fun_task_timeout_monitor(ds, db_name, table_name, **op_kwargs):
     tb = [
-        {"db": db_name, "table":table_name, "partition": "dt={pt}".format(pt=ds), "timeout": "7200"}
+        {"db": db_name, "table": table_name, "partition": "dt={pt}".format(pt=ds), "timeout": "7200"}
     ]
 
     TaskTimeoutMonitor().set_task_monitor(tb)
-
 
 
 '''
@@ -50,12 +64,12 @@ db_name,table_name,conn_id,prefix_name,priority_weight
 #
 
 table_list = [
-    ("ptsp_db", "transactions", "opos_ptsp_db", "base",3),
+    ("pre_ptsp_db", "pre_opos_payment_order", "mysql_pre_ptsp_db", "base", 3),
 ]
 
 HIVE_DB = 'opos_dw_ods'
 HIVE_TABLE = 'ods_sqoop_%s_%s_di'
-UFILE_PATH = 'ufile://opay-datalake/oride_dw_sqoop_di/%s/%s'
+UFILE_PATH = 'ufile://opay-datalake/opos_dw_sqoop_di/%s/%s'
 ODS_CREATE_TABLE_SQL = '''
     CREATE EXTERNAL TABLE IF NOT EXISTS {db_name}.`{table_name}`(
         {columns}
@@ -150,7 +164,7 @@ def run_check_table(db_name, table_name, conn_id, hive_table_name, **kwargs):
 
 
 conn_conf_dict = {}
-for db_name, table_name, conn_id, prefix_name,priority_weight_nm in table_list:
+for db_name, table_name, conn_id, prefix_name, priority_weight_nm in table_list:
     if conn_id not in conn_conf_dict:
         conn_conf_dict[conn_id] = BaseHook.get_connection(conn_id)
 
@@ -166,8 +180,8 @@ for db_name, table_name, conn_id, prefix_name,priority_weight_nm in table_list:
             --connect "jdbc:mysql://{host}:{port}/{schema}?tinyInt1isBit=false&useUnicode=true&characterEncoding=utf8" \
             --username {username} \
             --password {password} \
-            --query 'select * from {table} where (DATE_FORMAT(created,"%Y-%m-%d")="{{{{ ds }}}}" OR DATE_FORMAT(report_time,"%Y-%m-%d")="{{{{ ds }}}}") AND $CONDITIONS' \
-            --split-by id \
+            --query 'select * from {table} where (DATE_FORMAT(create_time,"%Y-%m-%d")="{{{{ ds }}}}" OR DATE_FORMAT(modify_time,"%Y-%m-%d")="{{{{ ds }}}}") AND $CONDITIONS' \
+            --split-by order_id \
             --target-dir {ufile_path}/dt={{{{ ds }}}}/ \
             --fields-terminated-by "\\001" \
             --lines-terminated-by "\\n" \
@@ -240,7 +254,7 @@ for db_name, table_name, conn_id, prefix_name,priority_weight_nm in table_list:
     add_partitions >> volume_monitoring >> validate_all_data
 
     # 超时监控
-    task_timeout_monitor= PythonOperator(
+    task_timeout_monitor = PythonOperator(
         task_id='task_timeout_monitor_{}'.format(hive_table_name),
         priority_weight=priority_weight_nm,
         python_callable=fun_task_timeout_monitor,
@@ -252,5 +266,4 @@ for db_name, table_name, conn_id, prefix_name,priority_weight_nm in table_list:
         dag=dag
     )
 
-
-    import_table >> check_table >> add_partitions
+    import_data_validate >> import_table >> check_table >> add_partitions

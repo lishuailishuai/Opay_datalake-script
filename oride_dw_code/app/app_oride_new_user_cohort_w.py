@@ -354,7 +354,7 @@ new_user_cohort_touchz_success = BashOperator(
     """.format(
         pt='{{macros.ds_add(ds, +6)}}',
         now_day='{{macros.ds_add(ds, +1)}}',
-        hdfs_data_dir=get_table_info(0)[1] + '/country_code=nal/dt={{ds}}'
+        hdfs_data_dir=get_table_info(0)[1] + '/country_code=nal/dt={{macros.ds_add(ds, +6)}}'
     ),
     dag=dag)
 
@@ -376,7 +376,7 @@ new_driver_cohort_touchz_success = BashOperator(
     """.format(
         pt='{{macros.ds_add(ds, +6)}}',
         now_day='{{macros.ds_add(ds, +1)}}',
-        hdfs_data_dir=get_table_info(1)[1] + '/country_code=nal/dt={{ds}}'
+        hdfs_data_dir=get_table_info(1)[1] + '/country_code=nal/dt={{macros.ds_add(ds, +6)}}'
     ),
     dag=dag)
 
@@ -398,7 +398,7 @@ act_user_cohort_touchz_success = BashOperator(
     """.format(
         pt='{{macros.ds_add(ds, +6)}}',
         now_day='{{macros.ds_add(ds, +1)}}',
-        hdfs_data_dir=get_table_info(2)[1] + '/country_code=nal/dt={{ds}}'
+        hdfs_data_dir=get_table_info(2)[1] + '/country_code=nal/dt={{macros.ds_add(ds, +6)}}'
     ),
     dag=dag)
 
@@ -420,7 +420,7 @@ act_driver_cohort_touchz_success = BashOperator(
     """.format(
         pt='{{macros.ds_add(ds, +6)}}',
         now_day='{{macros.ds_add(ds, +1)}}',
-        hdfs_data_dir=get_table_info(3)[1] + '/country_code=nal/dt={{ds}}'
+        hdfs_data_dir=get_table_info(3)[1] + '/country_code=nal/dt={{macros.ds_add(ds, +6)}}'
     ),
     dag=dag)
 

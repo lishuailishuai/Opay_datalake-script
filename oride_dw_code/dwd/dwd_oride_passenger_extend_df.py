@@ -24,7 +24,7 @@ import requests
 import os
 
 args = {
-    'owner': 'lijialong',
+    'owner': 'chenghui',
     'start_date': datetime(2019, 10, 1),
     'depends_on_past': False,
     'retries': 3,
@@ -35,7 +35,7 @@ args = {
 }
 
 dag = airflow.DAG('dwd_oride_passenger_extend_df',
-                  schedule_interval="20 01 * * *",
+                  schedule_interval="40 03 * * *",
                   default_args=args,
                   catchup=False)
 

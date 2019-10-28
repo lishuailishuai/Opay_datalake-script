@@ -7,13 +7,14 @@ from airflow.operators.bash_operator import BashOperator
 from airflow.operators.hive_operator import HiveOperator
 from airflow.operators.python_operator import PythonOperator
 from airflow.sensors.hive_partition_sensor import HivePartitionSensor
+from airflow.sensors import UFileSensor
 
 from utils.connection_helper import get_hive_cursor
 from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
 from plugins.TaskTouchzSuccess import TaskTouchzSuccess
 
 args = {
-    'owner': 'chenlili',
+    'owner': 'chenghui',
     'start_date': datetime(2019, 9, 9),
     'depends_on_past': False,
     'retries': 3,
@@ -24,7 +25,7 @@ args = {
 }
 
 dag = airflow.DAG('dwd_oride_passenger_recharge_df',
-                  schedule_interval="30 01 * * *",
+                  schedule_interval="00 02 * * *",
                   default_args=args,
                   catchup=False)
 
@@ -37,11 +38,13 @@ sleep_time = BashOperator(
 ##----------------------------------------- 依赖 ---------------------------------------##
 
 # 依赖前一天分区
-ods_sqoop_base_data_user_recharge_df_prev_day_task = HivePartitionSensor(
-    task_id="ods_sqoop_base_data_user_recharge_df_prev_day_task",
-    table="ods_sqoop_base_data_user_recharge_df",
-    partition="dt='{{ds}}'",
-    schema="oride_dw_ods",
+ods_sqoop_base_data_user_recharge_df_prev_day_task = UFileSensor(
+    task_id='ods_sqoop_base_data_user_recharge_df_prev_day_task',
+    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="oride_dw_sqoop/oride_data/data_user_recharge",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )

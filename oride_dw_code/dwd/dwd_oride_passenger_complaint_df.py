@@ -24,7 +24,7 @@ import requests
 import os
 
 args = {
-    'owner': 'lijialong',
+    'owner': 'chenghui',
     'start_date': datetime(2019, 10, 1),
     'depends_on_past': False,
     'retries': 3,
@@ -35,7 +35,7 @@ args = {
 }
 
 dag = airflow.DAG('dwd_oride_passenger_complaint_df',
-                  schedule_interval="20 01 * * *",
+                  schedule_interval="00 04 * * *",
                   default_args=args,
                   catchup=False)
 
@@ -125,21 +125,47 @@ dwd_oride_passenger_complaint_df_task = HiveOperator(
 )
 
 #生成_SUCCESS
-def check_success(ds,dag,**op_kwargs):
+# def check_success(ds,dag,**op_kwargs):
 
-    dag_ids=dag.dag_id
+#     dag_ids=dag.dag_id
 
-    msg = [
-        {"table":"{dag_name}".format(dag_name=dag_ids),"hdfs_path": "{hdfsPath}/country_code=nal/dt={pt}".format(pt=ds,hdfsPath=hdfs_path)}
-    ]
+#     msg = [
+#         {"table":"{dag_name}".format(dag_name=dag_ids),"hdfs_path": "{hdfsPath}/country_code=nal/dt={pt}".format(pt=ds,hdfsPath=hdfs_path)}
+#     ]
 
-    TaskTouchzSuccess().set_touchz_success(msg)
+#     TaskTouchzSuccess().set_touchz_success(msg)
 
-touchz_data_success= PythonOperator(
+# touchz_data_success= PythonOperator(
+#     task_id='touchz_data_success',
+#     python_callable=check_success,
+#     provide_context=True,
+#     dag=dag
+# )
+
+
+# 生成_SUCCESS
+touchz_data_success = BashOperator(
+
     task_id='touchz_data_success',
-    python_callable=check_success,
-    provide_context=True,
-    dag=dag
-)
+
+    bash_command="""
+    $HADOOP_HOME/bin/hadoop fs -mkdir -p {hdfs_data_dir}
+    line_num=`$HADOOP_HOME/bin/hadoop fs -du -s {hdfs_data_dir} | tail -1 | awk '{{print $1}}'`
+
+    if [ $line_num -eq 0 ]
+    then
+        echo "FATAL {hdfs_data_dir} is empty"
+        $HADOOP_HOME/bin/hadoop fs -mkdir {hdfs_data_dir}
+        $HADOOP_HOME/bin/hadoop fs -touchz {hdfs_data_dir}/_SUCCESS
+    else
+        echo "DATA EXPORT Successed ......"
+        $HADOOP_HOME/bin/hadoop fs -touchz {hdfs_data_dir}/_SUCCESS
+    fi
+    """.format(
+        pt='{{ds}}',
+        now_day='{{macros.ds_add(ds, +1)}}',
+        hdfs_data_dir=hdfs_path + '/country_code=nal/dt={{ds}}'
+    ),
+    dag=dag)
 
 ods_sqoop_base_data_user_complaint_df_task >> sleep_time >> dwd_oride_passenger_complaint_df_task >> touchz_data_success

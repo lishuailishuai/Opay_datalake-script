@@ -24,7 +24,7 @@ import requests
 import os
 
 args = {
-    'owner': 'lijialong',
+    'owner': 'chenghui',
     'start_date': datetime(2019, 10, 1),
     'depends_on_past': False,
     'retries': 3,
@@ -35,7 +35,7 @@ args = {
 }
 
 dag = airflow.DAG('dwd_oride_passenger_comment_df',
-                  schedule_interval="20 01 * * *",
+                  schedule_interval="00 04 * * *",
                   default_args=args,
                   catchup=False)
 
@@ -99,7 +99,7 @@ dwd_oride_passenger_comment_df_task = HiveOperator(
         SELECT
             id,
             order_id,--订单ID 
-            passenger_id,--乘客ID
+            user_id as passenger_id,--乘客ID
             driver_id,--司机ID 
             score,--评价分数 
             content,--评价内容 

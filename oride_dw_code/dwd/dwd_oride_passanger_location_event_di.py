@@ -51,7 +51,7 @@ sleep_time = BashOperator(
 # 依赖前一小时分区
 dwd_oride_passanger_location_event_hi_prev_day_task = UFileSensor(
     task_id='dwd_oride_passanger_location_event_hi_prev_day_task',
-    filepath='{hdfs_path_str}/dt={pt}/hour={hour}/_SUCCESS'.format(
+    filepath='{hdfs_path_str}/country_code=nal/dt={pt}/hour={hour}/_SUCCESS'.format(
         hdfs_path_str="oride/oride_dw/dwd_oride_passanger_location_event_hi",
         pt='{{ds}}',
         hour='23'
@@ -77,7 +77,7 @@ def fun_task_timeout_monitor(ds, dag, **op_kwargs):
 
     tb = [
         {"db": "oride_dw", "table": "{dag_name}".format(dag_name=dag_ids),
-         "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "600"}
+         "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "1800"}
     ]
 
     TaskTimeoutMonitor().set_task_monitor(tb)
