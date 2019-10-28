@@ -98,7 +98,7 @@ dwd_oride_rider_signups_guarantors_df_task = HiveOperator(
 
         SELECT
             id, 
-            rider_id as driver_id--骑手id, 
+            rider_id as driver_id,--骑手id, 
             name,--'担保人姓名', 
             gender,--'1-male,2-female', 
             country,--'国家', 
