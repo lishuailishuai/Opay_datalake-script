@@ -119,7 +119,7 @@ dwd_oride_rider_signups_guarantors_df_task = HiveOperator(
             passport_admin_time,--'passport pass time.', 
             note,--'审核备注', 
             update_time, 
-            create_time
+            create_time,
             'nal' as country_code,
             '{pt}' as dt
         FROM
