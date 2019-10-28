@@ -365,7 +365,7 @@ create_bdm_dim_data = BashOperator(
         ;
 "
         echo ${bdm_dim_sql}
-        hive -e "${bdm_dim_sql}" 
+        beeline -u "jdbc:hive2://10.52.17.84:10000" -n airflow -e  "${bdm_dim_sql}" 
     """,
     dag=dag,
 )
@@ -666,7 +666,7 @@ create_shop_list_data = BashOperator(
         
 "
         echo ${shop_list_sql}
-        hive -e "${shop_list_sql}" 
+        beeline -u "jdbc:hive2://10.52.17.84:10000" -n airflow -e  "${shop_list_sql}" 
     """,
     dag=dag,
 )
