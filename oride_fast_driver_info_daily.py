@@ -13,7 +13,7 @@ import csv
 
 args = {
     'owner': 'linan',
-    'start_date': datetime(2019, 9, 4),
+    'start_date': datetime(2019, 10, 28),
     'depends_on_past': False,
     'retries': 1,
     'retry_delay': timedelta(minutes=5),
