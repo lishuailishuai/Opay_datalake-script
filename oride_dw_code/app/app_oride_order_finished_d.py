@@ -15,6 +15,7 @@ import re
 import logging
 from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
 from plugins.TaskTouchzSuccess import TaskTouchzSuccess
+from airflow.sensors.hive_partition_sensor import HivePartitionSensor
 
 args = {
     'owner': 'chenghui',
@@ -27,26 +28,24 @@ args = {
     'email_on_retry': False,
 }
 
-dag = airflow.DAG(
-    'app_oride_order_finished_d',
-    schedule_interval="30 04 * * *",
-    default_args=args
-)
+dag = airflow.DAG('app_oride_order_finished_d',
+                  schedule_interval="30 4 * * *",
+                  default_args=args,
+                  catchup=False)
 
 sleep_time = BashOperator(
     task_id='sleep_id',
     depends_on_past=False,
-    bash_command='sleep 60',
+    bash_command='sleep 10',
     dag=dag
 )
 
-"""
-/------------------------------- 依赖数据源 --------------------------------/
-"""
-dependence_ods_log_oride_driver_timerange = UFileSensor(
-    task_id='dependence_ods_log_oride_driver_timerange',
-    filepath='{hdfs_path_str}/dt={pt}'.format(
-        hdfs_path_str="oride/oride_dw_ods/ods_log_oride_driver_timerange",
+##----------------------------------------- 依赖 ---------------------------------------##
+
+dwd_oride_driver_timerange_di_task = UFileSensor(
+    task_id='dwd_oride_driver_timerange_di_task',
+    filepath='{hdfs_path_str}/country_code=nal/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="oride/oride_dw/dwd_oride_driver_timerange_di",
         pt='{{ ds }}'
     ),
     bucket_name='opay-datalake',
@@ -54,20 +53,19 @@ dependence_ods_log_oride_driver_timerange = UFileSensor(
     dag=dag
 )
 
-dependence_dim_oride_city = UFileSensor(
-    task_id='dependence_dim_oride_city',
-    filepath='{hdfs_path_str}'.format(
-        hdfs_path_str="oride/oride_dw/dim_oride_city",
-        pt='{{ ds }}'
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60,
+dim_oride_city_task = HivePartitionSensor(
+    task_id="dim_oride_city_task",
+    table="dim_oride_city",
+    partition="dt='{{ ds }}'",
+    schema="oride_dw",
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
 
-dependence_dwd_oride_driver_extend_df = UFileSensor(
-    task_id='dependence_dwd_oride_driver_extend_df',
-    filepath='{hdfs_path_str}'.format(
+
+dwd_oride_driver_extend_df_task = UFileSensor(
+    task_id='dwd_oride_driver_extend_df_task',
+    filepath='{hdfs_path_str}/country_code=nal/dt={pt}/_SUCCESS'.format(
         hdfs_path_str="oride/oride_dw/dwd_oride_driver_extend_df",
         pt='{{ ds }}'
     ),
@@ -76,9 +74,9 @@ dependence_dwd_oride_driver_extend_df = UFileSensor(
     dag=dag
 )
 
-dependence_dwd_oride_order_base_include_test_di = UFileSensor(
-    task_id='dependence_dwd_oride_order_base_include_test_di',
-    filepath='{hdfs_path_str}'.format(
+dwd_oride_order_base_include_test_di_task = UFileSensor(
+    task_id='dwd_oride_order_base_include_test_di_task',
+    filepath='{hdfs_path_str}/country_code=nal/dt={pt}/_SUCCESS'.format(
         hdfs_path_str="oride/oride_dw/dwd_oride_order_base_include_test_di",
         pt='{{ ds }}'
     ),
@@ -87,9 +85,6 @@ dependence_dwd_oride_order_base_include_test_di = UFileSensor(
     dag=dag
 )
 
-"""
-/---------------------------------- end ----------------------------------/
-"""
 
 ##----------------------------------------- 变量 ---------------------------------------##
 
@@ -165,7 +160,7 @@ app_oride_order_finished_d_task = HiveOperator(
                     LEFT OUTER JOIN
                     (
                         SELECT *
-                        FROM oride_dw_ods.ods_log_oride_driver_timerange
+                        FROM oride_dw.dwd_oride_driver_timerange_di
                         WHERE  dt='{pt}'
                     ) dtr 
                     ON ord.driver_id=dtr.driver_id
@@ -178,8 +173,10 @@ app_oride_order_finished_d_task = HiveOperator(
             nvl(k4.wdl,0);
     '''.format(
         pt='{{ds}}',
+        now_day='{{macros.ds_add(ds, +1)}}',
         table=table_name
     ),
+    schema='oride_dw',
     dag=dag
 )
 
@@ -202,5 +199,6 @@ touchz_data_success = PythonOperator(
     dag=dag
 )
 
-dependence_ods_log_oride_driver_timerange >> dependence_dim_oride_city >> dependence_dwd_oride_driver_extend_df \
->> dependence_dwd_oride_order_base_include_test_di >> app_oride_order_finished_d_task >> touchz_data_success
+dwd_oride_driver_timerange_di_task >> dim_oride_city_task >> dwd_oride_driver_extend_df_task \
+>> dwd_oride_order_base_include_test_di_task >> sleep_time >>app_oride_order_finished_d_task \
+>> touchz_data_success
