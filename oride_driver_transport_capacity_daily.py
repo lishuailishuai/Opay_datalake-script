@@ -179,7 +179,6 @@ insert_driver_metrics = HiveOperator(
             WHERE
                 dt='{{ ds }}'
                 AND city_id != 999001
-                AND from_unixtime(create_time, 'yyyy-MM-dd')=dt
         ),
         -- 订单基础表近7天数据
 
@@ -225,9 +224,9 @@ insert_driver_metrics = HiveOperator(
                             FROM
                                 order_base
                             WHERE
-                                status in (4,5)
+                                status in (4,5) and from_unixtime(create_time, 'yyyy-MM-dd') = '{{ ds }}'
                         ) dd
-                        INNER JOIN order_base do ON do.driver_id=dd.driver_id
+                        INNER JOIN order_base do ON do.driver_id=dd.driver_id and from_unixtime(do.create_time, 'yyyy-MM-dd') = '{{ ds }}'
                     GROUP BY do.dt,do.driver_id
                 ) t1
                 INNER JOIN
@@ -415,6 +414,7 @@ insert_driver_metrics = HiveOperator(
                     driver_id 
                 from order_base 
                 where status in (4,5) 
+                and from_unixtime(create_time, 'yyyy-MM-dd') = '{{ ds }}'
                 group by driver_id 
                 ) as fd on r.driver_id = fd.driver_id 
             group by d.city_name, d.serv_type 
