@@ -42,11 +42,11 @@ sleep_time = BashOperator(
 
 ##----------------------------------------- 依赖 ---------------------------------------##
 
-dwd_oride_driver_timerange_di_task = UFileSensor(
-    task_id='dwd_oride_driver_timerange_di_task',
+dwm_oride_driver_base_di_task = UFileSensor(
+    task_id='dwm_oride_driver_base_di_task',
     filepath='{hdfs_path_str}/country_code=nal/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw/dwd_oride_driver_timerange_di",
-        pt='{{ ds }}'
+        hdfs_path_str="oride/oride_dw/dwm_oride_driver_base_di	",
+        pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
     poke_interval=60,
@@ -56,34 +56,12 @@ dwd_oride_driver_timerange_di_task = UFileSensor(
 dim_oride_city_task = HivePartitionSensor(
     task_id="dim_oride_city_task",
     table="dim_oride_city",
-    partition="dt='{{ ds }}'",
+    partition="dt='{{ds}}'",
     schema="oride_dw",
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
 
-
-dwd_oride_driver_extend_df_task = UFileSensor(
-    task_id='dwd_oride_driver_extend_df_task',
-    filepath='{hdfs_path_str}/country_code=nal/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw/dwd_oride_driver_extend_df",
-        pt='{{ ds }}'
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60,
-    dag=dag
-)
-
-dwd_oride_order_base_include_test_di_task = UFileSensor(
-    task_id='dwd_oride_order_base_include_test_di_task',
-    filepath='{hdfs_path_str}/country_code=nal/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw/dwd_oride_order_base_include_test_di",
-        pt='{{ ds }}'
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60,
-    dag=dag
-)
 
 
 ##----------------------------------------- 变量 ---------------------------------------##
@@ -99,7 +77,7 @@ def fun_task_timeout_monitor(ds, dag, **op_kwargs):
 
     tb = [
         {"db": "oride_dw", "table": "{dag_name}".format(dag_name=dag_ids),
-         "partition": "dt={pt}".format(pt=ds), "timeout": "600"}
+         "partition": "dt={pt}".format(pt=ds), "timeout": "1200"}
     ]
 
     TaskTimeoutMonitor().set_task_monitor(tb)
@@ -122,55 +100,28 @@ app_oride_order_finished_d_task = HiveOperator(
         SET hive.exec.dynamic.partition.mode=nonstrict;
         
         insert overwrite table oride_dw.{table} partition(dt)
-            select k4.city_name, --城市名称
-	            nvl(k4.wdl,0) wdl, --完单量
-	            count(distinct k4.id) qss,    --司机数量
-	            round(sum(k4.every_day_driver_online_dur)/(1000*3600*count(distinct k4.id)),2) as avg_online_dur,--人均在线时长(小时)
-	            nvl(k4.dt,date_sub(from_unixtime(unix_timestamp(),'yyyy-MM-dd'),1)) dt
+            select  k2.city_name,
+                k1.driver_finish_ord_num as wdl,--完单量
+                count(if(k1.is_finish_driver=1,k1.driver_id,null)) qss, --完单司机
+                round(sum(if(k1.is_finish_driver=1,k1.finish_driver_online_dur,0))/(3600*count(if(k1.is_finish_driver=1,k1.driver_id,null))),2) as avg_online_dur, --人均在线时长
+                k1.dt
             from
             (
-	            select k1.id, --k1.id是driverID
-		            k3.city_name,
-		            k2.dt,
-		            k2.wdl,
-		            k2.every_day_driver_online_dur
-	            from oride_dw.dwd_oride_driver_extend_df k1
-	            left join oride_dw.dim_oride_city k3	
-	            on k1.city_id=k3.city_id
-	            left join
-	            (
-	                select ord.dt,
-	                    ord.driver_id,
-	                    ord.wdl,
-	                    if(ord.is_td_finish>=1,nvl(dtr.driver_freerange,0) + nvl(ord.td_finish_billing_dur,0) + nvl(ord.td_cannel_pick_dur,0),0) as every_day_driver_online_dur
-	                from
-	                (
-	                    select from_unixtime(a.create_time,'yyyy-MM-dd') dt,
-			                a.driver_id,
-			                count(distinct case when a.status in (4,5) then a.order_id end) wdl,
-			                sum(a.td_cannel_pick_dur) as td_cannel_pick_dur,
-			                sum(a.is_td_finish) as is_td_finish,  --用于判断该订单是否是完单
-                            sum(if(a.is_td_finish = 1,a.td_finish_billing_dur,0)) as td_finish_billing_dur
-		                from oride_dw.dwd_oride_order_base_include_test_di a		
-		                where from_unixtime(a.create_time,'yyyy-MM-dd')
-			                between date_sub(from_unixtime(unix_timestamp(),'yyyy-MM-dd'),1) 
-			                and date_sub(from_unixtime(unix_timestamp(),'yyyy-MM-dd'),1)
-		                group by from_unixtime(a.create_time,'yyyy-MM-dd'),a.driver_id
-		            ) ord 
-                    LEFT OUTER JOIN
-                    (
-                        SELECT *
-                        FROM oride_dw.dwd_oride_driver_timerange_di
-                        WHERE  dt='{pt}'
-                    ) dtr 
-                    ON ord.driver_id=dtr.driver_id
-	            ) k2
-	            on k1.id=k2.driver_id
-	            where k1.fault=0
-            ) k4
-            group by k4.city_name,
-            nvl(k4.dt,date_sub(from_unixtime(unix_timestamp(),'yyyy-MM-dd'),1)),
-            nvl(k4.wdl,0);
+                select 
+                    a.dt,
+	                a.driver_id,
+	                a.city_id,
+	                a.finish_driver_online_dur,--在线时长
+	                a.driver_finish_ord_num, --完单量
+	                a.is_finish_driver --是否完单
+                from oride_dw.dwm_oride_driver_base_di a
+                where a.dt='{pt}'
+            ) k1
+            left join oride_dw.dim_oride_city k2
+            on k1.city_id=k2.city_id
+            group by k2.city_name,
+            k1.dt,
+            k1.driver_finish_ord_num;
     '''.format(
         pt='{{ds}}',
         now_day='{{macros.ds_add(ds, +1)}}',
@@ -199,6 +150,5 @@ touchz_data_success = PythonOperator(
     dag=dag
 )
 
-dwd_oride_driver_timerange_di_task >> dim_oride_city_task >> dwd_oride_driver_extend_df_task \
->> dwd_oride_order_base_include_test_di_task >> sleep_time >>app_oride_order_finished_d_task \
->> touchz_data_success
+dwm_oride_driver_base_di_task >> dim_oride_city_task >> sleep_time \
+>>app_oride_order_finished_d_task >> touchz_data_success
