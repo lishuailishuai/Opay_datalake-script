@@ -3,6 +3,8 @@ from airflow.operators.hive_operator import HiveOperator
 from datetime import datetime, timedelta
 from airflow.sensors import UFileSensor
 from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
+from airflow.operators.bash_operator import BashOperator
+
 
 args = {
     'owner': 'zhenqian.zhang',
