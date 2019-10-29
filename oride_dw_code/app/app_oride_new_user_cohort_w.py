@@ -101,17 +101,17 @@ create_oride_cohort_mid_task = HiveOperator(
             order_id,
             passenger_id,
             driver_id,
-            min(create_time) over (partition by passenger_id) as user_first_time,--乘客第一次完单时间
-            min(create_time) over (partition by driver_id) as driver_first_time,--司机第一次完单时间
+            min(from_unixtime(create_time,'yyyy-MM-dd HH:mm:ss')) over (partition by passenger_id) as user_first_time,--乘客第一次完单时间
+            min(from_unixtime(create_time,'yyyy-MM-dd HH:mm:ss')) over (partition by driver_id) as driver_first_time,--司机第一次完单时间
             price,
             distance,
             create_date,
-            create_time
+            from_unixtime(create_time,'yyyy-MM-dd HH:mm:ss') as create_time
             --min(unix_timestamp(create_time)) over (partition by passenger_id) as user_first_time,--乘客第一次完单时间
             --min(unix_timestamp(create_time)) over (partition by driver_id) as driver_first_time,--司机第一次完单时间
-            from oride_dw.dwd_oride_order_base_include_test_df
-            where dt in('{pt}','his') and create_date>='2019-06-17'
-            and status in(4,5) and city_id<>999001 and driver_id<>1) t ;
+            from oride_dw.dwd_oride_order_base_include_test_di
+            where dt>='2019-07-08'  --从20190705号开始加的city_id字段，因此从28周开始统计留存数据，按日的从20190705号开始统计
+            and status in(4,5) and city_id<>999001 and driver_id<>1) t
             '''.format(
             pt='{{macros.ds_add(ds, +6)}}'
     ),
