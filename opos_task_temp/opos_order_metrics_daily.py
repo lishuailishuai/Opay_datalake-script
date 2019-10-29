@@ -161,6 +161,7 @@ insert_opos_active_user_detail_metrics = HiveOperator(
         p.sender_id,
         p.receipt_id,
         p.order_type,
+        p.trade_status,
         'nal' as country_code,
         '{dt}' as dt
         
@@ -169,10 +170,11 @@ insert_opos_active_user_detail_metrics = HiveOperator(
             select 
             sender_id,
             order_type,
-            receipt_id
+            receipt_id,
+            trade_status
             from 
             opos_dw_ods.ods_sqoop_base_pre_opos_payment_order_di
-            where dt = '{dt}' and trade_status = 'SUCCESS'
+            where dt = '{dt}'
         ) p 
         join (
             select 
@@ -196,8 +198,16 @@ insert_opos_active_user_metrics = HiveOperator(
     hql='''
         set hive.exec.parallel=true;
         set hive.exec.dynamic.partition.mode=nonstrict;
+        
+        with active_base as (
+            select 
+            * 
+            from 
+            opos_temp.opos_active_user_detail_daily
+            where country_code = 'nal' and dt in ('{dt}','{before_1_day}','{before_7_day}','{before_15_day}','{before_30_day}')
+        ),
     
-        with user_base as (
+        user_base as (
             select 
             bd_id,
             city_id,
@@ -209,8 +219,8 @@ insert_opos_active_user_metrics = HiveOperator(
             sum(if(dt = '{before_15_day}',1,0)) as is_before_15_day,
             sum(if(dt = '{before_30_day}',1,0)) as is_before_30_day
             from 
-            opos_temp.opos_active_user_detail_daily
-            where country_code = 'nal' and dt in ('{dt}','{before_1_day}','{before_7_day}','{before_15_day}','{before_30_day}')
+            active_base 
+            where trade_status = 'SUCCESS'
             group by bd_id,
             city_id,
             sender_id,
@@ -300,8 +310,8 @@ insert_opos_active_user_metrics = HiveOperator(
             count(distinct(receipt_id)) as order_merchant_cnt,
             count(distinct(if(order_type = 'pos',receipt_id,null))) as pos_order_merchant_cnt
             from 
-            opos_temp.opos_active_user_detail_daily 
-            where country_code = 'nal' and dt = '{dt}'
+            active_base
+            where dt = '{dt}' and trade_status = 'SUCCESS'
             group by bd_id,
             city_id
         ),
@@ -332,8 +342,11 @@ insert_opos_active_user_metrics = HiveOperator(
                 from 
                 opos_temp.opos_active_user_detail_daily 
                 where country_code = 'nal' 
-            ) u join
-            time_dim t on u.dt = t.dt
+                and dt between '{dt}' and '{before_30_day}'
+                and trade_status = 'SUCCESS' 
+            ) u 
+            join public_dw_dim.dim_date d on u.dt = d.dt
+            join time_dim t on d.monday_of_year = t.monday_of_year
             group by t.monday_of_year,u.bd_id,u.city_id
         ),
         
@@ -353,9 +366,25 @@ insert_opos_active_user_metrics = HiveOperator(
                 from 
                 opos_temp.opos_active_user_detail_daily 
                 where country_code = 'nal' 
-            ) u join
-            time_dim t on u.dt = t.dt
+                and dt between '{dt}' and '{before_30_day}'
+                and trade_status = 'SUCCESS' 
+            ) u 
+            join public_dw_dim.dim_date d on u.dt = d.dt
+            join time_dim t on d.month = t.month
             group by t.month,u.bd_id,u.city_id
+        ),
+        
+        have_order_user as (
+            select 
+            '{dt}' as dt,
+            bd_id,
+            city_id,
+            count(distinct(sender_id)) as have_order_user_cnt
+            from 
+            active_base
+            where dt = '{dt}'
+            group by bd_id,
+            city_id
         )
         
         
@@ -375,6 +404,7 @@ insert_opos_active_user_metrics = HiveOperator(
         nvl(wd.qr_user_active_cnt,0),
         nvl(md.pos_user_active_cnt,0),
         nvl(md.qr_user_active_cnt,0),
+        nvl(ou.have_order_user_cnt,0),
         
         'nal' as country_code,
         '{dt}' as dt
@@ -388,7 +418,7 @@ insert_opos_active_user_metrics = HiveOperator(
         left join order_merchant_data omd on cu.dt = omd.dt and cu.bd_id = omd.bd_id and cu.city_id = omd.city_id
         left join week_data wd on cu.dt = wd.dt and cu.bd_id = wd.bd_id and cu.city_id = wd.city_id
         left join month_data md on cu.dt = md.dt and cu.bd_id = md.bd_id and cu.city_id = md.city_id
-        
+        left join have_order_user ou on cu.dt = ou.dt and cu.bd_id = ou.bd_id and cu.city_id = ou.city_id
         
         
         ;
@@ -431,7 +461,8 @@ insert_crm_metrics = HiveToMySqlTransfer(
         nvl(b.week_pos_user_active_cnt,0),
         nvl(b.week_qr_user_active_cnt,0),
         nvl(b.month_pos_user_active_cnt,0),
-        nvl(b.month_qr_user_active_cnt,0)
+        nvl(b.month_qr_user_active_cnt,0),
+        nvl(b.have_order_user_cnt,0)
         
         from 
         opos_temp.opos_metrcis_report a 
