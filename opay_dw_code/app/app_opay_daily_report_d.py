@@ -28,7 +28,7 @@ args = {
 
 dag = airflow.DAG(
     'app_opay_daily_report_d', # check
-    schedule_interval="30 04 * * *",
+    schedule_interval="30 03 * * *",
     default_args=args
 )
 
@@ -46,7 +46,7 @@ sleep_time = BashOperator(
 dependence_ods_sqoop_base_user_df = HivePartitionSensor(
     task_id="ods_sqoop_base_user_df",
     table="ods_sqoop_base_user_df", # 表名一至
-    partition="dt='{{ yesterday_ds }}'",
+    partition="dt='{{ ds }}'",
     schema="opay_dw_ods",
     poke_interval=60,
     dag=dag
@@ -56,7 +56,7 @@ dependence_ods_sqoop_base_user_df = HivePartitionSensor(
 dependence_ods_sqoop_base_big_order_df = HivePartitionSensor(
     task_id="dependence_ods_sqoop_base_big_order_df",
     table="ods_sqoop_base_big_order_df", # 表名一至
-    partition="dt='{{ yesterday_ds }}'",
+    partition="dt='{{ ds }}'",
     schema="opay_dw_ods",
     poke_interval=60,
     dag=dag
@@ -65,7 +65,7 @@ dependence_ods_sqoop_base_big_order_df = HivePartitionSensor(
 dependence_ods_sqoop_base_user_transfer_user_record_df = HivePartitionSensor(
     task_id="dependence_ods_sqoop_base_user_transfer_user_record_df",
     table="ods_sqoop_base_user_transfer_user_record_df", # 表名一至
-    partition="dt='{{ yesterday_ds }}'",
+    partition="dt='{{ ds }}'",
     schema="opay_dw_ods",
     poke_interval=60,
     dag=dag
@@ -74,7 +74,7 @@ dependence_ods_sqoop_base_user_transfer_user_record_df = HivePartitionSensor(
 dependence_ods_sqoop_base_merchant_transfer_user_record_df = HivePartitionSensor(
     task_id="dependence_ods_sqoop_base_merchant_transfer_user_record_df",
     table="ods_sqoop_base_merchant_transfer_user_record_df", # 表名一至
-    partition="dt='{{ yesterday_ds }}'",
+    partition="dt='{{ ds }}'",
     schema="opay_dw_ods",
     poke_interval=60,
     dag=dag
@@ -83,7 +83,7 @@ dependence_ods_sqoop_base_merchant_transfer_user_record_df = HivePartitionSensor
 dependence_ods_sqoop_base_airtime_topup_record_df = HivePartitionSensor(
     task_id="dependence_ods_sqoop_base_airtime_topup_record_df",
     table="ods_sqoop_base_airtime_topup_record_df", # 表名一至
-    partition="dt='{{ yesterday_ds }}'",
+    partition="dt='{{ ds }}'",
     schema="opay_dw_ods",
     poke_interval=60,
     dag=dag
@@ -92,7 +92,7 @@ dependence_ods_sqoop_base_airtime_topup_record_df = HivePartitionSensor(
 dependence_ods_sqoop_base_user_topup_record_df = HivePartitionSensor(
     task_id="dependence_ods_sqoop_base_user_topup_record_df",
     table="ods_sqoop_base_user_topup_record_df", # 表名一至
-    partition="dt='{{ yesterday_ds }}'",
+    partition="dt='{{ ds }}'",
     schema="opay_dw_ods",
     poke_interval=60,
     dag=dag
@@ -106,8 +106,8 @@ dependence_ods_sqoop_base_user_topup_record_df = HivePartitionSensor(
 hive_table = 'opay.app_opay_daily_report_d' # check table_name
 
 
-insert_result_to_impala = HiveOperator(
-    task_id='insert_result_to_impala',
+app_opay_daily_report_d_task = HiveOperator(
+    task_id='app_opay_daily_report_d_task',
     hql="""
         set mapred.job.queue.name=root.users.airflow;
         set hive.exec.parallel=true;
@@ -333,17 +333,17 @@ insert_result_to_impala = HiveOperator(
         bind_card_data as (
             SELECT 
                 '{pt}' state_date,
-                sum(if(out_channel_id = 'Paystack', nvl(amount,0), 0)) `paystack_amt`, 
-                sum(if(out_channel_id = 'Paystack', 1, 0)) `paystack_cnt`, 
+                sum(if(out_channel_id = 'PAYSTACK', nvl(amount,0), 0)) `paystack_amt`, 
+                sum(if(out_channel_id = 'PAYSTACK', 1, 0)) `paystack_cnt`, 
             
-                sum(if(out_channel_id = 'InterSwitch', nvl(amount,0), 0)) `inter_switch_amt`, 
-                sum(if(out_channel_id = 'InterSwitch', 1, 0)) `inter_switch_cnt`,
+                sum(if(out_channel_id = 'INTERSWITCH', nvl(amount,0), 0)) `inter_switch_amt`, 
+                sum(if(out_channel_id = 'INTERSWITCH', 1, 0)) `inter_switch_cnt`,
             
                 sum(if(out_channel_id = 'GTGIPS', nvl(amount,0), 0)) `gtgips_amt`, 
                 sum(if(out_channel_id = 'GTGIPS', 1, 0)) `gtgips_cnt`,
             
-                sum(if(out_channel_id = 'Flutterwave', nvl(amount,0), 0)) `flutterwave_amt`, 
-                sum(if(out_channel_id = 'Flutterwave', 1, 0)) `flutterwave_cnt`
+                sum(if(out_channel_id = 'FLUTTERWAVE', nvl(amount,0), 0)) `flutterwave_amt`, 
+                sum(if(out_channel_id = 'FLUTTERWAVE', 1, 0)) `flutterwave_cnt`
             from opay_dw_ods.ods_sqoop_base_user_topup_record_df
             where dt = '{pt}' and date_format(create_time, 'yyyy-MM-dd')='{pt}' and order_status='SUCCESS'
         )
@@ -401,4 +401,4 @@ insert_result_to_impala = HiveOperator(
     dag=dag
 )
 
-dependence_ods_sqoop_base_user_df >> dependence_ods_sqoop_base_big_order_df >> dependence_ods_sqoop_base_user_transfer_user_record_df >> dependence_ods_sqoop_base_merchant_transfer_user_record_df >> dependence_ods_sqoop_base_airtime_topup_record_df >> dependence_ods_sqoop_base_user_topup_record_df >> insert_result_to_impala
+dependence_ods_sqoop_base_user_df >> dependence_ods_sqoop_base_big_order_df >> dependence_ods_sqoop_base_user_transfer_user_record_df >> dependence_ods_sqoop_base_merchant_transfer_user_record_df >> dependence_ods_sqoop_base_airtime_topup_record_df >> dependence_ods_sqoop_base_user_topup_record_df >> app_opay_daily_report_d_task
