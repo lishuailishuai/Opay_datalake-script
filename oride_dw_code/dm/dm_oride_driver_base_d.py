@@ -223,7 +223,7 @@ dm_oride_driver_base_d_task = HiveOperator(
                 sum(td_billing_dur) as td_billing_dur,
                 sum(td_cannel_pick_dur) as td_cannel_pick_dur,
                 sum(is_strong_dispatch) as is_strong_dispatch,  --用于判断该司机是否是强派单司机
-                sum(is_td_finish) as is_td_finish,  --用于判断该订单是否是完单
+                sum(is_td_finish) as is_td_finish  --用于判断该订单是否是完单
                -- sum(if(is_td_finish = 1,td_finish_billing_dur,0)) as td_finish_billing_dur
                 
                 FROM oride_dw.dwd_oride_order_base_include_test_di
