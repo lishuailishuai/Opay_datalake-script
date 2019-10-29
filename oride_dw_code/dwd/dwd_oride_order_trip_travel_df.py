@@ -124,7 +124,7 @@ ods_sqoop_base_data_trip_df_task = HiveOperator(
             (CASE WHEN reward IS NULL THEN 0 ELSE reward END) as  reward,
             (CASE WHEN tip IS NULL THEN 0 ELSE tip END) as  tip,
             NVL(CAST(order_id AS bigint), 0) as order_id,
-            from_unixtime(create_time,'yyyy-MM-dd hh:mm:ss') as create_time,
+            from_unixtime(create_time,'yyyy-MM-dd HH:mm:ss') as create_time,
             NVL(start_time, 0) as start_time,
             NVL(finish_time, 0) as finish_time,
             NVL(cancel_time, 0) as cancel_time,
