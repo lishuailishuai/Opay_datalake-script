@@ -628,7 +628,7 @@ left OUTER JOIN
             id,
             count(trip_id) OVER(PARTITION BY trip_id ) AS cn 
         from oride_dw_ods.ods_sqoop_base_data_order_df
-        where  dt ='{pt}' and serv_type = 3 and pax_num < 3
+        where  dt ='{pt}' and serv_type = 3 and pax_num < 3 and driver_id >0
             AND from_unixtime(create_time,'yyyy-MM-dd') = '{pt}'
     )base
     where base.cn > 1
