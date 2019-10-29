@@ -157,6 +157,12 @@ SELECT product_id,
             driver_finish_ord_num,
             --司机完成订单数
     
+            driver_finish_pay_order_num,
+            --司机支付完单数
+
+            driver_finish_gmv,
+            --司机完单gmv
+
            country_code,
            --国家码字段
     
@@ -178,7 +184,8 @@ SELECT product_id,
     
             sum(DISTINCT (CASE WHEN ord.driver_id=p1.driver_id THEN ord.succ_push_order_cnt ELSE 0 END)) AS succ_push_order_cnt,--成功推送司机的订单数
     
-            sum( nvl(dtr.driver_freerange,0) + nvl(ord.td_finish_order_dur,0) + nvl(ord.td_cannel_pick_dur,0)) AS finish_driver_online_dur,
+            
+            sum( nvl(dtr.driver_freerange,0) + nvl(ord.td_finish_billing_dur,0) + nvl(ord.td_finish_cannel_pick_dur,0)) AS finish_driver_online_dur,
             --完单司机在线时长（秒）
             
             sum(nvl(c1.driver_click_order_cnt,0)) as driver_click_order_cnt,
@@ -190,8 +197,16 @@ SELECT product_id,
             sum(nvl(ord.td_billing_dur,0)) as driver_billing_dur,
             --司机订单计费时长
             
-            sum(nvl(ord.driver_finish_ord_num,0)) as driver_finish_ord_num
-            --司机当日完成订单数
+            sum(nvl(ord.driver_finish_ord_num,0)) as driver_finish_ord_num,
+            --司机当日完成订单数(完单量)
+           
+            sum(nvl(ord.driver_finish_pay_order_num,0)) as driver_finish_pay_order_num,
+            --司机支付完单量
+
+            sum(nvl(finish_gmv,0)) as driver_finish_gmv
+            --司机完单gmv
+
+
     
        FROM
             (
@@ -208,7 +223,11 @@ SELECT product_id,
                 sum(if(is_td_finish = 1,td_finish_order_dur,0)) as td_finish_order_dur,
                 sum(td_billing_dur) as td_billing_dur,
                 sum(td_cannel_pick_dur) as td_cannel_pick_dur,
-                sum(if(is_td_finish = 1,1,0)) as driver_finish_ord_num
+                sum(if(is_td_finish = 1,td_cannel_pick_dur,0)) as td_finish_cannel_pick_dur,                
+                sum(if(is_td_finish = 1,td_finish_billing_dur,0)) as td_finish_billing_dur,
+                sum(if(is_td_finish = 1,1,0)) as driver_finish_ord_num,
+                sum(if(is_td_finish_pay = 1, 1, 0)) as driver_finish_pay_order_num, --支付完单量
+                sum(if(is_td_finish = 1, price, 0)) as finish_gmv --当日完单gmv
                 FROM oride_dw.dwd_oride_order_base_include_test_di
                 WHERE dt='{pt}'
                 AND city_id<>'999001' --去除测试数据
@@ -255,7 +274,7 @@ SELECT product_id,
                 dri.country_code,
                 dri.driver_id
     ) x
-    WHERE x.country_code IN ('nal')
+    WHERE x.country_code IN ('nal');
 
 '''.format(
         pt='{{ds}}',
