@@ -134,10 +134,10 @@ SELECT t1.passenger_id,
        t2.balance,
        -- 余额
 
-       from_unixtime(t2.register_time,'yyyy-MM-dd hh:mm:ss') AS register_time,
+       from_unixtime(t2.register_time,'yyyy-MM-dd HH:mm:ss') AS register_time,
        -- 注册时间
 
-       from_unixtime(t2.login_time,'yyyy-MM-dd hh:mm:ss') AS login_time,
+       from_unixtime(t2.login_time,'yyyy-MM-dd HH:mm:ss') AS login_time,
        -- 最后登陆时间
 
        t2.inviter_role,

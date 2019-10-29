@@ -43,23 +43,16 @@ ods_sqoop_base_bd_shop_df_dependence_task = HivePartitionSensor(
 )
 
 
-ods_sqoop_base_transactions_di_dependence_task = HivePartitionSensor(
-    task_id="ods_sqoop_base_transactions_di_dependence_task",
-    table="ods_sqoop_base_transactions_di",
+ods_sqoop_base_pre_opos_payment_order_di_dependence_task = HivePartitionSensor(
+    task_id="ods_sqoop_base_pre_opos_payment_order_di_dependence_task",
+    table="ods_sqoop_base_pre_opos_payment_order_di",
     partition="dt='{{ds}}'",
     schema="opos_dw_ods",
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
 
-ods_sqoop_base_agents_df_dependence_task = HivePartitionSensor(
-    task_id="ods_sqoop_base_agents_df_dependence_task",
-    table="ods_sqoop_base_agents_df",
-    partition="dt='{{ds}}'",
-    schema="opos_dw_ods",
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
+
 
 insert_opos_order_metrics = HiveOperator(
     task_id='insert_opos_order_metrics',
@@ -475,10 +468,9 @@ insert_crm_metrics = HiveToMySqlTransfer(
     dag=dag)
 
 
-ods_sqoop_base_agents_df_dependence_task >> insert_opos_order_metrics
-ods_sqoop_base_transactions_di_dependence_task >> insert_opos_order_metrics
+ods_sqoop_base_pre_opos_payment_order_di_dependence_task >> insert_opos_order_metrics
 ods_sqoop_base_bd_shop_df_dependence_task >> insert_opos_order_metrics
-ods_sqoop_base_transactions_di_dependence_task >> insert_opos_active_user_detail_metrics
+ods_sqoop_base_pre_opos_payment_order_di_dependence_task >> insert_opos_active_user_detail_metrics
 ods_sqoop_base_bd_shop_df_dependence_task >> insert_opos_active_user_detail_metrics
 
 insert_opos_active_user_detail_metrics >> insert_opos_active_user_metrics

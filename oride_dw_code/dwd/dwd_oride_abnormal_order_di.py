@@ -128,11 +128,11 @@ dwd_oride_abnormal_order_di_task = HiveOperator(
        amount,
        --扣款金额
 
-       from_unixtime(create_time,'yyyy-MM-dd hh:mm:ss') AS f_create_time,
-       --格式化创建时间(yyyy-MM-dd hh:mm:ss)
+       from_unixtime(create_time,'yyyy-MM-dd HH:mm:ss') AS f_create_time,
+       --格式化创建时间(yyyy-MM-dd HH:mm:ss)
 
-       from_unixtime(update_time,'yyyy-MM-dd hh:mm:ss') AS f_update_time,
-       --格式化更新时间(yyyy-MM-dd hh:mm:ss)
+       from_unixtime(update_time,'yyyy-MM-dd HH:mm:ss') AS f_update_time,
+       --格式化更新时间(yyyy-MM-dd HH:mm:ss)
 
        'nal' AS country_code,
        --国家码字段
