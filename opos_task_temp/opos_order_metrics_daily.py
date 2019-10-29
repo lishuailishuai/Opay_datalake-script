@@ -73,6 +73,7 @@ insert_opos_order_metrics = HiveOperator(
             from 
             opos_dw_ods.ods_sqoop_base_bd_shop_df
             where dt = '{dt}'
+            and substr(created_at,1,10) <= '{dt}'
             group by bd_id,city_id
         ),
         
@@ -108,6 +109,7 @@ insert_opos_order_metrics = HiveOperator(
                 from 
                 opos_dw_ods.ods_sqoop_base_bd_shop_df
                 where dt = '{dt}'
+                and substr(created_at,1,10) <= '{dt}'
             ) s on p.receipt_id = s.opay_id
             group by s.bd_id,s.city_id
         ) 
@@ -177,6 +179,7 @@ insert_opos_active_user_detail_metrics = HiveOperator(
             from 
             opos_dw_ods.ods_sqoop_base_bd_shop_df
             where dt = '{dt}'
+            and substr(created_at,1,10) <= '{dt}'
         ) s on p.receipt_id = s.opay_id
         
         ;
