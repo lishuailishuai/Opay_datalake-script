@@ -208,7 +208,7 @@ SELECT product_id,
 
             sum(nvl(finish_gmv,0)) as driver_finish_gmv,
             --司机完单gmv
-            if(ord.is_td_finish>=1,1,0) as is_finish_driver,
+            if(ord.is_td_finish>=1,1,0) as is_finish_driver
             --是否完单司机标志
 
     
