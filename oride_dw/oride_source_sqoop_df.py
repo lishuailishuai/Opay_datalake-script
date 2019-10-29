@@ -188,6 +188,9 @@ table_list = [
     ("opay_spread", "promoter_user_relat_admin", "opay_spread_mysql", "promoter",1),
     ("opay_spread", "promoter_users_device", "opay_spread_mysql", "promoter",1),
     ("opay_spread", "spread_sign_up", "opay_spread_mysql", "promoter",1),
+
+    # algorithm_db
+    ("algorithm", "order_operation_info", "algorithm_db", "algorithm",1),
 ]
 
 HIVE_DB = 'oride_dw_ods'
@@ -313,7 +316,7 @@ for db_name, table_name, conn_id, prefix_name,priority_weight_nm in table_list:
             --hive-delims-replacement " " \
             --delete-target-dir \
             --compression-codec=snappy \
-            -m 12
+            -m {m}
         '''.format(
             host=conn_conf_dict[conn_id].host,
             port=conn_conf_dict[conn_id].port,
@@ -321,7 +324,8 @@ for db_name, table_name, conn_id, prefix_name,priority_weight_nm in table_list:
             username=conn_conf_dict[conn_id].login,
             password=conn_conf_dict[conn_id].password,
             table=table_name,
-            ufile_path=UFILE_PATH % (db_name, table_name)
+            ufile_path=UFILE_PATH % (db_name, table_name),
+            m=1 if table_name=='order_operation_info' else 12
         ),
         dag=dag,
     )

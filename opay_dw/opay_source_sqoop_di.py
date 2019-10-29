@@ -80,6 +80,9 @@ table_list = [
     ("opay_transaction","user_topup_record", "opay_db", "base",3),
     ("opay_transaction","user_transfer_card_record", "opay_db", "base",3),
     ("opay_transaction","user_transfer_user_record", "opay_db", "base",3),
+    ("opay_fee","user_fee_record", "opay_db", "base",3),
+    ("opay_fee","merchant_fee_record", "opay_db", "base",3),
+
 ]
 
 HIVE_DB = 'opay_dw_ods'
