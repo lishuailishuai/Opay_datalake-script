@@ -188,7 +188,7 @@ SELECT product_id,
             sum(DISTINCT (CASE WHEN ord.driver_id=p1.driver_id THEN ord.succ_push_order_cnt ELSE 0 END)) AS succ_push_order_cnt,--成功推送司机的订单数
     
             
-            sum(if(ord.is_td_finish>=1,nvl(dtr.driver_freerange,0) + nvl(ord.td_finish_billing_dur,0) + nvl(ord.td_cannel_pick_dur,0),0)) AS finish_driver_online_dur,
+            sum(if(ord.is_td_finish>=1,nvl(dtr.driver_freerange,0) + nvl(ord.td_billing_dur,0) + nvl(ord.td_cannel_pick_dur,0),0)) AS finish_driver_online_dur,
             --完单司机在线时长（秒）
             
             sum(nvl(c1.driver_click_order_cnt,0)) as driver_click_order_cnt,
@@ -228,7 +228,6 @@ SELECT product_id,
                 sum(td_billing_dur) as td_billing_dur,
                 sum(td_cannel_pick_dur) as td_cannel_pick_dur,
                 sum(is_td_finish) as is_td_finish,  --用于判断该订单是否是完单                
-                sum(if(is_td_finish = 1,td_finish_billing_dur,0)) as td_finish_billing_dur,
                 sum(if(is_td_finish = 1,1,0)) as driver_finish_ord_num,
                 sum(if(is_td_finish_pay = 1, 1, 0)) as driver_finish_pay_order_num, --支付完单量
                 sum(if(is_td_finish = 1, price, 0)) as finish_gmv --当日完单gmv

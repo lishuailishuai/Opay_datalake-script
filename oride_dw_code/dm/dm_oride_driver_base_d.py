@@ -193,7 +193,7 @@ dm_oride_driver_base_d_task = HiveOperator(
     
             sum((CASE WHEN ord.driver_id=p1.driver_id THEN ord.succ_push_order_cnt ELSE 0 END)) AS succ_push_order_cnt,--成功推送司机的订单数
     
-            sum(if(ord.is_td_finish>=1,nvl(dtr.driver_freerange,0) + nvl(ord.td_finish_billing_dur,0) + nvl(ord.td_cannel_pick_dur,0),0)) AS finish_driver_online_dur,
+            sum(if(ord.is_td_finish>=1,nvl(dtr.driver_freerange,0) + nvl(ord.td_billing_dur,0) + nvl(ord.td_cannel_pick_dur,0),0)) AS finish_driver_online_dur,
             --完单司机在线时长（秒）
             
             sum(nvl(c1.driver_click_order_cnt,0)) as driver_click_order_cnt,
@@ -204,7 +204,7 @@ dm_oride_driver_base_d_task = HiveOperator(
             
             sum(nvl(ord.td_billing_dur,0)) as driver_billing_dur,
             --司机订单计费时长
-            sum(if(ord.is_td_finish>=1 and ord.is_strong_dispatch>=1,nvl(dtr.driver_freerange,0) + nvl(ord.td_finish_billing_dur,0) + nvl(ord.td_cannel_pick_dur,0),0)) AS strong_finish_driver_online_dur
+            sum(if(ord.is_td_finish>=1 and ord.is_strong_dispatch>=1,nvl(dtr.driver_freerange,0) + nvl(ord.td_billing_dur,0) + nvl(ord.td_cannel_pick_dur,0),0)) AS strong_finish_driver_online_dur
             --强派单完单司机在线时长（秒）
     
        FROM
@@ -224,7 +224,7 @@ dm_oride_driver_base_d_task = HiveOperator(
                 sum(td_cannel_pick_dur) as td_cannel_pick_dur,
                 sum(is_strong_dispatch) as is_strong_dispatch,  --用于判断该司机是否是强派单司机
                 sum(is_td_finish) as is_td_finish,  --用于判断该订单是否是完单
-                sum(if(is_td_finish = 1,td_finish_billing_dur,0)) as td_finish_billing_dur
+               -- sum(if(is_td_finish = 1,td_finish_billing_dur,0)) as td_finish_billing_dur
                 
                 FROM oride_dw.dwd_oride_order_base_include_test_di
                 WHERE dt='{pt}'
