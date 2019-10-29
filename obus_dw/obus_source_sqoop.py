@@ -279,19 +279,6 @@ for obus_table in obus_table_list:
         dag=dag
     )
 
-    '''
-    刷新impala数据库
-    '''
-    refresh_impala = ImpalaOperator(
-        task_id='refresh_impala_{}'.format(hive_table.format(bs=obus_table.get('table'))),
-        hql="""
-            REFRESH {table};
-        """.format(table=hive_table.format(bs=obus_table.get('table'))),
-        schema=hive_db,
-        priority_weight=50,
-        dag=dag
-    )
-
     if obus_table.get('table') in IGNORED_TABLE_LIST:
         add_partitions >> validate_all_data
     else:
@@ -323,5 +310,5 @@ for obus_table in obus_table_list:
 
     # 加入调度队列
     import_from_mysql >> create_table >> add_partitions
-    validate_all_data >> refresh_impala >> success
+    validate_all_data >> success
 
