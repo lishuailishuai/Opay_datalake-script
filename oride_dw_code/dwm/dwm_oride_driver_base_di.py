@@ -162,6 +162,9 @@ SELECT product_id,
 
             driver_finish_gmv,
             --司机完单gmv
+            
+            is_finish_driver,
+            --是否完单司机标志
 
            country_code,
            --国家码字段
@@ -185,7 +188,7 @@ SELECT product_id,
             sum(DISTINCT (CASE WHEN ord.driver_id=p1.driver_id THEN ord.succ_push_order_cnt ELSE 0 END)) AS succ_push_order_cnt,--成功推送司机的订单数
     
             
-            sum( nvl(dtr.driver_freerange,0) + nvl(ord.td_finish_billing_dur,0) + nvl(ord.td_finish_cannel_pick_dur,0)) AS finish_driver_online_dur,
+            sum(if(ord.is_td_finish>=1,nvl(dtr.driver_freerange,0) + nvl(ord.td_finish_billing_dur,0) + nvl(ord.td_cannel_pick_dur,0),0)) AS finish_driver_online_dur,
             --完单司机在线时长（秒）
             
             sum(nvl(c1.driver_click_order_cnt,0)) as driver_click_order_cnt,
@@ -203,9 +206,10 @@ SELECT product_id,
             sum(nvl(ord.driver_finish_pay_order_num,0)) as driver_finish_pay_order_num,
             --司机支付完单量
 
-            sum(nvl(finish_gmv,0)) as driver_finish_gmv
+            sum(nvl(finish_gmv,0)) as driver_finish_gmv,
             --司机完单gmv
-
+            if(ord.is_td_finish>=1,1,0) as is_finish_driver,
+            --是否完单司机标志
 
     
        FROM
@@ -223,7 +227,7 @@ SELECT product_id,
                 sum(if(is_td_finish = 1,td_finish_order_dur,0)) as td_finish_order_dur,
                 sum(td_billing_dur) as td_billing_dur,
                 sum(td_cannel_pick_dur) as td_cannel_pick_dur,
-                sum(if(is_td_finish = 1,td_cannel_pick_dur,0)) as td_finish_cannel_pick_dur,                
+                sum(is_td_finish) as is_td_finish,  --用于判断该订单是否是完单                
                 sum(if(is_td_finish = 1,td_finish_billing_dur,0)) as td_finish_billing_dur,
                 sum(if(is_td_finish = 1,1,0)) as driver_finish_ord_num,
                 sum(if(is_td_finish_pay = 1, 1, 0)) as driver_finish_pay_order_num, --支付完单量
@@ -272,7 +276,8 @@ SELECT product_id,
        GROUP BY dri.product_id,
                 dri.city_id,
                 dri.country_code,
-                dri.driver_id
+                dri.driver_id,
+                if(ord.is_td_finish>=1,1,0)
     ) x
     WHERE x.country_code IN ('nal');
 
