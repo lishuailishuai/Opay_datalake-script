@@ -45,7 +45,7 @@ sleep_time = BashOperator(
 dwm_oride_driver_base_di_task = UFileSensor(
     task_id='dwm_oride_driver_base_di_task',
     filepath='{hdfs_path_str}/country_code=nal/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw/dwm_oride_driver_base_di	",
+        hdfs_path_str="oride/oride_dw/dwm_oride_driver_base_di",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
