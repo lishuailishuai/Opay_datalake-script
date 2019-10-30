@@ -33,11 +33,19 @@ args = {
     'on_success_callback':on_success_callback,
 }
 
+schedule_interval="05 04 * * *"
+
 dag = airflow.DAG(
     'obus_source_sqoop',
-    schedule_interval="05 04 * * *",
+    schedule_interval=schedule_interval,
     concurrency=15,
     max_active_runs=1,
+    default_args=args
+)
+
+dag_monitor = airflow.DAG(
+    'obus_source_sqoop_monitor',
+    schedule_interval=schedule_interval,
     default_args=args
 )
 
@@ -305,7 +313,7 @@ for obus_table in obus_table_list:
             'db_name': hive_db,
             'table_name': hive_table.format(bs=obus_table.get('table')),
         },
-        dag=dag
+        dag=dag_monitor
     )
 
     # 加入调度队列
