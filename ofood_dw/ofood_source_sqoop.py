@@ -16,7 +16,7 @@ from utils.validate_metrics_utils import *
 
 args = {
     'owner': 'zhenqian.zhang',
-    'start_date': datetime(2019, 7, 26),
+    'start_date': datetime(2019, 10, 29),
     'depends_on_past': False,
     'retries': 1,
     'retry_delay': timedelta(minutes=5),
@@ -26,11 +26,18 @@ args = {
     'on_success_callback':on_success_callback,
 }
 
+schedule_interval="30 02 * * *"
+
 dag = airflow.DAG(
     'ofood_source_sqoop',
-    schedule_interval="30 02 * * *",
+    schedule_interval=schedule_interval,
     concurrency=10,
     max_active_runs=1,
+    default_args=args)
+
+dag_monitor = airflow.DAG(
+    'ofood_source_sqoop_monitor',
+    schedule_interval=schedule_interval,
     default_args=args)
 
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
@@ -252,7 +259,7 @@ for db_name, table_name, conn_id, prefix_name in table_list:
             'db_name': HIVE_DB,
             'table_name': hive_table_name,
         },
-        dag=dag
+        dag=dag_monitor
     )
 
 
