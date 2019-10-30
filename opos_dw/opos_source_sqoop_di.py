@@ -25,11 +25,18 @@ args = {
     'on_success_callback': on_success_callback,
 }
 
+schedule_interval="20 01 * * *"
+
 dag = airflow.DAG(
     'opos_source_sqoop_di',
-    schedule_interval="20 01 * * *",
+    schedule_interval=schedule_interval,
     concurrency=15,
     max_active_runs=1,
+    default_args=args)
+
+dag_monitor = airflow.DAG(
+    'opos_source_sqoop_di_monitor',
+    schedule_interval=schedule_interval,
     default_args=args)
 
 ##----------------------------------------- 数据采集前元数据校验 ---------------------------------------##
@@ -263,7 +270,7 @@ for db_name, table_name, conn_id, prefix_name, priority_weight_nm in table_list:
             'db_name': HIVE_DB,
             'table_name': hive_table_name,
         },
-        dag=dag
+        dag=dag_monitor
     )
 
     import_data_validate >> import_table >> check_table >> add_partitions
