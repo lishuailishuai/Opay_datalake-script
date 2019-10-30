@@ -100,24 +100,26 @@ app_oride_order_finished_d_task = HiveOperator(
         SET hive.exec.dynamic.partition.mode=nonstrict;
         
         insert overwrite table oride_dw.{table} partition(dt)
-            select  k2.city_name,
-                k1.driver_finish_ord_num as wdl,--完单量
-                count(if(k1.is_finish_driver=1,k1.driver_id,null)) qss, --完单司机
-                round(sum(if(k1.is_finish_driver=1,k1.finish_driver_online_dur,0))/(3600*count(if(k1.is_finish_driver=1,k1.driver_id,null))),2) as avg_online_dur, --人均在线时长
-                k1.dt
-            from
-            (
-                select 
-                    a.dt,
+            select k2.city_name,
+                k1.driver_finish_ord_num as wdl, --完单量
+                count(distinct k1.driver_id) as qss,--完单司机数
+                round(sum(k1.finish_driver_online_dur)/(3600*count(distinct k1.driver_id)),2) as avg_online_dur--平均在线时长
+            from (
+                select a.dt,
+                    a.city_id,
 	                a.driver_id,
-	                a.city_id,
 	                a.finish_driver_online_dur,--在线时长
 	                a.driver_finish_ord_num, --完单量
-	                a.is_finish_driver --是否完单
-                from oride_dw.dwm_oride_driver_base_di a
-                where a.dt='{pt}'
+	                a.is_finish_driver
+	            from oride_dw.dwm_oride_driver_base_di a
+	            where a.dt='${pt}'
             ) k1
-            left join oride_dw.dim_oride_city k2
+            left join 
+            (
+                select city_id,city_name
+                from oride_dw.dim_oride_city
+                where dt='${pt}'
+            ) k2
             on k1.city_id=k2.city_id
             group by k2.city_name,
             k1.dt,
