@@ -278,7 +278,6 @@ for db_name, table_name, conn_id, prefix_name,priority_weight_nm in table_list:
     # 超时监控
     task_timeout_monitor= PythonOperator(
         task_id='task_timeout_monitor_{}'.format(hive_table_name),
-        priority_weight=priority_weight_nm,
         python_callable=fun_task_timeout_monitor,
         provide_context=True,
         op_kwargs={
