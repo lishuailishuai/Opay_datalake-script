@@ -113,13 +113,13 @@ app_oride_order_finished_d_task = HiveOperator(
 	                a.driver_finish_ord_num, --完单量
 	                a.is_finish_driver
 	            from oride_dw.dwm_oride_driver_base_di a
-	            where a.dt='${pt}'
+	            where a.dt='{pt}'
             ) k1
             left join 
             (
                 select city_id,city_name
                 from oride_dw.dim_oride_city
-                where dt='${pt}'
+                where dt='{pt}'
             ) k2
             on k1.city_id=k2.city_id
             group by k2.city_name,
