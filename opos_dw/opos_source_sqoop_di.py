@@ -15,7 +15,7 @@ from airflow.sensors.sql_sensor import SqlSensor
 
 args = {
     'owner': 'linan',
-    'start_date': datetime(2019, 10, 25),
+    'start_date': datetime(2019, 10, 29),
     'depends_on_past': False,
     'retries': 1,
     'retry_delay': timedelta(minutes=5),

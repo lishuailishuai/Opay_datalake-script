@@ -15,7 +15,7 @@ from utils.validate_metrics_utils import *
 
 args = {
     'owner': 'linan',
-    'start_date': datetime(2019, 10, 29),
+    'start_date': datetime(2019, 10, 30),
     'depends_on_past': False,
     'retries': 1,
     'retry_delay': timedelta(minutes=5),
