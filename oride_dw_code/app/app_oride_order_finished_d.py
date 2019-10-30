@@ -103,7 +103,8 @@ app_oride_order_finished_d_task = HiveOperator(
             select k2.city_name,
                 k1.driver_finish_ord_num as wdl, --完单量
                 count(distinct k1.driver_id) as qss,--完单司机数
-                round(sum(k1.finish_driver_online_dur)/(3600*count(distinct k1.driver_id)),2) as avg_online_dur--平均在线时长
+                round(sum(k1.finish_driver_online_dur)/(3600*count(distinct k1.driver_id)),2) as avg_online_dur,--平均在线时长
+                k1.dt
             from (
                 select a.dt,
                     a.city_id,
