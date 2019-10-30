@@ -23,17 +23,18 @@ args = {
     'email_on_retry': False,
     'on_success_callback':on_success_callback,
 }
+schedule_interval="00 03 * * *"
 
 dag = airflow.DAG(
     'opay_source_sqoop_df',
-    schedule_interval="00 03 * * *",
+    schedule_interval=schedule_interval,
     concurrency=15,
     max_active_runs=1,
     default_args=args)
 
 dag_monitor = airflow.DAG(
     'opay_source_sqoop_df_monitor',
-    schedule_interval="00 03 * * *",
+    schedule_interval=schedule_interval,
     default_args=args)
 
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
