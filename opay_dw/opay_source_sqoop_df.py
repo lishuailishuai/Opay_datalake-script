@@ -31,6 +31,11 @@ dag = airflow.DAG(
     max_active_runs=1,
     default_args=args)
 
+dag_monitor = airflow.DAG(
+    'opay_source_sqoop_df_monitor',
+    schedule_interval="00 02 * * *",
+    default_args=args)
+
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
 
 def fun_task_timeout_monitor(ds, db_name, table_name, **op_kwargs):
@@ -116,11 +121,7 @@ table_list = [
     ("opay_user","user_upgrade", "opay_db", "base",3),
     ("opay_user","user_token", "opay_db", "base",3),
     ("opay_user","user_kyc_record", "opay_db", "base",3),
-    ("opay_user","user_email", "opay_db", "base",3),
-    ("opay_sms","message_record", "opay_db", "base",3),
     ("opay_overlord","overlord_user", "opay_db", "base",3),
-    ("opay_fee","user_fee_record", "opay_db", "base",3),
-    ("opay_fee","merchant_fee_record", "opay_db", "base",3),
     ("opay_transaction","business_collection_record", "opay_db", "base",3),
 ]
 
@@ -324,7 +325,7 @@ for db_name, table_name, conn_id, prefix_name,priority_weight_nm in table_list:
             'db_name': HIVE_DB,
             'table_name': hive_table_name,
         },
-        dag=dag
+        dag=dag_monitor
     )
 
     import_table >> check_table >> add_partitions
