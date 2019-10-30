@@ -14,7 +14,7 @@ from utils.util import on_success_callback
 
 args = {
     'owner': 'zhenqian.zhang',
-    'start_date': datetime(2019, 10, 16),
+    'start_date': datetime(2019, 10, 30),
     'depends_on_past': False,
     'retries': 1,
     'retry_delay': timedelta(minutes=5),
@@ -26,14 +26,14 @@ args = {
 
 dag = airflow.DAG(
     'opay_source_sqoop_df',
-    schedule_interval="00 02 * * *",
+    schedule_interval="00 03 * * *",
     concurrency=15,
     max_active_runs=1,
     default_args=args)
 
 dag_monitor = airflow.DAG(
     'opay_source_sqoop_df_monitor',
-    schedule_interval="00 02 * * *",
+    schedule_interval="00 03 * * *",
     default_args=args)
 
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
