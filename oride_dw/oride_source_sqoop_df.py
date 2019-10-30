@@ -38,8 +38,6 @@ dag = airflow.DAG(
 dag_monitor = airflow.DAG(
     'oride_source_sqoop_df_monitor',
     schedule_interval=schedule_interval,
-    concurrency=15,
-    max_active_runs=1,
     default_args=args)
 
 check_data_driver_records_finish = SqlSensor(
