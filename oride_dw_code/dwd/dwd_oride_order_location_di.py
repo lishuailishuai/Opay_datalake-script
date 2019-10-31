@@ -48,8 +48,8 @@ sleep_time = BashOperator(
 ##----------------------------------------- 依赖 ---------------------------------------##
 
 # 依赖前一天分区
-dependence_dwd_oride_order_location_event_hi_prev_day_task = UFileSensor(
-    task_id='dependence_dwd_oride_order_location_event_hi_prev_day_task',
+dependence_dwd_oride_client_event_detail_hi_prev_day_task = UFileSensor(
+    task_id='dependence_dwd_oride_client_event_detail_hi_prev_day_task',
     filepath='{hdfs_path_str}/country_code=nal/dt={pt}/hour={hour}/_SUCCESS'.format(
         hdfs_path_str="oride/oride_dw/dwd_oride_client_event_detail_hi",
         pt='{{ds}}',
@@ -374,7 +374,7 @@ touchz_data_success = PythonOperator(
     dag=dag
 )
 
-dependence_dwd_oride_order_location_event_hi_prev_day_task >> \
+dependence_dwd_oride_client_event_detail_hi_prev_day_task >> \
 dependence_dwd_oride_driver_location_event_hi_prev_day_task >> \
 dependence_dwd_oride_passanger_location_event_hi_prev_day_task >> \
 sleep_time >> dwd_oride_order_location_di_task >> task_check_key_data >> touchz_data_success
