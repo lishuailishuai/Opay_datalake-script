@@ -42,7 +42,6 @@ ods_sqoop_base_bd_shop_df_dependence_task = HivePartitionSensor(
     dag=dag
 )
 
-
 ods_sqoop_base_pre_opos_payment_order_di_dependence_task = HivePartitionSensor(
     task_id="ods_sqoop_base_pre_opos_payment_order_di_dependence_task",
     table="ods_sqoop_base_pre_opos_payment_order_di",
@@ -52,7 +51,14 @@ ods_sqoop_base_pre_opos_payment_order_di_dependence_task = HivePartitionSensor(
     dag=dag
 )
 
-
+ods_sqoop_base_bd_city_df_dependence_task = HivePartitionSensor(
+    task_id="ods_sqoop_base_bd_city_df_dependence_task",
+    table="ods_sqoop_base_bd_city_df",
+    partition="dt='{{ds}}'",
+    schema="opos_dw_ods",
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
 
 insert_opos_order_metrics = HiveOperator(
     task_id='insert_opos_order_metrics',
@@ -61,20 +67,62 @@ insert_opos_order_metrics = HiveOperator(
         set hive.exec.parallel=true;
         set hive.exec.dynamic.partition.mode=nonstrict;
         
-        with merchant_data as (
+        with 
+        shop_dim as (
+        
+            select 
+            s.id,
+            s.bd_id,
+            s.city_id,
+            s.opay_id,
+            s.created_at,
+            c.name as city_name,
+            c.country
+            from 
+            (
+                select
+                id,
+                created_at,
+                bd_id,
+                city_id,
+                opay_id
+                from 
+                opos_dw_ods.ods_sqoop_base_bd_shop_df
+                where dt = '{dt}'
+                and substr(created_at,1,10) <= '{dt}'
+            ) s 
+            join (
+                select 
+                id,
+                name,
+                country
+                from 
+                opos_dw_ods.ods_sqoop_base_bd_city_df
+                where dt = '{dt}'
+            ) c on s.city_id = c.id
+        ),
+        
+        
+        merchant_data as (
+            
             select 
             '{dt}' as dt,
             bd_id,
             city_id,
+            city_name,
+            country,
             count(id) as merchant_cnt,
             0 as pos_merchant_cnt,
             count(if(substr(created_at,1,10) = '{dt}',id,null)) as new_merchant_cnt,
             0 as new_pos_merchant_cnt
             from 
-            opos_dw_ods.ods_sqoop_base_bd_shop_df
-            where dt = '{dt}'
-            and substr(created_at,1,10) <= '{dt}'
-            group by bd_id,city_id
+            shop_dim
+            group by 
+            bd_id,
+            city_id,
+            city_name,
+            country
+            
         ),
         
         order_data as (
@@ -82,6 +130,8 @@ insert_opos_order_metrics = HiveOperator(
             '{dt}' as dt,
             s.bd_id,
             s.city_id,
+            s.city_name,
+            s.country,
             count(if(p.order_type = 'pos' and p.trade_status = 'SUCCESS',p.order_id,null)) as pos_complete_order_cnt,
             count(if(p.order_type = 'qrcode' and p.trade_status = 'SUCCESS',p.order_id,null)) as qr_complete_order_cnt,
             count(if(p.trade_status = 'SUCCESS',p.order_id,null)) as complete_order_cnt,
@@ -101,17 +151,8 @@ insert_opos_order_metrics = HiveOperator(
                 opos_dw_ods.ods_sqoop_base_pre_opos_payment_order_di
                 where dt = '{dt}'
             ) p 
-            join (
-                select 
-                bd_id,
-                city_id,
-                opay_id
-                from 
-                opos_dw_ods.ods_sqoop_base_bd_shop_df
-                where dt = '{dt}'
-                and substr(created_at,1,10) <= '{dt}'
-            ) s on p.receipt_id = s.opay_id
-            group by s.bd_id,s.city_id
+            join shop_dim s on p.receipt_id = s.opay_id
+            group by s.bd_id,s.city_id,s.city_name,s.country
         ) 
         
         insert overwrite table opos_temp.opos_metrcis_report partition (country_code,dt)
@@ -127,6 +168,8 @@ insert_opos_order_metrics = HiveOperator(
         nvl(od.complete_order_cnt,0),
         nvl(od.gmv,0),
         nvl(od.actual_amount,0),
+        md.city_name,
+        md.country,
         'nal' as country_code,
         md.dt as dt
         
@@ -157,6 +200,8 @@ insert_opos_active_user_detail_metrics = HiveOperator(
         p.receipt_id,
         p.order_type,
         p.trade_status,
+        c.name,
+        c.country,
         'nal' as country_code,
         '{dt}' as dt
         
@@ -181,6 +226,15 @@ insert_opos_active_user_detail_metrics = HiveOperator(
             where dt = '{dt}'
             and substr(created_at,1,10) <= '{dt}'
         ) s on p.receipt_id = s.opay_id
+        join (
+            select 
+            id,
+            name,
+            country
+            from 
+            opos_dw_ods.ods_sqoop_base_bd_city_df
+            where dt = '{dt}'
+        ) c on s.city_id = c.id
         
         ;
         '''.format(
@@ -209,6 +263,8 @@ insert_opos_active_user_metrics = HiveOperator(
             city_id,
             sender_id,
             order_type,
+            city_name,
+            country,
             sum(if(dt = '{dt}',1,0)) as is_current_day,
             sum(if(dt = '{before_1_day}',1,0)) as is_before_1_day,
             sum(if(dt = '{before_7_day}',1,0)) as is_before_7_day,
@@ -217,10 +273,13 @@ insert_opos_active_user_metrics = HiveOperator(
             from 
             active_base 
             where trade_status = 'SUCCESS'
-            group by bd_id,
+            group by 
+            bd_id,
             city_id,
             sender_id,
-            order_type
+            order_type,
+            city_name,
+            country
         ),
         
         current_user as (
@@ -228,15 +287,19 @@ insert_opos_active_user_metrics = HiveOperator(
             '{dt}' as dt,
             bd_id,
             city_id,
-            count(if(order_type = 'pos',sender_id,null)) as pos_user_active_cnt,
-            count(if(order_type = 'qrcode',sender_id,null)) as qr_user_active_cnt
+            city_name,
+            country,
+            count(distinct if(order_type = 'pos',sender_id,null)) as pos_user_active_cnt,
+            count(distinct if(order_type = 'qrcode',sender_id,null)) as qr_user_active_cnt
             
             from 
             user_base 
             where is_current_day > 0
             group by 
             bd_id,
-            city_id
+            city_id,
+            city_name,
+            country
         ),
         
         
@@ -246,13 +309,17 @@ insert_opos_active_user_metrics = HiveOperator(
             '{dt}' as dt,
             bd_id,
             city_id,
+            city_name,
+            country,
             count(distinct sender_id) as user_active_cnt
             from 
             user_base 
             where is_current_day > 0 and is_before_1_day > 0
             group by 
             bd_id,
-            city_id
+            city_id,
+            city_name,
+            country
         ),
         
         day_7_remain as (
@@ -261,13 +328,17 @@ insert_opos_active_user_metrics = HiveOperator(
             '{dt}' as dt,
             bd_id,
             city_id,
+            city_name,
+            country,
             count(distinct sender_id) as user_active_cnt
             from 
             user_base 
             where is_current_day > 0 and is_before_7_day > 0
             group by 
             bd_id,
-            city_id
+            city_id,
+            city_name,
+            country
         ),
         
         day_15_remain as (
@@ -275,13 +346,17 @@ insert_opos_active_user_metrics = HiveOperator(
             '{dt}' as dt,
             bd_id,
             city_id,
+            city_name,
+            country,
             count(distinct sender_id) as user_active_cnt
             from 
             user_base 
             where is_current_day > 0 and is_before_15_day > 0
             group by 
             bd_id,
-            city_id
+            city_id,
+            city_name,
+            country
         ),
         
         day_30_remain as (
@@ -289,13 +364,17 @@ insert_opos_active_user_metrics = HiveOperator(
             '{dt}' as dt,
             bd_id,
             city_id,
+            city_name,
+            country,
             count(distinct sender_id) as user_active_cnt
             from 
             user_base 
             where is_current_day > 0 and is_before_30_day > 0
             group by 
             bd_id,
-            city_id
+            city_id,
+            city_name,
+            country
         ),
         
         order_merchant_data as (
@@ -303,13 +382,17 @@ insert_opos_active_user_metrics = HiveOperator(
             '{dt}' as dt,
             bd_id,
             city_id,
+            city_name,
+            country,
             count(distinct(receipt_id)) as order_merchant_cnt,
             count(distinct(if(order_type = 'pos',receipt_id,null))) as pos_order_merchant_cnt
             from 
             active_base
             where dt = '{dt}' and trade_status = 'SUCCESS'
             group by bd_id,
-            city_id
+            city_id,
+            city_name,
+            country
         ),
         
         time_dim as (
@@ -326,6 +409,8 @@ insert_opos_active_user_metrics = HiveOperator(
             '{dt}' as dt,
             u.bd_id,
             u.city_id,
+            u.city_name,
+            u.country,
             t.monday_of_year,
             count(distinct(if(order_type = 'pos',sender_id,null))) as pos_user_active_cnt,
             count(distinct(if(order_type = 'qrcode',sender_id,null))) as qr_user_active_cnt
@@ -343,7 +428,9 @@ insert_opos_active_user_metrics = HiveOperator(
             ) u 
             join public_dw_dim.dim_date d on u.dt = d.dt
             join time_dim t on d.monday_of_year = t.monday_of_year
-            group by t.monday_of_year,u.bd_id,u.city_id
+            group by t.monday_of_year,u.bd_id,u.city_id,
+            u.city_name,
+            u.country
         ),
         
         month_data as (
@@ -351,6 +438,8 @@ insert_opos_active_user_metrics = HiveOperator(
             '{dt}' as dt,
             u.bd_id,
             u.city_id,
+            u.city_name,
+            u.country,
             t.month,
             count(distinct(if(order_type = 'pos',sender_id,null))) as pos_user_active_cnt,
             count(distinct(if(order_type = 'qrcode',sender_id,null))) as qr_user_active_cnt
@@ -367,7 +456,8 @@ insert_opos_active_user_metrics = HiveOperator(
             ) u 
             join public_dw_dim.dim_date d on u.dt = d.dt
             join time_dim t on d.month = t.month
-            group by t.month,u.bd_id,u.city_id
+            group by t.month,u.bd_id,u.city_id,u.city_name,
+            u.country
         ),
         
         have_order_user as (
@@ -375,12 +465,16 @@ insert_opos_active_user_metrics = HiveOperator(
             '{dt}' as dt,
             bd_id,
             city_id,
+            city_name,
+            country,
             count(distinct(sender_id)) as have_order_user_cnt
             from 
             active_base
             where dt = '{dt}'
             group by bd_id,
-            city_id
+            city_id,
+            city_name,
+            country
         )
         
         
@@ -401,7 +495,8 @@ insert_opos_active_user_metrics = HiveOperator(
         nvl(md.pos_user_active_cnt,0),
         nvl(md.qr_user_active_cnt,0),
         nvl(ou.have_order_user_cnt,0),
-        
+        cu.city_name,
+        cu.country,
         'nal' as country_code,
         '{dt}' as dt
         
@@ -458,7 +553,9 @@ insert_crm_metrics = HiveToMySqlTransfer(
         nvl(b.week_qr_user_active_cnt,0),
         nvl(b.month_pos_user_active_cnt,0),
         nvl(b.month_qr_user_active_cnt,0),
-        nvl(b.have_order_user_cnt,0)
+        nvl(b.have_order_user_cnt,0),
+        a.city_name,
+        a.country
         
         from 
         opos_temp.opos_metrcis_report a 
@@ -470,9 +567,11 @@ insert_crm_metrics = HiveToMySqlTransfer(
     mysql_table='opos_metrics_daily',
     dag=dag)
 
-
+ods_sqoop_base_bd_city_df_dependence_task >> insert_opos_order_metrics
 ods_sqoop_base_pre_opos_payment_order_di_dependence_task >> insert_opos_order_metrics
 ods_sqoop_base_bd_shop_df_dependence_task >> insert_opos_order_metrics
+
+ods_sqoop_base_bd_city_df_dependence_task >> insert_opos_active_user_detail_metrics
 ods_sqoop_base_pre_opos_payment_order_di_dependence_task >> insert_opos_active_user_detail_metrics
 ods_sqoop_base_bd_shop_df_dependence_task >> insert_opos_active_user_detail_metrics
 
