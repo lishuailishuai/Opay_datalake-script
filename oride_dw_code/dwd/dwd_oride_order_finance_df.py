@@ -124,7 +124,7 @@ ord.product_id,
  ord.order_id, --订单号
  ord.create_date,--订单日期
  ord.driver_id, --司机id
- sum(nvl(recharge.amount,0.0)) AS recharge_amount, --充值金额
+ sum(nvl(recharge.amount,0.0)) AS recharge_amount, --资金调整金额
  sum(nvl(reward.amount,0.0)) AS reward_amount, --奖励金额
  sum(nvl(records.amount_pay_online,0.0)) AS amount_pay_online, --当日总收入-线上支付金额
  sum(nvl(records.amount_pay_offline,0.0)) AS amount_pay_offline, --当日总收入-线下支付金额
@@ -140,7 +140,7 @@ LEFT JOIN
   (SELECT *
    FROM oride_dw_ods.ods_sqoop_base_data_driver_recharge_records_df
    WHERE dt='{pt}'
-     AND amount>0) recharge ON ord.order_id=recharge.order_id
+     AND amount_reason in(4,5,7)) recharge ON ord.order_id=recharge.order_id
 LEFT JOIN
   (SELECT *
    FROM oride_dw_ods.ods_sqoop_base_data_driver_reward_df
