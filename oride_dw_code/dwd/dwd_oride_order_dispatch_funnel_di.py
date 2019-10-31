@@ -260,4 +260,4 @@ touchz_data_success = PythonOperator(
     dag=dag
 )
 
-dependence_dwd_oride_order_dispatch_funnel_di_prev_day_task >> sleep_time >> dwd_oride_order_dispatch_funnel_di_task >> touchz_data_success
+dispatch_tracker_server_magic_prev_day_task >> sleep_time >> dwd_oride_order_dispatch_funnel_di_task >> touchz_data_success
