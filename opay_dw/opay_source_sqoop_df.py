@@ -59,17 +59,35 @@ db_name,table_name,conn_id,prefix_name,priority_weight
 #
 
 table_list = [
-    ("opay_transaction","adjustment_decrease_record", "opay_db", "base",3),
-    ("opay_transaction","adjustment_increase_record", "opay_db", "base",3),
+    ("opay_bigorder","big_order", "opay_db", "base",3),
+    ("opay_transaction","user_transfer_user_record", "opay_db", "base",3),
+    ("opay_user","user", "opay_db", "base",3),
+    ("opay_transaction","merchant_transfer_user_record", "opay_db", "base",3),
     ("opay_transaction","airtime_topup_record", "opay_db", "base",3),
     ("opay_transaction","betting_topup_record", "opay_db", "base",3),
+    ("opay_transaction","user_topup_record", "opay_db", "base",3),
+    ("opay_user","user_upgrade", "opay_db", "base",3),
+
+    ("opay_bigorder","merchant_order", "opay_db", "base",2),
+    ("opay_account","account_user", "opay_db", "base", 2),
+    ("opay_account","account_merchant", "opay_db", "base", 2),
+
+    ("opay_user","user_operator", "opay_db", "base", 1),
+    ("opay_user","user_payment_instrument", "opay_db", "base", 1),
+    ("opay_overlord","overlord_user", "opay_db", "base", 1),
+    ("opay_merchant","merchant", "opay_db", "base", 1),
+    ("opay_account","accounting_merchant_record", "opay_db", "base", 1),
+    ("opay_account","accounting_record", "opay_db", "base", 1),
+]
+"""
+    ("opay_transaction","adjustment_decrease_record", "opay_db", "base",3),
+    ("opay_transaction","adjustment_increase_record", "opay_db", "base",3),
     ("opay_transaction","electricity_topup_record", "opay_db", "base",3),
     ("opay_transaction","merchant_acquiring_record", "opay_db", "base",3),
     ("opay_transaction","merchant_pos_transaction_record", "opay_db", "base",3),
     ("opay_transaction","merchant_receive_money_record", "opay_db", "base",3),
     ("opay_transaction","merchant_topup_record", "opay_db", "base",3),
     ("opay_transaction","merchant_transfer_card_record", "opay_db", "base",3),
-    ("opay_transaction","merchant_transfer_user_record", "opay_db", "base",3),
     ("opay_transaction","mobiledata_topup_record", "opay_db", "base",3),
     ("opay_transaction","payment_authorization_record", "opay_db", "base",3),
     ("opay_transaction","payment_token_record", "opay_db", "base",3),
@@ -79,18 +97,9 @@ table_list = [
     ("opay_transaction","user_easycash_record", "opay_db", "base",3),
     ("opay_transaction","user_pos_transaction_record", "opay_db", "base",3),
     ("opay_transaction","user_receive_money_record", "opay_db", "base",3),
-    ("opay_transaction","user_topup_record", "opay_db", "base",3),
     ("opay_transaction","user_transfer_card_record", "opay_db", "base",3),
-    ("opay_transaction","user_transfer_user_record", "opay_db", "base",3),
-    ("opay_bigorder","big_order", "opay_db", "base",3),
-    ("opay_bigorder","merchant_order", "opay_db", "base",3),
     ("opay_bigorder","user_order", "opay_db", "base",3),
-    ("opay_account","account_merchant", "opay_db", "base",3),
-    ("opay_account","account_user", "opay_db", "base",3),
-    ("opay_account","accounting_merchant_record", "opay_db", "base",3),
-    ("opay_account","accounting_record", "opay_db", "base",3),
     ("opay_account","accounting_request_record", "opay_db", "base",3),
-    ("opay_merchant","merchant", "opay_db", "base",3),
     ("opay_merchant","merchant_email_setting", "opay_db", "base",3),
     ("opay_merchant","merchant_key", "opay_db", "base",3),
     ("opay_merchant","merchant_operator", "opay_db", "base",3),
@@ -112,19 +121,14 @@ table_list = [
     ("opay_recon","internal_record", "opay_db", "base",3),
     ("opay_recon","internal_request_record", "opay_db", "base",3),
     ("opay_user","upload_file", "opay_db", "base",3),
-    ("opay_user","user", "opay_db", "base",3),
     ("opay_user","user_bvn", "opay_db", "base",3),
     ("opay_user","user_kyc", "opay_db", "base",3),
     ("opay_user","user_kyc_upload", "opay_db", "base",3),
     ("opay_user","user_limit", "opay_db", "base",3),
-    ("opay_user","user_operator", "opay_db", "base",3),
-    ("opay_user","user_payment_instrument", "opay_db", "base",3),
-    ("opay_user","user_upgrade", "opay_db", "base",3),
     ("opay_user","user_token", "opay_db", "base",3),
     ("opay_user","user_kyc_record", "opay_db", "base",3),
-    ("opay_overlord","overlord_user", "opay_db", "base",3),
     ("opay_transaction","business_collection_record", "opay_db", "base",3),
-]
+"""
 
 HIVE_DB = 'opay_dw_ods'
 HIVE_TABLE = 'ods_sqoop_%s_%s_df'
@@ -238,7 +242,7 @@ for db_name, table_name, conn_id, prefix_name,priority_weight_nm in table_list:
         bash_command='''
             #!/usr/bin/env bash
             sqoop import "-Dorg.apache.sqoop.splitter.allow_text_splitter=true" \
-            -D mapred.job.queue.name=root.collects \
+            -D mapred.job.queue.name=root.opay_collects \
             --connect "jdbc:mysql://{host}:{port}/{schema}?tinyInt1isBit=false&useUnicode=true&characterEncoding=utf8" \
             --username {username} \
             --password {password} \
@@ -258,7 +262,7 @@ for db_name, table_name, conn_id, prefix_name,priority_weight_nm in table_list:
             password=conn_conf_dict[conn_id].password,
             table=table_name,
             ufile_path=UFILE_PATH % (db_name, table_name),
-            m=1 if table_name=='channel_response_code' else 12
+            m=1 if table_name=='channel_response_code' else 20
     ),
         dag=dag,
     )
