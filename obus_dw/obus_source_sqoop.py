@@ -23,7 +23,7 @@ from utils.util import on_success_callback
 
 args = {
     'owner': 'wuduo',
-    'start_date': datetime(2019, 10, 29),
+    'start_date': datetime(2019, 10, 30),
     'depends_on_past': False,
     'retries': 3,
     'retry_delay': timedelta(minutes=5),
@@ -33,7 +33,7 @@ args = {
     'on_success_callback':on_success_callback,
 }
 
-schedule_interval="05 04 * * *"
+schedule_interval="05 08 * * *"
 
 dag = airflow.DAG(
     'obus_source_sqoop',
