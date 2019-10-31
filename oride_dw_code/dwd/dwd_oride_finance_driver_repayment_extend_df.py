@@ -209,6 +209,9 @@ SELECT dri.city_id,
        dri.fault,
        --骑手状态
 
+       dri.plate_number,
+       --车牌号
+
        dri.country_code,
        --国家码字段
 
