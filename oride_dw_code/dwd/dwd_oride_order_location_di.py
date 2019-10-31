@@ -139,135 +139,100 @@ dwd_oride_order_location_di_task = HiveOperator(
             t.order_id order_id,
             concat(substring(cast(t.event_time as string),0,10),'_',t.lat,'_',t.lng) loc
             from 
-            (
-                select
-                event_name,
-                event_time ,
-                get_json_object(event_value,'$.order_id') order_id,
-                get_json_object(event_value,'$.lat') lat,
-                get_json_object(event_value,'$.lng') lng
-                from oride_dw.dwd_oride_client_event_detail_hi
-                where dt = '{pt}'
-                and event_name in (
-                    'looking_for_a_driver_show',
-                    'successful_order_show',
-                    'accept_order_click',
-                    'rider_arrive_show',
-                    'confirm_arrive_click_arrived',
-                    'pick_up_passengers_sliding_arrived',
-                    'start_ride_show',
-                    'start_ride_sliding',
-                    'complete_the_order_show',
-                    'start_ride_sliding_arrived'
-                )
-            ) t where t.order_id is not null
+            (   select 
+                s.event_name,
+                s.event_time,
+                s.order_id,
+                s.lat,
+                s.lng
+                
+                from 
+                (
+                    select
+                    event_name,
+                    event_time ,
+                    get_json_object(event_value,'$.order_id') order_id,
+                    get_json_object(event_value,'$.lat') lat,
+                    get_json_object(event_value,'$.lng') lng,
+                    row_number() over(partition by event_name,get_json_object(event_value,'$.order_id') order by event_time) order_by
+                    from oride_dw.dwd_oride_client_event_detail_hi
+                    where dt = '{pt}'
+                    and event_name in (
+                        'looking_for_a_driver_show',
+                        'successful_order_show',
+                        'accept_order_click',
+                        'rider_arrive_show',
+                        'confirm_arrive_click_arrived',
+                        'pick_up_passengers_sliding_arrived',
+                        'start_ride_show',
+                        'start_ride_sliding',
+                        'complete_the_order_show',
+                        'start_ride_sliding_arrived'
+                    ) 
+                    and get_json_object(event_value,'$.order_id') is not null
+                ) s where s.order_by = 1
+            ) t 
         ),
-
-
 
         middle_data_1 as (
             select 
             od.*,
-            nvl(l.loc,'') looking_for_a_driver_show,
-            nvl(s.loc,'') successful_order_show,
-            nvl(a.loc,'') accept_order_click,
-            nvl(r.loc,'') rider_arrive_show,
-            nvl(c.loc,'') confirm_arrive_click_arrived
-
+            nvl(if(l.event_name = 'looking_for_a_driver_show',l.loc,''),'') looking_for_a_driver_show,
+            nvl(if(l.event_name = 'successful_order_show',l.loc,''),'') successful_order_show,
+            nvl(if(l.event_name = 'accept_order_click',l.loc,''),'') accept_order_click,
+            nvl(if(l.event_name = 'rider_arrive_show',l.loc,''),'') rider_arrive_show,
+            nvl(if(l.event_name = 'confirm_arrive_click_arrived',l.loc,''),'') confirm_arrive_click_arrived,
+            nvl(if(l.event_name = 'pick_up_passengers_sliding_arrived',l.loc,''),'') pick_up_passengers_sliding_arrived,
+            nvl(if(l.event_name = 'start_ride_show',l.loc,''),'') start_ride_show,
+            nvl(if(l.event_name = 'start_ride_sliding',l.loc,''),'') start_ride_sliding,
+            nvl(if(l.event_name = 'complete_the_order_show',l.loc,''),'') complete_the_order_show,
+            nvl(if(l.event_name = 'start_ride_sliding_arrived',l.loc,''),'') start_ride_sliding_arrived
+            
             from order_data od 
             left join (
                 select 
                 order_id,
+                event_name,
                 loc 
                 from event_loc_data 
-                where event_name = 'looking_for_a_driver_show'
             )  l on od.order_id = l.order_id
 
-            left join (
-                select 
-                order_id,
-                loc 
-                from event_loc_data 
-                where event_name = 'successful_order_show'
-            )  s on od.order_id = s.order_id
-
-            left join (
-                select 
-                order_id,
-                loc 
-                from event_loc_data 
-                where event_name = 'accept_order_click'
-            )  a on od.order_id = a.order_id
-
-            left join (
-                select 
-                order_id,
-                loc 
-                from event_loc_data 
-                where event_name = 'rider_arrive_show'
-            )  r on od.order_id = r.order_id
-
-            left join (
-                select 
-                order_id,
-                loc 
-                from event_loc_data 
-                where event_name = 'confirm_arrive_click_arrived'
-            ) c on od.order_id = c.order_id
         ),
-
 
         middle_data_2 as (
             select 
-            m.*,
-            nvl(p.loc,'') pick_up_passengers_sliding_arrived,
-            nvl(s.loc,'') start_ride_show,
-            nvl(st.loc,'') start_ride_sliding,
-            nvl(c.loc,'') complete_the_order_show,
-            nvl(sta.loc,'') start_ride_sliding_arrived
+            m.order_id,
+            m.user_id,
+            m.driver_id,
+            m.create_time,
+            m.status,
+            m.start_loc,
+            m.end_loc,
+            concat_ws('',collect_list(looking_for_a_driver_show)) looking_for_a_driver_show,
+            concat_ws('',collect_list(successful_order_show)) successful_order_show,
+            concat_ws('',collect_list(accept_order_click)) accept_order_click,
+            concat_ws('',collect_list(rider_arrive_show)) rider_arrive_show,
+            concat_ws('',collect_list(confirm_arrive_click_arrived)) confirm_arrive_click_arrived,
+            concat_ws('',collect_list(pick_up_passengers_sliding_arrived)) pick_up_passengers_sliding_arrived,
+            concat_ws('',collect_list(start_ride_show)) start_ride_show,
+            concat_ws('',collect_list(start_ride_sliding)) start_ride_sliding,
+            concat_ws('',collect_list(complete_the_order_show)) complete_the_order_show,
+            concat_ws('',collect_list(start_ride_sliding_arrived)) start_ride_sliding_arrived
 
             from 
             middle_data_1 m 
-            left join (
-                select 
-                order_id,
-                loc 
-                from event_loc_data 
-                where event_name = 'pick_up_passengers_sliding_arrived'
-            ) p on m.order_id = p.order_id
+            group by 
+            m.order_id,
+            m.user_id,
+            m.driver_id,
+            m.create_time,
+            m.status,
+            m.start_loc,
+            m.end_loc
 
-            left join (
-                select 
-                order_id,
-                loc 
-                from event_loc_data 
-                where event_name = 'start_ride_show'
-            ) s on m.order_id = s.order_id
-
-            left join (
-                select 
-                order_id,
-                loc 
-                from event_loc_data 
-                where event_name = 'start_ride_sliding'
-            ) st on m.order_id = st.order_id
-
-            left join (
-                select 
-                order_id,
-                loc 
-                from event_loc_data 
-                where event_name = 'complete_the_order_show'
-            ) c on m.order_id = c.order_id
-
-            left join (
-                select 
-                order_id,
-                loc 
-                from event_loc_data 
-                where event_name = 'start_ride_sliding_arrived'
-            ) sta on m.order_id = sta.order_id
         ),
+
+
         
         driver_location as (
             select 
