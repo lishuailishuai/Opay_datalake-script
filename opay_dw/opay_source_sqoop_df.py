@@ -238,7 +238,7 @@ for db_name, table_name, conn_id, prefix_name,priority_weight_nm in table_list:
         bash_command='''
             #!/usr/bin/env bash
             sqoop import "-Dorg.apache.sqoop.splitter.allow_text_splitter=true" \
-            -D mapred.job.queue.name=root.collects \
+            -D mapred.job.queue.name=root.opay_collects \
             --connect "jdbc:mysql://{host}:{port}/{schema}?tinyInt1isBit=false&useUnicode=true&characterEncoding=utf8" \
             --username {username} \
             --password {password} \
