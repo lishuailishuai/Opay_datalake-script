@@ -567,6 +567,49 @@ insert_crm_metrics = HiveToMySqlTransfer(
     mysql_table='opos_metrics_daily',
     dag=dag)
 
+insert_bi_metrics = HiveToMySqlTransfer(
+    task_id='insert_bi_metrics',
+    sql=""" 
+        select 
+        null,
+        a.dt,
+        a.bd_id , 
+        a.city_id , 
+        a.merchant_cnt , 
+        a.pos_merchant_cnt , 
+        a.new_merchant_cnt , 
+        a.new_pos_merchant_cnt , 
+        a.pos_complete_order_cnt , 
+        a.qr_complete_order_cnt , 
+        a.complete_order_cnt , 
+        a.gmv ,
+        a.actual_amount ,
+        nvl(b.pos_user_active_cnt,0),
+        nvl(b.qr_user_active_cnt,0),
+        nvl(b.before_1_day_user_active_cnt,0),
+        nvl(b.before_7_day_user_active_cnt,0),
+        nvl(b.before_15_day_user_active_cnt,0),
+        nvl(b.before_30_day_user_active_cnt,0),
+        nvl(b.order_merchant_cnt,0),
+        nvl(b.pos_order_merchant_cnt,0),
+        nvl(b.week_pos_user_active_cnt,0),
+        nvl(b.week_qr_user_active_cnt,0),
+        nvl(b.month_pos_user_active_cnt,0),
+        nvl(b.month_qr_user_active_cnt,0),
+        nvl(b.have_order_user_cnt,0),
+        a.city_name,
+        a.country
+
+        from 
+        opos_temp.opos_metrcis_report a 
+        left join opos_temp.opos_active_user_daily b on  a.country_code = b.country_code and a.dt = b.dt and a.bd_id = b.bd_id and a.city_id = b.city_id       
+        where a.country_code = 'nal' and  a.dt = '{{ ds }}'
+
+        """,
+    mysql_conn_id='mysql_bi',
+    mysql_table='opos_metrics_daily',
+    dag=dag)
+
 ods_sqoop_base_bd_city_df_dependence_task >> insert_opos_order_metrics
 ods_sqoop_base_pre_opos_payment_order_di_dependence_task >> insert_opos_order_metrics
 ods_sqoop_base_bd_shop_df_dependence_task >> insert_opos_order_metrics
@@ -579,3 +622,7 @@ insert_opos_active_user_detail_metrics >> insert_opos_active_user_metrics
 
 insert_opos_order_metrics >> insert_crm_metrics
 insert_opos_active_user_metrics >> insert_crm_metrics
+
+
+insert_opos_order_metrics >> insert_bi_metrics
+insert_opos_active_user_metrics >> insert_bi_metrics
