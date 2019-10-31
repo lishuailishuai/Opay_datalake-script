@@ -16,7 +16,7 @@ from utils.util import on_success_callback
 
 args = {
     'owner': 'zhenqian.zhang',
-    'start_date': datetime(2019, 9, 28),
+    'start_date': datetime(2019, 10, 29),
     'depends_on_past': False,
     'retries': 1,
     'retry_delay': timedelta(minutes=5),
@@ -26,13 +26,19 @@ args = {
     'on_success_callback':on_success_callback,
 }
 
+schedule_interval="00 01 * * *"
+
 dag = airflow.DAG(
     'oride_source_sqoop_df',
-    schedule_interval="00 01 * * *",
+    schedule_interval=schedule_interval,
     concurrency=15,
     max_active_runs=1,
     default_args=args)
 
+dag_monitor = airflow.DAG(
+    'oride_source_sqoop_df_monitor',
+    schedule_interval=schedule_interval,
+    default_args=args)
 
 check_data_driver_records_finish = SqlSensor(
     task_id="check_data_driver_records_finish",
@@ -397,7 +403,7 @@ for db_name, table_name, conn_id, prefix_name,priority_weight_nm in table_list:
             'db_name': HIVE_DB,
             'table_name': hive_table_name,
         },
-        dag=dag
+        dag=dag_monitor
     )
 
     if table_name in ['data_driver_records_day', 'data_driver_balance_extend']:
