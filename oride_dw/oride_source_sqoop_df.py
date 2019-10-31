@@ -331,7 +331,7 @@ for db_name, table_name, conn_id, prefix_name,priority_weight_nm in table_list:
             password=conn_conf_dict[conn_id].password,
             table=table_name,
             ufile_path=UFILE_PATH % (db_name, table_name),
-            m=1 if table_name=='order_operation_info' else 12
+            m=12
         ),
         dag=dag,
     )
