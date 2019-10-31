@@ -35,7 +35,7 @@ args = {
 }
 
 dag = airflow.DAG('dwd_oride_order_dispatch_funnel_di',
-                  schedule_interval="30 00 * * *",
+                  schedule_interval="20 01 * * *",
                   default_args=args,
                   catchup=False)
 
@@ -49,8 +49,8 @@ sleep_time = BashOperator(
 
 
 # 依赖前一天分区
-dependence_dwd_oride_order_dispatch_funnel_di_prev_day_task = HivePartitionSensor(
-    task_id="dependence_dwd_oride_order_dispatch_funnel_di_prev_day_task",
+dispatch_tracker_server_magic_prev_day_task = HivePartitionSensor(
+    task_id="dispatch_tracker_server_magic_prev_day_task",
     table="dispatch_tracker_server_magic",
     partition="dt='{{macros.ds_add(ds, +1)}}' and hour='00'",
     schema="oride_source",
