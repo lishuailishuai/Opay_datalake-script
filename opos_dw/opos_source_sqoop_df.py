@@ -61,6 +61,7 @@ table_list = [
     # crm数据
     ("opay_crm", "bd_shop", "opos_opay_crm", "base"),
     ("opay_crm", "bd_city", "opos_opay_crm", "base"),
+    ("opay_crm", "bd_admin_users", "opos_opay_crm", "base"),
 
     # opay订单数据
     ("ptsp_db", "agents", "opos_ptsp_db", "base"),
