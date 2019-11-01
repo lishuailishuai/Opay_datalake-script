@@ -78,17 +78,17 @@ def monitor(ds, **kwargs):
     alter_job = list()
     kill_job = list()
 
-    now_time = datetime.datetime.now()
+    now_time = datetime.now()
 
     for job in item_list:
         job_name = job[0]
         time_str = str(job[1].pop())
         time_str = time_str[:time_str.index('+')]
-        job_last_avtive_time = datetime.datetime.strptime(time_str, time_format)
+        job_last_avtive_time = datetime.strptime(time_str, time_format)
         delay = now_time - job_last_avtive_time
-        if delay > datetime.timedelta(days=1):
+        if delay > timedelta(days=1):
             kill_job.append(job_name)
-        if delay > datetime.timedelta(seconds=60 * 5):
+        if delay > timedelta(seconds=60 * 5):
             alter_job.append(job_name)
 
     alter_message = "注意："
