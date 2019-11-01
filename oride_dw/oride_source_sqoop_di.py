@@ -60,6 +60,8 @@ table_list = [
     # oride data
     ("oride_data", "data_order", "sqoop_db", "base",3),
     ("oride_data", "data_order_payment", "sqoop_db", "base",3),
+    # algorithm_db
+    ("algorithm", "order_operation_info", "algorithm_db", "algorithm",1),
 ]
 
 HIVE_DB = 'oride_dw_ods'
@@ -164,7 +166,11 @@ for db_name, table_name, conn_id, prefix_name,priority_weight_nm in table_list:
         conn_conf_dict[conn_id] = BaseHook.get_connection(conn_id)
 
     hive_table_name = HIVE_TABLE % (prefix_name, table_name)
+
     # sqoop import
+    query = 'select * from {table} where (FROM_UNIXTIME(create_time, "%Y-%m-%d")="{{{{ ds }}}}" OR FROM_UNIXTIME(UNIX_TIMESTAMP(updated_at), "%Y-%m-%d")="{{{{ ds }}}}") AND $CONDITIONS'.format(table=table_name)
+    order_operation_query = 'select * from {table} where dt="{{{{ ds_nodash }}}}" AND $CONDITIONS'.format(table=table_name)
+
     import_table = BashOperator(
         task_id='import_table_{}'.format(hive_table_name),
         priority_weight=priority_weight_nm,
@@ -175,7 +181,7 @@ for db_name, table_name, conn_id, prefix_name,priority_weight_nm in table_list:
             --connect "jdbc:mysql://{host}:{port}/{schema}?tinyInt1isBit=false&useUnicode=true&characterEncoding=utf8" \
             --username {username} \
             --password {password} \
-            --query 'select * from {table} where (FROM_UNIXTIME(create_time, "%Y-%m-%d")="{{{{ ds }}}}" OR FROM_UNIXTIME(UNIX_TIMESTAMP(updated_at), "%Y-%m-%d")="{{{{ ds }}}}") AND $CONDITIONS' \
+            --query {query}  \
             --split-by id \
             --target-dir {ufile_path}/dt={{{{ ds }}}}/ \
             --fields-terminated-by "\\001" \
@@ -190,8 +196,8 @@ for db_name, table_name, conn_id, prefix_name,priority_weight_nm in table_list:
             schema=db_name,
             username=conn_conf_dict[conn_id].login,
             password=conn_conf_dict[conn_id].password,
-            table=table_name,
-            ufile_path=UFILE_PATH % (db_name, table_name)
+            ufile_path=UFILE_PATH % (db_name, table_name),
+            query=order_operation_query if table_name=='order_operation_info' else query
         ),
         dag=dag,
     )
