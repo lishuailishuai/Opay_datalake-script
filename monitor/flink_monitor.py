@@ -9,10 +9,10 @@ import logging
 from plugins.comwx import ComwxApi
 
 # pushgateway外网地址
-push_gateway_address = "152.32.140.147"
+# push_gateway_address = "152.32.140.147"
 
 # pushgateway内网地址
-push_gateway_address = "152.32.140.147"
+push_gateway_address = "10.52.61.177"
 
 # 格式化时间格式
 time_format = "%Y-%m-%dT%H:%M:%S"
@@ -70,8 +70,10 @@ def parseHTML():
 
 # 监控心跳函数
 def monitor(ds, **kwargs):
+    logging.info("========监控任务开始执行=======")
+
     item_list = parseHTML()
-    logging.info(item_list)
+    logging.info("任务列表：" + str(item_list))
 
     alter_job = list()
     kill_job = list()
@@ -97,6 +99,8 @@ def monitor(ds, **kwargs):
                 flink job进程 ：{job} 最近5分钟无上报心跳，请查看任务。
             """.format(job=job)
         comwx.postAppMessage(alter_message, '271')
+
+    logging.info("========监控任务执行完毕=======")
 
 
 # 杀死超时job，目前不实现
