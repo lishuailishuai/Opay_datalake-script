@@ -49,10 +49,10 @@ sleep_time = BashOperator(
 
 
 # 依赖前一天分区
-dependence_dwd_oride_order_dispatch_filter_detail_di_prev_day_task = HivePartitionSensor(
-    task_id="dwd_oride_order_dispatch_filter_detail_di_prev_day_task",
+dependence_dispatch_tracker_server_magic_prev_day_task = HivePartitionSensor(
+    task_id="dependence_dispatch_tracker_server_magic_prev_day_task",
     table="dispatch_tracker_server_magic",
-    partition="dt='{{macros.ds_add(ds, +1)}}' and hour='00'",
+    partition="dt='{{ ds }}' and hour='23'",
     schema="oride_source",
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
@@ -138,7 +138,7 @@ touchz_data_success = PythonOperator(
     dag=dag
 )
 
-dependence_dwd_oride_order_dispatch_filter_detail_di_prev_day_task >> \
+dependence_dispatch_tracker_server_magic_prev_day_task >> \
 sleep_time >> \
 dwd_oride_order_dispatch_filter_detail_di_task >> \
 touchz_data_success

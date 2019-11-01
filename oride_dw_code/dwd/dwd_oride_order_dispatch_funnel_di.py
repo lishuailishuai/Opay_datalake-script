@@ -35,7 +35,7 @@ args = {
 }
 
 dag = airflow.DAG('dwd_oride_order_dispatch_funnel_di',
-                  schedule_interval="20 01 * * *",
+                  schedule_interval="40 01 * * *",
                   default_args=args,
                   catchup=False)
 
@@ -49,10 +49,10 @@ sleep_time = BashOperator(
 
 
 # 依赖前一天分区
-dispatch_tracker_server_magic_prev_day_task = HivePartitionSensor(
-    task_id="dispatch_tracker_server_magic_prev_day_task",
+dependence_dispatch_tracker_server_magic_prev_day_task = HivePartitionSensor(
+    task_id="dependence_dispatch_tracker_server_magic_prev_day_task",
     table="dispatch_tracker_server_magic",
-    partition="dt='{{macros.ds_add(ds, +1)}}' and hour='00'",
+    partition="dt='{{ ds }}' and hour='23'",
     schema="oride_source",
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
@@ -72,7 +72,7 @@ def fun_task_timeout_monitor(ds, dag, **op_kwargs):
 
     tb = [
         {"db": "oride_dw", "table": "{dag_name}".format(dag_name=dag_ids),
-         "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "1200"}
+         "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "5400"}
     ]
 
     TaskTimeoutMonitor().set_task_monitor(tb)
@@ -260,4 +260,4 @@ touchz_data_success = PythonOperator(
     dag=dag
 )
 
-dispatch_tracker_server_magic_prev_day_task >> sleep_time >> dwd_oride_order_dispatch_funnel_di_task >> touchz_data_success
+dependence_dispatch_tracker_server_magic_prev_day_task >> sleep_time >> dwd_oride_order_dispatch_funnel_di_task >> touchz_data_success
