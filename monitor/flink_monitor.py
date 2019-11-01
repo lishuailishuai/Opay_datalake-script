@@ -31,7 +31,7 @@ args = {
 }
 
 dag = airflow.DAG(
-    'oride_street_association',
+    'flink_monitor',
     schedule_interval="*/5 * * * *",
     default_args=args)
 
