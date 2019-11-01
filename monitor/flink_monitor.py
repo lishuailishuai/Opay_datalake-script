@@ -69,7 +69,7 @@ def parseHTML():
 
 
 # 监控心跳函数
-def monitor():
+def monitor(ds, **kwargs):
     item_list = parseHTML()
     logging.info(item_list)
 
