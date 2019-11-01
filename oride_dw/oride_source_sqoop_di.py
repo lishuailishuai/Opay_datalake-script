@@ -181,7 +181,7 @@ for db_name, table_name, conn_id, prefix_name,priority_weight_nm in table_list:
             --connect "jdbc:mysql://{host}:{port}/{schema}?tinyInt1isBit=false&useUnicode=true&characterEncoding=utf8" \
             --username {username} \
             --password {password} \
-            --query {query}  \
+            --query '{query}'  \
             --split-by id \
             --target-dir {ufile_path}/dt={{{{ ds }}}}/ \
             --fields-terminated-by "\\001" \
