@@ -684,7 +684,7 @@ def send_report_email(ds, **kwargs):
                 </table>
                 <table width="100%" class="table">
                 <caption>
-                    <h3>专车分城市指标</h3>
+                    <h3>专车分城市指标(不包含同时呼叫)</h3>
                 </caption>
                 </table>
                 <table width="100%" class="table">
@@ -697,7 +697,7 @@ def send_report_email(ds, **kwargs):
                 </table>
                 <table width="100%" class="table">
                 <caption>
-                    <h3>快车分城市指标</h3>
+                    <h3>快车分城市指标(不包含同时呼叫)</h3>
                 </caption>
                 </table>
                 <table width="100%" class="table">
