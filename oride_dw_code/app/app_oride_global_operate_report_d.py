@@ -507,7 +507,7 @@ select nvl(f.country_code,-10000) as country_code,
     from (select nvl(country_code,-10000) as country_code,
        nvl(city_id,-10000) as city_id,
        nvl(driver_serv_type,-10000) as product_id,   --包含同时呼叫的业务线       
-       sum(recharge_amount+reward_amount+reward_amount+amount_pay_online+amount_pay_offline) AS iph_fenzi_inSimulRing --iph分子（包含同时呼叫）
+       sum(recharge_amount+reward_amount+amount_pay_online+amount_pay_offline) AS iph_fenzi_inSimulRing --iph分子（包含同时呼叫）
 from (select * from oride_dw.dwd_oride_order_finance_df 
 where dt='{pt}'
 and create_date='{pt}') t1 
