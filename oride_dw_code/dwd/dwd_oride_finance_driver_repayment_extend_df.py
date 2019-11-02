@@ -212,7 +212,7 @@ SELECT dri.city_id,
        dri.plate_number,
        --车牌号
 
-       air.register_time,
+       dri.register_time,
        --司机注册时间
 
        aud.address as driver_address,
@@ -291,13 +291,13 @@ ON dri.driver_id=aud.driver_id
 LEFT OUTER JOIN
 
 (select 
-  driver_id,
+  age.driver_id,
   (amount_agenter+amount)/7 as last_week_daily_due --上周日均应还款金额
 from
 (SELECT driver_id,
         sum(amount_agenter) as amount_agenter
    FROM oride_dw_ods.ods_sqoop_base_data_driver_records_day_df
-   WHERE BETWEEN DATE_ADD('{pt}', -6) AND DATE_ADD('{pt}',0)
+   WHERE dt BETWEEN DATE_ADD('{pt}', -6) AND DATE_ADD('{pt}',0)
    GROUP BY driver_id) age
 LEFT OUTER JOIN 
 (SELECT driver_id,
