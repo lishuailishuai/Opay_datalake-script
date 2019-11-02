@@ -212,6 +212,11 @@ SELECT dri.city_id,
        dri.plate_number,
        --车牌号
 
+       aud.address as driver_address,--司机地址
+       air.register_time,--司机注册时间
+
+       nvl(age.amount_agenter,0)+nvl(tb1.amount,0) as aa,--上周日均应还款金额
+
        dri.country_code,
        --国家码字段
 
@@ -275,6 +280,24 @@ LEFT OUTER JOIN --所有骑手的违约期数
       ORDER BY driver_id,
                dt DESC) AS slack_det
    GROUP BY driver_id) oer ON dri.driver_id=oer.driver_id
+LEFT OUTER JOIN
+  (
+    select * from oride_dw.dim_oride_driver_audit_base where dt='{pt}'
+  ) aud
+ON dri.driver_id=aud.driver_id
+LEFT OUTER JOIN
+(SELECT driver_id,
+          amount_agenter
+   FROM oride_dw_ods.ods_sqoop_base_data_driver_records_day_df
+   WHERE dt='{pt}'
+   GROUP BY driver_id,amount_agenter) age ON dri.driver_id = age.driver_id
+LEFT OUTER JOIN
+(SELECT *
+      FROM oride_dw_ods.ods_sqoop_base_data_driver_repayment_df
+      WHERE dt='{pt}'
+        AND substring(updated_at,1,13)<='{now_day} 00'
+        AND repayment_type=0) tb1
+ON dri.driver_id = tb1.driver_id
 
 '''.format(
         pt='{{ds}}',
