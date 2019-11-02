@@ -212,10 +212,14 @@ SELECT dri.city_id,
        dri.plate_number,
        --车牌号
 
-       aud.address as driver_address,--司机地址
-       air.register_time,--司机注册时间
+       air.register_time,
+       --司机注册时间
 
-       nvl(age.amount_agenter,0)+nvl(tb1.amount,0) as aa,--上周日均应还款金额
+       aud.address as driver_address,
+       --司机地址
+
+       avg1.last_week_daily_due,
+       --上周日均应还款金额
 
        dri.country_code,
        --国家码字段
@@ -270,7 +274,6 @@ LEFT OUTER JOIN --所有骑手的违约期数
 
   (SELECT driver_id,
           IF(INSTR(concat_ws('',collect_list(false_id)),'0')=0, LENGTH(concat_ws('',collect_list(false_id))), INSTR(concat_ws('',collect_list(false_id)),'0')-1) AS overdue_payment_cnt --违约期数
-
    FROM
      (SELECT driver_id,
              dt,
@@ -286,18 +289,27 @@ LEFT OUTER JOIN
   ) aud
 ON dri.driver_id=aud.driver_id
 LEFT OUTER JOIN
+
+(select 
+  driver_id,
+  (amount_agenter+amount)/7 as last_week_daily_due --上周日均应还款金额
+from
 (SELECT driver_id,
-          amount_agenter
+        sum(amount_agenter) as amount_agenter
    FROM oride_dw_ods.ods_sqoop_base_data_driver_records_day_df
-   WHERE dt='{pt}'
-   GROUP BY driver_id,amount_agenter) age ON dri.driver_id = age.driver_id
-LEFT OUTER JOIN
-(SELECT *
+   WHERE BETWEEN DATE_ADD('{pt}', -6) AND DATE_ADD('{pt}',0)
+   GROUP BY driver_id) age
+LEFT OUTER JOIN 
+(SELECT driver_id,
+        sum(amount) as amount
       FROM oride_dw_ods.ods_sqoop_base_data_driver_repayment_df
-      WHERE dt='{pt}'
+      WHERE BETWEEN DATE_ADD('{pt}', -6) AND DATE_ADD('{pt}',0)
         AND substring(updated_at,1,13)<='{now_day} 00'
-        AND repayment_type=0) tb1
-ON dri.driver_id = tb1.driver_id
+        AND repayment_type=0
+      group by driver_id) tb1
+ON age.driver_id = tb1.driver_id
+) avg1
+on dri.driver_id=avg1.driver_id
 
 '''.format(
         pt='{{ds}}',
