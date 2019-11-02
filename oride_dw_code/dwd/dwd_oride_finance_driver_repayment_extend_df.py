@@ -303,7 +303,7 @@ LEFT OUTER JOIN
 (SELECT driver_id,
         sum(amount) as amount
       FROM oride_dw_ods.ods_sqoop_base_data_driver_repayment_df
-      WHERE BETWEEN DATE_ADD('{pt}', -6) AND DATE_ADD('{pt}',0)
+      WHERE dt BETWEEN DATE_ADD('{pt}', -6) AND DATE_ADD('{pt}',0)
         AND substring(updated_at,1,13)<='{now_day} 00'
         AND repayment_type=0
       group by driver_id) tb1
