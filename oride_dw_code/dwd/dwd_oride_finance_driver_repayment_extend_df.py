@@ -286,6 +286,7 @@ LEFT OUTER JOIN --所有骑手的违约期数
 LEFT OUTER JOIN
   (
     select * from oride_dw.dim_oride_driver_audit_base where dt='{pt}'
+    and status=2
   ) aud
 ON dri.driver_id=aud.driver_id
 LEFT OUTER JOIN
