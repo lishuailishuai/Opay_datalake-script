@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 import time
 from utils.connection_helper import get_hive_cursor, get_db_conn, get_db_conf
 from utils.validate_metrics_utils import *
-from airflow.sensors.s3_prefix_sensor import S3PrefixSensor
+from airflow.sensors.s3_key_sensor import S3KeySensor
 from airflow.operators.bash_operator import BashOperator
 import logging
 
@@ -37,58 +37,58 @@ dag = airflow.DAG(
 依赖采集完成
 """
 #等待采集dag全部任务完成
-dependence_ods_sqoop_data_driver_df = S3PrefixSensor(
+dependence_ods_sqoop_data_driver_df = S3KeySensor(
     task_id='dependence_ods_sqoop_data_driver_df',
-    prefix='obus_dw/ods_sqoop_data_driver_df/country_code=nal/dt={pt}'.format(pt='{{ ds }}'),
+    bucket_key='obus_dw/ods_sqoop_data_driver_df/country_code=nal/dt={pt}/_SUCCESS'.format(pt='{{ ds }}'),
     bucket_name='opay-bi',
     dag=dag
 )
 
-dependence_ods_sqoop_conf_cycle_df = S3PrefixSensor(
+dependence_ods_sqoop_conf_cycle_df = S3KeySensor(
     task_id='dependence_ods_sqoop_conf_cycle_df',
-    prefix='obus_dw/ods_sqoop_conf_cycle_df/country_code=nal/dt={pt}'.format(pt='{{ ds }}'),
+    bucket_key='obus_dw/ods_sqoop_conf_cycle_df/country_code=nal/dt={pt}/_SUCCESS'.format(pt='{{ ds }}'),
     bucket_name='opay-bi',
     dag=dag
 )
 
-dependence_ods_sqoop_data_order_df = S3PrefixSensor(
+dependence_ods_sqoop_data_order_df = S3KeySensor(
     task_id='dependence_ods_sqoop_data_order_df',
-    prefix='obus_dw/ods_sqoop_data_order_df/country_code=nal/dt={pt}'.format(pt='{{ ds }}'),
+    bucket_key='obus_dw/ods_sqoop_data_order_df/country_code=nal/dt={pt}/_SUCCESS'.format(pt='{{ ds }}'),
     bucket_name='opay-bi',
     dag=dag
 )
 
-dependence_ods_sqoop_conf_station_df = S3PrefixSensor(
+dependence_ods_sqoop_conf_station_df = S3KeySensor(
     task_id='dependence_ods_sqoop_conf_station_df',
-    prefix='obus_dw/ods_sqoop_conf_station_df/country_code=nal/dt={pt}'.format(pt='{{ ds }}'),
+    bucket_key='obus_dw/ods_sqoop_conf_station_df/country_code=nal/dt={pt}/_SUCCESS'.format(pt='{{ ds }}'),
     bucket_name='opay-bi',
     dag=dag
 )
 
-dependence_ods_sqoop_data_order_payment_df = S3PrefixSensor(
+dependence_ods_sqoop_data_order_payment_df = S3KeySensor(
     task_id='dependence_ods_sqoop_data_order_payment_df',
-    prefix='obus_dw/ods_sqoop_data_order_payment_df/country_code=nal/dt={pt}'.format(pt='{{ ds }}'),
+    bucket_key='obus_dw/ods_sqoop_data_order_payment_df/country_code=nal/dt={pt}/_SUCCESS'.format(pt='{{ ds }}'),
     bucket_name='opay-bi',
     dag=dag
 )
 
-dependence_ods_sqoop_data_user_recharge_df = S3PrefixSensor(
+dependence_ods_sqoop_data_user_recharge_df = S3KeySensor(
     task_id='dependence_ods_sqoop_data_user_recharge_df',
-    prefix='obus_dw/ods_sqoop_data_user_recharge_df/country_code=nal/dt={pt}'.format(pt='{{ ds }}'),
+    bucket_key='obus_dw/ods_sqoop_data_user_recharge_df/country_code=nal/dt={pt}/_SUCCESS'.format(pt='{{ ds }}'),
     bucket_name='opay-bi',
     dag=dag
 )
 
-dependence_ods_sqoop_data_user_df = S3PrefixSensor(
+dependence_ods_sqoop_data_user_df = S3KeySensor(
     task_id='dependence_ods_sqoop_data_user_df',
-    prefix='obus_dw/ods_sqoop_data_user_df/country_code=nal/dt={pt}'.format(pt='{{ ds }}'),
+    bucket_key='obus_dw/ods_sqoop_data_user_df/country_code=nal/dt={pt}/_SUCCESS'.format(pt='{{ ds }}'),
     bucket_name='opay-bi',
     dag=dag
 )
 
-dependence_ods_sqoop_data_ticket_df = S3PrefixSensor(
+dependence_ods_sqoop_data_ticket_df = S3KeySensor(
     task_id='dependence_ods_sqoop_data_ticket_df',
-    prefix='obus_dw/ods_sqoop_data_ticket_df/country_code=nal/dt={pt}'.format(pt='{{ ds }}'),
+    bucket_key='obus_dw/ods_sqoop_data_ticket_df/country_code=nal/dt={pt}/_SUCCESS'.format(pt='{{ ds }}'),
     bucket_name='opay-bi',
     dag=dag
 )
