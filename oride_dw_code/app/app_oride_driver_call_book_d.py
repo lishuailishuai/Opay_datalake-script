@@ -58,7 +58,7 @@ def fun_task_timeout_monitor(ds, dag, **op_kwargs):
 
     tb = [
         {"db": "oride_dw", "table": "{dag_name}".format(dag_name=dag_ids),
-         "partition": "dt={pt}".format(pt=ds), "timeout": "2000"}
+         "partition": "dt={pt}".format(pt=ds), "timeout": "2400"}
     ]
 
     TaskTimeoutMonitor().set_task_monitor(tb)
@@ -99,7 +99,7 @@ dwd_oride_driver_call_record_mid_task = HiveOperator(
         SET hive.exec.dynamic.partition.mode=nonstrict;
         
         insert overwrite table oride_dw.dwd_oride_driver_call_record_mid  partition(country_code,dt)
-            select b.user_id,f as name_phone_num,'nal' ascountry_code,'{pt}' as dt
+            select b.user_id,f as name_phone_num,'nal' as country_code,'{pt}' as dt
             from oride_dw.dwd_oride_client_event_detail_hi b
             lateral view explode(split(substr(get_json_object(b.event_value,'$.call_record'),2,length(get_json_object(b.event_value,'$.call_record'))-2),',')) call_record as f
             where b.dt between date_sub('{pt}',29) and '{pt}' and b.event_name='call_record';    
@@ -182,8 +182,5 @@ touchz_data_success = PythonOperator(
     dag=dag
 )
 
-dwd_oride_client_event_detail_hi_task >> dwd_oride_driver_phone_list_mid_task >> sleep_time
-dwd_oride_client_event_detail_hi_task >> dwd_oride_driver_call_record_mid_task >> sleep_time
-
-
-sleep_time>>app_oride_driver_call_book_d_task >> touchz_data_success
+dwd_oride_client_event_detail_hi_task >> dwd_oride_driver_phone_list_mid_task >> sleep_time>>app_oride_driver_call_book_d_task >> touchz_data_success
+dwd_oride_client_event_detail_hi_task >> dwd_oride_driver_call_record_mid_task >> sleep_time>>app_oride_driver_call_book_d_task >> touchz_data_success
