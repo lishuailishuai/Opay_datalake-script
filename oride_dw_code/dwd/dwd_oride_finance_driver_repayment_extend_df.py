@@ -215,10 +215,10 @@ SELECT dri.city_id,
        dri.register_time,
        --司机注册时间
 
-       aud.address as driver_address,
-       --司机地址
+       nvl(aud.address,-1) as driver_address,
+       --司机地址（-1 未知）
 
-       avg1.last_week_daily_due,
+       nvl(avg1.last_week_daily_due,0.0) as last_week_daily_due,
        --上周日均应还款金额
 
        dri.country_code,
