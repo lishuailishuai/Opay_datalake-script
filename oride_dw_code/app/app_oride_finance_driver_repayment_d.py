@@ -219,7 +219,7 @@ def __data_to_mysql(conn, data, column, update=''):
                 sval += ',(\'{}\')'.format('\',\''.join([str(x) for x in row]))
             cnt += 1
             if cnt >= 1000:
-                #logging.info(esql.format(isql, sval, update))
+                logging.info(esql.format(isql, sval, update))
                 conn.execute(esql.format(isql, sval, update))
                 cnt = 0
                 sval = ''
