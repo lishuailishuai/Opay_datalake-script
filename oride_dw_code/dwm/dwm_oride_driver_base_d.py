@@ -374,5 +374,5 @@ touchz_data_success = PythonOperator(
 dim_oride_driver_base_prev_day_task >> dwd_oride_order_base_include_test_di_prev_day_task >> \
 dwd_oride_order_push_driver_detail_di_prev_day_task >> oride_driver_timerange_prev_day_task >> \
 dwd_oride_driver_accept_order_show_detail_di_prev_day_task >>\
-dwd_oride_driver_accept_order_click_detail_di_prev_day_task
+dwd_oride_driver_accept_order_click_detail_di_prev_day_task >> \
 sleep_time >> dwm_oride_driver_base_d_task >> touchz_data_success
