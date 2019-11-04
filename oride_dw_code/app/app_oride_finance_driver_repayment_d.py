@@ -211,7 +211,7 @@ def __data_to_mysql(conn, data, column, update=''):
             row = [
                 day, city_id, city_name, driver_id, driver_name.replace("'", "\\'"), driver_mobile, driver_type,
                 balance, repayment_total_amount, start_date, repayment_amount, total_numbers,
-                effective_days, lose_numbers, last_back_time, today_repayment, status,order_numbers,order_agv,fault,plate_number,register_time,driver_address,last_week_daily_due
+                effective_days, lose_numbers, last_back_time, today_repayment, status,order_numbers,order_agv,fault,plate_number,register_time,driver_address.replace("'", " "),last_week_daily_due
             ]
             if sval == '':
                 sval = '(\'{}\')'.format('\',\''.join([str(x) for x in row]))
