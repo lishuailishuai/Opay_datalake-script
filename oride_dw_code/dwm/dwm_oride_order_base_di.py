@@ -150,6 +150,7 @@ dwm_oride_order_base_di_task = HiveOperator(
            
            ord.is_td_passanger_after_cancel as is_passanger_after_cancel,
            --是否应答后乘客取消
+           
            ord.is_td_driver_after_cancel as is_driver_after_cancel,
            --是否应答后司机取消
            if(push.order_id is not null,1,0) as is_succ_broadcast,    
