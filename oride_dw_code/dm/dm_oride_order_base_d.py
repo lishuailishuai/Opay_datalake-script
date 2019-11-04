@@ -93,15 +93,16 @@ dependence_dwd_oride_driver_accept_order_show_detail_di_prev_day_task = UFileSen
 )
 
 # 依赖前一天分区
-dependence_dwd_oride_order_mark_df_prev_day_task = HivePartitionSensor(
-    task_id="dwd_oride_order_mark_df_prev_day_task",
-    table="dwd_oride_order_mark_df",
-    partition="dt='{{ds}}'",
-    schema="oride_dw",
+dependence_dwd_oride_order_mark_df_prev_day_task = UFileSensor(
+    task_id='dwd_oride_order_mark_df_prev_day_task',
+    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="oride/oride_dw/dwd_oride_order_mark_df/country_code=nal",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
-
 
 ##----------------------------------------- 变量 ---------------------------------------##
 
