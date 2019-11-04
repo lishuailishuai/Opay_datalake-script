@@ -45,7 +45,6 @@ sleep_time = BashOperator(
 
 ##----------------------------------------- 依赖 ---------------------------------------## 
 
-
 # 依赖前一天分区
 dependence_dwd_oride_order_base_include_test_di_prev_day_task = UFileSensor(
     task_id='dwd_oride_order_base_include_test_di_prev_day_task',
