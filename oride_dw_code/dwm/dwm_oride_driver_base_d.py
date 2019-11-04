@@ -62,7 +62,7 @@ dim_oride_driver_base_prev_day_task = UFileSensor(
 oride_driver_timerange_prev_day_task = UFileSensor(
     task_id='oride_driver_timerange_prev_day_task',
     filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw/dim_oride_driver_base",
+        hdfs_path_str="oride/oride_dw_ods/ods_log_oride_driver_timerange",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
