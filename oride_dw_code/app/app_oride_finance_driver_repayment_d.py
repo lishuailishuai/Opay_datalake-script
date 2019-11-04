@@ -117,7 +117,7 @@ def get_data_from_hive(ds,**op_kwargs):
             fault,
             plate_number, --车牌号
             register_time, -- 司机注册时间
-            driver_address, --司机地址（-1 未知）
+            NVL(regexp_replace(driver_address,'\\\\\\\\',''), '') as driver_address, --司机地址（-1 未知）
             last_week_daily_due --上周日均应还款金额
         FROM (select * FROM {hive_db}.{hive_table}
         WHERE dt = '{pt}') t1
