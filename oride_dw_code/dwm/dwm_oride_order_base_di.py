@@ -153,7 +153,7 @@ dwm_oride_order_base_di_task = HiveOperator(
            
            ord.is_td_driver_after_cancel as is_driver_after_cancel,
            --是否应答后司机取消
-           if(push.order_id is not null,1,0) as is_succ_broadcast,    
+           if(push.success>=1,1,0) as is_succ_broadcast,    
            --是否成功播单（push节点）dm层成功播单量没有限定success=1
            if(show.order_id is not null,1,0) as is_accpet_show,
            --是否推送给骑手（骑手端打点show节点）
@@ -217,6 +217,17 @@ dwm_oride_order_base_di_task = HiveOperator(
            --是否拼车成功
            ord.is_strong_dispatch,
            --是否强派1：是，0:否
+           if(ord.arrive_time>0,(ord.arrive_time-ord.create_time),0) as user_order_total_dur,
+           --乘客下单到行程结束总时长
+           
+           if(push.order_id is not null,1,0) as is_broadcast,
+           --是否播单，这个播单包含播了但是没有成功的
+           
+           push.broadcast_distance, 
+           --播单总距离
+           
+           push.push_all_times_cnt, 
+           --播单总次数
  		   ord.country_code as country_code,
            
            ord.dt as dt
@@ -242,10 +253,13 @@ dwm_oride_order_base_di_task = HiveOperator(
       (
         SELECT 
         order_id,  --成功播单的订单
-        sum(distance) AS succ_broadcast_distance, --成功播单距离
-        count(1) AS succ_push_all_times_cnt --成功播单总次数的总次数
+        sum(if(success=1,distance,0)) AS succ_broadcast_distance, --成功播单距离
+        sum(if(success=1,1,0)) AS succ_push_all_times_cnt, --成功播单总次数
+        sum(distance) as broadcast_distance, --播单总距离
+        count(1) as push_all_times_cnt, --播单总次数
+        sum(success) as success  --用于判断是否成功播单
         FROM oride_dw.dwd_oride_order_dispatch_funnel_di
-        WHERE dt='{pt}' and event_name='dispatch_push_driver' and success=1
+        WHERE dt='{pt}' and event_name='dispatch_push_driver' 
         GROUP BY order_id
         ) push ON ord.order_id=push.order_id
     LEFT OUTER JOIN 
