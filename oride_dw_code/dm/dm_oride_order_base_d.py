@@ -214,9 +214,10 @@ dm_oride_order_base_d_task = HiveOperator(
            count(if(is_td_after_cancel = 1 ,ord.order_id,null)) as after_cancel_order_cnt,--应答后取消订单数
            sum(td_passanger_after_cancel_time_dur) AS passanger_after_cancel_time_dur,--乘客应答后取消时长（秒）
            sum(td_driver_after_cancel_time_dur) AS driver_after_cancel_time_dur,--司机应答后取消时长（秒）
-           sum(if((ord.status = 6 and cancel_role =2),ord.distance,0.0)) as  passanger_cancel_order_dis,   --乘客取消订单接驾距离
-           sum(a1.pick_up_distance) as accept_order_pick_up_dis, --应答单接驾距离(米)（计算平均接驾距离（应答单使用））
-           sum(r1.accept_order_assigned_cnt) as  accept_order_pick_up_assigned_cnt, --应答单分配次数（应答单接驾距离(米)（计算平均接驾距离（应答单使用）））
+           sum(if((ord.status = 6 and cancel_role =2),ord.distance,0.0)) as  passanger_cancel_order_dis,   --乘客取消订单送驾距离
+           sum(a1.pick_up_distance) as accept_order_pick_up_dis, --应答单接驾距离(米)（计算平均接驾距离（应答单使用））该指标定义有问题？？？
+           sum(r1.accept_order_assigned_cnt) as  accept_order_pick_up_assigned_cnt, 
+           --应答单分配次数（应答单接驾距离(米)（计算平均接驾距离（应答单使用）））该指标有问题？？？
            null as column1, --预留字段
            ord.driver_serv_type,  --业务类型，订单表中司机类型
            
