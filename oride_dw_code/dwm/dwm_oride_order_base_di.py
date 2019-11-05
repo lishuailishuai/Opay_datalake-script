@@ -217,6 +217,8 @@ dwm_oride_order_base_di_task = HiveOperator(
            --是否拼车成功
            ord.is_strong_dispatch,
            --是否强派1：是，0:否
+           if(ord.arrive_time>0,(ord.arrive_time-ord.create_time),0) as user_order_total_dur,
+           --乘客下单到行程结束总时长
  		   ord.country_code as country_code,
            
            ord.dt as dt
