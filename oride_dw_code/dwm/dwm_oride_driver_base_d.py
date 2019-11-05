@@ -168,8 +168,8 @@ select dri.driver_id,
             dri.is_bind,
             --是否绑定车辆
             
-            dri.block as is_survival,
-            --是否存活司机0:存活
+            null as is_survival,
+            --是否存活司机,逻辑待定
             
             if(dtr.driver_id is not null,1,0) as is_td_online,
             --当天是否在线
@@ -323,7 +323,7 @@ select dri.driver_id,
             dri.is_bind,
             --是否绑定车辆
             
-            dri.block,
+           -- dri.block,
             --是否存活司机0:存活
             
             if(dtr.driver_id is not null,1,0),
