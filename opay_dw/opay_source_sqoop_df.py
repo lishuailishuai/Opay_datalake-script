@@ -78,6 +78,8 @@ table_list = [
     ("opay_merchant","merchant", "opay_db", "base", 1),
     ("opay_account","accounting_merchant_record", "opay_db", "base", 1),
     ("opay_account","accounting_record", "opay_db", "base", 1),
+
+    ("opay_sms","message_template", "opay_db", "base", 1),
 ]
 """
     ("opay_transaction","adjustment_decrease_record", "opay_db", "base",3),
