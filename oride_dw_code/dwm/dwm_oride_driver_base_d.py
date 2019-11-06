@@ -345,6 +345,9 @@ select dri.driver_id,
             --当天是否在线
             
             if(push.driver_id is not null,1,0),
+            --当天是否被播单（push节点）
+            
+            if(push.success>=1,1,0),
             --当天是否被成功播单（push节点）
             
             if(show.driver_id is not null,1,0),
