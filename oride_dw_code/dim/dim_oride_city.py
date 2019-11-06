@@ -198,65 +198,97 @@ FROM
 WHERE t.row_num = 1) weather
 on lower(cit.city_name)=lower(weather.city)
 
+
+HQL_DQC="""
+    SELECT count(1)-count(distinct city_id) as cnt
+      FROM oride_dw.{table}
+      WHERE dt='{pt}'
+      and country_code in ('NG')
+"""
+
+CHECK_VALUE=`hive -e "$HQL_DQC"`
+echo $CHECK_VALUE
+
+if [[ ${CHECK_VALUE}>0 ]]
+then
+    echo "Executing 主键重复校验: FATAL DATA is ERROR"
+    exit 1
+else
+    echo "Executing 主键重复校验: NOTICE  success"
+
+fi
+
+
+    msg = [
+        {"table":"{dag_name}","hdfs_path": "{hdfs_path}/country_code=NG/dt={pt}"}
+    ]
+
+    TaskTouchzSuccess().set_touchz_success(msg)
+
 '''.format(
         pt='{{ds}}',
         now_day='{{macros.ds_add(ds, +1)}}',
-        table=table_name
+        table=table_name,
+        dag_name=dag.dag_id,
+        hdfs_path=hdfs_path
         ),
 schema='oride_dw',
     dag=dag)
 
 
 #熔断数据，如果数据重复，报错
-def check_key_data(ds,**kargs):
+# def check_key_data(ds,**kargs):
 
-    #主键重复校验
-    HQL_DQC='''
-    SELECT count(1)-count(distinct city_id) as cnt
-      FROM oride_dw.{table}
-      WHERE dt='{pt}'
-      and country_code in ('NG')
-    '''.format(
-        pt=ds,
-        now_day=airflow.macros.ds_add(ds, +1),
-        table=table_name
-        )
+#     #主键重复校验
+#     HQL_DQC='''
+#     SELECT count(1)-count(distinct city_id) as cnt
+#       FROM oride_dw.{table}
+#       WHERE dt='{pt}'
+#       and country_code in ('NG')
+#     '''.format(
+#         pt=ds,
+#         now_day=airflow.macros.ds_add(ds, +1),
+#         table=table_name
+#         )
 
-    cursor = get_hive_cursor()
-    logging.info('Executing 主键重复校验: %s', HQL_DQC)
+#     cursor = get_hive_cursor()
+#     logging.info('Executing 主键重复校验: %s', HQL_DQC)
 
-    cursor.execute(HQL_DQC)
-    res = cursor.fetchone()
+#     cursor.execute(HQL_DQC)
+#     res = cursor.fetchone()
 
-    if res[0] >1:
-        raise Exception ("Error The primary key repeat !", res)
-    else:
-        print("-----> Notice Data Export Success ......")
+#     if res[0] >1:
+#         raise Exception ("Error The primary key repeat !", res)
+#     else:
+#         print("-----> Notice Data Export Success ......")
     
  
-task_check_key_data = PythonOperator(
-    task_id='check_data',
-    python_callable=check_key_data,
-    provide_context=True,
-    dag=dag
-)
+# task_check_key_data = PythonOperator(
+#     task_id='check_data',
+#     python_callable=check_key_data,
+#     provide_context=True,
+#     dag=dag
+# )
 
 #生成_SUCCESS
-def check_success(ds,dag,**op_kwargs):
+# def check_success(ds,dag,**op_kwargs):
 
-    dag_ids=dag.dag_id
+#     dag_ids=dag.dag_id
 
-    msg = [
-        {"table":"{dag_name}".format(dag_name=dag_ids),"hdfs_path": "{hdfs_path}/country_code=NG/dt={pt}".format(pt=ds,hdfs_path=hdfs_path)}
-    ]
+#     msg = [
+#         {"table":"{dag_name}".format(dag_name=dag_ids),"hdfs_path": "{hdfs_path}/country_code=NG/dt={pt}".format(pt=ds,hdfs_path=hdfs_path)}
+#     ]
 
-    TaskTouchzSuccess().set_touchz_success(msg)
+#     TaskTouchzSuccess().set_touchz_success(msg)
 
-touchz_data_success= PythonOperator(
-    task_id='touchz_data_success',
-    python_callable=check_success,
-    provide_context=True,
-    dag=dag
-)
+# touchz_data_success= PythonOperator(
+#     task_id='touchz_data_success',
+#     python_callable=check_success,
+#     provide_context=True,
+#     dag=dag
+# )
 
-ods_sqoop_base_data_city_conf_df_tesk>>ods_sqoop_base_weather_per_10min_df_prev_day_task>>sleep_time>>dim_oride_city_task>>task_check_key_data>>touchz_data_success
+
+ods_sqoop_base_data_city_conf_df_tesk>>ods_sqoop_base_weather_per_10min_df_prev_day_task>>sleep_time>>dim_oride_city_task
+
+#ods_sqoop_base_data_city_conf_df_tesk>>ods_sqoop_base_weather_per_10min_df_prev_day_task>>sleep_time>>dim_oride_city_task>>task_check_key_data>>touchz_data_success
