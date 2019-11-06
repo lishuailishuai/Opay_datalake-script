@@ -174,7 +174,10 @@ select dri.driver_id,
             if(dtr.driver_id is not null,1,0) as is_td_online,
             --当天是否在线
             
-            if(push.driver_id is not null,1,0) as is_td_succ_broadcast,
+            if(push.driver_id is not null,1,0) as is_td_broadcast,
+            --当天是否被播单（push节点）
+            
+            if(push.success>=1,1,0) as is_td_succ_broadcast,
             --当天是否被成功播单（push节点）
             
             if(show.driver_id is not null,1,0) as is_td_accpet_show,
@@ -189,6 +192,9 @@ select dri.driver_id,
             if(ord.is_td_finish>=1,1,0) as is_td_finish,
             -- 当天是否完单
             
+            sum(push.push_times) as push_times,
+            --司机被播单总次数（push节点）
+            
             sum(push.succ_push_times) as succ_push_times,
             --成功被播单总次数（push节点）
             
@@ -197,6 +203,9 @@ select dri.driver_id,
             
             sum(click.driver_click_order_times) as driver_click_order_times,
             -- 应答总次数（骑手端click节点）
+            
+            sum(push.push_order_cnt) as push_order_cnt, 
+            --司机被播单订单量（push节点）
             
             sum(push.succ_push_order_cnt) as succ_push_order_cnt, 
             --成功被播单订单量（push节点）
@@ -222,6 +231,9 @@ select dri.driver_id,
             sum(ord.td_finish_billing_dur) as driver_billing_dur,
             --司机计费时长
             
+            sum(ord.td_service_dur) as driver_service_dur,
+            --司机服务时长
+            
             sum(ord.td_finish_order_dur) as driver_finished_dur,
             --司机支付完单做单时长（支付跨天可能偏大）
             
@@ -231,10 +243,10 @@ select dri.driver_id,
             sum(dtr.driver_freerange) as driver_free_dur,
             --司机空闲时长
             
-            sum(if(ord.is_td_finish>=1,(nvl(ord.td_finish_billing_dur,0)+nvl(ord.td_cannel_pick_dur,0)+nvl(dtr.driver_freerange,0)),0)) as driver_finish_online_dur,
+            sum(if(ord.is_td_finish>=1,(nvl(ord.td_service_dur,0)+nvl(ord.td_cannel_pick_dur,0)+nvl(dtr.driver_freerange,0)),0)) as driver_finish_online_dur,
             --完单司机在线时长
             
-            sum(if(ord.is_td_finish>=1,(nvl(ord.td_finish_billing_dur,0)+nvl(ord.td_cannel_pick_dur,0)+nvl(dtr.driver_freerange,0)),0)) as strong_driver_finish_online_dur,
+            sum(if(ord.is_td_finish>=1 and is_strong_dispatch>=1,(nvl(ord.td_service_dur,0)+nvl(ord.td_cannel_pick_dur,0)+nvl(dtr.driver_freerange,0)),0)) as strong_driver_finish_online_dur,
             --强派单完单司机在线时长
             dri.country_code as country_code,
             dri.dt as dt
@@ -256,11 +268,13 @@ select dri.driver_id,
             LEFT OUTER JOIN
             (
                 SELECT driver_id, --成功播单司机
-                count(distinct order_id) as succ_push_order_cnt, --成功被播单订单量（push节点）
-                count(1) as succ_push_times  --成功被播单总次数（push节点）
+                count(distinct order_id) as push_order_cnt, --司机被播单订单量（push节点）
+                count(1) as push_times,  --司机被播单总次数（push节点）
+                count(distinct (if(success=1,order_id,null))) as succ_push_order_cnt, --成功被播单订单量（push节点）
+                sum(if(success=1,1,0)) as succ_push_times,  --成功被播单总次数（push节点）
+                sum(success) as success  --用于判断该司机是否被成功播单
                 FROM oride_dw.dwd_oride_order_push_driver_detail_di
                 WHERE dt='{pt}'
-                AND success=1
                 GROUP BY driver_id
             ) push ON dri.driver_id=push.driver_id
             LEFT OUTER JOIN
@@ -293,7 +307,8 @@ select dri.driver_id,
                 sum(is_td_finish) as is_td_finish,  --用于判断司机是否有完单，该字段为司机当天完单量  
                 sum(is_td_finish_pay) as is_td_finish_pay,  --用于判断司机是否有支付完单，该字段为司机当天支付完单量
                 sum(if(is_td_finish = 1, price, 0)) as price, --司机完单gmv
-                sum(td_finish_billing_dur) as td_finish_billing_dur, --司机计费时长，和司机完单计费时长一样
+                sum(td_finish_billing_dur) as td_finish_billing_dur, --司机计费时长，和司机完单计费时长不一样
+                sum(td_service_dur) as td_service_dur, --司机服务时长
                 sum(td_finish_order_dur) as td_finish_order_dur, --司机支付完单做单时长（支付跨天可能偏大）
                 sum(td_cannel_pick_dur) as td_cannel_pick_dur, --司机当天订单被取消时长
                 sum(is_strong_dispatch) as is_strong_dispatch, --用于判断司机是否有强派单
@@ -330,6 +345,9 @@ select dri.driver_id,
             --当天是否在线
             
             if(push.driver_id is not null,1,0),
+            --当天是否被播单（push节点）
+            
+            if(push.success>=1,1,0),
             --当天是否被成功播单（push节点）
             
             if(show.driver_id is not null,1,0),

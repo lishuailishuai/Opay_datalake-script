@@ -293,22 +293,23 @@ LEFT OUTER JOIN
 
 (select 
   age.driver_id,
-  (amount_agenter+nvl(amount,0))/7 as last_week_daily_due --上周日均应还款金额
+  sum(nvl(amount_agenter,0)+nvl(amount,0))/sum(if((nvl(amount_agenter,0)+nvl(amount,0))<>0,1,0)) as last_week_daily_due --上周日均应还款金额
 from
-(SELECT driver_id,
+(SELECT driver_id,dt,
         sum(amount_agenter) as amount_agenter
    FROM oride_dw_ods.ods_sqoop_base_data_driver_records_day_df
    WHERE dt BETWEEN DATE_ADD('{pt}', -6) AND DATE_ADD('{pt}',0)
-   GROUP BY driver_id) age
+   GROUP BY driver_id,dt) age
 LEFT OUTER JOIN 
-(SELECT driver_id,
+(SELECT driver_id,dt,
         sum(amount) as amount
       FROM oride_dw_ods.ods_sqoop_base_data_driver_repayment_df
       WHERE dt BETWEEN DATE_ADD('{pt}', -6) AND DATE_ADD('{pt}',0)
         AND substring(updated_at,1,13)<='{now_day} 00'
         AND repayment_type=0
-      group by driver_id) tb1
-ON age.driver_id = tb1.driver_id
+      group by driver_id,dt) tb1
+ON age.driver_id = tb1.driver_id and age.dt = tb1.dt
+group by age.driver_id
 ) avg1
 on dri.driver_id=avg1.driver_id
 

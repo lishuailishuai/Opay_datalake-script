@@ -77,7 +77,7 @@ def fun_task_timeout_monitor(ds, dag, **op_kwargs):
 
     tb = [
         {"db": "oride_dw", "table": "{dag_name}".format(dag_name=dag_ids),
-         "partition": "dt={pt}".format(pt=ds), "timeout": "1200"}
+         "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "1200"}
     ]
 
     TaskTimeoutMonitor().set_task_monitor(tb)
@@ -99,11 +99,12 @@ app_oride_order_finished_d_task = HiveOperator(
         SET hive.exec.parallel=TRUE;
         SET hive.exec.dynamic.partition.mode=nonstrict;
         
-        insert overwrite table oride_dw.{table} partition(dt)
+        insert overwrite table oride_dw.{table} partition(country_code,dt)
             select k2.city_name,
                 k1.driver_finish_ord_num as wdl, --完单量
                 count(distinct k1.driver_id) as qss,--完单司机数
                 round(sum(k1.finish_driver_online_dur)/(3600*count(distinct k1.driver_id)),2) as avg_online_dur,--平均在线时长
+                'nal' AS country_code,--国家码
                 k1.dt
             from (
                 select a.dt,
@@ -140,7 +141,7 @@ def check_success(ds, dag, **op_kwargs):
 
     msg = [
         {"table": "{dag_name}".format(dag_name=dag_ids),
-         "hdfs_path": "{hdfsPath}/dt={pt}".format(pt=ds, hdfsPath=hdfs_path)}
+         "hdfs_path": "{hdfsPath}/country_code=nal/dt={pt}".format(pt=ds, hdfsPath=hdfs_path)}
     ]
 
     TaskTouchzSuccess().set_touchz_success(msg)
