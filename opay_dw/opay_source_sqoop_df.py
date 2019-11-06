@@ -92,6 +92,11 @@ table_list = [
     ("opay_activity", "activity", "opay_db", "base", 1),
     ("opay_activity", "activity_rules", "opay_db", "base", 1),
     ("opay_activity", "preferential_record", "opay_db", "base", 1),
+
+    ("opay_commission", "commission_account_balance", "opay_db", "base", 1),
+    ("opay_commission", "commission_order", "opay_db", "base", 1),
+    ("opay_commission", "commission_top_up_record", "opay_db", "base", 1),
+
 ]
 """
     ("opay_transaction","adjustment_decrease_record", "opay_db", "base",3),
