@@ -180,24 +180,26 @@ insert_oride_global_daily_report = HiveOperator(
         with lfw_event_data as (
             SELECT
                 '{{ ds }}' as dt,
-                SUM(oride_cllick_request_event_counter)/count(DISTINCT dt) as oride_cllick_request_event_counter_lfw,
-                SUM(estimated_price_cllick_request_event_counter)/count(DISTINCT dt) as estimated_price_cllick_request_event_counter_lfw
+                count(distinct case when event_name='choose_end_point_click' then user_id end)/count(DISTINCT dt) as oride_cllick_request_event_counter_lfw,
+                count(distinct case when event_name='request_a_ride_show' then user_id end)/count(DISTINCT dt) as estimated_price_cllick_request_event_counter_lfw
             FROM
-                oride_source.appsflyer_opay_event_log
+                oride_dw.dwd_oride_client_event_detail_hi
             WHERE
-                dt BETWEEN '{{ macros.ds_add(ds, -28) }}' AND '{{ macros.ds_add(ds, -1) }}'
-                AND from_unixtime(unix_timestamp(dt, 'yyyy-MM-dd'),'u') = from_unixtime(unix_timestamp('{{ ds }}', 'yyyy-MM-dd'),'u')
+                dt BETWEEN '{{ macros.ds_add(ds, -28) }}' AND '{{ macros.ds_add(ds, -1) }}' and app_version='4.4.405' 
+                AND from_unixtime(unix_timestamp(dt, 'yyyy-MM-dd'),'u') = from_unixtime(unix_timestamp('{{ ds }}', 'yyyy-MM-dd'),'u') and
+                from_unixtime(cast(event_time as int),'yyyy-MM-dd') BETWEEN '{{ macros.ds_add(ds, -28) }}' AND '{{ macros.ds_add(ds, -1) }}'
+                AND from_unixtime(cast(event_time as int),'u') = from_unixtime(cast(event_time as int),'u')
         ),
         -- event数据
         event_data as (
-            SELECT
+        SELECT
                 dt,
-                SUM(oride_cllick_request_event_counter) as oride_cllick_request_event_counter,
-                SUM(estimated_price_cllick_request_event_counter) as estimated_price_cllick_request_event_counter
+                count(distinct case when event_name='choose_end_point_click' then user_id end) as oride_cllick_request_event_counter,
+                count(distinct case when event_name='request_a_ride_show' then user_id end) as estimated_price_cllick_request_event_counter
             FROM
-                oride_source.appsflyer_opay_event_log
+                oride_dw.dwd_oride_client_event_detail_hi
             WHERE
-                dt='{{ ds }}'
+                dt='{{ ds }}' and app_version='4.4.405' and from_unixtime(cast(event_time as int),'yyyy-MM-dd')='{{ ds }}'
             GROUP BY
                 dt
         ),
@@ -2655,12 +2657,12 @@ def send_funnel_report_email(ds, **kwargs):
         row_fmt = '''
                  <td>{0}</td>
                 <!--呼叫前-->
-                <td><!--{2}--></td>
-                <td><!--{3}--></td>
-                <td><!--{4}%--></td>
-                <td><!--{5}%--></td>
-                <td><!--{6}%--></td>
-                <td><!--{7}%--></td>
+                <td>{2}</td>
+                <td>{3}</td>
+                <td>{4}</td>
+                <td>{5}</td>
+                <td>{6}</td>
+                <td>{7}</td>
                 <!--呼叫-应答-->
                 <td>{26}</td>
                 <td>{8}</td>
