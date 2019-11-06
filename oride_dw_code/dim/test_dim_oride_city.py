@@ -34,7 +34,7 @@ args = {
         'email_on_retry': False,
 } 
 
-dag = airflow.DAG( 'dim_oride_city', 
+dag = airflow.DAG( 'test_dim_oride_city', 
     schedule_interval="00 01 * * *", 
     default_args=args,
     catchup=False) 
@@ -74,7 +74,7 @@ ods_sqoop_base_weather_per_10min_df_prev_day_task = UFileSensor(
 
 ##----------------------------------------- 变量 ---------------------------------------## 
 
-table_name="dim_oride_city"
+table_name="test_dim_oride_city"
 hdfs_path="ufile://opay-datalake/oride/oride_dw/"+table_name
 
 
@@ -85,7 +85,7 @@ def fun_task_timeout_monitor(ds,dag,**op_kwargs):
     dag_ids=dag.dag_id
 
     msg = [
-        {"db": "oride_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=NG/dt={pt}".format(pt=ds), "timeout": "800"}
+        {"db": "test_db", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=NG/dt={pt}".format(pt=ds), "timeout": "800"}
     ]
 
     TaskTimeoutMonitor().set_task_monitor(msg)
@@ -97,16 +97,18 @@ task_timeout_monitor= PythonOperator(
     dag=dag
 )
 
+
+
 ##----------------------------------------- 脚本 ---------------------------------------## 
 
-dim_oride_city_task = HiveOperator(
 
-    task_id='dim_oride_city_task',
-    hql='''
+def test_dim_oride_city_sql_task():
+
+    HQL='''
     set hive.exec.parallel=true;
     set hive.exec.dynamic.partition.mode=nonstrict;
 
-INSERT overwrite TABLE oride_dw.{table} partition(country_code,dt)
+INSERT overwrite TABLE test_db.{table} partition(country_code,dt)
 
 SELECT city_id,
        --城市 ID
@@ -200,18 +202,20 @@ on lower(cit.city_name)=lower(weather.city)
         pt='{{ds}}',
         now_day='{{macros.ds_add(ds, +1)}}',
         table=table_name
-        ),
-schema='oride_dw',
-    dag=dag)
+        )
+
+    logging.info(HQL)
+
+    return HQL
 
 
 #熔断数据，如果数据重复，报错
-def check_key_data(ds,**kargs):
+def check_key_data_task(cursor):
 
     #主键重复校验
-    HQL_DQC='''
+    check_sql='''
     SELECT count(1)-count(distinct city_id) as cnt
-      FROM oride_dw.{table}
+      FROM test_db.{table}
       WHERE dt='{pt}'
       and country_code in ('NG')
     '''.format(
@@ -220,41 +224,51 @@ def check_key_data(ds,**kargs):
         table=table_name
         )
 
-    cursor = get_hive_cursor()
-    logging.info('Executing 主键重复校验: %s', HQL_DQC)
+    logging.info('Executing 主键重复校验: %s', check_sql)
 
-    cursor.execute(HQL_DQC)
+    cursor.execute(check_sql)
+
     res = cursor.fetchone()
 
     if res[0] >1:
+        flag=1
         raise Exception ("Error The primary key repeat !", res)
+        sys.exit(1)
     else:
+        flag=0
         print("-----> Notice Data Export Success ......")
-    
-task_check_key_data = PythonOperator(
-    task_id='check_data',
-    python_callable=check_key_data,
-    provide_context=True,
-    dag=dag
-)
 
-#生成_SUCCESS
-def check_success(ds,dag,**op_kwargs):
+    return flag
 
-    dag_ids=dag.dag_id
 
+def execution_data_task_id(ds,**kargs):
+
+    cursor = get_hive_cursor()
+
+    #读取sql
+    _sql=test_dim_oride_city_sql_task()
+
+    #执行hive 
+    cursor.execute(_sql)
+
+    #读取验证sql
+    _check=check_key_data_task()
+
+    #生成_SUCCESS
     msg = [
-        {"table":"{dag_name}".format(dag_name=dag_ids),"hdfs_path": "{hdfs_path}/country_code=NG/dt={pt}".format(pt=ds,hdfs_path=hdfs_path)}
+        {"table":"{dag_name}".format(dag_name=dag.dag_id),"hdfs_path": "{hdfs_path}/country_code=NG/dt={pt}".format(pt=ds,hdfs_path=hdfs_path)}
     ]
 
     TaskTouchzSuccess().set_touchz_success(msg)
+    
 
-touchz_data_success= PythonOperator(
-    task_id='touchz_data_success',
-    python_callable=check_success,
+execution_data_task= PythonOperator(
+    task_id='execution_data_task',
+    python_callable=execution_data_task_id,
     provide_context=True,
     dag=dag
 )
 
-
-ods_sqoop_base_data_city_conf_df_tesk>>ods_sqoop_base_weather_per_10min_df_prev_day_task>>sleep_time>>dim_oride_city_task>>task_check_key_data>>touchz_data_success
+ods_sqoop_base_data_city_conf_df_tesk>>sleep_time
+ods_sqoop_base_weather_per_10min_df_prev_day_task>>sleep_time
+sleep_time>>execution_data_task
