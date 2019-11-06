@@ -180,26 +180,28 @@ insert_oride_global_daily_report = HiveOperator(
         with lfw_event_data as (
             SELECT
                 '{{ ds }}' as dt,
-                count(distinct case when event_name='choose_end_point_click' then user_id end)/count(DISTINCT dt) as oride_cllick_request_event_counter_lfw,
-                count(distinct case when event_name='request_a_ride_show' then user_id end)/count(DISTINCT dt) as estimated_price_cllick_request_event_counter_lfw
+                sum(case when event_name='choose_end_point_click' then 1 end)/count(DISTINCT dt) as oride_cllick_request_event_counter_lfw,
+                sum(case when event_name='request_a_ride_show' then 1 end)/count(DISTINCT dt) as estimated_price_cllick_request_event_counter_lfw,
+                sum(case when event_name='request_a_ride_click' then 1 end)/count(DISTINCT dt) as  request_a_ride_click_lfw
             FROM
                 oride_dw.dwd_oride_client_event_detail_hi
             WHERE
-                dt BETWEEN '{{ macros.ds_add(ds, -28) }}' AND '{{ macros.ds_add(ds, -1) }}' and app_version='4.4.405' 
+                dt BETWEEN '{{ macros.ds_add(ds, -28) }}' AND '{{ macros.ds_add(ds, -1) }}' and app_version>='4.4.405' 
                 AND from_unixtime(unix_timestamp(dt, 'yyyy-MM-dd'),'u') = from_unixtime(unix_timestamp('{{ ds }}', 'yyyy-MM-dd'),'u') and
                 from_unixtime(cast(event_time as int),'yyyy-MM-dd') BETWEEN '{{ macros.ds_add(ds, -28) }}' AND '{{ macros.ds_add(ds, -1) }}'
-                AND from_unixtime(cast(event_time as int),'u') = from_unixtime(cast(event_time as int),'u')
+                AND from_unixtime(cast(event_time as int),'u') = from_unixtime(unix_timestamp('{{ ds }}', 'yyyy-MM-dd'),'u') 
         ),
         -- event数据
         event_data as (
         SELECT
                 dt,
-                count(distinct case when event_name='choose_end_point_click' then user_id end) as oride_cllick_request_event_counter,
-                count(distinct case when event_name='request_a_ride_show' then user_id end) as estimated_price_cllick_request_event_counter
+                sum(case when event_name='choose_end_point_click' then 1 end) as oride_cllick_request_event_counter,
+                sum(case when event_name='request_a_ride_show' then 1 end) as estimated_price_cllick_request_event_counter,
+                sum(case when event_name='request_a_ride_click' then 1 end)/count(DISTINCT dt) as  request_a_ride_click
             FROM
                 oride_dw.dwd_oride_client_event_detail_hi
             WHERE
-                dt='{{ ds }}' and app_version='4.4.405' and from_unixtime(cast(event_time as int),'yyyy-MM-dd')='{{ ds }}'
+                dt='{{ ds }}' and app_version>='4.4.405' and from_unixtime(cast(event_time as int),'yyyy-MM-dd')='{{ ds }}'
             GROUP BY
                 dt
         ),
@@ -543,7 +545,9 @@ insert_oride_global_daily_report = HiveOperator(
             od.finished_num,
             od.request_usernum,
             od.opay_pay_filed_order_num,
-            od.opay_pay_order_num
+            od.opay_pay_order_num,
+            nvl(led.request_a_ride_click_lfw,0) request_a_ride_click_lfw,
+            nvl(ed.request_a_ride_click,0) request_a_ride_click
             
         FROM
             order_data od
@@ -2408,10 +2412,10 @@ def send_funnel_report_email(ds, **kwargs):
             from_unixtime(unix_timestamp(dt, 'yyyy-MM-dd'),'u') as week,
             nvl(oride_cllick_request_event_counter,0),
             nvl(estimated_price_cllick_request_event_counter,0),
-            nvl(round(estimated_price_cllick_request_event_counter/oride_cllick_request_event_counter*100, 2),0) as ep_vs_oc,
-            nvl(round(estimated_price_cllick_request_event_counter_lfw/oride_cllick_request_event_counter_lfw*100, 2),0) as ep_vs_oc_lfw,
-            nvl(round(request_num/estimated_price_cllick_request_event_counter*100, 2),0) as rq_vs_ep,
-            nvl(round(request_num_lfw/estimated_price_cllick_request_event_counter_lfw*100, 2),0) as rq_vs_ep_lfw,
+            concat(nvl(round(estimated_price_cllick_request_event_counter/oride_cllick_request_event_counter*100, 2),0),'%') as ep_vs_oc,
+            concat(nvl(round(estimated_price_cllick_request_event_counter_lfw/oride_cllick_request_event_counter_lfw*100, 2),0),'%')as ep_vs_oc_lfw,
+            concat(nvl(round(request_a_ride_click_c_new/estimated_price_cllick_request_event_counter*100, 2),0),'%') as rq_vs_ep,
+            concat(nvl(round(request_a_ride_click_lfw_c_new/estimated_price_cllick_request_event_counter_lfw*100, 2),0),'%') as rq_vs_ep_lfw,
             nvl(request_num,0),
             nvl(request_num_lfw,0),
             nvl(round((request_num-push_num)/request_num*100, 2),0) as no_push_rate,
