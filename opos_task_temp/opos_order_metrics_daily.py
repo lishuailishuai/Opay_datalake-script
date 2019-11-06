@@ -6,6 +6,7 @@ from airflow.operators.bash_operator import BashOperator
 from airflow.operators.python_operator import PythonOperator
 from airflow.operators.hive_operator import HiveOperator
 from airflow.operators.hive_to_mysql import HiveToMySqlTransfer
+from airflow.operators.mysql_operator import MySqlOperator
 from airflow.utils.email import send_email
 from airflow.models import Variable
 from utils.connection_helper import get_hive_cursor
@@ -524,6 +525,26 @@ insert_opos_active_user_metrics = HiveOperator(
     schema='opos_temp',
     dag=dag)
 
+delete_crm_data = MySqlOperator(
+    task_id='delete_crm_data',
+    sql="""
+        DELETE FROM opos_metrics_daily WHERE dt='{ds}' ;
+    """.format(
+        ds='{{ds}}'
+    ),
+    mysql_conn_id='mysql_dw',
+    dag=dag)
+
+delete_bi_data = MySqlOperator(
+    task_id='delete_bi_data',
+    sql="""
+        DELETE FROM opos_metrics_daily WHERE dt='{ds}' ;
+    """.format(
+        ds='{{ds}}'
+    ),
+    mysql_conn_id='mysql_bi',
+    dag=dag)
+
 insert_crm_metrics = HiveToMySqlTransfer(
     task_id='insert_crm_metrics',
     sql=""" 
@@ -620,9 +641,8 @@ ods_sqoop_base_bd_shop_df_dependence_task >> insert_opos_active_user_detail_metr
 
 insert_opos_active_user_detail_metrics >> insert_opos_active_user_metrics
 
-insert_opos_order_metrics >> insert_crm_metrics
-insert_opos_active_user_metrics >> insert_crm_metrics
+insert_opos_order_metrics >> delete_crm_data >> insert_crm_metrics
+insert_opos_active_user_metrics >> delete_crm_data >> insert_crm_metrics
 
-
-insert_opos_order_metrics >> insert_bi_metrics
-insert_opos_active_user_metrics >> insert_bi_metrics
+insert_opos_order_metrics >> delete_bi_data >> insert_bi_metrics
+insert_opos_active_user_metrics >> delete_bi_data >> insert_bi_metrics
