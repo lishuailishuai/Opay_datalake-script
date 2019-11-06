@@ -347,7 +347,7 @@ schema='oride_dw',
     dag=dag)
 
 
-熔断数据，如果数据重复，报错
+#熔断数据，如果数据重复，报错
 def check_key_data(ds,**kargs):
 
     #主键重复校验
