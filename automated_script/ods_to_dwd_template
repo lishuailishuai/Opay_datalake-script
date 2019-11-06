@@ -1,0 +1,182 @@
+# -*- coding: utf-8 -*-
+import airflow
+from datetime import datetime, timedelta
+from airflow.operators.hive_operator import HiveOperator
+from airflow.operators.python_operator import PythonOperator
+from airflow.operators.bash_operator import BashOperator
+from airflow.sensors import UFileSensor
+from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
+from plugins.TaskTouchzSuccess import TaskTouchzSuccess
+from utils.connection_helper import get_hive_cursor
+import logging
+
+
+OWNER = '$owner'
+ODS_PATH = '$ods_path'
+TABLE_NAME = '$table_name'
+TABLE_COMMENT = '$table_comment'
+HDFS_PATH_BASE = '$hdfs_path_base'
+HIVE_DB = '$hive_db'
+HIVE_ODS_DB = '$hive_ods_db'
+HIVE_ODS_TABLE = '$hive_ods_table'
+COLUMN_LIST = '$column_list'
+HDFS_PATH = HDFS_PATH_BASE + TABLE_NAME
+
+args = {
+    'owner': OWNER,
+    'start_date': airflow.utils.dates.days_ago(1),
+    'depends_on_past': False,
+    'retries': 3,
+    'retry_delay': timedelta(minutes=2),
+    'email': ['bigdata_dw@opay-inc.com'],
+    'email_on_failure': True,
+    'email_on_retry': False,
+}
+
+dag = airflow.DAG(TABLE_NAME,
+                  schedule_interval="30 02 * * *",
+                  default_args=args,
+                  catchup=False)
+
+sleep_time = BashOperator(
+    task_id='sleep_id',
+    depends_on_past=False,
+    bash_command='sleep 10',
+    dag=dag)
+
+
+# 依赖前一天分区
+ods_depend_task = UFileSensor(
+    task_id='ods_depend_task',
+    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str=ODS_PATH,
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
+# 获取字段详细信息
+def get_column_info():
+    hql = '''
+            DESCRIBE FORMATTED {db}.{table}
+        '''.format(
+        db=HIVE_ODS_DB,
+        table=HIVE_ODS_TABLE
+    )
+    logging.info(hql)
+    hive_cursor = get_hive_cursor()
+    hive_cursor.execute(hql)
+    res = hive_cursor.fetchall()
+    #logging.info(res)
+    hive_schema = []
+    column_select_list = COLUMN_LIST.split(",")
+    for (column_name, column_type, column_comment) in res:
+        col_name = column_name.lower().strip()
+        if col_name == '# col_name' or col_name == '':
+            continue
+        if col_name == '# partition information':
+            break
+        if col_name not in column_select_list:
+            continue
+        column_str = "`%s` %s comment '%s'" % (col_name, column_type, column_comment)
+        hive_schema.append(column_str)
+    logging.info(hive_schema)
+    return hive_schema
+
+
+##----------------------------------------- 任务超时监控 ---------------------------------------##
+
+def fun_task_timeout_monitor(ds, db_name, table_name, **op_kwargs):
+
+    tb = [
+        {"db": db_name, "table":table_name, "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "600"}
+    ]
+
+    TaskTimeoutMonitor().set_task_monitor(tb)
+
+task_timeout_monitor= PythonOperator(
+    task_id='task_timeout_monitor',
+    python_callable=fun_task_timeout_monitor,
+    provide_context=True,
+    op_kwargs={
+        'db_name': HIVE_DB,
+        'table_name': TABLE_NAME,
+    },
+    dag=dag
+)
+
+##----------------------------------------- 脚本 ---------------------------------------##
+dwd_create_task = HiveOperator(
+    task_id='dwd_create_task',
+    hql='''
+        CREATE EXTERNAL TABLE IF NOT EXISTS {db_name}.{table}(
+            {column}
+        )
+        COMMENT '{table_comment}'
+        PARTITIONED BY (
+            `country_code` string COMMENT '二位国家码',
+             `dt` string COMMENT '分区时间')
+        STORED AS ORC
+        LOCATION '{hdfs_path}'
+        TBLPROPERTIES ("orc.compress"="SNAPPY")
+'''.format(
+        db_name=HIVE_DB,
+        table=TABLE_NAME,
+        hdfs_path=HDFS_PATH,
+        column=",".join(get_column_info()),
+        table_comment=TABLE_COMMENT
+    ),
+    dag=dag
+)
+
+
+dwd_insert_task = HiveOperator(
+    task_id='dwd_insert_task',
+    hql='''
+        SET hive.exec.parallel=TRUE;
+        SET hive.exec.dynamic.partition.mode=nonstrict;
+
+        insert overwrite table {db_name}.{table} partition(country_code,dt)
+        SELECT
+            {column_list},
+            'nal' as country_code,
+            '{pt}' as dt
+        FROM
+            {hive_ods_db}.{hive_ods_table}
+        WHERE
+            dt='{pt}'
+        ;
+'''.format(
+        pt='{{ds}}',
+        now_hour='{{ execution_date.strftime("%H") }}',
+        db_name=HIVE_DB,
+        table=TABLE_NAME,
+        hive_ods_db=HIVE_ODS_DB,
+        hive_ods_table=HIVE_ODS_TABLE,
+        column_list=COLUMN_LIST
+    ),
+    dag=dag
+)
+
+#生成_SUCCESS
+def check_success(ds,table_name,**op_kwargs):
+
+    msg = [
+        {"table":table_name,"hdfs_path": "{hdfsPath}/country_code=nal/dt={pt}".format(pt=ds,hdfsPath=HDFS_PATH)}
+    ]
+
+    TaskTouchzSuccess().set_touchz_success(msg)
+
+touchz_data_success= PythonOperator(
+    task_id='touchz_data_success',
+    python_callable=check_success,
+    provide_context=True,
+    op_kwargs={
+        'table_name': TABLE_NAME,
+    },
+    dag=dag
+)
+
+ods_depend_task >> sleep_time >> dwd_create_task >> dwd_insert_task >> touchz_data_success

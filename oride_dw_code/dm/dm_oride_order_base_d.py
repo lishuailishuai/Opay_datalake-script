@@ -33,7 +33,7 @@ args = {
 }
 
 dag = airflow.DAG('dm_oride_order_base_d',
-                  schedule_interval="30 01 * * *",
+                  schedule_interval="00 02 * * *",
                   default_args=args,
                   catchup=False)
 
@@ -46,56 +46,10 @@ sleep_time = BashOperator(
 ##----------------------------------------- 依赖 ---------------------------------------## 
 
 # 依赖前一天分区
-dependence_dwd_oride_order_base_include_test_di_prev_day_task = UFileSensor(
-    task_id='dwd_oride_order_base_include_test_di_prev_day_task',
+dependence_dwm_oride_order_base_di_prev_day_task = UFileSensor(
+    task_id='dwm_oride_order_base_di_prev_day_task',
     filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw/dwd_oride_order_base_include_test_di/country_code=nal",
-        pt='{{ds}}'
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
-
-dependence_dwd_oride_order_dispatch_funnel_di_prev_day_task = UFileSensor(
-    task_id='dwd_oride_order_dispatch_funnel_di_prev_day_task',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw/dwd_oride_order_dispatch_funnel_di/country_code=nal",
-        pt='{{ds}}'
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
-
-dependence_dwd_oride_driver_accept_order_click_detail_di_prev_day_task = UFileSensor(
-    task_id='dwd_oride_driver_accept_order_click_detail_di_prev_day_task',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw/dwd_oride_driver_accept_order_click_detail_di/country_code=nal",
-        pt='{{ds}}'
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
-
-
-dependence_dwd_oride_driver_accept_order_show_detail_di_prev_day_task = UFileSensor(
-    task_id='dwd_oride_driver_accept_order_show_detail_di_prev_day_task',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw/dwd_oride_driver_accept_order_show_detail_di/country_code=nal",
-        pt='{{ds}}'
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
-
-# 依赖前一天分区
-dependence_dwd_oride_order_mark_df_prev_day_task = UFileSensor(
-    task_id='dwd_oride_order_mark_df_prev_day_task',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw/dwd_oride_order_mark_df/country_code=nal",
+        hdfs_path_str="oride/oride_dw/dwm_oride_order_base_di/country_code=nal",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -119,187 +73,72 @@ dm_oride_order_base_d_task = HiveOperator(
     set hive.exec.dynamic.partition.mode=nonstrict;
     
     insert overwrite table  oride_dw.{table} partition(country_code,dt)
-    select 
-          ord.city_id,
-           --所属城市
-    
-           ord.product_id as product_id,
-           --订单车辆类型(0: 专快混合 1:driect[专车] 2: street[快车] 99:招手停)
-    
-           count(ord.order_id) AS ride_order_cnt,
-           --当天下单数
-    
-           sum(is_td_request) AS request_order_cnt,
-           --当天接单数
-    
-           sum(is_td_finish) AS finish_order_cnt,
-           --当天完单数
-    
-           sum(td_pick_up_dur) AS pick_up_order_dur,
-           --当天接驾订单时长（分钟）
-    
-           sum(td_take_dur) AS take_order_dur,
-           --当天应答订单时长（分钟）
-    
-           sum(td_cannel_pick_dur) AS cannel_pick_order_dur,
-           --当天取消接驾订单时长（分钟）
-    
-           sum(td_wait_dur) AS wait_order_dur,
-           --当天等待上车订单时长（分钟）
-    
-           sum(td_billing_dur) AS billing_order_dur,
-           --当天计费订单时长（分钟）
-    
-           sum(td_pay_dur) AS pay_order_dur,
-           --当天支付订单时长(分钟)
-    
-           sum(is_td_sys_cancel) AS sys_cancel_order_cnt,
-           --当天系统取消订单数
-    
-           sum(is_td_passanger_before_cancel) AS passanger_before_cancel_order_cnt,
-           --当天乘客应答前取消订单数
-    
-           sum(is_td_passanger_after_cancel) AS passanger_after_cancel_order_cnt, --当天乘客应答后取消订单数
-    
-           sum(is_td_finish_pay) as finish_pay, --当天完成支付
-    
-           sum(nvl(succ_broadcast_distance,0)) as succ_broadcast_dis, --当天成功播单距离(米)
-    
-           sum(is_td_driver_after_cancel) as driver_after_cancel_order_cnt,--当天司机应答后取消订单数
-    
-           sum(td_finish_billing_dur) as finish_billing_dur,--当天完单计费时长（分钟）
-          
-           sum(td_finish_order_dur) as finish_order_dur,--当天完单做单时长(分钟）
-    
-           sum(case when ord.order_id=a1.order_id and is_td_finish=1 then pick_up_distance else 0 end) as finish_order_pick_up_dis, --完单接驾距离(米)
-    
-           count(distinct p1.order_id) as succ_broadcast_cnt,--成功播单数
-    
-           sum(case when ord.order_id = d1.order_id then 1 else 0 end) as broadcast_cnt, --播单数
-           
-           count(distinct r1.order_id) as driver_accpet_order_cnt,  --司机应答订单数
-    
-           sum (case when ord.order_id=p1.order_id then 1 else 0 end) as dispatch_push_driver_order_cnt, --推送给骑手的订单数(push阶段)
-           
-           sum (case when ord.order_id=p1.order_id then p1.push_driver_times_cnt else 0 end) as push_driver_times_cnt, --推送成功给司机的总次数(push阶段)
-            
-           sum (case when ord.order_id=p1.order_id then p1.succ_push_all_times_cnt else 0 end) as succ_push_all_times_cnt, --推送成功的总次数(push阶段)
-            
-           sum(td_finish_order_dur)+sum(td_cannel_pick_dur) as accept_order_dur,
-           --当天做单时长(当天完成做单时长+当天取消接驾时长（分钟）)
-           
-           count(distinct r2.order_id) as push_driver_order_accpet_show_cnt,  --司机被推送订单数(accpet_show阶段)
-           
-           sum(if(ord.is_td_finish = 1, td_service_dur,0)) service_dur, --当天完单服务时长
-           
-           sum (case when ord.order_id = r1.order_id then r1.driver_click_times else 0 end) as driver_click_times_cnt, --司机应答的总次数(accpet_click阶段)
-           
-           sum(if(ord.is_td_finish = 1, ord.td_take_dur,0)) as finish_take_order_dur, --当天完成订单应答时长
-           
-           sum(if(ord.is_td_finish = 1, ord.distance,0)) as finish_order_onride_dis, --完单送驾距离(米)
-           
-           sum(case when ord.order_id=a1.order_id and is_td_finish=1 then order_assigned_cnt else 0 end) as finish_order_pick_up_assigned_cnt, --订单被分配次数（计算平均接驾距离使用）
-           
-           sum(if(ord.status in(4,5),ord.price,0.0)) as price,  --当日完单gmv
-           sum(if(ord.status=5,ord.price,0.0)) as pay_price, --当日应付金额
-           sum(if(ord.status=5,ord.pay_amount,0.0)) as pay_amount, --当日实付金额
-           count(if(mark_ord.is_valid=1,ord.order_id,null)) as valid_ord_cnt, --有效订单数
-           sum(if(ord.is_td_finish = 1,ord.td_pick_up_dur,0)) as finish_pick_up_dur, --当日完单接驾时长
-           sum(if(ord.is_td_finish = 1,ord.pax_num,0)) as pax_num,  --当日完单乘客数
-           count(if(ord.pay_mode=2,ord.order_id,null)) as opay_pay_cnt, --opay支付订单数
-           count(if(ord.pay_mode=2 and ord.pay_status in(0,2),ord.order_id,null)) as opay_pay_failed_cnt, --opay支付失败订单数
-           count(if(mark_ord.is_wet_order=1,ord.order_id,null)) as wet_ord_cnt, --湿单订单量
-           count(if(mark_ord.score in(1,2) and ord.is_td_finish=1,ord.order_id,null)) as bad_feedback_finish_ord_cnt, --差评完单量
-           
-           count(if(is_td_after_cancel = 1 ,ord.order_id,null)) as after_cancel_order_cnt,--应答后取消订单数
-           sum(td_passanger_after_cancel_time_dur) AS passanger_after_cancel_time_dur,--乘客应答后取消时长（秒）
-           sum(td_driver_after_cancel_time_dur) AS driver_after_cancel_time_dur,--司机应答后取消时长（秒）
-           sum(if((ord.status = 6 and cancel_role =2),ord.distance,0.0)) as  passanger_cancel_order_dis,   --乘客取消订单接驾距离
-           sum(a1.pick_up_distance) as accept_order_pick_up_dis, --应答单接驾距离(米)（计算平均接驾距离（应答单使用））
-           sum(r1.accept_order_assigned_cnt) as  accept_order_pick_up_assigned_cnt, --应答单分配次数（应答单接驾距离(米)（计算平均接驾距离（应答单使用）））
-           null as column1, --预留字段
-           ord.driver_serv_type,  --业务类型，订单表中司机类型
-           
-           --------拼车相关数据---------
-           count(if(ord.is_carpool =1, ord.order_id, null)) as carpool_num,--'拼车订单数'
-           count(if(ord.is_chartered_bus = 1, ord.order_id, null)) as chartered_bus_num, --包车订单数
-           count(if(ord.is_carpool_success = 1, ord.order_id, null)) as carpool_success_num,--'拼车成功订单数'
-           count(if(ord.is_carpool_accept = 1, ord.order_id, null)) as carpool_accept_num, --'拼车应答订单数'
-           count(if(ord.is_carpool_success_and_finish = 1, ord.order_id, null)) as carpool_success_and_finish_num,--'拼车成功且完单数'
-           
-           ord.country_code,
-           
-           ord.dt
-    FROM
-      (
-         SELECT *
-         FROM oride_dw.dwd_oride_order_base_include_test_di
-         WHERE dt = '{pt}'
-         AND city_id<>'999001' --去除测试数据
-         and driver_id<>1
-       ) ord
-    LEFT OUTER JOIN
-      (
-        SELECT 
-        order_id,
-        sum(if (success=1, distance,0)) AS succ_broadcast_distance, --成功播单距离
-        count(concat(order_id,'_',order_round)) AS push_driver_times_cnt, -- 推送成功给司机的总次数
-        count(if (success=1,1,null)) AS succ_push_all_times_cnt --推送成功的总次数
-        FROM oride_dw.dwd_oride_order_dispatch_funnel_di
-        WHERE dt='{pt}' and event_name='dispatch_push_driver' 
-        GROUP BY order_id
-        ) p1 ON ord.order_id=p1.order_id
-    LEFT OUTER JOIN
-      (
-        SELECT  
-        order_id,
-        count(1) as order_assigned_cnt, --订单被分配次数（计算平均接驾距离使用）
-        sum(distance) AS pick_up_distance --接驾总距离
-        FROM oride_dw.dwd_oride_order_dispatch_funnel_di
-        WHERE dt='{pt}' and event_name='dispatch_assign_driver'
-        GROUP BY order_id
-       ) a1 ON ord.order_id=a1.order_id
-    LEFT OUTER JOIN
-      (
-        SELECT order_id
-        FROM oride_dw.dwd_oride_order_dispatch_funnel_di --播单
-        WHERE dt='{pt}' and event_name='dispatch_chose_driver'
-        GROUP BY order_id
-      ) d1 ON ord.order_id=d1.order_id
-    
-    LEFT OUTER JOIN 
-    (
-        SELECT 
-        order_id,
-        count(distinct order_id) as accept_order_assigned_cnt, --应答订单被分配次数（计算平均接驾距离（应答单）使用）
-        count(1) driver_click_times
-        FROM 
-        oride_dw.dwd_oride_driver_accept_order_click_detail_di
-        WHERE dt='{pt}'
-        GROUP BY order_id
-    )  r1 on ord.order_id = r1.order_id
-    LEFT OUTER JOIN 
-    (
-        SELECT 
-        order_id
-        FROM 
-        oride_dw.dwd_oride_driver_accept_order_show_detail_di
-        WHERE dt='{pt}'
-        GROUP BY order_id
-    )  r2 on ord.order_id = r2.order_id
-    left outer join 
-    (
-        select * from oride_dw.dwd_oride_order_mark_df 
-        where dt='{pt}' and substr(create_time,1,10)='{pt}'
-    )  mark_ord on ord.order_id=mark_ord.order_id
-    
-    GROUP BY ord.city_id,
-             ord.product_id,
-             ord.country_code,
-             ord.dt,
-             ord.driver_serv_type  --业务类型，司机业务类型
-    ;
-
+    select city_id,
+       product_id,
+       count(1) as ride_order_cnt, --下单量
+       sum(is_request) as request_order_cnt, --接单量
+       sum(is_finish) as finish_order_cnt, --完单量
+       sum(pick_up_order_dur) as pick_up_order_dur, --当天接驾订单时长
+       sum(take_order_dur) as take_order_dur, --当天应答订单时长
+       sum(cannel_pick_order_dur) as cannel_pick_order_dur,--当天取消接驾订单时长
+       sum(wait_order_dur) as wait_order_dur, -- 当天等待上车订单时长
+       sum(billing_order_dur) as billing_order_dur, --废弃字段
+       sum(pay_order_dur) as pay_order_dur, --当天支付订单时长
+       sum(is_sys_cancel) as sys_cancel_order_cnt, --当天系统取消订单数
+       sum(is_passanger_before_cancel) as passanger_before_cancel_order_cnt, --当天乘客应答前取消订单数
+       sum(is_passanger_after_cancel) as passanger_after_cancel_order_cnt, --当天乘客应答后取消订单数
+       sum(is_finished_pay) as finish_pay, --当天完成支付
+       sum(succ_broadcast_distance) as succ_broadcast_dis, --当天成功播单距离(米)
+       sum(is_driver_after_cancel) as driver_after_cancel_order_cnt, --当天司机应答后取消订单数
+       sum(if(is_finish=1,billing_order_dur,0)) as finish_billing_dur, --当天完单计费时长,该字段和当天计费订单时长不一样
+       sum(finished_order_dur) as finish_order_dur, --当天支付完单做单时长
+       sum(if(is_finish=1,pick_up_distance,0)) as finish_order_pick_up_dis, --完单接驾距离(米)
+       sum(is_succ_broadcast) as succ_broadcast_cnt, --成功播单数
+       sum(is_broadcast) as broadcast_cnt, --播单数，之前在chose节点统计的有问题？？？
+       sum(is_accpet_click) as driver_accpet_order_cnt, --司机应答订单数(accpet_click阶段)
+       null as dispatch_push_driver_order_cnt, --推送给骑手的订单数(推送给骑手的订单目前只在骑手端show)，之前在push节点统计的有问题？？？？废弃,跟push节点broadcast_cnt一样
+       sum(push_all_times_cnt) as push_driver_times_cnt, -- 推送给司机的总次数 
+       sum(succ_push_all_times) as succ_push_all_times_cnt, --推送成功的总次数
+       sum(nvl(finished_order_dur,0)+nvl(cannel_pick_order_dur,0)) as accept_order_dur, --当天做单时长(当天完成做单时长+当天取消接驾时长）
+       sum(is_accpet_show) as push_driver_order_accpet_show_cnt, --司机被推送订单数,即推送给骑手的订单数(accpet_show阶段)
+       sum(if(is_finish=1,order_service_dur,0)) as service_dur, -- 当天完单服务时长，服务时长不一定都是完单的，有status=6的也有arrive_time
+       sum(driver_click_times_cnt) as driver_click_times_cnt, --司机应答的总次数(accpet_click阶段)
+       sum(if(is_finish=1,take_order_dur,0)) as finish_take_order_dur, -- 当天完成订单应答时长
+       sum(if(is_finish=1,order_onride_distance,0)) as finish_order_onride_dis, --完单送驾距离(米)
+       sum(if(is_finish=1,order_assigned_cnt,0)) as finish_order_pick_up_assigned_cnt, --完单订单被分配次数（计算平均接驾距离使用）
+       sum(if(is_finish=1,price,0)) as price, --当日完单gmv
+       sum(if(is_finished_pay=1,price,0)) as pay_price, --当日应付金额
+       sum(if(is_finished_pay=1,pay_amount,0)) as pay_amount, -- 当日实付金额
+       sum(is_valid) as valid_ord_cnt, --当日有效订单数
+       sum(if(is_finish=1,pick_up_order_dur,0)) as finish_pick_up_dur, --当日完单接驾时长 
+       sum(if(is_finish=1,pax_num,0)) as pax_num, --乘客数
+       sum(is_opay_pay) as opay_pay_cnt, --当日opay支付订单数,pay_mode=2
+       sum(if(is_opay_pay=1 and is_succ_pay=0,1,0)) as opay_pay_failed_cnt, --当日opay支付失败订单数,pay_mode=2 and pay_status in(0,2)
+       sum(is_wet_order) as wet_ord_cnt, --湿单订单量
+       sum(if(score in(1,2) and is_finish=1,1,0)) as bad_feedback_finish_ord_cnt, -- 差评完单量
+       sum(is_after_cancel) as after_cancel_order_cnt, --应答后取消订单数
+       sum(if(is_passanger_after_cancel=1,cannel_pick_order_dur,0)) as passanger_after_cancel_time_dur, -- 乘客应答后取消时长（秒）
+       sum(if(is_driver_after_cancel=1,cannel_pick_order_dur,0)) as driver_after_cancel_time_dur, --司机应答后取消时长（秒）
+       sum(if(is_passanger_before_cancel=1 or is_driver_after_cancel=1,order_onride_distance,0)) as passanger_cancel_order_dis, --乘客取消订单送驾距离????
+       sum(if(is_request=1,pick_up_distance,0)) as accept_order_pick_up_dis, --应答单接驾距离(米)（计算平均接驾距离（应答单使用））先使用接单标志？？？？
+       sum(if(is_request=1,order_assigned_cnt,0)) as accept_order_pick_up_assigned_cnt, 
+       -- 应答单分配次数（应答单接驾距离(米)（计算平均接驾距离（应答单使用））先使用接单标志？？？？之前逻辑有问题
+       null as column1,
+       driver_serv_type, --订单表与司机绑定的业务类型
+       sum(is_carpool) as carpool_num, --拼车订单数
+       sum(is_chartered_bus) as chartered_bus_num, --包车订单数
+       sum(is_carpool_success) as carpool_success_num, --拼成订单数
+       sum(if(is_request=1 and is_carpool=1,1,0)) as carpool_accept_num, -- 拼车应答订单数
+       sum(if(is_finish=1 and is_carpool_success=1,1,0)) as carpool_success_and_finish_num, --拼车成功且完单数
+       country_code,
+       dt as dt
+from oride_dw.dwm_oride_order_base_di
+where dt='{pt}'
+group by city_id,
+       product_id,
+       driver_serv_type,
+       country_code,
+       dt;
 '''.format(
         pt='{{ds}}',
         now_day='{{macros.ds_add(ds, +1)}}',
@@ -331,9 +170,5 @@ touchz_data_success = BashOperator(
     ),
     dag=dag)
 
-dependence_dwd_oride_order_base_include_test_di_prev_day_task >> \
-dependence_dwd_oride_order_dispatch_funnel_di_prev_day_task >> \
-dependence_dwd_oride_driver_accept_order_click_detail_di_prev_day_task >> \
-dependence_dwd_oride_driver_accept_order_show_detail_di_prev_day_task >> \
-dependence_dwd_oride_order_mark_df_prev_day_task >>\
+dependence_dwm_oride_order_base_di_prev_day_task >> \
 sleep_time >> dm_oride_order_base_d_task >> touchz_data_success

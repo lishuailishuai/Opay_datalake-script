@@ -145,21 +145,21 @@ SELECT t.order_id,  --订单ID
             start_lat,
             end_lng,
             end_lat,
-            unix_timestamp(create_time) as create_time,
-            create_time as create_time_s,
+            create_time as create_time,
+            from_unixtime(create_time,'yyyy-MM-dd HH:mm:ss') as create_time_s,
             
-            substr(create_time,1,13) as create_time_hour,  --订单所在小时，为了获取天气状况
-            floor(cast(minute(create_time) as int) / 10)*10 as create_time_mins, --订单所在十分钟采集时间，为了获取天气状况git
+            from_unixtime(create_time,'yyyy-MM-dd HH') as create_time_hour,  --订单所在小时，为了获取天气状况
+            floor(cast(minute(from_unixtime(create_time)) as int) / 10)*10 as create_time_mins, --订单所在十分钟采集时间，为了获取天气状况git
             create_date,
             status,
-            LEAD(unix_timestamp(create_time),1,unix_timestamp(create_time)) OVER(PARTITION BY passenger_id ORDER BY unix_timestamp(create_time)) create_time2,
+            LEAD(create_time,1,create_time) OVER(PARTITION BY passenger_id ORDER BY create_time) create_time2,
             LEAD(start_lng,1,0) OVER(PARTITION BY passenger_id ORDER BY create_time) start_lng2,
             LEAD(start_lat,1,0) OVER(PARTITION BY passenger_id ORDER BY create_time) start_lat2,
             LEAD(end_lng,1,0) OVER(PARTITION BY passenger_id ORDER BY create_time) end_lng2,
             LEAD(end_lat,1,0) OVER(PARTITION BY passenger_id ORDER BY create_time) end_lat2,
             LEAD(order_id,1,order_id) OVER(PARTITION BY passenger_id ORDER BY create_time) order_id2
-        FROM oride_dw.dwd_oride_order_base_include_test_df
-        WHERE dt in ('{pt}','his') 
+        FROM oride_dw.dwd_oride_order_base_include_test_di
+        WHERE dt='{pt}'
             AND city_id<>'999001' --去除测试数据
              and driver_id<>1
         ) t

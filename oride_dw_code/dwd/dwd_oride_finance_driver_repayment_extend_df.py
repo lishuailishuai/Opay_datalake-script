@@ -293,7 +293,7 @@ LEFT OUTER JOIN
 
 (select 
   age.driver_id,
-  (amount_agenter+amount)/7 as last_week_daily_due --上周日均应还款金额
+  (amount_agenter+nvl(amount,0))/7 as last_week_daily_due --上周日均应还款金额
 from
 (SELECT driver_id,
         sum(amount_agenter) as amount_agenter
