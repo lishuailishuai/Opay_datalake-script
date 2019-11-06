@@ -102,7 +102,7 @@ task_timeout_monitor= PythonOperator(
 ##----------------------------------------- 脚本 ---------------------------------------## 
 
 
-def test_dim_oride_city_sql_task():
+def test_dim_oride_city_sql_task(ds):
 
     HQL='''
     set hive.exec.parallel=true;
@@ -192,15 +192,15 @@ FROM
               count(1) counts
       FROM oride_dw_ods.ods_sqoop_base_weather_per_10min_df
       WHERE dt = '{pt}'
-        AND daliy = '{pt}'
+        AND daliy = '{now_day}'
       GROUP BY city,
                weather ) t ) t
 WHERE t.row_num = 1) weather
 on lower(cit.city_name)=lower(weather.city)
 
 '''.format(
-        pt='{{ds}}',
-        now_day='{{macros.ds_add(ds, +1)}}',
+        pt=ds,
+        now_day='macros.ds_add({{ds}}, +1)',
         table=table_name
         )
 
@@ -246,7 +246,7 @@ def execution_data_task_id(ds,**kargs):
     cursor = get_hive_cursor()
 
     #读取sql
-    _sql=test_dim_oride_city_sql_task()
+    _sql=test_dim_oride_city_sql_task(ds)
 
     #执行hive 
     cursor.execute(_sql)
