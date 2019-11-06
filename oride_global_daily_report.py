@@ -2556,8 +2556,8 @@ def send_funnel_report_email(ds, **kwargs):
                         <tr>
                             <th>日期</th>
                             <!--呼叫前-->
-                            <th>地址选择需求数</th>
-                            <th>估价需求数</th>
+                            <th>地址选择次数</th>
+                            <th>估价次数</th>
                             <th>地址选择-估价转化率</th>
                             <th>地址选择-估价转化率（近4周同期均值）</th>
                             <th>估价-下单转化率</th>
