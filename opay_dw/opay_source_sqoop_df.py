@@ -81,10 +81,17 @@ table_list = [
 
     ("opay_sms","message_template", "opay_db", "base", 1),
 
-    ("opay_transaction", "cash_in_record", "opay_db", "base", 2),
-    ("opay_transaction", "cash_out_record", "opay_db", "base", 2),
-    ("opay_transaction", "business_activity_record", "opay_db", "base", 2),
-    ("opay_transaction", "activity_record", "opay_db", "base", 2),
+    ("opay_user", "user_token", "opay_db", "base", 1),
+    ("opay_user", "user_telesale", "opay_db", "base", 1),
+    ("opay_user", "user_reseller", "opay_db", "base", 1),
+    ("opay_user", "user_push_token", "opay_db", "base", 1),
+    ("opay_user", "user_operator", "opay_db", "base", 1),
+    ("opay_user", "user_nearby_agent", "opay_db", "base", 1),
+    ("opay_user", "user_message", "opay_db", "base", 1),
+
+    ("opay_activity", "activity", "opay_db", "base", 1),
+    ("opay_activity", "activity_rules", "opay_db", "base", 1),
+    ("opay_activity", "preferential_record", "opay_db", "base", 1),
 ]
 """
     ("opay_transaction","adjustment_decrease_record", "opay_db", "base",3),
