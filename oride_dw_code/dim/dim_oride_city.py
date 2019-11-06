@@ -102,153 +102,14 @@ task_timeout_monitor= PythonOperator(
 ##----------------------------------------- 脚本 ---------------------------------------## 
 
 
-dim_oride_city_task=BashOperator(
-
-task_id='dim_oride_city_task',
-
-bash_command="""
-hql='''
-    set hive.exec.parallel=true;
-    set hive.exec.dynamic.partition.mode=nonstrict;
-
-INSERT overwrite TABLE oride_dw.{table} partition(country_code,dt)
-
-SELECT city_id,
-       --城市 ID
-
-       city_name,
-       --城市名称
-
-       country_name,
-       --国家名称
-
-       shape,
-       --形状：1 圆形, 2 多边形
-
-       area,
-       --区域设置数据
-
-       product_id,
-       --开启的服务类型[1,2,99] 1 专车 2 快车 99 招手停
-
-       avoid_highway_type,
-       --可设置避开高速的服务类型[1,2] 1 专车 2 快车
-
-       validate,
-       --本条数据是否有效 0 无效，1 有效
-       
-       weather.weather, 
-       --该城市当天的天气
-
-       opening_time,--开启时间       
-
-       assign_type, --强派的服务类型[1,2,3] 1 专车 2 快车 3 keke车
-
-       cty.country_code,
-       --二位国家码
-       
-       '{pt}' AS dt
-FROM
-  (SELECT id AS city_id,
-          --城市 ID
-
-          name AS city_name,
-          --城市名称
-
-          country AS country_name,
-          --国家
-
-          shape,
-          --形状：1 圆形, 2 多边形
-
-          area,
-          --区域设置数据
-
-          serv_type AS product_id,
-          --开启的服务类型[1,2,99] 1 专车 2 快车 99 招手停
-
-          avoid_highway_type,
-          --可设置避开高速的服务类型[1,2] 1 专车 2 快车
-
-          validate, --本条数据是否有效 0 无效，1 有效
-
-          opening_time,--开启时间                
-          assign_type --强派的服务类型[1,2,3] 1 专车 2 快车 3 keke车
-
-FROM oride_dw_ods.ods_sqoop_base_data_city_conf_df
-   WHERE dt='{pt}') cit
-LEFT OUTER JOIN
-  (SELECT country_name_en,
-          country_code
-   FROM oride_dw.dim_oride_country_base) cty ON cit.country_name=cty.country_name_en
-left outer join
-(SELECT t.city AS city,
-              t.weather AS weather
-FROM
-  ( SELECT t.city,
-           t.weather,
-           row_number() over(partition BY t.city
-                             ORDER BY t.counts DESC) row_num  --城市一天的天气状况取一天当中某种天气持续最长时间的
-   FROM
-     ( SELECT city,
-              weather,
-              count(1) counts
-      FROM oride_dw_ods.ods_sqoop_base_weather_per_10min_df
-      WHERE dt = '{pt}'
-        AND daliy = '{pt}'
-      GROUP BY city,
-               weather ) t ) t
-WHERE t.row_num = 1) weather
-on lower(cit.city_name)=lower(weather.city)
-'''
-
-hive -e "${hql}"
+# dim_oride_city_task=BashOperator(
 
 
-
-HQL_DQC='''
-    SELECT count(1)-count(distinct city_id) as cnt
-      FROM oride_dw.{table}
-      WHERE dt='{pt}'
-      and country_code in ('NG')
-'''
-
-CHECK_VALUE=`hive -e "$HQL_DQC"`
-echo $CHECK_VALUE
-
-if [[ ${CHECK_VALUE}>0 ]]
-then
-    echo "Executing 主键重复校验: FATAL DATA is ERROR"
-    exit 1
-else
-    echo "Executing 主键重复校验: NOTICE  success"
-
-fi
-
-
-    msg = [
-        {"table":"{dag_name}","hdfs_path": "{hdfs_path}/country_code=NG/dt={pt}"}
-    ]
-
-    TaskTouchzSuccess().set_touchz_success(msg)
-
-""".format(
-        pt='{{ds}}',
-        now_day='{{macros.ds_add(ds, +1)}}',
-        table=table_name,
-        dag_name=dag.dag_id,
-        hdfs_path=hdfs_path
-        ),
-      schema='oride_dw',
-    dag=dag)
-
-
-
-
-# dim_oride_city_tasks = HiveOperator(
 
 #     task_id='dim_oride_city_task',
-#     hql='''
+
+#     bash_command="""
+#     Hsql="
 #     set hive.exec.parallel=true;
 #     set hive.exec.dynamic.partition.mode=nonstrict;
 
@@ -342,68 +203,203 @@ fi
 # WHERE t.row_num = 1) weather
 # on lower(cit.city_name)=lower(weather.city)
 
-# '''.format(
-#         pt='{{ds}}',
-#         now_day='{{macros.ds_add(ds, +1)}}',
-#         table=table_name
-#         ),
-# schema='oride_dw',
-#     dag=dag)
+# "
+
+# HQL_DQC="
+#      SELECT count(1)-count(distinct city_id) as cnt
+#        FROM oride_dw.{table}
+#        WHERE dt='{pt}'
+#        and country_code in ('NG')
+#  "
 
 
-#熔断数据，如果数据重复，报错
-# def check_key_data(ds,**kargs):
+#     #CHECK_VALUE=`hive -e "$HQL_DQC"`
 
-#     #主键重复校验
-#     HQL_DQC='''
-#     SELECT count(1)-count(distinct city_id) as cnt
-#       FROM oride_dw.{table}
-#       WHERE dt='{pt}'
-#       and country_code in ('NG')
-#     '''.format(
-#         pt=ds,
-#         now_day=airflow.macros.ds_add(ds, +1),
-#         table=table_name
-#         )
-
-#     cursor = get_hive_cursor()
-#     logging.info('Executing 主键重复校验: %s', HQL_DQC)
-
-#     cursor.execute(HQL_DQC)
-#     res = cursor.fetchone()
-
-#     if res[0] >1:
-#         raise Exception ("Error The primary key repeat !", res)
-#     else:
-#         print("-----> Notice Data Export Success ......")
-    
- 
-# task_check_key_data = PythonOperator(
-#     task_id='check_data',
-#     python_callable=check_key_data,
-#     provide_context=True,
-#     dag=dag
-# )
-
-#生成_SUCCESS
-# def check_success(ds,dag,**op_kwargs):
-
-#     dag_ids=dag.dag_id
+#     if [[ $CHECK_VALUE>0 ]]
+#     then
+#         echo "Executing 主键重复校验: FATAL DATA is ERROR"
+#         exit 1
+#     else
+#         echo "Executing 主键重复校验: NOTICE  success"
+#     fi
 
 #     msg = [
-#         {"table":"{dag_name}".format(dag_name=dag_ids),"hdfs_path": "{hdfs_path}/country_code=NG/dt={pt}".format(pt=ds,hdfs_path=hdfs_path)}
+#         {"table":"{dag_name}","hdfs_path": "{hdfs_path}/country_code=NG/dt={pt}"}
 #     ]
 
-#     TaskTouchzSuccess().set_touchz_success(msg)
+#     #TaskTouchzSuccess().set_touchz_success(msg)
 
-# touchz_data_success= PythonOperator(
-#     task_id='touchz_data_success',
-#     python_callable=check_success,
-#     provide_context=True,
+# """.format(
+#         pt='{{ds}}',
+#         now_day='{{macros.ds_add(ds, +1)}}',
+#         table=table_name,
+#         dag_name=table_name,
+#         hdfs_path=hdfs_path
+#         ),
+#       schema='oride_dw',
 #     dag=dag
-# )
+#     )
 
 
-ods_sqoop_base_data_city_conf_df_tesk>>ods_sqoop_base_weather_per_10min_df_prev_day_task>>sleep_time>>dim_oride_city_task
+dim_oride_city_task = HiveOperator(
 
-#ods_sqoop_base_data_city_conf_df_tesk>>ods_sqoop_base_weather_per_10min_df_prev_day_task>>sleep_time>>dim_oride_city_task>>task_check_key_data>>touchz_data_success
+    task_id='dim_oride_city_task',
+    hql='''
+    set hive.exec.parallel=true;
+    set hive.exec.dynamic.partition.mode=nonstrict;
+
+INSERT overwrite TABLE oride_dw.{table} partition(country_code,dt)
+
+SELECT city_id,
+       --城市 ID
+
+       city_name,
+       --城市名称
+
+       country_name,
+       --国家名称
+
+       shape,
+       --形状：1 圆形, 2 多边形
+
+       area,
+       --区域设置数据
+
+       product_id,
+       --开启的服务类型[1,2,99] 1 专车 2 快车 99 招手停
+
+       avoid_highway_type,
+       --可设置避开高速的服务类型[1,2] 1 专车 2 快车
+
+       validate,
+       --本条数据是否有效 0 无效，1 有效
+       
+       weather.weather, 
+       --该城市当天的天气
+
+       opening_time,--开启时间       
+
+       assign_type, --强派的服务类型[1,2,3] 1 专车 2 快车 3 keke车
+
+       cty.country_code,
+       --二位国家码
+       
+       '{pt}' AS dt
+FROM
+  (SELECT id AS city_id,
+          --城市 ID
+
+          name AS city_name,
+          --城市名称
+
+          country AS country_name,
+          --国家
+
+          shape,
+          --形状：1 圆形, 2 多边形
+
+          area,
+          --区域设置数据
+
+          serv_type AS product_id,
+          --开启的服务类型[1,2,99] 1 专车 2 快车 99 招手停
+
+          avoid_highway_type,
+          --可设置避开高速的服务类型[1,2] 1 专车 2 快车
+
+          validate, --本条数据是否有效 0 无效，1 有效
+
+          opening_time,--开启时间                
+          assign_type --强派的服务类型[1,2,3] 1 专车 2 快车 3 keke车
+
+FROM oride_dw_ods.ods_sqoop_base_data_city_conf_df
+   WHERE dt='{pt}') cit
+LEFT OUTER JOIN
+  (SELECT country_name_en,
+          country_code
+   FROM oride_dw.dim_oride_country_base) cty ON cit.country_name=cty.country_name_en
+left outer join
+(SELECT t.city AS city,
+              t.weather AS weather
+FROM
+  ( SELECT t.city,
+           t.weather,
+           row_number() over(partition BY t.city
+                             ORDER BY t.counts DESC) row_num  --城市一天的天气状况取一天当中某种天气持续最长时间的
+   FROM
+     ( SELECT city,
+              weather,
+              count(1) counts
+      FROM oride_dw_ods.ods_sqoop_base_weather_per_10min_df
+      WHERE dt = '{pt}'
+        AND daliy = '{pt}'
+      GROUP BY city,
+               weather ) t ) t
+WHERE t.row_num = 1) weather
+on lower(cit.city_name)=lower(weather.city)
+
+'''.format(
+        pt='{{ds}}',
+        now_day='{{macros.ds_add(ds, +1)}}',
+        table=table_name
+        ),
+schema='oride_dw',
+    dag=dag)
+
+
+熔断数据，如果数据重复，报错
+def check_key_data(ds,**kargs):
+
+    #主键重复校验
+    HQL_DQC='''
+    SELECT count(1)-count(distinct city_id) as cnt
+      FROM oride_dw.{table}
+      WHERE dt='{pt}'
+      and country_code in ('NG')
+    '''.format(
+        pt=ds,
+        now_day=airflow.macros.ds_add(ds, +1),
+        table=table_name
+        )
+
+    cursor = get_hive_cursor()
+    logging.info('Executing 主键重复校验: %s', HQL_DQC)
+
+    cursor.execute(HQL_DQC)
+    res = cursor.fetchone()
+
+    if res[0] >1:
+        raise Exception ("Error The primary key repeat !", res)
+    else:
+        print("-----> Notice Data Export Success ......")
+    
+ 
+task_check_key_data = PythonOperator(
+    task_id='check_data',
+    python_callable=check_key_data,
+    provide_context=True,
+    dag=dag
+)
+
+生成_SUCCESS
+def check_success(ds,dag,**op_kwargs):
+
+    dag_ids=dag.dag_id
+
+    msg = [
+        {"table":"{dag_name}".format(dag_name=dag_ids),"hdfs_path": "{hdfs_path}/country_code=NG/dt={pt}".format(pt=ds,hdfs_path=hdfs_path)}
+    ]
+
+    TaskTouchzSuccess().set_touchz_success(msg)
+
+touchz_data_success= PythonOperator(
+    task_id='touchz_data_success',
+    python_callable=check_success,
+    provide_context=True,
+    dag=dag
+)
+
+
+#ods_sqoop_base_data_city_conf_df_tesk>>ods_sqoop_base_weather_per_10min_df_prev_day_task>>sleep_time>>dim_oride_city_task
+
+ods_sqoop_base_data_city_conf_df_tesk>>ods_sqoop_base_weather_per_10min_df_prev_day_task>>sleep_time>>dim_oride_city_task>>task_check_key_data>>touchz_data_success
