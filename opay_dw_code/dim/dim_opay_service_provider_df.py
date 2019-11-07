@@ -47,7 +47,7 @@ dag = airflow.DAG('dim_opay_service_provider_df',
 ##----------------------------------------- 依赖 ---------------------------------------##
 ods_service_provider_base_df_task = UFileSensor(
     task_id='ods_service_provider_base_df_task',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+    filepath='{hdfs_path_str}/service_provider_init.data'.format(
         hdfs_path_str="opay/opay_dw/ods_service_provider_base_df",
         pt='{{ds}}'
     ),

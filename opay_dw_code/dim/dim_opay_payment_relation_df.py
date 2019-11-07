@@ -47,7 +47,7 @@ dag = airflow.DAG('dim_opay_payment_relation_df',
 ##----------------------------------------- 依赖 ---------------------------------------##
 ods_payment_relation_base_df_task = UFileSensor(
     task_id='ods_payment_relation_base_df_task',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+    filepath='{hdfs_path_str}/payment_relation_init.data'.format(
         hdfs_path_str="opay/opay_dw/ods_payment_relation_base_df",
         pt='{{ds}}'
     ),
