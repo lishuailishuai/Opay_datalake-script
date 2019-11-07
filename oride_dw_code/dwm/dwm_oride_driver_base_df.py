@@ -214,7 +214,7 @@ select dri.driver_id,
             --成功被推送订单量（骑手端show节点）
             
             sum(click.driver_click_order_cnt) as driver_click_order_cnt, 
-            --成功应答订单量（骑手端show节点）
+            --成功应答订单量（骑手端click节点）
             
             sum(ord.is_td_request) as driver_request_order_cnt,
             --司机接单量（理论和应答量一样）
@@ -228,7 +228,7 @@ select dri.driver_id,
             sum(ord.price) as driver_finish_price, 
             --司机完单gmv
             
-            sum(ord.td_finish_billing_dur) as driver_billing_dur,
+            sum(ord.td_billing_dur) as driver_billing_dur,
             --司机计费时长
             
             sum(ord.td_service_dur) as driver_service_dur,
@@ -292,7 +292,7 @@ select dri.driver_id,
             (
                 SELECT 
                 driver_id,
-                count(distinct order_id) driver_click_order_cnt, --成功应答订单量（骑手端show节点）
+                count(distinct order_id) driver_click_order_cnt, --成功应答订单量（骑手端click节点）
                 count(1) as driver_click_order_times  -- 应答总次数（骑手端click节点）
                 FROM 
                 oride_dw.dwd_oride_driver_accept_order_click_detail_di
@@ -307,7 +307,7 @@ select dri.driver_id,
                 sum(is_td_finish) as is_td_finish,  --用于判断司机是否有完单，该字段为司机当天完单量  
                 sum(is_td_finish_pay) as is_td_finish_pay,  --用于判断司机是否有支付完单，该字段为司机当天支付完单量
                 sum(if(is_td_finish = 1, price, 0)) as price, --司机完单gmv
-                sum(td_finish_billing_dur) as td_finish_billing_dur, --司机计费时长，和司机完单计费时长不一样
+                sum(td_billing_dur) as td_billing_dur, --司机计费时长，和司机完单计费时长不一样
                 sum(td_service_dur) as td_service_dur, --司机服务时长
                 sum(td_finish_order_dur) as td_finish_order_dur, --司机支付完单做单时长（支付跨天可能偏大）
                 sum(td_cannel_pick_dur) as td_cannel_pick_dur, --司机当天订单被取消时长
