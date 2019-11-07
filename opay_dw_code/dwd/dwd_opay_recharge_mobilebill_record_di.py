@@ -60,7 +60,7 @@ def fun_task_timeout_monitor(ds,dag,**op_kwargs):
     dag_ids=dag.dag_id
 
     msg = [
-        {"db": "opay_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "3000"}
+        {"db": "opay_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=NG/dt={pt}".format(pt=ds), "timeout": "3000"}
     ]
 
     TaskTimeoutMonitor().set_task_monitor(msg)
@@ -294,7 +294,7 @@ def check_success(ds,dag,**op_kwargs):
     dag_ids=dag.dag_id
 
     msg = [
-        {"table":"{dag_name}".format(dag_name=dag_ids),"hdfs_path": "{hdfsPath}/country_code=nal/dt={pt}".format(pt=ds,hdfsPath=hdfs_path)}
+        {"table":"{dag_name}".format(dag_name=dag_ids),"hdfs_path": "{hdfsPath}/country_code=NG/dt={pt}".format(pt=ds,hdfsPath=hdfs_path)}
     ]
 
     TaskTouchzSuccess().set_touchz_success(msg)
@@ -306,4 +306,5 @@ touchz_data_success= PythonOperator(
     dag=dag
 )
 
-dim_opay_user_base_di_prev_day_task >> dwd_opay_recharge_mobilebill_record_di_task >> touchz_data_success
+dim_opay_user_base_di_prev_day_task >> dwd_opay_recharge_mobilebill_record_di_task
+dwd_opay_recharge_mobilebill_record_di_task >> touchz_data_success

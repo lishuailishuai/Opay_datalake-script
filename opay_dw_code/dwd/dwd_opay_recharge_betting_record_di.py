@@ -248,7 +248,7 @@ def check_success(ds,dag,**op_kwargs):
     dag_ids=dag.dag_id
 
     msg = [
-        {"table":"{dag_name}".format(dag_name=dag_ids),"hdfs_path": "{hdfsPath}/country_code=nal/dt={pt}".format(pt=ds,hdfsPath=hdfs_path)}
+        {"table":"{dag_name}".format(dag_name=dag_ids),"hdfs_path": "{hdfsPath}/country_code=NG/dt={pt}".format(pt=ds,hdfsPath=hdfs_path)}
     ]
 
     TaskTouchzSuccess().set_touchz_success(msg)
@@ -260,4 +260,5 @@ touchz_data_success= PythonOperator(
     dag=dag
 )
 
-dim_opay_user_base_di_prev_day_task >> dwd_opay_recharge_betting_record_di_task >> touchz_data_success
+dim_opay_user_base_di_prev_day_task >> dwd_opay_recharge_betting_record_di_task
+dwd_opay_recharge_betting_record_di_task >> touchz_data_success

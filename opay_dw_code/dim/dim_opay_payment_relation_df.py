@@ -60,5 +60,5 @@ dim_opay_payment_relation_df_task = HiveOperator(
 )
 ##---- hive operator end ---##
 
-
+dim_opay_payment_relation_df_task
 

@@ -60,3 +60,5 @@ dim_opay_service_provider_df_task = HiveOperator(
 )
 ##---- hive operator end ---##
 
+
+dim_opay_service_provider_df_task

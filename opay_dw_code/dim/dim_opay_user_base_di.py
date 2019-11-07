@@ -98,132 +98,47 @@ task_timeout_monitor= PythonOperator(
 table_name="dim_opay_user_base_di"
 hdfs_path="ufile://opay-datalake/opay/opay_dw/"+table_name
 
-##---- hive operator ---##
-fill_dim_opay_user_base_di_task = HiveOperator(
-    task_id='fill_dim_opay_user_base_di_task',
-    hql='''
-    set hive.exec.dynamic.partition.mode=nonstrict;
-    set hive.exec.parallel=true; --default false
-
-    alter table dim_opay_user_base_di drop partition(country_code='NG',dt='{pt}');
-
-    alter table dim_opay_user_base_di add partition(country_code='NG',dt='{pt}');
-
-    insert overwrite table dim_opay_user_base_di partition(country_code, dt)
-    select 
-        t1.id,
-        t1.user_id,
-        t1.mobile,
-        t1.business_name,
-        t1.first_name,
-        t1.middle_name,
-        t1.surname,
-        t1.kyc_level,
-        t1.kyc_update_time,
-        if(length(t1.bvn)=0, '-', replace(t1.bvn, '\t', '')) bvn,
-        t1.dob bithday,
-        t1.gender,
-        t1.country,
-        t1.state,
-        t1.city,
-        t1.address,
-        t1.lga,
-        t1.role,
-        t1.referral_code,
-        t1.referrer_code,
-        t1.notification,
-        if(t2.role='agent' and t2.upgrade_status='upgraded', t2.upgrade_date, '9999-01-01 00:00:00') agent_upgrade_time,
-        t3.email,
-        if(t3.email_verified='Y', 'authed', 'unauth') email_auth_status,
-        t3.update_time email_auth_time,
-        t1.create_time,
-        t1.update_time,
-        case t1.country
-            when 'Nigeria' then 'NG'
-            when 'Norway' then 'NO'
-            when 'Ghana' then 'GH'
-            when 'Botswana' then 'BW'
-            when 'Ghana' then 'GH'
-            when 'Kenya' then 'KE'
-            when 'Malawi' then 'MW'
-            when 'Mozambique' then 'MZ'
-            when 'Poland' then 'PL'
-            when 'South Africa' then 'ZA'
-            when 'Sweden' then 'SE'
-            when 'Tanzania' then 'TZ'
-            when 'Uganda' then 'UG'
-            when 'USA' then 'US'
-            when 'Zambia' then 'ZM'
-            when 'Zimbabwe' then 'ZW'
-            else 'NG'
-            end as country_code,
-        t1.dt
-    from  opay_dw_ods.ods_sqoop_base_user_di t1
-    left join 
-    (
-        select user_id, role, upgrade_type, upgrade_status, upgrade_date
-        from opay_dw_ods.ods_sqoop_base_user_upgrade_df
-        where dt='{pt}'
-    ) t2 on t1.user_id = t2.user_id 
-    left join
-    (
-        select * from (
-            select user_id, email, email_verified, update_time,
-            row_number() over(partition by user_id order by update_time desc) rn
-            from opay_dw_ods.ods_sqoop_base_user_email_di
-        ) mail_temp where rn = 1
-
-    ) t3 on t1.user_id = t3.user_id
-
-    '''.format(
-        pt='{{ds}}'
-    ),
-    schema='opay_dw',
-    dag=dag
-)
-##---- hive operator end ---##
-
-##---- hive operator ---##
-# dim_opay_user_base_di_task = HiveOperator(
-#     task_id='dim_opay_user_base_di_task',
+# ##---- hive operator ---##
+# fill_dim_opay_user_base_di_task = HiveOperator(
+#     task_id='fill_dim_opay_user_base_di_task',
 #     hql='''
 #     set hive.exec.dynamic.partition.mode=nonstrict;
-#     set hive.mapjoin.smalltable.filesize=128000000; --default 25000000
 #     set hive.exec.parallel=true; --default false
-#     set mapreduce.map.memory.mb=4000; --default 3072
-#     insert overwrite table dim_opay_user_base_di 
-#     partition(country_code, dt)
-#     select 
-#         user_di.id,
-#         user_di.user_id,
-#         user_di.mobile,
-#         user_di.business_name,
-#         user_di.first_name,
-#         user_di.middle_name,
-#         user_di.surname,
-#         user_di.kyc_level,
-#         user_di.kyc_update_time,
-#         user_di.bvn,
-#         user_di.dob bithday,
-#         user_di.gender,
-#         user_di.country,
-#         user_di.state,
-#         user_di.city,
-#         user_di.address,
-#         user_di.lga,
-#         user_di.role,
-#         user_di.referral_code,
-#         user_di.referrer_code,
-#         user_di.notification,
-        
-#         if(upgrade_di.role='agent' and upgrade_di.upgrade_status='upgraded', upgrade_di.upgrade_date, '9999-01-01 00:00:00') agent_upgrade_time,
-#         email_di.email,
-#         if(email_di.email_verified='Y', 'authed', 'unauth') email_auth_status,
-#         email_di.update_time email_auth_time,
-        
-#         user_di.create_time,
-#         user_di.update_time,
-#         case user_di.country
+#
+#     alter table dim_opay_user_base_di drop partition(country_code='NG',dt='{pt}');
+#
+#     alter table dim_opay_user_base_di add partition(country_code='NG',dt='{pt}');
+#
+#     insert overwrite table dim_opay_user_base_di partition(country_code, dt)
+#     select
+#         t1.id,
+#         t1.user_id,
+#         t1.mobile,
+#         t1.business_name,
+#         t1.first_name,
+#         t1.middle_name,
+#         t1.surname,
+#         t1.kyc_level,
+#         t1.kyc_update_time,
+#         if(length(t1.bvn)=0, '-', replace(t1.bvn, '\t', '')) bvn,
+#         t1.dob bithday,
+#         t1.gender,
+#         t1.country,
+#         t1.state,
+#         t1.city,
+#         t1.address,
+#         t1.lga,
+#         t1.role,
+#         t1.referral_code,
+#         t1.referrer_code,
+#         t1.notification,
+#         if(t2.role='agent' and t2.upgrade_status='upgraded', t2.upgrade_date, '9999-01-01 00:00:00') agent_upgrade_time,
+#         t3.email,
+#         if(t3.email_verified='Y', 'authed', 'unauth') email_auth_status,
+#         t3.update_time email_auth_time,
+#         t1.create_time,
+#         t1.update_time,
+#         case t1.country
 #             when 'Nigeria' then 'NG'
 #             when 'Norway' then 'NO'
 #             when 'Ghana' then 'GH'
@@ -242,57 +157,143 @@ fill_dim_opay_user_base_di_task = HiveOperator(
 #             when 'Zimbabwe' then 'ZW'
 #             else 'NG'
 #             end as country_code,
-#         '{pt}' dt
-#     from
-#     (
-#         select 
-#             t2.*
-#         from
-#         (
-#             select 
-#                 user_id 
-#             from opay_dw_ods.ods_sqoop_base_user_di 
-#             where dt = '{pt}'
-#             union
-#             select 
-#                 user_id
-#             from opay_dw_ods.ods_sqoop_base_user_email_di
-#             where dt = '{pt}'
-#             union
-#             select 
-#                 user_id
-#             from opay_dw_ods.ods_sqoop_base_user_upgrade_df
-#             where dt = '{pt}' and (date_format(create_time, 'yyyy-MM-dd') = {pt} or date_format(update_time, 'yyyy-MM-dd') = {pt})
-#         ) t1
-#         join
-#         (
-#             select * from (
-#                 select *, row_number() over(partition by user_id order by update_time desc) rn 
-#                 from opay_dw_ods.ods_sqoop_base_user_di
-#             ) user_temp where rn = 1
-#         ) t2 on t1.user_id = t2.user_id
-#     ) user_di
+#         t1.dt
+#     from  opay_dw_ods.ods_sqoop_base_user_di t1
 #     left join
 #     (
-#         select
-#             user_id, email, email_verified, update_time
-#         from opay_dw_ods.ods_sqoop_base_user_email_di
-#         where dt = '{pt}'
-#     ) email_di on user_di.user_id = email_di.user_id
-#     left join
-#     (
-#          select 
-#             user_id, role, upgrade_type, upgrade_status, upgrade_date
+#         select user_id, role, upgrade_type, upgrade_status, upgrade_date
 #         from opay_dw_ods.ods_sqoop_base_user_upgrade_df
-#         where dt = '{pt}' and (date_format(create_time, 'yyyy-MM-dd') = {pt} or date_format(update_time, 'yyyy-MM-dd') = {pt})
-#     ) upgrade_di on user_di.user_id = upgrade_di.user_id
-
+#         where dt='{pt}'
+#     ) t2 on t1.user_id = t2.user_id
+#     left join
+#     (
+#         select * from (
+#             select user_id, email, email_verified, update_time,
+#             row_number() over(partition by user_id order by update_time desc) rn
+#             from opay_dw_ods.ods_sqoop_base_user_email_di
+#         ) mail_temp where rn = 1
+#
+#     ) t3 on t1.user_id = t3.user_id
+#
 #     '''.format(
 #         pt='{{ds}}'
 #     ),
 #     schema='opay_dw',
 #     dag=dag
 # )
+# ##---- hive operator end ---##
+
+##---- hive operator ---##
+dim_opay_user_base_di_task = HiveOperator(
+    task_id='dim_opay_user_base_di_task',
+    hql='''
+    set hive.exec.dynamic.partition.mode=nonstrict;
+    set hive.mapjoin.smalltable.filesize=128000000; --default 25000000
+    set hive.exec.parallel=true; --default false
+    set mapreduce.map.memory.mb=4000; --default 3072
+    insert overwrite table dim_opay_user_base_di 
+    partition(country_code, dt)
+    select 
+        user_di.id,
+        user_di.user_id,
+        user_di.mobile,
+        user_di.business_name,
+        user_di.first_name,
+        user_di.middle_name,
+        user_di.surname,
+        user_di.kyc_level,
+        user_di.kyc_update_time,
+        user_di.bvn,
+        user_di.dob bithday,
+        user_di.gender,
+        user_di.country,
+        user_di.state,
+        user_di.city,
+        user_di.address,
+        user_di.lga,
+        user_di.role,
+        user_di.referral_code,
+        user_di.referrer_code,
+        user_di.notification,
+        
+        if(upgrade_di.role='agent' and upgrade_di.upgrade_status='upgraded', upgrade_di.upgrade_date, '9999-01-01 00:00:00') agent_upgrade_time,
+        
+        email_di.email,
+        if(email_di.email_verified='Y', 'authed', 'unauth') email_auth_status,
+        email_di.update_time email_auth_time,
+        
+        user_di.create_time,
+        user_di.update_time,
+        case user_di.country
+            when 'Nigeria' then 'NG'
+            when 'Norway' then 'NO'
+            when 'Ghana' then 'GH'
+            when 'Botswana' then 'BW'
+            when 'Ghana' then 'GH'
+            when 'Kenya' then 'KE'
+            when 'Malawi' then 'MW'
+            when 'Mozambique' then 'MZ'
+            when 'Poland' then 'PL'
+            when 'South Africa' then 'ZA'
+            when 'Sweden' then 'SE'
+            when 'Tanzania' then 'TZ'
+            when 'Uganda' then 'UG'
+            when 'USA' then 'US'
+            when 'Zambia' then 'ZM'
+            when 'Zimbabwe' then 'ZW'
+            else 'NG'
+            end as country_code,
+        '{pt}' dt
+    from
+    (
+        select 
+            t2.*
+        from
+        (
+            select 
+                user_id 
+            from opay_dw_ods.ods_sqoop_base_user_di 
+            where dt = '{pt}'
+            union
+            select 
+                user_id
+            from opay_dw_ods.ods_sqoop_base_user_email_di
+            where dt = '{pt}'
+            union
+            select 
+                user_id
+            from opay_dw_ods.ods_sqoop_base_user_upgrade_df
+            where dt = '{pt}' and (date_format(create_time, 'yyyy-MM-dd') = {pt} or date_format(update_time, 'yyyy-MM-dd') = {pt})
+        ) t1
+        join
+        (
+            select * from (
+                select *, row_number() over(partition by user_id order by update_time desc) rn 
+                from opay_dw_ods.ods_sqoop_base_user_di
+            ) user_temp where rn = 1
+        ) t2 on t1.user_id = t2.user_id
+    ) user_di
+    left join
+    (
+        select
+            user_id, email, email_verified, update_time
+        from opay_dw_ods.ods_sqoop_base_user_email_di
+        where dt = '{pt}'
+    ) email_di on user_di.user_id = email_di.user_id
+    left join
+    (
+         select 
+            user_id, role, upgrade_type, upgrade_status, upgrade_date
+        from opay_dw_ods.ods_sqoop_base_user_upgrade_df
+        where dt = '{pt}' and (date_format(create_time, 'yyyy-MM-dd') = {pt} or date_format(update_time, 'yyyy-MM-dd') = {pt})
+    ) upgrade_di on user_di.user_id = upgrade_di.user_id
+
+    '''.format(
+        pt='{{ds}}'
+    ),
+    schema='opay_dw',
+    dag=dag
+)
 ##---- hive operator end ---##
 
 #生成_SUCCESS
@@ -313,7 +314,7 @@ touchz_data_success= PythonOperator(
     dag=dag
 )
 
-ods_sqoop_base_user_upgrade_df_task >>fill_dim_opay_user_base_di_task
-ods_sqoop_base_user_email_di_task>>fill_dim_opay_user_base_di_task
-ods_sqoop_base_user_di_task >> fill_dim_opay_user_base_di_task
-fill_dim_opay_user_base_di_task>> touchz_data_success
+ods_sqoop_base_user_upgrade_df_task >>dim_opay_user_base_di_task
+ods_sqoop_base_user_email_di_task>>dim_opay_user_base_di_task
+ods_sqoop_base_user_di_task >> dim_opay_user_base_di_task
+dim_opay_user_base_di_task>> touchz_data_success
