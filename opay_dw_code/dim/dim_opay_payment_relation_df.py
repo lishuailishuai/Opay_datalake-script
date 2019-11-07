@@ -43,6 +43,19 @@ dag = airflow.DAG('dim_opay_payment_relation_df',
 
 ##------declare variables end ------##
 
+
+##----------------------------------------- 依赖 ---------------------------------------##
+ods_payment_relation_base_df_task = UFileSensor(
+    task_id='ods_payment_relation_base_df_task',
+    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="opay/opay_dw/ods_payment_relation_base_df",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
 ##---- hive operator ---##
 dim_opay_payment_relation_df_task = HiveOperator(
     task_id='dim_opay_payment_relation_df_task',
@@ -61,5 +74,5 @@ dim_opay_payment_relation_df_task = HiveOperator(
 )
 ##---- hive operator end ---##
 
-dim_opay_payment_relation_df_task
+ods_payment_relation_base_df_task>>dim_opay_payment_relation_df_task
 

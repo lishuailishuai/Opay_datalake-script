@@ -43,14 +43,27 @@ dag = airflow.DAG('dim_opay_service_provider_df',
 
 ##------declare variables end ------##
 
+
+##----------------------------------------- 依赖 ---------------------------------------##
+ods_service_provider_base_df_task = UFileSensor(
+    task_id='ods_service_provider_base_df_task',
+    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="opay/opay_dw/ods_service_provider_base_df",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
+
 ##---- hive operator ---##
 dim_opay_service_provider_df_task = HiveOperator(
     task_id='dim_opay_service_provider_df_task',
     hql='''
     set hive.exec.dynamic.partition.mode=nonstrict;
-    set hive.mapjoin.smalltable.filesize=64000000;
-    insert overwrite table opay_dw.dim_opay_service_provider_df
-    partition(dt='{pt}')
+
+    insert overwrite table opay_dw.dim_opay_service_provider_df partition(dt='{pt}')
     select 
         id, name, service_type, provider_type 
     from opay_dw_ods.ods_service_provider_base_df
@@ -63,4 +76,4 @@ dim_opay_service_provider_df_task = HiveOperator(
 ##---- hive operator end ---##
 
 
-dim_opay_service_provider_df_task
+ods_service_provider_base_df_task>>dim_opay_service_provider_df_task
