@@ -188,5 +188,4 @@ touchz_data_success = PythonOperator(
 )
 
 dwd_oride_client_event_detail_hi_task >> dwd_oride_driver_phone_list_mid_task >> \
-dwd_oride_client_event_detail_hi_task >> dwd_oride_driver_call_record_mid_task >> \
-sleep_time>>app_oride_driver_call_book_d_task >> touchz_data_success
+dwd_oride_driver_call_record_mid_task >> sleep_time>>app_oride_driver_call_book_d_task >> touchz_data_success
