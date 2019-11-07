@@ -79,75 +79,75 @@ hdfs_path="ufile://opay-datalake/opay/opay_dw/" + table_name
 
 
 ##---- hive operator ---##
-fill_dwd_opay_merchant_acquiring_record_di_task = HiveOperator(
-    task_id='fill_dwd_opay_merchant_acquiring_record_di_task',
-    hql='''
-    set hive.exec.dynamic.partition.mode=nonstrict;
-     
-    insert overwrite table dwd_opay_merchant_acquiring_record_di 
-    partition(country_code, dt)
-    select 
-        order_di.id,
-        order_di.order_no,
-        order_di.user_id,
-        if(order_di.create_time < nvl(user_di.agent_upgrade_time, '9999-01-01 00:00:00'), 'customer', 'agent') user_role,
-        order_di.merchant_id,
-        order_di.merchant_order_no,
-        order_di.amount,
-        order_di.country,
-        order_di.currency,
-        order_di.pay_channel,
-        order_di.order_status,
-        order_di.fee fee_amount,
-        order_di.fee_pattern,
-        order_di.outward_id,
-        order_di.outward_type,
-        order_di.original_order_no,
-        order_di.source_system,
-        order_di.order_type,
-        order_di.is_refund,
-        order_di.error_msg,
-        order_di.external_reason,
-        order_di.internal_reason,
-        order_di.create_time,
-        order_di.update_time,
-        case order_di.country
-            when 'NG' then 'NG'
-            when 'NO' then 'NO'
-            when 'GH' then 'GH'
-            when 'BW' then 'BW'
-            when 'GH' then 'GH'
-            when 'KE' then 'KE'
-            when 'MW' then 'MW'
-            when 'MZ' then 'MZ'
-            when 'PL' then 'PL'
-            when 'ZA' then 'ZA'
-            when 'SE' then 'SE'
-            when 'TZ' then 'TZ'
-            when 'UG' then 'UG'
-            when 'US' then 'US'
-            when 'ZM' then 'ZM'
-            when 'ZW' then 'ZW'
-            else 'NG'
-            end as country_code,
-        order_di.dt
-    from opay_dw_ods.ods_sqoop_base_merchant_acquiring_record_di order_di
-    left join
-    (
-        select * from 
-        (
-            select user_id, role, agent_upgrade_time, row_number() over(partition by user_id order by update_time desc) rn 
-            from opay_dw.dim_opay_user_base_di
-        ) user_temp where rn = 1
-    ) user_di
-    on user_di.user_id = order_di.user_id
-
-    '''.format(
-        pt='{{ds}}'
-    ),
-    schema='opay_dw',
-    dag=dag
-)
+# fill_dwd_opay_merchant_acquiring_record_di_task = HiveOperator(
+#     task_id='fill_dwd_opay_merchant_acquiring_record_di_task',
+#     hql='''
+#     set hive.exec.dynamic.partition.mode=nonstrict;
+#
+#     insert overwrite table dwd_opay_merchant_acquiring_record_di
+#     partition(country_code, dt)
+#     select
+#         order_di.id,
+#         order_di.order_no,
+#         order_di.user_id,
+#         if(order_di.create_time < nvl(user_di.agent_upgrade_time, '9999-01-01 00:00:00'), 'customer', 'agent') user_role,
+#         order_di.merchant_id,
+#         order_di.merchant_order_no,
+#         order_di.amount,
+#         order_di.country,
+#         order_di.currency,
+#         order_di.pay_channel,
+#         order_di.order_status,
+#         order_di.fee fee_amount,
+#         order_di.fee_pattern,
+#         order_di.outward_id,
+#         order_di.outward_type,
+#         order_di.original_order_no,
+#         order_di.source_system,
+#         order_di.order_type,
+#         order_di.is_refund,
+#         order_di.error_msg,
+#         order_di.external_reason,
+#         order_di.internal_reason,
+#         order_di.create_time,
+#         order_di.update_time,
+#         case order_di.country
+#             when 'NG' then 'NG'
+#             when 'NO' then 'NO'
+#             when 'GH' then 'GH'
+#             when 'BW' then 'BW'
+#             when 'GH' then 'GH'
+#             when 'KE' then 'KE'
+#             when 'MW' then 'MW'
+#             when 'MZ' then 'MZ'
+#             when 'PL' then 'PL'
+#             when 'ZA' then 'ZA'
+#             when 'SE' then 'SE'
+#             when 'TZ' then 'TZ'
+#             when 'UG' then 'UG'
+#             when 'US' then 'US'
+#             when 'ZM' then 'ZM'
+#             when 'ZW' then 'ZW'
+#             else 'NG'
+#             end as country_code,
+#         order_di.dt
+#     from opay_dw_ods.ods_sqoop_base_merchant_acquiring_record_di order_di
+#     left join
+#     (
+#         select * from
+#         (
+#             select user_id, role, agent_upgrade_time, row_number() over(partition by user_id order by update_time desc) rn
+#             from opay_dw.dim_opay_user_base_di
+#         ) user_temp where rn = 1
+#     ) user_di
+#     on user_di.user_id = order_di.user_id
+#
+#     '''.format(
+#         pt='{{ds}}'
+#     ),
+#     schema='opay_dw',
+#     dag=dag
+# )
 ##---- hive operator end ---##
 
 ##---- hive operator ---##

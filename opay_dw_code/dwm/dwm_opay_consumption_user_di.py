@@ -43,22 +43,22 @@ dag = airflow.DAG('dwm_opay_consumption_user_di',
 
 
 ##---- hive operator ---##
-fill_dwm_opay_consumption_user_di_task = HiveOperator(
-    task_id='fill_dwm_opay_consumption_user_di_task',
-    hql='''
-    set hive.exec.dynamic.partition.mode=nonstrict;
-    insert overwrite table dwm_opay_consumption_user_di 
-    partition(country_code, dt)
-    select 
-        country_code, dt, sender_id, sender_type, recipient_id, recipient_type, order_status, sum(amount) order_amt, count(*) order_cnt 
-    from opay_dw.dwd_opay_business_collection_record_di
-    group by country_code, dt, sender_id, sender_type, recipient_id, recipient_type, order_status
-    '''.format(
-        pt='{{ds}}'
-    ),
-    schema='opay_dw',
-    dag=dag
-)
+# fill_dwm_opay_consumption_user_di_task = HiveOperator(
+#     task_id='fill_dwm_opay_consumption_user_di_task',
+#     hql='''
+#     set hive.exec.dynamic.partition.mode=nonstrict;
+#     insert overwrite table dwm_opay_consumption_user_di
+#     partition(country_code, dt)
+#     select
+#         country_code, dt, sender_id, sender_type, recipient_id, recipient_type, order_status, sum(amount) order_amt, count(*) order_cnt
+#     from opay_dw.dwd_opay_business_collection_record_di
+#     group by country_code, dt, sender_id, sender_type, recipient_id, recipient_type, order_status
+#     '''.format(
+#         pt='{{ds}}'
+#     ),
+#     schema='opay_dw',
+#     dag=dag
+# )
 ##---- hive operator end ---##
 
 ##---- hive operator ---##

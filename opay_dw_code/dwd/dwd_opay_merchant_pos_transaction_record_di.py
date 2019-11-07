@@ -79,63 +79,63 @@ hdfs_path="ufile://opay-datalake/opay/opay_dw/" + table_name
 
 
 ##---- hive operator ---##
-fill_dwd_opay_merchant_pos_transaction_record_di_task = HiveOperator(
-    task_id='fill_dwd_opay_merchant_pos_transaction_record_di_task',
-    hql='''
-    set hive.exec.dynamic.partition.mode=nonstrict;
-     
-    insert overwrite table dwd_opay_merchant_pos_transaction_record_di 
-    partition(country_code, dt)
-    select 
-        order_di.id,
-        order_di.order_no,
-        order_di.terminal_id,
-        order_di.pos_trade_req_id,
-        order_di.transaction_reference,
-        order_di.retrieval_reference_number,
-        order_di.merchant_id,
-        order_di.currency,
-        order_di.amount,
-        order_di.fee_amount,
-        order_di.fee_pattern,
-        order_di.channel_code,
-        order_di.channel_msg,
-        order_di.payment_date,
-        order_di.transaction_type,
-        order_di.order_status,
-        order_di.accounting_status,
-        order_di.terminal_provider_id,
-        order_di.bank_code,
-        order_di.country,
-        order_di.create_time,
-        order_di.update_time,
-        case order_di.country
-            when 'NG' then 'NG'
-            when 'NO' then 'NO'
-            when 'GH' then 'GH'
-            when 'BW' then 'BW'
-            when 'GH' then 'GH'
-            when 'KE' then 'KE'
-            when 'MW' then 'MW'
-            when 'MZ' then 'MZ'
-            when 'PL' then 'PL'
-            when 'ZA' then 'ZA'
-            when 'SE' then 'SE'
-            when 'TZ' then 'TZ'
-            when 'UG' then 'UG'
-            when 'US' then 'US'
-            when 'ZM' then 'ZM'
-            when 'ZW' then 'ZW'
-            else 'NG'
-            end as country_code,
-        order_di.dt
-    from opay_dw_ods.ods_sqoop_base_merchant_pos_transaction_record_di order_di
-    '''.format(
-        pt='{{ds}}'
-    ),
-    schema='opay_dw',
-    dag=dag
-)
+# fill_dwd_opay_merchant_pos_transaction_record_di_task = HiveOperator(
+#     task_id='fill_dwd_opay_merchant_pos_transaction_record_di_task',
+#     hql='''
+#     set hive.exec.dynamic.partition.mode=nonstrict;
+#
+#     insert overwrite table dwd_opay_merchant_pos_transaction_record_di
+#     partition(country_code, dt)
+#     select
+#         order_di.id,
+#         order_di.order_no,
+#         order_di.terminal_id,
+#         order_di.pos_trade_req_id,
+#         order_di.transaction_reference,
+#         order_di.retrieval_reference_number,
+#         order_di.merchant_id,
+#         order_di.currency,
+#         order_di.amount,
+#         order_di.fee_amount,
+#         order_di.fee_pattern,
+#         order_di.channel_code,
+#         order_di.channel_msg,
+#         order_di.payment_date,
+#         order_di.transaction_type,
+#         order_di.order_status,
+#         order_di.accounting_status,
+#         order_di.terminal_provider_id,
+#         order_di.bank_code,
+#         order_di.country,
+#         order_di.create_time,
+#         order_di.update_time,
+#         case order_di.country
+#             when 'NG' then 'NG'
+#             when 'NO' then 'NO'
+#             when 'GH' then 'GH'
+#             when 'BW' then 'BW'
+#             when 'GH' then 'GH'
+#             when 'KE' then 'KE'
+#             when 'MW' then 'MW'
+#             when 'MZ' then 'MZ'
+#             when 'PL' then 'PL'
+#             when 'ZA' then 'ZA'
+#             when 'SE' then 'SE'
+#             when 'TZ' then 'TZ'
+#             when 'UG' then 'UG'
+#             when 'US' then 'US'
+#             when 'ZM' then 'ZM'
+#             when 'ZW' then 'ZW'
+#             else 'NG'
+#             end as country_code,
+#         order_di.dt
+#     from opay_dw_ods.ods_sqoop_base_merchant_pos_transaction_record_di order_di
+#     '''.format(
+#         pt='{{ds}}'
+#     ),
+#     schema='opay_dw',
+#     dag=dag
+# )
 ##---- hive operator end ---##
 
 ##---- hive operator ---##
