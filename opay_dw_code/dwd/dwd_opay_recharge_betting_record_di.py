@@ -38,7 +38,7 @@ args = {
 
 
 dag = airflow.DAG('dwd_opay_recharge_betting_record_di',
-                  schedule_interval="0 3 2 * *",
+                  schedule_interval="00 03 * * *",
                   default_args=args,
                   catchup=False)
 

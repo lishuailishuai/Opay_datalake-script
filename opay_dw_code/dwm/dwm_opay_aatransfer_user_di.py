@@ -27,7 +27,7 @@ import os
 #
 args = {
     'owner': 'xiedong',
-    'start_date': datetime(2019, 11, 2),
+    'start_date': datetime(2019, 11, 7),
     'depends_on_past': False,
     'retries': 3,
     'retry_delay': timedelta(minutes=2),
@@ -37,18 +37,18 @@ args = {
 }
 
 
-dag = airflow.DAG('dwm_opay_aatransfer_relation_di',
+dag = airflow.DAG('dwm_opay_aatransfer_user_di',
                  schedule_interval="00 03 * * *",
                   default_args=args,
                   catchup=False)
 
 
 ##---- hive operator ---##
-fill_dwm_opay_aatransfer_relation_di_task = HiveOperator(
-    task_id='fill_dwm_opay_aatransfer_relation_di_task',
+fill_dwm_opay_aatransfer_user_di_task = HiveOperator(
+    task_id='fill_dwm_opay_aatransfer_user_di_task',
     hql='''
     set hive.exec.dynamic.partition.mode=nonstrict;
-    insert overwrite table dwm_opay_aatransfer_relation_di 
+    insert overwrite table dwm_opay_aatransfer_user_di 
     partition(country_code, dt)
     select
 	t1.payment_relation_id, t2.name, t2.payment_relation_type, t2.role_relation_type, 'AATransfer' service_type, t1.order_status, t1.order_amt, t1.order_cnt, 
@@ -80,34 +80,30 @@ on t1.payment_relation_id = t2.id
 ##---- hive operator end ---##
 
 ##---- hive operator ---##
-dwm_opay_aatransfer_relation_di_task = HiveOperator(
-    task_id='dwm_opay_aatransfer_relation_di_task',
+dwm_opay_aatransfer_user_di_task = HiveOperator(
+    task_id='dwm_opay_aatransfer_user_di_task',
     hql='''
     set hive.exec.dynamic.partition.mode=nonstrict;
-    insert overwrite table dwm_opay_aatransfer_relation_di 
+    insert overwrite table dwm_opay_aatransfer_user_di 
     partition(country_code, dt)
     select
-        t1.payment_relation_id, t2.name payment_relation_name, t2.payment_relation_type, t2.role_relation_type, 'AATransfer' service_type, t1.order_status, t1.order_amt, t1.order_cnt, 
+        t1.sender_id, t1.sender_type, t1.recipient_id, t1.recipient_type, 'AATransfer' service_type, t1.order_status, t1.order_amt, t1.order_cnt,
         t1.country_code, t1.dt
     from
     (
         select 
-            payment_relation_id, country_code, dt, sum(amount) order_amt, count(*) order_cnt, transfer_status order_status 
+            user_id sender_id, 'USER' sender_type, recipient_id, recipient_type, transfer_status order_status, sum(amount) order_amt, count(*) order_cnt, 
+            country_code, dt
         from opay_dw.dwd_opay_user_transfer_user_record_di
-        where dt='{pt}'
-        group by country_code, dt, payment_relation_id, transfer_status
+        where dt='${pt}'
+        group by country_code, dt, user_id, recipient_id, recipient_type, transfer_status
         union all
         select 
-            payment_relation_id, country_code, dt, sum(amount) order_amt, count(*) order_cnt, order_status 
+            merchant_id sender_id, 'MERCHANT' sender_type, recipient_id, recipient_type, order_status, sum(amount) order_amt, count(*) order_cnt, 
+            country_code, dt
         from opay_dw.dwd_opay_merchant_transfer_user_record_di
-        where dt='{pt}'
-        group by country_code, dt, payment_relation_id, order_status
-    ) t1
-    join
-    (
-        select * from dim_opay_payment_relation_df where dt = '{pt}'
-    ) t2
-    on t1.payment_relation_id = t2.id
+        where dt='${pt}'
+        group by country_code, dt, merchant_id, recipient_id, 
     '''.format(
         pt='{{ds}}'
     ),
@@ -115,4 +111,4 @@ dwm_opay_aatransfer_relation_di_task = HiveOperator(
     dag=dag
 )
 
-dwm_opay_aatransfer_relation_di_task
+dwm_opay_aatransfer_user_di_task

@@ -38,8 +38,9 @@ args = {
 
 
 dag = airflow.DAG('dwm_opay_recharge_service_provider_di',
-                  schedule_interval="0 3 2 * *",
-                  default_args=args)
+                 schedule_interval="00 03 * * *",
+                  default_args=args,
+                  catchup=False)
 
 
 ##---- hive operator ---##
@@ -96,6 +97,7 @@ fill_dwm_opay_recharge_service_provider_di_task = HiveOperator(
 dwm_opay_recharge_service_provider_di_task = HiveOperator(
     task_id='dwm_opay_recharge_service_provider_di_task',
     hql='''
+    set hive.exec.dynamic.partition.mode=nonstrict;
     insert overwrite table dwm_opay_recharge_service_provider_di 
     partition(country_code, dt)
     select 

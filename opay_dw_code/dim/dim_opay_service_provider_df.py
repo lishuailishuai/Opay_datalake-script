@@ -37,8 +37,9 @@ args = {
 }
 
 dag = airflow.DAG('dim_opay_service_provider_df',
-                  schedule_interval="0 3 2 * *",
-                  default_args=args)
+                 schedule_interval="00 03 * * *",
+                  default_args=args,
+                  catchup=False)
 
 ##------declare variables end ------##
 

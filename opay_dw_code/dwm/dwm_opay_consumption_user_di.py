@@ -38,8 +38,8 @@ args = {
 
 
 dag = airflow.DAG('dwm_opay_consumption_user_di',
-                  schedule_interval="0 3 2 * *",
-                  default_args=args)
+                  schedule_interval="00 03 * * *",
+                  default_args=args,)
 
 
 ##---- hive operator ---##

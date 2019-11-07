@@ -38,8 +38,9 @@ args = {
 
 
 dag = airflow.DAG('dwd_opay_recharge_mobilebill_record_di',
-                  schedule_interval="0 3 2 * *",
-                  default_args=args)
+                 schedule_interval="00 03 * * *",
+                  default_args=args,
+                  catchup=False)
 
 ##----------------------------------------- 依赖 ---------------------------------------##
 dim_opay_user_base_di_prev_day_task = UFileSensor(
