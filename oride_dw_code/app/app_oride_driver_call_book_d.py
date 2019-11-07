@@ -58,7 +58,7 @@ def fun_task_timeout_monitor(ds, dag, **op_kwargs):
 
     tb = [
         {"db": "oride_dw", "table": "{dag_name}".format(dag_name=dag_ids),
-         "partition": "dt={pt}".format(pt=ds), "timeout": "2400"}
+         "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "2400"}
     ]
 
     TaskTimeoutMonitor().set_task_monitor(tb)
@@ -119,41 +119,46 @@ app_oride_driver_call_book_d_task = HiveOperator(
         SET hive.exec.parallel=TRUE;
         SET hive.exec.dynamic.partition.mode=nonstrict;
         
-        insert overwrite table oride_dw.{table} partition(dt)
-        select a3.user_id,a3.contact_name,a3.contact_phone_number,if(b3.call_cnt is null,0,b3.call_cnt) as call_cnt,'{pt}' as dt
-        from (
-            select  a2.user_id,a2.contact_name,a2.contact_phone_number
-            from(
-                select a1.user_id,
-                substr(split(a1.name_phone_num,'\":\"')[0],3) contact_name,
-                substr(split(a1.name_phone_num,'\":\"')[1],0,length(split(a1.name_phone_num,'\":\"')[1])-2) contact_phone_number 
-                from  oride_dw.dwd_oride_driver_phone_list_mid a1
-                where a1.dt='{pt}'
-            )a2
-            group by a2.user_id,a2.contact_name,a2.contact_phone_number
-        ) a3
-        left join
-        (
-            select b2.user_id,
-            b2.contact_name,
-            b2.contact_phone_number,
-            count(1) call_cnt --通话次数
-            --,b2.call_dur  --通话时长(总)
-            --,max(last_call_time) as last_call_time --最后一次通话时间
-            from(
-                select b1.user_id,
-                substr(split(b1.name_phone_num,'\":\"')[0],3)  contact_name,
-                substr(split(b1.name_phone_num,'\":\"')[1],0,length(split(b1.name_phone_num,'\":\"')[1])-2) contact_phone_number
-                --,split(a1.name_phone_num,'\":\"')[2] call_dur,--通话时长
-                --substr(split(a1.name_phone_num,'\":\"')[3],0,length(split(a1.name_phone_num,'\":\"')[3])-2) last_call_time --最后一次通话时间
-                from oride_dw.dwd_oride_driver_call_record_mid b1
-                where b1.dt='{pt}'
-            ) as b2  
-            group by b2.user_id,b2.contact_name,b2.contact_phone_number
-        ) b3
-        on a3.user_id=b3.user_id
-        and a3.contact_name=b3.contact_name
-        and a3.contact_phone_number=b3.contact_phone_number;
+        insert overwrite table oride_dw.{table} partition(country_code,dt)
+            select a3.user_id, --司机ID
+                a3.contact_name, --联系人姓名
+                a3.contact_phone_number, --联系人电话号吗
+                if(b3.call_cnt is null,0,b3.call_cnt) as call_cnt,--与联系人通话次数
+                'nal' AS country_code,--国家码
+                '{pt}' as dt --日期
+            from (
+                select  a2.user_id,a2.contact_name,a2.contact_phone_number
+                from(
+                    select a1.user_id,
+                    substr(split(a1.name_phone_num,'\":\"')[0],3) contact_name,
+                    substr(split(a1.name_phone_num,'\":\"')[1],0,length(split(a1.name_phone_num,'\":\"')[1])-2) contact_phone_number 
+                    from  oride_dw.dwd_oride_driver_phone_list_mid a1
+                    where a1.dt='{pt}'
+                )a2
+                group by a2.user_id,a2.contact_name,a2.contact_phone_number
+            ) a3
+            left join
+            (
+                select b2.user_id,
+                b2.contact_name,
+                b2.contact_phone_number,
+                count(1) call_cnt --通话次数
+                --,b2.call_dur  --通话时长(总)
+                --,max(last_call_time) as last_call_time --最后一次通话时间
+                from(
+                    select b1.user_id,
+                    substr(split(b1.name_phone_num,'\":\"')[0],3)  contact_name,
+                    substr(split(b1.name_phone_num,'\":\"')[1],0,length(split(b1.name_phone_num,'\":\"')[1])-2) contact_phone_number
+                    --,split(a1.name_phone_num,'\":\"')[2] call_dur,--通话时长
+                    --substr(split(a1.name_phone_num,'\":\"')[3],0,length(split(a1.name_phone_num,'\":\"')[3])-2) last_call_time --最后一次通话时间
+                    from oride_dw.dwd_oride_driver_call_record_mid b1
+                    where b1.dt='{pt}'
+                ) as b2  
+                group by b2.user_id,b2.contact_name,b2.contact_phone_number
+            ) b3
+            on a3.user_id=b3.user_id
+            and a3.contact_name=b3.contact_name
+            and a3.contact_phone_number=b3.contact_phone_number;
     '''.format(
         pt='{{ds}}',
         now_day='{{macros.ds_add(ds, +1)}}',
@@ -169,7 +174,7 @@ def check_success(ds, dag, **op_kwargs):
 
     msg = [
         {"table": "{dag_name}".format(dag_name=dag_ids),
-         "hdfs_path": "{hdfsPath}/dt={pt}".format(pt=ds, hdfsPath=hdfs_path)}
+         "hdfs_path": "{hdfsPath}/country_code=nal/dt={pt}".format(pt=ds, hdfsPath=hdfs_path)}
     ]
 
     TaskTouchzSuccess().set_touchz_success(msg)
@@ -182,5 +187,5 @@ touchz_data_success = PythonOperator(
     dag=dag
 )
 
-dwd_oride_client_event_detail_hi_task >> dwd_oride_driver_phone_list_mid_task >> sleep_time>>app_oride_driver_call_book_d_task >> touchz_data_success
-dwd_oride_client_event_detail_hi_task >> dwd_oride_driver_call_record_mid_task >> sleep_time>>app_oride_driver_call_book_d_task >> touchz_data_success
+dwd_oride_client_event_detail_hi_task >> dwd_oride_driver_phone_list_mid_task >> sleep_time>> \
+dwd_oride_driver_call_record_mid_task >> sleep_time>>app_oride_driver_call_book_d_task >> touchz_data_success
