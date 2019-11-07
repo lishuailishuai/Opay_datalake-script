@@ -184,26 +184,36 @@ insert_oride_global_daily_report = HiveOperator(
                 sum(case when event_name='request_a_ride_show' then 1 end)/count(DISTINCT dt) as estimated_price_cllick_request_event_counter_lfw,
                 sum(case when event_name='request_a_ride_click' then 1 end)/count(DISTINCT dt) as  request_a_ride_click_lfw
             FROM
-                oride_dw.dwd_oride_client_event_detail_hi
-            WHERE
-                dt BETWEEN '{{ macros.ds_add(ds, -28) }}' AND '{{ macros.ds_add(ds, -1) }}' and app_version>='4.4.405' 
-                AND from_unixtime(unix_timestamp(dt, 'yyyy-MM-dd'),'u') = from_unixtime(unix_timestamp('{{ ds }}', 'yyyy-MM-dd'),'u') and
-                from_unixtime(cast(event_time as int),'yyyy-MM-dd') BETWEEN '{{ macros.ds_add(ds, -28) }}' AND '{{ macros.ds_add(ds, -1) }}'
-                AND from_unixtime(cast(event_time as int),'u') = from_unixtime(unix_timestamp('{{ ds }}', 'yyyy-MM-dd'),'u') 
+                (select * from 
+                   (select a.*,row_number() over(partition by event_name,event_time,user_id order by event_time) rn 
+                     from oride_dw.dwd_oride_client_event_detail_hi a
+                     WHERE
+                      dt BETWEEN '{{ macros.ds_add(ds, -28) }}' AND '{{ macros.ds_add(ds, -1) }}' and app_version>='4.4.405' 
+                      AND from_unixtime(unix_timestamp(dt, 'yyyy-MM-dd'),'u') = from_unixtime(unix_timestamp('{{ ds }}', 'yyyy-MM-dd'),'u') and
+                      from_unixtime(cast(event_time as int),'yyyy-MM-dd') BETWEEN '{{ macros.ds_add(ds, -28) }}' AND '{{ macros.ds_add(ds, -1) }}'
+                      AND from_unixtime(cast(event_time as int),'u') = from_unixtime(unix_timestamp('{{ ds }}', 'yyyy-MM-dd'),'u') 
+                   ) m 
+                 where rn=1
+                ) m1
         ),
         -- event数据
         event_data as (
         SELECT
-                dt,
+                '{{ ds }}' as dt,
                 sum(case when event_name='choose_end_point_click' then 1 end) as oride_cllick_request_event_counter,
                 sum(case when event_name='request_a_ride_show' then 1 end) as estimated_price_cllick_request_event_counter,
                 sum(case when event_name='request_a_ride_click' then 1 end)/count(DISTINCT dt) as  request_a_ride_click
             FROM
-                oride_dw.dwd_oride_client_event_detail_hi
-            WHERE
-                dt='{{ ds }}' and app_version>='4.4.405' and from_unixtime(cast(event_time as int),'yyyy-MM-dd')='{{ ds }}'
-            GROUP BY
-                dt
+                (select * from 
+                   (select b.*,row_number()over(partition by event_name,event_time,user_id order by event_time) rn 
+                      from oride_dw.dwd_oride_client_event_detail_hi b
+                      WHERE
+                       dt='{{ ds }}' and app_version>='4.4.405' and from_unixtime(cast(event_time as int),'yyyy-MM-dd')='{{ ds }}'
+                     
+                    ) m2
+                where rn=1
+                ) m3
+                  
         ),
         -- 近4周数据
         lfw_data as (
