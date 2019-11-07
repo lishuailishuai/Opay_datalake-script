@@ -235,15 +235,16 @@ def check_key_data_task(ds):
 
 #主流程
 def execution_data_task_id(ds,**kargs):
+
     hive_hook = HiveCliHook()
+
     #读取sql
     _sql=test_dim_oride_city_sql_task(ds)
 
     logging.info('Executing: %s', _sql)
     hive_hook.run_cli(_sql)
+    
     #执行hive
-
-    #sys.exit(0)
 
     #读取验证sql
     _check=check_key_data_task(ds)
