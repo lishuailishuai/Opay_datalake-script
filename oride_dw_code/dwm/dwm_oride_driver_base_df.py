@@ -34,7 +34,7 @@ args = {
     'email_on_retry': False,
 }
 
-dag = airflow.DAG('dwm_oride_driver_base_d',
+dag = airflow.DAG('dwm_oride_driver_base_df',
                   schedule_interval="30 01 * * *",
                   default_args=args)
 
@@ -116,7 +116,7 @@ dwd_oride_driver_accept_order_click_detail_di_prev_day_task = UFileSensor(
 
 ##----------------------------------------- 变量 ---------------------------------------##
 
-table_name = "dwm_oride_driver_base_d"
+table_name = "dwm_oride_driver_base_df"
 hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
 
 
@@ -142,9 +142,9 @@ task_timeout_monitor = PythonOperator(
 
 ##----------------------------------------- 脚本 ---------------------------------------##
 
-dwm_oride_driver_base_d_task = HiveOperator(
+dwm_oride_driver_base_df_task = HiveOperator(
 
-    task_id='dwm_oride_driver_base_d_task',
+    task_id='dwm_oride_driver_base_df_task',
     hql='''
     set hive.exec.parallel=true;
     set hive.exec.dynamic.partition.mode=nonstrict;
@@ -393,4 +393,4 @@ dim_oride_driver_base_prev_day_task >> dwd_oride_order_base_include_test_di_prev
 dwd_oride_order_push_driver_detail_di_prev_day_task >> oride_driver_timerange_prev_day_task >> \
 dwd_oride_driver_accept_order_show_detail_di_prev_day_task >>\
 dwd_oride_driver_accept_order_click_detail_di_prev_day_task >> \
-sleep_time >> dwm_oride_driver_base_d_task >> touchz_data_success
+sleep_time >> dwm_oride_driver_base_df_task >> touchz_data_success
