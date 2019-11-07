@@ -58,7 +58,7 @@ def fun_task_timeout_monitor(ds, dag, **op_kwargs):
 
     tb = [
         {"db": "oride_dw", "table": "{dag_name}".format(dag_name=dag_ids),
-         "partition": "dt={pt}".format(pt=ds), "timeout": "2400"}
+         "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "2400"}
     ]
 
     TaskTimeoutMonitor().set_task_monitor(tb)
@@ -119,8 +119,13 @@ app_oride_driver_call_book_d_task = HiveOperator(
         SET hive.exec.parallel=TRUE;
         SET hive.exec.dynamic.partition.mode=nonstrict;
         
-        insert overwrite table oride_dw.{table} partition(dt)
-        select a3.user_id,a3.contact_name,a3.contact_phone_number,if(b3.call_cnt is null,0,b3.call_cnt) as call_cnt,'{pt}' as dt
+        insert overwrite table oride_dw.{table} partition(country_code,dt)
+        select a3.user_id,--司机ID
+            a3.contact_name,--联系人姓名
+            a3.contact_phone_number,--联系人电话
+            if(b3.call_cnt is null,0,b3.call_cnt) as call_cnt,--与联系人通话次数
+            'nal' AS country_code,--国家码
+            '{pt}' as dt --日期
         from (
             select  a2.user_id,a2.contact_name,a2.contact_phone_number
             from(
@@ -169,7 +174,7 @@ def check_success(ds, dag, **op_kwargs):
 
     msg = [
         {"table": "{dag_name}".format(dag_name=dag_ids),
-         "hdfs_path": "{hdfsPath}/dt={pt}".format(pt=ds, hdfsPath=hdfs_path)}
+         "hdfs_path": "{hdfsPath}/country_code=nal/dt={pt}".format(pt=ds, hdfsPath=hdfs_path)}
     ]
 
     TaskTouchzSuccess().set_touchz_success(msg)
