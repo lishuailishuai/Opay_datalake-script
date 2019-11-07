@@ -45,7 +45,7 @@ dag = airflow.DAG('dwm_opay_consumption_relation_di',
 ##----------------------------------------- 依赖 ---------------------------------------##
 #依赖前一天分区
 dwd_opay_business_collection_record_di_task = UFileSensor(
-    task_id='dwd_opay_business_collection_record_di_di_task',
+    task_id='dwd_opay_business_collection_record_di_task',
     filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
         hdfs_path_str="opay/opay_dw/dwd_opay_business_collection_record_di/country_code=NG",
         pt='{{ds}}'
@@ -107,6 +107,7 @@ dwm_opay_consumption_relation_di_task = HiveOperator(
     task_id='dwm_opay_consumption_relation_di_task',
     hql='''
     set hive.exec.dynamic.partition.mode=nonstrict;
+    set hive.exec.parallel=true;
     insert overwrite table dwm_opay_consumption_relation_di 
     partition(country_code, dt)
     select

@@ -145,7 +145,7 @@ dwd_opay_merchant_receive_money_record_di_task = HiveOperator(
     task_id='dwd_opay_merchant_receive_money_record_di_task',
     hql='''
     set hive.exec.dynamic.partition.mode=nonstrict;
-     
+    set hive.exec.parallel=true;
     insert overwrite table dwd_opay_merchant_receive_money_record_di 
     partition(country_code, dt)
     select 
