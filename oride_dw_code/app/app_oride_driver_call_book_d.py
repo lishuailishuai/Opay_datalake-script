@@ -127,7 +127,9 @@ app_oride_driver_call_book_d_task = HiveOperator(
             'nal' AS country_code,--国家码
             '{pt}' as dt --日期
         from (
-            select  a2.user_id,a2.contact_name,a2.contact_phone_number
+            select  a2.user_id,a2.contact_name,a2.contact_phone_number,
+                length(a2.contact_name) contact_name_len,
+                length(a2.contact_phone_number) contact_number_len
             from(
                 select a1.user_id,
                 substr(split(a1.name_phone_num,'\":\"')[0],3) contact_name,
@@ -158,7 +160,8 @@ app_oride_driver_call_book_d_task = HiveOperator(
         ) b3
         on a3.user_id=b3.user_id
         and a3.contact_name=b3.contact_name
-        and a3.contact_phone_number=b3.contact_phone_number;
+        and a3.contact_phone_number=b3.contact_phone_number
+        where a3.contact_number_len<50 and a3.contact_name_len<64;
     '''.format(
         pt='{{ds}}',
         now_day='{{macros.ds_add(ds, +1)}}',
