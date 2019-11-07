@@ -282,8 +282,8 @@ dwm_oride_order_base_di_task = HiveOperator(
         order_id,
         count(1) as order_assigned_cnt, --订单被分配次数（计算平均接驾距离使用）
         sum(distance) AS pick_up_distance --接驾总距离
-        FROM oride_dw.dwd_oride_order_dispatch_funnel_di
-        WHERE dt='{pt}' and event_name='dispatch_assign_driver'
+        FROM oride_dw.dwd_oride_order_assign_driver_detail_di   --调度算法assign节点
+        WHERE dt='{pt}' 
         GROUP BY order_id
        ) assign ON ord.order_id=assign.order_id
     LEFT OUTER JOIN
@@ -295,8 +295,8 @@ dwm_oride_order_base_di_task = HiveOperator(
         sum(distance) as broadcast_distance, --播单总距离
         count(1) as push_all_times_cnt, --播单总次数
         sum(success) as success  --用于判断是否成功播单
-        FROM oride_dw.dwd_oride_order_dispatch_funnel_di
-        WHERE dt='{pt}' and event_name='dispatch_push_driver' 
+        FROM oride_dw.dwd_oride_order_push_driver_detail_di   --调度算法push节点
+        WHERE dt='{pt}'  
         GROUP BY order_id
         ) push ON ord.order_id=push.order_id
     LEFT OUTER JOIN 
