@@ -73,9 +73,8 @@ dim_opay_payment_relation_df_task = HiveOperator(
     insert overwrite table opay_dw.dim_opay_payment_relation_df partition(dt)
 
     select 
-        id, name, payment_relation_type, role_relation_type,dt
+        id, name, payment_relation_type, role_relation_type,'{pt}' as dt
     from opay_dw_ods.ods_payment_relation_base_df
-    where dt='{pt}'
     '''.format(
         pt='{{ds}}'
     ),

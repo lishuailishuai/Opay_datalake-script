@@ -73,9 +73,8 @@ dim_opay_service_provider_df_task = HiveOperator(
     insert overwrite table opay_dw.dim_opay_service_provider_df partition(dt)
 
     select 
-        id, name, service_type, provider_type,dt
+        id, name, service_type, provider_type,'{pt}' as dt
     from opay_dw_ods.ods_service_provider_base_df
-    where dt='{pt}'
     '''.format(
         pt='{{ds}}'
     ),
