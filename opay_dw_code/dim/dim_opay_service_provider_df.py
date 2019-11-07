@@ -63,6 +63,12 @@ dim_opay_service_provider_df_task = HiveOperator(
     hql='''
     set hive.exec.dynamic.partition.mode=nonstrict;
 
+    set hive.exec.parallel=true;
+
+    alter table dim_opay_service_provider_df drop partition(dt='{pt}');
+
+    alter table dim_opay_service_provider_df add partition(dt='{pt}');
+
     insert overwrite table opay_dw.dim_opay_service_provider_df partition(dt='{pt}')
     select 
         id, name, service_type, provider_type 

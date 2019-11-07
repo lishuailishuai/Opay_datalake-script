@@ -61,7 +61,14 @@ dim_opay_payment_relation_df_task = HiveOperator(
     task_id='dim_opay_payment_relation_df_task',
     hql='''
     set hive.exec.dynamic.partition.mode=nonstrict;
-    insert overwrite table opay_dw.dim_opay_service_provider_df
+
+    set hive.exec.parallel=true;
+
+    alter table dim_opay_payment_relation_df drop partition(dt='{pt}');
+
+    alter table dim_opay_payment_relation_df add partition(dt='{pt}');
+    
+    insert overwrite table opay_dw.dim_opay_payment_relation_df
     partition(dt='{pt}')
     select 
         id, name, payment_relation_type, role_relation_type 
