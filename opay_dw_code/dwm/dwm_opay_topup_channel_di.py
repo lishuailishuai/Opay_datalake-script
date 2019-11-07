@@ -78,6 +78,7 @@ dwm_opay_topup_channel_di_task = HiveOperator(
     task_id='dwm_opay_topup_channel_di_task',
     hql='''
     set hive.exec.dynamic.partition.mode=nonstrict;
+    set hive.exec.parallel=true;
     insert overwrite table dwm_opay_topup_channel_di 
     partition(country_code, dt)
     select
