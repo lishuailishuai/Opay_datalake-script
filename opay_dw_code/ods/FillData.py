@@ -37,7 +37,7 @@ args = {
 }
 
 dag = airflow.DAG('fill_data_temp',
-                  schedule_interval="* * * * 9999",
+                  schedule_interval="* * * * *",
                   default_args=args)
 
 ##------declare variables end ------##

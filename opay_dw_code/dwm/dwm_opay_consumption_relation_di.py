@@ -61,7 +61,7 @@ fill_dwm_opay_consumption_relation_di_task = HiveOperator(
     ) t1
     join
     (
-        select * from opay_dw.dim_opay_payment_relation_df where dt = '${dt}'
+        select * from opay_dw.dim_opay_payment_relation_df where dt = '{pt}'
     ) t2
     on t1.payment_relation_id = t2.id
 
@@ -88,12 +88,12 @@ dwm_opay_consumption_relation_di_task = HiveOperator(
         select 
             payment_relation_id, country_code, dt, sum(amount) order_amt, count(*) order_cnt, order_status 
         from opay_dw.dwd_opay_business_collection_record_di
-        where dt='${dt}'
+        where dt='{pt}'
         group by country_code, dt, payment_relation_id, order_status
     ) t1
     join
     (
-        select * from opay_dw.dim_opay_payment_relation_df where dt = '${dt}'
+        select * from opay_dw.dim_opay_payment_relation_df where dt = '{pt}'
     ) t2
     on t1.payment_relation_id = t2.id
     '''.format(

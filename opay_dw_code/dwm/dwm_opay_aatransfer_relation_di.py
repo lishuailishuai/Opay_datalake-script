@@ -66,7 +66,7 @@ from
 ) t1
 join
 (
-	select * from dim_opay_payment_relation_df where dt = '${dt}'
+	select * from dim_opay_payment_relation_df where dt = '{pt}'
 ) t2
 on t1.payment_relation_id = t2.id
 
@@ -92,18 +92,18 @@ dwm_opay_aatransfer_relation_di_task = HiveOperator(
         select 
             payment_relation_id, country_code, dt, sum(amount) order_amt, count(*) order_cnt, transfer_status order_status 
         from opay_dw.dwd_opay_user_transfer_user_record_di
-        where dt='${dt}'
+        where dt='{pt}'
         group by country_code, dt, payment_relation_id, transfer_status
         union all
         select 
             payment_relation_id, country_code, dt, sum(amount) order_amt, count(*) order_cnt, order_status 
         from opay_dw.dwd_opay_merchant_transfer_user_record_di
-        where dt='${dt}'
+        where dt='{pt}'
         group by country_code, dt, payment_relation_id, order_status
     ) t1
     join
     (
-        select * from dim_opay_payment_relation_df where dt = '${dt}'
+        select * from dim_opay_payment_relation_df where dt = '{pt}'
     ) t2
     on t1.payment_relation_id = t2.id
     '''.format(

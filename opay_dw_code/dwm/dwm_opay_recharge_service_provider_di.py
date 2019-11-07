@@ -80,7 +80,7 @@ fill_dwm_opay_recharge_service_provider_di_task = HiveOperator(
     ) t1 
     join 
     (
-        select * from dim_opay_service_provider_df where dt = '${dt}'
+        select * from dim_opay_service_provider_df where dt = '{pt}'
     ) t2 
     on t1.service_provider_id = t2.id
 
@@ -105,36 +105,36 @@ dwm_opay_recharge_service_provider_di_task = HiveOperator(
         select 
             service_provider_id, user_role, 'TV' service_type, order_status, sum(amount) order_amt, count(*) order_cnt, country_code, dt
         from opay_dw.dwd_opay_recharge_tv_record_di
-        where dt='${dt}'
+        where dt='{pt}'
         group by country_code, dt, service_provider_id, user_role, order_status
         union all
         select 
             service_provider_id, user_role, 'Betting' service_type, order_status, sum(amount) order_amt, count(*) order_cnt, country_code, dt
         from opay_dw.dwd_opay_recharge_betting_record_di
-        where dt='${dt}'
+        where dt='{pt}'
         group by country_code, dt, service_provider_id, user_role, order_status
         union all
         select 
             service_provider_id, user_role, 'MobileData' service_type, order_status, sum(amount) order_amt, count(*) order_cnt, country_code, dt
         from opay_dw.dwd_opay_recharge_mobiledata_record_di
-        where dt='${dt}'
+        where dt='{pt}'
         group by country_code, dt, service_provider_id, user_role, order_status
         union all
         select 
             service_provider_id, user_role, 'Airtime' service_type, order_status, sum(amount) order_amt, count(*) order_cnt, country_code, dt
         from opay_dw.dwd_opay_recharge_mobilebill_record_di
-        where dt='${dt}'
+        where dt='{pt}'
         group by country_code, dt, service_provider_id, user_role, order_status
         union all
         select 
             service_provider_id, user_role, 'Electricity' service_type, order_status, sum(amount) order_amt, count(*) order_cnt, country_code, dt
         from opay_dw.dwd_opay_recharge_electricity_record_di
-        where dt='${dt}'
+        where dt='{pt}'
         group by country_code, dt, service_provider_id, user_role, order_status
     ) t1 
     join 
     (
-        select * from dim_opay_service_provider_df where dt = '${dt}'
+        select * from dim_opay_service_provider_df where dt = '{pt}'
     ) t2 
     on t1.service_provider_id = t2.id
     '''.format(
