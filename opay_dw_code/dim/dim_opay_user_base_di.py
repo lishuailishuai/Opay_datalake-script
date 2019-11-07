@@ -34,40 +34,47 @@ args = {
 }
 
 dag = airflow.DAG('dim_opay_user_base_di',
-                  schedule_interval="0 3 2 * *",
-                  default_args=args,
-                  catchup=False)
+                  schedule_interval="00 03 * * *",
+                  default_args=args
+                  )
 
 ##----------------------------------------- 依赖 ---------------------------------------##
 #依赖前一天分区
-ods_sqoop_base_user_upgrade_df_prev_day_task=HivePartitionSensor(
-      task_id="ods_sqoop_base_user_upgrade_df_prev_day_task",
-      table="ods_sqoop_base_user_upgrade_df",
-      partition="dt='{{ds}}'",
-      schema="opay_dw_ods",
-      poke_interval=60, #依赖不满足时，一分钟检查一次依赖状态
-      dag=dag
-    )
+ods_sqoop_base_user_upgrade_df_task = UFileSensor(
+    task_id='ods_sqoop_base_user_upgrade_df_task',
+    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="opay_dw_ods/opay_user/user_upgrade",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+) 
 
-#依赖前一天分区
-ods_sqoop_base_user_email_di_prev_day_task=HivePartitionSensor(
-      task_id="ods_sqoop_base_user_email_di_prev_day_task",
-      table="ods_sqoop_base_user_email_di",
-      partition="dt='{{ds}}'",
-      schema="opay_dw_ods",
-      poke_interval=60, #依赖不满足时，一分钟检查一次依赖状态
-      dag=dag
-    )
 
-#依赖前一天分区
-ods_sqoop_base_user_di_prev_day_task=HivePartitionSensor(
-      task_id="ods_sqoop_base_user_di_prev_day_task",
-      table="ods_sqoop_base_user_di",
-      partition="dt='{{ds}}'",
-      schema="opay_dw_ods",
-      poke_interval=60, #依赖不满足时，一分钟检查一次依赖状态
-      dag=dag
-    )
+ods_sqoop_base_user_email_di_task = UFileSensor(
+    task_id='ods_sqoop_base_user_email_di_task',
+    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="opay_dw_sqoop_di/opay_user/user_email",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+) 
+
+
+ods_sqoop_base_user_di_task = UFileSensor(
+    task_id='ods_sqoop_base_user_di_task',
+    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="opay_dw_sqoop_di/opay_user/user",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+) 
+
 
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
 def fun_task_timeout_monitor(ds,dag,**op_kwargs):
@@ -75,7 +82,7 @@ def fun_task_timeout_monitor(ds,dag,**op_kwargs):
     dag_ids=dag.dag_id
 
     msg = [
-        {"db": "opay_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "3000"}
+        {"db": "opay_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=NG/dt={pt}".format(pt=ds), "timeout": "3000"}
     ]
 
     TaskTimeoutMonitor().set_task_monitor(msg)
@@ -97,8 +104,12 @@ fill_dim_opay_user_base_di_task = HiveOperator(
     hql='''
     set hive.exec.dynamic.partition.mode=nonstrict;
     set hive.exec.parallel=true; --default false
-    insert overwrite table dim_opay_user_base_di
-    partition(country_code, dt)
+
+    alter table dim_opay_user_base_di drop partition(country_code='NG',dt='{pt}');
+
+    alter table dim_opay_user_base_di add partition(country_code='NG',dt='{pt}');
+
+    insert overwrite table dim_opay_user_base_di partition(country_code, dt)
     select 
         t1.id,
         t1.user_id,
@@ -302,7 +313,7 @@ touchz_data_success= PythonOperator(
     dag=dag
 )
 
-ods_sqoop_base_user_upgrade_df_prev_day_task >>fill_dim_opay_user_base_di_task
-ods_sqoop_base_user_email_di_prev_day_task>>fill_dim_opay_user_base_di_task
-ods_sqoop_base_user_di_prev_day_task >> fill_dim_opay_user_base_di_task
+ods_sqoop_base_user_upgrade_df_task >>fill_dim_opay_user_base_di_task
+ods_sqoop_base_user_email_di_task>>fill_dim_opay_user_base_di_task
+ods_sqoop_base_user_di_task >> fill_dim_opay_user_base_di_task
 fill_dim_opay_user_base_di_task>> touchz_data_success
