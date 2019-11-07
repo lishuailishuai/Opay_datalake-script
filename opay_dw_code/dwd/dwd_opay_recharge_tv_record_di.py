@@ -166,8 +166,14 @@ dwd_opay_recharge_tv_record_di_task = HiveOperator(
     task_id='dwd_opay_recharge_tv_record_di_task',
     hql='''
     set hive.exec.dynamic.partition.mode=nonstrict;
-    insert overwrite table dwd_opay_recharge_tv_record_di 
-    partition(country_code, dt)
+
+    set hive.exec.parallel=true;
+
+    alter table dwd_opay_recharge_tv_record_di drop partition(country_code='NG',dt='{pt}');
+
+    alter table dwd_opay_recharge_tv_record_di add partition(country_code='NG',dt='{pt}');
+
+    insert overwrite table dwd_opay_recharge_tv_record_di partition(country_code, dt)
     select 
         order_di.id,
         order_di.order_no,

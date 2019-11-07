@@ -63,6 +63,7 @@ ods_sqoop_base_weather_per_10min_df_prev_day_task = UFileSensor(
 
 ##----------------------------------------- 变量 ---------------------------------------## 
 
+db_name="oride_dw"
 table_name="test_dim_oride_city"
 hdfs_path="ufile://opay-datalake/oride/oride_dw/"+table_name
 
@@ -74,7 +75,7 @@ def fun_task_timeout_monitor(ds,dag,**op_kwargs):
     dag_ids=dag.dag_id
 
     msg = [
-        {"db": "test_db", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=NG/dt={pt}".format(pt=ds), "timeout": "800"}
+        {"db": "{db}", "table":"{dag_name}".format(db=db_name,dag_name=dag_ids), "partition": "country_code=NG/dt={pt}".format(pt=ds), "timeout": "800"}
     ]
 
     TaskTimeoutMonitor().set_task_monitor(msg)
@@ -97,7 +98,7 @@ def test_dim_oride_city_sql_task(ds):
     set hive.exec.parallel=true;
     set hive.exec.dynamic.partition.mode=nonstrict;
 
-INSERT overwrite TABLE test_db.{table} partition(country_code,dt)
+INSERT overwrite TABLE {db}.{table} partition(country_code,dt)
 
 SELECT city_id,
        --城市 ID
@@ -190,7 +191,8 @@ on lower(cit.city_name)=lower(weather.city)
 '''.format(
         pt=ds,
         now_day='macros.ds_add(ds, +1)',
-        table=table_name
+        table=table_name,
+        db=db_name
         )
 
     #logging.info(HQL)
@@ -212,7 +214,8 @@ def check_key_data_task(ds):
     '''.format(
         pt=ds,
         now_day=airflow.macros.ds_add(ds, +1),
-        table=table_name
+        table=table_name,
+        db=db_name
         )
 
     logging.info('Executing 主键重复校验: %s', check_sql)
@@ -232,6 +235,38 @@ def check_key_data_task(ds):
 
     return flag
 
+def get_country_code(ds,db_name,table_name):
+
+    cursor = get_hive_cursor()
+
+    #获取二位国家码
+    get_sql='''
+
+    select concat_ws(',',collect_set(country_code)) from {db}.{table} WHERE dt='{pt}'
+
+    '''.format(
+        pt=ds,
+        now_day=airflow.macros.ds_add(ds, +1),
+        table=table_name,
+        db=db_name
+        )
+
+    logging.info('Executing 获取二位国家码: %s', get_sql)
+
+    cursor.execute(get_sql)
+
+    res = cursor.fetchone()
+
+    if res[0] >1:
+        country_code=res
+
+    else:
+
+        country_code="nal"
+
+        logging.info('Executing 二位国家码为空，赋予默认值 %s', country_code)
+
+    return country_code
 
 #主流程
 def execution_data_task_id(ds,**kargs):
@@ -250,7 +285,7 @@ def execution_data_task_id(ds,**kargs):
     _check=check_key_data_task(ds)
 
     #生成_SUCCESS
-    msg = [
+    msg = [ 
         {"table":"{dag_name}".format(dag_name=dag.dag_id),"hdfs_path": "{hdfs_path}/country_code=NG/dt={pt}".format(pt=ds,hdfs_path=hdfs_path)}
     ]
 

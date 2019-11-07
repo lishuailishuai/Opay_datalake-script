@@ -188,11 +188,14 @@ dim_opay_user_base_di_task = HiveOperator(
     task_id='dim_opay_user_base_di_task',
     hql='''
     set hive.exec.dynamic.partition.mode=nonstrict;
-    set hive.mapjoin.smalltable.filesize=128000000; --default 25000000
     set hive.exec.parallel=true; --default false
-    set mapreduce.map.memory.mb=4000; --default 3072
-    insert overwrite table dim_opay_user_base_di 
-    partition(country_code, dt)
+
+    alter table dim_opay_user_base_di drop partition(country_code='NG',dt='{pt}');
+
+    alter table dim_opay_user_base_di add partition(country_code='NG',dt='{pt}');
+
+    
+    insert overwrite table dim_opay_user_base_di partition(country_code, dt)
     select 
         user_di.id,
         user_di.user_id,
