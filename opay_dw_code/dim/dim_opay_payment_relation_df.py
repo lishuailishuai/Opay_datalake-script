@@ -76,5 +76,5 @@ dim_opay_payment_relation_df_task = HiveOperator(
 )
 ##---- hive operator end ---##
 
-ods_payment_relation_base_df_task>>dim_opay_payment_relation_df_task
+dim_opay_payment_relation_df_task
 
