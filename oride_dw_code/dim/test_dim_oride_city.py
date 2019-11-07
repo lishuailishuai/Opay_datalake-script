@@ -21,7 +21,7 @@ import json
 import logging
 from airflow.models import Variable
 import requests
-import os
+import os,sys
 
 args = {
         'owner': 'yangmingze',
@@ -192,7 +192,7 @@ FROM
               count(1) counts
       FROM oride_dw_ods.ods_sqoop_base_weather_per_10min_df
       WHERE dt = '{pt}'
-        AND daliy = '{now_day}'
+        AND daliy = '{pt}'
       GROUP BY city,
                weather ) t ) t
 WHERE t.row_num = 1) weather
@@ -200,17 +200,19 @@ on lower(cit.city_name)=lower(weather.city)
 
 '''.format(
         pt=ds,
-        now_day='macros.ds_add({{ds}}, +1)',
+        now_day='macros.ds_add(ds, +1)',
         table=table_name
         )
 
-    logging.info(HQL)
+    #logging.info(HQL)
 
     return HQL
 
 
 #熔断数据，如果数据重复，报错
-def check_key_data_task(cursor):
+def check_key_data_task(ds):
+
+    cursor = get_hive_cursor()
 
     #主键重复校验
     check_sql='''
@@ -241,6 +243,7 @@ def check_key_data_task(cursor):
     return flag
 
 
+#主流程
 def execution_data_task_id(ds,**kargs):
 
     cursor = get_hive_cursor()
@@ -248,11 +251,15 @@ def execution_data_task_id(ds,**kargs):
     #读取sql
     _sql=test_dim_oride_city_sql_task(ds)
 
+    print("asdfasdf")
+
     #执行hive 
     cursor.execute(_sql)
 
+    sys.exit(0)
+
     #读取验证sql
-    _check=check_key_data_task()
+    #_check=check_key_data_task(ds)
 
     #生成_SUCCESS
     msg = [
@@ -262,8 +269,8 @@ def execution_data_task_id(ds,**kargs):
     TaskTouchzSuccess().set_touchz_success(msg)
     
 
-execution_data_task= PythonOperator(
-    task_id='execution_data_task',
+dim_oride_city_task= PythonOperator(
+    task_id='dim_oride_city_task',
     python_callable=execution_data_task_id,
     provide_context=True,
     dag=dag
@@ -271,4 +278,4 @@ execution_data_task= PythonOperator(
 
 ods_sqoop_base_data_city_conf_df_tesk>>sleep_time
 ods_sqoop_base_weather_per_10min_df_prev_day_task>>sleep_time
-sleep_time>>execution_data_task
+sleep_time>>dim_oride_city_task
