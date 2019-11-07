@@ -86,13 +86,13 @@ dwm_opay_topup_channel_di_task = HiveOperator(
         select 
             out_channel_id, country_code, dt, user_role recipient_role, sum(amount) order_amt, count(*) order_cnt, order_status 
         from opay_dw.dwd_opay_user_topup_record_di
-        where dt='${dt}'
+        where dt='{pt}'
         group by country_code, dt, out_channel_id, user_role, order_status
         union all
         select 
             out_channel_id, country_code, dt, 'merchant' recipient_role, sum(amount) order_amt, count(*) order_cnt, order_status 
         from opay_dw.dwd_opay_merchant_topup_record_di
-        where dt='${dt}'
+        where dt='{pt}'
         group by country_code, dt, out_channel_id, order_status
     ) t1
     '''.format(
