@@ -66,13 +66,28 @@ dwm_opay_consumption_user_di_task = HiveOperator(
     task_id='dwm_opay_consumption_user_di_task',
     hql='''
     set hive.exec.dynamic.partition.mode=nonstrict;
-    insert overwrite table dwm_opay_consumption_user_di 
-    partition(country_code, dt)
-    select 
-        country_code, dt, sender_id, sender_type, recipient_id, recipient_type, 'Consumption' service_type,order_status, sum(amount) order_amt, count(*) order_cnt 
-    from opay_dw.dwd_opay_business_collection_record_di
-    where dt='{pt}'
-    group by country_code, dt, sender_id, sender_type, recipient_id, recipient_type, order_status
+    set hive.exec.parallel=true;
+    
+    insert overwrite table dwm_opay_consumption_user_di partition(country_code, dt)
+    SELECT sender_id,
+       sender_type,
+       recipient_id,
+       recipient_type,
+       'Consumption' AS service_type,
+       order_status,
+       sum(amount) AS order_amt,
+       count(*) AS order_cnt,
+       country_code,
+       dt
+FROM opay_dw.dwd_opay_business_collection_record_di
+WHERE dt='{pt}'
+GROUP BY country_code,
+         dt,
+         sender_id,
+         sender_type,
+         recipient_id,
+         recipient_type,
+         order_status
     '''.format(
         pt='{{ds}}'
     ),
