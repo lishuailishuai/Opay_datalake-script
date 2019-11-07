@@ -71,7 +71,7 @@ dwm_opay_consumption_user_di_task = HiveOperator(
     select 
         country_code, dt, sender_id, sender_type, recipient_id, recipient_type, 'Consumption' service_type,order_status, sum(amount) order_amt, count(*) order_cnt 
     from opay_dw.dwd_opay_business_collection_record_di
-    where dt='{dt}'
+    where dt='{pt}'
     group by country_code, dt, sender_id, sender_type, recipient_id, recipient_type, order_status
     '''.format(
         pt='{{ds}}'

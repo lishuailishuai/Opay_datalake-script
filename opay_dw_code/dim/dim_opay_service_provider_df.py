@@ -50,8 +50,10 @@ dim_opay_service_provider_df_task = HiveOperator(
     set hive.exec.dynamic.partition.mode=nonstrict;
     set hive.mapjoin.smalltable.filesize=64000000;
     insert overwrite table opay_dw.dim_opay_service_provider_df
-    partition('{pt}')
-    select id, name, service_type, provider_type from opay_dw_ods.ods_service_provider_base_df
+    partition(dt='{pt}')
+    select 
+        id, name, service_type, provider_type 
+    from opay_dw_ods.ods_service_provider_base_df
     '''.format(
         pt='{{ds}}'
     ),

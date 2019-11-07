@@ -48,10 +48,11 @@ dim_opay_payment_relation_df_task = HiveOperator(
     task_id='dim_opay_payment_relation_df_task',
     hql='''
     set hive.exec.dynamic.partition.mode=nonstrict;
-    set hive.mapjoin.smalltable.filesize=64000000;
     insert overwrite table opay_dw.dim_opay_service_provider_df
-    partition('{pt}')
-    select id, name, payment_relation_type, role_relation_type from opay_dw_ods.ods_payment_relation_base_df
+    partition(dt='{pt}')
+    select 
+        id, name, payment_relation_type, role_relation_type 
+    from opay_dw_ods.ods_payment_relation_base_df
     '''.format(
         pt='{{ds}}'
     ),
