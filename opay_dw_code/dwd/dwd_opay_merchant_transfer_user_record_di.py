@@ -163,7 +163,13 @@ dwd_opay_merchant_transfer_user_record_di_task = HiveOperator(
     task_id='dwd_opay_merchant_transfer_user_record_di_task',
     hql='''
     set hive.exec.dynamic.partition.mode=nonstrict;
-     
+    with user_data as(
+        select * from
+        (
+            select user_id, role, agent_upgrade_time, row_number() over(partition by user_id order by update_time desc) rn
+            from opay_dw.dim_opay_user_base_di
+        ) user_temp where rn = 1
+    )
     insert overwrite table dwd_opay_merchant_transfer_user_record_di 
     partition(country_code, dt)
     select 
