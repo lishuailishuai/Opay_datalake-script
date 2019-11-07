@@ -60,7 +60,7 @@ dag = airflow.DAG('dim_opay_payment_relation_df',
 dim_opay_payment_relation_df_task = HiveOperator(
     task_id='dim_opay_payment_relation_df_task',
     hql='''
-    set hive.exec.dynamic.partition.mode=nonstrict;
+
 
     set hive.exec.parallel=true;
 
