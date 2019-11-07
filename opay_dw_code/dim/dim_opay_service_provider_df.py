@@ -69,6 +69,7 @@ dim_opay_service_provider_df_task = HiveOperator(
     select 
         id, name, service_type, provider_type 
     from opay_dw_ods.ods_service_provider_base_df
+    where dt='{pt}'
     '''.format(
         pt='{{ds}}'
     ),
