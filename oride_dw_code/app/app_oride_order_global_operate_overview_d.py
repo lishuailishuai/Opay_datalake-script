@@ -157,7 +157,7 @@ app_oride_order_global_operate_overview_d_task = HiveOperator(
                 substr(create_time,1,13) as dt_hour,
                 dt
         from oride_dw.dwm_oride_order_base_di 
-        where dt = '${pt}' 
+        where dt = '{pt}' 
         ),
         order_finance as (--财务表
             select  --补贴金额 天 业务线
@@ -166,7 +166,7 @@ app_oride_order_global_operate_overview_d_task = HiveOperator(
                 sum(recharge_amount+reward_amount) as allowance,
                 dt
             from oride_dw.dwd_oride_order_finance_df
-            where dt = '${pt}' and create_date = '${pt}'
+            where dt = '{pt}' and create_date = '{pt}'
             group by city_id,product_id,dt
         ),
                 
@@ -178,11 +178,11 @@ app_oride_order_global_operate_overview_d_task = HiveOperator(
                 weather,
                 dt
             from oride_dw. dim_oride_city
-            where dt = '${pt}' and city_id not in (999001,999008,999002)
+            where dt = '{pt}' and city_id not in (999001,999008,999002)
         )
         
         --插入数据
-        insert overwrite table oride_dw.${table} partition(country_code,dt)
+        insert overwrite table oride_dw.{table} partition(country_code,dt)
         select
             ph.city_id as city_id_p_h,--城市id(城市/业务线/小时)
             ph.city_name as city_name_p_h ,--城市名
@@ -246,7 +246,7 @@ app_oride_order_global_operate_overview_d_task = HiveOperator(
             first_ord.open_date,-- 开城日期
             
             'nal' as country_code,--国家二维码
-            '${pt}' as dt
+            '{pt}' as dt
         from
         ------------小时数据----------------
         (--城市/业务线/小时
@@ -393,7 +393,7 @@ app_oride_order_global_operate_overview_d_task = HiveOperator(
                 dt,
                 count (distinct passenger_id) as act_users
             FROM oride_dw.dim_oride_passenger_base
-            WHERE dt= '${pt}' and substr(login_time,1,10) = dt and  city_id <> 0 and city_id < 999000
+            WHERE dt= '{pt}' and substr(login_time,1,10) = dt and  city_id <> 0 and city_id < 999000
             group by city_id,dt
         )act on ad.city_id = act.city_id and ad.dt = act.dt
         left join
@@ -402,7 +402,7 @@ app_oride_order_global_operate_overview_d_task = HiveOperator(
                     city_id,
                     td_online_driver_num
             from oride_dw.dm_oride_driver_audit_pass_cube_d 
-            where dt = '${pt}'and city_id >0 and product_id  = -10000
+            where dt = '{pt}'and city_id >0 and product_id  = -10000
         )online_driver on  online_driver.city_id = ad.city_id
         left join
         (--计算开城日期  ad
@@ -410,7 +410,7 @@ app_oride_order_global_operate_overview_d_task = HiveOperator(
                 city_id,
                 min(create_date) as open_date
             from dwd_oride_order_base_include_test_df
-            where dt in ( '${pt}','his') 
+            where dt in ( '{pt}','his') 
             and status in (4,5)and city_id <> '999001'
             group by city_id 
         )first_ord on ph.city_id = first_ord.city_id;
