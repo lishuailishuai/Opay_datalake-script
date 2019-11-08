@@ -6,7 +6,7 @@ from airflow.operators.impala_plugin import ImpalaOperator
 from utils.connection_helper import get_hive_cursor
 from airflow.operators.python_operator import PythonOperator
 from airflow.contrib.hooks.redis_hook import RedisHook
-from airflow.hooks.hive_hooks import HiveCliHook
+from airflow.hooks.hive_hooks import HiveCliHook, HiveServer2Hook
 from airflow.operators.hive_to_mysql import HiveToMySqlTransfer
 from airflow.operators.mysql_operator import MySqlOperator
 from airflow.operators.dagrun_operator import TriggerDagRunOperator
@@ -247,6 +247,7 @@ def execution_data_task_id(ds,**kargs):
 
     logging.info('Executing: %s', _sql)
 
+    #执行Hive
     hive_hook.run_cli(_sql)
 
     #读取验证sql
@@ -270,4 +271,4 @@ dim_oride_city_task= PythonOperator(
 
 ods_sqoop_base_data_city_conf_df_tesk>>sleep_time
 ods_sqoop_base_weather_per_10min_df_prev_day_task>>sleep_time
-sleep_time>>execution_data_task_id
+sleep_time>>dim_oride_city_task

@@ -224,13 +224,13 @@ dwm_oride_order_base_di_task = HiveOperator(
            --抢单阶段接驾距离(应答)
            
            if(push1.order_id is not null and push1.driver_id is not null,1,0) as is_td_request_inpush,
-           --抢单阶段应答单量，不包含招手停、拼车、包车(应答)
+           --抢单阶段应答单量，不包含招手停、不包含拼车和包车不走push的部分(应答)
            
            if(push1.order_id is not null and push1.driver_id is not null and ord.is_td_finish=1,push1.distance,0) as finish_order_distance_inpush,
            --抢单阶段接驾距离(完单)
            
            if(push1.order_id is not null and push1.driver_id is not null and ord.is_td_finish=1,1,0) as is_td_finish_inpush,
-           --抢单阶段完单量，不包含招手停、拼车、包车(完单)
+           --抢单阶段完单量，不包含招手停、不包含拼车和包车不走push的部分(完单)
            
            show.driver_show_times as driver_show_times_cnt,
            --骑手端推送给司机总次数（骑手端show节点）

@@ -129,21 +129,26 @@ dwm_opay_aatransfer_relation_di_task = HiveOperator(
     insert overwrite table dwm_opay_aatransfer_relation_di 
     partition(country_code, dt)
     select
-        t1.payment_relation_id, t2.name payment_relation_name, t2.payment_relation_type, t2.role_relation_type, 'AATransfer' service_type, t1.order_status, t1.order_amt, t1.order_cnt, 
+        t1.payment_relation_id, t2.name payment_relation_name, t2.payment_relation_type, t2.role_relation_type, 'AATransfer' service_type, t1.order_status, 
+        t1.order_amt, t1.order_cnt,
         t1.country_code, t1.dt
-    from
+    from 
     (
-        select 
-            payment_relation_id, country_code, dt, sum(amount) order_amt, count(*) order_cnt, transfer_status order_status 
-        from opay_dw.dwd_opay_user_transfer_user_record_di
-        where dt='{pt}'
-        group by country_code, dt, payment_relation_id, transfer_status
-        union all
-        select 
-            payment_relation_id, country_code, dt, sum(amount) order_amt, count(*) order_cnt, order_status 
-        from opay_dw.dwd_opay_merchant_transfer_user_record_di
-        where dt='{pt}'
-        group by country_code, dt, payment_relation_id, order_status
+        select
+             payment_relation_id, sum(amount) order_amt, count(order_no) order_cnt, order_status, country_code, dt
+        from 
+        (
+            select 
+                payment_relation_id, country_code, dt, amount, order_no, transfer_status order_status
+            from opay_dw.dwd_opay_user_transfer_user_record_di
+            where dt='{pt}'
+            union all
+            select 
+                payment_relation_id, country_code, dt, amount, order_no, order_status
+            from opay_dw.dwd_opay_merchant_transfer_user_record_di
+            where dt='{pt}'
+        ) ut 
+        group by ut.country_code, ut.dt, ut.payment_relation_id, ut.order_status 
     ) t1
     join
     (

@@ -93,9 +93,7 @@ def get_all_data_row(ds):
                             <td>{}</td>
                             <td>{}</td>
                             <td>{}</td>
-                            <td>{}</td>
-                            <td>{}</td>
-                            <td>{}</td>
+                            <td>{}</td>                          
                             <!--系统-->
                             <td>{}</td>
                     '''
@@ -127,8 +125,8 @@ def get_all_data_row(ds):
                 cast(new_user_gmv as bigint) as new_user_gmv, -- 当日新注册乘客完单gmv，状态4，5
                 concat(cast(nvl(round((recharge_amount+reward_amount)*100/price,1),0) as string),'%') as b_subsidy_rate,  --b端补贴率
                 concat(cast(nvl(round((price-pay_amount)*100/price,1),0) as string),'%') as c_subsidy_rate, --c端补贴率【gmv状态4，5；实付金额状态5】
-                cast(user_recharge_succ_balance as bigint) as user_recharge_succ_balance, --每日用户充值真实金额
-                recharge_users, --每日充值客户数
+                --cast(user_recharge_succ_balance as bigint) as user_recharge_succ_balance, --每日用户充值真实金额
+                --recharge_users, --每日充值客户数
                 map_request_num,  --地图调用次数
                 concat(cast(nvl(round(opay_pay_failed_cnt*100/opay_pay_cnt,1),0) as string),'%') as opay_pay_failed_rate --opay支付失败占比
                 FROM oride_dw.app_oride_global_operate_report_d
@@ -622,7 +620,7 @@ def send_report_email(ds, **kwargs):
                             <th colspan="9" style="text-align: center;">关键指标</th>
                             <th colspan="8" style="text-align: center;">乘客指标</th>
                             <th colspan="4" style="text-align: center;">司机指标</th>
-                            <th colspan="7" style="text-align: center;">财务</th>
+                            <th colspan="5" style="text-align: center;">财务</th>
                             <th colspan="1" style="text-align: center;">系统</th>
 
                         </tr>
@@ -656,9 +654,7 @@ def send_report_email(ds, **kwargs):
                             <th>GMV</th>
                             <th>当日注册且完单乘客GMV</th>
                             <th>B端补贴率</th>
-                            <th>C端补贴率</th>
-                            <th>每日充值真实金额</th>
-                            <th>每日充值人数</th>
+                            <th>C端补贴率</th>                           
                             <th>地图调用次数</th>
                             <!--系统-->
                             <th>opay支付失败订单占比</th>
