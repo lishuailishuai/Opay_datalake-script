@@ -201,40 +201,43 @@ on lower(cit.city_name)=lower(weather.city)
         table=table_name,
         db=db_name
         )
+    return HQL
 
 
 #熔断数据，如果数据重复，报错
-def check_key_data(ds,**kargs):
+def check_key_data_task(ds):
+
+    cursor = get_hive_cursor()
 
     #主键重复校验
-    HQL_DQC='''
+    check_sql='''
     SELECT count(1)-count(distinct city_id) as cnt
-      FROM oride_dw.{table}
+      FROM {db}.{table}
       WHERE dt='{pt}'
       and country_code in ('NG')
     '''.format(
         pt=ds,
         now_day=airflow.macros.ds_add(ds, +1),
-        table=table_name
+        table=table_name,
+        db=db_name
         )
 
-    cursor = get_hive_cursor()
-    logging.info('Executing 主键重复校验: %s', HQL_DQC)
+    logging.info('Executing 主键重复校验: %s', check_sql)
 
-    cursor.execute(HQL_DQC)
+    cursor.execute(check_sql)
+
     res = cursor.fetchone()
-
+ 
     if res[0] >1:
+        flag=1
         raise Exception ("Error The primary key repeat !", res)
+        sys.exit(1)
     else:
+        flag=0
         print("-----> Notice Data Export Success ......")
-    
-task_check_key_data = PythonOperator(
-    task_id='check_data',
-    python_callable=check_key_data,
-    provide_context=True,
-    dag=dag
-)
+
+    return flag
+
 
 
 #主流程
@@ -250,8 +253,8 @@ def execution_data_task_id(ds,**kargs):
     #执行Hive
     hive_hook.run_cli(_sql)
 
-    #读取验证sql
-    _check=check_key_data_task(ds)
+    #熔断数据
+    check_key_data_task(ds)
 
     #生成_SUCCESS
     """
