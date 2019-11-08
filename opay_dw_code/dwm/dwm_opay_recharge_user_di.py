@@ -116,19 +116,19 @@ dwm_opay_recharge_user_di_task = HiveOperator(
     hql='''
      set hive.exec.dynamic.partition.mode=nonstrict;
     INSERT overwrite TABLE opay_dw.{table} partition(country_code,dt)
-    select user_id,service_type,user_role,sum(amount) amount,order_status,count(1) c ,country,dt
+    select user_id,service_type,user_role,sum(amount) amount,order_status,count(1) c ,country_code,dt
 from 
-    (select user_id,'Electricity' service_type,user_role,amount,order_status,country,dt from opay_dw.dwd_opay_recharge_electricity_record_di where dt='{pt}'
+    (select user_id,'Electricity' service_type,user_role,amount,order_status,country_code,dt from opay_dw.dwd_opay_recharge_electricity_record_di where dt='{pt}'
        union all
-     select user_id,'Betting' service_type,user_role,amount,order_status,country,dt from opay_dw.dwd_opay_recharge_betting_record_di where dt='{pt}'
+     select user_id,'Betting' service_type,user_role,amount,order_status,country_code,dt from opay_dw.dwd_opay_recharge_betting_record_di where dt='{pt}'
        union all
-     select user_id,'MobileData' service_type,user_role,amount,order_status,country,dt from opay_dw.dwd_opay_recharge_mobiledata_record_di where dt='{pt}'
+     select user_id,'MobileData' service_type,user_role,amount,order_status,country_code,dt from opay_dw.dwd_opay_recharge_mobiledata_record_di where dt='{pt}'
        union all
-     select user_id,'TV' service_type,user_role,amount,order_status,country,dt from opay_dw.dwd_opay_recharge_tv_record_di where dt='{pt}'
+     select user_id,'TV' service_type,user_role,amount,order_status,country_code,dt from opay_dw.dwd_opay_recharge_tv_record_di where dt='{pt}'
        union all
-     select user_id,'Airtime' service_type,user_role,amount,order_status,country,dt from opay_dw.dwd_opay_recharge_mobilebill_record_di where dt='{pt}'
+     select user_id,'Airtime' service_type,user_role,amount,order_status,country_code,dt from opay_dw.dwd_opay_recharge_mobilebill_record_di where dt='{pt}'
     )m 
-group by user_id,service_type,user_role,order_status,country,dt;
+group by user_id,service_type,user_role,order_status,country_code,dt;
 
 '''.format(
         pt='{{ds}}',

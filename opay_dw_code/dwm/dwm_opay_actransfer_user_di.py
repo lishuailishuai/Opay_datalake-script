@@ -83,15 +83,15 @@ dwm_opay_actransfer_user_di_task = HiveOperator(
    
      set hive.exec.dynamic.partition.mode=nonstrict;
     INSERT overwrite TABLE opay_dw.{table} partition(country_code,dt)
-     select sender_id,sender_type,service_type,order_status,sum(amount) s_amount,count(1) c,country,dt
+     select sender_id,sender_type,service_type,order_status,sum(amount) s_amount,count(1) c,country_code,dt
 from 
-   (select user_id sender_id,'USER' sender_type,'ACTransfer' service_type,order_status,amount,country,dt from dwd_opay_user_transfer_card_record_di
+   (select user_id sender_id,'USER' sender_type,'ACTransfer' service_type,order_status,amount,country_code,dt from dwd_opay_user_transfer_card_record_di
      where dt='{pt}'
     union all
-    select merchant_id sender_id,'MERCHANT' sender_type,'ACTransfer' service_type,order_status,amount,country,dt from dwd_opay_merchant_transfer_card_record_di
+    select merchant_id sender_id,'MERCHANT' sender_type,'ACTransfer' service_type,order_status,amount,country_code,dt from dwd_opay_merchant_transfer_card_record_di
      where dt='{pt}'
    )m
- group by sender_id,sender_type,service_type,order_status,country,dt;
+ group by sender_id,sender_type,service_type,order_status,country_code,dt;
 
 
 
