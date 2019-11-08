@@ -112,21 +112,20 @@ dwm_opay_topup_channel_di_task = HiveOperator(
     insert overwrite table dwm_opay_topup_channel_di 
     partition(country_code, dt)
     select
-        out_channel_id, recipient_role, 'TopupWithCard' service_type, order_status, order_amt, order_cnt, country_code, dt
+        out_channel_id, recipient_role, 'TopupWithCard' service_type, order_status, sum(amount) order_amt, count(order_no) order_cnt, country_code, dt
     from
     (
         select 
-            out_channel_id, country_code, dt, user_role recipient_role, sum(amount) order_amt, count(*) order_cnt, order_status 
+            out_channel_id, country_code, dt, user_role recipient_role, amount, order_no, order_status
         from opay_dw.dwd_opay_user_topup_record_di
         where dt='{pt}'
-        group by country_code, dt, out_channel_id, user_role, order_status
         union all
         select 
-            out_channel_id, country_code, dt, 'merchant' recipient_role, sum(amount) order_amt, count(*) order_cnt, order_status 
+            out_channel_id, country_code, dt, 'merchant' recipient_role, amount, order_no, order_status 
         from opay_dw.dwd_opay_merchant_topup_record_di
         where dt='{pt}'
-        group by country_code, dt, out_channel_id, order_status
     ) t1
+     group by country_code, dt, out_channel_id, recipient_role, order_status
     '''.format(
         pt='{{ds}}'
     ),
