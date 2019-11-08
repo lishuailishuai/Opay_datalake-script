@@ -41,8 +41,8 @@ dag = airflow.DAG('dim_opay_payment_relation_df',
                   default_args=args,
                   catchup=False)
 
-##------declare variables end ------##
-
+table_name = "dim_opay_payment_relation_df"
+hdfs_path="ufile://opay-datalake/opay/opay_dw/" + table_name
 
 ##----------------------------------------- 依赖 ---------------------------------------##
 # ods_payment_relation_base_df_task = UFileSensor(
@@ -83,5 +83,23 @@ dim_opay_payment_relation_df_task = HiveOperator(
 )
 ##---- hive operator end ---##
 
-dim_opay_payment_relation_df_task
+#生成_SUCCESS
+def check_success(ds,dag,**op_kwargs):
+
+    dag_ids=dag.dag_id
+
+    msg = [
+        {"table":"{dag_name}".format(dag_name=dag_ids),"hdfs_path": "{hdfsPath}/country_code=NG/dt={pt}".format(pt=ds,hdfsPath=hdfs_path)}
+    ]
+
+    TaskTouchzSuccess().set_touchz_success(msg)
+
+touchz_data_success= PythonOperator(
+    task_id='touchz_data_success',
+    python_callable=check_success,
+    provide_context=True,
+    dag=dag
+)
+
+dim_opay_payment_relation_df_task >> touchz_data_success
 
