@@ -36,8 +36,6 @@ class TaskTouchzSuccess(object):
     def get_country_code(self):
 
         cursor = get_hive_cursor()
-
-        print("------")
     
         #获取二位国家码
         get_sql='''
@@ -49,10 +47,14 @@ class TaskTouchzSuccess(object):
             table=self.table_name,
             db=self.db_name
             )
+
+        print(get_sql)
     
         cursor.execute(get_sql)
     
         res = cursor.fetchone()
+
+        print(res)
     
         if len(res[0]) >1:
             country_code_list=res[0]
@@ -175,8 +177,6 @@ class TaskTouchzSuccess(object):
 
             #获取国家列表
             country_code_list=self.get_country_code()
-
-            #country_code_list="CN,NG,SE,BR"
 
 
             # 没有国家分区并且每个目录必须有数据才能生成 Success
