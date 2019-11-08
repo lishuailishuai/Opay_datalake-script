@@ -6,7 +6,7 @@ from airflow.operators.python_operator import PythonOperator
 from airflow.operators.bash_operator import BashOperator
 from airflow.sensors import UFileSensor
 from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
-from plugins.TaskTouchzSuccess import TaskTouchzSuccess
+from plugins.TaskTouchzSuccess_01 import TaskTouchzSuccess
 import logging
 import os,sys
 from airflow.hooks.hive_hooks import HiveCliHook, HiveServer2Hook
@@ -249,20 +249,15 @@ def execution_data_task_id(ds,**kargs):
     # hive_hook.run_cli(_sql)
 
 
-    print(get_country_code(ds,db_name,table_name))
+    #print(get_country_code(ds,db_name,table_name))
 
-    sys.exit(1)
     
-
     #读取验证sql
     _check=check_key_data_task(ds)
 
     #生成_SUCCESS
-    msg = [ 
-        {"table":"{dag_name}".format(dag_name=dag.dag_id),"hdfs_path": "{hdfs_path}/country_code=NG/dt={pt}".format(pt=ds,hdfs_path=hdfs_path)}
-    ]
 
-    TaskTouchzSuccess().set_touchz_success(msg)
+    TaskTouchzSuccess().set_countries_touchz_success(ds,db_name,table_name,hdfs_path)
     
 
 dim_oride_city_task= PythonOperator(
