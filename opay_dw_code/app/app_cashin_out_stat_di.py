@@ -94,7 +94,7 @@ app_cashin_out_stat_di_task = HiveOperator(
     set hive.exec.parallel=true;
 
     insert overwrite table app_cashin_out_stat_di
-    partition(country_count,dt)
+    partition(country_code, dt)
     select 
         sum(amount) order_amt, count(*) order_cnt, 'CashIn' service_type, 'NG' country_code, '{pt}' dt
     from opay_dw_ods.ods_sqoop_base_cash_in_record_di
