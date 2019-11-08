@@ -139,11 +139,10 @@ app_oride_order_global_operate_overview_d_task = HiveOperator(
 
     hql='''
         SET hive.exec.parallel=TRUE;
-        SET hive.exec.dynamic.partition.mode=nonstrict;
-        
+      set hive.exec.dynamic.partition.mode=nonstrict;
         --将数据加载到内存，临时表
         with 
-            order_base as (
+            order_base as (--订单表
             select
                 city_id,
                 order_id,
@@ -158,24 +157,36 @@ app_oride_order_global_operate_overview_d_task = HiveOperator(
                 substr(create_time,1,13) as dt_hour,
                 dt
         from oride_dw.dwm_oride_order_base_di 
-        where dt = '{pt}' 
+        where dt = '${pt}' 
         ),
-            order_finance as (
-                select  --补贴金额 天 业务线
-                    city_id,
-                    product_id,
-                    sum(recharge_amount+reward_amount) as allowance,
-                    dt
-                from oride_dw.dwd_oride_order_finance_df
-                where dt = '{pt}' and create_date = '{pt}'
-                group by city_id,product_id,dt
-            )
+        order_finance as (--财务表
+            select  --补贴金额 天 业务线
+                city_id,
+                product_id,
+                sum(recharge_amount+reward_amount) as allowance,
+                dt
+            from oride_dw.dwd_oride_order_finance_df
+            where dt = '${pt}' and create_date = '${pt}'
+            group by city_id,product_id,dt
+        ),
+                
+        
+        city_info as (--计算天气 只算天 ad
+            select 
+                city_id,
+                city_name,
+                weather,
+                dt
+            from oride_dw. dim_oride_city
+            where dt = '${pt}' and city_id not in (999001,999008,999002)
+        )
+        
         --插入数据
-        insert overwrite table oride_dw.{table} partition(country_code,dt)
+        insert overwrite table oride_dw.${table} partition(country_code,dt)
         select
             ph.city_id as city_id_p_h,--城市id(城市/业务线/小时)
-            city.city_name,--城市名
-            city.weather,--城市天气
+            ph.city_name as city_name_p_h ,--城市名
+            ph.weather as weather_p_h,--城市天气
             ph.product_id as product_id_p_h,--业务线
             ph.order_cnt_p_h,--下单数量(城市/业务线/小时)
             ph.valid_ord_cnt_p_h,--有效订单量((城市/业务线/小时))
@@ -188,6 +199,8 @@ app_oride_order_global_operate_overview_d_task = HiveOperator(
             ph.dt_hour as dt_hour_p_h,--小时(城市/业务线/小时)
         
             ah.city_id as city_id_a_h,--订单id(城市/不分业务线/小时)
+            ah.city_name as city_name_a_h,
+            ah.weather as weather_a_h,
             ah.order_cnt_a_h,--下单数量(城市/不分业务线/小时)
             ah.valid_ord_cnt_a_h,--有效订单量(城市/不分业务线/小时)
             ah.wet_ord_cnt_a_h,--湿单订单量(城市/不分业务线/小时)
@@ -199,6 +212,8 @@ app_oride_order_global_operate_overview_d_task = HiveOperator(
             ah.dt_hour as dt_hour_a_h,--小时(城市/不分业务线/小时)
             
             pd.city_id as city_id_p_d,--订单id(城市/业务线/天)
+            pd.city_name city_name_p_d,
+            pd.weather as weather_p_d,
             pd.product_id as product_id_p_d,--业务线(城市/业务线/天)
             pd.order_cnt_p_d,--订单数量 (城市/业务线/天)
             pd.valid_ord_cnt_p_d, --有效订单数业 (城市/业务线/天)
@@ -213,6 +228,8 @@ app_oride_order_global_operate_overview_d_task = HiveOperator(
             pd.finish_order_driver_p_d,--完单司机数 业务线/天
             
             ad.city_id as city_id_a_d,
+            ad.city_name as city_name_a_d,
+            ad.weather as weather_a_d,
             ad.order_cnt_a_d,--订单数量  (城市/不分业务线/天)
             ad.valid_ord_cnt_a_d,--有效订单数业  (城市/不分业务线/天)
             ad.wet_ord_cnt_a_d, --湿单订单量  (城市/不分业务线/天)
@@ -229,12 +246,14 @@ app_oride_order_global_operate_overview_d_task = HiveOperator(
             first_ord.open_date,-- 开城日期
             
             'nal' as country_code,--国家二维码
-            '{pt}' as dt
+            '${pt}' as dt
         from
         ------------小时数据----------------
         (--城市/业务线/小时
             select
                 ord.city_id,
+                city_info.city_name,
+                city_info.weather,
                 ord.product_id,
                 count(ord.order_id) as order_cnt_p_h,--订单数量 业务线/小时
                 count(if(ord.is_valid=1,ord.order_id,null)) as valid_ord_cnt_p_h, --有效订单数业务线/小时
@@ -247,9 +266,12 @@ app_oride_order_global_operate_overview_d_task = HiveOperator(
                 ord.dt_hour,
                 ord.dt
             from order_base as ord
+            left join city_info on ord.city_id = city_info.city_id
             group by
                 ord.city_id,
                 ord.product_id,
+                city_info.city_name,
+                city_info.weather,
                 ord.dt_hour,
                 ord.dt
         )ph
@@ -257,6 +279,8 @@ app_oride_order_global_operate_overview_d_task = HiveOperator(
         (--城市/不分业务线/小时
             select
                 ord.city_id,
+                city_info.city_name,
+                city_info.weather,
                 count(ord.order_id) as order_cnt_a_h,--订单数量 业务线/小时
                 count(if(ord.is_valid=1,ord.order_id,null)) as valid_ord_cnt_a_h, --有效订单数业务线/小时
                 count(if(ord.is_wet_order=1,ord.order_id,null)) as wet_ord_cnt_a_h, --湿单订单量 业务线/小时
@@ -268,8 +292,11 @@ app_oride_order_global_operate_overview_d_task = HiveOperator(
                 ord.dt_hour,
                 ord.dt
             from order_base as ord
+            left join city_info on ord.city_id = city_info.city_id
             group by
                 ord.city_id,
+                city_info.city_name,
+                city_info.weather,
                 ord.dt_hour,
                 ord.dt
         )ah on  ph.city_id = ah.city_id and ph.dt_hour = ah.dt_hour
@@ -278,6 +305,8 @@ app_oride_order_global_operate_overview_d_task = HiveOperator(
         (--城市/业务线/天
             select
                 ord.city_id,
+                city_info.city_name,
+                city_info.weather,
                 ord.product_id,
             
                 count(ord.order_id) as order_cnt_p_d,--订单数量 业务线/天
@@ -302,8 +331,11 @@ app_oride_order_global_operate_overview_d_task = HiveOperator(
                 select *
                 from order_finance
             )finance_ord on finance_ord.city_id = ord.city_id and finance_ord.product_id = ord.product_id
+            left join city_info on ord.city_id = city_info.city_id
             group by
                 ord.city_id,
+                city_info.city_name,
+                city_info.weather,
                 ord.product_id,
                 finance_ord.allowance,
                 'all_day',
@@ -314,6 +346,8 @@ app_oride_order_global_operate_overview_d_task = HiveOperator(
         (--城市/不分业务线/天
             select
                 ord.city_id,
+                city_info.city_name,
+                city_info.weather,
                 9999  as product_id,
                 count(ord.order_id) as order_cnt_a_d,--订单数量 业务线/天
                 count(if(ord.is_valid=1,ord.order_id,null)) as valid_ord_cnt_a_d, --有效订单数业 业务线/天
@@ -341,25 +375,17 @@ app_oride_order_global_operate_overview_d_task = HiveOperator(
                 from order_finance
                 group by city_id,dt
             )finance_ord on finance_ord.city_id = ord.city_id 
+            left join city_info on city_info.city_id = ord.city_id
             group by
                 ord.city_id,
+                city_info.city_name,
+                city_info.weather,
                 9999,
                 finance_ord.allowance,
                 'all_day',
                 ord.dt
         )ad on ph.city_id = ad.city_id and ph.product_id = ad.product_id and ph.dt = ad.dt and ph.dt_hour = ad.dt_hour
-        
-        left join
-        (--计算天气 只算天 ad
-            select 
-                city_id,
-                city_name,
-                weather,
-                dt
-            from oride_dw. dim_oride_city
-            where dt = '{pt}' and city_id not in (999001,999008,999002)
-        )city  on ph.city_id = city.city_id and ph.dt = city.dt
-        
+
         left join
         (--计算活跃用户  不分业务线 天  不分小时  ad
             SELECT 
@@ -367,7 +393,7 @@ app_oride_order_global_operate_overview_d_task = HiveOperator(
                 dt,
                 count (distinct passenger_id) as act_users
             FROM oride_dw.dim_oride_passenger_base
-            WHERE dt= '{pt}' and substr(login_time,1,10) = dt and  city_id <> 0 and city_id < 999000
+            WHERE dt= '${pt}' and substr(login_time,1,10) = dt and  city_id <> 0 and city_id < 999000
             group by city_id,dt
         )act on ad.city_id = act.city_id and ad.dt = act.dt
         left join
@@ -376,7 +402,7 @@ app_oride_order_global_operate_overview_d_task = HiveOperator(
                     city_id,
                     td_online_driver_num
             from oride_dw.dm_oride_driver_audit_pass_cube_d 
-            where dt = '{pt}'and city_id >0 and product_id  = -10000
+            where dt = '${pt}'and city_id >0 and product_id  = -10000
         )online_driver on  online_driver.city_id = ad.city_id
         left join
         (--计算开城日期  ad
@@ -384,7 +410,7 @@ app_oride_order_global_operate_overview_d_task = HiveOperator(
                 city_id,
                 min(create_date) as open_date
             from dwd_oride_order_base_include_test_df
-            where dt in ( '{pt}','his') 
+            where dt in ( '${pt}','his') 
             and status in (4,5)and city_id <> '999001'
             group by city_id 
         )first_ord on ph.city_id = first_ord.city_id;
