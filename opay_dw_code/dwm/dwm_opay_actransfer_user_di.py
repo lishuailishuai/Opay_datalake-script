@@ -50,7 +50,7 @@ sleep_time = BashOperator(
 dependence_dwd_opay_merchant_transfer_card_record_di_prev_day_task = UFileSensor(
     task_id='dependence_dwd_opay_merchant_transfer_card_record_di_prev_day_task',
     filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opay/opay_dw/dwd_opay_merchant_transfer_card_record_di",
+        hdfs_path_str="opay/opay_dw/dwd_opay_merchant_transfer_card_record_di/country_code=NG",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -62,7 +62,7 @@ dependence_dwd_opay_merchant_transfer_card_record_di_prev_day_task = UFileSensor
 dependence_dwd_opay_user_transfer_card_record_di_prev_day_task = UFileSensor(
     task_id='dependence_dwd_opay_user_transfer_card_record_di_prev_day_task',
     filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opay/opay_dw/dwd_opay_user_transfer_card_record_di",
+        hdfs_path_str="opay/opay_dw/dwd_opay_user_transfer_card_record_di/country_code=NG",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
