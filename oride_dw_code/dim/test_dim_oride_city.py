@@ -243,10 +243,11 @@ def execution_data_task_id(ds,**kargs):
     hive_hook = HiveCliHook()
 
     #读取sql
-    # _sql=test_dim_oride_city_sql_task(ds)
+    _sql=test_dim_oride_city_sql_task(ds)
 
-    # logging.info('Executing: %s', _sql)
-    # hive_hook.run_cli(_sql)
+    logging.info('Executing: %s', _sql)
+    
+    hive_hook.run_cli(_sql)
 
     
     #读取验证sql
