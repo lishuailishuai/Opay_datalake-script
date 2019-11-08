@@ -38,12 +38,6 @@ dag = airflow.DAG('dwm_oride_driver_base_df',
                   schedule_interval="30 01 * * *",
                   default_args=args)
 
-sleep_time = BashOperator(
-    task_id='sleep_id',
-    depends_on_past=False,
-    bash_command='sleep 30',
-    dag=dag)
-
 ##----------------------------------------- 依赖 ---------------------------------------##
 
 # 依赖前一天分区
