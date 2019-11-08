@@ -98,6 +98,7 @@ table_list = [
     ("opay_commission", "commission_top_up_record", "opay_db", "base", 1),
 
 ]
+
 """
     ("opay_transaction","adjustment_decrease_record", "opay_db", "base",3),
     ("opay_transaction","adjustment_increase_record", "opay_db", "base",3),
@@ -261,7 +262,7 @@ for db_name, table_name, conn_id, prefix_name,priority_weight_nm in table_list:
         bash_command='''
             #!/usr/bin/env bash
             sqoop import "-Dorg.apache.sqoop.splitter.allow_text_splitter=true" \
-            -D mapred.job.queue.name=root.users.airflow \
+            -D mapred.job.queue.name=root.opay_collects \
             --connect "jdbc:mysql://{host}:{port}/{schema}?tinyInt1isBit=false&useUnicode=true&characterEncoding=utf8" \
             --username {username} \
             --password {password} \
