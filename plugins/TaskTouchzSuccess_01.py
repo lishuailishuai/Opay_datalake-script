@@ -159,7 +159,7 @@ class TaskTouchzSuccess(object):
 
 
 
-    def set_countries_touchz_success(self,ds,db_name,table_name,data_hdfs_path,country_partition="true",file_type="true"):
+    def countries_touchz_success(self,ds,db_name,table_name,data_hdfs_path,country_partition="true",file_type="true"):
 
         """
         country_partition:是否有国家分区
@@ -174,7 +174,9 @@ class TaskTouchzSuccess(object):
             self.table_name=table_name
 
             #获取国家列表
-            country_code_list=self.get_country_code()
+            #country_code_list=self.get_country_code()
+
+            country_code_list="CN,NG,SE"
 
 
             # 没有国家分区并且每个目录必须有数据才能生成 Success
