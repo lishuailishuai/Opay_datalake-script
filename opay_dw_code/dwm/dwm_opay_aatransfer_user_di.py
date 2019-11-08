@@ -143,7 +143,8 @@ dwm_opay_aatransfer_user_di_task = HiveOperator(
             country_code, dt
         from opay_dw.dwd_opay_merchant_transfer_user_record_di
         where dt='{pt}'
-        group by country_code, dt, merchant_id, recipient_id, 
+        group by country_code, dt, merchant_id, recipient_id, recipient_type, order_status
+    ) t1
     '''.format(
         pt='{{ds}}'
     ),
