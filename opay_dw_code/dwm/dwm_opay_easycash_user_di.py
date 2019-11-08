@@ -73,9 +73,9 @@ dwm_opay_easycash_user_di_task = HiveOperator(
    
      set hive.exec.dynamic.partition.mode=nonstrict;
     INSERT overwrite TABLE opay_dw.{table} partition(country_code,dt)
-   select user_id,'agent' user_role,'easycash' service_type,order_status,sum(amount) s_amount,count(1) c,country,dt
+   select user_id,'agent' user_role,'easycash' service_type,order_status,sum(amount) s_amount,count(1) c,country_code,dt
      from dwd_opay_user_easycash_record_di where dt='{pt}'
-    group by user_id,order_status,country,dt;  
+    group by user_id,order_status,country_code,dt;  
 
 '''.format(
         pt='{{ds}}',
