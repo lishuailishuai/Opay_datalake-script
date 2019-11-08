@@ -6,7 +6,7 @@ from airflow.operators.python_operator import PythonOperator
 from airflow.operators.bash_operator import BashOperator
 from airflow.sensors import UFileSensor
 from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
-from plugins.TaskTouchzSuccess_01 import TaskTouchzSuccess
+from plugins.TaskTouchzSuccess import TaskTouchzSuccess
 import logging
 import os,sys
 from airflow.hooks.hive_hooks import HiveCliHook, HiveServer2Hook
