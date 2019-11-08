@@ -248,9 +248,6 @@ def execution_data_task_id(ds,**kargs):
     # logging.info('Executing: %s', _sql)
     # hive_hook.run_cli(_sql)
 
-
-    #print(get_country_code(ds,db_name,table_name))
-
     
     #读取验证sql
     _check=check_key_data_task(ds)

@@ -36,6 +36,8 @@ class TaskTouchzSuccess(object):
     def get_country_code(self):
 
         cursor = get_hive_cursor()
+
+        print("------")
     
         #获取二位国家码
         get_sql='''
