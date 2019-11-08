@@ -133,12 +133,12 @@ dwm_opay_aatransfer_user_di_task = HiveOperator(
         select 
             out_channel_id, country_code, dt, user_role recipient_role, amount, order_no, order_status
         from opay_dw.dwd_opay_user_topup_record_di
-        where dt='${pt}'
+        where dt='{pt}'
         union all
         select 
             out_channel_id, country_code, dt, 'merchant' recipient_role, amount, order_no, order_status 
         from opay_dw.dwd_opay_merchant_topup_record_di
-        where dt='${pt}'
+        where dt='{pt}'
     ) t1
    group by country_code, dt, out_channel_id, recipient_role, order_status
     '''.format(
