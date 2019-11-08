@@ -15,6 +15,8 @@ from airflow.operators.bash_operator import BashOperator
 from airflow.sensors.named_hive_partition_sensor import NamedHivePartitionSensor
 from airflow.sensors.hive_partition_sensor import HivePartitionSensor
 from airflow.sensors import UFileSensor
+from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
+from plugins.TaskTouchzSuccess import TaskTouchzSuccess
 import json
 import logging
 from airflow.models import Variable
@@ -23,7 +25,7 @@ import os
 
 args = {
     'owner': 'liushuzhen',
-    'start_date': datetime(2019, 10, 28),
+    'start_date': datetime(2019, 11, 7),
     'depends_on_past': False,
     'retries': 3,
     'retry_delay': timedelta(minutes=2),
@@ -49,7 +51,7 @@ sleep_time = BashOperator(
 dependence_dwd_opay_user_pos_transaction_record_di_prev_day_task = UFileSensor(
     task_id='dependence_dwd_opay_user_pos_transaction_record_di_prev_day_task',
     filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opay/opay_dw/dwd_opay_user_pos_transaction_record_di",
+        hdfs_path_str="opay/opay_dw/dwd_opay_user_pos_transaction_record_di/country_code=NG",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -61,7 +63,7 @@ dependence_dwd_opay_user_pos_transaction_record_di_prev_day_task = UFileSensor(
 dependence_dwd_opay_merchant_pos_transaction_record_di_prev_day_task = UFileSensor(
     task_id='dependence_dwd_opay_merchant_pos_transaction_record_di_prev_day_task',
     filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opay/opay_dw/dwd_opay_merchant_pos_transaction_record_di",
+        hdfs_path_str="opay/opay_dw/dwd_opay_merchant_pos_transaction_record_di/country_code=NG",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -103,27 +105,22 @@ group by recipient_id,recipient_type,recipient_role,service_type,order_status,co
 
 
 # 生成_SUCCESS
-touchz_data_success = BashOperator(
+def check_success(ds,dag,**op_kwargs):
 
+    dag_ids=dag.dag_id
+
+    msg = [
+        {"table":"{dag_name}".format(dag_name=dag_ids),"hdfs_path": "{hdfsPath}/country_code=NG/dt={pt}".format(pt=ds,hdfsPath=hdfs_path)}
+    ]
+
+    TaskTouchzSuccess().set_touchz_success(msg)
+
+touchz_data_success= PythonOperator(
     task_id='touchz_data_success',
-
-    bash_command="""
-    line_num=`$HADOOP_HOME/bin/hadoop fs -du -s {hdfs_data_dir} | tail -1 | awk '{{print $1}}'`
-
-    if [ $line_num -eq 0 ]
-    then
-        echo "FATAL {hdfs_data_dir} is empty"
-        $HADOOP_HOME/bin/hadoop fs -touchz {hdfs_data_dir}/_SUCCESS
-    else
-        echo "DATA EXPORT Successed ......"
-        $HADOOP_HOME/bin/hadoop fs -touchz {hdfs_data_dir}/_SUCCESS
-    fi
-    """.format(
-        pt='{{ds}}',
-        now_day='{{macros.ds_add(ds, +1)}}',
-        hdfs_data_dir=hdfs_path + '/dt={{ds}}'
-    ),
-    dag=dag)
+    python_callable=check_success,
+    provide_context=True,
+    dag=dag
+)
 
 dependence_dwd_opay_user_pos_transaction_record_di_prev_day_task >> \
 dependence_dwd_opay_merchant_pos_transaction_record_di_prev_day_task >> \

@@ -6,7 +6,7 @@ from airflow.operators.python_operator import PythonOperator
 from airflow.operators.bash_operator import BashOperator
 from airflow.sensors import UFileSensor
 from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
-from plugins.TaskTouchzSuccess_01 import TaskTouchzSuccess
+from plugins.TaskTouchzSuccess import TaskTouchzSuccess
 import logging
 import os,sys
 from airflow.hooks.hive_hooks import HiveCliHook, HiveServer2Hook
@@ -243,10 +243,11 @@ def execution_data_task_id(ds,**kargs):
     hive_hook = HiveCliHook()
 
     #读取sql
-    # _sql=test_dim_oride_city_sql_task(ds)
+    _sql=test_dim_oride_city_sql_task(ds)
 
-    # logging.info('Executing: %s', _sql)
-    # hive_hook.run_cli(_sql)
+    logging.info('Executing: %s', _sql)
+    
+    hive_hook.run_cli(_sql)
 
     
     #读取验证sql

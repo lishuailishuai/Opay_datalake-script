@@ -118,18 +118,6 @@ dependence_dwd_oride_order_finance_df_prev_day_task = UFileSensor(
 )
 
 # 依赖前一天分区
-dependence_dwd_oride_passenger_recharge_df_prev_day_task = UFileSensor(
-    task_id='dwd_oride_passenger_recharge_df',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw/dwd_oride_passenger_recharge_df/country_code=nal",
-        pt='{{ds}}'
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
-
-# 依赖前一天分区
 dependence_dm_oride_driver_order_base_cube_d_prev_day_task = UFileSensor(
     task_id='dm_oride_driver_order_base_cube_d',
     filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
@@ -431,7 +419,7 @@ group by country_code,
          nvl(product_id,-10000)
 with cube),
 
---用户充值相关
+--用户充值相关（该业务已经下线）
 passenger_recharge_data as
 (
 select country_code,
@@ -635,7 +623,6 @@ dependence_dm_oride_driver_audit_pass_cube_d_prev_day_task >> \
 dependence_dm_oride_driver_base_d_prev_day_task >>\
 dependence_server_magic_now_day_task >>\
 dependence_dwd_oride_order_finance_df_prev_day_task >>\
-dependence_dwd_oride_passenger_recharge_df_prev_day_task >>\
 dependence_dm_oride_driver_order_base_cube_d_prev_day_task >>\
 sleep_time >> \
 app_oride_global_operate_report_d_task >> \
