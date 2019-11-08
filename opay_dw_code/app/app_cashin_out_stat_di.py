@@ -93,7 +93,7 @@ app_cashin_out_stat_di_task = HiveOperator(
     set hive.exec.dynamic.partition.mode=nonstrict;
     set hive.exec.parallel=true;
 
-    insert overwrite table app_cashin_out_stat_di_task
+    insert overwrite table app_cashin_out_stat_di
     partition(country_count='NG',dt='{pt}')
     select 
         sum(amount) order_amt, count(*) order_cnt, 'CashIn' service_type
