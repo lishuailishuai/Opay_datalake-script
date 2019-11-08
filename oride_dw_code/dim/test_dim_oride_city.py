@@ -250,7 +250,7 @@ def execution_data_task_id(ds,**kargs):
 
     
     #读取验证sql
-    _check=check_key_data_task(ds)
+    #_check=check_key_data_task(ds)
 
     #生成_SUCCESS
 

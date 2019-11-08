@@ -176,8 +176,6 @@ class TaskTouchzSuccess(object):
             #获取国家列表
             country_code_list=self.get_country_code()
 
-            #country_code_list="CN,NG,SE,BR"
-
 
             # 没有国家分区并且每个目录必须有数据才能生成 Success
             if country_partition.lower()=="false" and file_type.lower()=="true":
