@@ -135,15 +135,16 @@ dwm_opay_aatransfer_user_di_task = HiveOperator(
             user_id sender_id, 'USER' sender_type, recipient_id, recipient_type, transfer_status order_status, sum(amount) order_amt, count(*) order_cnt, 
             country_code, dt
         from opay_dw.dwd_opay_user_transfer_user_record_di
-        where dt='${pt}'
+        where dt='{pt}'
         group by country_code, dt, user_id, recipient_id, recipient_type, transfer_status
         union all
         select 
             merchant_id sender_id, 'MERCHANT' sender_type, recipient_id, recipient_type, order_status, sum(amount) order_amt, count(*) order_cnt, 
             country_code, dt
         from opay_dw.dwd_opay_merchant_transfer_user_record_di
-        where dt='${pt}'
-        group by country_code, dt, merchant_id, recipient_id, 
+        where dt='{pt}'
+        group by country_code, dt, merchant_id, recipient_id, recipient_type, order_status
+    ) t1
     '''.format(
         pt='{{ds}}'
     ),
