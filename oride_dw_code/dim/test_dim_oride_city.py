@@ -63,7 +63,7 @@ ods_sqoop_base_weather_per_10min_df_prev_day_task = UFileSensor(
 
 ##----------------------------------------- 变量 ---------------------------------------## 
 
-db_name="oride_dw"
+db_name="test_db"
 table_name="test_dim_oride_city"
 hdfs_path="ufile://opay-datalake/oride/oride_dw/"+table_name
 
@@ -235,38 +235,7 @@ def check_key_data_task(ds):
 
     return flag
 
-def get_country_code(ds,db_name,table_name):
 
-    cursor = get_hive_cursor()
-
-    #获取二位国家码
-    get_sql='''
-
-    select concat_ws(',',collect_set(country_code)) from {db}.{table} WHERE dt='{pt}'
-
-    '''.format(
-        pt=ds,
-        now_day=airflow.macros.ds_add(ds, +1),
-        table=table_name,
-        db=db_name
-        )
-
-    logging.info('Executing 获取二位国家码: %s', get_sql)
-
-    cursor.execute(get_sql)
-
-    res = cursor.fetchone()
-
-    if res[0] >1:
-        country_code=res
-
-    else:
-
-        country_code="nal"
-
-        logging.info('Executing 二位国家码为空，赋予默认值 %s', country_code)
-
-    return country_code
 
 #主流程
 def execution_data_task_id(ds,**kargs):
@@ -274,12 +243,16 @@ def execution_data_task_id(ds,**kargs):
     hive_hook = HiveCliHook()
 
     #读取sql
-    _sql=test_dim_oride_city_sql_task(ds)
+    # _sql=test_dim_oride_city_sql_task(ds)
 
-    logging.info('Executing: %s', _sql)
-    hive_hook.run_cli(_sql)
+    # logging.info('Executing: %s', _sql)
+    # hive_hook.run_cli(_sql)
+
+
+    print(get_country_code(ds,db_name,table_name))
+
+    sys.exit(1)
     
-    #执行hive
 
     #读取验证sql
     _check=check_key_data_task(ds)

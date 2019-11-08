@@ -216,7 +216,7 @@ dwd_opay_recharge_tv_record_di_task = HiveOperator(
             when 'GH' then 'GH'
             else 'NG'
             end as country_code,
-        {pt} dt
+        '{pt}' as dt
     from
     (
         select 
