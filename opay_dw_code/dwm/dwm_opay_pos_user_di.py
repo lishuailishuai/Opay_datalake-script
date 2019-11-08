@@ -39,12 +39,6 @@ dag = airflow.DAG('dwm_opay_pos_user_di',
                   default_args=args,
                   catchup=False)
 
-sleep_time = BashOperator(
-    task_id='sleep_id',
-    depends_on_past=False,
-    bash_command='sleep 30',
-    dag=dag)
-
 ##----------------------------------------- 依赖 ---------------------------------------##
 
 # 依赖前一天分区
@@ -78,13 +72,12 @@ hdfs_path = "ufile://opay-datalake/opay/opay_dw/" + table_name
 
 ##----------------------------------------- 脚本 ---------------------------------------##
 
-dwm_opay_pos_user_di_task = HiveOperator(
+def dwm_opay_pos_user_di_task(ds):
+    HQL = '''
+    set hive.exec.parallel=true;
+    set hive.exec.dynamic.partition.mode=nonstrict;
 
-    task_id='dwm_opay_pos_user_di_task',
-    hql='''
-   
-     set hive.exec.dynamic.partition.mode=nonstrict;
-    INSERT overwrite TABLE opay_dw.{table} partition(country_code,dt)
+INSERT overwrite TABLE opay_dw.{table} partition(country_code,dt)
     select recipient_id,recipient_type,recipient_role,service_type,order_status,sum(amount) s_amount,count(1) c,country,dt
 from 
     (select user_id recipient_id,'USER' recipient_type,user_role recipient_role,'pos' service_type,order_status,amount,country,dt
@@ -96,34 +89,50 @@ from
 group by recipient_id,recipient_type,recipient_role,service_type,order_status,country,dt;
 
 '''.format(
-        pt='{{ds}}',
-        now_day='{{macros.ds_add(ds, +1)}}',
-        table=table_name
-    ),
-    schema='opay_dw',
-    dag=dag)
+        pt=ds,
+        table=table_name,
+        db=db_name
+    )
+    return HQL
 
 
-# 生成_SUCCESS
-def check_success(ds,dag,**op_kwargs):
+# 熔断数据，如果数据重复，报错
+def check_key_data_task(ds):
+    cursor = get_hive_cursor()
 
-    dag_ids=dag.dag_id
+# 主流程
+def execution_data_task_id(ds, **kargs):
+    hive_hook = HiveCliHook()
 
-    msg = [
-        {"table":"{dag_name}".format(dag_name=dag_ids),"hdfs_path": "{hdfsPath}/country_code=NG/dt={pt}".format(pt=ds,hdfsPath=hdfs_path)}
-    ]
+    # 读取sql
+    _sql = dwm_opay_pos_user_di_task(ds)
 
-    TaskTouchzSuccess().set_touchz_success(msg)
+    logging.info('Executing: %s', _sql)
 
-touchz_data_success= PythonOperator(
-    task_id='touchz_data_success',
-    python_callable=check_success,
+    # 执行Hive
+    hive_hook.run_cli(_sql)
+
+    # 熔断数据
+    check_key_data_task(ds)
+
+    # 生成_SUCCESS
+    """
+    第一个参数true: 数据目录是有country_code分区。false 没有
+    第二个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
+
+    """
+    TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "true", "true")
+
+
+dwm_opay_pos_user_di_task = PythonOperator(
+    task_id='dwm_opay_pos_user_di_task',
+    python_callable=execution_data_task_id,
     provide_context=True,
     dag=dag
 )
 
+
+
 dependence_dwd_opay_user_pos_transaction_record_di_prev_day_task >> \
 dependence_dwd_opay_merchant_pos_transaction_record_di_prev_day_task >> \
-sleep_time >> \
-dwm_opay_pos_user_di_task >> \
-touchz_data_success
+dwm_opay_pos_user_di_task
