@@ -223,7 +223,7 @@ def check_key_data_task(ds):
     cursor.execute(check_sql)
 
     res = cursor.fetchone()
-    print(res)
+ 
 
     if res[0] >1:
         flag=1
@@ -254,7 +254,7 @@ def execution_data_task_id(ds,**kargs):
 
     #生成_SUCCESS
 
-    TaskTouchzSuccess().set_countries_touchz_success(ds,db_name,table_name,hdfs_path)
+    TaskTouchzSuccess().countries_touchz_success(ds,db_name,table_name,hdfs_path,"true","false")
     
 
 dim_oride_city_task= PythonOperator(
