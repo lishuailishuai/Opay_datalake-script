@@ -40,12 +40,6 @@ dag = airflow.DAG( 'dim_oride_city',
     catchup=False) 
 
 
-sleep_time = BashOperator(
-    task_id='sleep_id',
-    depends_on_past=False,
-    bash_command='sleep 30',
-    dag=dag)
-
 ##----------------------------------------- 依赖 ---------------------------------------## 
 
 
@@ -272,6 +266,5 @@ dim_oride_city_task= PythonOperator(
 )
 
 
-ods_sqoop_base_data_city_conf_df_tesk>>sleep_time
-ods_sqoop_base_weather_per_10min_df_prev_day_task>>sleep_time
-sleep_time>>dim_oride_city_task
+ods_sqoop_base_data_city_conf_df_tesk>>dim_oride_city_task
+ods_sqoop_base_weather_per_10min_df_prev_day_task>>dim_oride_city_task
