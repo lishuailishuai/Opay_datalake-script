@@ -129,4 +129,7 @@ touchz_data_success= PythonOperator(
     dag=dag
 )
 
+
+ods_sqoop_base_cash_in_record_di_prev_day_task >> app_cashin_out_stat_di_task
+ods_sqoop_base_cash_out_record_di_prev_day_task >> app_cashin_out_stat_di_task
 app_cashin_out_stat_di_task >> touchz_data_success
