@@ -82,14 +82,14 @@ dwm_opay_receivemoney_recipient_di_task = HiveOperator(
      set hive.exec.dynamic.partition.mode=nonstrict;
      set hive.exec.parallel=true; 
     INSERT overwrite TABLE opay_dw.{table} partition(country_code,dt)
-    select recipient_id,recipient_type,recipient_role,service_type,order_status,sum(amount) s_amount,count(1) c,country,dt
+    select recipient_id,recipient_type,recipient_role,service_type,order_status,sum(amount) s_amount,count(1) c,country_code,dt
 from 
-    (select merchant_id recipient_id,'MERCHANT' recipient_type,'merchant' recipient_role,'receivemoney' service_type,order_status,amount,country,dt from dwd_opay_merchant_receive_money_record_di
+    (select merchant_id recipient_id,'MERCHANT' recipient_type,'merchant' recipient_role,'receivemoney' service_type,order_status,amount,country_code,dt from dwd_opay_merchant_receive_money_record_di
      where dt='{pt}'
       union all
-    select user_id recipient_id,'USER' recipient_type,user_role recipient_role,'receivemoney' service_type,order_status,amount,country,dt from dwd_opay_user_receive_money_record_di
+    select user_id recipient_id,'USER' recipient_type,user_role recipient_role,'receivemoney' service_type,order_status,amount,country_code,dt from dwd_opay_user_receive_money_record_di
      where dt='{pt}')m
-group by recipient_id,recipient_type,recipient_role,service_type,order_status,country,dt;
+group by recipient_id,recipient_type,recipient_role,service_type,order_status,country_code,dt;
 
 '''.format(
         pt='{{ds}}',
