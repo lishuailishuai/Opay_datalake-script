@@ -66,7 +66,7 @@ class TaskTouchzSuccess(object):
         return country_code_list
 
    
-    def data_not_empty_file_touchz(self):
+    def data_not_file_type_touchz(self):
 
         """
             非空文件 touchz _SUCCESS
@@ -111,7 +111,7 @@ class TaskTouchzSuccess(object):
             sys.exit(1)
 
 
-    def data_empty_file_touchz(self):
+    def data_file_type_touchz(self):
 
         """
             空文件 touchz _SUCCESS
@@ -157,63 +157,60 @@ class TaskTouchzSuccess(object):
 
 
 
-    def set_countries_touchz_success(self,ds,db_name,table_name,data_hdfs_path,country_partition="true",empty_file="true"):
+    def set_countries_touchz_success(self,ds,db_name,table_name,data_hdfs_path,country_partition="true",file_type="true"):
 
         """
         country_partition:是否有国家分区
-        empty_file:是否空文件也生成 success
+        file_type:是否空文件也生成 success
             
         """
 
         try:
 
+            self.db_name=db_name
+            self.ds=ds
+            self.table_name=table_name
+
             #获取国家列表
             country_code_list=get_country_code()
 
 
+            # 没有国家分区并且每个目录必须有数据才能生成 Success
+            if country_partition.lower()=="false" and file_type.lower()=="true":
+
+                #输出不同国家的数据路径
+                self.hdfs_data_dir_str=data_hdfs_path+"/dt="+self.ds
+
+                data_not_file_type_touchz()
+
+            # 没有国家分区并且数据为空也生成 Success
+            if country_partition.lower()=="false" and file_type.lower()=="false":
+
+                #输出不同国家的数据路径
+                self.hdfs_data_dir_str=data_hdfs_path+"/dt="+self.ds
+
+                data_file_type_touchz()
+
+
             for country_code_word in country_code_list.split(","):
-
-                # 没有国家分区并且每个目录必须有数据才能生成 Success
-                if country_partition.lower()=="false" && empty_file.lower()=="true":
-
-                    #输出不同国家的数据路径
-                    self.hdfs_data_dir_str=data_hdfs_path+"/dt="+ds
-
-                    data_not_empty_file_touchz()
 
 
                 #有国家分区并且每个目录必须有数据才能生成 Success
-                if country_partition.lower()=="true" && empty_file.lower()=="true":
+                if country_partition.lower()=="true" and file_type.lower()=="true":
 
                     #输出不同国家的数据路径
-                    self.hdfs_data_dir_str=data_hdfs_path+"/country_code="+country_code_word+"/dt="+ds
+                    self.hdfs_data_dir_str=data_hdfs_path+"/country_code="+country_code_word+"/dt="+self.ds
 
-                    data_not_empty_file_touchz()
+                    data_not_file_type_touchz()
 
-                # 没有国家分区并且数据为空也生成 Success
-                if country_partition.lower()=="false" && empty_file.lower()=="false":
-
-                    #输出不同国家的数据路径
-                    self.hdfs_data_dir_str=data_hdfs_path+"/dt="+ds
-
-                    data_empty_file_touchz()
-
-
+                
                 #有国家分区并且数据为空也生成 Success
-                if country_partition.lower()=="true" && empty_file.lower()=="false":
+                if country_partition.lower()=="true" and file_type.lower()=="false":
 
                     #输出不同国家的数据路径
-                    self.hdfs_data_dir_str=data_hdfs_path+"/country_code="+country_code_word+"/dt="+ds
+                    self.hdfs_data_dir_str=data_hdfs_path+"/country_code="+country_code_word+"/dt="+self.ds
 
-                    data_not_empty_file_touchz()
-
-
-                    
-
-
-
-
-
+                    data_not_file_type_touchz()
 
             
         except Exception as e:
