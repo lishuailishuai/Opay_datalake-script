@@ -12,6 +12,7 @@ from airflow.models import Variable
 from plugins.comwx import ComwxApi
 import logging
 import json
+import MySQLdb
 
 args = {
     'owner': 'wuduo',
@@ -273,7 +274,7 @@ def init_mysql_table(**op_kwargs):
             # logging.info(record)
             if not record:
                 break
-            rows.append("('{}')".format("','".join([str(x).replace("'", "\\'") for x in record])))
+            rows.append("('{}')".format("','".join([str(MySQLdb.escape_string(str(x)), encoding="utf-8") for x in record])))
             # logging.info(rows)
             cnt += 1
             if cnt >= 1000:
