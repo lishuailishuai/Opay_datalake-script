@@ -54,6 +54,17 @@ dim_opay_user_base_di_prev_day_task = UFileSensor(
     dag=dag
 )
 
+ods_sqoop_base_merchant_acquiring_record_di_prev_day_task = UFileSensor(
+    task_id='ods_sqoop_base_merchant_acquiring_record_di_prev_day_task',
+    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="opay_dw_sqoop_di/opay_transaction/merchant_acquiring_record",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
 def fun_task_timeout_monitor(ds,dag,**op_kwargs):
 
@@ -268,4 +279,5 @@ touchz_data_success= PythonOperator(
 )
 
 dim_opay_user_base_di_prev_day_task >> dwd_opay_merchant_acquiring_record_di_task
+ods_sqoop_base_merchant_acquiring_record_di_prev_day_task >> dwd_opay_merchant_acquiring_record_di_task
 dwd_opay_merchant_acquiring_record_di_task >> touchz_data_success
