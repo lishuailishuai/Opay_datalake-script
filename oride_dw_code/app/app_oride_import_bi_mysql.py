@@ -29,7 +29,8 @@ dag = airflow.DAG(
     'app_oride_import_bi_mysql',
     schedule_interval="30 05 * * *",
     max_active_runs=1,
-    default_args=args
+    default_args=args,
+    concurrency=5
 )
 
 sleep_time = BashOperator(
@@ -214,6 +215,7 @@ def init_mysql_table(**op_kwargs):
     hive_table = op_kwargs.get('table')
     mysql_cursor = op_kwargs.get('mysql_conn')
     dt = op_kwargs.get('ds')
+    overwrite = op_kwargs.get('overwrite')
 
     hive_columns = get_hive_table_columns(hive_cursor, hive_db, hive_table)
     cols = []
@@ -256,7 +258,10 @@ def init_mysql_table(**op_kwargs):
     wxapi = ComwxApi('wwd26d45f97ea74ad2', 'BLE_v25zCmnZaFUgum93j3zVBDK-DjtRkLisI_Wns4g', '1000011')
     try:
         mcursor = mysql_connectors[mysql_cursor]
-        mcursor.execute("DELETE FROM {db}.{table} WHERE dt = '{dt}'".format(db=hive_db, table=hive_table, dt=dt))
+        if overwrite:
+            mcursor.execute("TRUNCATE TABLE {db}.{table}".format(db=hive_db, table=hive_table))
+        else:
+            mcursor.execute("DELETE FROM {db}.{table} WHERE dt = '{dt}'".format(db=hive_db, table=hive_table, dt=dt))
         isql = 'replace into {db}.{table} (`{cols}`) values '.format(
             db=hive_db,
             table=hive_table,
@@ -310,6 +315,11 @@ for hive_db_info in hive_sync_db:
     table_info = json.loads(hive_db_info)
     table = table_info.get('hive_table', None)
     db = table_info.get('hive_db', None)
+    overwrite = table_info.get('overwrite', '')
+    if overwrite.lower() == 'true':
+        overwrite = True
+    else:
+        overwrite = False
     mysql_conn = table_info.get('mysql_conn', None)
     if not table or not db or not mysql_conn:
         continue
@@ -375,6 +385,7 @@ for hive_db_info in hive_sync_db:
             "conn": hive_cursor,
             "db": db,
             "table": table,
+            "overwrite": overwrite,
             "mysql_conn": mysql_conn,
             "ds": '{{ ds }}'
         },
