@@ -59,14 +59,14 @@ db_name,table_name,conn_id,prefix_name,priority_weight
 #
 
 table_list = [
-    ("opay_bigorder","big_order", "opay_db", "base",3),
-    ("opay_transaction","user_transfer_user_record", "opay_db", "base",3),
-    ("opay_user","user", "opay_db", "base",3),
-    ("opay_transaction","merchant_transfer_user_record", "opay_db", "base",3),
-    ("opay_transaction","airtime_topup_record", "opay_db", "base",3),
-    ("opay_transaction","betting_topup_record", "opay_db", "base",3),
-    ("opay_transaction","user_topup_record", "opay_db", "base",3),
-    ("opay_user","user_upgrade", "opay_db", "base",3),
+    # ("opay_bigorder","big_order", "opay_db", "base",3),
+    # ("opay_transaction","user_transfer_user_record", "opay_db", "base",3),
+    # ("opay_user","user", "opay_db", "base",3),
+    # ("opay_transaction","merchant_transfer_user_record", "opay_db", "base",3),
+    # ("opay_transaction","airtime_topup_record", "opay_db", "base",3),
+    # ("opay_transaction","betting_topup_record", "opay_db", "base",3),
+    # ("opay_transaction","user_topup_record", "opay_db", "base",3),
+    # ("opay_user","user_upgrade", "opay_db", "base",3),
 
     ("opay_bigorder","merchant_order", "opay_db", "base",2),
     ("opay_account","account_user", "opay_db", "base", 2),
