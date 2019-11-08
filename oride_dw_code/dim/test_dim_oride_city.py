@@ -254,7 +254,7 @@ def execution_data_task_id(ds,**kargs):
 
     #生成_SUCCESS
 
-    TaskTouchzSuccess().countries_touchz_success(ds,db_name,table_name,hdfs_path,"true","false")
+    TaskTouchzSuccess().countries_touchz_success(ds,db_name,table_name,hdfs_path,"true","true")
     
 
 dim_oride_city_task= PythonOperator(
