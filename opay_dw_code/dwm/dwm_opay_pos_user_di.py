@@ -39,12 +39,6 @@ dag = airflow.DAG('dwm_opay_pos_user_di',
                   default_args=args,
                   catchup=False)
 
-sleep_time = BashOperator(
-    task_id='sleep_id',
-    depends_on_past=False,
-    bash_command='sleep 30',
-    dag=dag)
-
 ##----------------------------------------- 依赖 ---------------------------------------##
 
 # 依赖前一天分区
@@ -82,18 +76,19 @@ dwm_opay_pos_user_di_task = HiveOperator(
 
     task_id='dwm_opay_pos_user_di_task',
     hql='''
-   
-     set hive.exec.dynamic.partition.mode=nonstrict;
-    INSERT overwrite TABLE opay_dw.{table} partition(country_code,dt)
-    select recipient_id,recipient_type,recipient_role,service_type,order_status,sum(amount) s_amount,count(1) c,country,dt
+     set hive.exec.parallel=true;
+    set hive.exec.dynamic.partition.mode=nonstrict;
+
+INSERT overwrite TABLE opay_dw.{table} partition(country_code,dt)
+    select recipient_id,recipient_type,recipient_role,service_type,order_status,sum(amount) s_amount,count(1) c,country_code,dt
 from 
-    (select user_id recipient_id,'USER' recipient_type,user_role recipient_role,'pos' service_type,order_status,amount,country,dt
+    (select user_id recipient_id,'USER' recipient_type,user_role recipient_role,'pos' service_type,order_status,amount,country_code,dt
     from dwd_opay_user_pos_transaction_record_di where dt='{pt}'
       union all
-    select merchant_id recipient_id,'MERCHANT' recipient_type,'merchant' recipient_role,'pos' service_type,order_status, amount,country,dt
+    select merchant_id recipient_id,'MERCHANT' recipient_type,'merchant' recipient_role,'pos' service_type,order_status, amount,country_code,dt
     from dwd_opay_merchant_pos_transaction_record_di  where dt='{pt}'
     ) m 
-group by recipient_id,recipient_type,recipient_role,service_type,order_status,country,dt;
+group by recipient_id,recipient_type,recipient_role,service_type,order_status,country_code,dt;
 
 '''.format(
         pt='{{ds}}',
@@ -122,8 +117,10 @@ touchz_data_success= PythonOperator(
     dag=dag
 )
 
+
+
+
 dependence_dwd_opay_user_pos_transaction_record_di_prev_day_task >> \
 dependence_dwd_opay_merchant_pos_transaction_record_di_prev_day_task >> \
-sleep_time >> \
 dwm_opay_pos_user_di_task >> \
 touchz_data_success

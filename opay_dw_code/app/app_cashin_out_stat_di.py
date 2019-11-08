@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import airflow
 from datetime import datetime, timedelta
 from airflow.operators.hive_operator import HiveOperator
@@ -23,8 +22,11 @@ from airflow.models import Variable
 import requests
 import os
 
+##
+# 央行月报汇报指标
+#
 args = {
-    'owner': 'liushuzhen',
+    'owner': 'xiedong',
     'start_date': datetime(2019, 11, 7),
     'depends_on_past': False,
     'retries': 3,
@@ -34,75 +36,82 @@ args = {
     'email_on_retry': False,
 }
 
-dag = airflow.DAG('dwm_opay_topup_recipient_di',
-                  schedule_interval="30 03 * * *",
+
+dag = airflow.DAG('app_cashin_out_stat_di',
+                 schedule_interval="20 03 * * *",
                   default_args=args,
                   catchup=False)
 
-sleep_time = BashOperator(
-    task_id='sleep_id',
-    depends_on_past=False,
-    bash_command='sleep 30',
-    dag=dag)
-
 ##----------------------------------------- 依赖 ---------------------------------------##
-
-# 依赖前一天分区
-dependence_dwd_opay_merchant_topup_record_di_prev_day_task = UFileSensor(
-    task_id='dependence_dwd_opay_merchant_topup_record_di_prev_day_task',
+ods_sqoop_base_cash_in_record_di_prev_day_task = UFileSensor(
+    task_id='ods_sqoop_base_cash_in_record_di_prev_day_task',
     filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opay/opay_dw/dwd_opay_merchant_topup_record_di/country_code=NG",
+        hdfs_path_str="opay_dw_sqoop_di/opay_transaction/cash_in_record",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
-# 依赖前一天分区
-dependence_dwd_opay_user_topup_record_di_prev_day_task = UFileSensor(
-    task_id='dependence_dwd_opay_user_topup_record_di_prev_day_task',
+
+ods_sqoop_base_cash_out_record_di_prev_day_task = UFileSensor(
+    task_id='ods_sqoop_base_cash_out_record_di_prev_day_task',
     filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opay/opay_dw/dwd_opay_user_topup_record_di/country_code=NG",
+        hdfs_path_str="opay_dw_sqoop_di/opay_transaction/cash_out_record",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
-##----------------------------------------- 变量 ---------------------------------------##
 
-table_name = "dwm_opay_topup_recipient_di"
-hdfs_path = "ufile://opay-datalake/opay/opay_dw/" + table_name
+##----------------------------------------- 任务超时监控 ---------------------------------------##
+def fun_task_timeout_monitor(ds,dag,**op_kwargs):
 
-##----------------------------------------- 脚本 ---------------------------------------##
+    dag_ids=dag.dag_id
 
-dwm_opay_topup_recipient_di_task = HiveOperator(
+    msg = [
+        {"db": "opay_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=NG/dt={pt}".format(pt=ds), "timeout": "3000"}
+    ]
 
-    task_id='dwm_opay_topup_recipient_di_task',
+    TaskTimeoutMonitor().set_task_monitor(msg)
+
+task_timeout_monitor= PythonOperator(
+    task_id='task_timeout_monitor',
+    python_callable=fun_task_timeout_monitor,
+    provide_context=True,
+    dag=dag
+)
+
+table_name = "app_cashin_out_stat_di"
+hdfs_path="ufile://opay-datalake/opay/opay_dw/" + table_name
+
+##---- hive operator ---##
+app_cashin_out_stat_di_task = HiveOperator(
+    task_id='app_cashin_out_stat_di_task',
     hql='''
-     set hive.exec.dynamic.partition.mode=nonstrict;
-     set hive.exec.parallel=true; 
-    INSERT overwrite TABLE opay_dw.{table} partition(country_code,dt)
-    
-select recipient_id,recipient_type,recipient_role,service_type,order_status,sum(amount) s_amount,count(1) c ,country_code,dt
-from 
-    (select merchant_id recipient_id,'MERCHANT' recipient_type,'merchant' recipient_role,'TopupWithCard' service_type,order_status,amount,country_code,dt from dwd_opay_merchant_topup_record_di
-     where dt='{pt}'
-      union all
-    select user_id recipient_id,'USER' recipient_type,user_role recipient_role,'TopupWithCard' service_type,order_status,amount,country_code,dt from dwd_opay_user_topup_record_di
-     where dt='{pt}')m
-group by recipient_id,recipient_type,recipient_role,service_type,order_status,country_code,dt;
+    set hive.exec.dynamic.partition.mode=nonstrict;
+    set hive.exec.parallel=true;
 
-'''.format(
-        pt='{{ds}}',
-        now_day='{{macros.ds_add(ds, +1)}}',
-        table=table_name
+    insert overwrite table app_cashin_out_stat_di
+    partition(country_code, dt)
+    select 
+        'CashIn' service_type, sum(amount) order_amt, count(*) order_cnt, 'NG' country_code, '{pt}' dt
+    from opay_dw_ods.ods_sqoop_base_cash_in_record_di
+    where dt='{pt}'
+    union
+    select 
+        'CashOut' service_type, sum(amount) order_amt, count(*) order_cnt, 'NG' country_code, '{pt}' dt
+    from opay_dw_ods.ods_sqoop_base_cash_out_record_di
+    where dt='{pt}'
+    '''.format(
+        pt='{{ds}}'
     ),
     schema='opay_dw',
-    dag=dag)
+    dag=dag
+)
 
-
-# 生成_SUCCESS
+#生成_SUCCESS
 def check_success(ds,dag,**op_kwargs):
 
     dag_ids=dag.dag_id
@@ -120,8 +129,7 @@ touchz_data_success= PythonOperator(
     dag=dag
 )
 
-dependence_dwd_opay_merchant_topup_record_di_prev_day_task >> \
-dependence_dwd_opay_user_topup_record_di_prev_day_task >> \
-sleep_time >> \
-dwm_opay_topup_recipient_di_task >> \
-touchz_data_success
+
+ods_sqoop_base_cash_in_record_di_prev_day_task >> app_cashin_out_stat_di_task
+ods_sqoop_base_cash_out_record_di_prev_day_task >> app_cashin_out_stat_di_task
+app_cashin_out_stat_di_task >> touchz_data_success

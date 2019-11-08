@@ -73,9 +73,9 @@ dwm_opay_merchant_acquiring_merchant_di_task = HiveOperator(
     
      set hive.exec.dynamic.partition.mode=nonstrict;
     INSERT overwrite TABLE opay_dw.{table} partition(country_code,dt)
-    select merchant_id,'MAcquiring' service_type,order_status,sum(amount) s_amount,count(1) c,country,dt
+    select merchant_id,'MAcquiring' service_type,order_status,sum(amount) s_amount,count(1) c,country_code,dt
      from dwd_opay_merchant_acquiring_record_di where dt='{pt}'
-    group by merchant_id,order_status,country,dt;
+    group by merchant_id,order_status,country_code,dt;
 
 '''.format(
         pt='{{ds}}',
