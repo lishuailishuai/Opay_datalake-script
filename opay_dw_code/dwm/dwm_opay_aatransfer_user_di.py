@@ -126,25 +126,24 @@ dwm_opay_aatransfer_user_di_task = HiveOperator(
     set hive.exec.parallel=true;
     insert overwrite table dwm_opay_aatransfer_user_di 
     partition(country_code, dt)
-    select
-        t1.sender_id, t1.sender_type, t1.recipient_id, t1.recipient_type, 'AATransfer' service_type, t1.order_status, t1.order_amt, t1.order_cnt,
+    select      
+        t1.sender_id, t1.sender_type, t1.recipient_id, t1.recipient_type, 'AATransfer' service_type, t1.order_status,  sum(amount) order_amt, count(order_no) order_cnt, 
         t1.country_code, t1.dt
     from
     (
         select 
-            user_id sender_id, 'USER' sender_type, recipient_id, recipient_type, transfer_status order_status, sum(amount) order_amt, count(*) order_cnt, 
+            user_id sender_id, 'USER' sender_type, recipient_id, recipient_type, transfer_status order_status, amount, order_no, 
             country_code, dt
         from opay_dw.dwd_opay_user_transfer_user_record_di
         where dt='{pt}'
-        group by country_code, dt, user_id, recipient_id, recipient_type, transfer_status
         union all
         select 
-            merchant_id sender_id, 'MERCHANT' sender_type, recipient_id, recipient_type, order_status, sum(amount) order_amt, count(*) order_cnt, 
+            merchant_id sender_id, 'MERCHANT' sender_type, recipient_id, recipient_type, order_status, amount, order_no, 
             country_code, dt
         from opay_dw.dwd_opay_merchant_transfer_user_record_di
         where dt='{pt}'
-        group by country_code, dt, merchant_id, recipient_id, recipient_type, order_status
     ) t1
+    group by country_code, dt, sender_id, sender_type, recipient_id, recipient_type, order_status
     '''.format(
         pt='{{ds}}'
     ),
