@@ -91,7 +91,7 @@ def get_data_from_hive(ds,**op_kwargs):
             NVL(city_name, '') as city_name, --城市名称
             NVL(t1.driver_id, 0) as driver_id, --司机Id
             NVL(regexp_replace(driver_name,'\\\\\\\\',''), '') as driver_name, --司机姓名
-            NVL(regexp_replace(phone_number,'\\\\\\\\',''), '') as driver_mobile, --司机手机号码
+            NVL(regexp_replace(bphone_number,'\\\\\\\\',''), '') as driver_mobile, --司机手机号码
             NVL(t1.product_id, 0) as driver_type,--骑手类型：1 ORide-Green, 2 ORide-Street, 3 OTrike
             (CASE
                 WHEN balance IS NULL THEN 0
@@ -119,8 +119,11 @@ def get_data_from_hive(ds,**op_kwargs):
             register_time, -- 司机注册时间
             NVL(regexp_replace(driver_address,'\\\\\\\\',''), '') as driver_address, --司机地址（-1 未知）
             last_week_daily_due --上周日均应还款金额
-        FROM (select * FROM {hive_db}.{hive_table}
-        WHERE dt = '{pt}') t1
+        FROM (SELECT 
+                a.*, b.phone_number as bphone_number 
+            FROM (select * FROM {hive_db}.{hive_table} WHERE dt = '{pt}') a 
+            JOIN (select * from dim_oride_driver_base where dt='{pt}') b ON a.driver_id = b.driver_id
+            ) t1
         
         LEFT OUTER JOIN
             
