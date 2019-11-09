@@ -942,7 +942,7 @@ def sendDispatchMail(*op_args, **op_kwargs):
     email_to = Variable.get("oride_app_oride_order_dispatch_d_receivers").split()
     result = is_alert(dt, [hive_table])
     if result:
-        email_to = ['bigdata@opay-inc.com']
+        email_to = ['bigdata_dw@opay-inc.com']
     # email_to = ['duo.wu@opay-inc.com']
     email_subject = 'oride调度算法指标_{}'.format(dt)
     #send_email(

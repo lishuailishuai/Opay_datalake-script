@@ -18,12 +18,12 @@ args = {
     'depends_on_past': False,
     'retries': 1,
     'retry_delay': timedelta(minutes=5),
-    'email': ['bigdata@opay-inc.com'],
+    'email': ['bigdata_dw@opay-inc.com'],
     'email_on_failure': True,
     'email_on_retry': False,
     'on_success_callback':on_success_callback,
 }
-schedule_interval="00 03 * * *"
+schedule_interval="00 05 * * *"
 
 dag = airflow.DAG(
     'opay_source_sqoop_df',
@@ -98,6 +98,7 @@ table_list = [
     ("opay_commission", "commission_top_up_record", "opay_db", "base", 1),
 
 ]
+
 """
     ("opay_transaction","adjustment_decrease_record", "opay_db", "base",3),
     ("opay_transaction","adjustment_increase_record", "opay_db", "base",3),
@@ -281,7 +282,7 @@ for db_name, table_name, conn_id, prefix_name,priority_weight_nm in table_list:
             password=conn_conf_dict[conn_id].password,
             table=table_name,
             ufile_path=UFILE_PATH % (db_name, table_name),
-            m=1 if table_name=='channel_response_code' else 20
+            m=18 if table_name=='channel_response_code' else 20
     ),
         dag=dag,
     )

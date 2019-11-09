@@ -152,105 +152,105 @@ dwm_oride_driver_base_df_task = HiveOperator(
 INSERT overwrite TABLE oride_dw.{table} partition(country_code,dt)
 select dri.driver_id, 
             --司机ID
-            
+
             dri.city_id,
             --城市ID
-            
+
             dri.product_id,
             --司机绑定的业务类型
-            
+
             dri.register_time,
             --司机注册时间
-            
+
             if(substr(dri.register_time,1,10)='{pt}',1,0) as is_td_sign,
             --是否当天签约or注册
-            
+
             dri.is_bind,
             --是否绑定车辆
-            
+
             null as is_survival,
             --是否存活司机,逻辑待定
-            
+
             if(dtr.driver_id is not null,1,0) as is_td_online,
             --当天是否在线
-            
+
             if(push.driver_id is not null,1,0) as is_td_broadcast,
             --当天是否被播单（push节点）
-            
+
             if(push.success>=1,1,0) as is_td_succ_broadcast,
             --当天是否被成功播单（push节点）
-            
+
             if(show.driver_id is not null,1,0) as is_td_accpet_show,
             --当天是否被推送订单（骑手端show节点）
-            
+
             if(click.driver_id is not null,1,0) as is_td_accpet_click,
             --当天是否应答（骑手端click节点）
-            
+
             if(ord.is_td_request>=1,1,0) as is_td_request,
             --当天是否接单（应答）或者直接关联订单表不为空也可以判断司机是否接单
-            
+
             if(ord.is_td_finish>=1,1,0) as is_td_finish,
             -- 当天是否完单
-            
+
             sum(push.push_times) as push_times,
             --司机被播单总次数（push节点）
-            
+
             sum(push.succ_push_times) as succ_push_times,
             --成功被播单总次数（push节点）
-            
+
             sum(show.driver_show_order_times) as driver_show_order_times,
             --成功被推送总次数（骑手端show节点）
-            
+
             sum(click.driver_click_order_times) as driver_click_order_times,
             -- 应答总次数（骑手端click节点）
-            
+
             sum(push.push_order_cnt) as push_order_cnt, 
             --司机被播单订单量（push节点）
-            
+
             sum(push.succ_push_order_cnt) as succ_push_order_cnt, 
             --成功被播单订单量（push节点）
-            
+
             sum(show.driver_show_order_cnt) as driver_show_order_cnt, 
             --成功被推送订单量（骑手端show节点）
-            
+
             sum(click.driver_click_order_cnt) as driver_click_order_cnt, 
             --成功应答订单量（骑手端click节点）
-            
+
             sum(ord.is_td_request) as driver_request_order_cnt,
             --司机接单量（理论和应答量一样）
-            
+
             sum(ord.is_td_finish) as driver_finish_order_cnt,
             --司机当天完单量
-            
+
             sum(ord.is_td_finish_pay) as driver_finished_pay_order_cnt,
             --司机支付完单量
-            
+
             sum(ord.price) as driver_finish_price, 
             --司机完单gmv
-            
+
             sum(ord.td_billing_dur) as driver_billing_dur,
             --司机计费时长
-            
+
             sum(ord.td_service_dur) as driver_service_dur,
             --司机服务时长
-            
+
             sum(ord.td_finish_order_dur) as driver_finished_dur,
             --司机支付完单做单时长（支付跨天可能偏大）
-            
+
             sum(ord.td_cannel_pick_dur) as cannel_pick_dur,
             --司机当天订单被取消时长,该取消时长包含应答后司机、乘客等各方取消，用于计算司机在线时长
-            
+
             sum(dtr.driver_freerange) as driver_free_dur,
             --司机空闲时长
-            
+
             sum(if(ord.is_td_finish>=1,(nvl(ord.td_service_dur,0)+nvl(ord.td_cannel_pick_dur,0)+nvl(dtr.driver_freerange,0)),0)) as driver_finish_online_dur,
             --完单司机在线时长
-            
+
             sum(if(ord.is_td_finish>=1 and is_strong_dispatch>=1,(nvl(ord.td_service_dur,0)+nvl(ord.td_cannel_pick_dur,0)+nvl(dtr.driver_freerange,0)),0)) as strong_driver_finish_online_dur,
             --强派单完单司机在线时长
             dri.country_code as country_code,
             dri.dt as dt
-            
+
        FROM
             (
                 SELECT 
@@ -312,9 +312,9 @@ select dri.driver_id,
                 sum(td_finish_order_dur) as td_finish_order_dur, --司机支付完单做单时长（支付跨天可能偏大）
                 sum(td_cannel_pick_dur) as td_cannel_pick_dur, --司机当天订单被取消时长
                 sum(is_strong_dispatch) as is_strong_dispatch, --用于判断司机是否有强派单
-                          
+
                 count(order_id) as succ_push_order_cnt  --该字段可以用于对比数据
-                
+
                 FROM oride_dw.dwd_oride_order_base_include_test_di
                 WHERE dt='{pt}'
                 AND city_id<>'999001' --去除测试数据
@@ -323,42 +323,42 @@ select dri.driver_id,
             ) ord ON dri.driver_id=ord.driver_id     
            group by dri.driver_id, 
             --司机ID
-            
+
             dri.city_id,
             --城市ID
-            
+
             dri.product_id,
             --司机绑定的业务类型
-            
+
             dri.register_time,
-            
+
             if(substr(dri.register_time,1,10)='{pt}',1,0),
             --是否当天签约or注册
-            
+
             dri.is_bind,
             --是否绑定车辆
-            
+
            -- dri.block,
             --是否存活司机0:存活
-            
+
             if(dtr.driver_id is not null,1,0),
             --当天是否在线
-            
+
             if(push.driver_id is not null,1,0),
             --当天是否被播单（push节点）
-            
+
             if(push.success>=1,1,0),
             --当天是否被成功播单（push节点）
-            
+
             if(show.driver_id is not null,1,0),
             --当天是否被推送订单（骑手端show节点）
-            
+
             if(click.driver_id is not null,1,0),
             --当天是否应答（骑手端click节点）
-            
+
             if(ord.is_td_request>=1,1,0),
             --当天是否接单（应答）或者直接关联订单表不为空也可以判断司机是否接单
-            
+
             if(ord.is_td_finish>=1,1,0),
             dri.country_code,
             dri.dt;  
@@ -391,6 +391,6 @@ touchz_data_success = PythonOperator(
 
 dim_oride_driver_base_prev_day_task >> dwd_oride_order_base_include_test_di_prev_day_task >> \
 dwd_oride_order_push_driver_detail_di_prev_day_task >> oride_driver_timerange_prev_day_task >> \
-dwd_oride_driver_accept_order_show_detail_di_prev_day_task >>\
+dwd_oride_driver_accept_order_show_detail_di_prev_day_task >> \
 dwd_oride_driver_accept_order_click_detail_di_prev_day_task >> \
 sleep_time >> dwm_oride_driver_base_df_task >> touchz_data_success

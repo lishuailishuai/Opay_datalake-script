@@ -181,34 +181,34 @@ dwm_opay_recharge_service_provider_di_task = HiveOperator(
     from 
     (
         select 
-            service_provider_id, user_role, 'TV' service_type, order_status, sum(amount) order_amt, count(*) order_cnt, country_code, dt
-        from opay_dw.dwd_opay_recharge_tv_record_di
-        where dt='{pt}'
-        group by country_code, dt, service_provider_id, user_role, order_status
-        union all
-        select 
-            service_provider_id, user_role, 'Betting' service_type, order_status, sum(amount) order_amt, count(*) order_cnt, country_code, dt
-        from opay_dw.dwd_opay_recharge_betting_record_di
-        where dt='{pt}'
-        group by country_code, dt, service_provider_id, user_role, order_status
-        union all
-        select 
-            service_provider_id, user_role, 'MobileData' service_type, order_status, sum(amount) order_amt, count(*) order_cnt, country_code, dt
-        from opay_dw.dwd_opay_recharge_mobiledata_record_di
-        where dt='{pt}'
-        group by country_code, dt, service_provider_id, user_role, order_status
-        union all
-        select 
-            service_provider_id, user_role, 'Airtime' service_type, order_status, sum(amount) order_amt, count(*) order_cnt, country_code, dt
-        from opay_dw.dwd_opay_recharge_mobilebill_record_di
-        where dt='{pt}'
-        group by country_code, dt, service_provider_id, user_role, order_status
-        union all
-        select 
-            service_provider_id, user_role, 'Electricity' service_type, order_status, sum(amount) order_amt, count(*) order_cnt, country_code, dt
-        from opay_dw.dwd_opay_recharge_electricity_record_di
-        where dt='{pt}'
-        group by country_code, dt, service_provider_id, user_role, order_status
+            service_provider_id, user_role, service_type, order_status, sum(amount) order_amt, count(order_no) order_cnt, country_code, dt
+        from
+        (
+            select 
+                service_provider_id, user_role, 'TV' service_type, order_status, amount, order_no, country_code, dt
+            from opay_dw.dwd_opay_recharge_tv_record_di
+            where dt='{pt}'
+            union all
+            select 
+                service_provider_id, user_role, 'Betting' service_type, order_status, amount, order_no, country_code, dt
+            from opay_dw.dwd_opay_recharge_betting_record_di
+            where dt='{pt}'
+            union all
+            select 
+                service_provider_id, user_role, 'MobileData' service_type, order_status, amount, order_no, country_code, dt
+            from opay_dw.dwd_opay_recharge_mobiledata_record_di
+            where dt='{pt}'
+            union all
+            select 
+                service_provider_id, user_role, 'Airtime' service_type, order_status, amount, order_no, country_code, dt
+            from opay_dw.dwd_opay_recharge_mobilebill_record_di
+            where dt='{pt}'
+            union all
+            select 
+                service_provider_id, user_role, 'Electricity' service_type, order_status, amount, order_no, country_code, dt
+            from opay_dw.dwd_opay_recharge_electricity_record_di
+            where dt='{pt}'
+        ) rechard_di group by country_code, dt, service_type, service_provider_id, user_role, order_status
     ) t1 
     join 
     (

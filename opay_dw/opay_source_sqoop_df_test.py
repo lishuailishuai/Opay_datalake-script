@@ -12,30 +12,28 @@ from plugins.SqoopSchemaUpdate import SqoopSchemaUpdate
 from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
 from utils.util import on_success_callback
 
-
 args = {
     'owner': 'zhenqian.zhang',
-    'start_date': datetime(2019, 10, 29),
+    'start_date': datetime(2019, 11, 9),
     'depends_on_past': False,
     'retries': 1,
     'retry_delay': timedelta(minutes=5),
-    'email': ['bigdata_dw@opay-inc.com'],
+    'email': ['bigdata@opay-inc.com'],
     'email_on_failure': True,
     'email_on_retry': False,
     'on_success_callback':on_success_callback,
 }
-
-schedule_interval="20 01 * * *"
+schedule_interval="00 03 * * *"
 
 dag = airflow.DAG(
-    'opay_source_sqoop_di',
+    'opay_source_sqoop_df_test',
     schedule_interval=schedule_interval,
     concurrency=15,
     max_active_runs=1,
     default_args=args)
 
 dag_monitor = airflow.DAG(
-    'opay_source_sqoop_di_monitor',
+    'opay_source_sqoop_df_monitor_test',
     schedule_interval=schedule_interval,
     default_args=args)
 
@@ -50,8 +48,8 @@ def fun_task_timeout_monitor(ds, db_name, table_name, **op_kwargs):
 
 # 忽略数据量检查的table
 IGNORED_TABLE_LIST = [
-    'adjustment_decrease_record',
-    'merchant_receive_money_record',
+    'user_limit',
+    'channel_router_rule',
 ]
 
 '''
@@ -60,45 +58,117 @@ db_name,table_name,conn_id,prefix_name,priority_weight
 '''
 #
 
+# table_list = [
+#     ("opay_bigorder","big_order", "opay_db", "base",3),
+#     ("opay_transaction","user_transfer_user_record", "opay_db", "base",3),
+#     ("opay_user","user", "opay_db", "base",3),
+#     ("opay_transaction","merchant_transfer_user_record", "opay_db", "base",3),
+#     ("opay_transaction","airtime_topup_record", "opay_db", "base",3),
+#     ("opay_transaction","betting_topup_record", "opay_db", "base",3),
+#     ("opay_transaction","user_topup_record", "opay_db", "base",3),
+#     ("opay_user","user_upgrade", "opay_db", "base",3),
+
+#     ("opay_bigorder","merchant_order", "opay_db", "base",2),
+#     ("opay_account","account_user", "opay_db", "base", 2),
+#     ("opay_account","account_merchant", "opay_db", "base", 2),
+
+#     ("opay_user","user_operator", "opay_db", "base", 1),
+#     ("opay_user","user_payment_instrument", "opay_db", "base", 1),
+#     ("opay_overlord","overlord_user", "opay_db", "base", 1),
+#     ("opay_merchant","merchant", "opay_db", "base", 1),
+#     ("opay_account","accounting_merchant_record", "opay_db", "base", 1),
+#     ("opay_account","accounting_record", "opay_db", "base", 1),
+
+#     ("opay_sms","message_template", "opay_db", "base", 1),
+
+#     ("opay_user", "user_token", "opay_db", "base", 1),
+#     ("opay_user", "user_telesale", "opay_db", "base", 1),
+#     ("opay_user", "user_reseller", "opay_db", "base", 1),
+#     ("opay_user", "user_push_token", "opay_db", "base", 1),
+#     ("opay_user", "user_operator", "opay_db", "base", 1),
+#     ("opay_user", "user_nearby_agent", "opay_db", "base", 1),
+#     ("opay_user", "user_message", "opay_db", "base", 1),
+
+#     ("opay_activity", "activity", "opay_db", "base", 1),
+#     ("opay_activity", "activity_rules", "opay_db", "base", 1),
+#     ("opay_activity", "preferential_record", "opay_db", "base", 1),
+
+#     ("opay_commission", "commission_account_balance", "opay_db", "base", 1),
+#     ("opay_commission", "commission_order", "opay_db", "base", 1),
+#     ("opay_commission", "commission_top_up_record", "opay_db", "base", 1),
+
+# ]
+
 table_list = [
-    ("opay_sms","message_record", "opay_db", "base",3),
-    ("opay_user","user_email", "opay_db", "base",3),
-    ("opay_user","user", "opay_db", "base",3),
-    ("opay_bigorder","big_order", "opay_db", "base",3),
+    ("opay_user", "user_nearby_agent", "opay_db", "base", 3),
+    ("opay_user", "user_message", "opay_db", "base", 3),
+
+    ("opay_activity", "activity", "opay_db", "base", 3),
+    ("opay_activity", "activity_rules", "opay_db", "base", 3),
+    ("opay_activity", "preferential_record", "opay_db", "base", 3),
+
+    ("opay_commission", "commission_account_balance", "opay_db", "base", 3),
+    ("opay_commission", "commission_order", "opay_db", "base", 3),
+    ("opay_commission", "commission_top_up_record", "opay_db", "base", 3),
+
+]
+
+
+
+"""
     ("opay_transaction","adjustment_decrease_record", "opay_db", "base",3),
     ("opay_transaction","adjustment_increase_record", "opay_db", "base",3),
-    ("opay_transaction","airtime_topup_record", "opay_db", "base",3),
-    ("opay_transaction","betting_topup_record", "opay_db", "base",3),
-    ("opay_transaction","business_collection_record", "opay_db", "base",3),
     ("opay_transaction","electricity_topup_record", "opay_db", "base",3),
     ("opay_transaction","merchant_acquiring_record", "opay_db", "base",3),
     ("opay_transaction","merchant_pos_transaction_record", "opay_db", "base",3),
     ("opay_transaction","merchant_receive_money_record", "opay_db", "base",3),
     ("opay_transaction","merchant_topup_record", "opay_db", "base",3),
     ("opay_transaction","merchant_transfer_card_record", "opay_db", "base",3),
-    ("opay_transaction","merchant_transfer_user_record", "opay_db", "base",3),
     ("opay_transaction","mobiledata_topup_record", "opay_db", "base",3),
+    ("opay_transaction","payment_authorization_record", "opay_db", "base",3),
+    ("opay_transaction","payment_token_record", "opay_db", "base",3),
     ("opay_transaction","receive_money_request_record", "opay_db", "base",3),
     ("opay_transaction","transfer_not_register_record", "opay_db", "base",3),
     ("opay_transaction","tv_topup_record", "opay_db", "base",3),
     ("opay_transaction","user_easycash_record", "opay_db", "base",3),
     ("opay_transaction","user_pos_transaction_record", "opay_db", "base",3),
     ("opay_transaction","user_receive_money_record", "opay_db", "base",3),
-    ("opay_transaction","user_topup_record", "opay_db", "base",3),
     ("opay_transaction","user_transfer_card_record", "opay_db", "base",3),
-    ("opay_transaction","user_transfer_user_record", "opay_db", "base",3),
-    ("opay_fee","user_fee_record", "opay_db", "base",3),
-    ("opay_fee","merchant_fee_record", "opay_db", "base",3),
-
-    ("opay_transaction", "cash_in_record", "opay_db", "base", 2),
-    ("opay_transaction", "cash_out_record", "opay_db", "base", 2),
-    ("opay_transaction", "business_activity_record", "opay_db", "base", 2),
-    ("opay_transaction", "activity_record", "opay_db", "base", 2),
-]
+    ("opay_bigorder","user_order", "opay_db", "base",3),
+    ("opay_account","accounting_request_record", "opay_db", "base",3),
+    ("opay_merchant","merchant_email_setting", "opay_db", "base",3),
+    ("opay_merchant","merchant_key", "opay_db", "base",3),
+    ("opay_merchant","merchant_operator", "opay_db", "base",3),
+    ("opay_merchant","merchant_pos_limit", "opay_db", "base",3),
+    ("opay_merchant","merchant_remittance_limit", "opay_db", "base",3),
+    ("opay_merchant","merchant_reseller", "opay_db", "base",3),
+    ("opay_channel","card_token", "opay_db", "base",3),
+    ("opay_channel","channel_response_code", "opay_db", "base",3),
+    ("opay_channel","channel_router_rule", "opay_db", "base",3),
+    ("opay_channel","channel_transaction", "opay_db", "base",3),
+    ("opay_channel","channel_transaction_mq_record", "opay_db", "base",3),
+    ("opay_channel","channel_transaction_record", "opay_db", "base",3),
+    ("opay_channel","channel_transaction_retry", "opay_db", "base",3),
+    ("opay_recon","collect_diff_detail", "opay_db", "base",3),
+    ("opay_recon","collect_record", "opay_db", "base",3),
+    ("opay_recon","exception_log", "opay_db", "base",3),
+    ("opay_recon","external_record", "opay_db", "base",3),
+    ("opay_recon","external_request_record", "opay_db", "base",3),
+    ("opay_recon","internal_record", "opay_db", "base",3),
+    ("opay_recon","internal_request_record", "opay_db", "base",3),
+    ("opay_user","upload_file", "opay_db", "base",3),
+    ("opay_user","user_bvn", "opay_db", "base",3),
+    ("opay_user","user_kyc", "opay_db", "base",3),
+    ("opay_user","user_kyc_upload", "opay_db", "base",3),
+    ("opay_user","user_limit", "opay_db", "base",3),
+    ("opay_user","user_token", "opay_db", "base",3),
+    ("opay_user","user_kyc_record", "opay_db", "base",3),
+    ("opay_transaction","business_collection_record", "opay_db", "base",3),
+"""
 
 HIVE_DB = 'opay_dw_ods'
-HIVE_TABLE = 'ods_sqoop_%s_%s_di'
-UFILE_PATH = 'ufile://opay-datalake/opay_dw_sqoop_di/%s/%s'
+HIVE_TABLE = 'ods_sqoop_%s_%s_df'
+UFILE_PATH = 'ufile://opay-datalake/opay_dw_ods/%s/%s'
 ODS_CREATE_TABLE_SQL = '''
     CREATE EXTERNAL TABLE IF NOT EXISTS {db_name}.`{table_name}`(
         {columns}
@@ -113,11 +183,14 @@ ODS_CREATE_TABLE_SQL = '''
       'org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat'
     LOCATION
       '{ufile_path}';
+    MSCK REPAIR TABLE {db_name}.`{table_name}`;
+    -- delete opay_dw table
+    DROP TABLE IF EXISTS opay_dw.`{table_name}`;
 '''
 
 # 需要验证的核心业务表
 table_core_list = [
-    # ("opay_data", "data_order", "sqoop_db", "base", "create_time","priority_weight")
+    # ("oride_data", "data_order", "sqoop_db", "base", "create_time","priority_weight")
 ]
 
 # 不需要验证的维度表，暂时为null
@@ -139,7 +212,7 @@ def run_check_table(db_name, table_name, conn_id, hive_table_name, **kwargs):
     if response:
         return True
 
-    # SHOW TABLES in opay_db LIKE 'data_aa'
+    # SHOW TABLES in oride_db LIKE 'data_aa'
     check_sql = 'SHOW TABLES in %s LIKE \'%s\'' % (HIVE_DB, hive_table_name)
     hive2_conn = HiveServer2Hook().get_conn()
     cursor = hive2_conn.cursor()
@@ -169,7 +242,7 @@ def run_check_table(db_name, table_name, conn_id, hive_table_name, **kwargs):
                 col_name = '_dt'
             else:
                 col_name = result[0]
-            if result[1] == 'timestamp' or result[1] == 'varchar' or result[1] == 'char' or result[1] == 'text' or \
+            if result[1] == 'timestamp' or result[1] == 'varchar' or result[1] == 'char' or result[1] == 'text' or result[1] == 'longtext' or \
                     result[1] == 'datetime':
                 data_type = 'string'
             elif result[1] == 'decimal':
@@ -209,15 +282,14 @@ for db_name, table_name, conn_id, prefix_name,priority_weight_nm in table_list:
             --connect "jdbc:mysql://{host}:{port}/{schema}?tinyInt1isBit=false&useUnicode=true&characterEncoding=utf8" \
             --username {username} \
             --password {password} \
-            --query 'select * from {table} where (FROM_UNIXTIME(UNIX_TIMESTAMP(create_time), "%Y-%m-%d")="{{{{ ds }}}}" OR FROM_UNIXTIME(UNIX_TIMESTAMP(update_time), "%Y-%m-%d")="{{{{ ds }}}}") AND $CONDITIONS' \
-            --split-by id \
+            --table {table} \
             --target-dir {ufile_path}/dt={{{{ ds }}}}/ \
             --fields-terminated-by "\\001" \
             --lines-terminated-by "\\n" \
             --hive-delims-replacement " " \
             --delete-target-dir \
             --compression-codec=snappy \
-            -m 16
+            -m {m}
         '''.format(
             host=conn_conf_dict[conn_id].host,
             port=conn_conf_dict[conn_id].port,
@@ -225,8 +297,9 @@ for db_name, table_name, conn_id, prefix_name,priority_weight_nm in table_list:
             username=conn_conf_dict[conn_id].login,
             password=conn_conf_dict[conn_id].password,
             table=table_name,
-            ufile_path=UFILE_PATH % (db_name, table_name)
-        ),
+            ufile_path=UFILE_PATH % (db_name, table_name),
+            m=1 if table_name=='channel_response_code' else 20
+    ),
         dag=dag,
     )
 
@@ -284,8 +357,6 @@ for db_name, table_name, conn_id, prefix_name,priority_weight_nm in table_list:
             dag=dag
         )
         add_partitions >> volume_monitoring >> validate_all_data
-
-
     # 超时监控
     task_timeout_monitor= PythonOperator(
         task_id='task_timeout_monitor_{}'.format(hive_table_name),

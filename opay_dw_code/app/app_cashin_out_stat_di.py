@@ -96,12 +96,12 @@ app_cashin_out_stat_di_task = HiveOperator(
     insert overwrite table app_cashin_out_stat_di
     partition(country_code, dt)
     select 
-        sum(amount) order_amt, count(*) order_cnt, 'CashIn' service_type, 'NG' country_code, '{pt}' dt
+        'CashIn' service_type, sum(amount) order_amt, count(*) order_cnt, 'NG' country_code, '{pt}' dt
     from opay_dw_ods.ods_sqoop_base_cash_in_record_di
     where dt='{pt}'
-    union all
+    union
     select 
-        sum(amount) order_amt, count(*) order_cnt, 'CashOut' service_type, 'NG' country_code, '{pt}' dt
+        'CashOut' service_type, sum(amount) order_amt, count(*) order_cnt, 'NG' country_code, '{pt}' dt
     from opay_dw_ods.ods_sqoop_base_cash_out_record_di
     where dt='{pt}'
     '''.format(
