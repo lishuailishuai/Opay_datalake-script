@@ -122,7 +122,7 @@ def get_data_from_hive(ds,**op_kwargs):
         FROM (SELECT 
                 a.*, b.phone_number as bphone_number 
             FROM (select * FROM {hive_db}.{hive_table} WHERE dt = '{pt}') a 
-            JOIN (select * from dim_oride_driver_base where dt='{pt}') b ON a.driver_id = b.driver_id
+            JOIN (select * from oride_dw.dim_oride_driver_base where dt='{pt}') b ON a.driver_id = b.driver_id
             ) t1
         
         LEFT OUTER JOIN
