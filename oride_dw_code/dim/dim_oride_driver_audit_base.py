@@ -204,8 +204,18 @@ select
   nvl(driver_team.name,-1) as driver_team_name,  --团队名称(-1 没有司管团队)
   (case when dri.status=2 and dri.association_id >0 and dri.team_id > 0 then 1 else 0 end) as is_driver_audit_pass,
    --司机是否审核通过
-
+   
   from_unixtime(veri_time,'yyyy-MM-dd') AS veri_audit_date,--总审核流程审查通过日期
+  
+     
+   (case when dri.know_orider = 7  then 1 else 0 end ) as is_proxy_write_channel,
+   --司机邀请司机渠道：代填写
+   
+   (case when dri.know_orider = 14  then 1 else 0 end ) as is_online_share_channel,
+   --司机邀请司机渠道：线上分享
+   
+   (case when dri.know_orider = 13  then 1 else 0 end ) as is_onsite_audit_channel,
+   --司机邀请司机渠道：现场审核
 
    'nal' AS country_code,
        --国家码字段
