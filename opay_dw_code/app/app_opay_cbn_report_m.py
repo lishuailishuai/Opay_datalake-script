@@ -37,7 +37,7 @@ args = {
 }
 
 dag = airflow.DAG('app_opay_cbn_report_m',
-                  schedule_interval="0 3 2 * *",
+                  schedule_interval="00 03 01 * *",
                   default_args=args)
 
 ##----依赖数据源---##

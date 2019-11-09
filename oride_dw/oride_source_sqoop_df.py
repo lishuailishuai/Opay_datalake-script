@@ -125,7 +125,7 @@ table_list = [
     ("oride_data", "data_sms_template", "sqoop_db", "base",1),
     ("oride_data", "data_user_comment", "sqoop_db", "base",1),
     ("oride_data", "data_user_complaint", "sqoop_db", "base",1),
-    ("oride_data", "data_user_recharge", "sqoop_db", "base",1),
+    # ("oride_data", "data_user_recharge", "sqoop_db", "base",1),
     ("oride_data", "data_user_whitelist", "sqoop_db", "base",1),
     ("oride_data", "data_driver_whitelist", "sqoop_db", "base",1),
     ("oride_data", "data_user_blacklist", "sqoop_db", "base",1),

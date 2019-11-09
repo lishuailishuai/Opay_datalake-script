@@ -6,7 +6,7 @@ from airflow.operators.impala_plugin import ImpalaOperator
 from utils.connection_helper import get_hive_cursor
 from airflow.operators.python_operator import PythonOperator
 from airflow.contrib.hooks.redis_hook import RedisHook
-from airflow.hooks.hive_hooks import HiveCliHook
+from airflow.hooks.hive_hooks import HiveCliHook, HiveServer2Hook
 from airflow.operators.hive_to_mysql import HiveToMySqlTransfer
 from airflow.operators.mysql_operator import MySqlOperator
 from airflow.operators.dagrun_operator import TriggerDagRunOperator
@@ -40,12 +40,6 @@ dag = airflow.DAG( 'dim_oride_city',
     catchup=False) 
 
 
-sleep_time = BashOperator(
-    task_id='sleep_id',
-    depends_on_past=False,
-    bash_command='sleep 30',
-    dag=dag)
-
 ##----------------------------------------- 依赖 ---------------------------------------## 
 
 
@@ -74,6 +68,7 @@ ods_sqoop_base_weather_per_10min_df_prev_day_task = UFileSensor(
 
 ##----------------------------------------- 变量 ---------------------------------------## 
 
+db_name="oride_dw"
 table_name="dim_oride_city"
 hdfs_path="ufile://opay-datalake/oride/oride_dw/"+table_name
 
@@ -99,14 +94,13 @@ task_timeout_monitor= PythonOperator(
 
 ##----------------------------------------- 脚本 ---------------------------------------## 
 
-dim_oride_city_task = HiveOperator(
+def dim_oride_city_sql_task(ds):
 
-    task_id='dim_oride_city_task',
-    hql='''
+    HQL='''
     set hive.exec.parallel=true;
     set hive.exec.dynamic.partition.mode=nonstrict;
 
-INSERT overwrite TABLE oride_dw.{table} partition(country_code,dt)
+INSERT overwrite TABLE {db}.{table} partition(country_code,dt)
 
 SELECT city_id,
        --城市 ID
@@ -197,64 +191,80 @@ WHERE t.row_num = 1) weather
 on lower(cit.city_name)=lower(weather.city)
 
 '''.format(
-        pt='{{ds}}',
-        now_day='{{macros.ds_add(ds, +1)}}',
-        table=table_name
-        ),
-schema='oride_dw',
-    dag=dag)
+        pt=ds,
+        table=table_name,
+        db=db_name
+        )
+    return HQL
 
 
 #熔断数据，如果数据重复，报错
-def check_key_data(ds,**kargs):
+def check_key_data_task(ds):
+
+    cursor = get_hive_cursor()
 
     #主键重复校验
-    HQL_DQC='''
+    check_sql='''
     SELECT count(1)-count(distinct city_id) as cnt
-      FROM oride_dw.{table}
+      FROM {db}.{table}
       WHERE dt='{pt}'
       and country_code in ('NG')
     '''.format(
         pt=ds,
         now_day=airflow.macros.ds_add(ds, +1),
-        table=table_name
+        table=table_name,
+        db=db_name
         )
 
-    cursor = get_hive_cursor()
-    logging.info('Executing 主键重复校验: %s', HQL_DQC)
+    logging.info('Executing 主键重复校验: %s', check_sql)
 
-    cursor.execute(HQL_DQC)
+    cursor.execute(check_sql)
+
     res = cursor.fetchone()
-
+ 
     if res[0] >1:
+        flag=1
         raise Exception ("Error The primary key repeat !", res)
+        sys.exit(1)
     else:
+        flag=0
         print("-----> Notice Data Export Success ......")
+
+    return flag
+
+
+
+#主流程
+def execution_data_task_id(ds,**kargs):
+
+    hive_hook = HiveCliHook()
+
+    #读取sql
+    _sql=dim_oride_city_sql_task(ds)
+
+    logging.info('Executing: %s', _sql)
+
+    #执行Hive
+    hive_hook.run_cli(_sql)
+
+    #熔断数据
+    check_key_data_task(ds)
+
+    #生成_SUCCESS
+    """
+    第一个参数true: 数据目录是有country_code分区。false 没有
+    第二个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
+
+    """
+    TaskTouchzSuccess().countries_touchz_success(ds,db_name,table_name,hdfs_path,"true","true")
     
-task_check_key_data = PythonOperator(
-    task_id='check_data',
-    python_callable=check_key_data,
-    provide_context=True,
-    dag=dag
-)
-
-#生成_SUCCESS
-def check_success(ds,dag,**op_kwargs):
-
-    dag_ids=dag.dag_id
-
-    msg = [
-        {"table":"{dag_name}".format(dag_name=dag_ids),"hdfs_path": "{hdfs_path}/country_code=NG/dt={pt}".format(pt=ds,hdfs_path=hdfs_path)}
-    ]
-
-    TaskTouchzSuccess().set_touchz_success(msg)
-
-touchz_data_success= PythonOperator(
-    task_id='touchz_data_success',
-    python_callable=check_success,
+dim_oride_city_task= PythonOperator(
+    task_id='dim_oride_city_task',
+    python_callable=execution_data_task_id,
     provide_context=True,
     dag=dag
 )
 
 
-ods_sqoop_base_data_city_conf_df_tesk>>ods_sqoop_base_weather_per_10min_df_prev_day_task>>sleep_time>>dim_oride_city_task>>task_check_key_data>>touchz_data_success
+ods_sqoop_base_data_city_conf_df_tesk>>dim_oride_city_task
+ods_sqoop_base_weather_per_10min_df_prev_day_task>>dim_oride_city_task

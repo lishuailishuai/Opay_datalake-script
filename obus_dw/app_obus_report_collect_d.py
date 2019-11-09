@@ -27,7 +27,7 @@ args = {
 
 dag = airflow.DAG(
     'app_obus_report_collect_d',
-    schedule_interval="00 05 * * *",
+    schedule_interval="00 09 * * *",
     concurrency=5,
     max_active_runs=1,
     default_args=args
