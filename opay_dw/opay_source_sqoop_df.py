@@ -59,44 +59,45 @@ db_name,table_name,conn_id,prefix_name,priority_weight
 #
 
 table_list = [
-    ("opay_bigorder","big_order", "opay_db", "base",3),
-    ("opay_transaction","user_transfer_user_record", "opay_db", "base",3),
-    ("opay_user","user", "opay_db", "base",3),
-    ("opay_transaction","merchant_transfer_user_record", "opay_db", "base",3),
-    ("opay_transaction","airtime_topup_record", "opay_db", "base",3),
-    ("opay_transaction","betting_topup_record", "opay_db", "base",3),
-    ("opay_transaction","user_topup_record", "opay_db", "base",3),
-    ("opay_user","user_upgrade", "opay_db", "base",3),
+    ("opay_bigorder","big_order", "opay_db_3317", "base",3),
+    ("opay_bigorder","merchant_order", "opay_db_3317", "base",2),
 
-    ("opay_bigorder","merchant_order", "opay_db", "base",2),
-    ("opay_account","account_user", "opay_db", "base", 2),
-    ("opay_account","account_merchant", "opay_db", "base", 2),
+    ("opay_transaction","user_transfer_user_record", "opay_db_3316", "base",3),
+    ("opay_transaction","merchant_transfer_user_record", "opay_db_3316", "base",3),
+    ("opay_transaction","airtime_topup_record", "opay_db_3316", "base",3),
+    ("opay_transaction","betting_topup_record", "opay_db_3316", "base",3),
+    ("opay_transaction","user_topup_record", "opay_db_3316", "base",3),
 
-    ("opay_user","user_operator", "opay_db", "base", 1),
-    ("opay_user","user_payment_instrument", "opay_db", "base", 1),
-    ("opay_overlord","overlord_user", "opay_db", "base", 1),
-    ("opay_merchant","merchant", "opay_db", "base", 1),
-    ("opay_account","accounting_merchant_record", "opay_db", "base", 1),
-    ("opay_account","accounting_record", "opay_db", "base", 1),
+    ("opay_user","user_upgrade", "opay_db_3321", "base",3),
+    ("opay_user","user", "opay_db_3321", "base",3),
+    ("opay_user","user_operator", "opay_db_3321", "base", 1),
+    ("opay_user","user_payment_instrument", "opay_db_3321", "base", 1),
+    ("opay_user", "user_token", "opay_db_3321", "base", 1),
+    ("opay_user", "user_telesale", "opay_db_3321", "base", 1),
+    ("opay_user", "user_reseller", "opay_db_3321", "base", 1),
+    ("opay_user", "user_push_token", "opay_db_3321", "base", 1),
+    ("opay_user", "user_operator", "opay_db_3321", "base", 1),
+    ("opay_user", "user_nearby_agent", "opay_db_3321", "base", 1),
+    ("opay_user", "user_message", "opay_db_3321", "base", 1),
 
-    ("opay_sms","message_template", "opay_db", "base", 1),
+    ("opay_account","account_user", "opay_db_3318", "base", 2),
+    ("opay_account","account_merchant", "opay_db_3318", "base", 2),
+    ("opay_account","accounting_merchant_record", "opay_db_3318", "base", 1),
+    ("opay_account","accounting_record", "opay_db_3318", "base", 1),
 
-    ("opay_user", "user_token", "opay_db", "base", 1),
-    ("opay_user", "user_telesale", "opay_db", "base", 1),
-    ("opay_user", "user_reseller", "opay_db", "base", 1),
-    ("opay_user", "user_push_token", "opay_db", "base", 1),
-    ("opay_user", "user_operator", "opay_db", "base", 1),
-    ("opay_user", "user_nearby_agent", "opay_db", "base", 1),
-    ("opay_user", "user_message", "opay_db", "base", 1),
+    ("opay_overlord","overlord_user", "opay_db_3322", "base", 1),
 
-    ("opay_activity", "activity", "opay_db", "base", 1),
-    ("opay_activity", "activity_rules", "opay_db", "base", 1),
-    ("opay_activity", "preferential_record", "opay_db", "base", 1),
+    ("opay_merchant","merchant", "opay_db_3322", "base", 1),
 
-    ("opay_commission", "commission_account_balance", "opay_db", "base", 1),
-    ("opay_commission", "commission_order", "opay_db", "base", 1),
-    ("opay_commission", "commission_top_up_record", "opay_db", "base", 1),
+    ("opay_sms","message_template", "opay_db_3319", "base", 1),
 
+    ("opay_activity", "activity", "opay_db_3322", "base", 1),
+    ("opay_activity", "activity_rules", "opay_db_3322", "base", 1),
+    ("opay_activity", "preferential_record", "opay_db_3322", "base", 1),
+
+    ("opay_commission", "commission_account_balance", "opay_db_3322", "base", 1),
+    ("opay_commission", "commission_order", "opay_db_3322", "base", 1),
+    ("opay_commission", "commission_top_up_record", "opay_db_3322", "base", 1),
 ]
 
 """
