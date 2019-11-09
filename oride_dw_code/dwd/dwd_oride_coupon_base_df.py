@@ -118,7 +118,7 @@ dwd_oride_coupon_base_df_task = HiveOperator(
         (select id,register_time from oride_dw_ods.ods_sqoop_base_data_user_extend_df where dt='{pt}') b 
     on a.user_id=b.id
     left join 
-        (select id,price,amount
+        (select *
            from oride_dw_ods.ods_sqoop_base_data_order_payment_df where dt='{pt}' and status='1') c
     on a.order_id=c.id 
     left join 
