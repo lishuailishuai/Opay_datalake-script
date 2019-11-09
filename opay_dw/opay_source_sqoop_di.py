@@ -52,6 +52,8 @@ def fun_task_timeout_monitor(ds, db_name, table_name, **op_kwargs):
 IGNORED_TABLE_LIST = [
     'adjustment_decrease_record',
     'merchant_receive_money_record',
+    'merchant_fee_record',
+    'user_fee_record'
 ]
 
 '''
