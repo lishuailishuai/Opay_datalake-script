@@ -23,7 +23,7 @@ import os
 
 args = {
     'owner': 'liushuzhen',
-    'start_date': datetime(2019, 10, 28),
+    'start_date': datetime(2019, 11, 8),
     'depends_on_past': False,
     'retries': 3,
     'retry_delay': timedelta(minutes=2),
@@ -33,7 +33,7 @@ args = {
 }
 
 dag = airflow.DAG('dwd_oride_coupon_base_df',
-                  schedule_interval="00 01 * * *",
+                  schedule_interval="00 02 * * *",
                   default_args=args,
                   catchup=False)
 
@@ -101,7 +101,7 @@ dwd_oride_coupon_base_df_task = HiveOperator(
 
     task_id='dwd_oride_coupon_base_df_task',
     hql='''
-    INSERT overwrite TABLE oride_dw.{table} partition(dt='{pt}')
+    INSERT overwrite TABLE oride_dw.{table} partition (country_code='nal',dt='{pt}')
     select a.id,a.template_id,a.name,a.type,a.amount,a.max_amount,a.start_price,a.discount,a.city_id,a.serv_type,
            a.start_time,
            a.expire_time,
@@ -109,7 +109,7 @@ dwd_oride_coupon_base_df_task = HiveOperator(
            a.used_time,
            a.user_id,
            b.register_time,
-           finish_d,a.order_id,c.price,c.amount,status,'NG'
+           finish_d,a.order_id,c.price,c.amount,c.coupon_amount,c.capped_id,c.capped_type,c.capped_mode,status
     from 
         (select * from oride_dw_ods.ods_sqoop_base_data_coupon_df where dt='{pt}') a
     left join 
@@ -134,27 +134,23 @@ dwd_oride_coupon_base_df_task = HiveOperator(
 
 
 # 生成_SUCCESS
-touchz_data_success = BashOperator(
+def check_success(ds,dag,**op_kwargs):
 
+    dag_ids=dag.dag_id
+
+    msg = [
+        {"table":"{dag_name}".format(dag_name=dag_ids),"hdfs_path": "{hdfsPath}/country_code=nal/dt={pt}".format(pt=ds,hdfsPath=hdfs_path)}
+    ]
+
+    TaskTouchzSuccess().set_touchz_success(msg)
+
+touchz_data_success= PythonOperator(
     task_id='touchz_data_success',
+    python_callable=check_success,
+    provide_context=True,
+    dag=dag
+)
 
-    bash_command="""
-    line_num=`$HADOOP_HOME/bin/hadoop fs -du -s {hdfs_data_dir} | tail -1 | awk '{{print $1}}'`
-
-    if [ $line_num -eq 0 ]
-    then
-        echo "FATAL {hdfs_data_dir} is empty"
-        $HADOOP_HOME/bin/hadoop fs -touchz {hdfs_data_dir}/_SUCCESS
-    else
-        echo "DATA EXPORT Successed ......"
-        $HADOOP_HOME/bin/hadoop fs -touchz {hdfs_data_dir}/_SUCCESS
-    fi
-    """.format(
-        pt='{{ds}}',
-        now_day='{{macros.ds_add(ds, +1)}}',
-        hdfs_data_dir=hdfs_path + '/dt={{ds}}'
-    ),
-    dag=dag)
 
 dependence_ods_sqoop_base_data_coupon_df_prev_day_task >> \
 dependence_ods_sqoop_base_data_order_payment_df_prev_day_task >> \
