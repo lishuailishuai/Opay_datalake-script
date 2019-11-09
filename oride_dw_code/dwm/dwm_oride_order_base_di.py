@@ -15,8 +15,6 @@ from airflow.operators.bash_operator import BashOperator
 from airflow.sensors.named_hive_partition_sensor import NamedHivePartitionSensor
 from airflow.sensors.hive_partition_sensor import HivePartitionSensor
 from airflow.sensors import UFileSensor
-from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
-from plugins.TaskTouchzSuccess import TaskTouchzSuccess
 import json
 import logging
 from airflow.models import Variable
@@ -38,7 +36,15 @@ dag = airflow.DAG('dwm_oride_order_base_di',
                   schedule_interval="30 01 * * *",
                   default_args=args,
                   catchup=False)
+
+sleep_time = BashOperator(
+    task_id='sleep_id',
+    depends_on_past=False,
+    bash_command='sleep 30',
+    dag=dag)
+
 ##----------------------------------------- 依赖 ---------------------------------------##
+
 
 # 依赖前一天分区
 dependence_dwd_oride_order_base_include_test_di_prev_day_task = UFileSensor(
@@ -97,40 +103,20 @@ dependence_dwd_oride_order_mark_df_prev_day_task = UFileSensor(
 )
 ##----------------------------------------- 变量 ---------------------------------------##
 
-db_name = "oride_dw"
 table_name = "dwm_oride_order_base_di"
 hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
 
-
-##----------------------------------------- 任务超时监控 ---------------------------------------##
-
-def fun_task_timeout_monitor(ds, dag, **op_kwargs):
-    dag_ids = dag.dag_id
-
-    msg = [
-        {"db": "oride_dw", "table": "{dag_name}".format(dag_name=dag_ids),
-         "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "800"}
-    ]
-
-    TaskTimeoutMonitor().set_task_monitor(msg)
-
-
-task_timeout_monitor = PythonOperator(
-    task_id='task_timeout_monitor',
-    python_callable=fun_task_timeout_monitor,
-    provide_context=True,
-    dag=dag
-)
-
-
 ##----------------------------------------- 脚本 ---------------------------------------##
 
-def dwm_oride_order_base_di_sql_task(ds):
-    HQL = '''
+
+dwm_oride_order_base_di_task = HiveOperator(
+    task_id='dwm_oride_order_base_di_task',
+    hql='''
+
     set hive.exec.parallel=true;
     set hive.exec.dynamic.partition.mode=nonstrict;
 
-    insert overwrite table {db}.{table} partition(country_code,dt)
+    insert overwrite table  oride_dw.{table} partition(country_code,dt)
     select  ord.order_id,
           ord.city_id,
            --所属城市
@@ -360,84 +346,42 @@ def dwm_oride_order_base_di_sql_task(ds):
     (
         select * from oride_dw.dwd_oride_order_mark_df 
         where dt='{pt}' and substr(create_time,1,10)='{pt}'
-    )  mark_ord on ord.order_id=mark_ord.order_id;
-    '''.format(
+    )  mark_ord on ord.order_id=mark_ord.order_id
+    ;
+'''.format(
         pt='{{ds}}',
         now_day='{{macros.ds_add(ds, +1)}}',
-        table=table_name,
-        db=db_name
-    )
-    return HQL
+        table=table_name
+    ),
+    schema='oride_dw',
+    dag=dag)
 
+# 生成_SUCCESS
+touchz_data_success = BashOperator(
 
-# 熔断数据，如果数据重复，报错
-def check_key_data_task(ds):
-    cursor = get_hive_cursor()
+    task_id='touchz_data_success',
 
-    # 主键重复校验
-    check_sql = '''
-    SELECT count(1)-count(distinct order_id) as cnt
-      FROM {db}.{table}
-      WHERE dt='{pt}'
-      and country_code in ('nal')
-    '''.format(
-        pt=ds,
-        now_day=airflow.macros.ds_add(ds, +1),
-        table=table_name,
-        db=db_name
-    )
+    bash_command="""
+    line_num=`$HADOOP_HOME/bin/hadoop fs -du -s {hdfs_data_dir} | tail -1 | awk '{{print $1}}'`
 
-    logging.info('Executing 主键重复校验: %s', check_sql)
-
-    cursor.execute(check_sql)
-
-    res = cursor.fetchone()
-
-    if res[0] > 1:
-        flag = 1
-        raise Exception("Error The primary key repeat !", res)
-        sys.exit(1)
-    else:
-        flag = 0
-        print("-----> Notice Data Export Success ......")
-
-    return flag
-
-
-# 主流程
-def execution_data_task_id(ds, **kargs):
-    hive_hook = HiveCliHook()
-
-    # 读取sql
-    _sql = dwm_oride_order_base_di_sql_task(ds)
-
-    logging.info('Executing: %s', _sql)
-
-    # 执行Hive
-    hive_hook.run_cli(_sql)
-
-    # 熔断数据
-    check_key_data_task(ds)
-
-    # 生成_SUCCESS
-    """
-    第一个参数true: 数据目录是有country_code分区。false 没有
-    第二个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
-
-    """
-    TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "true", "true")
-
-
-dwm_oride_order_base_di_task = PythonOperator(
-    task_id='dwm_oride_order_base_di_task',
-    python_callable=execution_data_task_id,
-    provide_context=True,
-    dag=dag
-)
+    if [ $line_num -eq 0 ]
+    then
+        echo "FATAL {hdfs_data_dir} is empty"
+        exit 1
+    else
+        echo "DATA EXPORT Successed ......"
+        $HADOOP_HOME/bin/hadoop fs -touchz {hdfs_data_dir}/_SUCCESS
+    fi
+    """.format(
+        pt='{{ds}}',
+        now_day='{{macros.ds_add(ds, +1)}}',
+        hdfs_data_dir=hdfs_path + '/country_code=nal/dt={{ds}}'
+    ),
+    dag=dag)
 
 dependence_dwd_oride_order_base_include_test_di_prev_day_task >> \
 dependence_dwd_oride_order_dispatch_funnel_di_prev_day_task >> \
 dependence_dwd_oride_driver_accept_order_show_detail_di_prev_day_task >> \
 dependence_dwd_oride_driver_accept_order_click_detail_di_prev_day_task >> \
 dependence_dwd_oride_order_mark_df_prev_day_task >> \
-dwm_oride_order_base_di_task
+sleep_time >> dwm_oride_order_base_di_task >> touchz_data_success
