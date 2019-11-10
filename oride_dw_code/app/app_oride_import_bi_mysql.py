@@ -408,3 +408,5 @@ close_hive_connectors = PythonOperator(
 
 sleep_time >> close_hive_connectors
 sleep_time >> close_db_connectors
+
+hive_cursor.close()
