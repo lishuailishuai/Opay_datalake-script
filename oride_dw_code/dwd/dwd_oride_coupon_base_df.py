@@ -111,7 +111,7 @@ dwd_oride_coupon_base_df_task = HiveOperator(
            a.used_time,
            a.user_id,
            b.register_time,
-           finish_d,a.order_id,c.price,c.amount,c.coupon_amount,c.capped_id,c.capped_type,c.capped_mode,status
+           finish_d,a.order_id,c.price,c.amount,c.coupon_amount,c.capped_id,c.capped_type,c.capped_mode,a.status
     from 
         (select * from oride_dw_ods.ods_sqoop_base_data_coupon_df where dt='{pt}') a
     left join 
