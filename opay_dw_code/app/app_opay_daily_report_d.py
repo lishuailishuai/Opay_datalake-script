@@ -70,6 +70,7 @@ dependence_ods_sqoop_base_user_transfer_user_record_di = HivePartitionSensor(
     poke_interval=60,
     dag=dag
 )
+
 # ods_sqoop_base_merchant_transfer_user_record_df
 dependence_ods_sqoop_base_merchant_transfer_user_record_di = HivePartitionSensor(
     task_id="dependence_ods_sqoop_base_merchant_transfer_user_record_di",
