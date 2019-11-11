@@ -15,6 +15,8 @@ from airflow.operators.bash_operator import BashOperator
 from airflow.sensors.named_hive_partition_sensor import NamedHivePartitionSensor
 from airflow.sensors.hive_partition_sensor import HivePartitionSensor
 from airflow.sensors import UFileSensor
+from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
+from plugins.TaskTouchzSuccess import TaskTouchzSuccess
 import json
 import logging
 from airflow.models import Variable
@@ -32,7 +34,7 @@ args = {
     'email_on_retry': False,
 }
 
-dag = airflow.DAG('dim_oride_coupon_sum_day',
+dag = airflow.DAG('dwm_oride_coupon_sum_day',
                   schedule_interval="00 01 * * *",
                   default_args=args,
                   catchup=False)
@@ -49,7 +51,7 @@ sleep_time = BashOperator(
 dependence_dwd_oride_coupon_base_df_prev_day_task = UFileSensor(
     task_id='dependence_dwd_oride_coupon_base_df_prev_day_task',
     filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw/dwd_oride_coupon_base_df",
+        hdfs_path_str="oride/oride_dw/dwd_oride_coupon_base_df/country_code='nal'",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -59,26 +61,27 @@ dependence_dwd_oride_coupon_base_df_prev_day_task = UFileSensor(
 
 ##----------------------------------------- 变量 ---------------------------------------##
 
-table_name = "dim_oride_coupon_sum_day"
+table_name = "dwm_oride_coupon_sum_day"
 hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
 
 ##----------------------------------------- 脚本 ---------------------------------------##
 
-dim_oride_coupon_sum_day_task = HiveOperator(
+dwm_oride_coupon_sum_day_task = HiveOperator(
 
-    task_id='dim_oride_coupon_sum_day_task',
+    task_id='dwm_oride_coupon_sum_day_task',
     hql='''
     INSERT overwrite TABLE oride_dw.{table} partition(dt='{pt}')
     select 
-       coupon_type,amount,start_price,discount,country_code,city_id,product_id,case when used_date=tran_date then '1' else '0' end,
+       coupon_type,amount,start_price,discount,city_id,product_id,case when used_date=tran_date then '1' else '0' end,
        sum(case when receive_date='{pt}' then 1 else 0 end),--领取量
        sum(case when used_date='{pt}' then 1 else 0 end),--使用量
        count(distinct case when used_date='{pt}' then user_id end),--使用人数
        count(case when used_date='{pt}' then 1 end) ,--交易笔数
-       sum(case when used_date='{pt}' then amt end),--交易金额
-       sum(case when used_date='{pt}' then discount_amt end) --交易折扣金额
+       sum(case when used_date='{pt}' then price end),--应付交易金额
+       sum(case when used_date='{pt}' then amount end),--实付交易金额
+       sum(case when used_date='{pt}' then coupon_amount end) --优惠券金额
     from 
-       (select coupon_type,amount,start_price,discount,country_code,city_id,product_id,amt,discount_amt,user_id,
+       (select coupon_type,amount,start_price,discount,city_id,product_id,price,amount,user_id,coupon_amount,
              from_unixtime(receive_time,'yyyy-MM-dd') receive_date,
              from_unixtime(used_time,'yyyy-MM-dd') used_date,
              from_unixtime(tran_time,'yyyy-MM-dd') tran_date
@@ -97,29 +100,24 @@ dim_oride_coupon_sum_day_task = HiveOperator(
 
 
 # 生成_SUCCESS
-touchz_data_success = BashOperator(
+def check_success(ds,dag,**op_kwargs):
 
+    dag_ids=dag.dag_id
+
+    msg = [
+        {"table":"{dag_name}".format(dag_name=dag_ids),"hdfs_path": "{hdfsPath}/country_code=nal/dt={pt}".format(pt=ds,hdfsPath=hdfs_path)}
+    ]
+
+    TaskTouchzSuccess().set_touchz_success(msg)
+
+touchz_data_success= PythonOperator(
     task_id='touchz_data_success',
-
-    bash_command="""
-    line_num=`$HADOOP_HOME/bin/hadoop fs -du -s {hdfs_data_dir} | tail -1 | awk '{{print $1}}'`
-
-    if [ $line_num -eq 0 ]
-    then
-        echo "FATAL {hdfs_data_dir} is empty"
-        $HADOOP_HOME/bin/hadoop fs -touchz {hdfs_data_dir}/_SUCCESS
-    else
-        echo "DATA EXPORT Successed ......"
-        $HADOOP_HOME/bin/hadoop fs -touchz {hdfs_data_dir}/_SUCCESS
-    fi
-    """.format(
-        pt='{{ds}}',
-        now_day='{{macros.ds_add(ds, +1)}}',
-        hdfs_data_dir=hdfs_path + '/dt={{ds}}'
-    ),
-    dag=dag)
+    python_callable=check_success,
+    provide_context=True,
+    dag=dag
+)
 
 dependence_dwd_oride_coupon_base_df_prev_day_task >> \
 sleep_time >> \
-dim_oride_coupon_sum_day_task >> \
+dwm_oride_coupon_sum_day_task >> \
 touchz_data_success
