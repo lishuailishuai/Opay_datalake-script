@@ -72,7 +72,7 @@ dwm_oride_coupon_sum_day_task = HiveOperator(
     hql='''
     set hive.exec.dynamic.partition.mode=nonstrict;
     set hive.exec.parallel=true;
-    INSERT overwrite TABLE oride_dw.{TABLE} partition(country_code,dt)
+    INSERT overwrite TABLE oride_dw.{table} partition(country_code,dt)
 SELECT coupon_type,
        amount,
        start_price,
