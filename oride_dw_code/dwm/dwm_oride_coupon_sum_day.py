@@ -70,7 +70,7 @@ dwm_oride_coupon_sum_day_task = HiveOperator(
 
     task_id='dwm_oride_coupon_sum_day_task',
     hql='''
-    INSERT overwrite TABLE oride_dw.{table} partition(dt='{pt}')
+    INSERT overwrite TABLE oride_dw.{table} partition(country_code='nal',dt='{pt}')
     select 
        coupon_type,amount,start_price,discount,city_id,product_id,case when used_date=tran_date then '1' else '0' end,
        sum(case when receive_date='{pt}' then 1 else 0 end),--领取量
