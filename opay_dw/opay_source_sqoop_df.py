@@ -59,17 +59,17 @@ db_name,table_name,conn_id,prefix_name,priority_weight
 #
 
 table_list = [
-    ("opay_bigorder","big_order", "opay_db_3317", "base",3),
+    ("opay_bigorder","big_order", "opay_db_3317", "base",1),
     ("opay_bigorder","merchant_order", "opay_db_3317", "base",2),
 
-    ("opay_transaction","user_transfer_user_record", "opay_db_3316", "base",3),
-    ("opay_transaction","merchant_transfer_user_record", "opay_db_3316", "base",3),
-    ("opay_transaction","airtime_topup_record", "opay_db_3316", "base",3),
-    ("opay_transaction","betting_topup_record", "opay_db_3316", "base",3),
-    ("opay_transaction","user_topup_record", "opay_db_3316", "base",3),
+    ("opay_transaction","user_transfer_user_record", "opay_db_3316", "base",1),
+    ("opay_transaction","merchant_transfer_user_record", "opay_db_3316", "base",1),
+    ("opay_transaction","airtime_topup_record", "opay_db_3316", "base",1),
+    ("opay_transaction","betting_topup_record", "opay_db_3316", "base",1),
+    ("opay_transaction","user_topup_record", "opay_db_3316", "base",1),
 
     ("opay_user","user_upgrade", "opay_db_3321", "base",3),
-    ("opay_user","user", "opay_db_3321", "base",3),
+    ("opay_user","user", "opay_db_3321", "base",1),
     ("opay_user","user_operator", "opay_db_3321", "base", 1),
     ("opay_user","user_payment_instrument", "opay_db_3321", "base", 1),
     ("opay_user", "user_token", "opay_db_3321", "base", 1),
