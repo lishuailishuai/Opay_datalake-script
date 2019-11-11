@@ -211,10 +211,10 @@ select
    (case when dri.know_orider = 7  then 1 else 0 end ) as is_proxy_write_channel,
    --司机邀请司机渠道：代填写
    
-   (case when dri.know_orider = 14  then 1 else 0 end ) as is_online_share_channel,
+   (case when dri.know_orider = 13  then 1 else 0 end ) as is_online_share_channel,
    --司机邀请司机渠道：线上分享
    
-   (case when dri.know_orider = 13  then 1 else 0 end ) as is_onsite_audit_channel,
+   (case when dri.know_orider = 14  then 1 else 0 end ) as is_onsite_audit_channel,
    --司机邀请司机渠道：现场审核
 
    'nal' AS country_code,
