@@ -70,25 +70,73 @@ dwm_oride_coupon_sum_day_task = HiveOperator(
 
     task_id='dwm_oride_coupon_sum_day_task',
     hql='''
-    INSERT overwrite TABLE oride_dw.{table} partition(country_code='nal',dt='{pt}')
-    select 
-       coupon_type,amount,start_price,discount,city_id,product_id,case when used_date=tran_date then '1' else '0' end,
-       sum(case when receive_date='{pt}' then 1 else 0 end),--领取量
-       sum(case when used_date='{pt}' then 1 else 0 end),--使用量
-       count(distinct case when used_date='{pt}' then user_id end),--使用人数
-       count(case when used_date='{pt}' then 1 end) ,--交易笔数
-       sum(case when used_date='{pt}' then price end),--应付交易金额
-       sum(case when used_date='{pt}' then amount end),--实付交易金额
-       sum(case when used_date='{pt}' then coupon_amount end) --优惠券金额
-    from 
-       (select coupon_type,amount,start_price,discount,city_id,product_id,price,amount,user_id,coupon_amount,
-             from_unixtime(receive_time,'yyyy-MM-dd') receive_date,
-             from_unixtime(used_time,'yyyy-MM-dd') used_date,
-             from_unixtime(tran_time,'yyyy-MM-dd') tran_date
-       from oride_dw.dwd_oride_coupon_base_df where dt='{pt}'
-      )m
-  group by coupon_type,amount,start_price,discount,country_code,city_id,product_id,case when used_date=tran_date then '1' else '0' end 
-;
+    set hive.exec.dynamic.partition.mode=nonstrict;
+    set hive.exec.parallel=true;
+    INSERT overwrite TABLE oride_dw.{TABLE} partition(country_code,dt)
+SELECT coupon_type,
+       amount,
+       start_price,
+       discount,
+       city_id,
+       product_id,
+       CASE
+           WHEN used_date=tran_date THEN '1'
+           ELSE '0'
+       END,
+       sum(CASE
+               WHEN receive_date='{pt}' THEN 1
+               ELSE 0
+           END),--领取量
+       sum(CASE
+              WHEN used_date='{pt}' THEN 1
+              ELSE 0
+           END),--使用量
+       count(DISTINCT CASE
+                    WHEN used_date='{pt}' THEN user_id
+                END),--使用人数
+       count(CASE
+           WHEN used_date='{pt}' THEN 1
+            END) ,--交易笔数
+       sum(CASE
+            WHEN used_date='{pt}' THEN price
+           END),--应付交易金额
+       sum(CASE
+            WHEN used_date='{pt}' THEN amount
+          END),--实付交易金额
+       sum(CASE
+           WHEN used_date='{pt}' THEN coupon_amount
+          END), --优惠券金额
+       country_code,
+       dt
+FROM
+  (SELECT coupon_type,
+          start_price,
+          discount,
+          city_id,
+          product_id,
+          price,
+          amount,
+          user_id,
+          coupon_amount,
+          country_code,
+          dt,
+          from_unixtime(receive_time,'yyyy-MM-dd') receive_date,
+          from_unixtime(used_time,'yyyy-MM-dd') used_date,
+          from_unixtime(tran_time,'yyyy-MM-dd') tran_date
+   FROM oride_dw.dwd_oride_coupon_base_df
+   WHERE dt='{pt}' )m
+GROUP BY dt,
+         coupon_type,
+         amount,
+         start_price,
+         discount,
+         country_code,
+         city_id,
+         product_id,
+         CASE
+             WHEN used_date=tran_date THEN '1'
+             ELSE '0'
+         END ;
 
 '''.format(
         pt='{{ds}}',
