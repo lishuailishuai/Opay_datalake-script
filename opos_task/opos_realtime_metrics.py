@@ -409,7 +409,7 @@ create_order_metrics_data = BashOperator(
     task_id='create_order_metrics_data',
     bash_command="""
         mysql -udml_insert -p6VaEyu -h10.52.149.112 opos_dw  -e "
-            
+
             insert into opos_dw.opos_metrcis_realtime (
             dt,
             city_id,
@@ -422,7 +422,7 @@ create_order_metrics_data = BashOperator(
             pos_active_user_cnt,
             qr_active_user_cnt
             ) 
-            
+
             select
             t.dt,
             t.city_id,
@@ -434,11 +434,11 @@ create_order_metrics_data = BashOperator(
             t.active_user_cnt,
             t.pos_active_user_cnt,
             t.qr_active_user_cnt
-            
+
             from
             (
               select
-              '2019-11-08' as dt,
+              '{{ ds }}' as dt,
               t.city_id as city_id,
               t.bd_id as bd_id,
               ifnull(count(if(t.order_type = 'pos' and t.trade_status = 'SUCCESS',t.order_id,null)),0) as pos_complete_order_cnt,
@@ -448,8 +448,8 @@ create_order_metrics_data = BashOperator(
               ifnull(count(distinct if(t.trade_status = 'SUCCESS',t.sender_id,null)),0) as active_user_cnt,
               ifnull(count(distinct if(t.order_type = 'pos' and t.trade_status = 'SUCCESS',t.sender_id,null)),0) as pos_active_user_cnt,
               ifnull(count(distinct if(t.order_type = 'qrcode' and t.trade_status = 'SUCCESS',t.sender_id,null)),0) as qr_active_user_cnt
-            
-            
+
+
               from
               (   select
                   o.order_id,
@@ -471,10 +471,10 @@ create_order_metrics_data = BashOperator(
                       order_type,
                       trade_status,
                       ifnull(org_payment_amount,0) as org_payment_amount
-            
+
                       from
                       opos_order
-                      where DATE_FORMAT(create_time,'%Y-%m-%d') = '2019-11-08'
+                      where DATE_FORMAT(create_time,'%Y-%m-%d') = '{{ ds }}'
                   ) o
                   on o.receipt_id = s.opay_id
                ) t
@@ -492,7 +492,7 @@ create_order_metrics_data = BashOperator(
             active_user_cnt=VALUES(active_user_cnt),
             pos_active_user_cnt=VALUES(pos_active_user_cnt),
             qr_active_user_cnt=VALUES(qr_active_user_cnt)
-            
+
             ;
 
         "
@@ -504,15 +504,15 @@ create_merchant_metrics_data = BashOperator(
     task_id='create_merchant_metrics_data',
     bash_command="""
         mysql -udml_insert -p6VaEyu -h10.52.149.112 opos_dw  -e "
-            
+
             insert into opos_dw.opos_shop_metrcis_realtime (dt,city_id,bd_id,new_shop_cnt)
-            
+
             select 
             t.dt,
             t.city_id,
             t.bd_id,
             t.new_shop_cnt
-            
+
             from 
             (
                 select 
@@ -520,7 +520,7 @@ create_merchant_metrics_data = BashOperator(
                 city_id,
                 bd_id,
                 count(id) as new_shop_cnt
-                
+
                 from 
                 bd_shop
                 where DATE_FORMAT(created_at,'%Y-%m-%d') = '{{ ds }}'
@@ -528,8 +528,8 @@ create_merchant_metrics_data = BashOperator(
                 city_id,
                 bd_id
             ) t 
-            
-            
+
+
             ON DUPLICATE KEY
             UPDATE
             dt=VALUES(dt),
@@ -547,7 +547,7 @@ create_merchant_metrics_data = BashOperator(
 delete_old_order = BashOperator(
     task_id='delete_old_order',
     bash_command="""
-        mysql -udml_insert -p6VaEyu -h10.52.149.112 opos_dw  -e "
+        mysql -uroot -p78c5f1142124334 -h10.52.149.112 opos_dw  -e "
             delete from opos_order where DATE_FORMAT(create_time,'%Y-%m-%d') < '{{ ds }}';
         "
     """,

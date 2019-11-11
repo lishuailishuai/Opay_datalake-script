@@ -108,6 +108,8 @@ dwd_oride_order_push_driver_detail_di_task = HiveOperator(
                 get_json_object(event_values, '$.distance') as distance,--司机的接驾距离(米)(订单播给司机时司机所处的位置)
                 get_json_object(event_values, '$.wait_time') as wait_time,--司机收到推送信息时有多久没有订单
                 get_json_object(event_values, '$.mode') as push_mode, --是派单方式（目前只有全局优化和直接发单）
+                cast(get_json_object(event_values, '$.assign_type') as int) as assign_type, --0=非强派单，1=强派单
+                cast(get_json_object(event_values, '$.serv_type') as int) as product_id, --业务线ID
                 'nal' as country_code,
                 dt
         from

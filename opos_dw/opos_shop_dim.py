@@ -31,12 +31,11 @@ dag = airflow.DAG(
     schedule_interval="*/5 * * * *",
     default_args=args)
 
-
 insert_shop_dim_data = BashOperator(
     task_id='insert_shop_dim_data',
     bash_command="""
-        mysql -uroot -p78c5f1142124334 -h10.52.149.112 opos_dw  -e "
-        
+        mysql -udml_insert -p6VaEyu -h10.52.149.112 opos_dw  -e "
+
             insert into opos_dw.opos_agent_shop_dim (agent_id,opay_id,shop_id,bd_id,city_id)
             select
             a.id,
@@ -56,7 +55,7 @@ insert_shop_dim_data = BashOperator(
             city_id=VALUES(city_id)
 
             ;
-            
+
         "
     """,
     dag=dag,
