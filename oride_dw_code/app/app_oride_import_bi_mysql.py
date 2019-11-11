@@ -57,33 +57,33 @@ mysql_connectors = {}
 
 
 # 关闭mysql连接
-def close_db_conn(**op_kwargs):
-    for k in mysql_connectors:
-        mysql_connectors[k].close()
+#def close_db_conn(**op_kwargs):
+#    for k in mysql_connectors:
+#        mysql_connectors[k].close()
 
 
-close_db_connectors = PythonOperator(
-    task_id='close_db_connectors',
-    python_callable=close_db_conn,
-    provide_context=True,
-    dag=dag
-)
+#close_db_connectors = PythonOperator(
+#    task_id='close_db_connectors',
+#    python_callable=close_db_conn,
+#    provide_context=True,
+#    dag=dag
+#)
 
 
 # 关闭hive连接
-def close_hive_conn(**op_kwargs):
-    hive = op_kwargs.get('hive')
-    if hive:
-        hive.close()
+#def close_hive_conn(**op_kwargs):
+#    hive = op_kwargs.get('hive')
+#    if hive:
+#        hive.close()
 
 
 # 创建mysql数据表
 def create_bi_mysql_table(conn, db, table, columns):
-    if conn not in mysql_connectors:
-        mconn = get_db_conn(conn)
-        mysql_connectors[conn] = mconn.cursor()
-
-    mcursor = mysql_connectors[conn]
+    #if conn not in mysql_connectors:
+    mconn = get_db_conn(conn)
+    #    mysql_connectors[conn] = mconn.cursor()
+    #mcursor = mysql_connectors[conn]
+    mcursor = mconn.cursor()
     sql = '''
         SELECT 
             COLUMN_NAME, 
@@ -124,6 +124,7 @@ def create_bi_mysql_table(conn, db, table, columns):
         )
         logging.info(sql)
         mcursor.execute(sql)
+        mcursor.close()
         return True
 
     # mysql表存在
@@ -166,6 +167,7 @@ def create_bi_mysql_table(conn, db, table, columns):
                 logging.info(sql + alter_sql)
                 mcursor.execute(sql + alter_sql)
 
+    mcursor.close()
     return False
 
 
@@ -210,7 +212,7 @@ def get_hive_table_columns(conn, db, table):
 
 # 根据hive数据表 更新 mysql数据表
 def init_mysql_table(**op_kwargs):
-    hive_cursor = op_kwargs.get('conn')
+    hive_cursor = get_hive_cursor()
     hive_db = op_kwargs.get('db')
     hive_table = op_kwargs.get('table')
     mysql_cursor = op_kwargs.get('mysql_conn')
@@ -257,7 +259,8 @@ def init_mysql_table(**op_kwargs):
     logging.info(hql)
     wxapi = ComwxApi('wwd26d45f97ea74ad2', 'BLE_v25zCmnZaFUgum93j3zVBDK-DjtRkLisI_Wns4g', '1000011')
     try:
-        mcursor = mysql_connectors[mysql_cursor]
+        mconn = get_db_conn(mysql_cursor)
+        mcursor = mconn.cursor()    # mysql_connectors[mysql_cursor]
         if overwrite:
             mcursor.execute("TRUNCATE TABLE {db}.{table}".format(db=hive_db, table=hive_table))
         else:
@@ -298,8 +301,12 @@ def init_mysql_table(**op_kwargs):
                 h=isql,
                 v=",".join(rows)
             ))
+        mcursor.close()
+        hive_cursor.close()
     except BaseException as e:
         logging.info(e)
+        mcursor.close()
+        hive_cursor.close()
         wxapi.postAppMessage(
             '重要重要重要：{}.{}数据写入mysql异常【{}】'.format(hive_db, hive_table, dt),
             '271'
@@ -320,6 +327,7 @@ for hive_db_info in hive_sync_db:
         overwrite = True
     else:
         overwrite = False
+
     mysql_conn = table_info.get('mysql_conn', None)
     if not table or not db or not mysql_conn:
         continue
@@ -382,7 +390,7 @@ for hive_db_info in hive_sync_db:
         python_callable=init_mysql_table,
         provide_context=True,
         op_kwargs={
-            "conn": hive_cursor,
+            # "conn": hive_cursor,
             "db": db,
             "table": table,
             "overwrite": overwrite,
@@ -394,17 +402,19 @@ for hive_db_info in hive_sync_db:
 
     table_validate_task >> sync_table_schema >> sleep_time
 
+hive_cursor.close()
+
 
 # 关闭hive连接
-close_hive_connectors = PythonOperator(
-    task_id='close_hive_connectors',
-    python_callable=close_hive_conn,
-    provide_context=True,
-    op_kwargs={
-        "hive": hive_cursor
-    },
-    dag=dag
-)
+# close_hive_connectors = PythonOperator(
+#    task_id='close_hive_connectors',
+#    python_callable=close_hive_conn,
+#    provide_context=True,
+#    op_kwargs={
+#        "hive": hive_cursor
+#    },
+#    dag=dag
+#)
 
-sleep_time >> close_hive_connectors
-sleep_time >> close_db_connectors
+#sleep_time >> close_hive_connectors
+#sleep_time >> close_db_connectors
