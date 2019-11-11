@@ -30,7 +30,7 @@ dag = airflow.DAG(
     schedule_interval="30 05 * * *",
     max_active_runs=1,
     default_args=args,
-    concurrency=5
+    concurrency=10
 )
 
 sleep_time = BashOperator(
@@ -212,7 +212,7 @@ def get_hive_table_columns(conn, db, table):
 
 # 根据hive数据表 更新 mysql数据表
 def init_mysql_table(**op_kwargs):
-    hive_cursor = get_hive_cursor()
+    hive_cursor = get_hive_cursor('hiveserver2_default')
     hive_db = op_kwargs.get('db')
     hive_table = op_kwargs.get('table')
     mysql_cursor = op_kwargs.get('mysql_conn')
