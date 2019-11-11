@@ -233,17 +233,25 @@ def dwm_oride_order_base_di_sql_task(ds):
 
            push.succ_push_all_times_cnt as succ_push_all_times,
            --成功播单总次数（push节点）
+           
+           null as request_order_distance_inpush,
 
-           if(push1.order_id is not null and push1.driver_id is not null,push1.distance,0) as request_order_distance_inpush,
+          -- if(push1.order_id is not null and push1.driver_id is not null,push1.distance,0) as request_order_distance_inpush,
            --抢单阶段接驾距离(应答)
+           
+           null as is_td_request_inpush,
 
-           if(push1.order_id is not null and push1.driver_id is not null,1,0) as is_td_request_inpush,
+          -- if(push1.order_id is not null and push1.driver_id is not null,1,0) as is_td_request_inpush,
            --抢单阶段应答单量，不包含招手停、不包含拼车和包车不走push的部分(应答)
+           
+           null as finish_order_distance_inpush,
 
-           if(push1.order_id is not null and push1.driver_id is not null and ord.is_td_finish=1,push1.distance,0) as finish_order_distance_inpush,
+          -- if(push1.order_id is not null and push1.driver_id is not null and ord.is_td_finish=1,push1.distance,0) as finish_order_distance_inpush,
            --抢单阶段接驾距离(完单)
+           
+           null as is_td_finish_inpush,
 
-           if(push1.order_id is not null and push1.driver_id is not null and ord.is_td_finish=1,1,0) as is_td_finish_inpush,
+           --if(push1.order_id is not null and push1.driver_id is not null and ord.is_td_finish=1,1,0) as is_td_finish_inpush,
            --抢单阶段完单量，不包含招手停、不包含拼车和包车不走push的部分(完单)
 
            show.driver_show_times as driver_show_times_cnt,
@@ -329,13 +337,13 @@ def dwm_oride_order_base_di_sql_task(ds):
       (
         SELECT 
         order_id,  --成功播单的订单
-        driver_id,
+       -- driver_id,
         max(order_round) as max_order_round, --播单最大轮数，要么被抢单了要么超时了
         min(distance) as distance --抢单阶段的接驾距离
         FROM oride_dw.dwd_oride_order_push_driver_detail_di   --调度算法push节点
         WHERE dt='{pt}' and success=1 
-        GROUP BY order_id,driver_id
-        ) push1 ON ord.order_id=push1.order_id and ord.driver_id=push1.driver_id    
+        GROUP BY order_id--,driver_id
+        ) push1 ON ord.order_id=push1.order_id --and ord.driver_id=push1.driver_id    
     LEFT OUTER JOIN 
     (
         SELECT 
