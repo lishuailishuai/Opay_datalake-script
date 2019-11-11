@@ -104,6 +104,7 @@ dwd_oride_order_dispatch_chose_detail_di_task = HiveOperator(
             get_json_object(event_values, '$.round') as order_round,--订单轮数
             get_json_object(event_values, '$.config_id') as config_id,--派单配置的id
             get_json_object(event_values, '$.timestamp') as log_timestamp,--埋点时间
+            cast(get_json_object(event_values, '$.serv_type') as int) as product_id, --业务线ID
             'nal' as country_code,
             dt
         from  

@@ -109,6 +109,7 @@ dwd_oride_order_assign_driver_detail_di_task = HiveOperator(
         d.dis,--司机的接驾距离(米)(订单分配给司机时司机所处的位置)(预估)
         d.wait_time,--司机收到推送信息时有多久没有订单
         d.push_mode,--是派单方式（目前只有全局优化和直接发单）
+        d.product_id --业务线ID
         'nal' as country_code, 
         '{pt}' dt
 
@@ -129,7 +130,8 @@ dwd_oride_order_assign_driver_detail_di_task = HiveOperator(
                 get_json_object(event_values, '$.success') as success,
                 get_json_object(event_values, '$.timestamp') as log_timestamp,
                 get_json_object(event_values, '$.wait_time') as wait_time,
-                get_json_object(event_values, '$.mode') as push_mode
+                get_json_object(event_values, '$.mode') as push_mode,
+                get_json_object(event_values, '$.serv_type') as product_id --业务线ID
 
                 from oride_source.dispatch_tracker_server_magic 
                 where dt='{pt}' and 
