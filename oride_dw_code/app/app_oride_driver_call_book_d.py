@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-司机通讯录和通话次数
+司机通讯录和通话次数（15天的通话记录）
 """
 import airflow
 from airflow.operators.hive_operator import HiveOperator
@@ -83,7 +83,7 @@ dwd_oride_driver_phone_list_mid_task = HiveOperator(
             select a.user_id,e as name_phone_num,'nal' as country_code,'{pt}' as dt
             from oride_dw.dwd_oride_client_event_detail_hi a
             lateral view explode(split(substr(get_json_object(a.event_value,'$.phone_list'),2,length(get_json_object(a.event_value,'$.phone_list'))-2),',')) phone_list as e
-            where a.dt between date_sub('{pt}',29) and '{pt}' and a.event_name='phone_list';
+            where a.dt between date_sub('{pt}',14) and '{pt}' and a.event_name='phone_list';
     '''.format(
         pt='{{ds}}',
         now_day='{{macros.ds_add(ds, +1)}}'
@@ -102,7 +102,7 @@ dwd_oride_driver_call_record_mid_task = HiveOperator(
             select b.user_id,f as name_phone_num,'nal' as country_code,'{pt}' as dt
             from oride_dw.dwd_oride_client_event_detail_hi b
             lateral view explode(split(substr(get_json_object(b.event_value,'$.call_record'),2,length(get_json_object(b.event_value,'$.call_record'))-2),',')) call_record as f
-            where b.dt between date_sub('{pt}',29) and '{pt}' and b.event_name='call_record';    
+            where b.dt between date_sub('{pt}',14) and '{pt}' and b.event_name='call_record';    
 
     '''.format(
         pt='{{ds}}',
