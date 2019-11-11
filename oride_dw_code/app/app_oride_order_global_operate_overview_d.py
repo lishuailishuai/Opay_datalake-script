@@ -410,7 +410,7 @@ def app_oride_order_global_operate_overview_d_sql_task(ds):
             select 
                 city_id,
                 min(create_date) as open_date
-            from dwd_oride_order_base_include_test_df
+            from oride_dw.dwd_oride_order_base_include_test_df
             where dt in ( '{pt}','his') 
             and status in (4,5)and city_id <> '999001'
             group by city_id 
