@@ -440,16 +440,3 @@ oride_cohort_mid_success >> \
 app_oride_new_driver_cohort_w_task >> \
 new_driver_cohort_touchz_success
 
-dependence_dwd_oride_order_base_include_test_df_prev_day_task >> \
-sleep_time >> \
-create_oride_cohort_mid_task >> \
-oride_cohort_mid_success >> \
-app_oride_act_user_cohort_w_task >> \
-act_user_cohort_touchz_success
-
-dependence_dwd_oride_order_base_include_test_df_prev_day_task >> \
-sleep_time >> \
-create_oride_cohort_mid_task >> \
-oride_cohort_mid_success >> \
-app_oride_act_driver_cohort_w_task >> \
-act_driver_cohort_touchz_success

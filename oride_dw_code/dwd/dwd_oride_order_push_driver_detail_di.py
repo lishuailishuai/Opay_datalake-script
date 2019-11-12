@@ -112,6 +112,7 @@ dwd_oride_order_push_driver_detail_di_task = HiveOperator(
                 cast(get_json_object(event_values, '$.serv_type') as int) as product_id, --业务线ID
                 get_json_object(event_values, '$.is_multiple') as is_multiple,  --是否播多单
                 null as order_id_multiple, --多单订单
+                get_json_object(event_values, '$.inner_id') as inner_id,  --行程ID唯一标志
                 'nal' as country_code,
                 dt
         from
@@ -136,6 +137,7 @@ dwd_oride_order_push_driver_detail_di_task = HiveOperator(
                 cast(get_json_object(event_values, '$.serv_type') as int) as product_id, --业务线ID
                 get_json_object(event_values, '$.is_multiple') as is_multiple,  --是否播多单
                 order_id1 as order_id_multiple, --多单订单
+                get_json_object(event_values, '$.inner_id') as inner_id,  --行程ID唯一标志
                 'nal' as country_code,
                 dt
         from
