@@ -215,8 +215,9 @@ for db_name, table_name, conn_id, prefix_name,priority_weight_nm in table_list:
             --username {username} \
             --password {password} \
             --query 'select * from {table} where (FROM_UNIXTIME(UNIX_TIMESTAMP(create_time), "%Y-%m-%d %H
-") between "{{{{ ds }}}} 01" and  "{{{{ macros.ds_add(ds, +1) }}}} 00" OR FROM_UNIXTIME(UNIX_TIMESTAMP(update_time), "%Y-%m-%d %H
-") between "{{{{ ds }}}} 01" and  "{{{{ macros.ds_add(ds, +1) }}}} 00") AND $CONDITIONS' \
+") >= "{{{{ ds }}}} 01" and FROM_UNIXTIME(UNIX_TIMESTAMP(create_time), "%Y-%m-%d %H
+") < "{{{{ macros.ds_add(ds, +1) }}}} 01" OR FROM_UNIXTIME(UNIX_TIMESTAMP(update_time), "%Y-%m-%d %H
+") >= "{{{{ ds }}}} 01" and FROM_UNIXTIME(UNIX_TIMESTAMP(create_time)< "{{{{ macros.ds_add(ds, +1) }}}} 01") AND $CONDITIONS' \
             --split-by id \
             --target-dir {ufile_path}/dt={{{{ ds }}}}/ \
             --fields-terminated-by "\\001" \
