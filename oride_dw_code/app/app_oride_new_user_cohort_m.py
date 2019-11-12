@@ -33,7 +33,7 @@ args = {
 }
 
 dag = airflow.DAG('app_oride_cohort_m',
-                  schedule_interval="30 01 1 * *",
+                  schedule_interval="00 03 1 * *",
                   default_args=args)
 
 sleep_time = BashOperator(
@@ -73,7 +73,7 @@ def get_table_info(i):
 
 
 ##----------------------------------------- 脚本 ---------------------------------------##
-create_oride_cohort_mid_task = HiveOperator(
+create_oride_cohort_mid_m_task = HiveOperator(
 
     task_id='create_oride_cohort_mid_m_task',
     hql='''drop table if exists oride_dw.oride_cohort_mid_m ;
@@ -124,8 +124,8 @@ create_oride_cohort_mid_task = HiveOperator(
                 --min(unix_timestamp(create_time)) over (partition by driver_id) as driver_first_time,--司机第一次完单时间
                 from oride_dw.dwd_oride_order_base_include_test_di
                 where dt>='2019-07-08'  --从20190705号开始加的city_id字段，因此从28周开始统计留存数据，按日的从20190705号开始统计
-                and status in(4,5) and city_id<>999001 and driver_id<>1) t
-            ) t 
+                and status in(4,5) and city_id<>999001 and driver_id<>1
+            ) t
             left join 
             (select dt dt_date,
                 day_of_year, --一年中的第几天
@@ -167,10 +167,10 @@ app_oride_new_user_cohort_m_task = HiveOperator(
             sum(if(new_user.passenger_id is not null,a.price,0)) as new_user_liucun_gmv, --新客留存完单gmv
             sum(if(new_user.passenger_id is not null,a.distance,0)) as new_user_liucun_dis --新客留存完单里程     
 
-            from oride_dw.oride_cohort_mid a
+            from oride_dw.oride_cohort_mid_m a
             left join
             (select order_id,city_id,product_id,passenger_id,is_new_user,month_create_date
-                from oride_dw.oride_cohort_mid
+                from oride_dw.oride_cohort_mid_m
                 where is_new_user=1
             ) new_user
             on a.city_id=new_user.city_id
@@ -219,10 +219,10 @@ app_oride_new_driver_cohort_m_task = HiveOperator(
         sum(if(new_driver.driver_id is not null,a.distance,0)) as new_driver_liucun_dis --新客留存完单里程
 
 
-        from oride_dw.oride_cohort_mid a
+        from oride_dw.oride_cohort_mid_m a
         left join
         (select order_id,city_id,product_id,driver_id,is_new_driver,month_create_date
-        from oride_dw.oride_cohort_mid
+        from oride_dw.oride_cohort_mid_m
         where is_new_driver=1
         ) new_driver
         on a.city_id=new_driver.city_id
@@ -270,10 +270,10 @@ app_oride_act_user_cohort_m_task = HiveOperator(
         sum(if(act_user.passenger_id is not null,a.price,0)) as act_user_liucun_gmv, --活跃乘客留存完单gmv
         sum(if(act_user.passenger_id is not null,a.distance,0)) as act_user_liucun_dis --活跃乘客留存完单里程
 
-        from oride_dw.oride_cohort_mid a
+        from oride_dw.oride_cohort_mid_m a
         left join
         (select month_create_date,city_id,product_id,passenger_id 
-        from oride_dw.oride_cohort_mid 
+        from oride_dw.oride_cohort_mid_m 
         group by month_create_date,city_id,product_id,passenger_id) act_user
         on a.city_id=act_user.city_id
         and a.product_id=act_user.product_id
@@ -320,10 +320,10 @@ app_oride_act_driver_cohort_m_task = HiveOperator(
         sum(if(act_driver.driver_id is not null,a.price,0)) as act_driver_liucun_gmv, --活跃司机留存完单gmv
         sum(if(act_driver.driver_id is not null,a.distance,0)) as act_driver_liucun_dis --活跃司机留存完单里程
 
-        from oride_dw.oride_cohort_mid a
+        from oride_dw.oride_cohort_mid_m a
         left join
         (select month_create_date,city_id,product_id,driver_id 
-        from oride_dw.oride_cohort_mid 
+        from oride_dw.oride_cohort_mid_m 
         group by month_create_date,city_id,product_id,driver_id) act_driver
         on a.city_id=act_driver.city_id
         and a.product_id=act_driver.product_id
@@ -343,16 +343,16 @@ app_oride_act_driver_cohort_m_task = HiveOperator(
     dag=dag)
 
 # 生成_SUCCESS
-oride_cohort_mid_success = BashOperator(
+oride_cohort_mid_m_success = BashOperator(
 
-    task_id='oride_cohort_mid_success',
+    task_id='oride_cohort_mid_m_success',
 
     bash_command="""
-    line_num=`$HADOOP_HOME/bin/hadoop fs -du -s hdfs://warehourse/user/hive/warehouse/oride_dw.db/oride_cohort_mid | tail -1 | awk '{{print $1}}'`
+    line_num=`$HADOOP_HOME/bin/hadoop fs -du -s hdfs://warehourse/user/hive/warehouse/oride_dw.db/oride_cohort_mid_m | tail -1 | awk '{{print $1}}'`
 
     if [ $line_num -eq 0 ]
     then
-        echo "table oride_dw.oride_cohort_mid is empty"
+        echo "table oride_dw.oride_cohort_mid_m is empty"
         exit 1
     else
         echo "DATA EXPORT Successed ......"
@@ -361,7 +361,7 @@ oride_cohort_mid_success = BashOperator(
         pt=date_last),
     dag=dag)
 
-new_user_cohort_touchz_success = BashOperator(
+new_user_cohort_m_touchz_success = BashOperator(
 
     task_id='new_user_cohort_touchz_success',
 
@@ -383,7 +383,7 @@ new_user_cohort_touchz_success = BashOperator(
     ),
     dag=dag)
 
-new_driver_cohort_touchz_success = BashOperator(
+new_driver_cohort_m_touchz_success = BashOperator(
 
     task_id='new_driver_cohort_touchz_success',
 
@@ -405,7 +405,7 @@ new_driver_cohort_touchz_success = BashOperator(
     ),
     dag=dag)
 
-act_user_cohort_touchz_success = BashOperator(
+act_user_cohort_m_touchz_success = BashOperator(
 
     task_id='act_user_cohort_touchz_success',
 
@@ -427,7 +427,7 @@ act_user_cohort_touchz_success = BashOperator(
     ),
     dag=dag)
 
-act_driver_cohort_touchz_success = BashOperator(
+act_driver_cohort_m_touchz_success = BashOperator(
 
     task_id='act_driver_cohort_touchz_success',
 
@@ -451,28 +451,28 @@ act_driver_cohort_touchz_success = BashOperator(
 
 dependence_dwd_oride_order_base_include_test_di_prev_day_task >> \
 sleep_time >> \
-create_oride_cohort_mid_task >> \
-oride_cohort_mid_success >> \
+create_oride_cohort_mid_m_task >> \
+oride_cohort_mid_m_success >> \
 app_oride_new_user_cohort_m_task >> \
-new_user_cohort_touchz_success
+new_user_cohort_m_touchz_success
 
 dependence_dwd_oride_order_base_include_test_di_prev_day_task >> \
 sleep_time >> \
-create_oride_cohort_mid_task >> \
-oride_cohort_mid_success >> \
+create_oride_cohort_mid_m_task >> \
+oride_cohort_mid_m_success >> \
 app_oride_new_driver_cohort_m_task >> \
-new_driver_cohort_touchz_success
+new_driver_cohort_m_touchz_success
 
 dependence_dwd_oride_order_base_include_test_di_prev_day_task >> \
 sleep_time >> \
-create_oride_cohort_mid_task >> \
-oride_cohort_mid_success >> \
+create_oride_cohort_mid_m_task >> \
+oride_cohort_mid_m_success >> \
 app_oride_act_user_cohort_m_task >> \
-act_user_cohort_touchz_success
+act_user_cohort_m_touchz_success
 
 dependence_dwd_oride_order_base_include_test_di_prev_day_task >> \
 sleep_time >> \
-create_oride_cohort_mid_task >> \
-oride_cohort_mid_success >> \
+create_oride_cohort_mid_m_task >> \
+oride_cohort_mid_m_success >> \
 app_oride_act_driver_cohort_m_task >> \
-act_driver_cohort_touchz_success
+act_driver_cohort_m_touchz_success
