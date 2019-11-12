@@ -175,7 +175,7 @@ insert_shop_metrics = HiveOperator(
             nvl(count(if(o.pay_status = 1 and o.shop_id is not null,o.order_id,null)),0) pay_order_num,
             nvl(sum(if(o.order_status = 8 and o.shop_id is not null and d.order_id is not null,d.origin_product + d.origin_package + d.origin_delivery,0)),0) trade_price_sum,
             nvl(sum(if(o.order_status = 8 and o.shop_id is not null and d.order_id is not null,d.origin_product + d.origin_package + d.origin_delivery - o.order_youhui - o.first_youhui,0)),0) actual_trade_price_sum,
-            nvl(sum(if(o.order_status = 8 and o.shop_id is not null and d.order_id is not null, d.first_roof + d.roof_mj + d.roof_delivery + d.roof_capped ,0)),0) cost_price_sum,
+            nvl(sum(if(o.order_status = 8 and o.shop_id is not null and d.order_id is not null, d.first_roof + d.roof_mj + d.roof_delivery + d.roof_capped + d.roof_plat_coupon ,0)),0) cost_price_sum,
             nvl(sum(if(o.order_status = 8 and o.shop_id is not null and d.order_id is not null,d.first_shop + d.shop_mj + d.shop_delivery + d.shop_capped,0)),0) amount_and_first_price_sum,
             nvl(sum(if(o.order_status = 8 and o.shop_id is not null,o.amount,0)),0) amount_price_sum,
             nvl(count(if(o.order_status = 8 and t.order_id is not null and  (t.order_compltet_time - o.pay_time)/60 <= 40,o.order_id,null)),0) in_time_order_num,
@@ -187,7 +187,10 @@ insert_shop_metrics = HiveOperator(
             nvl(count(if(o.pay_status <> 0 and o.refund_status <> 0 and o.order_status in (-1,-2,-3) and lu.order_id is null,o.order_id,null)),0) user_cancel_num,
             nvl(count(if(o.pay_status <> 0 and o.refund_status <> 0 and o.order_status in (-1,-2,-3) and lm.order_id is not null,o.order_id,null)),0) merchant_cancel_num,
             nvl(count(if(o.pay_status <> 0 and o.refund_status <> 0 and o.order_status in (-1,-2,-3) and ls.order_id is not null,o.order_id,null)),0) as sys_cancel_num,
-            1 is_open
+            1 is_open,
+            nvl(sum(if(o.order_status = 8 and o.shop_id is not null and d.order_id is not null,d.roof_plat_coupon,0)),0) as roof_plat_coupon,
+            nvl(sum(if(o.order_status = 8 and o.shop_id is not null and d.order_id is not null,d.roof_coupon,0)),0) as roof_coupon
+            
             from 
             (
                 select 
@@ -373,7 +376,9 @@ insert_shop_metrics = HiveOperator(
         if(ndm.shop_id is not null and ndm.first_place_date = '{{ ds_nodash }}',1,0) is_first_placed_order,
         if(ndm.shop_id is not null and ndm.first_complete_date = '{{ ds_nodash }}',1,0) is_first_completed_order,
         nvl(nd.new_user_place_invitation_num,0) total_number_of_invitation_new_users,
-        nvl(nd.new_user_complete_invitation_num,0) number_of_invitation_new_users
+        nvl(nd.new_user_complete_invitation_num,0) number_of_invitation_new_users,
+        od.roof_plat_coupon,
+        od.roof_coupon
         
         from 
         order_data od 
@@ -419,7 +424,9 @@ create_crm_data = BashOperator(
             d.number_of_cancel_order_before_payment,
             d.number_of_cancel_order_after_payment,
             d.total_number_of_invitation_new_users,
-            d.number_of_invitation_new_users
+            d.number_of_invitation_new_users,
+            d.roof_plat_coupon,
+            d.roof_coupon
             
             from 
             (
@@ -448,6 +455,8 @@ create_crm_data = BashOperator(
                 d.number_of_cancel_order_after_payment,
                 d.total_number_of_invitation_new_users,
                 d.number_of_invitation_new_users,
+                d.roof_plat_coupon,
+                d.roof_coupon,
                 row_number() over(partition by d.shop_id order by d.area_id) order_by
                 from 
                 (
@@ -475,7 +484,10 @@ create_crm_data = BashOperator(
                 nvl(sum(s.before_pay_cancel_num),0) number_of_cancel_order_before_payment,
                 nvl(sum(s.after_pay_cancel_num),0) number_of_cancel_order_after_payment,
                 nvl(sum(s.total_number_of_invitation_new_users),0) total_number_of_invitation_new_users,
-                nvl(sum(s.number_of_invitation_new_users),0) number_of_invitation_new_users
+                nvl(sum(s.number_of_invitation_new_users),0) number_of_invitation_new_users,
+                nvl(sum(s.roof_plat_coupon),0) roof_plat_coupon,
+                nvl(sum(s.roof_coupon),0) roof_coupon
+                
                 
                 
                 from     
@@ -533,7 +545,9 @@ insert_crm_metrics = HiveToMySqlTransfer(
         number_of_cancel_order_before_payment,
         number_of_cancel_order_after_payment,
         total_number_of_invitation_new_users,
-        number_of_invitation_new_users
+        number_of_invitation_new_users,
+        roof_plat_coupon,
+        roof_coupon
         
         from 
         ofood_bi.ofood_area_shop_metrics_info
