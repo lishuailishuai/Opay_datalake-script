@@ -6,7 +6,7 @@ from airflow.operators.impala_plugin import ImpalaOperator
 from utils.connection_helper import get_hive_cursor
 from airflow.operators.python_operator import PythonOperator
 from airflow.contrib.hooks.redis_hook import RedisHook
-from airflow.hooks.hive_hooks import HiveCliHook
+from airflow.hooks.hive_hooks import HiveCliHook, HiveServer2Hook
 from airflow.operators.hive_to_mysql import HiveToMySqlTransfer
 from airflow.operators.mysql_operator import MySqlOperator
 from airflow.operators.dagrun_operator import TriggerDagRunOperator
@@ -37,12 +37,6 @@ args = {
 dag = airflow.DAG('dm_oride_driver_base_cube_d',
                   schedule_interval="30 01 * * *",
                   default_args=args)
-
-sleep_time = BashOperator(
-    task_id='sleep_id',
-    depends_on_past=False,
-    bash_command='sleep 30',
-    dag=dag)
 
 ##----------------------------------------- 依赖 ---------------------------------------## 
 
@@ -127,6 +121,7 @@ dependence_dwd_oride_driver_accept_order_show_detail_di_prev_day_task = UFileSen
 
 ##----------------------------------------- 变量 ---------------------------------------##
 
+db_name = "oride_dw"
 table_name = "dm_oride_driver_base_cube_d"
 hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
 
@@ -137,13 +132,15 @@ def fun_task_timeout_monitor(ds,dag,**op_kwargs):
 
     dag_ids=dag.dag_id
 
-    tb = [
+    msg = [
         {"db": "oride_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "2400"}
     ]
 
-    TaskTimeoutMonitor().set_task_monitor(tb)
+    TaskTimeoutMonitor().set_task_monitor(msg)
 
-task_timeout_monitor= PythonOperator(
+
+
+task_timeout_monitor = PythonOperator(
     task_id='task_timeout_monitor',
     python_callable=fun_task_timeout_monitor,
     provide_context=True,
@@ -152,10 +149,8 @@ task_timeout_monitor= PythonOperator(
 
 ##----------------------------------------- 脚本 ---------------------------------------## 
 
-dm_oride_driver_base_cube_d_task = HiveOperator(
-
-    task_id='dm_oride_driver_base_cube_d_task',
-    hql='''
+def dm_oride_driver_base_cube_d_sql_task(ds):
+    HQL='''
     set hive.exec.parallel=true;
     set hive.exec.dynamic.partition.mode=nonstrict;
 
@@ -356,34 +351,41 @@ dm_oride_driver_base_cube_d_task = HiveOperator(
     WHERE x.country_code IN ('nal')
  
 '''.format(
-        pt='{{ds}}',
-        now_day='{{macros.ds_add(ds, +1)}}',
-        table=table_name
-    ),
-    dag=dag)
+        pt=ds,
+        table=table_name,
+        db=db_name
+        )
+    return HQL
 
-# 生成_SUCCESS
-touchz_data_success = BashOperator(
 
-    task_id='touchz_data_success',
+# 主流程
+def execution_data_task_id(ds, **kargs):
+    hive_hook = HiveCliHook()
 
-    bash_command="""
-    line_num=`$HADOOP_HOME/bin/hadoop fs -du -s {hdfs_data_dir} | tail -1 | awk '{{print $1}}'`
-    
-    if [ $line_num -eq 0 ]
-    then
-        echo "FATAL {hdfs_data_dir} is empty"
-        exit 1
-    else
-        echo "DATA EXPORT Successed ......"
-        $HADOOP_HOME/bin/hadoop fs -touchz {hdfs_data_dir}/_SUCCESS
-    fi
-    """.format(
-        pt='{{ds}}',
-        now_day='{{macros.ds_add(ds, +1)}}',
-        hdfs_data_dir=hdfs_path + '/country_code=nal/dt={{ds}}'
-    ),
-    dag=dag)
+    # 读取sql
+    _sql = dm_oride_driver_base_cube_d_sql_task(ds)
+
+    logging.info('Executing: %s', _sql)
+
+    # 执行Hive
+    hive_hook.run_cli(_sql)
+
+    # 熔断数据
+    #check_key_data_task(ds)
+
+    # 生成_SUCCESS
+    """
+    第一个参数true: 数据目录是有country_code分区。false 没有
+    第二个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
+
+    """
+
+dm_oride_driver_base_cube_d_task = PythonOperator(
+    task_id='dm_oride_driver_base_cube_d_task',
+    python_callable=execution_data_task_id,
+    provide_context=True,
+    dag=dag
+)
 
 dependence_dim_oride_driver_audit_base_prev_day_task >> \
 dependence_dwd_oride_order_base_include_test_di_prev_day_task >> \
@@ -392,6 +394,4 @@ dependence_dwd_oride_order_push_driver_detail_di_prev_day_task >> \
 dependence_oride_driver_timerange_prev_day_task >> \
 dependence_dwd_oride_driver_accept_order_click_detail_di_prev_day_task >> \
 dependence_dwd_oride_driver_accept_order_show_detail_di_prev_day_task >> \
-sleep_time >> \
-dm_oride_driver_base_cube_d_task >> \
-touchz_data_success
+dm_oride_driver_base_cube_d_task
