@@ -6,7 +6,7 @@ from airflow.operators.impala_plugin import ImpalaOperator
 from utils.connection_helper import get_hive_cursor
 from airflow.operators.python_operator import PythonOperator
 from airflow.contrib.hooks.redis_hook import RedisHook
-from airflow.hooks.hive_hooks import HiveCliHook
+from airflow.hooks.hive_hooks import HiveCliHook, HiveServer2Hook
 from airflow.operators.hive_to_mysql import HiveToMySqlTransfer
 from airflow.operators.mysql_operator import MySqlOperator
 from airflow.operators.dagrun_operator import TriggerDagRunOperator
@@ -39,11 +39,6 @@ dag = airflow.DAG('dwd_oride_driver_timerange_di',
                   default_args=args,
                   catchup=False)
 
-sleep_time = BashOperator(
-    task_id='sleep_id',
-    depends_on_past=False,
-    bash_command='sleep 10',
-    dag=dag)
 
 ##----------------------------------------- 依赖 ---------------------------------------##
 
@@ -63,6 +58,7 @@ ods_log_oride_driver_timerange_task = UFileSensor(
 ##----------------------------------------- 变量 ---------------------------------------##
 
 
+db_name = "oride_dw"
 table_name = "dwd_oride_driver_timerange_di"
 hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
 
@@ -87,10 +83,8 @@ task_timeout_monitor= PythonOperator(
 
 ##----------------------------------------- 脚本 ---------------------------------------##
 
-dwd_oride_driver_timerange_di_task = HiveOperator(
-    task_id='dwd_oride_driver_timerange_di_task',
-
-    hql='''
+def dwd_oride_driver_timerange_di_sql_task(ds):
+    HQL='''
         SET hive.exec.parallel=TRUE;
         SET hive.exec.dynamic.partition.mode=nonstrict;
 
@@ -108,29 +102,42 @@ dwd_oride_driver_timerange_di_task = HiveOperator(
             dt='{pt}'
         ;
 '''.format(
-        pt='{{ds}}',
-        now_hour='{{ execution_date.strftime("%H") }}',
-        table=table_name
-    ),
-    dag=dag
-)
+        pt=ds,
+        table=table_name,
+        db=db_name
+        )
+    return HQL
 
-#生成_SUCCESS
-def check_success(ds,dag,**op_kwargs):
+# 主流程
+def execution_data_task_id(ds, **kargs):
+    hive_hook = HiveCliHook()
 
-    dag_ids=dag.dag_id
+    # 读取sql
+    _sql = dwd_oride_driver_timerange_di_sql_task(ds)
 
-    msg = [
-        {"table":"{dag_name}".format(dag_name=dag_ids),"hdfs_path": "{hdfsPath}/country_code=nal/dt={pt}".format(pt=ds,hdfsPath=hdfs_path)}
-    ]
+    logging.info('Executing: %s', _sql)
 
-    TaskTouchzSuccess().set_touchz_success(msg)
+    # 执行Hive
+    hive_hook.run_cli(_sql)
 
-touchz_data_success= PythonOperator(
-    task_id='touchz_data_success',
-    python_callable=check_success,
+    # 熔断数据
+    #check_key_data_task(ds)
+
+    # 生成_SUCCESS
+    """
+    第一个参数true: 数据目录是有country_code分区。false 没有
+    第二个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
+
+    """
+    TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "true", "true")
+
+
+dwd_oride_driver_timerange_di_task = PythonOperator(
+    task_id='dwd_oride_driver_timerange_di_task',
+    python_callable=execution_data_task_id,
     provide_context=True,
     dag=dag
 )
 
-ods_log_oride_driver_timerange_task >> sleep_time >> dwd_oride_driver_timerange_di_task >> touchz_data_success
+
+ods_log_oride_driver_timerange_task >>  dwd_oride_driver_timerange_di_task

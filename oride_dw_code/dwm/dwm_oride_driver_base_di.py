@@ -6,7 +6,7 @@ from airflow.operators.impala_plugin import ImpalaOperator
 from utils.connection_helper import get_hive_cursor
 from airflow.operators.python_operator import PythonOperator
 from airflow.contrib.hooks.redis_hook import RedisHook
-from airflow.hooks.hive_hooks import HiveCliHook
+from airflow.hooks.hive_hooks import HiveCliHook, HiveServer2Hook
 from airflow.operators.hive_to_mysql import HiveToMySqlTransfer
 from airflow.operators.mysql_operator import MySqlOperator
 from airflow.operators.dagrun_operator import TriggerDagRunOperator
@@ -38,12 +38,6 @@ dag = airflow.DAG( 'dwm_oride_driver_base_di',
     schedule_interval="30 01 * * *", 
     default_args=args) 
 
-
-sleep_time = BashOperator(
-    task_id='sleep_id',
-    depends_on_past=False,
-    bash_command='sleep 30',
-    dag=dag)
 
 ##----------------------------------------- 依赖 ---------------------------------------## 
 
@@ -94,6 +88,8 @@ oride_driver_timerange_prev_day_tesk = HivePartitionSensor(
 
 ##----------------------------------------- 变量 ---------------------------------------## 
 
+
+db_name = "oride_dw"
 table_name="dwm_oride_driver_base_di"
 hdfs_path="ufile://opay-datalake/oride/oride_dw/"+table_name
 
@@ -103,31 +99,30 @@ def fun_task_timeout_monitor(ds,dag,**op_kwargs):
 
     dag_ids=dag.dag_id
 
-    
-    tb = [
+    msg = [
         {"db": "oride_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "3600"}
     ]
 
-    TaskTimeoutMonitor().set_task_monitor(tb)
+    TaskTimeoutMonitor().set_task_monitor(msg)
 
-task_timeout_monitor= PythonOperator(
+
+
+task_timeout_monitor = PythonOperator(
     task_id='task_timeout_monitor',
     python_callable=fun_task_timeout_monitor,
     provide_context=True,
     dag=dag
 )
-
 ##----------------------------------------- 脚本 ---------------------------------------## 
 
-dwm_oride_driver_base_di_task = HiveOperator(
+def dwm_oride_driver_base_di_sql_task(ds):
 
-    task_id='dwm_oride_driver_base_di_task',
-    hql='''
-    set hive.exec.parallel=true;
-    set hive.exec.dynamic.partition.mode=nonstrict;
-
-INSERT overwrite TABLE oride_dw.{table} partition(country_code,dt)
-SELECT product_id,
+    HQL='''
+        set hive.exec.parallel=true;
+        set hive.exec.dynamic.partition.mode=nonstrict;
+    
+        INSERT overwrite TABLE oride_dw.{table} partition(country_code,dt)
+        SELECT product_id,
            city_id,
            driver_id,
            driver_finish_order_dur,
@@ -281,28 +276,41 @@ SELECT product_id,
     WHERE x.country_code IN ('nal');
 
 '''.format(
-        pt='{{ds}}',
-        now_day='{{macros.ds_add(ds, +1)}}',
-        table=table_name
-        ),
-    dag=dag)
+        pt=ds,
+        table=table_name,
+        db=db_name
+        )
+    return HQL
 
-#生成_SUCCESS
-def check_success(ds,dag,**op_kwargs):
+# 主流程
+def execution_data_task_id(ds, **kargs):
+    hive_hook = HiveCliHook()
 
-    dag_ids=dag.dag_id
+    # 读取sql
+    _sql = dwm_oride_driver_base_di_sql_task(ds)
 
-    msg = [
-        {"table":"{dag_name}".format(dag_name=dag_ids),"hdfs_path": "{hdfsPath}/country_code=nal/dt={pt}".format(pt=ds,hdfsPath=hdfs_path)}
-    ]
+    logging.info('Executing: %s', _sql)
 
-    TaskTouchzSuccess().set_touchz_success(msg)
+    # 执行Hive
+    hive_hook.run_cli(_sql)
 
-touchz_data_success= PythonOperator(
-    task_id='touchz_data_success',
-    python_callable=check_success,
+    # 熔断数据
+    #check_key_data_task(ds)
+
+    # 生成_SUCCESS
+    """
+    第一个参数true: 数据目录是有country_code分区。false 没有
+    第二个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
+
+    """
+    TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "true", "true")
+
+
+dwm_oride_driver_base_di_task = PythonOperator(
+    task_id='dwm_oride_driver_base_di_task',
+    python_callable=execution_data_task_id,
     provide_context=True,
     dag=dag
 )
 
-dim_oride_driver_base_prev_day_tesk >> dwd_oride_order_base_include_test_di_prev_day_tesk >> dwd_oride_order_push_driver_detail_di_prev_day_tesk >> oride_driver_timerange_prev_day_tesk >> sleep_time >> dwm_oride_driver_base_di_task >> touchz_data_success
+dim_oride_driver_base_prev_day_tesk >> dwd_oride_order_base_include_test_di_prev_day_tesk >> dwd_oride_order_push_driver_detail_di_prev_day_tesk >> oride_driver_timerange_prev_day_tesk  >> dwm_oride_driver_base_di_task
