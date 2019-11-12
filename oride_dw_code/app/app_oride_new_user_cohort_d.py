@@ -72,14 +72,9 @@ create_oride_cohort_mid_d_task = HiveOperator(
     task_id='create_oride_cohort_mid_d_task',
     hql='''drop table if exists oride_dw.oride_cohort_mid_d ;
      create table oride_dw.oride_cohort_mid_d as 
-           select weekofyear(to_date(dt)) as week_now, --当前所在周
-           day(to_date(dt)) as day_now, --当前所在天
-           month(to_date(dt)) as month_now, --当前所在月
-
-           t2.week_of_year as week_create_date, --下单时间所在周
+           select day(to_date(dt)) as day_now, --当前所在天
             t2.day_of_year as day_create_date, --下单时间所在天（一年中的第几天）
-            t2.month as month_create_date, --下单时间所在月
-
+            
             city_id,
             driver_serv_type as product_id,
             order_id, 
