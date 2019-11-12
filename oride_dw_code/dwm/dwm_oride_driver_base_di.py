@@ -313,4 +313,7 @@ dwm_oride_driver_base_di_task = PythonOperator(
     dag=dag
 )
 
-dim_oride_driver_base_prev_day_tesk >> dwd_oride_order_base_include_test_di_prev_day_tesk >> dwd_oride_order_push_driver_detail_di_prev_day_tesk >> oride_driver_timerange_prev_day_tesk  >> dwm_oride_driver_base_di_task
+dim_oride_driver_base_prev_day_tesk >>dwm_oride_driver_base_di_task 
+dwd_oride_order_base_include_test_di_prev_day_tesk >> dwm_oride_driver_base_di_task
+dwd_oride_order_push_driver_detail_di_prev_day_tesk >>dwm_oride_driver_base_di_task 
+oride_driver_timerange_prev_day_tesk  >> dwm_oride_driver_base_di_task

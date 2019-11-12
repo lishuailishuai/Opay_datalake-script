@@ -430,8 +430,9 @@ dwm_oride_driver_base_df_task = PythonOperator(
     dag=dag
 )
 
-dim_oride_driver_base_prev_day_task >> dwd_oride_order_base_include_test_di_prev_day_task >> \
-dwd_oride_order_push_driver_detail_di_prev_day_task >> oride_driver_timerange_prev_day_task >> \
-dwd_oride_driver_accept_order_show_detail_di_prev_day_task >> \
-dwd_oride_driver_accept_order_click_detail_di_prev_day_task >> \
-dwm_oride_driver_base_df_task
+dim_oride_driver_base_prev_day_task >> dwm_oride_driver_base_df_task
+dwd_oride_order_base_include_test_di_prev_day_task >>dwm_oride_driver_base_df_task
+dwd_oride_order_push_driver_detail_di_prev_day_task >>dwm_oride_driver_base_df_task 
+oride_driver_timerange_prev_day_task >> dwm_oride_driver_base_df_task
+dwd_oride_driver_accept_order_show_detail_di_prev_day_task >>dwm_oride_driver_base_df_task
+dwd_oride_driver_accept_order_click_detail_di_prev_day_task >>dwm_oride_driver_base_df_task
