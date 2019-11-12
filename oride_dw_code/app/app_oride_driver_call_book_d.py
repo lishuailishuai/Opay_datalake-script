@@ -10,6 +10,8 @@ from datetime import datetime, timedelta
 from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
 from plugins.TaskTouchzSuccess import TaskTouchzSuccess
 from airflow.sensors.hive_partition_sensor import HivePartitionSensor
+from airflow.hooks.hive_hooks import HiveCliHook, HiveServer2Hook
+import logging
 
 args = {
     'owner': 'chenghui',
@@ -27,13 +29,6 @@ dag = airflow.DAG('app_oride_driver_call_book_d',
                   default_args=args,
                   catchup=False)
 
-sleep_time = BashOperator(
-    task_id='sleep_id',
-    depends_on_past=False,
-    bash_command='sleep 30',
-    dag=dag
-)
-
 
 ##----------------------------------------- 依赖 ---------------------------------------##
 
@@ -48,6 +43,7 @@ dwd_oride_client_event_detail_hi_task = HivePartitionSensor(
 
 ##----------------------------------------- 变量 ---------------------------------------##
 
+db_name = "oride_dw"
 table_name = "app_oride_driver_call_book_d"
 hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
 
@@ -73,9 +69,8 @@ task_timeout_monitor = PythonOperator(
 
 ##----------------------------------------- 脚本 ---------------------------------------##
 
-dwd_oride_driver_phone_list_mid_task = HiveOperator(
-    task_id='dwd_oride_driver_phone_list_mid_task',
-    hql='''
+def dwd_oride_driver_phone_list_mid_sql_task(ds):
+    HQL='''
         SET hive.exec.parallel=TRUE;
         SET hive.exec.dynamic.partition.mode=nonstrict;
 
@@ -85,16 +80,12 @@ dwd_oride_driver_phone_list_mid_task = HiveOperator(
             lateral view explode(split(substr(get_json_object(a.event_value,'$.phone_list'),2,length(get_json_object(a.event_value,'$.phone_list'))-2),',')) phone_list as e
             where a.dt between date_sub('{pt}',14) and '{pt}' and a.event_name='phone_list';
     '''.format(
-        pt='{{ds}}',
-        now_day='{{macros.ds_add(ds, +1)}}'
-    ),
-    schema='oride_dw',
-    dag=dag
-)
+        pt=ds
+    )
+    return HQL
 
-dwd_oride_driver_call_record_mid_task = HiveOperator(
-    task_id='dwd_oride_driver_call_record_mid_task',
-    hql='''
+def dwd_oride_driver_call_record_mid_sql_task(ds):
+    HQL='''
         SET hive.exec.parallel=TRUE;
         SET hive.exec.dynamic.partition.mode=nonstrict;
         
@@ -105,21 +96,16 @@ dwd_oride_driver_call_record_mid_task = HiveOperator(
             where b.dt between date_sub('{pt}',14) and '{pt}' and b.event_name='call_record';    
 
     '''.format(
-        pt='{{ds}}',
-        now_day='{{macros.ds_add(ds, +1)}}'
-    ),
-    schema='oride_dw',
-    dag=dag
-)
+        pt='{{ds}}'
+    )
+    return HQL
 
-app_oride_driver_call_book_d_task = HiveOperator(
-    task_id='app_oride_driver_call_book_d_task',
-
-    hql='''
+def app_oride_driver_call_book_d_sql_task(ds):
+    HQL='''
         SET hive.exec.parallel=TRUE;
         SET hive.exec.dynamic.partition.mode=nonstrict;
         
-        insert overwrite table oride_dw.{table} partition(country_code,dt)
+        insert overwrite table {db}.{table} partition(country_code,dt)
         select a3.user_id,--司机ID
             a3.contact_name,--联系人姓名
             a3.contact_phone_number,--联系人电话
@@ -164,31 +150,73 @@ app_oride_driver_call_book_d_task = HiveOperator(
         where a3.contact_number_len<50 and a3.contact_name_len<64;
     '''.format(
         pt='{{ds}}',
-        now_day='{{macros.ds_add(ds, +1)}}',
-        table=table_name
-    ),
-    schema='oride_dw',
+        table=table_name,
+        db=db_name
+    )
+    return HQL
+
+
+#主流程
+def dwd_oride_driver_phone_list_mid(ds,**kargs):
+
+    hive_hook = HiveCliHook()
+
+    #读取sql
+    _sql=dwd_oride_driver_phone_list_mid_sql_task(ds)
+    logging.info('Executing: %s', _sql)
+
+    # 执行Hive
+    hive_hook.run_cli(_sql)
+
+
+def dwd_oride_driver_call_record_mid(ds,**kargs):
+    hive_hook=HiveCliHook()
+
+    # 读取sql
+    _sql = dwd_oride_driver_call_record_mid_sql_task(ds)
+    logging.info('Executing: %s', _sql)
+
+    # 执行Hive
+    hive_hook.run_cli(_sql)
+
+
+def execution_data_task_id(ds,**kargs):
+
+    hive_hook = HiveCliHook()
+    # 读取sql
+    _sql = app_oride_driver_call_book_d_sql_task(ds)
+
+    logging.info('Executing: %s', _sql)
+    # 执行Hive
+    hive_hook.run_cli(_sql)
+
+    # 生成_SUCCESS
+    """
+    第一个参数true: 数据目录是有country_code分区。false 没有
+    第二个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
+
+    """
+    TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "true", "true")
+
+dwd_oride_driver_phone_list_mid_task = PythonOperator(
+    task_id='dwd_oride_driver_phone_list_mid_task',
+    python_callable=dwd_oride_driver_phone_list_mid,
+    provide_context=True,
     dag=dag
 )
-
-# 生成_SUCCESS
-def check_success(ds, dag, **op_kwargs):
-    dag_ids = dag.dag_id
-
-    msg = [
-        {"table": "{dag_name}".format(dag_name=dag_ids),
-         "hdfs_path": "{hdfsPath}/country_code=nal/dt={pt}".format(pt=ds, hdfsPath=hdfs_path)}
-    ]
-
-    TaskTouchzSuccess().set_touchz_success(msg)
-
-
-touchz_data_success = PythonOperator(
-    task_id='touchz_data_success',
-    python_callable=check_success,
+dwd_oride_driver_call_record_mid_task = PythonOperator(
+    task_id='dwd_oride_driver_call_record_mid_task',
+    python_callable=dwd_oride_driver_call_record_mid,
     provide_context=True,
     dag=dag
 )
 
-dwd_oride_client_event_detail_hi_task >> dwd_oride_driver_phone_list_mid_task >> \
-dwd_oride_driver_call_record_mid_task >> sleep_time>>app_oride_driver_call_book_d_task >> touchz_data_success
+app_oride_driver_call_book_d_task= PythonOperator(
+    task_id='app_oride_driver_call_book_d_task',
+    python_callable=execution_data_task_id,
+    provide_context=True,
+    dag=dag
+)
+
+dwd_oride_client_event_detail_hi_task>>dwd_oride_driver_phone_list_mid_task>>\
+    dwd_oride_driver_call_record_mid_task>>app_oride_driver_call_book_d_task
