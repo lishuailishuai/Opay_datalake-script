@@ -125,11 +125,8 @@ db_name = "oride_dw"
 table_name = "app_oride_global_operate_report_driservtype_d"
 hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
 
-##----------------------------------------- 脚本 ---------------------------------------##
-
-def app_oride_global_operate_report_driservtype_d_sql_task(ds):
-    ##----------------------------------------- 脚本变量 ---------------------------------------##
-    order_data_null = """
+##----------------------------------------- 脚本变量 ---------------------------------------##
+order_data_null = """
            null as ride_order_cnt, --当日下单量
            null as finish_order_cnt, --当日完单量
            null as finish_pay, --当日完成支付量
@@ -151,7 +148,7 @@ def app_oride_global_operate_report_driservtype_d_sql_task(ds):
            null as finish_order_cnt_lfw  --近四周同期完单数据
            """
 
-    passenger_data_null = """
+passenger_data_null = """
            null as new_users,  --当天注册乘客数
            null as act_users,  --当天活跃乘客数
            null as ord_users,  --当日下单乘客数
@@ -165,25 +162,28 @@ def app_oride_global_operate_report_driservtype_d_sql_task(ds):
            null as new_user_gmv  --当日新注册乘客完单gmv
     """
 
-    driver_cube_data_null = """
+driver_cube_data_null = """
            null as td_request_driver_num, --当日接单司机数
            null as td_finish_order_driver_num,  --当日完单司机数
            null as td_push_accpet_show_driver_num --被推送骑手数
     """
 
-    driver_data_null = """
+driver_data_null = """
            null as finish_driver_online_dur,  --当日完单司机在线时长
            null as driver_billing_dur, --当日司机计费时长
            null as driver_pushed_order_cnt  --司机被推送订单数
     """
 
-    finance_data_null = """
+finance_data_null = """
            null AS recharge_amount, --充值金额
            null AS reward_amount, --奖励金额
            null AS amount_pay_online, --当日总收入-线上支付金额
            null AS amount_pay_offline --当日总收入-线下支付金额 
     """
 
+##----------------------------------------- 脚本 ---------------------------------------##
+
+def app_oride_global_operate_report_driservtype_d_sql_task(ds):
     HQL ='''
     SET hive.exec.parallel=true;
     SET hive.exec.dynamic.partition=true;
@@ -408,7 +408,12 @@ GROUP BY nvl(country_code,'nal'),
         pt=ds,
         now_day=airflow.macros.ds_add(ds, +1),
         table=table_name,
-        db=db_name
+        db=db_name,
+        order_data_null=order_data_null,
+        passenger_data_null=passenger_data_null,
+        driver_cube_data_null=driver_cube_data_null,
+        driver_data_null=driver_data_null,
+        finance_data_null=finance_data_null
     )
     return HQL
 
