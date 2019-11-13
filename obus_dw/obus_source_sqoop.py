@@ -66,6 +66,7 @@ IGNORED_TABLE_LIST = [
     'log_balance',
     'data_driver_recharge_records',
     'data_device_extend',
+    'conf_recharge_options',
 ]
 
 obus_table_list = [
