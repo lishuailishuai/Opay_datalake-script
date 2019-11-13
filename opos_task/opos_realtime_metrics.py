@@ -482,7 +482,7 @@ create_order_metrics_data = BashOperator(
                       opos_order
                       where 
                       (DATE_FORMAT(create_time,'%Y-%m-%d') = '{{ ds }}' or 
-                      DATE_FORMAT(create_time,'%Y-%m-%d') = '{{ ds }}'
+                      DATE_FORMAT(create_time,'%Y-%m-%d') = '{{ macros.ds_add(ds, -1) }}'
                       )
                   ) o
                   on o.receipt_id = s.opay_id
