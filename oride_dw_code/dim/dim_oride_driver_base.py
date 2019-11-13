@@ -39,13 +39,6 @@ dag = airflow.DAG( 'dim_oride_driver_base',
     default_args=args,
     catchup=False) 
 
-
-sleep_time = BashOperator(
-    task_id='sleep_id',
-    depends_on_past=False,
-    bash_command='sleep 30',
-    dag=dag)
-
 ##----------------------------------------- 依赖 ---------------------------------------## 
 
 
@@ -102,260 +95,267 @@ task_timeout_monitor= PythonOperator(
 
 ##----------------------------------------- 变量 ---------------------------------------## 
 
+db_name = "oride_dw"
 table_name="dim_oride_driver_base"
 hdfs_path="ufile://opay-datalake/oride/oride_dw/"+table_name
 
 ##----------------------------------------- 脚本 ---------------------------------------## 
-
-dim_oride_driver_base_task = HiveOperator(
-
-    task_id='dim_oride_driver_base_task',
-    hql='''
+def dim_oride_driver_base_sql_task(ds):
+    HQL = '''
     set hive.exec.parallel=true;
     set hive.exec.dynamic.partition.mode=nonstrict;
 
-INSERT overwrite TABLE oride_dw.{table} partition(country_code,dt)
-
-SELECT dri.driver_id,
-       ext.city_id,
-       --所属城市ID
-
-       phone_number,
-       --手机号
-
-       password,
-       --密码
-
-       opay_account,
-       --opay 账号
-
-       plate_number,
-       --车牌号
-
-       driver_name,
-       --真实姓名
-
-       birthday,
-       --生日
-
-       gender,
-       --性别
-
-       government,
-       --Local Government
-
-       country,
-       --国家
-
-       cit.city_name,
-       --城市名称
-
-       black,
-       --黑名单0正常1删除
-
-       group_id,
-       --所属组id
-
-       serv_mode,
-       --服务模式 (0: no service, 1: in service)
-
-       serv_status,
-       --服务状态 (0: wait assign, 1: pick up, 2: send)
-
-       from_unixtime(register_time,'yyyy-MM-dd HH:mm:ss') as register_time,
-       --注册时间
-
-       from_unixtime(login_time,'yyyy-MM-dd HH:mm:ss') as login_time,
-       --最后登陆时间
-
-       is_bind,
-       --状态 0 未绑定 1 已绑定
-
-       from_unixtime(first_bind_time,'yyyy-MM-dd HH:mm:ss') as first_bind_time,
-       --初次绑定时间
-
-       block,
-       --后台管理司机接单状态(0: 允许 1:不允许)
-
-       ext.product_id,
-       --1 专车 2 快车 3 Otrike
-
-       local_gov_ids,
-       --行会ID,json
-
-       dri.updated_at,
-       --最后更新时间
-
-       fault,
-       --正常0(停运)修理1(停运)无资料2(停运)事故3(停运)扣除4(欠缴)5
-
-       LANGUAGE, --客户端语言
-
-       'nal' AS country_code,
-       --国家码字段
-
-        '{pt}' as dt
-FROM
-  (SELECT id AS driver_id,
-          --司机 ID
-
-          phone_number,
-          --手机号
-
-          password,
-          --密码
-
-          opay_account,
-          --opay 账号
-
-          plate_number,
-          --车牌号
-
-          real_name as driver_name,
-          --真实姓名
-
-          birthday,
-          --生日
-
-          gender,
-          --性别
-
-          government,
-          --Local Government
-
-          country,
-          --国家
-
-          city as city_name,
-          --城市名称
-
-          black,
-          --黑名单0正常1删除
-
-          group_id,
-          --所属组id
-
-          updated_at
-   FROM oride_dw_ods.ods_sqoop_base_data_driver_df
-   WHERE  dt = '{pt}') dri
-LEFT OUTER JOIN
-  (SELECT id AS driver_id,
-          --司机 ID
-
-          serv_mode,
-          --服务模式 (0: no service, 1: in service)
-
-          serv_status,
-          --服务状态 (0: wait assign, 1: pick up, 2: send)
-
-          register_time,
-          --注册时间
-
-          login_time,
-          --最后登陆时间
-
-          is_bind,
-          --状态 0 未绑定 1 已绑定
-
-          first_bind_time,
-          --初次绑定时间
-
-          block,
-          --后台管理司机接单状态(0: 允许 1:不允许)
-
-          serv_type AS product_id,
-          --1 专车 2 快车
-
-          local_gov_ids,
-          --行会ID,json
-
-          fault,
-          --正常0(停运)修理1(停运)无资料2(停运)事故3(停运)扣除4(欠缴)5
-
-          city_id,
-          --所属城市ID
-
-          LANGUAGE --客户端语言
-FROM oride_dw_ods.ods_sqoop_base_data_driver_extend_df
-   WHERE dt = '{pt}') ext ON dri.driver_id=ext.driver_id
-LEFT OUTER JOIN
-(select * from oride_dw.dim_oride_city where dt = '{pt}' and country_code='NG') cit
-ON cit.city_id=ext.city_id
-where ext.city_id<>'999001' --去除测试数据
-and dri.driver_id not in(3835,
-3963,
-3970,
-4702,
-5559,
-5902,
-7669,
-29105, --以上都是录错城市的司机
-10722, --测试数据
-1)    --北京城市测试数据
-'''.format(
-        pt='{{ds}}',
-        now_day='{{macros.ds_add(ds, +1)}}',
-        table=table_name
-        ),
-schema='oride_dw',
-    dag=dag)
-
-
-#熔断数据，如果数据重复，报错
-def check_key_data(ds,**kargs):
-
-    #主键重复校验
-    HQL_DQC='''
-    SELECT count(1)-count(distinct driver_id) as cnt
-      FROM oride_dw.{table}
-      WHERE dt='{pt}'
+    INSERT overwrite TABLE oride_dw.{table} partition(country_code,dt)
+    
+    SELECT dri.driver_id,
+           ext.city_id,
+           --所属城市ID
+    
+           phone_number,
+           --手机号
+    
+           password,
+           --密码
+    
+           opay_account,
+           --opay 账号
+    
+           plate_number,
+           --车牌号
+    
+           driver_name,
+           --真实姓名
+    
+           birthday,
+           --生日
+    
+           gender,
+           --性别
+    
+           government,
+           --Local Government
+    
+           country,
+           --国家
+    
+           cit.city_name,
+           --城市名称
+    
+           black,
+           --黑名单0正常1删除
+    
+           group_id,
+           --所属组id
+    
+           serv_mode,
+           --服务模式 (0: no service, 1: in service)
+    
+           serv_status,
+           --服务状态 (0: wait assign, 1: pick up, 2: send)
+    
+           from_unixtime(register_time,'yyyy-MM-dd HH:mm:ss') as register_time,
+           --注册时间
+    
+           from_unixtime(login_time,'yyyy-MM-dd HH:mm:ss') as login_time,
+           --最后登陆时间
+    
+           is_bind,
+           --状态 0 未绑定 1 已绑定
+    
+           from_unixtime(first_bind_time,'yyyy-MM-dd HH:mm:ss') as first_bind_time,
+           --初次绑定时间
+    
+           block,
+           --后台管理司机接单状态(0: 允许 1:不允许)
+    
+           ext.product_id,
+           --1 专车 2 快车 3 Otrike
+    
+           local_gov_ids,
+           --行会ID,json
+    
+           dri.updated_at,
+           --最后更新时间
+    
+           fault,
+           --正常0(停运)修理1(停运)无资料2(停运)事故3(停运)扣除4(欠缴)5
+    
+           LANGUAGE, --客户端语言
+    
+           'nal' AS country_code,
+           --国家码字段
+    
+            '{pt}' as dt
+    FROM
+      (SELECT id AS driver_id,
+              --司机 ID
+    
+              phone_number,
+              --手机号
+    
+              password,
+              --密码
+    
+              opay_account,
+              --opay 账号
+    
+              plate_number,
+              --车牌号
+    
+              real_name as driver_name,
+              --真实姓名
+    
+              birthday,
+              --生日
+    
+              gender,
+              --性别
+    
+              government,
+              --Local Government
+    
+              country,
+              --国家
+    
+              city as city_name,
+              --城市名称
+    
+              black,
+              --黑名单0正常1删除
+    
+              group_id,
+              --所属组id
+    
+              updated_at
+       FROM oride_dw_ods.ods_sqoop_base_data_driver_df
+       WHERE  dt = '{pt}') dri
+    LEFT OUTER JOIN
+      (SELECT id AS driver_id,
+              --司机 ID
+    
+              serv_mode,
+              --服务模式 (0: no service, 1: in service)
+    
+              serv_status,
+              --服务状态 (0: wait assign, 1: pick up, 2: send)
+    
+              register_time,
+              --注册时间
+    
+              login_time,
+              --最后登陆时间
+    
+              is_bind,
+              --状态 0 未绑定 1 已绑定
+    
+              first_bind_time,
+              --初次绑定时间
+    
+              block,
+              --后台管理司机接单状态(0: 允许 1:不允许)
+    
+              serv_type AS product_id,
+              --1 专车 2 快车
+    
+              local_gov_ids,
+              --行会ID,json
+    
+              fault,
+              --正常0(停运)修理1(停运)无资料2(停运)事故3(停运)扣除4(欠缴)5
+    
+              city_id,
+              --所属城市ID
+    
+              LANGUAGE --客户端语言
+    FROM oride_dw_ods.ods_sqoop_base_data_driver_extend_df
+       WHERE dt = '{pt}') ext ON dri.driver_id=ext.driver_id
+    LEFT OUTER JOIN
+    (select * from oride_dw.dim_oride_city where dt = '{pt}' and country_code='NG') cit
+    ON cit.city_id=ext.city_id
+    where ext.city_id<>'999001' --去除测试数据
+    and dri.driver_id not in(3835,
+    3963,
+    3970,
+    4702,
+    5559,
+    5902,
+    7669,
+    29105, --以上都是录错城市的司机
+    10722, --测试数据
+    1)    --北京城市测试数据
     '''.format(
         pt=ds,
         now_day=airflow.macros.ds_add(ds, +1),
-        table=table_name
-        )
+        table=table_name,
+        db=db_name
+    )
+    return HQL
 
+# 熔断数据，如果数据重复，报错
+def check_key_data_task(ds):
     cursor = get_hive_cursor()
-    logging.info('Executing 主键重复校验: %s', HQL_DQC)
 
-    cursor.execute(HQL_DQC)
+    # 主键重复校验
+    check_sql = '''
+    SELECT count(1)-count(distinct driver_id) as cnt
+      FROM {db}.{table}
+      WHERE dt='{pt}'
+      and country_code in ('nal')
+    '''.format(
+        pt=ds,
+        now_day=airflow.macros.ds_add(ds, +1),
+        table=table_name,
+        db=db_name
+    )
+
+    logging.info('Executing 主键重复校验: %s', check_sql)
+
+    cursor.execute(check_sql)
+
     res = cursor.fetchone()
 
-    if res[0] >1:
-        raise Exception ("Error The primary key repeat !", res)
+    if res[0] > 1:
+        flag = 1
+        raise Exception("Error The primary key repeat !", res)
+        sys.exit(1)
     else:
+        flag = 0
         print("-----> Notice Data Export Success ......")
-    
- 
-task_check_key_data = PythonOperator(
-    task_id='check_data',
-    python_callable=check_key_data,
+
+    return flag
+
+
+# 主流程
+def execution_data_task_id(ds, **kargs):
+    hive_hook = HiveCliHook()
+
+    # 读取sql
+    _sql = dim_oride_driver_base_sql_task(ds)
+
+    logging.info('Executing: %s', _sql)
+
+    # 执行Hive
+    hive_hook.run_cli(_sql)
+
+    # 熔断数据
+    check_key_data_task(ds)
+
+    # 生成_SUCCESS
+    """
+    第一个参数true: 数据目录是有country_code分区。false 没有
+    第二个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
+
+    """
+    TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "true", "true")
+
+
+dim_oride_driver_base_task = PythonOperator(
+    task_id='dim_oride_driver_base_task',
+    python_callable=execution_data_task_id,
     provide_context=True,
     dag=dag
 )
 
-#生成_SUCCESS
-touchz_data_success = BashOperator(
-
-    task_id='touchz_data_success',
-
-    bash_command="""
-    line_num=`$HADOOP_HOME/bin/hadoop fs -du -s {hdfs_data_dir} | tail -1 | awk '{{print $1}}'`
-    
-    if [ $line_num -eq 0 ]
-    then
-        echo "FATAL {hdfs_data_dir} is empty"
-        exit 1
-    else
-        echo "DATA EXPORT Successed ......"
-        $HADOOP_HOME/bin/hadoop fs -touchz {hdfs_data_dir}/_SUCCESS
-    fi
-    """.format(
-        pt='{{ds}}',
-        now_day='{{macros.ds_add(ds, +1)}}',
-        hdfs_data_dir=hdfs_path+'/country_code=nal/dt={{ds}}'
-        ),
-    dag=dag)
+ods_sqoop_base_data_driver_df_prev_day_tesk>>ods_sqoop_base_data_driver_extend_df_prev_day_tesk>>dim_oride_city_prev_day_tesk>>dim_oride_driver_base_task
 
 
-ods_sqoop_base_data_driver_df_prev_day_tesk>>ods_sqoop_base_data_driver_extend_df_prev_day_tesk>>dim_oride_city_prev_day_tesk>>sleep_time>>dim_oride_driver_base_task>>task_check_key_data>>touchz_data_success

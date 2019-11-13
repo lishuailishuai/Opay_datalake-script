@@ -110,11 +110,41 @@ dwd_oride_order_push_driver_detail_di_task = HiveOperator(
                 get_json_object(event_values, '$.mode') as push_mode, --是派单方式（目前只有全局优化和直接发单）
                 cast(get_json_object(event_values, '$.assign_type') as int) as assign_type, --0=非强派单，1=强派单
                 cast(get_json_object(event_values, '$.serv_type') as int) as product_id, --业务线ID
+                get_json_object(event_values, '$.is_multiple') as is_multiple,  --是否播多单
+                null as order_id_multiple, --多单订单
+                get_json_object(event_values, '$.inner_id') as inner_id,  --行程ID唯一标志
                 'nal' as country_code,
                 dt
         from
                 oride_source.dispatch_tracker_server_magic 
-        where  dt = '{pt}' and event_name='dispatch_push_driver' 
+        where  dt = '{pt}' and event_name='dispatch_push_driver' and get_json_object(event_values, '$.is_multiple')<>'true'
+        
+        union all
+        
+        select 
+                get_json_object(event_values, '$.city_id') as city_id,--下单时所在城市
+                get_json_object(event_values, '$.order_id') as order_id, --订单ID
+                get_json_object(event_values, '$.user_id') as passenger_id, --乘客ID
+                get_json_object(event_values, '$.driver_id') as driver_id,--司机ID
+                get_json_object(event_values, '$.round') as order_round,--订单轮数
+                get_json_object(event_values, '$.config_id') as config_id,--派单配置的id
+                get_json_object(event_values, '$.success') as success,--是否成功（1，0）
+                get_json_object(event_values, '$.timestamp') as log_timestamp,--埋点时间
+                get_json_object(event_values, '$.distance') as distance,--司机的接驾距离(米)(订单播给司机时司机所处的位置)
+                get_json_object(event_values, '$.wait_time') as wait_time,--司机收到推送信息时有多久没有订单
+                get_json_object(event_values, '$.mode') as push_mode, --是派单方式（目前只有全局优化和直接发单）
+                cast(get_json_object(event_values, '$.assign_type') as int) as assign_type, --0=非强派单，1=强派单
+                cast(get_json_object(event_values, '$.serv_type') as int) as product_id, --业务线ID
+                get_json_object(event_values, '$.is_multiple') as is_multiple,  --是否播多单
+                order_id1 as order_id_multiple, --多单订单
+                get_json_object(event_values, '$.inner_id') as inner_id,  --行程ID唯一标志
+                'nal' as country_code,
+                dt
+        from
+                oride_source.dispatch_tracker_server_magic 
+        lateral view explode(split(substr(get_json_object(event_values, '$.order_list'),2,length(get_json_object(event_values, '$.order_list'))-2),',')) order_list as order_id1
+        where  dt = '{pt}' and event_name='dispatch_push_driver'
+        and get_json_object(event_values, '$.is_multiple')='true' 
 
 '''.format(
         pt='{{ds}}',

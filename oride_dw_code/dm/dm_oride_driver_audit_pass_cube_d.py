@@ -38,12 +38,6 @@ dag = airflow.DAG('dm_oride_driver_audit_pass_cube_d',
                   schedule_interval="30 01 * * *",
                   default_args=args)
 
-sleep_time = BashOperator(
-    task_id='sleep_id',
-    depends_on_past=False,
-    bash_command='sleep 30',
-    dag=dag)
-
 ##----------------------------------------- 依赖 ---------------------------------------##
 
 
@@ -134,15 +128,14 @@ task_timeout_monitor= PythonOperator(
 )
 ##----------------------------------------- 变量 ---------------------------------------##
 
+db_name = "oride_dw"
 table_name = "dm_oride_driver_audit_pass_cube_d"
 hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
 
 ##----------------------------------------- 脚本 ---------------------------------------##
 
-dm_oride_driver_audit_pass_cube_d_task = HiveOperator(
-
-    task_id='dm_oride_driver_audit_pass_cube_d_task',
-    hql='''
+def dm_oride_driver_audit_pass_cube_d_sql_task(ds):
+    HQL ='''
     set hive.exec.parallel=true;
     set hive.exec.dynamic.partition.mode=nonstrict;
 
@@ -278,36 +271,41 @@ dm_oride_driver_audit_pass_cube_d_task = HiveOperator(
                 dri.country_code 
                 WITH CUBE) x
     WHERE x.country_code IN ('nal')
+    '''.format(
+        pt=ds,
+        now_day=airflow.macros.ds_add(ds, +1),
+        table=table_name,
+        db=db_name
+    )
+    return HQL
 
-'''.format(
-        pt='{{ds}}',
-        now_day='{{macros.ds_add(ds, +1)}}',
-        table=table_name
-    ),
-    dag=dag)
+# 主流程
+def execution_data_task_id(ds, **kargs):
+    hive_hook = HiveCliHook()
 
-# 生成_SUCCESS
-touchz_data_success = BashOperator(
+    # 读取sql
+    _sql = dm_oride_driver_audit_pass_cube_d_sql_task(ds)
 
-    task_id='touchz_data_success',
+    logging.info('Executing: %s', _sql)
 
-    bash_command="""
-    line_num=`$HADOOP_HOME/bin/hadoop fs -du -s {hdfs_data_dir} | tail -1 | awk '{{print $1}}'`
+    # 执行Hive
+    hive_hook.run_cli(_sql)
 
-    if [ $line_num -eq 0 ]
-    then
-        echo "FATAL {hdfs_data_dir} is empty"
-        exit 1
-    else
-        echo "DATA EXPORT Successed ......"
-        $HADOOP_HOME/bin/hadoop fs -touchz {hdfs_data_dir}/_SUCCESS
-    fi
-    """.format(
-        pt='{{ds}}',
-        now_day='{{macros.ds_add(ds, +1)}}',
-        hdfs_data_dir=hdfs_path + '/country_code=nal/dt={{ds}}'
-    ),
-    dag=dag)
+    # 生成_SUCCESS
+    """
+    第一个参数true: 数据目录是有country_code分区。false 没有
+    第二个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
+
+    """
+    TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "true", "true")
+
+
+dm_oride_driver_audit_pass_cube_d_task = PythonOperator(
+    task_id='dm_oride_driver_audit_pass_cube_d_task',
+    python_callable=execution_data_task_id,
+    provide_context=True,
+    dag=dag
+)
 
 dependence_dim_oride_driver_base_prev_day_task >> \
 dependence_dwd_oride_order_base_include_test_di_prev_day_task >> \
@@ -315,6 +313,4 @@ dependence_dwd_oride_order_push_driver_detail_di_prev_day_task >> \
 dependence_ods_log_oride_driver_timerange_prev_day_task >> \
 dependence_dwd_oride_driver_accept_order_click_detail_di_prev_day_task >> \
 dependence_dwd_oride_driver_accept_order_show_detail_di_prev_day_task >> \
-sleep_time >> \
-dm_oride_driver_audit_pass_cube_d_task >> \
-touchz_data_success
+dm_oride_driver_audit_pass_cube_d_task

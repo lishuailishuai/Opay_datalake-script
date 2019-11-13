@@ -109,7 +109,9 @@ dwd_oride_order_assign_driver_detail_di_task = HiveOperator(
         d.dis,--司机的接驾距离(米)(订单分配给司机时司机所处的位置)(预估)
         d.wait_time,--司机收到推送信息时有多久没有订单
         d.push_mode,--是派单方式（目前只有全局优化和直接发单）
-        d.product_id --业务线ID
+        d.product_id, --业务线ID
+        d.is_multiple,  --是否播多单
+        d.order_id_multiple, --多单订单
         'nal' as country_code, 
         '{pt}' dt
 
@@ -131,20 +133,43 @@ dwd_oride_order_assign_driver_detail_di_task = HiveOperator(
                 get_json_object(event_values, '$.timestamp') as log_timestamp,
                 get_json_object(event_values, '$.wait_time') as wait_time,
                 get_json_object(event_values, '$.mode') as push_mode,
-                get_json_object(event_values, '$.serv_type') as product_id --业务线ID
+                get_json_object(event_values, '$.serv_type') as product_id, --业务线ID
+                get_json_object(event_values, '$.is_multiple') as is_multiple,  --是否播多单
+                null as order_id_multiple --多单订单
 
                 from oride_source.dispatch_tracker_server_magic 
-                where dt='{pt}' and 
-                event_name='dispatch_assign_driver' and 
-                from_unixtime(cast(get_json_object(event_values, '$.timestamp') as int), 'yyyy-MM-dd')='{pt}'
+                where dt='{pt}' and event_name='dispatch_assign_driver' 
+                and from_unixtime(cast(get_json_object(event_values, '$.timestamp') as int), 'yyyy-MM-dd')='{pt}'
+                and get_json_object(event_values, '$.is_multiple')<>'true'
+                
+                union all
+                
+                select 
+                split(replace(replace(get_json_object(event_values, '$.driver_ids'),'[',''),']',''), ',') as drivers, 
+                split(replace(replace(get_json_object(event_values, '$.distances'),'[',''),']',''), ',') as distances,
+                get_json_object(event_values, '$.order_id') as order_id,
+                get_json_object(event_values, '$.city_id') as city_id,
+                get_json_object(event_values, '$.user_id') as passenger_id,
+                get_json_object(event_values, '$.round') as order_round,
+                get_json_object(event_values, '$.config_id') as config_id,
+                get_json_object(event_values, '$.success') as success,
+                get_json_object(event_values, '$.timestamp') as log_timestamp,
+                get_json_object(event_values, '$.wait_time') as wait_time,
+                get_json_object(event_values, '$.mode') as push_mode,
+                get_json_object(event_values, '$.serv_type') as product_id, --业务线ID
+                get_json_object(event_values, '$.is_multiple') as is_multiple,  --是否播多单
+                order_id1 as order_id_multiple --多单订单
+
+                from oride_source.dispatch_tracker_server_magic 
+                lateral view explode(split(substr(get_json_object(event_values, '$.order_list'),2,length(get_json_object(event_values, '$.order_list'))-2),',')) order_list as order_id1
+                where dt='{pt}' and event_name='dispatch_assign_driver' 
+                and from_unixtime(cast(get_json_object(event_values, '$.timestamp') as int), 'yyyy-MM-dd')='{pt}'
+                and get_json_object(event_values, '$.is_multiple')='true'
             ) as t 
             lateral view posexplode(drivers) d as dpos, driver_id 
             lateral view posexplode(distances) ds as dspos, dis 
             where dpos = dspos
         ) d
-
-
-
 '''.format(
         pt='{{ds}}',
         now_day='{{macros.ds_add(ds, +1)}}',

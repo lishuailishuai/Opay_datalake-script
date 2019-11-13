@@ -106,11 +106,38 @@ dwd_oride_order_dispatch_filter_detail_di_task = HiveOperator(
             get_json_object(event_values, '$.timestamp') as log_timestamp,--埋点时间
             get_json_object(event_values, '$.reason') as reason,--过滤原因
             cast(get_json_object(event_values, '$.serv_type') as int) as product_id, --业务线ID
+            get_json_object(event_values, '$.rule') as rule,--过滤规则
+            get_json_object(event_values, '$.is_multiple') as is_multiple,  --是否播多单
+            null as order_id_multiple, --多单订单
             'nal' as country_code,
              dt
         from  
         oride_source.dispatch_tracker_server_magic 
         where  dt = '{pt}' and event_name='dispatch_filter_driver'
+        and get_json_object(event_values, '$.is_multiple')<>'true'
+        
+        union all
+        
+        select 
+            get_json_object(event_values, '$.city_id') as city_id,--下单时所在城市
+            get_json_object(event_values, '$.order_id') as order_id, --订单ID
+            get_json_object(event_values, '$.user_id') as passenger_id, --乘客ID
+            get_json_object(event_values, '$.driver_id') as driver_id,--司机ID
+            get_json_object(event_values, '$.round') as order_round,--订单轮数
+            get_json_object(event_values, '$.config_id') as config_id,--派单配置的id
+            get_json_object(event_values, '$.timestamp') as log_timestamp,--埋点时间
+            get_json_object(event_values, '$.reason') as reason,--过滤原因
+            cast(get_json_object(event_values, '$.serv_type') as int) as product_id, --业务线ID
+            get_json_object(event_values, '$.rule') as rule,--过滤规则
+            get_json_object(event_values, '$.is_multiple') as is_multiple,  --是否播多单
+            order_id1 as order_id_multiple, --多单订单
+            'nal' as country_code,
+             dt
+        from  
+        oride_source.dispatch_tracker_server_magic 
+        lateral view explode(split(substr(get_json_object(event_values, '$.order_list'),2,length(get_json_object(event_values, '$.order_list'))-2),',')) order_list as order_id1
+        where  dt = '{pt}' and event_name='dispatch_filter_driver'
+        and get_json_object(event_values, '$.is_multiple')='true'
 '''.format(
         pt='{{ds}}',
         now_day='{{macros.ds_add(ds, +1)}}',

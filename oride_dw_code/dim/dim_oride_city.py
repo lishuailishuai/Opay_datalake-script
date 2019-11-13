@@ -133,7 +133,7 @@ SELECT city_id,
 
        assign_type, --强派的服务类型[1,2,3] 1 专车 2 快车 3 keke车
 
-       cty.country_code,
+       nvl(cty.country_code,'nal') as country_code,
        --二位国家码
        
        '{pt}' AS dt

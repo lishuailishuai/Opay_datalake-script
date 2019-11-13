@@ -39,12 +39,6 @@ dag = airflow.DAG('app_oride_order_skyeye_tableau_d',
                   default_args=args,
                   catchup=False)
 
-sleep_time = BashOperator(
-    task_id='sleep_id',
-    depends_on_past=False,
-    bash_command='sleep 30',
-    dag=dag)
-
 ##----------------------------------------- 依赖 ---------------------------------------##
 
 # 依赖前一天分区
@@ -72,6 +66,7 @@ dependence_dwd_oride_order_skyeye_di_prev_day_task = UFileSensor(
 
 ##----------------------------------------- 变量 ---------------------------------------##
 
+db_name="oride_dw"
 table_name = "app_oride_order_skyeye_tableau_d"
 hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
 
@@ -82,11 +77,11 @@ def fun_task_timeout_monitor(ds,dag,**op_kwargs):
 
     dag_ids=dag.dag_id
 
-    tb = [
-        {"db": "oride_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "2400"}
+    msg = [
+        {"db": "oride_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "800"}
     ]
 
-    TaskTimeoutMonitor().set_task_monitor(tb)
+    TaskTimeoutMonitor().set_task_monitor(msg)
 
 task_timeout_monitor= PythonOperator(
     task_id='task_timeout_monitor',
@@ -97,9 +92,8 @@ task_timeout_monitor= PythonOperator(
 
 ##----------------------------------------- 脚本 ---------------------------------------##
 
-app_oride_order_skyeye_tableau_d_task = HiveOperator(
-    task_id='app_oride_order_skyeye_tableau_d_task',
-    hql='''
+def app_oride_order_skyeye_tableau_d_sql_task(ds):
+    HQL='''
     set hive.exec.parallel=true;
     set hive.exec.dynamic.partition.mode=nonstrict;
 
@@ -139,31 +133,42 @@ app_oride_order_skyeye_tableau_d_task = HiveOperator(
     )os on bit.order_id = os.order_id
     group by bit.city_id,bit.country_code;    
 '''.format(
-        pt='{{ds}}',
-        table=table_name
-    ),
-    schema='oride_dw',
-    dag=dag)
+        pt=ds,
+        table=table_name,
+        db=db_name
+        )
+    return HQL
 
 # 生成_SUCCESS
-touchz_data_success = BashOperator(
-    task_id='touchz_data_sucess',
-    bash_command="""
-    line_num=`$HADOOP_HOME/bin/hadoop fs -du -s {hdfs_data_dir} | tail -1 | awk '{{print $1}}'`
 
-    if [ $line_num -eq 0 ]
-    then
-        echo "FATAL {hdfs_data_dir} is empty"
-        exit 1
-    else
-        echo "DATA EXPORT Successed ......"
-        $HADOOP_HOME/bin/hadoop fs -touchz {hdfs_data_dir}/_SUCCESS
-    fi
-    """.format(
-        pt='{{ds}}',
-        now_day='{{macros.ds_add(ds, +1)}}',
-        hdfs_data_dir=hdfs_path + '/country_code=nal/dt={{ds}}'
-    ),
+# 主流程
+def execution_data_task_id(ds, **kargs):
+    hive_hook = HiveCliHook()
+
+    # 读取sql
+    _sql = app_oride_order_skyeye_tableau_d_sql_task(ds)
+
+    logging.info('Executing: %s', _sql)
+
+    # 执行Hive
+    hive_hook.run_cli(_sql)
+
+    # 熔断数据
+    #check_key_data_task(ds)
+
+    # 生成_SUCCESS
+    """
+    第一个参数true: 数据目录是有country_code分区。false 没有
+    第二个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
+
+    """
+    TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "true", "true")
+
+
+app_oride_order_skyeye_tableau_d_task = PythonOperator(
+    task_id='app_oride_order_skyeye_tableau_d_task',
+    python_callable=execution_data_task_id,
+    provide_context=True,
     dag=dag
 )
 
@@ -171,6 +176,4 @@ touchz_data_success = BashOperator(
 
 dependence_dwd_oride_order_base_include_test_di_prev_day_task >> \
 dependence_dwd_oride_order_skyeye_di_prev_day_task >> \
-sleep_time >> \
-app_oride_order_skyeye_tableau_d_task >> \
-touchz_data_success
+app_oride_order_skyeye_tableau_d_task

@@ -46,11 +46,11 @@ sleep_time = BashOperator(
 
 
 # 依赖前一天分区
-dependence_dwd_oride_order_base_include_test_df_prev_day_task = UFileSensor(
-    task_id='dwd_oride_order_base_include_test_df_prev_day_task',
+dependence_dwd_oride_order_base_include_test_di_prev_day_task = UFileSensor(
+    task_id='dwd_oride_order_base_include_test_di_prev_day_task',
     filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw/dwd_oride_order_base_include_test_df/country_code=nal",
-        pt='{{macros.ds_add(ds, +6)}}'
+        hdfs_path_str="oride/oride_dw/dwd_oride_order_base_include_test_di/country_code=nal",
+        pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
@@ -64,7 +64,8 @@ def get_table_info(i):
                    'app_oride_act_user_cohort_w',
                    'app_oride_act_driver_cohort_w']
     hdfs_paths = "ufile://opay-datalake/oride/oride_dw/"
-    return table_names[i],hdfs_paths+table_names[i]
+    return table_names[i], hdfs_paths + table_names[i]
+
 
 ##----------------------------------------- 脚本 ---------------------------------------##
 create_oride_cohort_mid_task = HiveOperator(
@@ -113,10 +114,9 @@ create_oride_cohort_mid_task = HiveOperator(
             where dt>='2019-07-08'  --从20190705号开始加的city_id字段，因此从28周开始统计留存数据，按日的从20190705号开始统计
             and status in(4,5) and city_id<>999001 and driver_id<>1) t
             '''.format(
-            pt='{{macros.ds_add(ds, +6)}}'
+        pt='{{macros.ds_add(ds, +6)}}'
     ),
     dag=dag)
-
 
 app_oride_new_user_cohort_w_task = HiveOperator(
 
@@ -144,7 +144,7 @@ app_oride_new_user_cohort_w_task = HiveOperator(
         count(if(new_user.passenger_id is not null,a.order_id,null)) as new_user_liucun_ord_cnt, --新客留存完单量
         sum(if(new_user.passenger_id is not null,a.price,0)) as new_user_liucun_gmv, --新客留存完单gmv
         sum(if(new_user.passenger_id is not null,a.distance,0)) as new_user_liucun_dis --新客留存完单里程     
-        
+
         from oride_dw.oride_cohort_mid a
         left join
         (select order_id,city_id,product_id,passenger_id,is_new_user,week_create_date
@@ -153,7 +153,7 @@ app_oride_new_user_cohort_w_task = HiveOperator(
         on a.city_id=new_user.city_id
         and a.product_id=new_user.product_id
         and a.passenger_id=new_user.passenger_id
-        
+
         group by nvl(a.week_create_date,-10000),
         nvl((a.week_create_date-new_user.week_create_date),-10000),
         nvl(a.city_id,-10000),
@@ -193,8 +193,8 @@ app_oride_new_driver_cohort_w_task = HiveOperator(
         count(if(new_driver.driver_id is not null,a.order_id,null)) as new_driver_liucun_ord_cnt, --新客留存完单量
         sum(if(new_driver.driver_id is not null,a.price,0)) as new_driver_liucun_gmv, --新客留存完单gmv
         sum(if(new_driver.driver_id is not null,a.distance,0)) as new_driver_liucun_dis --新客留存完单里程
-        
-        
+
+
         from oride_dw.oride_cohort_mid a
         left join
         (select order_id,city_id,product_id,driver_id,is_new_driver,week_create_date
@@ -203,7 +203,7 @@ app_oride_new_driver_cohort_w_task = HiveOperator(
         on a.city_id=new_driver.city_id
         and a.product_id=new_driver.product_id
         and a.driver_id=new_driver.driver_id
-        
+
         group by nvl(a.week_create_date,-10000),
         nvl((a.week_create_date-new_driver.week_create_date),-10000),
         nvl(a.city_id,-10000),
@@ -235,7 +235,7 @@ app_oride_act_user_cohort_w_task = HiveOperator(
         act_user_liucun_dis, --活跃乘客留存完单里程
         'nal' as country_code,
         '{pt}' as dt
-        
+
         from(select nvl(a.week_create_date,-10000) as week_create_date,
         nvl((a.week_create_date-act_user.week_create_date),-10000) as weeks,
         nvl(a.city_id,-10000) as city_id,
@@ -244,7 +244,7 @@ app_oride_act_user_cohort_w_task = HiveOperator(
         count(if(act_user.passenger_id is not null,a.order_id,null)) as act_user_liucun_ord_cnt, --活跃乘客留存完单量
         sum(if(act_user.passenger_id is not null,a.price,0)) as act_user_liucun_gmv, --活跃乘客留存完单gmv
         sum(if(act_user.passenger_id is not null,a.distance,0)) as act_user_liucun_dis --活跃乘客留存完单里程
-        
+
         from oride_dw.oride_cohort_mid a
         left join
         (select week_create_date,city_id,product_id,passenger_id 
@@ -424,31 +424,28 @@ act_driver_cohort_touchz_success = BashOperator(
     ),
     dag=dag)
 
-
-
-dependence_dwd_oride_order_base_include_test_df_prev_day_task >> \
+dependence_dwd_oride_order_base_include_test_di_prev_day_task >> \
 sleep_time >> \
 create_oride_cohort_mid_task >> \
 oride_cohort_mid_success >> \
 app_oride_new_user_cohort_w_task >> \
 new_user_cohort_touchz_success
 
-
-dependence_dwd_oride_order_base_include_test_df_prev_day_task >> \
+dependence_dwd_oride_order_base_include_test_di_prev_day_task >> \
 sleep_time >> \
 create_oride_cohort_mid_task >> \
 oride_cohort_mid_success >> \
 app_oride_new_driver_cohort_w_task >> \
 new_driver_cohort_touchz_success
 
-dependence_dwd_oride_order_base_include_test_df_prev_day_task >> \
+dependence_dwd_oride_order_base_include_test_di_prev_day_task >> \
 sleep_time >> \
 create_oride_cohort_mid_task >> \
 oride_cohort_mid_success >> \
 app_oride_act_user_cohort_w_task >> \
 act_user_cohort_touchz_success
 
-dependence_dwd_oride_order_base_include_test_df_prev_day_task >> \
+dependence_dwd_oride_order_base_include_test_di_prev_day_task >> \
 sleep_time >> \
 create_oride_cohort_mid_task >> \
 oride_cohort_mid_success >> \

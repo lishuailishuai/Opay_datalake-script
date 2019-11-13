@@ -38,12 +38,6 @@ dag = airflow.DAG('app_oride_global_operate_report_d',
                   schedule_interval="50 01 * * *",
                   default_args=args)
 
-sleep_time = BashOperator(
-    task_id='sleep_id',
-    depends_on_past=False,
-    bash_command='sleep 30',
-    dag=dag)
-
 ##----------------------------------------- 依赖 ---------------------------------------##
 
 
@@ -149,82 +143,82 @@ task_timeout_monitor= PythonOperator(
 
 ##----------------------------------------- 变量 ---------------------------------------##
 
+db_name = "oride_dw"
 table_name = "app_oride_global_operate_report_d"
 hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
 
+##----------------------------------------- 脚本变量 ---------------------------------------##
+
+order_data_null = """
+           null as ride_order_cnt, --当日下单量
+           null as finish_order_cnt, --当日完单量
+           null as finish_pay, --当日完成支付量
+           null as valid_ord_cnt,  --当日有效订单量
+           null as wet_ord_cnt, --当日湿单订单量
+           null as bad_feedback_finish_ord_cnt, --当日差评完单量
+           null as beckoning_num, --当日招手停完单数
+           null as finish_take_order_dur,  --当日完单应答时长
+           null as finish_pick_up_dur,  --当日完单接驾时长
+           null as finish_billing_dur,  --当日完单计费时长【跟计费时长有点差异】
+           null as finish_order_onride_dis,  --当日完单送驾距离
+           null as pax_num,  --乘客数
+           null as price, --当日完单gmv,订单状态4，5
+           null as pay_price,  --当日应付金额，订单状态5
+           null as pay_amount,  --当日实付金额，订单状态5
+           null as opay_pay_cnt, --opay支付订单数,pay_mode=2
+           null as opay_pay_failed_cnt, --opay支付失败订单数,pay_mode=2 and pay_status in(0,2)
+           null as order_cnt_lfw, --近四周同期下单数据
+           null as finish_order_cnt_lfw  --近四周同期完单数据
+           """
+
+passenger_data_null = """
+           null as new_users,  --当天注册乘客数
+           null as act_users,  --当天活跃乘客数
+           null as ord_users,  --当日下单乘客数
+           null as finished_users,  --当日完单乘客数
+           null as first_finished_users,  --当日首次完单乘客数
+           null as old_finished_users,  --当日完单老客数
+           null as new_user_ord_cnt,  --当日新注册乘客下单量
+           null as new_user_finished_cnt,  --当日新注册乘客完单量
+           null as paid_users,  --当日总支付乘客数
+           null as online_paid_users,  --当日线上支付乘客数
+           null as new_user_gmv  --当日新注册乘客完单gmv
+    """
+
+driver_cube_data_null = """
+           null as td_audit_finish_driver_num,  --当日审核通过司机数（包含同时呼叫）
+           null as td_online_driver_num,  --当日在线司机数（包含同时呼叫）
+           null as td_request_driver_num_inSimulRing, --当日接单司机数（包含同时呼叫）
+           null as td_finish_order_driver_num_inSimulRing,  --当日完单司机数（包含同时呼叫）
+           null as td_push_accpet_show_driver_num --被推送骑手数
+    """
+
+driver_data_null = """
+           null as finish_driver_online_dur,  --当日完单司机在线时长
+           null as driver_billing_dur, --当日司机计费时长
+           null as driver_pushed_order_cnt  --司机被推送订单数
+    """
+
+finance_data_null = """
+           null AS recharge_amount, --充值金额
+           null AS reward_amount, --奖励金额
+           null AS amount_pay_online, --当日总收入-线上支付金额
+           null AS amount_pay_offline --当日总收入-线下支付金额 
+    """
+passenger_recharge_data_null = """
+           null as recharge_users, --每天充值用户数
+           null as user_recharge_succ_balance  --每天用户充值真实金额
+    """
+
+union_product_data_null = """
+           null as finish_order_cnt_inSimulRing, --当日完单量(包含同时呼叫)
+           null as td_request_driver_num, --当日接单司机数（不包含同时呼叫）
+           null as td_finish_order_driver_num,  --当日完单司机数（不包含同时呼叫）
+           null as iph_fenzi_inSimulRing --iph分子（包含同时呼叫）
+    """
 ##----------------------------------------- 脚本 ---------------------------------------##
-order_data_null="""
-       null as ride_order_cnt, --当日下单量
-       null as finish_order_cnt, --当日完单量
-       null as finish_pay, --当日完成支付量
-       null as valid_ord_cnt,  --当日有效订单量
-       null as wet_ord_cnt, --当日湿单订单量
-       null as bad_feedback_finish_ord_cnt, --当日差评完单量
-       null as beckoning_num, --当日招手停完单数
-       null as finish_take_order_dur,  --当日完单应答时长
-       null as finish_pick_up_dur,  --当日完单接驾时长
-       null as finish_billing_dur,  --当日完单计费时长【跟计费时长有点差异】
-       null as finish_order_onride_dis,  --当日完单送驾距离
-       null as pax_num,  --乘客数
-       null as price, --当日完单gmv,订单状态4，5
-       null as pay_price,  --当日应付金额，订单状态5
-       null as pay_amount,  --当日实付金额，订单状态5
-       null as opay_pay_cnt, --opay支付订单数,pay_mode=2
-       null as opay_pay_failed_cnt, --opay支付失败订单数,pay_mode=2 and pay_status in(0,2)
-       null as order_cnt_lfw, --近四周同期下单数据
-       null as finish_order_cnt_lfw  --近四周同期完单数据
-       """
-
-passenger_data_null="""
-       null as new_users,  --当天注册乘客数
-       null as act_users,  --当天活跃乘客数
-       null as ord_users,  --当日下单乘客数
-       null as finished_users,  --当日完单乘客数
-       null as first_finished_users,  --当日首次完单乘客数
-       null as old_finished_users,  --当日完单老客数
-       null as new_user_ord_cnt,  --当日新注册乘客下单量
-       null as new_user_finished_cnt,  --当日新注册乘客完单量
-       null as paid_users,  --当日总支付乘客数
-       null as online_paid_users,  --当日线上支付乘客数
-       null as new_user_gmv  --当日新注册乘客完单gmv
-"""
-
-driver_cube_data_null="""
-       null as td_audit_finish_driver_num,  --当日审核通过司机数（包含同时呼叫）
-       null as td_online_driver_num,  --当日在线司机数（包含同时呼叫）
-       null as td_request_driver_num_inSimulRing, --当日接单司机数（包含同时呼叫）
-       null as td_finish_order_driver_num_inSimulRing,  --当日完单司机数（包含同时呼叫）
-       null as td_push_accpet_show_driver_num --被推送骑手数
-"""
-
-driver_data_null="""
-       null as finish_driver_online_dur,  --当日完单司机在线时长
-       null as driver_billing_dur, --当日司机计费时长
-       null as driver_pushed_order_cnt  --司机被推送订单数
-"""
-
-finance_data_null="""
-       null AS recharge_amount, --充值金额
-       null AS reward_amount, --奖励金额
-       null AS amount_pay_online, --当日总收入-线上支付金额
-       null AS amount_pay_offline --当日总收入-线下支付金额 
-"""
-passenger_recharge_data_null="""
-       null as recharge_users, --每天充值用户数
-       null as user_recharge_succ_balance  --每天用户充值真实金额
-"""
-
-union_product_data_null="""
-       null as finish_order_cnt_inSimulRing, --当日完单量(包含同时呼叫)
-       null as td_request_driver_num, --当日接单司机数（不包含同时呼叫）
-       null as td_finish_order_driver_num,  --当日完单司机数（不包含同时呼叫）
-       null as iph_fenzi_inSimulRing --iph分子（包含同时呼叫）
-"""
-
-app_oride_global_operate_report_d_task = HiveOperator(
-
-    task_id='app_oride_global_operate_report_d_task',
-    hql='''
+def app_oride_global_operate_report_d_sql_task(ds):
+    HQL ='''
     SET hive.exec.parallel=true;
     SET hive.exec.dynamic.partition=true;
     SET hive.exec.dynamic.partition.mode=nonstrict;
@@ -580,42 +574,48 @@ select * from union_product_data where country_code='nal') t
 GROUP BY nvl(country_code,'nal'),
        nvl(city_id,-10000),
        nvl(product_id,-10000);
-'''.format(
+    '''.format(
+        pt=ds,
+        now_day=airflow.macros.ds_add(ds, +1),
+        table=table_name,
+        db=db_name,
         order_data_null=order_data_null,
         passenger_data_null=passenger_data_null,
         driver_cube_data_null=driver_cube_data_null,
         driver_data_null=driver_data_null,
         finance_data_null=finance_data_null,
         passenger_recharge_data_null=passenger_recharge_data_null,
-        union_product_data_null=union_product_data_null,
-        pt='{{ds}}',
-        now_day='{{macros.ds_add(ds, +1)}}',
-        table=table_name
-    ),
-    dag=dag)
+        union_product_data_null=union_product_data_null
+    )
+    return HQL
 
-# 生成_SUCCESS
-touchz_data_success = BashOperator(
+# 主流程
+def execution_data_task_id(ds, **kargs):
+    hive_hook = HiveCliHook()
 
-    task_id='touchz_data_success',
+    # 读取sql
+    _sql = app_oride_global_operate_report_d_sql_task(ds)
 
-    bash_command="""
-    line_num=`$HADOOP_HOME/bin/hadoop fs -du -s {hdfs_data_dir} | tail -1 | awk '{{print $1}}'`
+    logging.info('Executing: %s', _sql)
 
-    if [ $line_num -eq 0 ]
-    then
-        echo "FATAL {hdfs_data_dir} is empty"
-        exit 1
-    else
-        echo "DATA EXPORT Successed ......"
-        $HADOOP_HOME/bin/hadoop fs -touchz {hdfs_data_dir}/_SUCCESS
-    fi
-    """.format(
-        pt='{{ds}}',
-        now_day='{{macros.ds_add(ds, +1)}}',
-        hdfs_data_dir=hdfs_path + '/country_code=nal/dt={{ds}}'
-    ),
-    dag=dag)
+    # 执行Hive
+    hive_hook.run_cli(_sql)
+
+    # 生成_SUCCESS
+    """
+    第一个参数true: 数据目录是有country_code分区。false 没有
+    第二个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
+
+    """
+    TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "true", "true")
+
+
+app_oride_global_operate_report_d_task = PythonOperator(
+    task_id='app_oride_global_operate_report_d_task',
+    python_callable=execution_data_task_id,
+    provide_context=True,
+    dag=dag
+)
 
 dependence_dm_oride_order_base_d_prev_day_task >> \
 dependence_dm_oride_passenger_base_cube_d_prev_day_task >> \
@@ -624,6 +624,6 @@ dependence_dm_oride_driver_base_d_prev_day_task >>\
 dependence_server_magic_now_day_task >>\
 dependence_dwd_oride_order_finance_df_prev_day_task >>\
 dependence_dm_oride_driver_order_base_cube_d_prev_day_task >>\
-sleep_time >> \
-app_oride_global_operate_report_d_task >> \
-touchz_data_success
+app_oride_global_operate_report_d_task
+
+

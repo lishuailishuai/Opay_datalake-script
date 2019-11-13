@@ -38,12 +38,6 @@ dag = airflow.DAG('app_oride_order_strong_base_cube_d',
                   schedule_interval="30 01 * * *",
                   default_args=args)
 
-sleep_time = BashOperator(
-    task_id='sleep_id',
-    depends_on_past=False,
-    bash_command='sleep 30',
-    dag=dag)
-
 ##----------------------------------------- 依赖 ---------------------------------------##
 
 
@@ -90,15 +84,15 @@ task_timeout_monitor= PythonOperator(
 
 ##----------------------------------------- 变量 ---------------------------------------##
 
+db_name = "oride_dw"
 table_name = "app_oride_order_strong_base_cube_d"
 hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
 
 ##----------------------------------------- 脚本 ---------------------------------------##
 
-app_oride_order_strong_base_cube_d_task = HiveOperator(
-
-    task_id='app_oride_order_strong_base_cube_d_task',
-    hql='''set hive.exec.parallel=true;
+def app_oride_order_strong_base_cube_d_sql_task(ds):
+    HQL = '''
+    set hive.exec.parallel=true;
     set hive.exec.dynamic.partition.mode=nonstrict;
 
     INSERT overwrite TABLE oride_dw.{table} partition(country_code,dt)
@@ -124,58 +118,61 @@ app_oride_order_strong_base_cube_d_task = HiveOperator(
                  sum(a.accept_click_ord_cnt) as accept_click_ord_cnt, --接单数（派单）
                  'nal' as country_code,
                  '{pt}' as dt
-FROM
-  (SELECT *
-   FROM oride_dw.dm_oride_order_strong_base_cube_d
-   WHERE dt='{pt}') a
-LEFT JOIN
-  (SELECT nvl(country_code,'-10000') AS country_code,
-          nvl(cast(city_id AS bigint),-10000) AS city_id,
-          nvl(product_id,-10000) AS product_id,
-          sum(finish_driver_online_dur) AS finish_driver_online_dur, --当日完单司机在线时长
- sum(strong_finish_driver_online_dur) AS strong_finish_driver_online_dur --当日强制派单完单司机在线时长
-FROM oride_dw.dm_oride_driver_base_d
-   WHERE dt='{pt}'
-   GROUP BY nvl(country_code,'-10000'),
-            nvl(cast(city_id AS bigint),-10000),
-            nvl(product_id,-10000) WITH CUBE) b ON a.city_id=nvl(b.city_id,-10000)
-AND a.product_id=nvl(b.product_id,-10000)
-AND a.country_code=nvl(b.country_code,-10000)
-group by nvl(a.city_id,-10000),nvl(a.product_id,-10000)
-                 '''.format(
-        pt='{{ds}}',
-        now_day='{{macros.ds_add(ds, +1)}}',
-        table=table_name
-    ),
-    dag=dag)
+        FROM
+          (SELECT *
+           FROM oride_dw.dm_oride_order_strong_base_cube_d
+           WHERE dt='{pt}') a
+        LEFT JOIN
+          (SELECT nvl(country_code,'-10000') AS country_code,
+                  nvl(cast(city_id AS bigint),-10000) AS city_id,
+                  nvl(product_id,-10000) AS product_id,
+                  sum(finish_driver_online_dur) AS finish_driver_online_dur, --当日完单司机在线时长
+         sum(strong_finish_driver_online_dur) AS strong_finish_driver_online_dur --当日强制派单完单司机在线时长
+        FROM oride_dw.dm_oride_driver_base_d
+           WHERE dt='{pt}'
+           GROUP BY nvl(country_code,'-10000'),
+                    nvl(cast(city_id AS bigint),-10000),
+                    nvl(product_id,-10000) WITH CUBE) b ON a.city_id=nvl(b.city_id,-10000)
+        AND a.product_id=nvl(b.product_id,-10000)
+        AND a.country_code=nvl(b.country_code,-10000)
+        group by nvl(a.city_id,-10000),nvl(a.product_id,-10000)
+    '''.format(
+        pt=ds,
+        now_day=airflow.macros.ds_add(ds, +1),
+        table=table_name,
+        db=db_name
+    )
+    return HQL
 
-# 生成_SUCCESS
-touchz_data_success = BashOperator(
+# 主流程
+def execution_data_task_id(ds, **kargs):
+    hive_hook = HiveCliHook()
 
-    task_id='touchz_data_success',
+    # 读取sql
+    _sql = app_oride_order_strong_base_cube_d_sql_task(ds)
 
-    bash_command="""
-    line_num=`$HADOOP_HOME/bin/hadoop fs -du -s {hdfs_data_dir} | tail -1 | awk '{{print $1}}'`
+    logging.info('Executing: %s', _sql)
 
-    if [ $line_num -eq 0 ]
-    then
-        echo "FATAL {hdfs_data_dir} is empty"
-        exit 1
-    else
-        echo "DATA EXPORT Successed ......"
-        $HADOOP_HOME/bin/hadoop fs -touchz {hdfs_data_dir}/_SUCCESS
-    fi
-    """.format(
-        pt='{{ds}}',
-        now_day='{{macros.ds_add(ds, +1)}}',
-        hdfs_data_dir=hdfs_path + '/country_code=nal/dt={{ds}}'
-    ),
-    dag=dag)
+    # 执行Hive
+    hive_hook.run_cli(_sql)
+
+    # 生成_SUCCESS
+    """
+    第一个参数true: 数据目录是有country_code分区。false 没有
+    第二个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
+
+    """
+    TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "true", "true")
+
+
+app_oride_order_strong_base_cube_d_task = PythonOperator(
+    task_id='app_oride_order_strong_base_cube_d_task',
+    python_callable=execution_data_task_id,
+    provide_context=True,
+    dag=dag
+)
 
 dependence_dm_oride_order_strong_base_cube_d_prev_day_task >> \
 dependence_dm_oride_driver_base_d_prev_day_task >> \
-sleep_time >> \
-app_oride_order_strong_base_cube_d_task >> \
-touchz_data_success
-
+app_oride_order_strong_base_cube_d_task
 

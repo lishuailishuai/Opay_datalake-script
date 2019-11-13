@@ -138,7 +138,7 @@ insert_ofood_global_metrics = HiveOperator(
             count(distinct if(olu.order_id is null and o.order_status in (-1,-2,-3) and o.pay_status <> 0 and o.refund_status <> 0,o.order_id,null)) user_cancel_num,
             sum(if(wo.order_id is not null and o.order_status = 8,wo.origin_product + wo.origin_package + wo.origin_delivery,0)) order_total_price_sum,
             sum(if(wo.order_id is not null and o.order_status = 8,wo.origin_product + wo.origin_package + wo.origin_delivery - order_youhui - first_youhui,0)) order_actual_price_sum,
-            sum(if(wo.order_id is not null and o.order_status = 8,wo.first_roof + wo.roof_mj + wo.roof_delivery + wo.roof_capped,0)) c_subsidy_price_sum
+            sum(if(wo.order_id is not null and o.order_status = 8,wo.first_roof + wo.roof_mj + wo.roof_delivery + wo.roof_capped + wo.roof_plat_coupon,0)) c_subsidy_price_sum
             from ofood_dw_ods.ods_sqoop_base_jh_order_df o
             left join (
                 select 
@@ -170,7 +170,8 @@ insert_ofood_global_metrics = HiveOperator(
                 first_roof,
                 roof_mj,
                 roof_delivery,
-                roof_capped 
+                roof_capped,
+                roof_plat_coupon 
                 from 
                 ofood_dw_ods.ods_sqoop_base_jh_waimai_order_df
                 where dt = '{{ ds }}'
@@ -240,8 +241,7 @@ insert_ofood_global_metrics = HiveOperator(
         
         --首次完单用户数
         
-        new_user as 
-        (
+        new_user as (
             select 
             d.ft day,
             count(d.uid) first_complete_user_num

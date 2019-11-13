@@ -6,7 +6,7 @@ from airflow.operators.impala_plugin import ImpalaOperator
 from utils.connection_helper import get_hive_cursor
 from airflow.operators.python_operator import PythonOperator
 from airflow.contrib.hooks.redis_hook import RedisHook
-from airflow.hooks.hive_hooks import HiveCliHook
+from airflow.hooks.hive_hooks import HiveCliHook, HiveServer2Hook
 from airflow.operators.hive_to_mysql import HiveToMySqlTransfer
 from airflow.operators.mysql_operator import MySqlOperator
 from airflow.operators.dagrun_operator import TriggerDagRunOperator
@@ -40,12 +40,6 @@ dag = airflow.DAG( 'dwd_oride_driver_pick_up_location_di',
     catchup=False) 
 
 
-sleep_time = BashOperator(
-    task_id='sleep_id',
-    depends_on_past=False,
-    bash_command='sleep 30',
-    dag=dag)
-
 ##----------------------------------------- 依赖 ---------------------------------------## 
 
 #依赖前一天分区
@@ -60,6 +54,7 @@ dwd_oride_driver_pick_up_location_di_prev_day_tesk=HivePartitionSensor(
 
 ##----------------------------------------- 变量 ---------------------------------------## 
 
+db_name = "oride_dw"
 table_name="dwd_oride_driver_pick_up_location_di"
 hdfs_path="ufile://opay-datalake/oride/oride_dw/"+table_name
 
@@ -69,13 +64,15 @@ def fun_task_timeout_monitor(ds,dag,**op_kwargs):
 
     dag_ids=dag.dag_id
 
-    tb = [
-        {"db": "oride_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "1200"}
+    msg = [
+        {"db": "oride_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "2400"}
     ]
 
-    TaskTimeoutMonitor().set_task_monitor(tb)
+    TaskTimeoutMonitor().set_task_monitor(msg)
 
-task_timeout_monitor= PythonOperator(
+
+
+task_timeout_monitor = PythonOperator(
     task_id='task_timeout_monitor',
     python_callable=fun_task_timeout_monitor,
     provide_context=True,
@@ -84,10 +81,8 @@ task_timeout_monitor= PythonOperator(
 
 ##----------------------------------------- 脚本 ---------------------------------------## 
 
-dwd_oride_driver_pick_up_location_di_task = HiveOperator(
-
-    task_id='dwd_oride_driver_pick_up_location_di_task',
-    hql='''
+def dwd_oride_driver_pick_up_location_di_sql_task(ds):
+    HQL='''
     set hive.exec.parallel=true;
     set hive.exec.dynamic.partition.mode=nonstrict;
 
@@ -141,70 +136,44 @@ GROUP BY driver_id,
          pick_up_status;
 
 '''.format(
-        pt='{{ds}}',
-        now_day='{{macros.ds_add(ds, +1)}}',
-        table=table_name
-        ),
-schema='oride_dw',
-    dag=dag)
-
-
-#熔断数据，如果数据重复，报错
-def check_key_data(ds,**kargs):
-
-    #主键重复校验
-    HQL_DQC='''
-    SELECT count(1)-count(distinct driver_id,order_id,pick_up_status) as cnt
-      FROM oride_dw.{table}
-      WHERE dt='{pt}'
-    '''.format(
         pt=ds,
-        now_day=airflow.macros.ds_add(ds, +1),
-        table=table_name
+        table=table_name,
+        db=db_name
         )
+    return HQL
 
-    cursor = get_hive_cursor()
-    logging.info('Executing 主键重复校验: %s', HQL_DQC)
 
-    cursor.execute(HQL_DQC)
-    res = cursor.fetchone()
+# 主流程
+def execution_data_task_id(ds, **kargs):
+    hive_hook = HiveCliHook()
 
-    if res[0] >1:
-        raise Exception ("Error The primary key repeat !", res)
-    else:
-        print("-----> Notice Data Export Success ......")
-    
- 
-task_check_key_data = PythonOperator(
-    task_id='check_data',
-    python_callable=check_key_data,
+    # 读取sql
+    _sql = dwd_oride_driver_pick_up_location_di_sql_task(ds)
+
+    logging.info('Executing: %s', _sql)
+
+    # 执行Hive
+    hive_hook.run_cli(_sql)
+
+    # 熔断数据
+    #check_key_data_task(ds)
+
+    # 生成_SUCCESS
+    """
+    第一个参数true: 数据目录是有country_code分区。false 没有
+    第二个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
+
+    """
+    TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "true", "true")
+
+
+dwd_oride_driver_pick_up_location_di_task = PythonOperator(
+    task_id='dwd_oride_driver_pick_up_location_di_task',
+    python_callable=execution_data_task_id,
     provide_context=True,
     dag=dag
 )
 
-#生成_SUCCESS
-touchz_data_success = BashOperator(
-
-    task_id='touchz_data_success',
-
-    bash_command="""
-    line_num=`$HADOOP_HOME/bin/hadoop fs -du -s {hdfs_data_dir} | tail -1 | awk '{{print $1}}'`
-    
-    if [ $line_num -eq 0 ]
-    then
-        echo "FATAL {hdfs_data_dir} is empty"
-        exit 1
-    else
-        echo "DATA EXPORT Successed ......"
-        $HADOOP_HOME/bin/hadoop fs -touchz {hdfs_data_dir}/_SUCCESS
-    fi
-    """.format(
-        pt='{{ds}}',
-        now_day='{{macros.ds_add(ds, +1)}}',
-        hdfs_data_dir=hdfs_path+'/country_code=nal/dt={{ds}}'
-        ),
-    dag=dag)
-
-dwd_oride_driver_pick_up_location_di_prev_day_tesk>>sleep_time>>dwd_oride_driver_pick_up_location_di_task>>task_check_key_data>>touchz_data_success
+dwd_oride_driver_pick_up_location_di_prev_day_tesk>>dwd_oride_driver_pick_up_location_di_task
 
 
