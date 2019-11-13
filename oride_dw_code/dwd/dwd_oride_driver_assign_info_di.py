@@ -85,7 +85,7 @@ task_timeout_monitor = PythonOperator(
 
 ##----------------------------------------- 脚本 ---------------------------------------##
 
-def dwd_oride_driver_assign_info_di_task(ds):
+def dwd_oride_driver_assign_info_di_sql_task(ds):
     HQL='''
         SET hive.exec.parallel=TRUE;
         SET hive.exec.dynamic.partition.mode=nonstrict;
@@ -116,7 +116,7 @@ def execution_data_task_id(ds, **kargs):
     hive_hook = HiveCliHook()
 
     # 读取sql
-    _sql = dwd_oride_driver_assign_info_di_task(ds)
+    _sql = dwd_oride_driver_assign_info_di_sql_task(ds)
 
     logging.info('Executing: %s', _sql)
 
