@@ -114,7 +114,7 @@ def dim_oride_driver_audit_base_sql_task(ds):
       driver_phone ,-- 电话号码, 
       gender,-- 1男，2女, 
       birthday,-- 生日, 
-      country,-- 国家, 
+      dri.country,-- 国家, 
       state,-- 州, 
       city_id ,-- 城市(等同协会城市), 
       address,-- 详细地址, 
