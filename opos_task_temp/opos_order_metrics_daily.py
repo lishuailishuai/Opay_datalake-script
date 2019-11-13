@@ -152,7 +152,7 @@ insert_opos_order_metrics = HiveOperator(
                 opos_dw_ods.ods_sqoop_base_pre_opos_payment_order_di
                 where dt = '{dt}'
             ) p 
-            join shop_dim s on p.receipt_id = s.opay_id
+            join shop_dim s on p.receipt_id = cast(s.opay_id as string)
             group by s.bd_id,s.city_id,s.city_name,s.country
         ) 
         
@@ -226,7 +226,7 @@ insert_opos_active_user_detail_metrics = HiveOperator(
             opos_dw_ods.ods_sqoop_base_bd_shop_df
             where dt = '{dt}'
             and substr(created_at,1,10) <= '{dt}'
-        ) s on p.receipt_id = s.opay_id
+        ) s on p.receipt_id = cast(s.opay_id as string)
         join (
             select 
             id,
