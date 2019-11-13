@@ -91,7 +91,7 @@ def dwd_oride_driver_virtual_device_login_sql_df(ds):
         SET hive.exec.parallel=TRUE;
         SET hive.exec.dynamic.partition.mode=nonstrict;
 
-        insert overwrite table oride_dw.{table} partition(country_code='nal',dt='{pt}')
+        insert overwrite table oride_dw.{table} partition(country_code,dt)
 
         select
             driver_id ,
