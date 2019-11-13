@@ -267,14 +267,18 @@ query_sql_template = '''
         merchant_risk_remark  
         from 
         opos_payment_order_{year}_{week}
-        where DATE_FORMAT(create_time,"%Y-%m-%d") = '{ds}' or DATE_FORMAT(modify_time,"%Y-%m-%d")='{ds}'
+        where 
+        (DATE_FORMAT(create_time,"%Y-%m-%d") = '{ds}' or DATE_FORMAT(modify_time,"%Y-%m-%d")='{ds}')
+        or 
+        (DATE_FORMAT(create_time,"%Y-%m-%d") = '{yesterday}' or DATE_FORMAT(modify_time,"%Y-%m-%d")='{yesterday}')
     '''
 
 
 def insert_order_data(ds, **kwargs):
     year = datetime.strptime(ds, '%Y-%m-%d').strftime('%Y')
     week = datetime.strptime(ds, '%Y-%m-%d').strftime('%W')
-    query_sql = query_sql_template.format(year=year, week=(int(week) + 1), ds=ds)
+    query_sql = query_sql_template.format(year=year, week=(int(week) + 1), ds=ds,
+                                          yesterday=airflow.macros.ds_add(ds, -1))
 
     logging.info(query_sql)
 
@@ -438,7 +442,7 @@ create_order_metrics_data = BashOperator(
             from
             (
               select
-              '{{ ds }}' as dt,
+              t.dt as dt,
               t.city_id as city_id,
               t.bd_id as bd_id,
               ifnull(count(if(t.order_type = 'pos' and t.trade_status = 'SUCCESS',t.order_id,null)),0) as pos_complete_order_cnt,
@@ -452,6 +456,7 @@ create_order_metrics_data = BashOperator(
 
               from
               (   select
+                  o.dt,
                   o.order_id,
                   o.receipt_id,
                   o.sender_id,
@@ -465,6 +470,7 @@ create_order_metrics_data = BashOperator(
                   join
                   (
                       select
+                      DATE_FORMAT(create_time,'%Y-%m-%d') as dt,
                       order_id,
                       receipt_id,
                       sender_id,
@@ -474,11 +480,14 @@ create_order_metrics_data = BashOperator(
 
                       from
                       opos_order
-                      where DATE_FORMAT(create_time,'%Y-%m-%d') = '{{ ds }}'
+                      where 
+                      (DATE_FORMAT(create_time,'%Y-%m-%d') = '{{ ds }}' or 
+                      DATE_FORMAT(create_time,'%Y-%m-%d') = '{{ ds }}'
+                      )
                   ) o
                   on o.receipt_id = s.opay_id
                ) t
-              group by t.bd_id,t.city_id
+              group by t.dt,t.bd_id,t.city_id
             ) t
             ON DUPLICATE KEY
             UPDATE
@@ -516,14 +525,15 @@ create_merchant_metrics_data = BashOperator(
             from 
             (
                 select 
-                '{{ ds }}' as dt,
+                DATE_FORMAT(created_at,'%Y-%m-%d') as dt,
                 city_id,
                 bd_id,
                 count(id) as new_shop_cnt
 
                 from 
                 bd_shop
-                where DATE_FORMAT(created_at,'%Y-%m-%d') = '{{ ds }}'
+                where 
+                DATE_FORMAT(created_at,'%Y-%m-%d') = '{{ ds }}' or 
                 group by 
                 city_id,
                 bd_id
@@ -548,7 +558,7 @@ delete_old_order = BashOperator(
     task_id='delete_old_order',
     bash_command="""
         mysql -uroot -p78c5f1142124334 -h10.52.149.112 opos_dw  -e "
-            delete from opos_order where DATE_FORMAT(create_time,'%Y-%m-%d') < '{{ ds }}';
+            delete from opos_order where DATE_FORMAT(create_time,'%Y-%m-%d') < '{{ macros.ds_add(ds, -1) }}';
         "
     """,
     dag=dag,
