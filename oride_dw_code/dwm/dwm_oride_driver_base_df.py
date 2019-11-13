@@ -231,7 +231,7 @@ select dri.driver_id,
             sum(ord.td_finish_order_dur) as driver_finished_dur,
             --司机支付完单做单时长（支付跨天可能偏大）
 
-            sum(ord.td_cannel_pick_dur) as cannel_pick_dur,
+            sum(ord.td_cannel_pick_dur) as driver_cannel_pick_dur,
             --司机当天订单被取消时长,该取消时长包含应答后司机、乘客等各方取消，用于计算司机在线时长
 
             sum(dtr.driver_freerange) as driver_free_dur,
