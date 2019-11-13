@@ -448,7 +448,7 @@ create_order_metrics_data = BashOperator(
               ifnull(count(if(t.order_type = 'pos' and t.trade_status = 'SUCCESS',t.order_id,null)),0) as pos_complete_order_cnt,
               ifnull(count(if(t.order_type = 'qrcode' and t.trade_status = 'SUCCESS',t.order_id,null)),0) as qr_complete_order_cnt,
               ifnull(sum(if(t.trade_status = 'SUCCESS',t.org_payment_amount,null)),0) as gmv,
-              ifnull(count(distinct t.receipt_id),0) as have_order_merchant_cnt,
+              ifnull(count(distinct if(t.trade_status = 'SUCCESS',t.receipt_id,null)),0) as have_order_merchant_cnt,
               ifnull(count(distinct if(t.trade_status = 'SUCCESS',t.sender_id,null)),0) as active_user_cnt,
               ifnull(count(distinct if(t.order_type = 'pos' and t.trade_status = 'SUCCESS',t.sender_id,null)),0) as pos_active_user_cnt,
               ifnull(count(distinct if(t.order_type = 'qrcode' and t.trade_status = 'SUCCESS',t.sender_id,null)),0) as qr_active_user_cnt
