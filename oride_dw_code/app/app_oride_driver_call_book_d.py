@@ -96,7 +96,7 @@ def dwd_oride_driver_call_record_mid_sql_task(ds):
             where b.dt between date_sub('{pt}',14) and '{pt}' and b.event_name='call_record';    
 
     '''.format(
-        pt='{{ds}}'
+        pt=ds
     )
     return HQL
 
@@ -149,7 +149,7 @@ def app_oride_driver_call_book_d_sql_task(ds):
         and a3.contact_phone_number=b3.contact_phone_number
         where a3.contact_number_len<50 and a3.contact_name_len<64;
     '''.format(
-        pt='{{ds}}',
+        pt=ds,
         table=table_name,
         db=db_name
     )
