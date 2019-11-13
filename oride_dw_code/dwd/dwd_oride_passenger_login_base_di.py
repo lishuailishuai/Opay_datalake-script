@@ -21,6 +21,7 @@ from airflow.models import Variable
 import requests
 import os
 from plugins.TaskTouchzSuccess import TaskTouchzSuccess
+from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
 
 args = {
         'owner': 'chenghui',
@@ -52,6 +53,24 @@ oride_client_event_detail_prev_day_task=HivePartitionSensor(
       dag=dag
     )
 
+##----------------------------------------- 任务超时监控 ---------------------------------------##
+
+def fun_task_timeout_monitor(ds,dag,**op_kwargs):
+
+    dag_ids=dag.dag_id
+
+    tb = [
+        {"db": "oride_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "600"}
+    ]
+
+    TaskTimeoutMonitor().set_task_monitor(tb)
+
+task_timeout_monitor= PythonOperator(
+    task_id='task_timeout_monitor',
+    python_callable=fun_task_timeout_monitor,
+    provide_context=True,
+    dag=dag
+)
 ##----------------------------------------- 变量 ---------------------------------------## 
 
 db_name="oride_dw"
