@@ -509,51 +509,51 @@ create_order_metrics_data = BashOperator(
     dag=dag,
 )
 
-create_merchant_metrics_data = BashOperator(
-    task_id='create_merchant_metrics_data',
-    bash_command="""
-        mysql -udml_insert -p6VaEyu -h10.52.149.112 opos_dw  -e "
-
-            insert into opos_dw.opos_shop_metrcis_realtime (dt,city_id,bd_id,new_shop_cnt)
-
-            select 
-            t.dt,
-            t.city_id,
-            t.bd_id,
-            t.new_shop_cnt
-
-            from 
-            (
-                select 
-                DATE_FORMAT(created_at,'%Y-%m-%d') as dt,
-                city_id,
-                bd_id,
-                count(id) as new_shop_cnt
-
-                from 
-                bd_shop
-                where 
-                DATE_FORMAT(created_at,'%Y-%m-%d') = '{{ ds }}' or 
-                group by 
-                city_id,
-                bd_id
-            ) t 
-
-
-            ON DUPLICATE KEY
-            UPDATE
-            dt=VALUES(dt),
-            city_id=VALUES(city_id),
-            bd_id=VALUES(bd_id),
-            new_shop_cnt=VALUES(new_shop_cnt)
-
-            ;
-
-        "
-    """,
-    dag=dag,
-)
-
+# create_merchant_metrics_data = BashOperator(
+#     task_id='create_merchant_metrics_data',
+#     bash_command="""
+#         mysql -udml_insert -p6VaEyu -h10.52.149.112 opos_dw  -e "
+#
+#             insert into opos_dw.opos_shop_metrcis_realtime (dt,city_id,bd_id,new_shop_cnt)
+#
+#             select
+#             t.dt,
+#             t.city_id,
+#             t.bd_id,
+#             t.new_shop_cnt
+#
+#             from
+#             (
+#                 select
+#                 DATE_FORMAT(created_at,'%Y-%m-%d') as dt,
+#                 city_id,
+#                 bd_id,
+#                 count(id) as new_shop_cnt
+#
+#                 from
+#                 bd_shop
+#                 where
+#                 DATE_FORMAT(created_at,'%Y-%m-%d') = '{{ ds }}' or
+#                 group by
+#                 city_id,
+#                 bd_id
+#             ) t
+#
+#
+#             ON DUPLICATE KEY
+#             UPDATE
+#             dt=VALUES(dt),
+#             city_id=VALUES(city_id),
+#             bd_id=VALUES(bd_id),
+#             new_shop_cnt=VALUES(new_shop_cnt)
+#
+#             ;
+#
+#         "
+#     """,
+#     dag=dag,
+# )
+#
 delete_old_order = BashOperator(
     task_id='delete_old_order',
     bash_command="""
@@ -565,4 +565,4 @@ delete_old_order = BashOperator(
 )
 
 insert_order_data >> create_order_metrics_data >> delete_old_order
-insert_order_data >> create_merchant_metrics_data >> delete_old_order
+# insert_order_data >> create_merchant_metrics_data >> delete_old_order
