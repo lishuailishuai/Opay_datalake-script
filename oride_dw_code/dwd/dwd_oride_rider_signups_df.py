@@ -149,7 +149,7 @@ def dwd_oride_rider_signups_df_sql_task(ds):
        --驾照号
 
        holding_license_time,
-       --驾照持有时间:\n1:less than 1 year\n2: 2~3 years\n3: More than 3 years
+       --驾照持有时间:1:less than 1 year2: 2~3 years3: More than 3 years
 
        gmail_account,
        --未知
@@ -170,7 +170,7 @@ def dwd_oride_rider_signups_df_sql_task(ds):
        --驾驶能力测试管理员id
 
        way_know,
-       --single selection \n1. OPAY AGENT\n2. ADVERTISEMENT\n3. THROUGH A FRIEND 10 预注册
+       --single selection 1. OPAY AGENT2. ADVERTISEMENT3. THROUGH A FRIEND 10 预注册
 
        base_finished_time,
        --基础信息完成时间:几乎等同于注册时间
