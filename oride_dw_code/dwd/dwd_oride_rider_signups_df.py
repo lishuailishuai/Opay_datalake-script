@@ -388,7 +388,10 @@ def dwd_oride_rider_signups_df_sql_task(ds):
        mobile_money_operator,
        --Mobile Money运营商
 
-       mobile_money_account--骑手Mobile Money账号
+       mobile_money_account,--骑手Mobile Money账号
+
+       'nal' as country_code,
+        '{pt}' as dt
 
 FROM oride_dw_ods.ods_sqoop_mass_rider_signups_df
 WHERE dt='{pt}'
