@@ -16,6 +16,7 @@ import logging
 from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
 from plugins.TaskTouchzSuccess import TaskTouchzSuccess
 from airflow.sensors.hive_partition_sensor import HivePartitionSensor
+from airflow.hooks.hive_hooks import HiveCliHook, HiveServer2Hook
 
 args = {
     'owner': 'chenghui',
@@ -32,13 +33,6 @@ dag = airflow.DAG('app_oride_order_finished_d',
                   schedule_interval="30 4 * * *",
                   default_args=args,
                   catchup=False)
-
-sleep_time = BashOperator(
-    task_id='sleep_id',
-    depends_on_past=False,
-    bash_command='sleep 10',
-    dag=dag
-)
 
 ##----------------------------------------- 依赖 ---------------------------------------##
 
@@ -66,6 +60,7 @@ dim_oride_city_task = HivePartitionSensor(
 
 ##----------------------------------------- 变量 ---------------------------------------##
 
+db_name = "oride_dw"
 table_name = "app_oride_order_finished_d"
 hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
 
@@ -92,14 +87,13 @@ task_timeout_monitor = PythonOperator(
 
 ##----------------------------------------- 脚本 ---------------------------------------##
 
-app_oride_order_finished_d_task = HiveOperator(
-    task_id='app_oride_order_finished_d_task',
+def app_oride_order_finished_d_sql_task(ds):
 
-    hql='''
+    HQL='''
         SET hive.exec.parallel=TRUE;
         SET hive.exec.dynamic.partition.mode=nonstrict;
         
-        insert overwrite table oride_dw.{table} partition(country_code,dt)
+        insert overwrite table {db}.{table} partition(country_code,dt)
             select k2.city_name,
                 k1.driver_finish_ord_num as wdl, --完单量
                 count(distinct k1.driver_id) as qss,--完单司机数
@@ -127,32 +121,76 @@ app_oride_order_finished_d_task = HiveOperator(
             k1.dt,
             k1.driver_finish_ord_num;
     '''.format(
-        pt='{{ds}}',
-        now_day='{{macros.ds_add(ds, +1)}}',
-        table=table_name
-    ),
-    schema='oride_dw',
-    dag=dag
-)
+        pt=ds,
+        table=table_name,
+        db=db_name
+    )
+    return HQL
 
-# 生成_SUCCESS
-def check_success(ds, dag, **op_kwargs):
-    dag_ids = dag.dag_id
+#熔断数据，如果数据重复，报错
+def check_key_data_task(ds):
 
-    msg = [
-        {"table": "{dag_name}".format(dag_name=dag_ids),
-         "hdfs_path": "{hdfsPath}/country_code=nal/dt={pt}".format(pt=ds, hdfsPath=hdfs_path)}
-    ]
+    cursor = get_hive_cursor()
 
-    TaskTouchzSuccess().set_touchz_success(msg)
+    # 主键重复校验
+    check_sql ='''
+        select count(1)-count(distinct city_name,wdl) as cnt
+        from {db}.{table}
+        where dt='{pt}'
+        and country_code in ('nal')
+    '''.format(
+        pt=ds,
+        now_day=airflow.macros.ds_add(ds, +1),
+        table=table_name,
+        db=db_name
+    )
 
+    logging.info('Executing 主键重复校验: %s', check_sql)
 
-touchz_data_success = PythonOperator(
-    task_id='touchz_data_success',
-    python_callable=check_success,
+    cursor.execute(check_sql)
+
+    res = cursor.fetchone()
+
+    if res[0] > 1:
+        flag = 1
+        raise Exception("Error The primary key repeat !", res)
+        sys.exit(1)
+    else:
+        flag = 0
+        print("-----> Notice Data Export Success ......")
+
+    return flag
+
+#主流程
+def execution_data_task_id(ds,**kargs):
+
+    hive_hook = HiveCliHook()
+
+    #读取sql
+    _sql=app_oride_order_finished_d_sql_task(ds)
+
+    logging.info('Executing: %s', _sql)
+
+    #执行Hive
+    hive_hook.run_cli(_sql)
+
+    #熔断数据
+    check_key_data_task(ds)
+
+    #生成_SUCCESS
+    """
+    第一个参数true: 数据目录是有country_code分区。false 没有
+    第二个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
+
+    """
+    TaskTouchzSuccess().countries_touchz_success(ds,db_name,table_name,hdfs_path,"true","true")
+
+app_oride_order_finished_d_task = PythonOperator(
+    task_id='app_oride_order_finished_d_task',
+    python_callable=execution_data_task_id,
     provide_context=True,
     dag=dag
 )
 
-dwm_oride_driver_base_di_task >> dim_oride_city_task >> sleep_time \
->>app_oride_order_finished_d_task >> touchz_data_success
+dwm_oride_driver_base_di_task >>app_oride_order_finished_d_task
+dim_oride_city_task >>app_oride_order_finished_d_task

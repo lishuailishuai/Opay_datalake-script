@@ -10,6 +10,9 @@ from airflow.sensors import UFileSensor
 from datetime import datetime, timedelta
 from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
 from plugins.TaskTouchzSuccess import TaskTouchzSuccess
+from airflow.hooks.hive_hooks import HiveCliHook, HiveServer2Hook
+from utils.connection_helper import get_hive_cursor
+import logging
 
 args = {
     'owner': 'chenghui',
@@ -26,13 +29,6 @@ dag = airflow.DAG('app_oride_driver_group_d',
                   schedule_interval="00 04 * * *",
                   default_args=args,
                   catchup=False)
-
-sleep_time = BashOperator(
-    task_id='sleep_id',
-    depends_on_past=False,
-    bash_command='sleep 30',
-    dag=dag
-)
 
 ##----------------------------------------- 依赖 ---------------------------------------##
 
@@ -71,6 +67,7 @@ dwd_oride_driver_data_group_df_task = UFileSensor(
 
 ##----------------------------------------- 变量 ---------------------------------------##
 
+db_name= "oride_dw"
 table_name = "app_oride_driver_group_d"
 hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
 
@@ -97,14 +94,13 @@ task_timeout_monitor =  PythonOperator(
 
 ##----------------------------------------- 脚本 ---------------------------------------##
 
-app_oride_driver_group_d_task = HiveOperator(
-    task_id='app_oride_driver_group_d_task',
+def app_oride_driver_group_d_sql_task(ds):
 
-    hql='''
+    HQL='''
         SET hive.exec.parallel=TRUE;
         SET hive.exec.dynamic.partition.mode=nonstrict;
         
-        insert overwrite table oride_dw.{table} partition(country_code,dt)
+        insert overwrite table {db}.{table} partition(country_code,dt)
         select k1.group_name, --司管名字
             k1.driver_sign_num,--签约司机人数
             k1.driver_get_car_cnt,--领车数量
@@ -117,7 +113,7 @@ app_oride_driver_group_d_task = HiveOperator(
             '{pt}' dt --日期
         from
         (
-            select t.group_name, --小司管名字
+            select t.group_name, --大司管名字
                 count(distinct t.driver_id) as driver_reg_cnt,
                 if(sum(t.finish_ord_cnt) is not null,sum(t.finish_ord_cnt),0) finish_ord_cnt,  --完单量
                 count(if(t.driver_id_order is not null,t.driver_id,null)) finish_driver_cnt,--完单司机量
@@ -170,37 +166,77 @@ app_oride_driver_group_d_task = HiveOperator(
             group by t.group_name
         ) k1;
     '''.format(
-        pt='{{ds}}',
-        now_day='{{macros.ds_add(ds, +1)}}',
-        table=table_name
-    ),
-    schema='oride_dw',
-    dag=dag
-)
+        pt=ds,
+        table=table_name,
+        db=db_name
+    )
+    return HQL
 
-# 生成_SUCCESS
-def check_success(ds, dag, **op_kwargs):
-    dag_ids = dag.dag_id
+#熔断数据，如果数据重复，报错
+def check_key_data_task(ds):
 
-    msg = [
-        {
-            "table": "{dag_name}".format(dag_name=dag_ids),
-            "hdfs_path": "{hdfsPath}/country_code=nal/dt={pt}".format(pt=ds, hdfsPath=hdfs_path)
-        }
-    ]
+    cursor = get_hive_cursor()
 
-    TaskTouchzSuccess().set_touchz_success(msg)
+    # 主键重复校验
+    check_sql ='''
+        select count(1)-count(distinct group_name) as cnt
+        from {db}.{table}
+        where dt='{pt}'
+        and country_code in ('nal')
+    '''.format(
+        pt=ds,
+        now_day=airflow.macros.ds_add(ds, +1),
+        table=table_name,
+        db=db_name
+    )
+
+    logging.info('Executing 主键重复校验: %s', check_sql)
+
+    res = cursor.fetchone()
+
+    if res[0] > 1:
+        flag = 1
+        raise Exception("Error The primary key repeat !", res)
+        sys.exit(1)
+    else:
+        flag = 0
+        print("-----> Notice Data Export Success ......")
+
+    return flag
 
 
-touchz_data_success=PythonOperator(
-    task_id='touchz_data_success',
-    python_callable=check_success,
+#主流程
+def execution_data_task_id(ds,**kargs):
+    hive_hook = HiveCliHook()
+
+    # 读取sql
+    _sql = app_oride_driver_group_d_sql_task(ds)
+
+    logging.info('Executing: %s', _sql)
+
+    # 执行Hive
+    hive_hook.run_cli(_sql)
+
+    # 熔断数据
+    check_key_data_task(ds)
+
+    # 生成_SUCCESS
+    """
+    第一个参数true: 数据目录是有country_code分区。false 没有
+    第二个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
+
+    """
+    TaskTouchzSuccess().countries_touchz_success(ds,db_name,table_name,hdfs_path,"true","true")
+
+app_oride_driver_group_d_task = PythonOperator(
+    task_id='app_oride_driver_group_d_task',
+    python_callable=execution_data_task_id,
     provide_context=True,
     dag=dag
 )
 
-dim_oride_driver_base_task >>sleep_time>>app_oride_driver_group_d_task >> touchz_data_success
+dim_oride_driver_base_task >>app_oride_driver_group_d_task
 
-dwd_oride_order_base_include_test_di_task >>sleep_time>>app_oride_driver_group_d_task >> touchz_data_success
+dwd_oride_order_base_include_test_di_task >>app_oride_driver_group_d_task
 
-dwd_oride_driver_data_group_df_task >> sleep_time >> app_oride_driver_group_d_task >> touchz_data_success
+dwd_oride_driver_data_group_df_task >> app_oride_driver_group_d_task

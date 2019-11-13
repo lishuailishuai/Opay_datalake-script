@@ -20,6 +20,7 @@ import logging
 from airflow.models import Variable
 import requests
 import os
+from plugins.TaskTouchzSuccess import TaskTouchzSuccess
 
 args = {
         'owner': 'chenghui',
@@ -38,12 +39,6 @@ dag = airflow.DAG( 'dwd_oride_passenger_login_base_di',
     catchup=False) 
 
 
-sleep_time = BashOperator(
-    task_id='sleep_id',
-    depends_on_past=False,
-    bash_command='sleep 30',
-    dag=dag)
-
 ##----------------------------------------- 依赖 ---------------------------------------## 
 
 
@@ -59,20 +54,20 @@ oride_client_event_detail_prev_day_task=HivePartitionSensor(
 
 ##----------------------------------------- 变量 ---------------------------------------## 
 
+db_name="oride_dw"
 table_name="dwd_oride_passenger_login_base_di"
 hdfs_path="ufile://opay-datalake/oride/oride_dw/"+table_name
 
 ##----------------------------------------- 脚本 ---------------------------------------## 
 
 
-dwd_oride_passenger_login_base_di_task = HiveOperator(
+def dwd_oride_passenger_login_base_di_sql_task(ds):
 
-    task_id='dwd_oride_passenger_login_base_di_task',
-    hql='''
+    HQL='''
     set hive.exec.parallel=true;
     set hive.exec.dynamic.partition.mode=nonstrict;
 
-INSERT overwrite TABLE oride_dw.{table} partition(country_code,dt)
+INSERT overwrite TABLE {db}.{table} partition(country_code,dt)
 SELECT user_id AS passenger_id,
        --乘客ID
 
@@ -148,18 +143,19 @@ GROUP BY user_id,
          dt;
 
 '''.format(
-        pt='{{ds}}',
-        now_day='{{macros.ds_add(ds, +1)}}',
-        table=table_name
-        ),
-    dag=dag)
-
+        pt=ds,
+        table=table_name,
+        db=db_name
+    )
+    return HQL
 
 #熔断数据，如果数据重复，报错
-def check_key_data(ds,**kargs):
+def check_key_data_task(ds):
+
+    cursor = get_hive_cursor()
 
     #主键重复校验
-    HQL_DQC='''
+    check_sql='''
     SELECT count(1)-count(distinct passenger_id,passenger_number,client_timestamp,
          platform,
          os_version,
@@ -174,57 +170,61 @@ def check_key_data(ds,**kargs):
          channel,
          subchannel,
          appsflyer_id) as cnt
-      FROM oride_dw.{table}
+      FROM {db}.{table}
       WHERE dt='{pt}'
     '''.format(
         pt=ds,
         now_day=airflow.macros.ds_add(ds, +1),
-        table=table_name
-        )
+        table=table_name,
+        db=db_name
+    )
+    logging.info('Executing 主键重复校验: %s', check_sql)
 
-    cursor = get_hive_cursor()
-    logging.info('Executing 主键重复校验: %s', HQL_DQC)
+    cursor.execute(check_sql)
 
-    cursor.execute(HQL_DQC)
     res = cursor.fetchone()
 
-    if res[0] >1:
-        raise Exception ("Error The primary key repeat !", res)
+    if res[0] > 1:
+        flag = 1
+        raise Exception("Error The primary key repeat !", res)
+        sys.exit(1)
     else:
+        flag = 0
         print("-----> Notice Data Export Success ......")
-    
- 
-task_check_key_data = PythonOperator(
-    task_id='check_data',
-    python_callable=check_key_data,
+
+    return flag
+
+#主流程
+def execution_data_task_id(ds,**kargs):
+
+    hive_hook = HiveCliHook()
+
+    #读取sql
+    _sql=dwd_oride_passenger_login_base_di_sql_task(ds)
+    logging.info('Executing: %s', _sql)
+
+    # 执行Hive
+    hive_hook.run_cli(_sql)
+
+    # 熔断数据
+    check_key_data_task(ds)
+
+    # 生成_SUCCESS
+    """
+    第一个参数true: 数据目录是有country_code分区。false 没有
+    第二个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
+
+    """
+    TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "true", "true")
+
+dwd_oride_passenger_login_base_di_task=PythonOperator(
+    task_id='dwd_oride_passenger_login_base_di_task',
+    python_callable=execution_data_task_id,
     provide_context=True,
     dag=dag
 )
 
-#生成_SUCCESS
-touchz_data_success = BashOperator(
-
-    task_id='touchz_data_success',
-
-    bash_command="""
-    line_num=`$HADOOP_HOME/bin/hadoop fs -du -s {hdfs_data_dir} | tail -1 | awk '{{print $1}}'`
-    
-    if [ $line_num -eq 0 ]
-    then
-        echo "FATAL {hdfs_data_dir} is empty"
-        exit 1
-    else
-        echo "DATA EXPORT Successed ......"
-        $HADOOP_HOME/bin/hadoop fs -touchz {hdfs_data_dir}/_SUCCESS
-    fi
-    """.format(
-        pt='{{ds}}',
-        now_day='{{macros.ds_add(ds, +1)}}',
-        hdfs_data_dir=hdfs_path+'/country_code=nal/dt={{ds}}'
-        ),
-    dag=dag)
-
-oride_client_event_detail_prev_day_task>>sleep_time>>dwd_oride_passenger_login_base_di_task>>task_check_key_data>>touchz_data_success
+oride_client_event_detail_prev_day_task>>dwd_oride_passenger_login_base_di_task
 
 
 

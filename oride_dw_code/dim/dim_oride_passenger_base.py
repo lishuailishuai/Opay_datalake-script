@@ -36,14 +36,8 @@ args = {
 
 dag = airflow.DAG( 'dim_oride_passenger_base', 
     schedule_interval="20 01 * * *",
-    default_args=args) 
-
-
-sleep_time = BashOperator(
-    task_id='sleep_id',
-    depends_on_past=False,
-    bash_command='sleep 30',
-    dag=dag)
+    default_args=args,
+    catchup=False)
 
 
 ##----------------------------------------- 依赖 ---------------------------------------## 
@@ -87,20 +81,20 @@ task_timeout_monitor= PythonOperator(
 )
 ##----------------------------------------- 变量 ---------------------------------------## 
 
+db_name="oride_dw"
 table_name="dim_oride_passenger_base"
 hdfs_path="ufile://opay-datalake/oride/oride_dw/"+table_name
 
 ##----------------------------------------- 脚本 ---------------------------------------## 
 
 
-dim_oride_passenger_base_task = HiveOperator(
+def dim_oride_passenger_base_sql_task(ds):
 
-    task_id='dim_oride_passenger_base_task',
-    hql='''
+    HQL='''
     set hive.exec.parallel=true;
     set hive.exec.dynamic.partition.mode=nonstrict;
 
-INSERT overwrite TABLE oride_dw.{table} partition(country_code,dt)
+INSERT overwrite TABLE {db}.{table} partition(country_code,dt)
 SELECT t1.passenger_id,
        --乘客ID
 
@@ -245,68 +239,77 @@ LEFT OUTER JOIN
 FROM oride_dw_ods.ods_sqoop_base_data_user_extend_df
    WHERE dt= '{pt}') t2 ON t1.passenger_id=t2.id;
 '''.format(
-        pt='{{ds}}',
-        now_day='{{macros.ds_add(ds, +1)}}',
-        table=table_name
-        ),
-    dag=dag)
+        pt=ds,
+        table=table_name,
+        db=db_name
+        )
+    return HQL
 
 
 #熔断数据，如果数据重复，报错
-def check_key_data(ds,**kargs):
+def check_key_data_task(ds):
+
+    cursor = get_hive_cursor()
 
     #主键重复校验
-    HQL_DQC='''
+    check_sql='''
     SELECT count(1)-count(distinct passenger_id) as cnt
-      FROM oride_dw.{table}
+      FROM {db}.{table}
       WHERE dt='{pt}'
     '''.format(
         pt=ds,
         now_day=airflow.macros.ds_add(ds, +1),
-        table=table_name
+        table=table_name,
+        db=db_name
         )
 
-    cursor = get_hive_cursor()
-    logging.info('Executing 主键重复校验: %s', HQL_DQC)
+    logging.info('Executing 主键重复校验: %s', check_sql)
 
-    cursor.execute(HQL_DQC)
+    cursor.execute(check_sql)
     res = cursor.fetchone()
 
-    if res[0] >1:
-        raise Exception ("Error The primary key repeat !", res)
+    if res[0] > 1:
+        flag = 1
+        raise Exception("Error The primary key repeat !", res)
+        sys.exit(1)
     else:
+        flag = 0
         print("-----> Notice Data Export Success ......")
-    
- 
-task_check_key_data = PythonOperator(
-    task_id='check_data',
-    python_callable=check_key_data,
+
+    return flag
+
+
+#主流程
+def execution_data_task_id(ds,**kargs):
+
+    hive_hook = HiveCliHook()
+
+    #读取sql
+    _sql=dim_oride_passenger_base_sql_task(ds)
+
+    logging.info('Executing: %s', _sql)
+
+    #执行Hive
+    hive_hook.run_cli(_sql)
+
+    #熔断数据
+    check_key_data_task(ds)
+
+    # 生成_SUCCESS
+    """
+    第一个参数true: 数据目录是有country_code分区。false 没有
+    第二个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
+
+    """
+    TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "true", "true")
+
+dim_oride_passenger_base_task = PythonOperator(
+    task_id='dim_oride_passenger_base_task',
+    python_callable=execution_data_task_id,
     provide_context=True,
     dag=dag
 )
 
-#生成_SUCCESS
-touchz_data_success = BashOperator(
-
-    task_id='touchz_data_success',
-
-    bash_command="""
-    line_num=`$HADOOP_HOME/bin/hadoop fs -du -s {hdfs_data_dir} | tail -1 | awk '{{print $1}}'`
-    
-    if [ $line_num -eq 0 ]
-    then
-        echo "FATAL {hdfs_data_dir} is empty"
-        exit 1
-    else
-        echo "DATA EXPORT Successed ......"
-        $HADOOP_HOME/bin/hadoop fs -touchz {hdfs_data_dir}/_SUCCESS
-    fi
-    """.format(
-        pt='{{ds}}',
-        now_day='{{macros.ds_add(ds, +1)}}',
-        hdfs_data_dir=hdfs_path+'/country_code=nal/dt={{ds}}'
-        ),
-    dag=dag)
-
-ods_sqoop_base_data_user_df_prev_day_tesk>>ods_sqoop_base_data_user_extend_df_prev_day_tesk>>sleep_time>>dim_oride_passenger_base_task>>task_check_key_data>>touchz_data_success
+ods_sqoop_base_data_user_df_prev_day_tesk>>dim_oride_passenger_base_task
+ods_sqoop_base_data_user_extend_df_prev_day_tesk>>dim_oride_passenger_base_task
 

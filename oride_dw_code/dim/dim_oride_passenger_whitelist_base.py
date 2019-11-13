@@ -39,11 +39,6 @@ dag = airflow.DAG('dim_oride_passenger_whitelist_base',
                   default_args=args,
                   catchup=False)
 
-sleep_time = BashOperator(
-    task_id='sleep_id',
-    depends_on_past=False,
-    bash_command='sleep 10',
-    dag=dag)
 
 ##----------------------------------------- 依赖 ---------------------------------------##
 
@@ -62,7 +57,7 @@ ods_sqoop_base_data_user_whitelist_df_task = UFileSensor(
 
 ##----------------------------------------- 变量 ---------------------------------------##
 
-
+db_name="oride_dw"
 table_name = "dim_oride_passenger_whitelist_base"
 hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
 
@@ -87,14 +82,13 @@ task_timeout_monitor= PythonOperator(
 
 ##----------------------------------------- 脚本 ---------------------------------------##
 
-dim_oride_passenger_whitelist_base_task = HiveOperator(
-    task_id='dim_oride_passenger_whitelist_base_task',
+def dim_oride_passenger_whitelist_base_sql_task(ds):
 
-    hql='''
+    HQL='''
         SET hive.exec.parallel=TRUE;
         SET hive.exec.dynamic.partition.mode=nonstrict;
 
-        insert overwrite table oride_dw.{table} partition(country_code,dt)
+        insert overwrite table {db}.{table} partition(country_code,dt)
 
         SELECT
             id,--'自增id' 
@@ -111,29 +105,72 @@ dim_oride_passenger_whitelist_base_task = HiveOperator(
             dt='{pt}'
         ;
 '''.format(
-        pt='{{ds}}',
-        now_hour='{{ execution_date.strftime("%H") }}',
-        table=table_name
-    ),
-    dag=dag
-)
+        pt=ds,
+        table=table_name,
+        db=db_name
+    )
+    return HQL
 
-#生成_SUCCESS
-def check_success(ds,dag,**op_kwargs):
+#熔断数据，如果数据重复，报错
+def check_key_data_task(ds):
 
-    dag_ids=dag.dag_id
+    cursor = get_hive_cursor()
 
-    msg = [
-        {"table":"{dag_name}".format(dag_name=dag_ids),"hdfs_path": "{hdfsPath}/country_code=nal/dt={pt}".format(pt=ds,hdfsPath=hdfs_path)}
-    ]
+    #主键重复校验
+    check_sql='''
+    select count(1)-count(distinct id) as cnt
+    from {db}.{table}
+    where dt='{pt}'
+    and country_code in ('nal')
+    '''.format(
+        pt=ds,
+        now_day=airflow.macros.ds_add(ds, +1),
+        table=table_name,
+        db=db_name
+    )
 
-    TaskTouchzSuccess().set_touchz_success(msg)
+    logging.info('Executing 主键重复校验: %s', check_sql)
 
-touchz_data_success= PythonOperator(
-    task_id='touchz_data_success',
-    python_callable=check_success,
+    cursor.execute(check_sql)
+
+    res = cursor.fetchone()
+    if res[0] >1:
+        flag=1
+        raise Exception ("Error The primary key repeat !", res)
+        sys.exit(1)
+    else:
+        flag=0
+        print("-----> Notice Data Export Success ......")
+
+    return flag
+
+#主流程
+def execution_data_task_id(ds,**kargs):
+    hive_hook = HiveCliHook()
+
+    # 读取sql
+    _sql = dim_oride_passenger_whitelist_base_sql_task(ds)
+
+    # 执行Hive
+    hive_hook.run_cli(_sql)
+
+    # 熔断数据
+    check_key_data_task(ds)
+
+    # 生成_SUCCESS
+    """
+        第一个参数true: 数据目录是有country_code分区。false 没有
+        第二个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
+
+        """
+    TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "true", "true")
+
+dim_oride_passenger_whitelist_base_task= PythonOperator(
+    task_id='dim_oride_passenger_whitelist_base_task',
+    python_callable=execution_data_task_id,
     provide_context=True,
     dag=dag
 )
 
-ods_sqoop_base_data_user_whitelist_df_task >> sleep_time >> dim_oride_passenger_whitelist_base_task >> touchz_data_success
+
+ods_sqoop_base_data_user_whitelist_df_task >> dim_oride_passenger_whitelist_base_task
