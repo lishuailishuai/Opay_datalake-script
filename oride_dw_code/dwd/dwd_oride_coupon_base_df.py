@@ -39,11 +39,11 @@ dag = airflow.DAG('dwd_oride_coupon_base_df',
                   default_args=args,
                   catchup=False)
 
-sleep_time = BashOperator(
-    task_id='sleep_id',
-    depends_on_past=False,
-    bash_command='sleep 30',
-    dag=dag)
+#sleep_time = BashOperator(
+#   task_id='sleep_id',
+#   depends_on_past=False,
+#    bash_command='sleep 30',
+#    dag=dag)
 
 ##----------------------------------------- 依赖 ---------------------------------------##
 
