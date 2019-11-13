@@ -30,7 +30,7 @@ dag = airflow.DAG(
     schedule_interval="30 05 * * *",
     max_active_runs=1,
     default_args=args,
-    concurrency=10
+    concurrency=8
 )
 
 sleep_time = BashOperator(
@@ -314,7 +314,7 @@ def init_mysql_table(**op_kwargs):
 
 
 # 遍历同步的数据库
-hive_cursor = get_hive_cursor()
+hive_cursor = get_hive_cursor("hiveserver2_default")
 hive_sync_db = Variable.get("app_oride_import_bi_mysql").split("\n")
 
 

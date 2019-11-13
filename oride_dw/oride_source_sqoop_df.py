@@ -198,6 +198,7 @@ table_list = [
 
     # algorithm_db
     ("algorithm", "order_operation_info", "algorithm_db", "algorithm",1),
+    ("anti_fraud_oride", "driver_virtual_device_login", "anti_fraud_oride", "base", 1),
 ]
 
 HIVE_DB = 'oride_dw_ods'
