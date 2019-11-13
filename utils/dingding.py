@@ -14,4 +14,4 @@ def dingding_alert(title, text):
         title=title,
         text=text
     )
-    requests.post(webhook, headers=headers, data=message)
+    requests.post(webhook, headers=headers, data=message.encode('utf-8'))
