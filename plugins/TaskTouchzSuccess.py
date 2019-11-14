@@ -125,32 +125,13 @@ class TaskTouchzSuccess(object):
 
         try:
         
-            #判断数据文件是否为0
-            line_str="$HADOOP_HOME/bin/hadoop fs -du -s {hdfs_data_dir} | tail -1 | awk \'{{print $1}}\'".format(hdfs_data_dir=self.hdfs_data_dir_str)
+            succ_str="$HADOOP_HOME/bin/hadoop fs -touchz {hdfs_data_dir}/_SUCCESS".format(hdfs_data_dir=self.hdfs_data_dir_str)
     
-            logging.info(line_str)
-        
-            with os.popen(line_str) as p:
-                line_num=p.read()
-        
-            #数据为0，发微信报警通知
-            if line_num[0] == str(0):
-                
-                self.comwx.postAppMessage('DW调度系统任务 {jobname} 数据产出异常'.format(jobname=self.table_name), '271')
-
-                logging.info("Error : {hdfs_data_dir} is empty".format(hdfs_data_dir=self.hdfs_data_dir_str))
-                sys.exit(1)
-        
-            else:  
-                succ_str="$HADOOP_HOME/bin/hadoop fs -touchz {hdfs_data_dir}/_SUCCESS".format(hdfs_data_dir=self.hdfs_data_dir_str)
+            logging.info(succ_str)
     
-                logging.info(succ_str)
-        
-                os.popen(succ_str)
-
-                time.sleep(10)
-        
-                logging.info("DATA EXPORT Successed ......")
+            os.popen(succ_str)
+    
+            logging.info("DATA EXPORT Successed ......")
 
     
         except Exception as e:
@@ -193,7 +174,7 @@ class TaskTouchzSuccess(object):
         
                 os.popen(succ_str)
 
-                time.sleep(10)
+                #time.sleep(10)
         
                 logging.info("DATA EXPORT Successed ......")
 
