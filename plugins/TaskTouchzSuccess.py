@@ -189,7 +189,7 @@ class TaskTouchzSuccess(object):
 
 
 
-    def countries_touchz_success(self,ds,db_name,table_name,data_hdfs_path,country_partition="true",file_type="true"):
+    def countries_touchz_success(self,ds,db_name,table_name,data_hdfs_path,country_partition="true",file_type="true",hour=None):
 
         """
         country_partition:是否有国家分区
