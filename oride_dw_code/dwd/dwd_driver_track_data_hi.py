@@ -45,7 +45,7 @@ dag = airflow.DAG('dwd_driver_track_data_hi',
 dependence_ods_log_driver_track_data_hi_task = HivePartitionSensor(
     task_id="dependence_ods_log_driver_track_data_hi_task",
     table="ods_log_driver_track_data_hi",
-    partition=""" dt='{{ ds }}' and hour={{ execution_date.strftime("%H") }} """,
+    partition=""" dt='{{ ds }}'/hour={{ execution_date.strftime("%H") }} """,
     schema="oride_dw_ods",
     poke_interval=60,
     dag=dag
