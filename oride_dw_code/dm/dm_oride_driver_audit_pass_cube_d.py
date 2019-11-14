@@ -213,10 +213,4 @@ dm_oride_driver_audit_pass_cube_d_task = PythonOperator(
     dag=dag
 )
 
-dependence_dim_oride_driver_base_prev_day_task >> \
-dependence_dwd_oride_order_base_include_test_di_prev_day_task >> \
-dependence_dwd_oride_order_push_driver_detail_di_prev_day_task >> \
-dependence_ods_log_oride_driver_timerange_prev_day_task >> \
-dependence_dwd_oride_driver_accept_order_click_detail_di_prev_day_task >> \
-dependence_dwd_oride_driver_accept_order_show_detail_di_prev_day_task >> \
-dm_oride_driver_audit_pass_cube_d_task
+dependence_dwm_oride_driver_base_df_prev_day_task >>dm_oride_driver_audit_pass_cube_d_task
