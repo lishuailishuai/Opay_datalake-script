@@ -133,7 +133,7 @@ def dwd_oride_client_event_detail_hi_sql_task(ds):
     return HQL
 
 #主流程
-def execution_data_task_id(ds,**kargs):
+def execution_data_task_id(ds,**kwargs):
 
     v_date=kwargs.get('v_execution_date')
     v_day=kwargs.get('v_execution_day')
@@ -159,7 +159,7 @@ def execution_data_task_id(ds,**kargs):
 
     """
 
-    TaskTouchzSuccess().countries_touchz_success(ds,db_name,table_name,hdfs_path,"true","true",v_hour)
+    TaskTouchzSuccess().countries_touchz_success(ds,db_name,table_name,hdfs_path,"true","true")
     
 dwd_oride_client_event_detail_hi_task= PythonOperator(
     task_id='dwd_oride_client_event_detail_hi_task',
