@@ -39,11 +39,6 @@ dag = airflow.DAG('dwm_opay_topup_recipient_di',
                   default_args=args,
                   catchup=False)
 
-sleep_time = BashOperator(
-    task_id='sleep_id',
-    depends_on_past=False,
-    bash_command='sleep 30',
-    dag=dag)
 
 ##----------------------------------------- 依赖 ---------------------------------------##
 
@@ -70,58 +65,91 @@ dependence_dwd_opay_user_topup_record_di_prev_day_task = UFileSensor(
     dag=dag
 )
 ##----------------------------------------- 变量 ---------------------------------------##
-
+db_name = "opay_dw"
 table_name = "dwm_opay_topup_recipient_di"
 hdfs_path = "ufile://opay-datalake/opay/opay_dw/" + table_name
 
 ##----------------------------------------- 脚本 ---------------------------------------##
 
-dwm_opay_topup_recipient_di_task = HiveOperator(
+def dwm_opay_topup_recipient_di_sql_task(ds):
 
-    task_id='dwm_opay_topup_recipient_di_task',
-    hql='''
+    HQL='''
      set hive.exec.dynamic.partition.mode=nonstrict;
      set hive.exec.parallel=true; 
-    INSERT overwrite TABLE opay_dw.{table} partition(country_code,dt)
-    
-select recipient_id,recipient_type,recipient_role,service_type,order_status,sum(amount) s_amount,count(1) c ,country_code,dt
-from 
-    (select merchant_id recipient_id,'MERCHANT' recipient_type,'merchant' recipient_role,'TopupWithCard' service_type,order_status,amount,country_code,dt from dwd_opay_merchant_topup_record_di
-     where dt='{pt}'
-      union all
-    select user_id recipient_id,'USER' recipient_type,user_role recipient_role,'TopupWithCard' service_type,order_status,amount,country_code,dt from dwd_opay_user_topup_record_di
-     where dt='{pt}')m
-group by recipient_id,recipient_type,recipient_role,service_type,order_status,country_code,dt;
+     INSERT overwrite TABLE {db}.{table} partition(country_code,dt)
+        SELECT recipient_id,
+               recipient_type,
+               recipient_role,
+               service_type,
+               order_status,
+               sum(amount) s_amount,
+               count(1) c,
+               country_code,
+               dt
+        FROM
+          (SELECT merchant_id as recipient_id,
+                  'MERCHANT' as recipient_type,
+                             'merchant' as recipient_role,
+                                        'TopupWithCard' as service_type,
+                                                        order_status,
+                                                        amount,
+                                                        country_code,
+                                                        dt
+           FROM opay_dw.dwd_opay_merchant_topup_record_di
+           WHERE dt='{pt}'
+           UNION ALL SELECT user_id as recipient_id,
+                            'USER' as recipient_type,
+                                   user_role as recipient_role,
+                                   'TopupWithCard' as service_type,
+                                                   order_status,
+                                                   amount,
+                                                   country_code,
+                                                   dt
+           FROM opay_dw.dwd_opay_user_topup_record_di
+           WHERE dt='{pt}')m
+        GROUP BY recipient_id,
+                 recipient_type,
+                 recipient_role,
+                 service_type,
+                 order_status,
+                 country_code,
+                 dt;
 
 '''.format(
-        pt='{{ds}}',
-        now_day='{{macros.ds_add(ds, +1)}}',
+        pt=ds,
+        db=db_name,
         table=table_name
-    ),
-    schema='opay_dw',
-    dag=dag)
+    )
+    return HQL
+
+# 主流程
+def execution_data_task_id(ds, **kargs):
+    hive_hook = HiveCliHook()
+
+    # 读取sql
+    _sql = dwm_opay_topup_recipient_di_sql_task(ds)
+
+    logging.info('Executing: %s', _sql)
+
+    # 执行Hive
+    hive_hook.run_cli(_sql)
 
 
-# 生成_SUCCESS
-def check_success(ds,dag,**op_kwargs):
 
-    dag_ids=dag.dag_id
+    # 生成_SUCCESS
+    """
+    第一个参数true: 数据目录是有country_code分区。false 没有
+    第二个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
 
-    msg = [
-        {"table":"{dag_name}".format(dag_name=dag_ids),"hdfs_path": "{hdfsPath}/country_code=NG/dt={pt}".format(pt=ds,hdfsPath=hdfs_path)}
-    ]
+    """
+    TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "true", "true")
 
-    TaskTouchzSuccess().set_touchz_success(msg)
 
-touchz_data_success= PythonOperator(
-    task_id='touchz_data_success',
-    python_callable=check_success,
+dwm_opay_topup_recipient_di_task = PythonOperator(
+    task_id='dwm_opay_topup_recipient_di_task',
+    python_callable=execution_data_task_id,
     provide_context=True,
     dag=dag
 )
-
-dependence_dwd_opay_merchant_topup_record_di_prev_day_task >> \
-dependence_dwd_opay_user_topup_record_di_prev_day_task >> \
-sleep_time >> \
-dwm_opay_topup_recipient_di_task >> \
-touchz_data_success
+dependence_dwd_opay_merchant_topup_record_di_prev_day_task >>dwm_opay_topup_recipient_di_task
+dependence_dwd_opay_user_topup_record_di_prev_day_task >>dwm_opay_topup_recipient_di_task
