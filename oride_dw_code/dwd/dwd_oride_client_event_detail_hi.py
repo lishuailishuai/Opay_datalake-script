@@ -159,7 +159,7 @@ def execution_data_task_id(ds,**kwargs):
 
     """
 
-    TaskTouchzSuccess().countries_touchz_success(ds,db_name,table_name,hdfs_path,"true","true")
+    TaskTouchzSuccess().countries_touchz_success(ds,db_name,table_name,hdfs_path,"true","true",v_hour)
     
 dwd_oride_client_event_detail_hi_task= PythonOperator(
     task_id='dwd_oride_client_event_detail_hi_task',
