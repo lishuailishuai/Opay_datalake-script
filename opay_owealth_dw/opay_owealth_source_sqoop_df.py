@@ -23,17 +23,17 @@ args = {
     'email_on_retry': False,
     'on_success_callback':on_success_callback,
 }
-schedule_interval="30 02 * * *"
+schedule_interval="20 03 * * *"
 
 dag = airflow.DAG(
-    'opay_source_sqoop_df',
+    'opay_owealth_source_sqoop_df',
     schedule_interval=schedule_interval,
     concurrency=15,
     max_active_runs=1,
     default_args=args)
 
 dag_monitor = airflow.DAG(
-    'opay_source_sqoop_df_monitor',
+    'opay_owealth_source_sqoop_df_monitor',
     schedule_interval=schedule_interval,
     default_args=args)
 
@@ -59,101 +59,20 @@ db_name,table_name,conn_id,prefix_name,priority_weight
 #
 
 table_list = [
-    ("opay_bigorder","big_order", "opay_db_3317", "base",1),
-    ("opay_bigorder","merchant_order", "opay_db_3317", "base",2),
-
-    ("opay_transaction","user_transfer_user_record", "opay_db_3316", "base",1),
-    ("opay_transaction","merchant_transfer_user_record", "opay_db_3316", "base",1),
-    ("opay_transaction","airtime_topup_record", "opay_db_3316", "base",1),
-    ("opay_transaction","betting_topup_record", "opay_db_3316", "base",1),
-    ("opay_transaction","user_topup_record", "opay_db_3316", "base",1),
-
-    ("opay_user","user_upgrade", "opay_db_3321", "base",3),
-    ("opay_user","user", "opay_db_3321", "base",1),
-    ("opay_user","user_operator", "opay_db_3321", "base", 1),
-    ("opay_user","user_payment_instrument", "opay_db_3321", "base", 1),
-    ("opay_user", "user_token", "opay_db_3321", "base", 1),
-    ("opay_user", "user_telesale", "opay_db_3321", "base", 1),
-    ("opay_user", "user_reseller", "opay_db_3321", "base", 1),
-    ("opay_user", "user_push_token", "opay_db_3321", "base", 1),
-    ("opay_user", "user_operator", "opay_db_3321", "base", 1),
-    ("opay_user", "user_nearby_agent", "opay_db_3321", "base", 1),
-    ("opay_user", "user_message", "opay_db_3321", "base", 1),
-
-    ("opay_account","account_user", "opay_db_3318", "base", 2),
-    ("opay_account","account_merchant", "opay_db_3318", "base", 2),
-    ("opay_account","accounting_merchant_record", "opay_db_3318", "base", 1),
-    ("opay_account","accounting_record", "opay_db_3318", "base", 1),
-
-    ("opay_overlord","overlord_user", "opay_db_3322", "base", 1),
-
-    ("opay_merchant","merchant", "opay_db_3322", "base", 1),
-
-    ("opay_sms","message_template", "opay_db_3319", "base", 1),
-
-    ("opay_activity", "activity", "opay_db_3322", "base", 1),
-    ("opay_activity", "activity_rules", "opay_db_3322", "base", 1),
-    ("opay_activity", "preferential_record", "opay_db_3322", "base", 1),
-
-    ("opay_commission", "commission_account_balance", "opay_db_3322", "base", 1),
-    ("opay_commission", "commission_order", "opay_db_3322", "base", 1),
-    ("opay_commission", "commission_top_up_record", "opay_db_3322", "base", 1),
+    ("opay_owealth","share_acct", "opay_owealth_db", "owealth",3),
+    ("opay_owealth","share_failure_user", "opay_owealth_db", "owealth",3),
+    ("opay_owealth","share_freeze", "opay_owealth_db", "owealth",3),
+    ("opay_owealth","share_holiday", "opay_owealth_db", "owealth",3),
+    ("opay_owealth","share_limit_level", "opay_owealth_db", "owealth",3),
+    ("opay_owealth","share_order", "opay_owealth_db", "owealth",3),
+    ("opay_owealth","share_platform_assets_acct", "opay_owealth_db", "owealth",3),
+    ("opay_owealth","share_platform_revenue_acct", "opay_owealth_db", "owealth",3),
 ]
 
-"""
-    ("opay_transaction","adjustment_decrease_record", "opay_db", "base",3),
-    ("opay_transaction","adjustment_increase_record", "opay_db", "base",3),
-    ("opay_transaction","electricity_topup_record", "opay_db", "base",3),
-    ("opay_transaction","merchant_acquiring_record", "opay_db", "base",3),
-    ("opay_transaction","merchant_pos_transaction_record", "opay_db", "base",3),
-    ("opay_transaction","merchant_receive_money_record", "opay_db", "base",3),
-    ("opay_transaction","merchant_topup_record", "opay_db", "base",3),
-    ("opay_transaction","merchant_transfer_card_record", "opay_db", "base",3),
-    ("opay_transaction","mobiledata_topup_record", "opay_db", "base",3),
-    ("opay_transaction","payment_authorization_record", "opay_db", "base",3),
-    ("opay_transaction","payment_token_record", "opay_db", "base",3),
-    ("opay_transaction","receive_money_request_record", "opay_db", "base",3),
-    ("opay_transaction","transfer_not_register_record", "opay_db", "base",3),
-    ("opay_transaction","tv_topup_record", "opay_db", "base",3),
-    ("opay_transaction","user_easycash_record", "opay_db", "base",3),
-    ("opay_transaction","user_pos_transaction_record", "opay_db", "base",3),
-    ("opay_transaction","user_receive_money_record", "opay_db", "base",3),
-    ("opay_transaction","user_transfer_card_record", "opay_db", "base",3),
-    ("opay_bigorder","user_order", "opay_db", "base",3),
-    ("opay_account","accounting_request_record", "opay_db", "base",3),
-    ("opay_merchant","merchant_email_setting", "opay_db", "base",3),
-    ("opay_merchant","merchant_key", "opay_db", "base",3),
-    ("opay_merchant","merchant_operator", "opay_db", "base",3),
-    ("opay_merchant","merchant_pos_limit", "opay_db", "base",3),
-    ("opay_merchant","merchant_remittance_limit", "opay_db", "base",3),
-    ("opay_merchant","merchant_reseller", "opay_db", "base",3),
-    ("opay_channel","card_token", "opay_db", "base",3),
-    ("opay_channel","channel_response_code", "opay_db", "base",3),
-    ("opay_channel","channel_router_rule", "opay_db", "base",3),
-    ("opay_channel","channel_transaction", "opay_db", "base",3),
-    ("opay_channel","channel_transaction_mq_record", "opay_db", "base",3),
-    ("opay_channel","channel_transaction_record", "opay_db", "base",3),
-    ("opay_channel","channel_transaction_retry", "opay_db", "base",3),
-    ("opay_recon","collect_diff_detail", "opay_db", "base",3),
-    ("opay_recon","collect_record", "opay_db", "base",3),
-    ("opay_recon","exception_log", "opay_db", "base",3),
-    ("opay_recon","external_record", "opay_db", "base",3),
-    ("opay_recon","external_request_record", "opay_db", "base",3),
-    ("opay_recon","internal_record", "opay_db", "base",3),
-    ("opay_recon","internal_request_record", "opay_db", "base",3),
-    ("opay_user","upload_file", "opay_db", "base",3),
-    ("opay_user","user_bvn", "opay_db", "base",3),
-    ("opay_user","user_kyc", "opay_db", "base",3),
-    ("opay_user","user_kyc_upload", "opay_db", "base",3),
-    ("opay_user","user_limit", "opay_db", "base",3),
-    ("opay_user","user_token", "opay_db", "base",3),
-    ("opay_user","user_kyc_record", "opay_db", "base",3),
-    ("opay_transaction","business_collection_record", "opay_db", "base",3),
-"""
 
-HIVE_DB = 'opay_dw_ods'
+HIVE_DB = 'opay_owealth_ods'
 HIVE_TABLE = 'ods_sqoop_%s_%s_df'
-UFILE_PATH = 'ufile://opay-datalake/opay_dw_ods/%s/%s'
+UFILE_PATH = 'ufile://opay-datalake/opay_owealth_ods/%s/%s'
 ODS_CREATE_TABLE_SQL = '''
     CREATE EXTERNAL TABLE IF NOT EXISTS {db_name}.`{table_name}`(
         {columns}
