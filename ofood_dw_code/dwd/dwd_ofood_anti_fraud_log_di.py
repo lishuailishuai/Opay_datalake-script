@@ -81,7 +81,7 @@ task_timeout_monitor= PythonOperator(
 
 def dwd_ofood_anti_fraud_log_di_sql_task(ds):
 
-     HQL'''
+    HQL'''
     set hive.exec.parallel=true;
     set hive.exec.dynamic.partition.mode=nonstrict;
 
