@@ -39,11 +39,6 @@ dag = airflow.DAG('dwd_oride_passenger_complaint_df',
                   default_args=args,
                   catchup=False)
 
-sleep_time = BashOperator(
-    task_id='sleep_id',
-    depends_on_past=False,
-    bash_command='sleep 10',
-    dag=dag)
 
 ##----------------------------------------- 依赖 ---------------------------------------##
 
@@ -62,7 +57,7 @@ ods_sqoop_base_data_user_complaint_df_task = UFileSensor(
 
 ##----------------------------------------- 变量 ---------------------------------------##
 
-
+db_name="oride_dw"
 table_name = "dwd_oride_passenger_complaint_df"
 hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
 
@@ -87,14 +82,13 @@ task_timeout_monitor= PythonOperator(
 
 ##----------------------------------------- 脚本 ---------------------------------------##
 
-dwd_oride_passenger_complaint_df_task = HiveOperator(
-    task_id='dwd_oride_passenger_complaint_df_task',
+def dwd_oride_passenger_complaint_df_sql_task(ds):
 
-    hql='''
+    HQL='''
         SET hive.exec.parallel=TRUE;
         SET hive.exec.dynamic.partition.mode=nonstrict;
 
-        insert overwrite table oride_dw.{table} partition(country_code,dt)
+        insert overwrite table {db}.{table} partition(country_code,dt)
 
         SELECT
             id as order_id,--订单ID
@@ -117,55 +111,41 @@ dwd_oride_passenger_complaint_df_task = HiveOperator(
             dt='{pt}'
         ;
 '''.format(
-        pt='{{ds}}',
-        now_hour='{{ execution_date.strftime("%H") }}',
-        table=table_name
-    ),
+        pt=ds,
+        table=table_name,
+        db=db_name
+)
+    return  HQL
+
+
+#主流程
+def execution_data_task_id(ds,**kargs):
+
+    hive_hook = HiveCliHook()
+
+    #读取sql
+    _sql=dwd_oride_passenger_complaint_df_sql_task(ds)
+
+    logging.info('Executing: %s', _sql)
+
+    #执行Hive
+    hive_hook.run_cli(_sql)
+
+
+    #生成_SUCCESS
+    """
+    第一个参数true: 数据目录是有country_code分区。false 没有
+    第二个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
+
+    """
+    TaskTouchzSuccess().countries_touchz_success(ds,db_name,table_name,hdfs_path,"true","false")
+
+dwd_oride_passenger_complaint_df_task= PythonOperator(
+    task_id='dwd_oride_passenger_complaint_df_task',
+    python_callable=execution_data_task_id,
+    provide_context=True,
     dag=dag
 )
 
-#生成_SUCCESS
-# def check_success(ds,dag,**op_kwargs):
 
-#     dag_ids=dag.dag_id
-
-#     msg = [
-#         {"table":"{dag_name}".format(dag_name=dag_ids),"hdfs_path": "{hdfsPath}/country_code=nal/dt={pt}".format(pt=ds,hdfsPath=hdfs_path)}
-#     ]
-
-#     TaskTouchzSuccess().set_touchz_success(msg)
-
-# touchz_data_success= PythonOperator(
-#     task_id='touchz_data_success',
-#     python_callable=check_success,
-#     provide_context=True,
-#     dag=dag
-# )
-
-
-# 生成_SUCCESS
-touchz_data_success = BashOperator(
-
-    task_id='touchz_data_success',
-
-    bash_command="""
-    $HADOOP_HOME/bin/hadoop fs -mkdir -p {hdfs_data_dir}
-    line_num=`$HADOOP_HOME/bin/hadoop fs -du -s {hdfs_data_dir} | tail -1 | awk '{{print $1}}'`
-
-    if [ $line_num -eq 0 ]
-    then
-        echo "FATAL {hdfs_data_dir} is empty"
-        $HADOOP_HOME/bin/hadoop fs -mkdir {hdfs_data_dir}
-        $HADOOP_HOME/bin/hadoop fs -touchz {hdfs_data_dir}/_SUCCESS
-    else
-        echo "DATA EXPORT Successed ......"
-        $HADOOP_HOME/bin/hadoop fs -touchz {hdfs_data_dir}/_SUCCESS
-    fi
-    """.format(
-        pt='{{ds}}',
-        now_day='{{macros.ds_add(ds, +1)}}',
-        hdfs_data_dir=hdfs_path + '/country_code=nal/dt={{ds}}'
-    ),
-    dag=dag)
-
-ods_sqoop_base_data_user_complaint_df_task >> sleep_time >> dwd_oride_passenger_complaint_df_task >> touchz_data_success
+ods_sqoop_base_data_user_complaint_df_task >>  dwd_oride_passenger_complaint_df_task
