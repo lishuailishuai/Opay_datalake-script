@@ -203,13 +203,6 @@ class TaskTouchzSuccess(object):
             self.ds=ds
             self.table_name=table_name
 
-            print(hour)
-
-            if hour is None:
-                print("1111")
-            else:
-                print(hour)
-
             #获取国家列表
             country_code_list=self.get_country_code()
 
@@ -217,8 +210,16 @@ class TaskTouchzSuccess(object):
             # 没有国家分区并且每个目录必须有数据才能生成 Success
             if country_partition.lower()=="false" and file_type.lower()=="true":
 
-                #输出不同国家的数据路径
-                self.hdfs_data_dir_str=data_hdfs_path+"/dt="+self.ds
+                if hour is None:
+                    #输出不同国家的数据路径
+                    self.hdfs_data_dir_str=data_hdfs_path+"/dt="+self.ds
+                else:
+                    #输出不同国家的数据路径
+                    self.hdfs_data_dir_str=data_hdfs_path+"/dt="+self.ds+"/hour="+hour
+
+                print(self.hdfs_data_dir_str)
+
+                sys.exit(1)
 
                 self.data_not_file_type_touchz()
 
@@ -229,6 +230,7 @@ class TaskTouchzSuccess(object):
                 self.hdfs_data_dir_str=data_hdfs_path+"/dt="+self.ds
 
                 self.data_file_type_touchz()
+
 
 
             for country_code_word in country_code_list.split(","):
