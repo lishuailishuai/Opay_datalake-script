@@ -205,7 +205,7 @@ class TaskTouchzSuccess(object):
 
             print(hour)
 
-            if hour=="None":
+            if hour is None:
                 print("1111")
             else:
                 print(hour)
