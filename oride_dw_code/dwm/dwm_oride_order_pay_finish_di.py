@@ -58,7 +58,7 @@ hdfs_path="ufile://opay-datalake/oride/oride_dw/"+table_name
 
 ##----------------------------------------- 脚本 ---------------------------------------## 
 
-dwm_oride_order_pay_finish_di_sql_task(ds):
+def dwm_oride_order_pay_finish_di_sql_task(ds):
     HQL='''
     set hive.exec.parallel=true;
     set hive.exec.dynamic.partition.mode=nonstrict;
@@ -106,7 +106,7 @@ WHERE dt='{pt}'
          passenger_id,
          country_code,
          dt
-'''.format(
+    '''.format(
         pt=ds,
         now_day='{{macros.ds_add(ds, +1)}}',
         now_hour='{{ execution_date.strftime("%H") }}',

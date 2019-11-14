@@ -177,4 +177,4 @@ dim_oride_city_task= PythonOperator(
     dag=dag
 )
 
-ods_sqoop_base_data_abnormal_order_df_task>>dwd_oride_abnormal_order_di_task
+ods_sqoop_base_data_abnormal_order_df_task>>dim_oride_city_task

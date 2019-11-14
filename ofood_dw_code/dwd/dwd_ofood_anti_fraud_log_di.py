@@ -124,8 +124,7 @@ abnormalstrategy, --命中策略id
 'nal' as country_code,
 dt
  from  oride_source.log_anti_ofood_oride_fraud where dt='{pt}' and action in ('OFoodUserRegister','OFoodUseCoupon','OFoodPlaceOrder','OFoodCancelOrder')
-
-'''.format(
+    '''.format(
         pt=ds,
         table=table_name,
         db=db_name
