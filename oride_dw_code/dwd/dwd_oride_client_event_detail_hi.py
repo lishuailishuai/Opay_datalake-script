@@ -39,18 +39,12 @@ dag = airflow.DAG('dwd_oride_client_event_detail_hi',
                   default_args=args,
                   catchup=False)
 
-sleep_time = BashOperator(
-    task_id='sleep_id',
-    depends_on_past=False,
-    bash_command='sleep 10',
-    dag=dag)
-
 ##----------------------------------------- 依赖 ---------------------------------------##
 
 
 # 依赖前一小时分区
-dependence_client_event_prev_hour_task = HivePartitionSensor(
-    task_id="dependence_client_event_prev_hour_task",
+client_event_prev_hour_task = HivePartitionSensor(
+    task_id="client_event_prev_hour_task",
     table="client_event",
     partition="""dt='{{ ds }}' and hour='{{ execution_date.strftime("%H") }}'""",
     schema="oride_source",
@@ -60,7 +54,7 @@ dependence_client_event_prev_hour_task = HivePartitionSensor(
 
 ##----------------------------------------- 变量 ---------------------------------------##
 
-
+db_name="oride_dw"
 table_name = "dwd_oride_client_event_detail_hi"
 hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
 
@@ -85,10 +79,8 @@ task_timeout_monitor= PythonOperator(
 
 ##----------------------------------------- 脚本 ---------------------------------------##
 
-dwd_oride_client_event_detail_hi_task = HiveOperator(
-    task_id='dwd_oride_client_event_detail_hi_task',
-
-    hql='''
+def dwd_oride_client_event_detail_hi_sql_task(ds):
+    HQL='''
         SET hive.exec.parallel=TRUE;
         SET hive.exec.dynamic.partition.mode=nonstrict;
 
@@ -132,32 +124,43 @@ dwd_oride_client_event_detail_hi_task = HiveOperator(
         
         ;
 '''.format(
-        pt='{{ds}}',
+        pt=ds,
+        now_day='{{macros.ds_add(ds, +1)}}',
         now_hour='{{ execution_date.strftime("%H") }}',
-        table=table_name
-    ),
-    dag=dag
-)
+        table=table_name,
+        db=db_name
+        )
+    return HQL
 
-# 生成_SUCCESS
-def check_success(ds, execution_date, dag, **op_kwargs):
-    dag_ids = dag.dag_id
+#主流程
+def execution_data_task_id(ds,**kargs):
 
-    msg = [
-        {"table": "{dag_name}".format(dag_name=dag_ids),
-         "hdfs_path": "{hdfsPath}/country_code=nal/dt={pt}/hour={hour}".format(pt=ds,
-                                                                               hour=execution_date.strftime("%H"),
-                                                                               hdfsPath=hdfs_path)}
-    ]
+    hive_hook = HiveCliHook()
 
-    TaskTouchzSuccess().set_touchz_success(msg)
+    #读取sql
+    _sql=dwd_oride_client_event_detail_hi_sql_task(ds)
 
+    logging.info('Executing: %s', _sql)
 
-touchz_data_success = PythonOperator(
-    task_id='touchz_data_success',
-    python_callable=check_success,
+    #执行Hive
+    hive_hook.run_cli(_sql)
+
+    #熔断数据
+    #check_key_data_task(ds)
+
+    #生成_SUCCESS
+    """
+    第一个参数true: 数据目录是有country_code分区。false 没有
+    第二个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
+
+    """
+    TaskTouchzSuccess().countries_touchz_success(ds,db_name,table_name,hdfs_path,"true","true")
+    
+dim_oride_city_task= PythonOperator(
+    task_id='dim_oride_city_task',
+    python_callable=execution_data_task_id,
     provide_context=True,
     dag=dag
 )
 
-dependence_client_event_prev_hour_task >> sleep_time >> dwd_oride_client_event_detail_hi_task >> touchz_data_success
+client_event_prev_hour_task>>dim_oride_city_task

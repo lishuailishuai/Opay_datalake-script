@@ -37,13 +37,6 @@ dag = airflow.DAG( 'dwm_oride_order_pay_finish_di',
     default_args=args,
     catchup=False) 
 
-
-sleep_time = BashOperator(
-    task_id='sleep_id',
-    depends_on_past=False,
-    bash_command='sleep 30',
-    dag=dag)
-
 ##----------------------------------------- 依赖 ---------------------------------------## 
 
 #依赖前一天分区
@@ -59,16 +52,14 @@ dwd_oride_order_pay_detail_di_prev_day_tesk=UFileSensor(
         )
 
 ##----------------------------------------- 变量 ---------------------------------------## 
-
+db_name="oride_dw"
 table_name="dwm_oride_order_pay_finish_di"
 hdfs_path="ufile://opay-datalake/oride/oride_dw/"+table_name
 
 ##----------------------------------------- 脚本 ---------------------------------------## 
 
-dwm_oride_order_pay_finish_di_task = HiveOperator(
-
-    task_id='dwm_oride_order_pay_finish_di_task',
-    hql='''
+dwm_oride_order_pay_finish_di_sql_task(ds):
+    HQL='''
     set hive.exec.parallel=true;
     set hive.exec.dynamic.partition.mode=nonstrict;
 
@@ -116,34 +107,45 @@ WHERE dt='{pt}'
          country_code,
          dt
 '''.format(
-        pt='{{ds}}',
+        pt=ds,
         now_day='{{macros.ds_add(ds, +1)}}',
-        table=table_name
-        ),
-    dag=dag)
+        now_hour='{{ execution_date.strftime("%H") }}',
+        table=table_name,
+        db=db_name
+        )
+    return HQL
 
-#生成_SUCCESS
-touchz_data_success = BashOperator(
+#主流程
+def execution_data_task_id(ds,**kargs):
 
-    task_id='touchz_data_success',
+    hive_hook = HiveCliHook()
 
-    bash_command="""
-    line_num=`$HADOOP_HOME/bin/hadoop fs -du -s {hdfs_data_dir} | tail -1 | awk '{{print $1}}'`
+    #读取sql
+    _sql=dwm_oride_order_pay_finish_di_sql_task(ds)
+
+    logging.info('Executing: %s', _sql)
+
+    #执行Hive
+    hive_hook.run_cli(_sql)
+
+    #熔断数据
+    check_key_data_task(ds)
+
+    #生成_SUCCESS
+    """
+    第一个参数true: 数据目录是有country_code分区。false 没有
+    第二个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
+
+    """
+    TaskTouchzSuccess().countries_touchz_success(ds,db_name,table_name,hdfs_path,"true","true")
     
-    if [ $line_num -eq 0 ]
-    then
-        echo "FATAL {hdfs_data_dir} is empty"
-        exit 1
-    else
-        echo "DATA EXPORT Successed ......"
-        $HADOOP_HOME/bin/hadoop fs -touchz {hdfs_data_dir}/_SUCCESS
-    fi
-    """.format(
-        pt='{{ds}}',
-        now_day='{{macros.ds_add(ds, +1)}}',
-        hdfs_data_dir=hdfs_path+'/country_code=nal/dt={{ds}}'
-        ),
-    dag=dag)
+dim_oride_city_task= PythonOperator(
+    task_id='dim_oride_city_task',
+    python_callable=execution_data_task_id,
+    provide_context=True,
+    dag=dag
+)
 
 
-dwd_oride_order_pay_detail_di_prev_day_tesk>>sleep_time>>dwm_oride_order_pay_finish_di_task>>touchz_data_success
+
+dwd_oride_order_pay_detail_di_prev_day_tesk>>dim_oride_city_task

@@ -37,13 +37,6 @@ dag = airflow.DAG( 'dwd_ofood_anti_fraud_log_di',
     default_args=args,
     catchup=False) 
 
-
-sleep_time = BashOperator(
-    task_id='sleep_id',
-    depends_on_past=False,
-    bash_command='sleep 120',
-    dag=dag)
-
 ##----------------------------------------- 依赖 ---------------------------------------## 
 
 
@@ -59,16 +52,36 @@ dwd_ofood_anti_fraud_log_di_prev_day_tesk=HivePartitionSensor(
 
 ##----------------------------------------- 变量 ---------------------------------------## 
 
+db_name="ofood_dw"
 table_name="dwd_ofood_anti_fraud_log_di"
 hdfs_path="ufile://opay-datalake/oride/ofood_dw/"+table_name
+
+##----------------------------------------- 任务超时监控 ---------------------------------------## 
+
+def fun_task_timeout_monitor(ds,dag,**op_kwargs):
+
+    dag_ids=dag.dag_id
+
+    msg = [
+        {"db": "ofood_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=NG/dt={pt}".format(pt=ds), "timeout": "800"}
+    ]
+
+    TaskTimeoutMonitor().set_task_monitor(msg)
+
+task_timeout_monitor= PythonOperator(
+    task_id='task_timeout_monitor',
+    python_callable=fun_task_timeout_monitor,
+    provide_context=True,
+    dag=dag
+)
+
 
 ##----------------------------------------- 脚本 ---------------------------------------## 
 
 
-dwd_ofood_anti_fraud_log_di_task = HiveOperator(
+def dwd_ofood_anti_fraud_log_di_sql_task(ds):
 
-    task_id='dwd_ofood_anti_fraud_log_di_task',
-    hql='''
+     HQL'''
     set hive.exec.parallel=true;
     set hive.exec.dynamic.partition.mode=nonstrict;
 
@@ -112,35 +125,42 @@ abnormalstrategy, --命中策略id
 dt
  from  oride_source.log_anti_ofood_oride_fraud where dt='{pt}' and action in ('OFoodUserRegister','OFoodUseCoupon','OFoodPlaceOrder','OFoodCancelOrder')
 
- '''.format(
-        pt='{{ds}}',
-        now_day='{{macros.ds_add(ds, +1)}}',
-        table=table_name
-        ),
-    dag=dag
-    )
+'''.format(
+        pt=ds,
+        table=table_name,
+        db=db_name
+        )
+    return HQL
 
-#生成_SUCCESS
-touchz_data_success = BashOperator(
+#主流程
+def execution_data_task_id(ds,**kargs):
 
-    task_id='touchz_data_success',
+    hive_hook = HiveCliHook()
 
-    bash_command="""
-    line_num=`$HADOOP_HOME/bin/hadoop fs -du -s {hdfs_data_dir} | tail -1 | awk '{{print $1}}'`
+    #读取sql
+    _sql=dwd_ofood_anti_fraud_log_di_sql_task(ds)
+
+    logging.info('Executing: %s', _sql)
+
+    #执行Hive
+    hive_hook.run_cli(_sql)
+
+    #熔断数据
+    #check_key_data_task(ds)
+
+    #生成_SUCCESS
+    """
+    第一个参数true: 数据目录是有country_code分区。false 没有
+    第二个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
+
+    """
+    TaskTouchzSuccess().countries_touchz_success(ds,db_name,table_name,hdfs_path,"true","true")
     
-    if [ $line_num -eq 0 ]
-    then
-        echo "FATAL {hdfs_data_dir} is empty"
-        exit 1
-    else
-        echo "DATA EXPORT Successed ......"
-        $HADOOP_HOME/bin/hadoop fs -touchz {hdfs_data_dir}/_SUCCESS
-    fi
-    """.format(
-        pt='{{ds}}',
-        now_day='{{macros.ds_add(ds, +1)}}',
-        hdfs_data_dir=hdfs_path+'/country_code=nal/dt={{ds}}'
-        ),
-    dag=dag)
+dim_oride_city_task= PythonOperator(
+    task_id='dim_oride_city_task',
+    python_callable=execution_data_task_id,
+    provide_context=True,
+    dag=dag
+)
  
-dwd_ofood_anti_fraud_log_di_prev_day_tesk>>sleep_time>>dwd_ofood_anti_fraud_log_di_task>>touchz_data_success
+dwd_ofood_anti_fraud_log_di_prev_day_tesk>>dim_oride_city_task

@@ -39,12 +39,6 @@ dag = airflow.DAG('dwd_oride_order_base_include_test_di',
                   default_args=args,
                   catchup=False)
 
-sleep_time = BashOperator(
-    task_id='sleep_id',
-    depends_on_past=False,
-    bash_command='sleep 30',
-    dag=dag)
-
 ##----------------------------------------- 依赖 ---------------------------------------## 
 
 # 依赖前一天分区
@@ -90,10 +84,9 @@ dependence_dispatch_tracker_server_magic_task = HivePartitionSensor(
 
 ##----------------------------------------- 变量 ---------------------------------------##
 
+db_name="oride_dw"
 table_name = "dwd_oride_order_base_include_test_di"
 hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
-
-
 
 ##----------------------------------------- 任务超时监控 ---------------------------------------## 
 
@@ -116,9 +109,7 @@ task_timeout_monitor= PythonOperator(
 
 ##----------------------------------------- 脚本 ---------------------------------------## 
 
-dwd_oride_order_base_include_test_di_task = HiveOperator(
-    task_id='dwd_oride_order_base_include_test_di_task',
-
+def dwd_oride_order_base_include_test_di_sql_task(ds):
     hql='''
 SET hive.exec.parallel=TRUE;
 SET hive.exec.dynamic.partition.mode=nonstrict;
@@ -634,15 +625,17 @@ left OUTER JOIN
     where base.cn > 1
 )carpool_success on carpool_success.order_id = base.order_id;
 '''.format(
-        pt='{{ds}}',
+        pt=ds,
         now_day='{{macros.ds_add(ds, +1)}}',
-        table=table_name
-    ),
-    dag=dag
-)
+        now_hour='{{ execution_date.strftime("%H") }}',
+        table=table_name,
+        db=db_name
+        )
+    return HQL
 
 
-def check_key_data(ds, **kargs):
+
+def check_key_data_task(ds):
     # 主键重复校验
     HQL_DQC = '''
     SELECT count(1) as nm
@@ -671,37 +664,38 @@ def check_key_data(ds, **kargs):
         print("-----> Notice Data Export Success ......")
 
 
-# 主键重复校验
-task_check_key_data = PythonOperator(
-    task_id='check_data',
-    python_callable=check_key_data,
-    provide_context=True,
-    dag=dag)
+#主流程
+def execution_data_task_id(ds,**kargs):
 
+    hive_hook = HiveCliHook()
 
-#生成_SUCCESS
-def check_success(ds,dag,**op_kwargs):
+    #读取sql
+    _sql=dwd_oride_order_base_include_test_di_sql_task(ds)
 
-    dag_ids=dag.dag_id
+    logging.info('Executing: %s', _sql)
 
-    msg = [
-        {"table":"{dag_name}".format(dag_name=dag_ids),"hdfs_path": "{hdfsPath}/country_code=nal/dt={pt}".format(pt=ds,hdfsPath=hdfs_path)}
-    ]
+    #执行Hive
+    hive_hook.run_cli(_sql)
 
-    TaskTouchzSuccess().set_touchz_success(msg)
+    #熔断数据
+    check_key_data_task(ds)
 
-touchz_data_success= PythonOperator(
-    task_id='touchz_data_success',
-    python_callable=check_success,
+    #生成_SUCCESS
+    """
+    第一个参数true: 数据目录是有country_code分区。false 没有
+    第二个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
+
+    """
+    TaskTouchzSuccess().countries_touchz_success(ds,db_name,table_name,hdfs_path,"true","true")
+    
+dim_oride_city_task= PythonOperator(
+    task_id='dim_oride_city_task',
+    python_callable=execution_data_task_id,
     provide_context=True,
     dag=dag
 )
 
-ods_sqoop_base_data_order_df_prev_day_task >> \
-ods_sqoop_base_data_order_payment_df_prev_day_task >> \
-oride_client_event_detail_prev_day_task >> \
-dependence_dispatch_tracker_server_magic_task >>\
-sleep_time >> \
-dwd_oride_order_base_include_test_di_task >> \
-task_check_key_data >> \
-touchz_data_success
+ods_sqoop_base_data_order_df_prev_day_task >>  dim_oride_city_task
+ods_sqoop_base_data_order_payment_df_prev_day_task >> dim_oride_city_task
+oride_client_event_detail_prev_day_task >> dim_oride_city_task
+dependence_dispatch_tracker_server_magic_task >> dim_oride_city_task

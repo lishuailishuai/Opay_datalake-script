@@ -39,17 +39,11 @@ dag = airflow.DAG('dwd_oride_abnormal_order_di',
                   default_args=args,
                   catchup=False)
 
-sleep_time = BashOperator(
-    task_id='sleep_id',
-    depends_on_past=False,
-    bash_command='sleep 10',
-    dag=dag)
-
 ##----------------------------------------- 依赖 ---------------------------------------##
 
 # 依赖前一天分区
-dependence_ods_sqoop_base_data_abnormal_order_df_prev_day_task = UFileSensor(
-    task_id='dependence_ods_sqoop_base_data_abnormal_order_df_prev_day_task',
+ods_sqoop_base_data_abnormal_order_df_task = UFileSensor(
+    task_id='ods_sqoop_base_data_abnormal_order_df_task',
     filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
         hdfs_path_str="oride_dw_sqoop/oride_data/data_abnormal_order",
         pt='{{ds}}'
@@ -61,6 +55,7 @@ dependence_ods_sqoop_base_data_abnormal_order_df_prev_day_task = UFileSensor(
 
 ##----------------------------------------- 变量 ---------------------------------------##
 
+db_name="oride_dw"
 table_name = "dwd_oride_abnormal_order_di"
 hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
 
@@ -87,10 +82,9 @@ task_timeout_monitor= PythonOperator(
 
 ##----------------------------------------- 脚本 ---------------------------------------##
 
-dwd_oride_abnormal_order_di_task = HiveOperator(
+def dwd_oride_abnormal_order_di_sql_task(ds):
 
-    task_id='dwd_oride_abnormal_order_di_task',
-    hql='''
+    HQL='''
     set hive.exec.parallel=true;
     set hive.exec.dynamic.partition.mode=nonstrict;
 
@@ -145,40 +139,42 @@ dwd_oride_abnormal_order_di_task = HiveOperator(
              OR from_unixtime(update_time,'yyyy-MM-dd')=dt) ;
 
 '''.format(
-        pt='{{ds}}',
+        pt=ds,
+        table=table_name,
         now_day='{{macros.ds_add(ds, +1)}}',
-        table=table_name
-    ),
-    schema='oride_dw',
-    dag=dag)
+        db=db_name
+        )
+    return HQL
 
+#主流程
+def execution_data_task_id(ds,**kargs):
 
-# 生成_SUCCESS
-touchz_data_success = BashOperator(
+    hive_hook = HiveCliHook()
 
-    task_id='touchz_data_success',
+    #读取sql
+    _sql=dwd_oride_abnormal_order_di_sql_task(ds)
 
-    bash_command="""
-    line_num=`$HADOOP_HOME/bin/hadoop fs -du -s {hdfs_data_dir} | tail -1 | awk '{{print $1}}'`
+    logging.info('Executing: %s', _sql)
 
-    if [ $line_num -eq 0 ]
-    then
-        echo "FATAL {hdfs_data_dir} is empty"
-        $HADOOP_HOME/bin/hadoop fs -mkdir {hdfs_data_dir}
-        $HADOOP_HOME/bin/hadoop fs -touchz {hdfs_data_dir}/_SUCCESS
-    else
-        echo "DATA EXPORT Successed ......"
-        $HADOOP_HOME/bin/hadoop fs -touchz {hdfs_data_dir}/_SUCCESS
-    fi
-    """.format(
-        pt='{{ds}}',
-        now_day='{{macros.ds_add(ds, +1)}}',
-        hdfs_data_dir=hdfs_path + '/country_code=nal/dt={{ds}}'
-    ),
-    dag=dag)
+    #执行Hive
+    hive_hook.run_cli(_sql)
 
-task_timeout_monitor
-dependence_ods_sqoop_base_data_abnormal_order_df_prev_day_task >> \
-sleep_time >> \
-dwd_oride_abnormal_order_di_task >> \
-touchz_data_success
+    #熔断数据
+    #check_key_data_task(ds)
+
+    #生成_SUCCESS
+    """
+    第一个参数true: 数据目录是有country_code分区。false 没有
+    第二个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
+
+    """
+    TaskTouchzSuccess().countries_touchz_success(ds,db_name,table_name,hdfs_path,"true","true")
+    
+dim_oride_city_task= PythonOperator(
+    task_id='dim_oride_city_task',
+    python_callable=execution_data_task_id,
+    provide_context=True,
+    dag=dag
+)
+
+ods_sqoop_base_data_abnormal_order_df_task>>dwd_oride_abnormal_order_di_task
