@@ -114,7 +114,7 @@ dwd_oride_order_dispatch_filter_detail_di_task = HiveOperator(
         from  
         oride_source.dispatch_tracker_server_magic 
         where  dt = '{pt}' and event_name='dispatch_filter_driver'
-        and get_json_object(event_values, '$.is_multiple')<>'true'
+        and (get_json_object(event_values, '$.is_multiple') is null or lower(get_json_object(event_values, '$.is_multiple'))='false')
         
         union all
         
@@ -137,7 +137,7 @@ dwd_oride_order_dispatch_filter_detail_di_task = HiveOperator(
         oride_source.dispatch_tracker_server_magic 
         lateral view explode(split(substr(get_json_object(event_values, '$.order_list'),2,length(get_json_object(event_values, '$.order_list'))-2),',')) order_list as order_id1
         where  dt = '{pt}' and event_name='dispatch_filter_driver'
-        and get_json_object(event_values, '$.is_multiple')='true'
+        and lower(get_json_object(event_values, '$.is_multiple'))='true'
 '''.format(
         pt='{{ds}}',
         now_day='{{macros.ds_add(ds, +1)}}',
