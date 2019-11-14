@@ -214,7 +214,7 @@ for db_name, table_name, conn_id, prefix_name,priority_weight_nm in table_list:
             --connect "jdbc:mysql://{host}:{port}/{schema}?tinyInt1isBit=false&useUnicode=true&characterEncoding=utf8" \
             --username {username} \
             --password {password} \
-            --query 'select * from {table} where ((FROM_UNIXTIME(UNIX_TIMESTAMP(create_time), "%Y-%m-%d %H:%i:%S") between "{{{{ macros.ds_add(ds, -2) }}}} 23:00:00" and "{{{{ macros.ds_add(ds, -1) }}}} 22:59:59") OR (FROM_UNIXTIME(UNIX_TIMESTAMP(update_time), "%Y-%m-%d %H:%i:%S") between "{{{{ macros.ds_add(ds, -2) }}}} 23:00:00" and "{{{{ macros.ds_add(ds, -1) }}}} 22:59:59")) AND $CONDITIONS' \
+            --query 'select * from {table} where ((FROM_UNIXTIME(UNIX_TIMESTAMP(create_time), "%Y-%m-%d %H:%i:%S") between "{{{{ macros.ds_add(ds, -1) }}}} 23:00:00" and "{{{{ ds }}}} 22:59:59") OR (FROM_UNIXTIME(UNIX_TIMESTAMP(update_time), "%Y-%m-%d %H:%i:%S") between "{{{{ macros.ds_add(ds, -1) }}}} 23:00:00" and "{{{{ ds }}}} 22:59:59")) AND $CONDITIONS' \
             --split-by id \
             --target-dir {ufile_path}/dt={{{{ ds }}}}/ \
             --fields-terminated-by "\\001" \
