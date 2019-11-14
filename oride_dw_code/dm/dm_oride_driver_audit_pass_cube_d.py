@@ -40,68 +40,11 @@ dag = airflow.DAG('dm_oride_driver_audit_pass_cube_d',
 
 ##----------------------------------------- 依赖 ---------------------------------------##
 
-
 # 依赖前一天分区
-dependence_dim_oride_driver_base_prev_day_task = UFileSensor(
-    task_id='dim_oride_driver_base_prev_day_task',
+dependence_dwm_oride_driver_base_df_prev_day_task = UFileSensor(
+    task_id='dwm_oride_driver_base_df_prev_day_task',
     filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw/dim_oride_driver_base/country_code=nal",
-        pt='{{ds}}'
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
-
-dependence_dwd_oride_order_base_include_test_di_prev_day_task = UFileSensor(
-    task_id='dwd_oride_order_base_include_test_di_prev_day_task',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw/dwd_oride_order_base_include_test_di/country_code=nal",
-        pt='{{ds}}'
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
-
-dependence_dwd_oride_order_push_driver_detail_di_prev_day_task = UFileSensor(
-    task_id='dwd_oride_order_push_driver_detail_di_prev_day_task',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw/dwd_oride_order_push_driver_detail_di/country_code=nal",
-        pt='{{ds}}'
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
-
-# 依赖前一天分区
-dependence_ods_log_oride_driver_timerange_prev_day_task = UFileSensor(
-    task_id='ods_log_oride_driver_timerange_prev_day_task',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw_ods/ods_log_oride_driver_timerange",
-        pt='{{ds}}'
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
-
-dependence_dwd_oride_driver_accept_order_click_detail_di_prev_day_task = UFileSensor(
-    task_id='dwd_oride_driver_accept_order_click_detail_di_prev_day_task',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw/dwd_oride_driver_accept_order_click_detail_di/country_code=nal",
-        pt='{{ds}}'
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
-
-dependence_dwd_oride_driver_accept_order_show_detail_di_prev_day_task = UFileSensor(
-    task_id='dwd_oride_driver_accept_order_show_detail_di_prev_day_task',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw/dwd_oride_driver_accept_order_show_detail_di/country_code=nal",
+        hdfs_path_str="oride/oride_dw/dwm_oride_driver_base_df/country_code=nal",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -141,136 +84,99 @@ def dm_oride_driver_audit_pass_cube_d_sql_task(ds):
 
     INSERT overwrite TABLE oride_dw.{table} partition(country_code,dt)
 
-    SELECT nvl(product_id,-10000) AS product_id,
-           nvl(city_id,-10000) AS city_id,
-           audit_finish_driver_num,
-              --注册司机数，审核通过司机数，但是注册司机数理论用该表统计不太准确
+    select nvl(product_id,-10000) as product_id,
+       nvl(city_id,-10000) as city_id,
+       audit_finish_driver_num,
+       --注册司机数，审核通过司机数，但是注册司机数理论用该表统计不太准确
+       
+       bind_driver_num,
+       --绑定成功司机数
+       
+       n_bind_driver_num,
+       --未绑定司机数
+       
+       td_online_driver_num,
+       --当天在线司机数
+       
+       td_driver_accept_take_num,
+       --骑手端应答的司机数 （accept_click阶段）
+       --之前统计有问题，偏小，不应该用订单表中司机ID关联
+       
+       td_driver_take_num,
+       --成功被播单司机数 （push阶段）
+       --之前统计有问题，不应该用订单表关联push节点司机，订单表中有司机的都是接单的，因此统计偏少
+       
+       td_request_driver_num,
+       --当天接单司机数
+       
+       td_finish_order_driver_num,
+       --当天完单司机数
+       
+       td_push_accpet_show_driver_num,
+       --当天被推送骑手数（骑手端show打点）
+       --之前统计有问题，偏小，不应该用订单表中司机ID关联
+       
+       td_audit_finish_driver_num,
+       --当天注册司机数,当天审核通过司机数
+       
+       fraud_driver_cnt, 
+       --疑似作弊订单涉及司机数
 
-           bind_driver_num,
-              --绑定成功司机数
-    
-           n_bind_driver_num,
-              --未绑定司机数
+       nvl(country_code,-10000) AS country_code,
+       --(去除with cube为空的BUG) --国家码字段
+       
+       dt
 
-           td_online_driver_num,
-              --当天在线司机数
-
-           td_driver_accept_take_num,
-              --骑手应答的总次数 （accept_click阶段）
-
-           td_driver_take_num,
-              --骑手成功应答的总次数 （push阶段）
-
-           td_request_driver_num,
-              --当天接单司机数
-
-           td_finish_order_driver_num,
-              --当天完单司机数
-
-           td_push_accpet_show_driver_num,
-              --被推送骑手数 （accept_show阶段）
-
-           td_audit_finish_driver_num,
-              --当天注册司机数,当天审核通过司机数
-           fraud_driver_cnt, --疑似作弊订单涉及司机数
-
-           country_code,
-           --国家码字段
-
-           '{pt}' AS dt
-    FROM
-      (SELECT dri.product_id,
-              dri.city_id,
-              count(distinct dri.driver_id) AS audit_finish_driver_num,
-              --注册司机数，审核通过司机数，但是注册司机数理论用该表统计不太准确
-    
-              count(distinct if(is_bind=1,dri.driver_id,null)) AS bind_driver_num,
-              --绑定成功司机数
-    
-              count(distinct if(is_bind=0,dri.driver_id,null)) AS n_bind_driver_num,
-              --未绑定司机数
-
-              count(distinct if(dri.driver_id=dtr.driver_id,dtr.driver_id,NULL)) AS td_online_driver_num,
-              --当天在线司机数
-
-              count(DISTINCT (CASE WHEN ord.driver_id=r1.driver_id THEN ord.driver_id ELSE NULL END)) AS td_driver_accept_take_num,
-              --骑手应答的总次数 （accept_click阶段）
-
-              count(DISTINCT (CASE WHEN ord.driver_id=p1.driver_id THEN ord.driver_id ELSE NULL END)) AS td_driver_take_num,
-              --骑手成功应答的总次数 （push阶段）
-
-              count(DISTINCT (CASE WHEN is_td_request=1 THEN ord.driver_id ELSE NULL END)) AS td_request_driver_num,
-              --当天接单司机数
-
-              count(DISTINCT (CASE WHEN is_td_finish=1 THEN ord.driver_id ELSE NULL END)) AS td_finish_order_driver_num,
-              --当天完单司机数
-
-              count(DISTINCT (CASE WHEN ord.driver_id = r2.driver_id THEN ord.driver_id ELSE NULL END)) AS td_push_accpet_show_driver_num,
-              --被推送骑手数 （accept_show阶段）
-
-              count(distinct (if(substr(register_time,1,10)=dri.dt and dri.driver_id<>0,dri.driver_id,NULL))) AS td_audit_finish_driver_num,
-              --当天注册司机数,当天审核通过司机数
-
-              null as fraud_driver_cnt, --疑似作弊订单涉及司机数
-              nvl(dri.country_code,-999) AS country_code --(去除with cube为空的BUG) --国家码字段
-
-       FROM
-         (
-            SELECT 
-            *
-            FROM oride_dw.dim_oride_driver_base  --已经去除了测试数据
-            WHERE dt='{pt}'
-         ) dri
-       LEFT OUTER JOIN
-         (
-            SELECT 
-            *
-            FROM oride_dw.dwd_oride_order_base_include_test_di
-             WHERE dt='{pt}'
-             AND city_id<>'999001' --去除测试数据
-             and driver_id<>1
-         ) ord ON dri.driver_id = ord.driver_id
-            AND dri.dt = ord.dt
-       LEFT OUTER JOIN
-         (
-            SELECT 
-            *
-            FROM oride_dw_ods.ods_log_oride_driver_timerange
-            WHERE dt='{pt}'
-         ) dtr ON dri.driver_id = dtr.driver_id
-       AND dri.dt=dtr.dt
-         LEFT OUTER JOIN
-      (
-           SELECT 
-           driver_id --成功播单司机
-           FROM oride_dw.dwd_oride_order_push_driver_detail_di
-           WHERE dt='{pt}'
-           AND success=1
-           GROUP BY driver_id
-       ) p1 ON ord.driver_id=p1.driver_id
-       LEFT OUTER JOIN 
-       (
-           SELECT 
-           driver_id
-           FROM 
-           oride_dw.dwd_oride_driver_accept_order_click_detail_di
-           WHERE dt='{pt}'
-           group by driver_id 
-       ) r1 on r1.driver_id = dri.driver_id
-       LEFT OUTER JOIN 
-       (
-           SELECT 
-           driver_id
-           FROM 
-           oride_dw.dwd_oride_driver_accept_order_show_detail_di
-           WHERE dt='{pt}'
-           group by driver_id 
-       ) r2 on r2.driver_id = dri.driver_id
-       GROUP BY dri.product_id,
-                dri.city_id,
-                dri.country_code 
-                WITH CUBE) x
-    WHERE x.country_code IN ('nal')
+        from (select product_id,
+               city_id,
+               count(driver_id) as audit_finish_driver_num,
+               --注册司机数，审核通过司机数，但是注册司机数理论用该表统计不太准确
+               
+               sum(is_bind) as bind_driver_num,
+               --绑定成功司机数
+               
+               sum(if(is_bind=1,0,1)) AS n_bind_driver_num,
+               --未绑定司机数
+               
+               sum(is_td_online) as td_online_driver_num,
+               --当天在线司机数
+               
+               sum(is_td_accpet_click) as td_driver_accept_take_num,
+               --骑手端应答的司机数 （accept_click阶段）
+               --之前统计有问题，偏小，不应该用订单表中司机ID关联
+               
+               sum(is_td_succ_broadcast) as td_driver_take_num,
+               --成功被播单司机数 （push阶段）
+               --之前统计有问题，不应该用订单表关联push节点司机，订单表中有司机的都是接单的，因此统计偏少
+               
+               sum(is_td_request) as td_request_driver_num,
+               --当天接单司机数
+               
+               sum(is_td_finish) as td_finish_order_driver_num,
+               --当天完单司机数
+               
+               sum(is_td_accpet_show) as td_push_accpet_show_driver_num,
+               --当天被推送骑手数（骑手端show打点）
+               --之前统计有问题，偏小，不应该用订单表中司机ID关联
+               
+               sum(is_td_sign) as td_audit_finish_driver_num,
+               --当天注册司机数,当天审核通过司机数
+               
+               null as fraud_driver_cnt, 
+               --疑似作弊订单涉及司机数
+        
+               nvl(country_code,-999) AS country_code,
+               --(去除with cube为空的BUG) --国家码字段
+        
+               '{pt}' AS dt
+               
+        from oride_dw.dwm_oride_driver_base_df
+        where dt='{pt}'
+        group by product_id,
+               city_id,
+               country_code
+        with cube) x
+        WHERE x.country_code IN ('nal');
     '''.format(
         pt=ds,
         now_day=airflow.macros.ds_add(ds, +1),
@@ -307,10 +213,4 @@ dm_oride_driver_audit_pass_cube_d_task = PythonOperator(
     dag=dag
 )
 
-dependence_dim_oride_driver_base_prev_day_task >> \
-dependence_dwd_oride_order_base_include_test_di_prev_day_task >> \
-dependence_dwd_oride_order_push_driver_detail_di_prev_day_task >> \
-dependence_ods_log_oride_driver_timerange_prev_day_task >> \
-dependence_dwd_oride_driver_accept_order_click_detail_di_prev_day_task >> \
-dependence_dwd_oride_driver_accept_order_show_detail_di_prev_day_task >> \
-dm_oride_driver_audit_pass_cube_d_task
+dependence_dwm_oride_driver_base_df_prev_day_task >>dm_oride_driver_audit_pass_cube_d_task

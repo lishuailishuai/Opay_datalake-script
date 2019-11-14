@@ -12,10 +12,9 @@ from plugins.SqoopSchemaUpdate import SqoopSchemaUpdate
 from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
 from utils.util import on_success_callback
 
-
 args = {
     'owner': 'zhenqian.zhang',
-    'start_date': datetime(2019, 10, 29),
+    'start_date': datetime(2019, 10, 30),
     'depends_on_past': False,
     'retries': 1,
     'retry_delay': timedelta(minutes=5),
@@ -24,18 +23,17 @@ args = {
     'email_on_retry': False,
     'on_success_callback':on_success_callback,
 }
-
-schedule_interval="20 01 * * *"
+schedule_interval="20 03 * * *"
 
 dag = airflow.DAG(
-    'opay_source_sqoop_di',
+    'opay_owealth_source_sqoop_df',
     schedule_interval=schedule_interval,
     concurrency=15,
     max_active_runs=1,
     default_args=args)
 
 dag_monitor = airflow.DAG(
-    'opay_source_sqoop_di_monitor',
+    'opay_owealth_source_sqoop_df_monitor',
     schedule_interval=schedule_interval,
     default_args=args)
 
@@ -50,10 +48,8 @@ def fun_task_timeout_monitor(ds, db_name, table_name, **op_kwargs):
 
 # 忽略数据量检查的table
 IGNORED_TABLE_LIST = [
-    'adjustment_decrease_record',
-    'merchant_receive_money_record',
-    'merchant_fee_record',
-    'user_fee_record'
+    'user_limit',
+    'channel_router_rule',
 ]
 
 '''
@@ -63,47 +59,20 @@ db_name,table_name,conn_id,prefix_name,priority_weight
 #
 
 table_list = [
-    ("opay_sms","message_record", "opay_db_3319", "base",3),
-
-    ("opay_user","user_email", "opay_db_3321", "base",3),
-    ("opay_user","user", "opay_db_3321", "base",3),
-
-    ("opay_bigorder","big_order", "opay_db_3317", "base",3),
-
-    ("opay_transaction","adjustment_decrease_record", "opay_db_3316", "base",3),
-    ("opay_transaction","adjustment_increase_record", "opay_db_3316", "base",3),
-    ("opay_transaction","airtime_topup_record", "opay_db_3316", "base",3),
-    ("opay_transaction","betting_topup_record", "opay_db_3316", "base",3),
-    ("opay_transaction","business_collection_record", "opay_db_3316", "base",3),
-    ("opay_transaction","electricity_topup_record", "opay_db_3316", "base",3),
-    ("opay_transaction","merchant_acquiring_record", "opay_db_3316", "base",3),
-    ("opay_transaction","merchant_pos_transaction_record", "opay_db_3316", "base",3),
-    ("opay_transaction","merchant_receive_money_record", "opay_db_3316", "base",3),
-    ("opay_transaction","merchant_topup_record", "opay_db_3316", "base",3),
-    ("opay_transaction","merchant_transfer_card_record", "opay_db_3316", "base",3),
-    ("opay_transaction","merchant_transfer_user_record", "opay_db_3316", "base",3),
-    ("opay_transaction","mobiledata_topup_record", "opay_db_3316", "base",3),
-    ("opay_transaction","receive_money_request_record", "opay_db_3316", "base",3),
-    ("opay_transaction","transfer_not_register_record", "opay_db_3316", "base",3),
-    ("opay_transaction","tv_topup_record", "opay_db_3316", "base",3),
-    ("opay_transaction","user_easycash_record", "opay_db_3316", "base",3),
-    ("opay_transaction","user_pos_transaction_record", "opay_db_3316", "base",3),
-    ("opay_transaction","user_receive_money_record", "opay_db_3316", "base",3),
-    ("opay_transaction","user_topup_record", "opay_db_3316", "base",3),
-    ("opay_transaction","user_transfer_card_record", "opay_db_3316", "base",3),
-    ("opay_transaction","user_transfer_user_record", "opay_db_3316", "base",3),
-    ("opay_transaction", "cash_in_record", "opay_db_3316", "base", 2),
-    ("opay_transaction", "cash_out_record", "opay_db_3316", "base", 2),
-    ("opay_transaction", "business_activity_record", "opay_db_3316", "base", 2),
-    ("opay_transaction", "activity_record", "opay_db_3316", "base", 2),
-
-    ("opay_fee","user_fee_record", "opay_db_3322", "base",3),
-    ("opay_fee","merchant_fee_record", "opay_db_3322", "base",3),
+    ("opay_owealth","share_acct", "opay_owealth_db", "owealth",3),
+    ("opay_owealth","share_failure_user", "opay_owealth_db", "owealth",3),
+    ("opay_owealth","share_freeze", "opay_owealth_db", "owealth",3),
+    ("opay_owealth","share_holiday", "opay_owealth_db", "owealth",3),
+    ("opay_owealth","share_limit_level", "opay_owealth_db", "owealth",3),
+    ("opay_owealth","share_order", "opay_owealth_db", "owealth",3),
+    ("opay_owealth","share_platform_assets_acct", "opay_owealth_db", "owealth",3),
+    ("opay_owealth","share_platform_revenue_acct", "opay_owealth_db", "owealth",3),
 ]
 
-HIVE_DB = 'opay_dw_ods'
-HIVE_TABLE = 'ods_sqoop_%s_%s_di'
-UFILE_PATH = 'ufile://opay-datalake/opay_dw_sqoop_di/%s/%s'
+
+HIVE_DB = 'opay_owealth_ods'
+HIVE_TABLE = 'ods_sqoop_%s_%s_df'
+UFILE_PATH = 'ufile://opay-datalake/opay_owealth_ods/%s/%s'
 ODS_CREATE_TABLE_SQL = '''
     CREATE EXTERNAL TABLE IF NOT EXISTS {db_name}.`{table_name}`(
         {columns}
@@ -118,11 +87,14 @@ ODS_CREATE_TABLE_SQL = '''
       'org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat'
     LOCATION
       '{ufile_path}';
+    MSCK REPAIR TABLE {db_name}.`{table_name}`;
+    -- delete opay_dw table
+    DROP TABLE IF EXISTS opay_dw.`{table_name}`;
 '''
 
 # 需要验证的核心业务表
 table_core_list = [
-    # ("opay_data", "data_order", "sqoop_db", "base", "create_time","priority_weight")
+    # ("oride_data", "data_order", "sqoop_db", "base", "create_time","priority_weight")
 ]
 
 # 不需要验证的维度表，暂时为null
@@ -144,7 +116,7 @@ def run_check_table(db_name, table_name, conn_id, hive_table_name, **kwargs):
     if response:
         return True
 
-    # SHOW TABLES in opay_db LIKE 'data_aa'
+    # SHOW TABLES in oride_db LIKE 'data_aa'
     check_sql = 'SHOW TABLES in %s LIKE \'%s\'' % (HIVE_DB, hive_table_name)
     hive2_conn = HiveServer2Hook().get_conn()
     cursor = hive2_conn.cursor()
@@ -174,7 +146,7 @@ def run_check_table(db_name, table_name, conn_id, hive_table_name, **kwargs):
                 col_name = '_dt'
             else:
                 col_name = result[0]
-            if result[1] == 'timestamp' or result[1] == 'varchar' or result[1] == 'char' or result[1] == 'text' or \
+            if result[1] == 'timestamp' or result[1] == 'varchar' or result[1] == 'char' or result[1] == 'text' or result[1] == 'longtext' or \
                     result[1] == 'datetime':
                 data_type = 'string'
             elif result[1] == 'decimal':
@@ -214,15 +186,14 @@ for db_name, table_name, conn_id, prefix_name,priority_weight_nm in table_list:
             --connect "jdbc:mysql://{host}:{port}/{schema}?tinyInt1isBit=false&useUnicode=true&characterEncoding=utf8" \
             --username {username} \
             --password {password} \
-            --query 'select * from {table} where ((FROM_UNIXTIME(UNIX_TIMESTAMP(create_time), "%Y-%m-%d %H:%i:%S") between "{{{{ macros.ds_add(ds, -1) }}}} 23:00:00" and "{{{{ ds }}}} 22:59:59") OR (FROM_UNIXTIME(UNIX_TIMESTAMP(update_time), "%Y-%m-%d %H:%i:%S") between "{{{{ macros.ds_add(ds, -1) }}}} 23:00:00" and "{{{{ ds }}}} 22:59:59")) AND $CONDITIONS' \
-            --split-by id \
+            --table {table} \
             --target-dir {ufile_path}/dt={{{{ ds }}}}/ \
             --fields-terminated-by "\\001" \
             --lines-terminated-by "\\n" \
             --hive-delims-replacement " " \
             --delete-target-dir \
             --compression-codec=snappy \
-            -m 16
+            -m {m}
         '''.format(
             host=conn_conf_dict[conn_id].host,
             port=conn_conf_dict[conn_id].port,
@@ -230,8 +201,9 @@ for db_name, table_name, conn_id, prefix_name,priority_weight_nm in table_list:
             username=conn_conf_dict[conn_id].login,
             password=conn_conf_dict[conn_id].password,
             table=table_name,
-            ufile_path=UFILE_PATH % (db_name, table_name)
-        ),
+            ufile_path=UFILE_PATH % (db_name, table_name),
+            m=18 if table_name=='channel_response_code' else 20
+    ),
         dag=dag,
     )
 
@@ -289,8 +261,6 @@ for db_name, table_name, conn_id, prefix_name,priority_weight_nm in table_list:
             dag=dag
         )
         add_partitions >> volume_monitoring >> validate_all_data
-
-
     # 超时监控
     task_timeout_monitor= PythonOperator(
         task_id='task_timeout_monitor_{}'.format(hive_table_name),

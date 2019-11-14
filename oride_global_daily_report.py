@@ -2549,7 +2549,7 @@ def send_funnel_report_email(ds, **kwargs):
                     <thead>
                         <tr>
                             <th></th>
-                            <th colspan="6" class="th_title">呼叫前</th>
+                            <th colspan="6" class="th_title">呼叫前(限客户端版本号>4.4.405)</th>
                             <th colspan="12" class="th_title">呼叫-应答</th>
                             <th colspan="7" class="th_title">完单-支付</th>
                         </tr>
@@ -2600,7 +2600,6 @@ def send_funnel_report_email(ds, **kwargs):
                             <th></th>
                             <th></th>
                             <th colspan="2" class="th_title">天气指标</th>
-                            <th colspan="6" class="th_title">呼叫前</th>
                             <th colspan="12" class="th_title">呼叫-应答</th>
                             <th colspan="7" class="th_title">完单-支付</th>
                         </tr>
@@ -2610,13 +2609,6 @@ def send_funnel_report_email(ds, **kwargs):
                             <!--天气指标-->
                             <th>天气</th>
                             <th>湿单占比</th>
-                            <!--呼叫前-->
-                            <th>地址选择需求数</th>
-                            <th>估价需求数</th>
-                            <th>地址选择-估价转化率</th>
-                            <th>地址选择-估价转化率（近4周同期均值）</th>
-                            <th>估价-下单转化率</th>
-                            <th>估价-下单转化率（近4周同期均值）</th>
                             <!--呼叫-应答-->
                             <th>下单乘客数</th>
                             <th>下单数</th>
@@ -2713,13 +2705,6 @@ def send_funnel_report_email(ds, **kwargs):
                 <!--天气指标-->
                 <td>{3}</td>
                 <td>{4}</td>
-                <!--呼叫前-->
-                <td><!--{5}--></td>
-                <td><!--{6}--></td>
-                <td><!--{7}%--></td>
-                <td><!--{8}%--></td>
-                <td><!--{9}%--></td>
-                <td><!--{10}%--></td>
                 <!--呼叫-应答-->
                 <td>{29}</td>
                 <td>{11}</td>
