@@ -217,20 +217,19 @@ class TaskTouchzSuccess(object):
                     #输出不同国家的数据路径
                     self.hdfs_data_dir_str=data_hdfs_path+"/dt="+self.ds+"/hour="+hour
 
-                print(self.hdfs_data_dir_str)
-
-                sys.exit(1)
-
-                self.data_not_file_type_touchz()
+                self.data_file_type_touchz()
 
             # 没有国家分区并且数据为空也生成 Success
             if country_partition.lower()=="false" and file_type.lower()=="false":
 
-                #输出不同国家的数据路径
-                self.hdfs_data_dir_str=data_hdfs_path+"/dt="+self.ds
+                if hour is None:
+                    #输出不同国家的数据路径
+                    self.hdfs_data_dir_str=data_hdfs_path+"/dt="+self.ds
+                else:
+                    #输出不同国家的数据路径
+                    self.hdfs_data_dir_str=data_hdfs_path+"/dt="+self.ds+"/hour="+hour
 
-                self.data_file_type_touchz()
-
+                self.data_not_file_type_touchz()
 
 
             for country_code_word in country_code_list.split(","):
@@ -239,17 +238,31 @@ class TaskTouchzSuccess(object):
                 #有国家分区并且每个目录必须有数据才能生成 Success
                 if country_partition.lower()=="true" and file_type.lower()=="true":
 
-                    #输出不同国家的数据路径
-                    self.hdfs_data_dir_str=data_hdfs_path+"/country_code="+country_code_word+"/dt="+self.ds
+                    if hour is None:
 
-                    self.data_not_file_type_touchz()
+                        #输出不同国家的数据路径
+                        self.hdfs_data_dir_str=data_hdfs_path+"/country_code="+country_code_word+"/dt="+self.ds
+                    else:
+
+                        #输出不同国家的数据路径
+                        self.hdfs_data_dir_str=data_hdfs_path+"/country_code="+country_code_word+"/dt="+self.ds+"/hour="+hour
+
+
+                    self.data_file_type_touchz()
 
                 
                 #有国家分区并且数据为空也生成 Success
                 if country_partition.lower()=="true" and file_type.lower()=="false":
 
-                    #输出不同国家的数据路径
-                    self.hdfs_data_dir_str=data_hdfs_path+"/country_code="+country_code_word+"/dt="+self.ds
+
+                    if hour is None:
+
+                        #输出不同国家的数据路径
+                        self.hdfs_data_dir_str=data_hdfs_path+"/country_code="+country_code_word+"/dt="+self.ds
+                    else:
+
+                        #输出不同国家的数据路径
+                        self.hdfs_data_dir_str=data_hdfs_path+"/country_code="+country_code_word+"/dt="+self.ds+"/hour="+hour
 
                     self.data_not_file_type_touchz()
 
