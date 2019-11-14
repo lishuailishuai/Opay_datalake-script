@@ -688,14 +688,14 @@ def execution_data_task_id(ds,**kargs):
     """
     TaskTouchzSuccess().countries_touchz_success(ds,db_name,table_name,hdfs_path,"true","true")
     
-dim_oride_city_task= PythonOperator(
-    task_id='dim_oride_city_task',
+dwd_oride_order_base_include_test_di_task= PythonOperator(
+    task_id='dwd_oride_order_base_include_test_di_task',
     python_callable=execution_data_task_id,
     provide_context=True,
     dag=dag
 )
 
-ods_sqoop_base_data_order_df_prev_day_task >>  dim_oride_city_task
-ods_sqoop_base_data_order_payment_df_prev_day_task >> dim_oride_city_task
-oride_client_event_detail_prev_day_task >> dim_oride_city_task
-dependence_dispatch_tracker_server_magic_task >> dim_oride_city_task
+ods_sqoop_base_data_order_df_prev_day_task >>  dwd_oride_order_base_include_test_di_task
+ods_sqoop_base_data_order_payment_df_prev_day_task >> dwd_oride_order_base_include_test_di_task
+oride_client_event_detail_prev_day_task >> dwd_oride_order_base_include_test_di_task
+dependence_dispatch_tracker_server_magic_task >> dwd_oride_order_base_include_test_di_task

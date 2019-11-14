@@ -185,11 +185,11 @@ def execution_data_task_id(ds,**kargs):
     """
     TaskTouchzSuccess().countries_touchz_success(ds,db_name,table_name,hdfs_path,"true","true")
     
-dim_oride_city_task= PythonOperator(
-    task_id='dim_oride_city_task',
+dm_oride_order_base_d_task= PythonOperator(
+    task_id='dm_oride_order_base_d_task',
     python_callable=execution_data_task_id,
     provide_context=True,
     dag=dag
 )
 
-dwm_oride_order_base_di_prev_day_task >>dim_oride_city_task
+dwm_oride_order_base_di_prev_day_task >>dm_oride_order_base_d_task

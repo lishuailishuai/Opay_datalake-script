@@ -135,8 +135,8 @@ def execution_data_task_id(ds,**kargs):
     """
     TaskTouchzSuccess().countries_touchz_success(ds,db_name,table_name,hdfs_path,"false","true")
     
-dim_oride_city_task= PythonOperator(
-    task_id='dim_oride_city_task',
+TaskTouchzSuccess_task= PythonOperator(
+    task_id='TaskTouchzSuccess_task',
     python_callable=execution_data_task_id,
     provide_context=True,
     dag=dag
@@ -144,4 +144,4 @@ dim_oride_city_task= PythonOperator(
 
 
 
-create_ods_log_oride_driver_timerange >> import_ods_log_oride_driver_timerange>>dim_oride_city_task
+create_ods_log_oride_driver_timerange >> import_ods_log_oride_driver_timerange>>TaskTouchzSuccess_task

@@ -139,8 +139,8 @@ def execution_data_task_id(ds,**kargs):
     """
     TaskTouchzSuccess().countries_touchz_success(ds,db_name,table_name,hdfs_path,"true","true")
     
-dim_oride_city_task= PythonOperator(
-    task_id='dim_oride_city_task',
+dwm_oride_order_pay_finish_di_task= PythonOperator(
+    task_id='dwm_oride_order_pay_finish_di_task',
     python_callable=execution_data_task_id,
     provide_context=True,
     dag=dag
@@ -148,4 +148,4 @@ dim_oride_city_task= PythonOperator(
 
 
 
-dwd_oride_order_pay_detail_di_prev_day_tesk>>dim_oride_city_task
+dwd_oride_order_pay_detail_di_prev_day_tesk>>dwm_oride_order_pay_finish_di_task

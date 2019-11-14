@@ -41,8 +41,8 @@ dag = airflow.DAG( 'dwd_oride_anti_fraud_log_di',
 
 
 #依赖前一天分区
-dwd_oride_anti_fraud_log_di_task=HivePartitionSensor(
-      task_id="dwd_oride_anti_fraud_log_di_task",
+log_anti_ofood_oride_fraud_task=HivePartitionSensor(
+      task_id="log_anti_ofood_oride_fraud_task",
       table="log_anti_ofood_oride_fraud",
       partition="dt='{{macros.ds_add(ds, +1)}}' and hour='00'",
       schema="oride_source",
@@ -157,11 +157,11 @@ def execution_data_task_id(ds,**kargs):
     """
     TaskTouchzSuccess().countries_touchz_success(ds,db_name,table_name,hdfs_path,"true","true")
     
-dim_oride_city_task= PythonOperator(
-    task_id='dim_oride_city_task',
+dwd_oride_anti_fraud_log_di_task= PythonOperator(
+    task_id='dwd_oride_anti_fraud_log_di_task',
     python_callable=execution_data_task_id,
     provide_context=True,
     dag=dag
 )
  
-dwd_oride_anti_fraud_log_di_task>>dim_oride_city_task
+log_anti_ofood_oride_fraud_task>>dwd_oride_anti_fraud_log_di_task

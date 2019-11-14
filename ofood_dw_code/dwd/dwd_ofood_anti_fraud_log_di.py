@@ -156,11 +156,11 @@ def execution_data_task_id(ds,**kargs):
     """
     TaskTouchzSuccess().countries_touchz_success(ds,db_name,table_name,hdfs_path,"true","true")
     
-dim_oride_city_task= PythonOperator(
-    task_id='dim_oride_city_task',
+dwd_ofood_anti_fraud_log_di_task= PythonOperator(
+    task_id='dwd_ofood_anti_fraud_log_di_task',
     python_callable=execution_data_task_id,
     provide_context=True,
     dag=dag
 )
  
-dwd_ofood_anti_fraud_log_di_prev_day_tesk>>dim_oride_city_task
+dwd_ofood_anti_fraud_log_di_prev_day_tesk>>dwd_ofood_anti_fraud_log_di_task

@@ -365,15 +365,15 @@ def execution_data_task_id(ds,**kargs):
     """
     TaskTouchzSuccess().countries_touchz_success(ds,db_name,table_name,hdfs_path,"true","true")
     
-dim_oride_city_task= PythonOperator(
-    task_id='dim_oride_city_task',
+dwd_oride_finance_driver_repayment_extend_df_task= PythonOperator(
+    task_id='dwd_oride_finance_driver_repayment_extend_df_task',
     python_callable=execution_data_task_id,
     provide_context=True,
     dag=dag
 )
 
-ods_sqoop_base_data_driver_balance_extend_df_prev_day_tesk>>dim_oride_city_task
-ods_sqoop_base_data_driver_records_day_df_prev_day_tesk>>dim_oride_city_task
-ods_sqoop_base_data_driver_recharge_records_df_prev_day_tesk>>dim_oride_city_task
-ods_sqoop_base_data_driver_repayment_df_prev_day_tesk>>dim_oride_city_task
-dim_oride_driver_base_prev_day_task>>dim_oride_city_task
+ods_sqoop_base_data_driver_balance_extend_df_prev_day_tesk>>dwd_oride_finance_driver_repayment_extend_df_task
+ods_sqoop_base_data_driver_records_day_df_prev_day_tesk>>dwd_oride_finance_driver_repayment_extend_df_task
+ods_sqoop_base_data_driver_recharge_records_df_prev_day_tesk>>dwd_oride_finance_driver_repayment_extend_df_task
+ods_sqoop_base_data_driver_repayment_df_prev_day_tesk>>dwd_oride_finance_driver_repayment_extend_df_task
+dim_oride_driver_base_prev_day_task>>dwd_oride_finance_driver_repayment_extend_df_task
