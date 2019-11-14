@@ -85,45 +85,46 @@ def dwd_ofood_anti_fraud_log_di_sql_task(ds):
     set hive.exec.parallel=true;
     set hive.exec.dynamic.partition.mode=nonstrict;
 
-INSERT overwrite TABLE ofood_dw.{table} partition(country_code,dt)
-select 
-action,--行为
-userid,--用户id
-deviceid,--设备id
-inviterrole,--邀请人类型
-inviterid,--邀请人id
-isblacklisted,--是否在黑名单
-isvirtualdevice,--是否是虚拟设备
-driverid,--司机id
-isroot,--是否root
-isvirtual,--是否为虚拟设备
-taketime,--接单时间
-waittime,--到达接送点时间
-pickuptime,--接到乘客时间
-arrivetime,--到达终点时间
-canceltime,--订单取消时间
-cancelreason,--订单取消原因
-createtime,--创建时间
-silencefrom,--静默开始时间
-silenceto,--静默结束时间
-behaviors,--行为id
-behavior,--行为id
-silenttime,--静默时间
-waitlat,--到达接送点纬度
-waitlng,--到达接送点经度
-arrivelat,--到达终点纬度
-arrivelng,--到达终点经度
-distance1,--司机等待乘客的位置与出发地
-distance2,--到达地和目的地的距离
-userdeviceid,--用户设备id
-issilent,--是否静默
-reason,--原因
-couponid,--优惠类型
-orderid,--订单id
-abnormalstrategy, --命中策略id
-'nal' as country_code,
-dt
- from  oride_source.log_anti_ofood_oride_fraud where dt='{pt}' and action in ('OFoodUserRegister','OFoodUseCoupon','OFoodPlaceOrder','OFoodCancelOrder')
+    INSERT overwrite TABLE ofood_dw.{table} partition(country_code,dt)
+    select 
+    action,--行为
+    userid,--用户id
+    deviceid,--设备id
+    inviterrole,--邀请人类型
+    inviterid,--邀请人id
+    isblacklisted,--是否在黑名单
+    isvirtualdevice,--是否是虚拟设备
+    driverid,--司机id
+    isroot,--是否root
+    isvirtual,--是否为虚拟设备
+    taketime,--接单时间
+    waittime,--到达接送点时间
+    pickuptime,--接到乘客时间
+    arrivetime,--到达终点时间
+    canceltime,--订单取消时间
+    cancelreason,--订单取消原因
+    createtime,--创建时间
+    silencefrom,--静默开始时间
+    silenceto,--静默结束时间
+    behaviors,--行为id
+    behavior,--行为id
+    silenttime,--静默时间
+    waitlat,--到达接送点纬度
+    waitlng,--到达接送点经度
+    arrivelat,--到达终点纬度
+    arrivelng,--到达终点经度
+    distance1,--司机等待乘客的位置与出发地
+    distance2,--到达地和目的地的距离
+    userdeviceid,--用户设备id
+    issilent,--是否静默
+    reason,--原因
+    couponid,--优惠类型
+    orderid,--订单id
+    abnormalstrategy, --命中策略id
+    'nal' as country_code,
+    dt
+     from  oride_source.log_anti_ofood_oride_fraud where dt='{pt}' and action in ('OFoodUserRegister','OFoodUseCoupon','OFoodPlaceOrder','OFoodCancelOrder')
+     ;
     '''.format(
         pt=ds,
         table=table_name,
