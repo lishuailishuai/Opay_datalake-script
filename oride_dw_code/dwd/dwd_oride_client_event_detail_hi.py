@@ -79,7 +79,7 @@ task_timeout_monitor= PythonOperator(
 
 ##----------------------------------------- 脚本 ---------------------------------------##
 
-def dwd_oride_client_event_detail_hi_sql_task(ds):
+def dwd_oride_client_event_detail_hi_sql_task(ds,hour):
     HQL='''
         SET hive.exec.parallel=TRUE;
         SET hive.exec.dynamic.partition.mode=nonstrict;
@@ -126,7 +126,7 @@ def dwd_oride_client_event_detail_hi_sql_task(ds):
 '''.format(
         pt=ds,
         now_day='{{macros.ds_add(ds, +1)}}',
-        now_hour='{{execution_date.strftime("%H")}}',
+        now_hour=hour,
         table=table_name,
         db=db_name
         )
@@ -142,7 +142,7 @@ def execution_data_task_id(ds,**kwargs):
     hive_hook = HiveCliHook()
 
     #读取sql
-    _sql=dwd_oride_client_event_detail_hi_sql_task(ds)
+    _sql=dwd_oride_client_event_detail_hi_sql_task(ds,v_hour)
 
     logging.info('Executing: %s', _sql)
 
