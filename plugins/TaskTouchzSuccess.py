@@ -203,10 +203,12 @@ class TaskTouchzSuccess(object):
             self.ds=ds
             self.table_name=table_name
 
+            print(hour)
+
             #获取国家列表
             country_code_list=self.get_country_code()
 
-            print(hour)
+
 
 
             # 没有国家分区并且每个目录必须有数据才能生成 Success
