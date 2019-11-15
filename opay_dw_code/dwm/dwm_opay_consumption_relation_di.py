@@ -69,46 +69,14 @@ dim_opay_payment_relation_df_task = UFileSensor(
 
 table_name = "dwm_opay_consumption_relation_di"
 hdfs_path="ufile://opay-datalake/opay/opay_dw/" + table_name
+db_name="opay_dw"
 
 
-##---- hive operator ---##
-# fill_dwm_opay_consumption_relation_di_task = HiveOperator(
-#     task_id='fill_dwm_opay_consumption_relation_di_task',
-#     hql='''
-#     set hive.exec.dynamic.partition.mode=nonstrict;
-#     insert overwrite table dwm_opay_consumption_relation_di
-#     partition(country_code, dt)
-#     select
-#         t1.payment_relation_id, t2.name payment_relation_name, t2.payment_relation_type, t2.role_relation_type, 'Consumption' service_type, t1.order_status, t1.order_amt, t1.order_cnt,
-#         t1.country_code, t1.dt
-#     from
-#     (
-#         select
-#             payment_relation_id, country_code, dt, sum(amount) order_amt, count(*) order_cnt, order_status
-#         from opay_dw.dwd_opay_business_collection_record_di
-#         group by country_code, dt, payment_relation_id, order_status
-#     ) t1
-#     join
-#     (
-#         select * from opay_dw.dim_opay_payment_relation_df where dt = '{pt}'
-#     ) t2
-#     on t1.payment_relation_id = t2.id
-#
-#     '''.format(
-#         pt='{{ds}}'
-#     ),
-#     schema='opay_dw',
-#     dag=dag
-# )
-##---- hive operator end ---##
-
-##---- hive operator ---##
-dwm_opay_consumption_relation_di_task = HiveOperator(
-    task_id='dwm_opay_consumption_relation_di_task',
-    hql='''
+def dwm_opay_consumption_relation_di_sql_task(ds):
+    HQL='''
     set hive.exec.dynamic.partition.mode=nonstrict;
     set hive.exec.parallel=true;
-    insert overwrite table dwm_opay_consumption_relation_di 
+    insert overwrite table {db}.{table} 
     partition(country_code, dt)
     select
         t1.payment_relation_id, t2.name payment_relation_name, t2.payment_relation_type, t2.role_relation_type, 'Consumption' service_type, t1.order_status, t1.order_amt, t1.order_cnt, 
@@ -127,30 +95,41 @@ dwm_opay_consumption_relation_di_task = HiveOperator(
     ) t2
     on t1.payment_relation_id = t2.id
     '''.format(
-        pt='{{ds}}'
-    ),
-    schema='opay_dw',
-    dag=dag
-)
+        pt=ds,
+        db=db_name,
+        table=table_name
+    )
+    return HQL
 
-#生成_SUCCESS
-def check_success(ds,dag,**op_kwargs):
+# 主流程
+def execution_data_task_id(ds, **kargs):
+    hive_hook = HiveCliHook()
 
-    dag_ids=dag.dag_id
+    # 读取sql
+    _sql = dwm_opay_consumption_relation_di_sql_task(ds)
 
-    msg = [
-        {"table":"{dag_name}".format(dag_name=dag_ids),"hdfs_path": "{hdfsPath}/country_code=NG/dt={pt}".format(pt=ds,hdfsPath=hdfs_path)}
-    ]
+    logging.info('Executing: %s', _sql)
 
-    TaskTouchzSuccess().set_touchz_success(msg)
+    # 执行Hive
+    hive_hook.run_cli(_sql)
 
-touchz_data_success= PythonOperator(
-    task_id='touchz_data_success',
-    python_callable=check_success,
+
+
+    # 生成_SUCCESS
+    """
+    第一个参数true: 数据目录是有country_code分区。false 没有
+    第二个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
+
+    """
+    TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "true", "true")
+
+
+dwm_opay_consumption_relation_di_task = PythonOperator(
+    task_id='dwm_opay_consumption_relation_di_task',
+    python_callable=execution_data_task_id,
     provide_context=True,
     dag=dag
 )
 
 dwd_opay_business_collection_record_di_task >> dwm_opay_consumption_relation_di_task
 dim_opay_payment_relation_df_task >> dwm_opay_consumption_relation_di_task
-dwm_opay_consumption_relation_di_task >> touchz_data_success
