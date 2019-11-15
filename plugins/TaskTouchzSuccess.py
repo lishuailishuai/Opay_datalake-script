@@ -138,8 +138,6 @@ class TaskTouchzSuccess(object):
     
             logging.info("DATA EXPORT Successed ......")
 
-            return
-
     
         except Exception as e:
 
@@ -185,8 +183,6 @@ class TaskTouchzSuccess(object):
         
                 logging.info("DATA EXPORT Successed ......")
 
-                return
-
     
         except Exception as e:
 
@@ -224,6 +220,8 @@ class TaskTouchzSuccess(object):
                     self.hdfs_data_dir_str=data_hdfs_path+"/dt="+self.ds+"/hour="+hour
 
                 self.data_file_type_touchz()
+
+                return
 
             # 没有国家分区并且数据为空也生成 Success
             if country_partition.lower()=="false" and file_type.lower()=="false":
