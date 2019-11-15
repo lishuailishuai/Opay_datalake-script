@@ -33,12 +33,6 @@ dag = airflow.DAG(
     default_args=args
 )
 
-sleep_time = BashOperator(
-    task_id='sleep_id',
-    depends_on_past=False,
-    bash_command='sleep 60',
-    dag=dag
-)
 
 hive_db = 'oride_dw'
 hive_table = 'dwd_oride_finance_driver_repayment_extend_df'
@@ -243,4 +237,5 @@ get_data_from_hive_task = PythonOperator(
 )
 
 
-dwd_oride_finance_driver_repayment_extend_df_tesk>>dwm_oride_driver_base_di_tesk>>sleep_time >> get_data_from_hive_task
+dwd_oride_finance_driver_repayment_extend_df_tesk>>get_data_from_hive_task
+dwm_oride_driver_base_di_tesk >> get_data_from_hive_task
