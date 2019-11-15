@@ -77,7 +77,7 @@ class TaskTouchzSuccess(object):
     
         except Exception as e:
 
-            self.comwx.postAppMessage('DW调度系统任务 {jobname} 数据产出异常'.format(jobname=self.table_name),'271')
+            #self.comwx.postAppMessage('DW调度系统任务 {jobname} 数据产出异常'.format(jobname=self.table_name),'271')
 
             logging.info(e)
 
@@ -136,7 +136,7 @@ class TaskTouchzSuccess(object):
     
         except Exception as e:
 
-            self.comwx.postAppMessage('DW调度系统任务 {jobname} 数据产出异常'.format(jobname=self.table_name),'271')
+            #self.comwx.postAppMessage('DW调度系统任务 {jobname} 数据产出异常'.format(jobname=self.table_name),'271')
 
             logging.info(e)
 
@@ -181,7 +181,7 @@ class TaskTouchzSuccess(object):
     
         except Exception as e:
 
-            self.comwx.postAppMessage('DW调度系统任务 {jobname} 数据产出异常'.format(jobname=self.table_name),'271')
+            #self.comwx.postAppMessage('DW调度系统任务 {jobname} 数据产出异常'.format(jobname=self.table_name),'271')
 
             logging.info(e)
 
@@ -269,7 +269,7 @@ class TaskTouchzSuccess(object):
             
         except Exception as e:
 
-            self.comwx.postAppMessage('DW调度系统任务 {jobname} 数据产出异常'.format(jobname=table_name),'271')
+            #self.comwx.postAppMessage('DW调度系统任务 {jobname} 数据产出异常'.format(jobname=table_name),'271')
 
             logging.info(e)
 
