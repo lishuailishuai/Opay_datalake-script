@@ -83,7 +83,7 @@ def app_opay_activity_stat_di_sql_task(ds):
              order_no, order_amount, benefit_amount,
              row_number() over(partition by order_no order by update_time desc) rn
         from opay_dw_ods.ods_sqoop_base_preferential_record_di
-        where dt = '{pt}'
+        where dt = '{pt}' and create_time BETWEEN date_format(date_sub('{pt}', 1), 'yyyy-MM-dd 23') AND date_format('{pt}', 'yyyy-MM-dd 23')
     ) t1 where t1.rn = 1 
     group by activity_id
 
