@@ -125,6 +125,8 @@ class TaskTouchzSuccess(object):
 
         try:
 
+            time.sleep(10)
+
             mkdir_str="$HADOOP_HOME/bin/hadoop fs -mkdir -p {hdfs_data_dir}".format(hdfs_data_dir=self.hdfs_data_dir_str)
             os.popen(mkdir_str)
 
@@ -153,6 +155,8 @@ class TaskTouchzSuccess(object):
         """
 
         try:
+
+            time.sleep(10)
         
             #判断数据文件是否为0
             line_str="$HADOOP_HOME/bin/hadoop fs -du -s {hdfs_data_dir} | tail -1 | awk \'{{print $1}}\'".format(hdfs_data_dir=self.hdfs_data_dir_str)
@@ -176,8 +180,6 @@ class TaskTouchzSuccess(object):
                 logging.info(succ_str)
         
                 os.popen(succ_str)
-
-                #time.sleep(10)
         
                 logging.info("DATA EXPORT Successed ......")
 
