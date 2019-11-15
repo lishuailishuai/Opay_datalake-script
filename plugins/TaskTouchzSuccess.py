@@ -208,10 +208,7 @@ class TaskTouchzSuccess(object):
             self.ds=ds
             self.table_name=table_name
 
-            #获取国家列表
-            country_code_list=self.get_country_code()
-
-
+        
             # 没有国家分区并且每个目录必须有数据才能生成 Success
             if country_partition.lower()=="false" and file_type.lower()=="true":
 
@@ -235,6 +232,10 @@ class TaskTouchzSuccess(object):
                     self.hdfs_data_dir_str=data_hdfs_path+"/dt="+self.ds+"/hour="+hour
 
                 self.data_not_file_type_touchz()
+
+
+            #获取国家列表
+            country_code_list=self.get_country_code()
 
 
             for country_code_word in country_code_list.split(","):
