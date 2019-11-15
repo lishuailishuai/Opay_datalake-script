@@ -67,16 +67,16 @@ def app_opay_activity_stat_di_sql_task(ds):
     HQL='''
    
     set hive.exec.dynamic.partition.mode=nonstrict;
-    set 
-    INSERT overwrite TABLE {db}.{table} partition('NG', '{pt}')
+    set hive.exec.parallel=true;
+    INSERT overwrite TABLE {db}.{table} partition(country_code='NG', dt='{pt}')
     select 
         activity_id, 
         'USER' as user_type,
         'customer' as user_role,
-        sum(order_amount) order_amt, 
-        sum(benefit_amount) benifit_amt, 
-        count(distinct order_no) order_cnt,
-        count(distinct user_id) user_cnt
+        sum(order_amount) as order_amt, 
+        count(distinct order_no) as order_cnt,
+        count(distinct user_id) as user_cnt,
+        sum(benefit_amount) as benifit_amt
     from (
         select 
              activity_id, user_id, 'USER' as user_type, 'customer' as customer,
