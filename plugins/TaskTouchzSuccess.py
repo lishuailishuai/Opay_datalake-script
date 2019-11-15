@@ -138,7 +138,7 @@ class TaskTouchzSuccess(object):
     
             logging.info("DATA EXPORT Successed ......")
 
-            sys.exit(0)
+            return
 
     
         except Exception as e:
@@ -185,7 +185,7 @@ class TaskTouchzSuccess(object):
         
                 logging.info("DATA EXPORT Successed ......")
 
-                sys.exit(0)
+                return
 
     
         except Exception as e:
