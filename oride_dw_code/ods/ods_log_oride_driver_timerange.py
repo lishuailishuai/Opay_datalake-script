@@ -16,6 +16,8 @@ import os
 from airflow.sensors.hive_partition_sensor import HivePartitionSensor
 from utils.validate_metrics_utils import *
 from airflow.operators.bash_operator import BashOperator
+from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
+from plugins.TaskTouchzSuccess import TaskTouchzSuccess
 
 args = {
         'owner': 'yangmingze',
