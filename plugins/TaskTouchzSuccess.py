@@ -124,7 +124,10 @@ class TaskTouchzSuccess(object):
         """
 
         try:
-        
+
+            mkdir_str="$HADOOP_HOME/bin/hadoop fs -mkdir -p {hdfs_data_dir}".format(hdfs_data_dir=self.hdfs_data_dir_str)
+            os.popen(mkdir_str)
+
             succ_str="$HADOOP_HOME/bin/hadoop fs -touchz {hdfs_data_dir}/_SUCCESS".format(hdfs_data_dir=self.hdfs_data_dir_str)
     
             logging.info(succ_str)
