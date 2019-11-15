@@ -36,10 +36,10 @@ dag = airflow.DAG('app_oride_order_finished_d',
 
 ##----------------------------------------- 依赖 ---------------------------------------##
 
-dwm_oride_driver_base_di_task = UFileSensor(
-    task_id='dwm_oride_driver_base_di_task',
+dwm_oride_driver_base_df_task = UFileSensor(
+    task_id='dwm_oride_driver_base_df_task',
     filepath='{hdfs_path_str}/country_code=nal/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw/dwm_oride_driver_base_di",
+        hdfs_path_str="oride/oride_dw/dwm_oride_driver_base_df",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -95,19 +95,19 @@ def app_oride_order_finished_d_sql_task(ds):
         
         insert overwrite table {db}.{table} partition(country_code,dt)
             select k2.city_name,
-                k1.driver_finish_ord_num as wdl, --完单量
+                k1.driver_finish_order_cnt as wdl, --完单量
                 count(distinct k1.driver_id) as qss,--完单司机数
-                round(sum(k1.finish_driver_online_dur)/(3600*count(distinct k1.driver_id)),2) as avg_online_dur,--平均在线时长
+                round(sum(k1.driver_finish_online_dur)/(3600*count(distinct k1.driver_id)),2) as avg_online_dur,--平均在线时长
                 'nal' AS country_code,--国家码
                 k1.dt
             from (
                 select a.dt,
                     a.city_id,
 	                a.driver_id,
-	                a.finish_driver_online_dur,--在线时长
-	                a.driver_finish_ord_num, --完单量
-	                a.is_finish_driver
-	            from oride_dw.dwm_oride_driver_base_di a
+	                a.driver_finish_online_dur,--在线时长
+	                nvl(a.driver_finish_order_cnt,0) driver_finish_order_cnt, --完单量
+	                a.is_td_finish
+	            from oride_dw.dwm_oride_driver_base_df a
 	            where a.dt='{pt}'
             ) k1
             left join 
@@ -119,7 +119,7 @@ def app_oride_order_finished_d_sql_task(ds):
             on k1.city_id=k2.city_id
             group by k2.city_name,
             k1.dt,
-            k1.driver_finish_ord_num;
+            k1.driver_finish_order_cnt;
     '''.format(
         pt=ds,
         table=table_name,
@@ -192,5 +192,5 @@ app_oride_order_finished_d_task = PythonOperator(
     dag=dag
 )
 
-dwm_oride_driver_base_di_task >>app_oride_order_finished_d_task
+dwm_oride_driver_base_df_task >>app_oride_order_finished_d_task
 dim_oride_city_task >>app_oride_order_finished_d_task
