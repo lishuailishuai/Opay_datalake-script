@@ -55,10 +55,10 @@ dim_oride_city_task = HivePartitionSensor(
     dag=dag
 )
 
-dwm_oride_driver_base_di_task = UFileSensor(
-    task_id='dwm_oride_driver_base_di_task',
+dwm_oride_driver_base_df_task = UFileSensor(
+    task_id='dwm_oride_driver_base_df_task',
     filepath='{hdfs_path_str}/country_code=nal/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw/dwm_oride_driver_base_di",
+        hdfs_path_str="oride/oride_dw/dwm_oride_driver_base_df",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -107,7 +107,7 @@ def app_oride_driver_invite_driver_d_sql_task(ds):
             count(DISTINCT a.driver_id) as submit_data_num,--提交资料人数
             count(DISTINCT if(a.status in (1,2,9),a.driver_id,null)) as audit_num,--现场审核人数
             count(DISTINCT if(a.status=2,a.driver_id,null)) as audit_success_num,--审核通过人数
-            count(DISTINCT if(d.is_finish_driver=1,a.driver_id,null)) as finish_driver_num, --完单司机数量
+            count(DISTINCT if(d.is_td_finish=1,a.driver_id,null)) as finish_driver_num, --完单司机数量
             'nal' as country_code,
             '{pt}' as dt
         from
@@ -126,8 +126,8 @@ def app_oride_driver_invite_driver_d_sql_task(ds):
         LEFT JOIN
         (
             SELECT driver_id,
-                is_finish_driver --是否完单司机标志
-            from oride_dw.dwm_oride_driver_base_di
+                is_td_finish --是否完单司机标志
+            from oride_dw.dwm_oride_driver_base_df
             where dt='{pt}'
         )as d
         on a.driver_id=d.driver_id
@@ -211,4 +211,4 @@ app_oride_driver_invite_driver_d_task = PythonOperator(
 
 ods_sqoop_mass_rider_signups_df_tesk>>app_oride_driver_invite_driver_d_task
 dim_oride_city_task>>app_oride_driver_invite_driver_d_task
-dwm_oride_driver_base_di_task>>app_oride_driver_invite_driver_d_task
+dwm_oride_driver_base_df_task>>app_oride_driver_invite_driver_d_task
