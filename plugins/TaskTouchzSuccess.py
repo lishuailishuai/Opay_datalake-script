@@ -235,6 +235,8 @@ class TaskTouchzSuccess(object):
 
                 self.data_not_file_type_touchz()
 
+                return
+
 
             #获取国家列表
             country_code_list=self.get_country_code()
@@ -273,6 +275,7 @@ class TaskTouchzSuccess(object):
                         self.hdfs_data_dir_str=data_hdfs_path+"/country_code="+country_code_word+"/dt="+self.ds+"/hour="+hour
 
                     self.data_not_file_type_touchz()
+
 
             
         except Exception as e:
