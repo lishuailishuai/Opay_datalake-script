@@ -631,7 +631,7 @@ left OUTER JOIN
         table=table_name,
         db=db_name
         )
-    return HQL
+    return hql
 
 
 
