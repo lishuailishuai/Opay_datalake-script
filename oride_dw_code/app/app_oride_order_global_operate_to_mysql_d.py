@@ -224,7 +224,7 @@ def app_oride_order_global_operate_to_mysql_d_sql_task(ds):
         amount.avg_finish_driver_amount, --司机人均收入
         users.finished_users,----完单乘客数
         users.first_finished_users as new_finished_users,----新增完单乘客数
-        round(od.wet_order_cnt / od.finish_order_cnt,2) as wet_order_rate,--湿单占比 
+        round(od.wet_order_cnt / od.order_cnt,2) as wet_order_rate,--湿单占比 
         od.country_code,
         od.dt
     from 
@@ -275,8 +275,8 @@ def app_oride_order_global_operate_to_mysql_d_sql_task(ds):
         ( --B端补贴  t1.recharge_amount+t1.reward_amount
             select 
                 city_id,
-                sum(if(create_date ='{pt}',reward_amount + reward_amount,0)) b_subsidy_d,--B端补贴、天
-                sum(reward_amount + reward_amount ) as b_subsidy_m,--B端补贴 月
+                sum(if(create_date ='{pt}',reward_amount + recharge_amount,0)) b_subsidy_d,--B端补贴、天
+                sum(reward_amount + recharge_amount ) as b_subsidy_m,--B端补贴 月
                 dt
             from oride_dw.dwd_oride_order_finance_df
             where dt ='{pt}' and month(create_date) = month('{pt}')
@@ -286,7 +286,7 @@ def app_oride_order_global_operate_to_mysql_d_sql_task(ds):
         (  --C端补贴  price- pay_amount is_finish=1
             select 
                 city_id,
-                sum(if(create_date ='{pt}',price - pay_amount,0)) c_subsidy_d,--B端补贴、天
+                sum(if(create_date ='{pt}',price - pay_amount,0)) c_subsidy_d,--C端补贴、天
                 sum(price - pay_amount) as c_subsidy_m,
                 dt
             from dwd_order_df
