@@ -8,6 +8,7 @@ from airflow.contrib.hooks.redis_hook import RedisHook
 from airflow.hooks.hive_hooks import HiveCliHook
 from airflow.operators.hive_to_mysql import HiveToMySqlTransfer
 from airflow.operators.mysql_operator import MySqlOperator
+from airflow.sensors.hive_partition_sensor import HivePartitionSensor
 import json
 import logging
 from airflow.models import Variable
@@ -377,52 +378,6 @@ create_opay_media_summary  = HiveOperator(
     schema='dashboard',
     dag=dag)
 
-create_driver_online_time  = HiveOperator(
-    task_id='create_driver_online_time',
-    hql="""
-        CREATE TABLE IF NOT EXISTS oride_driver_online_time (
-          driver_id int,
-          online_time int
-        )
-        PARTITIONED BY (
-            dt STRING
-        )
-        STORED AS PARQUET
-    """,
-    schema='dashboard',
-    dag=dag)
-
-def import_driver_online_time_to_hive(ds, ds_nodash, **kwargs):
-    redis_conn = RedisHook(redis_conn_id='pika').get_conn()
-    cursor=0
-    count=100
-    rows = []
-    while True:
-        result = redis_conn.scan(cursor, 'online_time:time:2:*:%s' % ds_nodash, count)
-        cursor = result[0]
-        if cursor == 0:
-            break
-        for k in result[1]:
-            v = redis_conn.get(k)
-            logging.info('k:%s, v:%s' % (k, v))
-            tmp = str(k, 'utf-8').split(':')
-            rows.append('('+ tmp[3] + ','+ str(v,'utf-8') +')')
-    if rows:
-        query = """
-            INSERT OVERWRITE TABLE dashboard.oride_driver_online_time PARTITION (dt='{dt}')
-            VALUES {value}
-        """.format(dt=ds, value=','.join(rows))
-        hive_hook = HiveCliHook()
-        hive_hook.run_cli(query)
-
-import_driver_online_time = PythonOperator(
-    task_id='import_driver_online_time',
-    python_callable=import_driver_online_time_to_hive,
-    provide_context=True,
-    dag=dag
-)
-
-
 create_coupon_summary = HiveOperator(
     task_id='create_coupon_summary',
     hql="""
@@ -501,6 +456,16 @@ insert_order_event_summary  = HiveOperator(
     schema='dashboard',
     dag=dag)
 
+
+dependent_dwd_oride_driver_timerange_di = HivePartitionSensor(
+    task_id="dependent_dwd_oride_driver_timerange_di",
+    table="dwd_oride_driver_timerange_di",
+    schema="oride_dw",
+    partition="dt='{{ds}}'",
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
 create_oride_driver_daily_summary = HiveOperator(
     task_id='create_oride_driver_daily_summary',
     hql="""
@@ -537,8 +502,8 @@ insert_oride_driver_daily_summary  = HiveOperator(
         with online_time as (
             select
                 driver_id,
-                online_time
-            from dashboard.oride_driver_online_time where dt='{{ ds }}'
+                driver_onlinerange as online_time
+            from oride_dw.dwd_oride_driver_timerange_di where dt='{{ ds }}'
         ),
         driver_comment as (
             select
@@ -650,7 +615,6 @@ refresh_impala = ImpalaOperator(
         REFRESH dashboard.opay_media_summary PARTITION (dt='{{macros.ds_add(ds, -1)}}');
         REFRESH dashboard.opay_media_summary PARTITION (dt='{{ds}}');
         REFRESH dashboard.oride_coupon_summary PARTITION (dt='{{ds}}');
-        REFRESH dashboard.oride_driver_online_time PARTITION (dt='{{ds}}');
         REFRESH dashboard.oride_order_event_summary PARTITION (dt='{{ds}}');
         REFRESH dashboard.oride_driver_daily_summary PARTITION (dt='{{ds}}');
     """,
@@ -671,9 +635,7 @@ import_opay_install_log >> insert_opay_media_summary
 insert_opay_media_summary >> refresh_impala
 create_coupon_summary >> insert_coupon_summary
 insert_coupon_summary >> refresh_impala
-create_driver_online_time >> import_driver_online_time
-import_driver_online_time >> refresh_impala
 create_order_event_summary >> insert_order_event_summary >> refresh_impala
-import_driver_online_time >> insert_oride_driver_daily_summary
 create_oride_driver_daily_summary >> insert_oride_driver_daily_summary >> refresh_impala
 insert_oride_driver_daily_summary >> clear_driver_daily_summary >> driver_daily_summary_to_msyql
+dependent_dwd_oride_driver_timerange_di >> insert_oride_driver_daily_summary
