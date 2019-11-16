@@ -39,11 +39,6 @@ dag = airflow.DAG('dwm_oride_coupon_sum_day',
                   default_args=args,
                   catchup=False)
 
-sleep_time = BashOperator(
-    task_id='sleep_id',
-    depends_on_past=False,
-    bash_command='sleep 30',
-    dag=dag)
 
 ##----------------------------------------- 依赖 ---------------------------------------##
 
@@ -51,7 +46,7 @@ sleep_time = BashOperator(
 dependence_dwd_oride_coupon_base_df_prev_day_task = UFileSensor(
     task_id='dependence_dwd_oride_coupon_base_df_prev_day_task',
     filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw/dwd_oride_coupon_base_df/country_code='nal'",
+        hdfs_path_str="oride/oride_dw/dwd_oride_coupon_base_df/country_code=nal",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',

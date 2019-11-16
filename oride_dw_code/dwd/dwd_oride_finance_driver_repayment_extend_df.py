@@ -84,7 +84,7 @@ ods_sqoop_base_data_driver_repayment_df_prev_day_tesk=HivePartitionSensor(
       table="ods_sqoop_base_data_driver_repayment_df",
       partition="dt='{{ds}}'",
       schema="oride_dw_ods",
-      poke_interval=60, #依赖不满足时，一分钟检查一次依赖状态 
+      poke_interval=60, #依赖不满足时，一分钟检查一次依赖状态
       dag=dag
     )
 
@@ -218,7 +218,7 @@ SELECT dri.city_id,
        nvl(aud.address,-1) as driver_address,
        --司机地址（-1 未知）
 
-       nvl(avg1.last_week_daily_due,0.0) as last_week_daily_due,
+       nvl(avg1.last_week_daily_due,0) as last_week_daily_due,
        --上周日均应还款金额
 
        dri.country_code,
@@ -291,24 +291,27 @@ LEFT OUTER JOIN
 ON dri.driver_id=aud.driver_id
 LEFT OUTER JOIN
 
+
 (select 
   age.driver_id,
-  sum(nvl(amount_agenter,0)+nvl(amount,0))/sum(if((nvl(amount_agenter,0)+nvl(amount,0))<>0,1,0)) as last_week_daily_due --上周日均应还款金额
+  sum(nvl(amount_agenter,0)+nvl(amount,0)) as fenzi, ----上周日均应还款金额分子
+  sum(if((nvl(amount_agenter,0)+nvl(amount,0))>0,1,0)) as fenmu,   --上周日均应还款金额分母
+  sum(nvl(amount_agenter,0)+nvl(amount,0))/sum(if((nvl(amount_agenter,0)+nvl(amount,0))>0,1,0)) as last_week_daily_due  --上周日均应还款金额
 from
-(SELECT driver_id,dt,
+(SELECT driver_id,from_unixtime(day,'yyyy-MM-dd') as day,
         sum(amount_agenter) as amount_agenter
    FROM oride_dw_ods.ods_sqoop_base_data_driver_records_day_df
-   WHERE dt BETWEEN DATE_ADD('{pt}', -6) AND DATE_ADD('{pt}',0)
-   GROUP BY driver_id,dt) age
+   WHERE dt='{pt}' and from_unixtime(day,'yyyy-MM-dd') BETWEEN DATE_ADD('{pt}', -6) AND DATE_ADD('{pt}',0)
+   GROUP BY driver_id,from_unixtime(day,'yyyy-MM-dd')) age
 LEFT OUTER JOIN 
-(SELECT driver_id,dt,
-        sum(amount) as amount
-      FROM oride_dw_ods.ods_sqoop_base_data_driver_repayment_df
-      WHERE dt BETWEEN DATE_ADD('{pt}', -6) AND DATE_ADD('{pt}',0)
-        AND substring(updated_at,1,13)<='{now_day} 00'
-        AND repayment_type=0
-      group by driver_id,dt) tb1
-ON age.driver_id = tb1.driver_id and age.dt = tb1.dt
+(select driver_id,from_unixtime(created_at,'yyyy-MM-dd') as created_at,
+sum(abs(amount)) as amount
+         FROM oride_dw_ods.ods_sqoop_base_data_driver_recharge_records_df
+         WHERE dt = '{pt}' and from_unixtime(created_at,'yyyy-MM-dd') BETWEEN DATE_ADD('{pt}', -6) AND DATE_ADD('{pt}',0)
+           AND from_unixtime(updated_at,'yyyy-MM-dd HH')<='2019-11-12 00'
+           AND amount_reason=6
+           AND amount<>0 group by driver_id,from_unixtime(created_at,'yyyy-MM-dd')) tb1
+ON age.driver_id = tb1.driver_id and age.day = tb1.created_at
 group by age.driver_id
 ) avg1
 on dri.driver_id=avg1.driver_id

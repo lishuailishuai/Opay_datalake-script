@@ -39,18 +39,12 @@ dag = airflow.DAG('dwd_oride_order_assign_driver_detail_di',
                   default_args=args,
                   catchup=False)
 
-sleep_time = BashOperator(
-    task_id='sleep_id',
-    depends_on_past=False,
-    bash_command='sleep 30',
-    dag=dag)
-
 ##----------------------------------------- 依赖 ---------------------------------------##
 
 
 # 依赖前一天分区
-dependence_dwd_oride_order_assign_driver_detail_di_prev_day_task = HivePartitionSensor(
-    task_id="dwd_oride_order_assign_driver_detail_di_prev_day_task",
+dispatch_tracker_server_magic_task = HivePartitionSensor(
+    task_id="dispatch_tracker_server_magic_task",
     table="dispatch_tracker_server_magic",
     partition="dt='{{ ds }}' and hour='23'",
     schema="oride_source",
@@ -60,11 +54,9 @@ dependence_dwd_oride_order_assign_driver_detail_di_prev_day_task = HivePartition
 
 ##----------------------------------------- 变量 ---------------------------------------##
 
-
+db_name="oride_dw"
 table_name = "dwd_oride_order_assign_driver_detail_di"
 hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
-
-
 
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
 
@@ -88,10 +80,9 @@ task_timeout_monitor = PythonOperator(
 
 ##----------------------------------------- 脚本 ---------------------------------------##
 
-dwd_oride_order_assign_driver_detail_di_task = HiveOperator(
-    task_id='dwd_oride_order_assign_driver_detail_di_task',
+def dwd_oride_order_assign_driver_detail_di_sql_task(ds):
 
-    hql='''
+    HQL='''
         SET hive.exec.parallel=TRUE;
         SET hive.exec.dynamic.partition.mode=nonstrict;
 
@@ -140,7 +131,7 @@ dwd_oride_order_assign_driver_detail_di_task = HiveOperator(
                 from oride_source.dispatch_tracker_server_magic 
                 where dt='{pt}' and event_name='dispatch_assign_driver' 
                 and from_unixtime(cast(get_json_object(event_values, '$.timestamp') as int), 'yyyy-MM-dd')='{pt}'
-                and get_json_object(event_values, '$.is_multiple')<>'true'
+                and (get_json_object(event_values, '$.is_multiple') is null or lower(get_json_object(event_values, '$.is_multiple'))='false')
                 
                 union all
                 
@@ -164,37 +155,52 @@ dwd_oride_order_assign_driver_detail_di_task = HiveOperator(
                 lateral view explode(split(substr(get_json_object(event_values, '$.order_list'),2,length(get_json_object(event_values, '$.order_list'))-2),',')) order_list as order_id1
                 where dt='{pt}' and event_name='dispatch_assign_driver' 
                 and from_unixtime(cast(get_json_object(event_values, '$.timestamp') as int), 'yyyy-MM-dd')='{pt}'
-                and get_json_object(event_values, '$.is_multiple')='true'
+                and lower(get_json_object(event_values, '$.is_multiple'))='true'
             ) as t 
             lateral view posexplode(drivers) d as dpos, driver_id 
             lateral view posexplode(distances) ds as dspos, dis 
             where dpos = dspos
         ) d
 '''.format(
-        pt='{{ds}}',
+        pt=ds,
         now_day='{{macros.ds_add(ds, +1)}}',
-        table=table_name
-    ),
-    dag=dag
-)
-
-# 生成_SUCCESS
-def check_success(ds, dag, **op_kwargs):
-    dag_ids = dag.dag_id
-
-    msg = [
-        {"table": "{dag_name}".format(dag_name=dag_ids),
-         "hdfs_path": "{hdfsPath}/country_code=nal/dt={pt}".format(pt=ds, hdfsPath=hdfs_path)}
-    ]
-
-    TaskTouchzSuccess().set_touchz_success(msg)
+        now_hour='{{ execution_date.strftime("%H") }}',
+        table=table_name,
+        db=db_name
+        )
+    return HQL
 
 
-touchz_data_success = PythonOperator(
-    task_id='touchz_data_success',
-    python_callable=check_success,
+#主流程
+def execution_data_task_id(ds,**kargs):
+
+    hive_hook = HiveCliHook()
+
+    #读取sql
+    _sql=dwd_oride_order_assign_driver_detail_di_sql_task(ds)
+
+    logging.info('Executing: %s', _sql)
+
+    #执行Hive
+    hive_hook.run_cli(_sql)
+
+    #熔断数据
+    #check_key_data_task(ds)
+
+    #生成_SUCCESS
+    """
+    第一个参数true: 数据目录是有country_code分区。false 没有
+    第二个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
+
+    """
+    TaskTouchzSuccess().countries_touchz_success(ds,db_name,table_name,hdfs_path,"true","true")
+    
+dwd_oride_order_assign_driver_detail_di_task= PythonOperator(
+    task_id='dwd_oride_order_assign_driver_detail_di_task',
+    python_callable=execution_data_task_id,
     provide_context=True,
     dag=dag
 )
 
-dependence_dwd_oride_order_assign_driver_detail_di_prev_day_task >> sleep_time >> dwd_oride_order_assign_driver_detail_di_task >> touchz_data_success
+
+dispatch_tracker_server_magic_task >>dwd_oride_order_assign_driver_detail_di_task

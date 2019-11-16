@@ -61,7 +61,7 @@ db_name="oride_dw"
 table_name = "dwd_oride_passenger_complaint_df"
 hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
 
-##----------------------------------------- 任务超时监控 ---------------------------------------## 
+##----------------------------------------- 任务超时监控 ---------------------------------------##
 
 def fun_task_timeout_monitor(ds,dag,**op_kwargs):
 
@@ -114,41 +114,9 @@ def dwd_oride_passenger_complaint_df_sql_task(ds):
         pt=ds,
         table=table_name,
         db=db_name
-    )
-    return HQL
+)
+    return  HQL
 
-#熔断数据，如果数据重复，报错
-def check_key_data_task(ds):
-
-    cursor = get_hive_cursor()
-
-    #主键重复校验
-    check_sql='''
-    select count(1)-count(distinct order_id) as cnt
-    from {db}.{table}
-    where dt='{pt}'
-    and country_code in ('nal')
-    '''.format(
-        pt=ds,
-        now_day=airflow.macros.ds_add(ds, +1),
-        table=table_name,
-        db=db_name
-    )
-    logging.info('Executing 主键重复校验: %s', check_sql)
-
-    cursor.execute(check_sql)
-
-    res = cursor.fetchone()
-
-    if res[0] > 1:
-        flag = 1
-        raise Exception("Error The primary key repeat !", res)
-        sys.exit(1)
-    else:
-        flag = 0
-        print("-----> Notice Data Export Success ......")
-
-    return flag
 
 #主流程
 def execution_data_task_id(ds,**kargs):
@@ -160,25 +128,24 @@ def execution_data_task_id(ds,**kargs):
 
     logging.info('Executing: %s', _sql)
 
-    # 执行Hive
+    #执行Hive
     hive_hook.run_cli(_sql)
 
-    # 熔断数据
-    check_key_data_task(ds)
 
-    # 生成_SUCCESS
+    #生成_SUCCESS
     """
     第一个参数true: 数据目录是有country_code分区。false 没有
     第二个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
 
     """
-    TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "true", "true")
+    TaskTouchzSuccess().countries_touchz_success(ds,db_name,table_name,hdfs_path,"true","false")
 
-dwd_oride_passenger_complaint_df_task=PythonOperator(
+dwd_oride_passenger_complaint_df_task= PythonOperator(
     task_id='dwd_oride_passenger_complaint_df_task',
     python_callable=execution_data_task_id,
     provide_context=True,
     dag=dag
 )
 
-ods_sqoop_base_data_user_complaint_df_task >> dwd_oride_passenger_complaint_df_task
+
+ods_sqoop_base_data_user_complaint_df_task >>  dwd_oride_passenger_complaint_df_task

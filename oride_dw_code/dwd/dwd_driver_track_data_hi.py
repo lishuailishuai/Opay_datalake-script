@@ -24,8 +24,8 @@ import requests
 import os
 
 args = {
-    'owner': 'yangmingze',
-    'start_date': datetime(2019, 10, 1),
+    'owner': 'lili.chen',
+    'start_date': datetime(2019, 11, 13),
     'depends_on_past': False,
     'retries': 3,
     'retry_delay': timedelta(minutes=2),
@@ -34,117 +34,125 @@ args = {
     'email_on_retry': False,
 }
 
-dag = airflow.DAG('dwd_oride_driver_reward_di',
-                  schedule_interval="50 01 * * *",
+dag = airflow.DAG('dwd_driver_track_data_hi',
+                  schedule_interval="30 * * * *",
                   default_args=args,
                   catchup=False)
 
 ##----------------------------------------- 依赖 ---------------------------------------##
 
-
 # 依赖前一天分区
-ods_sqoop_base_data_driver_reward_df_task = UFileSensor(
-    task_id='ods_sqoop_base_data_driver_reward_df_task',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride_dw_sqoop/oride_data/data_driver_reward",
-        pt='{{ds}}'
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+dependence_ods_log_driver_track_data_hi_task = HivePartitionSensor(
+    task_id="dependence_ods_log_driver_track_data_hi_task",
+    table="ods_log_driver_track_data_hi",
+    partition=""" dt='{{ ds }}' and hour='{{ execution_date.strftime("%H") }}' """,
+    schema="oride_dw_ods",
+    poke_interval=60,
     dag=dag
-) 
+)
 
 ##----------------------------------------- 变量 ---------------------------------------##
 
-db_name="oride_dw"
-table_name = "dwd_oride_driver_reward_di"
+db_name = "oride_dw"
+table_name = "dwd_driver_track_data_hi"
 hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
 
-##----------------------------------------- 任务超时监控 ---------------------------------------## 
 
-def fun_task_timeout_monitor(ds,dag,**op_kwargs):
+##----------------------------------------- 任务超时监控 ---------------------------------------##
 
-    dag_ids=dag.dag_id
+def fun_task_timeout_monitor(ds, dag, **op_kwargs):
+    dag_ids = dag.dag_id
 
     tb = [
-        {"db": "oride_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "600"}
+        {"db": "oride_dw", "table": "{dag_name}".format(dag_name=dag_ids),
+         "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "600"}
     ]
 
     TaskTimeoutMonitor().set_task_monitor(tb)
 
-task_timeout_monitor= PythonOperator(
+
+task_timeout_monitor = PythonOperator(
     task_id='task_timeout_monitor',
     python_callable=fun_task_timeout_monitor,
     provide_context=True,
     dag=dag
 )
 
+
 ##----------------------------------------- 脚本 ---------------------------------------##
+def dwd_driver_track_data_hi_sql_task(ds):
+    HQL = '''
+    SET hive.exec.parallel=TRUE;
+   SET hive.exec.dynamic.partition.mode=nonstrict;
+   insert overwrite table oride_dw.dwd_driver_track_data_hi partition(country_code,dt,hour)   
+   select id as driver_id,
+          --司机ID
 
-def dwd_oride_driver_reward_di_sql_task(ds):
+          order_id as order_id,
+          --订单ID
 
-    HQL='''
-        SET hive.exec.parallel=TRUE;
-        SET hive.exec.dynamic.partition.mode=nonstrict;
+          lng, 
+          --经度
 
-        insert overwrite table oride_dw.{table} partition(country_code,dt)
+          lat,
+          --纬度
 
-        SELECT
-            id,--奖励 ID, 
-            driver_id,--司机 ID, 
-            order_id,--订单 ID, 
-            reward_type,--奖励类型, 
-            reward_id,--奖励 ID, 
-            reward_name,--奖励名称, 
-            order_num,--订单数量, 
-            amount,--奖励金额, 
-            create_time,--奖励时间
-            'nal' as country_code,
-            '{pt}' as dt
-        FROM
-            oride_dw_ods.ods_sqoop_base_data_driver_reward_df
-        WHERE
-            dt='{pt}'
-        ;
-'''.format(
+          direction,
+          --方向
+
+          mode,
+          --模式
+
+          city_id,
+          --城市ID
+
+          `timestamp` as log_timestamp,
+          --日志时间
+
+          'nal' as country_code,
+
+          dt,
+          
+          hour
+
+    from oride_dw_ods.ods_log_driver_track_data_hi
+   where dt='{pt}';
+    '''.format(
         pt=ds,
-        now_day='{{macros.ds_add(ds, +1)}}',
-        now_hour='{{ execution_date.strftime("%H") }}',
+        now_day=airflow.macros.ds_add(ds, +1),
         table=table_name,
         db=db_name
-        )
+    )
     return HQL
 
 
-#主流程
-def execution_data_task_id(ds,**kargs):
-
+# 主流程
+def execution_data_task_id(ds, **kargs):
     hive_hook = HiveCliHook()
 
-    #读取sql
-    _sql=dwd_oride_driver_reward_di_sql_task(ds)
+    # 读取sql
+    _sql = dwd_driver_track_data_hi_sql_task(ds)
 
     logging.info('Executing: %s', _sql)
 
-    #执行Hive
+    # 执行Hive
     hive_hook.run_cli(_sql)
 
-    #熔断数据
-    #check_key_data_task(ds)
-
-    #生成_SUCCESS
+    # 生成_SUCCESS
     """
     第一个参数true: 数据目录是有country_code分区。false 没有
     第二个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
 
     """
-    TaskTouchzSuccess().countries_touchz_success(ds,db_name,table_name,hdfs_path,"true","true")
-    
-dwd_oride_driver_reward_di_task= PythonOperator(
-    task_id='dwd_oride_driver_reward_di_task',
+    TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "true", "true")
+
+
+dwd_driver_track_data_hi_task = PythonOperator(
+    task_id='dwd_driver_track_data_hi_task',
     python_callable=execution_data_task_id,
     provide_context=True,
     dag=dag
 )
 
-ods_sqoop_base_data_driver_reward_df_task >>dwd_oride_driver_reward_di_task
+dependence_ods_log_driver_track_data_hi_task >> dwd_driver_track_data_hi_task
+

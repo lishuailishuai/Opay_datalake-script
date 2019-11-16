@@ -301,7 +301,7 @@ select dri.driver_id,
                 sum(is_td_finish) as is_td_finish,  --用于判断司机是否有完单，该字段为司机当天完单量  
                 sum(is_td_finish_pay) as is_td_finish_pay,  --用于判断司机是否有支付完单，该字段为司机当天支付完单量
                 sum(if(is_td_finish = 1, price, 0)) as price, --司机完单gmv
-                sum(td_billing_dur) as td_billing_dur, --司机计费时长，和司机完单计费时长不一样
+                sum(td_billing_dur) as td_billing_dur, --司机计费时长，和司机完单计费时长不一样,有些订单status不是完单，比如4变6的那种
                 sum(td_service_dur) as td_service_dur, --司机服务时长
                 sum(td_finish_order_dur) as td_finish_order_dur, --司机支付完单做单时长（支付跨天可能偏大）
                 sum(td_cannel_pick_dur) as td_cannel_pick_dur, --司机当天订单被取消时长

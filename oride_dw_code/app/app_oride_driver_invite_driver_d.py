@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-昨日司机完单分布图多城市对比
+司机邀请司机数据表
 """
 import airflow
 from airflow.operators.hive_operator import HiveOperator
@@ -20,7 +20,7 @@ from airflow.hooks.hive_hooks import HiveCliHook, HiveServer2Hook
 
 args = {
     'owner': 'chenghui',
-    'start_date': datetime(2019, 10, 26),
+    'start_date': datetime(2019, 11, 13),
     'depends_on_past': False,
     'retries': 3,
     'retry_delay': timedelta(minutes=5),
@@ -29,12 +29,31 @@ args = {
     'email_on_retry': False,
 }
 
-dag = airflow.DAG('app_oride_order_finished_d',
-                  schedule_interval="30 4 * * *",
+dag = airflow.DAG('app_oride_driver_invite_driver_d',
+                  schedule_interval="00 4 * * *",
                   default_args=args,
                   catchup=False)
 
 ##----------------------------------------- 依赖 ---------------------------------------##
+
+#依赖前一天分区
+ods_sqoop_mass_rider_signups_df_tesk=HivePartitionSensor(
+      task_id="ods_sqoop_mass_rider_signups_df_tesk",
+      table="ods_sqoop_mass_rider_signups_df",
+      partition="dt='{{ds}}'",
+      schema="oride_dw_ods",
+      poke_interval=60, #依赖不满足时，一分钟检查一次依赖状态
+      dag=dag
+    )
+
+dim_oride_city_task = HivePartitionSensor(
+    task_id="dim_oride_city_task",
+    table="dim_oride_city",
+    partition="dt='{{ds}}'",
+    schema="oride_dw",
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
 
 dwm_oride_driver_base_df_task = UFileSensor(
     task_id='dwm_oride_driver_base_df_task',
@@ -47,23 +66,11 @@ dwm_oride_driver_base_df_task = UFileSensor(
     dag=dag
 )
 
-dim_oride_city_task = HivePartitionSensor(
-    task_id="dim_oride_city_task",
-    table="dim_oride_city",
-    partition="dt='{{ds}}'",
-    schema="oride_dw",
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
-
-
-
 ##----------------------------------------- 变量 ---------------------------------------##
 
 db_name = "oride_dw"
-table_name = "app_oride_order_finished_d"
+table_name = "app_oride_driver_invite_driver_d"
 hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
-
 
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
 
@@ -85,41 +92,50 @@ task_timeout_monitor = PythonOperator(
     dag=dag
 )
 
-##----------------------------------------- 脚本 ---------------------------------------##
-
-def app_oride_order_finished_d_sql_task(ds):
+def app_oride_driver_invite_driver_d_sql_task(ds):
 
     HQL='''
         SET hive.exec.parallel=TRUE;
         SET hive.exec.dynamic.partition.mode=nonstrict;
         
-        insert overwrite table {db}.{table} partition(country_code,dt)
-            select k2.city_name,
-                k1.driver_finish_order_cnt as wdl, --完单量
-                count(distinct k1.driver_id) as qss,--完单司机数
-                round(sum(k1.driver_finish_online_dur)/(3600*count(distinct k1.driver_id)),2) as avg_online_dur,--平均在线时长
-                'nal' AS country_code,--国家码
-                k1.dt
-            from (
-                select a.dt,
-                    a.city_id,
-	                a.driver_id,
-	                a.driver_finish_online_dur,--在线时长
-	                nvl(a.driver_finish_order_cnt,0) driver_finish_order_cnt, --完单量
-	                a.is_td_finish
-	            from oride_dw.dwm_oride_driver_base_df a
-	            where a.dt='{pt}'
-            ) k1
-            left join 
-            (
-                select city_id,city_name
-                from oride_dw.dim_oride_city
-                where dt='{pt}'
-            ) k2
-            on k1.city_id=k2.city_id
-            group by k2.city_name,
-            k1.dt,
-            k1.driver_finish_order_cnt;
+        INSERT OVERWRITE table {db}.{table} partition(country_code,dt)
+        SELECT 
+            a.commit_day,--提交日
+            c.city_name  as regional_name,--地域名
+            if(a.driver_type is NOT NULL,a.driver_type,0) as product_id,--业务线
+            a.know_orider,--渠道
+            count(DISTINCT a.driver_id) as submit_data_num,--提交资料人数
+            count(DISTINCT if(a.status in (1,2,9),a.driver_id,null)) as audit_num,--现场审核人数
+            count(DISTINCT if(a.status=2,a.driver_id,null)) as audit_success_num,--审核通过人数
+            count(DISTINCT if(d.is_td_finish=1,a.driver_id,null)) as finish_driver_num, --完单司机数量
+            'nal' as country_code,
+            '{pt}' as dt
+        from
+        (
+            SELECT *,from_unixtime(create_time,'yyyy-MM-dd') as commit_day
+            from oride_dw_ods.ods_sqoop_mass_rider_signups_df
+            where dt='{pt}' and know_orider in(7,13,14) and driver_id!=0
+        ) as a 
+        LEFT JOIN 
+        (
+            SELECT city_id,city_name
+            from oride_dw.dim_oride_city 
+            WHERE dt='{pt}'
+        )as c
+        on a.city=c.city_id
+        LEFT JOIN
+        (
+            SELECT driver_id,
+                is_td_finish --是否完单司机标志
+            from oride_dw.dwm_oride_driver_base_df
+            where dt='{pt}'
+        )as d
+        on a.driver_id=d.driver_id
+        GROUP BY a.commit_day,c.city_name,a.driver_type,a.know_orider 
+        GROUPING SETS(
+            (a.commit_day,c.city_name,a.driver_type,a.know_orider),
+            (a.commit_day,c.city_name,a.know_orider)
+        );
     '''.format(
         pt=ds,
         table=table_name,
@@ -134,7 +150,7 @@ def check_key_data_task(ds):
 
     # 主键重复校验
     check_sql ='''
-        select count(1)-count(distinct city_name,wdl) as cnt
+        select count(1)-count(distinct commit_day,regional_name,product_id,know_orider) as cnt
         from {db}.{table}
         where dt='{pt}'
         and country_code in ('nal')
@@ -161,36 +177,38 @@ def check_key_data_task(ds):
 
     return flag
 
+
 #主流程
 def execution_data_task_id(ds,**kargs):
 
     hive_hook = HiveCliHook()
 
     #读取sql
-    _sql=app_oride_order_finished_d_sql_task(ds)
+    _sql=app_oride_driver_invite_driver_d_sql_task(ds)
 
     logging.info('Executing: %s', _sql)
 
-    #执行Hive
+    # 执行Hive
     hive_hook.run_cli(_sql)
 
-    #熔断数据
+    # 熔断数据
     check_key_data_task(ds)
 
-    #生成_SUCCESS
+    # 生成_SUCCESS
     """
     第一个参数true: 数据目录是有country_code分区。false 没有
     第二个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
 
     """
-    TaskTouchzSuccess().countries_touchz_success(ds,db_name,table_name,hdfs_path,"true","true")
+    TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "true", "true")
 
-app_oride_order_finished_d_task = PythonOperator(
-    task_id='app_oride_order_finished_d_task',
+app_oride_driver_invite_driver_d_task = PythonOperator(
+    task_id='app_oride_driver_invite_driver_d_task',
     python_callable=execution_data_task_id,
     provide_context=True,
     dag=dag
 )
 
-dwm_oride_driver_base_df_task >>app_oride_order_finished_d_task
-dim_oride_city_task >>app_oride_order_finished_d_task
+ods_sqoop_mass_rider_signups_df_tesk>>app_oride_driver_invite_driver_d_task
+dim_oride_city_task>>app_oride_driver_invite_driver_d_task
+dwm_oride_driver_base_df_task>>app_oride_driver_invite_driver_d_task

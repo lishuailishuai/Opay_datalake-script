@@ -872,12 +872,12 @@ def get_driver_num(**op_kwargs):
         a_member = a_member.union(set(redis_conn.smembers(active_a_driver % dt)))
         no_member = no_member.union(set(redis_conn.smembers(active_no_driver % dt)))
     for mem in a_member:
-        tmp = driver_dic[int(mem)]
+        tmp = driver_dic.get(int(mem), '0,0')
         if tmp not in driver_num:
             driver_num[tmp] = {"a_mem": 0, "no_mem": 0}
         driver_num[tmp]["a_mem"] += 1
     for mem in no_member:
-        tmp = driver_dic[int(mem)]
+        tmp = driver_dic.get(int(mem), '0,0')
         if tmp not in driver_num:
             driver_num[tmp] = {"a_mem": 0, "no_mem": 0}
         driver_num[tmp]["no_mem"] += 1

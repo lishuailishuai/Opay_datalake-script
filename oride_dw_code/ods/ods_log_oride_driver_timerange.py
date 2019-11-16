@@ -16,6 +16,8 @@ import os
 from airflow.sensors.hive_partition_sensor import HivePartitionSensor
 from utils.validate_metrics_utils import *
 from airflow.operators.bash_operator import BashOperator
+from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
+from plugins.TaskTouchzSuccess import TaskTouchzSuccess
 
 args = {
         'owner': 'yangmingze',
@@ -35,7 +37,7 @@ dag = airflow.DAG( 'ods_oride_log_driver_timerange',
 
 ##----------------------------------------- 变量 ---------------------------------------##
 
-
+db_name="oride_dw_ods"
 table_name = "ods_log_oride_driver_timerange"
 hdfs_path = "ufile://opay-datalake/oride/oride_dw_ods/" + table_name
 
@@ -124,28 +126,24 @@ create_ods_log_oride_driver_timerange = HiveOperator(
     dag=dag)
 
 
-# 生成_SUCCESS
-touchz_data_success = BashOperator(
+#主流程
+def execution_data_task_id(ds,**kargs):
 
-    task_id='touchz_data_success',
+    #生成_SUCCESS
+    """
+    第一个参数true: 数据目录是有country_code分区。false 没有
+    第二个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
 
-    bash_command="""
-    line_num=`$HADOOP_HOME/bin/hadoop fs -du -s {hdfs_data_dir} | tail -1 | awk '{{print $1}}'`
-
-    if [ $line_num -eq 0 ]
-    then
-        echo "FATAL {hdfs_data_dir} is empty"
-        exit 1
-    else
-        echo "DATA EXPORT Successed ......"
-        $HADOOP_HOME/bin/hadoop fs -touchz {hdfs_data_dir}/_SUCCESS
-    fi
-    """.format(
-        pt='{{ds}}',
-        now_day='{{macros.ds_add(ds, +1)}}',
-        hdfs_data_dir=hdfs_path + '/dt={{ds}}'
-    ),
-    dag=dag)
+    """
+    TaskTouchzSuccess().countries_touchz_success(ds,db_name,table_name,hdfs_path,"false","true")
+    
+TaskTouchzSuccess_task= PythonOperator(
+    task_id='TaskTouchzSuccess_task',
+    python_callable=execution_data_task_id,
+    provide_context=True,
+    dag=dag
+)
 
 
-create_ods_log_oride_driver_timerange >> import_ods_log_oride_driver_timerange>>touchz_data_success
+
+create_ods_log_oride_driver_timerange >> import_ods_log_oride_driver_timerange>>TaskTouchzSuccess_task

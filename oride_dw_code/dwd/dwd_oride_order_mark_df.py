@@ -42,10 +42,10 @@ dag = airflow.DAG('dwd_oride_order_mark_df',
 ##----------------------------------------- 依赖 ---------------------------------------##
 
 # 依赖前一天分区
-dwd_oride_order_base_include_test_df_prev_day_task = UFileSensor(
-    task_id='dwd_oride_order_base_include_test_df_prev_day_task',
+dwd_oride_order_base_include_test_di_prev_day_task = UFileSensor(
+    task_id='dwd_oride_order_base_include_test_di_prev_day_task',
     filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw/dwd_oride_order_base_include_test_df/country_code=nal",
+        hdfs_path_str="oride/oride_dw/dwd_oride_order_base_include_test_di/country_code=nal",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -260,7 +260,7 @@ dwd_oride_order_mark_df_task = PythonOperator(
     dag=dag
 )
 
-dwd_oride_order_base_include_test_df_prev_day_task >> \
+dwd_oride_order_base_include_test_di_prev_day_task >> \
 dim_oride_city_prev_day_task >> \
 ods_sqoop_base_weather_per_10min_df_prev_day_task >> \
 ods_sqoop_base_data_user_comment_df_prev_day_task >> \

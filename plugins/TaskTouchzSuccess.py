@@ -77,7 +77,7 @@ class TaskTouchzSuccess(object):
     
         except Exception as e:
 
-            self.comwx.postAppMessage('DW调度系统任务 {jobname} 数据产出异常'.format(jobname=self.table_name),'271')
+            #self.comwx.postAppMessage('DW调度系统任务 {jobname} 数据产出异常'.format(jobname=self.table_name),'271')
 
             logging.info(e)
 
@@ -124,38 +124,24 @@ class TaskTouchzSuccess(object):
         """
 
         try:
-        
-            #判断数据文件是否为0
-            line_str="$HADOOP_HOME/bin/hadoop fs -du -s {hdfs_data_dir} | tail -1 | awk \'{{print $1}}\'".format(hdfs_data_dir=self.hdfs_data_dir_str)
-    
-            logging.info(line_str)
-        
-            with os.popen(line_str) as p:
-                line_num=p.read()
-        
-            #数据为0，发微信报警通知
-            if line_num[0] == str(0):
-                
-                self.comwx.postAppMessage('DW调度系统任务 {jobname} 数据产出异常'.format(jobname=self.table_name), '271')
 
-                logging.info("Error : {hdfs_data_dir} is empty".format(hdfs_data_dir=self.hdfs_data_dir_str))
-                sys.exit(1)
-        
-            else:  
-                succ_str="$HADOOP_HOME/bin/hadoop fs -touchz {hdfs_data_dir}/_SUCCESS".format(hdfs_data_dir=self.hdfs_data_dir_str)
-    
-                logging.info(succ_str)
-        
-                os.popen(succ_str)
+            time.sleep(10)
 
-                time.sleep(10)
-        
-                logging.info("DATA EXPORT Successed ......")
+            mkdir_str="$HADOOP_HOME/bin/hadoop fs -mkdir -p {hdfs_data_dir}".format(hdfs_data_dir=self.hdfs_data_dir_str)
+            os.popen(mkdir_str)
+
+            succ_str="$HADOOP_HOME/bin/hadoop fs -touchz {hdfs_data_dir}/_SUCCESS".format(hdfs_data_dir=self.hdfs_data_dir_str)
+    
+            logging.info(succ_str)
+    
+            os.popen(succ_str)
+    
+            logging.info("DATA EXPORT Successed ......")
 
     
         except Exception as e:
 
-            self.comwx.postAppMessage('DW调度系统任务 {jobname} 数据产出异常'.format(jobname=self.table_name),'271')
+            #self.comwx.postAppMessage('DW调度系统任务 {jobname} 数据产出异常'.format(jobname=self.table_name),'271')
 
             logging.info(e)
 
@@ -169,6 +155,8 @@ class TaskTouchzSuccess(object):
         """
 
         try:
+
+            time.sleep(10)
         
             #判断数据文件是否为0
             line_str="$HADOOP_HOME/bin/hadoop fs -du -s {hdfs_data_dir} | tail -1 | awk \'{{print $1}}\'".format(hdfs_data_dir=self.hdfs_data_dir_str)
@@ -192,15 +180,13 @@ class TaskTouchzSuccess(object):
                 logging.info(succ_str)
         
                 os.popen(succ_str)
-
-                time.sleep(10)
         
                 logging.info("DATA EXPORT Successed ......")
 
     
         except Exception as e:
 
-            self.comwx.postAppMessage('DW调度系统任务 {jobname} 数据产出异常'.format(jobname=self.table_name),'271')
+            #self.comwx.postAppMessage('DW调度系统任务 {jobname} 数据产出异常'.format(jobname=self.table_name),'271')
 
             logging.info(e)
 
@@ -208,7 +194,7 @@ class TaskTouchzSuccess(object):
 
 
 
-    def countries_touchz_success(self,ds,db_name,table_name,data_hdfs_path,country_partition="true",file_type="true"):
+    def countries_touchz_success(self,ds,db_name,table_name,data_hdfs_path,country_partition="true",file_type="true",hour=None):
 
         """
         country_partition:是否有国家分区
@@ -222,25 +208,38 @@ class TaskTouchzSuccess(object):
             self.ds=ds
             self.table_name=table_name
 
-            #获取国家列表
-            country_code_list=self.get_country_code()
-
-
+        
             # 没有国家分区并且每个目录必须有数据才能生成 Success
             if country_partition.lower()=="false" and file_type.lower()=="true":
 
-                #输出不同国家的数据路径
-                self.hdfs_data_dir_str=data_hdfs_path+"/dt="+self.ds
+                if hour is None:
+                    #输出不同国家的数据路径
+                    self.hdfs_data_dir_str=data_hdfs_path+"/dt="+self.ds
+                else:
+                    #输出不同国家的数据路径
+                    self.hdfs_data_dir_str=data_hdfs_path+"/dt="+self.ds+"/hour="+hour
 
-                self.data_not_file_type_touchz()
+                self.data_file_type_touchz()
+
+                return
 
             # 没有国家分区并且数据为空也生成 Success
             if country_partition.lower()=="false" and file_type.lower()=="false":
 
-                #输出不同国家的数据路径
-                self.hdfs_data_dir_str=data_hdfs_path+"/dt="+self.ds
+                if hour is None:
+                    #输出不同国家的数据路径
+                    self.hdfs_data_dir_str=data_hdfs_path+"/dt="+self.ds
+                else:
+                    #输出不同国家的数据路径
+                    self.hdfs_data_dir_str=data_hdfs_path+"/dt="+self.ds+"/hour="+hour
 
-                self.data_file_type_touchz()
+                self.data_not_file_type_touchz()
+
+                return
+
+
+            #获取国家列表
+            country_code_list=self.get_country_code()
 
 
             for country_code_word in country_code_list.split(","):
@@ -249,24 +248,39 @@ class TaskTouchzSuccess(object):
                 #有国家分区并且每个目录必须有数据才能生成 Success
                 if country_partition.lower()=="true" and file_type.lower()=="true":
 
-                    #输出不同国家的数据路径
-                    self.hdfs_data_dir_str=data_hdfs_path+"/country_code="+country_code_word+"/dt="+self.ds
+                    if hour is None:
 
-                    self.data_not_file_type_touchz()
+                        #输出不同国家的数据路径
+                        self.hdfs_data_dir_str=data_hdfs_path+"/country_code="+country_code_word+"/dt="+self.ds
+                    else:
+
+                        #输出不同国家的数据路径
+                        self.hdfs_data_dir_str=data_hdfs_path+"/country_code="+country_code_word+"/dt="+self.ds+"/hour="+hour
+
+
+                    self.data_file_type_touchz()
 
                 
                 #有国家分区并且数据为空也生成 Success
                 if country_partition.lower()=="true" and file_type.lower()=="false":
 
-                    #输出不同国家的数据路径
-                    self.hdfs_data_dir_str=data_hdfs_path+"/country_code="+country_code_word+"/dt="+self.ds
+
+                    if hour is None:
+
+                        #输出不同国家的数据路径
+                        self.hdfs_data_dir_str=data_hdfs_path+"/country_code="+country_code_word+"/dt="+self.ds
+                    else:
+
+                        #输出不同国家的数据路径
+                        self.hdfs_data_dir_str=data_hdfs_path+"/country_code="+country_code_word+"/dt="+self.ds+"/hour="+hour
 
                     self.data_not_file_type_touchz()
+
 
             
         except Exception as e:
 
-            self.comwx.postAppMessage('DW调度系统任务 {jobname} 数据产出异常'.format(jobname=table_name),'271')
+            #self.comwx.postAppMessage('DW调度系统任务 {jobname} 数据产出异常'.format(jobname=table_name),'271')
 
             logging.info(e)
 

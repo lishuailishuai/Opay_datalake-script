@@ -39,11 +39,7 @@ dag = airflow.DAG('dwm_opay_recharge_user_di',
                   default_args=args,
                   catchup=False)
 
-sleep_time = BashOperator(
-    task_id='sleep_id',
-    depends_on_past=False,
-    bash_command='sleep 30',
-    dag=dag)
+
 
 ##----------------------------------------- 依赖 ---------------------------------------##
 
@@ -104,63 +100,120 @@ dependence_dwd_opay_recharge_mobilebill_record_di_prev_day_task = UFileSensor(
     dag=dag
 )
 ##----------------------------------------- 变量 ---------------------------------------##
-
+db_name = "opay_dw"
 table_name = "dwm_opay_recharge_user_di"
 hdfs_path = "ufile://opay-datalake/opay/opay_dw/" + table_name
 
 ##----------------------------------------- 脚本 ---------------------------------------##
 
-dwm_opay_recharge_user_di_task = HiveOperator(
+def dwm_opay_recharge_user_di_sql_task(ds):
 
-    task_id='dwm_opay_recharge_user_di_task',
-    hql='''
+    HQL='''
      set hive.exec.dynamic.partition.mode=nonstrict;
-    INSERT overwrite TABLE opay_dw.{table} partition(country_code,dt)
-    select user_id,service_type,user_role,sum(amount) amount,order_status,count(1) c ,country_code,dt
-from 
-    (select user_id,'Electricity' service_type,user_role,amount,order_status,country_code,dt from opay_dw.dwd_opay_recharge_electricity_record_di where dt='{pt}'
-       union all
-     select user_id,'Betting' service_type,user_role,amount,order_status,country_code,dt from opay_dw.dwd_opay_recharge_betting_record_di where dt='{pt}'
-       union all
-     select user_id,'MobileData' service_type,user_role,amount,order_status,country_code,dt from opay_dw.dwd_opay_recharge_mobiledata_record_di where dt='{pt}'
-       union all
-     select user_id,'TV' service_type,user_role,amount,order_status,country_code,dt from opay_dw.dwd_opay_recharge_tv_record_di where dt='{pt}'
-       union all
-     select user_id,'Airtime' service_type,user_role,amount,order_status,country_code,dt from opay_dw.dwd_opay_recharge_mobilebill_record_di where dt='{pt}'
-    )m 
-group by user_id,service_type,user_role,order_status,country_code,dt;
+
+    INSERT overwrite TABLE {db}.{table} partition(country_code,dt)
+    SELECT user_id,
+           service_type,
+           user_role,
+           sum(amount) amount,
+           order_status,
+           count(1) c,
+           country_code,
+           dt
+    FROM
+      (SELECT user_id,
+              'Electricity' as service_type,
+                            user_role,
+                            amount,
+                            order_status,
+                            country_code,
+                            dt
+       FROM opay_dw.dwd_opay_recharge_electricity_record_di
+       WHERE dt='{pt}'
+       UNION ALL SELECT user_id,
+                        'Betting' as service_type,
+                                  user_role,
+                                  amount,
+                                  order_status,
+                                  country_code,
+                                  dt
+       FROM opay_dw.dwd_opay_recharge_betting_record_di
+       WHERE dt='{pt}'
+       UNION ALL SELECT user_id,
+                        'MobileData' as service_type,
+                                     user_role,
+                                     amount,
+                                     order_status,
+                                     country_code,
+                                     dt
+       FROM opay_dw.dwd_opay_recharge_mobiledata_record_di
+       WHERE dt='{pt}'
+       UNION ALL SELECT user_id,
+                        'TV' as service_type,
+                             user_role,
+                             amount,
+                             order_status,
+                             country_code,
+                             dt
+       FROM opay_dw.dwd_opay_recharge_tv_record_di
+       WHERE dt='{pt}'
+       UNION ALL SELECT user_id,
+                        'Airtime' as service_type,
+                                  user_role,
+                                  amount,
+                                  order_status,
+                                  country_code,
+                                  dt
+       FROM opay_dw.dwd_opay_recharge_mobilebill_record_di
+       WHERE dt='{pt}' )m
+    GROUP BY user_id,
+             service_type,
+             user_role,
+             order_status,
+             country_code,
+             dt;
 
 '''.format(
-        pt='{{ds}}',
-        now_day='{{macros.ds_add(ds, +1)}}',
+        pt=ds,
+        db=db_name,
         table=table_name
-    ),
-    schema='opay_dw',
-    dag=dag)
+    )
+    return HQL
+
+# 主流程
+def execution_data_task_id(ds, **kargs):
+    hive_hook = HiveCliHook()
+
+    # 读取sql
+    _sql = dwm_opay_recharge_user_di_sql_task(ds)
+
+    logging.info('Executing: %s', _sql)
+
+    # 执行Hive
+    hive_hook.run_cli(_sql)
 
 
-# 生成_SUCCESS
-def check_success(ds,dag,**op_kwargs):
 
-    dag_ids=dag.dag_id
+    # 生成_SUCCESS
+    """
+    第一个参数true: 数据目录是有country_code分区。false 没有
+    第二个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
 
-    msg = [
-        {"table":"{dag_name}".format(dag_name=dag_ids),"hdfs_path": "{hdfsPath}/country_code=NG/dt={pt}".format(pt=ds,hdfsPath=hdfs_path)}
-    ]
+    """
+    TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "true", "true")
 
-    TaskTouchzSuccess().set_touchz_success(msg)
 
-touchz_data_success= PythonOperator(
-    task_id='touchz_data_success',
-    python_callable=check_success,
+dwm_opay_recharge_user_di_task = PythonOperator(
+    task_id='dwm_opay_recharge_user_di_task',
+    python_callable=execution_data_task_id,
     provide_context=True,
     dag=dag
 )
-dependence_dwd_opay_recharge_electricity_record_di_prev_day_task >> \
-dependence_dwd_opay_recharge_betting_record_di_prev_day_task >> \
-dependence_dwd_opay_recharge_mobiledata_record_di_prev_day_task >> \
-dependence_dwd_opay_recharge_tv_record_di_prev_day_task >> \
-dependence_dwd_opay_recharge_mobilebill_record_di_prev_day_task >> \
-sleep_time >> \
-dwm_opay_recharge_user_di_task >> \
-touchz_data_success
+
+
+
+dependence_dwd_opay_recharge_electricity_record_di_prev_day_task >>dwm_opay_recharge_user_di_task
+dependence_dwd_opay_recharge_betting_record_di_prev_day_task >>dwm_opay_recharge_user_di_task
+dependence_dwd_opay_recharge_mobiledata_record_di_prev_day_task >>dwm_opay_recharge_user_di_task
+dependence_dwd_opay_recharge_tv_record_di_prev_day_task >>dwm_opay_recharge_user_di_task
+dependence_dwd_opay_recharge_mobilebill_record_di_prev_day_task >>dwm_opay_recharge_user_di_task

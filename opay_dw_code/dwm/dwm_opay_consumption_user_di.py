@@ -68,34 +68,14 @@ dim_opay_payment_relation_df_task = UFileSensor(
 
 table_name = "dwm_opay_consumption_user_di"
 hdfs_path="ufile://opay-datalake/opay/opay_dw/" + table_name
+db_name ="opay_dw"
 
-##---- hive operator ---##
-# fill_dwm_opay_consumption_user_di_task = HiveOperator(
-#     task_id='fill_dwm_opay_consumption_user_di_task',
-#     hql='''
-#     set hive.exec.dynamic.partition.mode=nonstrict;
-#     insert overwrite table dwm_opay_consumption_user_di
-#     partition(country_code, dt)
-#     select
-#         country_code, dt, sender_id, sender_type, recipient_id, recipient_type, order_status, sum(amount) order_amt, count(*) order_cnt
-#     from opay_dw.dwd_opay_business_collection_record_di
-#     group by country_code, dt, sender_id, sender_type, recipient_id, recipient_type, order_status
-#     '''.format(
-#         pt='{{ds}}'
-#     ),
-#     schema='opay_dw',
-#     dag=dag
-# )
-##---- hive operator end ---##
-
-##---- hive operator ---##
-dwm_opay_consumption_user_di_task = HiveOperator(
-    task_id='dwm_opay_consumption_user_di_task',
-    hql='''
+def dwm_opay_consumption_user_di_sql_task(ds):
+    HQL='''
     set hive.exec.dynamic.partition.mode=nonstrict;
     set hive.exec.parallel=true;
     
-    insert overwrite table dwm_opay_consumption_user_di partition(country_code, dt)
+    insert overwrite table {db}.{table} partition(country_code, dt)
     SELECT sender_id,
        sender_type,
        recipient_id,
@@ -116,31 +96,41 @@ GROUP BY country_code,
          recipient_type,
          order_status
     '''.format(
-        pt='{{ds}}'
-    ),
-    schema='opay_dw',
-    dag=dag
-)
+        pt=ds,
+        db=db_name,
+        table=table_name
+    )
+    return HQL
 
-#生成_SUCCESS
-def check_success(ds,dag,**op_kwargs):
+# 主流程
+def execution_data_task_id(ds, **kargs):
+    hive_hook = HiveCliHook()
 
-    dag_ids=dag.dag_id
+    # 读取sql
+    _sql = dwm_opay_consumption_user_di_sql_task(ds)
 
-    msg = [
-        {"table":"{dag_name}".format(dag_name=dag_ids),"hdfs_path": "{hdfsPath}/country_code=NG/dt={pt}".format(pt=ds,hdfsPath=hdfs_path)}
-    ]
+    logging.info('Executing: %s', _sql)
 
-    TaskTouchzSuccess().set_touchz_success(msg)
+    # 执行Hive
+    hive_hook.run_cli(_sql)
 
-touchz_data_success= PythonOperator(
-    task_id='touchz_data_success',
-    python_callable=check_success,
+
+
+    # 生成_SUCCESS
+    """
+    第一个参数true: 数据目录是有country_code分区。false 没有
+    第二个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
+
+    """
+    TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "true", "true")
+
+
+dwm_opay_consumption_user_di_task = PythonOperator(
+    task_id='dwm_opay_consumption_user_di_task',
+    python_callable=execution_data_task_id,
     provide_context=True,
     dag=dag
 )
 
-
 dwd_opay_business_collection_record_di_task >> dwm_opay_consumption_user_di_task
 dim_opay_payment_relation_df_task >> dwm_opay_consumption_user_di_task
-dwm_opay_consumption_user_di_task >> touchz_data_success

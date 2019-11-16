@@ -69,47 +69,16 @@ dwd_opay_user_topup_record_di_task = UFileSensor(
 
 table_name = "dwm_opay_topup_channel_di"
 hdfs_path="ufile://opay-datalake/opay/opay_dw/" + table_name
+db_name ="opay_dw"
 
 
-##---- hive operator ---##
-# fill_dwm_opay_topup_channel_di_task = HiveOperator(
-#     task_id='fill_dwm_opay_topup_channel_di_task',
-#     hql='''
-#     set hive.exec.dynamic.partition.mode=nonstrict;
-#     insert overwrite table dwm_opay_topup_channel_di
-#     partition(country_code, dt)
-#     select
-#         out_channel_id, recipient_role, 'TopupWithCard' service_type, order_status, order_amt, order_cnt
-#     from
-#     (
-#         select
-#             out_channel_id, country_code, dt, user_role recipient_role, sum(amount) order_amt, count(*) order_cnt, order_status
-#         from opay_dw.dwd_opay_user_topup_record_di
-#         group by country_code, dt, out_channel_id, user_role, order_status
-#         union all
-#         select
-#             out_channel_id, country_code, dt, 'merchant' recipient_role, sum(amount) order_amt, count(*) order_cnt, order_status
-#         from opay_dw.dwd_opay_merchant_topup_record_di
-#         group by country_code, dt, out_channel_id, order_status
-#     ) t1
-#
-#     '''.format(
-#         pt='{{ds}}'
-#     ),
-#     schema='opay_dw',
-#     dag=dag
-# )
-##---- hive operator end ---##
-
-##---- hive operator ---##
-dwm_opay_topup_channel_di_task = HiveOperator(
-    task_id='dwm_opay_topup_channel_di_task',
-    hql='''
+def dwm_opay_topup_channel_di_sql_task(ds):
+    HQL='''
     set hive.exec.dynamic.partition.mode=nonstrict;
     
     set hive.exec.parallel=true;
     
-    insert overwrite table dwm_opay_topup_channel_di 
+    insert overwrite table {db}.{table} 
     partition(country_code, dt)
     select
         out_channel_id, recipient_role, 'TopupWithCard' service_type, order_status, sum(amount) order_amt, count(order_no) order_cnt, country_code, dt
@@ -127,30 +96,41 @@ dwm_opay_topup_channel_di_task = HiveOperator(
     ) t1
      group by country_code, dt, out_channel_id, recipient_role, order_status
     '''.format(
-        pt='{{ds}}'
-    ),
-    schema='opay_dw',
-    dag=dag
-)
+        pt=ds,
+        db=db_name,
+        table=table_name
+    )
+    return HQL
 
-#生成_SUCCESS
-def check_success(ds,dag,**op_kwargs):
+# 主流程
+def execution_data_task_id(ds, **kargs):
+    hive_hook = HiveCliHook()
 
-    dag_ids=dag.dag_id
+    # 读取sql
+    _sql = dwm_opay_topup_channel_di_sql_task(ds)
 
-    msg = [
-        {"table":"{dag_name}".format(dag_name=dag_ids),"hdfs_path": "{hdfsPath}/country_code=NG/dt={pt}".format(pt=ds,hdfsPath=hdfs_path)}
-    ]
+    logging.info('Executing: %s', _sql)
 
-    TaskTouchzSuccess().set_touchz_success(msg)
+    # 执行Hive
+    hive_hook.run_cli(_sql)
 
-touchz_data_success= PythonOperator(
-    task_id='touchz_data_success',
-    python_callable=check_success,
+
+
+    # 生成_SUCCESS
+    """
+    第一个参数true: 数据目录是有country_code分区。false 没有
+    第二个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
+
+    """
+    TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "true", "true")
+
+
+dwm_opay_topup_channel_di_task = PythonOperator(
+    task_id='dwm_opay_topup_channel_di_task',
+    python_callable=execution_data_task_id,
     provide_context=True,
     dag=dag
 )
 
 dwd_opay_merchant_topup_record_di_task >> dwm_opay_topup_channel_di_task
 dwd_opay_user_topup_record_di_task >> dwm_opay_topup_channel_di_task
-dwm_opay_topup_channel_di_task >> touchz_data_success

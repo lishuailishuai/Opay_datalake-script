@@ -84,102 +84,16 @@ task_timeout_monitor= PythonOperator(
 )
 
 ##----------------------------------------- 变量 ---------------------------------------##
-
+db_name="opay_dw"
 table_name = "dwd_opay_recharge_mobiledata_record_di"
 hdfs_path="ufile://opay-datalake/opay/opay_dw/" + table_name
 
 
-##---- hive operator ---##
-# fill_dwd_opay_recharge_mobiledata_record_di_task = HiveOperator(
-#     task_id='fill_dwd_opay_recharge_mobiledata_record_di_task',
-#     hql='''
-#     set hive.exec.dynamic.partition.mode=nonstrict;
-#
-#     insert overwrite table dwd_opay_recharge_mobiledata_record_di
-#     partition(country_code, dt)
-#     select
-#         order_di.id,
-#         order_di.order_no,
-#         order_di.user_id,
-#         if(order_di.create_time < nvl(user_di.agent_upgrade_time, '9999-01-01 00:00:00'), 'customer', 'agent') user_role,
-#         order_di.merchant_id,
-#         order_di.amount,
-#         order_di.country,
-#         order_di.currency,
-#         order_di.recipient_mobile recharge_account,
-#         order_di.telecom_perator service_provider,
-#        case order_di.telecom_perator
-#             when 'DataAir' then '301'
-#             when 'DataEti' then '302'
-#             when 'DataGlo' then '303'
-#             when 'DataMtn' then '304'
-#             else '300'
-#             end as service_provider_id,
-#         order_di.pay_channel,
-#         order_di.pay_status,
-#         order_di.order_status,
-#         order_di.error_code,
-#         order_di.error_msg,
-#         order_di.fee_amount,
-#         order_di.fee_pattern,
-#         order_di.out_ward_id,
-#         order_di.out_ward_type,
-#         order_di.recipient_email,
-#         order_di.current_balance,
-#         order_di.till_date_balance,
-#         order_di.audit_no,
-#         order_di.confirm_code,
-#         order_di.out_channel_id,
-#         order_di.out_channel_order_no out_order_no,
-#         order_di.business_no channel_order_no,
-#         order_di.create_time,
-#         order_di.update_time,
-#         case order_di.country
-#             when 'NG' then 'NG'
-#             when 'NO' then 'NO'
-#             when 'GH' then 'GH'
-#             when 'BW' then 'BW'
-#             when 'GH' then 'GH'
-#             when 'KE' then 'KE'
-#             when 'MW' then 'MW'
-#             when 'MZ' then 'MZ'
-#             when 'PL' then 'PL'
-#             when 'ZA' then 'ZA'
-#             when 'SE' then 'SE'
-#             when 'TZ' then 'TZ'
-#             when 'UG' then 'UG'
-#             when 'US' then 'US'
-#             when 'ZM' then 'ZM'
-#             when 'ZW' then 'ZW'
-#             else 'NG'
-#             end as country_code,
-#         order_di.dt
-#     from opay_dw_ods.ods_sqoop_base_mobiledata_topup_record_di order_di
-#     left join
-#     (
-#         select * from
-#         (
-#             select user_id, role, agent_upgrade_time, row_number() over(partition by user_id order by update_time desc) rn
-#             from opay_dw.dim_opay_user_base_di
-#         ) user_temp where rn = 1
-#     ) user_di
-#     on user_di.user_id = order_di.user_id
-#
-#     '''.format(
-#         pt='{{ds}}'
-#     ),
-#     schema='opay_dw',
-#     dag=dag
-# )
-##---- hive operator end ---##
-
-##---- hive operator ---##
-dwd_opay_recharge_mobiledata_record_di_task = HiveOperator(
-    task_id='dwd_opay_recharge_mobiledata_record_di_task',
-    hql='''
+def dwd_opay_recharge_mobiledata_record_di_sql_task(ds):
+    HQL='''
     set hive.exec.dynamic.partition.mode=nonstrict;
     set hive.exec.parallel=true;
-    insert overwrite table dwd_opay_recharge_mobiledata_record_di 
+    insert overwrite table {db}.{table} 
     partition(country_code, dt)
     select 
         order_di.id,
@@ -284,30 +198,39 @@ dwd_opay_recharge_mobiledata_record_di_task = HiveOperator(
     ) user_di
     on user_di.user_id = order_di.user_id
     '''.format(
-        pt='{{ds}}'
-    ),
-    schema='opay_dw',
-    dag=dag
-)
+        pt=ds,
+        table=table_name,
+        db=db_name
+    )
+    return HQL
 
-#生成_SUCCESS
-def check_success(ds,dag,**op_kwargs):
+def execution_data_task_id(ds, **kargs):
+    hive_hook = HiveCliHook()
 
-    dag_ids=dag.dag_id
+    # 读取sql
+    _sql = dwd_opay_recharge_mobiledata_record_di_sql_task(ds)
 
-    msg = [
-        {"table":"{dag_name}".format(dag_name=dag_ids),"hdfs_path": "{hdfsPath}/country_code=NG/dt={pt}".format(pt=ds,hdfsPath=hdfs_path)}
-    ]
+    logging.info('Executing: %s', _sql)
 
-    TaskTouchzSuccess().set_touchz_success(msg)
+    # 执行Hive
+    hive_hook.run_cli(_sql)
 
-touchz_data_success= PythonOperator(
-    task_id='touchz_data_success',
-    python_callable=check_success,
+
+
+    # 生成_SUCCESS
+    """
+    第一个参数true: 数据目录是有country_code分区。false 没有
+    第二个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
+
+    """
+    TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "true", "true")
+
+
+dwd_opay_recharge_mobiledata_record_di_task = PythonOperator(
+    task_id='dwd_opay_recharge_mobiledata_record_di_task',
+    python_callable=execution_data_task_id,
     provide_context=True,
     dag=dag
 )
-
 dim_opay_user_base_di_prev_day_task >> dwd_opay_recharge_mobiledata_record_di_task
 ods_sqoop_base_mobiledata_topup_record_di_prev_day_task >> dwd_opay_recharge_mobiledata_record_di_task
-dwd_opay_recharge_mobiledata_record_di_task >> touchz_data_success

@@ -485,7 +485,7 @@ create_order_metrics_data = BashOperator(
                       DATE_FORMAT(create_time,'%Y-%m-%d') = '{{ macros.ds_add(ds, -1) }}'
                       )
                   ) o
-                  on o.receipt_id = s.opay_id
+                  on o.receipt_id = concat(s.opay_id,'')
                ) t
               group by t.dt,t.bd_id,t.city_id
             ) t
