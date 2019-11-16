@@ -125,6 +125,8 @@ class TaskTouchzSuccess(object):
 
         try:
 
+            print("debug-> data_not_file_type_touchz")
+
             time.sleep(10)
 
             mkdir_str="$HADOOP_HOME/bin/hadoop fs -mkdir -p {hdfs_data_dir}".format(hdfs_data_dir=self.hdfs_data_dir_str)
@@ -155,6 +157,8 @@ class TaskTouchzSuccess(object):
         """
 
         try:
+
+            print("debug-> data_file_type_touchz")
 
             time.sleep(10)
         
