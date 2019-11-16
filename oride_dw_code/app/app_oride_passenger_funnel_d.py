@@ -20,10 +20,12 @@ import logging
 from airflow.models import Variable
 import requests
 import os
+from plugins.TaskTouchzSuccess import TaskTouchzSuccess
+from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
 
 args = {
-    'owner': 'liushuzhen',
-    'start_date': datetime(2019, 11, 7),
+    'owner': 'chenghui',
+    'start_date': datetime(2019, 11, 15),
     'depends_on_past': False,
     'retries': 3,
     'retry_delay': timedelta(minutes=2),
@@ -37,240 +39,163 @@ dag = airflow.DAG('app_oride_passenger_funnel_d',
                   default_args=args,
                   catchup=False)
 
-sleep_time = BashOperator(
-    task_id='sleep_id',
-    depends_on_past=False,
-    bash_command='sleep 30',
-    dag=dag)
 
 ##----------------------------------------- 依赖 ---------------------------------------##
 
-# 依赖前一天分区
-dependence_dwd_oride_client_event_detail_hi_prev_day_task = UFileSensor(
-    task_id='dependence_dwd_oride_client_event_detail_hi_prev_day_task',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw/dwd_oride_client_event_detail_hi",
+dwd_oride_order_base_include_test_di_task = UFileSensor(
+    task_id='dwd_oride_order_base_include_test_di_task',
+    filepath='{hdfs_path_str}/country_code=nal/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="oride/oride_dw/dwd_oride_order_base_include_test_di",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    poke_interval=60,
     dag=dag
 )
-dependence_dwm_oride_order_base_di_prev_day_task = UFileSensor(
-    task_id='dependence_dwm_oride_order_base_di_prev_day_task',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+dependence_dwm_oride_order_base_di_task = UFileSensor(
+    task_id='dwm_oride_order_base_di_task',
+    filepath='{hdfs_path_str}/country_code=nal/dt={pt}/_SUCCESS'.format(
         hdfs_path_str="oride/oride_dw/dwm_oride_order_base_di",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    poke_interval=60,
     dag=dag
 )
-dependence_ods_sqoop_base_data_order_payment_di_prev_day_task = UFileSensor(
-    task_id='dependence_ods_sqoop_base_data_order_payment_di_prev_day_task',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride_dw_sqoop/oride_data/data_order_payment",
-        pt='{{ds}}'
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
-dependence_ods_sqoop_base_data_user_comment_df_prev_day_task = UFileSensor(
-    task_id='dependence_ods_sqoop_base_data_user_comment_df_prev_day_task',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride_dw_sqoop/oride_data/data_user_comment",
-        pt='{{ds}}'
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
-##----------------------------------------- 变量 ---------------------------------------##
 
+#----------------------------------------- 任务超时监控 ---------------------------------------##
+
+def fun_task_timeout_monitor(ds, dag, **op_kwargs):
+    dag_ids = dag.dag_id
+
+    tb = [
+        {
+            "db": "oride_dw", "table": "{dag_name}".format(dag_name=dag_ids),
+            "partition": "dt={pt}".format(pt=ds),"timeout": "1200"
+        }
+    ]
+    TaskTimeoutMonitor().set_task_monitor(tb)
+
+
+task_timeout_monitor =  PythonOperator(
+    task_id='task_timeout_monitor',
+    python_callable=fun_task_timeout_monitor,
+    provide_context=True,
+    dag=dag
+)
+
+##----------------------------------------- 变量 ---------------------------------------##
+db_name= "oride_dw"
 table_name = "app_oride_passenger_funnel_d"
 hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
 
 ##----------------------------------------- 脚本 ---------------------------------------##
 
-app_oride_passenger_funnel_d_task = HiveOperator(
+def app_oride_passenger_funnel_d_sql_task(ds):
+    HQL='''
+    SET hive.exec.parallel=TRUE;
+    SET hive.exec.dynamic.partition.mode=nonstrict;
+    
+    insert overwrite table {db}.{table} partition(dt)
+    select  ord.country_code,
+        ord.product_id,
+        ord.submit_order_cnt,--下单量
+        ord.submit_order_user_num,--下单乘客量
+        ord.finish_pay_order_cnt,--完成支付订单量
+        ord.driver_reply_before_user_cancel_cnt,--司机应答前乘客取消订单量
+        ord.driver_reply_before_user_cancel_dur,--司机应答前到乘客取消订单之间的时长
+        ord.reply_dur,--应答时长
+        ord.driver_order_success_cnt,--司机接单成功的订单数量(应答订单)
+        ord.receive_order_user_num,--接单乘客数
+        ord.reply_after_user_cancel_dur,--应答后用户取消时长
+        ord.reply_after_driver_cancel_dur,--应答后司机取消时长
+        ord.reply_after_user_cancle_order_cnt,--应答后乘客取消的订单数
+        ord.reply_after_driver_cancel_order_cnt,--应答后司机取消的订单数
+        ord.driver_arrive_car_point_dur,--司机平均到达上车点时长
+        ord.finish_order_user_num,--完单乘客数
+        ord.finish_order_cnt,--完单量
+        ord.pay_user_num,--支付乘客数
+        ord.price,--应付金额
+        ord.amount,--实付金额
+        ord.order_delivery_dur,--下单送达时长
+        bro.broadcast,--未播单量
+        bro.order_onride_dis,--完单计费距离
+        bro.pick_up_dis, --接驾距离
+        bro.user_evaluation_order_cnt,--乘客评价订单量
+        '{pt}' as dt
+    from
+    (
+        select
+            country_code,
+            product_id,
+            count(distinct order_id) as submit_order_cnt,--下单量
+            count(distinct passenger_id)as submit_order_user_num, --下单乘客量
+            count(distinct if(is_td_finish_pay=1,order_id,null)) as finish_pay_order_cnt,--完成支付订单量
+            count(distinct if(is_td_passanger_before_cancel=1,order_id,null)) as driver_reply_before_user_cancel_cnt,  --司机应答前乘客取消订单量
+            sum(if(status = 6 AND driver_id = 0 AND cancel_role = 1,cancel_time-create_time,0)) as driver_reply_before_user_cancel_dur,--司机应答前到乘客取消订单之间的时长
+            sum(td_take_dur) as reply_dur, --应答时长
+            count(distinct if(is_td_request=1,order_id,null)) as driver_order_success_cnt, --司机接单成功的订单数量(应答订单)
+            count(distinct if(is_td_request=1,passenger_id,null)) as receive_order_user_num, --接单乘客数
+            sum(td_passanger_after_cancel_time_dur) as reply_after_user_cancel_dur,--应答后用户取消时长
+            sum(td_driver_after_cancel_time_dur)as reply_after_driver_cancel_dur,--应答后司机取消时长
+            count(if(is_td_passanger_after_cancel=1,order_id,null))as reply_after_user_cancle_order_cnt,--应答后乘客取消的订单数
+            count(distinct if(is_td_driver_after_cancel=1,order_id,null)) reply_after_driver_cancel_order_cnt,--应答后司机取消的订单数
+            sum(td_pick_up_dur) as driver_arrive_car_point_dur,--司机平均到达上车点时长
+            count(distinct if(is_td_finish=1,passenger_id,null)) as finish_order_user_num, --完单乘客数
+            count(distinct if(is_td_finish=1,order_id,null)) as finish_order_cnt, --完单量
+            count(distinct if(is_td_finish_pay=1,passenger_id,null)) pay_user_num, --支付乘客数
+            sum(if(is_td_finish=1,price,0)) as price,--应付金额
+            sum(if(is_td_finish=1,pay_amount,0)) as amount, --实付金额
+            sum(if(is_td_finish=1,arrive_time-create_time,0)) as order_delivery_dur --下单送达时长
+        from oride_dw.dwd_oride_order_base_include_test_di where dt='{pt}'
+        group by country_code,product_id
+    )as ord
+    left join
+    (
+        select country_code,product_id,
+            nvl(avg(pick_up_distance/order_assigned_cnt),0) as pick_up_dis,--接驾总距离
+            sum(if(is_finish=1,order_onride_distance,0)) as order_onride_dis,--完单计费距离(完成订单的司机开始行程到司机送达之间的距离)
+            count(if(score is not null and is_finish=1,order_id,null)) as user_evaluation_order_cnt ,--乘客评价订单数量
+            count(if(is_succ_broadcast=0,order_id,null)) broadcast --未播单量
+        from  oride_dw.dwm_oride_order_base_di 
+        where dt='{pt}'
+        group by country_code,product_id
+    ) as bro 
+    on ord.country_code=bro.country_code and ord.product_id=bro.product_id;
+    '''.format(
+        pt=ds,
+        table=table_name,
+        db=db_name
+    )
+    return HQL
 
+#主流程
+def execution_data_task_id(ds,**kargs):
+    hive_hook = HiveCliHook()
+
+    # 读取sql
+    _sql = app_oride_passenger_funnel_d_sql_task(ds)
+
+    logging.info('Executing: %s', _sql)
+
+    # 执行Hive
+    hive_hook.run_cli(_sql)
+
+    # 生成_SUCCESS
+    """
+    第一个参数true: 数据目录是有country_code分区。false 没有
+    第二个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
+
+    """
+    TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "false", "true")
+
+app_oride_passenger_funnel_d_task = PythonOperator(
     task_id='app_oride_passenger_funnel_d_task',
-    hql='''
-      with base as 
-            (select user_id,event_name,event_value,country_code,event_time,
-             get_json_object(event_value, '$.serv_type') AS product_id,
-             get_json_object(event_value, '$.order_id') AS order_id
-             from oride_dw.dwd_oride_client_event_detail_hi 
-             where from_unixtime(cast(event_time as int),'yyyy-MM-dd')='{pt}' and dt='{pt}' and app_version>='4.4.405' and 
-             event_name in('radar_map_show','successful_order_show','successful_order_cancelorder_click','rider_arrive_show',
-                 'rider_arrive_cancelorder_click','start_ride_show',
-                 'complete_the_order_show','complete_the_payment_show','oride_show','choose_end_point_click',
-                 'request_a_ride_show','request_a_ride_click','searching_cancel_click')
-            ),
-          base1 as 
-             (select order_id,passenger_id,country_code,is_succ_broadcast,--是否播单
-               is_driver_after_cancel,--应答后司机是否取消
-               cannel_pick_order_dur,--取消时长
-               pick_up_distance,--接驾总距离
-               order_assigned_cnt,--订单被分配次数
-               order_onride_distance, --送架距离
-               user_order_total_dur --下单到完单时长
-             from oride_dw.dwm_oride_order_base_di where dt='{pt}'
-             )
-    INSERT overwrite TABLE oride_dw.{table} partition(dt='{pt}')
-    select m.country_code,m1.product_id,a,b,c,d,e,f,j,h,i,j,k,l,m,n,o,p,q,m2.broadcast,j2,j3,l1,p1,m3.q1,m3.q2,m1.q3
-from 
-   (select country_code,
-       sum(case when event_name='oride_show' then u else 0 end) a ,--活跃乘客数
-       sum(case when event_name='choose_end_point_click' then u else 0 end) b,--点击选择终点
-       sum(case when event_name='request_a_ride_show' then u else 0 end) c,--估价人数
-       sum(case when event_name='request_a_ride_show' then c else 0 end) d,--估价次数
-       sum(case when event_name='request_a_ride_click' then u else 0 end) e,--下单人数
-       sum(case when event_name='request_a_ride_click' then c else 0 end) f,--下单次数
-       sum(case when event_name='searching_cancel_click' then u else 0 end)g --应答前取消订单
-      
-    from 
-       (select country_code,event_name,count(1) c,count(distinct user_id) u from 
-           (select user_id,event_name,event_value,country_code
-             from base
-              where event_name in ('oride_show',
-                         'choose_end_point_click',
-                         'request_a_ride_show', 
-                         'request_a_ride_click',
-                         'searching_cancel_click'
-                      )
-             )mm 
-         group by country_code,event_name) mmm
-    group by country_code
-   )m
-left join 
-
-  (select country_code,product_id,count(distinct user_id) h,--接单乘客数
-       count(distinct case when xd is not null or xd='' then user_id end) i,--应答后取消乘客数
-       avg(xd_t) j,--`应答后用户平均取消时长`,
-       count(distinct case when is_driver_after_cancel='1' then user_id end) j2,--应答后司机取消乘客数
-       avg(case when is_driver_after_cancel='1' then cannel_pick_order_dur end)j3,--应答后司机平均取消时长
-       avg(sj_t) k,--`司机平均到达上车点时长`,
-       avg(sc_t) l,--`司乘互找时长`,
-       avg(pick_up_distance/order_assigned_cnt) l1,--平均接驾距离
-       count(distinct case when time5 is not null or time5='' then user_id end) m,--完成打车订单乘客数
-       count(distinct case when time6 is not null or time6='' then user_id end) n,--支付成功乘客数
-       sum(price) o,--应付金额
-       sum(amount) p, --实付金额
-       avg(order_onride_distance) p1,--平均送架距离
-       count(distinct case when score is not null or score='' then user_id end) q, --评价乘客数
-       avg(user_order_total_dur) q3--下单到完单时长
-  from 
-      ( select  b.user_id,b.order_id,b.country_code,a.product_id,b.event_time time1, --接单时间
-                 COALESCE(c.event_time,dd.event_time) xd,--应答后用户取消
-                 COALESCE(c.event_time,dd.event_time)-b.event_time xd_t,--应答后用户取消时长
-                 d.event_time-b.event_time sj_t,--司机到达上车点时长
-                 e.event_time-d.event_time sc_t,--司乘互找时长
-                 f.event_time time5,--完成打车订单
-                  j.event_time time6, --支付成功
-                  h.price,  --应付金额
-                  h.amount,--实付金额
-                  i.score,--订单评分
-                  o.is_driver_after_cancel,--应答后司机是否取消
-                  o.cannel_pick_order_dur,--取消时长
-                  o.pick_up_distance,--接驾总距离
-                  o.order_assigned_cnt,--订单被分配次数
-                  o.order_onride_distance, --送架距离
-                  o.user_order_total_dur --下单到完单时长
-        from 
-           (select order_id,min(product_id) product_id from base where event_name='radar_map_show' group by order_id) a  --雷达显示
-        join 
-           (select order_id,min(event_time) event_time,min(user_id) user_id,min(country_code) country_code,
-              min(product_id) product_id from base where event_name='successful_order_show' group by order_id) b --打车成功
-        on a.order_id=b.order_id
-        left join 
-           (select order_id,min(event_time) event_time from base where event_name='successful_order_cancelorder_click' group by order_id) c --应答后到达前取消
-        on b.order_id=c.order_id
-        left join 
-           (select order_id,min(event_time) event_time from base where event_name='rider_arrive_show' group by order_id) d --骑手到达乘客上车点
-        on b.order_id=d.order_id
-        left join 
-           (select order_id,min(event_time) event_time from base where event_name='rider_arrive_cancelorder_click' group by order_id) dd --取消订单
-        on b.order_id=dd.order_id
-        left join 
-           (select order_id,min(event_time) event_time from base where event_name='start_ride_show' group by order_id) e --行程开始
-        on b.order_id=e.order_id
-        left join 
-           (select order_id,min(event_time) event_time from base where event_name='complete_the_order_show' group by order_id) f --完成打车订单
-        on b.order_id=f.order_id
-        left join 
-           (select order_id,min(event_time) event_time from base where event_name='complete_the_payment_show' group by order_id) j --支付完成
-        on b.order_id=j.order_id
-        left join 
-           (select * from oride_dw_ods.ods_sqoop_base_data_order_payment_di where dt='{pt}') h 
-        on b.order_id=h.id
-        left join 
-           (select * from oride_dw_ods.ods_sqoop_base_data_user_comment_df where dt='{pt}') i
-        on b.order_id=i.order_id
-        left join 
-           base1 o
-        on b.order_id=o.order_id
-       )n 
-     group by country_code,product_id
-     )m1
-  on m.country_code=m1.country_code
- left join 
-     (select country_code,count(distinct passenger_id) broadcast --未播单人数
-      from base1 where is_succ_broadcast='0'
-      group by country_code
-      ) m2
-  on m.country_code=m2.country_code
-  left join 
-     (select country_code,
-             avg(case when gj_time-ac_time < 15*60 then gj_time-ac_time end) q1,--登陆到估价时长
-             avg(case when gj_time-zd_time <15*60 then gj_time-zd_time end)q2 --选择终点到估价时长
-      from 
-          (select country_code,user_id,min(case when event_name='oride_show' then event_time end) ac_time,
-               min(case when event_name='choose_end_point_click' then event_time end) zd_time,
-               min(case when event_name='request_a_ride_show' then event_time end) gj_time
-           from base where event_name in('oride_show','choose_end_point_click','request_a_ride_show')
-           group by country_code,user_id) qqq
-     group by country_code
-    )m3
-   on m.country_code=m3.country_code;
-
-'''.format(
-        pt='{{ds}}',
-        now_day='{{macros.ds_add(ds, +1)}}',
-        table=table_name
-    ),
-    schema='oride_dw',
-    dag=dag)
+    python_callable=execution_data_task_id,
+    provide_context=True,
+    dag=dag
+)
 
 
-# 生成_SUCCESS
-touchz_data_success = BashOperator(
-
-    task_id='touchz_data_success',
-
-    bash_command="""
-    line_num=`$HADOOP_HOME/bin/hadoop fs -du -s {hdfs_data_dir} | tail -1 | awk '{{print $1}}'`
-
-    if [ $line_num -eq 0 ]
-    then
-        echo "FATAL {hdfs_data_dir} is empty"
-        $HADOOP_HOME/bin/hadoop fs -touchz {hdfs_data_dir}/_SUCCESS
-    else
-        echo "DATA EXPORT Successed ......"
-        $HADOOP_HOME/bin/hadoop fs -touchz {hdfs_data_dir}/_SUCCESS
-    fi
-    """.format(
-        pt='{{ds}}',
-        now_day='{{macros.ds_add(ds, +1)}}',
-        hdfs_data_dir=hdfs_path + '/dt={{ds}}'
-    ),
-    dag=dag)
-
-dependence_dwd_oride_client_event_detail_hi_prev_day_task >> \
-dependence_dwm_oride_order_base_di_prev_day_task >> \
-dependence_ods_sqoop_base_data_order_payment_di_prev_day_task >> \
-dependence_ods_sqoop_base_data_user_comment_df_prev_day_task >> \
-sleep_time >> \
-app_oride_passenger_funnel_d_task >> \
-touchz_data_success
+dwd_oride_order_base_include_test_di_task>>app_oride_passenger_funnel_d_task
+dependence_dwm_oride_order_base_di_task>>app_oride_passenger_funnel_d_task
