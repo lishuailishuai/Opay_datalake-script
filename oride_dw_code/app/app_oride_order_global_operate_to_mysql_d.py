@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """全局运营日报 to mysql"""
+
 import airflow
 from datetime import datetime, timedelta
 from airflow.operators.hive_operator import HiveOperator
