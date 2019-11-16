@@ -197,7 +197,7 @@ def app_oride_order_global_operate_to_mysql_d_sql_task(ds):
                 is_finish,
                 create_time,
                 dt 
-            from dwd_oride_order_base_include_test_df
+            from oride_dw.dwd_oride_order_base_include_test_df
             where dt = '{pt}' and city_id != 999001 and is_finish=1
         )
     
@@ -278,7 +278,7 @@ def app_oride_order_global_operate_to_mysql_d_sql_task(ds):
                 sum(if(create_date ='{pt}',reward_amount + reward_amount,0)) b_subsidy_d,--B端补贴、天
                 sum(reward_amount + reward_amount ) as b_subsidy_m,--B端补贴 月
                 dt
-            from dwd_oride_order_finance_df
+            from oride_dw.dwd_oride_order_finance_df
             where dt ='{pt}' and month(create_date) = month('{pt}')
             group by city_id,dt
         )b
@@ -339,7 +339,7 @@ def app_oride_order_global_operate_to_mysql_d_sql_task(ds):
                 city_id,
                 driver_id,
                 dt 
-            from dwd_oride_order_base_include_test_df
+            from oride_dw.dwd_oride_order_base_include_test_df
             where dt in ( '{pt}','his') and create_date < '{pt}' and city_id != 999001
             group by   city_id,driver_id,dt 
         )old on new.city_id = old.city_id and new.driver_id = old.driver_id
@@ -400,7 +400,7 @@ def app_oride_order_global_operate_to_mysql_d_sql_task(ds):
                         amount_all,
                         amount_service,
                         from_unixtime(day,'yyyy-MM-dd') as day_date
-                    from dwd_oride_driver_records_day_df
+                    from oride_dw.dwd_oride_driver_records_day_df
                     where dt = '{pt}' and  from_unixtime(day,'yyyy-MM-dd') = '{pt}'
                 )drd on od.driver_id = drd.driver_id
                 left join 
