@@ -79,6 +79,7 @@ db_name,table_name,conn_id,prefix_name,priority_weight
 
 table_list = [
     # oride data
+    ("oride_data", "data_country_conf", "sqoop_db", "base",3),
     ("oride_data", "data_order", "sqoop_db", "base",3),
     ("oride_data", "data_order_payment", "sqoop_db", "base",3),
     ("oride_data", "data_user", "sqoop_db", "base",3),
