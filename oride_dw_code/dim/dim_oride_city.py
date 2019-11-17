@@ -162,14 +162,18 @@ FROM
           validate, --本条数据是否有效 0 无效，1 有效
 
           opening_time,--开启时间                
-          assign_type --强派的服务类型[1,2,3] 1 专车 2 快车 3 keke车
+          assign_type,--强派的服务类型[1,2,3] 1 专车 2 快车 3 keke车
+
+          allow_flagdown_type, --允许招手停的服务类型 
+                                
+          country_id --国家ID 
 
 FROM oride_dw_ods.ods_sqoop_base_data_city_conf_df
    WHERE dt='{pt}') cit
 LEFT OUTER JOIN
-  (SELECT country_name_en,
-          country_code
-   FROM oride_dw.dim_oride_country_base) cty ON cit.country_name=cty.country_name_en
+  (SELECT *
+   FROM oride_dw.ods_sqoop_base_data_country_conf_df 
+   WHERE dt='{pt}') cty ON cit.country_id=cty.id
 left outer join
 (SELECT t.city AS city,
               t.weather AS weather
@@ -198,6 +202,43 @@ on lower(cit.city_name)=lower(weather.city)
         db=db_name
         )
     return HQL
+
+
+#熔断数据，如果数据为0，报错
+def check_key_data_cnt_task(ds):
+
+    cursor = get_hive_cursor()
+
+    #主键重复校验
+    check_sql='''
+    SELECT count(1) as cnt
+      FROM {db}.{table}
+      WHERE dt='{pt}'
+      and country_code in ('NG')
+    '''.format(
+        pt=ds,
+        now_day=airflow.macros.ds_add(ds, +1),
+        table=table_name,
+        db=db_name
+        )
+
+    logging.info('Executing 主键重复校验: %s', check_sql)
+
+    cursor.execute(check_sql)
+
+    res = cursor.fetchone()
+ 
+    if res[0] =0:
+        flag=1
+        raise Exception ("Error The primary key repeat !", res)
+        sys.exit(1)
+    else:
+        flag=0
+        print("-----> Notice Data Export Success ......")
+
+    return flag
+
+
 
 
 #熔断数据，如果数据重复，报错
@@ -248,6 +289,9 @@ def execution_data_task_id(ds,**kargs):
 
     #执行Hive
     hive_hook.run_cli(_sql)
+
+    #熔断数据，如果数据不能为0
+    check_key_data_cnt_task(ds)
 
     #熔断数据
     check_key_data_task(ds)
