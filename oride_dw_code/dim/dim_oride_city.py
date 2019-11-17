@@ -228,7 +228,7 @@ def check_key_data_cnt_task(ds):
 
     res = cursor.fetchone()
  
-    if res[0] =0:
+    if res[0] ==0:
         flag=1
         raise Exception ("Error The primary key repeat !", res)
         sys.exit(1)
