@@ -172,7 +172,7 @@ FROM oride_dw_ods.ods_sqoop_base_data_city_conf_df
    WHERE dt='{pt}') cit
 LEFT OUTER JOIN
   (SELECT *
-   FROM oride_dw.ods_sqoop_base_data_country_conf_df 
+   FROM oride_dw_ods.ods_sqoop_base_data_country_conf_df 
    WHERE dt='{pt}') cty ON cit.country_id=cty.id
 left outer join
 (SELECT t.city AS city,
