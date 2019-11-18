@@ -424,7 +424,10 @@ create_order_metrics_data = BashOperator(
             have_order_merchant_cnt,
             active_user_cnt,
             pos_active_user_cnt,
-            qr_active_user_cnt
+            qr_active_user_cnt,
+            new_user_cnt,
+            pos_new_user_cnt,
+            qr_new_user_cnt
             ) 
 
             select
@@ -437,7 +440,10 @@ create_order_metrics_data = BashOperator(
             t.have_order_merchant_cnt,
             t.active_user_cnt,
             t.pos_active_user_cnt,
-            t.qr_active_user_cnt
+            t.qr_active_user_cnt,
+            t.new_user_cnt,
+            t.pos_new_user_cnt,
+            t.qr_new_user_cnt
 
             from
             (
@@ -451,7 +457,11 @@ create_order_metrics_data = BashOperator(
               ifnull(count(distinct if(t.trade_status = 'SUCCESS',t.receipt_id,null)),0) as have_order_merchant_cnt,
               ifnull(count(distinct if(t.trade_status = 'SUCCESS',t.sender_id,null)),0) as active_user_cnt,
               ifnull(count(distinct if(t.order_type = 'pos' and t.trade_status = 'SUCCESS',t.sender_id,null)),0) as pos_active_user_cnt,
-              ifnull(count(distinct if(t.order_type = 'qrcode' and t.trade_status = 'SUCCESS',t.sender_id,null)),0) as qr_active_user_cnt
+              ifnull(count(distinct if(t.order_type = 'qrcode' and t.trade_status = 'SUCCESS',t.sender_id,null)),0) as qr_active_user_cnt,
+              
+              ifnull(count(distinct if(t.trade_status = 'SUCCESS' and t.first_order = '1',t.sender_id,null)),0) as new_user_cnt,
+              ifnull(count(distinct if(t.order_type = 'pos' and t.trade_status = 'SUCCESS' and t.first_order = '1',t.sender_id,null)),0) as pos_new_user_cnt,
+              ifnull(count(distinct if(t.order_type = 'qrcode' and t.trade_status = 'SUCCESS' and t.first_order = '1',t.sender_id,null)),0) as qr_new_user_cnt
 
 
               from
@@ -464,7 +474,8 @@ create_order_metrics_data = BashOperator(
                   o.trade_status,
                   o.org_payment_amount,
                   s.bd_id,
-                  s.city_id
+                  s.city_id,
+                  o.first_order
                   from
                   bd_shop s
                   join
@@ -476,7 +487,8 @@ create_order_metrics_data = BashOperator(
                       sender_id,
                       order_type,
                       trade_status,
-                      ifnull(org_payment_amount,0) as org_payment_amount
+                      ifnull(org_payment_amount,0) as org_payment_amount,
+                      first_order
 
                       from
                       opos_order
@@ -500,7 +512,10 @@ create_order_metrics_data = BashOperator(
             have_order_merchant_cnt=VALUES(have_order_merchant_cnt),
             active_user_cnt=VALUES(active_user_cnt),
             pos_active_user_cnt=VALUES(pos_active_user_cnt),
-            qr_active_user_cnt=VALUES(qr_active_user_cnt)
+            qr_active_user_cnt=VALUES(qr_active_user_cnt),
+            new_user_cnt=VALUES(new_user_cnt),
+            pos_new_user_cnt=VALUES(pos_new_user_cnt),
+            qr_new_user_cnt=VALUES(qr_new_user_cnt)
 
             ;
 
