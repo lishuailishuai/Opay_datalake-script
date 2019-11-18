@@ -224,7 +224,7 @@ def app_oride_order_global_operate_to_mysql_d_sql_task(ds):
         amount.avg_finish_driver_amount, --司机人均收入
         users.finished_users,----完单乘客数
         users.first_finished_users as new_finished_users,----新增完单乘客数
-        round(od.wet_order_cnt / od.order_cnt,2) as wet_order_rate,--湿单占比 
+        round(od.wet_order_cnt / od.order_cnt,8) as wet_order_rate,--湿单占比 
         od.country_code,
         od.dt
     from 
