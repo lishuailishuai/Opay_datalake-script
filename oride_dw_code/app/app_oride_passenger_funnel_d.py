@@ -105,7 +105,7 @@ def app_oride_passenger_funnel_d_sql_task(ds):
     SET hive.exec.parallel=TRUE;
     SET hive.exec.dynamic.partition.mode=nonstrict;
     
-    insert overwrite table {db}.{table} partition(dt)
+    insert overwrite table {db}.{table} partition(country_code,dt)
     select  if(city.city_name is not null,city.city_name,ord.region_name) region_name,
         ord.product_id,
         ord.submit_order_cnt,--下单量
@@ -131,6 +131,7 @@ def app_oride_passenger_funnel_d_sql_task(ds):
         bro.order_onride_dis,--完单计费距离
         bro.pick_up_dis, --接驾距离
         bro.user_evaluation_order_cnt,--乘客评价订单量
+        'nal' as country_code,
         '{pt}' as dt
     from
     (
