@@ -153,7 +153,7 @@ def app_oride_passenger_funnel_limited_edition_d_sql_task(ds):
                 )as b 
                 group by country_code,order_id
             ) as t2
-            group by t2.region_name
+            group by t2.country_code
         ) as b
         on a.region_name=b.region_name;
    
