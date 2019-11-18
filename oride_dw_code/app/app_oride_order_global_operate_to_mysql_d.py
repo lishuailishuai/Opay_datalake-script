@@ -336,13 +336,12 @@ def app_oride_order_global_operate_to_mysql_d_sql_task(ds):
         left join
         (--以前的司机数
             select 
-                city_id,
-                driver_id,
-                dt 
+                driver_id
+            
             from oride_dw.dwd_oride_order_base_include_test_df
             where dt in ( '{pt}','his') and create_date < '{pt}' and city_id != 999001
-            group by   city_id,driver_id,dt 
-        )old on new.city_id = old.city_id and new.driver_id = old.driver_id
+            group by   driver_id
+        )old on new.driver_id = old.driver_id
         group by new.city_id,new.dt
     )new_driver on od.city_id = new_driver.city_id and new_driver.dt = od.dt
     left join
