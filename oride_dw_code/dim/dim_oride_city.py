@@ -108,7 +108,7 @@ SELECT city_id,
        city_name,
        --城市名称
 
-       country_name,
+       nvl(cty.name,-1) as country_name,
        --国家名称
 
        shape,
@@ -144,7 +144,7 @@ FROM
           name AS city_name,
           --城市名称
 
-          country AS country_name,
+          country,
           --国家
 
           shape,
