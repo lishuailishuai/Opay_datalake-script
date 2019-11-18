@@ -2570,7 +2570,6 @@ def send_funnel_report_email(ds, **kwargs):
                             <th>应答前取消率</th>
                             <th>应答前取消率（近4周同期均值）</th>
                             <th>应答率</th>
-                            <th>应答率（近4周同期均值）</th>
                             <th>应答后取消率</th>
                             <th>应答后取消率（近4周同期均值）</th>
                             <th>司机取消率</th>
@@ -2667,7 +2666,6 @@ def send_funnel_report_email(ds, **kwargs):
                 <td>{11}%</td>
                 <td>{12}%</td>
                 <td>{13}%</td>
-                <td>{14}%</td>
                 <td>{15}%</td>
                 <td>{16}%</td>
                 <td>{17}%</td>
