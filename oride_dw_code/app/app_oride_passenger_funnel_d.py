@@ -80,7 +80,7 @@ def fun_task_timeout_monitor(ds, dag, **op_kwargs):
     tb = [
         {
             "db": "oride_dw", "table": "{dag_name}".format(dag_name=dag_ids),
-            "partition": "dt={pt}".format(pt=ds),"timeout": "1200"
+            "partition": "country_code=nal/dt={pt}".format(pt=ds),"timeout": "1200"
         }
     ]
     TaskTimeoutMonitor().set_task_monitor(tb)
@@ -211,7 +211,7 @@ def execution_data_task_id(ds,**kargs):
     第二个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
 
     """
-    TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "false", "true")
+    TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "true", "true")
 
 app_oride_passenger_funnel_d_task = PythonOperator(
     task_id='app_oride_passenger_funnel_d_task',
