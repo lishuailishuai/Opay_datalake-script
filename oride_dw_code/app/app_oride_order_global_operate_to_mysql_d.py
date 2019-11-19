@@ -117,10 +117,10 @@ dependence_dwd_oride_driver_recharge_records_df_task = UFileSensor(
 
 
 
-dependence_dm_oride_driver_audit_pass_cube_d_task = UFileSensor(
-    task_id='dm_oride_driver_audit_pass_cube_d_task',
+dependence_dm_oride_driver_base_task = UFileSensor(
+    task_id='dm_oride_driver_base_task',
     filepath='{hdfs_path_str}/country_code=nal/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw/dm_oride_driver_audit_pass_cube_d",
+        hdfs_path_str="oride/oride_dw/dm_oride_driver_base",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -198,7 +198,7 @@ def app_oride_order_global_operate_to_mysql_d_sql_task(ds):
                 create_time,
                 dt 
             from oride_dw.dwd_oride_order_base_include_test_df
-            where dt = '${pt}' and city_id != 999001 and is_finish=1
+            where dt = '{pt}' and city_id != 999001 and is_finish=1
         )
     
     insert overwrite table oride_dw.{table} partition(country_code,dt)
@@ -226,7 +226,7 @@ def app_oride_order_global_operate_to_mysql_d_sql_task(ds):
         nvl(users.first_finished_users,0)  as new_finished_users,----新增完单乘客数
         nvl(round(od.wet_order_cnt / od.order_cnt,8),0) as wet_order_rate,--湿单占比 
         nvl(city.country_code,'-10000') as country_code,
-        '${pt}' as  dt
+        '{pt}' as  dt
     from 
     (
         select 
@@ -239,7 +239,7 @@ def app_oride_order_global_operate_to_mysql_d_sql_task(ds):
             count(if(is_wet_order =1,1,null)) as wet_order_cnt, --湿单量
             sum(order_onride_distance) as order_distance --送驾距离
         from  oride_dw.dwm_oride_order_base_di 
-            where dt = '${pt}' 
+            where dt = '{pt}' 
         group by city_id with cube
     )od
     left join
@@ -250,7 +250,7 @@ def app_oride_order_global_operate_to_mysql_d_sql_task(ds):
             dt,
             country_code
         from oride_dw.dim_oride_city
-        where dt = '${pt}'
+        where dt = '{pt}'
     )city on nvl(od.city_id,-10000) = city.city_id
     left join
     (
@@ -274,11 +274,11 @@ def app_oride_order_global_operate_to_mysql_d_sql_task(ds):
         ( --B端补贴  t1.recharge_amount+t1.reward_amount
             select 
                 city_id,
-                sum(if(create_date ='${pt}',nvl(reward_amount,0) + nvl(recharge_amount,0),0)) b_subsidy_d,--B端补贴、天
+                sum(if(create_date ='{pt}',nvl(reward_amount,0) + nvl(recharge_amount,0),0)) b_subsidy_d,--B端补贴、天
                 sum(nvl(reward_amount,0) + nvl(recharge_amount,0) ) as b_subsidy_m,--B端补贴 月
                 dt
             from oride_dw.dwd_oride_order_finance_df
-            where dt ='${pt}' and month(create_date) = month('${pt}')
+            where dt ='{pt}' and month(create_date) = month('{pt}')
             group by city_id,dt
         )b
         left join
@@ -286,12 +286,12 @@ def app_oride_order_global_operate_to_mysql_d_sql_task(ds):
             select 
                 city_id,
                 
-                sum(if(create_date ='${pt}',nvl(price,0) - nvl(pay_amount,0),0)) c_subsidy_d,--C端补贴、天
+                sum(if(create_date ='{pt}',nvl(price,0) - nvl(pay_amount,0),0)) c_subsidy_d,--C端补贴、天
                 sum(nvl(price,0) - nvl(pay_amount,0)) as c_subsidy_m,
                 dt
             from  dwd_order_df
-            where dt = '${pt}' and city_id != 999001 and is_finish=1
-            and   month(create_date) = month('${pt}')
+            where dt = '{pt}' and city_id != 999001 and is_finish=1
+            and   month(create_date) = month('{pt}')
             group by city_id,dt
         )c on  b.city_id =  c.city_id  and  c.dt =  b.dt
         group by b.city_id,b.dt,b.b_subsidy_d,c.c_subsidy_d
@@ -300,11 +300,10 @@ def app_oride_order_global_operate_to_mysql_d_sql_task(ds):
     (--审核司机数
         select 
             city_id,
-            td_audit_finish_driver_num, --审核司机数
-            dt
-        from oride_dw.dm_oride_driver_audit_pass_cube_d
-        where dt ='${pt}' 
-        and product_id = -10000
+            sum(td_audit_finish_driver_num) as td_audit_finish_driver_num --审核司机数
+        from oride_dw.dm_oride_driver_base
+        where dt ='{pt}' 
+        group by city_id with cube
     )audit on nvl(od.city_id, -10000) = nvl( audit.city_id, -10000)
     left join
     (--当日完单用户数，当新增日完单用户数
@@ -314,7 +313,7 @@ def app_oride_order_global_operate_to_mysql_d_sql_task(ds):
             first_finished_users,--当日新增完单用户
             dt
         from  oride_dw.dm_oride_passenger_base_cube_d
-        where dt ='${pt}' 
+        where dt ='{pt}' 
         and product_id = -10000 and driver_serv_type = -10000
     )users on nvl(od.city_id,-10000) = nvl(users.city_id ,-10000)
     
@@ -330,7 +329,7 @@ def app_oride_order_global_operate_to_mysql_d_sql_task(ds):
                 city_id,
                 driver_id
             from dwd_order_df
-            where create_date = '${pt}'
+            where create_date = '{pt}'
             group by   city_id,driver_id,dt 
         )new
         left join
@@ -339,7 +338,7 @@ def app_oride_order_global_operate_to_mysql_d_sql_task(ds):
                 driver_id
             
             from oride_dw.dwd_oride_order_base_include_test_df
-            where dt in ( '${pt}','his') and create_date < '${pt}' and city_id != 999001 and is_finish =1 
+            where dt in ( '{pt}','his') and create_date < '{pt}' and city_id != 999001 and is_finish =1 
             group by   driver_id
         )old on new.driver_id = old.driver_id
         group by new.city_id with cube
@@ -376,7 +375,7 @@ def app_oride_order_global_operate_to_mysql_d_sql_task(ds):
                      city_id,
                      dt
                     from  oride_dw.dwm_oride_order_base_di 
-                   where dt = '${pt}' and is_finish = 1
+                   where dt = '{pt}' and is_finish = 1
                     group by driver_id,city_id,dt
                 )od
                 left join
@@ -387,7 +386,7 @@ def app_oride_order_global_operate_to_mysql_d_sql_task(ds):
                         product_id,
                         dt
                     from oride_dw.dim_oride_driver_base 
-                    where dt = '${pt}'
+                    where dt = '{pt}'
                 )driver on od.city_id = driver.city_id and driver.driver_id = od.driver_id
                 left join 
                 (--司机总收入 amount_all
@@ -397,7 +396,7 @@ def app_oride_order_global_operate_to_mysql_d_sql_task(ds):
                         nvl(amount_agenter,0) as amount_agenter,
                         from_unixtime(day,'yyyy-MM-dd') as day_date
                     from oride_dw.dwd_oride_driver_records_day_df
-                    where dt = '${pt}' and  from_unixtime(day,'yyyy-MM-dd') = '${pt}'
+                    where dt = '{pt}' and  from_unixtime(day,'yyyy-MM-dd') = '{pt}'
                 )drd on od.driver_id = drd.driver_id
                 left join 
                 (--司机amount
@@ -407,15 +406,14 @@ def app_oride_order_global_operate_to_mysql_d_sql_task(ds):
                         abs(nvl(amount,0)) as amount, 
                         from_unixtime(created_at, "yyyy-MM-dd")  as created_at 
                     FROM oride_dw.dwd_oride_driver_recharge_records_df  
-                    WHERE dt = '${pt}' and from_unixtime(created_at,'yyyy-MM-dd') = '${pt}' 
+                    WHERE dt = '{pt}' and from_unixtime(created_at,'yyyy-MM-dd') = '{pt}' 
                     and amount_reason=6 
                 )drr on od.driver_id = drr.driver_id
                 group by od.city_id,driver.product_id,od.dt
             )t
         )tmp 
         where tmp.rn = 1
-    )amount on od.city_id = amount.city_id ;
-    '''.format(
+    )amount on od.city_id = amount.city_id ;'''.format(
         pt=ds,
         table=table_name,
         db=db_name
@@ -456,5 +454,5 @@ app_oride_order_global_operate_to_mysql_d_task = PythonOperator(
 
 dependence_dwm_oride_order_base_di_task >> dependence_dim_oride_city_task >> dependence_dim_oride_passenger_base_task >> \
 dependence_dim_oride_driver_base_task >> dependence_dwd_oride_order_finance_df_task >> dependence_dwd_oride_driver_records_day_df_task >> \
-dependence_dwd_oride_driver_recharge_records_df_task >> dependence_dm_oride_driver_audit_pass_cube_d_task>>dependence_dm_oride_passenger_base_cube_d_task>>\
+dependence_dwd_oride_driver_recharge_records_df_task >> dependence_dm_oride_driver_base_task>>dependence_dm_oride_passenger_base_cube_d_task>>\
 dependence_dwd_oride_order_base_include_test_df_task>>app_oride_order_global_operate_to_mysql_d_task
