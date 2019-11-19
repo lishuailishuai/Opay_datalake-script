@@ -123,7 +123,7 @@ class TaskTouchzSuccess(object):
             验证_SUCCESS是否执行成功
         """
 
-        time.sleep(10)
+        time.sleep(15)
 
         print("debug-> check_success_exist")
 
