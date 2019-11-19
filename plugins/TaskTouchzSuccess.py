@@ -125,7 +125,7 @@ class TaskTouchzSuccess(object):
 
         print("debug-> check_success_exist")
 
-        command="$HADOOP_HOME/bin/hadoop dfs -ls {hdfs_data_dir}/_SUCCESS>/dev/null 2>/dev/null && echo 1 || echo 0".format(hdfs_data_dir=self.hdfs_data_dir_str)
+        command="hadoop dfs -ls {hdfs_data_dir}/_SUCCESS>/dev/null 2>/dev/null && echo 1 || echo 0".format(hdfs_data_dir=self.hdfs_data_dir_str)
 
         logging.info(command)
 
@@ -220,7 +220,7 @@ class TaskTouchzSuccess(object):
 
                 time.sleep(5)
 
-                succ_str="$HADOOP_HOME/bin/hadoop fs -touchz {hdfs_data_dir}/_SUCCESS".format(hdfs_data_dir=self.hdfs_data_dir_str)
+                succ_str="hadoop fs -touchz {hdfs_data_dir}/_SUCCESS".format(hdfs_data_dir=self.hdfs_data_dir_str)
     
                 logging.info(succ_str)
         
