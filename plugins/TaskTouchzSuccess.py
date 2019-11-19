@@ -134,9 +134,13 @@ class TaskTouchzSuccess(object):
         
         res = 0 if res is None else res[0].lower().strip()
         out.close()
+
+        print(type(res))
         
+        print(res)
+
         #判断 _SUCCESS 文件是否生成
-        if res == '' or res == 'None' or res == '0':
+        if res== '' or res == 'None' or res[0] == '0':
             logging.info("_SUCCESS 验证失败")
 
             sys.exit(1)
