@@ -36,16 +36,15 @@ dag = airflow.DAG('app_oride_driver_invite_driver_data_trace_d',
 
 ##----------------------------------------- 依赖 ---------------------------------------##
 
-dim_oride_driver_audit_base_task = UFileSensor(
-    task_id='dim_oride_driver_audit_base_task',
-    filepath='{hdfs_path_str}/country_code=nal/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw/dim_oride_driver_audit_base",
-        pt='{{ds}}'
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60,
-    dag=dag
-)
+#依赖前一天分区
+ods_sqoop_mass_rider_signups_df_tesk=HivePartitionSensor(
+      task_id="ods_sqoop_mass_rider_signups_df_tesk",
+      table="ods_sqoop_mass_rider_signups_df",
+      partition="dt='{{ds}}'",
+      schema="oride_dw_ods",
+      poke_interval=60, #依赖不满足时，一分钟检查一次依赖状态
+      dag=dag
+    )
 
 dwd_oride_order_base_include_test_di_task = UFileSensor(
     task_id='dwd_oride_order_base_include_test_di_task',
@@ -211,6 +210,6 @@ app_oride_driver_invite_driver_data_trace_d_task = PythonOperator(
     dag=dag
 )
 
-dim_oride_driver_audit_base_task >> app_oride_driver_invite_driver_data_trace_d_task
+ods_sqoop_mass_rider_signups_df_tesk >> app_oride_driver_invite_driver_data_trace_d_task
 dwd_oride_order_base_include_test_di_task >> app_oride_driver_invite_driver_data_trace_d_task
 dim_oride_city_task >> app_oride_driver_invite_driver_data_trace_d_task
