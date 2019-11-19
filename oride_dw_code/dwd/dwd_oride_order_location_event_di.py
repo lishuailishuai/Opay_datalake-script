@@ -73,7 +73,7 @@ dependence_dwd_oride_passanger_location_event_hi_prev_day_task = UFileSensor(
 
 ##----------------------------------------- 变量 ---------------------------------------##
 
-
+db_name = "oride_dw"
 table_name = "dwd_oride_order_location_event_di"
 hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
 
@@ -98,158 +98,152 @@ task_timeout_monitor = PythonOperator(
     dag=dag
 )
 
+
 ##----------------------------------------- 脚本 ---------------------------------------##
 
-dwd_oride_location_driver_event_di_task = HiveOperator(
-    task_id='dwd_oride_location_driver_event_di_task',
 
-    hql='''
-        SET hive.exec.parallel=TRUE;
-        SET hive.exec.dynamic.partition.mode=nonstrict;
+def dwd_oride_order_location_event_di_sql_task(ds):
+    HQL = '''
+    set hive.exec.parallel=true;
+    set hive.exec.dynamic.partition.mode=nonstrict;
 
-        insert overwrite table oride_dw.{table} partition(country_code,dt)
-
-         
-        select 
-        d.order_id , --订单id
-        p.user_id , --用户id
-        d.driver_id , --司机id
-        d.accept_order_click_lat , --司机accept_order_click，事件，纬度
-        d.accept_order_click_lng , --司机accept_order_click，事件，经度
-        d.confirm_arrive_click_arrived_lat , --司机confirm_arrive_click_arrived，事件，纬度
-        d.confirm_arrive_click_arrived_lng  , --司机confirm_arrive_click_arrived，事件，经度
-        d.pick_up_passengers_sliding_arrived_lat , --司机pick_up_passengers_sliding_arrived，事件，纬度
-        d.pick_up_passengers_sliding_arrived_lng , --司机pick_up_passengers_sliding_arrived，事件，经度
-        d.start_ride_sliding_lat , --司机start_ride_sliding，事件，纬度
-        d.start_ride_sliding_lng , --司机start_ride_sliding，事件，经度
-        d.start_ride_sliding_arrived_lat , --司机start_ride_sliding_arrived，事件，纬度
-        d.start_ride_sliding_arrived_lng , --司机start_ride_sliding_arrived，事件，经度
-        p.looking_for_a_driver_show_lat , --乘客looking_for_a_driver_show，事件，纬度
-        p.looking_for_a_driver_show_lng ,--乘客looking_for_a_driver_show，事件，经度
-        p.successful_order_show_lat ,--乘客successful_order_show，事件，纬度
-        p.successful_order_show_lng ,--乘客successful_order_show，事件，经度
-        p.start_ride_show_lat ,--乘客start_ride_show，事件，纬度
-        p.start_ride_show_lng ,--乘客start_ride_show，事件，经度
-        p.complete_the_order_show_lat,--乘客complete_the_order_show，事件，纬度
-        p.complete_the_order_show_lng, --乘客complete_the_order_show，事件，经度
-        p.rider_arrive_show_lat ,  --乘客rider_arrive_show，事件，纬度
-        p.rider_arrive_show_lng , --乘客rider_arrive_show，事件，经度
-        
-        'nal' as country_code,
-        '{pt}' as dt
-        
-        from 
-        
-        (
-            select 
-            order_id , 
-            driver_id ,
-            accept_order_click_lat ,
-            accept_order_click_lng ,
-            confirm_arrive_click_arrived_lat ,
-            confirm_arrive_click_arrived_lng  ,
-            pick_up_passengers_sliding_arrived_lat ,
-            pick_up_passengers_sliding_arrived_lng ,
-            start_ride_sliding_lat ,
-            start_ride_sliding_lng ,
-            start_ride_sliding_arrived_lat ,
-            start_ride_sliding_arrived_lng 
-            from 
-            oride_dw.dwd_oride_driver_location_event_di
-            where dt = '{pt}'
-        ) d 
-        left join 
-        (	
-            select 
-            
-            order_id , 
-            user_id ,
-            looking_for_a_driver_show_lat ,
-            looking_for_a_driver_show_lng ,
-            successful_order_show_lat ,
-            successful_order_show_lng ,
-            start_ride_show_lat ,
-            start_ride_show_lng ,
-            complete_the_order_show_lat,
-            complete_the_order_show_lng,
-            rider_arrive_show_lat ,
-            rider_arrive_show_lng 
-            from 
-            oride_dw.dwd_oride_passanger_location_event_di
-            where dt = '{pt}'
-        ) p on d.order_id = p.order_id
-
-
-        ;
-
+    INSERT OVERWRITE TABLE {db}.{table} partition(country_code,dt)
+    SELECT  d.order_id --订单id 
+           ,p.user_id --用户id 
+           ,d.driver_id --司机id 
+           ,d.accept_order_click_lat --司机accept_order_click，事件，纬度 
+           ,d.accept_order_click_lng --司机accept_order_click，事件，经度 
+           ,d.confirm_arrive_click_arrived_lat --司机confirm_arrive_click_arrived，事件，纬度 
+           ,d.confirm_arrive_click_arrived_lng --司机confirm_arrive_click_arrived，事件，经度 
+           ,d.pick_up_passengers_sliding_arrived_lat --司机pick_up_passengers_sliding_arrived，事件，纬度 
+           ,d.pick_up_passengers_sliding_arrived_lng --司机pick_up_passengers_sliding_arrived，事件，经度 
+           ,d.start_ride_sliding_lat --司机start_ride_sliding，事件，纬度 
+           ,d.start_ride_sliding_lng --司机start_ride_sliding，事件，经度 
+           ,d.start_ride_sliding_arrived_lat --司机start_ride_sliding_arrived，事件，纬度 
+           ,d.start_ride_sliding_arrived_lng --司机start_ride_sliding_arrived，事件，经度 
+           ,p.looking_for_a_driver_show_lat --乘客looking_for_a_driver_show，事件，纬度 
+           ,p.looking_for_a_driver_show_lng --乘客looking_for_a_driver_show，事件，经度 
+           ,p.successful_order_show_lat --乘客successful_order_show，事件，纬度 
+           ,p.successful_order_show_lng --乘客successful_order_show，事件，经度 
+           ,p.start_ride_show_lat --乘客start_ride_show，事件，纬度 
+           ,p.start_ride_show_lng --乘客start_ride_show，事件，经度 
+           ,p.complete_the_order_show_lat --乘客complete_the_order_show，事件，纬度 
+           ,p.complete_the_order_show_lng --乘客complete_the_order_show，事件，经度 
+           ,p.rider_arrive_show_lat --乘客rider_arrive_show，事件，纬度 
+           ,p.rider_arrive_show_lng --乘客rider_arrive_show，事件，经度 
+           ,'nal'  AS country_code 
+           ,'{pt}' AS dt
+    FROM 
+    (
+        SELECT  order_id 
+               ,driver_id 
+               ,accept_order_click_lat 
+               ,accept_order_click_lng 
+               ,confirm_arrive_click_arrived_lat 
+               ,confirm_arrive_click_arrived_lng 
+               ,pick_up_passengers_sliding_arrived_lat 
+               ,pick_up_passengers_sliding_arrived_lng 
+               ,start_ride_sliding_lat 
+               ,start_ride_sliding_lng 
+               ,start_ride_sliding_arrived_lat 
+               ,start_ride_sliding_arrived_lng
+        FROM oride_dw.dwd_oride_driver_location_event_di
+        WHERE dt = '{pt}'  
+    ) d
+    LEFT JOIN 
+    (
+        SELECT  order_id 
+               ,user_id 
+               ,looking_for_a_driver_show_lat 
+               ,looking_for_a_driver_show_lng 
+               ,successful_order_show_lat 
+               ,successful_order_show_lng 
+               ,start_ride_show_lat 
+               ,start_ride_show_lng 
+               ,complete_the_order_show_lat 
+               ,complete_the_order_show_lng 
+               ,rider_arrive_show_lat 
+               ,rider_arrive_show_lng
+        FROM oride_dw.dwd_oride_passanger_location_event_di
+        WHERE dt = '{pt}'  
+    ) p
+    ON d.order_id = p.order_id 
+    ;
 
 '''.format(
-        pt='{{ds}}',
-        now_day='{{ds}}',
-        table=table_name
-    ),
-    dag=dag
-)
+        pt=ds,
+        table=table_name,
+        db=db_name
+    )
+    return HQL
 
 
-def check_key_data(ds, **kargs):
+# 熔断数据，如果数据重复，报错
+def check_key_data_task(ds):
+    cursor = get_hive_cursor()
+
     # 主键重复校验
-    HQL_DQC = '''
-    SELECT count(1) as nm
-    FROM
-     (SELECT order_id,
-             user_id,
-             driver_id,
-             count(1) as cnt
-      FROM oride_dw.{table}
+    check_sql = '''
+    SELECT count(1)-count(distinct (concat(order_id,'_',nvl(user_id,0),'_',nvl(driver_id,0))))  as cnt
+      FROM {db}.{table}
       WHERE dt='{pt}'
-      GROUP BY 
-      order_id,
-      user_id,
-      driver_id 
-      HAVING count(1)>1) t1
+      and country_code in ('nal')
     '''.format(
         pt=ds,
-        now_day=ds,
-        table=table_name
+        now_day=airflow.macros.ds_add(ds, +1),
+        table=table_name,
+        db=db_name
     )
 
-    cursor = get_hive_cursor()
-    logging.info('Executing 主键重复校验: %s', HQL_DQC)
+    logging.info('Executing 主键重复校验: %s', check_sql)
 
-    cursor.execute(HQL_DQC)
+    cursor.execute(check_sql)
+
     res = cursor.fetchone()
 
     if res[0] > 1:
+        flag = 1
         raise Exception("Error The primary key repeat !", res)
+        sys.exit(1)
     else:
+        flag = 0
         print("-----> Notice Data Export Success ......")
 
-
-# 主键重复校验
-task_check_key_data = PythonOperator(
-    task_id='check_data',
-    python_callable=check_key_data,
-    provide_context=True,
-    dag=dag)
-
-# 生成_SUCCESS
-def check_success(ds, dag, **op_kwargs):
-    dag_ids = dag.dag_id
-
-    msg = [
-        {"table": "{dag_name}".format(dag_name=dag_ids),
-         "hdfs_path": "{hdfsPath}/country_code=nal/dt={pt}".format(pt=ds, hdfsPath=hdfs_path)}
-    ]
-
-    TaskTouchzSuccess().set_touchz_success(msg)
+    return flag
 
 
-touchz_data_success = PythonOperator(
-    task_id='touchz_data_success',
-    python_callable=check_success,
+# 主流程
+def execution_data_task_id(ds, **kargs):
+    hive_hook = HiveCliHook()
+
+    # 读取sql
+    _sql = dwd_oride_order_location_event_di_sql_task(ds)
+
+    logging.info('Executing: %s', _sql)
+
+    # 执行Hive
+    hive_hook.run_cli(_sql)
+
+    # 熔断数据
+    check_key_data_task(ds)
+
+    # 生成_SUCCESS
+    """
+    第一个参数true: 数据目录是有country_code分区。false 没有
+    第二个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
+
+    """
+    TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "true", "true")
+
+
+dwd_oride_order_location_event_di_task = PythonOperator(
+    task_id='dwd_oride_order_location_event_di_task',
+    python_callable=execution_data_task_id,
     provide_context=True,
     dag=dag
 )
 
-dependence_dwd_oride_driver_location_event_hi_prev_day_task >> dependence_dwd_oride_passanger_location_event_hi_prev_day_task >> sleep_time >> dwd_oride_location_driver_event_di_task >> task_check_key_data >> touchz_data_success
+dependence_dwd_oride_driver_location_event_hi_prev_day_task >> \
+dependence_dwd_oride_passanger_location_event_hi_prev_day_task >> \
+sleep_time >> \
+dwd_oride_order_location_event_di_task

@@ -340,7 +340,7 @@ def check_key_data_task(ds):
       SELECT count(1)-count(distinct order_id) as cnt
       FROM {db}.{table}
       WHERE dt='{pt}'
-      and country_code in ('NG')
+      and country_code in ('nal')
     '''.format(
         pt=ds,
         now_day=airflow.macros.ds_add(ds, +1),

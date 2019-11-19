@@ -63,7 +63,7 @@ dwd_oride_client_event_detail_hi_hour_task = UFileSensor(
 
 ##----------------------------------------- 变量 ---------------------------------------##
 
-
+db_name = "oride_dw"
 table_name = "dwd_oride_driver_location_event_hi"
 hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
 
@@ -89,145 +89,131 @@ task_timeout_monitor = PythonOperator(
     dag=dag
 )
 
+
 ##----------------------------------------- 脚本 ---------------------------------------##
 
-dwd_oride_location_driver_event_hi_task = HiveOperator(
-    task_id='dwd_oride_location_driver_event_hi_task',
 
-    hql='''
-        SET hive.exec.parallel=TRUE;
-        SET hive.exec.dynamic.partition.mode=nonstrict;
+def dwd_oride_location_driver_event_hi_sql_task(ds,execution_date):
+    HQL = '''
+    set hive.exec.parallel=true;
+    set hive.exec.dynamic.partition.mode=nonstrict;
 
-        insert overwrite table oride_dw.{table} partition(country_code,dt,hour)
-
-        select 
-        t.order_id, --订单id
-        t.driver_id, --司机id
-        
-        replace(concat_ws(',',collect_set(if(accept_order_click_lat is null,'',accept_order_click_lat))),',','') as accept_order_click_lat, --accept_order_click，事件，纬度
-        replace(concat_ws(',',collect_set(if(accept_order_click_lng is null,'',accept_order_click_lng))),',','') as accept_order_click_lng, --accept_order_click，事件，经度
-        replace(concat_ws(',',collect_set(if(confirm_arrive_click_arrived_lat is null,'',confirm_arrive_click_arrived_lat))),',','') as confirm_arrive_click_arrived_lat, --confirm_arrive_click_arrived，事件，纬度
-        replace(concat_ws(',',collect_set(if(confirm_arrive_click_arrived_lng is null,'',confirm_arrive_click_arrived_lng))),',','') as confirm_arrive_click_arrived_lng, --confirm_arrive_click_arrived，事件，经度
-        replace(concat_ws(',',collect_set(if(pick_up_passengers_sliding_arrived_lat is null,'',pick_up_passengers_sliding_arrived_lat))),',','') as pick_up_passengers_sliding_arrived_lat, --pick_up_passengers_sliding_arrived，事件，纬度
-        replace(concat_ws(',',collect_set(if(pick_up_passengers_sliding_arrived_lng is null,'',pick_up_passengers_sliding_arrived_lng))),',','') as pick_up_passengers_sliding_arrived_lng, --pick_up_passengers_sliding_arrived，事件，经度
-        replace(concat_ws(',',collect_set(if(start_ride_sliding_lat is null,'',start_ride_sliding_lat))),',','') as start_ride_sliding_lat, --start_ride_sliding，事件，纬度
-        replace(concat_ws(',',collect_set(if(start_ride_sliding_lng is null,'',start_ride_sliding_lng))),',','') as start_ride_sliding_lng, --start_ride_sliding，事件，经度
-        replace(concat_ws(',',collect_set(if(start_ride_sliding_arrived_lat is null,'',start_ride_sliding_arrived_lat))),',','') as start_ride_sliding_arrived_lat, --start_ride_sliding_arrived，事件，纬度
-        replace(concat_ws(',',collect_set(if(start_ride_sliding_arrived_lng is null,'',start_ride_sliding_arrived_lng))),',','') as start_ride_sliding_arrived_lng, --start_ride_sliding_arrived，事件，经度
-        
-        'nal' as country_code,
-        '{now_day}' as dt,
-        '{now_hour}' as hour
-        
-        
-        from 
-        (	
-            select
-            get_json_object(event_value,'$.order_id') order_id,
-            user_id as driver_id,
-            if(event_name = 'accept_order_click',get_json_object(event_value,'$.lat'),null) as accept_order_click_lat,
-            if(event_name = 'accept_order_click',get_json_object(event_value,'$.lng'),null) as accept_order_click_lng,
-            if(event_name = 'confirm_arrive_click_arrived',get_json_object(event_value,'$.lat'),null) as confirm_arrive_click_arrived_lat,
-            if(event_name = 'confirm_arrive_click_arrived',get_json_object(event_value,'$.lng'),null) as confirm_arrive_click_arrived_lng,
-            if(event_name = 'pick_up_passengers_sliding_arrived',get_json_object(event_value,'$.lat'),null) as pick_up_passengers_sliding_arrived_lat,
-            if(event_name = 'pick_up_passengers_sliding_arrived',get_json_object(event_value,'$.lng'),null) as pick_up_passengers_sliding_arrived_lng,
-            if(event_name = 'start_ride_sliding',get_json_object(event_value,'$.lat'),null) as start_ride_sliding_lat,
-            if(event_name = 'start_ride_sliding',get_json_object(event_value,'$.lng'),null) as start_ride_sliding_lng,
-            if(event_name = 'start_ride_sliding_arrived',get_json_object(event_value,'$.lat'),null) as start_ride_sliding_arrived_lat,
-            if(event_name = 'start_ride_sliding_arrived',get_json_object(event_value,'$.lng'),null) as start_ride_sliding_arrived_lng
-                    
-        
-            from oride_dw.dwd_oride_client_event_detail_hi
-            where dt = '{now_day}'
-            and hour = '{now_hour}'
-            and event_name in (
-                'accept_order_click',
-                'confirm_arrive_click_arrived',
-                'pick_up_passengers_sliding_arrived',
-                'start_ride_sliding',
-                'start_ride_sliding_arrived'
-            )
-        ) t 
-        where t.order_id is not null
-        group by 
-        t.order_id,
-        t.driver_id
-        
-        ;
-
+    INSERT OVERWRITE TABLE {db}.{table} partition(country_code,dt,hour)
+    SELECT  t.order_id --订单id 
+           ,t.driver_id --司机id 
+           ,replace(concat_ws(',',collect_set(if(accept_order_click_lat is null,'',accept_order_click_lat))),',','')                                 AS accept_order_click_lat --accept_order_click，事件，纬度 
+           ,replace(concat_ws(',',collect_set(if(accept_order_click_lng is null,'',accept_order_click_lng))),',','')                                 AS accept_order_click_lng --accept_order_click，事件，经度 
+           ,replace(concat_ws(',',collect_set(if(confirm_arrive_click_arrived_lat is null,'',confirm_arrive_click_arrived_lat))),',','')             AS confirm_arrive_click_arrived_lat --confirm_arrive_click_arrived，事件，纬度 
+           ,replace(concat_ws(',',collect_set(if(confirm_arrive_click_arrived_lng is null,'',confirm_arrive_click_arrived_lng))),',','')             AS confirm_arrive_click_arrived_lng --confirm_arrive_click_arrived，事件，经度 
+           ,replace(concat_ws(',',collect_set(if(pick_up_passengers_sliding_arrived_lat is null,'',pick_up_passengers_sliding_arrived_lat))),',','') AS pick_up_passengers_sliding_arrived_lat --pick_up_passengers_sliding_arrived，事件，纬度 
+           ,replace(concat_ws(',',collect_set(if(pick_up_passengers_sliding_arrived_lng is null,'',pick_up_passengers_sliding_arrived_lng))),',','') AS pick_up_passengers_sliding_arrived_lng --pick_up_passengers_sliding_arrived，事件，经度 
+           ,replace(concat_ws(',',collect_set(if(start_ride_sliding_lat is null,'',start_ride_sliding_lat))),',','')                                 AS start_ride_sliding_lat --start_ride_sliding，事件，纬度 
+           ,replace(concat_ws(',',collect_set(if(start_ride_sliding_lng is null,'',start_ride_sliding_lng))),',','')                                 AS start_ride_sliding_lng --start_ride_sliding，事件，经度 
+           ,replace(concat_ws(',',collect_set(if(start_ride_sliding_arrived_lat is null,'',start_ride_sliding_arrived_lat))),',','')                 AS start_ride_sliding_arrived_lat --start_ride_sliding_arrived，事件，纬度 
+           ,replace(concat_ws(',',collect_set(if(start_ride_sliding_arrived_lng is null,'',start_ride_sliding_arrived_lng))),',','')                 AS start_ride_sliding_arrived_lng --start_ride_sliding_arrived，事件，经度 
+           ,'nal'                                                                                                                                    AS country_code 
+           ,'{now_day}'                                                                                                                              AS dt 
+           ,'{now_hour}'                                                                                                                             AS hour
+    FROM 
+    (
+        SELECT  get_json_object(event_value,'$.order_id') order_id 
+               ,user_id                                                                                         AS driver_id 
+               ,if(event_name = 'accept_order_click',get_json_object(event_value,'$.lat'),null)                 AS accept_order_click_lat 
+               ,if(event_name = 'accept_order_click',get_json_object(event_value,'$.lng'),null)                 AS accept_order_click_lng 
+               ,if(event_name = 'confirm_arrive_click_arrived',get_json_object(event_value,'$.lat'),null)       AS confirm_arrive_click_arrived_lat 
+               ,if(event_name = 'confirm_arrive_click_arrived',get_json_object(event_value,'$.lng'),null)       AS confirm_arrive_click_arrived_lng 
+               ,if(event_name = 'pick_up_passengers_sliding_arrived',get_json_object(event_value,'$.lat'),null) AS pick_up_passengers_sliding_arrived_lat 
+               ,if(event_name = 'pick_up_passengers_sliding_arrived',get_json_object(event_value,'$.lng'),null) AS pick_up_passengers_sliding_arrived_lng 
+               ,if(event_name = 'start_ride_sliding',get_json_object(event_value,'$.lat'),null)                 AS start_ride_sliding_lat 
+               ,if(event_name = 'start_ride_sliding',get_json_object(event_value,'$.lng'),null)                 AS start_ride_sliding_lng 
+               ,if(event_name = 'start_ride_sliding_arrived',get_json_object(event_value,'$.lat'),null)         AS start_ride_sliding_arrived_lat 
+               ,if(event_name = 'start_ride_sliding_arrived',get_json_object(event_value,'$.lng'),null)         AS start_ride_sliding_arrived_lng
+        FROM oride_dw.dwd_oride_client_event_detail_hi
+        WHERE dt = '{now_day}' 
+        AND hour = '{now_hour}' 
+        AND event_name IN ( 'accept_order_click', 'confirm_arrive_click_arrived', 'pick_up_passengers_sliding_arrived', 'start_ride_sliding', 'start_ride_sliding_arrived' )  
+    ) t
+    WHERE t.order_id is not null 
+    GROUP BY  t.order_id 
+             ,t.driver_id 
+    ;
 
 '''.format(
-        pt='{{ds}}',
-        now_day='{{ds}}',
-        now_hour='{{ execution_date.strftime("%H") }}',
-        table=table_name
-    ),
-    dag=dag
-)
+        pt=ds,
+        now_day=ds,
+        now_hour=execution_date.strftime("%H"),
+        table=table_name,
+        db=db_name
+    )
+    return HQL
 
 
-def check_key_data(ds, execution_date, **kargs):
+# 熔断数据，如果数据重复，报错
+def check_key_data_task(ds,execution_date):
+    cursor = get_hive_cursor()
+
     # 主键重复校验
-    HQL_DQC = '''
-    SELECT count(1) as nm
-    FROM
-     (SELECT order_id,
-             driver_id,
-             count(1) as cnt
-      FROM oride_dw.{table}
-
-      WHERE dt='{pt}'
-      and hour = '{now_hour}'
-      GROUP BY 
-      order_id,
-      driver_id 
-      HAVING count(1)>1) t1
+    check_sql = '''
+    SELECT count(1)-count(distinct (concat(order_id,'_',driver_id))) as cnt
+      FROM {db}.{table}
+      WHERE dt='{pt}' and hour ='{now_hour}'
+      and country_code in ('nal')
     '''.format(
         pt=ds,
         now_day=ds,
         now_hour=execution_date.strftime("%H"),
-        table=table_name
+        table=table_name,
+        db=db_name
     )
 
-    cursor = get_hive_cursor()
-    logging.info('Executing 主键重复校验: %s', HQL_DQC)
+    logging.info('Executing 主键重复校验: %s', check_sql)
 
-    cursor.execute(HQL_DQC)
+    cursor.execute(check_sql)
+
     res = cursor.fetchone()
 
     if res[0] > 1:
+        flag = 1
         raise Exception("Error The primary key repeat !", res)
+        sys.exit(1)
     else:
+        flag = 0
         print("-----> Notice Data Export Success ......")
 
-
-# 主键重复校验
-task_check_key_data = PythonOperator(
-    task_id='check_data',
-    python_callable=check_key_data,
-    provide_context=True,
-    dag=dag)
+    return flag
 
 
-# 生成_SUCCESS
-def check_success(ds, execution_date, dag, **op_kwargs):
-    dag_ids = dag.dag_id
+# 主流程
+def execution_data_task_id(ds,execution_date, **kargs):
+    hive_hook = HiveCliHook()
 
-    msg = [
-        {"table": "{dag_name}".format(dag_name=dag_ids),
-         "hdfs_path": "{hdfsPath}/country_code=nal/dt={pt}/hour={hour}".format(pt=ds,
-                                                                               hour=execution_date.strftime("%H"),
-                                                                               hdfsPath=hdfs_path)}
-    ]
+    # 读取sql
+    _sql = dwd_oride_location_driver_event_hi_sql_task(ds,execution_date)
 
-    TaskTouchzSuccess().set_touchz_success(msg)
+    logging.info('Executing: %s', _sql)
+
+    # 执行Hive
+    hive_hook.run_cli(_sql)
+
+    # 熔断数据
+    check_key_data_task(ds,execution_date)
+
+    # 生成_SUCCESS
+    """
+    第一个参数true: 数据目录是有country_code分区。false 没有
+    第二个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
+
+    """
+    TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "true", "false")
 
 
-touchz_data_success = PythonOperator(
-    task_id='touchz_data_success',
-    python_callable=check_success,
+dwd_oride_driver_location_event_hi_task = PythonOperator(
+    task_id='dwd_oride_driver_location_event_hi_task',
+    python_callable=execution_data_task_id,
     provide_context=True,
     dag=dag
 )
 
-dwd_oride_client_event_detail_hi_hour_task >> sleep_time >> dwd_oride_location_driver_event_hi_task >> task_check_key_data >> touchz_data_success
+dwd_oride_client_event_detail_hi_hour_task >> \
+sleep_time >> \
+dwd_oride_driver_location_event_hi_task
