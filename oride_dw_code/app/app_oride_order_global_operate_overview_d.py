@@ -138,7 +138,10 @@ task_timeout_monitor = PythonOperator(
 ##----------------------------------------- 脚本 ---------------------------------------##
 
 def app_oride_order_global_operate_overview_d_sql_task(ds):
-    HQL='''        with 
+    HQL='''   
+      SET hive.exec.parallel=TRUE;
+      set hive.exec.dynamic.partition.mode=nonstrict;
+         with 
             order_base as (--订单表
             select
                 city_id,
