@@ -105,7 +105,7 @@ def app_oride_driver_invite_driver_funnel_d_sql_task(ds):
         SELECT 
             a.commit_week,--提交周
             c.city_name as regional_name,--地域名
-            if(a.product_id is NOT NULL,a.product_id,0) as product_id,--业务线
+            if(a.driver_type is NOT NULL,a.driver_type,0) as product_id,--业务线
             a.know_orider,--渠道
             count(DISTINCT a.driver_id) as submit_data_num,--提交资料人数
             count(if(a.status in (1,2,9),a.driver_id,null)) as audit_num,--现场审核人数
@@ -116,8 +116,8 @@ def app_oride_driver_invite_driver_funnel_d_sql_task(ds):
         from
         (
             SELECT *,weekofyear(from_unixtime(create_time,'yyyy-MM-dd')) as commit_week
-            from oride_dw.dim_oride_driver_audit_base
-            where dt='{pt}' and know_orider in(7,13,14) and driver_id!=0
+            from oride_dw_ods.ods_sqoop_mass_rider_signups_df
+            where dt='{pt}' and know_orider in(7,13,14)
         ) as a 
         LEFT JOIN 
         (
@@ -125,7 +125,7 @@ def app_oride_driver_invite_driver_funnel_d_sql_task(ds):
             from oride_dw.dim_oride_city 
             WHERE dt='{pt}'
         ) as c
-        on a.city_id=c.city_id
+        on a.city=c.city_id
         LEFT JOIN
         (
             SELECT driver_id,
@@ -134,9 +134,9 @@ def app_oride_driver_invite_driver_funnel_d_sql_task(ds):
             where dt='{pt}'
         ) as d
         on a.driver_id=d.driver_id
-        GROUP BY a.commit_week,c.city_name,a.product_id,a.know_orider 
+        GROUP BY a.commit_week,c.city_name,a.driver_type,a.know_orider 
         GROUPING SETS(
-            (a.commit_week,c.city_name,a.product_id,a.know_orider),
+            (a.commit_week,c.city_name,a.driver_type,a.know_orider),
             (a.commit_week,c.city_name,a.know_orider)
         );
     '''.format(

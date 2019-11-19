@@ -114,7 +114,7 @@ def app_oride_driver_invite_driver_d_sql_task(ds):
         (
             SELECT *,from_unixtime(create_time,'yyyy-MM-dd') as commit_day
             from oride_dw_ods.ods_sqoop_mass_rider_signups_df
-            where dt='{pt}' and know_orider in(7,13,14) and driver_id!=0
+            where dt='{pt}' and know_orider in(7,13,14)
         ) as a 
         LEFT JOIN 
         (
