@@ -165,7 +165,7 @@ class TaskTouchzSuccess(object):
     
             logging.info("DATA EXPORT Successed ......")
 
-            self.heck_success_exist()
+            self.check_success_exist()
 
     
         except Exception as e:
@@ -215,7 +215,7 @@ class TaskTouchzSuccess(object):
         
                 logging.info("DATA EXPORT Successed ......")
 
-            self.heck_success_exist()
+            self.check_success_exist()
 
     
         except Exception as e:
