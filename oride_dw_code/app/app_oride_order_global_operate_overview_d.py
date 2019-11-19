@@ -83,10 +83,10 @@ dependence_dwd_oride_order_finance_df_task = UFileSensor(
     dag=dag
 )
 
-dependence_dm_oride_driver_audit_pass_cube_d_task = UFileSensor(
-    task_id='dm_oride_driver_audit_pass_cube_d_task',
+dependence_dm_oride_driver_base_task = UFileSensor(
+    task_id='dm_oride_driver_base_task',
     filepath='{hdfs_path_str}/country_code=nal/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw/dm_oride_driver_audit_pass_cube_d",
+        hdfs_path_str="oride/oride_dw/dm_oride_driver_base",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -138,11 +138,10 @@ task_timeout_monitor = PythonOperator(
 ##----------------------------------------- 脚本 ---------------------------------------##
 
 def app_oride_order_global_operate_overview_d_sql_task(ds):
-    HQL='''
-        SET hive.exec.parallel=TRUE;
+    HQL='''   
+      SET hive.exec.parallel=TRUE;
       set hive.exec.dynamic.partition.mode=nonstrict;
-        --将数据加载到内存，临时表
-        with 
+         with 
             order_base as (--订单表
             select
                 city_id,
@@ -402,8 +401,8 @@ def app_oride_order_global_operate_overview_d_sql_task(ds):
                 select 
                     city_id,
                     td_online_driver_num
-            from oride_dw.dm_oride_driver_audit_pass_cube_d 
-            where dt = '{pt}'and city_id >0 and product_id  = -10000
+            from oride_dw.dm_oride_driver_base 
+            where dt = '{pt}'
         )online_driver on  online_driver.city_id = ad.city_id
         left join
         (--计算开城日期  ad
@@ -414,8 +413,7 @@ def app_oride_order_global_operate_overview_d_sql_task(ds):
             where dt in ( '{pt}','his') 
             and status in (4,5)and city_id <> '999001'
             group by city_id 
-        )first_ord on ph.city_id = first_ord.city_id;
-    '''.format(
+        )first_ord on ph.city_id = first_ord.city_id;'''.format(
         pt=ds,
         table=table_name,
         db=db_name
@@ -455,5 +453,5 @@ app_oride_order_global_operate_overview_d_task = PythonOperator(
 )
 
 dependence_dim_oride_city_task  >>  dependence_dim_oride_passenger_base_task  >> dependence_dwd_oride_order_base_include_test_df_task >>\
-dependence_dwd_oride_order_finance_df_task >> dependence_dm_oride_driver_audit_pass_cube_d_task >> dependence_dwm_oride_order_base_di_task >> \
+dependence_dwd_oride_order_finance_df_task >> dependence_dm_oride_driver_base_task >> dependence_dwm_oride_order_base_di_task >> \
 app_oride_order_global_operate_overview_d_task

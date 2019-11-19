@@ -36,16 +36,15 @@ dag = airflow.DAG('app_oride_driver_invite_driver_data_trace_d',
 
 ##----------------------------------------- 依赖 ---------------------------------------##
 
-dim_oride_driver_audit_base_task = UFileSensor(
-    task_id='dim_oride_driver_audit_base_task',
-    filepath='{hdfs_path_str}/country_code=nal/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw/dim_oride_driver_audit_base",
-        pt='{{ds}}'
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60,
-    dag=dag
-)
+#依赖前一天分区
+ods_sqoop_mass_rider_signups_df_tesk=HivePartitionSensor(
+      task_id="ods_sqoop_mass_rider_signups_df_tesk",
+      table="ods_sqoop_mass_rider_signups_df",
+      partition="dt='{{ds}}'",
+      schema="oride_dw_ods",
+      poke_interval=60, #依赖不满足时，一分钟检查一次依赖状态
+      dag=dag
+    )
 
 dwd_oride_order_base_include_test_di_task = UFileSensor(
     task_id='dwd_oride_order_base_include_test_di_task',
@@ -105,7 +104,7 @@ def app_oride_driver_invite_driver_data_trace_d_sql_task(ds):
         INSERT OVERWRITE table {db}.{table} partition(country_code,dt)
         SELECT a.commit_week,--提交周
             c.city_name as regional_name,--地域名
-            if(a.product_id is NOT NULL,a.product_id,0) as product_id,--业务线
+            if(a.driver_type is NOT NULL,a.driver_type,0) as product_id,--业务线
             a.know_orider,--渠道
             nvl(sum(b.one_finish_order_cnt),0) as all_finish_order_cnt,--完单数量
             nvl(sum(b.one_finish_order_amt),0) as all_finish_order_amt,--完单金额
@@ -114,8 +113,8 @@ def app_oride_driver_invite_driver_data_trace_d_sql_task(ds):
         from
         (
             SELECT *,weekofyear(from_unixtime(create_time,'yyyy-MM-dd')) as commit_week
-            from oride_dw.dim_oride_driver_audit_base
-            where dt='{pt}' and know_orider in(7,13,14) and driver_id!=0
+            from oride_dw_ods.ods_sqoop_mass_rider_signups_df
+            where dt='{pt}' and know_orider in(7,13,14) 
         ) as a 
         LEFT JOIN
         (
@@ -132,10 +131,10 @@ def app_oride_driver_invite_driver_data_trace_d_sql_task(ds):
             from oride_dw.dim_oride_city 
             WHERE dt='{pt}'
         )as c
-        on a.city_id=c.city_id
-        GROUP BY a.commit_week,c.city_name,a.product_id,a.know_orider 
+        on a.city=c.city_id
+        GROUP BY a.commit_week,c.city_name,a.driver_type,a.know_orider 
         GROUPING SETS(
-            (a.commit_week,c.city_name,a.product_id,a.know_orider),
+            (a.commit_week,c.city_name,a.driver_type,a.know_orider),
             (a.commit_week,c.city_name,a.know_orider)
         );
     '''.format(
@@ -211,6 +210,6 @@ app_oride_driver_invite_driver_data_trace_d_task = PythonOperator(
     dag=dag
 )
 
-dim_oride_driver_audit_base_task >> app_oride_driver_invite_driver_data_trace_d_task
+ods_sqoop_mass_rider_signups_df_tesk >> app_oride_driver_invite_driver_data_trace_d_task
 dwd_oride_order_base_include_test_di_task >> app_oride_driver_invite_driver_data_trace_d_task
 dim_oride_city_task >> app_oride_driver_invite_driver_data_trace_d_task

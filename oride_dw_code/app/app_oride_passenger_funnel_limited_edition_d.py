@@ -59,7 +59,7 @@ def fun_task_timeout_monitor(ds, dag, **op_kwargs):
     tb = [
         {
             "db": "oride_dw", "table": "{dag_name}".format(dag_name=dag_ids),
-            "partition": "dt={pt}".format(pt=ds), "timeout": "2400"
+            "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "2400"
         }
     ]
     TaskTimeoutMonitor().set_task_monitor(tb)
@@ -94,8 +94,8 @@ def app_oride_passenger_funnel_limited_edition_d_sql_task(ds):
         and dt='{pt}'  and app_version>='4.4.405' 
         and event_name in('oride_show','choose_end_point_click','request_a_ride_show')
     )
-        insert overwrite table {db}.{table} partition(dt)
-        select a.country_code,
+        insert overwrite table {db}.{table} partition(country_code,dt)
+        select a.region_name,
             a.active_user_num,--活跃乘客数
             a.check_end_user_num,--选择终点乘客数量
             a.valuation_cnt,--估价次数
@@ -103,10 +103,11 @@ def app_oride_passenger_funnel_limited_edition_d_sql_task(ds):
             0 as driver_user_find_each_other_dur,--司乘互找时长
             b.login_valuation_dur,--登陆到估价时长
             b.check_end_to_valuation_dur,--选择终点到估价时长
+            'nal' as country_code,
             '{pt}' as dt
         from 
         (    
-            select country_code,
+            select country_code as region_name,
                 count(distinct if(event_name='oride_show',user_id,null))as active_user_num,--活跃乘客数
                 count(distinct if(event_name='choose_end_point_click',user_id,null)) as check_end_user_num,--选择终点乘客数量
                 count(if(event_name='request_a_ride_show',1,null)) as valuation_cnt,--估价次数
@@ -121,7 +122,7 @@ def app_oride_passenger_funnel_limited_edition_d_sql_task(ds):
         )as a
         left join
         (
-            select country_code,
+            select country_code as region_name,
                 avg(case when gj_time-ac_time < 15*60 then gj_time-ac_time end) as login_valuation_dur,--登陆到估价时长
                 avg(case when gj_time-zd_time <15*60 then gj_time-zd_time end) as check_end_to_valuation_dur --选择终点到估价时长
             from 
@@ -154,7 +155,7 @@ def app_oride_passenger_funnel_limited_edition_d_sql_task(ds):
             ) as t2
             group by t2.country_code
         ) as b
-        on a.country_code=b.country_code;
+        on a.region_name=b.region_name;
    
     '''.format(
         pt=ds,
@@ -182,7 +183,7 @@ def execution_data_task_id(ds, **kargs):
     第二个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
 
     """
-    TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "false", "true")
+    TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "true", "true")
 
 
 app_oride_passenger_funnel_limited_edition_d_task = PythonOperator(

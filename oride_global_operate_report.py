@@ -288,8 +288,8 @@ def get_product_rows(ds, all_completed_num_nobeckon, product_id):
                  concat(cast(nvl(round(t1.driver_billing_dur*100/t1.finish_driver_online_dur,1),0) AS string),'%') AS billing_dur_rate, --计费时长占比
                  nvl(round(t1.driver_pushed_order_cnt/t1.td_push_accpet_show_driver_num,0),0) AS avg_pushed_order_cnt, --人均推送订单数
                  nvl(round(t1.finish_order_cnt_inSimulRing/t1.finish_driver_online_dur*3600,1),0) AS TPH, --分子完单量用（包含同时呼叫的）
-                 -- '-' as IPH,
-                 nvl(round(t1.iph_fenzi_inSimulRing*3600/t1.finish_driver_online_dur,1),0) AS IPH, --分子（包含同时呼叫）
+                 '-' as IPH,
+                -- nvl(round(t1.iph_fenzi_inSimulRing*3600/t1.finish_driver_online_dur,1),0) AS IPH, --分子（包含同时呼叫）
                  if(t1.finish_order_cnt>=10000,concat(cast(nvl(round(t1.bad_feedback_finish_ord_cnt*10000/t1.finish_order_cnt,0),0) AS string),'‱'),'-') as bad_feedback_finish_rate, --万单完单差评率
                  nvl(cast(round(t1.finish_take_order_dur/t1.finish_order_cnt,0) as bigint),0) AS avg_take_order_dur,--平均应答时长
                  nvl(cast(round(t1.finish_pick_up_dur/t1.finish_order_cnt,0) as bigint),0) AS avg_pick_up_dur, --平均接驾时长

@@ -116,6 +116,28 @@ class TaskTouchzSuccess(object):
     
         return country_code_list
 
+
+    def check_success_exist(self):
+
+        """
+            验证_SUCCESS是否执行成功
+        """
+
+
+        check_file="""
+        $HADOOP_HOME/bin/hadoop dfs -test -e {hdfs_data_dir}/_SUCCESS
+
+        if [[ $? -eq 0 ]];then
+            echo "_SUCCESS 验证成功"
+        else
+            echo "_SUCCESS 验证失败"
+            exit 1
+        fi
+
+        """.format(hdfs_data_dir=self.hdfs_data_dir_str)
+
+        os.popen(check_file)
+
    
     def data_not_file_type_touchz(self):
 
@@ -142,6 +164,8 @@ class TaskTouchzSuccess(object):
             os.popen(succ_str)
     
             logging.info("DATA EXPORT Successed ......")
+
+            self.heck_success_exist()
 
     
         except Exception as e:
@@ -190,6 +214,8 @@ class TaskTouchzSuccess(object):
                 os.popen(succ_str)
         
                 logging.info("DATA EXPORT Successed ......")
+
+            self.heck_success_exist()
 
     
         except Exception as e:
