@@ -82,16 +82,17 @@ def app_oride_gps_d_sql_task(ds):
 
         insert into table {db}.{table} partition(country_code,dt)
             
-        select a.gps_type,a.gps_id,a.latitude,a.longitude,a.times,a.hour,
+        select a.gps_type,a.gps_id,a.latitude,a.longitude,a.times,a.hour,0 as lost,
             'nal' as country_code,'{pt}' as dt 
         from(
             SELECT gps_type,gps_id,latitude,longitude,times,hour
             FROM oride_source.moto_locations 
             WHERE hour='02' AND dt='{pt}' 
+            group by gps_type,gps_id,latitude,longitude,times,hour
             ORDER BY gps_id,times ASC
         ) as a
-        UNION 
-        select b.gps_type,b.gps_id,b.latitude,b.longitude,b.times,b.hour,
+        UNION
+        select b.gps_type,b.gps_id,b.latitude,b.longitude,b.times,b.hour,1 as lost,
             'nal' as country_code,'{pt}' as dt 
         from(
             SELECT gps_type,tday.gps_id,latitude,longitude,tday.times,hour
@@ -105,6 +106,7 @@ def app_oride_gps_d_sql_task(ds):
             ) AS yday ON tday.times = yday.mtimes
             WHERE tday.dt='{yes_day}' 
             AND tday.gps_id NOT IN (SELECT gps_id FROM oride_source.moto_locations as subtb2 WHERE dt='{pt}' GROUP BY subtb2.gps_id)
+            group by gps_type,tday.gps_id,latitude,longitude,tday.times,hour
             ORDER BY tday.gps_id,tday.times ASC
         )as b; 
     '''.format(
