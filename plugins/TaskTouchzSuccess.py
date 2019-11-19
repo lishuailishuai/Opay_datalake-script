@@ -123,21 +123,26 @@ class TaskTouchzSuccess(object):
             验证_SUCCESS是否执行成功
         """
 
+        print("debug-> check_success_exist")
 
-        check_file="""
-        $HADOOP_HOME/bin/hadoop dfs -test -e {hdfs_data_dir}/_SUCCESS
+        command="$HADOOP_HOME/bin/hadoop dfs -ls {hdfs_data_dir}/_SUCCESS>/dev/null 2>/dev/null && echo 1 || echo 0".format(hdfs_data_dir=self.hdfs_data_dir_str)
 
-        if [[ $? -eq 0 ]];then
-            echo "_SUCCESS 验证成功"
-        else
-            echo "_SUCCESS 验证失败"
-            exit 1
-        fi
+        logging.info(command)
 
-        """.format(hdfs_data_dir=self.hdfs_data_dir_str)
-
-        os.popen(check_file)
-
+        out = os.popen(command, 'r')
+        res = out.readlines()
+        
+        res = 0 if res is None else res[0].lower().strip()
+        out.close()
+        
+        #判断 _SUCCESS 文件是否生成
+        if res == '' or res == 'None' or res == '0':
+            logging.info("_SUCCESS 验证失败")
+        
+        else:
+        
+            logging.info("_SUCCESS 验证成功")
+        
    
     def data_not_file_type_touchz(self):
 
