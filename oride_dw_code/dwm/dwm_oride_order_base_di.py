@@ -250,13 +250,13 @@ def dwm_oride_order_base_di_sql_task(ds):
            --抢单阶段接驾距离(应答)
 
            if(push1.order_id is not null and push1.driver_id is not null,1,0) as is_td_request_inpush,
-           --抢单阶段应答单量，不包含招手停、不包含拼车和包车不走push的部分(应答)
+           --抢单阶段应答单量，11.11号之前不包含招手停、不包含拼车和包车不走push的部分(应答)，11号之后包含拼车播多单情况
 
            if(push1.order_id is not null and push1.driver_id is not null and ord.is_td_finish=1,push1.distance,0) as finish_order_distance_inpush,
            --抢单阶段接驾距离(完单)
 
            if(push1.order_id is not null and push1.driver_id is not null and ord.is_td_finish=1,1,0) as is_td_finish_inpush,
-           --抢单阶段完单量，不包含招手停、不包含拼车和包车不走push的部分(完单)
+           --抢单阶段完单量，11.11号之前不包含招手停、不包含拼车和包车不走push的部分(完单)，11号之后包含拼车播多单情况
 
            show.driver_show_times as driver_show_times_cnt,
            --骑手端推送给司机总次数（骑手端show节点）
@@ -317,17 +317,17 @@ def dwm_oride_order_base_di_sql_task(ds):
     LEFT OUTER JOIN
       (
         SELECT  
-        order_id,
+        if(lower(is_multiple)='true',order_id_multiple,order_id) as order_id,
         count(1) as order_assigned_cnt, --订单被分配次数（计算平均接驾距离使用）
         sum(distance) AS pick_up_distance --接驾总距离
         FROM oride_dw.dwd_oride_order_assign_driver_detail_di   --调度算法assign节点
         WHERE dt='{pt}'
-        GROUP BY order_id
+        GROUP BY if(lower(is_multiple)='true',order_id_multiple,order_id)
        ) assign ON ord.order_id=assign.order_id
     LEFT OUTER JOIN
       (
         SELECT 
-        order_id,  --播单的订单
+        if(lower(is_multiple)='true',order_id_multiple,order_id) as order_id,  --播单的订单
         sum(if(success=1,distance,0)) AS succ_broadcast_distance, --成功播单距离
         sum(if(success=1,1,0)) AS succ_push_all_times_cnt, --成功播单总次数，目前算法侧播单阶段平均接驾距离=成功播单距离/成功播单总次数,不关注success=0的
         sum(distance) as broadcast_distance, --播单总距离
@@ -335,18 +335,18 @@ def dwm_oride_order_base_di_sql_task(ds):
         sum(success) as success  --用于判断是否成功播单
         FROM oride_dw.dwd_oride_order_push_driver_detail_di   --调度算法push节点
         WHERE dt='{pt}'  
-        GROUP BY order_id
+        GROUP BY if(lower(is_multiple)='true',order_id_multiple,order_id)
         ) push ON ord.order_id=push.order_id
     LEFT OUTER JOIN   --抢单阶段的平均接驾距离（应答和完单）
       (
         SELECT 
-        order_id,  --成功播单的订单
+        if(lower(is_multiple)='true',order_id_multiple,order_id) as order_id,  --成功播单的订单
         driver_id,
         max(order_round) as max_order_round, --播单最大轮数，要么被抢单了要么超时了
         min(distance) as distance --抢单阶段的接驾距离
         FROM oride_dw.dwd_oride_order_push_driver_detail_di   --调度算法push节点
         WHERE dt='{pt}' and success=1 
-        GROUP BY order_id,driver_id
+        GROUP BY if(lower(is_multiple)='true',order_id_multiple,order_id),driver_id
         ) push1 ON ord.order_id=push1.order_id and ord.driver_id=push1.driver_id    
     LEFT OUTER JOIN 
     (
