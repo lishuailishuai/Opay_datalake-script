@@ -123,6 +123,8 @@ class TaskTouchzSuccess(object):
             验证_SUCCESS是否执行成功
         """
 
+        time.sleep(10)
+
         print("debug-> check_success_exist")
 
         command="hadoop dfs -ls {hdfs_data_dir}/_SUCCESS>/dev/null 2>/dev/null && echo 1 || echo 0".format(hdfs_data_dir=self.hdfs_data_dir_str)
@@ -131,15 +133,9 @@ class TaskTouchzSuccess(object):
 
         out = os.popen(command, 'r')
         res = out.readlines()
-
-        print(res)
         
         res = 0 if res is None else res[0].lower().strip()
         out.close()
-
-        print(type(res))
-        
-        print(res)
 
         #判断 _SUCCESS 文件是否生成
         if res== '' or res == 'None' or res[0] == '0':
