@@ -138,6 +138,8 @@ class TaskTouchzSuccess(object):
         #判断 _SUCCESS 文件是否生成
         if res == '' or res == 'None' or res == '0':
             logging.info("_SUCCESS 验证失败")
+
+            sys.exit(1)
         
         else:
         
