@@ -185,6 +185,9 @@ def app_oride_order_global_operate_to_mysql_d_sql_task(ds):
       SET hive.exec.parallel=TRUE;
       set hive.exec.dynamic.partition.mode=nonstrict;    
          --将数据加载到内存，临时表
+         
+         
+         
      with 
         dwd_order_df as
         ( 
@@ -237,7 +240,7 @@ def app_oride_order_global_operate_to_mysql_d_sql_task(ds):
             sum(if(is_finish =1,price,0)) as gmv, --gmv
             count(distinct if(is_finish =1 ,driver_id, null)) as finish_order_driver_num,--完单司机数
             count(if(is_wet_order =1,1,null)) as wet_order_cnt, --湿单量
-            sum(order_onride_distance) as order_distance --送驾距离
+            sum(if(is_finish = 1, order_onride_distance , 0)) as order_distance --送驾距离
         from  oride_dw.dwm_oride_order_base_di 
             where dt = '{pt}' 
         group by city_id with cube
@@ -281,7 +284,7 @@ def app_oride_order_global_operate_to_mysql_d_sql_task(ds):
             group by city_id,dt
         )b
         left join
-        (  --C端补贴  price- pay_amount is_finish=1
+        (  --C端补贴  price - pay_amount is_finish=1
             select 
                 city_id,
                 
