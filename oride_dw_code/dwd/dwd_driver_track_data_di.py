@@ -82,38 +82,30 @@ task_timeout_monitor= PythonOperator(
 def dwd_driver_track_data_di_sql_task(ds):
     HQL ='''
     SET hive.exec.parallel=TRUE;
-   SET hive.exec.dynamic.partition.mode=nonstrict;
-   insert overwrite table oride_dw.dwd_driver_track_data_di partition(country_code,dt)   
-   select id as driver_id,
-          --司机ID
-          
-          order_id as order_id,
-          --订单ID
-          
-          lng, 
-          --经度
-          
-          lat,
-          --纬度
-          
-          direction,
-          --方向
-          
-          mode,
-          --模式
-          
-          city_id,
-          --城市ID
-          
-          `timestamp` as log_timestamp,
-          --日志时间
-          
-          'nal' as country_code,
-          
-          dt
+    SET hive.exec.dynamic.partition.mode=nonstrict;
    
-    from oride_dw_ods.ods_log_driver_track_data_hi
-   where dt='{pt}';
+    INSERT OVERWRITE TABLE oride_dw.dwd_driver_track_data_di partition(country_code,dt)
+    SELECT  id          AS driver_id --司机ID 
+           ,order_id    AS order_id --订单ID 
+           ,lng --经度 
+           ,lat --纬度 
+           ,direction --方向 
+           ,mode --模式 
+           ,city_id --城市ID 
+           ,`timestamp` AS log_timestamp --日志时间 
+           ,serv_mode 
+           ,serv_status 
+           ,gps_time --卫星真实时间 
+           ,speed --定位速度 
+           ,accuracy --定位精度 
+           ,provider --位置提供者 
+           ,trip_id 
+           ,order_ids 
+           ,mock 
+           ,'nal'       AS country_code 
+           ,dt
+    FROM oride_dw_ods.ods_log_driver_track_data_hi
+    WHERE dt='{pt}';  
     '''.format(
         pt=ds,
         now_day=airflow.macros.ds_add(ds, +1),

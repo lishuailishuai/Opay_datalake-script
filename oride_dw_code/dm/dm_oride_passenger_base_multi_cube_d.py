@@ -25,7 +25,7 @@ from plugins.TaskTouchzSuccess import TaskTouchzSuccess
 
 args = {
     'owner': 'chenlili',
-    'start_date': datetime(2019, 9, 4),
+    'start_date': datetime(2019, 11, 18),
     'depends_on_past': False,
     'retries': 3,
     'retry_delay': timedelta(minutes=2),
@@ -34,7 +34,7 @@ args = {
     'email_on_retry': False,
 }
 
-dag = airflow.DAG('dm_oride_passenger_base_cube_d',
+dag = airflow.DAG('dm_oride_passenger_base_multi_cube_d',
                   schedule_interval="30 01 * * *",
                   default_args=args)
 
@@ -87,19 +87,22 @@ dependence_dim_oride_passenger_base_prev_day_task = UFileSensor(
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
+
+
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
 
-def fun_task_timeout_monitor(ds,dag,**op_kwargs):
-
-    dag_ids=dag.dag_id
+def fun_task_timeout_monitor(ds, dag, **op_kwargs):
+    dag_ids = dag.dag_id
 
     msg = [
-        {"db": "oride_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "1800"}
+        {"db": "oride_dw", "table": "{dag_name}".format(dag_name=dag_ids),
+         "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "1800"}
     ]
 
     TaskTimeoutMonitor().set_task_monitor(msg)
 
-task_timeout_monitor= PythonOperator(
+
+task_timeout_monitor = PythonOperator(
     task_id='task_timeout_monitor',
     python_callable=fun_task_timeout_monitor,
     provide_context=True,
@@ -109,19 +112,19 @@ task_timeout_monitor= PythonOperator(
 ##----------------------------------------- 变量 ---------------------------------------##
 
 db_name = "oride_dw"
-table_name = "dm_oride_passenger_base_cube_d"
+table_name = "dm_oride_passenger_base_multi_cube_d"
 hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
+
 
 ##----------------------------------------- 脚本 ---------------------------------------##
 
-def dm_oride_passenger_base_cube_d_sql_task(ds):
-    HQL ='''
+def dm_oride_passenger_base_multi_cube_d_sql_task(ds):
+    HQL = '''
     set hive.exec.parallel=true;
     set hive.exec.dynamic.partition.mode=nonstrict;
     with order_base_data as (
           SELECT if(t2.passenger_id IS NULL,1,0) AS is_first_order_mark,--准确说历史没有完单的是否本日首次
              if(t3.passenger_id IS NOT NULL,1,0) AS new_reg_user_mark, --是否当日新注册乘客
-             null as is_fraud, --是否疑似作弊订单
              t1.*
             FROM
               (SELECT *
@@ -142,6 +145,11 @@ def dm_oride_passenger_base_cube_d_sql_task(ds):
                FROM oride_dw.dim_oride_passenger_base
                WHERE dt='{pt}'
                  AND substr(register_time,1,10)=dt) t3 ON t1.passenger_id=t3.passenger_id
+            inner join
+              (select city_id,product_id,size(split(product_id,',')) as product_id_cnt
+                from oride_dw.dim_oride_city
+                where dt='{pt}' and size(split(product_id,','))>1) multi_cit
+                on t1.city_id=multi_cit.city_id
                     )
     INSERT overwrite TABLE oride_dw.{table} partition(country_code,dt)
     select 
@@ -170,9 +178,9 @@ def dm_oride_passenger_base_cube_d_sql_task(ds):
                count(if(substr(login_time,1,10)=dt,passenger_id,NULL)) AS act_users --当天活跃乘客数
         FROM oride_dw.dim_oride_passenger_base
         WHERE dt='{pt}') t1
-        
+
         right join
-        
+
         (SELECT nvl(country_code,'-10000') as country_code,
                city_id,
                product_id, --招手停订单数限定具体业务线
@@ -192,7 +200,7 @@ def dm_oride_passenger_base_cube_d_sql_task(ds):
          count(distinct(IF (pay_status=1
                             AND pay_mode IN(2,3),passenger_id,NULL))) AS online_paid_users, --当日线上支付乘客数
          null as fraud_user_cnt --疑似作弊订单乘客数
-        FROM order_base_data
+        FROM order_base_data 
         group by nvl(country_code,'-10000'),
                city_id,
                product_id,
@@ -200,7 +208,7 @@ def dm_oride_passenger_base_cube_d_sql_task(ds):
         with cube) t2
         on t1.country_code=t2.country_code and t1.city_id=nvl(t2.city_id,-10000) and t1.product_id=nvl(t2.product_id,-10000)
         and t1.driver_serv_type=nvl(t2.driver_serv_type,-10000)
-        where nvl(t2.country_code,'-10000')<>'-10000';
+        where t2.country_code<>'-10000';
     '''.format(
         pt=ds,
         now_day=airflow.macros.ds_add(ds, +1),
@@ -209,12 +217,13 @@ def dm_oride_passenger_base_cube_d_sql_task(ds):
     )
     return HQL
 
+
 # 主流程
 def execution_data_task_id(ds, **kargs):
     hive_hook = HiveCliHook()
 
     # 读取sql
-    _sql = dm_oride_passenger_base_cube_d_sql_task(ds)
+    _sql = dm_oride_passenger_base_multi_cube_d_sql_task(ds)
 
     logging.info('Executing: %s', _sql)
 
@@ -230,8 +239,8 @@ def execution_data_task_id(ds, **kargs):
     TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "true", "true")
 
 
-dm_oride_passenger_base_cube_d_task = PythonOperator(
-    task_id='dm_oride_passenger_base_cube_d_task',
+dm_oride_passenger_base_multi_cube_d_task = PythonOperator(
+    task_id='dm_oride_passenger_base_multi_cube_d_task',
     python_callable=execution_data_task_id,
     provide_context=True,
     dag=dag
@@ -241,5 +250,5 @@ dependence_dwd_oride_order_base_include_test_di_prev_day_task >> \
 dependence_dwd_oride_order_base_include_test_df_prev_day_task >> \
 dependence_dwd_oride_order_base_include_test_df_his_prev_day_task >> \
 dependence_dim_oride_passenger_base_prev_day_task >> \
-dm_oride_passenger_base_cube_d_task
+dm_oride_passenger_base_multi_cube_d_task
 
