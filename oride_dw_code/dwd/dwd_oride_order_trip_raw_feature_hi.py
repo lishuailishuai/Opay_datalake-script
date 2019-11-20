@@ -48,9 +48,9 @@ sleep_time = BashOperator(
 ##----------------------------------------- 依赖 ---------------------------------------##
 
 # 依赖前一小时分区
-oride_trip_raw_feature_prev_hour_task = HivePartitionSensor(
-    task_id="oride_trip_raw_feature_prev_hour_task",
-    table="oride_trip_raw_feature",
+ods_log_oride_trip_raw_feature_hi_prev_hour_task = HivePartitionSensor(
+    task_id="ods_log_oride_trip_raw_feature_hi_prev_hour_task",
+    table="ods_log_oride_trip_raw_feature_hi",
     partition="""dt='{{ ds }}' and hour='{{ execution_date.strftime("%H") }}'""",
     schema="oride_dw_ods",
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
