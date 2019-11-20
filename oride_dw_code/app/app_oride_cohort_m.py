@@ -44,8 +44,8 @@ sleep_time = BashOperator(
 
 ##----------------------------------------- 依赖 ---------------------------------------##
 
-partition_sql = "hive -e \"show partitions oride_dw.dwd_oride_order_base_include_test_df;\" " \
-                "2>/dev/null |tail -2|head -1|awk -F'/' '{print $2}'|awk -F'=' '{print $2}'"
+partition_sql = "hive -e \"show partitions oride_dw.dwd_oride_order_base_include_test_di;\" " \
+                "2>/dev/null |tail -1|awk -F'/' '{print $2}'|awk -F'=' '{print $2}'"
 date_last = os.popen(partition_sql).read().strip("\n")
 
 # 依赖前一天分区
@@ -78,12 +78,8 @@ create_oride_cohort_mid_m_task = HiveOperator(
     task_id='create_oride_cohort_mid_m_task',
     hql='''drop table if exists oride_dw.oride_cohort_mid_m ;
      create table oride_dw.oride_cohort_mid_m as 
-           select weekofyear(to_date(dt)) as week_now, --当前所在周
-           day(to_date(dt)) as day_now, --当前所在天
-           month(to_date(dt)) as month_now, --当前所在月
+           select month(to_date(dt)) as month_now, --当前所在月
 
-           t2.week_of_year as week_create_date, --下单时间所在周
-            t2.day_of_year as day_create_date, --下单时间所在天（一年中的第几天）
             t2.month as month_create_date, --下单时间所在月
 
             city_id,
@@ -124,7 +120,7 @@ create_oride_cohort_mid_m_task = HiveOperator(
                 --min(unix_timestamp(create_time)) over (partition by driver_id) as driver_first_time,--司机第一次完单时间
                 from oride_dw.dwd_oride_order_base_include_test_di
                 where dt>='2019-07-08'  --从20190705号开始加的city_id字段，因此从28周开始统计留存数据，按日的从20190705号开始统计
-                and status in(4,5) and city_id<>999001 and driver_id<>1
+                and status in(4,5) and city_id<>999001 and driver_id<>1 and product_id<>99
             ) t
             left join 
             (select dt dt_date,
@@ -363,7 +359,7 @@ oride_cohort_mid_m_success = BashOperator(
 
 new_user_cohort_m_touchz_success = BashOperator(
 
-    task_id='new_user_cohort_touchz_success',
+    task_id='new_user_cohort_m_touchz_success',
 
     bash_command="""
     line_num=`$HADOOP_HOME/bin/hadoop fs -du -s {hdfs_data_dir} | tail -1 | awk '{{print $1}}'`
@@ -385,7 +381,7 @@ new_user_cohort_m_touchz_success = BashOperator(
 
 new_driver_cohort_m_touchz_success = BashOperator(
 
-    task_id='new_driver_cohort_touchz_success',
+    task_id='new_driver_cohort_m_touchz_success',
 
     bash_command="""
     line_num=`$HADOOP_HOME/bin/hadoop fs -du -s {hdfs_data_dir} | tail -1 | awk '{{print $1}}'`
@@ -407,7 +403,7 @@ new_driver_cohort_m_touchz_success = BashOperator(
 
 act_user_cohort_m_touchz_success = BashOperator(
 
-    task_id='act_user_cohort_touchz_success',
+    task_id='act_user_cohort_m_touchz_success',
 
     bash_command="""
     line_num=`$HADOOP_HOME/bin/hadoop fs -du -s {hdfs_data_dir} | tail -1 | awk '{{print $1}}'`
@@ -429,7 +425,7 @@ act_user_cohort_m_touchz_success = BashOperator(
 
 act_driver_cohort_m_touchz_success = BashOperator(
 
-    task_id='act_driver_cohort_touchz_success',
+    task_id='act_driver_cohort_m_touchz_success',
 
     bash_command="""
     line_num=`$HADOOP_HOME/bin/hadoop fs -du -s {hdfs_data_dir} | tail -1 | awk '{{print $1}}'`
