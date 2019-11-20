@@ -106,7 +106,7 @@ def app_oride_driver_invite_driver_funnel_d_sql_task(ds):
             c.city_name as regional_name,--地域名
             if(a.driver_type is NOT NULL,a.driver_type,0) as product_id,--业务线
             a.know_orider,--渠道
-            count(DISTINCT a.driver_id) as submit_data_num,--提交资料人数
+            count( a.driver_id) as submit_data_num,--提交资料人数
             count(if(a.status in (1,2,9),a.driver_id,null)) as audit_num,--现场审核人数
             count(if(a.status=2,a.driver_id,null)) as audit_success_num,--审核通过人数
             count(DISTINCT if(d.is_td_finish=1,a.driver_id,null)) as finish_driver_num, --完单司机数量

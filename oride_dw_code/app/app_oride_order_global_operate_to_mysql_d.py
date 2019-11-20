@@ -225,7 +225,7 @@ def app_oride_order_global_operate_to_mysql_d_sql_task(ds):
         nvl(users.finished_users,0) as finished_users,----完单乘客数
         nvl(users.first_finished_users,0)  as new_finished_users,----新增完单乘客数
         nvl(round(od.wet_order_cnt / od.order_cnt,8),0) as wet_order_rate,--湿单占比 
-        nvl(city.country_code,'-10000') as country_code,
+        'nal' as country_code,
         '{pt}' as  dt
     from 
     (
@@ -247,8 +247,7 @@ def app_oride_order_global_operate_to_mysql_d_sql_task(ds):
         select
             city_id,
             city_name,
-            dt,
-            country_code
+            dt
         from oride_dw.dim_oride_city
         where dt = '{pt}'
     )city on nvl(od.city_id,-10000) = city.city_id
