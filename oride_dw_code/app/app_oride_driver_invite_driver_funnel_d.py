@@ -20,7 +20,7 @@ from airflow.hooks.hive_hooks import HiveCliHook, HiveServer2Hook
 
 args = {
     'owner': 'chenghui',
-    'start_date': datetime(2019, 11, 13),
+    'start_date': datetime(2019, 11, 5),
     'depends_on_past': False,
     'retries': 3,
     'retry_delay': timedelta(minutes=5),
