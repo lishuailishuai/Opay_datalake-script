@@ -330,7 +330,7 @@ def send_owealth_report_email(ds, **kwargs):
     html = html_fmt.format(rows=row_html)
     # send mail
 
-    email_to = ['shuzhen.liu@opay-inc.com']
+    email_to = Variable.get("owealth_report_receivers").split()
 
     email_subject = 'OWealth日报_{}'.format(ds)
     send_email(
