@@ -204,7 +204,8 @@ def execution_data_task_id(ds, execution_date, **kargs):
     第二个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
 
     """
-    TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "true", "false")
+    TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "true", "false",
+                                                 execution_date.strftime("%H"))
 
 
 dwd_oride_passanger_location_event_hi_task = PythonOperator(

@@ -91,10 +91,11 @@ task_timeout_monitor = PythonOperator(
     dag=dag
 )
 
+
 ##----------------------------------------- 脚本 ---------------------------------------##
 
 
-def dwd_oride_location_order_event_hi_sql_task(ds,execution_date):
+def dwd_oride_location_order_event_hi_sql_task(ds, execution_date):
     HQL = '''
     set hive.exec.parallel=true;
     set hive.exec.dynamic.partition.mode=nonstrict;
@@ -175,7 +176,7 @@ def dwd_oride_location_order_event_hi_sql_task(ds,execution_date):
 
 
 # 熔断数据，如果数据重复，报错
-def check_key_data_task(ds,execution_date):
+def check_key_data_task(ds, execution_date):
     cursor = get_hive_cursor()
 
     # 主键重复校验
@@ -210,11 +211,11 @@ def check_key_data_task(ds,execution_date):
 
 
 # 主流程
-def execution_data_task_id(ds,execution_date, **kargs):
+def execution_data_task_id(ds, execution_date, **kargs):
     hive_hook = HiveCliHook()
 
     # 读取sql
-    _sql = dwd_oride_location_order_event_hi_sql_task(ds,execution_date)
+    _sql = dwd_oride_location_order_event_hi_sql_task(ds, execution_date)
 
     logging.info('Executing: %s', _sql)
 
@@ -222,7 +223,7 @@ def execution_data_task_id(ds,execution_date, **kargs):
     hive_hook.run_cli(_sql)
 
     # 熔断数据
-    check_key_data_task(ds,execution_date)
+    check_key_data_task(ds, execution_date)
 
     # 生成_SUCCESS
     """
@@ -230,8 +231,8 @@ def execution_data_task_id(ds,execution_date, **kargs):
     第二个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
 
     """
-    TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "true", "false")
-
+    TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "true", "false",
+                                                 execution_date.strftime("%H"))
 
 
 dwd_oride_order_location_event_hi_task = PythonOperator(
