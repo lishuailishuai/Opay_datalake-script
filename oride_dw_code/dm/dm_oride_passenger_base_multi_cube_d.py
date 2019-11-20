@@ -25,7 +25,7 @@ from plugins.TaskTouchzSuccess import TaskTouchzSuccess
 
 args = {
     'owner': 'chenlili',
-    'start_date': datetime(2019, 9, 4),
+    'start_date': datetime(2019, 11, 18),
     'depends_on_past': False,
     'retries': 3,
     'retry_delay': timedelta(minutes=2),
