@@ -123,21 +123,30 @@ class TaskTouchzSuccess(object):
             验证_SUCCESS是否执行成功
         """
 
+        time.sleep(15)
 
-        check_file="""
-        $HADOOP_HOME/bin/hadoop dfs -test -e {hdfs_data_dir}/_SUCCESS
+        print("debug-> check_success_exist")
 
-        if [[ $? -eq 0 ]];then
-            echo "_SUCCESS 验证成功"
-        else
-            echo "_SUCCESS 验证失败"
-            exit 1
-        fi
+        command="hadoop dfs -ls {hdfs_data_dir}/_SUCCESS>/dev/null 2>/dev/null && echo 1 || echo 0".format(hdfs_data_dir=self.hdfs_data_dir_str)
 
-        """.format(hdfs_data_dir=self.hdfs_data_dir_str)
+        logging.info(command)
 
-        os.popen(check_file)
+        out = os.popen(command, 'r')
+        res = out.readlines()
+        
+        res = 0 if res is None else res[0].lower().strip()
+        out.close()
 
+        #判断 _SUCCESS 文件是否生成
+        if res== '' or res == 'None' or res[0] == '0':
+            logging.info("_SUCCESS 验证失败")
+
+            sys.exit(1)
+        
+        else:
+        
+            logging.info("_SUCCESS 验证成功")
+        
    
     def data_not_file_type_touchz(self):
 
@@ -165,7 +174,7 @@ class TaskTouchzSuccess(object):
     
             logging.info("DATA EXPORT Successed ......")
 
-            self.heck_success_exist()
+            self.check_success_exist()
 
     
         except Exception as e:
@@ -207,7 +216,7 @@ class TaskTouchzSuccess(object):
 
                 time.sleep(5)
 
-                succ_str="$HADOOP_HOME/bin/hadoop fs -touchz {hdfs_data_dir}/_SUCCESS".format(hdfs_data_dir=self.hdfs_data_dir_str)
+                succ_str="hadoop fs -touchz {hdfs_data_dir}/_SUCCESS".format(hdfs_data_dir=self.hdfs_data_dir_str)
     
                 logging.info(succ_str)
         
@@ -215,7 +224,7 @@ class TaskTouchzSuccess(object):
         
                 logging.info("DATA EXPORT Successed ......")
 
-            self.heck_success_exist()
+            self.check_success_exist()
 
     
         except Exception as e:
