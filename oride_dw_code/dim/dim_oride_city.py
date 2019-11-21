@@ -109,7 +109,9 @@ del_partition_tesk = BashOperator(
     task_id='del_partition_tesk',
 
     bash_command="""
-    $HADOOP_HOME/bin/hadoop fs -rm -r {hdfs_data_dir} | tail -1 | awk '{{print $1}}'
+
+    echo "$HADOOP_HOME/bin/hadoop fs -rm -r {hdfs_data_dir}"
+    $HADOOP_HOME/bin/hadoop fs -rm -r {hdfs_data_dir}
 
     """.format(
         pt='{{ds}}',
