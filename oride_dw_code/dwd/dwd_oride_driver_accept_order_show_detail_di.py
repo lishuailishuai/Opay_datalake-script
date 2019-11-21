@@ -62,6 +62,7 @@ dwd_oride_driver_accept_order_show_detail_di_prev_day_task = UFileSensor(
 
 ##----------------------------------------- 变量 ---------------------------------------##
 
+db_name = "oride_dw"
 table_name = "dwd_oride_driver_accept_order_show_detail_di"
 hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
 
@@ -88,112 +89,135 @@ task_timeout_monitor = PythonOperator(
 
 ##----------------------------------------- 脚本 ---------------------------------------##
 
-dwd_oride_driver_accept_order_show_detail_di_task = HiveOperator(
 
-    task_id='dwd_oride_driver_accept_order_show_detail_di_task',
-    hql='''
+def dwd_oride_driver_accept_order_show_detail_di_sql_task(ds):
+    HQL = '''
     set hive.exec.parallel=true;
     set hive.exec.dynamic.partition.mode=nonstrict;
 
-    INSERT overwrite TABLE oride_dw.{table} partition(country_code,dt)
-    SELECT driver_id,
-           --主键（driver_id,order_id）
-
-           city_id,
-           --定位城市
-
-           product_id,
-           --接单司机类型，1=专车，2=快车
-
-           order_id,
-           --订单号
-
-           startLat,
-           --订单当前纬度
-
-           startLng,
-           --订单当前经度
-
-           lat,
-           --用户当前纬度
-
-           lng,
-           --用户当前经度
-
-           log_timestamp,
-           --埋点时间
-           isAssign, --是否强派单,1强派单,0非强派单
-           event_name,  --事件类型
-
-           'nal' AS country_code,
-           --国家码字段
-
-           '{pt}' AS dt
-    FROM
-      (SELECT 
-              user_id AS driver_id,
-              get_json_object(event_value, '$.order_id') AS order_id,
-              get_json_object(event_value, '$.city_id') AS city_id,
-              get_json_object(event_value, '$.serv_type') AS product_id,
-              get_json_object(event_value, '$.lat') AS lat,
-              get_json_object(event_value, '$.lng') AS lng,
-              get_json_object(event_value, '$.startLat') AS startLat,
-              get_json_object(event_value, '$.startLng') AS startLng,
-              event_time AS log_timestamp,
-              get_json_object(event_value, '$.isAssign') AS isAssign,  --是否强派单
-              event_name  --事件类型
-       FROM oride_dw.dwd_oride_client_event_detail_hi
-       WHERE dt='{pt}'
-         AND event_name in('accept_order_show','order_push_show')
-         union all
-         SELECT 
-              user_id AS driver_id,
-              order_id,
-              get_json_object(event_value, '$.city_id') AS city_id,
-              get_json_object(event_value, '$.serv_type') AS product_id,
-              get_json_object(event_value, '$.lat') AS lat,
-              get_json_object(event_value, '$.lng') AS lng,
-              get_json_object(event_value, '$.startLat') AS startLat,
-              get_json_object(event_value, '$.startLng') AS startLng,
-              event_time AS log_timestamp,
-              get_json_object(event_value, '$.isAssign') AS isAssign,  --是否强派单
-              event_name  --事件类型
-       FROM oride_dw.dwd_oride_client_event_detail_hi
-       lateral view explode(split(substr(get_json_object(event_value, '$.order_ids'),2,length(get_json_object(event_value, '$.order_ids'))-2),',')) order_ids as order_id
-       WHERE dt='{pt}'
-         AND event_name in('accept_order_show','order_push_show')
-       ) t 
-       ;
+    INSERT OVERWRITE TABLE {db}.{table} partition(country_code,dt)
+    SELECT  driver_id --主键（driver_id order_id） 
+           ,city_id --定位城市 
+           ,product_id --接单司机类型，1=专车，2=快车 
+           ,order_id --订单号 
+           ,startLat --订单当前纬度 
+           ,startLng --订单当前经度 
+           ,lat --用户当前纬度 
+           ,lng --用户当前经度 
+           ,log_timestamp --埋点时间 
+           ,isAssign --是否强派单 1强派单 0非强派单 
+           ,event_name --事件类型 
+           ,'nal'  AS country_code --国家码字段 
+           ,'{pt}' AS dt
+    FROM 
+    (
+        SELECT  user_id                                    AS driver_id 
+               ,get_json_object(event_value,'$.order_id')  AS order_id 
+               ,get_json_object(event_value,'$.city_id')   AS city_id 
+               ,get_json_object(event_value,'$.serv_type') AS product_id 
+               ,get_json_object(event_value,'$.lat')       AS lat 
+               ,get_json_object(event_value,'$.lng')       AS lng 
+               ,get_json_object(event_value,'$.startLat')  AS startLat 
+               ,get_json_object(event_value,'$.startLng')  AS startLng 
+               ,event_time                                 AS log_timestamp 
+               ,get_json_object(event_value,'$.isAssign')  AS isAssign --是否强派单 
+               ,event_name --事件类型
+        FROM oride_dw.dwd_oride_client_event_detail_hi
+        WHERE dt='{pt}' 
+        AND event_name in('accept_order_show','order_push_show')  
+        UNION ALL
+        SELECT  user_id                                    AS driver_id 
+               ,order_id 
+               ,get_json_object(event_value,'$.city_id')   AS city_id 
+               ,get_json_object(event_value,'$.serv_type') AS product_id 
+               ,get_json_object(event_value,'$.lat')       AS lat 
+               ,get_json_object(event_value,'$.lng')       AS lng 
+               ,get_json_object(event_value,'$.startLat')  AS startLat 
+               ,get_json_object(event_value,'$.startLng')  AS startLng 
+               ,event_time                                 AS log_timestamp 
+               ,get_json_object(event_value,'$.isAssign')  AS isAssign --是否强派单 
+               ,event_name --事件类型
+        FROM oride_dw.dwd_oride_client_event_detail_hi lateral view explode 
+        (split(substr(get_json_object(event_value, '$.order_ids'),2,length(get_json_object(event_value, '$.order_ids'))-2),',') 
+        ) order_ids AS order_id
+        WHERE dt='{pt}' 
+        AND event_name in('accept_order_show','order_push_show')  
+    ) t ;
 
 '''.format(
-        pt='{{ds}}',
-        now_day='{{macros.ds_add(ds, +1)}}',
-        table=table_name
-    ),
-    schema='oride_dw',
-    dag=dag)
+        pt=ds,
+        table=table_name,
+        db=db_name
+    )
+    return HQL
 
 
-# 生成_SUCCESS
-def check_success(ds, dag, **op_kwargs):
-    dag_ids = dag.dag_id
+# 熔断数据，如果数据重复，报错
+def check_key_data_task(ds):
+    cursor = get_hive_cursor()
 
-    msg = [
-        {"table": "{dag_name}".format(dag_name=dag_ids),
-         "hdfs_path": "{hdfsPath}/country_code=nal/dt={pt}".format(pt=ds, hdfsPath=hdfs_path)}
-    ]
+    # 主键重复校验
+    check_sql = '''
+    SELECT count(1)-count(distinct (concat(order_id,'_',driver_id))) as cnt
+      FROM {db}.{table}
+      WHERE dt='{pt}'
+      and country_code in ('nal')
+    '''.format(
+        pt=ds,
+        now_day=airflow.macros.ds_add(ds, +1),
+        table=table_name,
+        db=db_name
+    )
 
-    TaskTouchzSuccess().set_touchz_success(msg)
+    logging.info('Executing 主键重复校验: %s', check_sql)
+
+    cursor.execute(check_sql)
+
+    res = cursor.fetchone()
+
+    if res[0] > 1:
+        flag = 1
+        raise Exception("Error The primary key repeat !", res)
+        sys.exit(1)
+    else:
+        flag = 0
+        print("-----> Notice Data Export Success ......")
+
+    return flag
 
 
-touchz_data_success = PythonOperator(
-    task_id='touchz_data_success',
-    python_callable=check_success,
+# 主流程
+def execution_data_task_id(ds, **kargs):
+    hive_hook = HiveCliHook()
+
+    # 读取sql
+    _sql = dwd_oride_driver_accept_order_show_detail_di_sql_task(ds)
+
+    logging.info('Executing: %s', _sql)
+
+    # 执行Hive
+    hive_hook.run_cli(_sql)
+
+    # 熔断数据
+    # check_key_data_task(ds)
+
+    # 生成_SUCCESS
+    """
+    第一个参数true: 数据目录是有country_code分区。false 没有
+    第二个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
+
+    """
+    TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "true", "true")
+
+
+
+dwd_oride_driver_accept_order_show_detail_di_task = PythonOperator(
+    task_id='dwd_oride_driver_accept_order_show_detail_di_task',
+    python_callable=execution_data_task_id,
     provide_context=True,
     dag=dag
 )
 
 dwd_oride_driver_accept_order_show_detail_di_prev_day_task >> \
 sleep_time >> \
-dwd_oride_driver_accept_order_show_detail_di_task >> \
-touchz_data_success
+dwd_oride_driver_accept_order_show_detail_di_task

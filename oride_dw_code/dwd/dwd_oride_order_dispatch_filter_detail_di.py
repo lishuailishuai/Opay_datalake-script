@@ -60,7 +60,7 @@ dependence_dispatch_tracker_server_magic_prev_day_task = HivePartitionSensor(
 
 ##----------------------------------------- 变量 ---------------------------------------##
 
-
+db_name = "oride_dw"
 table_name = "dwd_oride_order_dispatch_filter_detail_di"
 hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
 
@@ -88,84 +88,126 @@ task_timeout_monitor = PythonOperator(
 
 ##----------------------------------------- 脚本 ---------------------------------------##
 
-dwd_oride_order_dispatch_filter_detail_di_task = HiveOperator(
-    task_id='dwd_oride_order_dispatch_filter_detail_di_task',
+def dwd_oride_order_dispatch_filter_detail_di_sql_task(ds):
+    HQL = '''
+    set hive.exec.parallel=true;
+    set hive.exec.dynamic.partition.mode=nonstrict;
 
-    hql='''
-        SET hive.exec.parallel=TRUE;
-        SET hive.exec.dynamic.partition.mode=nonstrict;
+    INSERT OVERWRITE TABLE {db}.{table} partition(country_code,dt)
+    SELECT  get_json_object(event_values,'$.city_id')                AS city_id --下单时所在城市 
+           ,get_json_object(event_values,'$.order_id')               AS order_id --订单ID 
+           ,get_json_object(event_values,'$.user_id')                AS passenger_id --乘客ID 
+           ,get_json_object(event_values,'$.driver_id')              AS driver_id --司机ID 
+           ,get_json_object(event_values,'$.round')                  AS order_round --订单轮数 
+           ,get_json_object(event_values,'$.config_id')              AS config_id --派单配置的id 
+           ,get_json_object(event_values,'$.timestamp')              AS log_timestamp --埋点时间 
+           ,get_json_object(event_values,'$.reason')                 AS reason --过滤原因 
+           ,cast(get_json_object(event_values,'$.serv_type') AS int) AS product_id --业务线ID 
+           ,get_json_object(event_values,'$.rule')                   AS rule --过滤规则 
+           ,get_json_object(event_values,'$.is_multiple')            AS is_multiple --是否播多单 
+           ,null                                                     AS order_id_multiple --多单订单 
+           ,'nal'                                                    AS country_code 
+           ,dt
+    FROM oride_source.dispatch_tracker_server_magic
+    WHERE dt = '{pt}' 
+    AND event_name='dispatch_filter_driver' 
+    AND (get_json_object(event_values, '$.is_multiple') is null or lower(get_json_object(event_values, '$.is_multiple'))='false')  
+    UNION ALL
+    SELECT  get_json_object(event_values,'$.city_id')                AS city_id --下单时所在城市 
+           ,get_json_object(event_values,'$.order_id')               AS order_id --订单ID 
+           ,get_json_object(event_values,'$.user_id')                AS passenger_id --乘客ID 
+           ,get_json_object(event_values,'$.driver_id')              AS driver_id --司机ID 
+           ,get_json_object(event_values,'$.round')                  AS order_round --订单轮数 
+           ,get_json_object(event_values,'$.config_id')              AS config_id --派单配置的id 
+           ,get_json_object(event_values,'$.timestamp')              AS log_timestamp --埋点时间 
+           ,get_json_object(event_values,'$.reason')                 AS reason --过滤原因 
+           ,cast(get_json_object(event_values,'$.serv_type') AS int) AS product_id --业务线ID 
+           ,get_json_object(event_values,'$.rule')                   AS rule --过滤规则 
+           ,get_json_object(event_values,'$.is_multiple')            AS is_multiple --是否播多单 
+           ,order_id1                                                AS order_id_multiple --多单订单 
+           ,'nal'                                                    AS country_code 
+           ,dt
+    FROM oride_source.dispatch_tracker_server_magic lateral view explode 
+    (split(substr(get_json_object(event_values, '$.order_list'),2,length(get_json_object(event_values, '$.order_list'))-2),',') 
+    ) order_list AS order_id1
+    WHERE dt = '{pt}' 
+    AND event_name='dispatch_filter_driver' 
+    AND lower(get_json_object(event_values, '$.is_multiple'))='true' ;
 
-        insert overwrite table oride_dw.{table} partition(country_code,dt)
-            select 
-            get_json_object(event_values, '$.city_id') as city_id,--下单时所在城市
-            get_json_object(event_values, '$.order_id') as order_id, --订单ID
-            get_json_object(event_values, '$.user_id') as passenger_id, --乘客ID
-            get_json_object(event_values, '$.driver_id') as driver_id,--司机ID
-            get_json_object(event_values, '$.round') as order_round,--订单轮数
-            get_json_object(event_values, '$.config_id') as config_id,--派单配置的id
-            get_json_object(event_values, '$.timestamp') as log_timestamp,--埋点时间
-            get_json_object(event_values, '$.reason') as reason,--过滤原因
-            cast(get_json_object(event_values, '$.serv_type') as int) as product_id, --业务线ID
-            get_json_object(event_values, '$.rule') as rule,--过滤规则
-            get_json_object(event_values, '$.is_multiple') as is_multiple,  --是否播多单
-            null as order_id_multiple, --多单订单
-            'nal' as country_code,
-             dt
-        from  
-        oride_source.dispatch_tracker_server_magic 
-        where  dt = '{pt}' and event_name='dispatch_filter_driver'
-        and (get_json_object(event_values, '$.is_multiple') is null or lower(get_json_object(event_values, '$.is_multiple'))='false')
-        
-        union all
-        
-        select 
-            get_json_object(event_values, '$.city_id') as city_id,--下单时所在城市
-            get_json_object(event_values, '$.order_id') as order_id, --订单ID
-            get_json_object(event_values, '$.user_id') as passenger_id, --乘客ID
-            get_json_object(event_values, '$.driver_id') as driver_id,--司机ID
-            get_json_object(event_values, '$.round') as order_round,--订单轮数
-            get_json_object(event_values, '$.config_id') as config_id,--派单配置的id
-            get_json_object(event_values, '$.timestamp') as log_timestamp,--埋点时间
-            get_json_object(event_values, '$.reason') as reason,--过滤原因
-            cast(get_json_object(event_values, '$.serv_type') as int) as product_id, --业务线ID
-            get_json_object(event_values, '$.rule') as rule,--过滤规则
-            get_json_object(event_values, '$.is_multiple') as is_multiple,  --是否播多单
-            order_id1 as order_id_multiple, --多单订单
-            'nal' as country_code,
-             dt
-        from  
-        oride_source.dispatch_tracker_server_magic 
-        lateral view explode(split(substr(get_json_object(event_values, '$.order_list'),2,length(get_json_object(event_values, '$.order_list'))-2),',')) order_list as order_id1
-        where  dt = '{pt}' and event_name='dispatch_filter_driver'
-        and lower(get_json_object(event_values, '$.is_multiple'))='true'
 '''.format(
-        pt='{{ds}}',
-        now_day='{{macros.ds_add(ds, +1)}}',
-        table=table_name
-    ),
-    dag=dag
-)
-
-# 生成_SUCCESS
-def check_success(ds, dag, **op_kwargs):
-    dag_ids = dag.dag_id
-
-    msg = [
-        {"table": "{dag_name}".format(dag_name=dag_ids),
-         "hdfs_path": "{hdfsPath}/country_code=nal/dt={pt}".format(pt=ds, hdfsPath=hdfs_path)}
-    ]
-
-    TaskTouchzSuccess().set_touchz_success(msg)
+        pt=ds,
+        table=table_name,
+        db=db_name
+    )
+    return HQL
 
 
-touchz_data_success = PythonOperator(
-    task_id='touchz_data_success',
-    python_callable=check_success,
+# 熔断数据，如果数据重复，报错
+def check_key_data_task(ds):
+    cursor = get_hive_cursor()
+
+    # 主键重复校验
+    check_sql = '''
+    SELECT count(1)-count(distinct (concat(order_id,'_',driver_id))) as cnt
+      FROM {db}.{table}
+      WHERE dt='{pt}'
+      and country_code in ('nal')
+    '''.format(
+        pt=ds,
+        now_day=airflow.macros.ds_add(ds, +1),
+        table=table_name,
+        db=db_name
+    )
+
+    logging.info('Executing 主键重复校验: %s', check_sql)
+
+    cursor.execute(check_sql)
+
+    res = cursor.fetchone()
+
+    if res[0] > 1:
+        flag = 1
+        raise Exception("Error The primary key repeat !", res)
+        sys.exit(1)
+    else:
+        flag = 0
+        print("-----> Notice Data Export Success ......")
+
+    return flag
+
+
+# 主流程
+def execution_data_task_id(ds, **kargs):
+    hive_hook = HiveCliHook()
+
+    # 读取sql
+    _sql = dwd_oride_order_dispatch_filter_detail_di_sql_task(ds)
+
+    logging.info('Executing: %s', _sql)
+
+    # 执行Hive
+    hive_hook.run_cli(_sql)
+
+    # 熔断数据
+    # check_key_data_task(ds)
+
+    # 生成_SUCCESS
+    """
+    第一个参数true: 数据目录是有country_code分区。false 没有
+    第二个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
+
+    """
+    TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "true", "true")
+
+
+
+dwd_oride_order_dispatch_filter_detail_di_task = PythonOperator(
+    task_id='dwd_oride_order_dispatch_filter_detail_di_task',
+    python_callable=execution_data_task_id,
     provide_context=True,
     dag=dag
 )
 
 dependence_dispatch_tracker_server_magic_prev_day_task >> \
 sleep_time >> \
-dwd_oride_order_dispatch_filter_detail_di_task >> \
-touchz_data_success
+dwd_oride_order_dispatch_filter_detail_di_task
