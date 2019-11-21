@@ -154,7 +154,7 @@ class TaskTouchzSuccess(object):
             删除已有分区，保证数据唯一性
         """
 
-        time.sleep(15)
+        time.sleep(10)
 
         print("debug-> delete_exist_partition")
 
@@ -164,6 +164,9 @@ class TaskTouchzSuccess(object):
         logging.info(del_command)
 
         os.popen(del_command, 'r')
+
+
+        time.sleep(10)
 
         #验证删除分区是否存在
         check_command="hadoop dfs -ls {hdfs_data_dir}>/dev/null 2>/dev/null && echo 1 || echo 0".format(hdfs_data_dir=self.hdfs_data_dir_str)
