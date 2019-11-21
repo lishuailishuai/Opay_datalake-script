@@ -103,6 +103,22 @@ task_timeout_monitor= PythonOperator(
     dag=dag
 )
 
+
+del_partition_tesk = BashOperator(
+
+    task_id='del_partition_tesk',
+
+    bash_command="""
+    $HADOOP_HOME/bin/hadoop fs -rm -r {hdfs_data_dir} | tail -1 | awk '{{print $1}}'
+
+    """.format(
+        pt='{{ds}}',
+        now_day='{{macros.ds_add(ds, +1)}}',
+        hdfs_data_dir=hdfs_path+'/country_code=nal/dt={{ds}}'
+        ),
+    dag=dag)
+
+
 ##----------------------------------------- 脚本 ---------------------------------------## 
 
 def dim_oride_city_sql_task(ds):
@@ -322,6 +338,6 @@ dim_oride_city_task= PythonOperator(
 )
 
 
-ods_sqoop_base_data_city_conf_df_tesk>>dim_oride_city_task
-ods_sqoop_base_data_country_conf_df_tesk>>dim_oride_city_task
-ods_sqoop_base_weather_per_10min_df_task>>dim_oride_city_task
+ods_sqoop_base_data_city_conf_df_tesk>>del_partition_tesk>>dim_oride_city_task
+ods_sqoop_base_data_country_conf_df_tesk>>del_partition_tesk>>dim_oride_city_task
+ods_sqoop_base_weather_per_10min_df_task>>del_partition_tesk>>dim_oride_city_task

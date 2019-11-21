@@ -204,9 +204,6 @@ class TaskTouchzSuccess(object):
 
             print("debug-> data_not_file_type_touchz")
 
-            #删除数据目录
-            #self.delete_exist_partition()
-
             mkdir_str="$HADOOP_HOME/bin/hadoop fs -mkdir -p {hdfs_data_dir}".format(hdfs_data_dir=self.hdfs_data_dir_str)
 
             logging.info(mkdir_str)
@@ -243,10 +240,7 @@ class TaskTouchzSuccess(object):
 
         try:
 
-            print("debug-> data_file_type_touchz")
-
-            #删除数据目录
-            #self.delete_exist_partition()   
+            print("debug-> data_file_type_touchz") 
         
             #判断数据文件是否为0
             line_str="$HADOOP_HOME/bin/hadoop fs -du -s {hdfs_data_dir} | tail -1 | awk \'{{print $1}}\'".format(hdfs_data_dir=self.hdfs_data_dir_str)
