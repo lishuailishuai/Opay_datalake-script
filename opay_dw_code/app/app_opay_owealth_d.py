@@ -37,7 +37,7 @@ args = {
 
 dag = airflow.DAG(
     'app_opay_owealth_d',
-    schedule_interval="30 01 * * *",
+    schedule_interval="50 03 * * *",
     default_args=args)
 
 ##----------------------------------------- 依赖 ---------------------------------------##
@@ -89,7 +89,7 @@ def app_opay_owealth_d_sql_task(ds):
                   balance
            FROM opay_owealth_ods.ods_sqoop_owealth_share_acct_df
            WHERE dt='{pt}'
-             AND substr(from_unixtime(unix_timestamp(create_time, 'yyyy-MM-dd HH:mm:ss')+3600),1,10)='{pt}' ),
+          ),
              order_base AS
           (SELECT create_time,
                   order_type,
