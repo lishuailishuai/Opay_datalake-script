@@ -301,7 +301,7 @@ def execution_data_task_id(ds,**kargs):
     hive_hook.run_cli(_sql)
 
     #熔断数据，如果数据不能为0
-    #check_key_data_cnt_task(ds)
+    check_key_data_cnt_task(ds)
 
     #熔断数据
     check_key_data_task(ds)
