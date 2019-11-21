@@ -146,6 +146,49 @@ class TaskTouchzSuccess(object):
         else:
         
             logging.info("_SUCCESS 验证成功")
+
+
+    def delete_exist_partition(self):
+
+        """
+            删除已有分区，保证数据唯一性
+        """
+
+        time.sleep(15)
+
+        print("debug-> delete_exist_partition")
+
+        #删除语句
+        del_command="hadoop dfs -rm -r {hdfs_data_dir}".format(hdfs_data_dir=self.hdfs_data_dir_str)
+
+        logging.info(del_command)
+
+        os.popen(del_command, 'r')
+
+        #验证删除分区是否存在
+        check_command="hadoop dfs -ls {hdfs_data_dir}>/dev/null 2>/dev/null && echo 1 || echo 0".format(hdfs_data_dir=self.hdfs_data_dir_str)
+
+        out = os.popen(check_command, 'r')
+
+        res = out.readlines()
+        
+        res = 0 if res is None else res[0].lower().strip()
+        out.close()
+
+        print(res)
+
+        #判断 删除分区是否存在
+        if res== '' or res == 'None' or res[0] == '0':
+
+            logging.info("目录删除成功")
+        
+        else:
+
+            #目录存在
+            logging.info("目录删除失败:"+" "+"{hdfs_data_dir}".format(hdfs_data_dir=self.hdfs_data_dir_str))
+
+            sys.exit(1)
+
         
    
     def data_not_file_type_touchz(self):
@@ -157,6 +200,9 @@ class TaskTouchzSuccess(object):
         try:
 
             print("debug-> data_not_file_type_touchz")
+
+            #删除数据目录
+            self.delete_exist_partition()
 
             mkdir_str="$HADOOP_HOME/bin/hadoop fs -mkdir -p {hdfs_data_dir}".format(hdfs_data_dir=self.hdfs_data_dir_str)
 
@@ -194,7 +240,10 @@ class TaskTouchzSuccess(object):
 
         try:
 
-            print("debug-> data_file_type_touchz")   
+            print("debug-> data_file_type_touchz")
+
+            #删除数据目录
+            self.delete_exist_partition()   
         
             #判断数据文件是否为0
             line_str="$HADOOP_HOME/bin/hadoop fs -du -s {hdfs_data_dir} | tail -1 | awk \'{{print $1}}\'".format(hdfs_data_dir=self.hdfs_data_dir_str)
