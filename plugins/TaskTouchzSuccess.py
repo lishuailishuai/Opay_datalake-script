@@ -179,12 +179,13 @@ class TaskTouchzSuccess(object):
         if res== '' or res == 'None' or res[0] == '0':
 
             logging.info("目录删除成功")
-
-            sys.exit(1)
         
         else:
             #目录存在
             logging.info("目录删除失败:"+" "+"{hdfs_data_dir}".format(hdfs_data_dir=self.hdfs_data_dir_str))
+            
+            sys.exit(1)
+
         
    
     def data_not_file_type_touchz(self):
