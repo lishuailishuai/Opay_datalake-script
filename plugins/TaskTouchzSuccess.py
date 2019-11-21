@@ -181,9 +181,10 @@ class TaskTouchzSuccess(object):
             logging.info("目录删除成功")
         
         else:
+            
             #目录存在
             logging.info("目录删除失败:"+" "+"{hdfs_data_dir}".format(hdfs_data_dir=self.hdfs_data_dir_str))
-            
+
             sys.exit(1)
 
         
