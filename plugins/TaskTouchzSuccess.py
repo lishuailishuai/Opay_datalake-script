@@ -282,6 +282,99 @@ class TaskTouchzSuccess(object):
             sys.exit(1)
 
 
+    def del_path(self,ds,db_name,table_name,data_hdfs_path,country_partition="true",file_type="true",hour=None):
+
+        """
+        country_partition:是否有国家分区
+        file_type:是否空文件也生成 success
+            
+        """
+
+        try:
+
+            self.db_name=db_name
+            self.ds=ds
+            self.table_name=table_name
+
+        
+            # 没有国家分区并且每个目录必须有数据才能生成 Success
+            if country_partition.lower()=="false" and file_type.lower()=="true":
+
+                if hour is None:
+                    #输出不同国家的数据路径
+                    self.hdfs_data_dir_str=data_hdfs_path+"/dt="+self.ds
+                else:
+                    #输出不同国家的数据路径
+                    self.hdfs_data_dir_str=data_hdfs_path+"/dt="+self.ds+"/hour="+hour
+
+                self.delete_exist_partition()
+
+                return
+
+            # 没有国家分区并且数据为空也生成 Success
+            if country_partition.lower()=="false" and file_type.lower()=="false":
+
+                if hour is None:
+                    #输出不同国家的数据路径
+                    self.hdfs_data_dir_str=data_hdfs_path+"/dt="+self.ds
+                else:
+                    #输出不同国家的数据路径
+                    self.hdfs_data_dir_str=data_hdfs_path+"/dt="+self.ds+"/hour="+hour
+
+                self.delete_exist_partition()
+
+                return
+
+
+            #获取国家列表
+            country_code_list=self.get_country_code()
+
+
+            for country_code_word in country_code_list.split(","):
+
+
+                #有国家分区并且每个目录必须有数据才能生成 Success
+                if country_partition.lower()=="true" and file_type.lower()=="true":
+
+                    if hour is None:
+
+                        #输出不同国家的数据路径
+                        self.hdfs_data_dir_str=data_hdfs_path+"/country_code="+country_code_word+"/dt="+self.ds
+                    else:
+
+                        #输出不同国家的数据路径
+                        self.hdfs_data_dir_str=data_hdfs_path+"/country_code="+country_code_word+"/dt="+self.ds+"/hour="+hour
+
+
+                    self.delete_exist_partition()
+
+                
+                #有国家分区并且数据为空也生成 Success
+                if country_partition.lower()=="true" and file_type.lower()=="false":
+
+
+                    if hour is None:
+
+                        #输出不同国家的数据路径
+                        self.hdfs_data_dir_str=data_hdfs_path+"/country_code="+country_code_word+"/dt="+self.ds
+                    else:
+
+                        #输出不同国家的数据路径
+                        self.hdfs_data_dir_str=data_hdfs_path+"/country_code="+country_code_word+"/dt="+self.ds+"/hour="+hour
+
+                    self.delete_exist_partition()
+
+
+            
+        except Exception as e:
+
+            #self.comwx.postAppMessage('DW调度系统任务 {jobname} 数据产出异常'.format(jobname=table_name),'271')
+
+            logging.info(e)
+
+            sys.exit(1)
+
+
 
     def countries_touchz_success(self,ds,db_name,table_name,data_hdfs_path,country_partition="true",file_type="true",hour=None):
 
