@@ -175,13 +175,15 @@ class TaskTouchzSuccess(object):
         res = 0 if res is None else res[0].lower().strip()
         out.close()
 
+        print(res)
+
         #判断 删除分区是否存在
         if res== '' or res == 'None' or res[0] == '0':
 
             logging.info("目录删除成功")
         
         else:
-            
+
             #目录存在
             logging.info("目录删除失败:"+" "+"{hdfs_data_dir}".format(hdfs_data_dir=self.hdfs_data_dir_str))
 
