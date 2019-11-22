@@ -171,7 +171,7 @@ for db_name, table_name, conn_id, prefix_name,priority_weight_nm in table_list:
 
     hive_table_name = HIVE_TABLE % (prefix_name, table_name)
 
-    query = 'select * from {table} where (FROM_UNIXTIME(create_time, "%Y-%m-%d %H")="{{{{ execution_date.strftime("%Y-%m-%d %H") }}}}" OR FROM_UNIXTIME(UNIX_TIMESTAMP(update_time), "%Y-%m-%d")="{{{{ execution_date.strftime("%Y-%m-%d %H") }}}}") AND $CONDITIONS'.format(table=table_name)
+    query = 'select * from {table} where (FROM_UNIXTIME(create_time, "%Y-%m-%d %H")="{{{{ execution_date.strftime("%Y-%m-%d %H") }}}}" OR FROM_UNIXTIME(UNIX_TIMESTAMP(update_time), "%Y-%m-%d %H")="{{{{ execution_date.strftime("%Y-%m-%d %H") }}}}") AND $CONDITIONS'.format(table=table_name)
 
 
     # sqoop import
