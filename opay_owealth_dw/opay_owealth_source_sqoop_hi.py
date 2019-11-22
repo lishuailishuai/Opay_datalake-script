@@ -196,7 +196,7 @@ for db_name, table_name, conn_id, prefix_name,priority_weight_nm in table_list:
             username=conn_conf_dict[conn_id].login,
             password=conn_conf_dict[conn_id].password,
             table=table_name,
-            ufile_path=UFILE_PATH % (db_name, table_name),
+            ufile_path=UFILE_PATH % (db_name+"_hi", table_name),
             m=18 if table_name=='channel_response_code' else 20
     ),
         dag=dag,
