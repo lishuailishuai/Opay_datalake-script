@@ -126,11 +126,14 @@ def dwd_oride_order_finance_df_sql_task(ds):
      ord.order_id, --订单号
      ord.create_date,--订单日期
      ord.driver_id, --司机id
-     sum(nvl(recharge.amount,0.0)) AS recharge_amount, --资金调整金额
+     sum(nvl(if(recharge.amount_reason in(4,5,7),recharge.amount,0),0.0)) AS recharge_amount, --资金调整金额
      sum(nvl(reward.amount,0.0)) AS reward_amount, --奖励金额
      sum(nvl(records.amount_pay_online,0.0)) AS amount_pay_online, --当日总收入-线上支付金额
      sum(nvl(records.amount_pay_offline,0.0)) AS amount_pay_offline, --当日总收入-线下支付金额
      ord.driver_serv_type, --订单表中司机业务类型字段
+     sum(nvl(if(recharge.amount_reason=6,abs(recharge.amount),0),0.0)) AS phone_amount, --手机还款
+     sum(nvl(records.amount_all,0.0)) AS amount_all, --当日总收入
+     sum(nvl(abs(records.amount_agenter),0.0)) AS amount_agenter, --司机份子钱
      'nal' as country_code,
      '{pt}' as dt
     FROM
@@ -142,7 +145,7 @@ def dwd_oride_order_finance_df_sql_task(ds):
       (SELECT *
        FROM oride_dw_ods.ods_sqoop_base_data_driver_recharge_records_df
        WHERE dt='{pt}'
-         AND amount_reason in(4,5,7)) recharge ON ord.order_id=recharge.order_id
+         AND amount_reason in(4,5,6,7)) recharge ON ord.order_id=recharge.order_id
     LEFT JOIN
       (SELECT *
        FROM oride_dw_ods.ods_sqoop_base_data_driver_reward_df
@@ -151,7 +154,9 @@ def dwd_oride_order_finance_df_sql_task(ds):
       (SELECT driver_id,
               from_unixtime(DAY,'yyyy-MM-dd') AS DAY,
               amount_pay_online,  --线上支付金额
-              amount_pay_offline   --线下支付金额
+              amount_pay_offline,   --线下支付金额
+              amount_all,  --司机总收入
+              amount_agenter --司机份子钱
        FROM oride_dw_ods.ods_sqoop_base_data_driver_records_day_df
        WHERE dt='{pt}') records ON ord.driver_id=records.driver_id
     AND substr(ord.finish_time,1,10)=records.day
