@@ -66,7 +66,7 @@ table_list = [
 
 HIVE_DB = 'opay_owealth_ods'
 HIVE_TABLE = 'ods_sqoop_%s_%s_hi'
-UFILE_PATH = 'ufile://opay-datalake/opay_owealth_ods/%s/%s'
+UFILE_PATH = 'ufile://opay-datalake/opay_owealth_sqoop_hi/%s/%s'
 ODS_CREATE_TABLE_SQL = '''
     CREATE EXTERNAL TABLE IF NOT EXISTS {db_name}.`{table_name}`(
         {columns}
