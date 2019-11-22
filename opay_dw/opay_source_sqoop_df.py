@@ -99,8 +99,6 @@ table_list = [
     ("opay_commission", "commission_order", "opay_db_3322", "base", 1),
     ("opay_commission", "commission_top_up_record", "opay_db_3322", "base", 1),
 
-    ("opay_owealth", "owealth_purchase_record", "opay_db_3320", "owealth", 1),
-    ("opay_owealth", "owealth_user_subscribed", "opay_db_3320", "owealth", 1),
 
 ]
 
