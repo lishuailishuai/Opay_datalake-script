@@ -157,7 +157,7 @@ def run_check_table(db_name, table_name, conn_id, hive_table_name, **kwargs):
             db_name=HIVE_DB,
             table_name=hive_table_name,
             columns=",\n".join(rows),
-            ufile_path=UFILE_PATH % (db_name, table_name)
+            ufile_path=UFILE_PATH % (db_name+"_hi", table_name)
         )
         logging.info('Executing: %s', sql)
         hive_hook.run_cli(sql)
