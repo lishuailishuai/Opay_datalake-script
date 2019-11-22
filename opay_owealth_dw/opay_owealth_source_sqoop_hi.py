@@ -26,7 +26,7 @@ args = {
 schedule_interval="20 03 * * *"
 
 dag = airflow.DAG(
-    'opay_owealth_source_sqoop_df',
+    'opay_owealth_source_sqoop_hi',
     schedule_interval=schedule_interval,
     concurrency=15,
     max_active_runs=1,
@@ -60,27 +60,20 @@ db_name,table_name,conn_id,prefix_name,priority_weight
 
 table_list = [
     ("opay_owealth","share_acct", "opay_owealth_db", "owealth",3),
-    ("opay_owealth","share_failure_user", "opay_owealth_db", "owealth",3),
-    ("opay_owealth","share_freeze", "opay_owealth_db", "owealth",3),
-    ("opay_owealth","share_holiday", "opay_owealth_db", "owealth",3),
-    ("opay_owealth","share_limit_level", "opay_owealth_db", "owealth",3),
     ("opay_owealth","share_order", "opay_owealth_db", "owealth",3),
-    ("opay_owealth","share_platform_assets_acct", "opay_owealth_db", "owealth",3),
-    ("opay_owealth","share_platform_revenue_acct", "opay_owealth_db", "owealth",3),
-    ("opay_owealth", "owealth_purchase_record", "opay_db_3320", "owealth", 3),
-    ("opay_owealth", "owealth_user_subscribed", "opay_db_3320", "owealth", 3),
 ]
 
 
 HIVE_DB = 'opay_owealth_ods'
-HIVE_TABLE = 'ods_sqoop_%s_%s_df'
+HIVE_TABLE = 'ods_sqoop_%s_%s_hi'
 UFILE_PATH = 'ufile://opay-datalake/opay_owealth_ods/%s/%s'
 ODS_CREATE_TABLE_SQL = '''
     CREATE EXTERNAL TABLE IF NOT EXISTS {db_name}.`{table_name}`(
         {columns}
     )
     PARTITIONED BY (
-      `dt` string)
+      `dt` string,
+      `hour` string)
     ROW FORMAT SERDE
       'org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe'
     STORED AS INPUTFORMAT
@@ -91,7 +84,7 @@ ODS_CREATE_TABLE_SQL = '''
       '{ufile_path}';
     MSCK REPAIR TABLE {db_name}.`{table_name}`;
     -- delete opay_dw table
-    DROP TABLE IF EXISTS opay_dw.`{table_name}`;
+    DROP TABLE IF EXISTS {db_name}.`{table_name}`;
 '''
 
 # 需要验证的核心业务表
@@ -189,7 +182,7 @@ for db_name, table_name, conn_id, prefix_name,priority_weight_nm in table_list:
             --username {username} \
             --password {password} \
             --table {table} \
-            --target-dir {ufile_path}/dt={{{{ ds }}}}/ \
+            --target-dir {ufile_path}/dt={{{{ ds }}}}/hour={{{{ execution_date.strftime("%H") }}}} \
             --fields-terminated-by "\\001" \
             --lines-terminated-by "\\n" \
             --hive-delims-replacement " " \
@@ -228,7 +221,7 @@ for db_name, table_name, conn_id, prefix_name,priority_weight_nm in table_list:
         task_id='add_partitions_{}'.format(hive_table_name),
         priority_weight=priority_weight_nm,
         hql='''
-                ALTER TABLE {table} ADD IF NOT EXISTS PARTITION (dt = '{{{{ ds }}}}')
+                ALTER TABLE {table} ADD IF NOT EXISTS PARTITION (dt = '{{{{ ds }}}}',hour = '{{{{ execution_date.strftime("%H") }}}}')
             '''.format(table=hive_table_name),
         schema=HIVE_DB,
         dag=dag)
