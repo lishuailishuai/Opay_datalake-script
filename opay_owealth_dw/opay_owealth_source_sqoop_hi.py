@@ -170,6 +170,10 @@ for db_name, table_name, conn_id, prefix_name,priority_weight_nm in table_list:
         conn_conf_dict[conn_id] = BaseHook.get_connection(conn_id)
 
     hive_table_name = HIVE_TABLE % (prefix_name, table_name)
+
+    query = 'select * from {table} where (FROM_UNIXTIME(create_time, "%Y-%m-%d %H")="{{{{ execution_date.strftime("%Y-%m-%d %H") }}}}" OR FROM_UNIXTIME(UNIX_TIMESTAMP(update_time), "%Y-%m-%d")="{{{{ execution_date.strftime("%Y-%m-%d %H") }}}}") AND $CONDITIONS'.format(table=table_name)
+
+
     # sqoop import
     import_table = BashOperator(
         task_id='import_table_{}'.format(hive_table_name),
@@ -181,14 +185,15 @@ for db_name, table_name, conn_id, prefix_name,priority_weight_nm in table_list:
             --connect "jdbc:mysql://{host}:{port}/{schema}?tinyInt1isBit=false&useUnicode=true&characterEncoding=utf8" \
             --username {username} \
             --password {password} \
-            --table {table} \
-            --target-dir {ufile_path}/dt={{{{ ds }}}}/hour={{{{ execution_date.strftime("%H") }}}} \
+            --query '{query}' \
+            --split-by id \
+            --target-dir {ufile_path}/dt={{{{ ds }}}}/ \
             --fields-terminated-by "\\001" \
             --lines-terminated-by "\\n" \
             --hive-delims-replacement " " \
             --delete-target-dir \
             --compression-codec=snappy \
-            -m {m}
+            -m 16
         '''.format(
             host=conn_conf_dict[conn_id].host,
             port=conn_conf_dict[conn_id].port,
@@ -197,6 +202,7 @@ for db_name, table_name, conn_id, prefix_name,priority_weight_nm in table_list:
             password=conn_conf_dict[conn_id].password,
             table=table_name,
             ufile_path=UFILE_PATH % (db_name, table_name),
+            query=query,
             m=18 if table_name=='channel_response_code' else 20
     ),
         dag=dag,
@@ -256,6 +262,7 @@ for db_name, table_name, conn_id, prefix_name,priority_weight_nm in table_list:
             dag=dag
         )
         add_partitions >> volume_monitoring >> validate_all_data
+
     # 超时监控
     task_timeout_monitor= PythonOperator(
         task_id='task_timeout_monitor_{}'.format(hive_table_name),
