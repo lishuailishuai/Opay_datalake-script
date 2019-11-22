@@ -52,6 +52,17 @@ dependence_dwm_oride_driver_base_df_prev_day_task = UFileSensor(
     dag=dag
 )
 
+dim_oride_city_prev_day_tesk = UFileSensor(
+    task_id='dim_oride_city_prev_day_tesk',
+    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="oride/oride_dw/dim_oride_city/country_code=NG",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
 ##----------------------------------------- 变量 ---------------------------------------##
 
 db_name = "oride_dw"
@@ -89,8 +100,8 @@ def dm_oride_driver_base_sql_task(ds):
 
     INSERT overwrite TABLE oride_dw.{table} partition(country_code,dt)
 
-    select product_id,
-       city_id,
+    select dri.product_id,
+       dri.city_id,
        count(driver_id) as audit_finish_driver_num,
        --注册司机数，审核通过司机数
        
@@ -164,11 +175,18 @@ def dm_oride_driver_base_sql_task(ds):
        --(去除with cube为空的BUG) --国家码字段
        
        '{pt}' AS dt
-               
+       from (select *         
        from oride_dw.dwm_oride_driver_base_df
-       where dt='{pt}'
-       group by product_id,
-               city_id,
+       where dt='{pt}') dri
+       inner join
+       (SELECT product_id1,
+               city_id
+        FROM oride_dw.dim_oride_city 
+        LATERAL VIEW explode(split(regexp_replace(product_id,'\\\\[|\\\\]',''),',')) s AS product_id1
+        WHERE dt='{pt}') cit
+        on dri.product_id=cit.product_id1 and dri.city_id=cit.city_id
+       group by dri.product_id,
+               dri.city_id,
                country_code
 
 '''.format(
@@ -210,4 +228,4 @@ dm_oride_driver_base_task = PythonOperator(
     dag=dag
 )
 
-dependence_dwm_oride_driver_base_df_prev_day_task >> dm_oride_driver_base_task
+dependence_dwm_oride_driver_base_df_prev_day_task >> dim_oride_city_prev_day_tesk >> dm_oride_driver_base_task

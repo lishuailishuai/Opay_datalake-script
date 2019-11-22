@@ -13,6 +13,7 @@ from plugins.comwx import ComwxApi
 from utils.validate_metrics_utils import *
 from constant.metrics_constant import *
 from airflow.sensors.hive_partition_sensor import HivePartitionSensor
+from airflow.sensors import UFileSensor
 
 comwx = ComwxApi('wwd26d45f97ea74ad2', 'BLE_v25zCmnZaFUgum93j3zVBDK-DjtRkLisI_Wns4g', '1000011')
 
@@ -34,12 +35,26 @@ global_table_names = [
     'oride_dw_ods.ods_sqoop_base_data_city_conf_df',
 ]
 
-# 熔断阻塞流程,配置依赖
-app_oride_global_operate_report_d_task = HivePartitionSensor(
-    task_id="app_oride_global_operate_report_d_task",
-    table="app_oride_global_operate_report_d",
-    partition="dt='{{ds}}'",
-    schema="oride_dw",
+# 依赖前一天分区
+app_oride_global_operate_report_d_task = UFileSensor(
+    task_id='app_oride_global_operate_report_d_task',
+    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="oride/oride_dw/app_oride_global_operate_report_d/country_code=nal",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
+# 依赖前一天分区
+app_oride_global_operate_report_multi_d_task = UFileSensor(
+    task_id='app_oride_global_operate_report_multi_d_task',
+    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="oride/oride_dw/app_oride_global_operate_report_multi_d/country_code=nal",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
@@ -289,7 +304,7 @@ def get_product_rows(ds, all_completed_num_nobeckon, product_id):
                  nvl(round(t1.driver_pushed_order_cnt/t1.td_push_accpet_show_driver_num,0),0) AS avg_pushed_order_cnt, --人均推送订单数
                  nvl(round(t1.finish_order_cnt_inSimulRing/t1.finish_driver_online_dur*3600,1),0) AS TPH, --分子完单量用（包含同时呼叫的）
                  '-' as IPH,
-                -- nvl(round(t1.iph_fenzi_inSimulRing*3600/t1.finish_driver_online_dur,1),0) AS IPH, --分子（包含同时呼叫）
+                 --nvl(round(t1.iph_fenzi_inSimulRing*3600/t1.finish_driver_online_dur,1),0) AS IPH, --分子（包含同时呼叫）
                  if(t1.finish_order_cnt>=10000,concat(cast(nvl(round(t1.bad_feedback_finish_ord_cnt*10000/t1.finish_order_cnt,0),0) AS string),'‱'),'-') as bad_feedback_finish_rate, --万单完单差评率
                  nvl(cast(round(t1.finish_take_order_dur/t1.finish_order_cnt,0) as bigint),0) AS avg_take_order_dur,--平均应答时长
                  nvl(cast(round(t1.finish_pick_up_dur/t1.finish_order_cnt,0) as bigint),0) AS avg_pick_up_dur, --平均接驾时长
@@ -360,58 +375,70 @@ def get_all_product_rows(ds, all_completed_num):
                             <td>{}</td>
                             <td>{}</td>
                             <td>{}</td> 
+                            <td>{}</td> 
                     '''
     sql = '''SELECT t1.dt,
-         t1.city_id,
-         if(t1.city_id=-10000,'All',cit.city_name) AS city_name,
-         if(t1.city_id=-10000,'-',nvl(cit.weather,'-')) AS weather, --当日该城市天气
-         concat(cast(nvl(round(nvl(t1.wet_ord_cnt,0)*100/nvl(t1.ride_order_cnt,0),1),0) AS string),'%') AS wet_order_rate, --湿单占比
-         nvl(t1.ride_order_cnt,0) AS ride_order_cnt, --当日下单数
-         if(t1.dt>'2019-11-21',order_cnt_lfw,'-') AS order_cnt_lfw, --近四周同期下单数据
-         nvl(t1.valid_ord_cnt,0) AS valid_ord_cnt, --有效下单量
-         nvl(t1.finish_pay,0) AS finish_pay, --当日支付完单数
-         nvl(t1.finish_order_cnt,0) AS finish_order_cnt, --当日完单量
-         if(t1.dt>'2019-11-21',finish_order_cnt_lfw,'-') AS finish_order_cnt_lfw, --完单数（近四周同期均值）
-         concat(cast(nvl(round(t1.finish_order_cnt*100/t1.ride_order_cnt,1),0) AS string),'%') AS finish_order_rate, --完单率
-         if(t1.dt>'2019-11-21',concat(cast(nvl(round(finish_order_cnt_lfw*100/order_cnt_lfw,1),0) AS string),'%'),'-') AS finish_order_rate_lfw, --完单率（近四周）
-         concat(cast(nvl(round(nvl(t1.finish_order_cnt,0)*100/{all_completed_num},1),0) AS string),'%') AS city_fininsh_ord_rate, --城市完单占比
-         --nvl(t1.act_users,0) as act_users, --当日活跃乘客数
-         nvl(t1.ord_users,0) AS ord_users, --当日下单乘客数
-         nvl(t1.finished_users,0) AS finished_users,--当日完单乘客数
-         concat(cast(nvl(round(t1.online_paid_users*100/t1.paid_users,1),0) AS string),'%') AS online_paid_user_rate, --当日线上支付乘客占比
-        concat(cast(nvl(round(nvl(t2.finish_order_cnt,0)*100/nvl(t1.finish_order_cnt,0),1),0) AS string),'%') AS direct_finish_rate, --专车完单占比
-        concat(cast(nvl(round(nvl(t3.finish_order_cnt,0)*100/nvl(t1.finish_order_cnt,0),1),0) AS string),'%') AS street_finish_rate, --快车完单占比
-        concat(cast(nvl(round(nvl(t4.finish_order_cnt,0)*100/nvl(t1.finish_order_cnt,0),1),0) AS string),'%') AS otrike_finish_rate --otrike完单占比        
-        FROM
-          (SELECT *
-           FROM oride_dw.app_oride_global_operate_report_driservtype_d
-           WHERE dt='{dt}'
-             AND driver_serv_type=-10000) t1
-        LEFT JOIN
-          (SELECT city_id,
-                  finish_order_cnt
-           FROM oride_dw.app_oride_global_operate_report_driservtype_d
-           WHERE dt='{dt}'
-             AND driver_serv_type=1) t2 ON t1.city_id=t2.city_id
-        LEFT JOIN
-          (SELECT city_id,
-                  finish_order_cnt
-           FROM oride_dw.app_oride_global_operate_report_driservtype_d
-           WHERE dt='{dt}'
-             AND driver_serv_type=2) t3 ON t1.city_id=t3.city_id
-        LEFT JOIN
-          (SELECT city_id,
-                  finish_order_cnt
-           FROM oride_dw.app_oride_global_operate_report_driservtype_d
-           WHERE dt='{dt}'
-             AND driver_serv_type=3) t4 ON t1.city_id=t4.city_id
-        LEFT JOIN
-          (SELECT *
-           FROM oride_dw.dim_oride_city
-           WHERE dt='{dt}') cit ON t1.city_id=cit.city_id
-        ORDER BY t1.city_id ASC
+                     t1.city_id,
+                     if(t1.city_id=-10000,'All',cit.city_name) AS city_name,
+                     if(t1.city_id=-10000,'-',nvl(cit.weather,'-')) AS weather, --当日该城市天气
+                     concat(cast(nvl(round(nvl(t1.wet_ord_cnt,0)*100/nvl(t1.ride_order_cnt,0),1),0) AS string),'%') AS wet_order_rate, --湿单占比
+                     nvl(t1.ride_order_cnt,0) AS ride_order_cnt, --当日下单数
+                     if(t1.dt>'2019-11-21',order_cnt_lfw,'-') AS order_cnt_lfw, --近四周同期下单数据
+                     nvl(t1.valid_ord_cnt,0) AS valid_ord_cnt, --有效下单量
+                     nvl(t1.finish_pay,0) AS finish_pay, --当日支付完单数
+                     nvl(t1.finish_order_cnt,0) AS finish_order_cnt, --当日完单量
+                     if(t1.dt>'2019-11-21',finish_order_cnt_lfw,'-') AS finish_order_cnt_lfw, --完单数（近四周同期均值）
+                     concat(cast(nvl(round(t1.finish_order_cnt*100/t1.ride_order_cnt,1),0) AS string),'%') AS finish_order_rate, --完单率
+                     if(t1.dt>'2019-11-21',concat(cast(nvl(round(finish_order_cnt_lfw*100/order_cnt_lfw,1),0) AS string),'%'),'-') AS finish_order_rate_lfw, --完单率（近四周）
+                     concat(cast(nvl(round(nvl(t1.finish_order_cnt,0)*100/t6.finish_order_cnt,1),0) AS string),'%') AS city_fininsh_ord_rate, --城市完单占比
+                     nvl(t1.ord_users,0) AS ord_users, --当日下单乘客数
+                     nvl(t1.finished_users,0) AS finished_users,--当日完单乘客数
+                     concat(cast(nvl(round(t1.online_paid_users*100/t1.paid_users,1),0) AS string),'%') AS online_paid_user_rate, --当日线上支付乘客占比
+                    concat(cast(nvl(round(nvl(t2.finish_order_cnt,0)*100/nvl(t1.finish_order_cnt,0),1),0) AS string),'%') AS direct_finish_rate, --专车完单占比
+                    concat(cast(nvl(round(nvl(t3.finish_order_cnt,0)*100/nvl(t1.finish_order_cnt,0),1),0) AS string),'%') AS street_finish_rate, --快车完单占比
+                    concat(cast(nvl(round(nvl(t4.finish_order_cnt,0)*100/nvl(t1.finish_order_cnt,0),1),0) AS string),'%') AS otrike_finish_rate, --otrike完单占比  
+                    concat(cast(nvl(round(nvl(t5.finish_order_cnt,0)*100/nvl(t1.finish_order_cnt,0),1),0) AS string),'%') AS ocar_finish_rate --ocar完单占比      
+                    FROM
+                      (SELECT *
+                       FROM oride_dw.app_oride_global_operate_report_multi_d
+                       WHERE dt='{dt}'
+                         AND driver_serv_type=-10000) t1
+                    LEFT JOIN
+                      (SELECT city_id,
+                              finish_order_cnt
+                       FROM oride_dw.app_oride_global_operate_report_multi_d
+                       WHERE dt='{dt}'
+                         AND driver_serv_type=1) t2 ON t1.city_id=t2.city_id
+                    LEFT JOIN
+                      (SELECT city_id,
+                              finish_order_cnt
+                       FROM oride_dw.app_oride_global_operate_report_multi_d
+                       WHERE dt='{dt}'
+                         AND driver_serv_type=2) t3 ON t1.city_id=t3.city_id
+                    LEFT JOIN
+                      (SELECT city_id,
+                              finish_order_cnt
+                       FROM oride_dw.app_oride_global_operate_report_multi_d
+                       WHERE dt='{dt}'
+                         AND driver_serv_type=3) t4 ON t1.city_id=t4.city_id
+                    LEFT JOIN
+                      (SELECT city_id,
+                              finish_order_cnt
+                       FROM oride_dw.app_oride_global_operate_report_multi_d
+                       WHERE dt='{dt}'
+                         AND driver_serv_type=4) t5 ON t1.city_id=t5.city_id
+                    LEFT JOIN
+                      (SELECT city_id,
+                              finish_order_cnt
+                       FROM oride_dw.app_oride_global_operate_report_multi_d
+                       WHERE dt='{dt}'
+                         AND driver_serv_type=-10000 and city_id=-10000) t6 ON 1=1
+                    LEFT JOIN
+                      (SELECT *
+                       FROM oride_dw.dim_oride_city
+                       WHERE dt='{dt}') cit ON t1.city_id=cit.city_id
+                    ORDER BY t1.city_id ASC
                  '''.format(dt=ds,
-                            all_completed_num=all_completed_num,
                             start_date=airflow.macros.ds_add(ds, -14))
     cursor = get_hive_cursor()
     logging.info('Executing: %s', sql)
@@ -437,7 +464,7 @@ def send_report_email(ds, **kwargs):
                                 <th colspan="2" style="text-align: center;">天气指标</th>
                                 <th colspan="9" style="text-align: center;">关键指标</th>
                                 <th colspan="3" style="text-align: center;">乘客指标</th>
-                                <th colspan="3" style="text-align: center;">各业务完单占比</th>
+                                <th colspan="4" style="text-align: center;">各业务完单占比</th>
                             </tr>
                             <tr>
                                 <th>日期</th>
@@ -463,6 +490,7 @@ def send_report_email(ds, **kwargs):
                                 <th>专车</th>
                                 <th>快车</th>
                                 <th>Otrike</th>
+                                <th>Ocar</th>
                             </tr>
     '''
     product_html_table_fmt = '''
@@ -717,6 +745,19 @@ def send_report_email(ds, **kwargs):
                     {otrike_rows}
                     </tbody>
                 </table> 
+                <table width="100%" class="table">
+                <caption>
+                    <h3>Ocar分城市指标(不包含同时呼叫)</h3>
+                </caption>
+                </table>
+                <table width="100%" class="table">
+                    <thead>
+                    {product_html_table_fmt}
+                    </thead>
+                    <tbody>
+                    {ocar_rows}
+                    </tbody>
+                </table>
         </body>
         </html>
         '''
@@ -734,6 +775,7 @@ def send_report_email(ds, **kwargs):
                            direct_rows=get_product_rows(ds, all_completed_num_nobeckon, 1),
                            street_rows=get_product_rows(ds, all_completed_num_nobeckon, 2),
                            otrike_rows=get_product_rows(ds, all_completed_num_nobeckon, 3),
+                           ocar_rows=get_product_rows(ds, all_completed_num_nobeckon, 4),
                            all_product_city_total_rows=get_all_product_rows(ds, all_completed_num)
                            )  #
 
@@ -759,4 +801,4 @@ send_report = PythonOperator(
     dag=dag
 )
 
-app_oride_global_operate_report_d_task >> send_report
+app_oride_global_operate_report_d_task >> app_oride_global_operate_report_multi_d_task >> send_report

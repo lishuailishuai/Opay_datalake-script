@@ -375,7 +375,7 @@ select nvl(country_code,-10000) as country_code,
        {passenger_data_null},
        {driver_data_null},
        null as map_request_num,  --地图调用次数
-       sum(recharge_amount) AS recharge_amount, --充值金额
+       sum(recharge_amount) AS recharge_amount, --资金调整金额
        sum(reward_amount) AS reward_amount, --奖励金额
        sum(amount_pay_online) AS amount_pay_online, --当日总收入-线上支付金额
        sum(amount_pay_offline) AS amount_pay_offline, --当日总收入-线下支付金额 
@@ -463,7 +463,7 @@ select nvl(f.country_code,-10000) as country_code,
     from (select nvl(country_code,-10000) as country_code,
        nvl(city_id,-10000) as city_id,
        nvl(driver_serv_type,-10000) as product_id,   --包含同时呼叫的业务线       
-       sum(recharge_amount+reward_amount+amount_pay_online+amount_pay_offline) AS iph_fenzi_inSimulRing --iph分子（包含同时呼叫）
+       sum(amount_all+phone_amount+amount_agenter) AS iph_fenzi_inSimulRing --iph分子（包含同时呼叫）
 from (select * from oride_dw.dwd_oride_order_finance_df 
 where dt='{pt}'
 and create_date='{pt}') t1 
