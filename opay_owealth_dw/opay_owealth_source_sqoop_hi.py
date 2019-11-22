@@ -33,7 +33,7 @@ dag = airflow.DAG(
     default_args=args)
 
 dag_monitor = airflow.DAG(
-    'opay_owealth_source_sqoop_df_monitor',
+    'opay_owealth_source_sqoop_hi_monitor',
     schedule_interval=schedule_interval,
     default_args=args)
 
