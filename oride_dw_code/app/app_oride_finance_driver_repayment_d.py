@@ -126,7 +126,19 @@ def get_data_from_hive(ds,**op_kwargs):
                     driver_id,
                     driver_finish_order_cnt
              FROM oride_dw.dwm_oride_driver_base_df
-             WHERE dt = '{pt}') t2 
+             WHERE dt = '{pt}'
+             and city_id<>'999001' --去除测试数据
+             and driver_id not in(3835,
+             3963,
+             3970,
+             4702,
+             5559,
+             5902,
+             7669,
+             29105, --以上都是录错城市的司机
+             10722, --测试数据
+             1)    --北京城市测试数据
+             ) t2 
         ON t1.driver_id=t2.driver_id
           AND t1.city_id=t2.city_id
           AND t1.product_id=t2.product_id

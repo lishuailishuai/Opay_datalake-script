@@ -13,8 +13,8 @@ from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
 from utils.util import on_success_callback
 
 args = {
-    'owner': 'zhenqian.zhang',
-    'start_date': datetime(2019, 10, 30),
+    'owner': 'yangmingze',
+    'start_date': datetime(2019, 11, 20),
     'depends_on_past': False,
     'retries': 1,
     'retry_delay': timedelta(minutes=5),
@@ -23,17 +23,18 @@ args = {
     'email_on_retry': False,
     'on_success_callback':on_success_callback,
 }
-schedule_interval="01 * * * *"
+
+schedule_interval="01 03 * * *"
 
 dag = airflow.DAG(
-    'opay_owealth_source_sqoop_hi',
+    'opay_owealth_source_sqoop_hf',
     schedule_interval=schedule_interval,
     concurrency=15,
     max_active_runs=1,
     default_args=args)
 
 dag_monitor = airflow.DAG(
-    'opay_owealth_source_sqoop_hi_monitor',
+    'opay_owealth_source_sqoop_hf_monitor',
     schedule_interval=schedule_interval,
     default_args=args)
 
@@ -61,12 +62,13 @@ db_name,table_name,conn_id,prefix_name,priority_weight
 table_list = [
     ("opay_owealth","share_acct", "opay_owealth_db", "owealth",3),
     ("opay_owealth","share_order", "opay_owealth_db", "owealth",3),
+
 ]
 
 
 HIVE_DB = 'opay_owealth_ods'
-HIVE_TABLE = 'ods_sqoop_%s_%s_hi'
-UFILE_PATH = 'ufile://opay-datalake/opay_owealth_sqoop_hi/%s/%s'
+HIVE_TABLE = 'ods_sqoop_%s_%s_hf'
+UFILE_PATH = 'ufile://opay-datalake/opay_owealth_sqoop_hf/%s/%s'
 ODS_CREATE_TABLE_SQL = '''
     CREATE EXTERNAL TABLE IF NOT EXISTS {db_name}.`{table_name}`(
         {columns}
@@ -185,8 +187,8 @@ for db_name, table_name, conn_id, prefix_name,priority_weight_nm in table_list:
             --connect "jdbc:mysql://{host}:{port}/{schema}?tinyInt1isBit=false&useUnicode=true&characterEncoding=utf8" \
             --username {username} \
             --password {password} \
-            --query '{query}' \
-            --target-dir {ufile_path}/dt={{{{ ds }}}}/ \
+            --table {table} \
+            --target-dir {ufile_path}/dt={{{{ ds }}}}/hour={{{{ execution_date.strftime("%H") }}}} \
             --fields-terminated-by "\\001" \
             --lines-terminated-by "\\n" \
             --hive-delims-replacement " " \
@@ -202,7 +204,7 @@ for db_name, table_name, conn_id, prefix_name,priority_weight_nm in table_list:
             table=table_name,
             ufile_path=UFILE_PATH % (db_name, table_name),
             query=query,
-            m=1 if table_name=='channel_response_code' else 20
+            m=18 if table_name=='channel_response_code' else 20
     ),
         dag=dag,
     )
