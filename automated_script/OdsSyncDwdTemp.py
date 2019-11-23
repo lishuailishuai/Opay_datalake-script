@@ -171,7 +171,7 @@ def get_format_schema(ods_db_name,ods_table_name,dwd_db_name,dwd_table_name):
 
         #将最后一条数据去除','
         if a==nm:
-            i=i+"'nal' as country_code,\n'{pt}' as dt"
+            i=i+"\n'nal' as country_code,\n'{pt}' as dt"
 
         b=b+"\n"+i
 
