@@ -99,13 +99,13 @@ def dwm_opay_actransfer_relation_di_sql_task(ds):
         select 
             payment_relation_id, country_code, dt, sum(amount) order_amt, count(*) order_cnt, order_status 
         from opay_dw.dwd_opay_user_transfer_card_record_di
-        where dt='{pt}'
+        where dt='{pt}' and create_time BETWEEN date_format(date_sub('{pt}', 1), 'yyyy-MM-dd 23') AND date_format('{pt}', 'yyyy-MM-dd 23')
         group by country_code, dt, payment_relation_id, order_status
         union all
         select 
             payment_relation_id, country_code, dt, sum(amount) order_amt, count(*) order_cnt, order_status 
         from opay_dw.dwd_opay_merchant_transfer_card_record_di
-        where dt='{pt}'
+        where dt='{pt}' and create_time BETWEEN date_format(date_sub('{pt}', 1), 'yyyy-MM-dd 23') AND date_format('{pt}', 'yyyy-MM-dd 23')
         group by country_code, dt, payment_relation_id, order_status
     ) t1
     join
