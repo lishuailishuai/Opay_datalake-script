@@ -98,13 +98,13 @@ def dwm_opay_aatransfer_user_di_sql_task(ds):
             user_id sender_id, 'USER' sender_type, recipient_id, recipient_type, transfer_status order_status, amount, order_no, 
             country_code, dt
         from opay_dw.dwd_opay_user_transfer_user_record_di
-        where dt='{pt}'
+        where dt='{pt}' and create_time BETWEEN date_format(date_sub('{pt}', 1), 'yyyy-MM-dd 23') AND date_format('{pt}', 'yyyy-MM-dd 23')
         union all
         select 
             merchant_id sender_id, 'MERCHANT' sender_type, recipient_id, recipient_type, order_status, amount, order_no, 
             country_code, dt
         from opay_dw.dwd_opay_merchant_transfer_user_record_di
-        where dt='{pt}'
+        where dt='{pt}' and create_time BETWEEN date_format(date_sub('{pt}', 1), 'yyyy-MM-dd 23') AND date_format('{pt}', 'yyyy-MM-dd 23')
     ) t1
     group by country_code, dt, sender_id, sender_type, recipient_id, recipient_type, order_status
     '''.format(

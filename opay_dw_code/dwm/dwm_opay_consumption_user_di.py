@@ -87,7 +87,7 @@ def dwm_opay_consumption_user_di_sql_task(ds):
        country_code,
        dt
 FROM opay_dw.dwd_opay_business_collection_record_di
-WHERE dt='{pt}'
+WHERE dt='{pt}' and create_time BETWEEN date_format(date_sub('{pt}', 1), 'yyyy-MM-dd 23') AND date_format('{pt}', 'yyyy-MM-dd 23')
 GROUP BY country_code,
          dt,
          sender_id,
