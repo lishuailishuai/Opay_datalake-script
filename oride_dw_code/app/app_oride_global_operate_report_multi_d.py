@@ -52,10 +52,10 @@ dependence_dm_oride_passenger_base_multi_cube_d_prev_day_task = UFileSensor(
     dag=dag
 )
 
-dependence_dm_oride_driver_order_base_d_prev_day_task = UFileSensor(
-    task_id='dm_oride_driver_order_base_d_prev_day_task',
+dependence_dm_oride_order_base_d_prev_day_task = UFileSensor(
+    task_id='dm_oride_order_base_d_prev_day_task',
     filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw/dm_oride_driver_order_base_d/country_code=nal",
+        hdfs_path_str="oride/oride_dw/dm_oride_order_base_d/country_code=nal",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -226,5 +226,5 @@ app_oride_global_operate_report_multi_d_task = PythonOperator(
 )
 
 dependence_dm_oride_passenger_base_multi_cube_d_prev_day_task >> \
-dependence_dm_oride_driver_order_base_d_prev_day_task >> \
+dependence_dm_oride_order_base_d_prev_day_task >> \
 app_oride_global_operate_report_multi_d_task

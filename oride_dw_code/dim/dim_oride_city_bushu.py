@@ -284,7 +284,7 @@ def execution_data_task_id(ds, **kargs):
 
 
 dim_oride_city_bushu_task = PythonOperator(
-    task_id='ddim_oride_city_bushu_task',
+    task_id='dim_oride_city_bushu_task',
     python_callable=execution_data_task_id,
     provide_context=True,
     dag=dag
