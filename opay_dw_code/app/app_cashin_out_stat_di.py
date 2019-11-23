@@ -98,12 +98,12 @@ app_cashin_out_stat_di_task = HiveOperator(
     select 
         'CashIn' service_type, sum(amount) order_amt, count(*) order_cnt, 'NG' country_code, '{pt}' dt
     from opay_dw_ods.ods_sqoop_base_cash_in_record_di
-    where dt='{pt}'
+    where dt='{pt}' and create_time BETWEEN date_format(date_sub('{pt}', 1), 'yyyy-MM-dd 23') AND date_format('{pt}', 'yyyy-MM-dd 23')
     union
     select 
         'CashOut' service_type, sum(amount) order_amt, count(*) order_cnt, 'NG' country_code, '{pt}' dt
     from opay_dw_ods.ods_sqoop_base_cash_out_record_di
-    where dt='{pt}'
+    where dt='{pt}' and create_time BETWEEN date_format(date_sub('{pt}', 1), 'yyyy-MM-dd 23') AND date_format('{pt}', 'yyyy-MM-dd 23')
     '''.format(
         pt='{{ds}}'
     ),

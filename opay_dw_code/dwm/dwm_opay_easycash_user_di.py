@@ -79,7 +79,7 @@ def dwm_opay_easycash_user_di_sql_task(ds):
             country_code,
             dt
     FROM opay_dw.dwd_opay_user_easycash_record_di
-    WHERE dt='{pt}'
+    WHERE dt='{pt}' and create_time BETWEEN date_format(date_sub('{pt}', 1), 'yyyy-MM-dd 23') AND date_format('{pt}', 'yyyy-MM-dd 23')
     GROUP BY user_id,
              order_status,
              country_code,

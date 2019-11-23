@@ -96,7 +96,7 @@ def dwm_opay_receivemoney_recipient_di_sql_task(ds):
                     country_code,
                     dt
            FROM opay_dw.dwd_opay_merchant_receive_money_record_di
-           WHERE dt='{pt}'
+           WHERE dt='{pt}' and create_time BETWEEN date_format(date_sub('{pt}', 1), 'yyyy-MM-dd 23') AND date_format('{pt}', 'yyyy-MM-dd 23')
            UNION ALL 
            SELECT user_id as recipient_id,
                             'USER' as recipient_type,
@@ -107,7 +107,8 @@ def dwm_opay_receivemoney_recipient_di_sql_task(ds):
                             country_code,
                             dt
            FROM opay_dw.dwd_opay_user_receive_money_record_di
-           WHERE dt='{pt}')m
+           WHERE dt='{pt}' and create_time BETWEEN date_format(date_sub('{pt}', 1), 'yyyy-MM-dd 23') AND date_format('{pt}', 'yyyy-MM-dd 23')
+        )m
         GROUP BY recipient_id,
                  recipient_type,
                  recipient_role,
