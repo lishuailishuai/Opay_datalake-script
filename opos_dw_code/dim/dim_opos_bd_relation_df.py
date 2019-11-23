@@ -1,27 +1,18 @@
 # -*- coding: utf-8 -*-
-import airflow:
-from datetime import datetime, timedelta
-from airflow.operators.hive_operator import HiveOperator
-from airflow.operators.impala_plugin import ImpalaOperator
-from utils.connection_helper import get_hive_cursor
-from airflow.operators.python_operator import PythonOperator
-from airflow.contrib.hooks.redis_hook import RedisHook
-from airflow.hooks.hive_hooks import HiveCliHook
-from airflow.operators.hive_to_mysql import HiveToMySqlTransfer
-from airflow.operators.mysql_operator import MySqlOperator
-from airflow.operators.dagrun_operator import TriggerDagRunOperator
-from airflow.sensors.external_task_sensor import ExternalTaskSensor
+import airflow
+from airflow.hooks.base_hook import BaseHook
 from airflow.operators.bash_operator import BashOperator
-from airflow.sensors.named_hive_partition_sensor import NamedHivePartitionSensor
-from airflow.sensors.hive_partition_sensor import HivePartitionSensor
-from airflow.sensors import UFileSensor
-from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
-from plugins.TaskTouchzSuccess import TaskTouchzSuccess
-import json
+from airflow.hooks.hive_hooks import HiveCliHook, HiveServer2Hook
+from airflow.hooks.mysql_hook import MySqlHook
+from airflow.operators.hive_operator import HiveOperator
+from airflow.operators.python_operator import PythonOperator
+from airflow.sensors.sql_sensor import SqlSensor
+from datetime import datetime, timedelta
 import logging
-from airflow.models import Variable
-import requests
-import os
+from plugins.SqoopSchemaUpdate import SqoopSchemaUpdate
+from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
+from utils.util import on_success_callback
+from utils.validate_metrics_utils import *
 
 args = {
     'owner': 'yuanfeng',
