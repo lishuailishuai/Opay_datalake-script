@@ -53,10 +53,10 @@ dependence_dm_oride_order_strong_base_cube_d_prev_day_task = UFileSensor(
     dag=dag
 )
 # 依赖前一天分区
-dependence_dm_oride_driver_base_d_prev_day_task = UFileSensor(
-    task_id='dm_oride_driver_base_d_prev_day_task',
+dependence_dm_oride_driver_base_prev_day_task = UFileSensor(
+    task_id='dm_oride_driver_base_prev_day_task',
     filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw/dm_oride_driver_base_d/country_code=nal",
+        hdfs_path_str="oride/oride_dw/dm_oride_driver_base/country_code=nal",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -128,7 +128,7 @@ def app_oride_order_strong_base_cube_d_sql_task(ds):
                   nvl(product_id,-10000) AS product_id,
                   sum(finish_driver_online_dur) AS finish_driver_online_dur, --当日完单司机在线时长
          sum(strong_finish_driver_online_dur) AS strong_finish_driver_online_dur --当日强制派单完单司机在线时长
-        FROM oride_dw.dm_oride_driver_base_d
+        FROM oride_dw.dm_oride_driver_base
            WHERE dt='{pt}'
            GROUP BY nvl(country_code,'-10000'),
                     nvl(cast(city_id AS bigint),-10000),
@@ -173,6 +173,6 @@ app_oride_order_strong_base_cube_d_task = PythonOperator(
 )
 
 dependence_dm_oride_order_strong_base_cube_d_prev_day_task >> \
-dependence_dm_oride_driver_base_d_prev_day_task >> \
+dependence_dm_oride_driver_base_prev_day_task >> \
 app_oride_order_strong_base_cube_d_task
 
