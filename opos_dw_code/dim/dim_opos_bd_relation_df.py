@@ -265,4 +265,3 @@ ods_sqoop_base_bd_shop_df_task >> dim_opos_bd_relation_df_task
 ods_sqoop_base_bd_city_df_task >> dim_opos_bd_relation_df_task
 
 
-
