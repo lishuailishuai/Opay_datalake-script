@@ -72,7 +72,7 @@ ods_sqoop_base_bd_city_df_task = UFileSensor(
 
 db_name = "opos_dw"
 table_name = "dim_opos_bd_relation_df"
-hdfs_path = "ufile://opay-datalake/opos/opos_dw/" + table_name +"/country_code=nal"
+hdfs_path = "ufile://opay-datalake/opos/opos_dw/" + table_name
 
 
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
@@ -81,7 +81,7 @@ def fun_task_timeout_monitor(ds, dag, **op_kwargs):
     dag_ids = dag.dag_id
 
     tb = [
-        {"db": "opos_dw", "table": "{dag_name}".format(dag_name=dag_ids), "partition": "dt={pt}".format(pt=ds),
+        {"db": "opos_dw", "table": "{dag_name}".format(dag_name=dag_ids), "partition": "country_code=nal/dt={pt}".format(pt=ds),
          "timeout": "600"}
     ]
 
