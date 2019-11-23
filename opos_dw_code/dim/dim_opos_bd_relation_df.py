@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-import airflow
+import airflow:
 from datetime import datetime, timedelta
 from airflow.operators.hive_operator import HiveOperator
 from airflow.operators.impala_plugin import ImpalaOperator
@@ -81,7 +81,7 @@ ods_sqoop_base_bd_city_df_task = UFileSensor(
 
 db_name = "opos_dw"
 table_name = "dim_opos_bd_relation_df"
-hdfs_path = "ufile://opay-datalake/opos/opos_dw/" + table_name
+hdfs_path = "ufile://opay-datalake/opos/opos_dw/" + table_name +"/country_code=nal"
 
 
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
