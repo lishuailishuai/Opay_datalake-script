@@ -54,10 +54,10 @@ dwd_oride_finance_driver_repayment_extend_df_tesk = UFileSensor(
 )
 
 #依赖前一天数据是否存在
-dwm_oride_driver_base_di_tesk = UFileSensor(
-    task_id='dwm_oride_driver_base_di_tesk',
+dwm_oride_driver_base_df_tesk = UFileSensor(
+    task_id='dwm_oride_driver_base_df_tesk',
     filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw/dwm_oride_driver_base_di/country_code=nal",
+        hdfs_path_str="oride/oride_dw/dwm_oride_driver_base_df/country_code=nal",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -106,7 +106,7 @@ def get_data_from_hive(ds,**op_kwargs):
             NVL(last_date, t1.dt) as last_back_time, -- 最后一次还款时间
             0 AS today_repayment, -- 今日是否还款：1已还款
             0 AS status, -- 状态
-            nvl(driver_finish_ord_num,0) AS order_numbers, -- 完成订单数量
+            nvl(driver_finish_order_cnt,0) AS order_numbers, -- 完成订单数量
             nvl(t3.order_agv,0) AS order_agv, -- 3日平均
             fault,
             plate_number, --车牌号
@@ -124,17 +124,29 @@ def get_data_from_hive(ds,**op_kwargs):
             (SELECT product_id,
                     city_id,
                     driver_id,
-                    driver_finish_ord_num
-             FROM oride_dw.dwm_oride_driver_base_di
-             WHERE dt = '{pt}') t2 
+                    driver_finish_order_cnt
+             FROM oride_dw.dwm_oride_driver_base_df
+             WHERE dt = '{pt}'
+             and city_id<>'999001' --去除测试数据
+             and driver_id not in(3835,
+             3963,
+             3970,
+             4702,
+             5559,
+             5902,
+             7669,
+             29105, --以上都是录错城市的司机
+             10722, --测试数据
+             1)    --北京城市测试数据
+             ) t2 
         ON t1.driver_id=t2.driver_id
           AND t1.city_id=t2.city_id
           AND t1.product_id=t2.product_id
         LEFT OUTER JOIN --所有骑手的3日平均接单数
         (SELECT driver_id,
-                ROUND(sum(driver_finish_ord_num)/3) AS order_agv --3日平均完单数
+                ROUND(sum(driver_finish_order_cnt)/3) AS order_agv --3日平均完单数
         
-         FROM oride_dw.dwm_oride_driver_base_di
+         FROM oride_dw.dwm_oride_driver_base_df
          WHERE dt BETWEEN '{prev_3_day}' AND '{pt}'
            AND city_id<>'999001'
         GROUP BY driver_id) t3
@@ -238,4 +250,4 @@ get_data_from_hive_task = PythonOperator(
 
 
 dwd_oride_finance_driver_repayment_extend_df_tesk>>get_data_from_hive_task
-dwm_oride_driver_base_di_tesk >> get_data_from_hive_task
+dwm_oride_driver_base_df_tesk >> get_data_from_hive_task

@@ -112,6 +112,11 @@ select
             pay_type, --支付类型(0:手动支付 1:自动支付)
             city_id,--所属城市
             passenger_id, --乘客 ID
+            tip        ,--小费                                    
+            capped_mode,--优惠活动车型（0 ride 1 keke 2 car）           
+            capped_type,--优惠活动类型（0 normal 1 novice）             
+            capped_id  ,--优惠活动 ID                               
+            card_id,    --支付卡号 
             country_code,
             '{pt}' as dt
 from 
@@ -136,7 +141,12 @@ from
             create_time,--创建时间
             serv_type as product_id,--订单业务类型(0: all 1:driect 2: street)
             updated_at as updated_time,--最后更新时间
-            pay_type --支付类型(0:手动支付 1:自动支付)
+            pay_type, --支付类型(0:手动支付 1:自动支付)
+            tip        ,--小费                                    
+            capped_mode,--优惠活动车型（0 ride 1 keke 2 car）           
+            capped_type,--优惠活动类型（0 normal 1 novice）             
+            capped_id  ,--优惠活动 ID                               
+            card_id    --支付卡号  
 
       FROM oride_dw_ods.ods_sqoop_base_data_order_payment_df
       WHERE dt='{pt}') pay

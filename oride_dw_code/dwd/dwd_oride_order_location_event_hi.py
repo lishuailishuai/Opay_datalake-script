@@ -223,7 +223,7 @@ def execution_data_task_id(ds, execution_date, **kargs):
     hive_hook.run_cli(_sql)
 
     # 熔断数据
-    check_key_data_task(ds, execution_date)
+    # check_key_data_task(ds, execution_date)
 
     # 生成_SUCCESS
     """

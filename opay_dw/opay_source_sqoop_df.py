@@ -98,6 +98,8 @@ table_list = [
     ("opay_commission", "commission_account_balance", "opay_db_3322", "base", 1),
     ("opay_commission", "commission_order", "opay_db_3322", "base", 1),
     ("opay_commission", "commission_top_up_record", "opay_db_3322", "base", 1),
+
+
 ]
 
 """
@@ -170,7 +172,7 @@ ODS_CREATE_TABLE_SQL = '''
       '{ufile_path}';
     MSCK REPAIR TABLE {db_name}.`{table_name}`;
     -- delete opay_dw table
-    DROP TABLE IF EXISTS opay_dw.`{table_name}`;
+    DROP TABLE IF EXISTS {db_name}.`{table_name}`;
 '''
 
 # 需要验证的核心业务表

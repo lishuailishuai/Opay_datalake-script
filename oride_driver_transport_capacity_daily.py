@@ -735,7 +735,7 @@ def send_fast_report_email(ds, **kwargs):
     if result:
         email_to = ['bigdata@opay-inc.com']
         # email_to = ['nan.li@opay-inc.com']
-        # email_to = ['jialong.li@opay-inc.com']
+         #email_to = ['jialong.li@opay-inc.com']
     # email_to = ['duo.wu@opay-inc.com']
     email_subject = '司机运力日报-快车_{}'.format(ds)
     send_email(
@@ -1031,6 +1031,299 @@ send_otrike_report = PythonOperator(
     dag=dag
 )
 
+
+
+#新增ocar
+def send_ocar_report_email(ds, **kwargs):
+    cursor = get_hive_cursor()
+    sql = '''
+            select 
+            'ALL' city_name,
+            nvl(round(sum(push_order_times_num)/sum(push_driver_num),2),0) push_driver_times_avg,
+            nvl(round(sum(push_order_num)/sum(push_driver_num),2),0) push_driver_order_avg,
+            nvl(round(sum(driver_onlinerange_sum)/3600,2),0) driver_onlinerange_sum,
+            nvl(round(sum(driver_onlinerange_sum)/(3600 * sum(onride_driver_num)),2),0) driver_onlinerange_rate,
+            concat(cast(nvl(round((sum(duration_sum) * 100)/sum(driver_onlinerange_sum),2),0) as string),'%') duration_rate,
+            nvl(round(sum(onride_num)/sum(onride_driver_num),2),0) onride_driver_order_avg,
+            nvl(sum(online_driver_num),0) online_driver_num,
+            nvl(sum(accept_driver_num),0) accept_driver_num,
+            nvl(sum(onride_driver_num),0) onride_driver_num,
+            nvl(sum(register_driver_num),0) register_driver_num,
+            nvl(sum(register_and_onride_driver_num),0) register_and_onride_driver_num,
+            nvl(sum(agg_register_driver_num),0) agg_register_driver_num,
+            nvl(sum(agg_onride_driver_num),0) agg_onride_driver_num,
+            cast(nvl(sum(seven_day_onride_driver_num),0) as bigint) seven_day_onride_driver_num, --近7日完单司机数
+            nvl(round(sum(price_sum)/sum(order_pay_num),2),0) order_price_avg,
+            nvl(round(sum(amount_sum)/sum(order_pay_num),2),0) order_amount_avg,
+            if(sum(onride_driver_num)>0, round(sum(amount_all)/sum(onride_driver_num),2), 0) as amount_all_avg
+
+            from 
+            oride_bi.oride_all_driver_capacity_metrics_info
+            where dt = '{dt}' and serv_type = 4
+
+
+    '''.format(dt=ds)
+
+    city_sql = '''
+            select 
+            city_name,
+            nvl(round(sum(push_order_times_num)/sum(push_driver_num),2),0) push_driver_times_avg,
+            nvl(round(sum(push_order_num)/sum(push_driver_num),2),0) push_driver_order_avg,
+            nvl(round(sum(driver_onlinerange_sum)/3600,2),0) driver_onlinerange_sum,
+            nvl(round(sum(driver_onlinerange_sum)/(3600 * sum(onride_driver_num)),2),0) driver_onlinerange_rate,
+            concat(cast(nvl(round((sum(duration_sum) * 100)/sum(driver_onlinerange_sum),2),0) as string),'%') duration_rate,
+            nvl(round(sum(onride_num)/sum(onride_driver_num),2),0) onride_driver_order_avg,
+            nvl(sum(online_driver_num),0) online_driver_num,
+            nvl(sum(accept_driver_num),0) accept_driver_num,
+            nvl(sum(onride_driver_num),0) onride_driver_num,
+            nvl(sum(register_driver_num),0) register_driver_num,
+            nvl(sum(register_and_onride_driver_num),0) register_and_onride_driver_num,
+            nvl(sum(agg_register_driver_num),0) agg_register_driver_num,
+            nvl(sum(agg_onride_driver_num),0) agg_onride_driver_num,
+            cast(nvl(sum(seven_day_onride_driver_num),0) as bigint) seven_day_onride_driver_num,  --近7日完单司机数
+            nvl(round(sum(price_sum)/sum(order_pay_num),2),0) order_price_avg,
+            nvl(round(sum(amount_sum)/sum(order_pay_num),2),0) order_amount_avg, 
+            if(sum(onride_driver_num)>0, round(sum(amount_all)/sum(onride_driver_num),2), 0) as amount_all_avg
+
+            from 
+            oride_bi.oride_all_driver_capacity_metrics_info
+            where dt = '{dt}' and serv_type = 4
+            group by city_name
+            order by city_name
+
+    '''.format(dt=ds)
+
+    html_fmt = '''
+            <html>
+            <head>
+            <title></title>
+            <style type="text/css">
+                table
+                {{
+                    font-family: "Trebuchet MS", Arial, Helvetica, sans-serif;
+                    border-collapse: collapse;
+                    margin: 0 auto;
+                    text-align: left;
+                    align:left;
+                }}
+                table td, table th
+                {{
+                    border: 1px solid #000000;
+                    color: #000000;
+                    height: 30px;
+                    padding: 5px 10px 5px 5px;
+                }}
+                table thead th
+                {{
+                    background-color: #CCE0F1;
+                    //color: white;
+                    width: 100px;
+                }}
+            </style>
+            </head>
+            <body>
+                <table width="100%" class="table">
+                    <caption>
+                        <h3>OCar指标数据</h3>
+                    </caption>
+                </table>
+                <table width="100%" class="table">
+                    <thead>
+                        <tr>
+                            <th></th>
+                            <th colspan="2" style="text-align: center;">总需求</th>
+                            <th colspan="7" style="text-align: center;">总供给</th>
+                            <th colspan="5" style="text-align: center;">招募</th>
+                            <th colspan="3" style="text-align: center;">财务</th>
+                        </tr>
+                        <tr>
+                            <th>城市</th>
+                            <!--总需求-->
+                            <th>人均推单次数</th>
+                            <th>人均推送订单数</th>
+                            <!--总供给-->
+                            <th>总在线时长</th>
+                            <th>人均在线时长</th>
+                            <th>计费时长占比</th>
+                            <th>人均完单数</th>
+                            <th>在线司机数</th>
+                            <th>接单司机数</th>
+                            <th>完单司机数</th>
+                            <!--招募-->
+                            <th>注册司机数</th>
+                            <th>注册且完单司机数</th>
+                            <th>累计注册司机数</th>
+                            <th>累计完单司机数</th>
+                            <th>近7日完单司机数</th>
+                            <!--财务-->
+                            <th>单均应付</th>
+                            <th>单均实付</th>
+                            <th>人均实际收入</th>
+                            <!--司机考核-->
+
+                        </tr>
+                    </thead>
+                    {rows}
+                </table>
+            </body>
+            </html>
+            '''
+
+    logging.info(sql)
+    cursor.execute(sql)
+    res = cursor.fetchall()
+
+    logging.info(city_sql)
+    cursor.execute(city_sql)
+    city_res = cursor.fetchall()
+
+    row_html = ''
+    tr_fmt = '''
+                <tr>{row}</tr>
+            '''
+
+    row_fmt = '''
+                <th>{city_name}</th>
+                <th>{order_time_push_driver_avg}</th>
+                <th>{order_push_driver_avg}</th>
+                <th>{driver_online_time_sum}</th>
+                <th>{driver_online_avg}</th>
+                <th>{duration_rate}</th>
+                <th>{onride_avg}</th>
+                <th>{online_driver_num}</th>
+                <th>{accpet_driver_num}</th>
+                <th>{onride_driver_num}</th>
+                <th>{register_driver_num}</th>
+                <th>{register_and_onride_driver_num}</th>
+                <th>{agg_register_driver_num}</th>
+                <th>{agg_onride_driver_num}</th>
+                <th>{seven_day_onride_driver_num}</th>
+                <th>{price_avg}</th>
+                <th>{amount_avg}</th>
+                <th>{amount_all_avg}</th>
+
+        '''
+
+    for data in res:
+        [
+            city_name,
+            order_time_push_driver_avg,
+            order_push_driver_avg,
+            driver_online_time_sum,
+            driver_online_avg,
+            duration_rate,
+            onride_avg,
+            online_driver_num,
+            accpet_driver_num,
+            onride_driver_num,
+            register_driver_num,
+            register_and_onride_driver_num,
+            agg_register_driver_num,
+            agg_onride_driver_num,
+            seven_day_onride_driver_num,
+            price_avg,
+            amount_avg,
+            amount_all_avg
+        ] = data
+
+        row = row_fmt.format(
+            city_name=city_name,
+            order_time_push_driver_avg=order_time_push_driver_avg,
+            order_push_driver_avg=order_push_driver_avg,
+            driver_online_time_sum=driver_online_time_sum,
+            driver_online_avg=driver_online_avg,
+            duration_rate=duration_rate,
+            onride_avg=onride_avg,
+            online_driver_num=online_driver_num,
+            accpet_driver_num=accpet_driver_num,
+            onride_driver_num=onride_driver_num,
+            register_driver_num=register_driver_num,
+            register_and_onride_driver_num=register_and_onride_driver_num,
+            agg_register_driver_num=agg_register_driver_num,
+            agg_onride_driver_num=agg_onride_driver_num,
+            seven_day_onride_driver_num=seven_day_onride_driver_num,
+            price_avg=price_avg,
+            amount_avg=amount_avg,
+            amount_all_avg=amount_all_avg
+        )
+
+        row_html += tr_fmt.format(row=row)
+
+    for data in city_res:
+        [
+            city_name,
+            order_time_push_driver_avg,
+            order_push_driver_avg,
+            driver_online_time_sum,
+            driver_online_avg,
+            duration_rate,
+            onride_avg,
+            online_driver_num,
+            accpet_driver_num,
+            onride_driver_num,
+            register_driver_num,
+            register_and_onride_driver_num,
+            agg_register_driver_num,
+            agg_onride_driver_num,
+            seven_day_onride_driver_num,
+            price_avg,
+            amount_avg,
+            amount_all_avg
+        ] = data
+
+        row = row_fmt.format(
+            city_name=city_name,
+            order_time_push_driver_avg=order_time_push_driver_avg,
+            order_push_driver_avg=order_push_driver_avg,
+            driver_online_time_sum=driver_online_time_sum,
+            driver_online_avg=driver_online_avg,
+            duration_rate=duration_rate,
+            onride_avg=onride_avg,
+            online_driver_num=online_driver_num,
+            accpet_driver_num=accpet_driver_num,
+            onride_driver_num=onride_driver_num,
+            register_driver_num=register_driver_num,
+            register_and_onride_driver_num=register_and_onride_driver_num,
+            agg_register_driver_num=agg_register_driver_num,
+            agg_onride_driver_num=agg_onride_driver_num,
+            seven_day_onride_driver_num=seven_day_onride_driver_num,
+            price_avg=price_avg,
+            amount_avg=amount_avg,
+            amount_all_avg=amount_all_avg
+        )
+
+        row_html += tr_fmt.format(row=row)
+
+    html = html_fmt.format(rows=row_html, dt=ds)
+
+    # send mail
+
+    email_to = Variable.get("oride_fast_driver_transport_metrics_receivers").split()
+    #email_to = ['jialong.li@opay-inc.com']
+    result = is_alert(ds, table_names)
+    if result:
+        email_to = ['bigdata@opay-inc.com']
+        #email_to = ['nan.li@opay-inc.com']
+        #email_to = ['jialong.li@opay-inc.com']
+    # email_to = ['duo.wu@opay-inc.com']
+    email_subject = '司机运力日报-ocar_{}'.format(ds)
+    send_email(
+        email_to
+        , email_subject, html, mime_charset='utf-8')
+    cursor.close()
+    return
+
+
+send_ocar_report = PythonOperator(
+    task_id='send_ocar_report',
+    python_callable=send_ocar_report_email,
+    provide_context=True,
+    dag=dag
+)
+
+
+
+
 validate_partition_data >> data_driver_extend_validate_task >> insert_driver_metrics
 validate_partition_data >> data_city_conf_validate_task >> insert_driver_metrics
 validate_partition_data >> data_order_payment_validate_task >> insert_driver_metrics
@@ -1041,4 +1334,4 @@ validate_partition_data >> data_driver_records_day_validate_task >> insert_drive
 
 insert_driver_metrics >> send_fast_report
 insert_driver_metrics >> send_otrike_report
-
+insert_driver_metrics >> send_ocar_report

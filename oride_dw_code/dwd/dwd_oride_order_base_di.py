@@ -24,8 +24,8 @@ import requests
 import os
 
 args = {
-    'owner': 'yangmingze',
-    'start_date': datetime(2019, 5, 20),
+    'owner': 'lili.chen',
+    'start_date': datetime(2019, 11, 20),
     'depends_on_past': False,
     'retries': 3,
     'retry_delay': timedelta(minutes=2),
@@ -34,12 +34,12 @@ args = {
     'email_on_retry': False,
 }
 
-dag = airflow.DAG('dwd_oride_order_base_include_test_di',
+dag = airflow.DAG('dwd_oride_order_base_di',
                   schedule_interval="00 01 * * *",
                   default_args=args,
                   catchup=False)
 
-##----------------------------------------- 依赖 ---------------------------------------## 
+##----------------------------------------- 依赖 ---------------------------------------##
 
 # 依赖前一天分区
 ods_sqoop_base_data_order_df_prev_day_task = HivePartitionSensor(
@@ -60,7 +60,6 @@ ods_sqoop_base_data_order_payment_df_prev_day_task = HivePartitionSensor(
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
-
 
 # 依赖前一天分区
 oride_client_event_detail_prev_day_task = HivePartitionSensor(
@@ -84,33 +83,36 @@ dependence_dispatch_tracker_server_magic_task = HivePartitionSensor(
 
 ##----------------------------------------- 变量 ---------------------------------------##
 
-db_name="oride_dw"
-table_name = "dwd_oride_order_base_include_test_di"
+db_name = "oride_dw"
+table_name = "dwd_oride_order_base_di"
 hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
 
-##----------------------------------------- 任务超时监控 ---------------------------------------## 
 
-def fun_task_timeout_monitor(ds,dag,**op_kwargs):
+##----------------------------------------- 任务超时监控 ---------------------------------------##
 
-    dag_ids=dag.dag_id
+def fun_task_timeout_monitor(ds, dag, **op_kwargs):
+    dag_ids = dag.dag_id
 
     tb = [
-        {"db": "oride_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "3600"}
+        {"db": "oride_dw", "table": "{dag_name}".format(dag_name=dag_ids),
+         "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "3600"}
     ]
 
     TaskTimeoutMonitor().set_task_monitor(tb)
 
-task_timeout_monitor= PythonOperator(
+
+task_timeout_monitor = PythonOperator(
     task_id='task_timeout_monitor',
     python_callable=fun_task_timeout_monitor,
     provide_context=True,
     dag=dag
 )
 
-##----------------------------------------- 脚本 ---------------------------------------## 
 
-def dwd_oride_order_base_include_test_di_sql_task(ds):
-    hql='''
+##----------------------------------------- 脚本 ---------------------------------------##
+
+def dwd_oride_order_base_di_sql_task(ds):
+    hql = '''
 SET hive.exec.parallel=TRUE;
 SET hive.exec.dynamic.partition.mode=nonstrict;
 
@@ -251,7 +253,7 @@ SELECT base.order_id,
             ELSE 0
         END) AS is_td_finish,
        --当天是否完单
-       
+
 
        (CASE
             WHEN pickup_time <> 0 THEN pickup_time - take_time
@@ -278,8 +280,8 @@ SELECT base.order_id,
             ELSE 0
         END) AS td_wait_dur,
        --当天等待上车时长（秒）
-       
-       
+
+
        (CASE
             WHEN arrive_time>0
                  AND take_time > 0 THEN arrive_time - take_time
@@ -398,26 +400,27 @@ SELECT base.order_id,
                 then 1
             else 0
        end as is_carpool, --'是否拼车'
-        
+
        case when (product_id = 3 and pax_num = 3 )
                 then 1
             else 0
        end as is_chartered_bus,--'是否包车'
-        
+
        case when carpool_success.order_id is not null
             then 1
             else 0 
        end as is_carpool_success, --'是否拼车成功'
-       
+
        case when (product_id = 3 and pax_num < 3 and base.driver_id > 0 )
             then 1
             else 0
         end as is_carpool_accept, --是否拼车应答单(司机)
-       
+
        case when carpool_success.order_id is not null and status in (4,5)
             then 1 
             else 0 
         end as is_carpool_success_and_finish, --拼车成功且订单完成
+        
         falsify, --取消罚款
         falsify_get, --取消罚款实际获得
         falsify_driver_cancel, --司机取消罚款
@@ -426,7 +429,7 @@ SELECT base.order_id,
         wait_lat, --等待乘客上车位置纬度
         wait_in_radius, --是否在接驾范围内
         wait_distance, --等待乘客上车距离
-        ancel_wait_payment_time,  --乘客取消待支付时间          
+        ancel_wait_payment_time,  --乘客取消待支付时间  
 
        country_code,
 
@@ -570,11 +573,11 @@ FROM
              wait_lat, --等待乘客上车位置纬度
              wait_in_radius, --是否在接驾范围内
              wait_distance, --等待乘客上车距离
-             cancel_wait_payment_time  --乘客取消待支付时间
+             ancel_wait_payment_time  --乘客取消待支付时间  
 
       FROM oride_dw_ods.ods_sqoop_base_data_order_df
       WHERE dt = '{pt}'
-         AND from_unixtime(create_time,'yyyy-MM-dd') = '{pt}'
+         AND (from_unixtime(create_time,'yyyy-MM-dd') = '{pt}' or substr(updated_at,1,10) = '{pt}')
          ) base
 LEFT OUTER JOIN
 (SELECT id AS order_id,
@@ -648,9 +651,8 @@ left OUTER JOIN
         now_hour='{{ execution_date.strftime("%H") }}',
         table=table_name,
         db=db_name
-        )
+    )
     return hql
-
 
 
 def check_key_data_task(ds):
@@ -682,38 +684,38 @@ def check_key_data_task(ds):
         print("-----> Notice Data Export Success ......")
 
 
-#主流程
-def execution_data_task_id(ds,**kargs):
-
+# 主流程
+def execution_data_task_id(ds, **kargs):
     hive_hook = HiveCliHook()
 
-    #读取sql
-    _sql=dwd_oride_order_base_include_test_di_sql_task(ds)
+    # 读取sql
+    _sql = dwd_oride_order_base_di_sql_task(ds)
 
     logging.info('Executing: %s', _sql)
 
-    #执行Hive
+    # 执行Hive
     hive_hook.run_cli(_sql)
 
-    #熔断数据
+    # 熔断数据
     check_key_data_task(ds)
 
-    #生成_SUCCESS
+    # 生成_SUCCESS
     """
     第一个参数true: 数据目录是有country_code分区。false 没有
     第二个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
 
     """
-    TaskTouchzSuccess().countries_touchz_success(ds,db_name,table_name,hdfs_path,"true","true")
-    
-dwd_oride_order_base_include_test_di_task= PythonOperator(
-    task_id='dwd_oride_order_base_include_test_di_task',
+    TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "true", "true")
+
+
+dwd_oride_order_base_di_task = PythonOperator(
+    task_id='dwd_oride_order_base_di_task',
     python_callable=execution_data_task_id,
     provide_context=True,
     dag=dag
 )
 
-ods_sqoop_base_data_order_df_prev_day_task >>  dwd_oride_order_base_include_test_di_task
-ods_sqoop_base_data_order_payment_df_prev_day_task >> dwd_oride_order_base_include_test_di_task
-oride_client_event_detail_prev_day_task >> dwd_oride_order_base_include_test_di_task
-dependence_dispatch_tracker_server_magic_task >> dwd_oride_order_base_include_test_di_task
+ods_sqoop_base_data_order_df_prev_day_task >> dwd_oride_order_base_di_task
+ods_sqoop_base_data_order_payment_df_prev_day_task >> dwd_oride_order_base_di_task
+oride_client_event_detail_prev_day_task >> dwd_oride_order_base_di_task
+dependence_dispatch_tracker_server_magic_task >> dwd_oride_order_base_di_task

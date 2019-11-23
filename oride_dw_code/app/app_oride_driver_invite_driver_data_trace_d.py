@@ -20,7 +20,7 @@ from airflow.hooks.hive_hooks import HiveCliHook, HiveServer2Hook
 
 args = {
     'owner': 'chenghui',
-    'start_date': datetime(2019, 11, 13),
+    'start_date': datetime(2019, 11, 5),
     'depends_on_past': False,
     'retries': 3,
     'retry_delay': timedelta(minutes=5),
@@ -192,7 +192,7 @@ def execution_data_task_id(ds, **kargs):
     hive_hook.run_cli(_sql)
 
     # 熔断数据
-    check_key_data_task(ds)
+    # check_key_data_task(ds)
 
     # 生成_SUCCESS
     """

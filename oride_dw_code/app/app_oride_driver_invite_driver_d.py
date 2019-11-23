@@ -20,7 +20,7 @@ from airflow.hooks.hive_hooks import HiveCliHook, HiveServer2Hook
 
 args = {
     'owner': 'chenghui',
-    'start_date': datetime(2019, 11, 13),
+    'start_date': datetime(2019, 11, 5),
     'depends_on_past': False,
     'retries': 3,
     'retry_delay': timedelta(minutes=5),
@@ -36,15 +36,16 @@ dag = airflow.DAG('app_oride_driver_invite_driver_d',
 
 ##----------------------------------------- 依赖 ---------------------------------------##
 
-#依赖前一天分区
-ods_sqoop_mass_rider_signups_df_tesk=HivePartitionSensor(
-      task_id="ods_sqoop_mass_rider_signups_df_tesk",
-      table="ods_sqoop_mass_rider_signups_df",
-      partition="dt='{{ds}}'",
-      schema="oride_dw_ods",
-      poke_interval=60, #依赖不满足时，一分钟检查一次依赖状态
-      dag=dag
-    )
+dwd_oride_rider_signups_df_task = UFileSensor(
+    task_id='dwd_oride_rider_signups_df_task',
+    filepath='{hdfs_path_str}/country_code=nal/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="oride/oride_dw/dwd_oride_rider_signups_df",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,
+    dag=dag
+)
 
 dim_oride_city_task = HivePartitionSensor(
     task_id="dim_oride_city_task",
@@ -98,44 +99,60 @@ def app_oride_driver_invite_driver_d_sql_task(ds):
         SET hive.exec.parallel=TRUE;
         SET hive.exec.dynamic.partition.mode=nonstrict;
         
+        WITH base as(
+            SELECT *,
+            from_unixtime(create_time,'yyyy-MM-dd') as cte_time,
+            from_unixtime(veri_time,'yyyy-MM-dd') as ver_time
+            from oride_dw.dwd_oride_rider_signups_df
+            where dt='{pt}' and know_orider in(7,13,14)
+        )
+        
         INSERT OVERWRITE table {db}.{table} partition(country_code,dt)
-        SELECT 
-            a.commit_day,--提交日
-            c.city_name  as regional_name,--地域名
-            if(a.driver_type is NOT NULL,a.driver_type,0) as product_id,--业务线
-            a.know_orider,--渠道
-            count( a.driver_id) as submit_data_num,--提交资料人数
-            count( if(a.status in (1,2,9),a.driver_id,null)) as audit_num,--现场审核人数
-            count( if(a.status=2,a.driver_id,null)) as audit_success_num,--审核通过人数
-            count( if(d.is_td_finish=1,a.driver_id,null)) as finish_driver_num, --完单司机数量
+        
+        SELECT create_table.cte_time,
+            t3.city_name,
+            create_table.product_id,
+            create_table.know_orider,
+            create_table.submit_data_num,
+            nvl(veri_table.audit_num,0)as audit_num,
+            nvl(veri_table.audit_success_num,0)as audit_success_num,
+            -10000 as finish_driver_num,
             'nal' as country_code,
             '{pt}' as dt
-        from
-        (
-            SELECT *,from_unixtime(create_time,'yyyy-MM-dd') as commit_day
-            from oride_dw_ods.ods_sqoop_mass_rider_signups_df
-            where dt='{pt}' and know_orider in(7,13,14)
-        ) as a 
+        from(
+            SELECT cte_time,
+            city,
+            driver_type as product_id,--业务线
+            know_orider,--渠道
+            count( driver_id) as submit_data_num--提交资料人数
+            from base 
+            where cte_time='{pt}'
+            GROUP BY cte_time,city,driver_type,know_orider
+        )as create_table
         LEFT JOIN 
+        (
+            SELECT 
+            ver_time,--查看日
+            city,--城市名
+            driver_type as product_id,--业务线
+            know_orider,--渠道
+            count( if(status in (1,2,9),driver_id,null)) as audit_num,--现场审核人数
+            count( if(status=2,driver_id,null)) as audit_success_num--审核通过人数
+            from base
+            where ver_time='{pt}'
+            GROUP BY ver_time,city,driver_type,know_orider
+        )as veri_table
+        on create_table.cte_time=veri_table.ver_time
+        and create_table.city=veri_table.city
+        and create_table.product_id=veri_table.product_id
+        and create_table.know_orider=veri_table.know_orider
+        LEFT JOIN
         (
             SELECT city_id,city_name
             from oride_dw.dim_oride_city 
             WHERE dt='{pt}'
-        )as c
-        on a.city=c.city_id
-        LEFT JOIN
-        (
-            SELECT driver_id,
-                is_td_finish --是否完单司机标志
-            from oride_dw.dwm_oride_driver_base_df
-            where dt='{pt}'
-        )as d
-        on a.driver_id=d.driver_id
-        GROUP BY a.commit_day,c.city_name,a.driver_type,a.know_orider 
-        GROUPING SETS(
-            (a.commit_day,c.city_name,a.driver_type,a.know_orider),
-            (a.commit_day,c.city_name,a.know_orider)
-        );
+        )as t3
+        on create_table.city=t3.city_id;
     '''.format(
         pt=ds,
         table=table_name,
@@ -209,6 +226,6 @@ app_oride_driver_invite_driver_d_task = PythonOperator(
     dag=dag
 )
 
-ods_sqoop_mass_rider_signups_df_tesk>>app_oride_driver_invite_driver_d_task
+dwd_oride_rider_signups_df_task>>app_oride_driver_invite_driver_d_task
 dim_oride_city_task>>app_oride_driver_invite_driver_d_task
 dwm_oride_driver_base_df_task>>app_oride_driver_invite_driver_d_task

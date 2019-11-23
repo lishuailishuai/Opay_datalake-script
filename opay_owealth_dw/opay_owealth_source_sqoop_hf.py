@@ -13,8 +13,8 @@ from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
 from utils.util import on_success_callback
 
 args = {
-    'owner': 'zhenqian.zhang',
-    'start_date': datetime(2019, 10, 30),
+    'owner': 'yangmingze',
+    'start_date': datetime(2019, 11, 20),
     'depends_on_past': False,
     'retries': 1,
     'retry_delay': timedelta(minutes=5),
@@ -23,17 +23,18 @@ args = {
     'email_on_retry': False,
     'on_success_callback':on_success_callback,
 }
-schedule_interval="20 03 * * *"
+
+schedule_interval="01 03 * * *"
 
 dag = airflow.DAG(
-    'opay_owealth_source_sqoop_df',
+    'opay_owealth_source_sqoop_hf',
     schedule_interval=schedule_interval,
     concurrency=15,
     max_active_runs=1,
     default_args=args)
 
 dag_monitor = airflow.DAG(
-    'opay_owealth_source_sqoop_df_monitor',
+    'opay_owealth_source_sqoop_hf_monitor',
     schedule_interval=schedule_interval,
     default_args=args)
 
@@ -60,27 +61,21 @@ db_name,table_name,conn_id,prefix_name,priority_weight
 
 table_list = [
     ("opay_owealth","share_acct", "opay_owealth_db", "owealth",3),
-    ("opay_owealth","share_failure_user", "opay_owealth_db", "owealth",3),
-    ("opay_owealth","share_freeze", "opay_owealth_db", "owealth",3),
-    ("opay_owealth","share_holiday", "opay_owealth_db", "owealth",3),
-    ("opay_owealth","share_limit_level", "opay_owealth_db", "owealth",3),
     ("opay_owealth","share_order", "opay_owealth_db", "owealth",3),
-    ("opay_owealth","share_platform_assets_acct", "opay_owealth_db", "owealth",3),
-    ("opay_owealth","share_platform_revenue_acct", "opay_owealth_db", "owealth",3),
-    ("opay_owealth", "owealth_purchase_record", "opay_db_3320", "owealth", 3),
-    ("opay_owealth", "owealth_user_subscribed", "opay_db_3320", "owealth", 3),
+
 ]
 
 
 HIVE_DB = 'opay_owealth_ods'
-HIVE_TABLE = 'ods_sqoop_%s_%s_df'
-UFILE_PATH = 'ufile://opay-datalake/opay_owealth_ods/%s/%s'
+HIVE_TABLE = 'ods_sqoop_%s_%s_hf'
+UFILE_PATH = 'ufile://opay-datalake/opay_owealth_sqoop_hf/%s/%s'
 ODS_CREATE_TABLE_SQL = '''
     CREATE EXTERNAL TABLE IF NOT EXISTS {db_name}.`{table_name}`(
         {columns}
     )
     PARTITIONED BY (
-      `dt` string)
+      `dt` string,
+      `hour` string)
     ROW FORMAT SERDE
       'org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe'
     STORED AS INPUTFORMAT
@@ -91,7 +86,7 @@ ODS_CREATE_TABLE_SQL = '''
       '{ufile_path}';
     MSCK REPAIR TABLE {db_name}.`{table_name}`;
     -- delete opay_dw table
-    DROP TABLE IF EXISTS opay_dw.`{table_name}`;
+    --DROP TABLE IF EXISTS {db_name}.`{table_name}`;
 '''
 
 # 需要验证的核心业务表
@@ -177,6 +172,10 @@ for db_name, table_name, conn_id, prefix_name,priority_weight_nm in table_list:
         conn_conf_dict[conn_id] = BaseHook.get_connection(conn_id)
 
     hive_table_name = HIVE_TABLE % (prefix_name, table_name)
+
+    query = 'select * from {table} where (FROM_UNIXTIME(create_time, "%Y-%m-%d %H")="{{{{ execution_date.strftime("%Y-%m-%d %H") }}}}" OR FROM_UNIXTIME(UNIX_TIMESTAMP(update_time), "%Y-%m-%d %H")="{{{{ execution_date.strftime("%Y-%m-%d %H") }}}}") AND $CONDITIONS'.format(table=table_name)
+
+
     # sqoop import
     import_table = BashOperator(
         task_id='import_table_{}'.format(hive_table_name),
@@ -189,7 +188,7 @@ for db_name, table_name, conn_id, prefix_name,priority_weight_nm in table_list:
             --username {username} \
             --password {password} \
             --table {table} \
-            --target-dir {ufile_path}/dt={{{{ ds }}}}/ \
+            --target-dir {ufile_path}/dt={{{{ ds }}}}/hour={{{{ execution_date.strftime("%H") }}}} \
             --fields-terminated-by "\\001" \
             --lines-terminated-by "\\n" \
             --hive-delims-replacement " " \
@@ -204,6 +203,7 @@ for db_name, table_name, conn_id, prefix_name,priority_weight_nm in table_list:
             password=conn_conf_dict[conn_id].password,
             table=table_name,
             ufile_path=UFILE_PATH % (db_name, table_name),
+            query=query,
             m=18 if table_name=='channel_response_code' else 20
     ),
         dag=dag,
@@ -228,7 +228,7 @@ for db_name, table_name, conn_id, prefix_name,priority_weight_nm in table_list:
         task_id='add_partitions_{}'.format(hive_table_name),
         priority_weight=priority_weight_nm,
         hql='''
-                ALTER TABLE {table} ADD IF NOT EXISTS PARTITION (dt = '{{{{ ds }}}}')
+                ALTER TABLE {table} ADD IF NOT EXISTS PARTITION (dt = '{{{{ ds }}}}',hour = '{{{{ execution_date.strftime("%H") }}}}')
             '''.format(table=hive_table_name),
         schema=HIVE_DB,
         dag=dag)
@@ -263,6 +263,7 @@ for db_name, table_name, conn_id, prefix_name,priority_weight_nm in table_list:
             dag=dag
         )
         add_partitions >> volume_monitoring >> validate_all_data
+
     # 超时监控
     task_timeout_monitor= PythonOperator(
         task_id='task_timeout_monitor_{}'.format(hive_table_name),
