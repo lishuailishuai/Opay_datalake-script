@@ -60,7 +60,7 @@ dependence_server_event_prev_hour_task = HivePartitionSensor(
 
 ##----------------------------------------- 变量 ---------------------------------------##
 
-
+db_name = "oride_dw"
 table_name = "dwd_oride_server_event_detail_hi"
 hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
 
@@ -86,82 +86,91 @@ task_timeout_monitor = PythonOperator(
     dag=dag
 )
 
+
 ##----------------------------------------- 脚本 ---------------------------------------##
 
-dwd_oride_server_event_detail_hi_task = HiveOperator(
-    task_id='dwd_oride_server_event_detail_hi_task',
 
-    hql='''
-        SET hive.exec.parallel=TRUE;
-        SET hive.exec.dynamic.partition.mode=nonstrict;
+def dwd_oride_server_event_detail_hi_sql_task(ds, execution_date):
+    HQL = '''
+    set hive.exec.parallel=true;
+    set hive.exec.dynamic.partition.mode=nonstrict;
 
-        insert overwrite table oride_dw.{table} partition(country_code,dt,hour)
+    INSERT OVERWRITE TABLE {db}.{table} partition(country_code,dt,hour)
+    SELECT  ip
+           ,server_ip
+           ,`timestamp`
+           ,common.user_id
+           ,common.user_number
+           ,common.client_timestamp
+           ,common.platform
+           ,common.os_version
+           ,common.app_name
+           ,common.app_version
+           ,common.locale
+           ,common.device_id
+           ,common.device_screen
+           ,common.device_model
+           ,common.device_manufacturer
+           ,common.is_root
+           ,common.channel
+           ,common.subchannel
+           ,common.gaid
+           ,common.appsflyer_id
+           ,e.event_time
+           ,e.event_name
+           ,e.page
+           ,e.source
+           ,e.event_value
+           ,'nal' AS country_code
+           ,dt
+           ,hour
+    FROM oride_source.server_event LATERAL VIEW EXPLODE
+    (events
+    ) es AS e
+    WHERE dt='{now_day}' 
+    AND hour='{now_hour}' 
+    ;
 
-        SELECT
-            ip,
-            server_ip,
-            `timestamp`,
-            common.user_id,
-            common.user_number,
-            common.client_timestamp,
-            common.platform,
-            common.os_version,
-            common.app_name,
-            common.app_version,
-            common.locale,
-            common.device_id,
-            common.device_screen,
-            common.device_model,
-            common.device_manufacturer,
-            common.is_root,
-            common.channel,
-            common.subchannel,
-            common.gaid,
-            common.appsflyer_id,
-            e.event_time,
-            e.event_name,
-            e.page,
-            e.source,
-            e.event_value,
-            'nal' as country_code,
-            dt,
-            hour
-
-        FROM
-            oride_source.server_event LATERAL VIEW EXPLODE(events) es AS e
-        WHERE
-            dt='{pt}'
-            AND hour='{now_hour}'
-        
-        ;
 '''.format(
-        pt='{{ds}}',
-        now_hour='{{ execution_date.strftime("%H") }}',
-        table=table_name
-    ),
-    dag=dag
-)
+        pt=ds,
+        now_day=ds,
+        now_hour=execution_date.strftime("%H"),
+        table=table_name,
+        db=db_name
+    )
+    return HQL
 
 
-# 生成_SUCCESS
-def check_success(ds, execution_date, dag, **op_kwargs):
-    dag_ids = dag.dag_id
+# 主流程
+def execution_data_task_id(ds, execution_date, **kargs):
+    hive_hook = HiveCliHook()
 
-    msg = [
-        {"table": "{dag_name}".format(dag_name=dag_ids),
-         "hdfs_path": "{hdfsPath}/country_code=nal/dt={pt}/hour={hour}".format(pt=ds,
-                                                                               hour=execution_date.strftime("%H"),
-                                                                               hdfsPath=hdfs_path)}
-    ]
+    # 读取sql
+    _sql = dwd_oride_server_event_detail_hi_sql_task(ds, execution_date)
 
-    TaskTouchzSuccess().set_touchz_success(msg)
+    logging.info('Executing: %s', _sql)
+
+    # 执行Hive
+    hive_hook.run_cli(_sql)
+
+    # 熔断数据
+    # check_key_data_task(ds)
+
+    # 生成_SUCCESS
+    """
+    第一个参数true: 数据目录是有country_code分区。false 没有
+    第二个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
+
+    """
+    TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "true", "false",
+                                                 execution_date.strftime("%H"))
 
 
-touchz_data_success = PythonOperator(
-    task_id='touchz_data_success',
-    python_callable=check_success,
+dwd_oride_server_event_detail_hi_task = PythonOperator(
+    task_id='dwd_oride_server_event_detail_hi_task',
+    python_callable=execution_data_task_id,
     provide_context=True,
     dag=dag
 )
 
-dependence_server_event_prev_hour_task >> sleep_time >> dwd_oride_server_event_detail_hi_task >> touchz_data_success
+dependence_server_event_prev_hour_task >> sleep_time >> dwd_oride_server_event_detail_hi_task
