@@ -105,7 +105,9 @@ operation_content,--操作内容
 operation_id,--操作人id
 operation_name,--操作人
 operation_time,--操作时间
-operation_remarks,--备注'nal' as country_code,
+operation_remarks,--备注
+
+'nal' as country_code,
 '{{pt}}' as dt
         
     from oride_dw_ods.ods_sqoop_base_data_operation_driver_log_df
