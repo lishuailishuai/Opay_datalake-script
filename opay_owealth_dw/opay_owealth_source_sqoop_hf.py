@@ -103,7 +103,7 @@ table_not_core_list = []
 
 def run_check_table(db_name, table_name, conn_id, hive_table_name, **kwargs):
     sqoopSchema = SqoopSchemaUpdate()
-    response = sqoopSchema.update_hfve_schema(
+    response = sqoopSchema.update_hive_schema(
         hive_db=HIVE_DB,
         hive_table=hive_table_name,
         mysql_db=db_name,
