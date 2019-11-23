@@ -193,7 +193,7 @@ def execution_data_task_id(ds, **kargs):
     hive_hook.run_cli(_sql)
 
     # 熔断数据
-    check_key_data_task(ds)
+    # check_key_data_task(ds)
 
     # 生成_SUCCESS
     """
