@@ -429,7 +429,7 @@ SELECT base.order_id,
         wait_lat, --等待乘客上车位置纬度
         wait_in_radius, --是否在接驾范围内
         wait_distance, --等待乘客上车距离
-        ancel_wait_payment_time,  --乘客取消待支付时间  
+        cancel_wait_payment_time,  --乘客取消待支付时间  
 
        country_code,
 
@@ -573,7 +573,7 @@ FROM
              wait_lat, --等待乘客上车位置纬度
              wait_in_radius, --是否在接驾范围内
              wait_distance, --等待乘客上车距离
-             ancel_wait_payment_time  --乘客取消待支付时间  
+             cancel_wait_payment_time  --乘客取消待支付时间  
 
       FROM oride_dw_ods.ods_sqoop_base_data_order_df
       WHERE dt = '{pt}'
