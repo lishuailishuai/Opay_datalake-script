@@ -277,7 +277,7 @@ def execution_data_task_id(ds,**kargs):
 
     hive_hook = HiveCliHook()
 
-    cf=CountriesPublicFrame(ds,db_name,table_name,hdfs_path,"true","true")
+    cf=CountriesPublicFrame(ds,db_name,table_name,hdfs_path,"true","false")
 
     cf.delete_partition()
 
