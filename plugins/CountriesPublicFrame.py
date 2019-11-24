@@ -24,18 +24,18 @@ from airflow.utils.trigger_rule import TriggerRule
 
 class CountriesPublicFrame(object):
 
-    def __init__(self,ds,db_name,table_name,data_hdfs_path,country_partition="true",file_type="true",hour=None):
+    def __init__(self,v_ds,v_db_name,v_table_name,v_data_hdfs_path,v_country_partition="true",v_file_type="true",v_hour=None):
 
         self.comwx = ComwxApi('wwd26d45f97ea74ad2', 'BLE_v25zCmnZaFUgum93j3zVBDK-DjtRkLisI_Wns4g', '1000011')
 
-        self.table_name=table_name
+        self.table_name=v_table_name
         self.hdfs_data_dir_str=""
-        self.data_hdfs_path=data_hdfs_path
-        self.db_name=db_name
-        self.ds=ds
-        self.country_partition=country_partition
-        self.file_type=file_type
-        self.hour=hour
+        self.data_hdfs_path=v_data_hdfs_path
+        self.db_name=v_db_name
+        self.ds=v_ds
+        self.country_partition=v_country_partition
+        self.file_type=v_file_type
+        self.hour=v_hour
 
     def get_country_code(self):
 
@@ -113,8 +113,6 @@ class CountriesPublicFrame(object):
         time.sleep(10)
 
         print("debug-> delete_exist_partition")
-
-        print(self.hdfs_data_dir_str)
 
         #删除语句
         del_command="hadoop dfs -rm -r {hdfs_data_dir}".format(hdfs_data_dir=self.hdfs_data_dir_str)
@@ -249,24 +247,24 @@ class CountriesPublicFrame(object):
     def touchz_success(self):
 
         # 没有国家分区并且每个目录必须有数据才能生成 Success
-        if self.country_partition.lower()=="false" and file_type.lower()=="true":
+        if self.country_partition.lower()=="false" and self.file_type.lower()=="true":
 
             self.countries_data_dir(self.data_file_type_touchz)
 
         # 没有国家分区并且数据为空也生成 Success
-        if self.country_partition.lower()=="false" and file_type.lower()=="false":
+        if self.country_partition.lower()=="false" and self.file_type.lower()=="false":
 
             self.countries_data_dir(self.data_not_file_type_touchz)
             
 
         #有国家分区并且每个目录必须有数据才能生成 Success
-        if self.country_partition.lower()=="true" and file_type.lower()=="true":
+        if self.country_partition.lower()=="true" and self.file_type.lower()=="true":
 
             self.countries_data_dir(self.data_file_type_touchz)
             
         
         #有国家分区并且数据为空也生成 Success
-        if self.country_partition.lower()=="true" and file_type.lower()=="false":
+        if self.country_partition.lower()=="true" and self.file_type.lower()=="false":
 
             self.countries_data_dir(self.data_not_file_type_touchz)
             
@@ -282,9 +280,11 @@ class CountriesPublicFrame(object):
 
         try:
 
+            hour=self.hour
+
         
             # 没有国家分区并且每个目录必须有数据才能生成 Success
-            if self.country_partition.lower()=="false" and file_type.lower()=="true":
+            if self.country_partition.lower()=="false" and self.file_type.lower()=="true":
 
                 if hour is None:
                     #输出不同国家的数据路径
@@ -298,7 +298,7 @@ class CountriesPublicFrame(object):
                 return
 
             # 没有国家分区并且数据为空也生成 Success
-            if self.country_partition.lower()=="false" and file_type.lower()=="false":
+            if self.country_partition.lower()=="false" and self.file_type.lower()=="false":
 
                 if hour is None:
                     #输出不同国家的数据路径
@@ -320,7 +320,7 @@ class CountriesPublicFrame(object):
 
 
                 #有国家分区并且每个目录必须有数据才能生成 Success
-                if self.country_partition.lower()=="true" and file_type.lower()=="true":
+                if self.country_partition.lower()=="true" and self.file_type.lower()=="true":
 
                     if hour is None:
 
@@ -336,7 +336,7 @@ class CountriesPublicFrame(object):
 
                 
                 #有国家分区并且数据为空也生成 Success
-                if self.country_partition.lower()=="true" and file_type.lower()=="false":
+                if self.country_partition.lower()=="true" and self.file_type.lower()=="false":
 
 
                     if hour is None:
