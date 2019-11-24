@@ -271,12 +271,15 @@ def check_key_data_task(ds):
 #主流程
 def execution_data_task_id(ds,**kargs):
 
+    v_date=kwargs.get('v_execution_date')
+    v_day=kwargs.get('v_execution_day')
+    v_hour=kwargs.get('v_execution_hour')
+
     hive_hook = HiveCliHook()
 
     cf=CountriesPublicFrame(ds,db_name,table_name,hdfs_path,"true","true")
 
     cf.delete_partition()
-
 
     #读取sql
     _sql=test_dim_oride_city_sql_task(ds)
@@ -287,10 +290,10 @@ def execution_data_task_id(ds,**kargs):
     hive_hook.run_cli(_sql)
 
     #熔断数据，如果数据不能为0
-    check_key_data_cnt_task(ds)
+    #check_key_data_cnt_task(ds)
 
     #熔断数据
-    check_key_data_task(ds)
+    #check_key_data_task(ds)
 
     #生成_SUCCESS
     """
@@ -304,6 +307,11 @@ test_dim_oride_city_task= PythonOperator(
     task_id='test_dim_oride_city_task',
     python_callable=execution_data_task_id,
     provide_context=True,
+    op_kwargs={
+        'v_execution_date':'{{execution_date.strftime("%Y-%m-%d %H:%M:%S")}}',
+        'v_execution_day':'{{execution_date.strftime("%Y-%m-%d")}}',
+        'v_execution_hour':'{{execution_date.strftime("%H")}}'
+    },
     dag=dag
 )
 

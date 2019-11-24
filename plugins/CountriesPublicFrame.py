@@ -83,9 +83,9 @@ class CountriesPublicFrame(object):
 
         print("debug-> check_success_exist")
 
-        command="hadoop dfs -ls {hdfs_data_dir}/_SUCCESS>/dev/null 2>/dev/null && echo 1 || echo 0".format(hdfs_data_dir=self.hdfs_data_dir_str)
+        command="hadoop fs -ls {hdfs_data_dir}/_SUCCESS>/dev/null 2>/dev/null && echo 1 || echo 0".format(hdfs_data_dir=self.hdfs_data_dir_str)
 
-        logging.info(command)
+        #logging.info(command)
 
         out = os.popen(command, 'r')
         res = out.readlines()
@@ -115,7 +115,7 @@ class CountriesPublicFrame(object):
         print("debug-> delete_exist_partition")
 
         #删除语句
-        del_command="hadoop dfs -rm -r {hdfs_data_dir}".format(hdfs_data_dir=self.hdfs_data_dir_str)
+        del_command="hadoop fs -rm -r {hdfs_data_dir}".format(hdfs_data_dir=self.hdfs_data_dir_str)
 
         logging.info(del_command)
 
@@ -125,7 +125,7 @@ class CountriesPublicFrame(object):
         time.sleep(10)
 
         #验证删除分区是否存在
-        check_command="hadoop dfs -ls {hdfs_data_dir}>/dev/null 2>/dev/null && echo 1 || echo 0".format(hdfs_data_dir=self.hdfs_data_dir_str)
+        check_command="hadoop fs -ls {hdfs_data_dir}>/dev/null 2>/dev/null && echo 1 || echo 0".format(hdfs_data_dir=self.hdfs_data_dir_str)
 
         out = os.popen(check_command, 'r')
 
