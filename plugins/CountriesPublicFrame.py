@@ -279,19 +279,16 @@ class CountriesPublicFrame(object):
         """
 
         try:
-
-            hour=self.hour
-
         
             # 没有国家分区并且每个目录必须有数据才能生成 Success
             if self.country_partition.lower()=="false" and self.file_type.lower()=="true":
 
-                if hour is None:
+                if self.hour is None:
                     #输出不同国家的数据路径
-                    self.hdfs_data_dir_str=data_hdfs_path+"/dt="+self.ds
+                    self.hdfs_data_dir_str=self.data_hdfs_path+"/dt="+self.ds
                 else:
                     #输出不同国家的数据路径
-                    self.hdfs_data_dir_str=data_hdfs_path+"/dt="+self.ds+"/hour="+hour
+                    self.hdfs_data_dir_str=self.data_hdfs_path+"/dt="+self.ds+"/hour="+self.hour
 
                 object_task()
 
@@ -300,12 +297,12 @@ class CountriesPublicFrame(object):
             # 没有国家分区并且数据为空也生成 Success
             if self.country_partition.lower()=="false" and self.file_type.lower()=="false":
 
-                if hour is None:
+                if self.hour is None:
                     #输出不同国家的数据路径
-                    self.hdfs_data_dir_str=data_hdfs_path+"/dt="+self.ds
+                    self.hdfs_data_dir_str=self.data_hdfs_path+"/dt="+self.ds
                 else:
                     #输出不同国家的数据路径
-                    self.hdfs_data_dir_str=data_hdfs_path+"/dt="+self.ds+"/hour="+hour
+                    self.hdfs_data_dir_str=self.data_hdfs_path+"/dt="+self.ds+"/hour="+self.hour
 
                 object_task()
 
@@ -322,14 +319,14 @@ class CountriesPublicFrame(object):
                 #有国家分区并且每个目录必须有数据才能生成 Success
                 if self.country_partition.lower()=="true" and self.file_type.lower()=="true":
 
-                    if hour is None:
+                    if self.hour is None:
 
                         #输出不同国家的数据路径
-                        self.hdfs_data_dir_str=data_hdfs_path+"/country_code="+country_code_word+"/dt="+self.ds
+                        self.hdfs_data_dir_str=self.data_hdfs_path+"/country_code="+country_code_word+"/dt="+self.ds
                     else:
 
                         #输出不同国家的数据路径
-                        self.hdfs_data_dir_str=data_hdfs_path+"/country_code="+country_code_word+"/dt="+self.ds+"/hour="+hour
+                        self.hdfs_data_dir_str=self.data_hdfs_path+"/country_code="+country_code_word+"/dt="+self.ds+"/hour="+self.hour
 
 
                     object_task()
@@ -339,14 +336,14 @@ class CountriesPublicFrame(object):
                 if self.country_partition.lower()=="true" and self.file_type.lower()=="false":
 
 
-                    if hour is None:
+                    if self.hour is None:
 
                         #输出不同国家的数据路径
-                        self.hdfs_data_dir_str=data_hdfs_path+"/country_code="+country_code_word+"/dt="+self.ds
+                        self.hdfs_data_dir_str=self.data_hdfs_path+"/country_code="+country_code_word+"/dt="+self.ds
                     else:
 
                         #输出不同国家的数据路径
-                        self.hdfs_data_dir_str=data_hdfs_path+"/country_code="+country_code_word+"/dt="+self.ds+"/hour="+hour
+                        self.hdfs_data_dir_str=self.data_hdfs_path+"/country_code="+country_code_word+"/dt="+self.ds+"/hour="+self.hour
 
                     object_task()
             
