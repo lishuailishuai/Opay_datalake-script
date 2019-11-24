@@ -84,26 +84,6 @@ table_name="test_dim_oride_city"
 hdfs_path="ufile://opay-datalake/oride/oride_dw/"+table_name
 
 
-##----------------------------------------- 任务超时监控 ---------------------------------------## 
-
-def fun_task_timeout_monitor(ds,dag,**op_kwargs):
-
-    dag_ids=dag.dag_id
-
-    msg = [
-        {"db": "test_db", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=NG/dt={pt}".format(pt=ds), "timeout": "800"}
-    ]
-
-    TaskTimeoutMonitor().set_task_monitor(msg)
-
-task_timeout_monitor= PythonOperator(
-    task_id='task_timeout_monitor',
-    python_callable=fun_task_timeout_monitor,
-    provide_context=True,
-    dag=dag
-)
-
-
 ##----------------------------------------- 脚本 ---------------------------------------## 
 
 def test_dim_oride_city_sql_task(ds):
