@@ -277,11 +277,31 @@ def execution_data_task_id(ds,**kwargs):
 
     hive_hook = HiveCliHook()
 
+    """
+        #功能函数
+        删除分区: delete_partition
+        生产success: touchz_success
+
+        #参数
+        第一个参数true: 数据目录是有country_code分区。false 没有
+        第二个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
+
+    """
+
     cf=CountriesPublicFrame(ds,db_name,table_name,hdfs_path,"true","false")
 
+    #删除分区
     cf.delete_partition()
 
-    #读取sql
+    """
+        #读取sql
+        %_sql_task(ds,v_hour)
+
+        第一个参数ds: 天级任务
+        第二个参数v_hour: 小时级任务，需要使用
+
+    """
+
     _sql=test_dim_oride_city_sql_task(ds)
 
     logging.info('Executing: %s', _sql)
@@ -295,12 +315,7 @@ def execution_data_task_id(ds,**kwargs):
     #熔断数据
     #check_key_data_task(ds)
 
-    #生成_SUCCESS
-    """
-    第一个参数true: 数据目录是有country_code分区。false 没有
-    第二个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
-
-    """
+    #生产success
     cf.touchz_success()
     
 test_dim_oride_city_task= PythonOperator(
