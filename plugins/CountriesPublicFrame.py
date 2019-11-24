@@ -244,31 +244,31 @@ class CountriesPublicFrame(object):
 
         #object_task=self.delete_exist_partition()
 
-        self.countries_data_dir(delete_exist_partition)
+        self.countries_data_dir(self.delete_exist_partition)
 
     def touchz_success(self):
 
         # 没有国家分区并且每个目录必须有数据才能生成 Success
         if self.country_partition.lower()=="false" and file_type.lower()=="true":
 
-            self.countries_data_dir(data_file_type_touchz)
+            self.countries_data_dir(self.data_file_type_touchz)
 
         # 没有国家分区并且数据为空也生成 Success
         if self.country_partition.lower()=="false" and file_type.lower()=="false":
 
-            self.countries_data_dir(data_not_file_type_touchz)
+            self.countries_data_dir(self.data_not_file_type_touchz)
             
 
         #有国家分区并且每个目录必须有数据才能生成 Success
         if self.country_partition.lower()=="true" and file_type.lower()=="true":
 
-            self.countries_data_dir(data_file_type_touchz)
+            self.countries_data_dir(self.data_file_type_touchz)
             
         
         #有国家分区并且数据为空也生成 Success
         if self.country_partition.lower()=="true" and file_type.lower()=="false":
 
-            self.countries_data_dir(data_not_file_type_touchz)
+            self.countries_data_dir(self.data_not_file_type_touchz)
             
 
 
