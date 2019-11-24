@@ -16,7 +16,6 @@ from airflow.sensors.named_hive_partition_sensor import NamedHivePartitionSensor
 from airflow.sensors.hive_partition_sensor import HivePartitionSensor
 from airflow.sensors import UFileSensor
 from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
-from plugins.TaskTouchzSuccess import TaskTouchzSuccess
 from plugins.CountriesPublicFrame import CountriesPublicFrame
 import json
 import logging
@@ -294,7 +293,9 @@ def execution_data_task_id(ds,**kargs):
 
     hive_hook = HiveCliHook()
 
-    CountriesPublicFrame(ds,db_name,table_name,hdfs_path,"true","true").delete_partition()
+    cf=CountriesPublicFrame(ds,db_name,table_name,hdfs_path,"true","true")
+
+    cf.delete_partition()
 
 
     #读取sql
@@ -317,7 +318,7 @@ def execution_data_task_id(ds,**kargs):
     第二个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
 
     """
-    CountriesPublicFrame(ds,db_name,table_name,hdfs_path,"true","true").touchz_success()
+    cf.touchz_success()
     
 test_dim_oride_city_task= PythonOperator(
     task_id='test_dim_oride_city_task',

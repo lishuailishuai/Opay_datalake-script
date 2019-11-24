@@ -171,6 +171,7 @@ def get_format_schema(ods_db_name,ods_table_name,dwd_db_name,dwd_table_name):
 
         #将最后一条数据去除','
         if a==nm:
+   
             i=i+"\n'nal' as country_code,\n'{pt}' as dt"
 
         b=b+"\n"+i
@@ -508,14 +509,13 @@ def execution_data_task_id(ds,**kargs):
 
 """+in_ods_table_name+"""_tesk>>"""+in_dwd_table_name+"""_task"""
 
+    out_file='./'+in_dwd_table_name+'.py'
+
     #将模板写文件
-    with open('./'+in_dwd_table_name+'.py','w') as f:
+    with open(out_file,'w') as f:
         f.write(template_str)
 
-    #print(template_str)
-
-
-
+    print("------"+" "+out_file+" "+"文件已经生成")
 
 
 create_template_task= PythonOperator(

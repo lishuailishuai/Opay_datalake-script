@@ -114,6 +114,8 @@ class CountriesPublicFrame(object):
 
         print("debug-> delete_exist_partition")
 
+        print(self.hdfs_data_dir_str)
+
         #删除语句
         del_command="hadoop dfs -rm -r {hdfs_data_dir}".format(hdfs_data_dir=self.hdfs_data_dir_str)
 
@@ -240,33 +242,33 @@ class CountriesPublicFrame(object):
 
     def delete_partition(self):
 
-        object_task=self.delete_exist_partition()
+        #object_task=self.delete_exist_partition()
 
-        self.countries_data_dir(object_task)
+        self.countries_data_dir(delete_exist_partition)
 
     def touchz_success(self):
 
         # 没有国家分区并且每个目录必须有数据才能生成 Success
-        if country_partition.lower()=="false" and file_type.lower()=="true":
+        if self.country_partition.lower()=="false" and file_type.lower()=="true":
 
-            self.countries_data_dir(self.data_file_type_touchz())
+            self.countries_data_dir(data_file_type_touchz)
 
         # 没有国家分区并且数据为空也生成 Success
-        if country_partition.lower()=="false" and file_type.lower()=="false":
+        if self.country_partition.lower()=="false" and file_type.lower()=="false":
 
-            self.countries_data_dir(self.data_not_file_type_touchz())
+            self.countries_data_dir(data_not_file_type_touchz)
             
 
         #有国家分区并且每个目录必须有数据才能生成 Success
-        if country_partition.lower()=="true" and file_type.lower()=="true":
+        if self.country_partition.lower()=="true" and file_type.lower()=="true":
 
-            self.countries_data_dir(self.data_file_type_touchz())
+            self.countries_data_dir(data_file_type_touchz)
             
         
         #有国家分区并且数据为空也生成 Success
-        if country_partition.lower()=="true" and file_type.lower()=="false":
+        if self.country_partition.lower()=="true" and file_type.lower()=="false":
 
-            self.countries_data_dir(self.data_not_file_type_touchz())
+            self.countries_data_dir(data_not_file_type_touchz)
             
 
 
@@ -282,7 +284,7 @@ class CountriesPublicFrame(object):
 
         
             # 没有国家分区并且每个目录必须有数据才能生成 Success
-            if country_partition.lower()=="false" and file_type.lower()=="true":
+            if self.country_partition.lower()=="false" and file_type.lower()=="true":
 
                 if hour is None:
                     #输出不同国家的数据路径
@@ -291,12 +293,12 @@ class CountriesPublicFrame(object):
                     #输出不同国家的数据路径
                     self.hdfs_data_dir_str=data_hdfs_path+"/dt="+self.ds+"/hour="+hour
 
-                object_task
+                object_task()
 
                 return
 
             # 没有国家分区并且数据为空也生成 Success
-            if country_partition.lower()=="false" and file_type.lower()=="false":
+            if self.country_partition.lower()=="false" and file_type.lower()=="false":
 
                 if hour is None:
                     #输出不同国家的数据路径
@@ -305,7 +307,7 @@ class CountriesPublicFrame(object):
                     #输出不同国家的数据路径
                     self.hdfs_data_dir_str=data_hdfs_path+"/dt="+self.ds+"/hour="+hour
 
-                object_task
+                object_task()
 
                 return
 
@@ -318,7 +320,7 @@ class CountriesPublicFrame(object):
 
 
                 #有国家分区并且每个目录必须有数据才能生成 Success
-                if country_partition.lower()=="true" and file_type.lower()=="true":
+                if self.country_partition.lower()=="true" and file_type.lower()=="true":
 
                     if hour is None:
 
@@ -330,11 +332,11 @@ class CountriesPublicFrame(object):
                         self.hdfs_data_dir_str=data_hdfs_path+"/country_code="+country_code_word+"/dt="+self.ds+"/hour="+hour
 
 
-                    object_task
+                    object_task()
 
                 
                 #有国家分区并且数据为空也生成 Success
-                if country_partition.lower()=="true" and file_type.lower()=="false":
+                if self.country_partition.lower()=="true" and file_type.lower()=="false":
 
 
                     if hour is None:
@@ -346,7 +348,7 @@ class CountriesPublicFrame(object):
                         #输出不同国家的数据路径
                         self.hdfs_data_dir_str=data_hdfs_path+"/country_code="+country_code_word+"/dt="+self.ds+"/hour="+hour
 
-                    object_task
+                    object_task()
             
         except Exception as e:
 
