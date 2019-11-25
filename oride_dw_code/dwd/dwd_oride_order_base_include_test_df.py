@@ -211,7 +211,7 @@ def insert_sql(pt,ds):
     wait_lat, --等待乘客上车位置纬度
     wait_in_radius, --是否在接驾范围内
     wait_distance, --等待乘客上车距离
-    ancel_wait_payment_time,  --乘客取消待支付时间  
+    cancel_wait_payment_time,  --乘客取消待支付时间  
     'nal' AS country_code,
     '{pt}' AS dt
     FROM
