@@ -86,6 +86,8 @@ db_name,table_name,conn_id,prefix_name,priority_weight
 table_list = [
     ("pre_ptsp_db", "pre_opos_payment_order", "mysql_pre_ptsp_db", "base", 3),
     ("pre_ptsp_db", "pre_opos_payment_order_bd", "mysql_pre_ptsp_db", "base", 3),
+
+    ("opos_cashback", "opos_bonus_record", "opos_cashback", "base", 3),
 ]
 
 HIVE_DB = 'opos_dw_ods'

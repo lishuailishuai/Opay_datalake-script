@@ -65,7 +65,6 @@ table_list = [
 
 
     # opos 红包数据
-    ("opos_cashback", "opos_bonus_record", "opos_cashback", "base"),
     ("opos_cashback", "opos_scan_history", "opos_cashback", "base"),
 
 ]
