@@ -80,7 +80,7 @@ task_timeout_monitor = PythonOperator(
 
 
 ##----------------------------------------- 脚本 ---------------------------------------##
-def dwd_driver_track_data_hi_sql_task(ds):
+def dwd_driver_track_data_hi_sql_task(ds,hour):
     HQL = '''
     SET hive.exec.parallel=TRUE;
    SET hive.exec.dynamic.partition.mode=nonstrict;
@@ -116,22 +116,24 @@ def dwd_driver_track_data_hi_sql_task(ds):
           hour
 
     from oride_dw_ods.ods_log_driver_track_data_hi
-   where dt='{pt}';
+   where dt='{pt}' and hour='{now_hour}';
     '''.format(
         pt=ds,
         now_day=airflow.macros.ds_add(ds, +1),
         table=table_name,
+        now_hour=hour,
         db=db_name
     )
     return HQL
 
 
 # 主流程
-def execution_data_task_id(ds, **kargs):
+def execution_data_task_id(ds, **kwargs):
     hive_hook = HiveCliHook()
+    v_hour = kwargs.get('v_execution_hour')
 
     # 读取sql
-    _sql = dwd_driver_track_data_hi_sql_task(ds)
+    _sql = dwd_driver_track_data_hi_sql_task(ds,v_hour)
 
     logging.info('Executing: %s', _sql)
 
