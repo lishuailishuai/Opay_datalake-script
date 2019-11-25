@@ -240,11 +240,17 @@ class CountriesPublicFrame(object):
 
     def delete_partition(self):
 
-        #object_task=self.delete_exist_partition()
+        """
+            删除分区调用函数
+        """
 
         self.countries_data_dir(self.delete_exist_partition)
 
     def touchz_success(self):
+
+        """
+            生成 Success 调用函数
+        """
 
         # 没有国家分区并且每个目录必须有数据才能生成 Success
         if self.country_partition.lower()=="false" and self.file_type.lower()=="true":
@@ -355,4 +361,40 @@ class CountriesPublicFrame(object):
 
             sys.exit(1)
 
+    #
+    def alter_partition(self):
+
+        # alter table table_name drop partition(country_code)
+        # alter table table_name add partition()
+
+        # 没有国家分区 && 小时参数为None
+        if self.country_partition.lower()=="false" and self.hour is None:
+
+            v_par="dt='{ds}'".format(self.ds)
+
+
+        if self.country_partition.lower()=="false" and self.hour is not None:
+            v_par="dt='{ds}',hour='{hour}'".format(ds=self.ds,hour=self.hour)
+
+        print(v_par)
+
+        country_code_list=self.get_country_code()
+
+        for country_code_word in country_code_list.split(","):
+
+            if self.country_partition.lower()=="true" and self.hour is None:
+
+                v_par="country_code='{country_code}',dt='{ds}'".format(ds=self.ds,country_code=country_code_word)
+
+            if self.country_partition.lower()=="true" and self.hour is not None:
+
+                v_par="country_code='{country_code}',dt='{ds}',hour='{hour}'".format(ds=self.ds,hour=self.hour,country_code=country_code_word)
+
+            print(v_par)
             
+
+
+
+
+
+
