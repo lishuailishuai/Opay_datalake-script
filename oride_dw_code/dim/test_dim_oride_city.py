@@ -302,7 +302,7 @@ def execution_data_task_id(ds,**kwargs):
 
     """
 
-    _sql=cf.alter_partition()+test_dim_oride_city_sql_task(ds)
+    _sql="\n"+cf.alter_partition()+test_dim_oride_city_sql_task(ds)
 
     logging.info('Executing: %s',_sql)
 
