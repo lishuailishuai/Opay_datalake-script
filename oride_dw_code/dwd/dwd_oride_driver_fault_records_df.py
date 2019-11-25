@@ -153,39 +153,6 @@ create_time,--创建时间
 #     return flag
 
 
-
-#主流程
-def execution_data_task_id(ds,**kargs):
-
-    hive_hook = HiveCliHook()
-
-    #读取sql
-    _sql=dwd_oride_driver_fault_records_df_sql_task(ds)
-
-    logging.info('Executing: %s', _sql)
-
-    #执行Hive
-    hive_hook.run_cli(_sql)
-
-    #熔断数据
-    #check_key_data_task(ds)
-
-    #生成_SUCCESS
-    """
-    第一个参数true: 数据目录是有country_code分区。false 没有
-    第二个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
-
-    """
-    TaskTouchzSuccess().countries_touchz_success(ds,db_name,table_name,hdfs_path,"true","true")
-    
-dwd_oride_driver_fault_records_df_task= PythonOperator(
-    task_id='dwd_oride_driver_fault_records_df_task',
-    python_callable=execution_data_task_id,
-    provide_context=True,
-    dag=dag
-)
-
-
 #主流程
 def execution_data_task_id(ds,**kwargs):
 
