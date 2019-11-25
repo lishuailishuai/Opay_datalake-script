@@ -183,7 +183,7 @@ def dm_oride_driver_base_sql_task(ds):
                city_id
         FROM oride_dw.dim_oride_city 
         LATERAL VIEW explode(split(regexp_replace(product_id,'\\\\[|\\\\]',''),',')) s AS product_id1
-        WHERE dt='{pt}') cit
+        WHERE dt='{pt}' and city_id<>999001) cit
         on dri.product_id=cit.product_id1 and dri.city_id=cit.city_id
        group by dri.product_id,
                dri.city_id,
