@@ -372,11 +372,13 @@ class CountriesPublicFrame(object):
 
             v_par="dt='{ds}'".format(self.ds)
 
+            print(v_par)
+
 
         if self.country_partition.lower()=="false" and self.hour is not None:
             v_par="dt='{ds}',hour='{hour}'".format(ds=self.ds,hour=self.hour)
 
-        print(v_par)
+            print(v_par)
 
         country_code_list=self.get_country_code()
 
