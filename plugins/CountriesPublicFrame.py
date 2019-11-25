@@ -361,7 +361,7 @@ class CountriesPublicFrame(object):
 
             sys.exit(1)
 
-    #
+    # alter 语句
     def alter_partition(self):   
 
         alter_str=""
