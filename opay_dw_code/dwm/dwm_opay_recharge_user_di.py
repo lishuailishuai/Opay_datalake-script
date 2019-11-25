@@ -129,7 +129,7 @@ def dwm_opay_recharge_user_di_sql_task(ds):
                             country_code,
                             dt
        FROM opay_dw.dwd_opay_recharge_electricity_record_di
-       WHERE dt='{pt}'
+       WHERE dt='{pt}' and create_time BETWEEN date_format(date_sub('{pt}', 1), 'yyyy-MM-dd 23') AND date_format('{pt}', 'yyyy-MM-dd 23')
        UNION ALL SELECT user_id,
                         'Betting' as service_type,
                                   user_role,
@@ -138,7 +138,7 @@ def dwm_opay_recharge_user_di_sql_task(ds):
                                   country_code,
                                   dt
        FROM opay_dw.dwd_opay_recharge_betting_record_di
-       WHERE dt='{pt}'
+       WHERE dt='{pt}' and create_time BETWEEN date_format(date_sub('{pt}', 1), 'yyyy-MM-dd 23') AND date_format('{pt}', 'yyyy-MM-dd 23')
        UNION ALL SELECT user_id,
                         'MobileData' as service_type,
                                      user_role,
@@ -147,7 +147,7 @@ def dwm_opay_recharge_user_di_sql_task(ds):
                                      country_code,
                                      dt
        FROM opay_dw.dwd_opay_recharge_mobiledata_record_di
-       WHERE dt='{pt}'
+       WHERE dt='{pt}' and create_time BETWEEN date_format(date_sub('{pt}', 1), 'yyyy-MM-dd 23') AND date_format('{pt}', 'yyyy-MM-dd 23')
        UNION ALL SELECT user_id,
                         'TV' as service_type,
                              user_role,
@@ -156,7 +156,7 @@ def dwm_opay_recharge_user_di_sql_task(ds):
                              country_code,
                              dt
        FROM opay_dw.dwd_opay_recharge_tv_record_di
-       WHERE dt='{pt}'
+       WHERE dt='{pt}' and create_time BETWEEN date_format(date_sub('{pt}', 1), 'yyyy-MM-dd 23') AND date_format('{pt}', 'yyyy-MM-dd 23')
        UNION ALL SELECT user_id,
                         'Airtime' as service_type,
                                   user_role,
@@ -165,7 +165,8 @@ def dwm_opay_recharge_user_di_sql_task(ds):
                                   country_code,
                                   dt
        FROM opay_dw.dwd_opay_recharge_mobilebill_record_di
-       WHERE dt='{pt}' )m
+       WHERE dt='{pt}' and create_time BETWEEN date_format(date_sub('{pt}', 1), 'yyyy-MM-dd 23') AND date_format('{pt}', 'yyyy-MM-dd 23') 
+    )m
     GROUP BY user_id,
              service_type,
              user_role,

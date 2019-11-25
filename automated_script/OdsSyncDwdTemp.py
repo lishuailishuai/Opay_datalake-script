@@ -52,6 +52,17 @@ dag = airflow.DAG(
 )
 
 
+##------------------------------- 手工修改 主参数部分 -------------------
+
+owner_name='yangmingze'
+ods_db_name='oride_dw_ods'
+ods_table_name='ods_sqoop_base_data_operation_driver_log_df'
+dwd_db_name='oride_dw'
+dwd_table_name='dwd_oride_operation_driver_log_df'
+
+##-------------------------------------------------------------------
+
+
 def get_location(hive_db, hive_table):
 
     """
@@ -160,7 +171,8 @@ def get_format_schema(ods_db_name,ods_table_name,dwd_db_name,dwd_table_name):
 
         #将最后一条数据去除','
         if a==nm:
-            i=i+"'nal' as country_code,\n'{{pt}}' as dt"
+   
+            i=i+"\n'nal' as country_code,\n'{pt}' as dt"
 
         b=b+"\n"+i
 
@@ -187,6 +199,36 @@ def get_format_schema(ods_db_name,ods_table_name,dwd_db_name,dwd_table_name):
         )
 
     return schema_str
+
+
+
+def fun_create_table(**kwargs):
+
+    """
+        #执行建表函数
+    """
+
+    in_ods_db_name=kwargs.get('v_ods_db_name')
+    in_ods_table_name=kwargs.get('v_ods_table_name')
+    in_dwd_db_name=kwargs.get('v_dwd_db_name')
+    in_dwd_table_name=kwargs.get('v_dwd_table_name')
+
+    create_table_info(in_ods_db_name,in_ods_table_name,in_dwd_db_name,in_dwd_table_name)
+
+create_table_task= PythonOperator(
+    task_id='create_table_task',
+    python_callable=fun_create_table,
+    provide_context=True,
+    op_kwargs={
+        'v_ods_db_name': ods_db_name,
+        'v_ods_table_name':ods_table_name,
+        'v_dwd_db_name': dwd_db_name,
+        'v_dwd_table_name':dwd_table_name
+    },
+    dag=dag
+)
+
+
 
 
 def create_table_info(hive_db, hive_table,dwd_db_name,dwd_table_name):
@@ -280,35 +322,6 @@ def create_table_info(hive_db, hive_table,dwd_db_name,dwd_table_name):
     hive_hook.run_cli(create_str)
 
 
-
-def fun_create_table(**kwargs):
-
-    """
-        #执行建表函数
-    """
-
-    in_ods_db_name=kwargs.get('v_ods_db_name')
-    in_ods_table_name=kwargs.get('v_ods_table_name')
-    in_dwd_db_name=kwargs.get('v_dwd_db_name')
-    in_dwd_table_name=kwargs.get('v_dwd_table_name')
-
-    create_table_info(in_ods_db_name,in_ods_table_name,in_dwd_db_name,in_dwd_table_name)
-
-create_table_task= PythonOperator(
-    task_id='create_table_task',
-    python_callable=fun_create_table,
-    provide_context=True,
-    op_kwargs={
-        'v_ods_db_name': "oride_dw_ods",
-        'v_ods_table_name':"ods_sqoop_mass_rider_signups_df",
-        'v_dwd_db_name': "oride_dw",
-        'v_dwd_table_name':"dwd_oride_rider_signups_df"
-    },
-    dag=dag
-)
-
-
-
 def fun_create_template(**kwargs):
 
     in_owner_name=kwargs.get('v_owner_name')
@@ -330,7 +343,7 @@ def fun_create_template(**kwargs):
 # -*- coding: utf-8 -*-
 import airflow
 from datetime import datetime, timedelta
-from airflow.operators.hive_operator import hive_operator
+from airflow.operators.hive_operator import HiveOperator
 from airflow.operators.impala_plugin import ImpalaOperator
 from utils.connection_helper import get_hive_cursor
 from airflow.operators.python_operator import PythonOperator
@@ -496,25 +509,25 @@ def execution_data_task_id(ds,**kargs):
 
 """+in_ods_table_name+"""_tesk>>"""+in_dwd_table_name+"""_task"""
 
+    out_file='./'+in_dwd_table_name+'.py'
+
     #将模板写文件
-    with open('./'+in_dwd_table_name+'.py','w') as f:
+    with open(out_file,'w') as f:
         f.write(template_str)
 
-    #print(template_str)
+    print("------"+" "+out_file+" "+"文件已经生成")
 
-
-#------------------------------- 手工修改 主参数部分 -------------------
 
 create_template_task= PythonOperator(
     task_id='create_template_task',
     python_callable=fun_create_template,
     provide_context=True,
     op_kwargs={
-        'v_owner_name':"yangmingze",
-        'v_ods_db_name': "oride_dw_ods",
-        'v_ods_table_name':"ods_sqoop_mass_rider_signups_df",
-        'v_dwd_db_name': "oride_dw",
-        'v_dwd_table_name':"dwd_oride_rider_signups_df"
+        'v_owner_name':owner_name,
+        'v_ods_db_name': ods_db_name,
+        'v_ods_table_name':ods_table_name,
+        'v_dwd_db_name': dwd_db_name,
+        'v_dwd_table_name':dwd_table_name
     },
     dag=dag
 )

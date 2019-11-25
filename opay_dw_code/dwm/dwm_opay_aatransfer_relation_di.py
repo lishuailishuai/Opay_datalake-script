@@ -103,12 +103,12 @@ def dwm_opay_aatransfer_relation_di_sql_task(ds):
             select 
                 payment_relation_id, country_code, dt, amount, order_no, transfer_status order_status
             from opay_dw.dwd_opay_user_transfer_user_record_di
-            where dt='{pt}'
+            where dt='{pt}' and create_time BETWEEN date_format(date_sub('{pt}', 1), 'yyyy-MM-dd 23') AND date_format('{pt}', 'yyyy-MM-dd 23')
             union all
             select 
                 payment_relation_id, country_code, dt, amount, order_no, order_status
             from opay_dw.dwd_opay_merchant_transfer_user_record_di
-            where dt='{pt}'
+            where dt='{pt}' and create_time BETWEEN date_format(date_sub('{pt}', 1), 'yyyy-MM-dd 23') AND date_format('{pt}', 'yyyy-MM-dd 23')
         ) ut 
         group by ut.country_code, ut.dt, ut.payment_relation_id, ut.order_status 
     ) t1

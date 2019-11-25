@@ -136,27 +136,27 @@ def dwm_opay_recharge_service_provider_di_sql_task(ds):
             select 
                 service_provider_id, user_role, 'TV' service_type, order_status, amount, order_no, country_code, dt
             from opay_dw.dwd_opay_recharge_tv_record_di
-            where dt='{pt}'
+            where dt='{pt}' and create_time BETWEEN date_format(date_sub('{pt}', 1), 'yyyy-MM-dd 23') AND date_format('{pt}', 'yyyy-MM-dd 23')
             union all
             select 
                 service_provider_id, user_role, 'Betting' service_type, order_status, amount, order_no, country_code, dt
             from opay_dw.dwd_opay_recharge_betting_record_di
-            where dt='{pt}'
+            where dt='{pt}' and create_time BETWEEN date_format(date_sub('{pt}', 1), 'yyyy-MM-dd 23') AND date_format('{pt}', 'yyyy-MM-dd 23')
             union all
             select 
                 service_provider_id, user_role, 'MobileData' service_type, order_status, amount, order_no, country_code, dt
             from opay_dw.dwd_opay_recharge_mobiledata_record_di
-            where dt='{pt}'
+            where dt='{pt}' and create_time BETWEEN date_format(date_sub('{pt}', 1), 'yyyy-MM-dd 23') AND date_format('{pt}', 'yyyy-MM-dd 23')
             union all
             select 
                 service_provider_id, user_role, 'Airtime' service_type, order_status, amount, order_no, country_code, dt
             from opay_dw.dwd_opay_recharge_mobilebill_record_di
-            where dt='{pt}'
+            where dt='{pt}' and create_time BETWEEN date_format(date_sub('{pt}', 1), 'yyyy-MM-dd 23') AND date_format('{pt}', 'yyyy-MM-dd 23')
             union all
             select 
                 service_provider_id, user_role, 'Electricity' service_type, order_status, amount, order_no, country_code, dt
             from opay_dw.dwd_opay_recharge_electricity_record_di
-            where dt='{pt}'
+            where dt='{pt}' and create_time BETWEEN date_format(date_sub('{pt}', 1), 'yyyy-MM-dd 23') AND date_format('{pt}', 'yyyy-MM-dd 23')
         ) rechard_di group by country_code, dt, service_type, service_provider_id, user_role, order_status
     ) t1 
     join 

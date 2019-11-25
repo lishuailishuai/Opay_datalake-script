@@ -25,7 +25,7 @@ args = {
     'on_success_callback': on_success_callback,
 }
 
-schedule_interval="20 01 * * *"
+schedule_interval = "20 01 * * *"
 
 dag = airflow.DAG(
     'opos_source_sqoop_di',
@@ -53,6 +53,19 @@ import_data_validate = SqlSensor(
     dag=dag
 )
 
+import_order_bd_validate = SqlSensor(
+    task_id="import_order_bd_validate",
+    conn_id='mysql_pre_ptsp_db',
+    sql='''
+        select 
+        count(1)
+        from 
+        pre_ptsp_db.pre_opos_payment_order_bd_sync_status
+        where DATE_FORMAT(sync_date,"%Y-%m-%d") = '{{ ds }}' and sync_status = 1
+    ''',
+    dag=dag
+)
+
 
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
 
@@ -72,6 +85,7 @@ db_name,table_name,conn_id,prefix_name,priority_weight
 
 table_list = [
     ("pre_ptsp_db", "pre_opos_payment_order", "mysql_pre_ptsp_db", "base", 3),
+    ("pre_ptsp_db", "pre_opos_payment_order_bd", "mysql_pre_ptsp_db", "base", 3),
 ]
 
 HIVE_DB = 'opos_dw_ods'
@@ -187,7 +201,7 @@ for db_name, table_name, conn_id, prefix_name, priority_weight_nm in table_list:
             --connect "jdbc:mysql://{host}:{port}/{schema}?tinyInt1isBit=false&useUnicode=true&characterEncoding=utf8" \
             --username {username} \
             --password {password} \
-            --query 'select * from {table} where (DATE_FORMAT(create_time,"%Y-%m-%d")="{{{{ ds }}}}" OR DATE_FORMAT(modify_time,"%Y-%m-%d")="{{{{ ds }}}}") AND $CONDITIONS' \
+            --query 'select * from {table} where (DATE_FORMAT(create_time,"%Y-%m-%d")="{{{{ ds }}}}") AND $CONDITIONS' \
             --split-by order_id \
             --target-dir {ufile_path}/dt={{{{ ds }}}}/ \
             --fields-terminated-by "\\001" \
@@ -273,4 +287,4 @@ for db_name, table_name, conn_id, prefix_name, priority_weight_nm in table_list:
         dag=dag_monitor
     )
 
-    import_data_validate >> import_table >> check_table >> add_partitions
+    import_data_validate >> import_order_bd_validate >> import_table >> check_table >> add_partitions

@@ -87,12 +87,12 @@ def dwm_opay_topup_channel_di_sql_task(ds):
         select 
             out_channel_id, country_code, dt, user_role recipient_role, amount, order_no, order_status
         from opay_dw.dwd_opay_user_topup_record_di
-        where dt='{pt}'
+        where dt='{pt}' and create_time BETWEEN date_format(date_sub('{pt}', 1), 'yyyy-MM-dd 23') AND date_format('{pt}', 'yyyy-MM-dd 23')
         union all
         select 
             out_channel_id, country_code, dt, 'merchant' recipient_role, amount, order_no, order_status 
         from opay_dw.dwd_opay_merchant_topup_record_di
-        where dt='{pt}'
+        where dt='{pt}' and create_time BETWEEN date_format(date_sub('{pt}', 1), 'yyyy-MM-dd 23') AND date_format('{pt}', 'yyyy-MM-dd 23')
     ) t1
      group by country_code, dt, out_channel_id, recipient_role, order_status
     '''.format(

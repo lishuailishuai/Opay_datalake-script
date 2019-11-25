@@ -203,6 +203,15 @@ def insert_sql(pt,ds):
        AND t1.finish_time>0,t1.finish_time - t1.take_time,0) AS finish_order_dur, -- 完成做单时长（秒）
     t1.pax_num,  --乘客数
     concat(t1.serv_type,'_',t1.driver_serv_type) as serv_union_type,  --业务类型，下单类型+司机类型(serv_type+driver_serv_type)
+    falsify, --取消罚款
+    falsify_get, --取消罚款实际获得
+    falsify_driver_cancel, --司机取消罚款
+    falsify_get_driver_cancel, --司机取消罚款用户实际获得
+    wait_lng, --等待乘客上车位置经度
+    wait_lat, --等待乘客上车位置纬度
+    wait_in_radius, --是否在接驾范围内
+    wait_distance, --等待乘客上车距离
+    cancel_wait_payment_time,  --乘客取消待支付时间  
     'nal' AS country_code,
     '{pt}' AS dt
     FROM

@@ -420,6 +420,16 @@ SELECT base.order_id,
             then 1 
             else 0 
         end as is_carpool_success_and_finish, --拼车成功且订单完成
+        
+        falsify, --取消罚款
+        falsify_get, --取消罚款实际获得
+        falsify_driver_cancel, --司机取消罚款
+        falsify_get_driver_cancel, --司机取消罚款用户实际获得
+        wait_lng, --等待乘客上车位置经度
+        wait_lat, --等待乘客上车位置纬度
+        wait_in_radius, --是否在接驾范围内
+        wait_distance, --等待乘客上车距离
+        cancel_wait_payment_time,  --乘客取消待支付时间  
 
        country_code,
 
@@ -554,7 +564,16 @@ FROM
              wait_carpool,--'是否在等在拼车',
              pax_num, -- 乘客数量 
              tip,  --小费
-             concat(serv_type,'_',driver_serv_type) as serv_union_type  --业务类型，下单类型+司机类型(serv_type+driver_serv_type)
+             concat(serv_type,'_',driver_serv_type) as serv_union_type,  --业务类型，下单类型+司机类型(serv_type+driver_serv_type)
+             falsify, --取消罚款
+             falsify_get, --取消罚款实际获得
+             falsify_driver_cancel, --司机取消罚款
+             falsify_get_driver_cancel, --司机取消罚款用户实际获得
+             wait_lng, --等待乘客上车位置经度
+             wait_lat, --等待乘客上车位置纬度
+             wait_in_radius, --是否在接驾范围内
+             wait_distance, --等待乘客上车距离
+             cancel_wait_payment_time  --乘客取消待支付时间  
 
       FROM oride_dw_ods.ods_sqoop_base_data_order_df
       WHERE dt = '{pt}'
