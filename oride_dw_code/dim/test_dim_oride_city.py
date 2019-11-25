@@ -288,7 +288,7 @@ def execution_data_task_id(ds,**kwargs):
 
     """
 
-    cf=CountriesPublicFrame(ds,db_name,table_name,hdfs_path,"false","false",v_hour)
+    cf=CountriesPublicFrame(ds,db_name,table_name,hdfs_path,"true","false")
 
     #删除分区
     #cf.delete_partition()
