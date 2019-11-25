@@ -245,5 +245,3 @@ dim_opos_bd_relation_df_task >> app_opos_bonus_target_di_task
 # airflow test app_opos_bonus_target_di app_opos_bonus_target_di_task 2019-11-24 -sd /home/feng.yuan/app_opos_bonus_target_di.py
 
 
-
-
