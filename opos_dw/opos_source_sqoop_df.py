@@ -63,10 +63,6 @@ table_list = [
     ("opay_crm", "bd_city", "opos_opay_crm", "base"),
     ("opay_crm", "bd_admin_users", "opos_opay_crm", "base"),
 
-
-    # opos 红包数据
-    ("opos_cashback", "opos_scan_history", "opos_cashback", "base"),
-
 ]
 HIVE_DB = 'opos_dw_ods'
 HIVE_TABLE = 'ods_sqoop_%s_%s_df'

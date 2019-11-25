@@ -79,15 +79,18 @@ def fun_task_timeout_monitor(ds, db_name, table_name, **op_kwargs):
 
 '''
 导入数据的列表
-db_name,table_name,conn_id,prefix_name,priority_weight
+db_name,table_name,conn_id,prefix_name,priority_weight,table_id,table_timestamp
 '''
 #
 
 table_list = [
-    ("pre_ptsp_db", "pre_opos_payment_order", "mysql_pre_ptsp_db", "base", 3),
-    ("pre_ptsp_db", "pre_opos_payment_order_bd", "mysql_pre_ptsp_db", "base", 3),
+    ("pre_ptsp_db", "pre_opos_payment_order", "mysql_pre_ptsp_db", "base", 3, "order_id", "create_time"),
+    ("pre_ptsp_db", "pre_opos_payment_order_bd", "mysql_pre_ptsp_db", "base", 3, "order_id", "create_time"),
 
-    ("opos_cashback", "opos_bonus_record", "opos_cashback", "base", 3),
+    # opos 红包数据
+    ("opos_cashback", "opos_bonus_record", "opos_cashback", "base", 3, "id", "create_time"),
+    ("opos_cashback", "opos_scan_history", "opos_cashback", "base", 3, "id", "time"),
+
 ]
 
 HIVE_DB = 'opos_dw_ods'
@@ -187,7 +190,7 @@ def run_check_table(db_name, table_name, conn_id, hive_table_name, **kwargs):
 
 
 conn_conf_dict = {}
-for db_name, table_name, conn_id, prefix_name, priority_weight_nm in table_list:
+for db_name, table_name, conn_id, prefix_name, priority_weight_nm, table_id, table_timestamp in table_list:
     if conn_id not in conn_conf_dict:
         conn_conf_dict[conn_id] = BaseHook.get_connection(conn_id)
 
@@ -203,8 +206,8 @@ for db_name, table_name, conn_id, prefix_name, priority_weight_nm in table_list:
             --connect "jdbc:mysql://{host}:{port}/{schema}?tinyInt1isBit=false&useUnicode=true&characterEncoding=utf8" \
             --username {username} \
             --password {password} \
-            --query 'select * from {table} where (DATE_FORMAT(create_time,"%Y-%m-%d")="{{{{ ds }}}}") AND $CONDITIONS' \
-            --split-by order_id \
+            --query 'select * from {table} where (DATE_FORMAT({table_timestamp},"%Y-%m-%d")="{{{{ ds }}}}") AND $CONDITIONS' \
+            --split-by {table_id} \
             --target-dir {ufile_path}/dt={{{{ ds }}}}/ \
             --fields-terminated-by "\\001" \
             --lines-terminated-by "\\n" \
@@ -219,7 +222,9 @@ for db_name, table_name, conn_id, prefix_name, priority_weight_nm in table_list:
             username=conn_conf_dict[conn_id].login,
             password=conn_conf_dict[conn_id].password,
             table=table_name,
-            ufile_path=UFILE_PATH % (db_name, table_name)
+            ufile_path=UFILE_PATH % (db_name, table_name),
+            table_id=table_id,
+            table_timestamp=table_timestamp
         ),
         dag=dag,
     )
