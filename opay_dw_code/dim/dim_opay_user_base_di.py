@@ -95,98 +95,13 @@ task_timeout_monitor= PythonOperator(
 )
 
 ##----------------------------------------- 变量 ---------------------------------------##
+db_name="opay_dw"
 table_name="dim_opay_user_base_di"
 hdfs_path="ufile://opay-datalake/opay/opay_dw/"+table_name
 
-# ##---- hive operator ---##
-# fill_dim_opay_user_base_di_task = HiveOperator(
-#     task_id='fill_dim_opay_user_base_di_task',
-#     hql='''
-#     set hive.exec.dynamic.partition.mode=nonstrict;
-#     set hive.exec.parallel=true; --default false
-#
-#     alter table dim_opay_user_base_di drop partition(country_code='NG',dt='{pt}');
-#
-#     alter table dim_opay_user_base_di add partition(country_code='NG',dt='{pt}');
-#
-#     insert overwrite table dim_opay_user_base_di partition(country_code, dt)
-#     select
-#         t1.id,
-#         t1.user_id,
-#         t1.mobile,
-#         t1.business_name,
-#         t1.first_name,
-#         t1.middle_name,
-#         t1.surname,
-#         t1.kyc_level,
-#         t1.kyc_update_time,
-#         if(length(t1.bvn)=0, '-', replace(t1.bvn, '\t', '')) bvn,
-#         t1.dob bithday,
-#         t1.gender,
-#         t1.country,
-#         t1.state,
-#         t1.city,
-#         t1.address,
-#         t1.lga,
-#         t1.role,
-#         t1.referral_code,
-#         t1.referrer_code,
-#         t1.notification,
-#         if(t2.role='agent' and t2.upgrade_status='upgraded', t2.upgrade_date, '9999-01-01 00:00:00') agent_upgrade_time,
-#         t3.email,
-#         if(t3.email_verified='Y', 'authed', 'unauth') email_auth_status,
-#         t3.update_time email_auth_time,
-#         t1.create_time,
-#         t1.update_time,
-#         case t1.country
-#             when 'Nigeria' then 'NG'
-#             when 'Norway' then 'NO'
-#             when 'Ghana' then 'GH'
-#             when 'Botswana' then 'BW'
-#             when 'Ghana' then 'GH'
-#             when 'Kenya' then 'KE'
-#             when 'Malawi' then 'MW'
-#             when 'Mozambique' then 'MZ'
-#             when 'Poland' then 'PL'
-#             when 'South Africa' then 'ZA'
-#             when 'Sweden' then 'SE'
-#             when 'Tanzania' then 'TZ'
-#             when 'Uganda' then 'UG'
-#             when 'USA' then 'US'
-#             when 'Zambia' then 'ZM'
-#             when 'Zimbabwe' then 'ZW'
-#             else 'NG'
-#             end as country_code,
-#         t1.dt
-#     from  opay_dw_ods.ods_sqoop_base_user_di t1
-#     left join
-#     (
-#         select user_id, role, upgrade_type, upgrade_status, upgrade_date
-#         from opay_dw_ods.ods_sqoop_base_user_upgrade_df
-#         where dt='{pt}'
-#     ) t2 on t1.user_id = t2.user_id
-#     left join
-#     (
-#         select * from (
-#             select user_id, email, email_verified, update_time,
-#             row_number() over(partition by user_id order by update_time desc) rn
-#             from opay_dw_ods.ods_sqoop_base_user_email_di
-#         ) mail_temp where rn = 1
-#
-#     ) t3 on t1.user_id = t3.user_id
-#
-#     '''.format(
-#         pt='{{ds}}'
-#     ),
-#     schema='opay_dw',
-#     dag=dag
-# )
-# ##---- hive operator end ---##
-
 ##---- hive operator ---##
-dim_opay_user_base_di_task = HiveOperator(
-    task_id='dim_opay_user_base_di_task',
-    hql='''
+def dim_opay_user_base_di_sql_task(ds):
+    HQL='''
     set hive.exec.dynamic.partition.mode=nonstrict;
     set hive.exec.parallel=true; --default false
 
@@ -195,7 +110,7 @@ dim_opay_user_base_di_task = HiveOperator(
     alter table dim_opay_user_base_di add partition(country_code='NG',dt='{pt}');
 
     
-    insert overwrite table dim_opay_user_base_di partition(country_code, dt)
+    insert overwrite table {db}.{table} (country_code, dt)
     select 
         user_di.id,
         user_di.user_id,
@@ -292,27 +207,38 @@ dim_opay_user_base_di_task = HiveOperator(
     ) upgrade_di on user_di.user_id = upgrade_di.user_id
 
     '''.format(
-        pt='{{ds}}'
-    ),
-    schema='opay_dw',
-    dag=dag
-)
+        pt=ds,
+        table=table_name,
+        db=db_name
+    )
+    return HQL
+
 ##---- hive operator end ---##
 
-#生成_SUCCESS
-def check_success(ds,dag,**op_kwargs):
+def execution_data_task_id(ds, **kargs):
+    hive_hook = HiveCliHook()
 
-    dag_ids=dag.dag_id
+    # 读取sql
+    _sql = dim_opay_user_base_di_sql_task(ds)
 
-    msg = [
-        {"table":"{dag_name}".format(dag_name=dag_ids),"hdfs_path": "{hdfsPath}/country_code=NG/dt={pt}".format(pt=ds,hdfsPath=hdfs_path)}
-    ]
+    logging.info('Executing: %s', _sql)
 
-    TaskTouchzSuccess().set_touchz_success(msg)
+    # 执行Hive
+    hive_hook.run_cli(_sql)
 
-touchz_data_success= PythonOperator(
-    task_id='touchz_data_success',
-    python_callable=check_success,
+
+
+    # 生成_SUCCESS
+    """
+    第一个参数true: 数据目录是有country_code分区。false 没有
+    第二个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
+
+    """
+    TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "true", "true")
+
+dim_opay_user_base_di_task = PythonOperator(
+    task_id='dim_opay_user_base_di_task',
+    python_callable=execution_data_task_id,
     provide_context=True,
     dag=dag
 )
@@ -320,4 +246,3 @@ touchz_data_success= PythonOperator(
 ods_sqoop_base_user_upgrade_df_task >>dim_opay_user_base_di_task
 ods_sqoop_base_user_email_di_task>>dim_opay_user_base_di_task
 ods_sqoop_base_user_di_task >> dim_opay_user_base_di_task
-dim_opay_user_base_di_task>> touchz_data_success
