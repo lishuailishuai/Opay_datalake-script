@@ -380,7 +380,7 @@ class CountriesPublicFrame(object):
 
             v_par_str="dt='{ds}',hour='{hour}'".format(ds=self.ds,hour=self.hour)
 
-            alter_str="alter table {db}.{table_name} drop partition({v_par});\n alter table {db}.{table_name} add partition({v_par});".format(v_par=v_par_strtable_name=self.table_name)
+            alter_str="alter table {db}.{table_name} drop partition({v_par});\n alter table {db}.{table_name} add partition({v_par});".format(v_par=v_par_str,table_name=self.table_name)
 
             return alter_str
 
@@ -393,14 +393,14 @@ class CountriesPublicFrame(object):
 
                 v_par_str="country_code='{country_code}',dt='{ds}'".format(ds=self.ds,country_code=country_code_word)
 
-                alter_str=alter_str+"\n"+"alter table {db}.{table_name} drop partition({v_par});\n alter table {db}.{table_name} add partition({v_par});".format(v_par=v_par_strtable_name=self.table_name)
+                alter_str=alter_str+"\n"+"alter table {db}.{table_name} drop partition({v_par});\n alter table {db}.{table_name} add partition({v_par});".format(v_par=v_par_str,table_name=self.table_name)
 
             # 有国家分区 && 小时参数不为None
             if self.country_partition.lower()=="true" and self.hour is not None:
 
                 v_par_str="country_code='{country_code}',dt='{ds}',hour='{hour}'".format(ds=self.ds,hour=self.hour,country_code=country_code_word)
 
-                alter_str=alter_str+"\n"+"alter table {db}.{table_name} drop partition({v_par});\n alter table {db}.{table_name} add partition({v_par});".format(v_par=v_par_strtable_name=self.table_name)
+                alter_str=alter_str+"\n"+"alter table {db}.{table_name} drop partition({v_par});\n alter table {db}.{table_name} add partition({v_par});".format(v_par=v_par_str,table_name=self.table_name)
             
 
         return alter_str
