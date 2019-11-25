@@ -88,7 +88,8 @@ def app_opay_owealth_d_sql_task(ds):
                   create_time,
                   balance
            FROM opay_owealth_ods.ods_sqoop_owealth_share_acct_df
-           WHERE dt='{pt}'
+           WHERE dt='{pt}' and 
+           substr(from_unixtime(unix_timestamp(create_time, 'yyyy-MM-dd HH:mm:ss')+3600),1,10)<='{pt}'
           ),
              order_base AS
           (SELECT create_time,

@@ -11,97 +11,71 @@ import logging
 from plugins.SqoopSchemaUpdate import SqoopSchemaUpdate
 from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
 from utils.util import on_success_callback
-from airflow.sensors.sql_sensor import SqlSensor
 
 args = {
-    'owner': 'linan',
-    'start_date': datetime(2019, 10, 29),
+    'owner': 'yangmingze',
+    'start_date': datetime(2019, 11, 20),
     'depends_on_past': False,
     'retries': 1,
     'retry_delay': timedelta(minutes=5),
     'email': ['bigdata_dw@opay-inc.com'],
     'email_on_failure': True,
     'email_on_retry': False,
-    'on_success_callback': on_success_callback,
+    'on_success_callback':on_success_callback,
 }
 
-schedule_interval = "20 01 * * *"
+schedule_interval="01 03 * * *"
 
 dag = airflow.DAG(
-    'opos_source_sqoop_di',
+    'opay_source_sqoop_hf',
     schedule_interval=schedule_interval,
     concurrency=15,
     max_active_runs=1,
     default_args=args)
 
 dag_monitor = airflow.DAG(
-    'opos_source_sqoop_di_monitor',
+    'opay_source_sqoop_hf_monitor',
     schedule_interval=schedule_interval,
     default_args=args)
-
-##----------------------------------------- 数据采集前元数据校验 ---------------------------------------##
-import_data_validate = SqlSensor(
-    task_id="import_data_validate",
-    conn_id='mysql_pre_ptsp_db',
-    sql='''
-        select 
-        count(1)
-        from 
-        pre_ptsp_db.pre_opos_payment_order_sync_status
-        where DATE_FORMAT(sync_date,"%Y-%m-%d") = '{{ ds }}' and sync_status = 1
-    ''',
-    dag=dag
-)
-
-import_order_bd_validate = SqlSensor(
-    task_id="import_order_bd_validate",
-    conn_id='mysql_pre_ptsp_db',
-    sql='''
-        select 
-        count(1)
-        from 
-        pre_ptsp_db.pre_opos_payment_order_bd_sync_status
-        where DATE_FORMAT(sync_date,"%Y-%m-%d") = '{{ ds }}' and sync_status = 1
-    ''',
-    dag=dag
-)
-
 
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
 
 def fun_task_timeout_monitor(ds, db_name, table_name, **op_kwargs):
     tb = [
-        {"db": db_name, "table": table_name, "partition": "dt={pt}".format(pt=ds), "timeout": "7200"}
+        {"db": db_name, "table":table_name, "partition": "dt={pt}".format(pt=ds), "timeout": "7200"}
     ]
 
     TaskTimeoutMonitor().set_task_monitor(tb)
 
+# 忽略数据量检查的table
+IGNORED_TABLE_LIST = [
+    'user_limit',
+    'channel_router_rule',
+]
 
 '''
 导入数据的列表
-db_name,table_name,conn_id,prefix_name,priority_weight,table_id,table_timestamp
+db_name,table_name,conn_id,prefix_name,priority_weight
 '''
 #
 
 table_list = [
-    ("pre_ptsp_db", "pre_opos_payment_order", "mysql_pre_ptsp_db", "base", 3, "order_id", "create_time"),
-    ("pre_ptsp_db", "pre_opos_payment_order_bd", "mysql_pre_ptsp_db", "base", 3, "order_id", "create_time"),
-
-    # opos 红包数据
-    ("opos_cashback", "opos_bonus_record", "opos_cashback", "base", 3, "id", "create_time"),
-    ("opos_cashback", "opos_scan_history", "opos_cashback", "base", 3, "id", "time"),
-
+    ("opay_user","user", "opay_db_3321", "base",3),
+    ("opay_transaction","mobiledata_topup_record", "opay_db_3316", "base",3),
+    ("opay_transaction","airtime_topup_record", "opay_db_3316", "base",3),
 ]
 
-HIVE_DB = 'opos_dw_ods'
-HIVE_TABLE = 'ods_sqoop_%s_%s_di'
-UFILE_PATH = 'ufile://opay-datalake/opos_dw_sqoop_di/%s/%s'
+
+HIVE_DB = 'opay_dw_ods'
+HIVE_TABLE = 'ods_sqoop_%s_%s_hf'
+UFILE_PATH = 'ufile://opay-datalake/opay_dw_sqoop_hf/%s/%s'
 ODS_CREATE_TABLE_SQL = '''
     CREATE EXTERNAL TABLE IF NOT EXISTS {db_name}.`{table_name}`(
         {columns}
     )
     PARTITIONED BY (
-      `dt` string)
+      `dt` string,
+      `hour` string)
     ROW FORMAT SERDE
       'org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe'
     STORED AS INPUTFORMAT
@@ -110,6 +84,9 @@ ODS_CREATE_TABLE_SQL = '''
       'org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat'
     LOCATION
       '{ufile_path}';
+    MSCK REPAIR TABLE {db_name}.`{table_name}`;
+    -- delete opay_dw table
+    --DROP TABLE IF EXISTS {db_name}.`{table_name}`;
 '''
 
 # 需要验证的核心业务表
@@ -166,7 +143,7 @@ def run_check_table(db_name, table_name, conn_id, hive_table_name, **kwargs):
                 col_name = '_dt'
             else:
                 col_name = result[0]
-            if result[1] == 'timestamp' or result[1] == 'varchar' or result[1] == 'char' or result[1] == 'text' or \
+            if result[1] == 'timestamp' or result[1] == 'varchar' or result[1] == 'char' or result[1] == 'text' or result[1] == 'longtext' or \
                     result[1] == 'datetime':
                 data_type = 'string'
             elif result[1] == 'decimal':
@@ -190,11 +167,15 @@ def run_check_table(db_name, table_name, conn_id, hive_table_name, **kwargs):
 
 
 conn_conf_dict = {}
-for db_name, table_name, conn_id, prefix_name, priority_weight_nm, table_id, table_timestamp in table_list:
+for db_name, table_name, conn_id, prefix_name,priority_weight_nm in table_list:
     if conn_id not in conn_conf_dict:
         conn_conf_dict[conn_id] = BaseHook.get_connection(conn_id)
 
     hive_table_name = HIVE_TABLE % (prefix_name, table_name)
+
+    query = 'select * from {table} where (FROM_UNIXTIME(create_time, "%Y-%m-%d %H")="{{{{ execution_date.strftime("%Y-%m-%d %H") }}}}" OR FROM_UNIXTIME(UNIX_TIMESTAMP(update_time), "%Y-%m-%d %H")="{{{{ execution_date.strftime("%Y-%m-%d %H") }}}}") AND $CONDITIONS'.format(table=table_name)
+
+
     # sqoop import
     import_table = BashOperator(
         task_id='import_table_{}'.format(hive_table_name),
@@ -202,19 +183,18 @@ for db_name, table_name, conn_id, prefix_name, priority_weight_nm, table_id, tab
         bash_command='''
             #!/usr/bin/env bash
             sqoop import "-Dorg.apache.sqoop.splitter.allow_text_splitter=true" \
-            -D mapred.job.queue.name=root.collects \
+            -D mapred.job.queue.name=root.opay_collects \
             --connect "jdbc:mysql://{host}:{port}/{schema}?tinyInt1isBit=false&useUnicode=true&characterEncoding=utf8" \
             --username {username} \
             --password {password} \
-            --query 'select * from {table} where (DATE_FORMAT({table_timestamp},"%Y-%m-%d")="{{{{ ds }}}}") AND $CONDITIONS' \
-            --split-by {table_id} \
-            --target-dir {ufile_path}/dt={{{{ ds }}}}/ \
+            --table {table} \
+            --target-dir {ufile_path}/dt={{{{ ds }}}}/hour={{{{ execution_date.strftime("%H") }}}} \
             --fields-terminated-by "\\001" \
             --lines-terminated-by "\\n" \
             --hive-delims-replacement " " \
             --delete-target-dir \
             --compression-codec=snappy \
-            -m 12
+            -m {m}
         '''.format(
             host=conn_conf_dict[conn_id].host,
             port=conn_conf_dict[conn_id].port,
@@ -223,9 +203,9 @@ for db_name, table_name, conn_id, prefix_name, priority_weight_nm, table_id, tab
             password=conn_conf_dict[conn_id].password,
             table=table_name,
             ufile_path=UFILE_PATH % (db_name, table_name),
-            table_id=table_id,
-            table_timestamp=table_timestamp
-        ),
+            query=query,
+            m=18 if table_name=='channel_response_code' else 20
+    ),
         dag=dag,
     )
 
@@ -248,7 +228,7 @@ for db_name, table_name, conn_id, prefix_name, priority_weight_nm, table_id, tab
         task_id='add_partitions_{}'.format(hive_table_name),
         priority_weight=priority_weight_nm,
         hql='''
-                ALTER TABLE {table} ADD IF NOT EXISTS PARTITION (dt = '{{{{ ds }}}}')
+                ALTER TABLE {table} ADD IF NOT EXISTS PARTITION (dt = '{{{{ ds }}}}',hour = '{{{{ execution_date.strftime("%H") }}}}')
             '''.format(table=hive_table_name),
         schema=HIVE_DB,
         dag=dag)
@@ -268,23 +248,25 @@ for db_name, table_name, conn_id, prefix_name, priority_weight_nm, table_id, tab
         dag=dag
     )
 
-    # 数据量监控
-    volume_monitoring = PythonOperator(
-        task_id='volume_monitorin_{}'.format(hive_table_name),
-        python_callable=data_volume_monitoring,
-        provide_context=True,
-        op_kwargs={
-            'db_name': HIVE_DB,
-            'table_name': hive_table_name,
-        },
-        dag=dag
-    )
-    add_partitions >> volume_monitoring >> validate_all_data
+    if table_name in IGNORED_TABLE_LIST:
+        add_partitions >> validate_all_data
+    else:
+        # 数据量监控
+        volume_monitoring = PythonOperator(
+            task_id='volume_monitorin_{}'.format(hive_table_name),
+            python_callable=data_volume_monitoring,
+            provide_context=True,
+            op_kwargs={
+                'db_name': HIVE_DB,
+                'table_name': hive_table_name,
+            },
+            dag=dag
+        )
+        add_partitions >> volume_monitoring >> validate_all_data
 
     # 超时监控
-    task_timeout_monitor = PythonOperator(
+    task_timeout_monitor= PythonOperator(
         task_id='task_timeout_monitor_{}'.format(hive_table_name),
-        priority_weight=priority_weight_nm,
         python_callable=fun_task_timeout_monitor,
         provide_context=True,
         op_kwargs={
@@ -294,4 +276,4 @@ for db_name, table_name, conn_id, prefix_name, priority_weight_nm, table_id, tab
         dag=dag_monitor
     )
 
-    import_data_validate >> import_order_bd_validate >> import_table >> check_table >> add_partitions
+    import_table >> check_table >> add_partitions

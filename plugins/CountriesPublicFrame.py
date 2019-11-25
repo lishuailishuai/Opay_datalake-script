@@ -240,11 +240,17 @@ class CountriesPublicFrame(object):
 
     def delete_partition(self):
 
-        #object_task=self.delete_exist_partition()
+        """
+            删除分区调用函数
+        """
 
         self.countries_data_dir(self.delete_exist_partition)
 
     def touchz_success(self):
+
+        """
+            生成 Success 调用函数
+        """
 
         # 没有国家分区并且每个目录必须有数据才能生成 Success
         if self.country_partition.lower()=="false" and self.file_type.lower()=="true":
@@ -355,4 +361,50 @@ class CountriesPublicFrame(object):
 
             sys.exit(1)
 
+    # alter 语句
+    def alter_partition(self):   
+
+        alter_str=""
+
+        # 没有国家分区 && 小时参数为None
+        if self.country_partition.lower()=="false" and self.hour is None:
+
+            v_par_str="dt='{ds}'".format(self.ds)
+
+            alter_str="alter table {db}.{table_name} drop partition({v_par});\n alter table {db}.{table_name} add partition({v_par});".format(v_par=v_par_str,table_name=self.table_name,db=self.db_name)
+
+            return alter_str
             
+        # 有国家分区 && 小时参数不为None
+        if self.country_partition.lower()=="false" and self.hour is not None:
+
+            v_par_str="dt='{ds}',hour='{hour}'".format(ds=self.ds,hour=self.hour)
+
+            alter_str="alter table {db}.{table_name} drop partition({v_par});\n alter table {db}.{table_name} add partition({v_par});".format(v_par=v_par_str,table_name=self.table_name,db=self.db_name)
+
+            return alter_str
+
+        country_code_list=self.get_country_code()
+
+        for country_code_word in country_code_list.split(","):
+
+            # 有国家分区 && 小时参数为None
+            if self.country_partition.lower()=="true" and self.hour is None:
+
+                v_par_str="country_code='{country_code}',dt='{ds}'".format(ds=self.ds,country_code=country_code_word)
+
+                alter_str=alter_str+"\n"+"alter table {db}.{table_name} drop partition({v_par});\n alter table {db}.{table_name} add partition({v_par});".format(v_par=v_par_str,table_name=self.table_name,db=self.db_name)
+
+            # 有国家分区 && 小时参数不为None
+            if self.country_partition.lower()=="true" and self.hour is not None:
+
+                v_par_str="country_code='{country_code}',dt='{ds}',hour='{hour}'".format(ds=self.ds,hour=self.hour,country_code=country_code_word)
+
+                alter_str=alter_str+"\n"+"alter table {db}.{table_name} drop partition({v_par});\n alter table {db}.{table_name} add partition({v_par});".format(v_par=v_par_str,table_name=self.table_name,db=self.db_name)
+            
+
+        return alter_str
+
+
+
+

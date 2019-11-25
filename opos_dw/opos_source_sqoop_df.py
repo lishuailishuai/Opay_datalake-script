@@ -63,8 +63,6 @@ table_list = [
     ("opay_crm", "bd_city", "opos_opay_crm", "base"),
     ("opay_crm", "bd_admin_users", "opos_opay_crm", "base"),
 
-    # opay订单数据
-
 ]
 HIVE_DB = 'opos_dw_ods'
 HIVE_TABLE = 'ods_sqoop_%s_%s_df'
