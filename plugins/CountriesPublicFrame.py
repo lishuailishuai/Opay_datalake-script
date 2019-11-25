@@ -362,40 +362,47 @@ class CountriesPublicFrame(object):
             sys.exit(1)
 
     #
-    def alter_partition(self):
-
-        # alter table table_name drop partition(country_code)
-        # alter table table_name add partition()
+    def alter_partition(self):   
 
         # 没有国家分区 && 小时参数为None
         if self.country_partition.lower()=="false" and self.hour is None:
 
-            v_par="dt='{ds}'".format(self.ds)
+            v_par_str="dt='{ds}'".format(self.ds)
 
-            print(v_par)
+            alter_str="""
+            alter table table_name drop partition({v_par});\nalter table table_name add partition({v_par});
+            """.format(v_par=v_par_str)
 
-
+            return alter_str
+            
+        # 有国家分区 && 小时参数不为None
         if self.country_partition.lower()=="false" and self.hour is not None:
-            v_par="dt='{ds}',hour='{hour}'".format(ds=self.ds,hour=self.hour)
+            v_par_str="dt='{ds}',hour='{hour}'".format(ds=self.ds,hour=self.hour)
 
-            print(v_par)
+            alter_str="alter table table_name drop partition({v_par});\nalter table table_name add partition({v_par});".format(v_par=v_par_str)
+
+            return alter_str
 
         country_code_list=self.get_country_code()
 
         for country_code_word in country_code_list.split(","):
 
+            # 有国家分区 && 小时参数为None
             if self.country_partition.lower()=="true" and self.hour is None:
 
-                v_par="country_code='{country_code}',dt='{ds}'".format(ds=self.ds,country_code=country_code_word)
+                v_par_str="country_code='{country_code}',dt='{ds}'".format(ds=self.ds,country_code=country_code_word)
 
+                alter_str=alter_str+"\n"+"alter table table_name drop partition({v_par});\nalter table table_name add partition({v_par});".format(v_par=v_par_str)
+
+            # 有国家分区 && 小时参数不为None
             if self.country_partition.lower()=="true" and self.hour is not None:
 
-                v_par="country_code='{country_code}',dt='{ds}',hour='{hour}'".format(ds=self.ds,hour=self.hour,country_code=country_code_word)
+                v_par_str="country_code='{country_code}',dt='{ds}',hour='{hour}'".format(ds=self.ds,hour=self.hour,country_code=country_code_word)
 
-            print(v_par)
+                alter_str=alter_str+"\n"+"alter table table_name drop partition({v_par});\nalter table table_name add partition({v_par});".format(v_par=v_par_str)
             
 
-
+        return alter_str
 
 
 

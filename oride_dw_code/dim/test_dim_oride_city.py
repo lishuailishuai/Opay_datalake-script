@@ -318,7 +318,7 @@ def execution_data_task_id(ds,**kwargs):
     #生产success
     #cf.touchz_success()
 
-    cf.alter_partition()
+    print(cf.alter_partition())
     
 test_dim_oride_city_task= PythonOperator(
     task_id='test_dim_oride_city_task',
