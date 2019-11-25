@@ -125,7 +125,7 @@ def dwd_oride_driver_accept_order_click_detail_di_sql_task(ds):
                ,event_name --事件类型
         FROM oride_dw.dwd_oride_client_event_detail_hi
         WHERE dt='{pt}' 
-        AND event_name ='accept_order_click'  
+        AND event_name in('accept_order_click','put_the_bill_click') 
         UNION ALL
         SELECT  user_id                                    AS driver_id 
                ,order_id 
@@ -142,7 +142,7 @@ def dwd_oride_driver_accept_order_click_detail_di_sql_task(ds):
         (split(substr(get_json_object(event_value, '$.order_ids'),2,length(get_json_object(event_value, '$.order_ids'))-2),',') 
         ) order_ids AS order_id
         WHERE dt='{pt}' 
-        AND event_name ='accept_order_click'  
+        AND event_name in('accept_order_click','put_the_bill_click')  
     ) t ;
 
 '''.format(
