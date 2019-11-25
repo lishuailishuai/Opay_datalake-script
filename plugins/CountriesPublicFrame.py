@@ -364,6 +364,8 @@ class CountriesPublicFrame(object):
     #
     def alter_partition(self):   
 
+        alter_str=""
+
         # 没有国家分区 && 小时参数为None
         if self.country_partition.lower()=="false" and self.hour is None:
 
