@@ -186,7 +186,7 @@ def execution_data_task_id(ds,**kwargs):
     cf.delete_partition()
 
     #拼接SQL
-    _sql="\n"+cf.alter_partition()+"\n"+test_dim_oride_city_sql_task(ds)
+    _sql="\n"+cf.alter_partition()+"\n"+dwd_oride_driver_fault_records_df_sql_task(ds)
 
     logging.info('Executing: %s',_sql)
 
