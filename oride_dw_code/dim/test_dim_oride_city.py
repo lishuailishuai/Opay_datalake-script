@@ -86,7 +86,7 @@ hdfs_path="ufile://opay-datalake/oride/oride_dw/"+table_name
 
 ##----------------------------------------- 脚本 ---------------------------------------## 
 
-def test_dim_oride_city_sql_task(ds):
+def test_dim_oride_city_sql_task(ds,execution_date):
 
     HQL='''
     set hive.exec.parallel=true;
@@ -189,7 +189,7 @@ on lower(cit.city_name)=lower(weather.city)
 '''.format(
         pt=ds,
         #now_day='{{macros.ds_add(ds, +1)}}',
-        now_hour=airflow.execution_date.strftime("%H"),
+        now_hour=execution_date.strftime("%H"),
         now_day=airflow.macros.ds_add(ds, +1),
         table=table_name,
         db=db_name
