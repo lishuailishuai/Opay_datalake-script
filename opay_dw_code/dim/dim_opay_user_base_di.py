@@ -100,8 +100,9 @@ table_name="dim_opay_user_base_di"
 hdfs_path="ufile://opay-datalake/opay/opay_dw/"+table_name
 
 ##---- hive operator ---##
-def dim_opay_user_base_di_sql_task(ds):
-    HQL='''
+dim_opay_user_base_di_task = HiveOperator(
+    task_id='dim_opay_user_base_di_task',
+    hql='''
     set hive.exec.dynamic.partition.mode=nonstrict;
     set hive.exec.parallel=true; --default false
 
@@ -110,7 +111,7 @@ def dim_opay_user_base_di_sql_task(ds):
     alter table dim_opay_user_base_di add partition(country_code='NG',dt='{pt}');
 
     
-    insert overwrite table {db}.{table} (country_code, dt)
+    insert overwrite table dim_opay_user_base_di partition(country_code, dt)
     select 
         user_di.id,
         user_di.user_id,
@@ -207,38 +208,27 @@ def dim_opay_user_base_di_sql_task(ds):
     ) upgrade_di on user_di.user_id = upgrade_di.user_id
 
     '''.format(
-        pt=ds,
-        table=table_name,
-        db=db_name
-    )
-    return HQL
-
+        pt='{{ds}}'
+    ),
+    schema='opay_dw',
+    dag=dag
+)
 ##---- hive operator end ---##
 
-def execution_data_task_id(ds, **kargs):
-    hive_hook = HiveCliHook()
+#生成_SUCCESS
+def check_success(ds,dag,**op_kwargs):
 
-    # 读取sql
-    _sql = dim_opay_user_base_di_sql_task(ds)
+    dag_ids=dag.dag_id
 
-    logging.info('Executing: %s', _sql)
+    msg = [
+        {"table":"{dag_name}".format(dag_name=dag_ids),"hdfs_path": "{hdfsPath}/country_code=NG/dt={pt}".format(pt=ds,hdfsPath=hdfs_path)}
+    ]
 
-    # 执行Hive
-    hive_hook.run_cli(_sql)
+    TaskTouchzSuccess().set_touchz_success(msg)
 
-
-
-    # 生成_SUCCESS
-    """
-    第一个参数true: 数据目录是有country_code分区。false 没有
-    第二个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
-
-    """
-    TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "true", "true")
-
-dim_opay_user_base_di_task = PythonOperator(
-    task_id='dim_opay_user_base_di_task',
-    python_callable=execution_data_task_id,
+touchz_data_success= PythonOperator(
+    task_id='touchz_data_success',
+    python_callable=check_success,
     provide_context=True,
     dag=dag
 )
@@ -246,3 +236,4 @@ dim_opay_user_base_di_task = PythonOperator(
 ods_sqoop_base_user_upgrade_df_task >>dim_opay_user_base_di_task
 ods_sqoop_base_user_email_di_task>>dim_opay_user_base_di_task
 ods_sqoop_base_user_di_task >> dim_opay_user_base_di_task
+dim_opay_user_base_di_task>> touchz_data_success
