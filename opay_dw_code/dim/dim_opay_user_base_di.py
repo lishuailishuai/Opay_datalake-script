@@ -105,11 +105,6 @@ def dim_opay_user_base_di_sql_task(ds):
     set hive.exec.dynamic.partition.mode=nonstrict;
     set hive.exec.parallel=true; --default false
 
-    alter table dim_opay_user_base_di drop partition(country_code='NG',dt='{pt}');
-
-    alter table dim_opay_user_base_di add partition(country_code='NG',dt='{pt}');
-
-    
     insert overwrite table {db}.{table} (country_code, dt)
     select 
         user_di.id,
