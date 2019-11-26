@@ -189,7 +189,7 @@ on lower(cit.city_name)=lower(weather.city)
 '''.format(
         pt=ds,
         #now_day='{{macros.ds_add(ds, +1)}}',
-        now_hour=execution_date.strftime("%H"),
+        now_hour=airflow.execution_date.strftime("%H"),
         now_day=airflow.macros.ds_add(ds, +1),
         table=table_name,
         db=db_name
