@@ -30,7 +30,7 @@ schedule_interval="20 01 * * *"
 dag = airflow.DAG(
     'opay_source_sqoop_di',
     schedule_interval=schedule_interval,
-    concurrency=15,
+    concurrency=20,
     max_active_runs=1,
     default_args=args)
 

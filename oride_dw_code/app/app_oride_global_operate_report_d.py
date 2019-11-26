@@ -178,7 +178,7 @@ driver_data_null = """
            null as td_online_driver_num,  --当日在线司机数（包含同时呼叫）
            null as td_request_driver_num_inSimulRing, --当日接单司机数（包含同时呼叫）
            null as td_finish_order_driver_num_inSimulRing,  --当日完单司机数（包含同时呼叫）
-           null as td_push_accpet_show_driver_num, --被推送骑手数
+           null as td_succ_broadcast_driver_num, --被推送骑手数
            null as finish_driver_online_dur,  --当日完单司机在线时长
            null as driver_billing_dur, --当日司机计费时长
            null as driver_pushed_order_cnt  --司机被推送订单数
@@ -321,7 +321,7 @@ select nvl(country_code,'-10000') as country_code,
        td_online_driver_num,  --当日在线司机数（包含同时呼叫）
        td_request_driver_num_inSimulRing, --当日接单司机数（包含同时呼叫）
        td_finish_order_driver_num_inSimulRing,  --当日完单司机数（包含同时呼叫）
-       td_push_accpet_show_driver_num, --被推送骑手数
+       td_succ_broadcast_driver_num, --被推送骑手数
        finish_driver_online_dur,  --当日完单司机在线时长
        driver_billing_dur, --当日司机计费时长
        driver_pushed_order_cnt,  --司机被推送订单数,之前统计偏小  
@@ -336,7 +336,7 @@ from(select nvl(country_code,-999) as country_code,
        sum(td_online_driver_num) as td_online_driver_num,  --当日在线司机数（包含同时呼叫）
        sum(td_request_driver_num) as td_request_driver_num_inSimulRing, --当日接单司机数（包含同时呼叫）
        sum(td_finish_order_driver_num) as td_finish_order_driver_num_inSimulRing,  --当日完单司机数（包含同时呼叫）
-       sum(td_accpet_show_driver_num) as td_push_accpet_show_driver_num, --被推送骑手数
+       sum(td_succ_broadcast_driver_num) as td_succ_broadcast_driver_num, --被成功播单司机数  自11.24号从show节点切为push节点
        sum(finish_driver_online_dur) as finish_driver_online_dur,  --当日完单司机在线时长
        sum(driver_billing_dur) as driver_billing_dur, --当日司机计费时长[！！！不准确]
        sum(driver_pushed_order_cnt) as driver_pushed_order_cnt  --司机被推送订单数       
@@ -511,7 +511,7 @@ SELECT nvl(city_id,-10000) as city_id,
        sum(td_online_driver_num) as td_online_driver_num,  --当日在线司机数（包含同时呼叫）
        sum(td_request_driver_num_inSimulRing) as td_request_driver_num_inSimulRing, --当日接单司机数（包含同时呼叫）
        sum(td_finish_order_driver_num_inSimulRing) as td_finish_order_driver_num_inSimulRing,  --当日完单司机数（包含同时呼叫）
-       sum(td_push_accpet_show_driver_num) as td_push_accpet_show_driver_num, --被推送骑手数 
+       sum(td_succ_broadcast_driver_num) as td_succ_broadcast_driver_num, --被推送骑手数 
        sum(finish_driver_online_dur) as finish_driver_online_dur,  --当日完单司机在线时长
        sum(driver_billing_dur) as driver_billing_dur, --当日司机计费时长
        sum(driver_pushed_order_cnt) as driver_pushed_order_cnt,  --司机被推送订单数

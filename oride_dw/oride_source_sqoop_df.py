@@ -101,7 +101,7 @@ table_list = [
     ("oride_data", "data_activity", "sqoop_db", "base",1),
     ("oride_data", "data_agenter_motorbike", "sqoop_db", "base",1),
     ("oride_data", "data_billboard_config", "sqoop_db", "base",1),
-    #("oride_data", "data_coupon_template", "sqoop_db", "base",1),
+    ("oride_data", "data_driver_fault_records", "sqoop_db", "base",1),
     ("oride_data", "data_device", "sqoop_db", "base",1),
     ("oride_data", "data_driver_balance_records", "sqoop_db", "base",1),
     ("oride_data", "data_driver_discount", "sqoop_db", "base",1),
