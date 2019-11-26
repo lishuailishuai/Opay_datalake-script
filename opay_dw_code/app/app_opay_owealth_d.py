@@ -273,17 +273,17 @@ def send_owealth_report_email(ds, **kwargs):
                             <!--汇总数据-->
 
                             <th>累计总额</th>
-                            <th>手动申购金额</th>
+                            <th>总申购金额</th>
                             <th>赎回金额</th>
 
                             <!--customer数据-->
                             <th>累计总额</th>
-                            <th>手动申购金额</th>
+                            <th>总申购金额</th>
                             <th>赎回金额</th>
 
                             <!--agent数据-->
                             <th>累计总额</th>
-                            <th>手动申购金额</th>
+                            <th>总申购金额</th>
                             <th>赎回金额</th>
 
 
