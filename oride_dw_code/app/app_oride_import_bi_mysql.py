@@ -30,7 +30,7 @@ dag = airflow.DAG(
     schedule_interval="30 05 * * *",
     max_active_runs=1,
     default_args=args,
-    concurrency=8
+    concurrency=20
 )
 
 sleep_time = BashOperator(
