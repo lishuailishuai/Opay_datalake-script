@@ -150,6 +150,15 @@ def dim_opos_bd_relation_df_sql_task(ds):
     --02.取出所有商户信息，关联bd
     insert overwrite table opos_dw.dim_opos_bd_relation_df partition(country_code,dt)
     select 
+    s.id,
+    s.opay_id as opay_id,
+    s.shop_name as shop_name,
+    s.opay_account as opay_account,
+    
+    s.city_id as city_code,
+    s.name as city_name,
+    s.country,
+    
     b.hcm_id,
     b.hcm_name,
     b.cm_id,
@@ -160,22 +169,21 @@ def dim_opos_bd_relation_df_sql_task(ds):
     b.bdm_name,
     b.bd_id,
     b.bd_name,
-
-    s.id as shop_id,
-    s.opay_id as opay_id,
-    s.shop_name as shop_name,
-    s.opay_account as opay_account,
-
-    s.city_id as city_code,
-    s.name as city_name,
+    
+    s.contact_name,
+    s.contact_phone,
+    s.cate_id,
+    s.status,
+    substr(s.created_at,0,10) as created_at,
+    
     'nal' as country_code,
     '{pt}' as dt
     from 
     --取出所有商铺，以商铺为主键，先关联地市，后关联bd信息表
     (
-      select shop.id,shop.shop_name,shop.bd_id,shop.opay_id,shop.opay_account,shop.city_id,city.country,city.name 
+      select shop.*,city.country,city.name 
       from 
-      (select id,shop_name,bd_id,opay_id,opay_account,city_id from opos_dw_ods.ods_sqoop_base_bd_shop_df where dt = '{pt}') as shop 
+      (select id,shop_name,bd_id,opay_id,opay_account,city_id,contact_name,contact_phone,cate_id,status,created_at from opos_dw_ods.ods_sqoop_base_bd_shop_df where dt = '{pt}') as shop 
       left join 
       (select id,name,country from opos_dw_ods.ods_sqoop_base_bd_city_df where dt = '{pt}') as city 
       on 
