@@ -180,7 +180,7 @@ FROM
               count(1) counts
       FROM oride_dw_ods.ods_sqoop_base_weather_per_10min_df
       WHERE dt = '{pt}'
-        AND daliy = '{pt}'
+        AND daliy = '{now_day}'
       GROUP BY city,
                weather ) t ) t
 WHERE t.row_num = 1) weather
@@ -188,8 +188,9 @@ on lower(cit.city_name)=lower(weather.city)
 
 '''.format(
         pt=ds,
-        now_day='{{macros.ds_add(ds, +1)}}',
+        #now_day='{{macros.ds_add(ds, +1)}}',
         now_hour='{{ execution_date.strftime("%H") }}',
+        now_day=airflow.macros.ds_add(ds, +1),
         table=table_name,
         db=db_name
         )
