@@ -33,7 +33,7 @@ args = {
     'on_success_callback':on_success_callback,
 }
 
-schedule_interval="55 07 * * *"
+schedule_interval="05 08 * * *"
 
 dag = airflow.DAG(
     'obus_source_sqoop',
