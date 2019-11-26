@@ -109,7 +109,7 @@ def dim_opay_user_base_di_sql_task(ds):
     alter table {db}.{table} add partition(country_code='NG',dt='{pt}');
 
     
-    insert overwrite table {db}.{table} (country_code, dt)
+    insert overwrite table {db}.{table} partition(country_code, dt)
     select 
         user_di.id,
         user_di.user_id,
@@ -180,7 +180,7 @@ def dim_opay_user_base_di_sql_task(ds):
             select 
                 user_id
             from opay_dw_ods.ods_sqoop_base_user_upgrade_df
-            where dt = '{pt}' and (date_format(create_time, 'yyyy-MM-dd') = {pt} or date_format(update_time, 'yyyy-MM-dd') = {pt})
+            where dt = '{pt}' and (date_format(create_time, 'yyyy-MM-dd') = {pt} or date_format(update_time, 'yyyy-MM-dd') = '{pt}')
         ) t1
         join
         (
@@ -202,7 +202,7 @@ def dim_opay_user_base_di_sql_task(ds):
          select 
             user_id, role, upgrade_type, upgrade_status, upgrade_date
         from opay_dw_ods.ods_sqoop_base_user_upgrade_df
-        where dt = '{pt}' and (date_format(create_time, 'yyyy-MM-dd') = {pt} or date_format(update_time, 'yyyy-MM-dd') = {pt})
+        where dt = '{pt}' and (date_format(create_time, 'yyyy-MM-dd') = '{pt}' or date_format(update_time, 'yyyy-MM-dd') = '{pt}')
     ) upgrade_di on user_di.user_id = upgrade_di.user_id
 
     '''.format(
