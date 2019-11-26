@@ -292,7 +292,7 @@ def get_product_rows(ds, all_completed_num_nobeckon, product_id):
                  nvl(t1.finished_users,0) as finished_users,--当日完单乘客数
                  nvl(if(product_id=3,t1.new_user_ord_cnt,t1.first_finished_users),0) as passenger_indictor_2, --1,2当日首次完单乘客数;3当日注册乘客下单数
                  nvl(t1.new_user_finished_cnt,0) as new_user_finished_cnt, --当日新注册乘客完单数
-                 if(product_id=3,nvl(round(t1.pax_num/t1.finish_order_cnt,0),0),0) as passenger_indictor_4,
+                 if(product_id=3,nvl(round(t1.pax_num/t1.finish_order_cnt,1),0),0) as passenger_indictor_4,
                  concat(cast(nvl(round(t1.online_paid_users*100/t1.paid_users,1),0) AS string),'%') AS online_paid_user_rate, --当日线上支付乘客占比
                  nvl(t1.td_audit_finish_driver_num,0) as td_audit_finish_driver_num, --当日审核通过司机数
                  nvl(t1.td_online_driver_num,0) as td_online_driver_num, --当日在线司机数
@@ -305,7 +305,7 @@ def get_product_rows(ds, all_completed_num_nobeckon, product_id):
                  nvl(round(t1.finish_order_cnt_inSimulRing/t1.finish_driver_online_dur*3600,1),0) AS TPH, --分子完单量用（包含同时呼叫的）
                  '-' as IPH,
                  --nvl(round(t1.iph_fenzi_inSimulRing*3600/t1.finish_driver_online_dur,1),0) AS IPH, --分子（包含同时呼叫）
-                 if(t1.finish_order_cnt>=10000,concat(cast(nvl(round(t1.bad_feedback_finish_ord_cnt*10000/t1.finish_order_cnt,0),0) AS string),'‱'),'-') as bad_feedback_finish_rate, --万单完单差评率
+                 if(t1.finish_order_cnt>=10000,concat(cast(nvl(cast(round(t1.bad_feedback_finish_ord_cnt*10000/t1.finish_order_cnt,0) as bigint),0) AS string),'‱'),'-') as bad_feedback_finish_rate, --万单完单差评率
                  nvl(cast(round(t1.finish_take_order_dur/t1.finish_order_cnt,0) as bigint),0) AS avg_take_order_dur,--平均应答时长
                  nvl(cast(round(t1.finish_pick_up_dur/t1.finish_order_cnt,0) as bigint),0) AS avg_pick_up_dur, --平均接驾时长
                  nvl(cast(round(t1.billing_order_dur/t1.finish_order_cnt,0) as bigint),0) AS avg_billing_order_dur,--平均计费时长
