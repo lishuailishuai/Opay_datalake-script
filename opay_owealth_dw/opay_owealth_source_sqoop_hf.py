@@ -14,7 +14,7 @@ from utils.util import on_success_callback
 
 args = {
     'owner': 'yangmingze',
-    'start_date': datetime(2019, 11, 20),
+    'start_date': datetime(2019, 11, 24),
     'depends_on_past': False,
     'retries': 1,
     'retry_delay': timedelta(minutes=5),
@@ -24,7 +24,7 @@ args = {
     'on_success_callback':on_success_callback,
 }
 
-schedule_interval="01 03 * * *"
+schedule_interval="07 05 * * *"
 
 dag = airflow.DAG(
     'opay_owealth_source_sqoop_hf',
@@ -188,7 +188,7 @@ for db_name, table_name, conn_id, prefix_name,priority_weight_nm in table_list:
             --username {username} \
             --password {password} \
             --table {table} \
-            --target-dir {ufile_path}/dt={{{{ ds }}}}/hour={{{{ execution_date.strftime("%H") }}}} \
+            --target-dir {ufile_path}/dt={{{{ execution_date.strftime("%Y-%m-%d") }}}}/hour={{{{ execution_date.strftime("%H") }}}} \
             --fields-terminated-by "\\001" \
             --lines-terminated-by "\\n" \
             --hive-delims-replacement " " \

@@ -86,7 +86,7 @@ hdfs_path="ufile://opay-datalake/oride/oride_dw/"+table_name
 
 ##----------------------------------------- 脚本 ---------------------------------------## 
 
-def test_dim_oride_city_sql_task(ds):
+def test_dim_oride_city_sql_task(ds,execution_date):
 
     HQL='''
     set hive.exec.parallel=true;
@@ -179,8 +179,8 @@ FROM
               weather,
               count(1) counts
       FROM oride_dw_ods.ods_sqoop_base_weather_per_10min_df
-      WHERE dt = '{pt}'
-        AND daliy = '{pt}'
+      WHERE dt = '{now_hour}'
+        AND daliy = '{now_day}'
       GROUP BY city,
                weather ) t ) t
 WHERE t.row_num = 1) weather
@@ -188,8 +188,9 @@ on lower(cit.city_name)=lower(weather.city)
 
 '''.format(
         pt=ds,
-        now_day='{{macros.ds_add(ds, +1)}}',
-        now_hour='{{ execution_date.strftime("%H") }}',
+        #now_day='{{macros.ds_add(ds, +1)}}',
+        now_hour=execution_date.strftime("%H"),
+        now_day=airflow.macros.ds_add(ds, +1),
         table=table_name,
         db=db_name
         )
@@ -298,7 +299,7 @@ def execution_data_task_id(ds,**kwargs):
     cf=CountriesPublicFrame(ds,db_name,table_name,hdfs_path,"true","true")
 
     #删除分区
-    cf.delete_partition()
+    #cf.delete_partition()
 
     #拼接SQL
     _sql="\n"+cf.alter_partition()+"\n"+test_dim_oride_city_sql_task(ds)
