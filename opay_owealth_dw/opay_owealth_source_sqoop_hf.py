@@ -182,13 +182,13 @@ for db_name, table_name, conn_id, prefix_name,priority_weight_nm in table_list:
         priority_weight=priority_weight_nm,
         bash_command='''
             #!/usr/bin/env bash
-            sqoop import "-Dorg.apache.sqoop.splitter.allow_text_splitter=true"
+            sqoop import "-Dorg.apache.sqoop.splitter.allow_text_splitter=true" \
             -D mapred.job.queue.name=root.opay_collects \
             --connect "jdbc:mysql://{host}:{port}/{schema}?tinyInt1isBit=false&useUnicode=true&characterEncoding=utf8" \
             --username {username} \
             --password {password} \
             --table {table} \
-            --target-dir {ufile_path}/dt={{{{ ds }}}}/hour={{{{ execution_date.strftime("%H") }}}} \
+            --target-dir {ufile_path}/dt={{{{ tomorrow_ds }}}}/hour={{{{ execution_date.strftime("%H") }}}} \
             --fields-terminated-by "\\001" \
             --lines-terminated-by "\\n" \
             --hive-delims-replacement " " \
