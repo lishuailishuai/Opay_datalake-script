@@ -34,7 +34,7 @@ args = {
     'email_on_retry': False,
 }
 
-dag = airflow.DAG('app_opos_bonus_payment_target_di',
+dag = airflow.DAG('app_opos_bonus_payment_target_d',
                   schedule_interval="10 03 * * *",
                   default_args=args,
                   catchup=False)
@@ -80,7 +80,7 @@ dim_opos_bd_relation_df_task = UFileSensor(
 ##----------------------------------------- 变量 ---------------------------------------##
 
 db_name = "opos_dw"
-table_name = "app_opos_bonus_payment_target_di"
+table_name = "app_opos_bonus_payment_target_d"
 hdfs_path = "ufile://opay-datalake/opos/opos_dw/" + table_name
 
 
@@ -107,7 +107,7 @@ task_timeout_monitor = PythonOperator(
 
 ##----------------------------------------- 脚本 ---------------------------------------##
 
-def app_opos_bonus_payment_target_di_sql_task(ds):
+def app_opos_bonus_payment_target_d_sql_task(ds):
     HQL = '''
     set hive.exec.parallel=true;
     set hive.exec.dynamic.partition.mode=nonstrict;
@@ -222,7 +222,7 @@ def execution_data_task_id(ds, **kargs):
     hive_hook = HiveCliHook()
 
     # 读取sql
-    _sql = app_opos_bonus_payment_target_di_sql_task(ds)
+    _sql = app_opos_bonus_payment_target_d_sql_task(ds)
 
     logging.info('Executing: %s', _sql)
 
@@ -241,21 +241,21 @@ def execution_data_task_id(ds, **kargs):
     TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "true", "true")
 
 
-app_opos_bonus_payment_target_di_task = PythonOperator(
-    task_id='app_opos_bonus_payment_target_di_task',
+app_opos_bonus_payment_target_d_task = PythonOperator(
+    task_id='app_opos_bonus_payment_target_d_task',
     python_callable=execution_data_task_id,
     provide_context=True,
     dag=dag
 )
 
-ods_sqoop_base_pre_opos_payment_order_di_task >> app_opos_bonus_payment_target_di_task
-ods_sqoop_base_pre_opos_payment_order_bd_di_task >> app_opos_bonus_payment_target_di_task
-dim_opos_bd_relation_df_task >> app_opos_bonus_payment_target_di_task
+ods_sqoop_base_pre_opos_payment_order_di_task >> app_opos_bonus_payment_target_d_task
+ods_sqoop_base_pre_opos_payment_order_bd_di_task >> app_opos_bonus_payment_target_d_task
+dim_opos_bd_relation_df_task >> app_opos_bonus_payment_target_d_task
 
 # 查看任务命令
-# airflow list_tasks app_opos_bonus_payment_target_di -sd /home/feng.yuan/app_opos_bonus_payment_target_di.py
+# airflow list_tasks app_opos_bonus_payment_target_d -sd /home/feng.yuan/app_opos_bonus_payment_target_d.py
 # 测试任务命令
-# airflow test app_opos_bonus_payment_target_di app_opos_bonus_payment_target_di_task 2019-11-24 -sd /home/feng.yuan/app_opos_bonus_payment_target_di.py
+# airflow test app_opos_bonus_payment_target_d app_opos_bonus_payment_target_d_task 2019-11-24 -sd /home/feng.yuan/app_opos_bonus_payment_target_d.py
 
 
 
