@@ -88,7 +88,7 @@ def ods_binlog_user_order_hi_sql_task(ds, hour):
         SET hive.exec.parallel=TRUE;
         SET hive.exec.dynamic.partition.mode=nonstrict;
 
-        INSERT OVERWRITE TABLE {db}.{table} partition(country_code,dt,hour)
+        INSERT OVERWRITE TABLE {db}.{table} partition(dt,hour)
         SELECT  get_json_object(after,'$.id')              AS id
                ,get_json_object(after,'$.order_no')        AS order_no
                ,get_json_object(after,'$.order_user_type') AS order_user_type
@@ -111,7 +111,6 @@ def ods_binlog_user_order_hi_sql_task(ds, hour):
                ,bussine_id
                ,op
                ,ts_ms
-               ,'nal' as country_code
                ,dt
                ,hour
         FROM opay_source.binlog_user_order
@@ -155,7 +154,7 @@ def execution_data_task_id(ds, **kwargs):
 
     """
 
-    TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "true", "true", v_hour)
+    TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "false", "true", v_hour)
 
 
 ods_binlog_user_order_hi_task = PythonOperator(
