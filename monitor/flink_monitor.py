@@ -10,6 +10,7 @@ import logging
 from plugins.comwx import ComwxApi
 import json
 import os
+from plugins.DingdingAlert import DingdingAlert
 
 # pushgateway外网地址
 # push_gateway_address = "152.32.140.147:9091"
@@ -23,6 +24,11 @@ push_gateway_delete_restful_address = "/metrics/job"
 # 格式化时间格式
 time_format = "%Y-%m-%dT%H:%M:%S"
 
+# 订订报警地址
+dingding_address = "https://oapi.dingtalk.com/robot/send?access_token=3845cd5ba5cc5f9505133b5d2847d525d78026b0735e4e3c4a8707b51f718f74"
+
+dingding_alert = DingdingAlert(dingding_address)
+
 # ResourceManager http api接口地址
 RM_HTTP_ADDRESS = "http://node5.datalake.opay.com:8088/ws/v1/cluster/apps"
 RM_HTTP_PARAMS = {
@@ -30,24 +36,24 @@ RM_HTTP_PARAMS = {
     'applicationTypes': 'Apache Flink'
 }
 
-comwx = ComwxApi('wwd26d45f97ea74ad2', 'BLE_v25zCmnZaFUgum93j3zVBDK-DjtRkLisI_Wns4g', '1000011')
-
 # 任务配置情况
-# 任务名称 并行度 container数量 slot数量 checkpoint statebackend路径 mainClass
+# 任务名称 并行度 container数量 slot数量 checkpoint statebackend路径 mainClass taskManager内存大小
 task_map = {
-    'opos-metrics': ('opos-metrics', 4, 4, 1, 's3a://opay-bi/flink/workflow/checkpoint',
-                     'com.opay.bd.opos.main.OposMetricsMain'),
-    'opay-metrics': ('opay-metrics', 2, 2, 1, 's3a://opay-bi/flink/workflow/checkpoint',
-                     'com.opay.bd.opay.main.OpayOrderMetricsMain'),
+    'opay-user-order-etl': ('opay-metrics',
+                            8, 4, 2,
+                            's3a://opay-bi/flink/workflow/checkpoint',
+                            'com.opay.bd.opay.main.OpayUserOrderMergeMain',
+                            3072
+                            ),
 }
 
 args = {
     'owner': 'linan',
-    'start_date': datetime(2019, 11, 1),
+    'start_date': datetime(2019, 11, 27),
     'depends_on_past': False,
     'retries': 1,
     'retry_delay': timedelta(minutes=5),
-    # 'email': ['nan.li@opay-inc.com'],
+    'email': ['bigdata_dw@opay-inc.com'],
     'email_on_failure': True,
     'email_on_retry': False,
 }
@@ -128,13 +134,11 @@ def repair_job_info(avlive_flink_job_info_map, monitor_jobs, alive_jobs):
     for repair_job in need_repair_jobs:
         new_job_handle(avlive_flink_job_info_map, repair_job)
 
-    logging.info("========== flink application online监控任务job id 数据补齐开始 ========== ")
+    logging.info("========== flink application online监控任务job id 数据补齐结束 ========== ")
 
 
 def monitor_rm(ds, **kwargs):
     logging.info("========== flink application 监控任务开始 ========== ")
-
-    comwx.postChatMessage("test test ", '271')
 
     # 存活任务set
     ative_flink_job = set()
@@ -145,11 +149,12 @@ def monitor_rm(ds, **kwargs):
     text = send_request(RM_HTTP_ADDRESS, RM_HTTP_PARAMS)
 
     obj = json.loads(text)
-    apps = obj['apps']['app']
 
-    for app in apps:
-        ative_flink_job.add(app['name'])
-        avlive_flink_job_info_map[app['name']] = app['trackingUrl']
+    if len(obj['apps']) != 0:
+        apps = obj['apps']['app']
+        for app in apps:
+            ative_flink_job.add(app['name'])
+            avlive_flink_job_info_map[app['name']] = app['trackingUrl']
 
     key_set = set(task_map.keys())
 
@@ -178,32 +183,29 @@ def monitor_rm(ds, **kwargs):
             logging.info(
                 "========== flink application 任务可能失败，job_info = {job_info} ========== ".format(job_info=job_info))
             if not job_info:
-                comwx.postChatMessage("""
-                                {job_name} : 任务失败或此任务没有在监控列表内，请完善任务元数据信息。
-                            """.format(job_name=fail_job), '271')
+                dingding_alert.send("""Flink {job_name} : 任务失败或此任务没有在监控列表内，请完善任务元数据信息。""".format(job_name=fail_job))
+
                 logging.info(
                     "========== flink application 任务失败或此任务没有在监控列表内，请完善任务元数据信息，job_info = {job_info} ========== ".format(
                         job_info=job_info))
                 continue
 
-            comwx.postChatMessage("""
-                                {job_name} : 任务失败，进去启动拉起流程，正在寻找最新checkpoint。
-                            """.format(job_name=fail_job), '271')
+            dingding_alert.send("""Flink {job_name} : 任务失败，进去启动拉起流程，正在寻找最新checkpoint。""".format(job_name=fail_job))
 
             # 查询失败前最新任务id
             pre_job_id = query_job_id(fail_job)
 
             if pre_job_id == '-1':
-                comwx.postChatMessage("""
-                            {job_name} : 任务失败，未找到前任务job id记录，从新启动新任务。
-                        """.format(job_name=fail_job), '271')
+
+                dingding_alert.send("""Flink {job_name} : 任务失败，未找到前任务job id记录，从新启动新任务。""".format(job_name=fail_job))
+
                 logging.info(
                     "========== flink application 任务失败，未找到前任务job id记录，从新启动新任务，job_name = {job_name} ========== ".format(
                         job_name=fail_job))
             else:
-                comwx.postChatMessage("""
-                            {job_name} : 任务失败，进入启动拉起流程，已找到最近jobId : {pre_job_id}。
-                        """.format(job_name=fail_job, pre_job_id=pre_job_id), '271')
+                dingding_alert.send(
+                    """Flink {job_name} : 任务失败，进入启动拉起流程，已找到最近jobId : {pre_job_id}。""".format(job_name=fail_job,
+                                                                                             pre_job_id=pre_job_id))
 
             # 获取job启动所需信息
 
@@ -212,16 +214,16 @@ def monitor_rm(ds, **kwargs):
                 'container_num': job_info[2],
                 'slot_num': job_info[3],
                 'checkpoint_address': job_info[4],
-                'main_class': job_info[5]
+                'main_class': job_info[5],
+                'task_manager_mem_size': job_info[6]
             }
             logging.info(
                 "========== flink application 任务失败，进入启动拉起流程 ========== ")
 
             new_job_id = start_flink_job(fail_job, pre_job_id, params)
 
-            comwx.postChatMessage("""
-                                {job_name} : 任务重新启动完成，最新jobId : {new_job_id}。
-                            """.format(job_name=fail_job, new_job_id=new_job_id), '271')
+            dingding_alert.send("""Flink {job_name} : 任务重新启动完成，最新jobId : {new_job_id}。""".format(job_name=fail_job,
+                                                                                                 new_job_id=new_job_id))
 
             logging.info(
                 "========== flink application 任务拉起成功========== ")
@@ -237,9 +239,8 @@ def monitor_rm(ds, **kwargs):
 def new_job_handle(avlive_flink_job_info_map, minus_job):
     logging.info("========== flink application 开始写入新任务job id ========== ")
 
-    comwx.postChatMessage("""
-                    {job_name} : 发现新任务没有保存job_id，正在保存。
-                """.format(job_name=minus_job), '271')
+    dingding_alert.send("""Flink {job_name} : 发现新任务没有保存job_id，正在保存。""".format(job_name=minus_job))
+
     respons = ''
     while respons.find('jid') < 0:
         respons = send_request("{track_url}jobs/overview".format(
@@ -252,9 +253,9 @@ def new_job_handle(avlive_flink_job_info_map, minus_job):
     logging.info("minus_job = " + minus_job + "  job_id = " + job_id)
 
     insert_job_id(minus_job, job_id)
-    comwx.postChatMessage("""
-                {job_name} : 已保存job_id {job_id} 。
-            """.format(job_name=minus_job, job_id=job_id), '271')
+
+    dingding_alert.send("""Flink {job_name} : 已保存job_id {job_id} 。""".format(job_name=minus_job, job_id=job_id))
+
     logging.info("========== flink application 新任务job id 写入成功 ========== ")
 
 
@@ -264,6 +265,7 @@ def start_flink_job(job_name, pre_job_id, param):
     slot_num = param['slot_num']
     checkpoint_address = param['checkpoint_address']
     main_class = param['main_class']
+    task_manager_mem_size = param['task_manager_mem_size']
     checkpoint = ''
     new_job_id = ''
     lines = None
@@ -272,13 +274,14 @@ def start_flink_job(job_name, pre_job_id, param):
 
     if pre_job_id == '-1':
         command = """
-                 ssh node5.datalake.opay.com " source /etc/profile ; flink run  -p {par_num} -m yarn-cluster -yn {container_num} -yqu root.users.airflow -ynm {job_name} -ys {slot_num}  -d -c {main_class} bd-flink-project-1.0.jar"
+                 ssh node5.datalake.opay.com " source /etc/profile ; flink run  -p {par_num} -m yarn-cluster -yn {container_num} -ytm {task_manager_mem_size} -yqu root.users.airflow -ynm {job_name} -ys {slot_num}  -d -c {main_class} bd-flink-project-1.0.jar"
                 """.format(
             par_num=par_num,
             container_num=container_num,
             job_name=job_name,
             slot_num=slot_num,
-            main_class=main_class
+            main_class=main_class,
+            task_manager_mem_size=task_manager_mem_size
         )
 
         logging.info(command)
@@ -303,12 +306,12 @@ def start_flink_job(job_name, pre_job_id, param):
                 checkpoint = line[line.index('chk'):].strip('\n')
                 break
 
-        comwx.postChatMessage("""
-            {job_name} : 任务失败，进去启动拉起流程，已找到最近jobId : {pre_job_id}，保存checkpoint 标识位置：{checkpoint}。
-        """.format(job_name=job_name, pre_job_id=pre_job_id, checkpoint=checkpoint), '271')
+        dingding_alert.send(
+            """Flink {job_name} : 任务失败，进去启动拉起流程，已找到最近jobId : {pre_job_id}，保存checkpoint 标识位置：{checkpoint}。""".format(
+                job_name=job_name, pre_job_id=pre_job_id, checkpoint=checkpoint))
 
         command = """
-                ssh node5.datalake.opay.com " source /etc/profile ; flink run -s {checkpoint_address}/{pre_job_id}/{checkpoint} -p {par_num} -m yarn-cluster -yn {container_num} -yqu root.users.airflow -ynm {job_name} -ys {slot_num}  -d -c {main_class} bd-flink-project-1.0.jar"
+                ssh node5.datalake.opay.com " source /etc/profile ; flink run -s {checkpoint_address}/{pre_job_id}/{checkpoint} -p {par_num}  -m yarn-cluster -yn {container_num} -ytm {task_manager_mem_size} -yqu root.users.airflow -ynm {job_name} -ys {slot_num}  -d -c {main_class} bd-flink-project-1.0.jar"
             """.format(
             checkpoint_address=checkpoint_address,
             pre_job_id=pre_job_id,
@@ -317,7 +320,8 @@ def start_flink_job(job_name, pre_job_id, param):
             container_num=container_num,
             job_name=job_name,
             slot_num=slot_num,
-            main_class=main_class
+            main_class=main_class,
+            task_manager_mem_size=task_manager_mem_size
         )
 
         logging.info(command)
@@ -408,9 +412,10 @@ def monitor(ds, **kwargs):
     if len(alter_job) > 0:
         for job in alter_job:
             alter_message += """
-                flink job进程 ：{job} 最近5分钟无上报心跳，请查看任务。
+            Flink job进程 ：{job} 最近5分钟无上报心跳，请查看任务。
             """.format(job=job)
-            comwx.postAppMessage(alter_message, '271')
+
+            dingding_alert.send(alter_message)
 
     if len(kill_jobs) > 0:
         for job in kill_jobs:
@@ -437,10 +442,10 @@ flink_monitor_rm_task = PythonOperator(
     provide_context=True,
     dag=dag
 )
-
-flink_monitor_task = PythonOperator(
-    task_id='flink_monitor_task',
-    python_callable=monitor,
-    provide_context=True,
-    dag=dag
-)
+#
+# flink_monitor_task = PythonOperator(
+#     task_id='flink_monitor_task',
+#     python_callable=monitor,
+#     provide_context=True,
+#     dag=dag
+# )
