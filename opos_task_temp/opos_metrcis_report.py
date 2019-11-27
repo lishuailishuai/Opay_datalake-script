@@ -79,7 +79,7 @@ ods_sqoop_base_pre_opos_payment_order_bd_di_task = UFileSensor(
 
 db_name = "opos_temp"
 table_name = "opos_metrcis_report"
-hdfs_path = "ufile://opay-datalake/oride/opos_temp/" + table_name
+hdfs_path = "ufile://opay-datalake/opos/opos_temp/" + table_name
 
 
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
