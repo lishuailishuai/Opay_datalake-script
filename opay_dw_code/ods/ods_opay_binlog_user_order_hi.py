@@ -34,7 +34,7 @@ args = {
     'email_on_retry': False,
 }
 
-dag = airflow.DAG('ods_opay_binlog_user_order',
+dag = airflow.DAG('ods_opay_binlog_user_order_hi',
                   schedule_interval="15 * * * *",
                   default_args=args,
                   catchup=False)
@@ -55,7 +55,7 @@ binlog_user_order_prev_hour_task = HivePartitionSensor(
 ##----------------------------------------- 变量 ---------------------------------------##
 
 db_name = "opay_dw_ods"
-table_name = "ods_binlog_user_order_hi"
+table_name = "ods_opay_binlog_user_order_hi"
 hdfs_path = "ufile://opay-datalake/opay_dw_ods/binlog/" + table_name
 
 
@@ -88,7 +88,7 @@ def ods_binlog_user_order_hi_sql_task(ds, hour):
         SET hive.exec.parallel=TRUE;
         SET hive.exec.dynamic.partition.mode=nonstrict;
 
-        INSERT OVERWRITE TABLE opay_dw_ods.ods_binlog_user_order_hi partition(country_code,dt,hour)
+        INSERT OVERWRITE TABLE {db}.{table} partition(country_code,dt,hour)
         SELECT  get_json_object(after,'$.id')              AS id
                ,get_json_object(after,'$.order_no')        AS order_no
                ,get_json_object(after,'$.order_user_type') AS order_user_type
