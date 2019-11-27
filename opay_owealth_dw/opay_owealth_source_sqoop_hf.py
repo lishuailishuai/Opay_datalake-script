@@ -24,7 +24,7 @@ args = {
     'on_success_callback':on_success_callback,
 }
 
-schedule_interval="01 10 * * *"
+schedule_interval="01 * * * *"
 
 dag = airflow.DAG(
     'opay_owealth_source_sqoop_hf',
@@ -188,7 +188,7 @@ for db_name, table_name, conn_id, prefix_name,priority_weight_nm in table_list:
             --username {username} \
             --password {password} \
             --table {table} \
-            --target-dir {ufile_path}/dt={{{{ execution_date.strftime("%Y-%m-%d") }}}}/hour={{{{ execution_date.strftime("%H") }}}} \
+            --target-dir {ufile_path}/dt=airflow.macros.ds_add(ds, +1)/hour={{{{ execution_date.strftime("%H") }}}} \
             --fields-terminated-by "\\001" \
             --lines-terminated-by "\\n" \
             --hive-delims-replacement " " \
