@@ -204,7 +204,7 @@ for db_name, table_name, conn_id, prefix_name,priority_weight_nm in table_list:
             table=table_name,
             ufile_path=UFILE_PATH % (db_name, table_name),
             query=query,
-            pt=airflow.macros.ds_add({{ ds }}, +1),
+            pt=airflow.macros.ds_add({{{{ ds }}}}, +1),
             m=18 if table_name=='channel_response_code' else 20
     ),
         dag=dag,
