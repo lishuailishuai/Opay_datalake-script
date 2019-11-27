@@ -122,7 +122,7 @@ class CountriesPublicFrame(object):
 
             logging.info("目录删除成功")
 
-            Destination directory ufile://opay-datalake/opay_owealth_sqoop_hf/opay_owealth/share_order/dt=2019-11-24/hour=19 deleted
+            #Destination directory ufile://opay-datalake/opay_owealth_sqoop_hf/opay_owealth/share_order/dt=2019-11-24/hour=19 deleted
         
         else:
 
