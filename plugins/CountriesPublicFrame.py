@@ -43,32 +43,13 @@ class CountriesPublicFrame(object):
             获取当前表中所有二位国家码
         """
 
-        cursor = get_hive_cursor()
-        
-        get_sql='''
-    
-        select concat_ws(',',collect_set(country_code)) as country_code from {db}.{table} WHERE dt='{pt}'
-    
-        '''.format(
-            pt=self.ds,
-            table=self.table_name,
-            db=self.db_name
-            )
-    
-        cursor.execute(get_sql)
-    
-        res = cursor.fetchone()
+        country_code = Variable.get("country_code_list").split(",")
 
-        if len(res[0]) >1:
-            country_code_list=res[0]
+        logging.info('Executing 二位国家码: %s', country_code)
+        
+        
     
-            logging.info('Executing 二位国家码: %s', country_code_list)
-    
-        else:
-    
-            country_code_list="nal"
-    
-            logging.info('Executing 二位国家码为空，赋予默认值 %s', country_code_list)
+        logging.info('Executing 二位国家码为空，赋予默认值 %s', country_code_list)
     
         return country_code_list
 
@@ -140,6 +121,8 @@ class CountriesPublicFrame(object):
         if res== '' or res == 'None' or res[0] == '0':
 
             logging.info("目录删除成功")
+
+            Destination directory ufile://opay-datalake/opay_owealth_sqoop_hf/opay_owealth/share_order/dt=2019-11-24/hour=19 deleted
         
         else:
 
