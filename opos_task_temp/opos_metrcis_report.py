@@ -250,30 +250,30 @@ bd.cm_id
 ,bd.city_name
 ,bd.country
 
-,bd.merchant_cnt
-,bd.pos_merchant_cnt
-,bd.new_merchant_cnt
-,bd.new_pos_merchant_cnt
+,nvl(bd.merchant_cnt,0)
+,nvl(bd.pos_merchant_cnt,0)
+,nvl(bd.new_merchant_cnt,0)
+,nvl(bd.new_pos_merchant_cnt,0)
 
-,ord.his_pos_complete_order_cnt
-,ord.his_qr_complete_order_cnt
-,ord.his_complete_order_cnt
-,ord.his_gmv
-,ord.his_actual_amount
-,ord.his_return_amount
-,ord.his_new_user_cost
-,ord.his_old_user_cost
-,ord.his_return_amount_order_cnt
+,nvl(ord.his_pos_complete_order_cnt,0)
+,nvl(ord.his_qr_complete_order_cnt,0)
+,nvl(ord.his_complete_order_cnt,0)
+,nvl(ord.his_gmv,0)
+,nvl(ord.his_actual_amount,0)
+,nvl(ord.his_return_amount,0)
+,nvl(ord.his_new_user_cost,0)
+,nvl(ord.his_old_user_cost,0)
+,nvl(ord.his_return_amount_order_cnt,0)
 
-,ord.pos_complete_order_cnt
-,ord.qr_complete_order_cnt
-,ord.complete_order_cnt
-,ord.gmv
-,ord.actual_amount
-,ord.return_amount
-,ord.new_user_cost
-,ord.old_user_cost
-,ord.return_amount_order_cnt
+,nvl(ord.pos_complete_order_cnt,0)
+,nvl(ord.qr_complete_order_cnt,0)
+,nvl(ord.complete_order_cnt,0)
+,nvl(ord.gmv,0)
+,nvl(ord.actual_amount,0)
+,nvl(ord.return_amount,0)
+,nvl(ord.new_user_cost,0)
+,nvl(ord.old_user_cost,0)
+,nvl(ord.return_amount_order_cnt,0)
 
 ,'nal' as country_code
 ,'{pt}' as dt
