@@ -158,7 +158,7 @@ def execution_data_task_id(ds, **kwargs):
 
 
 ods_binlog_user_order_hi_task = PythonOperator(
-    task_id='dwd_oride_client_event_detail_hi_task',
+    task_id='ods_binlog_user_order_hi_task',
     python_callable=execution_data_task_id,
     provide_context=True,
     op_kwargs={
