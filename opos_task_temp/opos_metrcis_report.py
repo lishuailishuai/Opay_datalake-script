@@ -154,18 +154,18 @@ from
 (select * from opos_temp.app_opos_order_data_history_di where country_code='nal' and dt='{before_1_day}' and bd_id is not null) as a
 full join
 (select 
-b.cm_id,
-b.cm_name,
-b.rm_id,
-b.rm_name,
-b.bdm_id,
-b.bdm_name,
-s.bd_id,
-b.bd_name,
+bd.cm_id,
+bd.cm_name,
+bd.rm_id,
+bd.rm_name,
+bd.bdm_id,
+bd.bdm_name,
+bd.bd_id,
+bd.bd_name,
 
-s.city_id, 
-ci.name as city_name,
-ci.country,
+bd.city_id, 
+bd.name as city_name,
+bd.country,
 
 count(if(p.order_type = 'pos',p.order_id,null)) as his_pos_complete_order_cnt,
 count(if(p.order_type = 'qrcode',p.order_id,null)) as his_qr_complete_order_cnt,
@@ -192,43 +192,39 @@ from
 (
 select dt,receipt_id,order_id,order_type,trade_status,org_payment_amount,pay_amount,return_amount,first_order,user_subsidy from opos_dw_ods.ods_sqoop_base_pre_opos_payment_order_di where dt = '{pt}' and trade_status = 'SUCCESS'
 ) as p 
-left join
---先用orderod关联每一笔交易的bdid
+inner join
+--先用orderod关联每一笔交易的bd_id,只取能关联上bd信息的交易，故用inner join
 (
-select order_id,bd_id,city_id from opos_dw_ods.ods_sqoop_base_pre_opos_payment_order_bd_di where dt='{pt}'
-) as s 
-on 
-p.order_id = s.order_id
+select s.order_id,s.bd_id,s.city_id,ci.name,ci.country,b.cm_id,b.cm_name,b.rm_id,b.rm_name,b.bdm_id,b.bdm_name,b.bd_name from
+  (select order_id,bd_id,city_id from opos_dw_ods.ods_sqoop_base_pre_opos_payment_order_bd_di where dt='{pt}') as s 
 left join
 --关联城市码表，求出国家和城市描述
-(
-select id,name,country from opos_dw_ods.ods_sqoop_base_bd_city_df where dt = '{pt}'
-) as ci
-on
-s.city_id=ci.id
+  (select id,name,country from opos_dw_ods.ods_sqoop_base_bd_city_df where dt = '{pt}') as ci
+on s.city_id=ci.id
 left join
 --关联bd信息码表，求出所有bd的层级关系和描述
-(
-select * from opos_dw.dim_opos_bd_info_df where country_code='nal' and dt='{pt}'
+  (select cm_id,cm_name,rm_id,rm_name,bdm_id,bdm_name,bd_id,bd_name from opos_dw.dim_opos_bd_info_df where country_code='nal' and dt='{pt}') as b
+on s.bd_id=b.bd_id
+) as bd
+on
+p.order_id=bd.order_id
+group by 
+bd.cm_id,
+bd.cm_name,
+bd.rm_id,
+bd.rm_name,
+bd.bdm_id,
+bd.bdm_name,
+bd.bd_id,
+bd.bd_name,
+
+bd.city_id, 
+bd.name,
+bd.country
+
 ) as b
 on
-s.bd_id=b.bd_id
-group by 
-b.cm_id,
-b.cm_name,
-b.rm_id,
-b.rm_name,
-b.bdm_id,
-b.bdm_name,
-s.bd_id,
-b.bd_name,
-
-s.city_id, 
-ci.name,
-ci.country)
-as b
-on
-a.bd_id=b.bd_id
+b.bd_id=b.bd_id
 and a.city_id=b.city_id
 ;
 
@@ -316,7 +312,7 @@ cm_id
 ,country
 ) as bd
 left join
-(select * from opos_temp.app_opos_order_data_history_di where country_code='nal' and dt='{pt}' and bd_id is not null) as ord
+(select * from opos_temp.app_opos_order_data_history_di where country_code='nal' and dt='{pt}') as ord
 on
 bd.bd_id = ord.bd_id
 and bd.city_id = ord.city_id
