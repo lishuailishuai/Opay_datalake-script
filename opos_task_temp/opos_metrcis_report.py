@@ -222,18 +222,18 @@ and a.city_id=b.city_id
 --得出最新维度下每个dbid的详细数据信息
 insert overwrite table opos_temp.opos_metrcis_report partition (country_code,dt)
 select
-bd.cm_id
-,bd.cm_name
-,bd.rm_id
-,bd.rm_name
-,bd.bdm_id
-,bd.bdm_name
-,bd.bd_id
-,bd.bd_name
+nvl(bd.cm_id,ord.cm_id) cm_id
+,nvl(bd.cm_name,ord.cm_name) cm_name
+,nvl(bd.rm_id,ord.rm_id) rm_id
+,nvl(bd.rm_name,ord.rm_name) rm_name
+,nvl(bd.bdm_id,ord.bdm_id) bdm_id
+,nvl(bd.bdm_name,ord.bdm_name) bdm_name
+,nvl(bd.bd_id,ord.bd_id) bd_id
+,nvl(bd.bd_name,ord.bd_name) bd_name
 
-,bd.city_id
-,bd.city_name
-,bd.country
+,nvl(bd.city_id,ord.city_id) city_id
+,nvl(bd.city_name,ord.city_name) city_name
+,nvl(bd.country,ord.country) country
 
 ,nvl(bd.merchant_cnt,0) merchant_cnt
 ,nvl(bd.pos_merchant_cnt,0) pos_merchant_cnt
@@ -301,7 +301,7 @@ cm_id
 ,city_name
 ,country
 ) as bd
-left join
+full join
 (select * from opos_temp.app_opos_order_data_history_di where country_code='nal' and dt='{pt}') as ord
 on
 bd.bd_id = ord.bd_id
