@@ -114,18 +114,18 @@ set hive.exec.dynamic.partition.mode=nonstrict;
 --03.创建临时明细表,扩充明细信息,将最新一天的交易明细数据关联上dbid和地市编码名称后插入到临时表中
 insert overwrite table opos_temp.opos_active_user_detail_daily partition (country_code,dt)
 select 
-b.cm_id
-,b.cm_name
-,b.rm_id
-,b.rm_name
-,b.bdm_id
-,b.bdm_name
-,s.bd_id
-,b.bd_name
+bd.cm_id
+,bd.cm_name
+,bd.rm_id
+,bd.rm_name
+,bd.bdm_id
+,bd.bdm_name
+,bd.bd_id
+,bd.bd_name
 
-,s.city_id
-,ci.name as city_name
-,ci.country
+,bd.city_id
+,bd.name as city_name
+,bd.country
 
 ,p.sender_id
 ,p.receipt_id
@@ -136,29 +136,26 @@ b.cm_id
 ,'nal' as country_code
 ,p.dt
 from 
-(select dt,sender_id,receipt_id,order_id,order_type,trade_status,first_order from opos_dw_ods.ods_sqoop_base_pre_opos_payment_order_di where dt = '{pt}' and trade_status = 'SUCCESS'
-) p 
-left join
---先用orderod关联每一笔交易的bdid
+--取出paynemt当天的所有数据
 (
-select order_id,bd_id,city_id from opos_dw_ods.ods_sqoop_base_pre_opos_payment_order_bd_di where dt='{pt}'
-) as s 
-on 
-p.order_id = s.order_id
+select dt,order_id,sender_id,receipt_id,order_type,trade_status,first_order from opos_dw_ods.ods_sqoop_base_pre_opos_payment_order_di where dt = '{pt}' and trade_status = 'SUCCESS'
+) as p 
+inner join
+--先用orderod关联每一笔交易的bd_id,只取能关联上bd信息的交易，故用inner join
+(
+select s.order_id,s.bd_id,s.city_id,ci.name,ci.country,b.cm_id,b.cm_name,b.rm_id,b.rm_name,b.bdm_id,b.bdm_name,b.bd_name from
+  (select order_id,bd_id,city_id from opos_dw_ods.ods_sqoop_base_pre_opos_payment_order_bd_di where dt='{pt}') as s 
 left join
 --关联城市码表，求出国家和城市描述
-(
-select id,name,country from opos_dw_ods.ods_sqoop_base_bd_city_df where dt = '{pt}'
-) as ci
-on
-s.city_id=ci.id
+  (select id,name,country from opos_dw_ods.ods_sqoop_base_bd_city_df where dt = '{pt}') as ci
+on s.city_id=ci.id
 left join
 --关联bd信息码表，求出所有bd的层级关系和描述
-(
-select * from opos_dw.dim_opos_bd_info_df where country_code='nal' and dt='{pt}'
-) as b
+  (select cm_id,cm_name,rm_id,rm_name,bdm_id,bdm_name,bd_id,bd_name from opos_dw.dim_opos_bd_info_df where country_code='nal' and dt='{pt}') as b
+on s.bd_id=b.bd_id
+) as bd
 on
-s.bd_id=b.bd_id;
+p.order_id=bd.order_id;
 
 --03.01.查出临时表中昨天,前天,7天前,15天前,30天前的数据
 with

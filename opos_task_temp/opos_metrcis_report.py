@@ -151,7 +151,7 @@ nvl(a.cm_id,b.cm_id) as cm_id
 ,'nal' as country_code
 ,'{pt}' as dt
 from
-(select * from opos_temp.app_opos_order_data_history_di where country_code='nal' and dt='{before_1_day}' and bd_id is not null) as a
+(select * from opos_temp.app_opos_order_data_history_di where country_code='nal' and dt='{before_1_day}' and length(bd_id)>0) as a
 full join
 (select 
 bd.cm_id,
@@ -296,7 +296,7 @@ opos_dw.dim_opos_bd_relation_df
 where 
 country_code='nal' 
 and dt='{pt}'
-and bd_id is not null
+and length(bd_id)>0
 group by
 cm_id
 ,cm_name
