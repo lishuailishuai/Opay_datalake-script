@@ -56,7 +56,7 @@ binlog_user_order_prev_hour_task = HivePartitionSensor(
 
 db_name = "opay_dw_ods"
 table_name = "ods_opay_binlog_user_order_hi"
-hdfs_path = "ufile://opay-datalake/opay_dw_ods/binlog/" + table_name
+hdfs_path = "s3a://opay-bi/opay_dw_ods/binlog/" + table_name
 
 
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
