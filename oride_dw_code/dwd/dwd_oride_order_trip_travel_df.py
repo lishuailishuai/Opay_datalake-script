@@ -17,6 +17,7 @@ from airflow.sensors.external_task_sensor import ExternalTaskSensor
 from airflow.operators.bash_operator import BashOperator
 from airflow.sensors.named_hive_partition_sensor import NamedHivePartitionSensor
 from airflow.sensors.hive_partition_sensor import HivePartitionSensor
+from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
 from plugins.CountriesPublicFrame import CountriesPublicFrame
 from airflow.sensors import UFileSensor
 import json
