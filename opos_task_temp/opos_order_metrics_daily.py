@@ -158,9 +158,7 @@ left join
 select * from opos_dw.dim_opos_bd_info_df where country_code='nal' and dt='{pt}'
 ) as b
 on
-s.bd_id=b.bd_id
-where
-s.bd_id is not null;
+s.bd_id=b.bd_id;
 
 --03.01.查出临时表中昨天,前天,7天前,15天前,30天前的数据
 with
@@ -716,11 +714,9 @@ ods_sqoop_base_pre_opos_payment_order_di_task >> opos_active_user_daily_task
 ods_sqoop_base_pre_opos_payment_order_bd_di_task >> opos_active_user_daily_task
 
 # 执行mysql任务
-opos_active_user_daily_task >> delete_crm_data >> insert_crm_metrics
-opos_active_user_daily_task >> delete_bi_data >> insert_bi_metrics
+opos_active_user_daily_task >> delete_crm_data >> insert_crm_metrics >> delete_bi_data >> insert_bi_metrics
 
-opos_metrcis_report_task >> delete_crm_data >> insert_crm_metrics
-opos_metrcis_report_task >> delete_bi_data >> insert_bi_metrics
+opos_metrcis_report_task >> delete_crm_data >> insert_crm_metrics >> delete_bi_data >> insert_bi_metrics
 
 # 查看任务命令
 # airflow list_tasks opos_order_metrics_daily -sd /home/feng.yuan/opos_order_metrics_daily.py
