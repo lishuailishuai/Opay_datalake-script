@@ -302,6 +302,9 @@ def dwm_oride_order_base_di_sql_task(ds):
 
            ord.is_strong_dispatch,
            --是否强派1：是，0:否
+           
+           if(ord.cancel_reason<>'',1,0) as cancel_feedback,
+           --是否有取消反馈
 
  		   ord.country_code as country_code,
 
