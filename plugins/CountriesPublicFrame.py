@@ -44,7 +44,7 @@ class CountriesPublicFrame(object):
             获取当前表中所有二位国家码
         """
 
-        if self.is_open.lower()=="false" and self.is_open.lower()!="true":
+        if self.is_open.lower()=="false":
             v_country_code_list="nal"
 
         if self.is_open.lower()=="true":
