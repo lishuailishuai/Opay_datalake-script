@@ -24,7 +24,7 @@ from airflow.utils.trigger_rule import TriggerRule
 
 class CountriesPublicFrame(object):
 
-    def __init__(self,v_is_open="false",v_ds,v_db_name,v_table_name,v_data_hdfs_path,v_country_partition="true",v_file_type="true",v_hour=None):
+    def __init__(self,v_is_open=None,v_ds,v_db_name,v_table_name,v_data_hdfs_path,v_country_partition="true",v_file_type="true",v_hour=None):
 
         self.comwx = ComwxApi('wwd26d45f97ea74ad2', 'BLE_v25zCmnZaFUgum93j3zVBDK-DjtRkLisI_Wns4g', '1000011')
 
