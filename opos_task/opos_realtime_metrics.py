@@ -42,7 +42,72 @@ opos_mysql_hook = MySqlHook("mysql_dw")
 opos_mysql_conn = opos_mysql_hook.get_conn()
 opos_mysql_cursor = opos_mysql_conn.cursor()
 
-insert_sql_template = """
+insert_order_bonus_sql_template = """
+    insert into opos_dw.opos_order_bonus (
+        id ,
+        activity_id ,
+        bd_id ,
+        city_id ,
+        device_id ,
+        opay_account ,
+        provider_account ,
+        receiver_account ,
+        amount ,
+        use_amount ,
+        bonus_rate ,
+        bonus_amount ,
+        status ,
+        settle_status ,
+        settle_type,
+        reason ,
+        risk_id ,
+        settle_time ,
+        expire_time ,
+        use_time ,
+        use_date ,
+        create_time ,
+        update_time 
+    )
+    values(
+        
+    )
+
+"""
+
+
+query_order_bonus_sql_template = """
+    select 
+        id ,
+        activity_id ,
+        bd_id ,
+        city_id ,
+        device_id ,
+        opay_account ,
+        provider_account ,
+        receiver_account ,
+        amount ,
+        use_amount ,
+        bonus_rate ,
+        bonus_amount ,
+        status ,
+        settle_status ,
+        settle_type,
+        reason ,
+        risk_id ,
+        settle_time ,
+        expire_time ,
+        use_time ,
+        use_date ,
+        create_time ,
+        update_time 
+    from 
+        opos_bonus_record
+        where 
+        (DATE_FORMAT(create_time,"%Y-%m-%d") = '{ds}' or DATE_FORMAT(modify_time,"%Y-%m-%d")='{ds}')
+
+"""
+
+insert_order_sql_template = """
       insert into opos_dw.opos_order (
         order_id , 
         device_no , 
@@ -449,7 +514,7 @@ def insert_order(ds, yesterday, week, year):
          merchant_risk_code,
          merchant_risk_remark] = list(data)
 
-        insert_sql = insert_sql_template.format(
+        insert_sql = insert_order_sql_template.format(
             order_id=order_id,
             device_no=device_no,
             cfrom=cfrom,
