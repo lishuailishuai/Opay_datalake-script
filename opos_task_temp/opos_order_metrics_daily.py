@@ -451,7 +451,6 @@ active_merchant as (
   t.city_id
 )
 
-
 insert overwrite table opos_temp.opos_active_user_daily partition(country_code,dt)
 select 
 cu.cm_id
@@ -469,26 +468,26 @@ cu.cm_id
 
 ,cu.pos_user_active_cnt
 ,cu.qr_user_active_cnt
-,nvl(dr1.user_active_cnt,0)
-,nvl(dr7.user_active_cnt,0)
-,nvl(dr15.user_active_cnt,0)
-,nvl(dr30.user_active_cnt,0)
-,nvl(omd.order_merchant_cnt,0)
-,nvl(omd.pos_order_merchant_cnt,0)
-,nvl(wd.pos_user_active_cnt,0)
-,nvl(wd.qr_user_active_cnt,0)
-,nvl(md.pos_user_active_cnt,0)
-,nvl(md.qr_user_active_cnt,0)
-,nvl(ou.have_order_user_cnt,0)
+,nvl(dr1.user_active_cnt,0) before_1_day_user_active_cnt
+,nvl(dr7.user_active_cnt,0) before_7_day_user_active_cnt
+,nvl(dr15.user_active_cnt,0) before_15_day_user_active_cnt
+,nvl(dr30.user_active_cnt,0) before_30_day_user_active_cnt
+,nvl(omd.order_merchant_cnt,0) order_merchant_cnt
+,nvl(omd.pos_order_merchant_cnt,0) pos_order_merchant_cnt
+,nvl(wd.pos_user_active_cnt,0) week_pos_user_active_cnt
+,nvl(wd.qr_user_active_cnt,0) week_qr_user_active_cnt
+,nvl(md.pos_user_active_cnt,0) month_pos_user_active_cnt
+,nvl(md.qr_user_active_cnt,0) month_qr_user_active_cnt
+,nvl(ou.have_order_user_cnt,0) have_order_user_cnt
 
 ,cu.user_active_cnt
 ,cu.new_user_cnt
-,nvl(am.more_5_merchant_cnt,0)
-,nvl(hd.his_order_merchant_cnt,0)
-,nvl(hd.his_pos_order_merchant_cnt,0)
-,nvl(hd.his_user_active_cnt,0)
-,nvl(hd.his_pos_user_active_cnt,0)
-,nvl(hd.his_qr_user_active_cnt,0)
+,nvl(am.more_5_merchant_cnt,0) more_5_merchant_cnt
+,nvl(hd.his_order_merchant_cnt,0) his_order_merchant_cnt
+,nvl(hd.his_pos_order_merchant_cnt,0) his_pos_order_merchant_cnt
+,nvl(hd.his_user_active_cnt,0) his_user_active_cnt
+,nvl(hd.his_pos_user_active_cnt,0) his_pos_user_active_cnt
+,nvl(hd.his_qr_user_active_cnt,0) his_qr_user_active_cnt
 
 ,'nal' as country_code
 ,'{pt}' as dt
