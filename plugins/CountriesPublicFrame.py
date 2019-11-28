@@ -43,19 +43,15 @@ class CountriesPublicFrame(object):
             获取当前表中所有二位国家码
         """
 
-        if is_open.lower()=="false" && is_open.lower()!="true":
-            country_code_list="nal"
+        if is_open.lower()=="false" and is_open.lower()!="true":
+            v_country_code_list="nal"
 
         if is_open.lower()=="true":
-            country_code_list = Variable.get("country_code_list")
-
-
+            v_country_code_list = Variable.get("country_code_list")
 
         logging.info('Executing 二位国家码: %s', country_code_list)
-
-        print(country_code_list)
         
-        return country_code_list
+        return v_country_code_list
 
 
     def check_success_exist(self):
