@@ -306,7 +306,7 @@ def execution_data_task_id(ds,**kwargs):
     logging.info('Executing: %s',_sql)
 
     #执行Hive
-    #hive_hook.run_cli(_sql)
+    hive_hook.run_cli(_sql)
 
     #熔断数据，如果数据不能为0
     #check_key_data_cnt_task(ds)
