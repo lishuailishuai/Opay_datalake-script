@@ -50,7 +50,7 @@ class CountriesPublicFrame(object):
         if self.is_open.lower()=="true":
             v_country_code_list = Variable.get("country_code_list")
 
-        logging.info('Executing 二位国家码: %s', country_code_list)
+        logging.info('Executing 二位国家码: %s', v_country_code_list)
         
         return v_country_code_list
 
