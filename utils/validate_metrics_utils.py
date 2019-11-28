@@ -434,7 +434,7 @@ def data_volume_monitoring(ds, db_name, table_name,is_valid_success, **op_kwargs
 
     #true: 数据有才生成_SUCCESS false:数据没有也生成_SUCCESS 
     if is_valid_success.lower()=="false":
-        row_num=0
+        row_num=1
 
     if row_num <= 0:
         comwx.postAppMessage("{db}.{table}数据导入异常".format(db=db_name, table=table_name), '271')
