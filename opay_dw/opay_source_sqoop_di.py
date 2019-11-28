@@ -202,7 +202,7 @@ def run_check_table(db_name, table_name, conn_id, hive_table_name, **kwargs):
 
 
 conn_conf_dict = {}
-for db_name, table_name, conn_id, prefix_name,priority_weight_nm in table_list:
+for db_name, table_name, conn_id, prefix_name,priority_weight_nm,is_valid_success in table_list:
     if conn_id not in conn_conf_dict:
         conn_conf_dict[conn_id] = BaseHook.get_connection(conn_id)
 
@@ -289,7 +289,7 @@ for db_name, table_name, conn_id, prefix_name,priority_weight_nm in table_list:
             op_kwargs={
                 'db_name': HIVE_DB,
                 'table_name': hive_table_name,
-                'is_valid_success':is_valid_success,
+                'is_valid_success':is_valid_success
             },
             dag=dag
         )
