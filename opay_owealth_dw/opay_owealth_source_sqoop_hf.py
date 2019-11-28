@@ -250,21 +250,20 @@ for db_name, table_name, conn_id, prefix_name,priority_weight_nm,is_valid_succes
 
     if table_name in IGNORED_TABLE_LIST:
         add_partitions >> validate_all_data
-    else:
-        # 数据量监控
-        volume_monitoring = PythonOperator(
-            task_id='volume_monitorin_{}'.format(hive_table_name),
-            python_callable=data_volume_monitoring,
-            provide_context=True,
-            op_kwargs={
-                'db_name': HIVE_DB,
-                'table_name': hive_table_name,
-                'ds':airflow.macros.ds_add(ds, +1),
-                'is_valid_success':is_valid_success
-            },
-            dag=dag
-        )
-        add_partitions >> volume_monitoring >> validate_all_data
+    # else:
+    #     # 数据量监控
+    #     volume_monitoring = PythonOperator(
+    #         task_id='volume_monitorin_{}'.format(hive_table_name),
+    #         python_callable=data_volume_monitoring,
+    #         provide_context=True,
+    #         op_kwargs={
+    #             'db_name': HIVE_DB,
+    #             'table_name': hive_table_name,
+    #             'is_valid_success':is_valid_success
+    #         },
+    #         dag=dag
+    #     )
+    #     add_partitions >> volume_monitoring >> validate_all_data
 
     # 超时监控
     task_timeout_monitor= PythonOperator(
