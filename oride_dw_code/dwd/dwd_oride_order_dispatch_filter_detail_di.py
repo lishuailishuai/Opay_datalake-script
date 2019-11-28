@@ -111,7 +111,7 @@ def dwd_oride_order_dispatch_filter_detail_di_sql_task(ds):
            ,dt
     FROM oride_source.dispatch_tracker_server_magic
     WHERE dt = '{pt}' 
-    AND event_name='dispatch_filter_driver' 
+    AND event_name='dispatch_filter_drivers' 
     AND (get_json_object(event_values, '$.is_multiple') is null or lower(get_json_object(event_values, '$.is_multiple'))='false')  
     UNION ALL
     SELECT  get_json_object(event_values,'$.city_id')                AS city_id --下单时所在城市 
@@ -133,7 +133,7 @@ def dwd_oride_order_dispatch_filter_detail_di_sql_task(ds):
     (split(substr(get_json_object(event_values, '$.order_list'),2,length(get_json_object(event_values, '$.order_list'))-2),',') 
     ) order_list AS order_id1
     WHERE dt = '{pt}' 
-    AND event_name='dispatch_filter_driver' 
+    AND event_name='dispatch_filter_drivers' 
     AND lower(get_json_object(event_values, '$.is_multiple'))='true' ;
 
 '''.format(
