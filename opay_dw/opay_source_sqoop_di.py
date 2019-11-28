@@ -74,7 +74,7 @@ table_list = [
     ("opay_transaction","adjustment_increase_record", "opay_db_3316", "base",3,"false"),
     ("opay_transaction","airtime_topup_record", "opay_db_3316", "base",3,"true"),
     ("opay_transaction","betting_topup_record", "opay_db_3316", "base",3,"true"),
-    ("opay_transaction","business_collection_record", "opay_db_3316", "base",3,"true"),
+    ("opay_transaction","business_collection_record", "opay_db_3316", "base",3,"false"),
     ("opay_transaction","electricity_topup_record", "opay_db_3316", "base",3,"true"),
     ("opay_transaction","merchant_acquiring_record", "opay_db_3316", "base",3,"true"),
     ("opay_transaction","merchant_pos_transaction_record", "opay_db_3316", "base",3,"false"),
@@ -87,22 +87,22 @@ table_list = [
     ("opay_transaction","transfer_not_register_record", "opay_db_3316", "base",3,"true"),
     ("opay_transaction","tv_topup_record", "opay_db_3316", "base",3,"true"),
     ("opay_transaction","user_easycash_record", "opay_db_3316", "base",3,"true"),
-    ("opay_transaction","user_pos_transaction_record", "opay_db_3316", "base",3,"true"),
+    ("opay_transaction","user_pos_transaction_record", "opay_db_3316", "base",3,"false"),
     ("opay_transaction","user_receive_money_record", "opay_db_3316", "base",3,"true"),
     ("opay_transaction","user_topup_record", "opay_db_3316", "base",3,"true"),
     ("opay_transaction","user_transfer_card_record", "opay_db_3316", "base",3,"true"),
     ("opay_transaction","user_transfer_user_record", "opay_db_3316", "base",3,"true"),
-    ("opay_transaction", "cash_in_record", "opay_db_3316", "base", 2,"true"),
-    ("opay_transaction", "cash_out_record", "opay_db_3316", "base", 2,"true"),
-    ("opay_transaction", "business_activity_record", "opay_db_3316", "base", 2,"true"),
-    ("opay_transaction", "activity_record", "opay_db_3316", "base", 2,"true"),
+    ("opay_transaction", "cash_in_record", "opay_db_3316", "base", 2,"false"),
+    ("opay_transaction", "cash_out_record", "opay_db_3316", "base", 2,"false"),
+    ("opay_transaction", "business_activity_record", "opay_db_3316", "base", 2,"false"),
+    ("opay_transaction", "activity_record", "opay_db_3316", "base", 2,"false"),
 
     ("opay_fee","user_fee_record", "opay_db_3322", "base",3,"true"),
     ("opay_fee","merchant_fee_record", "opay_db_3322", "base",3,"true"),
 
-    ("opay_account","account_user_record", "opay_db_3318", "base", 2,"true"),
+    ("opay_account","account_user_record", "opay_db_3318", "base", 2,"false"),
 
-    ("opay_activity","preferential_record", "opay_db_3322", "base",3,"true"),
+    ("opay_activity","preferential_record", "opay_db_3322", "base",3,"false"),
 ]
 
 HIVE_DB = 'opay_dw_ods'
