@@ -153,78 +153,68 @@ nvl(a.cm_id,b.cm_id) as cm_id
 from
 (select * from opos_temp.app_opos_order_data_history_di where country_code='nal' and dt='{before_1_day}' and length(bd_id)>0) as a
 full join
-(select 
-bd.cm_id,
-bd.cm_name,
-bd.rm_id,
-bd.rm_name,
-bd.bdm_id,
-bd.bdm_name,
-bd.bd_id,
-bd.bd_name,
+(
+select 
+cm_id,
+cm_name,
+rm_id,
+rm_name,
+bdm_id,
+bdm_name,
+bd_id,
+bd_name,
 
-bd.city_id, 
-bd.name as city_name,
-bd.country,
+city_id, 
+name as city_name,
+country,
 
-count(if(p.order_type = 'pos',p.order_id,null)) as his_pos_complete_order_cnt,
-count(if(p.order_type = 'qrcode',p.order_id,null)) as his_qr_complete_order_cnt,
-count(p.order_id) as his_complete_order_cnt,
-sum(p.org_payment_amount) as his_gmv,
-sum(p.pay_amount) as his_actual_amount,
-sum(p.return_amount) as his_return_amount,
-sum(if(p.first_order = '1',p.org_payment_amount - p.pay_amount + p.user_subsidy,0)) as his_new_user_cost,
-sum(if(p.first_order <> '1',p.org_payment_amount - p.pay_amount + p.user_subsidy,0)) as his_old_user_cost,
-count(if(p.return_amount > 0,p.order_id,null)) as his_return_amount_order_cnt,
+count(if(order_type = 'pos',order_id,null)) as his_pos_complete_order_cnt,
+count(if(order_type = 'qrcode',order_id,null)) as his_qr_complete_order_cnt,
+count(order_id) as his_complete_order_cnt,
+sum(org_payment_amount) as his_gmv,
+sum(pay_amount) as his_actual_amount,
+sum(return_amount) as his_return_amount,
+sum(if(first_order = '1',org_payment_amount - pay_amount + user_subsidy,0)) as his_new_user_cost,
+sum(if(first_order <> '1',org_payment_amount - pay_amount + user_subsidy,0)) as his_old_user_cost,
+count(if(return_amount > 0,order_id,null)) as his_return_amount_order_cnt,
 
-count(if(p.dt = '{pt}' and p.order_type = 'pos',p.order_id,null)) as pos_complete_order_cnt,
-count(if(p.dt = '{pt}' and p.order_type = 'qrcode',p.order_id,null)) as qr_complete_order_cnt,
-count(if(p.dt = '{pt}',p.order_id,null)) as complete_order_cnt,
-sum(if(p.dt = '{pt}',p.org_payment_amount,0)) as gmv,
-sum(if(p.dt = '{pt}',p.pay_amount,0)) as actual_amount,
-sum(if(p.dt = '{pt}',p.return_amount,0)) as return_amount,
-sum(if(p.dt = '{pt}' and p.first_order = '1',p.org_payment_amount - p.pay_amount + p.user_subsidy,0)) as new_user_cost,
-sum(if(p.dt = '{pt}' and p.first_order <> '1',p.org_payment_amount - p.pay_amount + p.user_subsidy,0)) as old_user_cost,
-count(if(p.dt = '{pt}' and p.return_amount > 0,p.order_id,null)) as return_amount_order_cnt
+count(if(dt = '{pt}' and order_type = 'pos',order_id,null)) as pos_complete_order_cnt,
+count(if(dt = '{pt}' and order_type = 'qrcode',order_id,null)) as qr_complete_order_cnt,
+count(if(dt = '{pt}',order_id,null)) as complete_order_cnt,
+sum(if(dt = '{pt}',org_payment_amount,0)) as gmv,
+sum(if(dt = '{pt}',pay_amount,0)) as actual_amount,
+sum(if(dt = '{pt}',return_amount,0)) as return_amount,
+sum(if(dt = '{pt}' and first_order = '1',org_payment_amount - pay_amount + user_subsidy,0)) as new_user_cost,
+sum(if(dt = '{pt}' and first_order <> '1',org_payment_amount - pay_amount + user_subsidy,0)) as old_user_cost,
+count(if(dt = '{pt}' and return_amount > 0,order_id,null)) as return_amount_order_cnt
 
 from 
---取出paynemt当天的所有数据
-(
-select dt,receipt_id,order_id,order_type,trade_status,org_payment_amount,pay_amount,return_amount,first_order,user_subsidy from opos_dw_ods.ods_sqoop_base_pre_opos_payment_order_di where dt = '{pt}' and trade_status = 'SUCCESS'
-) as p 
+(select
+p.dt,p.receipt_id,p.order_id,p.order_type,p.trade_status,p.org_payment_amount,p.pay_amount,p.return_amount,p.first_order,p.user_subsidy,bd.bd_id,bd.city_id,bd.name,bd.country,bd.cm_id,bd.cm_name,bd.rm_id,bd.rm_name,bd.bdm_id,bd.bdm_name,bd.bd_name
+from
+    (select dt,receipt_id,order_id,order_type,trade_status,org_payment_amount,pay_amount,return_amount,first_order,user_subsidy from opos_dw_ods.ods_sqoop_base_pre_opos_payment_order_di where dt = '{pt}' and trade_status = 'SUCCESS') as p 
 inner join
---先用orderod关联每一笔交易的bd_id,只取能关联上bd信息的交易，故用inner join
-(
-select s.order_id,s.bd_id,s.city_id,ci.name,ci.country,b.cm_id,b.cm_name,b.rm_id,b.rm_name,b.bdm_id,b.bdm_name,b.bd_name from
-  (select order_id,bd_id,city_id from opos_dw_ods.ods_sqoop_base_pre_opos_payment_order_bd_di where dt='{pt}') as s 
-left join
---关联城市码表，求出国家和城市描述
-  (select id,name,country from opos_dw_ods.ods_sqoop_base_bd_city_df where dt = '{pt}') as ci
-on s.city_id=ci.id
-left join
---关联bd信息码表，求出所有bd的层级关系和描述
-  (select cm_id,cm_name,rm_id,rm_name,bdm_id,bdm_name,bd_id,bd_name from opos_dw.dim_opos_bd_info_df where country_code='nal' and dt='{pt}') as b
-on s.bd_id=b.bd_id
-) as bd
+    --先用orderod关联每一笔交易的bd_id,只取能关联上bd信息的交易，故用inner join
+    (
+    select s.order_id,s.bd_id,s.city_id,ci.name,ci.country,b.cm_id,b.cm_name,b.rm_id,b.rm_name,b.bdm_id,b.bdm_name,b.bd_name from
+      (select order_id,bd_id,city_id from opos_dw_ods.ods_sqoop_base_pre_opos_payment_order_bd_di where dt='{pt}') as s 
+    left join
+    --关联城市码表，求出国家和城市描述
+      (select id,name,country from opos_dw_ods.ods_sqoop_base_bd_city_df where dt = '{pt}') as ci
+    on s.city_id=ci.id
+    left join
+    --关联bd信息码表，求出所有bd的层级关系和描述
+      (select cm_id,cm_name,rm_id,rm_name,bdm_id,bdm_name,bd_id,bd_name from opos_dw.dim_opos_bd_info_df where country_code='nal' and   dt='{pt}')   as b
+    on s.bd_id=b.bd_id
+    ) as bd
 on
-p.order_id=bd.order_id
+    p.order_id=bd.order_id) as tmp
+
 group by 
-bd.cm_id,
-bd.cm_name,
-bd.rm_id,
-bd.rm_name,
-bd.bdm_id,
-bd.bdm_name,
-bd.bd_id,
-bd.bd_name,
-
-bd.city_id, 
-bd.name,
-bd.country
-
+cm_id,cm_name,rm_id,rm_name,bdm_id,bdm_name,bd_id,bd_name,city_id, name,country
 ) as b
 on
-b.bd_id=b.bd_id
+a.bd_id=b.bd_id
 and a.city_id=b.city_id
 ;
 
