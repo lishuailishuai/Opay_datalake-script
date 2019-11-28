@@ -359,3 +359,4 @@ ods_sqoop_base_pre_opos_payment_order_bd_di_task >> opos_metrcis_report_task
 # 测试任务命令
 # airflow test opos_metrcis_report opos_metrcis_report_task 2019-11-24 -sd /home/feng.yuan/opos_metrcis_report.py
 
+
