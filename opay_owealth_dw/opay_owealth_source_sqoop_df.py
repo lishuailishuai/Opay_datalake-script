@@ -54,22 +54,22 @@ IGNORED_TABLE_LIST = [
 
 '''
 导入数据的列表
-db_name,table_name,conn_id,prefix_name,priority_weight
+db_name,table_name,conn_id,prefix_name,priority_weight,is_valid_success
 '''
 #
 
 table_list = [
-    ("opay_owealth","share_acct", "opay_owealth_db", "owealth",3),
-    ("opay_owealth","share_failure_user", "opay_owealth_db", "owealth",3),
-    ("opay_owealth","share_freeze", "opay_owealth_db", "owealth",3),
-    ("opay_owealth","share_holiday", "opay_owealth_db", "owealth",3),
-    ("opay_owealth","share_limit_level", "opay_owealth_db", "owealth",3),
-    ("opay_owealth","share_order", "opay_owealth_db", "owealth",3),
-    ("opay_owealth","share_platform_assets_acct", "opay_owealth_db", "owealth",3),
-    ("opay_owealth","share_platform_revenue_acct", "opay_owealth_db", "owealth",3),
-    ("opay_owealth", "owealth_purchase_record", "opay_db_3320", "owealth", 3),
-    ("opay_owealth", "owealth_user_subscribed", "opay_db_3320", "owealth", 3),
-    ("opay_owealth", "share_revenue_log", "opay_db_3320", "owealth", 2),
+    ("opay_owealth","share_acct", "opay_owealth_db", "owealth",3,"true"),
+    ("opay_owealth","share_failure_user", "opay_owealth_db", "owealth",3,"false"),
+    ("opay_owealth","share_freeze", "opay_owealth_db", "owealth",3,"true"),
+    ("opay_owealth","share_holiday", "opay_owealth_db", "owealth",3,"false"),
+    ("opay_owealth","share_limit_level", "opay_owealth_db", "owealth",3,"true"),
+    ("opay_owealth","share_order", "opay_owealth_db", "owealth",3,"true"),
+    ("opay_owealth","share_platform_assets_acct", "opay_owealth_db", "owealth",3,"true"),
+    ("opay_owealth","share_platform_revenue_acct", "opay_owealth_db", "owealth",3,"true"),
+    ("opay_owealth", "owealth_purchase_record", "opay_db_3320", "owealth", 3,"true"),
+    ("opay_owealth", "owealth_user_subscribed", "opay_db_3320", "owealth", 3,"true"),
+    ("opay_owealth", "share_revenue_log", "opay_db_3320", "owealth", 2,"true"),
 ]
 
 
