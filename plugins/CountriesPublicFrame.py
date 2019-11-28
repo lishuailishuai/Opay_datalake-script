@@ -24,7 +24,7 @@ from airflow.utils.trigger_rule import TriggerRule
 
 class CountriesPublicFrame(object):
 
-    def __init__(self,is_open="false",v_ds,v_db_name,v_table_name,v_data_hdfs_path,v_country_partition="true",v_file_type="true",v_hour=None):
+    def __init__(self,v_is_open="false",v_ds,v_db_name,v_table_name,v_data_hdfs_path,v_country_partition="true",v_file_type="true",v_hour=None):
 
         self.comwx = ComwxApi('wwd26d45f97ea74ad2', 'BLE_v25zCmnZaFUgum93j3zVBDK-DjtRkLisI_Wns4g', '1000011')
 
@@ -36,6 +36,7 @@ class CountriesPublicFrame(object):
         self.country_partition=v_country_partition
         self.file_type=v_file_type
         self.hour=v_hour
+        self.is_open=v_is_open
 
     def get_country_code(self):
 
@@ -43,10 +44,10 @@ class CountriesPublicFrame(object):
             获取当前表中所有二位国家码
         """
 
-        if is_open.lower()=="false" and is_open.lower()!="true":
+        if self.is_open.lower()=="false" and self.is_open.lower()!="true":
             v_country_code_list="nal"
 
-        if is_open.lower()=="true":
+        if self.is_open.lower()=="true":
             v_country_code_list = Variable.get("country_code_list")
 
         logging.info('Executing 二位国家码: %s', country_code_list)
