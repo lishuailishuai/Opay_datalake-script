@@ -213,8 +213,6 @@ select * from opos_dw.dim_opos_bd_info_df where country_code='nal' and dt='{pt}'
 ) as b
 on
 s.bd_id=b.bd_id
-where
-s.bd_id is not null
 group by 
 b.cm_id,
 b.cm_name,
