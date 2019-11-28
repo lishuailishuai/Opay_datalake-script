@@ -137,15 +137,16 @@ nvl(a.cm_id,b.cm_id) as cm_id
 ,nvl(a.his_new_user_cost,0) + nvl(b.his_new_user_cost,0)  as his_new_user_cost
 ,nvl(a.his_old_user_cost,0) + nvl(b.his_old_user_cost,0)  as his_old_user_cost
 ,nvl(a.his_return_amount_order_cnt,0) + nvl(b.his_return_amount_order_cnt,0)  as his_return_amount_order_cnt
-,nvl(a.pos_complete_order_cnt,0) + nvl(b.pos_complete_order_cnt,0)  as pos_complete_order_cnt
-,nvl(a.qr_complete_order_cnt,0) + nvl(b.qr_complete_order_cnt,0)  as qr_complete_order_cnt
-,nvl(a.complete_order_cnt,0) + nvl(b.complete_order_cnt,0)  as complete_order_cnt
-,nvl(a.gmv,0) + nvl(b.gmv,0)  as gmv
-,nvl(a.actual_amount,0) + nvl(b.actual_amount,0)  as actual_amount
-,nvl(a.return_amount,0) + nvl(b.return_amount,0)  as return_amount
-,nvl(a.new_user_cost,0) + nvl(b.new_user_cost,0)  as new_user_cost
-,nvl(a.old_user_cost,0) + nvl(b.old_user_cost,0)  as old_user_cost
-,nvl(a.return_amount_order_cnt,0) + nvl(b.return_amount_order_cnt,0)  as return_amount_order_cnt
+
+,nvl(b.pos_complete_order_cnt,0)  as pos_complete_order_cnt
+,nvl(b.qr_complete_order_cnt,0)  as qr_complete_order_cnt
+,nvl(b.complete_order_cnt,0)  as complete_order_cnt
+,nvl(b.gmv,0)  as gmv
+,nvl(b.actual_amount,0)  as actual_amount
+,nvl(b.return_amount,0)  as return_amount
+,nvl(b.new_user_cost,0)  as new_user_cost
+,nvl(b.old_user_cost,0)  as old_user_cost
+,nvl(b.return_amount_order_cnt,0)  as return_amount_order_cnt
 
 ,'nal' as country_code
 ,'{pt}' as dt
@@ -212,8 +213,6 @@ select * from opos_dw.dim_opos_bd_info_df where country_code='nal' and dt='{pt}'
 ) as b
 on
 s.bd_id=b.bd_id
-where
-s.bd_id is not null
 group by 
 b.cm_id,
 b.cm_name,
