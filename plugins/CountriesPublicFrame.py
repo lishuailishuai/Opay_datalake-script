@@ -45,7 +45,7 @@ class CountriesPublicFrame(object):
 
         country_code_list = Variable.get("country_code_list").split(",")
 
-        logging.info('Executing 二位国家码: %s', country_code)
+        logging.info('Executing 二位国家码: %s', country_code_list)
 
         print(country_code_list)
         
