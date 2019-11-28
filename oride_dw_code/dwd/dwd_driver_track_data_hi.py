@@ -60,12 +60,12 @@ hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
 
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
 
-def fun_task_timeout_monitor(ds, dag, **op_kwargs):
+def fun_task_timeout_monitor(ds, execution_date,dag, **op_kwargs):
     dag_ids = dag.dag_id
 
     tb = [
         {"db": "oride_dw", "table": "{dag_name}".format(dag_name=dag_ids),
-         "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "600"}
+         "partition": "country_code=nal/dt={pt}/hour={hour}".format(pt=ds, hour=execution_date.strftime("%H")), "timeout": "600"}
     ]
 
     TaskTimeoutMonitor().set_task_monitor(tb)

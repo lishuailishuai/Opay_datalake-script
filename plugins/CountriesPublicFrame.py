@@ -43,14 +43,12 @@ class CountriesPublicFrame(object):
             获取当前表中所有二位国家码
         """
 
-        country_code = Variable.get("country_code_list").split(",")
+        country_code_list = Variable.get("country_code_list").split(",")
 
         logging.info('Executing 二位国家码: %s', country_code)
+
+        print(country_code_list)
         
-        
-    
-        logging.info('Executing 二位国家码为空，赋予默认值 %s', country_code_list)
-    
         return country_code_list
 
 
