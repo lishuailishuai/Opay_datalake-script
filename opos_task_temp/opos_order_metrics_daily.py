@@ -627,12 +627,16 @@ insert_crm_metrics = HiveToMySqlTransfer(
         nvl(b.his_user_active_cnt,0),
         nvl(b.his_pos_user_active_cnt,0),
         nvl(b.his_qr_user_active_cnt,0)
-
-
         from 
-        opos_temp.opos_metrcis_report a 
-        left join opos_temp.opos_active_user_daily b on  a.country_code = b.country_code and a.dt = b.dt and a.bd_id = b.bd_id and a.city_id = b.city_id       
-        where a.country_code = 'nal' and  a.dt = '{{ ds }}'
+        (select * from opos_temp.opos_metrcis_report where country_code = 'nal' and  dt = '{{ ds }}') a
+        left join 
+        (select * from opos_temp.opos_active_user_daily where country_code = 'nal' and  dt = '{{ ds }}') b 
+        on  
+        a.country_code = b.country_code 
+        and a.dt = b.dt 
+        and a.bd_id = b.bd_id 
+        and a.city_id = b.city_id       
+        
 
         """,
     mysql_conn_id='mysql_dw',
@@ -693,13 +697,16 @@ insert_bi_metrics = HiveToMySqlTransfer(
         nvl(b.his_user_active_cnt,0),
         nvl(b.his_pos_user_active_cnt,0),
         nvl(b.his_qr_user_active_cnt,0)
-
-
         from 
-        opos_temp.opos_metrcis_report a 
-        left join opos_temp.opos_active_user_daily b on  a.country_code = b.country_code and a.dt = b.dt and a.bd_id = b.bd_id and a.city_id = b.city_id       
-        where a.country_code = 'nal' and  a.dt = '{{ ds }}'
-
+        (select * from opos_temp.opos_metrcis_report where country_code = 'nal' and  dt = '{{ ds }}') a
+        left join 
+        (select * from opos_temp.opos_active_user_daily where country_code = 'nal' and  dt = '{{ ds }}') b 
+        on  
+        a.country_code = b.country_code 
+        and a.dt = b.dt 
+        and a.bd_id = b.bd_id 
+        and a.city_id = b.city_id       
+    
 
     """,
     mysql_conn_id='mysql_bi',
