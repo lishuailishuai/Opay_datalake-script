@@ -42,13 +42,6 @@ dag = airflow.DAG(
     default_args=args
 )
 
-sleep_time = BashOperator(
-    task_id='sleep_id',
-    depends_on_past=False,
-    bash_command='sleep 30',
-    dag=dag
-)
-
 ##----------------------------------------- 依赖 ---------------------------------------## 
 
 ods_sqoop_base_data_trip_df_tesk = UFileSensor(
