@@ -122,9 +122,7 @@ class CountriesPublicFrame(object):
         if res== '' or res == 'None' or res[0] == '0':
 
             logging.info("目录删除成功")
-
-            #Destination directory ufile://opay-datalake/opay_owealth_sqoop_hf/opay_owealth/share_order/dt=2019-11-24/hour=19 deleted
-        
+               
         else:
 
             #目录存在

@@ -169,23 +169,24 @@ def execution_data_task_id(ds,**kwargs):
         生产success: touchz_success
 
         #参数
-        第一个参数true: 数据目录是有country_code分区。false 没有
-        第二个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
+        第一个参数true: 所有国家是否上线。false 没有
+        第二个参数true: 数据目录是有country_code分区。false 没有
+        第三个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
 
         #读取sql
-        %_sql_task(ds,v_hour)
+        %_sql(ds,v_hour)
 
         第一个参数ds: 天级任务
         第二个参数v_hour: 小时级任务，需要使用
 
     """
 
-    cf=CountriesPublicFrame(ds,db_name,table_name,hdfs_path,"true","true")
+    cf=CountriesPublicFrame("true",ds,db_name,table_name,hdfs_path,"true","true")
 
     #删除分区
     cf.delete_partition()
 
-    #拼接SQL
+    #读取sql
     _sql="\n"+cf.alter_partition()+"\n"+dwd_oride_driver_fault_records_df_sql_task(ds)
 
     logging.info('Executing: %s',_sql)
