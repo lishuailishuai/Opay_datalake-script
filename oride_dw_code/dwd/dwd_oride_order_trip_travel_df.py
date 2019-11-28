@@ -66,42 +66,6 @@ dependence_ods_sqoop_base_data_trip_df = HivePartitionSensor(
 
 hive_dwd_table = 'dwd_oride_order_trip_travel_df'
 
-# 创建dwd表
-create_dwd_table_task = HiveOperator(
-    task_id='create_dwd_table_task',
-    hql='''
-        CREATE EXTERNAL TABLE IF NOT EXISTS oride_dw.{table} (
-            travel_id           bigint          comment '行程ID',
-            driver_id           bigint          comment '司机ID',
-            city_id             bigint          comment '所属城市',
-            product_id           int             comment '订单车辆类型(1:driect 2:street 3:keke)',
-            pax_num             int             comment '乘客数量',
-            pax_max             int             comment '乘客上限',
-            duration            bigint          comment '时间',
-            distance            bigint          comment '订单距离',
-            price               decimal(38,2)   comment '订单价格',
-            reward              decimal(38,2)   comment '司机奖励',
-            tip                 decimal(38,2)   comment '小费',
-            order_id            bigint          comment '订单号',
-            create_time         string          comment '创建时间',
-            start_time          bigint          comment '开始时间',
-            finish_time         bigint          comment '完成时间',
-            cancel_time         bigint          comment '取消时间',
-            status              int             comment '订单状态 (0: initial, 1: ongoing, 2: finished 3: cancel)',
-            pickup_order_id     bigint          comment '接单',
-            count_down          bigint          comment '倒计时秒'
-        ) 
-        PARTITIONED BY (
-            `country_code` string COMMENT '二位国家码',  
-            `dt` string comment '日期'
-        )
-        STORED AS ORC 
-        LOCATION 'ufile://opay-datalake/oride/oride_dw/dwd_oride_order_trip_travel_df' 
-        TBLPROPERTIES("orc.compress"="SNAPPY") 
-    '''.format(table=hive_dwd_table),
-    schema='oride_dw',
-    dag=dag
-)
 
 # 清洗数据
 ods_sqoop_base_data_trip_df_task = HiveOperator(

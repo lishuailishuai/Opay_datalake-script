@@ -250,7 +250,7 @@ for db_name, table_name, conn_id, prefix_name,priority_weight_nm,is_valid_succes
 
     if table_name in IGNORED_TABLE_LIST:
         add_partitions >> validate_all_data
-    # else:
+    #else:
     #     # 数据量监控
     #     volume_monitoring = PythonOperator(
     #         task_id='volume_monitorin_{}'.format(hive_table_name),
@@ -277,4 +277,4 @@ for db_name, table_name, conn_id, prefix_name,priority_weight_nm,is_valid_succes
         dag=dag_monitor
     )
 
-    import_table >> check_table >> add_partitions
+    import_table >> check_table >> add_partitions>> validate_all_data
