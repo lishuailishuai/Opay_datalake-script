@@ -48,29 +48,33 @@ sleep_time = BashOperator(
     dag=dag
 )
 
-hive_ods_table = 'ods_sqoop_base_data_trip_df'
-"""
-/------------------------------- 依赖数据源 --------------------------------/
-"""
-dependence_ods_sqoop_base_data_trip_df = HivePartitionSensor(
-    task_id='dependence_ods_sqoop_base_data_trip_df',
-    table=hive_ods_table,
-    partition="dt='{{ds}}'",
-    schema='oride_dw_ods',
+##----------------------------------------- 依赖 ---------------------------------------## 
+
+ods_sqoop_base_data_trip_df_tesk = UFileSensor(
+    task_id='ods_sqoop_base_data_trip_df_tesk',
+    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="ufile://opay-datalake/oride_dw_sqoop/oride_data/data_trip",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
-"""
-/---------------------------------- end ----------------------------------/
-"""
-
-hive_dwd_table = 'dwd_oride_order_trip_travel_df'
 
 
-# 清洗数据
-ods_sqoop_base_data_trip_df_task = HiveOperator(
-    task_id='ods_sqoop_base_data_trip_df_task',
-    hql='''
+##----------------------------------------- 变量 ---------------------------------------## 
+
+db_name="oride_dw"
+table_name="dwd_oride_order_trip_travel_df"
+hdfs_path="ufile://opay-datalake/oride/oride_dw/"+table_name
+
+
+##----------------------------------------- 脚本 ---------------------------------------## 
+
+
+def dwd_oride_order_trip_travel_df_sql_task(ds):
+
+    HQL='''
         SET hive.exec.parallel=true;
         SET hive.exec.dynamic.partition=true;
         SET hive.exec.dynamic.partition.mode=nonstrict;
@@ -105,69 +109,111 @@ ods_sqoop_base_data_trip_df_task = HiveOperator(
             ) AS t 
             LATERAL VIEW posexplode(orders) d AS pos, order_id 
     '''.format(
-        table=hive_dwd_table,
-        ods_db='oride_dw_ods',
-        ods_table=hive_ods_table,
-        pt='{{ ds }}'
-    ),
-    schema='oride_dw',
-    dag=dag
-)
+        pt=ds,
+        now_day=airflow.macros.ds_add(ds, +1),
+        table=table_name,
+        db=db_name
+        )
+    return HQL
+    
+ 
+#熔断数据，如果数据为0，报错
+def check_key_data_task(ds):
 
-
-#熔断数据，如果数据重复，报错
-def check_key_data(ds,**kargs):
+    cursor = get_hive_cursor()
 
     #主键重复校验
-    HQL_DQC='''
+    check_sql='''
     SELECT count(1)-count(distinct travel_id,order_id) as cnt
       FROM oride_dw.{table}
       WHERE dt='{pt}'
     '''.format(
         pt=ds,
         now_day=airflow.macros.ds_add(ds, +1),
-        table=hive_dwd_table
+        table=table_name,
+        db=db_name
         )
 
-    cursor = get_hive_cursor()
-    logging.info('Executing 主键重复校验: %s', HQL_DQC)
+    logging.info('Executing 主键重复校验: %s', check_sql)
 
-    cursor.execute(HQL_DQC)
+    cursor.execute(check_sql)
+
     res = cursor.fetchone()
-
-    if res[0] >1:
-        raise Exception ("Error The primary key repeat !", res)
-    else:
-        print("-----> Notice Data Export Success ......")
-    
  
-task_check_key_data = PythonOperator(
-    task_id='check_data',
-    python_callable=check_key_data,
+    if res[0] ==0:
+        flag=1
+        raise Exception ("Error The primary key repeat !", res)
+        sys.exit(1)
+    else:
+        flag=0
+        print("-----> Notice Data Export Success ......")
+
+    return flag
+
+
+#主流程
+def execution_data_task_id(ds,**kwargs):
+
+    v_date=kwargs.get('v_execution_date')
+    v_day=kwargs.get('v_execution_day')
+    v_hour=kwargs.get('v_execution_hour')
+
+    hive_hook = HiveCliHook()
+
+    """
+        #功能函数
+        alter语句: alter_partition
+        删除分区: delete_partition
+        生产success: touchz_success
+
+        #参数
+        第一个参数true: 所有国家是否上线。false 没有
+        第二个参数true: 数据目录是有country_code分区。false 没有
+        第三个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
+
+        #读取sql
+        %_sql(ds,v_hour)
+
+        第一个参数ds: 天级任务
+        第二个参数v_hour: 小时级任务，需要使用
+
+    """
+
+    cf=CountriesPublicFrame("false",ds,db_name,table_name,hdfs_path,"true","true")
+
+    #删除分区
+    cf.delete_partition()
+
+    #读取sql
+    _sql="\n"+cf.alter_partition()+"\n"+dwd_oride_order_trip_travel_df_sql_task(ds)
+
+    logging.info('Executing: %s',_sql)
+
+    #执行Hive
+    hive_hook.run_cli(_sql)
+
+    #熔断数据，如果数据不能为0
+    #check_key_data_cnt_task(ds)
+
+    #熔断数据
+    check_key_data_task(ds)
+
+    #生产success
+    cf.touchz_success()
+
+    
+dwd_oride_order_trip_travel_df_task= PythonOperator(
+    task_id='dwd_oride_order_trip_travel_df_task',
+    python_callable=execution_data_task_id,
     provide_context=True,
-    dag=dag
-)
-
-# 生成_SUCCESS
-touchz_data_success = BashOperator(
-    task_id='touchz_data_success',
-    bash_command="""
-        line_num=`$HADOOP_HOME/bin/hadoop fs -du -s {hdfs_data_dir} | tail -1 | awk '{{print $1}}'`
-
-        if [ $line_num -eq 0 ]; then
-            echo "FATAL {hdfs_data_dir} is empty"
-            exit 1
-        else
-            echo "DATA EXPORT Successed ......"
-            $HADOOP_HOME/bin/hadoop fs -touchz {hdfs_data_dir}/_SUCCESS
-        fi
-    """.format(
-        pt='{{ ds }}',
-        now_day='{{ macros.ds_add(ds, +1) }}',
-        hdfs_data_dir='ufile://opay-datalake/oride/oride_dw/dwd_oride_order_trip_travel_df/country_code=nal/dt={{ ds }}'
-    ),
+    op_kwargs={
+        'v_execution_date':'{{execution_date.strftime("%Y-%m-%d %H:%M:%S")}}',
+        'v_execution_day':'{{execution_date.strftime("%Y-%m-%d")}}',
+        'v_execution_hour':'{{execution_date.strftime("%H")}}'
+    },
     dag=dag
 )
 
 
-dependence_ods_sqoop_base_data_trip_df >>create_dwd_table_task>>sleep_time >> ods_sqoop_base_data_trip_df_task>>task_check_key_data >> touchz_data_success
+
+ods_sqoop_base_data_trip_df_tesk>>dwd_oride_order_trip_travel_df_task
