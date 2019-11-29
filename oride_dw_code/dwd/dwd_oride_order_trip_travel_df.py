@@ -117,10 +117,10 @@ def dwd_oride_order_trip_travel_df_sql_task(ds):
         FROM (SELECT 
                 *,
                 split(replace(replace(order_ids,'[',''),']',''), ',') AS orders 
-            FROM {db}.{table} 
+            FROM 
             WHERE dt = '{pt}'
             ) AS t 
-            LATERAL VIEW explode(orders) d AS pos, order_id
+            LATERAL VIEW explode(orders) d AS order_id
     '''.format(
         pt=ds,
         now_day=airflow.macros.ds_add(ds, +1),
