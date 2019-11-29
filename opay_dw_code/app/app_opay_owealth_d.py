@@ -63,10 +63,10 @@ ods_sqoop_owealth_share_order_df_prev_day_task = UFileSensor(
     dag=dag
 )
 
-ods_sqoop_base_user_df_prev_day_task = UFileSensor(
-    task_id='ods_sqoop_base_user_df_prev_day_task',
+ods_sqoop_base_user_di_prev_day_task = UFileSensor(
+    task_id='ods_sqoop_base_user_di_prev_day_task',
     filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opay_dw_ods/opay_user/user",
+        hdfs_path_str="opay_dw_sqoop_di/opay_user/user",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -101,10 +101,17 @@ def app_opay_owealth_d_sql_task(ds):
              AND status="S"
              AND substr(from_unixtime(unix_timestamp(create_time, 'yyyy-MM-dd HH:mm:ss')+3600),1,10)='{pt}'),
              user_base AS
-          (SELECT ROLE,
-                  mobile
-           FROM opay_dw_ods.ods_sqoop_base_user_df
-           WHERE dt='{pt}')
+          (
+           select 
+                user_id, ROLE, mobile
+            from (
+                select 
+                    user_id, ROLE, mobile,
+                    row_number() over(partition by user_id order by update_time desc) rn
+                from opay_dw_ods.ods_sqoop_base_user_di
+                where dt <= '{pt}'
+            ) t1 where rn = 1
+          )
         INSERT overwrite TABLE opay_dw.app_opay_owealth_d partition (dt='{pt}')
         SELECT   agent_balance+customer_balance total_balance, --总的累计金额
                  agent_subscribe_amount+customer_subscribe_amount total_subscribe_amount,--总的手动申购金额
@@ -349,7 +356,7 @@ send_owealth_report = PythonOperator(
 )
 ods_sqoop_owealth_share_acct_df_prev_day_task >> app_opay_owealth_d_task
 ods_sqoop_owealth_share_order_df_prev_day_task >> app_opay_owealth_d_task
-ods_sqoop_base_user_df_prev_day_task >> app_opay_owealth_d_task
+ods_sqoop_base_user_di_prev_day_task >> app_opay_owealth_d_task
 app_opay_owealth_d_task >> send_owealth_report
 
 
