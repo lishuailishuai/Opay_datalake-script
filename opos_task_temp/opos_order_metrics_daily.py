@@ -798,12 +798,12 @@ insert_bi_bd_metrics = HiveToMySqlTransfer(
         a.country_code = b.country_code 
         and a.dt = b.dt 
         and a.bd_id = b.bd_id 
-        and a.city_id = b.city_id    
+        and a.city_id = b.city_id  
+  
         left join
         public_dw_dim.dim_date as d
         on
-        a.dt=d.dt;
-
+        a.dt=d.dt
 
     """,
     mysql_conn_id='mysql_bi',
