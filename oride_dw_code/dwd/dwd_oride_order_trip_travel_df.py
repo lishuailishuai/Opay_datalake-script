@@ -117,7 +117,7 @@ def dwd_oride_order_trip_travel_df_sql_task(ds):
         FROM (SELECT 
                 *,
                 split(replace(replace(order_ids,'[',''),']',''), ',') AS orders 
-            FROM 
+            FROM oride_dw_ods.ods_sqoop_base_data_trip_df
             WHERE dt = '{pt}'
             ) AS t 
             LATERAL VIEW explode(orders) d AS order_id
