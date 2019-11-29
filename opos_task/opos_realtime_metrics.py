@@ -42,6 +42,14 @@ opos_mysql_hook = MySqlHook("mysql_dw")
 opos_mysql_conn = opos_mysql_hook.get_conn()
 opos_mysql_cursor = opos_mysql_conn.cursor()
 
+opos_cashback_mysql_hook = MySqlHook("opos_cashback")
+opos_cashback_mysql_conn = opos_cashback_mysql_hook.get_conn()
+opos_cashback_mysql_cursor = opos_cashback_mysql_conn.cursor()
+
+
+
+
+
 insert_order_bonus_sql_template = """
     insert into opos_dw.opos_order_bonus (
         id ,
@@ -69,11 +77,33 @@ insert_order_bonus_sql_template = """
         update_time 
     )
     values(
+        {id} ,
+        {activity_id} ,
+        {bd_id} ,
+        {city_id} ,
+        '{device_id}' ,
+        '{opay_account}' ,
+        '{provider_account}' ,
+        '{receiver_account}' ,
+        {amount} ,
+        {use_amount} ,
+        {bonus_rate} ,
+        {bonus_amount} ,
+        {status} ,
+        {settle_status} ,
+        {settle_type},
+        '{reason}' ,
+        '{risk_id}' ,
+        '{settle_time}' ,
+        '{expire_time}' ,
+        '{use_time}' ,
+        '{use_date}' ,
+        '{create_time}' ,
+        '{update_time}' 
         
     )
 
 """
-
 
 query_order_bonus_sql_template = """
     select 
@@ -407,6 +437,72 @@ def insert_order_data(ds, **kwargs):
 
     insert_order(ds, airflow.macros.ds_add(ds, -1), week, year)
     insert_order_extend(ds, airflow.macros.ds_add(ds, -1), week, year)
+    insert_order_bonus(ds, airflow.macros.ds_add(ds, -1), week, year)
+
+
+def insert_order_bonus(ds, yesterday, week, year):
+    query_sql = query_order_bonus_sql_template.format(year=year, week=(int(week) + 1), ds=ds,
+                                                      yesterday=yesterday)
+
+    logging.info(query_sql)
+    opos_cashback_mysql_cursor.execute(query_sql)
+    results = opos_cashback_mysql_cursor.fetchall()
+    logging.info(" record num : {num}".format(num=len(results)))
+    for data in results:
+        [
+            id,
+            activity_id,
+            bd_id,
+            city_id,
+            device_id,
+            opay_account,
+            provider_account,
+            receiver_account,
+            amount,
+            use_amount,
+            bonus_rate,
+            bonus_amount,
+            status,
+            settle_status,
+            settle_type,
+            reason,
+            risk_id,
+            settle_time,
+            expire_time,
+            use_time,
+            use_date,
+            create_time,
+            update_time
+        ] = list(data)
+
+        insert_sql = insert_order_bonus_sql_template.format(
+            id=id,
+            activity_id=activity_id,
+            bd_id=bd_id,
+            city_id=city_id,
+            device_id=device_id,
+            opay_accoun=opay_account,
+            provider_account=provider_account,
+            receiver_account=receiver_account,
+            amount=amount,
+            use_amount=use_amount,
+            bonus_rate=bonus_rate,
+            bonus_amount=bonus_amount,
+            status=status,
+            settle_statu=settle_status,
+            settle_type=settle_type,
+            reason=reason,
+            risk_id=risk_id,
+            settle_time=settle_time,
+            expire_time=expire_time,
+            use_time=use_time,
+            use_date=use_date,
+            create_time=create_time,
+            update_time=update_time
+        )
+
+        opos_cashback_mysql_cursor.execute(insert_sql)
+        opos_cashback_mysql_conn.commit()
 
 
 def insert_order_extend(ds, yesterday, week, year):
