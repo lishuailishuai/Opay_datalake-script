@@ -400,9 +400,10 @@ def app_oride_order_global_operate_overview_d_sql_task(ds):
         (--在线司机数  不分业务线  天 不分小时 ad
                 select 
                     city_id,
-                    td_online_driver_num
+                    sum(td_online_driver_num) as  td_online_driver_num
             from oride_dw.dm_oride_driver_base 
             where dt = '{pt}'
+            group by city_id
         )online_driver on  online_driver.city_id = ad.city_id
         left join
         (--计算开城日期  ad
