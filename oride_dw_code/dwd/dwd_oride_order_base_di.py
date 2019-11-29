@@ -431,7 +431,7 @@ SELECT base.order_id,
         wait_distance, --等待乘客上车距离
         cancel_wait_payment_time,  --乘客取消待支付时间  
 
-       country_code,
+       country.country_code as country_code,
 
        '{pt}' AS dt
 FROM
@@ -573,7 +573,8 @@ FROM
              wait_lat, --等待乘客上车位置纬度
              wait_in_radius, --是否在接驾范围内
              wait_distance, --等待乘客上车距离
-             cancel_wait_payment_time  --乘客取消待支付时间  
+             cancel_wait_payment_time,  --乘客取消待支付时间  
+             country_id  --国家编码
 
       FROM oride_dw_ods.ods_sqoop_base_data_order_df
       WHERE dt = '{pt}'
@@ -628,6 +629,12 @@ WHERE assign_type=1
 GROUP BY order_id,driver_id) push_ord
 on base.order_id=push_ord.order_id
 and base.driver_id=push_ord.driver_id
+
+left join
+(SELECT *
+   FROM oride_dw_ods.ods_sqoop_base_data_country_conf_df 
+   WHERE dt='{pt}') country
+on base.country_id=country.id
 
 left OUTER JOIN
 (--拼车成功的订单   trip对应id数量 > 1的 id 
