@@ -824,3 +824,4 @@ opos_metrcis_report_task >> delete_crm_data >> insert_crm_metrics >> delete_bi_d
 # 测试任务命令
 # airflow test opos_order_metrics_daily opos_active_user_daily_task 2019-11-26 -sd /home/feng.yuan/opos_order_metrics_daily.py
 
+
