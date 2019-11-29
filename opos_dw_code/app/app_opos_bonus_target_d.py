@@ -41,23 +41,11 @@ dag = airflow.DAG('app_opos_bonus_target_d',
 
 ##----------------------------------------- 依赖 ---------------------------------------##
 
-# 依赖前一天分区，ods_sqoop_base_opos_bonus_record_di表，ufile://opay-datalake/opos_dw_sqoop/opay_crm/bd_admin_users
-ods_sqoop_base_opos_bonus_record_di_task = UFileSensor(
-    task_id='ods_sqoop_base_opos_bonus_record_di_task',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opos_dw_sqoop/opay_crm/bd_admin_users",
-        pt='{{ds}}'
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
-
 # 依赖前一天分区，dim_opos_bd_relation_df表，ufile://opay-datalake/opos/opos_dw/dim_opos_bd_relation_df
-dim_opos_bd_relation_df_task = UFileSensor(
-    task_id='dim_opos_bd_relation_df_task',
+dwd_opos_bonus_record_di_task = UFileSensor(
+    task_id='dwd_opos_bonus_record_di_task',
     filepath='{hdfs_path_str}/country_code=nal/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opos/opos_dw/dim_opos_bd_relation_df",
+        hdfs_path_str="opos/opos_dw/dwd_opos_bonus_record_di",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -104,8 +92,14 @@ def app_opos_bonus_target_d_sql_task(ds):
     insert overwrite table opos_dw.{table} partition(country_code,dt)
     select
     create_date,
-    city_code,
+    create_week,
+    create_month,
+    create_year,
+
+    city_id as city_code,
     city_name,
+    country,
+
     cm_id,
     cm_name,
     rm_id,
@@ -143,49 +137,20 @@ def app_opos_bonus_target_d_sql_task(ds):
     'nal' as country_code,
     '{pt}' as dt
     from
-    (
-    select
-    o.id,
-    o.city_id as city_code,
-    o.bd_id,
-    o.opay_account,
-    o.provider_account,
-    o.receiver_account,
-    o.amount,
-    o.use_amount,
-    o.bonus_amount,
-    o.status,
-    o.settle_status,
-    o.settle_type,
-    substr(o.create_time,0,10) as create_date,
-    o.dt,
-
-    b.cm_id,
-    b.cm_name,
-    b.rm_id,
-    b.rm_name,
-    b.bdm_id,
-    b.bdm_name,
-    b.bd_name,
-
-    c.country as country_code,
-    c.name as city_name
-    from
-    (select * from opos_dw_ods.ods_sqoop_base_opos_bonus_record_di where dt='{pt}') as o
-    left join
-    (select * from opos_dw.dim_opos_bd_info_df where country_code='nal' and dt='{pt}') as b
-    on
-    o.bd_id=b.bd_id
-    left join
-    (select id,name,country from opos_dw_ods.ods_sqoop_base_bd_city_df where dt = '{pt}') as c
-    on
-    o.city_id=c.id
-    ) as bonus_record
+    opos_dw.dwd_opos_bonus_record_di
+    where 
+    country_code='nal' 
+    and dt='{pt}'
     group by
     create_date,
-    country_code,
-    city_code,
+    create_week,
+    create_month,
+    create_year,
+
+    city_id,
     city_name,
+    country,
+
     cm_id,
     cm_name,
     rm_id,
@@ -194,6 +159,7 @@ def app_opos_bonus_target_d_sql_task(ds):
     bdm_name,
     bd_id,
     bd_name;
+
 
 
 '''.format(
@@ -236,8 +202,7 @@ app_opos_bonus_target_d_task = PythonOperator(
     dag=dag
 )
 
-ods_sqoop_base_opos_bonus_record_di_task >> app_opos_bonus_target_d_task
-dim_opos_bd_relation_df_task >> app_opos_bonus_target_d_task
+dwd_opos_bonus_record_di_task >> app_opos_bonus_target_d_task
 
 # 查看任务命令
 # airflow list_tasks app_opos_bonus_target_d -sd /home/feng.yuan/app_opos_bonus_target_d.py
