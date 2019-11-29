@@ -37,13 +37,14 @@ RM_HTTP_PARAMS = {
 }
 
 # 任务配置情况
-# 任务名称 并行度 container数量 slot数量 checkpoint statebackend路径 mainClass taskManager内存大小
+# 任务名称 并行度 container数量 slot数量 checkpoint statebackend路径 mainClass taskManager内存大小 , 是否从checkpoint中恢复
 task_map = {
     'opay-user-order-etl': ('opay-metrics',
                             8, 4, 2,
                             's3a://opay-bi/flink/workflow/checkpoint',
                             'com.opay.bd.opay.main.OpayUserOrderMergeMain',
-                            3072
+                            3072,
+                            False
                             ),
 }
 
@@ -215,7 +216,8 @@ def monitor_rm(ds, **kwargs):
                 'slot_num': job_info[3],
                 'checkpoint_address': job_info[4],
                 'main_class': job_info[5],
-                'task_manager_mem_size': job_info[6]
+                'task_manager_mem_size': job_info[6],
+                'is_chk': job_info[7]
             }
             logging.info(
                 "========== flink application 任务失败，进入启动拉起流程 ========== ")
@@ -266,13 +268,14 @@ def start_flink_job(job_name, pre_job_id, param):
     checkpoint_address = param['checkpoint_address']
     main_class = param['main_class']
     task_manager_mem_size = param['task_manager_mem_size']
+    is_chk = param['is_chk']
     checkpoint = ''
     new_job_id = ''
     lines = None
 
     # 获取checkpoint最新地址
 
-    if pre_job_id == '-1':
+    if not is_chk or pre_job_id == '-1':
         command = """
                  ssh node5.datalake.opay.com " source /etc/profile ; flink run  -p {par_num} -m yarn-cluster -yn {container_num} -ytm {task_manager_mem_size} -yqu root.users.airflow -ynm {job_name} -ys {slot_num}  -d -c {main_class} bd-flink-project-1.0.jar"
                 """.format(
