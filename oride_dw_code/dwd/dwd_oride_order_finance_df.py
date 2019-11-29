@@ -134,7 +134,7 @@ def dwd_oride_order_finance_df_sql_task(ds):
      sum(nvl(if(recharge.amount_reason=6,abs(recharge.amount),0),0.0)) AS phone_amount, --手机还款
      sum(nvl(records.amount_all,0.0)) AS amount_all, --当日总收入
      sum(nvl(abs(records.amount_agenter),0.0)) AS amount_agenter, --司机份子钱
-     'nal' as country_code,
+     ord.country_code as country_code,
      '{pt}' as dt
     FROM
       (SELECT *

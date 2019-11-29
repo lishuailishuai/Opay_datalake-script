@@ -135,7 +135,7 @@ SELECT t.order_id,  --订单ID
         if(weather.city is not null and weather.run_time_hour is not null and weather.mins is not null,1,0) as is_wet_order, --是否湿单
         t.driver_id, --司机ID
         com.score, -- 该订单的评分
-        'nal' AS country_code,
+        t.country_code as country_code,
         '{pt}' AS dt
     FROM (
         SELECT
