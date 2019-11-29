@@ -728,6 +728,10 @@ insert_bi_bd_metrics = HiveToMySqlTransfer(
         select 
         null,
         a.dt,
+        
+        d.week_of_year as create_week,
+        substr(a.dt,0,7) as create_month,
+        substr(a.dt,0,4) as create_year,
 
         a.cm_id,
         a.cm_name,
@@ -794,7 +798,11 @@ insert_bi_bd_metrics = HiveToMySqlTransfer(
         a.country_code = b.country_code 
         and a.dt = b.dt 
         and a.bd_id = b.bd_id 
-        and a.city_id = b.city_id       
+        and a.city_id = b.city_id    
+        left join
+        public_dw_dim.dim_date as d
+        on
+        a.dt=d.dt;   
 
 
     """,
