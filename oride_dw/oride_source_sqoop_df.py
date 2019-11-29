@@ -150,10 +150,8 @@ table_list = [
     ("oride_data", "data_driver_recharge_type", "sqoop_db", "base",1),
     ("oride_data", "data_city_repayment_conf", "sqoop_db", "base",1),
 
-    ("oride_data", "data_trip", "sqoop_db", "base",1),
     ("oride_data", "data_trip_history", "sqoop_db", "base",1),
     ("oride_data", "data_driver_assign_info_history", "sqoop_db", "base",1),
-    ("oride_data", "data_opay_transaction", "sqoop_db", "base",1),
     ("oride_data", "data_opay_transaction_history", "sqoop_db", "base",1),
 
     ("bi", "weather_per_10min", "mysql_bi", "base",3),

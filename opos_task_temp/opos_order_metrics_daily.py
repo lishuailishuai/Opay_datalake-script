@@ -572,6 +572,16 @@ delete_bi_data = MySqlOperator(
     mysql_conn_id='mysql_bi',
     dag=dag)
 
+delete_bi_bd_data = MySqlOperator(
+    task_id='delete_bi_bd_data',
+    sql="""
+        DELETE FROM opos_metrics_daily_d WHERE dt='{ds}' ;
+    """.format(
+        ds='{{ds}}'
+    ),
+    mysql_conn_id='mysql_bi',
+    dag=dag)
+
 insert_crm_metrics = HiveToMySqlTransfer(
     task_id='insert_crm_metrics',
     sql=""" 
@@ -705,11 +715,91 @@ insert_bi_metrics = HiveToMySqlTransfer(
         and a.dt = b.dt 
         and a.bd_id = b.bd_id 
         and a.city_id = b.city_id       
-    
+
 
     """,
     mysql_conn_id='mysql_bi',
     mysql_table='opos_metrics_daily',
+    dag=dag)
+
+insert_bi_bd_metrics = HiveToMySqlTransfer(
+    task_id='insert_bi_bd_metrics',
+    sql=""" 
+        select 
+        null,
+        a.dt,
+
+        a.cm_id,
+        a.cm_name,
+        a.rm_id,
+        a.rm_name,
+        a.bdm_id,
+        a.bdm_name,
+        a.bd_id,
+        a.bd_name,
+
+        a.city_id,
+        a.city_name,
+        a.country,
+
+        a.merchant_cnt , 
+        a.pos_merchant_cnt , 
+        a.new_merchant_cnt , 
+        a.new_pos_merchant_cnt , 
+        a.pos_complete_order_cnt , 
+        a.qr_complete_order_cnt , 
+        a.complete_order_cnt , 
+        a.gmv ,
+        a.actual_amount ,
+        nvl(b.pos_user_active_cnt,0),
+        nvl(b.qr_user_active_cnt,0),
+        nvl(b.before_1_day_user_active_cnt,0),
+        nvl(b.before_7_day_user_active_cnt,0),
+        nvl(b.before_15_day_user_active_cnt,0),
+        nvl(b.before_30_day_user_active_cnt,0),
+        nvl(b.order_merchant_cnt,0),
+        nvl(b.pos_order_merchant_cnt,0),
+        nvl(b.week_pos_user_active_cnt,0),
+        nvl(b.week_qr_user_active_cnt,0),
+        nvl(b.month_pos_user_active_cnt,0),
+        nvl(b.month_qr_user_active_cnt,0),
+        nvl(b.have_order_user_cnt,0),
+
+        a.return_amount,
+        a.new_user_cost,
+        a.old_user_cost,
+        a.return_amount_order_cnt,
+        a.his_pos_complete_order_cnt,
+        a.his_qr_complete_order_cnt,
+        a.his_complete_order_cnt,
+        a.his_gmv,
+        a.his_actual_amount,
+        a.his_return_amount,
+        a.his_new_user_cost,
+        a.his_old_user_cost,
+        a.his_return_amount_order_cnt,
+        nvl(b.user_active_cnt,0),
+        nvl(b.new_user_cnt,0),
+        nvl(b.more_5_merchant_cnt,0),
+        nvl(b.his_order_merchant_cnt,0),
+        nvl(b.his_pos_order_merchant_cnt,0),
+        nvl(b.his_user_active_cnt,0),
+        nvl(b.his_pos_user_active_cnt,0),
+        nvl(b.his_qr_user_active_cnt,0)
+        from 
+        (select * from opos_temp.opos_metrcis_report where country_code = 'nal' and  dt = '2019-11-28') a
+        left join 
+        (select * from opos_temp.opos_active_user_daily where country_code = 'nal' and  dt = '2019-11-28') b 
+        on  
+        a.country_code = b.country_code 
+        and a.dt = b.dt 
+        and a.bd_id = b.bd_id 
+        and a.city_id = b.city_id       
+
+
+    """,
+    mysql_conn_id='mysql_bi',
+    mysql_table='opos_metrics_daily_d',
     dag=dag)
 
 dim_opos_bd_relation_df_task >> opos_active_user_daily_task
@@ -717,9 +807,9 @@ ods_sqoop_base_pre_opos_payment_order_di_task >> opos_active_user_daily_task
 ods_sqoop_base_pre_opos_payment_order_bd_di_task >> opos_active_user_daily_task
 
 # 执行mysql任务
-opos_active_user_daily_task >> delete_crm_data >> insert_crm_metrics >> delete_bi_data >> insert_bi_metrics
+opos_active_user_daily_task >> delete_crm_data >> insert_crm_metrics >> delete_bi_data >> insert_bi_metrics >> delete_bi_bd_data >> insert_bi_bd_metrics
 
-opos_metrcis_report_task >> delete_crm_data >> insert_crm_metrics >> delete_bi_data >> insert_bi_metrics
+opos_metrcis_report_task >> delete_crm_data >> insert_crm_metrics >> delete_bi_data >> insert_bi_metrics >> delete_bi_bd_data >> insert_bi_bd_metrics
 
 # 查看任务命令
 # airflow list_tasks opos_order_metrics_daily -sd /home/feng.yuan/opos_order_metrics_daily.py
