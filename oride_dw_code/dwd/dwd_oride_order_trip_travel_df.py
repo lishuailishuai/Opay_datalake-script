@@ -48,7 +48,7 @@ dag = airflow.DAG(
 ods_sqoop_base_data_trip_df_tesk = UFileSensor(
     task_id='ods_sqoop_base_data_trip_df_tesk',
     filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="/oride_dw_sqoop/oride_data/data_trip",
+        hdfs_path_str="oride_dw_sqoop/oride_data/data_trip",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
