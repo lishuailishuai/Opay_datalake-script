@@ -184,7 +184,7 @@ SELECT t.order_id,  --订单ID
           and weather.run_time_hour=t.create_time_hour
           and weather.mins=t.create_time_mins
           left join
-          (select * from oride_dw_ods.ods_sqoop_base_data_user_comment_df
+          (select * from oride_dw_ods.ods_sqoop_base_data_driver_comment_df
           where dt='{pt}') com
           on t.order_id=com.order_id
     '''.format(
