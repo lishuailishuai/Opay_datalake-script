@@ -791,9 +791,9 @@ insert_bi_bd_metrics = HiveToMySqlTransfer(
         nvl(b.his_pos_user_active_cnt,0),
         nvl(b.his_qr_user_active_cnt,0)
         from 
-        (select * from opos_temp.opos_metrcis_report where country_code = 'nal' and  dt = '2019-11-28') a
+        (select * from opos_temp.opos_metrcis_report where country_code = 'nal' and  dt = '{{ ds }}') a
         left join 
-        (select * from opos_temp.opos_active_user_daily where country_code = 'nal' and  dt = '2019-11-28') b 
+        (select * from opos_temp.opos_active_user_daily where country_code = 'nal' and  dt = '{{ ds }}') b 
         on  
         a.country_code = b.country_code 
         and a.dt = b.dt 
@@ -802,7 +802,7 @@ insert_bi_bd_metrics = HiveToMySqlTransfer(
         left join
         public_dw_dim.dim_date as d
         on
-        a.dt=d.dt;   
+        a.dt=d.dt;
 
 
     """,
