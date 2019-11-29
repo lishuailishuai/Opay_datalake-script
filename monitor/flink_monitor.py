@@ -268,14 +268,14 @@ def start_flink_job(job_name, pre_job_id, param):
     checkpoint_address = param['checkpoint_address']
     main_class = param['main_class']
     task_manager_mem_size = param['task_manager_mem_size']
-    is_chk = param['is_chk']
+    # is_chk = param['is_chk']
     checkpoint = ''
     new_job_id = ''
     lines = None
 
     # 获取checkpoint最新地址
 
-    if not is_chk or pre_job_id == '-1':
+    if  pre_job_id == '-1':
         command = """
                  ssh node5.datalake.opay.com " source /etc/profile ; flink run  -p {par_num} -m yarn-cluster -yn {container_num} -ytm {task_manager_mem_size} -yqu root.users.airflow -ynm {job_name} -ys {slot_num}  -d -c {main_class} bd-flink-project-1.0.jar"
                 """.format(
