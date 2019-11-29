@@ -48,7 +48,7 @@ dag = airflow.DAG(
 ods_sqoop_base_data_trip_df_tesk = UFileSensor(
     task_id='ods_sqoop_base_data_trip_df_tesk',
     filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="ufile://opay-datalake/oride_dw_sqoop/oride_data/data_trip",
+        hdfs_path_str="oride_dw_sqoop/oride_data/data_trip",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -117,10 +117,10 @@ def dwd_oride_order_trip_travel_df_sql_task(ds):
         FROM (SELECT 
                 *,
                 split(replace(replace(order_ids,'[',''),']',''), ',') AS orders 
-            FROM {ods_db}.{ods_table} 
+            FROM {db}.{table} 
             WHERE dt = '{pt}'
             ) AS t 
-            LATERAL VIEW posexplode(orders) d AS pos, order_id 
+            LATERAL VIEW explode(orders) d AS pos, order_ids
     '''.format(
         pt=ds,
         now_day=airflow.macros.ds_add(ds, +1),

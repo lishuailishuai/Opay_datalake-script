@@ -135,7 +135,7 @@ SELECT t.order_id,  --订单ID
         if(weather.city is not null and weather.run_time_hour is not null and weather.mins is not null,1,0) as is_wet_order, --是否湿单
         t.driver_id, --司机ID
         com.score, -- 该订单的评分
-        'nal' AS country_code,
+        t.country_code as country_code,
         '{pt}' AS dt
     FROM (
         SELECT
@@ -184,7 +184,7 @@ SELECT t.order_id,  --订单ID
           and weather.run_time_hour=t.create_time_hour
           and weather.mins=t.create_time_mins
           left join
-          (select * from oride_dw_ods.ods_sqoop_base_data_user_comment_df
+          (select * from oride_dw_ods.ods_sqoop_base_data_driver_comment_df  --自11.29号的数据开始切换为乘客评价表，之前是司机评价乘客表，待追溯
           where dt='{pt}') com
           on t.order_id=com.order_id
     '''.format(
