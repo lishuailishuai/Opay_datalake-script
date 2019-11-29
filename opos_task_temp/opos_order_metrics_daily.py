@@ -728,6 +728,10 @@ insert_bi_bd_metrics = HiveToMySqlTransfer(
         select 
         null,
         a.dt,
+        
+        d.week_of_year as create_week,
+        substr(a.dt,0,7) as create_month,
+        substr(a.dt,0,4) as create_year,
 
         a.cm_id,
         a.cm_name,
@@ -787,15 +791,19 @@ insert_bi_bd_metrics = HiveToMySqlTransfer(
         nvl(b.his_pos_user_active_cnt,0),
         nvl(b.his_qr_user_active_cnt,0)
         from 
-        (select * from opos_temp.opos_metrcis_report where country_code = 'nal' and  dt = '2019-11-28') a
+        (select * from opos_temp.opos_metrcis_report where country_code = 'nal' and  dt = '{{ ds }}') a
         left join 
-        (select * from opos_temp.opos_active_user_daily where country_code = 'nal' and  dt = '2019-11-28') b 
+        (select * from opos_temp.opos_active_user_daily where country_code = 'nal' and  dt = '{{ ds }}') b 
         on  
         a.country_code = b.country_code 
         and a.dt = b.dt 
         and a.bd_id = b.bd_id 
-        and a.city_id = b.city_id       
-
+        and a.city_id = b.city_id  
+  
+        left join
+        public_dw_dim.dim_date as d
+        on
+        a.dt=d.dt
 
     """,
     mysql_conn_id='mysql_bi',
@@ -815,4 +823,5 @@ opos_metrcis_report_task >> delete_crm_data >> insert_crm_metrics >> delete_bi_d
 # airflow list_tasks opos_order_metrics_daily -sd /home/feng.yuan/opos_order_metrics_daily.py
 # 测试任务命令
 # airflow test opos_order_metrics_daily opos_active_user_daily_task 2019-11-26 -sd /home/feng.yuan/opos_order_metrics_daily.py
+
 
