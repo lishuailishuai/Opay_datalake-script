@@ -85,7 +85,12 @@ OFOOD_MODEL_PATH = "ufile://opay-datalake/oride/ofood_dw"
 OFOOD_BURIED_PATH = "ufile://opay-datalake/ofood/client"
 OFOOD_SQOOP_PATH = "ufile://opay-datalake/ofood_dw_sqoop"
 
-OPAY_SQOOP_PATH = "ufile://opay-datalake/opay_dw_ods"
+OPAY_DW_SQOOP_DF_PATH = "ufile://opay-datalake/opay_dw_ods"
+OPAY_DW_SQOOP_DI_PATH = "ufile://opay-datalake/opay_dw_sqoop_di"
+
+OPAY_OWEALTH_SQOOP_DF_PATH="ufile://opay-datalake/opay_owealth_ods/"
+
+OPOY_DW_SQOOP_DF_PATH="ufile://opay-datalake/opos_dw_sqoop"
 
 OBUS_SQOOP_PATH = "s3a://opay-bi/obus_dw"
 
@@ -105,7 +110,14 @@ def send_report_email(ds, **kwargs):
         埋点日数据量:{ofood_buried_size}<br><br>
 
         业务：opay<br>
+        采集日数据量:{opay_di_collect_size}<br>
         采集日数据量:{opay_collect_size}<br><br>
+
+        业务：opay_owealth<br>
+        采集日数据量:{opay_owealth_df_collect_size}<br><br>
+
+        业务：opoy<br>
+        采集日数据量:{opoy_df_collect_size}<br><br>
 
         业务：obus<br>
         采集日数据量:{obus_collect_size}<br><br>
@@ -118,8 +130,13 @@ def send_report_email(ds, **kwargs):
         ofood_model_size=getSizeInNiceString(get_dir_size(OFOOD_MODEL_PATH, ds)),
         ofood_collect_size=getSizeInNiceString(get_dir_size(OFOOD_SQOOP_PATH, ds)),
         ofood_buried_size=getSizeInNiceString(get_dir_size(OFOOD_BURIED_PATH, ds)),
-        opay_collect_size=getSizeInNiceString(get_dir_size(OPAY_SQOOP_PATH, ds)),
-        obus_collect_size=getSizeInNiceString(get_dir_size(OBUS_SQOOP_PATH, ds))
+        opay_collect_size=getSizeInNiceString(get_dir_size(OPAY_DW_SQOOP_DF_PATH, ds)),
+        obus_collect_size=getSizeInNiceString(get_dir_size(OBUS_SQOOP_PATH, ds)),
+
+        opay_di_collect_size=getSizeInNiceString(get_dir_size(OPAY_DW_SQOOP_DI_PATH, ds)),
+        opay_owealth_df_collect_size=getSizeInNiceString(get_dir_size(OPAY_OWEALTH_SQOOP_DF_PATH, ds)),
+        opoy_df_collect_size=getSizeInNiceString(get_dir_size(OPOY_DW_SQOOP_DF_PATH, ds))
+
     )
     send_email(
         email_to

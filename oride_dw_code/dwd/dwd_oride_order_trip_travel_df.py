@@ -120,7 +120,7 @@ def dwd_oride_order_trip_travel_df_sql_task(ds):
             FROM {db}.{table} 
             WHERE dt = '{pt}'
             ) AS t 
-            LATERAL VIEW explode(orders) d AS pos, order_ids
+            LATERAL VIEW explode(orders) d AS pos, order_id
     '''.format(
         pt=ds,
         now_day=airflow.macros.ds_add(ds, +1),
