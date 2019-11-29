@@ -249,6 +249,7 @@ for db_name, table_name, conn_id, prefix_name,priority_weight_nm in table_list:
         op_kwargs={
             'db_name': HIVE_DB,
             'table_name': hive_table_name,
+            'is_valid_success':"true"
         },
         dag=dag
     )
