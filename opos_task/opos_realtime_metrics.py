@@ -210,6 +210,52 @@ insert_sql_template = """
         merchant_risk_remark=VALUES(merchant_risk_remark)
 """
 
+insert_order_extend_sql_template = """
+    insert into opos_dw.opos_order_extend (
+        order_id,
+        opay_id,
+        shop_phone,
+        shop_id,
+        city_id,
+        category,
+        bd_id,
+        bdm_id,
+        rm_id,
+        cm_id,
+        hcm_id,
+        create_time
+    ) values
+    (
+        '{order_id}',
+        '{opay_id}',
+        '{shop_phone}',
+        '{shop_id}',
+        '{city_id}',
+        '{category}',
+        {bd_id},
+        {bdm_id},
+        {rm_id},
+        {cm_id},
+        {hcm_id},
+        '{create_time}'
+    )
+     ON DUPLICATE KEY
+    UPDATE
+     order_id=VALUES(order_id), 
+     opay_id=VALUES(opay_id), 
+     shop_phone=VALUES(shop_phone), 
+     shop_id=VALUES(shop_id), 
+     city_id=VALUES(city_id), 
+     category=VALUES(category), 
+     bd_id=VALUES(bd_id), 
+     bdm_id=VALUES(bdm_id), 
+     rm_id=VALUES(rm_id), 
+     cm_id=VALUES(cm_id), 
+     hcm_id=VALUES(hcm_id), 
+     create_time=VALUES(create_time)
+
+"""
+
 query_sql_template = '''
         select 
         order_id , 
@@ -269,24 +315,85 @@ query_sql_template = '''
         opos_payment_order_{year}_{week}
         where 
         (DATE_FORMAT(create_time,"%Y-%m-%d") = '{ds}' or DATE_FORMAT(modify_time,"%Y-%m-%d")='{ds}')
-        or 
-        (DATE_FORMAT(create_time,"%Y-%m-%d") = '{yesterday}' or DATE_FORMAT(modify_time,"%Y-%m-%d")='{yesterday}')
     '''
+
+query_order_extend_sql_template = """
+    select 
+    order_id,
+    opay_id,
+    shop_phone,
+    shop_id,
+    city_id,
+    category,
+    bd_id,
+    bdm_id,
+    rm_id,
+    cm_id,
+    hcm_id,
+    create_time
+    from opos_payment_order_bd_{year}_{week}
+    where (DATE_FORMAT(create_time,"%Y-%m-%d") = '{ds}' )
+"""
 
 
 def insert_order_data(ds, **kwargs):
     year = datetime.strptime(ds, '%Y-%m-%d').strftime('%Y')
     week = datetime.strptime(ds, '%Y-%m-%d').strftime('%W')
-    query_sql = query_sql_template.format(year=year, week=(int(week) + 1), ds=ds,
-                                          yesterday=airflow.macros.ds_add(ds, -1))
+
+    insert_order(ds, airflow.macros.ds_add(ds, -1), week, year)
+    insert_order_extend(ds, airflow.macros.ds_add(ds, -1), week, year)
+
+
+def insert_order_extend(ds, yesterday, week, year):
+    query_sql = query_order_extend_sql_template.format(year=year, week=(int(week) + 1), ds=ds,
+                                                       yesterday=yesterday)
 
     logging.info(query_sql)
-
     ptsp_mysql_cursor.execute(query_sql)
     results = ptsp_mysql_cursor.fetchall()
-
     logging.info(" record num : {num}".format(num=len(results)))
+    for data in results:
+        [
+            order_id,
+            opay_id,
+            shop_phone,
+            shop_id,
+            city_id,
+            category,
+            bd_id,
+            bdm_id,
+            rm_id,
+            cm_id,
+            hcm_id,
+            create_time
+        ] = list(data)
 
+        insert_sql = insert_order_extend_sql_template.format(
+            order_id=order_id,
+            opay_id=opay_id,
+            shop_phone=shop_phone,
+            shop_id=shop_id,
+            city_id=city_id,
+            category=category,
+            bd_id=bd_id,
+            bdm_id=bdm_id,
+            rm_id=rm_id,
+            cm_id=cm_id,
+            hcm_id=hcm_id,
+            create_time=create_time
+        )
+
+        opos_mysql_cursor.execute(insert_sql)
+        opos_mysql_conn.commit()
+
+
+def insert_order(ds, yesterday, week, year):
+    query_sql = query_sql_template.format(year=year, week=(int(week) + 1), ds=ds,
+                                          yesterday=yesterday)
+    logging.info(query_sql)
+    ptsp_mysql_cursor.execute(query_sql)
+    results = ptsp_mysql_cursor.fetchall()
+    logging.info(" record num : {num}".format(num=len(results)))
     for data in results:
         [order_id,
          device_no,
@@ -458,7 +565,7 @@ create_order_metrics_data = BashOperator(
               ifnull(count(distinct if(t.trade_status = 'SUCCESS',t.sender_id,null)),0) as active_user_cnt,
               ifnull(count(distinct if(t.order_type = 'pos' and t.trade_status = 'SUCCESS',t.sender_id,null)),0) as pos_active_user_cnt,
               ifnull(count(distinct if(t.order_type = 'qrcode' and t.trade_status = 'SUCCESS',t.sender_id,null)),0) as qr_active_user_cnt,
-              
+
               ifnull(count(distinct if(t.trade_status = 'SUCCESS' and t.first_order = '1',t.sender_id,null)),0) as new_user_cnt,
               ifnull(count(distinct if(t.order_type = 'pos' and t.trade_status = 'SUCCESS' and t.first_order = '1',t.sender_id,null)),0) as pos_new_user_cnt,
               ifnull(count(distinct if(t.order_type = 'qrcode' and t.trade_status = 'SUCCESS' and t.first_order = '1',t.sender_id,null)),0) as qr_new_user_cnt
@@ -477,7 +584,16 @@ create_order_metrics_data = BashOperator(
                   s.city_id,
                   o.first_order
                   from
-                  bd_shop s
+                  (
+                    select 
+                    order_id,
+                    opay_id,
+                    bd_id,
+                    city_id
+
+                    from 
+                    opos_order_extend
+                  ) s
                   join
                   (
                       select
@@ -497,7 +613,7 @@ create_order_metrics_data = BashOperator(
                       DATE_FORMAT(create_time,'%Y-%m-%d') = '{{ macros.ds_add(ds, -1) }}'
                       )
                   ) o
-                  on o.receipt_id = concat(s.opay_id,'')
+                  on o.order_id = s.order_id
                ) t
               group by t.dt,t.bd_id,t.city_id
             ) t

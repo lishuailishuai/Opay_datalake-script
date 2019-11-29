@@ -53,6 +53,17 @@ dim_opos_bd_relation_df_task = UFileSensor(
     dag=dag
 )
 
+opos_metrcis_report_task = UFileSensor(
+    task_id='opos_metrcis_report_task',
+    filepath='{hdfs_path_str}/country_code=nal/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="opos/opos_temp/opos_metrcis_report",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
 ods_sqoop_base_pre_opos_payment_order_di_task = UFileSensor(
     task_id='ods_sqoop_base_pre_opos_payment_order_di_task',
     filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
@@ -103,18 +114,18 @@ set hive.exec.dynamic.partition.mode=nonstrict;
 --03.创建临时明细表,扩充明细信息,将最新一天的交易明细数据关联上dbid和地市编码名称后插入到临时表中
 insert overwrite table opos_temp.opos_active_user_detail_daily partition (country_code,dt)
 select 
-b.cm_id
-,b.cm_name
-,b.rm_id
-,b.rm_name
-,b.bdm_id
-,b.bdm_name
-,s.bd_id
-,b.bd_name
+bd.cm_id
+,bd.cm_name
+,bd.rm_id
+,bd.rm_name
+,bd.bdm_id
+,bd.bdm_name
+,bd.bd_id
+,bd.bd_name
 
-,s.city_id
-,ci.name as city_name
-,ci.country
+,bd.city_id
+,bd.name as city_name
+,bd.country
 
 ,p.sender_id
 ,p.receipt_id
@@ -125,31 +136,26 @@ b.cm_id
 ,'nal' as country_code
 ,p.dt
 from 
-(select dt,sender_id,receipt_id,order_id,order_type,trade_status,first_order from opos_dw_ods.ods_sqoop_base_pre_opos_payment_order_di where dt = '{pt}' and trade_status = 'SUCCESS'
-) p 
-left join
---先用orderod关联每一笔交易的bdid
+--取出paynemt当天的所有数据
 (
-select order_id,bd_id,city_id from opos_dw_ods.ods_sqoop_base_pre_opos_payment_order_bd_di where dt='{pt}'
-) as s 
-on 
-p.order_id = s.order_id
+select dt,order_id,sender_id,receipt_id,order_type,trade_status,first_order from opos_dw_ods.ods_sqoop_base_pre_opos_payment_order_di where dt = '{pt}' and trade_status = 'SUCCESS'
+) as p 
+inner join
+--先用orderod关联每一笔交易的bd_id,只取能关联上bd信息的交易，故用inner join
+(
+select s.order_id,s.bd_id,s.city_id,ci.name,ci.country,b.cm_id,b.cm_name,b.rm_id,b.rm_name,b.bdm_id,b.bdm_name,b.bd_name from
+  (select order_id,bd_id,city_id from opos_dw_ods.ods_sqoop_base_pre_opos_payment_order_bd_di where dt='{pt}') as s 
 left join
 --关联城市码表，求出国家和城市描述
-(
-select id,name,country from opos_dw_ods.ods_sqoop_base_bd_city_df where dt = '{pt}'
-) as ci
-on
-s.city_id=ci.id
+  (select id,name,country from opos_dw_ods.ods_sqoop_base_bd_city_df where dt = '{pt}') as ci
+on s.city_id=ci.id
 left join
 --关联bd信息码表，求出所有bd的层级关系和描述
-(
-select * from opos_dw.dim_opos_bd_info_df where country_code='nal' and dt='{pt}'
-) as b
+  (select cm_id,cm_name,rm_id,rm_name,bdm_id,bdm_name,bd_id,bd_name from opos_dw.dim_opos_bd_info_df where country_code='nal' and dt='{pt}') as b
+on s.bd_id=b.bd_id
+) as bd
 on
-s.bd_id=b.bd_id
-where
-s.bd_id is not null;
+p.order_id=bd.order_id;
 
 --03.01.查出临时表中昨天,前天,7天前,15天前,30天前的数据
 with
@@ -445,7 +451,6 @@ active_merchant as (
   t.city_id
 )
 
-
 insert overwrite table opos_temp.opos_active_user_daily partition(country_code,dt)
 select 
 cu.cm_id
@@ -463,26 +468,26 @@ cu.cm_id
 
 ,cu.pos_user_active_cnt
 ,cu.qr_user_active_cnt
-,nvl(dr1.user_active_cnt,0)
-,nvl(dr7.user_active_cnt,0)
-,nvl(dr15.user_active_cnt,0)
-,nvl(dr30.user_active_cnt,0)
-,nvl(omd.order_merchant_cnt,0)
-,nvl(omd.pos_order_merchant_cnt,0)
-,nvl(wd.pos_user_active_cnt,0)
-,nvl(wd.qr_user_active_cnt,0)
-,nvl(md.pos_user_active_cnt,0)
-,nvl(md.qr_user_active_cnt,0)
-,nvl(ou.have_order_user_cnt,0)
+,nvl(dr1.user_active_cnt,0) before_1_day_user_active_cnt
+,nvl(dr7.user_active_cnt,0) before_7_day_user_active_cnt
+,nvl(dr15.user_active_cnt,0) before_15_day_user_active_cnt
+,nvl(dr30.user_active_cnt,0) before_30_day_user_active_cnt
+,nvl(omd.order_merchant_cnt,0) order_merchant_cnt
+,nvl(omd.pos_order_merchant_cnt,0) pos_order_merchant_cnt
+,nvl(wd.pos_user_active_cnt,0) week_pos_user_active_cnt
+,nvl(wd.qr_user_active_cnt,0) week_qr_user_active_cnt
+,nvl(md.pos_user_active_cnt,0) month_pos_user_active_cnt
+,nvl(md.qr_user_active_cnt,0) month_qr_user_active_cnt
+,nvl(ou.have_order_user_cnt,0) have_order_user_cnt
 
 ,cu.user_active_cnt
 ,cu.new_user_cnt
-,nvl(am.more_5_merchant_cnt,0)
-,nvl(hd.his_order_merchant_cnt,0)
-,nvl(hd.his_pos_order_merchant_cnt,0)
-,nvl(hd.his_user_active_cnt,0)
-,nvl(hd.his_pos_user_active_cnt,0)
-,nvl(hd.his_qr_user_active_cnt,0)
+,nvl(am.more_5_merchant_cnt,0) more_5_merchant_cnt
+,nvl(hd.his_order_merchant_cnt,0) his_order_merchant_cnt
+,nvl(hd.his_pos_order_merchant_cnt,0) his_pos_order_merchant_cnt
+,nvl(hd.his_user_active_cnt,0) his_user_active_cnt
+,nvl(hd.his_pos_user_active_cnt,0) his_pos_user_active_cnt
+,nvl(hd.his_qr_user_active_cnt,0) his_qr_user_active_cnt
 
 ,'nal' as country_code
 ,'{pt}' as dt
@@ -546,14 +551,178 @@ opos_active_user_daily_task = PythonOperator(
     dag=dag
 )
 
+# 将数据推到mysql一份
+delete_crm_data = MySqlOperator(
+    task_id='delete_crm_data',
+    sql="""
+        DELETE FROM opos_metrics_daily WHERE dt='{ds}' ;
+    """.format(
+        ds='{{ds}}'
+    ),
+    mysql_conn_id='mysql_dw',
+    dag=dag)
+
+delete_bi_data = MySqlOperator(
+    task_id='delete_bi_data',
+    sql="""
+        DELETE FROM opos_metrics_daily WHERE dt='{ds}' ;
+    """.format(
+        ds='{{ds}}'
+    ),
+    mysql_conn_id='mysql_bi',
+    dag=dag)
+
+insert_crm_metrics = HiveToMySqlTransfer(
+    task_id='insert_crm_metrics',
+    sql=""" 
+        select 
+        null,
+        a.dt,
+        a.bd_id , 
+        a.city_id , 
+        a.merchant_cnt , 
+        a.pos_merchant_cnt , 
+        a.new_merchant_cnt , 
+        a.new_pos_merchant_cnt , 
+        a.pos_complete_order_cnt , 
+        a.qr_complete_order_cnt , 
+        a.complete_order_cnt , 
+        a.gmv ,
+        a.actual_amount ,
+        nvl(b.pos_user_active_cnt,0),
+        nvl(b.qr_user_active_cnt,0),
+        nvl(b.before_1_day_user_active_cnt,0),
+        nvl(b.before_7_day_user_active_cnt,0),
+        nvl(b.before_15_day_user_active_cnt,0),
+        nvl(b.before_30_day_user_active_cnt,0),
+        nvl(b.order_merchant_cnt,0),
+        nvl(b.pos_order_merchant_cnt,0),
+        nvl(b.week_pos_user_active_cnt,0),
+        nvl(b.week_qr_user_active_cnt,0),
+        nvl(b.month_pos_user_active_cnt,0),
+        nvl(b.month_qr_user_active_cnt,0),
+        nvl(b.have_order_user_cnt,0),
+        a.city_name,
+        a.country,
+
+        a.return_amount,
+        a.new_user_cost,
+        a.old_user_cost,
+        a.return_amount_order_cnt,
+        a.his_pos_complete_order_cnt,
+        a.his_qr_complete_order_cnt,
+        a.his_complete_order_cnt,
+        a.his_gmv,
+        a.his_actual_amount,
+        a.his_return_amount,
+        a.his_new_user_cost,
+        a.his_old_user_cost,
+        a.his_return_amount_order_cnt,
+        nvl(b.user_active_cnt,0),
+        nvl(b.new_user_cnt,0),
+        nvl(b.more_5_merchant_cnt,0),
+        nvl(b.his_order_merchant_cnt,0),
+        nvl(b.his_pos_order_merchant_cnt,0),
+        nvl(b.his_user_active_cnt,0),
+        nvl(b.his_pos_user_active_cnt,0),
+        nvl(b.his_qr_user_active_cnt,0)
+        from 
+        (select * from opos_temp.opos_metrcis_report where country_code = 'nal' and  dt = '{{ ds }}') a
+        left join 
+        (select * from opos_temp.opos_active_user_daily where country_code = 'nal' and  dt = '{{ ds }}') b 
+        on  
+        a.country_code = b.country_code 
+        and a.dt = b.dt 
+        and a.bd_id = b.bd_id 
+        and a.city_id = b.city_id       
+        
+
+        """,
+    mysql_conn_id='mysql_dw',
+    mysql_table='opos_metrics_daily',
+    dag=dag)
+
+insert_bi_metrics = HiveToMySqlTransfer(
+    task_id='insert_bi_metrics',
+    sql=""" 
+        select 
+        null,
+        a.dt,
+        a.bd_id , 
+        a.city_id , 
+        a.merchant_cnt , 
+        a.pos_merchant_cnt , 
+        a.new_merchant_cnt , 
+        a.new_pos_merchant_cnt , 
+        a.pos_complete_order_cnt , 
+        a.qr_complete_order_cnt , 
+        a.complete_order_cnt , 
+        a.gmv ,
+        a.actual_amount ,
+        nvl(b.pos_user_active_cnt,0),
+        nvl(b.qr_user_active_cnt,0),
+        nvl(b.before_1_day_user_active_cnt,0),
+        nvl(b.before_7_day_user_active_cnt,0),
+        nvl(b.before_15_day_user_active_cnt,0),
+        nvl(b.before_30_day_user_active_cnt,0),
+        nvl(b.order_merchant_cnt,0),
+        nvl(b.pos_order_merchant_cnt,0),
+        nvl(b.week_pos_user_active_cnt,0),
+        nvl(b.week_qr_user_active_cnt,0),
+        nvl(b.month_pos_user_active_cnt,0),
+        nvl(b.month_qr_user_active_cnt,0),
+        nvl(b.have_order_user_cnt,0),
+        a.city_name,
+        a.country,
+
+        a.return_amount,
+        a.new_user_cost,
+        a.old_user_cost,
+        a.return_amount_order_cnt,
+        a.his_pos_complete_order_cnt,
+        a.his_qr_complete_order_cnt,
+        a.his_complete_order_cnt,
+        a.his_gmv,
+        a.his_actual_amount,
+        a.his_return_amount,
+        a.his_new_user_cost,
+        a.his_old_user_cost,
+        a.his_return_amount_order_cnt,
+        nvl(b.user_active_cnt,0),
+        nvl(b.new_user_cnt,0),
+        nvl(b.more_5_merchant_cnt,0),
+        nvl(b.his_order_merchant_cnt,0),
+        nvl(b.his_pos_order_merchant_cnt,0),
+        nvl(b.his_user_active_cnt,0),
+        nvl(b.his_pos_user_active_cnt,0),
+        nvl(b.his_qr_user_active_cnt,0)
+        from 
+        (select * from opos_temp.opos_metrcis_report where country_code = 'nal' and  dt = '{{ ds }}') a
+        left join 
+        (select * from opos_temp.opos_active_user_daily where country_code = 'nal' and  dt = '{{ ds }}') b 
+        on  
+        a.country_code = b.country_code 
+        and a.dt = b.dt 
+        and a.bd_id = b.bd_id 
+        and a.city_id = b.city_id       
+    
+
+    """,
+    mysql_conn_id='mysql_bi',
+    mysql_table='opos_metrics_daily',
+    dag=dag)
+
 dim_opos_bd_relation_df_task >> opos_active_user_daily_task
 ods_sqoop_base_pre_opos_payment_order_di_task >> opos_active_user_daily_task
 ods_sqoop_base_pre_opos_payment_order_bd_di_task >> opos_active_user_daily_task
 
+# 执行mysql任务
+opos_active_user_daily_task >> delete_crm_data >> insert_crm_metrics >> delete_bi_data >> insert_bi_metrics
+
+opos_metrcis_report_task >> delete_crm_data >> insert_crm_metrics >> delete_bi_data >> insert_bi_metrics
+
 # 查看任务命令
 # airflow list_tasks opos_order_metrics_daily -sd /home/feng.yuan/opos_order_metrics_daily.py
 # 测试任务命令
-# airflow test opos_order_metrics_daily opos_active_user_daily_task 2019-11-25 -sd /home/feng.yuan/opos_order_metrics_daily.py
-
-
+# airflow test opos_order_metrics_daily opos_active_user_daily_task 2019-11-26 -sd /home/feng.yuan/opos_order_metrics_daily.py
 

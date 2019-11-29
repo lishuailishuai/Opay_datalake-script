@@ -35,7 +35,7 @@ args = {
 }
 
 dag = airflow.DAG('opos_metrcis_report',
-                  schedule_interval="10 04 * * *",
+                  schedule_interval="50 03 * * *",
                   default_args=args,
                   catchup=False)
 
@@ -137,97 +137,82 @@ nvl(a.cm_id,b.cm_id) as cm_id
 ,nvl(a.his_new_user_cost,0) + nvl(b.his_new_user_cost,0)  as his_new_user_cost
 ,nvl(a.his_old_user_cost,0) + nvl(b.his_old_user_cost,0)  as his_old_user_cost
 ,nvl(a.his_return_amount_order_cnt,0) + nvl(b.his_return_amount_order_cnt,0)  as his_return_amount_order_cnt
-,nvl(a.pos_complete_order_cnt,0) + nvl(b.pos_complete_order_cnt,0)  as pos_complete_order_cnt
-,nvl(a.qr_complete_order_cnt,0) + nvl(b.qr_complete_order_cnt,0)  as qr_complete_order_cnt
-,nvl(a.complete_order_cnt,0) + nvl(b.complete_order_cnt,0)  as complete_order_cnt
-,nvl(a.gmv,0) + nvl(b.gmv,0)  as gmv
-,nvl(a.actual_amount,0) + nvl(b.actual_amount,0)  as actual_amount
-,nvl(a.return_amount,0) + nvl(b.return_amount,0)  as return_amount
-,nvl(a.new_user_cost,0) + nvl(b.new_user_cost,0)  as new_user_cost
-,nvl(a.old_user_cost,0) + nvl(b.old_user_cost,0)  as old_user_cost
-,nvl(a.return_amount_order_cnt,0) + nvl(b.return_amount_order_cnt,0)  as return_amount_order_cnt
+
+,nvl(b.pos_complete_order_cnt,0)  as pos_complete_order_cnt
+,nvl(b.qr_complete_order_cnt,0)  as qr_complete_order_cnt
+,nvl(b.complete_order_cnt,0)  as complete_order_cnt
+,nvl(b.gmv,0)  as gmv
+,nvl(b.actual_amount,0)  as actual_amount
+,nvl(b.return_amount,0)  as return_amount
+,nvl(b.new_user_cost,0)  as new_user_cost
+,nvl(b.old_user_cost,0)  as old_user_cost
+,nvl(b.return_amount_order_cnt,0)  as return_amount_order_cnt
 
 ,'nal' as country_code
 ,'{pt}' as dt
 from
-(select * from opos_temp.app_opos_order_data_history_di where country_code='nal' and dt='{before_1_day}' and bd_id is not null) as a
+(select * from opos_temp.app_opos_order_data_history_di where country_code='nal' and dt='{before_1_day}' and length(bd_id)>0) as a
 full join
-(select 
-b.cm_id,
-b.cm_name,
-b.rm_id,
-b.rm_name,
-b.bdm_id,
-b.bdm_name,
-s.bd_id,
-b.bd_name,
+(
+select 
+cm_id,
+cm_name,
+rm_id,
+rm_name,
+bdm_id,
+bdm_name,
+bd_id,
+bd_name,
 
-s.city_id, 
-ci.name as city_name,
-ci.country,
+city_id, 
+name as city_name,
+country,
 
-count(if(p.order_type = 'pos',p.order_id,null)) as his_pos_complete_order_cnt,
-count(if(p.order_type = 'qrcode',p.order_id,null)) as his_qr_complete_order_cnt,
-count(p.order_id) as his_complete_order_cnt,
-sum(p.org_payment_amount) as his_gmv,
-sum(p.pay_amount) as his_actual_amount,
-sum(p.return_amount) as his_return_amount,
-sum(if(p.first_order = '1',p.org_payment_amount - p.pay_amount + p.user_subsidy,0)) as his_new_user_cost,
-sum(if(p.first_order <> '1',p.org_payment_amount - p.pay_amount + p.user_subsidy,0)) as his_old_user_cost,
-count(if(p.return_amount > 0,p.order_id,null)) as his_return_amount_order_cnt,
+count(if(order_type = 'pos',order_id,null)) as his_pos_complete_order_cnt,
+count(if(order_type = 'qrcode',order_id,null)) as his_qr_complete_order_cnt,
+count(order_id) as his_complete_order_cnt,
+sum(org_payment_amount) as his_gmv,
+sum(pay_amount) as his_actual_amount,
+sum(return_amount) as his_return_amount,
+sum(if(first_order = '1',org_payment_amount - pay_amount + user_subsidy,0)) as his_new_user_cost,
+sum(if(first_order <> '1',org_payment_amount - pay_amount + user_subsidy,0)) as his_old_user_cost,
+count(if(return_amount > 0,order_id,null)) as his_return_amount_order_cnt,
 
-count(if(p.dt = '{pt}' and p.order_type = 'pos',p.order_id,null)) as pos_complete_order_cnt,
-count(if(p.dt = '{pt}' and p.order_type = 'qrcode',p.order_id,null)) as qr_complete_order_cnt,
-count(if(p.dt = '{pt}',p.order_id,null)) as complete_order_cnt,
-sum(if(p.dt = '{pt}',p.org_payment_amount,0)) as gmv,
-sum(if(p.dt = '{pt}',p.pay_amount,0)) as actual_amount,
-sum(if(p.dt = '{pt}',p.return_amount,0)) as return_amount,
-sum(if(p.dt = '{pt}' and p.first_order = '1',p.org_payment_amount - p.pay_amount + p.user_subsidy,0)) as new_user_cost,
-sum(if(p.dt = '{pt}' and p.first_order <> '1',p.org_payment_amount - p.pay_amount + p.user_subsidy,0)) as old_user_cost,
-count(if(p.dt = '{pt}' and p.return_amount > 0,p.order_id,null)) as return_amount_order_cnt
+count(if(dt = '{pt}' and order_type = 'pos',order_id,null)) as pos_complete_order_cnt,
+count(if(dt = '{pt}' and order_type = 'qrcode',order_id,null)) as qr_complete_order_cnt,
+count(if(dt = '{pt}',order_id,null)) as complete_order_cnt,
+sum(if(dt = '{pt}',org_payment_amount,0)) as gmv,
+sum(if(dt = '{pt}',pay_amount,0)) as actual_amount,
+sum(if(dt = '{pt}',return_amount,0)) as return_amount,
+sum(if(dt = '{pt}' and first_order = '1',org_payment_amount - pay_amount + user_subsidy,0)) as new_user_cost,
+sum(if(dt = '{pt}' and first_order <> '1',org_payment_amount - pay_amount + user_subsidy,0)) as old_user_cost,
+count(if(dt = '{pt}' and return_amount > 0,order_id,null)) as return_amount_order_cnt
 
 from 
---取出paynemt当天的所有数据
-(
-select dt,receipt_id,order_id,order_type,trade_status,org_payment_amount,pay_amount,return_amount,first_order,user_subsidy from opos_dw_ods.ods_sqoop_base_pre_opos_payment_order_di where dt = '{pt}' and trade_status = 'SUCCESS'
-) as p 
-left join
---先用orderod关联每一笔交易的bdid
-(
-select order_id,bd_id,city_id from opos_dw_ods.ods_sqoop_base_pre_opos_payment_order_bd_di where dt='{pt}'
-) as s 
-on 
-p.order_id = s.order_id
-left join
---关联城市码表，求出国家和城市描述
-(
-select id,name,country from opos_dw_ods.ods_sqoop_base_bd_city_df where dt = '{pt}'
-) as ci
+(select
+p.dt,p.receipt_id,p.order_id,p.order_type,p.trade_status,p.org_payment_amount,p.pay_amount,p.return_amount,p.first_order,p.user_subsidy,bd.bd_id,bd.city_id,bd.name,bd.country,bd.cm_id,bd.cm_name,bd.rm_id,bd.rm_name,bd.bdm_id,bd.bdm_name,bd.bd_name
+from
+    (select dt,receipt_id,order_id,order_type,trade_status,org_payment_amount,pay_amount,return_amount,first_order,user_subsidy from opos_dw_ods.ods_sqoop_base_pre_opos_payment_order_di where dt = '{pt}' and trade_status = 'SUCCESS') as p 
+inner join
+    --先用orderod关联每一笔交易的bd_id,只取能关联上bd信息的交易，故用inner join
+    (
+    select s.order_id,s.bd_id,s.city_id,ci.name,ci.country,b.cm_id,b.cm_name,b.rm_id,b.rm_name,b.bdm_id,b.bdm_name,b.bd_name from
+      (select order_id,bd_id,city_id from opos_dw_ods.ods_sqoop_base_pre_opos_payment_order_bd_di where dt='{pt}') as s 
+    left join
+    --关联城市码表，求出国家和城市描述
+      (select id,name,country from opos_dw_ods.ods_sqoop_base_bd_city_df where dt = '{pt}') as ci
+    on s.city_id=ci.id
+    left join
+    --关联bd信息码表，求出所有bd的层级关系和描述
+      (select cm_id,cm_name,rm_id,rm_name,bdm_id,bdm_name,bd_id,bd_name from opos_dw.dim_opos_bd_info_df where country_code='nal' and   dt='{pt}')   as b
+    on s.bd_id=b.bd_id
+    ) as bd
 on
-s.city_id=ci.id
-left join
---关联bd信息码表，求出所有bd的层级关系和描述
-(
-select * from opos_dw.dim_opos_bd_info_df where country_code='nal' and dt='{pt}'
-) as b
-on
-s.bd_id=b.bd_id
-where
-s.bd_id is not null
-group by 
-b.cm_id,
-b.cm_name,
-b.rm_id,
-b.rm_name,
-b.bdm_id,
-b.bdm_name,
-s.bd_id,
-b.bd_name,
+    p.order_id=bd.order_id) as tmp
 
-s.city_id, 
-ci.name,
-ci.country)
-as b
+group by 
+cm_id,cm_name,rm_id,rm_name,bdm_id,bdm_name,bd_id,bd_name,city_id, name,country
+) as b
 on
 a.bd_id=b.bd_id
 and a.city_id=b.city_id
@@ -237,43 +222,43 @@ and a.city_id=b.city_id
 --得出最新维度下每个dbid的详细数据信息
 insert overwrite table opos_temp.opos_metrcis_report partition (country_code,dt)
 select
-bd.cm_id
-,bd.cm_name
-,bd.rm_id
-,bd.rm_name
-,bd.bdm_id
-,bd.bdm_name
-,bd.bd_id
-,bd.bd_name
+nvl(bd.cm_id,ord.cm_id) cm_id
+,nvl(bd.cm_name,ord.cm_name) cm_name
+,nvl(bd.rm_id,ord.rm_id) rm_id
+,nvl(bd.rm_name,ord.rm_name) rm_name
+,nvl(bd.bdm_id,ord.bdm_id) bdm_id
+,nvl(bd.bdm_name,ord.bdm_name) bdm_name
+,nvl(bd.bd_id,ord.bd_id) bd_id
+,nvl(bd.bd_name,ord.bd_name) bd_name
 
-,bd.city_id
-,bd.city_name
-,bd.country
+,nvl(bd.city_id,ord.city_id) city_id
+,nvl(bd.city_name,ord.city_name) city_name
+,nvl(bd.country,ord.country) country
 
-,bd.merchant_cnt
-,bd.pos_merchant_cnt
-,bd.new_merchant_cnt
-,bd.new_pos_merchant_cnt
+,nvl(bd.merchant_cnt,0) merchant_cnt
+,nvl(bd.pos_merchant_cnt,0) pos_merchant_cnt
+,nvl(bd.new_merchant_cnt,0) new_merchant_cnt
+,nvl(bd.new_pos_merchant_cnt,0) new_pos_merchant_cnt
 
-,ord.his_pos_complete_order_cnt
-,ord.his_qr_complete_order_cnt
-,ord.his_complete_order_cnt
-,ord.his_gmv
-,ord.his_actual_amount
-,ord.his_return_amount
-,ord.his_new_user_cost
-,ord.his_old_user_cost
-,ord.his_return_amount_order_cnt
+,nvl(ord.pos_complete_order_cnt,0) pos_complete_order_cnt
+,nvl(ord.qr_complete_order_cnt,0) qr_complete_order_cnt
+,nvl(ord.complete_order_cnt,0) complete_order_cnt
+,nvl(ord.gmv,0) gmv
+,nvl(ord.actual_amount,0) actual_amount
+,nvl(ord.return_amount,0) return_amount
+,nvl(ord.new_user_cost,0) new_user_cost
+,nvl(ord.old_user_cost,0) old_user_cost
+,nvl(ord.return_amount_order_cnt,0) return_amount_order_cnt
 
-,ord.pos_complete_order_cnt
-,ord.qr_complete_order_cnt
-,ord.complete_order_cnt
-,ord.gmv
-,ord.actual_amount
-,ord.return_amount
-,ord.new_user_cost
-,ord.old_user_cost
-,ord.return_amount_order_cnt
+,nvl(ord.his_pos_complete_order_cnt,0) his_pos_complete_order_cnt
+,nvl(ord.his_qr_complete_order_cnt,0) his_qr_complete_order_cnt
+,nvl(ord.his_complete_order_cnt,0) his_complete_order_cnt
+,nvl(ord.his_gmv,0) his_gmv
+,nvl(ord.his_actual_amount,0) his_actual_amount
+,nvl(ord.his_return_amount,0) his_return_amount
+,nvl(ord.his_new_user_cost,0) his_new_user_cost
+,nvl(ord.his_old_user_cost,0) his_old_user_cost
+,nvl(ord.his_return_amount_order_cnt,0) his_return_amount_order_cnt
 
 ,'nal' as country_code
 ,'{pt}' as dt
@@ -301,7 +286,7 @@ opos_dw.dim_opos_bd_relation_df
 where 
 country_code='nal' 
 and dt='{pt}'
-and bd_id is not null
+and length(bd_id)>0
 group by
 cm_id
 ,cm_name
@@ -316,8 +301,8 @@ cm_id
 ,city_name
 ,country
 ) as bd
-left join
-(select * from opos_temp.app_opos_order_data_history_di where country_code='nal' and dt='{pt}' and bd_id is not null) as ord
+full join
+(select * from opos_temp.app_opos_order_data_history_di where country_code='nal' and dt='{pt}') as ord
 on
 bd.bd_id = ord.bd_id
 and bd.city_id = ord.city_id
@@ -373,4 +358,5 @@ ods_sqoop_base_pre_opos_payment_order_bd_di_task >> opos_metrcis_report_task
 # airflow list_tasks opos_metrcis_report -sd /home/feng.yuan/opos_metrcis_report.py
 # 测试任务命令
 # airflow test opos_metrcis_report opos_metrcis_report_task 2019-11-24 -sd /home/feng.yuan/opos_metrcis_report.py
+
 

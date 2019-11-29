@@ -34,14 +34,14 @@ sleep_time = BashOperator(
 )
 
 # 依赖
-dependence_table_oride_order_city_daily_report_task = HivePartitionSensor(
-    task_id="dependence_table_oride_order_city_daily_report_task",
-    table="oride_order_city_daily_report",
-    partition="dt='{{ ds }}'",
-    schema="oride_bi",
-    poke_interval=120,
-    dag=dag
-)
+# dependence_table_oride_order_city_daily_report_task = HivePartitionSensor(
+#     task_id="dependence_table_oride_order_city_daily_report_task",
+#     table="oride_order_city_daily_report",
+#     partition="dt='{{ ds }}'",
+#     schema="oride_bi",
+#     poke_interval=120,
+#     dag=dag
+# )
 
 dependence_table_ods_sqoop_base_data_city_conf_df_task = HivePartitionSensor(
     task_id="dependence_table_ods_sqoop_base_data_city_conf_df_task",
@@ -164,7 +164,7 @@ insert_result_to_hive = HiveOperator(
 )
 
 
-dependence_table_oride_order_city_daily_report_task >> sleep_time
+
 dependence_table_ods_sqoop_base_data_city_conf_df_task >> sleep_time
 
 sleep_time >> insert_result_to_hive

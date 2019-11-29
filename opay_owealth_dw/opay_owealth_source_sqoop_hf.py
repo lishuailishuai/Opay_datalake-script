@@ -23,8 +23,8 @@ args = {
     'email_on_retry': False,
     'on_success_callback':on_success_callback,
 }
-
-schedule_interval="07 05 * * *"
+ 
+schedule_interval="01 18 * * *"
 
 dag = airflow.DAG(
     'opay_owealth_source_sqoop_hf',
@@ -55,13 +55,13 @@ IGNORED_TABLE_LIST = [
 
 '''
 导入数据的列表
-db_name,table_name,conn_id,prefix_name,priority_weight
+db_name,table_name,conn_id,prefix_name,priority_weight,is_valid_success
 '''
 #
 
 table_list = [
-    ("opay_owealth","share_acct", "opay_owealth_db", "owealth",3),
-    ("opay_owealth","share_order", "opay_owealth_db", "owealth",3),
+    ("opay_owealth","share_acct", "opay_owealth_db", "owealth",3,"true"),
+    ("opay_owealth","share_order", "opay_owealth_db", "owealth",3,"true"),
 
 ]
 
@@ -167,7 +167,7 @@ def run_check_table(db_name, table_name, conn_id, hive_table_name, **kwargs):
 
 
 conn_conf_dict = {}
-for db_name, table_name, conn_id, prefix_name,priority_weight_nm in table_list:
+for db_name, table_name, conn_id, prefix_name,priority_weight_nm,is_valid_success in table_list:
     if conn_id not in conn_conf_dict:
         conn_conf_dict[conn_id] = BaseHook.get_connection(conn_id)
 
@@ -188,7 +188,7 @@ for db_name, table_name, conn_id, prefix_name,priority_weight_nm in table_list:
             --username {username} \
             --password {password} \
             --table {table} \
-            --target-dir {ufile_path}/dt={{{{ execution_date.strftime("%Y-%m-%d") }}}}/hour={{{{ execution_date.strftime("%H") }}}} \
+            --target-dir {ufile_path}/dt={{{{ tomorrow_ds }}}}/hour={{{{ execution_date.strftime("%H") }}}} \
             --fields-terminated-by "\\001" \
             --lines-terminated-by "\\n" \
             --hive-delims-replacement " " \
@@ -250,19 +250,20 @@ for db_name, table_name, conn_id, prefix_name,priority_weight_nm in table_list:
 
     if table_name in IGNORED_TABLE_LIST:
         add_partitions >> validate_all_data
-    else:
-        # 数据量监控
-        volume_monitoring = PythonOperator(
-            task_id='volume_monitorin_{}'.format(hive_table_name),
-            python_callable=data_volume_monitoring,
-            provide_context=True,
-            op_kwargs={
-                'db_name': HIVE_DB,
-                'table_name': hive_table_name,
-            },
-            dag=dag
-        )
-        add_partitions >> volume_monitoring >> validate_all_data
+    #else:
+    #     # 数据量监控
+    #     volume_monitoring = PythonOperator(
+    #         task_id='volume_monitorin_{}'.format(hive_table_name),
+    #         python_callable=data_volume_monitoring,
+    #         provide_context=True,
+    #         op_kwargs={
+    #             'db_name': HIVE_DB,
+    #             'table_name': hive_table_name,
+    #             'is_valid_success':is_valid_success
+    #         },
+    #         dag=dag
+    #     )
+    #     add_partitions >> volume_monitoring >> validate_all_data
 
     # 超时监控
     task_timeout_monitor= PythonOperator(
@@ -276,4 +277,4 @@ for db_name, table_name, conn_id, prefix_name,priority_weight_nm in table_list:
         dag=dag_monitor
     )
 
-    import_table >> check_table >> add_partitions
+    import_table >> check_table >> add_partitions>> validate_all_data

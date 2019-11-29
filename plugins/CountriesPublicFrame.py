@@ -24,7 +24,7 @@ from airflow.utils.trigger_rule import TriggerRule
 
 class CountriesPublicFrame(object):
 
-    def __init__(self,v_ds,v_db_name,v_table_name,v_data_hdfs_path,v_country_partition="true",v_file_type="true",v_hour=None):
+    def __init__(self,v_is_open,v_ds,v_db_name,v_table_name,v_data_hdfs_path,v_country_partition="true",v_file_type="true",v_hour=None):
 
         self.comwx = ComwxApi('wwd26d45f97ea74ad2', 'BLE_v25zCmnZaFUgum93j3zVBDK-DjtRkLisI_Wns4g', '1000011')
 
@@ -36,6 +36,7 @@ class CountriesPublicFrame(object):
         self.country_partition=v_country_partition
         self.file_type=v_file_type
         self.hour=v_hour
+        self.is_open=v_is_open
 
     def get_country_code(self):
 
@@ -43,34 +44,15 @@ class CountriesPublicFrame(object):
             获取当前表中所有二位国家码
         """
 
-        cursor = get_hive_cursor()
-        
-        get_sql='''
-    
-        select concat_ws(',',collect_set(country_code)) as country_code from {db}.{table} WHERE dt='{pt}'
-    
-        '''.format(
-            pt=self.ds,
-            table=self.table_name,
-            db=self.db_name
-            )
-    
-        cursor.execute(get_sql)
-    
-        res = cursor.fetchone()
+        if self.is_open.lower()=="false":
+            v_country_code_list="nal"
 
-        if len(res[0]) >1:
-            country_code_list=res[0]
-    
-            logging.info('Executing 二位国家码: %s', country_code_list)
-    
-        else:
-    
-            country_code_list="nal"
-    
-            logging.info('Executing 二位国家码为空，赋予默认值 %s', country_code_list)
-    
-        return country_code_list
+        if self.is_open.lower()=="true":
+            v_country_code_list = Variable.get("country_code_list")
+
+        logging.info('Executing 二位国家码: %s', v_country_code_list)
+        
+        return v_country_code_list
 
 
     def check_success_exist(self):
@@ -140,7 +122,7 @@ class CountriesPublicFrame(object):
         if res== '' or res == 'None' or res[0] == '0':
 
             logging.info("目录删除成功")
-        
+               
         else:
 
             #目录存在

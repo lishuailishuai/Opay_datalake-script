@@ -24,7 +24,7 @@ args = {
     'on_success_callback':on_success_callback,
 }
 
-schedule_interval="00 19 * * *"
+schedule_interval="01 19 * * *"
 
 dag = airflow.DAG(
     'opay_source_sqoop_hf',
@@ -188,7 +188,7 @@ for db_name, table_name, conn_id, prefix_name,priority_weight_nm in table_list:
             --username {username} \
             --password {password} \
             --table {table} \
-            --target-dir {ufile_path}/dt={{{{ ds }}}}/hour={{{{ execution_date.strftime("%H") }}}} \
+            --target-dir {ufile_path}/dt={{{{ tomorrow_ds }}}}/hour={{{{ execution_date.strftime("%H") }}}} \
             --fields-terminated-by "\\001" \
             --lines-terminated-by "\\n" \
             --hive-delims-replacement " " \
@@ -250,19 +250,19 @@ for db_name, table_name, conn_id, prefix_name,priority_weight_nm in table_list:
 
     if table_name in IGNORED_TABLE_LIST:
         add_partitions >> validate_all_data
-    else:
-        # 数据量监控
-        volume_monitoring = PythonOperator(
-            task_id='volume_monitorin_{}'.format(hive_table_name),
-            python_callable=data_volume_monitoring,
-            provide_context=True,
-            op_kwargs={
-                'db_name': HIVE_DB,
-                'table_name': hive_table_name,
-            },
-            dag=dag
-        )
-        add_partitions >> volume_monitoring >> validate_all_data
+    # else:
+    #     # 数据量监控
+    #     volume_monitoring = PythonOperator(
+    #         task_id='volume_monitorin_{}'.format(hive_table_name),
+    #         python_callable=data_volume_monitoring,
+    #         provide_context=True,
+    #         op_kwargs={
+    #             'db_name': HIVE_DB,
+    #             'table_name': hive_table_name,
+    #         },
+    #         dag=dag
+    #     )
+    #     add_partitions >> volume_monitoring >> validate_all_data
 
     # 超时监控
     task_timeout_monitor= PythonOperator(

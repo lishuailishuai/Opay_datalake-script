@@ -58,51 +58,51 @@ IGNORED_TABLE_LIST = [
 
 '''
 导入数据的列表
-db_name,table_name,conn_id,prefix_name,priority_weight
+db_name,table_name,conn_id,prefix_name,priority_weight,is_valid_success
 '''
 #
 
 table_list = [
-    ("opay_sms","message_record", "opay_db_3319", "base",3),
+    ("opay_sms","message_record", "opay_db_3319", "base",3,"true"),
 
-    ("opay_user","user_email", "opay_db_3321", "base",3),
-    ("opay_user","user", "opay_db_3321", "base",3),
+    ("opay_user","user_email", "opay_db_3321", "base",3,"true"),
+    ("opay_user","user", "opay_db_3321", "base",3,"true"),
 
-    ("opay_bigorder","big_order", "opay_db_3317", "base",3),
+    ("opay_bigorder","big_order", "opay_db_3317", "base",3,"true"),
 
-    ("opay_transaction","adjustment_decrease_record", "opay_db_3316", "base",3),
-    ("opay_transaction","adjustment_increase_record", "opay_db_3316", "base",3),
-    ("opay_transaction","airtime_topup_record", "opay_db_3316", "base",3),
-    ("opay_transaction","betting_topup_record", "opay_db_3316", "base",3),
-    ("opay_transaction","business_collection_record", "opay_db_3316", "base",3),
-    ("opay_transaction","electricity_topup_record", "opay_db_3316", "base",3),
-    ("opay_transaction","merchant_acquiring_record", "opay_db_3316", "base",3),
-    ("opay_transaction","merchant_pos_transaction_record", "opay_db_3316", "base",3),
-    ("opay_transaction","merchant_receive_money_record", "opay_db_3316", "base",3),
-    ("opay_transaction","merchant_topup_record", "opay_db_3316", "base",3),
-    ("opay_transaction","merchant_transfer_card_record", "opay_db_3316", "base",3),
-    ("opay_transaction","merchant_transfer_user_record", "opay_db_3316", "base",3),
-    ("opay_transaction","mobiledata_topup_record", "opay_db_3316", "base",3),
-    ("opay_transaction","receive_money_request_record", "opay_db_3316", "base",3),
-    ("opay_transaction","transfer_not_register_record", "opay_db_3316", "base",3),
-    ("opay_transaction","tv_topup_record", "opay_db_3316", "base",3),
-    ("opay_transaction","user_easycash_record", "opay_db_3316", "base",3),
-    ("opay_transaction","user_pos_transaction_record", "opay_db_3316", "base",3),
-    ("opay_transaction","user_receive_money_record", "opay_db_3316", "base",3),
-    ("opay_transaction","user_topup_record", "opay_db_3316", "base",3),
-    ("opay_transaction","user_transfer_card_record", "opay_db_3316", "base",3),
-    ("opay_transaction","user_transfer_user_record", "opay_db_3316", "base",3),
-    ("opay_transaction", "cash_in_record", "opay_db_3316", "base", 2),
-    ("opay_transaction", "cash_out_record", "opay_db_3316", "base", 2),
-    ("opay_transaction", "business_activity_record", "opay_db_3316", "base", 2),
-    ("opay_transaction", "activity_record", "opay_db_3316", "base", 2),
+    ("opay_transaction","adjustment_decrease_record", "opay_db_3316", "base",3,"true"),
+    ("opay_transaction","adjustment_increase_record", "opay_db_3316", "base",3,"false"),
+    ("opay_transaction","airtime_topup_record", "opay_db_3316", "base",3,"true"),
+    ("opay_transaction","betting_topup_record", "opay_db_3316", "base",3,"true"),
+    ("opay_transaction","business_collection_record", "opay_db_3316", "base",3,"false"),
+    ("opay_transaction","electricity_topup_record", "opay_db_3316", "base",3,"true"),
+    ("opay_transaction","merchant_acquiring_record", "opay_db_3316", "base",3,"true"),
+    ("opay_transaction","merchant_pos_transaction_record", "opay_db_3316", "base",3,"false"),
+    ("opay_transaction","merchant_receive_money_record", "opay_db_3316", "base",3,"true"),
+    ("opay_transaction","merchant_topup_record", "opay_db_3316", "base",3,"true"),
+    ("opay_transaction","merchant_transfer_card_record", "opay_db_3316", "base",3,"true"),
+    ("opay_transaction","merchant_transfer_user_record", "opay_db_3316", "base",3,"true"),
+    ("opay_transaction","mobiledata_topup_record", "opay_db_3316", "base",3,"true"),
+    ("opay_transaction","receive_money_request_record", "opay_db_3316", "base",3,"true"),
+    ("opay_transaction","transfer_not_register_record", "opay_db_3316", "base",3,"true"),
+    ("opay_transaction","tv_topup_record", "opay_db_3316", "base",3,"true"),
+    ("opay_transaction","user_easycash_record", "opay_db_3316", "base",3,"true"),
+    ("opay_transaction","user_pos_transaction_record", "opay_db_3316", "base",3,"false"),
+    ("opay_transaction","user_receive_money_record", "opay_db_3316", "base",3,"true"),
+    ("opay_transaction","user_topup_record", "opay_db_3316", "base",3,"true"),
+    ("opay_transaction","user_transfer_card_record", "opay_db_3316", "base",3,"true"),
+    ("opay_transaction","user_transfer_user_record", "opay_db_3316", "base",3,"true"),
+    ("opay_transaction", "cash_in_record", "opay_db_3316", "base", 2,"false"),
+    ("opay_transaction", "cash_out_record", "opay_db_3316", "base", 2,"false"),
+    ("opay_transaction", "business_activity_record", "opay_db_3316", "base", 2,"false"),
+    ("opay_transaction", "activity_record", "opay_db_3316", "base", 2,"false"),
 
-    ("opay_fee","user_fee_record", "opay_db_3322", "base",3),
-    ("opay_fee","merchant_fee_record", "opay_db_3322", "base",3),
+    ("opay_fee","user_fee_record", "opay_db_3322", "base",3,"true"),
+    ("opay_fee","merchant_fee_record", "opay_db_3322", "base",3,"true"),
 
-    ("opay_account","account_user_record", "opay_db_3318", "base", 2),
+    ("opay_account","account_user_record", "opay_db_3318", "base", 2,"false"),
 
-    ("opay_activity","preferential_record", "opay_db_3322", "base",3),
+    ("opay_activity","preferential_record", "opay_db_3322", "base",3,"false"),
 ]
 
 HIVE_DB = 'opay_dw_ods'
@@ -202,7 +202,7 @@ def run_check_table(db_name, table_name, conn_id, hive_table_name, **kwargs):
 
 
 conn_conf_dict = {}
-for db_name, table_name, conn_id, prefix_name,priority_weight_nm in table_list:
+for db_name, table_name, conn_id, prefix_name,priority_weight_nm,is_valid_success in table_list:
     if conn_id not in conn_conf_dict:
         conn_conf_dict[conn_id] = BaseHook.get_connection(conn_id)
 
@@ -289,6 +289,7 @@ for db_name, table_name, conn_id, prefix_name,priority_weight_nm in table_list:
             op_kwargs={
                 'db_name': HIVE_DB,
                 'table_name': hive_table_name,
+                'is_valid_success':is_valid_success
             },
             dag=dag
         )

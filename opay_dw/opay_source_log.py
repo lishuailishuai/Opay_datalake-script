@@ -31,14 +31,14 @@ def add_partitions(**op_kwargs):
     hour = op_kwargs.get('hour')
     hive_cursor = get_hive_cursor()
     hql = '''
-        SHOW TABLES IN opay_dw_ods 'ods_log*|ods_binlog*'
+        SHOW TABLES IN opay_source 'binlog*'
     '''
     logging.info(hql)
     hive_cursor.execute(hql)
     tables = hive_cursor.fetchall()
     for (table, ) in tables:
         sql = '''
-            ALTER TABLE opay_dw_ods.{table} ADD IF NOT EXISTS PARTITION (country_code='nal', dt='{dt}', hour='{hour}')
+            ALTER TABLE opay_source.{table} ADD IF NOT EXISTS PARTITION ( dt='{dt}', hour='{hour}')
         '''.format(
             table=table,
             dt=dt,

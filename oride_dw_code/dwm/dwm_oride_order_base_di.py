@@ -302,6 +302,12 @@ def dwm_oride_order_base_di_sql_task(ds):
 
            ord.is_strong_dispatch,
            --是否强派1：是，0:否
+           
+           if(ord.cancel_reason<>'',1,0) as cancel_feedback,
+           --是否有取消反馈
+           
+           ord.status,
+           --订单状态 (0: wait assign, 1: pick up passenger, 2: wait passenger, 3: send passenger, 4: arrive destination, 5: finished, 6: cancel,13:乘客取消待支付)
 
  		   ord.country_code as country_code,
 
