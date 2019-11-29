@@ -23,7 +23,7 @@ from utils.util import on_success_callback
 
 args = {
     'owner': 'wuduo',
-    'start_date': datetime(2019, 10, 30),
+    'start_date': datetime(2019, 11, 27),
     'depends_on_past': False,
     'retries': 3,
     'retry_delay': timedelta(minutes=5),
