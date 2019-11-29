@@ -798,12 +798,12 @@ insert_bi_bd_metrics = HiveToMySqlTransfer(
         a.country_code = b.country_code 
         and a.dt = b.dt 
         and a.bd_id = b.bd_id 
-        and a.city_id = b.city_id    
+        and a.city_id = b.city_id  
+  
         left join
         public_dw_dim.dim_date as d
         on
-        a.dt=d.dt;
-
+        a.dt=d.dt
 
     """,
     mysql_conn_id='mysql_bi',
@@ -823,4 +823,5 @@ opos_metrcis_report_task >> delete_crm_data >> insert_crm_metrics >> delete_bi_d
 # airflow list_tasks opos_order_metrics_daily -sd /home/feng.yuan/opos_order_metrics_daily.py
 # 测试任务命令
 # airflow test opos_order_metrics_daily opos_active_user_daily_task 2019-11-26 -sd /home/feng.yuan/opos_order_metrics_daily.py
+
 
