@@ -34,7 +34,7 @@ args = {
     'email_on_retry': False,
 }
 
-dag = airflow.DAG('dwd_pre_opos_payment_order_di',
+dag = airflow.DAG('dwd_opos_bonus_record_di',
                   schedule_interval="20 02 * * *",
                   default_args=args,
                   catchup=False)
@@ -68,7 +68,7 @@ dim_opos_bd_relation_df_task = UFileSensor(
 ##----------------------------------------- 变量 ---------------------------------------##
 
 db_name = "opos_dw"
-table_name = "dwd_pre_opos_payment_order_di"
+table_name = "dwd_opos_bonus_record_di"
 hdfs_path = "ufile://opay-datalake/opos/opos_dw/" + table_name
 
 
