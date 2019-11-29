@@ -579,7 +579,7 @@ delete_bi_bd_data = MySqlOperator(
     """.format(
         ds='{{ds}}'
     ),
-    mysql_conn_id='mysql_bi_bd',
+    mysql_conn_id='mysql_bi',
     dag=dag)
 
 insert_crm_metrics = HiveToMySqlTransfer(
@@ -798,7 +798,7 @@ insert_bi_bd_metrics = HiveToMySqlTransfer(
 
 
     """,
-    mysql_conn_id='mysql_bi_bd',
+    mysql_conn_id='mysql_bi',
     mysql_table='opos_metrics_daily_d',
     dag=dag)
 
