@@ -383,7 +383,7 @@ SELECT base.order_id,
        pay_status, --支付类型（0: 支付中, 1: 成功, 2: 失败）
        pax_num, -- 乘客数量 
        tip,  --小费
-       nulll as estimated_price,
+       null as estimated_price,
         --预估价格区间（最小值,最大值,-1 未知）
        if(push_ord.order_id is not null and push_ord.driver_id is not null,1,0) as is_strong_dispatch,  
        --是否强制派单1:是，0:否
