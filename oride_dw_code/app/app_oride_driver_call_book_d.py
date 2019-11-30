@@ -111,7 +111,7 @@ def app_oride_driver_call_book_d_sql_task(ds):
        --司机ID
 
        (case when a3.user_id=b3.user_id and a3.contact_phone_number=b3.contact_phone_number then a3.contact_name else null end) as contact_name,
-       --联系人姓名
+       --联系人姓名 （如果手机号没有在通讯录里，那么通话记录里的姓名应该是空，没有名字）
 
        a3.contact_phone_number,
        --联系人电话
