@@ -31,7 +31,7 @@ def add_partitions(**op_kwargs):
     hour = op_kwargs.get('hour')
     hive_cursor = get_hive_cursor()
     hql = '''
-        SHOW TABLES IN opay_source 'binlog*'
+        SHOW TABLES IN opay_source '*'
     '''
     logging.info(hql)
     hive_cursor.execute(hql)
