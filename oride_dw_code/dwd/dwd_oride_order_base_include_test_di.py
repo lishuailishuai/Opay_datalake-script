@@ -43,25 +43,28 @@ dag = airflow.DAG('dwd_oride_order_base_include_test_di',
 ##----------------------------------------- 依赖 ---------------------------------------## 
 
 # 依赖前一天分区
-ods_sqoop_base_data_order_df_prev_day_task = HivePartitionSensor(
-    task_id="ods_sqoop_base_data_order_df_prev_day_task",
-    table="ods_sqoop_base_data_order_df",
-    partition="dt='{{ds}}'",
-    schema="oride_dw_ods",
+ods_sqoop_base_data_order_df_prev_day_task = UFileSensor(
+    task_id='ods_sqoop_base_data_order_df_prev_day_task',
+    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="oride_dw_sqoop/oride_data/data_order",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
 
 # 依赖前一天分区
-ods_sqoop_base_data_order_payment_df_prev_day_task = HivePartitionSensor(
-    task_id="ods_sqoop_base_data_order_payment_df_prev_day_task",
-    table="ods_sqoop_base_data_order_payment_df",
-    partition="dt='{{ds}}'",
-    schema="oride_dw_ods",
+ods_sqoop_base_data_order_payment_df_prev_day_task = UFileSensor(
+    task_id='ods_sqoop_base_data_order_payment_df_prev_day_task',
+    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="oride_dw_sqoop/oride_data/data_order_payment",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
-
 
 # 依赖前一天分区
 oride_client_event_detail_prev_day_task = HivePartitionSensor(
@@ -83,6 +86,17 @@ dependence_dispatch_tracker_server_magic_task = HivePartitionSensor(
     dag=dag
 )
 
+# 依赖前一天分区
+ods_sqoop_base_data_country_conf_df_prev_day_task = UFileSensor(
+    task_id='ods_sqoop_base_data_country_conf_df_prev_day_task',
+    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="oride_dw_sqoop/oride_data/data_country_conf",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
 ##----------------------------------------- 变量 ---------------------------------------##
 
 db_name="oride_dw"
@@ -757,3 +771,4 @@ ods_sqoop_base_data_order_df_prev_day_task >>  dwd_oride_order_base_include_test
 ods_sqoop_base_data_order_payment_df_prev_day_task >> dwd_oride_order_base_include_test_di_task
 oride_client_event_detail_prev_day_task >> dwd_oride_order_base_include_test_di_task
 dependence_dispatch_tracker_server_magic_task >> dwd_oride_order_base_include_test_di_task
+ods_sqoop_base_data_country_conf_df_prev_day_task >> dwd_oride_order_base_include_test_di_task
