@@ -159,7 +159,8 @@ SELECT t.order_id,  --订单ID
             LEAD(start_lat,1,0) OVER(PARTITION BY passenger_id ORDER BY create_time) start_lat2,
             LEAD(end_lng,1,0) OVER(PARTITION BY passenger_id ORDER BY create_time) end_lng2,
             LEAD(end_lat,1,0) OVER(PARTITION BY passenger_id ORDER BY create_time) end_lat2,
-            LEAD(order_id,1,order_id) OVER(PARTITION BY passenger_id ORDER BY create_time) order_id2
+            LEAD(order_id,1,order_id) OVER(PARTITION BY passenger_id ORDER BY create_time) order_id2,
+            country_code
         FROM oride_dw.dwd_oride_order_base_include_test_di
         WHERE dt='{pt}'
             AND city_id<>'999001' --去除测试数据

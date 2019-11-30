@@ -77,9 +77,9 @@ ods_sqoop_base_pre_opos_payment_order_bd_di_task = UFileSensor(
 
 ##----------------------------------------- 变量 ---------------------------------------##
 
-db_name = "opos_temp"
+db_name = "opos_dw"
 table_name = "dwd_pre_opos_payment_order_di"
-hdfs_path = "ufile://opay-datalake/opos/opos_temp/" + table_name
+hdfs_path = "ufile://opay-datalake/opos/opos_dw/" + table_name
 
 
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
@@ -145,7 +145,7 @@ p.order_id
 ,shop.cate_id
 ,shop.created_at
 
-,shop.cate_id as city_id_shop
+,shop.city_code as city_id_shop
 ,shop.city_name as city_name_shop
 ,shop.country as country_shop
 

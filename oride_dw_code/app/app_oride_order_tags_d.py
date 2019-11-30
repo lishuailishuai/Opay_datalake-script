@@ -70,14 +70,14 @@ dependence_ods_oride_data_order = HivePartitionSensor(
     dag=dag
 )
 
-dependence_oride_global_daily_report = HivePartitionSensor(
-    task_id="dependence_oride_global_daily_report",
-    table="oride_global_daily_report",
-    partition="dt='{{ ds }}'",
-    schema="oride_bi",
-    poke_interval=60,
-    dag=dag
-)
+# dependence_oride_global_daily_report = HivePartitionSensor(
+#     task_id="dependence_oride_global_daily_report",
+#     table="oride_global_daily_report",
+#     partition="dt='{{ ds }}'",
+#     schema="oride_bi",
+#     poke_interval=60,
+#     dag=dag
+# )
 
 dependence_data_city_conf = HivePartitionSensor(
     task_id="dependence_data_city_conf",
@@ -88,14 +88,14 @@ dependence_data_city_conf = HivePartitionSensor(
     dag=dag
 )
 
-dependence_oride_global_city_serv_daily_report = HivePartitionSensor(
-    task_id="dependence_oride_global_city_serv_daily_report",
-    table="oride_global_city_serv_daily_report",
-    partition="dt='{{ ds }}'",
-    schema="oride_bi",
-    poke_interval=60,
-    dag=dag
-)
+# dependence_oride_global_city_serv_daily_report = HivePartitionSensor(
+#     task_id="dependence_oride_global_city_serv_daily_report",
+#     table="oride_global_city_serv_daily_report",
+#     partition="dt='{{ ds }}'",
+#     schema="oride_bi",
+#     poke_interval=60,
+#     dag=dag
+# )
 """
 ##-----end-------##
 """

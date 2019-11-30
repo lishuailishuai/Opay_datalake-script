@@ -121,7 +121,7 @@ def dwm_oride_driver_order_base_di_sql_task(ds):
            sum(cannel_pick_order_dur) as driver_cannel_pick_dur,
            --司机当天订单被取消时长,该表不可以用于计算司机在线时长
            
-           country_code,
+           'nal' as country_code,
            
            dt
        

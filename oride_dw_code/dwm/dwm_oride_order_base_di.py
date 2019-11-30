@@ -309,7 +309,7 @@ def dwm_oride_order_base_di_sql_task(ds):
            ord.status,
            --订单状态 (0: wait assign, 1: pick up passenger, 2: wait passenger, 3: send passenger, 4: arrive destination, 5: finished, 6: cancel,13:乘客取消待支付)
 
- 		   ord.country_code as country_code,
+ 		   'nal' as country_code,
 
            ord.dt as dt
     FROM

@@ -17,6 +17,7 @@ from airflow.sensors.hive_partition_sensor import HivePartitionSensor
 from airflow.sensors import UFileSensor
 from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
 from plugins.TaskTouchzSuccess import TaskTouchzSuccess
+from plugins.CountriesPublicFrame import CountriesPublicFrame
 import json
 import logging
 from airflow.models import Variable
@@ -95,7 +96,7 @@ def fun_task_timeout_monitor(ds,dag,**op_kwargs):
     dag_ids=dag.dag_id
 
     tb = [
-        {"db": "oride_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "3600"}
+        {"db": "oride_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=NG/dt={pt}".format(pt=ds), "timeout": "3600"}
     ]
 
     TaskTimeoutMonitor().set_task_monitor(tb)
@@ -690,33 +691,65 @@ def check_key_data_task(ds):
 
 
 #主流程
-def execution_data_task_id(ds,**kargs):
+def execution_data_task_id(ds,**kwargs):
+
+    v_date=kwargs.get('v_execution_date')
+    v_day=kwargs.get('v_execution_day')
+    v_hour=kwargs.get('v_execution_hour')
 
     hive_hook = HiveCliHook()
 
-    #读取sql
-    _sql=dwd_oride_order_base_include_test_di_sql_task(ds)
+    """
+        #功能函数
+        alter语句: alter_partition
+        删除分区: delete_partition
+        生产success: touchz_success
 
-    logging.info('Executing: %s', _sql)
+        #参数
+        第一个参数true: 所有国家是否上线。false 没有
+        第二个参数true: 数据目录是有country_code分区。false 没有
+        第三个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
+
+        #读取sql
+        %_sql(ds,v_hour)
+
+        第一个参数ds: 天级任务
+        第二个参数v_hour: 小时级任务，需要使用
+
+    """
+
+    cf=CountriesPublicFrame("true",ds,db_name,table_name,hdfs_path,"true","false")
+
+    #删除分区
+    cf.delete_partition()
+
+    #读取sql
+    _sql="\n"+cf.alter_partition()+"\n"+dwd_oride_order_base_include_test_di_sql_task(ds)
+
+    logging.info('Executing: %s',_sql)
 
     #执行Hive
     hive_hook.run_cli(_sql)
 
+    #熔断数据，如果数据不能为0
+    #check_key_data_cnt_task(ds)
+
     #熔断数据
     check_key_data_task(ds)
 
-    #生成_SUCCESS
-    """
-    第一个参数true: 数据目录是有country_code分区。false 没有
-    第二个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
+    #生产success
+    cf.touchz_success()
 
-    """
-    TaskTouchzSuccess().countries_touchz_success(ds,db_name,table_name,hdfs_path,"true","true")
     
 dwd_oride_order_base_include_test_di_task= PythonOperator(
     task_id='dwd_oride_order_base_include_test_di_task',
     python_callable=execution_data_task_id,
     provide_context=True,
+    op_kwargs={
+        'v_execution_date':'{{execution_date.strftime("%Y-%m-%d %H:%M:%S")}}',
+        'v_execution_day':'{{execution_date.strftime("%Y-%m-%d")}}',
+        'v_execution_hour':'{{execution_date.strftime("%H")}}'
+    },
     dag=dag
 )
 
