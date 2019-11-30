@@ -341,6 +341,7 @@ app_opos_bonus_shop_target_d_task = PythonOperator(
 )
 
 dwd_opos_bonus_record_di_task >> app_opos_bonus_shop_target_d_task
+dwd_pre_opos_payment_order_di_task >> app_opos_bonus_shop_target_d_task
 
 # 查看任务命令
 # airflow list_tasks app_opos_bonus_shop_target_d -sd /home/feng.yuan/app_opos_bonus_shop_target_d.py
