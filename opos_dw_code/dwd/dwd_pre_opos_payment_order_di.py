@@ -111,123 +111,99 @@ def dwd_pre_opos_payment_order_di_sql_task(ds):
 set hive.exec.parallel=true;
 set hive.exec.dynamic.partition.mode=nonstrict;
 
-insert overwrite table opos_dw.dwd_pre_opos_payment_order_di partition(country_code,dt)
+
+insert overwrite table opos_dw.dwd_opos_bonus_record_di partition(country_code,dt)
 select
-p.order_id
-,p.device_no
-,p.cfrom
+o.id
+,o.activity_id
 
-,p.dt as create_date
+,substr(o.create_time,0,10) as create_date
 ,d.week_of_year as create_week
-,substr(p.dt,0,7) as create_month
-,substr(p.dt,0,4) as create_year
+,substr(o.create_time,0,7) as create_month
+,substr(o.create_time,0,4) as create_year
 
-,p.receipt_id
-,p.sender_id
+,b.hcm_id
+,b.hcm_name
+,b.cm_id
+,b.cm_name
+,b.rm_id
+,b.rm_name
+,b.bdm_id
+,b.bdm_name
+,o.bd_id
+,b.bd_name
 
-,bd.cm_id
-,bd.cm_name
-,bd.rm_id
-,bd.rm_name
-,bd.bdm_id
-,bd.bdm_name
-,bd.bd_id
-,bd.bd_name
+,o.city_id
+,c.name as city_name
+,c.country
 
-,bd.city_id
-,bd.name as city_name
-,bd.country
+,o.device_id
+,o.opay_account
 
-,shop.shop_name
-,shop.opay_account
-,shop.contact_name
-,shop.contact_phone
-,shop.cate_id
-,shop.created_at
+,o.provider_account
+,provider.id as provider_shop_id
+,provider.opay_id as provider_opay_id
+,provider.shop_name as provider_shop_name
+,provider.contact_name as provider_contact_name
+,provider.contact_phone as provider_contact_phone
+,provider.created_at as provider_created_at
+,provider.city_code as provider_city_id
+,provider.city_name as provider_city_name
+,provider.country as provider_country
 
-,shop.city_code as city_id_shop
-,shop.city_name as city_name_shop
-,shop.country as country_shop
+,o.receiver_account
+,receiver.id as receiver_shop_id
+,receiver.opay_id as receiver_opay_id
+,receiver.shop_name as receiver_shop_name
+,receiver.contact_name as receiver_contact_name
+,receiver.contact_phone as receiver_contact_phone
+,receiver.created_at as receiver_created_at
+,receiver.city_code as receiver_city_id
+,receiver.city_name as receiver_city_name
+,receiver.country as receiver_country
 
-,p.bill_create_ip
-,p.org_pp_trade_no
-,p.pp_trade_no
-,p.payment_id
-,p.org_payment_amount
-,p.pay_type
-,p.pay_amount
-,p.merchant_activity_id
-,p.merchant_activity_type
-,p.merchant_activity_title
-,p.threshold_amount
-,p.threshold_orders
-,p.activity_type
-,p.activity_title
-,p.activity_id
-,p.discount_ids
-,p.discount_amount
-,p.return_amount
-,p.user_subsidy
-,p.order_type
-,p.pay_cur
-,p.trade_type
-,p.trade_status
-,p.merchant_subsidy_status
-,p.user_subsidy_status
-,p.first_order
-,p.resp_code
-,p.resp_message
-,p.query_resp_code
-,p.query_resp_message
-,p.auth_code
-,p.trade_version
-,p.reversal_type
-,p.refund_code
-,p.repaired
-,p.create_time
-,p.modify_time
-,p.resp_time
-,p.goods_desc
-,p.remark
-,p.sn
-,p.pos_user_data
-,p.user_risk_status
-,p.user_risk_code
-,p.user_risk_remark
-,p.merchant_risk_status
-,p.merchant_risk_code
-,p.merchant_risk_remark
+,o.amount
+,o.use_amount
+,o.bonus_rate
+,o.bonus_amount
+
+,o.status
+,o.settle_status
+,o.settle_type
+,o.reason
+,o.risk_id
+,o.settle_time
+,o.expire_time
+,o.use_time
+,o.use_date
+,o.create_time
+,o.update_time
 
 ,'nal' as country_code
-,p.dt
+,o.dt
 from
-(select * from opos_dw_ods.ods_sqoop_base_pre_opos_payment_order_di where dt = '{pt}') as p 
+(select * from opos_dw_ods.ods_sqoop_base_opos_bonus_record_di where dt='{pt}') as o
 left join
-    --先用orderod关联每一笔交易的bd_id,只取能关联上bd信息的交易，故用inner join
-(
-  select s.order_id,s.bd_id,s.city_id,ci.name,ci.country,b.cm_id,b.cm_name,b.rm_id,b.rm_name,b.bdm_id,b.bdm_name,b.bd_name from
-    (select order_id,bd_id,city_id from opos_dw_ods.ods_sqoop_base_pre_opos_payment_order_bd_di where dt='{pt}') as s 
-  left join
-  --关联城市码表，求出国家和城市描述
-    (select id,name,country from opos_dw_ods.ods_sqoop_base_bd_city_df where dt = '{pt}') as ci
-  on 
-    s.city_id=ci.id
-  left join
-  --关联bd信息码表，求出所有bd的层级关系和描述
-    (select * from opos_dw.dim_opos_bd_info_df where country_code='nal' and dt='{pt}') as b
-  on 
-    s.bd_id=b.bd_id
-) as bd
+(select * from opos_dw.dim_opos_bd_info_df where country_code='nal' and dt='{pt}') as b
 on
-  p.order_id=bd.order_id
+o.bd_id=b.bd_id
 left join
-(select * from opos_dw.dim_opos_bd_relation_df where country_code='nal' and dt='{pt}') as shop
+(select id,name,country from opos_dw_ods.ods_sqoop_base_bd_city_df where dt = '{pt}') as c
 on
-  p.receipt_id=shop.opay_id
+o.city_id=c.id
 left join
 public_dw_dim.dim_date as d
 on
-p.dt=d.dt;
+substr(o.create_time,0,10)=d.dt
+left join
+(select * from opos_dw.dim_opos_bd_relation_df where country_code='nal' and dt='{pt}') as provider
+on
+o.provider_account=provider.opay_account
+left join
+(select * from opos_dw.dim_opos_bd_relation_df where country_code='nal' and dt='{pt}') as receiver
+on
+o.receiver_account=receiver.opay_account
+;
 
 
 
