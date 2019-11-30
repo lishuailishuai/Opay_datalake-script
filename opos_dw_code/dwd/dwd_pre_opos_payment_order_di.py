@@ -145,7 +145,7 @@ p.order_id
 ,shop.cate_id
 ,shop.created_at
 
-,shop.cate_id as city_id_shop
+,shop.city_code as city_id_shop
 ,shop.city_name as city_name_shop
 ,shop.country as country_shop
 
