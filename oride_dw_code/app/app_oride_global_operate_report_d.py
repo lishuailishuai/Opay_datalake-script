@@ -88,10 +88,10 @@ dependence_server_magic_now_day_task = HivePartitionSensor(
 )
 
 # 依赖前一天分区
-dependence_dwd_oride_order_finance_df_prev_day_task = UFileSensor(
-    task_id='dwd_oride_order_finance_df_prev_day_task',
+dependence_dwd_oride_order_finance_di_prev_day_task = UFileSensor(
+    task_id='dwd_oride_order_finance_di_prev_day_task',
     filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw/dwd_oride_order_finance_df/country_code=nal",
+        hdfs_path_str="oride/oride_dw/dwd_oride_order_finance_di/country_code=nal",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -186,20 +186,16 @@ driver_data_null = """
 
 finance_data_null = """
            null AS recharge_amount, --充值金额
-           null AS reward_amount, --奖励金额
-           null AS amount_pay_online, --当日总收入-线上支付金额
-           null AS amount_pay_offline --当日总收入-线下支付金额 
-    """
-passenger_recharge_data_null = """
-           null as recharge_users, --每天充值用户数
-           null as user_recharge_succ_balance  --每天用户充值真实金额
+           null AS reward_amount --奖励金额
+         --  null AS amount_pay_online, --当日总收入-线上支付金额
+         --  null AS amount_pay_offline --当日总收入-线下支付金额 
     """
 
 union_product_data_null = """
            null as finish_order_cnt_inSimulRing, --当日完单量(包含同时呼叫)
            null as td_request_driver_num, --当日接单司机数（不包含同时呼叫）
-           null as td_finish_order_driver_num,  --当日完单司机数（不包含同时呼叫）
-           null as iph_fenzi_inSimulRing --iph分子（包含同时呼叫）
+           null as td_finish_order_driver_num  --当日完单司机数（不包含同时呼叫）
+          -- null as iph_fenzi_inSimulRing --iph分子（包含同时呼叫）
     """
 ##----------------------------------------- 脚本 ---------------------------------------##
 def app_oride_global_operate_report_d_sql_task(ds):
@@ -237,7 +233,6 @@ select nvl(t.country_code,'-10000') as country_code,
        {driver_data_null},
        null as map_request_num,
        {finance_data_null},
-       {passenger_recharge_data_null},
        {union_product_data_null}  
 from (SELECT dt,country_code,
        city_id,
@@ -304,7 +299,6 @@ select country_code,
        {driver_data_null},
        null as map_request_num,
        {finance_data_null},
-       {passenger_recharge_data_null},
        {union_product_data_null}   
 from oride_dw.dm_oride_passenger_base_cube_d 
 where dt='{pt}' and nvl(driver_serv_type,'-10000')='-10000'),     
@@ -327,9 +321,8 @@ select nvl(country_code,'-10000') as country_code,
        driver_pushed_order_cnt,  --司机被推送订单数,之前统计偏小  
        null as map_request_num,
        {finance_data_null},
-       {passenger_recharge_data_null},
        {union_product_data_null}        
-from(select nvl(country_code,-999) as country_code,
+from(select nvl(country_code,'-999') as country_code,
        city_id,
        product_id,      
        sum(td_audit_finish_driver_num) as td_audit_finish_driver_num,  --当日审核通过司机数（包含同时呼叫）
@@ -342,7 +335,7 @@ from(select nvl(country_code,-999) as country_code,
        sum(driver_pushed_order_cnt) as driver_pushed_order_cnt  --司机被推送订单数       
 from oride_dw.dm_oride_driver_base
 where dt='{pt}'
-group by nvl(country_code,-999),
+group by nvl(country_code,'-999'),
        city_id,
        product_id
 with cube) t
@@ -359,7 +352,6 @@ SELECT 'nal' as country_code,
        {driver_data_null},
        count(1) as map_request_num,  --地图调用次数
        {finance_data_null},
-       {passenger_recharge_data_null},
        {union_product_data_null}   
        FROM oride_source.server_magic
        WHERE dt='{pt}'
@@ -368,7 +360,7 @@ SELECT 'nal' as country_code,
 --gmv相关  
 finance_data as
 (
-select nvl(country_code,-10000) as country_code,
+select nvl(country_code,'-10000') as country_code,
        nvl(city_id,-10000) as city_id,
        nvl(product_id,-10000) as product_id,
        {order_data_null},
@@ -377,11 +369,8 @@ select nvl(country_code,-10000) as country_code,
        null as map_request_num,  --地图调用次数
        sum(recharge_amount) AS recharge_amount, --资金调整金额
        sum(reward_amount) AS reward_amount, --奖励金额
-       sum(amount_pay_online) AS amount_pay_online, --当日总收入-线上支付金额
-       sum(amount_pay_offline) AS amount_pay_offline, --当日总收入-线下支付金额 
-       {passenger_recharge_data_null},
        {union_product_data_null}   
-from (select * from oride_dw.dwd_oride_order_finance_df 
+from (select * from oride_dw.dwd_oride_order_finance_di 
 where dt='{pt}'
 and create_date='{pt}') t1 
 group by country_code,
@@ -389,29 +378,10 @@ group by country_code,
          nvl(product_id,-10000)
 with cube),
 
---用户充值相关（该业务已经下线）
-passenger_recharge_data as
-(
-select country_code,
-       -10000 as city_id,
-       -10000 as product_id,
-       {order_data_null},
-       {passenger_data_null},
-       {driver_data_null},
-       null as map_request_num,  --地图调用次数
-       {finance_data_null},
-       count(distinct user_id) as recharge_users, --每天充值用户数
-       sum(user_recharge_succ_balance) as user_recharge_succ_balance,  --每天用户充值真实金额
-       {union_product_data_null}  
-from oride_dw.dwd_oride_passenger_recharge_df
-where dt='{pt}'
-and create_date='{pt}'
-group by country_code
-),
 --混合业务线新增指标
 union_product_data as
 (
-select nvl(country_code,-10000) as country_code,
+select nvl(country_code,'-10000') as country_code,
        nvl(city_id,-10000) as city_id,
        nvl(product_id,-10000) as product_id,
        {order_data_null},
@@ -419,25 +389,23 @@ select nvl(country_code,-10000) as country_code,
        {driver_data_null},
        null as map_request_num,  --地图调用次数
        {finance_data_null},
-       {passenger_recharge_data_null},
        sum(finish_order_cnt_inSimulRing) as finish_order_cnt_inSimulRing, --当日完单量(包含同时呼叫)
        sum(td_request_driver_num) as td_request_driver_num, --当日接单司机数（不包含同时呼叫）
-       sum(td_finish_order_driver_num) as td_finish_order_driver_num,  --当日完单司机数（不包含同时呼叫）
-       sum(iph_fenzi_inSimulRing) as iph_fenzi_inSimulRing --iph分子（包含同时呼叫）
-from (select nvl(a.country_code,-10000) as country_code,
+       sum(td_finish_order_driver_num) as td_finish_order_driver_num  --当日完单司机数（不包含同时呼叫）
+      -- 0 as iph_fenzi_inSimulRing --iph分子（包含同时呼叫）
+from (select nvl(a.country_code,'-10000') as country_code,
 			 nvl(a.city_id,-10000) as city_id,
 			 nvl(a.product_id,-10000) as product_id,  --包含同时呼叫的业务线
  			 finish_order_cnt_inSimulRing, --当日完单量(包含同时呼叫)
  			 null as td_request_driver_num, --当日接单司机数（不包含同时呼叫）
-             null as td_finish_order_driver_num,  --当日完单司机数（不包含同时呼叫）
-             null as iph_fenzi_inSimulRing --iph分子（包含同时呼叫）
- 		from (select nvl(country_code,-10000) as country_code,
+             null as td_finish_order_driver_num  --当日完单司机数（不包含同时呼叫）
+ 		from (select nvl(country_code,'-10000') as country_code,
 			 city_id,
 			 driver_serv_type as product_id,  --包含同时呼叫的业务线
  			 sum(finish_order_cnt) as finish_order_cnt_inSimulRing --当日完单量(包含同时呼叫)			 
 FROM oride_dw.dm_oride_order_base_d
 where dt='{pt}' 
-group by nvl(country_code,-10000),city_id,driver_serv_type
+group by nvl(country_code,'-10000'),city_id,driver_serv_type
 with cube) a
 
 union all
@@ -446,32 +414,11 @@ select country_code,
        product_id,   --不包含同时呼叫的业务线
        null as finish_order_cnt_inSimulRing, --当日完单量(包含同时呼叫)
        td_request_driver_num, --当日接单司机数(不包含同时呼叫)
-       td_finish_order_driver_num,  --当日完单司机数(不包含同时呼叫)
-       null as iph_fenzi_inSimulRing --iph分子（包含同时呼叫）
+       td_finish_order_driver_num  --当日完单司机数(不包含同时呼叫)
 from oride_dw.dm_oride_driver_order_base_cube
 where dt='{pt}' 
-
-
-union all
-select nvl(f.country_code,-10000) as country_code,
-       nvl(f.city_id,-10000) as city_id,
-       nvl(f.product_id,-10000) as product_id,   --包含同时呼叫的业务线
-       null as finish_order_cnt_inSimulRing, --当日完单量(包含同时呼叫)
-       null as td_request_driver_num, --当日接单司机数(不包含同时呼叫)
-       null as td_finish_order_driver_num,  --当日完单司机数(不包含同时呼叫)
-       f.iph_fenzi_inSimulRing --iph分子（包含同时呼叫） 
-    from (select nvl(country_code,-10000) as country_code,
-       nvl(city_id,-10000) as city_id,
-       nvl(driver_serv_type,-10000) as product_id,   --包含同时呼叫的业务线       
-       sum(amount_all+phone_amount+amount_agenter) AS iph_fenzi_inSimulRing --iph分子（包含同时呼叫）
-from (select * from oride_dw.dwd_oride_order_finance_df 
-where dt='{pt}'
-and create_date='{pt}') t1 
-group by nvl(country_code,-10000),
-         nvl(city_id,-10000),
-         nvl(driver_serv_type,-10000)
-with cube) f) m
-group by nvl(country_code,-10000),
+) m
+group by nvl(country_code,'-10000'),
 nvl(city_id,-10000),
 nvl(product_id,-10000)
 )
@@ -518,16 +465,16 @@ SELECT nvl(city_id,-10000) as city_id,
        sum(map_request_num) as map_request_num,  --地图调用次数
        sum(recharge_amount) as recharge_amount, --充值金额
        sum(reward_amount) AS reward_amount, --奖励金额
-       sum(amount_pay_online) AS amount_pay_online, --当日总收入-线上支付金额
-       sum(amount_pay_offline) AS amount_pay_offline, --当日总收入-线下支付金额 
-       sum(recharge_users) as recharge_users, --每天充值用户数
-       sum(user_recharge_succ_balance) as user_recharge_succ_balance,  --每天用户充值真实金额
+       null AS amount_pay_online, --当日总收入-线上支付金额
+       null AS amount_pay_offline, --当日总收入-线下支付金额 
+       null as recharge_users, --每天充值用户数
+       null as user_recharge_succ_balance,  --每天用户充值真实金额
        sum(wet_ord_cnt) as wet_ord_cnt, --当日湿单订单量
        sum(bad_feedback_finish_ord_cnt) as bad_feedback_finish_ord_cnt, --当日差评完单量
        sum(finish_order_cnt_inSimulRing) as finish_order_cnt_inSimulRing, --当日完单量(包含同时呼叫)
        sum(td_request_driver_num) as td_request_driver_num, --当日接单司机数（不包含同时呼叫）
        sum(td_finish_order_driver_num) as td_finish_order_driver_num,  --当日完单司机数（不包含同时呼叫）
-       sum(iph_fenzi_inSimulRing) as iph_fenzi_inSimulRing, --iph分子（包含同时呼叫）
+       null as iph_fenzi_inSimulRing, --iph分子（包含同时呼叫）
        nvl(country_code,'nal') as country_code,
        '{pt}' as dt
 FROM (select * from order_data where nvl(country_code,'-10000')<>'-10000'
@@ -539,10 +486,8 @@ UNION ALL
 select * from map_data
 union all 
 select * from finance_data where nvl(country_code,'-10000')<>'-10000'
-union all 
-select * from passenger_recharge_data
 union all
-select * from union_product_data where country_code='nal') t
+select * from union_product_data where country_code <>'-10000') t
 GROUP BY nvl(country_code,'nal'),
        nvl(city_id,-10000),
        nvl(product_id,-10000);
@@ -555,7 +500,6 @@ GROUP BY nvl(country_code,'nal'),
         passenger_data_null=passenger_data_null,
         driver_data_null=driver_data_null,
         finance_data_null=finance_data_null,
-        passenger_recharge_data_null=passenger_recharge_data_null,
         union_product_data_null=union_product_data_null
     )
     return HQL
@@ -592,7 +536,7 @@ dependence_dm_oride_order_base_d_prev_day_task >> \
 dependence_dm_oride_passenger_base_cube_d_prev_day_task >> \
 dependence_dm_oride_driver_base_prev_day_task >>\
 dependence_server_magic_now_day_task >>\
-dependence_dwd_oride_order_finance_df_prev_day_task >>\
+dependence_dwd_oride_order_finance_di_prev_day_task >>\
 dependence_dm_oride_driver_order_base_cube_prev_day_task >>\
 app_oride_global_operate_report_d_task
 

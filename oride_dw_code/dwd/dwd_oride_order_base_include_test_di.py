@@ -43,25 +43,28 @@ dag = airflow.DAG('dwd_oride_order_base_include_test_di',
 ##----------------------------------------- 依赖 ---------------------------------------## 
 
 # 依赖前一天分区
-ods_sqoop_base_data_order_df_prev_day_task = HivePartitionSensor(
-    task_id="ods_sqoop_base_data_order_df_prev_day_task",
-    table="ods_sqoop_base_data_order_df",
-    partition="dt='{{ds}}'",
-    schema="oride_dw_ods",
+ods_sqoop_base_data_order_df_prev_day_task = UFileSensor(
+    task_id='ods_sqoop_base_data_order_df_prev_day_task',
+    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="oride_dw_sqoop/oride_data/data_order",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
 
 # 依赖前一天分区
-ods_sqoop_base_data_order_payment_df_prev_day_task = HivePartitionSensor(
-    task_id="ods_sqoop_base_data_order_payment_df_prev_day_task",
-    table="ods_sqoop_base_data_order_payment_df",
-    partition="dt='{{ds}}'",
-    schema="oride_dw_ods",
+ods_sqoop_base_data_order_payment_df_prev_day_task = UFileSensor(
+    task_id='ods_sqoop_base_data_order_payment_df_prev_day_task',
+    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="oride_dw_sqoop/oride_data/data_order_payment",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
-
 
 # 依赖前一天分区
 oride_client_event_detail_prev_day_task = HivePartitionSensor(
@@ -83,6 +86,17 @@ dependence_dispatch_tracker_server_magic_task = HivePartitionSensor(
     dag=dag
 )
 
+# 依赖前一天分区
+ods_sqoop_base_data_country_conf_df_prev_day_task = UFileSensor(
+    task_id='ods_sqoop_base_data_country_conf_df_prev_day_task',
+    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="oride_dw_sqoop/oride_data/data_country_conf",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
 ##----------------------------------------- 变量 ---------------------------------------##
 
 db_name="oride_dw"
@@ -369,7 +383,7 @@ SELECT base.order_id,
        pay_status, --支付类型（0: 支付中, 1: 成功, 2: 失败）
        pax_num, -- 乘客数量 
        tip,  --小费
-       nvl(ep.estimated_price,-1) as estimated_price,
+       nulll as estimated_price,
         --预估价格区间（最小值,最大值,-1 未知）
        if(push_ord.order_id is not null and push_ord.driver_id is not null,1,0) as is_strong_dispatch,  
        --是否强制派单1:是，0:否
@@ -395,30 +409,15 @@ SELECT base.order_id,
        --当天司机应答后取消平均时长（秒） 
        serv_union_type,  --业务类型，下单类型+司机类型(serv_type+driver_serv_type)
 
-       case when (product_id = 3 and pax_num < 3 )
-                then 1
-            else 0
-       end as is_carpool, --'是否拼车'
+       is_carpool, --'是否拼车'
         
-       case when (product_id = 3 and pax_num = 3 )
-                then 1
-            else 0
-       end as is_chartered_bus,--'是否包车'
+       null as is_chartered_bus,--'是否包车' (已经废弃)
         
-       case when carpool_success.order_id is not null
-            then 1
-            else 0 
-       end as is_carpool_success, --'是否拼车成功'
+       null as is_carpool_success, --'是否拼车成功' (已经废弃)
        
-       case when (product_id = 3 and pax_num < 3 and base.driver_id > 0 )
-            then 1
-            else 0
-        end as is_carpool_accept, --是否拼车应答单(司机)
+        null as is_carpool_accept, --是否拼车应答单(司机) (已经废弃)
        
-       case when carpool_success.order_id is not null and status in (4,5)
-            then 1 
-            else 0 
-        end as is_carpool_success_and_finish, --拼车成功且订单完成
+        null as is_carpool_success_and_finish, --拼车成功且订单完成 (已经废弃)
         falsify, --取消罚款
         falsify_get, --取消罚款实际获得
         falsify_driver_cancel, --司机取消罚款
@@ -428,8 +427,10 @@ SELECT base.order_id,
         wait_in_radius, --是否在接驾范围内
         wait_distance, --等待乘客上车距离
         cancel_wait_payment_time,  --乘客取消待支付时间          
-
-       country.country_code as country_code,
+        estimate_duration,  -- 预估时间
+        estimate_distance,-- '预估距离'
+        estimate_price,  --预估价格     
+       nvl(country.country_code,'nal') as country_code,
 
        '{pt}' AS dt
 FROM
@@ -572,7 +573,13 @@ FROM
              wait_in_radius, --是否在接驾范围内
              wait_distance, --等待乘客上车距离
              cancel_wait_payment_time,  --乘客取消待支付时间
-             country_id  --国家ID
+             country_id,  --国家ID
+             
+             is_carpool , -- '是否是拼车' 
+             estimate_duration,  -- 预估时间
+             estimate_distance,-- '预估距离'
+             estimate_price  --预估价格
+
 
       FROM oride_dw_ods.ods_sqoop_base_data_order_df
       WHERE dt = '{pt}'
@@ -596,15 +603,15 @@ LEFT OUTER JOIN
 FROM oride_dw_ods.ods_sqoop_base_data_order_payment_df
 WHERE dt = '{pt}') pay ON base.order_id=pay.order_id
 LEFT OUTER JOIN
-(SELECT get_json_object(event_value, '$.order_id') AS order_id,
-       min(get_json_object(event_value, '$.estimated_price')) AS estimated_price --预估价格区间（最小值,最大值）
-FROM oride_dw.dwd_oride_client_event_detail_hi
-WHERE event_name='successful_order_show'
-  AND dt='{pt}'
-  AND length(get_json_object(event_value, '$.estimated_price'))>1
-GROUP BY get_json_object(event_value, '$.order_id')) ep
-ON base.order_id=ep.order_id
-left outer join
+--(SELECT get_json_object(event_value, '$.order_id') AS order_id,
+--       min(get_json_object(event_value, '$.estimated_price')) AS estimated_price --预估价格区间（最小值,最大值）
+--FROM oride_dw.dwd_oride_client_event_detail_hi
+--WHERE event_name='successful_order_show'
+--  AND dt='{pt}'
+--  AND length(get_json_object(event_value, '$.estimated_price'))>1
+--GROUP BY get_json_object(event_value, '$.order_id')) ep
+--ON base.order_id=ep.order_id
+--left outer join
 
 --(select order_id from oride_dw.dwd_oride_order_dispatch_funnel_di
 --   WHERE dt='{pt}'
@@ -632,24 +639,24 @@ left join
 (SELECT *
    FROM oride_dw_ods.ods_sqoop_base_data_country_conf_df 
    WHERE dt='{pt}') country
-on base.country_id=country.id
+on base.country_id=country.id;
 
-left OUTER JOIN
-(--拼车成功的订单   trip对应id数量 > 1的 id 
-    select 
-        id as order_id
-    from
-    (
-        select 
-            trip_id,
-            id,
-            count(trip_id) OVER(PARTITION BY trip_id ) AS cn 
-        from oride_dw_ods.ods_sqoop_base_data_order_df
-        where  dt ='{pt}' and serv_type = 3 and pax_num < 3 and driver_id >0
-            AND from_unixtime(create_time,'yyyy-MM-dd') = '{pt}'
-    )base
-    where base.cn > 1
-)carpool_success on carpool_success.order_id = base.order_id;
+--left OUTER JOIN
+--(--拼车成功的订单   trip对应id数量 > 1的 id 
+--    select 
+--        id as order_id
+--    from
+--    (
+--        select 
+--            trip_id,
+--            id,
+--            count(trip_id) OVER(PARTITION BY trip_id ) AS cn 
+--        from oride_dw_ods.ods_sqoop_base_data_order_df
+--        where  dt ='{pt}' and serv_type = 3 and pax_num < 3 and driver_id >0
+--            AND from_unixtime(create_time,'yyyy-MM-dd') = '{pt}'
+--    )base
+--    where base.cn > 1
+--)carpool_success on carpool_success.order_id = base.order_id;
 '''.format(
         pt=ds,
         now_day='{{macros.ds_add(ds, +1)}}',
@@ -757,3 +764,4 @@ ods_sqoop_base_data_order_df_prev_day_task >>  dwd_oride_order_base_include_test
 ods_sqoop_base_data_order_payment_df_prev_day_task >> dwd_oride_order_base_include_test_di_task
 oride_client_event_detail_prev_day_task >> dwd_oride_order_base_include_test_di_task
 dependence_dispatch_tracker_server_magic_task >> dwd_oride_order_base_include_test_di_task
+ods_sqoop_base_data_country_conf_df_prev_day_task >> dwd_oride_order_base_include_test_di_task

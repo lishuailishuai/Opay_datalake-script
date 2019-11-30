@@ -45,7 +45,7 @@ dag = airflow.DAG('dm_oride_passenger_base_cube_d',
 dependence_dwd_oride_order_base_include_test_di_prev_day_task = UFileSensor(
     task_id='dwd_oride_order_base_include_test_di_prev_day_task',
     filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw/dwd_oride_order_base_include_test_di/country_code=nal",
+        hdfs_path_str="oride/oride_dw/dwd_oride_order_base_include_test_di/country_code=NG",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -122,7 +122,17 @@ def dm_oride_passenger_base_cube_d_sql_task(ds):
           SELECT if(t2.passenger_id IS NULL,1,0) AS is_first_order_mark,--准确说历史没有完单的是否本日首次
              if(t3.passenger_id IS NOT NULL,1,0) AS new_reg_user_mark, --是否当日新注册乘客
              null as is_fraud, --是否疑似作弊订单
-             t1.*
+            -- t1.*
+            t1.city_id,
+            t1.product_id,
+            t1.driver_serv_type,
+            t1.passenger_id,
+            t1.status,
+            t1.pay_status,
+            t1.pay_mode,
+            t1.order_id,
+            t1.price,
+            'nal' as country_code
             FROM
               (SELECT *
                FROM oride_dw.dwd_oride_order_base_include_test_di
