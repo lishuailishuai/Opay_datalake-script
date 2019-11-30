@@ -100,6 +100,72 @@ def dwd_oride_driver_call_record_mid_sql_task(ds):
     )
     return HQL
 
+
+def app_oride_driver_call_book_d_mid_sql_task(ds):
+    HQL='''
+        SET hive.exec.parallel=TRUE;
+        SET hive.exec.dynamic.partition.mode=nonstrict;
+        
+        insert overwrite table oride_dw.app_oride_driver_call_book_d_mid  partition(country_code,dt)
+        SELECT a3.user_id,
+            --司机ID
+        
+            (CASE
+                 WHEN a3.user_id=b3.user_id
+                      AND a3.contact_phone_number=b3.contact_phone_number THEN a3.contact_name
+                 ELSE NULL
+             END) AS contact_name,
+            --联系人姓名 （如果手机号没有在通讯录里，那么通话记录里的姓名应该是空，没有名字）
+        
+            a3.contact_phone_number,
+            --联系人电话
+        
+            b3.call_cnt AS call_cnt,
+            --与联系人通话次数
+
+            'nal' AS country_code,
+            --国家码
+        
+            '{pt}' AS dt
+        FROM
+          (SELECT b2.user_id,
+                  b2.contact_name,
+                  b2.contact_phone_number,
+                  count(1) call_cnt --通话次数
+        
+           FROM
+             (SELECT b1.user_id,
+                     substr(split(b1.name_phone_num,'\":\"')[0],3) AS contact_name,
+                     substr(split(b1.name_phone_num,'\":\"')[1],0,length(split(b1.name_phone_num,'\":\"')[1])-2) AS contact_phone_number
+           FROM oride_dw.dwd_oride_driver_call_record_mid b1
+           WHERE b1.dt='{pt}') AS b2
+        GROUP BY b2.user_id,
+                 b2.contact_name,
+                 b2.contact_phone_number) b3 --通话记录
+        
+        LEFT OUTER JOIN
+          (SELECT a2.user_id,
+                  a2.contact_name,
+                  a2.contact_phone_number,
+                  length(a2.contact_name) contact_name_len,
+                  length(a2.contact_phone_number) contact_number_len
+           FROM
+             (SELECT a1.user_id,
+                     substr(split(a1.name_phone_num,'\":\"')[0],3) AS contact_name,
+                     substr(split(a1.name_phone_num,'\":\"')[1],0,length(split(a1.name_phone_num,'\":\"')[1])-2) AS contact_phone_number
+           FROM oride_dw.dwd_oride_driver_phone_list_mid a1
+           WHERE a1.dt='{pt}')a2
+        GROUP BY a2.user_id,
+                 a2.contact_name,
+                 a2.contact_phone_number ) a3 --手机通讯录
+         ON a3.user_id=b3.user_id
+        AND a3.contact_phone_number=b3.contact_phone_number
+        
+    '''.format(
+        pt=ds
+    )
+    return HQL
+
 def app_oride_driver_call_book_d_sql_task(ds):
     HQL='''
         SET hive.exec.parallel=TRUE;
@@ -122,55 +188,11 @@ def app_oride_driver_call_book_d_sql_task(ds):
        'nal' AS country_code,
        --国家码
 
-       dt --日期
+       '{pt}' as dt --日期
 
 FROM
-  (SELECT a3.user_id,
-          --司机ID
-
-          (CASE WHEN a3.user_id=b3.user_id
-           AND a3.contact_phone_number=b3.contact_phone_number THEN a3.contact_name ELSE NULL END) AS contact_name,
-          --联系人姓名 （如果手机号没有在通讯录里，那么通话记录里的姓名应该是空，没有名字）
-
-          a3.contact_phone_number,
-          --联系人电话
-
-          b3.call_cnt AS call_cnt, --与联系人通话次数
-          '{pt}' AS dt
-   FROM
-     (SELECT b2.user_id,
-             b2.contact_name,
-             b2.contact_phone_number,
-             count(1) call_cnt --通话次数
-
-      FROM
-        (SELECT b1.user_id,
-                substr(split(b1.name_phone_num,'\":\"')[0],3) AS contact_name,
-                substr(split(b1.name_phone_num,'\":\"')[1],0,length(split(b1.name_phone_num,'\":\"')[1])-2) AS contact_phone_number
-      FROM oride_dw.dwd_oride_driver_call_record_mid b1
-      WHERE b1.dt='{pt}') AS b2
-   GROUP BY b2.user_id,
-            b2.contact_name,
-            b2.contact_phone_number) b3 --通话记录
-
-LEFT OUTER JOIN
-  (SELECT a2.user_id,
-          a2.contact_name,
-          a2.contact_phone_number,
-          length(a2.contact_name) contact_name_len,
-          length(a2.contact_phone_number) contact_number_len
-   FROM
-     (SELECT a1.user_id,
-             substr(split(a1.name_phone_num,'\":\"')[0],3) AS contact_name,
-             substr(split(a1.name_phone_num,'\":\"')[1],0,length(split(a1.name_phone_num,'\":\"')[1])-2) AS contact_phone_number
-   FROM oride_dw.dwd_oride_driver_phone_list_mid a1
-   WHERE a1.dt='{pt}')a2
-GROUP BY a2.user_id,
-         a2.contact_name,
-         a2.contact_phone_number ) a3 --手机通讯录
- ON a3.user_id=b3.user_id
-AND a3.contact_phone_number=b3.contact_phone_number) x1
-WHERE x1.dt BETWEEN date_sub('{pt}',14) AND '{pt}'
+  oride_dw.app_oride_driver_call_book_d_mid
+WHERE dt BETWEEN date_sub('{pt}',14) AND '{pt}'
 GROUP BY user_id,
          contact_name,
          contact_phone_number
@@ -208,6 +230,17 @@ def dwd_oride_driver_call_record_mid(ds,**kargs):
     hive_hook.run_cli(_sql)
 
 
+def app_oride_driver_call_book_d_mid(ds,**kargs):
+    hive_hook=HiveCliHook()
+
+    # 读取sql
+    _sql = app_oride_driver_call_book_d_mid_sql_task(ds)
+    logging.info('Executing: %s', _sql)
+
+    # 执行Hive
+    hive_hook.run_cli(_sql)
+
+
 def execution_data_task_id(ds,**kargs):
 
     hive_hook = HiveCliHook()
@@ -239,6 +272,13 @@ dwd_oride_driver_call_record_mid_task = PythonOperator(
     dag=dag
 )
 
+app_oride_driver_call_book_d_mid_task = PythonOperator(
+    task_id='app_oride_driver_call_book_d_mid_task',
+    python_callable=app_oride_driver_call_book_d_mid,
+    provide_context=True,
+    dag=dag
+)
+
 app_oride_driver_call_book_d_task= PythonOperator(
     task_id='app_oride_driver_call_book_d_task',
     python_callable=execution_data_task_id,
@@ -246,5 +286,5 @@ app_oride_driver_call_book_d_task= PythonOperator(
     dag=dag
 )
 
-dwd_oride_client_event_detail_hi_task>>dwd_oride_driver_phone_list_mid_task>>\
-    dwd_oride_driver_call_record_mid_task>>app_oride_driver_call_book_d_task
+dwd_oride_client_event_detail_hi_task>>dwd_oride_driver_phone_list_mid_task>>app_oride_driver_call_book_d_mid_task>>app_oride_driver_call_book_d_task
+dwd_oride_client_event_detail_hi_task>>dwd_oride_driver_call_record_mid_task>>app_oride_driver_call_book_d_mid_task>>app_oride_driver_call_book_d_task
