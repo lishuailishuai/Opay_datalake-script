@@ -135,7 +135,7 @@ app_oride_order_skyeye_analysis_d_task = HiveOperator(
         b.city_id,--城市id
         b.pay_mode as mode,--支付模式
         c.phone_number,--司机手机号
-        nvl(b.country_code,-10000) as country_code,--国家码
+        'nal' as country_code,--国家码
         '{pt}'  as dt
         FROM
     (
