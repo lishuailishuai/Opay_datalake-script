@@ -695,7 +695,16 @@ create_order_metrics_data = BashOperator(
             qr_active_user_cnt,
             new_user_cnt,
             pos_new_user_cnt,
-            qr_new_user_cnt
+            qr_new_user_cnt,
+            bonus_conplete_order_cnt,
+            bonus_gmv,
+            bonus_new_user_cnt,
+            bonus_active_user_cnt,
+            bonus_actual_amount_sum,
+            not_bonus_conplete_order_cnt,
+            not_bonus_gmv,
+            not_bonus_actual_amount_sum,
+            not_bonus_active_user_cnt
             ) 
 
             select
@@ -711,7 +720,17 @@ create_order_metrics_data = BashOperator(
             t.qr_active_user_cnt,
             t.new_user_cnt,
             t.pos_new_user_cnt,
-            t.qr_new_user_cnt
+            t.qr_new_user_cnt,
+
+            t.bonus_conplete_order_cnt,
+            t.bonus_gmv,
+            t.bonus_new_user_cnt,
+            t.bonus_active_user_cnt,
+            t.bonus_actual_amount_sum,
+            t.not_bonus_conplete_order_cnt,
+            t.not_bonus_gmv,
+            t.not_bonus_actual_amount_sum,
+            t.not_bonus_active_user_cnt
 
             from
             (
@@ -729,8 +748,18 @@ create_order_metrics_data = BashOperator(
 
               ifnull(count(distinct if(t.trade_status = 'SUCCESS' and t.first_order = '1',t.sender_id,null)),0) as new_user_cnt,
               ifnull(count(distinct if(t.order_type = 'pos' and t.trade_status = 'SUCCESS' and t.first_order = '1',t.sender_id,null)),0) as pos_new_user_cnt,
-              ifnull(count(distinct if(t.order_type = 'qrcode' and t.trade_status = 'SUCCESS' and t.first_order = '1',t.sender_id,null)),0) as qr_new_user_cnt
+              ifnull(count(distinct if(t.order_type = 'qrcode' and t.trade_status = 'SUCCESS' and t.first_order = '1',t.sender_id,null)),0) as qr_new_user_cnt,
 
+              ifnull(count(if(t.trade_status = 'SUCCESS' and length(t.discount_ids) > 0,t.order_id,null)),0) as bonus_conplete_order_cnt,
+              ifnull(sum(if(t.trade_status = 'SUCCESS' and length(t.discount_ids) > 0,t.org_payment_amount,null)),0) as bonus_gmv,
+              ifnull(count(distinct if(t.trade_status = 'SUCCESS' and t.first_order = '1' and length(t.discount_ids) > 0,t.sender_id,null)),0) as bonus_new_user_cnt,
+              ifnull(count(distinct if(t.trade_status = 'SUCCESS' and length(t.discount_ids) > 0,t.sender_id,null)),0) as bonus_active_user_cnt,
+              ifnull(sum(if(t.trade_status = 'SUCCESS' and length(t.discount_ids) > 0,t.payment_amount,null)),0) as bonus_actual_amount_sum,
+              
+              ifnull(count(if(t.trade_status = 'SUCCESS' and length(t.discount_ids) = 0,t.order_id,null)),0) as not_bonus_conplete_order_cnt,
+              ifnull(sum(if(t.trade_status = 'SUCCESS' and length(t.discount_ids) = 0,t.org_payment_amount,null)),0) as not_bonus_gmv,
+              ifnull(sum(if(t.trade_status = 'SUCCESS' and length(t.discount_ids) = 0,t.payment_amount,null)),0) as not_bonus_actual_amount_sum,
+              ifnull(count(distinct if(t.trade_status = 'SUCCESS' and length(t.discount_ids) = 0,t.sender_id,null)),0) as not_bonus_active_user_cnt
 
               from
               (   select
@@ -743,7 +772,8 @@ create_order_metrics_data = BashOperator(
                   o.org_payment_amount,
                   s.bd_id,
                   s.city_id,
-                  o.first_order
+                  o.first_order,
+                  o.discount_ids
                   from
                   (
                     select 
@@ -765,7 +795,8 @@ create_order_metrics_data = BashOperator(
                       order_type,
                       trade_status,
                       ifnull(org_payment_amount,0) as org_payment_amount,
-                      first_order
+                      first_order,
+                      discount_ids
 
                       from
                       opos_order
@@ -792,7 +823,16 @@ create_order_metrics_data = BashOperator(
             qr_active_user_cnt=VALUES(qr_active_user_cnt),
             new_user_cnt=VALUES(new_user_cnt),
             pos_new_user_cnt=VALUES(pos_new_user_cnt),
-            qr_new_user_cnt=VALUES(qr_new_user_cnt)
+            qr_new_user_cnt=VALUES(qr_new_user_cnt),
+            bonus_conplete_order_cnt=VALUES(bonus_conplete_order_cnt),
+            bonus_gmv=VALUES(bonus_gmv),
+            bonus_new_user_cnt=VALUES(bonus_new_user_cnt),
+            bonus_active_user_cnt=VALUES(bonus_active_user_cnt),
+            bonus_actual_amount_sum=VALUES(bonus_actual_amount_sum),
+            not_bonus_conplete_order_cnt=VALUES(not_bonus_conplete_order_cnt),
+            not_bonus_gmv=VALUES(not_bonus_gmv),
+            not_bonus_actual_amount_sum=VALUES(not_bonus_actual_amount_sum),
+            not_bonus_active_user_cnt=VALUES(not_bonus_active_user_cnt)
 
             ;
 
@@ -800,6 +840,58 @@ create_order_metrics_data = BashOperator(
     """,
     dag=dag,
 )
+
+
+
+
+
+create_bonus_metrics_data = BashOperator(
+    task_id='create_bonus_metrics_data',
+    bash_command="""
+        mysql -udml_insert -p6VaEyu -h10.52.149.112 opos_dw  -e "
+
+            insert into opos_dw.opos_shop_metrcis_realtime (dt,city_id,bd_id,new_shop_cnt)
+
+            select
+            t.dt,
+            t.city_id,
+            t.bd_id,
+            t.new_shop_cnt
+
+            from
+            (
+                select
+                DATE_FORMAT(created_at,'%Y-%m-%d') as dt,
+                city_id,
+                bd_id,
+                count(id) as new_shop_cnt
+
+                from
+                bd_shop
+                where
+                DATE_FORMAT(created_at,'%Y-%m-%d') = '{{ ds }}' or
+                group by
+                city_id,
+                bd_id
+            ) t
+
+
+            ON DUPLICATE KEY
+            UPDATE
+            dt=VALUES(dt),
+            city_id=VALUES(city_id),
+            bd_id=VALUES(bd_id),
+            new_shop_cnt=VALUES(new_shop_cnt)
+
+            ;
+
+        "
+    """,
+    dag=dag,
+)
+
+
+
 
 # create_merchant_metrics_data = BashOperator(
 #     task_id='create_merchant_metrics_data',
