@@ -73,7 +73,7 @@ task_timeout_monitor= PythonOperator(
 
 dependence_table_lists = [
 
-{"db": "oride_dw", "table": "dwd_oride_order_base_include_test_di", "partitions": "country_code=nal"},
+{"db": "oride_dw", "table": "dwd_oride_order_base_include_test_di", "partitions": "country_code=NG"},
 
 {"db": "oride_dw_ods", "table": "ods_sqoop_base_data_order_payment_df", "partitions": "country_code=nal"}
 
