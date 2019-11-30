@@ -166,6 +166,8 @@ table_list = [
     ("opay_spread", "rider_signups_agents", "opay_spread_mysql", "mass",1),
     ("opay_spread", "rider_signups_guarantors", "opay_spread_mysql", "mass",1),
     ("opay_spread", "rider_signups_logs", "opay_spread_mysql", "mass",1),
+    ("opay_spread", "rider_apply_live_info", "opay_spread_mysql", "base", 1),
+
     # 数据库：oride_assets
     ("oride_assets", "oride_assets_transit", "opay_spread_mysql", "mass",1),
     ("oride_assets", "oride_categories", "opay_spread_mysql", "mass",1),
