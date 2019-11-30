@@ -41,33 +41,10 @@ dag = airflow.DAG('opos_metrcis_report',
 
 ##----------------------------------------- 依赖 ---------------------------------------##
 
-# 依赖前一天分区，dim_opos_bd_relation_df表，ufile://opay-datalake/opos/opos_dw/dim_opos_bd_relation_df
-dim_opos_bd_relation_df_task = UFileSensor(
-    task_id='dim_opos_bd_relation_df_task',
+dwd_pre_opos_payment_order_di_task = UFileSensor(
+    task_id='dwd_pre_opos_payment_order_di_task',
     filepath='{hdfs_path_str}/country_code=nal/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opos/opos_dw/dim_opos_bd_relation_df",
-        pt='{{ds}}'
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
-
-ods_sqoop_base_pre_opos_payment_order_di_task = UFileSensor(
-    task_id='ods_sqoop_base_pre_opos_payment_order_di_task',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opos_dw_sqoop_di/pre_ptsp_db/pre_opos_payment_order",
-        pt='{{ds}}'
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
-
-ods_sqoop_base_pre_opos_payment_order_bd_di_task = UFileSensor(
-    task_id='ods_sqoop_base_pre_opos_payment_order_bd_di_task',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opos_dw_sqoop_di/pre_ptsp_db/pre_opos_payment_order_bd",
+        hdfs_path_str="opos/opos_dw/dwd_pre_opos_payment_order_di",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -124,6 +101,7 @@ nvl(a.cm_id,b.cm_id) as cm_id
 ,nvl(a.bdm_name,b.bdm_name) as bdm_name
 ,nvl(a.bd_id,b.bd_id) as bd_id
 ,nvl(a.bd_name,b.bd_name) as bd_name
+
 ,nvl(a.city_id,b.city_id) as city_id
 ,nvl(a.city_name,b.city_name) as city_name
 ,nvl(a.country,b.country) as country
@@ -155,63 +133,64 @@ from
 full join
 (
 select 
-cm_id,
-cm_name,
-rm_id,
-rm_name,
-bdm_id,
-bdm_name,
-bd_id,
-bd_name,
+cm_id
+,cm_name
+,rm_id
+,rm_name
+,bdm_id
+,bdm_name
+,bd_id
+,bd_name
 
-city_id, 
-name as city_name,
-country,
+,city_id
+,city_name
+,country
 
-count(if(order_type = 'pos',order_id,null)) as his_pos_complete_order_cnt,
-count(if(order_type = 'qrcode',order_id,null)) as his_qr_complete_order_cnt,
-count(order_id) as his_complete_order_cnt,
-sum(org_payment_amount) as his_gmv,
-sum(pay_amount) as his_actual_amount,
-sum(return_amount) as his_return_amount,
-sum(if(first_order = '1',org_payment_amount - pay_amount + user_subsidy,0)) as his_new_user_cost,
-sum(if(first_order <> '1',org_payment_amount - pay_amount + user_subsidy,0)) as his_old_user_cost,
-count(if(return_amount > 0,order_id,null)) as his_return_amount_order_cnt,
+,create_date
+,create_week
+,create_month
+,create_year
 
-count(if(dt = '{pt}' and order_type = 'pos',order_id,null)) as pos_complete_order_cnt,
-count(if(dt = '{pt}' and order_type = 'qrcode',order_id,null)) as qr_complete_order_cnt,
-count(if(dt = '{pt}',order_id,null)) as complete_order_cnt,
-sum(if(dt = '{pt}',org_payment_amount,0)) as gmv,
-sum(if(dt = '{pt}',pay_amount,0)) as actual_amount,
-sum(if(dt = '{pt}',return_amount,0)) as return_amount,
-sum(if(dt = '{pt}' and first_order = '1',org_payment_amount - pay_amount + user_subsidy,0)) as new_user_cost,
-sum(if(dt = '{pt}' and first_order <> '1',org_payment_amount - pay_amount + user_subsidy,0)) as old_user_cost,
-count(if(dt = '{pt}' and return_amount > 0,order_id,null)) as return_amount_order_cnt
+,count(if(order_type = 'pos',order_id,null)) as his_pos_complete_order_cnt
+,count(if(order_type = 'qrcode',order_id,null)) as his_qr_complete_order_cnt
+,count(order_id) as his_complete_order_cnt
+,sum(org_payment_amount) as his_gmv
+,sum(pay_amount) as his_actual_amount
+,sum(return_amount) as his_return_amount
+,sum(if(first_order = '1',org_payment_amount - pay_amount + user_subsidy,0)) as his_new_user_cost
+,sum(if(first_order <> '1',org_payment_amount - pay_amount + user_subsidy,0)) as his_old_user_cost
+,count(if(return_amount > 0,order_id,null)) as his_return_amount_order_cnt
+
+,count(if(dt = '{pt}' and order_type = 'pos',order_id,null)) as pos_complete_order_cnt
+,count(if(dt = '{pt}' and order_type = 'qrcode',order_id,null)) as qr_complete_order_cnt
+,count(if(dt = '{pt}',order_id,null)) as complete_order_cnt
+,sum(if(dt = '{pt}',org_payment_amount,0)) as gmv
+,sum(if(dt = '{pt}',pay_amount,0)) as actual_amount
+,sum(if(dt = '{pt}',return_amount,0)) as return_amount
+,sum(if(dt = '{pt}' and first_order = '1',org_payment_amount - pay_amount + user_subsidy,0)) as new_user_cost
+,sum(if(dt = '{pt}' and first_order <> '1',org_payment_amount - pay_amount + user_subsidy,0)) as old_user_cost
+,count(if(dt = '{pt}' and return_amount > 0,order_id,null)) as return_amount_order_cnt
 
 from 
-(select
-p.dt,p.receipt_id,p.order_id,p.order_type,p.trade_status,p.org_payment_amount,p.pay_amount,p.return_amount,p.first_order,p.user_subsidy,bd.bd_id,bd.city_id,bd.name,bd.country,bd.cm_id,bd.cm_name,bd.rm_id,bd.rm_name,bd.bdm_id,bd.bdm_name,bd.bd_name
-from
-    (select dt,receipt_id,order_id,order_type,trade_status,org_payment_amount,pay_amount,return_amount,first_order,user_subsidy from opos_dw_ods.ods_sqoop_base_pre_opos_payment_order_di where dt = '{pt}' and trade_status = 'SUCCESS') as p 
-inner join
-    --先用orderod关联每一笔交易的bd_id,只取能关联上bd信息的交易，故用inner join
-    (
-    select s.order_id,s.bd_id,s.city_id,ci.name,ci.country,b.cm_id,b.cm_name,b.rm_id,b.rm_name,b.bdm_id,b.bdm_name,b.bd_name from
-      (select order_id,bd_id,city_id from opos_dw_ods.ods_sqoop_base_pre_opos_payment_order_bd_di where dt='{pt}') as s 
-    left join
-    --关联城市码表，求出国家和城市描述
-      (select id,name,country from opos_dw_ods.ods_sqoop_base_bd_city_df where dt = '{pt}') as ci
-    on s.city_id=ci.id
-    left join
-    --关联bd信息码表，求出所有bd的层级关系和描述
-      (select cm_id,cm_name,rm_id,rm_name,bdm_id,bdm_name,bd_id,bd_name from opos_dw.dim_opos_bd_info_df where country_code='nal' and   dt='{pt}')   as b
-    on s.bd_id=b.bd_id
-    ) as bd
-on
-    p.order_id=bd.order_id) as tmp
-
+(select * from opos_dw.dwd_pre_opos_payment_order_di where country_code='nal' and dt='{pt}' and trade_status = 'SUCCESS' and length(bd_id)>0) as tmp
 group by 
-cm_id,cm_name,rm_id,rm_name,bdm_id,bdm_name,bd_id,bd_name,city_id, name,country
+cm_id
+,cm_name
+,rm_id
+,rm_name
+,bdm_id
+,bdm_name
+,bd_id
+,bd_name
+
+,city_id
+,city_name
+,country
+
+,create_date
+,create_week
+,create_month
+,create_year
 ) as b
 on
 a.bd_id=b.bd_id
@@ -350,9 +329,7 @@ opos_metrcis_report_task = PythonOperator(
     dag=dag
 )
 
-dim_opos_bd_relation_df_task >> opos_metrcis_report_task
-ods_sqoop_base_pre_opos_payment_order_di_task >> opos_metrcis_report_task
-ods_sqoop_base_pre_opos_payment_order_bd_di_task >> opos_metrcis_report_task
+dwd_pre_opos_payment_order_di_task >> opos_metrcis_report_task
 
 # 查看任务命令
 # airflow list_tasks opos_metrcis_report -sd /home/feng.yuan/opos_metrcis_report.py
