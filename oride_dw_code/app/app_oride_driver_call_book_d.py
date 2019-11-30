@@ -107,16 +107,16 @@ def app_oride_driver_call_book_d_sql_task(ds):
         
         insert overwrite table {db}.{table} partition(country_code,dt)
 
-        SELECT a3.user_id,
+        SELECT b2.user_id,
        --司机ID
 
-       a3.contact_name,
+       b2.contact_name,
        --联系人姓名
 
-       a3.contact_phone_number,
+       b2.contact_phone_number,
        --联系人电话
 
-       if(b3.call_cnt IS NULL,0,b3.call_cnt) AS call_cnt,
+       b2.call_cnt AS call_cnt,
        --与联系人通话次数
 
        'nal' AS country_code,
@@ -125,22 +125,7 @@ def app_oride_driver_call_book_d_sql_task(ds):
        '{pt}' AS dt --日期
 
 FROM
-  (SELECT a2.user_id,
-          a2.contact_name,
-          a2.contact_phone_number,
-          length(a2.contact_name) AS contact_name_len,
-          length(a2.contact_phone_number) AS contact_number_len
-   FROM
-     (SELECT a1.user_id,
-             substr(split(a1.name_phone_num,'\":\"')[0],3) AS contact_name,
-             substr(split(a1.name_phone_num,'\":\"')[1],0,length(split(a1.name_phone_num,'\":\"')[1])-2) AS contact_phone_number
-   FROM oride_dw.dwd_oride_driver_phone_list_mid a1
-   WHERE a1.dt='{pt}')a2
-GROUP BY a2.user_id,
-         a2.contact_name,
-         a2.contact_phone_number ) a3
-LEFT OUTER JOIN
-  (SELECT b2.user_id,
+  SELECT b2.user_id,
           b2.contact_name,
           b2.contact_phone_number,
           count(1) AS call_cnt --通话次数
@@ -152,11 +137,9 @@ LEFT OUTER JOIN
    WHERE b1.dt='{pt}') b2
 GROUP BY b2.user_id,
          b2.contact_name,
-         b2.contact_phone_number) b3 ON a3.user_id=b3.user_id
-AND a3.contact_name=b3.contact_name
-AND a3.contact_phone_number=b3.contact_phone_number
-WHERE a3.contact_number_len<50
-  AND a3.contact_name_len<64;
+         b2.contact_phone_number
+WHERE length(b2.contact_phone_number)<50
+  AND length(b2.contact_name)<64;
 
     '''.format(
         pt=ds,
