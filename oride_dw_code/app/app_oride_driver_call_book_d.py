@@ -122,7 +122,7 @@ def app_oride_driver_call_book_d_sql_task(ds):
        'nal' AS country_code,
        --国家码
 
-       '{pt}' AS dt --日期
+       dt --日期
 
 FROM
   (SELECT a3.user_id,
@@ -135,8 +135,8 @@ FROM
           a3.contact_phone_number,
           --联系人电话
 
-          b3.call_cnt AS call_cnt --与联系人通话次数
-
+          b3.call_cnt AS call_cnt, --与联系人通话次数
+          '{pt}' AS dt
    FROM
      (SELECT b2.user_id,
              b2.contact_name,
