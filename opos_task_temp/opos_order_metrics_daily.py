@@ -41,11 +41,10 @@ dag = airflow.DAG(
 
 ##----------------------------------------- 依赖 ---------------------------------------##
 
-# 依赖前一天分区，dim_opos_bd_relation_df表，ufile://opay-datalake/opos/opos_dw/dim_opos_bd_relation_df
-dim_opos_bd_relation_df_task = UFileSensor(
-    task_id='dim_opos_bd_relation_df_task',
+dwd_pre_opos_payment_order_di_task = UFileSensor(
+    task_id='dwd_pre_opos_payment_order_di_task',
     filepath='{hdfs_path_str}/country_code=nal/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opos/opos_dw/dim_opos_bd_relation_df",
+        hdfs_path_str="opos/opos_dw/dwd_pre_opos_payment_order_di",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -57,28 +56,6 @@ opos_metrcis_report_task = UFileSensor(
     task_id='opos_metrcis_report_task',
     filepath='{hdfs_path_str}/country_code=nal/dt={pt}/_SUCCESS'.format(
         hdfs_path_str="opos/opos_temp/opos_metrcis_report",
-        pt='{{ds}}'
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
-
-ods_sqoop_base_pre_opos_payment_order_di_task = UFileSensor(
-    task_id='ods_sqoop_base_pre_opos_payment_order_di_task',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opos_dw_sqoop_di/pre_ptsp_db/pre_opos_payment_order",
-        pt='{{ds}}'
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
-
-ods_sqoop_base_pre_opos_payment_order_bd_di_task = UFileSensor(
-    task_id='ods_sqoop_base_pre_opos_payment_order_bd_di_task',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opos_dw_sqoop_di/pre_ptsp_db/pre_opos_payment_order_bd",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -795,13 +772,10 @@ insert_bi_bd_metrics = HiveToMySqlTransfer(
     mysql_table='opos_metrics_daily_d',
     dag=dag)
 
-dim_opos_bd_relation_df_task >> opos_active_user_daily_task
-ods_sqoop_base_pre_opos_payment_order_di_task >> opos_active_user_daily_task
-ods_sqoop_base_pre_opos_payment_order_bd_di_task >> opos_active_user_daily_task
+dwd_pre_opos_payment_order_di_task >> opos_active_user_daily_task
 
 # 执行mysql任务
 opos_active_user_daily_task >> delete_crm_data >> insert_crm_metrics >> delete_bi_data >> insert_bi_metrics >> delete_bi_bd_data >> insert_bi_bd_metrics
-
 opos_metrcis_report_task >> delete_crm_data >> insert_crm_metrics >> delete_bi_data >> insert_bi_metrics >> delete_bi_bd_data >> insert_bi_bd_metrics
 
 # 查看任务命令

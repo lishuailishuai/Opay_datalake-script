@@ -41,33 +41,10 @@ dag = airflow.DAG('opos_metrcis_report',
 
 ##----------------------------------------- 依赖 ---------------------------------------##
 
-# 依赖前一天分区，dim_opos_bd_relation_df表，ufile://opay-datalake/opos/opos_dw/dim_opos_bd_relation_df
-dim_opos_bd_relation_df_task = UFileSensor(
-    task_id='dim_opos_bd_relation_df_task',
+dwd_pre_opos_payment_order_di_task = UFileSensor(
+    task_id='dwd_pre_opos_payment_order_di_task',
     filepath='{hdfs_path_str}/country_code=nal/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opos/opos_dw/dim_opos_bd_relation_df",
-        pt='{{ds}}'
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
-
-ods_sqoop_base_pre_opos_payment_order_di_task = UFileSensor(
-    task_id='ods_sqoop_base_pre_opos_payment_order_di_task',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opos_dw_sqoop_di/pre_ptsp_db/pre_opos_payment_order",
-        pt='{{ds}}'
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
-
-ods_sqoop_base_pre_opos_payment_order_bd_di_task = UFileSensor(
-    task_id='ods_sqoop_base_pre_opos_payment_order_bd_di_task',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opos_dw_sqoop_di/pre_ptsp_db/pre_opos_payment_order_bd",
+        hdfs_path_str="opos/opos_dw/dwd_pre_opos_payment_order_di",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -352,9 +329,7 @@ opos_metrcis_report_task = PythonOperator(
     dag=dag
 )
 
-dim_opos_bd_relation_df_task >> opos_metrcis_report_task
-ods_sqoop_base_pre_opos_payment_order_di_task >> opos_metrcis_report_task
-ods_sqoop_base_pre_opos_payment_order_bd_di_task >> opos_metrcis_report_task
+dwd_pre_opos_payment_order_di_task >> opos_metrcis_report_task
 
 # 查看任务命令
 # airflow list_tasks opos_metrcis_report -sd /home/feng.yuan/opos_metrcis_report.py
