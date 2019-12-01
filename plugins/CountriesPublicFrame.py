@@ -407,18 +407,18 @@ class CountriesPublicFrame(object):
         """
 
         try:
+
+            #没有小时级分区
+            if self.hour is None:
+                #输出不同国家的数据路径(没有小时级分区)
+                self.hdfs_data_dir_str=self.data_hdfs_path+"/dt="+self.ds
+            else:
+                #输出不同国家的数据路径(有小时级分区)
+                self.hdfs_data_dir_str=self.data_hdfs_path+"/dt="+self.ds+"/hour="+self.hour
         
             # 没有国家分区并且每个目录必须有数据才能生成 Success
             if self.country_partition.lower()=="false" and self.file_type.lower()=="true":
 
-                if self.hour is None:
-                    #输出不同国家的数据路径
-                    self.hdfs_data_dir_str=self.data_hdfs_path+"/dt="+self.ds
-                else:
-                    #输出不同国家的数据路径
-                    self.hdfs_data_dir_str=self.data_hdfs_path+"/dt="+self.ds+"/hour="+self.hour
-
-                #self.data_file_type_touchz()
                 object_task()
 
                 return
@@ -426,14 +426,6 @@ class CountriesPublicFrame(object):
             # 没有国家分区并且数据为空也生成 Success
             if self.country_partition.lower()=="false" and self.file_type.lower()=="false":
 
-                if self.hour is None:
-                    #输出不同国家的数据路径
-                    self.hdfs_data_dir_str=self.data_hdfs_path+"/dt="+self.ds
-                else:
-                    #输出不同国家的数据路径
-                    self.hdfs_data_dir_str=self.data_hdfs_path+"/dt="+self.ds+"/hour="+self.hour
-
-                #self.data_not_file_type_touchz()
                 object_task()
 
                 return
@@ -458,7 +450,6 @@ class CountriesPublicFrame(object):
         try:
 
             #获取国家列表
-            #country_code_list=self.get_country_code()
 
             for country_code_word in self.country_code_list.split(","):
 
@@ -469,39 +460,28 @@ class CountriesPublicFrame(object):
                     country_code_word=country_code_word.upper()
 
 
-                #有国家分区、没有开通多国家业务(国家码默认nal)
+                #没有小时级分区
+                if self.hour is None:
+
+                    #输出不同国家的数据路径(没有小时级分区)
+                    self.hdfs_data_dir_str=self.data_hdfs_path+"/country_code="+country_code_word+"/dt="+self.ds
+                else:
+
+                    #输出不同国家的数据路径(有小时级分区)
+                    self.hdfs_data_dir_str=self.data_hdfs_path+"/country_code="+country_code_word+"/dt="+self.ds+"/hour="+self.hour
+
+
+                #没有开通多国家业务(国家码默认nal)
                 if self.country_partition.lower()=="true" and self.is_open.lower()=="false":
 
                     #必须有数据才可以生成Success 文件
                     if self.file_type.lower()=="true":
 
-                        #没有小时级分区
-                        if self.hour is None:
-
-                            #输出不同国家的数据路径
-                            self.hdfs_data_dir_str=self.data_hdfs_path+"/country_code="+country_code_word+"/dt="+self.ds
-                        else:
-
-                            #输出不同国家的数据路径
-                            self.hdfs_data_dir_str=self.data_hdfs_path+"/country_code="+country_code_word+"/dt="+self.ds+"/hour="+self.hour
-
-                        #self.data_file_type_touchz()
                         object_task()
 
                     #数据为空也生成 Success 文件
                     if self.file_type.lower()=="false":
 
-                        #没有小时级分区
-                        if self.hour is None:
-
-                            #输出不同国家的数据路径
-                            self.hdfs_data_dir_str=self.data_hdfs_path+"/country_code="+country_code_word+"/dt="+self.ds
-                        else:
-
-                            #输出不同国家的数据路径
-                            self.hdfs_data_dir_str=self.data_hdfs_path+"/country_code="+country_code_word+"/dt="+self.ds+"/hour="+self.hour
-                    
-                        #self.data_not_file_type_touchz()
                         object_task()
 
                 
@@ -511,16 +491,6 @@ class CountriesPublicFrame(object):
                     
                     #必须有数据才可以生成Success 文件
                     if self.file_type.lower()=="true":
-
-                        #没有小时级分区
-                        if self.hour is None:
-
-                            #输出不同国家的数据路径
-                            self.hdfs_data_dir_str=self.data_hdfs_path+"/country_code="+country_code_word+"/dt="+self.ds
-                        else:
-
-                            #输出不同国家的数据路径
-                            self.hdfs_data_dir_str=self.data_hdfs_path+"/country_code="+country_code_word+"/dt="+self.ds+"/hour="+self.hour
 
                         #在必须有数据条件下：国家是nal时，数据可以为空 (并且不在删除分区函数调用下)
                         if country_code_word=="nal":
@@ -532,17 +502,6 @@ class CountriesPublicFrame(object):
                     #数据为空也生成 Success 文件
                     if self.file_type.lower()=="false":
 
-                        #没有小时级分区
-                        if self.hour is None:
-
-                            #输出不同国家的数据路径
-                            self.hdfs_data_dir_str=self.data_hdfs_path+"/country_code="+country_code_word+"/dt="+self.ds
-                        else:
-
-                            #输出不同国家的数据路径
-                            self.hdfs_data_dir_str=self.data_hdfs_path+"/country_code="+country_code_word+"/dt="+self.ds+"/hour="+self.hour
-
-                        #self.data_not_file_type_touchz()
                         object_task()
 
                    
@@ -577,8 +536,6 @@ class CountriesPublicFrame(object):
             alter_str="alter table {db}.{table_name} drop partition({v_par});\n alter table {db}.{table_name} add partition({v_par});".format(v_par=v_par_str,table_name=self.table_name,db=self.db_name)
 
             return alter_str
-
-        #country_code_list=self.get_country_code()
 
         for country_code_word in self.country_code_list.split(","):
 
