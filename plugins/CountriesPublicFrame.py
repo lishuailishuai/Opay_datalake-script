@@ -493,11 +493,17 @@ class CountriesPublicFrame(object):
                     if self.file_type.lower()=="true":
 
                         #在必须有数据条件下：国家是nal时，数据可以为空 (并且不在删除分区函数调用下)
-                        if country_code_word=="nal":
+
+                        if country_code_word=="nal" and self.v_del_flag==0:
                             self.data_not_file_type_touchz()
 
                         else:
+
+                            self.v_del_flag==0
+                            
                             object_task()
+
+                        
 
                     #数据为空也生成 Success 文件
                     if self.file_type.lower()=="false":
