@@ -523,7 +523,7 @@ class CountriesPublicFrame(object):
                             self.hdfs_data_dir_str=self.data_hdfs_path+"/country_code="+country_code_word+"/dt="+self.ds+"/hour="+self.hour
 
                         #在必须有数据条件下：国家是nal时，数据可以为空 (并且不在删除分区函数调用下)
-                        if country_code_word=="nal" and self.v_del_flag==0:
+                        if country_code_word=="nal":
                             self.data_not_file_type_touchz()
 
                         else:
