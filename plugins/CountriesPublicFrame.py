@@ -39,7 +39,9 @@ class CountriesPublicFrame(object):
         self.is_open=v_is_open
         self.v_del_flag=0
 
-        self.country_code_list=self.get_country_code(self)
+        self.country_code_list=""
+
+        self.get_country_code(self)
 
     def get_country_code(self):
 
@@ -55,7 +57,9 @@ class CountriesPublicFrame(object):
 
         logging.info('Executing 二位国家码: %s', v_country_code_list)
         
-        return v_country_code_list
+        #return v_country_code_list
+
+        self.country_code_list=v_country_code_list
 
 
     def check_success_exist(self):
