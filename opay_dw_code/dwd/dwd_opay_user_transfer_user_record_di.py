@@ -110,7 +110,7 @@ def dwd_opay_user_transfer_user_record_di_sql_task(ds):
         order_di.id,
         order_di.order_no,
         order_di.user_id,
-        if(order_di.create_time < nvl(user_di.agent_upgrade_time, '9999-01-01 00:00:00'), 'customer', 'agent') user_role,
+        user_di.role as user_role,
         order_di.user_name,
         order_di.recipient_id,
         case
