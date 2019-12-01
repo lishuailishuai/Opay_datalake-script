@@ -282,6 +282,8 @@ class CountriesPublicFrame(object):
 
             self.exist_country_code_data_dir(self.delete_exist_partition)
 
+        self.v_del_flag=0
+
 
     def touchz_success_dev(self):
 
@@ -497,8 +499,7 @@ class CountriesPublicFrame(object):
 
                             object_task()
 
-                            return
-
+                            continue
 
                         #在必须有数据条件下：国家是nal时，数据可以为空 
                         if country_code_word=="nal":
