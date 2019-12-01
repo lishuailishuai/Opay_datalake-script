@@ -289,16 +289,27 @@ class CountriesPublicFrame(object):
             生成 Success 函数
         """
 
-        # 没有国家分区
-        if self.country_partition.lower()=="false":
+         # 没有国家分区并且每个目录必须有数据才能生成 Success
+        if self.country_partition.lower()=="false" and self.file_type.lower()=="true":
+
+            self.not_exist_country_code_data_dir(self.data_file_type_touchz)
+
+        # 没有国家分区并且数据为空也生成 Success
+        if self.country_partition.lower()=="false" and self.file_type.lower()=="false":
 
             self.not_exist_country_code_data_dir(self.data_not_file_type_touchz)
 
 
-        #有国家分区
-        if self.country_partition.lower()=="true":
+        #有国家分区并且每个目录必须有数据才能生成 Success
+        if self.country_partition.lower()=="true" and self.file_type.lower()=="true":
 
             self.exist_country_code_data_dir(self.data_file_type_touchz)
+        
+        
+        #有国家分区并且数据为空也生成 Success
+        if self.country_partition.lower()=="true" and self.file_type.lower()=="false":
+
+            self.exist_country_code_data_dir(self.data_not_file_type_touchz)
 
 
     def countries_data_dir(self,object_task):
