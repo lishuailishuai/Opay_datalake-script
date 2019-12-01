@@ -39,6 +39,8 @@ class CountriesPublicFrame(object):
         self.is_open=v_is_open
         self.v_del_flag=0
 
+        self.country_code_list=self.get_country_code(self)
+
     def get_country_code(self):
 
         """
@@ -335,10 +337,10 @@ class CountriesPublicFrame(object):
 
 
             #获取国家列表
-            country_code_list=self.get_country_code()
+            #country_code_list=self.get_country_code()
 
 
-            for country_code_word in country_code_list.split(","):
+            for country_code_word in self.country_code_list.split(","):
 
 
                 #有国家分区并且每个目录必须有数据才能生成 Success
@@ -441,9 +443,9 @@ class CountriesPublicFrame(object):
         try:
 
             #获取国家列表
-            country_code_list=self.get_country_code()
+            #country_code_list=self.get_country_code()
 
-            for country_code_word in country_code_list.split(","):
+            for country_code_word in self.country_code_list.split(","):
 
                 if country_code_word.lower()=='nal':
                     country_code_word=country_code_word.lower()
@@ -561,9 +563,9 @@ class CountriesPublicFrame(object):
 
             return alter_str
 
-        country_code_list=self.get_country_code()
+        #country_code_list=self.get_country_code()
 
-        for country_code_word in country_code_list.split(","):
+        for country_code_word in self.country_code_list.split(","):
 
             # 有国家分区 && 小时参数为None
             if self.country_partition.lower()=="true" and self.hour is None:
