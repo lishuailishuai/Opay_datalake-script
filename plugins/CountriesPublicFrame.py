@@ -37,7 +37,7 @@ class CountriesPublicFrame(object):
         self.file_type=v_file_type
         self.hour=v_hour
         self.is_open=v_is_open
-        self.v_country_code_mid=""
+        self.v_del_flag=0
 
     def get_country_code(self):
 
@@ -256,7 +256,26 @@ class CountriesPublicFrame(object):
         if self.country_partition.lower()=="true" and self.file_type.lower()=="false":
 
             self.countries_data_dir(self.data_not_file_type_touchz)
-            
+    
+
+     def delete_partition_dev(self):
+
+        """
+            删除分区调用函数
+        """
+
+        self.v_del_flag=1
+
+        if self.country_partition.lower()=="false":
+
+            self.not_exist_country_code_data_dir(self.delete_exist_partition)
+
+
+        #有国家分区
+        if self.country_partition.lower()=="true":
+
+            self.exist_country_code_data_dir(self.delete_exist_partition)
+
 
     def touchz_success_dev(self):
 
@@ -267,13 +286,13 @@ class CountriesPublicFrame(object):
         # 没有国家分区
         if self.country_partition.lower()=="false":
 
-            self.not_exist_country_code_data_dir()
+            self.not_exist_country_code_data_dir(self.data_not_file_type_touchz)
 
 
         #有国家分区
         if self.country_partition.lower()=="true":
 
-            self.exist_country_code_data_dir()
+            self.exist_country_code_data_dir(self.data_file_type_touchz)
 
 
     def countries_data_dir(self,object_task):
@@ -362,7 +381,7 @@ class CountriesPublicFrame(object):
 
 
     #没有有国家码分区
-    def not_exist_country_code_data_dir(self):
+    def not_exist_country_code_data_dir(self,object_task):
 
         """
         country_partition:是否有国家分区
@@ -382,7 +401,8 @@ class CountriesPublicFrame(object):
                     #输出不同国家的数据路径
                     self.hdfs_data_dir_str=self.data_hdfs_path+"/dt="+self.ds+"/hour="+self.hour
 
-                self.data_file_type_touchz()
+                #self.data_file_type_touchz()
+                object_task()
 
                 return
 
@@ -396,7 +416,8 @@ class CountriesPublicFrame(object):
                     #输出不同国家的数据路径
                     self.hdfs_data_dir_str=self.data_hdfs_path+"/dt="+self.ds+"/hour="+self.hour
 
-                self.data_not_file_type_touchz()
+                #self.data_not_file_type_touchz()
+                object_task()
 
                 return
 
@@ -409,7 +430,7 @@ class CountriesPublicFrame(object):
             sys.exit(1)
 
     #有国家码分区
-    def exist_country_code_data_dir(self):
+    def exist_country_code_data_dir(self,object_task):
 
         """
         country_partition:是否有国家分区
@@ -447,7 +468,8 @@ class CountriesPublicFrame(object):
                             #输出不同国家的数据路径
                             self.hdfs_data_dir_str=self.data_hdfs_path+"/country_code="+country_code_word+"/dt="+self.ds+"/hour="+self.hour
 
-                    self.data_file_type_touchz()
+                        #self.data_file_type_touchz()
+                        object_task()
 
                     #数据为空也生成 Success 文件
                     if self.file_type.lower()=="false":
@@ -462,7 +484,8 @@ class CountriesPublicFrame(object):
                             #输出不同国家的数据路径
                             self.hdfs_data_dir_str=self.data_hdfs_path+"/country_code="+country_code_word+"/dt="+self.ds+"/hour="+self.hour
                     
-                    self.data_not_file_type_touchz()
+                        #self.data_not_file_type_touchz()
+                        object_task()
 
                 
                 #开通多国家业务
@@ -482,6 +505,13 @@ class CountriesPublicFrame(object):
                             #输出不同国家的数据路径
                             self.hdfs_data_dir_str=self.data_hdfs_path+"/country_code="+country_code_word+"/dt="+self.ds+"/hour="+self.hour
 
+                        #在必须有数据条件下：国家是nal时，数据可以为空 (并且不在删除分区函数调用下)
+                        if country_code_word=="nal" and self.v_del_flag==0:
+                            self.data_not_file_type_touchz()
+
+                        else:
+                            object_task()
+
                     #数据为空也生成 Success 文件
                     if self.file_type.lower()=="false":
 
@@ -495,13 +525,10 @@ class CountriesPublicFrame(object):
                             #输出不同国家的数据路径
                             self.hdfs_data_dir_str=self.data_hdfs_path+"/country_code="+country_code_word+"/dt="+self.ds+"/hour="+self.hour
 
-                    #国家是nal时，数据可以为空
-                    if country_code_word=="nal":
-                        self.data_not_file_type_touchz()
+                        #self.data_not_file_type_touchz()
+                        object_task()
 
-                    else:
-                        self.data_file_type_touchz()
-            
+                   
         except Exception as e:
 
             #self.comwx.postAppMessage('DW调度系统任务 {jobname} 数据产出异常'.format(jobname=table_name),'271')
