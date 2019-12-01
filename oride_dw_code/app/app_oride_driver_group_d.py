@@ -45,7 +45,7 @@ dim_oride_driver_base_task = UFileSensor(
 
 dwd_oride_order_base_include_test_di_task = UFileSensor(
     task_id='dwd_oride_order_base_include_test_di_task',
-    filepath='{hdfs_path_str}/country_code=nal/dt={pt}/_SUCCESS'.format(
+    filepath='{hdfs_path_str}/country_code=NG/dt={pt}/_SUCCESS'.format(
         hdfs_path_str="oride/oride_dw/dwd_oride_order_base_include_test_di",
         pt='{{ds}}'
     ),

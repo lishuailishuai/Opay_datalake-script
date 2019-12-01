@@ -125,6 +125,8 @@ p.order_id
 ,p.receipt_id
 ,p.sender_id
 
+,bd.hcm_id
+,bd.hcm_name
 ,bd.cm_id
 ,bd.cm_name
 ,bd.rm_id
@@ -138,16 +140,17 @@ p.order_id
 ,bd.name as city_name
 ,bd.country
 
-,shop.shop_name
-,shop.opay_account
-,shop.contact_name
-,shop.contact_phone
-,shop.cate_id
-,shop.created_at
+,bd.shop_id
+,bd.shop_name
+,bd.opay_account
+,bd.contact_name
+,bd.contact_phone
+,bd.cate_id
+,bd.created_at
 
-,shop.city_code as city_id_shop
-,shop.city_name as city_name_shop
-,shop.country as country_shop
+,bd.city_id_shop
+,bd.city_name_shop
+,bd.country_shop
 
 ,p.bill_create_ip
 ,p.org_pp_trade_no
@@ -205,8 +208,10 @@ from
 left join
     --先用orderod关联每一笔交易的bd_id,只取能关联上bd信息的交易，故用inner join
 (
-  select s.order_id,s.bd_id,s.city_id,ci.name,ci.country,b.cm_id,b.cm_name,b.rm_id,b.rm_name,b.bdm_id,b.bdm_name,b.bd_name from
-    (select order_id,bd_id,city_id from opos_dw_ods.ods_sqoop_base_pre_opos_payment_order_bd_di where dt='{pt}') as s 
+  select s.order_id,s.bd_id,s.city_id,s.shop_id,ci.name,ci.country,b.hcm_id,b.hcm_name,b.cm_id,b.cm_name,b.rm_id,b.rm_name,b.bdm_id,b.bdm_name,b.bd_name
+  ,shop.shop_name,shop.opay_account,shop.contact_name,shop.contact_phone,shop.cate_id,shop.created_at
+  ,shop.city_code as city_id_shop,shop.city_name as city_name_shop,shop.country as country_shop from
+    (select order_id,bd_id,city_id,shop_id from opos_dw_ods.ods_sqoop_base_pre_opos_payment_order_bd_di where dt='{pt}') as s 
   left join
   --关联城市码表，求出国家和城市描述
     (select id,name,country from opos_dw_ods.ods_sqoop_base_bd_city_df where dt = '{pt}') as ci
@@ -217,17 +222,18 @@ left join
     (select * from opos_dw.dim_opos_bd_info_df where country_code='nal' and dt='{pt}') as b
   on 
     s.bd_id=b.bd_id
+  left join
+    (select * from opos_dw.dim_opos_bd_relation_df where country_code='nal' and dt='{pt}') as shop
+  on
+    s.shop_id=shop.id
 ) as bd
 on
   p.order_id=bd.order_id
 left join
-(select * from opos_dw.dim_opos_bd_relation_df where country_code='nal' and dt='{pt}') as shop
+  public_dw_dim.dim_date as d
 on
-  p.receipt_id=shop.opay_id
-left join
-public_dw_dim.dim_date as d
-on
-p.dt=d.dt;
+  p.dt=d.dt;
+
 
 
 

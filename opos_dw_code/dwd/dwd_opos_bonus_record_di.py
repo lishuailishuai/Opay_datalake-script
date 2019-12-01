@@ -100,7 +100,6 @@ def dwd_opos_bonus_record_di_sql_task(ds):
 set hive.exec.parallel=true;
 set hive.exec.dynamic.partition.mode=nonstrict;
 
---插入数据
 insert overwrite table opos_dw.dwd_opos_bonus_record_di partition(country_code,dt)
 select
 o.id
@@ -111,6 +110,8 @@ o.id
 ,substr(o.create_time,0,7) as create_month
 ,substr(o.create_time,0,4) as create_year
 
+,b.hcm_id
+,b.hcm_name
 ,b.cm_id
 ,b.cm_name
 ,b.rm_id
@@ -128,6 +129,7 @@ o.id
 ,o.opay_account
 
 ,o.provider_account
+,provider.id as provider_shop_id
 ,provider.opay_id as provider_opay_id
 ,provider.shop_name as provider_shop_name
 ,provider.contact_name as provider_contact_name
@@ -138,6 +140,7 @@ o.id
 ,provider.country as provider_country
 
 ,o.receiver_account
+,receiver.id as receiver_shop_id
 ,receiver.opay_id as receiver_opay_id
 ,receiver.shop_name as receiver_shop_name
 ,receiver.contact_name as receiver_contact_name
@@ -148,7 +151,6 @@ o.id
 ,receiver.country as receiver_country
 
 ,o.amount
-
 ,o.use_amount
 ,o.bonus_rate
 ,o.bonus_amount

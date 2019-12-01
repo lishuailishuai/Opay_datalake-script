@@ -63,7 +63,7 @@ dependence_dwd_oride_order_skyeye_di_prev_day_task = UFileSensor(
 dependence_dwd_oride_order_base_include_test_di_prev_day_task = UFileSensor(
     task_id='dwd_oride_order_base_include_test_di_prev_day_task',
     filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw/dwd_oride_order_base_include_test_di/country_code=nal",
+        hdfs_path_str="oride/oride_dw/dwd_oride_order_base_include_test_di/country_code=NG",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -135,7 +135,7 @@ app_oride_order_skyeye_analysis_d_task = HiveOperator(
         b.city_id,--城市id
         b.pay_mode as mode,--支付模式
         c.phone_number,--司机手机号
-        nvl(b.country_code,-10000) as country_code,--国家码
+        'nal' as country_code,--国家码
         '{pt}'  as dt
         FROM
     (
