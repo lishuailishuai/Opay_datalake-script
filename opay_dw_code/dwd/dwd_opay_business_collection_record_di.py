@@ -44,10 +44,10 @@ dag = airflow.DAG('dwd_opay_business_collection_record_di',
                   catchup=False)
 
 ##----------------------------------------- 依赖 ---------------------------------------##
-dim_opay_user_base_di_prev_day_task = UFileSensor(
-    task_id='dim_opay_user_base_di_prev_day_task',
+ods_sqoop_base_user_di_prev_day_task = UFileSensor(
+    task_id='ods_sqoop_base_user_di_prev_day_task',
     filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opay/opay_dw/dim_opay_user_base_di/country_code=NG",
+        hdfs_path_str="opay_dw_sqoop_di/opay_user/user",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -248,5 +248,5 @@ dwd_opay_business_collection_record_di_task = PythonOperator(
     dag=dag
 )
 
-dim_opay_user_base_di_prev_day_task >> dwd_opay_business_collection_record_di_task
+ods_sqoop_base_user_di_prev_day_task >> dwd_opay_business_collection_record_di_task
 ods_sqoop_base_business_collection_record_di_prev_day_task >> dwd_opay_business_collection_record_di_task
