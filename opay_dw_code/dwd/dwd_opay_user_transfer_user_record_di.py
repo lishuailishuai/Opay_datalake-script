@@ -134,12 +134,12 @@ def dwd_opay_user_transfer_user_record_di_sql_task(ds):
         order_di.recipient_opay_account,
         order_di.recipient_type,
         case 
-            when if(order_di.create_time < nvl(user_di.agent_upgrade_time, '9999-01-01 00:00:00') and order_di.recipient_type='MERCHANT', true, false) then 'c2m'
-            when if(order_di.create_time >= nvl(user_di.agent_upgrade_time, '9999-01-01 00:00:00') and order_di.recipient_type='MERCHANT', true, false) then 'a2m'
-            when if(order_di.create_time < nvl(user_di.agent_upgrade_time, '9999-01-01 00:00:00') and order_di.create_time < nvl(recipient_di.agent_upgrade_time, '9999-01-01 00:00:00'), true, false) then 'c2c'
-            when if(order_di.create_time < nvl(user_di.agent_upgrade_time, '9999-01-01 00:00:00') and order_di.create_time >= nvl(recipient_di.agent_upgrade_time, '9999-01-01 00:00:00'), true, false) then 'c2a'
-            when if(order_di.create_time >= nvl(user_di.agent_upgrade_time, '9999-01-01 00:00:00') and order_di.create_time < nvl(recipient_di.agent_upgrade_time, '9999-01-01 00:00:00'), true, false) then 'a2c'
-            when if(order_di.create_time >= nvl(user_di.agent_upgrade_time, '9999-01-01 00:00:00') and order_di.create_time >= nvl(recipient_di.agent_upgrade_time, '9999-01-01 00:00:00'), true, false) then 'a2a'
+            when if(user_di.role='customer' and order_di.recipient_type='MERCHANT', true, false) then 'c2m'
+            when if(user_di.role='agent' and order_di.recipient_type='MERCHANT', true, false) then 'a2m'
+            when if(user_di.role='customer' and recipient_di.role='customer', true, false) then 'c2c'
+            when if(user_di.role='customer' and recipient_di.role='agent', true, false) then 'c2a'
+            when if(user_di.role='agent' and recipient_di.role='customer', true, false) then 'a2c'
+            when if(user_di.role='agent' and recipient_di.role='agent', true, false) then 'a2a'
             else 'unknow'
         end as payment_relation_id,
         case order_di.country

@@ -125,17 +125,17 @@ def dwd_opay_business_collection_record_di_sql_task(ds):
         order_di.recipient_mobile,
         recipient_di.role as recipient_role,
         case 
-            when if(order_di.sender_type='USER' and order_di.recipient_type='USER' and order_di.create_time < nvl(user_di.agent_upgrade_time, '9999-01-01 00:00:00') and order_di.create_time < nvl(recipient_di.agent_upgrade_time, '9999-01-01 00:00:00'), true, false) then 'c2c'
-            when if(order_di.sender_type='USER' and order_di.recipient_type='USER' and order_di.create_time < nvl(user_di.agent_upgrade_time, '9999-01-01 00:00:00') and order_di.create_time >= nvl(recipient_di.agent_upgrade_time, '9999-01-01 00:00:00'), true, false) then 'c2a'
+            when if(order_di.sender_type='USER' and order_di.recipient_type='USER' and user_di.role='customer' and recipient_di.role='customer', true, false) then 'c2c'
+            when if(order_di.sender_type='USER' and order_di.recipient_type='USER' and user_di.role='customer' and recipient_di.role='agent', true, false) then 'c2a'
             
-            when if(order_di.sender_type='USER' and order_di.recipient_type='USER' and order_di.create_time >= nvl(user_di.agent_upgrade_time, '9999-01-01 00:00:00') and order_di.create_time < nvl(recipient_di.agent_upgrade_time, '9999-01-01 00:00:00'), true, false) then 'a2c'
-            when if(order_di.sender_type='USER' and order_di.recipient_type='USER' and order_di.create_time >= nvl(user_di.agent_upgrade_time, '9999-01-01 00:00:00') and order_di.create_time >= nvl(recipient_di.agent_upgrade_time, '9999-01-01 00:00:00'), true, false) then 'a2a'
+            when if(order_di.sender_type='USER' and order_di.recipient_type='USER' and user_di.role='agent' and recipient_di.role='customer', true, false) then 'a2c'
+            when if(order_di.sender_type='USER' and order_di.recipient_type='USER' and user_di.role='agent' and recipient_di.role='agent', true, false) then 'a2a'
             
-            when if(order_di.sender_type='MERCHANT' and order_di.recipient_type='USER' and order_di.create_time < nvl(recipient_di.agent_upgrade_time, '9999-01-01 00:00:00'), true, false) then 'm2c'
-            when if(order_di.sender_type='MERCHANT' and order_di.recipient_type='USER' and order_di.create_time >= nvl(recipient_di.agent_upgrade_time, '9999-01-01 00:00:00'), true, false) then 'm2a'
+            when if(order_di.sender_type='MERCHANT' and order_di.recipient_type='USER' and recipient_di.role='customer', true, false) then 'm2c'
+            when if(order_di.sender_type='MERCHANT' and order_di.recipient_type='USER' and recipient_di.role='agent', true, false) then 'm2a'
             
-            when if(order_di.sender_type='USER' and order_di.recipient_type='MERCHANT' and order_di.create_time < nvl(user_di.agent_upgrade_time, '9999-01-01 00:00:00'), true, false) then 'c2m'
-            when if(order_di.sender_type='USER' and order_di.recipient_type='MERCHANT' and order_di.create_time >= nvl(user_di.agent_upgrade_time, '9999-01-01 00:00:00'), true, false) then 'a2m'
+            when if(order_di.sender_type='USER' and order_di.recipient_type='MERCHANT' and user_di.role='customer', true, false) then 'c2m'
+            when if(order_di.sender_type='USER' and order_di.recipient_type='MERCHANT' and user_di.role='agent', true, false) then 'a2m'
             
             when if(order_di.sender_type='MERCHANT' and order_di.recipient_type='MERCHANT', true, false) then 'm2m'
         end as payment_relation_id,

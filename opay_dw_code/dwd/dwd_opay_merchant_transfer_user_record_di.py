@@ -135,8 +135,8 @@ def dwd_opay_merchant_transfer_user_record_di_sql_task(ds):
         order_di.update_time,
         case 
             when if(order_di.recipient_type='MERCHANT', true, false) then 'm2m'
-            when if(order_di.recipient_type='USER' and order_di.create_time < nvl(recipient_di.agent_upgrade_time, '9999-01-01 00:00:00'), true, false) then 'm2c'
-            when if(order_di.recipient_type='USER' and order_di.create_time >= nvl(recipient_di.agent_upgrade_time, '9999-01-01 00:00:00'), true, false) then 'm2a'
+            when if(order_di.recipient_type='USER' and recipient_di.role='customer', true, false) then 'm2c'
+            when if(order_di.recipient_type='USER' and recipient_di.role='agent', true, false) then 'm2a'
             else 'unknow'
         end as payment_relation_id,
         case order_di.country

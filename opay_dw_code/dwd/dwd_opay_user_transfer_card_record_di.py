@@ -141,8 +141,8 @@ def dwd_opay_user_transfer_card_record_di_sql_task(ds):
         order_di.create_time,
         order_di.update_time,
        case 
-            when if(order_di.create_time < nvl(user_di.agent_upgrade_time, '9999-01-01 00:00:00'), true, false) then 'c2bank'
-            when if(order_di.create_time >= nvl(user_di.agent_upgrade_time, '9999-01-01 00:00:00'), true, false) then 'a2bank'
+            when if(user_di.role='customer', true, false) then 'c2bank'
+            when if(user_di.role='agent', true, false) then 'a2bank'
             else 'unknow'
         end as payment_relation_id,
         case order_di.country
