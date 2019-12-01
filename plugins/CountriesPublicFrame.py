@@ -134,9 +134,6 @@ class CountriesPublicFrame(object):
 
             #目录存在
             logging.info("目录删除失败:"+" "+"{hdfs_data_dir}".format(hdfs_data_dir=self.hdfs_data_dir_str))
-
-            #sys.exit(1)
-
         
    
     def data_not_file_type_touchz(self):
