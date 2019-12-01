@@ -116,7 +116,7 @@ def dwd_opay_merchant_transfer_user_record_di_sql_task(ds):
         order_di.recipient_id,
         case 
             when if(order_di.recipient_type='MERCHANT', true, false) then 'merchant'
-            when if(order_di.recipient_type='USER'), true, false) then recipient_di.role
+            when if(order_di.recipient_type='USER', true, false) then recipient_di.role
         end as recipient_role,
         order_di.recipient_name,
         order_di.recipient_mobile,
