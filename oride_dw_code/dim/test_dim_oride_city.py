@@ -231,8 +231,6 @@ def check_key_data_cnt_task(ds):
     return flag
 
 
-
-
 #熔断数据，如果数据重复，报错
 def check_key_data_task(ds):
 
@@ -316,7 +314,7 @@ def execution_data_task_id(ds,**kwargs):
     #check_key_data_task(ds)
 
     #生产success
-    cf.touchz_success()
+    cf.touchz_success_dev()
 
     
 test_dim_oride_city_task= PythonOperator(
