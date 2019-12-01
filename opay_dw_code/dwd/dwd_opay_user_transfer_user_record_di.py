@@ -94,11 +94,15 @@ def dwd_opay_user_transfer_user_record_di_sql_task(ds):
     set hive.exec.parallel=true;
      
     with user_data as(
-        select * from 
-        (
-            select user_id, role, agent_upgrade_time, row_number() over(partition by user_id order by update_time desc) rn 
-            from opay_dw.dim_opay_user_base_di
-        ) user_temp where rn = 1
+        select 
+            user_id, `role`
+        from (
+            select 
+                user_id, `role`,
+                row_number() over(partition by user_id order by update_time desc) rn
+            from opay_dw_ods.ods_sqoop_base_user_di
+            where dt <= '{pt}'
+        ) t1 where rn = 1
     )
     insert overwrite table {db}.{table} 
     partition(country_code, dt)
@@ -111,8 +115,7 @@ def dwd_opay_user_transfer_user_record_di_sql_task(ds):
         order_di.recipient_id,
         case
             when if(order_di.recipient_type='MERCHANT', true, false) then 'merchant'
-            when if(order_di.recipient_type='USER' and order_di.create_time < nvl(recipient_di.agent_upgrade_time, '9999-01-01 00:00:00'), true, false) then 'customer'
-            when if(order_di.recipient_type='USER' and order_di.create_time >= nvl(recipient_di.agent_upgrade_time, '9999-01-01 00:00:00'), true, false) then 'agent'
+            when if(order_di.recipient_type='USER', true, false) then recipient_di.role
         end as recipient_role,
         order_di.recipient_name,
         order_di.recipient_mobile,

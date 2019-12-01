@@ -96,11 +96,15 @@ def dwd_opay_business_collection_record_di_sql_task(ds):
     set hive.exec.dynamic.partition.mode=nonstrict;
     set hive.exec.parallel=true;
     with user_data as(
-        select * from 
-        (
-            select user_id, role, agent_upgrade_time, row_number() over(partition by user_id order by update_time desc) rn 
-            from opay_dw.dim_opay_user_base_di
-        ) user_temp where rn = 1
+        select 
+            user_id, `role`
+        from (
+            select 
+                user_id, `role`,
+                row_number() over(partition by user_id order by update_time desc) rn
+            from opay_dw_ods.ods_sqoop_base_user_di
+            where dt <= '{pt}'
+        ) t1 where rn = 1
     )
     insert overwrite table {db}.{table} 
     partition(country_code, dt)
@@ -114,20 +118,12 @@ def dwd_opay_business_collection_record_di_sql_task(ds):
         order_di.sender_type,
         order_di.sender_name,
         order_di.sender_mobile,
-        case
-            when if(order_di.sender_type='MERCHANT', true, false) then 'merchant'
-            when if(order_di.sender_type='USER' and order_di.create_time < nvl(user_di.agent_upgrade_time, '9999-01-01 00:00:00'), true, false) then 'customer'
-            when if(order_di.sender_type='USER' and order_di.create_time >= nvl(user_di.agent_upgrade_time, '9999-01-01 00:00:00'), true, false) then 'agent'
-        end as sender_role,
+        user_di.role as sender_role,
         order_di.recipient_id,
         order_di.recipient_type,
         order_di.recipient_name,
         order_di.recipient_mobile,
-        case
-            when if(order_di.recipient_type='MERCHANT', true, false) then 'merchant'
-            when if(order_di.recipient_type='USER' and order_di.create_time < nvl(recipient_di.agent_upgrade_time, '9999-01-01 00:00:00'), true, false) then 'customer'
-            when if(order_di.recipient_type='USER' and order_di.create_time >= nvl(recipient_di.agent_upgrade_time, '9999-01-01 00:00:00'), true, false) then 'agent'
-        end as recipient_role,
+        recipient_di.role as recipient_role,
         case 
             when if(order_di.sender_type='USER' and order_di.recipient_type='USER' and order_di.create_time < nvl(user_di.agent_upgrade_time, '9999-01-01 00:00:00') and order_di.create_time < nvl(recipient_di.agent_upgrade_time, '9999-01-01 00:00:00'), true, false) then 'c2c'
             when if(order_di.sender_type='USER' and order_di.recipient_type='USER' and order_di.create_time < nvl(user_di.agent_upgrade_time, '9999-01-01 00:00:00') and order_di.create_time >= nvl(recipient_di.agent_upgrade_time, '9999-01-01 00:00:00'), true, false) then 'c2a'
