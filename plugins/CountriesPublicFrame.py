@@ -264,7 +264,7 @@ class CountriesPublicFrame(object):
             self.countries_data_dir(self.data_not_file_type_touchz)
     
 
-     def delete_partition_dev(self):
+    def delete_partition_dev(self):
 
         """
             删除分区调用函数
