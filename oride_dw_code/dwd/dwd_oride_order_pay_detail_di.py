@@ -102,7 +102,7 @@ select
             opay_amount,--opay 支付的金额
             reference,-- opay 流水号
             currency,--货币类型
-            country,--国家
+            pay.country_code as country,--国家
             status,--支付模式（0: 支付中, 1: 成功, 2: 失败）
             modify_time,--最后修改时间
             create_time,--创建时间
@@ -116,7 +116,7 @@ select
             capped_type,--优惠活动类型（0 normal 1 novice）             
             capped_id  ,--优惠活动 ID                               
             card_id,    --支付卡号 
-            pay.country_code,
+            nvl(ord.country_code,'nal') as country_code,
             '{pt}' as dt
 from 
      (SELECT 
