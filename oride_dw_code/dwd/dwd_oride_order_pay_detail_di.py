@@ -15,7 +15,7 @@ from airflow.operators.bash_operator import BashOperator
 from airflow.sensors.named_hive_partition_sensor import NamedHivePartitionSensor
 from airflow.sensors.hive_partition_sensor import HivePartitionSensor
 from airflow.sensors import UFileSensor
-from plugins.ModelPublicFrame import ModelPublicFrame
+from plugins.CountriesPublicFrame import CountriesPublicFrame
 import json
 import logging
 from airflow.models import Variable
