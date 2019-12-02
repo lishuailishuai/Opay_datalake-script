@@ -23,7 +23,7 @@ from utils.util import on_success_callback
 
 args = {
     'owner': 'wuduo',
-    'start_date': datetime(2019, 10, 30),
+    'start_date': datetime(2019, 11, 27),
     'depends_on_past': False,
     'retries': 3,
     'retry_delay': timedelta(minutes=5),
@@ -33,7 +33,7 @@ args = {
     'on_success_callback':on_success_callback,
 }
 
-schedule_interval="05 08 * * *"
+schedule_interval="00 08 * * *"
 
 dag = airflow.DAG(
     'obus_source_sqoop',
@@ -70,52 +70,52 @@ IGNORED_TABLE_LIST = [
 ]
 
 obus_table_list = [
-    {"db": "obus_data", "table": "conf_capped_price",                "conn": "obus_db"},
-    {"db": "obus_data", "table": "conf_city",                        "conn": "obus_db"},
-    {"db": "obus_data", "table": "conf_cycle",                       "conn": "obus_db"},
-    {"db": "obus_data", "table": "conf_line",                        "conn": "obus_db"},
-    {"db": "obus_data", "table": "conf_line_points",                 "conn": "obus_db"},
-    {"db": "obus_data", "table": "conf_line_stations",               "conn": "obus_db"},
-    {"db": "obus_data", "table": "conf_recharge",                    "conn": "obus_db"},
-    {"db": "obus_data", "table": "conf_recharge_options",            "conn": "obus_db"},
-    {"db": "obus_data", "table": "conf_station",                     "conn": "obus_db"},
-    {"db": "obus_data", "table": "conf_system",                      "conn": "obus_db"},
-    {"db": "obus_data", "table": "data_bus",                         "conn": "obus_db"},
-    {"db": "obus_data", "table": "data_device",                      "conn": "obus_db"},
-    {"db": "obus_data", "table": "data_device_extend",               "conn": "obus_db"},
-    {"db": "obus_data", "table": "data_driver",                      "conn": "obus_db"},
-    {"db": "obus_data", "table": "data_driver_balance_extend",       "conn": "obus_db"},
-    {"db": "obus_data", "table": "data_driver_balance_records",      "conn": "obus_db"},
-    {"db": "obus_data", "table": "data_driver_fee_blacklist",        "conn": "obus_db"},
-    {"db": "obus_data", "table": "data_driver_feedback",             "conn": "obus_db"},
-    {"db": "obus_data", "table": "data_driver_operation_log",        "conn": "obus_db"},
-    {"db": "obus_data", "table": "data_driver_pay_opay",             "conn": "obus_db"},
-    {"db": "obus_data", "table": "data_driver_pay_records",          "conn": "obus_db"},
-    {"db": "obus_data", "table": "data_driver_recharge_records",     "conn": "obus_db"},
-    {"db": "obus_data", "table": "data_driver_recharge_type",        "conn": "obus_db"},
-    {"db": "obus_data", "table": "data_driver_records_day",          "conn": "obus_db"},
-    {"db": "obus_data", "table": "data_driver_records_detail",       "conn": "obus_db"},
-    {"db": "obus_data", "table": "data_driver_records_type",         "conn": "obus_db"},
-    {"db": "obus_data", "table": "data_driver_trip",                 "conn": "obus_db"},
-    {"db": "obus_data", "table": "data_driver_trip_log",             "conn": "obus_db"},
-    {"db": "obus_data", "table": "data_driver_work_log",             "conn": "obus_db"},
-    {"db": "obus_data", "table": "data_fcm_template",                "conn": "obus_db"},
-    {"db": "obus_data", "table": "data_opay_transaction",            "conn": "obus_db"},
-    {"db": "obus_data", "table": "data_order",                       "conn": "obus_db"},
-    {"db": "obus_data", "table": "data_order_copy",                  "conn": "obus_db"},
-    {"db": "obus_data", "table": "data_order_payment",               "conn": "obus_db"},
-    {"db": "obus_data", "table": "data_scanner",                     "conn": "obus_db"},
-    {"db": "obus_data", "table": "data_sms_template",                "conn": "obus_db"},
-    {"db": "obus_data", "table": "data_ticket",                      "conn": "obus_db"},
-    {"db": "obus_data", "table": "data_ticket_batch",                "conn": "obus_db"},
-    {"db": "obus_data", "table": "data_ticket_log",                  "conn": "obus_db"},
-    {"db": "obus_data", "table": "data_translation",                 "conn": "obus_db"},
-    {"db": "obus_data", "table": "data_user",                        "conn": "obus_db"},
-    {"db": "obus_data", "table": "data_user_feedback",               "conn": "obus_db"},
-    {"db": "obus_data", "table": "data_user_recharge",               "conn": "obus_db"},
-    {"db": "obus_data", "table": "data_ussd",                        "conn": "obus_db"},
-    {"db": "obus_data", "table": "log_balance",                      "conn": "obus_db"},
-    {"db": "obus_data", "table": "log_ticket_bind",                  "conn": "obus_db"}
+    {"db": "obus_data", "table": "conf_capped_price",                "conn": "obus_db","priority_weight":3,"is_valid_success":"false"},
+    {"db": "obus_data", "table": "conf_city",                        "conn": "obus_db","priority_weight":3,"is_valid_success":"false"},
+    {"db": "obus_data", "table": "conf_cycle",                       "conn": "obus_db","priority_weight":3,"is_valid_success":"false"},
+    {"db": "obus_data", "table": "conf_line",                        "conn": "obus_db","priority_weight":3,"is_valid_success":"false"},
+    {"db": "obus_data", "table": "conf_line_points",                 "conn": "obus_db","priority_weight":3,"is_valid_success":"false"},
+    {"db": "obus_data", "table": "conf_line_stations",               "conn": "obus_db","priority_weight":3,"is_valid_success":"false"},
+    {"db": "obus_data", "table": "conf_recharge",                    "conn": "obus_db","priority_weight":3,"is_valid_success":"false"},
+    {"db": "obus_data", "table": "conf_recharge_options",            "conn": "obus_db","priority_weight":3,"is_valid_success":"false"},
+    {"db": "obus_data", "table": "conf_station",                     "conn": "obus_db","priority_weight":3,"is_valid_success":"false"},
+    {"db": "obus_data", "table": "conf_system",                      "conn": "obus_db","priority_weight":3,"is_valid_success":"false"},
+    {"db": "obus_data", "table": "data_bus",                         "conn": "obus_db","priority_weight":3,"is_valid_success":"false"},
+    {"db": "obus_data", "table": "data_device",                      "conn": "obus_db","priority_weight":3,"is_valid_success":"false"},
+    {"db": "obus_data", "table": "data_device_extend",               "conn": "obus_db","priority_weight":3,"is_valid_success":"false"},
+    {"db": "obus_data", "table": "data_driver",                      "conn": "obus_db","priority_weight":3,"is_valid_success":"false"},
+    {"db": "obus_data", "table": "data_driver_balance_extend",       "conn": "obus_db","priority_weight":3,"is_valid_success":"false"},
+    {"db": "obus_data", "table": "data_driver_balance_records",      "conn": "obus_db","priority_weight":3,"is_valid_success":"false"},
+    {"db": "obus_data", "table": "data_driver_fee_blacklist",        "conn": "obus_db","priority_weight":3,"is_valid_success":"false"},
+    {"db": "obus_data", "table": "data_driver_feedback",             "conn": "obus_db","priority_weight":3,"is_valid_success":"false"},
+    {"db": "obus_data", "table": "data_driver_operation_log",        "conn": "obus_db","priority_weight":3,"is_valid_success":"false"},
+    {"db": "obus_data", "table": "data_driver_pay_opay",             "conn": "obus_db","priority_weight":3,"is_valid_success":"false"},
+    {"db": "obus_data", "table": "data_driver_pay_records",          "conn": "obus_db","priority_weight":3,"is_valid_success":"false"},
+    {"db": "obus_data", "table": "data_driver_recharge_records",     "conn": "obus_db","priority_weight":3,"is_valid_success":"false"},
+    {"db": "obus_data", "table": "data_driver_recharge_type",        "conn": "obus_db","priority_weight":3,"is_valid_success":"false"},
+    {"db": "obus_data", "table": "data_driver_records_day",          "conn": "obus_db","priority_weight":3,"is_valid_success":"false"},
+    {"db": "obus_data", "table": "data_driver_records_detail",       "conn": "obus_db","priority_weight":3,"is_valid_success":"false"},
+    {"db": "obus_data", "table": "data_driver_records_type",         "conn": "obus_db","priority_weight":3,"is_valid_success":"false"},
+    {"db": "obus_data", "table": "data_driver_trip",                 "conn": "obus_db","priority_weight":3,"is_valid_success":"false"},
+    {"db": "obus_data", "table": "data_driver_trip_log",             "conn": "obus_db","priority_weight":3,"is_valid_success":"false"},
+    {"db": "obus_data", "table": "data_driver_work_log",             "conn": "obus_db","priority_weight":3,"is_valid_success":"false"},
+    {"db": "obus_data", "table": "data_fcm_template",                "conn": "obus_db","priority_weight":3,"is_valid_success":"false"},
+    {"db": "obus_data", "table": "data_opay_transaction",            "conn": "obus_db","priority_weight":3,"is_valid_success":"false"},
+    {"db": "obus_data", "table": "data_order",                       "conn": "obus_db","priority_weight":3,"is_valid_success":"false"},
+    {"db": "obus_data", "table": "data_order_copy",                  "conn": "obus_db","priority_weight":3,"is_valid_success":"false"},
+    {"db": "obus_data", "table": "data_order_payment",               "conn": "obus_db","priority_weight":3,"is_valid_success":"false"},
+    {"db": "obus_data", "table": "data_scanner",                     "conn": "obus_db","priority_weight":3,"is_valid_success":"false"},
+    {"db": "obus_data", "table": "data_sms_template",                "conn": "obus_db","priority_weight":3,"is_valid_success":"false"},
+    {"db": "obus_data", "table": "data_ticket",                      "conn": "obus_db","priority_weight":3,"is_valid_success":"false"},
+    {"db": "obus_data", "table": "data_ticket_batch",                "conn": "obus_db","priority_weight":3,"is_valid_success":"false"},
+    {"db": "obus_data", "table": "data_ticket_log",                  "conn": "obus_db","priority_weight":3,"is_valid_success":"false"},
+    {"db": "obus_data", "table": "data_translation",                 "conn": "obus_db","priority_weight":3,"is_valid_success":"false"},
+    {"db": "obus_data", "table": "data_user",                        "conn": "obus_db","priority_weight":3,"is_valid_success":"false"},
+    {"db": "obus_data", "table": "data_user_feedback",               "conn": "obus_db","priority_weight":3,"is_valid_success":"false"},
+    {"db": "obus_data", "table": "data_user_recharge",               "conn": "obus_db","priority_weight":3,"is_valid_success":"false"},
+    {"db": "obus_data", "table": "data_ussd",                        "conn": "obus_db","priority_weight":3,"is_valid_success":"false"},
+    {"db": "obus_data", "table": "log_balance",                      "conn": "obus_db","priority_weight":3,"is_valid_success":"false"},
+    {"db": "obus_data", "table": "log_ticket_bind",                  "conn": "obus_db","priority_weight":3,"is_valid_success":"false"}
 ]
 
 hive_db = 'obus_dw_ods'
@@ -215,6 +215,7 @@ for obus_table in obus_table_list:
     '''
     import_from_mysql = BashOperator(
         task_id='import_from_mysql_{}'.format(obus_table.get('db')+"_"+obus_table.get('table')),
+        priority_weight=obus_table.get('priority_weight'),
         bash_command='''
             #!/usr/bin/env bash
             sqoop import "-Dorg.apache.sqoop.splitter.allow_text_splitter=true" \
@@ -246,6 +247,7 @@ for obus_table in obus_table_list:
     '''
     create_table = PythonOperator(
         task_id='create_table_{}'.format(hive_table.format(bs=obus_table.get('table'))),
+        priority_weight=obus_table.get('priority_weight'),
         python_callable=create_hive_external_table,
         provide_context=True,
         op_kwargs={
@@ -261,6 +263,7 @@ for obus_table in obus_table_list:
     '''
     add_partitions = HiveOperator(
         task_id='add_partitions_{}'.format(hive_table.format(bs=obus_table.get('table'))),
+        priority_weight=obus_table.get('priority_weight'),
         hql='''
             ALTER TABLE {hive_db}.{table} ADD IF NOT EXISTS PARTITION (country_code='nal', dt='{{{{ ds }}}}')
         '''.format(
@@ -276,6 +279,7 @@ for obus_table in obus_table_list:
     '''
     validate_all_data = PythonOperator(
         task_id='validate_data_{}'.format(hive_table.format(bs=obus_table.get('table'))),
+        priority_weight=obus_table.get('priority_weight'),
         python_callable=validata_data,
         provide_context=True,
         op_kwargs={
@@ -294,11 +298,13 @@ for obus_table in obus_table_list:
         # 数据量监控
         volume_monitoring = PythonOperator(
             task_id='volume_monitorin_{}'.format(hive_table.format(bs=obus_table.get('table'))),
+            priority_weight=obus_table.get('priority_weight'),
             python_callable=data_volume_monitoring,
             provide_context=True,
             op_kwargs={
                 'db_name': hive_db,
                 'table_name': hive_table.format(bs=obus_table.get('table')),
+                'is_valid_success':obus_table.get('is_valid_success'),
             },
             dag=dag
         )
@@ -308,6 +314,7 @@ for obus_table in obus_table_list:
     # 超时监控
     task_timeout_monitor= PythonOperator(
         task_id='task_timeout_monitor_{}'.format(hive_table.format(bs=obus_table.get('table'))),
+        priority_weight=obus_table.get('priority_weight'),
         python_callable=fun_task_timeout_monitor,
         provide_context=True,
         op_kwargs={

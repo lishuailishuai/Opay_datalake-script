@@ -45,7 +45,7 @@ dag = airflow.DAG('dwd_oride_order_mark_df',
 dwd_oride_order_base_include_test_di_prev_day_task = UFileSensor(
     task_id='dwd_oride_order_base_include_test_di_prev_day_task',
     filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw/dwd_oride_order_base_include_test_di/country_code=nal",
+        hdfs_path_str="oride/oride_dw/dwd_oride_order_base_include_test_di/country_code=NG",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -93,7 +93,7 @@ def fun_task_timeout_monitor(ds,dag,**op_kwargs):
     dag_ids=dag.dag_id
 
     msg = [
-        {"db": "oride_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "1500"}
+        {"db": "oride_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=NG/dt={pt}".format(pt=ds), "timeout": "1500"}
     ]
 
     TaskTimeoutMonitor().set_task_monitor(msg)
@@ -135,7 +135,7 @@ SELECT t.order_id,  --订单ID
         if(weather.city is not null and weather.run_time_hour is not null and weather.mins is not null,1,0) as is_wet_order, --是否湿单
         t.driver_id, --司机ID
         com.score, -- 该订单的评分
-        'nal' AS country_code,
+        t.country_code as country_code,
         '{pt}' AS dt
     FROM (
         SELECT
@@ -159,7 +159,8 @@ SELECT t.order_id,  --订单ID
             LEAD(start_lat,1,0) OVER(PARTITION BY passenger_id ORDER BY create_time) start_lat2,
             LEAD(end_lng,1,0) OVER(PARTITION BY passenger_id ORDER BY create_time) end_lng2,
             LEAD(end_lat,1,0) OVER(PARTITION BY passenger_id ORDER BY create_time) end_lat2,
-            LEAD(order_id,1,order_id) OVER(PARTITION BY passenger_id ORDER BY create_time) order_id2
+            LEAD(order_id,1,order_id) OVER(PARTITION BY passenger_id ORDER BY create_time) order_id2,
+            country_code
         FROM oride_dw.dwd_oride_order_base_include_test_di
         WHERE dt='{pt}'
             AND city_id<>'999001' --去除测试数据
@@ -184,7 +185,7 @@ SELECT t.order_id,  --订单ID
           and weather.run_time_hour=t.create_time_hour
           and weather.mins=t.create_time_mins
           left join
-          (select * from oride_dw_ods.ods_sqoop_base_data_user_comment_df
+          (select * from oride_dw_ods.ods_sqoop_base_data_driver_comment_df  --自11.29号的数据开始切换为乘客评价表，之前是司机评价乘客表，待追溯
           where dt='{pt}') com
           on t.order_id=com.order_id
     '''.format(
@@ -204,7 +205,6 @@ def check_key_data_task(ds):
     SELECT count(1)-count(distinct order_id) as cnt
       FROM {db}.{table}
       WHERE dt='{pt}'
-      and country_code in ('nal')
     '''.format(
         pt=ds,
         now_day=airflow.macros.ds_add(ds, +1),

@@ -60,12 +60,12 @@ hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
 
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
 
-def fun_task_timeout_monitor(ds, dag, **op_kwargs):
+def fun_task_timeout_monitor(ds, execution_date,dag, **op_kwargs):
     dag_ids = dag.dag_id
 
     tb = [
         {"db": "oride_dw", "table": "{dag_name}".format(dag_name=dag_ids),
-         "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "600"}
+         "partition": "country_code=nal/dt={pt}/hour={hour}".format(pt=ds, hour=execution_date.strftime("%H")), "timeout": "600"}
     ]
 
     TaskTimeoutMonitor().set_task_monitor(tb)
@@ -147,7 +147,7 @@ def execution_data_task_id(ds, **kwargs):
     第二个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
 
     """
-    TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "true", "false")
+    TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "true", "false",v_hour)
 
 
 dwd_driver_track_data_hi_task = PythonOperator(

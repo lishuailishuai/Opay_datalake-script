@@ -44,10 +44,10 @@ dag = airflow.DAG('dwd_opay_recharge_betting_record_di',
                   catchup=False)
 
 ##----------------------------------------- 依赖 ---------------------------------------##
-dim_opay_user_base_di_prev_day_task = UFileSensor(
-    task_id='dim_opay_user_base_di_prev_day_task',
+ods_sqoop_base_user_di_prev_day_task = UFileSensor(
+    task_id='ods_sqoop_base_user_di_prev_day_task',
     filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opay/opay_dw/dim_opay_user_base_di/country_code=NG",
+        hdfs_path_str="opay_dw_sqoop_di/opay_user/user",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -83,7 +83,7 @@ def dwd_opay_recharge_betting_record_di_sql_task(ds):
         order_di.id,
         order_di.order_no,
         order_di.user_id,
-        if(order_di.create_time < nvl(user_di.agent_upgrade_time, '9999-01-01 00:00:00'), 'customer', 'agent') user_role,
+        user_di.role as user_role,
         order_di.pay_channel,
         order_di.merchant_id,
         order_di.out_order_no,
@@ -95,11 +95,12 @@ def dwd_opay_recharge_betting_record_di_sql_task(ds):
         order_di.fee_amount,
         order_di.fee_pattern,
         order_di.error_msg,
-        order_di.betting_provider as service_provider,
+        upper(order_di.betting_provider) as service_provider,
         case upper(order_di.betting_provider)
             when 'BET9JA' then '201'
             when 'SUPABET' then '202'
             when 'NAIRABET' then '203'
+            when 'CLOUDBET' then '204'
             else '200'
             end as service_provider_id,
         order_di.recipient_betting_account as recharge_account,
@@ -162,11 +163,15 @@ def dwd_opay_recharge_betting_record_di_sql_task(ds):
     ) order_di
     left join
     (
-        select * from 
-        (
-            select user_id, role, agent_upgrade_time, row_number() over(partition by user_id order by update_time desc) rn 
-            from opay_dw.dim_opay_user_base_di
-        ) user_temp where rn = 1
+        select 
+            user_id, `role`
+        from (
+            select 
+                user_id, `role`,
+                row_number() over(partition by user_id order by update_time desc) rn
+            from opay_dw_ods.ods_sqoop_base_user_di
+            where dt <= '{pt}'
+        ) t1 where rn = 1
     ) user_di
     on user_di.user_id = order_di.user_id
     '''.format(
@@ -207,5 +212,5 @@ dwd_opay_recharge_betting_record_di_task = PythonOperator(
     dag=dag
 )
 
-dim_opay_user_base_di_prev_day_task >> dwd_opay_recharge_betting_record_di_task
+ods_sqoop_base_user_di_prev_day_task >> dwd_opay_recharge_betting_record_di_task
 ods_sqoop_base_betting_topup_record_di_prev_day_task >> dwd_opay_recharge_betting_record_di_task

@@ -49,7 +49,7 @@ sleep_time = BashOperator(
 dependence_dwd_oride_order_base_include_test_di_prev_day_task = UFileSensor(
     task_id='dwd_oride_order_base_include_test_di_prev_day_task',
     filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw/dwd_oride_order_base_include_test_di/country_code=nal",
+        hdfs_path_str="oride/oride_dw/dwd_oride_order_base_include_test_di/country_code=NG",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -112,8 +112,10 @@ create_oride_cohort_mid_task = HiveOperator(
             --min(unix_timestamp(create_time)) over (partition by driver_id) as driver_first_time,--司机第一次完单时间
             from oride_dw.dwd_oride_order_base_include_test_di
             where dt>='2019-07-08'  --从20190705号开始加的city_id字段，因此从28周开始统计留存数据，按日的从20190705号开始统计
+            and dt<='{dt}'
             and status in(4,5) and city_id<>999001 and driver_id<>1) t
             '''.format(
+        dt='{{ds}}',
         pt='{{macros.ds_add(ds, +6)}}'
     ),
     dag=dag)

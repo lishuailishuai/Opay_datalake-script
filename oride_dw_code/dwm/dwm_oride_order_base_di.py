@@ -44,7 +44,7 @@ dag = airflow.DAG('dwm_oride_order_base_di',
 dependence_dwd_oride_order_base_include_test_di_prev_day_task = UFileSensor(
     task_id='dwd_oride_order_base_include_test_di_prev_day_task',
     filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw/dwd_oride_order_base_include_test_di/country_code=nal",
+        hdfs_path_str="oride/oride_dw/dwd_oride_order_base_include_test_di/country_code=NG",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -100,7 +100,7 @@ dependence_dwd_oride_driver_accept_order_click_detail_di_prev_day_task = UFileSe
 dependence_dwd_oride_order_mark_df_prev_day_task = UFileSensor(
     task_id='dwd_oride_order_mark_df_prev_day_task',
     filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw/dwd_oride_order_mark_df/country_code=nal",
+        hdfs_path_str="oride/oride_dw/dwd_oride_order_mark_df/country_code=NG",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -302,8 +302,14 @@ def dwm_oride_order_base_di_sql_task(ds):
 
            ord.is_strong_dispatch,
            --是否强派1：是，0:否
+           
+           if(ord.cancel_reason<>'',1,0) as cancel_feedback,
+           --是否有取消反馈
+           
+           ord.status,
+           --订单状态 (0: wait assign, 1: pick up passenger, 2: wait passenger, 3: send passenger, 4: arrive destination, 5: finished, 6: cancel,13:乘客取消待支付)
 
- 		   ord.country_code as country_code,
+ 		   'nal' as country_code,
 
            ord.dt as dt
     FROM

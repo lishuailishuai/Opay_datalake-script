@@ -17,6 +17,8 @@ from airflow.sensors.external_task_sensor import ExternalTaskSensor
 from airflow.operators.bash_operator import BashOperator
 from airflow.sensors.named_hive_partition_sensor import NamedHivePartitionSensor
 from airflow.sensors.hive_partition_sensor import HivePartitionSensor
+from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
+from plugins.CountriesPublicFrame import CountriesPublicFrame
 from airflow.sensors import UFileSensor
 import json
 import logging
@@ -41,72 +43,51 @@ dag = airflow.DAG(
     default_args=args
 )
 
-sleep_time = BashOperator(
-    task_id='sleep_id',
-    depends_on_past=False,
-    bash_command='sleep 30',
-    dag=dag
-)
+##----------------------------------------- 依赖 ---------------------------------------## 
 
-hive_ods_table = 'ods_sqoop_base_data_trip_df'
-"""
-/------------------------------- 依赖数据源 --------------------------------/
-"""
-dependence_ods_sqoop_base_data_trip_df = HivePartitionSensor(
-    task_id='dependence_ods_sqoop_base_data_trip_df',
-    table=hive_ods_table,
-    partition="dt='{{ds}}'",
-    schema='oride_dw_ods',
+ods_sqoop_base_data_trip_df_tesk = UFileSensor(
+    task_id='ods_sqoop_base_data_trip_df_tesk',
+    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="oride_dw_sqoop/oride_data/data_trip",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
-"""
-/---------------------------------- end ----------------------------------/
-"""
 
-hive_dwd_table = 'dwd_oride_order_trip_travel_df'
 
-# 创建dwd表
-create_dwd_table_task = HiveOperator(
-    task_id='create_dwd_table_task',
-    hql='''
-        CREATE EXTERNAL TABLE IF NOT EXISTS oride_dw.{table} (
-            travel_id           bigint          comment '行程ID',
-            driver_id           bigint          comment '司机ID',
-            city_id             bigint          comment '所属城市',
-            product_id           int             comment '订单车辆类型(1:driect 2:street 3:keke)',
-            pax_num             int             comment '乘客数量',
-            pax_max             int             comment '乘客上限',
-            duration            bigint          comment '时间',
-            distance            bigint          comment '订单距离',
-            price               decimal(38,2)   comment '订单价格',
-            reward              decimal(38,2)   comment '司机奖励',
-            tip                 decimal(38,2)   comment '小费',
-            order_id            bigint          comment '订单号',
-            create_time         string          comment '创建时间',
-            start_time          bigint          comment '开始时间',
-            finish_time         bigint          comment '完成时间',
-            cancel_time         bigint          comment '取消时间',
-            status              int             comment '订单状态 (0: initial, 1: ongoing, 2: finished 3: cancel)',
-            pickup_order_id     bigint          comment '接单',
-            count_down          bigint          comment '倒计时秒'
-        ) 
-        PARTITIONED BY (
-            `country_code` string COMMENT '二位国家码',  
-            `dt` string comment '日期'
-        )
-        STORED AS ORC 
-        LOCATION 'ufile://opay-datalake/oride/oride_dw/dwd_oride_order_trip_travel_df' 
-        TBLPROPERTIES("orc.compress"="SNAPPY") 
-    '''.format(table=hive_dwd_table),
-    schema='oride_dw',
+##----------------------------------------- 变量 ---------------------------------------## 
+
+db_name="oride_dw"
+table_name="dwd_oride_order_trip_travel_df"
+hdfs_path="ufile://opay-datalake/oride/oride_dw/"+table_name
+
+##----------------------------------------- 任务超时监控 ---------------------------------------## 
+
+def fun_task_timeout_monitor(ds,dag,**op_kwargs):
+
+    dag_ids=dag.dag_id
+
+    msg = [
+        {"db": "oride_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "600"}
+    ]
+
+    TaskTimeoutMonitor().set_task_monitor(msg)
+
+task_timeout_monitor = PythonOperator(
+    task_id='task_timeout_monitor',
+    python_callable=fun_task_timeout_monitor,
+    provide_context=True,
     dag=dag
 )
 
-# 清洗数据
-ods_sqoop_base_data_trip_df_task = HiveOperator(
-    task_id='ods_sqoop_base_data_trip_df_task',
-    hql='''
+##----------------------------------------- 脚本 ---------------------------------------## 
+
+
+def dwd_oride_order_trip_travel_df_sql_task(ds):
+
+    HQL='''
         SET hive.exec.parallel=true;
         SET hive.exec.dynamic.partition=true;
         SET hive.exec.dynamic.partition.mode=nonstrict;
@@ -136,74 +117,79 @@ ods_sqoop_base_data_trip_df_task = HiveOperator(
         FROM (SELECT 
                 *,
                 split(replace(replace(order_ids,'[',''),']',''), ',') AS orders 
-            FROM {ods_db}.{ods_table} 
+            FROM oride_dw_ods.ods_sqoop_base_data_trip_df
             WHERE dt = '{pt}'
             ) AS t 
-            LATERAL VIEW posexplode(orders) d AS pos, order_id 
-    '''.format(
-        table=hive_dwd_table,
-        ods_db='oride_dw_ods',
-        ods_table=hive_ods_table,
-        pt='{{ ds }}'
-    ),
-    schema='oride_dw',
-    dag=dag
-)
-
-
-#熔断数据，如果数据重复，报错
-def check_key_data(ds,**kargs):
-
-    #主键重复校验
-    HQL_DQC='''
-    SELECT count(1)-count(distinct travel_id,order_id) as cnt
-      FROM oride_dw.{table}
-      WHERE dt='{pt}'
+            LATERAL VIEW explode(orders) d AS order_id
     '''.format(
         pt=ds,
         now_day=airflow.macros.ds_add(ds, +1),
-        table=hive_dwd_table
+        table=table_name,
+        db=db_name
         )
+    return HQL
 
-    cursor = get_hive_cursor()
-    logging.info('Executing 主键重复校验: %s', HQL_DQC)
 
-    cursor.execute(HQL_DQC)
-    res = cursor.fetchone()
+#主流程
+def execution_data_task_id(ds,**kwargs):
 
-    if res[0] >1:
-        raise Exception ("Error The primary key repeat !", res)
-    else:
-        print("-----> Notice Data Export Success ......")
+    v_date=kwargs.get('v_execution_date')
+    v_day=kwargs.get('v_execution_day')
+    v_hour=kwargs.get('v_execution_hour')
+
+    hive_hook = HiveCliHook()
+
+    """
+        #功能函数
+        alter语句: alter_partition
+        删除分区: delete_partition
+        生产success: touchz_success
+
+        #参数
+        第一个参数true: 所有国家是否上线。false 没有
+        第二个参数true: 数据目录是有country_code分区。false 没有
+        第三个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
+
+        #读取sql
+        %_sql(ds,v_hour)
+
+        第一个参数ds: 天级任务
+        第二个参数v_hour: 小时级任务，需要使用
+
+    """
+
+    cf=CountriesPublicFrame("false",ds,db_name,table_name,hdfs_path,"true","true")
+
+    #删除分区
+    cf.delete_partition()
+
+    #读取sql
+    _sql="\n"+cf.alter_partition()+"\n"+dwd_oride_order_trip_travel_df_sql_task(ds)
+
+    logging.info('Executing: %s',_sql)
+
+    #执行Hive
+    hive_hook.run_cli(_sql)
+
+    #熔断数据，如果数据不能为0
+    #check_key_data_cnt_task(ds)
+
+    #生产success
+    cf.touchz_success()
+
     
- 
-task_check_key_data = PythonOperator(
-    task_id='check_data',
-    python_callable=check_key_data,
+dwd_oride_order_trip_travel_df_task= PythonOperator(
+    task_id='dwd_oride_order_trip_travel_df_task',
+    python_callable=execution_data_task_id,
     provide_context=True,
-    dag=dag
-)
-
-# 生成_SUCCESS
-touchz_data_success = BashOperator(
-    task_id='touchz_data_success',
-    bash_command="""
-        line_num=`$HADOOP_HOME/bin/hadoop fs -du -s {hdfs_data_dir} | tail -1 | awk '{{print $1}}'`
-
-        if [ $line_num -eq 0 ]; then
-            echo "FATAL {hdfs_data_dir} is empty"
-            exit 1
-        else
-            echo "DATA EXPORT Successed ......"
-            $HADOOP_HOME/bin/hadoop fs -touchz {hdfs_data_dir}/_SUCCESS
-        fi
-    """.format(
-        pt='{{ ds }}',
-        now_day='{{ macros.ds_add(ds, +1) }}',
-        hdfs_data_dir='ufile://opay-datalake/oride/oride_dw/dwd_oride_order_trip_travel_df/country_code=nal/dt={{ ds }}'
-    ),
+    op_kwargs={
+        'v_execution_date':'{{execution_date.strftime("%Y-%m-%d %H:%M:%S")}}',
+        'v_execution_day':'{{execution_date.strftime("%Y-%m-%d")}}',
+        'v_execution_hour':'{{execution_date.strftime("%H")}}'
+    },
     dag=dag
 )
 
 
-dependence_ods_sqoop_base_data_trip_df >>create_dwd_table_task>>sleep_time >> ods_sqoop_base_data_trip_df_task>>task_check_key_data >> touchz_data_success
+
+ods_sqoop_base_data_trip_df_tesk>>dwd_oride_order_trip_travel_df_task

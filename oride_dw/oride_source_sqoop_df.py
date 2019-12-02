@@ -31,7 +31,7 @@ schedule_interval="00 01 * * *"
 dag = airflow.DAG(
     'oride_source_sqoop_df',
     schedule_interval=schedule_interval,
-    concurrency=15,
+    concurrency=40,
     max_active_runs=1,
     default_args=args)
 
@@ -150,10 +150,8 @@ table_list = [
     ("oride_data", "data_driver_recharge_type", "sqoop_db", "base",1),
     ("oride_data", "data_city_repayment_conf", "sqoop_db", "base",1),
 
-    ("oride_data", "data_trip", "sqoop_db", "base",1),
     ("oride_data", "data_trip_history", "sqoop_db", "base",1),
     ("oride_data", "data_driver_assign_info_history", "sqoop_db", "base",1),
-    ("oride_data", "data_opay_transaction", "sqoop_db", "base",1),
     ("oride_data", "data_opay_transaction_history", "sqoop_db", "base",1),
 
     ("bi", "weather_per_10min", "mysql_bi", "base",3),
@@ -168,6 +166,8 @@ table_list = [
     ("opay_spread", "rider_signups_agents", "opay_spread_mysql", "mass",1),
     ("opay_spread", "rider_signups_guarantors", "opay_spread_mysql", "mass",1),
     ("opay_spread", "rider_signups_logs", "opay_spread_mysql", "mass",1),
+    ("opay_spread", "rider_apply_live_info", "opay_spread_mysql", "base", 1),
+
     # 数据库：oride_assets
     ("oride_assets", "oride_assets_transit", "opay_spread_mysql", "mass",1),
     ("oride_assets", "oride_categories", "opay_spread_mysql", "mass",1),
@@ -393,6 +393,7 @@ for db_name, table_name, conn_id, prefix_name,priority_weight_nm in table_list:
             op_kwargs={
                 'db_name': HIVE_DB,
                 'table_name': hive_table_name,
+                'is_valid_success':"true"
             },
             dag=dag
         )

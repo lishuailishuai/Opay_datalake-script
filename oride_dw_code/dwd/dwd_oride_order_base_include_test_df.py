@@ -212,7 +212,7 @@ def insert_sql(pt,ds):
     wait_in_radius, --是否在接驾范围内
     wait_distance, --等待乘客上车距离
     cancel_wait_payment_time,  --乘客取消待支付时间  
-    'nal' AS country_code,
+    'nal' as country_code,
     '{pt}' AS dt
     FROM
       (SELECT *
@@ -222,7 +222,12 @@ def insert_sql(pt,ds):
       (SELECT *
        FROM {data_payment}
        WHERE dt = '{dt}'
-         ) t2 ON t1.id=t2.id;
+         ) t2 ON t1.id=t2.id
+  --  left join
+  --  (SELECT *
+   --    FROM oride_dw_ods.ods_sqoop_base_data_country_conf_df 
+   --    WHERE dt='{pt}') country
+   -- on t1.country_id=country.id;
 
     '''
 

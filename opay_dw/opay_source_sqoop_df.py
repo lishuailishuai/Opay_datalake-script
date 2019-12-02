@@ -28,7 +28,7 @@ schedule_interval="30 02 * * *"
 dag = airflow.DAG(
     'opay_source_sqoop_df',
     schedule_interval=schedule_interval,
-    concurrency=15,
+    concurrency=40,
     max_active_runs=1,
     default_args=args)
 
@@ -98,8 +98,6 @@ table_list = [
     ("opay_commission", "commission_account_balance", "opay_db_3322", "base", 1),
     ("opay_commission", "commission_order", "opay_db_3322", "base", 1),
     ("opay_commission", "commission_top_up_record", "opay_db_3322", "base", 1),
-
-
 ]
 
 """
@@ -340,6 +338,7 @@ for db_name, table_name, conn_id, prefix_name,priority_weight_nm in table_list:
             op_kwargs={
                 'db_name': HIVE_DB,
                 'table_name': hive_table_name,
+                'is_valid_success':"true"
             },
             dag=dag
         )

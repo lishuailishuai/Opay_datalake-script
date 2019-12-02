@@ -42,17 +42,17 @@ sleep_time = BashOperator(
 """
 ##----依赖数据源---##
 """
-# ods_sqoop_base_user_df
-dependence_ods_sqoop_base_user_df = HivePartitionSensor(
-    task_id="ods_sqoop_base_user_df",
-    table="ods_sqoop_base_user_df", # 表名一至
+# ods_sqoop_base_user_di
+dependence_ods_sqoop_base_user_di = HivePartitionSensor(
+    task_id="ods_sqoop_base_user_di",
+    table="ods_sqoop_base_user_di", # 表名一至
     partition="dt='{{ ds }}'",
     schema="opay_dw_ods",
     poke_interval=60,
     dag=dag
 )
 
-# ods_sqoop_base_big_order_df
+# ods_sqoop_base_big_order_di
 dependence_ods_sqoop_base_big_order_di = HivePartitionSensor(
     task_id="dependence_ods_sqoop_base_big_order_di",
     table="ods_sqoop_base_big_order_di", # 表名一至
@@ -61,7 +61,7 @@ dependence_ods_sqoop_base_big_order_di = HivePartitionSensor(
     poke_interval=60,
     dag=dag
 )
-# ods_sqoop_base_user_transfer_user_record_df
+# ods_sqoop_base_user_transfer_user_record_di
 dependence_ods_sqoop_base_user_transfer_user_record_di = HivePartitionSensor(
     task_id="dependence_ods_sqoop_base_user_transfer_user_record_di",
     table="ods_sqoop_base_user_transfer_user_record_di", # 表名一至
@@ -71,7 +71,7 @@ dependence_ods_sqoop_base_user_transfer_user_record_di = HivePartitionSensor(
     dag=dag
 )
 
-# ods_sqoop_base_merchant_transfer_user_record_df
+# ods_sqoop_base_merchant_transfer_user_record_di
 dependence_ods_sqoop_base_merchant_transfer_user_record_di = HivePartitionSensor(
     task_id="dependence_ods_sqoop_base_merchant_transfer_user_record_di",
     table="ods_sqoop_base_merchant_transfer_user_record_di", # 表名一至
@@ -80,7 +80,7 @@ dependence_ods_sqoop_base_merchant_transfer_user_record_di = HivePartitionSensor
     poke_interval=60,
     dag=dag
 )
-# ods_sqoop_base_airtime_topup_record_df
+# ods_sqoop_base_airtime_topup_record_di
 dependence_ods_sqoop_base_airtime_topup_record_di = HivePartitionSensor(
     task_id="dependence_ods_sqoop_base_airtime_topup_record_di",
     table="ods_sqoop_base_airtime_topup_record_di", # 表名一至
@@ -89,7 +89,7 @@ dependence_ods_sqoop_base_airtime_topup_record_di = HivePartitionSensor(
     poke_interval=60,
     dag=dag
 )
-# ods_sqoop_base_user_topup_record_df
+# ods_sqoop_base_user_topup_record_di
 dependence_ods_sqoop_base_user_topup_record_di = HivePartitionSensor(
     task_id="dependence_ods_sqoop_base_user_topup_record_di",
     table="ods_sqoop_base_user_topup_record_di", # 表名一至
@@ -157,7 +157,18 @@ app_opay_daily_report_d_task = HiveOperator(
                 sum(amount) `st_summary_amt`, 
                 count(order_no) `st_summary_cnt` 
             from opay_dw_ods.ods_sqoop_base_big_order_di
-            where dt = '{pt}' and date_format(create_time, 'yyyy-MM-dd')='{pt}' and order_status='SUCCESS'
+            where dt = '{pt}' and create_time BETWEEN date_format(date_sub('{pt}', 1), 'yyyy-MM-dd 23') AND date_format('{pt}', 'yyyy-MM-dd 23') and order_status='SUCCESS'
+        ),
+        dim_user_data as (
+            select 
+                user_id, `role`
+            from (
+                select 
+                    user_id, `role`,
+                    row_number() over(partition by user_id order by update_time desc) rn
+                from opay_dw_ods.ods_sqoop_base_user_di
+                where dt <= '{pt}'
+            ) t1 where rn = 1
         ),
         --C端用户交易
         p2p_data as (
@@ -174,22 +185,10 @@ app_opay_daily_report_d_task = HiveOperator(
                 select 
                     user_id, recipient_id, nvl(amount,0) `amount`
                 from opay_dw_ods.ods_sqoop_base_user_transfer_user_record_di
-                where dt = '{pt}' and date_format(create_time, 'yyyy-MM-dd')='{pt}' and transfer_status='TRANSFER_S'
+                where dt = '{pt}' and create_time BETWEEN date_format(date_sub('{pt}', 1), 'yyyy-MM-dd 23') AND date_format('{pt}', 'yyyy-MM-dd 23') and transfer_status='TRANSFER_S'
             ) ut
-            join
-            (
-                select 
-                    user_id, `role` 
-                from opay_dw_ods.ods_sqoop_base_user_df
-                where dt = '{pt}'
-            ) uu on ut.user_id=uu.user_id
-            join
-            (
-                select 
-                    user_id, `role` 
-                from opay_dw_ods.ods_sqoop_base_user_df
-                where dt = '{pt}'
-            ) ur on ut.recipient_id = ur.user_id
+            join dim_user_data uu on ut.user_id=uu.user_id
+            join dim_user_data ur on ut.recipient_id = ur.user_id
         ),
         --C2B Transfer
         c2b_data as (
@@ -201,14 +200,13 @@ app_opay_daily_report_d_task = HiveOperator(
                 select 
                     user_id, recipient_id, nvl(amount, 0) `amount`
                 from opay_dw_ods.ods_sqoop_base_user_transfer_user_record_di
-                where dt = '{pt}' and date_format(create_time, 'yyyy-MM-dd')='{pt}' and transfer_status='TRANSFER_S' and recipient_type='MERCHANT'
+                where dt = '{pt}' and create_time BETWEEN date_format(date_sub('{pt}', 1), 'yyyy-MM-dd 23') AND date_format('{pt}', 'yyyy-MM-dd 23') and transfer_status='TRANSFER_S' and recipient_type='MERCHANT'
             ) ut
             join
             (
                 select 
                     user_id
-                from opay_dw_ods.ods_sqoop_base_user_df
-                where dt = '{pt}' and `role`='customer'
+                from dim_user_data where `role`='customer'
             ) uu on ut.user_id=uu.user_id
         ),
         --B2C Transfer
@@ -220,14 +218,13 @@ app_opay_daily_report_d_task = HiveOperator(
                 select 
                     recipient_id, nvl(amount, 0) `amount`
                 from opay_dw_ods.ods_sqoop_base_merchant_transfer_user_record_di
-                where dt = '{pt}' and date_format(create_time, 'yyyy-MM-dd')='{pt}' and order_status='SUCCESS'
+                where dt = '{pt}' and create_time BETWEEN date_format(date_sub('{pt}', 1), 'yyyy-MM-dd 23') AND date_format('{pt}', 'yyyy-MM-dd 23') and order_status='SUCCESS'
             ) ut
             join
             (
                 select 
                     user_id
-                from opay_dw_ods.ods_sqoop_base_user_df
-                where dt = '{pt}' and `role`='customer'
+                from dim_user_data where `role`='customer'
             ) ur on ut.recipient_id = ur.user_id
         ),
         --用户交易
@@ -266,14 +263,14 @@ app_opay_daily_report_d_task = HiveOperator(
                 select 
                     user_id, order_no, service_type, nvl(amount, 0) `amount`
                 from opay_dw_ods.ods_sqoop_base_big_order_di
-                where dt = '{pt}' and date_format(create_time, 'yyyy-MM-dd')='{pt}' and order_status='SUCCESS'
+                where dt = '{pt}' and create_time BETWEEN date_format(date_sub('{pt}', 1), 'yyyy-MM-dd 23') AND date_format('{pt}', 'yyyy-MM-dd 23') and order_status='SUCCESS'
             ) t1
             join 
             (
                 select 
                     user_id
-                from opay_dw_ods.ods_sqoop_base_user_df
-                where dt = '{pt}'  and lower(role)='customer'
+                from dim_user_data
+                where lower(role)='customer'
             ) t2
             on t2.user_id=t1.user_id
         ),
@@ -292,7 +289,7 @@ app_opay_daily_report_d_task = HiveOperator(
                 sum(if(telecom_perator = 'MTN', nvl(amount,0), 0)) `mtn_amt`, 
                 sum(if(telecom_perator = 'MTN', 1, 0)) `mtn_cnt`	
             from opay_dw_ods.ods_sqoop_base_airtime_topup_record_di
-            where dt = '{pt}' and date_format(create_time, 'yyyy-MM-dd')='{pt}' and order_status='SUCCESS'
+            where dt = '{pt}' and create_time BETWEEN date_format(date_sub('{pt}', 1), 'yyyy-MM-dd 23') AND date_format('{pt}', 'yyyy-MM-dd 23') and order_status='SUCCESS'
         ),
         betting_topup_data as (
             SELECT 
@@ -303,7 +300,7 @@ app_opay_daily_report_d_task = HiveOperator(
                 sum(if(betting_provider = 'SUPABET', nvl(amount,0), 0)) `supabet_amt`, 
                 sum(if(betting_provider = 'SUPABET', 1, 0)) `supabet_cnt`
             from opay_dw_ods.ods_sqoop_base_betting_topup_record_di
-            where dt = '{pt}' and date_format(create_time, 'yyyy-MM-dd')='{pt}' and order_status='SUCCESS'
+            where dt = '{pt}' and create_time BETWEEN date_format(date_sub('{pt}', 1), 'yyyy-MM-dd 23') AND date_format('{pt}', 'yyyy-MM-dd 23') and order_status='SUCCESS'
         ),
         agent_ordered_data as (
             select
@@ -324,15 +321,15 @@ app_opay_daily_report_d_task = HiveOperator(
             ) t1 inner join (
                 select 
                     user_id
-                from opay_dw_ods.ods_sqoop_base_user_df
-                where dt = '{pt}'  and lower(role)='agent'
+                from dim_user_data
+                where lower(role)='agent'
             ) t2
             on t2.user_id=t1.user_id
         ),
         agent_cnt_data as (
             select '{pt}' state_date, count(user_id) `agent_cnt`
-            from opay_dw_ods.ods_sqoop_base_user_df
-            where dt = '{pt}'  and lower(role)='agent'
+            from dim_user_data
+            where lower(role)='agent'
         ),
         bind_card_data as (
             SELECT 
@@ -349,7 +346,7 @@ app_opay_daily_report_d_task = HiveOperator(
                 sum(if(out_channel_id = 'FLUTTERWAVE', nvl(amount,0), 0)) `flutterwave_amt`, 
                 sum(if(out_channel_id = 'FLUTTERWAVE', 1, 0)) `flutterwave_cnt`
             from opay_dw_ods.ods_sqoop_base_user_topup_record_di
-            where dt = '{pt}' and date_format(create_time, 'yyyy-MM-dd')='{pt}' and order_status='SUCCESS'
+            where dt = '{pt}' and create_time BETWEEN date_format(date_sub('{pt}', 1), 'yyyy-MM-dd 23') AND date_format('{pt}', 'yyyy-MM-dd 23') and order_status='SUCCESS'
         )
         insert overwrite table {table_name} PARTITION (dt='{pt}')
         select 
@@ -405,4 +402,4 @@ app_opay_daily_report_d_task = HiveOperator(
     dag=dag
 )
 
-dependence_ods_sqoop_base_user_df >> dependence_ods_sqoop_base_big_order_di >> dependence_ods_sqoop_base_user_transfer_user_record_di >> dependence_ods_sqoop_base_merchant_transfer_user_record_di >> dependence_ods_sqoop_base_airtime_topup_record_di >> dependence_ods_sqoop_base_user_topup_record_di >> app_opay_daily_report_d_task
+dependence_ods_sqoop_base_user_di >> dependence_ods_sqoop_base_big_order_di >> dependence_ods_sqoop_base_user_transfer_user_record_di >> dependence_ods_sqoop_base_merchant_transfer_user_record_di >> dependence_ods_sqoop_base_airtime_topup_record_di >> dependence_ods_sqoop_base_user_topup_record_di >> app_opay_daily_report_d_task

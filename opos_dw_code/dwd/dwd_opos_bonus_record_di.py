@@ -34,8 +34,8 @@ args = {
     'email_on_retry': False,
 }
 
-dag = airflow.DAG('app_opos_bonus_target_di',
-                  schedule_interval="10 03 * * *",
+dag = airflow.DAG('dwd_opos_bonus_record_di',
+                  schedule_interval="20 02 * * *",
                   default_args=args,
                   catchup=False)
 
@@ -68,7 +68,7 @@ dim_opos_bd_relation_df_task = UFileSensor(
 ##----------------------------------------- 变量 ---------------------------------------##
 
 db_name = "opos_dw"
-table_name = "app_opos_bonus_target_di"
+table_name = "dwd_opos_bonus_record_di"
 hdfs_path = "ufile://opay-datalake/opos/opos_dw/" + table_name
 
 
@@ -95,105 +95,103 @@ task_timeout_monitor = PythonOperator(
 
 ##----------------------------------------- 脚本 ---------------------------------------##
 
-def app_opos_bonus_target_di_sql_task(ds):
+def dwd_opos_bonus_record_di_sql_task(ds):
     HQL = '''
-    set hive.exec.parallel=true;
-    set hive.exec.dynamic.partition.mode=nonstrict;
+set hive.exec.parallel=true;
+set hive.exec.dynamic.partition.mode=nonstrict;
 
-    --02.先取红包record表
-    insert overwrite table opos_dw.{table} partition(country_code,dt)
-    select
-    create_date,
-    city_code,
-    city_name,
-    cm_id,
-    cm_name,
-    rm_id,
-    rm_name,
-    bdm_id,
-    bdm_name,
-    bd_id,
-    bd_name,
+insert overwrite table opos_dw.dwd_opos_bonus_record_di partition(country_code,dt)
+select
+o.id
+,o.activity_id
 
-    --已入账金额
-    sum(if(status=1,bonus_amount,0)) as entered_account_amt,
-    --待入账金额
-    sum(if(status=0,bonus_amount,0)) as tobe_entered_account_amt,
-    --被扫者奖励金额
-    sum(bonus_amount) as swepted_award_amt,
-    --已结算金额
-    sum(if(status=1 and settle_status=1,bonus_amount,0)) as settled_amount,
-    --待结算金额
-    sum(if(status=1 and settle_status=0,bonus_amount,0)) as tobe_settled_amount,
-    --获取金额的被扫者
-    count(distinct(provider_account)) as swepted_award_cnt,
+,substr(o.create_time,0,10) as create_date
+,d.week_of_year as create_week
+,substr(o.create_time,0,7) as create_month
+,substr(o.create_time,0,4) as create_year
 
-    --扫描红包二维码次数
-    count(1) as sweep_times,
-    --扫描红包二维码人数
-    count(distinct(opay_account)) as sweep_people,
-    --主扫红包金额
-    sum(amount) as sweep_amt,
+,b.hcm_id
+,b.hcm_name
+,b.cm_id
+,b.cm_name
+,b.rm_id
+,b.rm_name
+,b.bdm_id
+,b.bdm_name
+,o.bd_id
+,b.bd_name
 
-    --红包使用率
-    sum(use_amount)/sum(bonus_amount) as bonus_use_percent,
-    --红包使用金额
-    sum(use_amount) as bonus_order_amt,
+,o.city_id
+,c.name as city_name
+,c.country
 
-    'nal' as country_code,
-    '{pt}' as dt
-    from
-    (
-    select
-    o.id,
-    o.city_id as city_code,
-    o.bd_id,
-    o.opay_account,
-    o.provider_account,
-    o.receiver_account,
-    o.amount,
-    o.use_amount,
-    o.bonus_amount,
-    o.status,
-    o.settle_status,
-    o.settle_type,
-    substr(o.create_time,0,10) as create_date,
-    o.dt,
+,o.device_id
+,o.opay_account
 
-    b.cm_id,
-    b.cm_name,
-    b.rm_id,
-    b.rm_name,
-    b.bdm_id,
-    b.bdm_name,
-    b.bd_name,
+,o.provider_account
+,provider.id as provider_shop_id
+,provider.opay_id as provider_opay_id
+,provider.shop_name as provider_shop_name
+,provider.contact_name as provider_contact_name
+,provider.contact_phone as provider_contact_phone
+,provider.created_at as provider_created_at
+,provider.city_code as provider_city_id
+,provider.city_name as provider_city_name
+,provider.country as provider_country
 
-    c.country as country_code,
-    c.name as city_name
-    from
-    (select * from opos_dw_ods.ods_sqoop_base_opos_bonus_record_di where dt='{pt}') as o
-    left join
-    (select * from opos_dw.dim_opos_bd_info_df where country_code='nal' and dt='{pt}') as b
-    on
-    o.bd_id=b.bd_id
-    left join
-    (select id,name,country from opos_dw_ods.ods_sqoop_base_bd_city_df where dt = '{pt}') as c
-    on
-    o.city_id=c.id
-    ) as bonus_record
-    group by
-    create_date,
-    country_code,
-    city_code,
-    city_name,
-    cm_id,
-    cm_name,
-    rm_id,
-    rm_name,
-    bdm_id,
-    bdm_name,
-    bd_id,
-    bd_name;
+,o.receiver_account
+,receiver.id as receiver_shop_id
+,receiver.opay_id as receiver_opay_id
+,receiver.shop_name as receiver_shop_name
+,receiver.contact_name as receiver_contact_name
+,receiver.contact_phone as receiver_contact_phone
+,receiver.created_at as receiver_created_at
+,receiver.city_code as receiver_city_id
+,receiver.city_name as receiver_city_name
+,receiver.country as receiver_country
+
+,o.amount
+,o.use_amount
+,o.bonus_rate
+,o.bonus_amount
+
+,o.status
+,o.settle_status
+,o.settle_type
+,o.reason
+,o.risk_id
+,o.settle_time
+,o.expire_time
+,o.use_time
+,o.use_date
+,o.create_time
+,o.update_time
+
+,'nal' as country_code
+,o.dt
+from
+(select * from opos_dw_ods.ods_sqoop_base_opos_bonus_record_di where dt='{pt}') as o
+left join
+(select * from opos_dw.dim_opos_bd_info_df where country_code='nal' and dt='{pt}') as b
+on
+o.bd_id=b.bd_id
+left join
+(select id,name,country from opos_dw_ods.ods_sqoop_base_bd_city_df where dt = '{pt}') as c
+on
+o.city_id=c.id
+left join
+public_dw_dim.dim_date as d
+on
+substr(o.create_time,0,10)=d.dt
+left join
+(select * from opos_dw.dim_opos_bd_relation_df where country_code='nal' and dt='{pt}') as provider
+on
+o.provider_account=provider.opay_account
+left join
+(select * from opos_dw.dim_opos_bd_relation_df where country_code='nal' and dt='{pt}') as receiver
+on
+o.receiver_account=receiver.opay_account;
+
 
 
 '''.format(
@@ -210,7 +208,7 @@ def execution_data_task_id(ds, **kargs):
     hive_hook = HiveCliHook()
 
     # 读取sql
-    _sql = app_opos_bonus_target_di_sql_task(ds)
+    _sql = dwd_opos_bonus_record_di_sql_task(ds)
 
     logging.info('Executing: %s', _sql)
 
@@ -229,18 +227,18 @@ def execution_data_task_id(ds, **kargs):
     TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "true", "true")
 
 
-app_opos_bonus_target_di_task = PythonOperator(
-    task_id='app_opos_bonus_target_di_task',
+dwd_opos_bonus_record_di_task = PythonOperator(
+    task_id='dwd_opos_bonus_record_di_task',
     python_callable=execution_data_task_id,
     provide_context=True,
     dag=dag
 )
 
-ods_sqoop_base_opos_bonus_record_di_task >> app_opos_bonus_target_di_task
-dim_opos_bd_relation_df_task >> app_opos_bonus_target_di_task
+ods_sqoop_base_opos_bonus_record_di_task >> dwd_opos_bonus_record_di_task
+dim_opos_bd_relation_df_task >> dwd_opos_bonus_record_di_task
 
 # 查看任务命令
-# airflow list_tasks app_opos_bonus_target_di -sd /home/feng.yuan/app_opos_bonus_target_di.py
+# airflow list_tasks dwd_opos_bonus_record_di -sd /root/feng.yuan/dwd_opos_bonus_record_di.py
 # 测试任务命令
-# airflow test app_opos_bonus_target_di app_opos_bonus_target_di_task 2019-11-24 -sd /home/feng.yuan/app_opos_bonus_target_di.py
+# airflow test dwd_opos_bonus_record_di dwd_opos_bonus_record_di_task 2019-11-28 -sd /root/feng.yuan/dwd_opos_bonus_record_di.py
 

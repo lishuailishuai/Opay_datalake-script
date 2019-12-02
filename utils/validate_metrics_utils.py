@@ -415,7 +415,7 @@ def create_validate_data(data_now, data_before_7, metric_order_and_name_map):
 """
 数据量监控
 """
-def data_volume_monitoring(ds, db_name, table_name, **op_kwargs):
+def data_volume_monitoring(ds, db_name, table_name,is_valid_success, **op_kwargs):
     cursor = get_hive_cursor()
     sql = """
         SELECT count(1) FROM {db_name}.{table_name} WHERE dt='{dt}'
@@ -428,9 +428,14 @@ def data_volume_monitoring(ds, db_name, table_name, **op_kwargs):
     cursor.execute(sql)
     res = cursor.fetchone()
     cursor.close()
-    print(res)
+
     row_num = int(res[0])
     logging.info("import data {db}.{table}, row_num:{row_num}".format(db=db_name, table=table_name, row_num=row_num))
+
+    #true: 数据有才生成_SUCCESS false:数据没有也生成_SUCCESS 
+    if is_valid_success.lower()=="false":
+        row_num=1
+
     if row_num <= 0:
         comwx.postAppMessage("{db}.{table}数据导入异常".format(db=db_name, table=table_name), '271')
         raise Exception('sqoop导入数据异常')

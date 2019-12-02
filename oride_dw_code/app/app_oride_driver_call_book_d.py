@@ -78,7 +78,7 @@ def dwd_oride_driver_phone_list_mid_sql_task(ds):
             select a.user_id,e as name_phone_num,'nal' as country_code,'{pt}' as dt
             from oride_dw.dwd_oride_client_event_detail_hi a
             lateral view explode(split(substr(get_json_object(a.event_value,'$.phone_list'),2,length(get_json_object(a.event_value,'$.phone_list'))-2),',')) phone_list as e
-            where a.dt between date_sub('{pt}',14) and '{pt}' and a.event_name='phone_list';
+            where a.dt='{pt}' and a.event_name='phone_list';
     '''.format(
         pt=ds
     )
@@ -93,8 +93,74 @@ def dwd_oride_driver_call_record_mid_sql_task(ds):
             select b.user_id,f as name_phone_num,'nal' as country_code,'{pt}' as dt
             from oride_dw.dwd_oride_client_event_detail_hi b
             lateral view explode(split(substr(get_json_object(b.event_value,'$.call_record'),2,length(get_json_object(b.event_value,'$.call_record'))-2),',')) call_record as f
-            where b.dt between date_sub('{pt}',14) and '{pt}' and b.event_name='call_record';    
+            where b.dt='{pt}' and b.event_name='call_record';    
 
+    '''.format(
+        pt=ds
+    )
+    return HQL
+
+
+def app_oride_driver_call_book_d_mid_sql_task(ds):
+    HQL='''
+        SET hive.exec.parallel=TRUE;
+        SET hive.exec.dynamic.partition.mode=nonstrict;
+        
+        insert overwrite table oride_dw.app_oride_driver_call_book_d_mid  partition(country_code,dt)
+        SELECT a3.user_id,
+            --司机ID
+        
+            (CASE
+                 WHEN a3.user_id=b3.user_id
+                      AND a3.contact_phone_number=b3.contact_phone_number THEN a3.contact_name
+                 ELSE NULL
+             END) AS contact_name,
+            --联系人姓名 （如果手机号没有在通讯录里，那么通话记录里的姓名应该是空，没有名字）
+        
+            a3.contact_phone_number,
+            --联系人电话
+        
+            b3.call_cnt AS call_cnt,
+            --与联系人通话次数
+
+            'nal' AS country_code,
+            --国家码
+        
+            '{pt}' AS dt
+        FROM
+          (SELECT b2.user_id,
+                  b2.contact_name,
+                  b2.contact_phone_number,
+                  count(1) call_cnt --通话次数
+        
+           FROM
+             (SELECT b1.user_id,
+                     substr(split(b1.name_phone_num,'\":\"')[0],3) AS contact_name,
+                     substr(split(b1.name_phone_num,'\":\"')[1],0,length(split(b1.name_phone_num,'\":\"')[1])-2) AS contact_phone_number
+           FROM oride_dw.dwd_oride_driver_call_record_mid b1
+           WHERE b1.dt='{pt}') AS b2
+        GROUP BY b2.user_id,
+                 b2.contact_name,
+                 b2.contact_phone_number) b3 --通话记录
+        
+        LEFT OUTER JOIN
+          (SELECT a2.user_id,
+                  a2.contact_name,
+                  a2.contact_phone_number,
+                  length(a2.contact_name) contact_name_len,
+                  length(a2.contact_phone_number) contact_number_len
+           FROM
+             (SELECT a1.user_id,
+                     substr(split(a1.name_phone_num,'\":\"')[0],3) AS contact_name,
+                     substr(split(a1.name_phone_num,'\":\"')[1],0,length(split(a1.name_phone_num,'\":\"')[1])-2) AS contact_phone_number
+           FROM oride_dw.dwd_oride_driver_phone_list_mid a1
+           WHERE a1.dt='{pt}')a2
+        GROUP BY a2.user_id,
+                 a2.contact_name,
+                 a2.contact_phone_number ) a3 --手机通讯录
+         ON a3.user_id=b3.user_id
+        AND a3.contact_phone_number=b3.contact_phone_number
+        
     '''.format(
         pt=ds
     )
@@ -106,48 +172,32 @@ def app_oride_driver_call_book_d_sql_task(ds):
         SET hive.exec.dynamic.partition.mode=nonstrict;
         
         insert overwrite table {db}.{table} partition(country_code,dt)
-        select a3.user_id,--司机ID
-            a3.contact_name,--联系人姓名
-            a3.contact_phone_number,--联系人电话
-            if(b3.call_cnt is null,0,b3.call_cnt) as call_cnt,--与联系人通话次数
-            'nal' AS country_code,--国家码
-            '{pt}' as dt --日期
-        from (
-            select  a2.user_id,a2.contact_name,a2.contact_phone_number,
-                length(a2.contact_name) contact_name_len,
-                length(a2.contact_phone_number) contact_number_len
-            from(
-                select a1.user_id,
-                substr(split(a1.name_phone_num,'\":\"')[0],3) contact_name,
-                substr(split(a1.name_phone_num,'\":\"')[1],0,length(split(a1.name_phone_num,'\":\"')[1])-2) contact_phone_number 
-                from  oride_dw.dwd_oride_driver_phone_list_mid a1
-                where a1.dt='{pt}'
-            )a2
-            group by a2.user_id,a2.contact_name,a2.contact_phone_number
-        ) a3
-        left join
-        (
-            select b2.user_id,
-            b2.contact_name,
-            b2.contact_phone_number,
-            count(1) call_cnt --通话次数
-            --,b2.call_dur  --通话时长(总)
-            --,max(last_call_time) as last_call_time --最后一次通话时间
-            from(
-                select b1.user_id,
-                substr(split(b1.name_phone_num,'\":\"')[0],3)  contact_name,
-                substr(split(b1.name_phone_num,'\":\"')[1],0,length(split(b1.name_phone_num,'\":\"')[1])-2) contact_phone_number
-                --,split(a1.name_phone_num,'\":\"')[2] call_dur,--通话时长
-                --substr(split(a1.name_phone_num,'\":\"')[3],0,length(split(a1.name_phone_num,'\":\"')[3])-2) last_call_time --最后一次通话时间
-                from oride_dw.dwd_oride_driver_call_record_mid b1
-                where b1.dt='{pt}'
-            ) as b2  
-            group by b2.user_id,b2.contact_name,b2.contact_phone_number
-        ) b3
-        on a3.user_id=b3.user_id
-        and a3.contact_name=b3.contact_name
-        and a3.contact_phone_number=b3.contact_phone_number
-        where a3.contact_number_len<50 and a3.contact_name_len<64;
+
+        SELECT user_id,
+       --司机ID
+
+       contact_name,
+       --联系人姓名 （如果手机号没有在通讯录里，那么通话记录里的姓名应该是空，没有名字）
+
+       contact_phone_number,
+       --联系人电话
+
+       sum(call_cnt) AS call_cnt,
+       --与联系人通话次数
+
+       'nal' AS country_code,
+       --国家码
+
+       '{pt}' as dt --日期
+
+FROM
+  oride_dw.app_oride_driver_call_book_d_mid
+WHERE dt BETWEEN date_sub('{pt}',14) AND '{pt}'
+GROUP BY user_id,
+         contact_name,
+         contact_phone_number
+
+
     '''.format(
         pt=ds,
         table=table_name,
@@ -174,6 +224,17 @@ def dwd_oride_driver_call_record_mid(ds,**kargs):
 
     # 读取sql
     _sql = dwd_oride_driver_call_record_mid_sql_task(ds)
+    logging.info('Executing: %s', _sql)
+
+    # 执行Hive
+    hive_hook.run_cli(_sql)
+
+
+def app_oride_driver_call_book_d_mid(ds,**kargs):
+    hive_hook=HiveCliHook()
+
+    # 读取sql
+    _sql = app_oride_driver_call_book_d_mid_sql_task(ds)
     logging.info('Executing: %s', _sql)
 
     # 执行Hive
@@ -211,6 +272,13 @@ dwd_oride_driver_call_record_mid_task = PythonOperator(
     dag=dag
 )
 
+app_oride_driver_call_book_d_mid_task = PythonOperator(
+    task_id='app_oride_driver_call_book_d_mid_task',
+    python_callable=app_oride_driver_call_book_d_mid,
+    provide_context=True,
+    dag=dag
+)
+
 app_oride_driver_call_book_d_task= PythonOperator(
     task_id='app_oride_driver_call_book_d_task',
     python_callable=execution_data_task_id,
@@ -218,5 +286,5 @@ app_oride_driver_call_book_d_task= PythonOperator(
     dag=dag
 )
 
-dwd_oride_client_event_detail_hi_task>>dwd_oride_driver_phone_list_mid_task>>\
-    dwd_oride_driver_call_record_mid_task>>app_oride_driver_call_book_d_task
+dwd_oride_client_event_detail_hi_task>>dwd_oride_driver_phone_list_mid_task>>app_oride_driver_call_book_d_mid_task>>app_oride_driver_call_book_d_task
+dwd_oride_client_event_detail_hi_task>>dwd_oride_driver_call_record_mid_task>>app_oride_driver_call_book_d_mid_task>>app_oride_driver_call_book_d_task

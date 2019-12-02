@@ -97,41 +97,43 @@ def dwd_oride_order_dispatch_filter_detail_di_sql_task(ds):
     SELECT  get_json_object(event_values,'$.city_id')                AS city_id --下单时所在城市 
            ,get_json_object(event_values,'$.order_id')               AS order_id --订单ID 
            ,get_json_object(event_values,'$.user_id')                AS passenger_id --乘客ID 
-           ,get_json_object(event_values,'$.driver_id')              AS driver_id --司机ID 
+           ,null              AS driver_id --司机ID 
            ,get_json_object(event_values,'$.round')                  AS order_round --订单轮数 
-           ,get_json_object(event_values,'$.config_id')              AS config_id --派单配置的id 
+           ,null             AS config_id --派单配置的id 
            ,get_json_object(event_values,'$.timestamp')              AS log_timestamp --埋点时间 
-           ,get_json_object(event_values,'$.reason')                 AS reason --过滤原因 
+           ,null                AS reason --过滤原因 
            ,cast(get_json_object(event_values,'$.serv_type') AS int) AS product_id --业务线ID 
-           ,get_json_object(event_values,'$.rule')                   AS rule --过滤规则 
+           ,null                   AS rule --过滤规则 
            ,get_json_object(event_values,'$.is_multiple')            AS is_multiple --是否播多单 
            ,null                                                     AS order_id_multiple --多单订单 
+           ,get_json_object(event_values,'$.od_filter_map')            AS od_filter_map --过滤司机和规则map
            ,'nal'                                                    AS country_code 
            ,dt
     FROM oride_source.dispatch_tracker_server_magic
     WHERE dt = '{pt}' 
-    AND event_name='dispatch_filter_driver' 
+    AND event_name='dispatch_filter_drivers' 
     AND (get_json_object(event_values, '$.is_multiple') is null or lower(get_json_object(event_values, '$.is_multiple'))='false')  
     UNION ALL
     SELECT  get_json_object(event_values,'$.city_id')                AS city_id --下单时所在城市 
            ,get_json_object(event_values,'$.order_id')               AS order_id --订单ID 
            ,get_json_object(event_values,'$.user_id')                AS passenger_id --乘客ID 
-           ,get_json_object(event_values,'$.driver_id')              AS driver_id --司机ID 
+           ,null              AS driver_id --司机ID 
            ,get_json_object(event_values,'$.round')                  AS order_round --订单轮数 
-           ,get_json_object(event_values,'$.config_id')              AS config_id --派单配置的id 
+           ,null              AS config_id --派单配置的id 
            ,get_json_object(event_values,'$.timestamp')              AS log_timestamp --埋点时间 
-           ,get_json_object(event_values,'$.reason')                 AS reason --过滤原因 
+           ,null                 AS reason --过滤原因 
            ,cast(get_json_object(event_values,'$.serv_type') AS int) AS product_id --业务线ID 
-           ,get_json_object(event_values,'$.rule')                   AS rule --过滤规则 
+           ,null                   AS rule --过滤规则 
            ,get_json_object(event_values,'$.is_multiple')            AS is_multiple --是否播多单 
            ,order_id1                                                AS order_id_multiple --多单订单 
+           ,get_json_object(event_values,'$.od_filter_map')            AS od_filter_map --过滤司机和规则map,该字段包含了对应行程和订单id所过滤掉的司机和规则
            ,'nal'                                                    AS country_code 
            ,dt
     FROM oride_source.dispatch_tracker_server_magic lateral view explode 
     (split(substr(get_json_object(event_values, '$.order_list'),2,length(get_json_object(event_values, '$.order_list'))-2),',') 
     ) order_list AS order_id1
     WHERE dt = '{pt}' 
-    AND event_name='dispatch_filter_driver' 
+    AND event_name='dispatch_filter_drivers' 
     AND lower(get_json_object(event_values, '$.is_multiple'))='true' ;
 
 '''.format(

@@ -44,10 +44,10 @@ dag = airflow.DAG('dwd_opay_merchant_transfer_user_record_di',
                   catchup=False)
 
 ##----------------------------------------- 依赖 ---------------------------------------##
-dim_opay_user_base_di_prev_day_task = UFileSensor(
-    task_id='dim_opay_user_base_di_prev_day_task',
+ods_sqoop_base_user_di_prev_day_task = UFileSensor(
+    task_id='ods_sqoop_base_user_di_prev_day_task',
     filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opay/opay_dw/dim_opay_user_base_di/country_code=NG",
+        hdfs_path_str="opay_dw_sqoop_di/opay_user/user",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -95,11 +95,15 @@ def dwd_opay_merchant_transfer_user_record_di_sql_task(ds):
     HQL='''
     set hive.exec.dynamic.partition.mode=nonstrict;
     with user_data as(
-        select * from
-        (
-            select user_id, role, agent_upgrade_time, row_number() over(partition by user_id order by update_time desc) rn
-            from opay_dw.dim_opay_user_base_di
-        ) user_temp where rn = 1
+        select 
+            user_id, `role`
+        from (
+            select 
+                user_id, `role`,
+                row_number() over(partition by user_id order by update_time desc) rn
+            from opay_dw_ods.ods_sqoop_base_user_di
+            where dt <= '{pt}'
+        ) t1 where rn = 1
     )
     insert overwrite table {db}.{table} 
     partition(country_code, dt)
@@ -112,8 +116,7 @@ def dwd_opay_merchant_transfer_user_record_di_sql_task(ds):
         order_di.recipient_id,
         case 
             when if(order_di.recipient_type='MERCHANT', true, false) then 'merchant'
-            when if(order_di.recipient_type='USER' and order_di.create_time < nvl(recipient_di.agent_upgrade_time, '9999-01-01 00:00:00'), true, false) then 'customer'
-            when if(order_di.recipient_type='USER' and order_di.create_time >= nvl(recipient_di.agent_upgrade_time, '9999-01-01 00:00:00'), true, false) then 'agent'
+            when if(order_di.recipient_type='USER', true, false) then recipient_di.role
         end as recipient_role,
         order_di.recipient_name,
         order_di.recipient_mobile,
@@ -132,8 +135,8 @@ def dwd_opay_merchant_transfer_user_record_di_sql_task(ds):
         order_di.update_time,
         case 
             when if(order_di.recipient_type='MERCHANT', true, false) then 'm2m'
-            when if(order_di.recipient_type='USER' and order_di.create_time < nvl(recipient_di.agent_upgrade_time, '9999-01-01 00:00:00'), true, false) then 'm2c'
-            when if(order_di.recipient_type='USER' and order_di.create_time >= nvl(recipient_di.agent_upgrade_time, '9999-01-01 00:00:00'), true, false) then 'm2a'
+            when if(order_di.recipient_type='USER' and recipient_di.role='customer', true, false) then 'm2c'
+            when if(order_di.recipient_type='USER' and recipient_di.role='agent', true, false) then 'm2a'
             else 'unknow'
         end as payment_relation_id,
         case order_di.country
@@ -227,5 +230,5 @@ dwd_opay_merchant_transfer_user_record_di_task = PythonOperator(
     dag=dag
 )
 
-dim_opay_user_base_di_prev_day_task >> dwd_opay_merchant_transfer_user_record_di_task
+ods_sqoop_base_user_di_prev_day_task >> dwd_opay_merchant_transfer_user_record_di_task
 ods_sqoop_base_merchant_transfer_user_record_di_prev_day_task >> dwd_opay_merchant_transfer_user_record_di_task

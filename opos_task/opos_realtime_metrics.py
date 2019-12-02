@@ -19,7 +19,7 @@ args = {
     'depends_on_past': False,
     'retries': 1,
     'retry_delay': timedelta(minutes=5),
-    'email': ['bigdata_dw@opay-inc.com'],
+    # 'email': ['bigdata_dw@opay-inc.com'],
     'email_on_failure': True,
     'email_on_retry': False,
     'on_success_callback': on_success_callback,
@@ -42,7 +42,124 @@ opos_mysql_hook = MySqlHook("mysql_dw")
 opos_mysql_conn = opos_mysql_hook.get_conn()
 opos_mysql_cursor = opos_mysql_conn.cursor()
 
-insert_sql_template = """
+opos_cashback_mysql_hook = MySqlHook("opos_cashback")
+opos_cashback_mysql_conn = opos_cashback_mysql_hook.get_conn()
+opos_cashback_mysql_cursor = opos_cashback_mysql_conn.cursor()
+
+insert_order_bonus_sql_template = """
+    insert into opos_dw.opos_order_bonus (
+        id ,
+        activity_id ,
+        bd_id ,
+        city_id ,
+        device_id ,
+        opay_account ,
+        provider_account ,
+        receiver_account ,
+        amount ,
+        use_amount ,
+        bonus_rate ,
+        bonus_amount ,
+        status ,
+        settle_status ,
+        settle_type,
+        reason ,
+        risk_id ,
+        settle_time,
+        expire_time,
+        use_time,
+        use_date ,
+        create_time ,
+        update_time 
+    )
+    values(
+        {id} ,
+        {activity_id} ,
+        {bd_id} ,
+        {city_id} ,
+        '{device_id}' ,
+        '{opay_account}' ,
+        '{provider_account}' ,
+        '{receiver_account}' ,
+        {amount} ,
+        {use_amount} ,
+        {bonus_rate} ,
+        {bonus_amount} ,
+        {status} ,
+        {settle_status} ,
+        {settle_type},
+        '{reason}' ,
+        '{risk_id}' ,
+        {settle_time_str}
+        {expire_time_str}
+        {use_time_str}
+        '{use_date}' ,
+        '{create_time}' ,
+        '{update_time}' 
+    )
+    ON DUPLICATE KEY
+    UPDATE
+    id=VALUES(id), 
+    activity_id=VALUES(activity_id), 
+    bd_id=VALUES(bd_id), 
+    city_id=VALUES(city_id), 
+    device_id=VALUES(device_id), 
+    opay_account=VALUES(opay_account), 
+    provider_account=VALUES(provider_account), 
+    receiver_account=VALUES(receiver_account), 
+    amount=VALUES(amount), 
+    use_amount=VALUES(use_amount), 
+    bonus_rate=VALUES(bonus_rate), 
+    bonus_amount=VALUES(bonus_amount), 
+    status=VALUES(status), 
+    settle_status=VALUES(settle_status), 
+    settle_type=VALUES(settle_type), 
+    reason=VALUES(reason), 
+    risk_id=VALUES(risk_id), 
+    settle_time=VALUES(settle_time), 
+    expire_time=VALUES(expire_time), 
+    use_time=VALUES(use_time), 
+    use_date=VALUES(use_date), 
+    create_time=VALUES(create_time), 
+    update_time=VALUES(update_time)
+    
+    
+
+"""
+
+query_order_bonus_sql_template = """
+    select 
+        id ,
+        activity_id ,
+        bd_id ,
+        city_id ,
+        device_id ,
+        opay_account ,
+        provider_account ,
+        receiver_account ,
+        amount ,
+        use_amount ,
+        bonus_rate ,
+        bonus_amount ,
+        status ,
+        settle_status ,
+        settle_type,
+        reason ,
+        risk_id ,
+        settle_time ,
+        expire_time ,
+        use_time ,
+        use_date ,
+        create_time ,
+        update_time 
+    from 
+        opos_bonus_record
+        where 
+        (DATE_FORMAT(create_time,"%Y-%m-%d") = '{ds}' or DATE_FORMAT(update_time,"%Y-%m-%d")='{ds}')
+
+"""
+
+insert_order_sql_template = """
       insert into opos_dw.opos_order (
         order_id , 
         device_no , 
@@ -210,6 +327,52 @@ insert_sql_template = """
         merchant_risk_remark=VALUES(merchant_risk_remark)
 """
 
+insert_order_extend_sql_template = """
+    insert into opos_dw.opos_order_extend (
+        order_id,
+        opay_id,
+        shop_phone,
+        shop_id,
+        city_id,
+        category,
+        bd_id,
+        bdm_id,
+        rm_id,
+        cm_id,
+        hcm_id,
+        create_time
+    ) values
+    (
+        '{order_id}',
+        '{opay_id}',
+        '{shop_phone}',
+        '{shop_id}',
+        '{city_id}',
+        '{category}',
+        {bd_id},
+        {bdm_id},
+        {rm_id},
+        {cm_id},
+        {hcm_id},
+        '{create_time}'
+    )
+     ON DUPLICATE KEY
+    UPDATE
+     order_id=VALUES(order_id), 
+     opay_id=VALUES(opay_id), 
+     shop_phone=VALUES(shop_phone), 
+     shop_id=VALUES(shop_id), 
+     city_id=VALUES(city_id), 
+     category=VALUES(category), 
+     bd_id=VALUES(bd_id), 
+     bdm_id=VALUES(bdm_id), 
+     rm_id=VALUES(rm_id), 
+     cm_id=VALUES(cm_id), 
+     hcm_id=VALUES(hcm_id), 
+     create_time=VALUES(create_time)
+
+"""
+
 query_sql_template = '''
         select 
         order_id , 
@@ -269,24 +432,179 @@ query_sql_template = '''
         opos_payment_order_{year}_{week}
         where 
         (DATE_FORMAT(create_time,"%Y-%m-%d") = '{ds}' or DATE_FORMAT(modify_time,"%Y-%m-%d")='{ds}')
-        or 
-        (DATE_FORMAT(create_time,"%Y-%m-%d") = '{yesterday}' or DATE_FORMAT(modify_time,"%Y-%m-%d")='{yesterday}')
     '''
+
+query_order_extend_sql_template = """
+    select 
+    order_id,
+    opay_id,
+    shop_phone,
+    shop_id,
+    city_id,
+    category,
+    bd_id,
+    bdm_id,
+    rm_id,
+    cm_id,
+    hcm_id,
+    create_time
+    from opos_payment_order_bd_{year}_{week}
+    where (DATE_FORMAT(create_time,"%Y-%m-%d") = '{ds}' )
+"""
 
 
 def insert_order_data(ds, **kwargs):
     year = datetime.strptime(ds, '%Y-%m-%d').strftime('%Y')
     week = datetime.strptime(ds, '%Y-%m-%d').strftime('%W')
-    query_sql = query_sql_template.format(year=year, week=(int(week) + 1), ds=ds,
-                                          yesterday=airflow.macros.ds_add(ds, -1))
+
+    # insert_order(ds, airflow.macros.ds_add(ds, -1), week, year)
+    # insert_order_extend(ds, airflow.macros.ds_add(ds, -1), week, year)
+    insert_order_bonus(ds, airflow.macros.ds_add(ds, -1), week, year)
+
+
+def insert_order_bonus(ds, yesterday, week, year):
+    query_sql = query_order_bonus_sql_template.format(year=year, week=(int(week) + 1), ds=ds,
+                                                      yesterday=yesterday)
 
     logging.info(query_sql)
+    opos_cashback_mysql_cursor.execute(query_sql)
+    results = opos_cashback_mysql_cursor.fetchall()
+    logging.info(" record num : {num}".format(num=len(results)))
+    for data in results:
 
+        original_columns = list(data)
+        columns = list()
+
+        for i in original_columns:
+            if i is None:
+                i = 'null'
+            columns.append(i)
+
+        [
+            id,
+            activity_id,
+            bd_id,
+            city_id,
+            device_id,
+            opay_account,
+            provider_account,
+            receiver_account,
+            amount,
+            use_amount,
+            bonus_rate,
+            bonus_amount,
+            status,
+            settle_status,
+            settle_type,
+            reason,
+            risk_id,
+            settle_time,
+            expire_time,
+            use_time,
+            use_date,
+            create_time,
+            update_time
+        ] = columns
+
+        settle_time_str = ''
+        if not settle_time:
+            settle_time_str = 'null'
+        else:
+            settle_time_str = "'{settle_time}',".format(settle_time=settle_time)
+
+        expire_time_str = ''
+        if not expire_time:
+            expire_time_str = 'null,'
+        else:
+            expire_time_str = "'{expire_time}',".format(expire_time=expire_time)
+
+        use_time_str = ''
+        if not use_time:
+            use_time_str = 'null,'
+        else:
+            use_time_str = "'{use_time}',".format(use_time=use_time)
+
+        insert_sql = insert_order_bonus_sql_template.format(
+            id=id,
+            activity_id=activity_id,
+            bd_id=bd_id,
+            city_id=city_id,
+            device_id=device_id,
+            opay_account=opay_account,
+            provider_account=provider_account,
+            receiver_account=receiver_account,
+            amount=amount,
+            use_amount=use_amount,
+            bonus_rate=bonus_rate,
+            bonus_amount=bonus_amount,
+            status=status,
+            settle_status=settle_status,
+            settle_type=settle_type,
+            reason=reason,
+            risk_id=risk_id,
+            settle_time_str=settle_time_str,
+            expire_time_str=expire_time_str,
+            use_time_str=use_time_str,
+            use_date=use_date,
+            create_time=create_time,
+            update_time=update_time
+        )
+
+        insert_sql = insert_sql.replace("'null'", 'null')
+        opos_mysql_cursor.execute(insert_sql)
+        opos_mysql_conn.commit()
+
+
+def insert_order_extend(ds, yesterday, week, year):
+    query_sql = query_order_extend_sql_template.format(year=year, week=(int(week) + 1), ds=ds,
+                                                       yesterday=yesterday)
+
+    logging.info(query_sql)
     ptsp_mysql_cursor.execute(query_sql)
     results = ptsp_mysql_cursor.fetchall()
-
     logging.info(" record num : {num}".format(num=len(results)))
+    for data in results:
+        [
+            order_id,
+            opay_id,
+            shop_phone,
+            shop_id,
+            city_id,
+            category,
+            bd_id,
+            bdm_id,
+            rm_id,
+            cm_id,
+            hcm_id,
+            create_time
+        ] = list(data)
 
+        insert_sql = insert_order_extend_sql_template.format(
+            order_id=order_id,
+            opay_id=opay_id,
+            shop_phone=shop_phone,
+            shop_id=shop_id,
+            city_id=city_id,
+            category=category,
+            bd_id=bd_id,
+            bdm_id=bdm_id,
+            rm_id=rm_id,
+            cm_id=cm_id,
+            hcm_id=hcm_id,
+            create_time=create_time
+        )
+
+        opos_mysql_cursor.execute(insert_sql)
+        opos_mysql_conn.commit()
+
+
+def insert_order(ds, yesterday, week, year):
+    query_sql = query_sql_template.format(year=year, week=(int(week) + 1), ds=ds,
+                                          yesterday=yesterday)
+    logging.info(query_sql)
+    ptsp_mysql_cursor.execute(query_sql)
+    results = ptsp_mysql_cursor.fetchall()
+    logging.info(" record num : {num}".format(num=len(results)))
     for data in results:
         [order_id,
          device_no,
@@ -342,7 +660,7 @@ def insert_order_data(ds, **kwargs):
          merchant_risk_code,
          merchant_risk_remark] = list(data)
 
-        insert_sql = insert_sql_template.format(
+        insert_sql = insert_order_sql_template.format(
             order_id=order_id,
             device_no=device_no,
             cfrom=cfrom,
@@ -414,161 +732,150 @@ create_order_metrics_data = BashOperator(
     bash_command="""
         mysql -udml_insert -p6VaEyu -h10.52.149.112 opos_dw  -e "
 
-            insert into opos_dw.opos_metrcis_realtime (
-            dt,
-            city_id,
-            bd_id,
-            pos_complete_order_cnt,
-            qr_complete_order_cnt,
-            gmv,
-            have_order_merchant_cnt,
-            active_user_cnt,
-            pos_active_user_cnt,
-            qr_active_user_cnt,
-            new_user_cnt,
-            pos_new_user_cnt,
-            qr_new_user_cnt
-            ) 
-
-            select
-            t.dt,
-            t.city_id,
-            t.bd_id,
-            t.pos_complete_order_cnt,
-            t.qr_complete_order_cnt,
-            t.gmv,
-            t.have_order_merchant_cnt,
-            t.active_user_cnt,
-            t.pos_active_user_cnt,
-            t.qr_active_user_cnt,
-            t.new_user_cnt,
-            t.pos_new_user_cnt,
-            t.qr_new_user_cnt
-
-            from
+            INSERT INTO opos_dw.opos_metrcis_realtime ( dt, city_id, bd_id, pos_complete_order_cnt, qr_complete_order_cnt, gmv, have_order_merchant_cnt, active_user_cnt, pos_active_user_cnt, qr_active_user_cnt, new_user_cnt, pos_new_user_cnt, qr_new_user_cnt, bonus_complete_order_cnt, bonus_gmv, bonus_new_user_cnt, bonus_active_user_cnt, bonus_actual_amount_sum, not_bonus_complete_order_cnt, not_bonus_gmv, not_bonus_actual_amount_sum, not_bonus_active_user_cnt )
+            SELECT  t.dt
+                   ,t.city_id
+                   ,t.bd_id
+                   ,t.pos_complete_order_cnt
+                   ,t.qr_complete_order_cnt
+                   ,t.gmv
+                   ,t.have_order_merchant_cnt
+                   ,t.active_user_cnt
+                   ,t.pos_active_user_cnt
+                   ,t.qr_active_user_cnt
+                   ,t.new_user_cnt
+                   ,t.pos_new_user_cnt
+                   ,t.qr_new_user_cnt
+                   ,t.bonus_complete_order_cnt
+                   ,t.bonus_gmv
+                   ,t.bonus_new_user_cnt
+                   ,t.bonus_active_user_cnt
+                   ,t.bonus_actual_amount_sum
+                   ,t.not_bonus_complete_order_cnt
+                   ,t.not_bonus_gmv
+                   ,t.not_bonus_actual_amount_sum
+                   ,t.not_bonus_active_user_cnt
+            FROM
             (
-              select
-              t.dt as dt,
-              t.city_id as city_id,
-              t.bd_id as bd_id,
-              ifnull(count(if(t.order_type = 'pos' and t.trade_status = 'SUCCESS',t.order_id,null)),0) as pos_complete_order_cnt,
-              ifnull(count(if(t.order_type = 'qrcode' and t.trade_status = 'SUCCESS',t.order_id,null)),0) as qr_complete_order_cnt,
-              ifnull(sum(if(t.trade_status = 'SUCCESS',t.org_payment_amount,null)),0) as gmv,
-              ifnull(count(distinct if(t.trade_status = 'SUCCESS',t.receipt_id,null)),0) as have_order_merchant_cnt,
-              ifnull(count(distinct if(t.trade_status = 'SUCCESS',t.sender_id,null)),0) as active_user_cnt,
-              ifnull(count(distinct if(t.order_type = 'pos' and t.trade_status = 'SUCCESS',t.sender_id,null)),0) as pos_active_user_cnt,
-              ifnull(count(distinct if(t.order_type = 'qrcode' and t.trade_status = 'SUCCESS',t.sender_id,null)),0) as qr_active_user_cnt,
-              
-              ifnull(count(distinct if(t.trade_status = 'SUCCESS' and t.first_order = '1',t.sender_id,null)),0) as new_user_cnt,
-              ifnull(count(distinct if(t.order_type = 'pos' and t.trade_status = 'SUCCESS' and t.first_order = '1',t.sender_id,null)),0) as pos_new_user_cnt,
-              ifnull(count(distinct if(t.order_type = 'qrcode' and t.trade_status = 'SUCCESS' and t.first_order = '1',t.sender_id,null)),0) as qr_new_user_cnt
-
-
-              from
-              (   select
-                  o.dt,
-                  o.order_id,
-                  o.receipt_id,
-                  o.sender_id,
-                  o.order_type,
-                  o.trade_status,
-                  o.org_payment_amount,
-                  s.bd_id,
-                  s.city_id,
-                  o.first_order
-                  from
-                  bd_shop s
-                  join
-                  (
-                      select
-                      DATE_FORMAT(create_time,'%Y-%m-%d') as dt,
-                      order_id,
-                      receipt_id,
-                      sender_id,
-                      order_type,
-                      trade_status,
-                      ifnull(org_payment_amount,0) as org_payment_amount,
-                      first_order
-
-                      from
-                      opos_order
-                      where 
-                      (DATE_FORMAT(create_time,'%Y-%m-%d') = '{{ ds }}' or 
-                      DATE_FORMAT(create_time,'%Y-%m-%d') = '{{ macros.ds_add(ds, -1) }}'
-                      )
-                  ) o
-                  on o.receipt_id = concat(s.opay_id,'')
-               ) t
-              group by t.dt,t.bd_id,t.city_id
+                SELECT  t.dt                                                                                                                             AS dt
+                       ,t.city_id                                                                                                                        AS city_id
+                       ,t.bd_id                                                                                                                          AS bd_id
+                       ,ifnull(COUNT(if(t.order_type = 'pos' AND t.trade_status = 'SUCCESS',t.order_id,null)),0)                                         AS pos_complete_order_cnt
+                       ,ifnull(COUNT(if(t.order_type = 'qrcode' AND t.trade_status = 'SUCCESS',t.order_id,null)),0)                                      AS qr_complete_order_cnt
+                       ,ifnull(SUM(if(t.trade_status = 'SUCCESS',t.org_payment_amount,null)),0)                                                          AS gmv
+                       ,ifnull(COUNT(distinct if(t.trade_status = 'SUCCESS',t.receipt_id,null)),0)                                                       AS have_order_merchant_cnt
+                       ,ifnull(COUNT(distinct if(t.trade_status = 'SUCCESS',t.sender_id,null)),0)                                                        AS active_user_cnt
+                       ,ifnull(COUNT(distinct if(t.order_type = 'pos' AND t.trade_status = 'SUCCESS',t.sender_id,null)),0)                               AS pos_active_user_cnt
+                       ,ifnull(COUNT(distinct if(t.order_type = 'qrcode' AND t.trade_status = 'SUCCESS',t.sender_id,null)),0)                            AS qr_active_user_cnt
+                       ,ifnull(COUNT(distinct if(t.trade_status = 'SUCCESS' AND t.first_order = '1',t.sender_id,null)),0)                                AS new_user_cnt
+                       ,ifnull(COUNT(distinct if(t.order_type = 'pos' AND t.trade_status = 'SUCCESS' AND t.first_order = '1',t.sender_id,null)),0)       AS pos_new_user_cnt
+                       ,ifnull(COUNT(distinct if(t.order_type = 'qrcode' AND t.trade_status = 'SUCCESS' AND t.first_order = '1',t.sender_id,null)),0)    AS qr_new_user_cnt
+                       ,ifnull(COUNT(if(t.trade_status = 'SUCCESS' AND length(t.discount_ids) > 0,t.order_id,null)),0)                                   AS bonus_complete_order_cnt
+                       ,ifnull(SUM(if(t.trade_status = 'SUCCESS' AND length(t.discount_ids) > 0,t.org_payment_amount,null)),0)                           AS bonus_gmv
+                       ,ifnull(COUNT(distinct if(t.trade_status = 'SUCCESS' AND t.first_order = '1' AND length(t.discount_ids) > 0,t.sender_id,null)),0) AS bonus_new_user_cnt
+                       ,ifnull(COUNT(distinct if(t.trade_status = 'SUCCESS' AND length(t.discount_ids) > 0,t.sender_id,null)),0)                         AS bonus_active_user_cnt
+                       ,ifnull(SUM(if(t.trade_status = 'SUCCESS' AND length(t.discount_ids) > 0,t.payment_amount,null)),0)                               AS bonus_actual_amount_sum
+                       ,ifnull(COUNT(if(t.trade_status = 'SUCCESS' AND length(t.discount_ids) = 0,t.order_id,null)),0)                                   AS not_bonus_complete_order_cnt
+                       ,ifnull(SUM(if(t.trade_status = 'SUCCESS' AND length(t.discount_ids) = 0,t.org_payment_amount,null)),0)                           AS not_bonus_gmv
+                       ,ifnull(SUM(if(t.trade_status = 'SUCCESS' AND length(t.discount_ids) = 0,t.payment_amount,null)),0)                               AS not_bonus_actual_amount_sum
+                       ,ifnull(COUNT(distinct if(t.trade_status = 'SUCCESS' AND length(t.discount_ids) = 0,t.sender_id,null)),0)                         AS not_bonus_active_user_cnt
+                FROM
+                (
+                    SELECT  o.dt
+                           ,o.order_id
+                           ,o.receipt_id
+                           ,o.sender_id
+                           ,o.order_type
+                           ,o.trade_status
+                           ,o.org_payment_amount
+                           ,o.payment_amount
+                           ,s.bd_id
+                           ,s.city_id
+                           ,o.first_order
+                           ,o.discount_ids
+                    FROM
+                    (
+                        SELECT  order_id
+                               ,opay_id
+                               ,bd_id
+                               ,city_id
+                        FROM opos_order_extend
+                    ) s
+                    JOIN
+                    (
+                        SELECT  DATE_FORMAT(create_time,'%Y-%m-%d') AS dt
+                               ,order_id
+                               ,receipt_id
+                               ,sender_id
+                               ,order_type
+                               ,trade_status
+                               ,ifnull(org_payment_amount,0)        AS org_payment_amount
+                               ,ifnull(pay_amount,0)                AS payment_amount
+                               ,first_order
+                               ,discount_ids
+                        FROM opos_order
+                        WHERE (DATE_FORMAT(create_time,'%Y-%m-%d') = '{{ ds }}' or DATE_FORMAT(create_time,'%Y-%m-%d') = '{{ macros.ds_add(ds, -1) }}' )
+                    ) o
+                    ON o.order_id = s.order_id
+                ) t
+                GROUP BY  t.dt
+                         ,t.bd_id
+                         ,t.city_id
             ) t
-            ON DUPLICATE KEY
-            UPDATE
-            dt=VALUES(dt),
-            city_id=VALUES(city_id),
-            bd_id=VALUES(bd_id),
-            pos_complete_order_cnt=VALUES(pos_complete_order_cnt),
-            qr_complete_order_cnt=VALUES(qr_complete_order_cnt),
-            gmv=VALUES(gmv),
-            have_order_merchant_cnt=VALUES(have_order_merchant_cnt),
-            active_user_cnt=VALUES(active_user_cnt),
-            pos_active_user_cnt=VALUES(pos_active_user_cnt),
-            qr_active_user_cnt=VALUES(qr_active_user_cnt),
-            new_user_cnt=VALUES(new_user_cnt),
-            pos_new_user_cnt=VALUES(pos_new_user_cnt),
-            qr_new_user_cnt=VALUES(qr_new_user_cnt)
+            ON DUPLICATE KEY UPDATE dt=VALUES(dt), city_id=VALUES(city_id), bd_id=VALUES(bd_id), pos_complete_order_cnt=VALUES(pos_complete_order_cnt), qr_complete_order_cnt=VALUES(qr_complete_order_cnt), gmv=VALUES(gmv), have_order_merchant_cnt=VALUES(have_order_merchant_cnt), active_user_cnt=VALUES(active_user_cnt), pos_active_user_cnt=VALUES(pos_active_user_cnt), qr_active_user_cnt=VALUES(qr_active_user_cnt), new_user_cnt=VALUES(new_user_cnt), pos_new_user_cnt=VALUES(pos_new_user_cnt), qr_new_user_cnt=VALUES(qr_new_user_cnt), bonus_complete_order_cnt=VALUES(bonus_complete_order_cnt), bonus_gmv=VALUES(bonus_gmv), bonus_new_user_cnt=VALUES(bonus_new_user_cnt), bonus_active_user_cnt=VALUES(bonus_active_user_cnt), bonus_actual_amount_sum=VALUES(bonus_actual_amount_sum), not_bonus_complete_order_cnt=VALUES(not_bonus_complete_order_cnt), not_bonus_gmv=VALUES(not_bonus_gmv), not_bonus_actual_amount_sum=VALUES(not_bonus_actual_amount_sum), not_bonus_active_user_cnt=VALUES(not_bonus_active_user_cnt) ;
 
-            ;
 
         "
     """,
     dag=dag,
 )
 
-# create_merchant_metrics_data = BashOperator(
-#     task_id='create_merchant_metrics_data',
-#     bash_command="""
-#         mysql -udml_insert -p6VaEyu -h10.52.149.112 opos_dw  -e "
-#
-#             insert into opos_dw.opos_shop_metrcis_realtime (dt,city_id,bd_id,new_shop_cnt)
-#
-#             select
-#             t.dt,
-#             t.city_id,
-#             t.bd_id,
-#             t.new_shop_cnt
-#
-#             from
-#             (
-#                 select
-#                 DATE_FORMAT(created_at,'%Y-%m-%d') as dt,
-#                 city_id,
-#                 bd_id,
-#                 count(id) as new_shop_cnt
-#
-#                 from
-#                 bd_shop
-#                 where
-#                 DATE_FORMAT(created_at,'%Y-%m-%d') = '{{ ds }}' or
-#                 group by
-#                 city_id,
-#                 bd_id
-#             ) t
-#
-#
-#             ON DUPLICATE KEY
-#             UPDATE
-#             dt=VALUES(dt),
-#             city_id=VALUES(city_id),
-#             bd_id=VALUES(bd_id),
-#             new_shop_cnt=VALUES(new_shop_cnt)
-#
-#             ;
-#
-#         "
-#     """,
-#     dag=dag,
-# )
-#
+create_bonus_metrics_data = BashOperator(
+    task_id='create_bonus_metrics_data',
+    bash_command="""
+        mysql -udml_insert -p6VaEyu -h10.52.149.112 opos_dw  -e "
+
+            INSERT INTO opos_dw.opos_bonus_metrics_realtime ( dt, city_id, bd_id, in_credit_amount_sum, not_in_credit_amount_sum, in_settlement_amount_sum, not_in_settlement_amount_sum, provider_cnt, bonus_order_cnt, bonus_user_cnt, main_scan_amount, bonus_used_amount_sum )
+            SELECT  t.dt
+                   ,t.city_id
+                   ,t.bd_id
+                   ,t.in_credit_amount_sum
+                   ,t.not_in_credit_amount_sum
+                   ,t.in_settlement_amount_sum
+                   ,t.not_in_settlement_amount_sum
+                   ,t.provider_cnt
+                   ,t.bonus_order_cnt
+                   ,t.bonus_user_cnt
+                   ,t.main_scan_amount
+                   ,t.bonus_used_amount_sum
+            FROM
+            (
+                SELECT  '{{ ds }}'                                               AS dt
+                       ,ifnull(city_id,-10000)                                   AS city_id
+                       ,ifnull(bd_id,-10000)                                     AS bd_id
+                       ,SUM(if(status = 1,bonus_amount,0))                       AS in_credit_amount_sum
+                       ,SUM(if(status = 0,bonus_amount,0))                       AS not_in_credit_amount_sum
+                       ,SUM(if(status = 1 AND settle_status = 1,bonus_amount,0)) AS in_settlement_amount_sum
+                       ,SUM(if(status = 1 AND settle_status = 0,bonus_amount,0)) AS not_in_settlement_amount_sum
+                       ,COUNT(distinct(provider_account))                        AS provider_cnt
+                       ,COUNT(1)                                                 AS bonus_order_cnt
+                       ,COUNT(distinct(opay_account))                            AS bonus_user_cnt
+                       ,SUM(amount)                                              AS main_scan_amount
+                       ,SUM(use_amount)                                          AS bonus_used_amount_sum
+
+                FROM opos_dw.opos_order_bonus
+                WHERE DATE_FORMAT(create_time,'%Y-%m-%d') = '{{ ds }}'
+                GROUP BY  city_id
+                         ,bd_id with rollup
+            ) t
+            ON DUPLICATE KEY
+            UPDATE dt=VALUES(dt), city_id=VALUES(city_id), bd_id=VALUES(bd_id), in_credit_amount_sum=VALUES(in_credit_amount_sum), not_in_credit_amount_sum=VALUES(not_in_credit_amount_sum), in_settlement_amount_sum=VALUES(in_settlement_amount_sum), not_in_settlement_amount_sum=VALUES(not_in_settlement_amount_sum), provider_cnt=VALUES(provider_cnt), bonus_order_cnt=VALUES(bonus_order_cnt), bonus_user_cnt=VALUES(bonus_user_cnt), main_scan_amount=VALUES(main_scan_amount), bonus_used_amount_sum=VALUES(bonus_used_amount_sum)
+            ;
+        "
+    """,
+    dag=dag,
+)
+
 delete_old_order = BashOperator(
     task_id='delete_old_order',
     bash_command="""
@@ -579,5 +886,15 @@ delete_old_order = BashOperator(
     dag=dag,
 )
 
+delete_old_order_bonus = BashOperator(
+    task_id='delete_old_order_bonus',
+    bash_command="""
+        mysql -uroot -p78c5f1142124334 -h10.52.149.112 opos_dw  -e "
+            delete from opos_dw.opos_order_bonus where DATE_FORMAT(create_time,'%Y-%m-%d') < '{{ macros.ds_add(ds, -1) }}';
+        "
+    """,
+    dag=dag,
+)
+
 insert_order_data >> create_order_metrics_data >> delete_old_order
-# insert_order_data >> create_merchant_metrics_data >> delete_old_order
+insert_order_data >> create_bonus_metrics_data >> delete_old_order_bonus
