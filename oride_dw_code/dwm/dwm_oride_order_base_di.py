@@ -44,7 +44,7 @@ dag = airflow.DAG('dwm_oride_order_base_di',
 dependence_dwd_oride_order_base_include_test_di_prev_day_task = UFileSensor(
     task_id='dwd_oride_order_base_include_test_di_prev_day_task',
     filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw/dwd_oride_order_base_include_test_di/country_code=nal",
+        hdfs_path_str="oride/oride_dw/dwd_oride_order_base_include_test_di/country_code=NG",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -100,7 +100,7 @@ dependence_dwd_oride_driver_accept_order_click_detail_di_prev_day_task = UFileSe
 dependence_dwd_oride_order_mark_df_prev_day_task = UFileSensor(
     task_id='dwd_oride_order_mark_df_prev_day_task',
     filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw/dwd_oride_order_mark_df/country_code=nal",
+        hdfs_path_str="oride/oride_dw/dwd_oride_order_mark_df/country_code=NG",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',

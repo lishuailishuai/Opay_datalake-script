@@ -37,6 +37,11 @@ class CountriesPublicFrame(object):
         self.file_type=v_file_type
         self.hour=v_hour
         self.is_open=v_is_open
+        self.v_del_flag=0
+
+        self.country_code_list=""
+
+        self.get_country_code()
 
     def get_country_code(self):
 
@@ -52,7 +57,9 @@ class CountriesPublicFrame(object):
 
         logging.info('Executing 二位国家码: %s', v_country_code_list)
         
-        return v_country_code_list
+        #return v_country_code_list
+
+        self.country_code_list=v_country_code_list
 
 
     def check_success_exist(self):
@@ -127,9 +134,6 @@ class CountriesPublicFrame(object):
 
             #目录存在
             logging.info("目录删除失败:"+" "+"{hdfs_data_dir}".format(hdfs_data_dir=self.hdfs_data_dir_str))
-
-            #sys.exit(1)
-
         
    
     def data_not_file_type_touchz(self):
@@ -220,7 +224,7 @@ class CountriesPublicFrame(object):
             sys.exit(1)
 
 
-    def delete_partition(self):
+    def delete_partition_dev(self):
 
         """
             删除分区调用函数
@@ -228,7 +232,7 @@ class CountriesPublicFrame(object):
 
         self.countries_data_dir(self.delete_exist_partition)
 
-    def touchz_success(self):
+    def touchz_success_dev(self):
 
         """
             生成 Success 调用函数
@@ -243,22 +247,71 @@ class CountriesPublicFrame(object):
         if self.country_partition.lower()=="false" and self.file_type.lower()=="false":
 
             self.countries_data_dir(self.data_not_file_type_touchz)
-            
+
 
         #有国家分区并且每个目录必须有数据才能生成 Success
         if self.country_partition.lower()=="true" and self.file_type.lower()=="true":
 
             self.countries_data_dir(self.data_file_type_touchz)
-            
+        
         
         #有国家分区并且数据为空也生成 Success
         if self.country_partition.lower()=="true" and self.file_type.lower()=="false":
 
             self.countries_data_dir(self.data_not_file_type_touchz)
-            
+    
+
+    def delete_partition(self):
+
+        """
+            删除分区调用函数
+        """
+
+        self.v_del_flag=1
+
+        if self.country_partition.lower()=="false":
+
+            self.not_exist_country_code_data_dir(self.delete_exist_partition)
 
 
-    def countries_data_dir(self,object_task):
+        #有国家分区
+        if self.country_partition.lower()=="true":
+
+            self.exist_country_code_data_dir(self.delete_exist_partition)
+
+        self.v_del_flag=0
+
+
+    def touchz_success(self):
+
+        """
+            生成 Success 函数
+        """
+
+         # 没有国家分区并且每个目录必须有数据才能生成 Success
+        if self.country_partition.lower()=="false" and self.file_type.lower()=="true":
+
+            self.not_exist_country_code_data_dir(self.data_file_type_touchz)
+
+        # 没有国家分区并且数据为空也生成 Success
+        if self.country_partition.lower()=="false" and self.file_type.lower()=="false":
+
+            self.not_exist_country_code_data_dir(self.data_not_file_type_touchz)
+
+
+        #有国家分区并且每个目录必须有数据才能生成 Success
+        if self.country_partition.lower()=="true" and self.file_type.lower()=="true":
+
+            self.exist_country_code_data_dir(self.data_file_type_touchz)
+        
+        
+        #有国家分区并且数据为空也生成 Success
+        if self.country_partition.lower()=="true" and self.file_type.lower()=="false":
+
+            self.exist_country_code_data_dir(self.data_not_file_type_touchz)
+
+
+    def countries_data_dir_dev(self,object_task):
 
         """
         country_partition:是否有国家分区
@@ -298,10 +351,10 @@ class CountriesPublicFrame(object):
 
 
             #获取国家列表
-            country_code_list=self.get_country_code()
+            #country_code_list=self.get_country_code()
 
 
-            for country_code_word in country_code_list.split(","):
+            for country_code_word in self.country_code_list.split(","):
 
 
                 #有国家分区并且每个目录必须有数据才能生成 Success
@@ -323,7 +376,6 @@ class CountriesPublicFrame(object):
                 #有国家分区并且数据为空也生成 Success
                 if self.country_partition.lower()=="true" and self.file_type.lower()=="false":
 
-
                     if self.hour is None:
 
                         #输出不同国家的数据路径
@@ -342,6 +394,134 @@ class CountriesPublicFrame(object):
             logging.info(e)
 
             sys.exit(1)
+
+
+    #没有有国家码分区
+    def not_exist_country_code_data_dir(self,object_task):
+
+        """
+        country_partition:是否有国家分区
+        file_type:是否空文件也生成 success
+            
+        """
+
+        try:
+
+            #没有小时级分区
+            if self.hour is None:
+                #输出不同国家的数据路径(没有小时级分区)
+                self.hdfs_data_dir_str=self.data_hdfs_path+"/dt="+self.ds
+            else:
+                #输出不同国家的数据路径(有小时级分区)
+                self.hdfs_data_dir_str=self.data_hdfs_path+"/dt="+self.ds+"/hour="+self.hour
+        
+            # 没有国家分区并且每个目录必须有数据才能生成 Success
+            if self.country_partition.lower()=="false" and self.file_type.lower()=="true":
+
+                object_task()
+
+                return
+
+            # 没有国家分区并且数据为空也生成 Success
+            if self.country_partition.lower()=="false" and self.file_type.lower()=="false":
+
+                object_task()
+
+                return
+
+        except Exception as e:
+
+            #self.comwx.postAppMessage('DW调度系统任务 {jobname} 数据产出异常'.format(jobname=table_name),'271')
+
+            logging.info(e)
+
+            sys.exit(1)
+
+    #有国家码分区
+    def exist_country_code_data_dir(self,object_task):
+
+        """
+        country_partition:是否有国家分区
+        file_type:是否空文件也生成 success
+            
+        """
+
+        try:
+
+            #获取国家列表
+
+            for country_code_word in self.country_code_list.split(","):
+
+                if country_code_word.lower()=='nal':
+                    country_code_word=country_code_word.lower()
+
+                else:
+                    country_code_word=country_code_word.upper()
+
+
+                #没有小时级分区
+                if self.hour is None:
+
+                    #输出不同国家的数据路径(没有小时级分区)
+                    self.hdfs_data_dir_str=self.data_hdfs_path+"/country_code="+country_code_word+"/dt="+self.ds
+                else:
+
+                    #输出不同国家的数据路径(有小时级分区)
+                    self.hdfs_data_dir_str=self.data_hdfs_path+"/country_code="+country_code_word+"/dt="+self.ds+"/hour="+self.hour
+
+
+                #没有开通多国家业务(国家码默认nal)
+                if self.country_partition.lower()=="true" and self.is_open.lower()=="false":
+
+                    #必须有数据才可以生成Success 文件
+                    if self.file_type.lower()=="true":
+
+                        object_task()
+
+                    #数据为空也生成 Success 文件
+                    if self.file_type.lower()=="false":
+
+                        object_task()
+
+                
+                #开通多国家业务
+                if self.country_partition.lower()=="true" and self.is_open.lower()=="true":
+
+                    
+                    #必须有数据才可以生成Success 文件
+                    if self.file_type.lower()=="true":
+
+                        #删除多国家分区使用
+                        if self.v_del_flag==1:
+
+                            object_task()
+
+                            continue
+
+                        #在必须有数据条件下：国家是nal时，数据可以为空 
+                        if country_code_word=="nal":
+                            self.data_not_file_type_touchz()
+
+                        else:
+
+                            object_task()
+
+                        
+
+                    #数据为空也生成 Success 文件
+                    if self.file_type.lower()=="false":
+
+                        object_task()
+
+                   
+        except Exception as e:
+
+            #self.comwx.postAppMessage('DW调度系统任务 {jobname} 数据产出异常'.format(jobname=table_name),'271')
+
+            logging.info(e)
+
+            sys.exit(1)
+
 
     # alter 语句
     def alter_partition(self):   
@@ -366,9 +546,7 @@ class CountriesPublicFrame(object):
 
             return alter_str
 
-        country_code_list=self.get_country_code()
-
-        for country_code_word in country_code_list.split(","):
+        for country_code_word in self.country_code_list.split(","):
 
             # 有国家分区 && 小时参数为None
             if self.country_partition.lower()=="true" and self.hour is None:

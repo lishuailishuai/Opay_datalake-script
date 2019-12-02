@@ -215,7 +215,7 @@ for obus_table in obus_table_list:
     '''
     import_from_mysql = BashOperator(
         task_id='import_from_mysql_{}'.format(obus_table.get('db')+"_"+obus_table.get('table')),
-        priority_weight=obus_table.get('priority_weight_nm'),
+        priority_weight=obus_table.get('priority_weight'),
         bash_command='''
             #!/usr/bin/env bash
             sqoop import "-Dorg.apache.sqoop.splitter.allow_text_splitter=true" \
@@ -247,7 +247,7 @@ for obus_table in obus_table_list:
     '''
     create_table = PythonOperator(
         task_id='create_table_{}'.format(hive_table.format(bs=obus_table.get('table'))),
-        priority_weight=obus_table.get('priority_weight_nm'),
+        priority_weight=obus_table.get('priority_weight'),
         python_callable=create_hive_external_table,
         provide_context=True,
         op_kwargs={
@@ -263,7 +263,7 @@ for obus_table in obus_table_list:
     '''
     add_partitions = HiveOperator(
         task_id='add_partitions_{}'.format(hive_table.format(bs=obus_table.get('table'))),
-        priority_weight=obus_table.get('priority_weight_nm'),
+        priority_weight=obus_table.get('priority_weight'),
         hql='''
             ALTER TABLE {hive_db}.{table} ADD IF NOT EXISTS PARTITION (country_code='nal', dt='{{{{ ds }}}}')
         '''.format(
@@ -279,7 +279,7 @@ for obus_table in obus_table_list:
     '''
     validate_all_data = PythonOperator(
         task_id='validate_data_{}'.format(hive_table.format(bs=obus_table.get('table'))),
-        priority_weight=obus_table.get('priority_weight_nm'),
+        priority_weight=obus_table.get('priority_weight'),
         python_callable=validata_data,
         provide_context=True,
         op_kwargs={
@@ -298,7 +298,7 @@ for obus_table in obus_table_list:
         # 数据量监控
         volume_monitoring = PythonOperator(
             task_id='volume_monitorin_{}'.format(hive_table.format(bs=obus_table.get('table'))),
-            priority_weight=obus_table.get('priority_weight_nm'),
+            priority_weight=obus_table.get('priority_weight'),
             python_callable=data_volume_monitoring,
             provide_context=True,
             op_kwargs={
@@ -314,7 +314,7 @@ for obus_table in obus_table_list:
     # 超时监控
     task_timeout_monitor= PythonOperator(
         task_id='task_timeout_monitor_{}'.format(hive_table.format(bs=obus_table.get('table'))),
-        priority_weight=obus_table.get('priority_weight_nm'),
+        priority_weight=obus_table.get('priority_weight'),
         python_callable=fun_task_timeout_monitor,
         provide_context=True,
         op_kwargs={

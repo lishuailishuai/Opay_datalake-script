@@ -15,7 +15,7 @@ from airflow.operators.bash_operator import BashOperator
 from airflow.sensors.named_hive_partition_sensor import NamedHivePartitionSensor
 from airflow.sensors.hive_partition_sensor import HivePartitionSensor
 from airflow.sensors import UFileSensor
-from plugins.CountriesPublicFrame import CountriesPublicFrame
+from plugins.ModelPublicFrame import ModelPublicFrame
 import json
 import logging
 from airflow.models import Variable
@@ -46,44 +46,45 @@ sleep_time = BashOperator(
     dag=dag)
 
 
+##----------------------------------------- 变量 ---------------------------------------##
+
+table_name="dwd_oride_order_pay_detail_di"
+db_name="oride_dw"
+
+table_list = [
+        {"db": "oride_dw", "table":table_name, "partitions": "country_code=nal", "timeout": "1600"}
+    ]
+
+##----------------------------------------- 任务超时监控 ---------------------------------------## 
+
+def fun_task_timeout_monitor(ds,**op_kwargs):
+
+    ModelPublicFrame().task_timeout_monitor(table_list,ds)
+
+task_timeout_monitor= PythonOperator(
+    task_id='task_timeout_monitor',
+    python_callable=fun_task_timeout_monitor,
+    provide_context=True,
+    dag=dag
+)
+
 ##----------------------------------------- 依赖 ---------------------------------------## 
 
 
-ods_sqoop_base_data_order_payment_df_tesk = UFileSensor(
-    task_id='ods_sqoop_base_data_order_payment_df_tesk',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride_dw_sqoop/oride_data/data_order_payment",
-        pt='{{ds}}'
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
+dependence_table_lists = [
 
-dwd_oride_order_base_include_test_di_tesk = UFileSensor(
-    task_id='dwd_oride_order_base_include_test_di_tesk',
-    filepath='{hdfs_path_str}/country_code=NG/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw/dwd_oride_order_base_include_test_di",
-        pt='{{ds}}'
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
+{"db": "oride_dw", "table": "dwd_oride_order_base_include_test_di", "partitions": "country_code=NG"},
 
+{"db": "oride_dw_ods", "table": "ods_sqoop_base_data_order_payment_df", "partitions": "country_code=nal"}
 
-##----------------------------------------- 变量 ---------------------------------------## 
-
-db_name="oride_dw"
-table_name="dwd_oride_order_pay_detail_di"
-hdfs_path="ufile://opay-datalake/oride/oride_dw/"+table_name
-
+]
 
 ##----------------------------------------- 脚本 ---------------------------------------## 
 
-def dwd_oride_order_pay_detail_di_sql_task(ds):
+dwd_oride_order_pay_detail_di_task = HiveOperator(
 
-    HQL='''
+    task_id='dwd_oride_order_pay_detail_di_task',
+    hql='''
     set hive.exec.parallel=true;
     set hive.exec.dynamic.partition.mode=nonstrict;
 
@@ -102,7 +103,7 @@ select
             opay_amount,--opay 支付的金额
             reference,-- opay 流水号
             currency,--货币类型
-            pay.country_code as country,--国家
+            country,--国家
             status,--支付模式（0: 支付中, 1: 成功, 2: 失败）
             modify_time,--最后修改时间
             create_time,--创建时间
@@ -116,7 +117,7 @@ select
             capped_type,--优惠活动类型（0 normal 1 novice）             
             capped_id  ,--优惠活动 ID                               
             card_id,    --支付卡号 
-            nvl(ord.country_code,'nal') as country_code,
+            country_code,
             '{pt}' as dt
 from 
      (SELECT 
@@ -134,7 +135,7 @@ from
             opay_amount,--opay 支付的金额
             reference,-- opay 流水号
             currency,--货币类型
-            country as country_code,--国家
+            country,--国家
             status,--支付模式（0: 支付中, 1: 成功, 2: 失败）
             modify_time,--最后修改时间
             create_time,--创建时间
@@ -164,20 +165,17 @@ WHERE dt = '{pt}'
   AND city_id<>'999001' --去除测试数据
   ) ord
 on pay.order_id=ord.order_id
-and pay.country_code=ord.country_code
-
 '''.format(
-        pt=ds,
-        #now_day='{{macros.ds_add(ds, +1)}}',
-        now_day=airflow.macros.ds_add(ds, +1),
-        table=table_name,
-        db=db_name
-        )
-    return HQL
+        pt='{{ds}}',
+        now_day='{{macros.ds_add(ds, +1)}}',
+        table=table_name
+        ),
+schema='oride_dw',
+    dag=dag)
 
 
 #熔断数据，如果数据重复，报错
-def check_key_data_task(ds):
+def check_key_data(ds,**kargs):
 
     #主键重复校验
     HQL_DQC='''
@@ -207,70 +205,28 @@ def check_key_data_task(ds):
         print("-----> Notice Data Export Success ......")
     
  
-
-#主流程
-def execution_data_task_id(ds,**kwargs):
-
-    v_date=kwargs.get('v_execution_date')
-    v_day=kwargs.get('v_execution_day')
-    v_hour=kwargs.get('v_execution_hour')
-
-    hive_hook = HiveCliHook()
-
-    """
-        #功能函数
-        alter语句: alter_partition
-        删除分区: delete_partition
-        生产success: touchz_success
-
-        #参数
-        第一个参数true: 所有国家是否上线。false 没有
-        第二个参数true: 数据目录是有country_code分区。false 没有
-        第三个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
-
-        #读取sql
-        %_sql(ds,v_hour)
-
-        第一个参数ds: 天级任务
-        第二个参数v_hour: 小时级任务，需要使用
-
-    """
-
-    cf=CountriesPublicFrame("true",ds,db_name,table_name,hdfs_path,"true","true")
-
-    #删除分区
-    cf.delete_partition()
-
-    #读取sql
-    _sql="\n"+cf.alter_partition()+"\n"+dwd_oride_order_pay_detail_di_sql_task(ds)
-
-    logging.info('Executing: %s',_sql)
-
-    #执行Hive
-    hive_hook.run_cli(_sql)
-
-    #熔断数据，如果数据不能为0
-    #check_key_data_cnt_task(ds)
-
-    #熔断数据
-    check_key_data_task(ds)
-
-    #生产success
-    cf.touchz_success()
-
-    
-dwd_oride_order_pay_detail_di_task= PythonOperator(
-    task_id='dwd_oride_order_pay_detail_di_task',
-    python_callable=execution_data_task_id,
+task_check_key_data = PythonOperator(
+    task_id='check_data',
+    python_callable=check_key_data,
     provide_context=True,
-    op_kwargs={
-        'v_execution_date':'{{execution_date.strftime("%Y-%m-%d %H:%M:%S")}}',
-        'v_execution_day':'{{execution_date.strftime("%Y-%m-%d")}}',
-        'v_execution_hour':'{{execution_date.strftime("%H")}}'
-    },
     dag=dag
 )
 
 
-ods_sqoop_base_data_order_payment_df_tesk>>dwd_oride_order_pay_detail_di_task
-dwd_oride_order_base_include_test_di_tesk>>dwd_oride_order_pay_detail_di_task
+##----------------------------------------- 生成_SUCCESS ---------------------------------------## 
+
+def fun_task_touchz_success(ds,**op_kwargs):
+
+    #生成_SUCCESS
+    ModelPublicFrame().task_touchz_success(table_list,ds)
+
+task_touchz_success= PythonOperator(
+    task_id='task_touchz_success',
+    python_callable=fun_task_touchz_success,
+    provide_context=True,
+    dag=dag
+)
+
+##----------------------------------------- 依赖关系配置 ---------------------------------------## 
+for tasks_dependence in ModelPublicFrame().tesk_dependence(dependence_table_lists,dag):
+    tasks_dependence>>dwd_oride_order_pay_detail_di_task>>sleep_time>>task_check_key_data>>task_touchz_success

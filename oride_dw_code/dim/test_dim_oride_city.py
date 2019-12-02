@@ -15,6 +15,7 @@ from airflow.operators.bash_operator import BashOperator
 from airflow.sensors.named_hive_partition_sensor import NamedHivePartitionSensor
 from airflow.sensors.hive_partition_sensor import HivePartitionSensor
 from airflow.sensors import UFileSensor
+from airflow.sensors import S3PrefixSensor
 from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
 from plugins.CountriesPublicFrame import CountriesPublicFrame
 import json
@@ -42,6 +43,20 @@ dag = airflow.DAG( 'test_dim_oride_city',
 
 ##----------------------------------------- 依赖 ---------------------------------------## 
 
+
+
+
+
+test_snappy_dev_01_tesk = S3PrefixSensor(
+    task_id='test_snappy_dev_01_tesk',
+    prefix='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="oride/oride_dw/test_snappy_dev_01",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-bi',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
 
 ods_sqoop_base_data_city_conf_df_tesk = UFileSensor(
     task_id='ods_sqoop_base_data_city_conf_df_tesk',
@@ -231,8 +246,6 @@ def check_key_data_cnt_task(ds):
     return flag
 
 
-
-
 #熔断数据，如果数据重复，报错
 def check_key_data_task(ds):
 
@@ -299,15 +312,15 @@ def execution_data_task_id(ds,**kwargs):
     cf=CountriesPublicFrame("true",ds,db_name,table_name,hdfs_path,"true","true")
 
     #删除分区
-    cf.delete_partition()
+    #cf.delete_partition()
 
     #读取sql
     _sql="\n"+cf.alter_partition()+"\n"+test_dim_oride_city_sql_task(ds)
 
-    logging.info('Executing: %s',_sql)
+    #logging.info('Executing: %s',_sql)
 
     #执行Hive
-    hive_hook.run_cli(_sql)
+    #hive_hook.run_cli(_sql)
 
     #熔断数据，如果数据不能为0
     #check_key_data_cnt_task(ds)
@@ -316,7 +329,7 @@ def execution_data_task_id(ds,**kwargs):
     #check_key_data_task(ds)
 
     #生产success
-    cf.touchz_success()
+    #cf.touchz_success()
 
     
 test_dim_oride_city_task= PythonOperator(

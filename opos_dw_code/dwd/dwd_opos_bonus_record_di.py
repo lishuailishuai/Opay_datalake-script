@@ -100,7 +100,6 @@ def dwd_opos_bonus_record_di_sql_task(ds):
 set hive.exec.parallel=true;
 set hive.exec.dynamic.partition.mode=nonstrict;
 
---插入数据
 insert overwrite table opos_dw.dwd_opos_bonus_record_di partition(country_code,dt)
 select
 o.id
@@ -111,6 +110,8 @@ o.id
 ,substr(o.create_time,0,7) as create_month
 ,substr(o.create_time,0,4) as create_year
 
+,b.hcm_id
+,b.hcm_name
 ,b.cm_id
 ,b.cm_name
 ,b.rm_id
@@ -128,9 +129,28 @@ o.id
 ,o.opay_account
 
 ,o.provider_account
-,o.receiver_account
-,o.amount
+,provider.id as provider_shop_id
+,provider.opay_id as provider_opay_id
+,provider.shop_name as provider_shop_name
+,provider.contact_name as provider_contact_name
+,provider.contact_phone as provider_contact_phone
+,provider.created_at as provider_created_at
+,provider.city_code as provider_city_id
+,provider.city_name as provider_city_name
+,provider.country as provider_country
 
+,o.receiver_account
+,receiver.id as receiver_shop_id
+,receiver.opay_id as receiver_opay_id
+,receiver.shop_name as receiver_shop_name
+,receiver.contact_name as receiver_contact_name
+,receiver.contact_phone as receiver_contact_phone
+,receiver.created_at as receiver_created_at
+,receiver.city_code as receiver_city_id
+,receiver.city_name as receiver_city_name
+,receiver.country as receiver_country
+
+,o.amount
 ,o.use_amount
 ,o.bonus_rate
 ,o.bonus_amount
@@ -162,7 +182,15 @@ o.city_id=c.id
 left join
 public_dw_dim.dim_date as d
 on
-substr(o.create_time,0,10)=d.dt;
+substr(o.create_time,0,10)=d.dt
+left join
+(select * from opos_dw.dim_opos_bd_relation_df where country_code='nal' and dt='{pt}') as provider
+on
+o.provider_account=provider.opay_account
+left join
+(select * from opos_dw.dim_opos_bd_relation_df where country_code='nal' and dt='{pt}') as receiver
+on
+o.receiver_account=receiver.opay_account;
 
 
 
