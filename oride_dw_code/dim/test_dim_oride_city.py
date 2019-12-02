@@ -16,7 +16,7 @@ from airflow.sensors.named_hive_partition_sensor import NamedHivePartitionSensor
 from airflow.sensors.hive_partition_sensor import HivePartitionSensor
 from airflow.sensors import UFileSensor
 from airflow.sensors import S3PrefixSensor
-from airflow.sensors import s3_key_sensor
+from airflow.sensors import S3KeySensor
 from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
 from plugins.CountriesPublicFrame import CountriesPublicFrame
 import json
@@ -46,7 +46,7 @@ dag = airflow.DAG( 'test_dim_oride_city',
 
 
 
-test_snappy_dev_01_tesk = s3_key_sensor(
+test_snappy_dev_01_tesk = S3KeySensor(
     task_id='test_snappy_dev_01_tesk',
     bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
         hdfs_path_str="oride/oride_dw/test_snappy_dev_01",
