@@ -1,14 +1,15 @@
 # -*- coding: utf-8 -*-
-'''
-司机通讯记录埋点表（二期）
-'''
-from datetime import datetime, timedelta
+"""
+司机通话记录(二期)
+
 import airflow
+from datetime import datetime, timedelta
 from airflow.sensors import UFileSensor
+from airflow.sensors.hive_partition_sensor import HivePartitionSensor
 from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
 from airflow.operators.python_operator import PythonOperator
-import logging
 from airflow.hooks.hive_hooks import HiveCliHook
+import logging
 from plugins.TaskTouchzSuccess import TaskTouchzSuccess
 args = {
     'owner':'chenghui',
@@ -21,7 +22,7 @@ args = {
     'email_on_retry': False,
 }
 
-dag = airflow.DAG('app_oride_passenger_funnel_second_edition_d',
+dag = airflow.DAG('app_oride_passenger_funnel_second_edition_point_d',
                   schedule_interval="40 02 * * *",
                   default_args=args,
                   catchup=False)
@@ -215,11 +216,11 @@ def execution_data_task_id(ds,**kargs):
     # 执行Hive
     hive_hook.run_cli(_sql)
     # 生成_SUCCESS
-    """
+
     第一个参数true: 数据目录是有country_code分区。false 没有
     第二个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
 
-    """
+
     TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "true", "true")
 
 app_oride_passenger_funnel_second_edition_point_d_task = PythonOperator(
@@ -231,3 +232,5 @@ app_oride_passenger_funnel_second_edition_point_d_task = PythonOperator(
 
 dependence_dwd_oride_client_event_detail_hi_prev_day_task>>app_oride_passenger_funnel_second_edition_point_d_task
 dwm_oride_order_base_di_task>>app_oride_passenger_funnel_second_edition_point_d_task
+
+"""
