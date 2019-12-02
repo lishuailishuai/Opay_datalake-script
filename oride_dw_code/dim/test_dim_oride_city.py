@@ -94,7 +94,7 @@ ods_sqoop_base_weather_per_10min_df_task = UFileSensor(
 
 db_name="test_db"
 table_name="test_dim_oride_city"
-hdfs_path="ufile://opay-datalake/oride/oride_dw/"+table_name
+hdfs_path="s3a://opay-bi/oride/oride_dw/"+table_name
 
 
 ##----------------------------------------- 脚本 ---------------------------------------## 
@@ -310,15 +310,15 @@ def execution_data_task_id(ds,**kwargs):
     cf=CountriesPublicFrame("true",ds,db_name,table_name,hdfs_path,"true","true")
 
     #删除分区
-    #cf.delete_partition()
+    cf.delete_partition()
 
     #读取sql
     _sql="\n"+cf.alter_partition()+"\n"+test_dim_oride_city_sql_task(ds)
 
-    #logging.info('Executing: %s',_sql)
+    logging.info('Executing: %s',_sql)
 
     #执行Hive
-    #hive_hook.run_cli(_sql)
+    hive_hook.run_cli(_sql)
 
     #熔断数据，如果数据不能为0
     #check_key_data_cnt_task(ds)
@@ -327,7 +327,7 @@ def execution_data_task_id(ds,**kwargs):
     #check_key_data_task(ds)
 
     #生产success
-    #cf.touchz_success()
+    cf.touchz_success()
 
     
 test_dim_oride_city_task= PythonOperator(
