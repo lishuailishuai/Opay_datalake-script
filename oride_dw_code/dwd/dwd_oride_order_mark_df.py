@@ -93,7 +93,7 @@ def fun_task_timeout_monitor(ds,dag,**op_kwargs):
     dag_ids=dag.dag_id
 
     msg = [
-        {"db": "oride_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "1500"}
+        {"db": "oride_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=NG/dt={pt}".format(pt=ds), "timeout": "1500"}
     ]
 
     TaskTimeoutMonitor().set_task_monitor(msg)
@@ -205,7 +205,6 @@ def check_key_data_task(ds):
     SELECT count(1)-count(distinct order_id) as cnt
       FROM {db}.{table}
       WHERE dt='{pt}'
-      and country_code in ('nal')
     '''.format(
         pt=ds,
         now_day=airflow.macros.ds_add(ds, +1),
