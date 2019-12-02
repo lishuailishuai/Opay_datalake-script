@@ -45,16 +45,16 @@ dag = airflow.DAG( 'test_dim_oride_city',
 
 
 
-# test_snappy_dev_01_tesk = S3KeySensor(
-#     task_id='test_snappy_dev_01_tesk',
-#     bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-#         hdfs_path_str="oride/oride_dw/test_snappy_dev_01",
-#         pt='{{ds}}'
-#     ),
-#     bucket_name='opay-bi',
-#     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-#     dag=dag
-# )
+test_snappy_dev_01_tesk = S3KeySensor(
+    task_id='test_snappy_dev_01_tesk',
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="oride/oride_dw/test_snappy_dev_01",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-bi',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
 
 ods_sqoop_base_data_city_conf_df_tesk = UFileSensor(
     task_id='ods_sqoop_base_data_city_conf_df_tesk',
