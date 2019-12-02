@@ -159,22 +159,22 @@ def send_balance_report_email(ds, **kwargs):
     sql = '''
         SELECT
             dt,
-            total,
-            bonus,
-            cash,
-            frozen,
-            customer,
-            customer_bouns,
-            customer_cash,
-            customer_frozen,
-            agent,
-            agent_bouns,
-            agent_cash,
-            agent_frozen,
-            merchant,
-            merchant_bouns,
-            merchant_cash,
-            merchant_frozen
+            total/100,
+            bonus/100,
+            cash/100,
+            frozen/100,
+            customer/100,
+            customer_bouns/100,
+            customer_cash/100,
+            customer_frozen/100,
+            agent/100,
+            agent_bouns/100,
+            agent_cash/100,
+            agent_frozen/100,
+            merchant/100,
+            merchant_bouns/100,
+            merchant_cash/100,
+            merchant_frozen/100
         
         FROM
            opay_dw.app_opay_account_report_d
