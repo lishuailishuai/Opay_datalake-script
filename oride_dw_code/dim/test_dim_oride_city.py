@@ -297,7 +297,7 @@ def execution_data_task_id(ds,**kwargs):
     cf=CountriesPublicFrame("true",ds,db_name,table_name,hdfs_path,"true","true")
 
     #删除分区
-    cf.delete_partition_dev()
+    cf.delete_partition()
 
     #读取sql
     _sql="\n"+cf.alter_partition()+"\n"+test_dim_oride_city_sql_task(ds)
@@ -314,7 +314,7 @@ def execution_data_task_id(ds,**kwargs):
     #check_key_data_task(ds)
 
     #生产success
-    cf.touchz_success_dev()
+    cf.touchz_success()
 
     
 test_dim_oride_city_task= PythonOperator(

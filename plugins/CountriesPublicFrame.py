@@ -224,7 +224,7 @@ class CountriesPublicFrame(object):
             sys.exit(1)
 
 
-    def delete_partition(self):
+    def delete_partition_dev(self):
 
         """
             删除分区调用函数
@@ -232,7 +232,7 @@ class CountriesPublicFrame(object):
 
         self.countries_data_dir(self.delete_exist_partition)
 
-    def touchz_success(self):
+    def touchz_success_dev(self):
 
         """
             生成 Success 调用函数
@@ -261,7 +261,7 @@ class CountriesPublicFrame(object):
             self.countries_data_dir(self.data_not_file_type_touchz)
     
 
-    def delete_partition_dev(self):
+    def delete_partition(self):
 
         """
             删除分区调用函数
@@ -282,7 +282,7 @@ class CountriesPublicFrame(object):
         self.v_del_flag=0
 
 
-    def touchz_success_dev(self):
+    def touchz_success(self):
 
         """
             生成 Success 函数
@@ -311,7 +311,7 @@ class CountriesPublicFrame(object):
             self.exist_country_code_data_dir(self.data_not_file_type_touchz)
 
 
-    def countries_data_dir(self,object_task):
+    def countries_data_dir_dev(self,object_task):
 
         """
         country_partition:是否有国家分区
