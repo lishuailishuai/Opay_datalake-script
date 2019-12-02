@@ -53,6 +53,7 @@ test_snappy_dev_01_tesk = S3PrefixSensor(
         hdfs_path_str="oride/oride_dw/test_snappy_dev_01",
         pt='{{ds}}'
     ),
+    delimiter="/",
     bucket_name='opay-bi',
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
