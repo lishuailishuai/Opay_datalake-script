@@ -16,6 +16,7 @@ from airflow.sensors.named_hive_partition_sensor import NamedHivePartitionSensor
 from airflow.sensors.hive_partition_sensor import HivePartitionSensor
 from airflow.sensors import UFileSensor
 from airflow.sensors import S3PrefixSensor
+from airflow.sensors import s3_key_sensor
 from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
 from plugins.CountriesPublicFrame import CountriesPublicFrame
 import json
@@ -45,15 +46,12 @@ dag = airflow.DAG( 'test_dim_oride_city',
 
 
 
-
-
-test_snappy_dev_01_tesk = S3PrefixSensor(
+test_snappy_dev_01_tesk = s3_key_sensor(
     task_id='test_snappy_dev_01_tesk',
-    prefix='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
         hdfs_path_str="oride/oride_dw/test_snappy_dev_01",
         pt='{{ds}}'
     ),
-    delimiter="/",
     bucket_name='opay-bi',
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
