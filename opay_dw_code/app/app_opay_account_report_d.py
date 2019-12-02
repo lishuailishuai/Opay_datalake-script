@@ -325,7 +325,7 @@ def send_balance_report_email(ds, **kwargs):
     # send mail
 
     #email_to = Variable.get("owealth_report_receivers").split()
-    email_to = ['shuzhen.liu@opay-inc.com']
+    email_to = ['bigdata@opay-inc.com']
 
     email_subject = '用户余额日报_{}'.format(ds)
     send_email(
