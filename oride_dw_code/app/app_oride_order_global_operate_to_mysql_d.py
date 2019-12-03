@@ -39,8 +39,7 @@ args = {
 
 dag = airflow.DAG('app_oride_order_global_operate_to_mysql_d',
                   schedule_interval="30 3 * * *",
-                  default_args=args,
-                  catchup=False)
+                  default_args=args)
 
 ##----------------------------------------- 依赖 ---------------------------------------##
 
