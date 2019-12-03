@@ -16,6 +16,7 @@ from airflow.sensors.named_hive_partition_sensor import NamedHivePartitionSensor
 from airflow.sensors.hive_partition_sensor import HivePartitionSensor
 from airflow.sensors import UFileSensor
 from plugins.CountriesPublicFrame import CountriesPublicFrame
+from airflow.sensors.s3_key_sensor import S3KeySensor
 import json
 import logging
 from airflow.models import Variable
@@ -60,17 +61,16 @@ ods_sqoop_base_data_order_payment_df_tesk = UFileSensor(
     dag=dag
 )
 
-dwd_oride_order_base_include_test_di_tesk = UFileSensor(
+dwd_oride_order_base_include_test_di_tesk = S3KeySensor(
     task_id='dwd_oride_order_base_include_test_di_tesk',
-    filepath='{hdfs_path_str}/country_code=NG/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw/dwd_oride_order_base_include_test_di",
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="oride/oride_dw/dwd_oride_order_base_include_test_di/counrty_code=NG",
         pt='{{ds}}'
     ),
-    bucket_name='opay-datalake',
+    bucket_name='opay-bi',
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
-
 
 ##----------------------------------------- 变量 ---------------------------------------## 
 
