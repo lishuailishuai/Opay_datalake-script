@@ -84,7 +84,7 @@ def app_oride_passenger_funnel_second_edition_d_sql_task(ds):
     SET hive.exec.dynamic.partition.mode=nonstrict;
         
         with city as(
-            select *from dim_oride_city where dt='{pt}'
+            select *from oride_dw.dim_oride_city where dt='{pt}'
         )
         
         insert overwrite table {db}.{table} partition(country_code,dt)
