@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-司机通话记录(二期)
-
+司机通话记录(二期)埋点表取数
+"""
 import airflow
 from datetime import datetime, timedelta
 from airflow.sensors import UFileSensor
@@ -11,9 +11,10 @@ from airflow.operators.python_operator import PythonOperator
 from airflow.hooks.hive_hooks import HiveCliHook
 import logging
 from plugins.TaskTouchzSuccess import TaskTouchzSuccess
+
 args = {
-    'owner':'chenghui',
-    'start_date': datetime(2019, 12, 01),
+    'owner': 'chenghui',
+    'start_date': datetime(2019, 12, 1),
     'depends_on_past': False,
     'retries': 3,
     'retry_delay': timedelta(minutes=2),
@@ -29,16 +30,6 @@ dag = airflow.DAG('app_oride_passenger_funnel_second_edition_point_d',
 
 ##----------------------------------------- 依赖 ---------------------------------------##
 
-dependence_dwd_oride_client_event_detail_hi_prev_day_task = UFileSensor(
-    task_id='dwd_oride_client_event_detail_hi_prev_day_task',
-    filepath='{hdfs_path_str}/dt={pt}/hour=23/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw/dwd_oride_client_event_detail_hi/country_code=nal",
-        pt='{{ds}}'
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
 
 dwm_oride_order_base_di_task = UFileSensor(
     task_id='dwm_oride_order_base_di_task',
@@ -50,21 +41,26 @@ dwm_oride_order_base_di_task = UFileSensor(
     poke_interval=60,
     dag=dag
 )
+dwd_oride_client_event_detail_hi_task = HivePartitionSensor(
+    task_id="dwd_oride_client_event_detail_hi_task",
+    table="dwd_oride_client_event_detail_hi",
+    partition="dt='{{ds}}'",
+    schema="oride_dw",
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
 
-##----------------------------------------- 变量 ---------------------------------------##
-db_name="oride_dw"
-table_name="app_oride_passenger_funnel_second_edition_point_d"
-hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
+# ----------------------------------------- 任务超时监控 ---------------------------------------##
 
-##----------------------------------------- 任务超时监控 ---------------------------------------##
 def fun_task_timeout_monitor(ds, dag, **op_kwargs):
     dag_ids = dag.dag_id
 
     tb = [
-        {"db": "oride_dw", "table": "{dag_name}".format(dag_name=dag_ids),
-         "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "1200"}
+        {
+            "db": "oride_dw", "table": "{dag_name}".format(dag_name=dag_ids),
+            "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "1200"
+        }
     ]
-
     TaskTimeoutMonitor().set_task_monitor(tb)
 
 
@@ -75,9 +71,16 @@ task_timeout_monitor = PythonOperator(
     dag=dag
 )
 
+##----------------------------------------- 变量 ---------------------------------------##
+db_name = "oride_dw"
+table_name = "app_oride_passenger_funnel_second_edition_point_d"
+hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
+
+
 ##----------------------------------------- 脚本 ---------------------------------------##
+
 def app_oride_passenger_funnel_second_edition_point_d_sql_task(ds):
-    HQL='''
+    HQL = '''
     
         SET hive.exec.parallel=TRUE;
         SET hive.exec.dynamic.partition.mode=nonstrict;
@@ -204,8 +207,9 @@ def app_oride_passenger_funnel_second_edition_point_d_sql_task(ds):
     )
     return HQL
 
-#主流程
-def execution_data_task_id(ds,**kargs):
+
+# 主流程
+def execution_data_task_id(ds, **kargs):
     hive_hook = HiveCliHook()
 
     # 读取sql
@@ -216,12 +220,13 @@ def execution_data_task_id(ds,**kargs):
     # 执行Hive
     hive_hook.run_cli(_sql)
     # 生成_SUCCESS
-
+    """
     第一个参数true: 数据目录是有country_code分区。false 没有
     第二个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
 
-
+    """
     TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "true", "true")
+
 
 app_oride_passenger_funnel_second_edition_point_d_task = PythonOperator(
     task_id='app_oride_passenger_funnel_second_edition_point_d_task',
@@ -230,7 +235,5 @@ app_oride_passenger_funnel_second_edition_point_d_task = PythonOperator(
     dag=dag
 )
 
-dependence_dwd_oride_client_event_detail_hi_prev_day_task>>app_oride_passenger_funnel_second_edition_point_d_task
-dwm_oride_order_base_di_task>>app_oride_passenger_funnel_second_edition_point_d_task
-
-"""
+dwm_oride_order_base_di_task >> app_oride_passenger_funnel_second_edition_point_d_task
+dwd_oride_client_event_detail_hi_task >> app_oride_passenger_funnel_second_edition_point_d_task

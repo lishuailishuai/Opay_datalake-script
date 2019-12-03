@@ -109,43 +109,43 @@ task_timeout_monitor = PythonOperator(
 
 def dim_opos_bd_relation_df_sql_task(ds):
     HQL = '''
-    set hive.exec.parallel=true;
-    set hive.exec.dynamic.partition.mode=nonstrict;
+set hive.exec.parallel=true;
+set hive.exec.dynamic.partition.mode=nonstrict;
 
-    --01.首先清空组织机构层级临时表,然后插入最新的组织机构层级数据
-    --插入最新的数据
-    insert overwrite table opos_dw.dim_opos_bd_info_df partition(country_code,dt)
-    select 
-    b.hcm_id,
-    b.hcm_name,
-    b.cm_id,
-    b.cm_name,
-    b.rm_id,
-    b.rm_name,
-    b.bdm_id,
-    b.bdm_name,
-    b.bd_id,
-    b.bd_name,
-    'nal' as country_code,
-    '{pt}' as dt
-    from
-    (
-    select hcm.id as hcm_id,hcm.name as hcm_name,cm.id as cm_id,cm.name as cm_name,rm.id as rm_id,rm.name as rm_name,bdm.id as bdm_id,bdm.name as bdm_name,bd.id as bd_id,bd.name as bd_name 
-    from 
-    (select id,name,leader_id from  opos_dw_ods.ods_sqoop_base_bd_admin_users_df where dt = '{pt}' and job_id = 6) bd
-    left join
-    (select id,name,leader_id from  opos_dw_ods.ods_sqoop_base_bd_admin_users_df where dt = '{pt}' and job_id = 5) bdm 
-    on bd.leader_id = bdm.id
-    left join
-    (select id,name,leader_id from  opos_dw_ods.ods_sqoop_base_bd_admin_users_df where dt = '{pt}' and job_id = 4) rm
-    on bdm.leader_id = rm.id
-    left join
-    (select id,name,leader_id from  opos_dw_ods.ods_sqoop_base_bd_admin_users_df where dt = '{pt}' and job_id = 3) cm 
-    on rm.leader_id = cm.id
-    left join
-    (select id,name,leader_id from  opos_dw_ods.ods_sqoop_base_bd_admin_users_df where dt = '{pt}' and job_id = 2) hcm
-    on cm.leader_id = hcm.id
-    ) as b;
+--01.首先清空组织机构层级临时表,然后插入最新的组织机构层级数据
+--插入最新的数据
+insert overwrite table opos_dw.dim_opos_bd_info_df partition(country_code,dt)
+select 
+nvl(hcm.id,0) as hcm_id
+,nvl(hcm.name,'-') as hcm_name
+,nvl(level2.cm_id,0) as cm_id
+,nvl(level2.cm_name,'-') as cm_name
+,nvl(level2.rm_id,0) as rm_id
+,nvl(level2.rm_name,'-') as rm_name
+,nvl(level2.bdm_id,0) as bdm_id
+,nvl(level2.bdm_name,'-') as bdm_name
+,nvl(level2.bd_id,0) as bd_id
+,nvl(level2.bd_name,'-') as bd_name 
+
+,'nal' as country_code
+,'{pt}' as dt
+from
+  (select id,name,leader_id from  opos_dw_ods.ods_sqoop_base_bd_admin_users_df where dt = '{pt}' and job_id = 2) hcm
+full join
+  (select nvl(cm.leader_id,0) as leader_id,nvl(cm.id,0) as cm_id,nvl(cm.name,'-') as cm_name,nvl(level3.rm_id,0) as rm_id,nvl(level3.rm_name,'-') as rm_name,nvl(level3.bdm_id,0) as bdm_id,nvl(level3.bdm_name,'-') as bdm_name,nvl(level3.bd_id,0) as bd_id,nvl(level3.bd_name,'-') as bd_name from
+    (select id,name,leader_id from  opos_dw_ods.ods_sqoop_base_bd_admin_users_df where dt = '{pt}' and job_id = 3) cm
+  full join
+    (select nvl(rm.leader_id,0) as leader_id,nvl(rm.id,0) as rm_id,nvl(rm.name,'-') as rm_name,nvl(level4.bdm_id,0) as bdm_id,nvl(level4.bdm_name,'-') as bdm_name,nvl(level4.bd_id,0) as bd_id,nvl(level4.bd_name,'-') as bd_name from
+      (select id,name,leader_id from  opos_dw_ods.ods_sqoop_base_bd_admin_users_df where dt = '{pt}' and job_id = 4) rm
+    full join
+      (select nvl(bdm.leader_id,0) as leader_id,nvl(bdm.id,0) as bdm_id,nvl(bdm.name,'-') as bdm_name,nvl(bd.id,0) as bd_id,nvl(bd.name,'-') as bd_name from
+        (select id,name,leader_id from  opos_dw_ods.ods_sqoop_base_bd_admin_users_df where dt = '{pt}' and job_id = 6) bd
+      full join
+        (select id,name,leader_id from  opos_dw_ods.ods_sqoop_base_bd_admin_users_df where dt = '{pt}' and job_id = 5) bdm
+      on bdm.id=bd.leader_id) as level4
+    on rm.id=level4.leader_id) as level3
+  on cm.id=level3.leader_id) as level2
+on hcm.id=level2.leader_id;
 
     --02.取出所有商户信息，关联bd
     insert overwrite table opos_dw.dim_opos_bd_relation_df partition(country_code,dt)
