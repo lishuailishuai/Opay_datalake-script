@@ -25,6 +25,7 @@ from airflow.models import Variable
 import requests
 import os
 
+
 args = {
     'owner': 'lijialong',
     'start_date': datetime(2019, 11, 4),
@@ -152,7 +153,6 @@ dependence_dwd_oride_order_base_include_test_df_task = UFileSensor(
     poke_interval=60,
     dag=dag
 )
-
 ##----------------------------------------- 变量 ---------------------------------------##
 
 db_name = "oride_dw"
@@ -181,13 +181,14 @@ task_timeout_monitor = PythonOperator(
 
 
 ##----------------------------------------- 脚本 ---------------------------------------##
+##----------------------------------------- 脚本 ---------------------------------------##
 
 def app_oride_order_global_operate_to_mysql_d_sql_task(ds):
     HQL = '''
       SET hive.exec.parallel=TRUE;
       set hive.exec.dynamic.partition.mode=nonstrict;    
          --将数据加载到内存，临时表
-       
+
              with 
         dwd_order_df as
         ( 
@@ -203,9 +204,9 @@ def app_oride_order_global_operate_to_mysql_d_sql_task(ds):
             from oride_dw.dwd_oride_order_base_include_test_df
             where dt = '{pt}' and city_id != 999001 and is_finish=1
         )
-    
+
     insert overwrite table oride_dw.{table} partition(country_code,dt)
-    
+
     select 
         nvl(od.city_id,-10000) as city_id,
         nvl(city.city_name,'-10000') as city_name,
@@ -228,7 +229,7 @@ def app_oride_order_global_operate_to_mysql_d_sql_task(ds):
         nvl(users.finished_users,0) as finished_users,----完单乘客数
         nvl(users.first_finished_users,0)  as new_finished_users,----新增完单乘客数
         nvl(round(od.wet_order_cnt / od.order_cnt,8),0) as wet_order_rate,--湿单占比
-        
+
         nvl(round(od.finish_order_cnt /  od.finish_order_cnt_1,8),0)  as  finish_order_mom_d, --完单日环比
         nvl(round(od.finish_order_cnt /  od.finish_order_cnt_7,8),0)  as  finish_order_yoy_d, --完单日同比
 
@@ -269,7 +270,7 @@ def app_oride_order_global_operate_to_mysql_d_sql_task(ds):
                 group by city_id with cube
 
         )tmp01
-        
+
         inner join
         (   
             select 
@@ -296,7 +297,7 @@ def app_oride_order_global_operate_to_mysql_d_sql_task(ds):
     (
         select
             b.city_id,
-        
+
             b.b_subsidy_d,
             --B端补贴/天
             --b_subsidy_m,
@@ -314,9 +315,9 @@ def app_oride_order_global_operate_to_mysql_d_sql_task(ds):
         ( --B端补贴  t1.recharge_amount+t1.reward_amount
             select 
                 city_id,
-                
+
                 sum(if(create_date ='{pt}',reward_amount,0))+sum(if(create_date ='{pt}',recharge_amount,0)) as b_subsidy_d,--B端补贴、天
-                    
+
                 sum(reward_amount) + sum(recharge_amount) as b_subsidy_m,--B端补贴 月
                 dt
             from oride_dw.dwd_oride_order_finance_df
@@ -357,13 +358,13 @@ def app_oride_order_global_operate_to_mysql_d_sql_task(ds):
         where dt ='{pt}' 
         and product_id = -10000 and driver_serv_type = -10000
     )users on nvl(od.city_id,-10000) = nvl(users.city_id ,-10000)
-    
+
     left join
     (--新增完单司机数
         select
             new.city_id,
             count(if(old.driver_id is null,new.driver_id,null)) as new_finished_drivers
-            
+
         from 
         ( --今日完单司机
             select 
@@ -377,14 +378,14 @@ def app_oride_order_global_operate_to_mysql_d_sql_task(ds):
         (--以前的完单司机数
             select 
                 driver_id
-            
+
             from oride_dw.dwd_oride_order_base_include_test_df
             where dt in ( '{pt}','his') and create_date < '{pt}' and city_id != 999001 and is_finish =1 
             group by   driver_id
         )old on new.driver_id = old.driver_id
         group by new.city_id with cube
     )new_driver on nvl(od.city_id,-10000) = nvl(new_driver.city_id,-10000)
-    
+
     left join
     (--司机人均实收
         select 
@@ -441,7 +442,7 @@ def app_oride_order_global_operate_to_mysql_d_sql_task(ds):
                 )drd on od.driver_id = drd.driver_id
                 left join 
                 (--司机amount
-                
+
                     SELECT  
                         driver_id,
                         abs(nvl(amount,0)) as amount, 
@@ -464,10 +465,7 @@ def app_oride_order_global_operate_to_mysql_d_sql_task(ds):
         from oride_dw.app_oride_order_global_operate_to_mysql_d 
         where (dt =date_sub('{pt}',1) or  dt =date_sub('{pt}',7)) and city_id <> -10000
         group by city_id
-    )global on od.city_id = global.city_id;  
-         
-         
-     '''.format(
+    )global on od.city_id = global.city_id;'''.format(
         pt=ds,
         table=table_name,
         db=db_name
