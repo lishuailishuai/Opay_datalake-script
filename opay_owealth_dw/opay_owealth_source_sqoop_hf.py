@@ -85,8 +85,7 @@ ODS_CREATE_TABLE_SQL = '''
     LOCATION
       '{ufile_path}';
     MSCK REPAIR TABLE {db_name}.`{table_name}`;
-    -- delete opay_dw table
-    --DROP TABLE IF EXISTS {db_name}.`{table_name}`;
+
 '''
 
 # 需要验证的核心业务表
@@ -228,7 +227,7 @@ for db_name, table_name, conn_id, prefix_name,priority_weight_nm,is_valid_succes
         task_id='add_partitions_{}'.format(hive_table_name),
         priority_weight=priority_weight_nm,
         hql='''
-                ALTER TABLE {table} ADD IF NOT EXISTS PARTITION (dt = '{{{{ ds }}}}',hour = '{{{{ execution_date.strftime("%H") }}}}')
+                ALTER TABLE {table} ADD IF NOT EXISTS PARTITION (dt = '{{{{ tomorrow_ds }}}}',hour = '{{{{ execution_date.strftime("%H") }}}}')
             '''.format(table=hive_table_name),
         schema=HIVE_DB,
         dag=dag)
