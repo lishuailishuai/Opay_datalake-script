@@ -277,24 +277,24 @@ def app_oride_order_global_operate_to_mysql_d_sql_task(ds):
                         select 
                 city_id,
                 
-                sum(if(create_date ='2019-11-01',reward_amount,0))+sum(if(create_date ='2019-11-01',recharge_amount,0)) as b_subsidy_d,--B端补贴、天
+                sum(if(create_date =''{pt}'',reward_amount,0))+sum(if(create_date =''{pt}'',recharge_amount,0)) as b_subsidy_d,--B端补贴、天
                     
                 sum(reward_amount) + sum(recharge_amount) as b_subsidy_m,--B端补贴 月
                 dt
             from oride_dw.dwd_oride_order_finance_df
-            where dt ='2019-11-01' and month(create_date) = month('2019-11-01')
+            where dt =''{pt}'' and month(create_date) = month(''{pt}'')
             group by city_id,dt
         )b
         left join
         (  --C端补贴  price - pay_amount is_finish=1
            select 
                 city_id,
-                sum(if(create_date ='2019-11-01',price,0))-sum(if(create_date ='2019-11-01',pay_amount,0)) as c_subsidy_d,--C端补贴、天     
-                sum(price) - (pay_amount) as c_subsidy_m,
+                sum(if(create_date =''{pt}'',price,0))-sum(if(create_date =''{pt}'',pay_amount,0)) as c_subsidy_d,--C端补贴、天     
+                sum(price) - sum(pay_amount) as c_subsidy_m,
                 dt
             from  dwd_order_df
-            where dt = '2019-11-01' and city_id != 999001 and is_finish=1
-            and   month(create_date) = month('2019-11-01')
+            where dt = ''{pt}'' and city_id != 999001 and is_finish=1
+            and   month(create_date) = month(''{pt}'')
             group by city_id,dt
         )c on  b.city_id =  c.city_id  and  c.dt =  b.dt
         group by b.city_id,b.dt,b.b_subsidy_d,c.c_subsidy_d
