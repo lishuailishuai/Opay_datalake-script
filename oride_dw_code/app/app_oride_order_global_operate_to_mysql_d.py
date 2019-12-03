@@ -59,7 +59,7 @@ dependence_dim_oride_city_task = HivePartitionSensor(
     table="dim_oride_city",
     partition="dt='{{ds}}'",
     schema="oride_dw",
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    poke_interval=60,  # 依赖   不满足时，一分钟检查一次依赖状态
     dag=dag
 )
 
