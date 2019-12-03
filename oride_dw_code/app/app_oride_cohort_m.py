@@ -15,6 +15,7 @@ from airflow.operators.bash_operator import BashOperator
 from airflow.sensors.named_hive_partition_sensor import NamedHivePartitionSensor
 from airflow.sensors.hive_partition_sensor import HivePartitionSensor
 from airflow.sensors import UFileSensor
+from airflow.sensors.s3_key_sensor import S3KeySensor
 import json
 import logging
 from airflow.models import Variable
@@ -49,18 +50,16 @@ partition_sql = "hive -e \"show partitions oride_dw.dwd_oride_order_base_include
 date_last = os.popen(partition_sql).read().strip("\n")
 
 # 依赖前一天分区
-dependence_dwd_oride_order_base_include_test_di_prev_day_task = UFileSensor(
+dependence_dwd_oride_order_base_include_test_di_prev_day_task = S3KeySensor(
     task_id='dwd_oride_order_base_include_test_di_prev_day_task',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw/dwd_oride_order_base_include_test_di/country_code=NG",
-        ##pt='{{macros.ds_add(ds, +29)}}'
-        pt=date_last
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="oride/oride_dw/dwd_oride_order_base_include_test_di/counrty_code=NG",
+        pt='{{ds}}'
     ),
-    bucket_name='opay-datalake',
+    bucket_name='opay-bi',
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
-
 
 ##----------------------------------------- 变量 ---------------------------------------##
 def get_table_info(i):
