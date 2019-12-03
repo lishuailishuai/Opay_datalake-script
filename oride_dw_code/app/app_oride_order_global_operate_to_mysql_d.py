@@ -73,16 +73,16 @@ dependence_dim_oride_passenger_base_task = HivePartitionSensor(
     dag=dag
 )
 
-# dependence_dim_oride_driver_base_task = HivePartitionSensor(
-#     task_id='dim_oride_driver_base_task',
-#     filepath='{hdfs_path_str}/country_code=NG/dt={pt}/_SUCCESS'.format(
-#         hdfs_path_str="oride/oride_dw/dim_oride_driver_base",
-#         pt='{{ds}}'
-#     ),
-#     bucket_name='opay-datalake',
-#     poke_interval=60,
-#     dag=dag
-# )
+dependence_dim_oride_driver_base_task = HivePartitionSensor(
+    task_id='dim_oride_driver_base_task',
+    filepath='{hdfs_path_str}/country_code=NG/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="oride/oride_dw/dim_oride_driver_base",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,
+    dag=dag
+)
 
 
 dependence_dwd_oride_order_finance_df_task = UFileSensor(
@@ -504,7 +504,18 @@ app_oride_order_global_operate_to_mysql_d_task = PythonOperator(
     dag=dag
 )
 
-dependence_dwm_oride_order_base_di_task >> dependence_dim_oride_city_task >> dependence_dim_oride_passenger_base_task >> \
-#dependence_dim_oride_driver_base_task >> dependence_dwd_oride_order_finance_df_task >> dependence_dwd_oride_driver_records_day_df_task >> \
-dependence_dwd_oride_driver_recharge_records_df_task >> dependence_dm_oride_driver_base_task>>dependence_dm_oride_passenger_base_cube_d_task>>\
+# dependence_dwm_oride_order_base_di_task >> dependence_dim_oride_city_task >> dependence_dim_oride_passenger_base_task >> \
+# dependence_dim_oride_driver_base_task >> dependence_dwd_oride_order_finance_df_task >> dependence_dwd_oride_driver_records_day_df_task >> \
+# dependence_dwd_oride_driver_recharge_records_df_task >> dependence_dm_oride_driver_base_task>>dependence_dm_oride_passenger_base_cube_d_task>>\
+# dependence_dwd_oride_order_base_include_test_df_task>>app_oride_order_global_operate_to_mysql_d_task
+
+
+dependence_dwm_oride_order_base_di_task>>app_oride_order_global_operate_to_mysql_d_task
+dependence_dim_oride_city_task>>app_oride_order_global_operate_to_mysql_d_task
+dependence_dim_oride_passenger_base_task>>app_oride_order_global_operate_to_mysql_d_task
+dependence_dwd_oride_order_finance_df_task>>app_oride_order_global_operate_to_mysql_d_task
+dependence_dwd_oride_driver_records_day_df_task>>app_oride_order_global_operate_to_mysql_d_task
+dependence_dwd_oride_driver_recharge_records_df_task>>app_oride_order_global_operate_to_mysql_d_task
+dependence_dm_oride_driver_base_task>>app_oride_order_global_operate_to_mysql_d_task
+dependence_dm_oride_passenger_base_cube_d_task>>app_oride_order_global_operate_to_mysql_d_task
 dependence_dwd_oride_order_base_include_test_df_task>>app_oride_order_global_operate_to_mysql_d_task
