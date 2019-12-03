@@ -109,6 +109,7 @@ task_timeout_monitor = PythonOperator(
 
 def dim_opos_bd_relation_df_sql_task(ds):
     HQL = '''
+
 set hive.exec.parallel=true;
 set hive.exec.dynamic.partition.mode=nonstrict;
 
@@ -147,53 +148,241 @@ full join
   on cm.id=level3.leader_id) as level2
 on hcm.id=level2.leader_id;
 
-    --02.取出所有商户信息，关联bd
-    insert overwrite table opos_dw.dim_opos_bd_relation_df partition(country_code,dt)
-    select 
-    s.id,
-    s.opay_id as opay_id,
-    s.shop_name as shop_name,
-    s.opay_account as opay_account,
-    
-    s.city_id as city_code,
-    s.name as city_name,
-    s.country,
-    
-    b.hcm_id,
-    b.hcm_name,
-    b.cm_id,
-    b.cm_name,
-    b.rm_id,
-    b.rm_name,
-    b.bdm_id,
-    b.bdm_name,
-    b.bd_id,
-    b.bd_name,
-    
-    s.contact_name,
-    s.contact_phone,
-    s.cate_id,
-    s.status,
-    substr(s.created_at,0,10) as created_at,
-    
-    'nal' as country_code,
-    '{pt}' as dt
-    from 
-    --取出所有商铺，以商铺为主键，先关联地市，后关联bd信息表
-    (
-      select shop.*,city.country,city.name 
-      from 
-      (select id,shop_name,bd_id,opay_id,opay_account,city_id,contact_name,contact_phone,cate_id,status,created_at from opos_dw_ods.ods_sqoop_base_bd_shop_df where dt = '{pt}') as shop 
-      left join 
-      (select id,name,country from opos_dw_ods.ods_sqoop_base_bd_city_df where dt = '{pt}') as city 
-      on 
-      shop.city_id=city.id
-    ) as s
-    left join
-    --关联bd_id各个层级的信息
+
+--02.取出所有商户信息，关联bd
+with
+bd as (
+--bd
+  select
+  s.id
+  ,s.opay_id as opay_id
+  ,s.shop_name as shop_name
+  ,s.opay_account as opay_account
+  ,s.city_id as city_code
+  ,cast(b.hcm_id as int) as hcm_id
+  ,b.hcm_name
+  ,cast(b.cm_id as int) as cm_id
+  ,b.cm_name
+  ,cast(b.rm_id as int) as rm_id
+  ,b.rm_name
+  ,cast(b.bdm_id as int) as bdm_id
+  ,b.bdm_name
+  ,cast(s.bd_id as int) as bd_id
+  ,b.bd_name
+  ,s.contact_name
+  ,s.contact_phone
+  ,s.cate_id
+  ,s.status
+  ,substr(s.created_at,0,10) as created_at
+  from
+    (select * from opos_dw_ods.ods_sqoop_base_bd_shop_df where dt = '{pt}') as s
+  inner join
     (select * from opos_dw.dim_opos_bd_info_df where country_code='nal' and dt='{pt}') as b
-    on
-    s.bd_id=b.bd_id;
+  on s.bd_id=b.bd_id
+  ),
+
+
+bdm as (  
+  --bdm
+  select
+  s.id
+  ,s.opay_id as opay_id
+  ,s.shop_name as shop_name
+  ,s.opay_account as opay_account
+  ,s.city_id as city_code
+  ,cast(b.hcm_id as int) as hcm_id
+  ,b.hcm_name
+  ,cast(b.cm_id as int) as cm_id
+  ,b.cm_name
+  ,cast(b.rm_id as int) as rm_id
+  ,b.rm_name
+  ,cast(s.bd_id as int) as bdm_id
+  ,b.bdm_name
+  ,0 as bd_id
+  ,'-' as bd_name
+  ,s.contact_name
+  ,s.contact_phone
+  ,s.cate_id
+  ,s.status
+  ,substr(s.created_at,0,10) as created_at
+  from
+    (select * from opos_dw_ods.ods_sqoop_base_bd_shop_df where dt = '{pt}') as s
+  inner join
+    (select hcm_id,hcm_name,cm_id,cm_name,rm_id,rm_name,bdm_id,bdm_name from opos_dw.dim_opos_bd_info_df where country_code='nal' and dt='{pt}' group by hcm_id,hcm_name,cm_id,cm_name,rm_id,rm_name,bdm_id,bdm_name) as b
+  on s.bd_id=b.bdm_id
+  ),
+
+rm as (
+  --rm
+  select
+  s.id
+  ,s.opay_id as opay_id
+  ,s.shop_name as shop_name
+  ,s.opay_account as opay_account
+  ,s.city_id as city_code
+  ,cast(b.hcm_id as int) as hcm_id
+  ,b.hcm_name
+  ,cast(b.cm_id as int) as cm_id
+  ,b.cm_name
+  ,cast(s.bd_id as int) as rm_id
+  ,b.rm_name
+  ,0 as bdm_id
+  ,'-' as bdm_name
+  ,0 as bd_id
+  ,'-' as bd_name
+  ,s.contact_name
+  ,s.contact_phone
+  ,s.cate_id
+  ,s.status
+  ,substr(s.created_at,0,10) as created_at
+  from
+    (select * from opos_dw_ods.ods_sqoop_base_bd_shop_df where dt = '{pt}') as s
+  inner join
+    (select hcm_id,hcm_name,cm_id,cm_name,rm_id,rm_name from opos_dw.dim_opos_bd_info_df where country_code='nal' and dt='{pt}' group by hcm_id,hcm_name,cm_id,cm_name,rm_id,rm_name) as b
+  on s.bd_id=b.rm_id
+  ),
+
+cm as (
+  --cm
+  select
+  s.id
+  ,s.opay_id as opay_id
+  ,s.shop_name as shop_name
+  ,s.opay_account as opay_account
+  ,s.city_id as city_code
+  ,cast(b.hcm_id as int) as hcm_id
+  ,b.hcm_name
+  ,cast(s.bd_id as int) as cm_id
+  ,b.cm_name
+  ,0 as rm_id
+  ,'-' as rm_name
+  ,0 as bdm_id
+  ,'-' as bdm_name
+  ,0 as bd_id
+  ,'-' as bd_name
+  ,s.contact_name
+  ,s.contact_phone
+  ,s.cate_id
+  ,s.status
+  ,substr(s.created_at,0,10) as created_at
+  from
+    (select * from opos_dw_ods.ods_sqoop_base_bd_shop_df where dt = '{pt}') as s
+  inner join
+    (select hcm_id,hcm_name,cm_id,cm_name from opos_dw.dim_opos_bd_info_df where country_code='nal' and dt='{pt}' group by hcm_id,hcm_name,cm_id,cm_name) as b
+  on s.bd_id=b.cm_id
+),
+
+hcm as (
+  
+  --hcm
+  select
+  s.id
+  ,s.opay_id as opay_id
+  ,s.shop_name as shop_name
+  ,s.opay_account as opay_account
+  ,s.city_id as city_code
+  ,cast(s.bd_id as int) as hcm_id
+  ,b.hcm_name
+  ,0 as cm_id
+  ,'-' as cm_name
+  ,0 as rm_id
+  ,'-' as rm_name
+  ,0 as bdm_id
+  ,'-' as bdm_name
+  ,0 as bd_id
+  ,'-' as bd_name
+  ,s.contact_name
+  ,s.contact_phone
+  ,s.cate_id
+  ,s.status
+  ,substr(s.created_at,0,10) as created_at
+  from
+    (select * from opos_dw_ods.ods_sqoop_base_bd_shop_df where dt = '{pt}') as s
+  inner join
+    (select hcm_id,hcm_name from opos_dw.dim_opos_bd_info_df where country_code='nal' and dt='{pt}' group by hcm_id,hcm_name) as b
+  on s.bd_id=b.hcm_id
+ 
+  ),
+
+nobd as (
+  --关联不上的
+  select
+  s.id
+  ,s.opay_id as opay_id
+  ,s.shop_name as shop_name
+  ,s.opay_account as opay_account
+  ,s.city_id as city_code
+  ,0 as hcm_id
+  ,'-' as hcm_name
+  ,0 as cm_id
+  ,'-' as cm_name
+  ,0 as rm_id
+  ,'-' as rm_name
+  ,0 as bdm_id
+  ,'-' as bdm_name
+  ,cast(s.bd_id as int) as bd_id
+  ,'-' as bd_name
+  ,s.contact_name
+  ,s.contact_phone
+  ,s.cate_id
+  ,s.status
+  ,substr(s.created_at,0,10) as created_at
+  from
+    (select * from opos_dw_ods.ods_sqoop_base_bd_shop_df where dt = '{pt}') as s
+  left join
+    (select id,job_id from opos_dw_ods.ods_sqoop_base_bd_admin_users_df where dt = '{pt}') as b
+  on s.bd_id=b.id
+  where b.job_id is null
+
+)
+
+insert overwrite table opos_dw.dim_opos_bd_relation_df partition(country_code,dt)
+select 
+b.id
+,b.opay_id
+,b.shop_name
+,b.opay_account
+,b.city_code
+,c.name as city_name
+,c.country
+,b.hcm_id
+,b.hcm_name
+,b.cm_id
+,b.cm_name
+,b.rm_id
+,b.rm_name
+,b.bdm_id
+,b.bdm_name
+,b.bd_id
+,b.bd_name
+,b.contact_name
+,b.contact_phone
+,b.cate_id
+,b.status
+,b.created_at
+
+,'nal' as country_code
+,'{pt}' as dt 
+from
+  (select id,opay_id,shop_name,opay_account,city_code,6 as job_id,hcm_id,hcm_name,cm_id,cm_name,rm_id,rm_name,bdm_id,bdm_name,bd_id,bd_name,contact_name,contact_phone,cate_id,status,created_at from bd
+  union
+  select id,opay_id,shop_name,opay_account,city_code,5 as job_id,hcm_id,hcm_name,cm_id,cm_name,rm_id,rm_name,bdm_id,bdm_name,bd_id,bd_name,contact_name,contact_phone,cate_id,status,created_at from bdm
+  union
+  select id,opay_id,shop_name,opay_account,city_code,4 as job_id,hcm_id,hcm_name,cm_id,cm_name,rm_id,rm_name,bdm_id,bdm_name,bd_id,bd_name,contact_name,contact_phone,cate_id,status,created_at from rm
+  union
+  select id,opay_id,shop_name,opay_account,city_code,3 as job_id,hcm_id,hcm_name,cm_id,cm_name,rm_id,rm_name,bdm_id,bdm_name,bd_id,bd_name,contact_name,contact_phone,cate_id,status,created_at from cm
+  union
+  select id,opay_id,shop_name,opay_account,city_code,2 as job_id,hcm_id,hcm_name,cm_id,cm_name,rm_id,rm_name,bdm_id,bdm_name,bd_id,bd_name,contact_name,contact_phone,cate_id,status,created_at from hcm
+  union
+  select id,opay_id,shop_name,opay_account,city_code,6 as job_id,hcm_id,hcm_name,cm_id,cm_name,rm_id,rm_name,bdm_id,bdm_name,bd_id,bd_name,contact_name,contact_phone,cate_id,status,created_at from nobd
+  ) as b
+left join
+  (select id,name,country from opos_dw_ods.ods_sqoop_base_bd_city_df where dt = '{pt}') as c
+on
+  b.city_code=c.id
+;
+
+
 
 '''.format(
         pt=ds,
