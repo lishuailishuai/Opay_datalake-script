@@ -204,7 +204,7 @@ def app_oride_order_global_operate_to_mysql_d_sql_task(ds):
             where dt = '{pt}' and city_id != 999001 and is_finish=1
         )
     
-    --insert overwrite table oride_dw.{table} partition(country_code,dt)
+    insert overwrite table oride_dw.{table} partition(country_code,dt)
     
     select 
         nvl(od.city_id,-10000) as city_id,
