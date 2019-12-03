@@ -108,6 +108,7 @@ task_timeout_monitor = PythonOperator(
 def dwd_pre_opos_payment_order_di_sql_task(ds):
     HQL = '''
 
+--插入数据
 set hive.exec.parallel=true;
 set hive.exec.dynamic.partition.mode=nonstrict;
 
@@ -125,32 +126,32 @@ p.order_id
 ,p.receipt_id
 ,p.sender_id
 
-,bd.hcm_id
-,bd.hcm_name
-,bd.cm_id
-,bd.cm_name
-,bd.rm_id
-,bd.rm_name
-,bd.bdm_id
-,bd.bdm_name
-,bd.bd_id
-,bd.bd_name
+,nvl(bd.hcm_id,0) as hcm_id
+,nvl(bd.hcm_name,'-') as hcm_name
+,nvl(bd.cm_id,0) as cm_id
+,nvl(bd.cm_name,'-') as cm_name
+,nvl(bd.rm_id,0) as rm_id
+,nvl(bd.rm_name,'-') as rm_name
+,nvl(bd.bdm_id,0) as bdm_id
+,nvl(bd.bdm_name,'-') as bdm_name
+,nvl(bd.bd_id,0) as bd_id
+,nvl(bd.bd_name,'-') as bd_name
 
-,bd.city_id
-,bd.name as city_name
-,bd.country
+,nvl(bd.city_id,'-') as city_id
+,nvl(bd.name,'-') as city_name
+,nvl(bd.country,'-') as country
 
-,bd.shop_id
-,bd.shop_name
-,bd.opay_account
-,bd.contact_name
-,bd.contact_phone
-,bd.cate_id
-,bd.created_at
+,nvl(bd.shop_id,'-') as shop_id
+,nvl(bd.shop_name,'-') as shop_name
+,nvl(bd.opay_account,'-') as opay_account
+,nvl(bd.contact_name,'-') as contact_name
+,nvl(bd.contact_phone,'-') as contact_phone
+,nvl(bd.cate_id,'-') as cate_id
+,nvl(bd.created_at,'-') as created_at
 
-,bd.city_id_shop
-,bd.city_name_shop
-,bd.country_shop
+,nvl(bd.city_id_shop,'-') as city_id_shop
+,nvl(bd.city_name_shop,'-') as city_name_shop
+,nvl(bd.country_shop,'-') as country_shop
 
 ,p.bill_create_ip
 ,p.org_pp_trade_no
@@ -208,24 +209,57 @@ from
 left join
     --先用orderod关联每一笔交易的bd_id,只取能关联上bd信息的交易，故用inner join
 (
-  select s.order_id,s.bd_id,s.city_id,s.shop_id,ci.name,ci.country,b.hcm_id,b.hcm_name,b.cm_id,b.cm_name,b.rm_id,b.rm_name,b.bdm_id,b.bdm_name,b.bd_name
-  ,shop.shop_name,shop.opay_account,shop.contact_name,shop.contact_phone,shop.cate_id,shop.created_at
-  ,shop.city_code as city_id_shop,shop.city_name as city_name_shop,shop.country as country_shop from
-    (select order_id,bd_id,city_id,shop_id from opos_dw_ods.ods_sqoop_base_pre_opos_payment_order_bd_di where dt='{pt}') as s 
+  select 
+  s.order_id
+  ,s.city_id
+  ,s.shop_id
+  ,ci.name
+  ,ci.country
+
+  ,s.hcm_id
+  ,hcm.name as hcm_name
+  ,s.cm_id
+  ,cm.name as cm_name
+  ,s.rm_id
+  ,rm.name as rm_name
+  ,s.bdm_id
+  ,bdm.name as bdm_name
+  ,s.bd_id
+  ,bd2.name as bd_name
+
+  ,shop.shop_name
+  ,shop.opay_account
+  ,shop.contact_name
+  ,shop.contact_phone
+  ,shop.cate_id
+  ,shop.created_at
+  ,shop.city_code as city_id_shop
+  ,shop.city_name as city_name_shop
+  ,shop.country as country_shop 
+  from
+    (select * from opos_dw_ods.ods_sqoop_base_pre_opos_payment_order_bd_di where dt='{pt}') as s 
+  left join
+    (select id,name from opos_dw_ods.ods_sqoop_base_bd_admin_users_df where dt = '{pt}') as bd2
+  on s.bd_id=bd2.id
+  left join
+    (select id,name from opos_dw_ods.ods_sqoop_base_bd_admin_users_df where dt = '{pt}') as bdm
+  on s.bdm_id=bdm.id
+  left join
+    (select id,name from opos_dw_ods.ods_sqoop_base_bd_admin_users_df where dt = '{pt}') as rm
+  on s.rm_id=rm.id
+  left join
+    (select id,name from opos_dw_ods.ods_sqoop_base_bd_admin_users_df where dt = '{pt}') as cm
+  on s.cm_id=cm.id
+  left join
+    (select id,name from opos_dw_ods.ods_sqoop_base_bd_admin_users_df where dt = '{pt}') as hcm
+  on s.hcm_id=hcm.id
   left join
   --关联城市码表，求出国家和城市描述
     (select id,name,country from opos_dw_ods.ods_sqoop_base_bd_city_df where dt = '{pt}') as ci
-  on 
-    s.city_id=ci.id
-  left join
-  --关联bd信息码表，求出所有bd的层级关系和描述
-    (select * from opos_dw.dim_opos_bd_info_df where country_code='nal' and dt='{pt}') as b
-  on 
-    s.bd_id=b.bd_id
+  on s.city_id=ci.id
   left join
     (select * from opos_dw.dim_opos_bd_relation_df where country_code='nal' and dt='{pt}') as shop
-  on
-    s.shop_id=shop.id
+  on s.shop_id=shop.id
 ) as bd
 on
   p.order_id=bd.order_id
