@@ -44,7 +44,7 @@ dag = airflow.DAG('dwm_oride_driver_base_df',
 dim_oride_driver_base_prev_day_task = UFileSensor(
     task_id='dim_oride_driver_base_prev_day_task',
     filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw/dim_oride_driver_base/country_code=nal",
+        hdfs_path_str="oride/oride_dw/dim_oride_driver_base/country_code=NG",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -242,7 +242,8 @@ select dri.driver_id,
 
             sum(if(ord.is_td_finish>=1 and is_strong_dispatch>=1,(nvl(ord.td_service_dur,0)+nvl(ord.td_cannel_pick_dur,0)+nvl(dtr.driver_freerange,0)),0)) as strong_driver_finish_online_dur,
             --强派单完单司机在线时长
-            dri.country_code as country_code,
+           -- dri.country_code as country_code,
+            'nal' as country_code,
             dri.dt as dt
 
        FROM
@@ -374,7 +375,6 @@ def check_key_data_task(ds):
     SELECT count(1)-count(distinct driver_id) as cnt
       FROM {db}.{table}
       WHERE dt='{pt}'
-      and country_code in ('nal')
     '''.format(
         pt=ds,
         now_day=airflow.macros.ds_add(ds, +1),

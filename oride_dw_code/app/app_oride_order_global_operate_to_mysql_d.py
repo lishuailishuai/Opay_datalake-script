@@ -73,11 +73,13 @@ dependence_dim_oride_passenger_base_task = HivePartitionSensor(
 )
 
 dependence_dim_oride_driver_base_task = HivePartitionSensor(
-    task_id="dim_oride_driver_base_task",
-    table="dim_oride_driver_base",
-    partition="dt='{{ds}}'",
-    schema="oride_dw",
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    task_id='dim_oride_driver_base_task',
+    filepath='{hdfs_path_str}/country_code=NG/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="oride/oride_dw/dim_oride_driver_base",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,
     dag=dag
 )
 
@@ -185,10 +187,8 @@ def app_oride_order_global_operate_to_mysql_d_sql_task(ds):
       SET hive.exec.parallel=TRUE;
       set hive.exec.dynamic.partition.mode=nonstrict;    
          --将数据加载到内存，临时表
-         
-         
-         
-     with 
+       
+             with 
         dwd_order_df as
         ( 
             select
@@ -204,7 +204,7 @@ def app_oride_order_global_operate_to_mysql_d_sql_task(ds):
             where dt = '{pt}' and city_id != 999001 and is_finish=1
         )
     
-    insert overwrite table oride_dw.{table} partition(country_code,dt)
+    --insert overwrite table oride_dw.{table} partition(country_code,dt)
     
     select 
         nvl(od.city_id,-10000) as city_id,
@@ -227,23 +227,61 @@ def app_oride_order_global_operate_to_mysql_d_sql_task(ds):
         nvl(amount.avg_finish_driver_amount,0) avg_finish_driver_amount, --司机人均收入
         nvl(users.finished_users,0) as finished_users,----完单乘客数
         nvl(users.first_finished_users,0)  as new_finished_users,----新增完单乘客数
-        nvl(round(od.wet_order_cnt / od.order_cnt,8),0) as wet_order_rate,--湿单占比 
+        nvl(round(od.wet_order_cnt / od.order_cnt,8),0) as wet_order_rate,--湿单占比
+        
+        nvl(round(od.finish_order_cnt /  od.finish_order_cnt_1,8),0)  as  finish_order_mom_d, --完单日环比
+        nvl(round(od.finish_order_cnt /  od.finish_order_cnt_7,8),0)  as  finish_order_yoy_d, --完单日同比
+
+        nvl(round(od.gmv /  od.gmv_1,8),0)  as  gmv_mom_d, --gmv日环比
+        nvl(round(od.gmv /  od.gmv_7,8),0)  as  gmv_yoy_d, --gmv日同比
+        nvl(round(sub.sum_subsidy_m / global.sum_subsidy_d_1,8),0) as sum_subsidy_mom_d , --总补贴日环比
+        nvl(round(sub.sum_subsidy_m / global.sum_subsidy_d_7,8),0) as sum_subsidy_yoy_d , --总补贴日同比
+
         'nal' as country_code,
         '{pt}' as  dt
     from 
-    (
-        select 
-            city_id,
-            count(1) as order_cnt, --下单量
-            sum(is_finish) as finish_order_cnt, --完单量
-            sum(is_valid) as valid_ord_cnt,--有效订单量
-            sum(if(is_finish =1,price,0)) as gmv, --gmv
-            count(distinct if(is_finish =1 ,driver_id, null)) as finish_order_driver_num,--完单司机数
-            count(if(is_wet_order =1,1,null)) as wet_order_cnt, --湿单量
-            sum(if(is_finish = 1, order_onride_distance , 0)) as order_distance --送驾距离
-        from  oride_dw.dwm_oride_order_base_di 
-            where dt = '{pt}' 
-        group by city_id with cube
+    (   select
+            tmp01.city_id,
+            tmp01.order_cnt, --下单量
+            tmp01.finish_order_cnt, --完单量
+            tmp01.valid_ord_cnt,--有效订单量
+            tmp01.gmv, --gmv
+            tmp01.finish_order_driver_num,--完单司机数
+            tmp01.wet_order_cnt, --湿单量
+            tmp01.order_distance, --送驾距离
+            tmp02.finish_order_cnt_1,-- 前一天完单量
+            tmp02.finish_order_cnt_7, -- 前一天完单量
+            tmp02.gmv_1,--前一天gmv
+            tmp02.gmv_7 --第7天前gmv
+
+        from(
+                select 
+                    city_id,
+                    count(1) as order_cnt, --下单量
+                    sum(is_finish) as finish_order_cnt, --完单量
+                    sum(is_valid) as valid_ord_cnt,--有效订单量
+                    sum(if(is_finish =1,price,0)) as gmv, --gmv
+                    count(distinct if(is_finish =1 ,driver_id, null)) as finish_order_driver_num,--完单司机数
+                    count(if(is_wet_order =1,1,null)) as wet_order_cnt, --湿单量
+                    sum(if(is_finish = 1, order_onride_distance , 0)) as order_distance --送驾距离
+                from  oride_dw.dwm_oride_order_base_di 
+                    where dt = '{pt}'
+                group by city_id with cube
+
+        )tmp01
+        
+        inner join
+        (   
+            select 
+                city_id,
+                sum(if(dt =date_sub('{pt}',1), is_finish,0)) as finish_order_cnt_1, -- 前一天完单量
+                sum(if(dt =date_sub('{pt}',7), is_finish,0)) as finish_order_cnt_7, -- 第前七天完单量
+                sum(if(dt =date_sub('{pt}',1) and is_finish =1,price,0)) as gmv_1,--前一天gmv
+                sum(if(dt =date_sub('{pt}',7) and is_finish =1,price,0)) as gmv_7--第7天前gmv
+            from  oride_dw.dwm_oride_order_base_di 
+            where  dt = date_sub('{pt}',1)  or  dt =date_sub('{pt}',7)
+            group by city_id
+        )tmp02 on tmp01.city_id = tmp02.city_id
     )od
     left join
     (   
@@ -274,7 +312,7 @@ def app_oride_order_global_operate_to_mysql_d_sql_task(ds):
             b.dt
         from
         ( --B端补贴  t1.recharge_amount+t1.reward_amount
-                        select 
+            select 
                 city_id,
                 
                 sum(if(create_date ='{pt}',reward_amount,0))+sum(if(create_date ='{pt}',recharge_amount,0)) as b_subsidy_d,--B端补贴、天
@@ -416,7 +454,20 @@ def app_oride_order_global_operate_to_mysql_d_sql_task(ds):
             )t
         )tmp 
         where tmp.rn = 1
-    )amount on od.city_id = amount.city_id ;'''.format(
+    )amount on od.city_id = amount.city_id
+    left join
+    (
+        select 
+            city_id,
+            SUM(if(dt =date_sub('{pt}',1), sum_subsidy_d , 0)) as sum_subsidy_d_1,--前一天的总补贴
+            SUM(if(dt =date_sub('{pt}',7), sum_subsidy_d , 0)) as sum_subsidy_d_7 --第前7天的总补贴
+        from oride_dw.app_oride_order_global_operate_to_mysql_d 
+        where (dt =date_sub('{pt}',1) or  dt =date_sub('{pt}',7)) and city_id <> -10000
+        group by city_id
+    )global on od.city_id = global.city_id;  
+         
+         
+     '''.format(
         pt=ds,
         table=table_name,
         db=db_name
