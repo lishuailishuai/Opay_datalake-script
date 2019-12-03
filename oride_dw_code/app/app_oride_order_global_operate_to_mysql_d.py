@@ -73,7 +73,7 @@ dependence_dim_oride_passenger_base_task = HivePartitionSensor(
     dag=dag
 )
 
-dependence_dim_oride_driver_base_task = HivePartitionSensor(
+dependence_dim_oride_driver_base_task = UFileSensor(
     task_id='dim_oride_driver_base_task',
     filepath='{hdfs_path_str}/country_code=NG/dt={pt}/_SUCCESS'.format(
         hdfs_path_str="oride/oride_dw/dim_oride_driver_base",
