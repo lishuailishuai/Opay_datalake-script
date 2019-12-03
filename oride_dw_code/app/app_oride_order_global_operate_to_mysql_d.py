@@ -288,6 +288,7 @@ def app_oride_order_global_operate_to_mysql_d_sql_task(ds):
         left join
         (  --C端补贴  price - pay_amount is_finish=1
            select 
+           arc
                 city_id,
                 sum(if(create_date =''{pt}'',price,0))-sum(if(create_date =''{pt}'',pay_amount,0)) as c_subsidy_d,--C端补贴、天     
                 sum(price) - sum(pay_amount) as c_subsidy_m,
