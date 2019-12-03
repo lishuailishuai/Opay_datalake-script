@@ -175,7 +175,7 @@ bd as (
   ,s.status
   ,substr(s.created_at,0,10) as created_at
   from
-    (select * from opos_dw_ods.ods_sqoop_base_bd_shop_df where dt = '{pt}') as s
+    (select * from opos_dw_ods.ods_sqoop_base_bd_shop_df where dt = '{pt}' and bd_id>0) as s
   inner join
     (select * from opos_dw.dim_opos_bd_info_df where country_code='nal' and dt='{pt}') as b
   on s.bd_id=b.bd_id
@@ -206,7 +206,7 @@ bdm as (
   ,s.status
   ,substr(s.created_at,0,10) as created_at
   from
-    (select * from opos_dw_ods.ods_sqoop_base_bd_shop_df where dt = '{pt}') as s
+    (select * from opos_dw_ods.ods_sqoop_base_bd_shop_df where dt = '{pt}' and bd_id>0) as s
   inner join
     (select hcm_id,hcm_name,cm_id,cm_name,rm_id,rm_name,bdm_id,bdm_name from opos_dw.dim_opos_bd_info_df where country_code='nal' and dt='{pt}' group by hcm_id,hcm_name,cm_id,cm_name,rm_id,rm_name,bdm_id,bdm_name) as b
   on s.bd_id=b.bdm_id
@@ -236,7 +236,7 @@ rm as (
   ,s.status
   ,substr(s.created_at,0,10) as created_at
   from
-    (select * from opos_dw_ods.ods_sqoop_base_bd_shop_df where dt = '{pt}') as s
+    (select * from opos_dw_ods.ods_sqoop_base_bd_shop_df where dt = '{pt}' and bd_id>0) as s
   inner join
     (select hcm_id,hcm_name,cm_id,cm_name,rm_id,rm_name from opos_dw.dim_opos_bd_info_df where country_code='nal' and dt='{pt}' group by hcm_id,hcm_name,cm_id,cm_name,rm_id,rm_name) as b
   on s.bd_id=b.rm_id
@@ -266,7 +266,7 @@ cm as (
   ,s.status
   ,substr(s.created_at,0,10) as created_at
   from
-    (select * from opos_dw_ods.ods_sqoop_base_bd_shop_df where dt = '{pt}') as s
+    (select * from opos_dw_ods.ods_sqoop_base_bd_shop_df where dt = '{pt}' and bd_id>0) as s
   inner join
     (select hcm_id,hcm_name,cm_id,cm_name from opos_dw.dim_opos_bd_info_df where country_code='nal' and dt='{pt}' group by hcm_id,hcm_name,cm_id,cm_name) as b
   on s.bd_id=b.cm_id
@@ -297,7 +297,7 @@ hcm as (
   ,s.status
   ,substr(s.created_at,0,10) as created_at
   from
-    (select * from opos_dw_ods.ods_sqoop_base_bd_shop_df where dt = '{pt}') as s
+    (select * from opos_dw_ods.ods_sqoop_base_bd_shop_df where dt = '{pt}' and bd_id>0) as s
   inner join
     (select hcm_id,hcm_name from opos_dw.dim_opos_bd_info_df where country_code='nal' and dt='{pt}' group by hcm_id,hcm_name) as b
   on s.bd_id=b.hcm_id
@@ -328,7 +328,7 @@ nobd as (
   ,s.status
   ,substr(s.created_at,0,10) as created_at
   from
-    (select * from opos_dw_ods.ods_sqoop_base_bd_shop_df where dt = '{pt}') as s
+    (select * from opos_dw_ods.ods_sqoop_base_bd_shop_df where dt = '{pt}' and bd_id>0) as s
   left join
     (select id,job_id from opos_dw_ods.ods_sqoop_base_bd_admin_users_df where dt = '{pt}') as b
   on s.bd_id=b.id
@@ -345,6 +345,7 @@ b.id
 ,b.city_code
 ,c.name as city_name
 ,c.country
+,b.job_id
 ,b.hcm_id
 ,b.hcm_name
 ,b.cm_id
@@ -374,13 +375,14 @@ from
   union
   select id,opay_id,shop_name,opay_account,city_code,2 as job_id,hcm_id,hcm_name,cm_id,cm_name,rm_id,rm_name,bdm_id,bdm_name,bd_id,bd_name,contact_name,contact_phone,cate_id,status,created_at from hcm
   union
-  select id,opay_id,shop_name,opay_account,city_code,6 as job_id,hcm_id,hcm_name,cm_id,cm_name,rm_id,rm_name,bdm_id,bdm_name,bd_id,bd_name,contact_name,contact_phone,cate_id,status,created_at from nobd
+  select id,opay_id,shop_name,opay_account,city_code,-1 as job_id,hcm_id,hcm_name,cm_id,cm_name,rm_id,rm_name,bdm_id,bdm_name,bd_id,bd_name,contact_name,contact_phone,cate_id,status,created_at from nobd
   ) as b
 left join
   (select id,name,country from opos_dw_ods.ods_sqoop_base_bd_city_df where dt = '{pt}') as c
 on
   b.city_code=c.id
 ;
+
 
 
 
