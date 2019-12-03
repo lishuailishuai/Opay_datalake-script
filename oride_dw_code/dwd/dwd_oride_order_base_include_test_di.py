@@ -101,7 +101,7 @@ ods_sqoop_base_data_country_conf_df_prev_day_task = UFileSensor(
 
 db_name="oride_dw"
 table_name = "dwd_oride_order_base_include_test_di"
-hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
+hdfs_path = "s3a://opay-bi/oride/oride_dw/" + table_name
 
 ##----------------------------------------- 任务超时监控 ---------------------------------------## 
 
