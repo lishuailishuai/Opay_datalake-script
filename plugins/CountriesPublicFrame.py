@@ -77,7 +77,7 @@ class CountriesPublicFrame(object):
 
             v_country_code_list=[]
 
-            self.v_country_code_map = Variable.get("country_code_dim")
+            self.v_country_code_map = Variable.get("country_code_dim").split("\n")
 
             for val in self.v_country_code_map:
                 #print(val)
