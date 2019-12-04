@@ -84,6 +84,8 @@ class CountriesPublicFrame(object):
 
             print(type(self.v_country_code_map))
 
+            print(self.v_country_code_map)
+
             print(self.v_country_code_map["NG"])
 
             print(self.v_country_code_map["GH"])
