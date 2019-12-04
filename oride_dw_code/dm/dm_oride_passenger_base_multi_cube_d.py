@@ -55,29 +55,6 @@ dependence_dwd_oride_order_base_include_test_di_prev_day_task = S3KeySensor(
 )
 
 # 依赖前一天分区
-dependence_dwd_oride_order_base_include_test_df_prev_day_task = UFileSensor(
-    task_id='dwd_oride_order_base_include_test_df_prev_day_task',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw/dwd_oride_order_base_include_test_df/country_code=nal",
-        pt='{{ds}}'
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
-
-# 依赖前一天分区
-dependence_dwd_oride_order_base_include_test_df_his_prev_day_task = UFileSensor(
-    task_id='dwd_oride_order_base_include_test_df_his_prev_day_task',
-    filepath='{hdfs_path_str}/dt=his/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw/dwd_oride_order_base_include_test_df/country_code=nal"
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
-
-# 依赖前一天分区
 dependence_dim_oride_passenger_base_prev_day_task = UFileSensor(
     task_id='dim_oride_passenger_base_prev_day_task',
     filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
@@ -256,9 +233,7 @@ dm_oride_passenger_base_multi_cube_d_task = PythonOperator(
     dag=dag
 )
 
-dependence_dwd_oride_order_base_include_test_di_prev_day_task >> \
-dependence_dwd_oride_order_base_include_test_df_prev_day_task >> \
-dependence_dwd_oride_order_base_include_test_df_his_prev_day_task >> \
-dependence_dim_oride_passenger_base_prev_day_task >> \
-dm_oride_passenger_base_multi_cube_d_task
+dependence_dwd_oride_order_base_include_test_di_prev_day_task >> dm_oride_passenger_base_multi_cube_d_task
+dependence_dim_oride_passenger_base_prev_day_task >> dm_oride_passenger_base_multi_cube_d_task
+
 
