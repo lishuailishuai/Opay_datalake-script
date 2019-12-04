@@ -90,7 +90,7 @@ class CountriesPublicFrame(object):
         
         #return v_country_code_list
 
-        self.country_code_list=v_country_code_list
+        #self.country_code_list=v_country_code_list
 
         print(v_country_code_list)
 
