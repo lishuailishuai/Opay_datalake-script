@@ -85,56 +85,50 @@ def fun_task_timeout_monitor(ds, dag, **op_kwargs):
 
 def opos_active_user_daily_sql_task(ds):
     HQL = '''
-set hive.exec.parallel=true;
-set hive.exec.dynamic.partition.mode=nonstrict;
 
 set hive.exec.parallel=true;
 set hive.exec.dynamic.partition.mode=nonstrict;
-
---03.创建临时明细表,扩充明细信息,将最新一天的交易明细数据关联上dbid和地市编码名称后插入到临时表中
-insert overwrite table opos_temp.opos_active_user_detail_daily partition (country_code,dt)
-select 
-cm_id
-,cm_name
-,rm_id
-,rm_name
-,bdm_id
-,bdm_name
-,bd_id
-,bd_name
-
-,city_id
-,city_name
-,country
-
-,sender_id
-,receipt_id
-,order_type
-,trade_status
-,first_order
-
-,'nal' as country_code
-,dt
-from 
---取出paynemt当天的所有数据
-(select * from opos_dw.dwd_pre_opos_payment_order_di where country_code='nal' and dt='{pt}' and trade_status = 'SUCCESS' and length(bd_id)>0) as tmp;
 
 --03.01.查出临时表中昨天,前天,7天前,15天前,30天前的数据
 with
 active_base as (
   select 
-  * 
+  hcm_id
+  ,hcm_name
+  ,cm_id
+  ,cm_name
+  ,rm_id
+  ,rm_name
+  ,bdm_id
+  ,bdm_name
+  ,bd_id
+  ,bd_name 
+
+  ,city_id
+  ,city_name
+  ,country
+  
+  ,sender_id
+  ,receipt_id
+  ,order_type
+  ,trade_status
+  ,first_order
+
+  ,dt
   from 
-  opos_temp.opos_active_user_detail_daily
+  opos_dw.dwd_pre_opos_payment_order_di
   where 
   country_code = 'nal' 
   and dt in ('{pt}','{before_1_day}','{before_7_day}','{before_15_day}','{before_30_day}')
+  and trade_status = 'SUCCESS'
 ),
 
 --03.02.然后从昨天,前天等等特殊历史天数中每个付款客户及对应付款店dbid的次数
 user_base as ( 
   select  
-  cm_id
+  hcm_id
+  ,hcm_name
+  ,cm_id
   ,cm_name
   ,rm_id
   ,rm_name
@@ -158,7 +152,9 @@ user_base as (
   from 
   active_base
   group by 
-  cm_id
+  hcm_id
+  ,hcm_name
+  ,cm_id
   ,cm_name
   ,rm_id
   ,rm_name
@@ -178,7 +174,8 @@ user_base as (
 --03.03.统计昨日有交易的交易,然后统计每个dbid下的每种订单类型有多数个用户
 current_user as (
   select 
-  '{pt}' as dt
+  hcm_id
+  ,hcm_name
   ,cm_id
   ,cm_name
   ,rm_id
@@ -202,7 +199,9 @@ current_user as (
   where 
   is_current_day > 0
   group by 
-  cm_id
+  hcm_id
+  ,hcm_name
+  ,cm_id
   ,cm_name
   ,rm_id
   ,rm_name
@@ -220,202 +219,502 @@ current_user as (
 day_1_remain as (
 
   select 
-  '{pt}' as dt,
-  bd_id,
-  city_id,
-  count(distinct sender_id) as user_active_cnt
+  hcm_id
+  ,hcm_name
+  ,cm_id
+  ,cm_name
+  ,rm_id
+  ,rm_name
+  ,bdm_id
+  ,bdm_name
+  ,bd_id
+  ,bd_name 
+
+  ,city_id
+  ,count(distinct sender_id) as user_active_cnt
   from 
   user_base 
   where is_current_day > 0 and is_before_1_day > 0
   group by 
-  bd_id,
-  city_id
+  hcm_id
+  ,hcm_name
+  ,cm_id
+  ,cm_name
+  ,rm_id
+  ,rm_name
+  ,bdm_id
+  ,bdm_name
+  ,bd_id
+  ,bd_name 
+
+  ,city_id
 ),
 
 --03.05.统计昨天和7天前都有交易的客户对应到dbid下的人数
 day_7_remain as (
 
   select 
-  '{pt}' as dt,
-  bd_id,
-  city_id,
-  count(distinct sender_id) as user_active_cnt
+  hcm_id
+  ,hcm_name
+  ,cm_id
+  ,cm_name
+  ,rm_id
+  ,rm_name
+  ,bdm_id
+  ,bdm_name
+  ,bd_id
+  ,bd_name 
+
+  ,city_id
+  ,count(distinct sender_id) as user_active_cnt
   from 
   user_base 
   where is_current_day > 0 and is_before_7_day > 0
   group by 
-  bd_id,
-  city_id
+  hcm_id
+  ,hcm_name
+  ,cm_id
+  ,cm_name
+  ,rm_id
+  ,rm_name
+  ,bdm_id
+  ,bdm_name
+  ,bd_id
+  ,bd_name 
+
+  ,city_id
 ),
 
 --03.06.统计昨天和15天前都有交易的客户
 day_15_remain as (
   select 
-  '{pt}' as dt,
-  bd_id,
-  city_id,
-  count(distinct sender_id) as user_active_cnt
+  hcm_id
+  ,hcm_name
+  ,cm_id
+  ,cm_name
+  ,rm_id
+  ,rm_name
+  ,bdm_id
+  ,bdm_name
+  ,bd_id
+  ,bd_name 
+
+  ,city_id
+  ,count(distinct sender_id) as user_active_cnt
   from 
   user_base 
   where is_current_day > 0 and is_before_15_day > 0
   group by 
-  bd_id,
-  city_id
+  hcm_id
+  ,hcm_name
+  ,cm_id
+  ,cm_name
+  ,rm_id
+  ,rm_name
+  ,bdm_id
+  ,bdm_name
+  ,bd_id
+  ,bd_name 
+
+  ,city_id
 ),
 
 --03.07.统计昨天和30天前都有交易的客户
 day_30_remain as (
   select 
-  '{pt}' as dt,
-  bd_id,
-  city_id,
-  count(distinct sender_id) as user_active_cnt
+  hcm_id
+  ,hcm_name
+  ,cm_id
+  ,cm_name
+  ,rm_id
+  ,rm_name
+  ,bdm_id
+  ,bdm_name
+  ,bd_id
+  ,bd_name 
+
+  ,city_id
+  ,count(distinct sender_id) as user_active_cnt
   from 
   user_base 
   where is_current_day > 0 and is_before_30_day > 0
   group by 
-  bd_id,
-  city_id
+  hcm_id
+  ,hcm_name
+  ,cm_id
+  ,cm_name
+  ,rm_id
+  ,rm_name
+  ,bdm_id
+  ,bdm_name
+  ,bd_id
+  ,bd_name 
+
+  ,city_id
 ),
 
 --03.08.统计每个dbid下交易成功的商户数量以及用pos交易的商户数量
 order_merchant_data as (
   select 
-  '{pt}' as dt,
-  bd_id,
-  city_id,
-  count(distinct(receipt_id)) as order_merchant_cnt,
-  count(distinct(if(order_type = 'pos',receipt_id,null))) as pos_order_merchant_cnt
+  hcm_id
+  ,hcm_name
+  ,cm_id
+  ,cm_name
+  ,rm_id
+  ,rm_name
+  ,bdm_id
+  ,bdm_name
+  ,bd_id
+  ,bd_name 
+
+  ,city_id
+  ,count(distinct(receipt_id)) as order_merchant_cnt
+  ,count(distinct(if(order_type = 'pos',receipt_id,null))) as pos_order_merchant_cnt
   from 
   active_base
   where dt = '{pt}'
   group by 
-  bd_id,
-  city_id
+  hcm_id
+  ,hcm_name
+  ,cm_id
+  ,cm_name
+  ,rm_id
+  ,rm_name
+  ,bdm_id
+  ,bdm_name
+  ,bd_id
+  ,bd_name 
+
+  ,city_id
 ),
 
 --03.09.join是inner join取维内自然周的数据
 week_data as (
   select 
-  '{pt}' as dt,
-  u.bd_id,
-  u.city_id,
-  mt.monday_of_year,
-  count(distinct(if(order_type = 'pos',sender_id,null))) as pos_user_active_cnt,
-  count(distinct(if(order_type = 'qrcode',sender_id,null))) as qr_user_active_cnt
+  u.hcm_id
+  ,u.hcm_name
+  ,u.cm_id
+  ,u.cm_name
+  ,u.rm_id
+  ,u.rm_name
+  ,u.bdm_id
+  ,u.bdm_name
+  ,u.bd_id
+  ,u.bd_name 
+
+  ,u.city_id
+  ,mt.monday_of_year
+  ,count(distinct(if(u.order_type = 'pos',u.sender_id,null))) as pos_user_active_cnt
+  ,count(distinct(if(u.order_type = 'qrcode',u.sender_id,null))) as qr_user_active_cnt
   from 
-  (
-  select 
-  *
-  from 
-  opos_temp.opos_active_user_detail_daily 
-  where 
-  country_code = 'nal' 
-  and dt >= '{pt}' 
-  and dt <= '{before_15_day}'
-  ) u 
+    (
+    select 
+    hcm_id
+    ,hcm_name
+    ,cm_id
+    ,cm_name
+    ,rm_id
+    ,rm_name
+    ,bdm_id
+    ,bdm_name
+    ,bd_id
+    ,bd_name 
+    ,city_id
+    ,order_type
+    ,sender_id
+    ,dt
+    from 
+    opos_dw.dwd_pre_opos_payment_order_di 
+    where 
+    country_code = 'nal' 
+    and dt >= '{pt}' 
+    and dt <= '{before_7_day}'
+    and trade_status = 'SUCCESS'
+    ) u 
   inner join 
   --取出当日所在日期的本周的所有7天的日期
-  (select d.dt,d.monday_of_year from public_dw_dim.dim_date d inner join (select * from public_dw_dim.dim_date where dt = '{pt}') t on d.monday_of_year = t.monday_of_year) as mt
-
-  on 
-  u.dt = mt.dt
+    (select d.dt,d.monday_of_year from public_dw_dim.dim_date d inner join (select * from public_dw_dim.dim_date where dt = '{pt}') t on d.monday_of_year = t.monday_of_year) as mt
+  on u.dt = mt.dt
   group by 
-  mt.monday_of_year
+  u.hcm_id
+  ,u.hcm_name
+  ,u.cm_id
+  ,u.cm_name
+  ,u.rm_id
+  ,u.rm_name
+  ,u.bdm_id
+  ,u.bdm_name
   ,u.bd_id
+  ,u.bd_name 
+
   ,u.city_id
+  ,mt.monday_of_year
 ),
 
 --03.10.求出每月的dbid分别是pos和qrcode交易的笔数,只拿出所属月的
 month_data as (
   select 
-  '{pt}' as dt,
-  u.bd_id,
-  u.city_id,
-  mt.month,
-  count(distinct(if(order_type = 'pos',sender_id,null))) as pos_user_active_cnt,
-  count(distinct(if(order_type = 'qrcode',sender_id,null))) as qr_user_active_cnt
+  u.hcm_id
+  ,u.hcm_name
+  ,u.cm_id
+  ,u.cm_name
+  ,u.rm_id
+  ,u.rm_name
+  ,u.bdm_id
+  ,u.bdm_name
+  ,u.bd_id
+  ,u.bd_name 
 
+  ,u.city_id
+  ,mt.month
+  ,count(distinct(if(u.order_type = 'pos',u.sender_id,null))) as pos_user_active_cnt
+  ,count(distinct(if(u.order_type = 'qrcode',u.sender_id,null))) as qr_user_active_cnt
   from 
-  (
-  select 
-  *
-  from 
-  opos_temp.opos_active_user_detail_daily 
-  where country_code = 'nal' 
-  and dt <= '{pt}' 
-  and dt >= '{before_30_day}'
-  ) u 
+    (
+    select 
+    hcm_id
+    ,hcm_name
+    ,cm_id
+    ,cm_name
+    ,rm_id
+    ,rm_name
+    ,bdm_id
+    ,bdm_name
+    ,bd_id
+    ,bd_name 
+    ,city_id
+    ,order_type
+    ,sender_id
+    ,dt
+    from 
+    opos_dw.dwd_pre_opos_payment_order_di 
+    where 
+    country_code = 'nal' 
+    and dt >= '{pt}' 
+    and dt <= '{before_30_day}'
+    and trade_status = 'SUCCESS'
+    ) u 
   inner join 
   --取出当日所在日期的本月的所有的日期
-  (select d.dt,d.month from public_dw_dim.dim_date d inner join (select * from public_dw_dim.dim_date where dt = '{pt}') t on d.month = t.month) as mt
-  on 
-  u.dt = mt.dt
+    (select d.dt,d.month from public_dw_dim.dim_date d inner join (select * from public_dw_dim.dim_date where dt = '{pt}') t on d.month = t.month) as mt
+  on u.dt = mt.dt
   group by 
-  mt.month,
-  u.bd_id,
-  u.city_id
+  u.hcm_id
+  ,u.hcm_name
+  ,u.cm_id
+  ,u.cm_name
+  ,u.rm_id
+  ,u.rm_name
+  ,u.bdm_id
+  ,u.bdm_name
+  ,u.bd_id
+  ,u.bd_name 
+
+  ,u.city_id
+  ,mt.month
 ),
 
 --03.11.取出当天所有付款者的数量
 have_order_user as (
   select 
-  '{pt}' as dt,
-  bd_id,
-  city_id,
-  count(distinct(sender_id)) as have_order_user_cnt
+  hcm_id
+  ,hcm_name
+  ,cm_id
+  ,cm_name
+  ,rm_id
+  ,rm_name
+  ,bdm_id
+  ,bdm_name
+  ,bd_id
+  ,bd_name 
+
+  ,city_id
+  ,count(distinct(sender_id)) as have_order_user_cnt
   from 
   active_base
   where 
   dt = '{pt}'
   group by 
-  bd_id,
-  city_id
+  hcm_id
+  ,hcm_name
+  ,cm_id
+  ,cm_name
+  ,rm_id
+  ,rm_name
+  ,bdm_id
+  ,bdm_name
+  ,bd_id
+  ,bd_name 
+
+  ,city_id
 ),
 
 --03.12.取出历史数据中所有的付款者，收款者，以及pos和扫码的人数
 his_data as (
   select 
-  '{pt}' as dt,
-  bd_id,
-  city_id,
-  count(distinct(receipt_id)) as his_order_merchant_cnt,
-  count(distinct(if(order_type = 'pos',receipt_id,null))) as his_pos_order_merchant_cnt,
+  '{pt}' as dt
+  ,hcm_id
+  ,hcm_name
+  ,cm_id
+  ,cm_name
+  ,rm_id
+  ,rm_name
+  ,bdm_id
+  ,bdm_name
+  ,bd_id
+  ,bd_name 
 
-  count(distinct(sender_id)) as his_user_active_cnt,
-  count(distinct(if(order_type = 'pos',sender_id,null))) as his_pos_user_active_cnt,
-  count(distinct(if(order_type = 'qrcode',sender_id,null))) as his_qr_user_active_cnt
+  ,city_id
+  ,city_name
+  ,country
+  ,count(distinct(receipt_id)) as his_order_merchant_cnt
+  ,count(distinct(if(order_type = 'pos',receipt_id,null))) as his_pos_order_merchant_cnt
 
-  from 
-  opos_temp.opos_active_user_detail_daily
-  where 
-  country_code='nal'
+  ,count(distinct(sender_id)) as his_user_active_cnt
+  ,count(distinct(if(order_type = 'pos',sender_id,null))) as his_pos_user_active_cnt
+  ,count(distinct(if(order_type = 'qrcode',sender_id,null))) as his_qr_user_active_cnt
+  from  
+
+    (
+    select 
+    hcm_id
+    ,hcm_name
+    ,cm_id
+    ,cm_name
+    ,rm_id
+    ,rm_name
+    ,bdm_id
+    ,bdm_name
+    ,bd_id
+    ,bd_name 
+  
+    ,city_id
+    ,city_name
+    ,country
+    ,order_type
+    ,receipt_id
+    ,sender_id
+    from  
+    opos_dw.dwd_pre_opos_payment_order_di 
+    where 
+    country_code = 'nal' 
+    and dt >= '2019-10-25' 
+    and dt <= '{pt}'
+    and trade_status = 'SUCCESS'
+    group by 
+    hcm_id
+    ,hcm_name
+    ,cm_id
+    ,cm_name
+    ,rm_id
+    ,rm_name
+    ,bdm_id
+    ,bdm_name
+    ,bd_id
+    ,bd_name 
+  
+    ,city_id
+    ,city_name
+    ,country
+    ,order_type
+    ,receipt_id
+    ,sender_id
+    ) as m
+
   group by 
-  bd_id,
-  city_id
+  hcm_id
+  ,hcm_name
+  ,cm_id
+  ,cm_name
+  ,rm_id
+  ,rm_name
+  ,bdm_id
+  ,bdm_name
+  ,bd_id
+  ,bd_name 
+
+  ,city_id
+  ,city_name
+  ,country
 ),
 
 --03.13.查出当天活跃的商户,然后计算成功交易次数大于5次的商户所属的bdid所对应的商户个数
 active_merchant as (
   select 
-  '{pt}' as dt,
-  t.bd_id,
-  t.city_id,
-  count(distinct(t.receipt_id)) as more_5_merchant_cnt
+  hcm_id
+  ,hcm_name
+  ,cm_id
+  ,cm_name
+  ,rm_id
+  ,rm_name
+  ,bdm_id
+  ,bdm_name
+  ,bd_id
+  ,bd_name 
+
+  ,city_id
+  ,count(distinct(t.receipt_id)) as more_5_merchant_cnt
 
   from 
   --先计算每个商户成功交易的笔数
-  (select bd_id,city_id,receipt_id,count(1) as current_complete_cnt from opos_temp.opos_active_user_detail_daily where country_code = 'nal' and dt = '{pt}' group by bd_id,city_id,receipt_id) t 
+    (
+    select 
+    hcm_id
+    ,hcm_name
+    ,cm_id
+    ,cm_name
+    ,rm_id
+    ,rm_name
+    ,bdm_id
+    ,bdm_name
+    ,bd_id
+    ,bd_name 
+  
+    ,city_id
+    ,receipt_id
+    ,count(1) as current_complete_cnt 
+    from 
+    opos_dw.dwd_pre_opos_payment_order_di 
+    where 
+    country_code = 'nal' 
+    and dt = '{pt}' 
+    and trade_status = 'SUCCESS'
+    group by 
+    hcm_id
+    ,hcm_name
+    ,cm_id
+    ,cm_name
+    ,rm_id
+    ,rm_name
+    ,bdm_id
+    ,bdm_name
+    ,bd_id
+    ,bd_name 
+  
+    ,city_id
+    ,receipt_id) t 
   where 
-  t.current_complete_cnt > 5
+  current_complete_cnt > 5
   group by
-  t.bd_id,
-  t.city_id
+  hcm_id
+  ,hcm_name
+  ,cm_id
+  ,cm_name
+  ,rm_id
+  ,rm_name
+  ,bdm_id
+  ,bdm_name
+  ,bd_id
+  ,bd_name 
+
+  ,city_id
 )
 
 insert overwrite table opos_temp.opos_active_user_daily partition(country_code,dt)
 select 
-cu.cm_id
+cu.hcm_id
+,cu.hcm_name
+,cu.cm_id
 ,cu.cm_name
 ,cu.rm_id
 ,cu.rm_name
@@ -428,8 +727,13 @@ cu.cm_id
 ,cu.city_name
 ,cu.country
 
-,cu.pos_user_active_cnt
-,cu.qr_user_active_cnt
+,d.dt as create_date
+,d.week_of_year as create_week
+,substr(d.dt,0,7) as create_month
+,substr(d.dt,0,4) as create_year
+
+,nvl(hd.pos_user_active_cnt,0) pos_user_active_cnt
+,nvl(hd.qr_user_active_cnt,0) qr_user_active_cnt
 ,nvl(dr1.user_active_cnt,0) before_1_day_user_active_cnt
 ,nvl(dr7.user_active_cnt,0) before_7_day_user_active_cnt
 ,nvl(dr15.user_active_cnt,0) before_15_day_user_active_cnt
@@ -442,31 +746,56 @@ cu.cm_id
 ,nvl(md.qr_user_active_cnt,0) month_qr_user_active_cnt
 ,nvl(ou.have_order_user_cnt,0) have_order_user_cnt
 
-,cu.user_active_cnt
-,cu.new_user_cnt
+,nvl(hd.user_active_cnt,0) user_active_cnt
+,nvl(hd.new_user_cnt,0) new_user_cnt
 ,nvl(am.more_5_merchant_cnt,0) more_5_merchant_cnt
-,nvl(hd.his_order_merchant_cnt,0) his_order_merchant_cnt
-,nvl(hd.his_pos_order_merchant_cnt,0) his_pos_order_merchant_cnt
-,nvl(hd.his_user_active_cnt,0) his_user_active_cnt
-,nvl(hd.his_pos_user_active_cnt,0) his_pos_user_active_cnt
-,nvl(hd.his_qr_user_active_cnt,0) his_qr_user_active_cnt
+,nvl(cu.his_order_merchant_cnt,0) his_order_merchant_cnt
+,nvl(cu.his_pos_order_merchant_cnt,0) his_pos_order_merchant_cnt
+,nvl(cu.his_user_active_cnt,0) his_user_active_cnt
+,nvl(cu.his_pos_user_active_cnt,0) his_pos_user_active_cnt
+,nvl(cu.his_qr_user_active_cnt,0) his_qr_user_active_cnt
 
 ,'nal' as country_code
 ,'{pt}' as dt
 
 from 
-current_user cu
-left join day_1_remain dr1 on cu.dt = dr1.dt and cu.bd_id = dr1.bd_id and cu.city_id = dr1.city_id
-left join day_7_remain dr7 on cu.dt = dr7.dt and cu.bd_id = dr7.bd_id and cu.city_id = dr7.city_id
-left join day_15_remain dr15 on cu.dt = dr15.dt and cu.bd_id = dr15.bd_id and cu.city_id = dr15.city_id
-left join day_30_remain dr30 on cu.dt = dr30.dt and cu.bd_id = dr30.bd_id and cu.city_id = dr30.city_id
-left join order_merchant_data omd on cu.dt = omd.dt and cu.bd_id = omd.bd_id and cu.city_id = omd.city_id
-left join week_data wd on cu.dt = wd.dt and cu.bd_id = wd.bd_id and cu.city_id = wd.city_id
-left join month_data md on cu.dt = md.dt and cu.bd_id = md.bd_id and cu.city_id = md.city_id
-left join have_order_user ou on cu.dt = ou.dt and cu.bd_id = ou.bd_id and cu.city_id = ou.city_id
-left join his_data hd on cu.dt = hd.dt and cu.bd_id = hd.bd_id and cu.city_id = hd.city_id
-left join active_merchant am on cu.dt = am.dt and cu.bd_id = am.bd_id and cu.city_id = am.city_id
+his_data cu
+left join 
+day_1_remain dr1 
+on cu.hcm_id = dr1.hcm_id and cu.cm_id = dr1.cm_id and cu.rm_id = dr1.rm_id and cu.bdm_id = dr1.bdm_id and cu.bd_id = dr1.bd_id and cu.city_id = dr1.city_id
+left join 
+day_7_remain dr7 
+on cu.hcm_id = dr7.hcm_id and cu.cm_id = dr7.cm_id and cu.rm_id = dr7.rm_id and cu.bdm_id = dr7.bdm_id and cu.bd_id = dr7.bd_id and cu.city_id = dr7.city_id
+left join 
+day_15_remain dr15 
+on cu.hcm_id = dr15.hcm_id and cu.cm_id = dr15.cm_id and cu.rm_id = dr15.rm_id and cu.bdm_id = dr15.bdm_id and cu.bd_id = dr15.bd_id and cu.city_id = dr15.city_id
+left join 
+day_30_remain dr30 
+on cu.hcm_id = dr30.hcm_id and cu.cm_id = dr30.cm_id and cu.rm_id = dr30.rm_id and cu.bdm_id = dr30.bdm_id and cu.bd_id = dr30.bd_id and cu.city_id = dr30.city_id
+left join 
+order_merchant_data omd 
+on cu.hcm_id = omd.hcm_id and cu.cm_id = omd.cm_id and cu.rm_id = omd.rm_id and cu.bdm_id = omd.bdm_id and cu.bd_id = omd.bd_id and cu.city_id = omd.city_id
+left join 
+week_data wd 
+on cu.hcm_id = wd.hcm_id and cu.cm_id = wd.cm_id and cu.rm_id = wd.rm_id and cu.bdm_id = wd.bdm_id and cu.bd_id = wd.bd_id and cu.city_id = wd.city_id
+left join 
+month_data md 
+on cu.hcm_id = md.hcm_id and cu.cm_id = md.cm_id and cu.rm_id = md.rm_id and cu.bdm_id = md.bdm_id and cu.bd_id = md.bd_id and cu.city_id = md.city_id
+left join 
+have_order_user ou 
+on cu.hcm_id = ou.hcm_id and cu.cm_id = ou.cm_id and cu.rm_id = ou.rm_id and cu.bdm_id = ou.bdm_id and cu.bd_id = ou.bd_id and cu.city_id = ou.city_id
+left join 
+current_user hd 
+on cu.hcm_id = hd.hcm_id and cu.cm_id = hd.cm_id and cu.rm_id = hd.rm_id and cu.bdm_id = hd.bdm_id and cu.bd_id = hd.bd_id and cu.city_id = hd.city_id
+left join 
+active_merchant am 
+on cu.hcm_id = am.hcm_id and cu.cm_id = am.cm_id and cu.rm_id = am.rm_id and cu.bdm_id = am.bdm_id and cu.bd_id = am.bd_id and cu.city_id = am.city_id
+left join
+(select dt,week_of_year from public_dw_dim.dim_date where dt='{pt}') as d
+on cu.dt=d.dt
 ;
+
+
 
 
 '''.format(
@@ -550,8 +879,8 @@ insert_crm_metrics = HiveToMySqlTransfer(
         select 
         null,
         a.dt,
-        a.bd_id , 
-        a.city_id , 
+        cast(a.bd_id as string) as bd_id,
+        if(a.city_id='-',0,a.city_id) as city_id,
         a.merchant_cnt , 
         a.pos_merchant_cnt , 
         a.new_merchant_cnt , 
@@ -603,10 +932,12 @@ insert_crm_metrics = HiveToMySqlTransfer(
         left join 
         (select * from opos_temp.opos_active_user_daily where country_code = 'nal' and  dt = '{{ ds }}') b 
         on  
-        a.country_code = b.country_code 
-        and a.dt = b.dt 
-        and a.bd_id = b.bd_id 
-        and a.city_id = b.city_id       
+a.hcm_id=b.hcm_id
+AND a.cm_id=b.cm_id
+AND a.rm_id=b.rm_id
+AND a.bdm_id=b.bdm_id
+AND a.bd_id=b.bd_id
+and a.city_id=b.city_id   
         
 
         """,
@@ -620,8 +951,8 @@ insert_bi_metrics = HiveToMySqlTransfer(
         select 
         null,
         a.dt,
-        a.bd_id , 
-        a.city_id , 
+        cast(a.bd_id as string) as bd_id,
+        if(a.city_id='-',0,a.city_id) as city_id,
         a.merchant_cnt , 
         a.pos_merchant_cnt , 
         a.new_merchant_cnt , 
@@ -672,11 +1003,13 @@ insert_bi_metrics = HiveToMySqlTransfer(
         (select * from opos_temp.opos_metrcis_report where country_code = 'nal' and  dt = '{{ ds }}') a
         left join 
         (select * from opos_temp.opos_active_user_daily where country_code = 'nal' and  dt = '{{ ds }}') b 
-        on  
-        a.country_code = b.country_code 
-        and a.dt = b.dt 
-        and a.bd_id = b.bd_id 
-        and a.city_id = b.city_id       
+        on    
+a.hcm_id=b.hcm_id
+AND a.cm_id=b.cm_id
+AND a.rm_id=b.rm_id
+AND a.bdm_id=b.bdm_id
+AND a.bd_id=b.bd_id
+and a.city_id=b.city_id  
 
 
     """,
@@ -695,16 +1028,16 @@ insert_bi_bd_metrics = HiveToMySqlTransfer(
         substr(a.dt,0,7) as create_month,
         substr(a.dt,0,4) as create_year,
 
-        a.cm_id,
+        cast(a.cm_id as string) as cm_id,
         a.cm_name,
-        a.rm_id,
+        cast(a.rm_id as string) as rm_id,
         a.rm_name,
-        a.bdm_id,
+        cast(a.bdm_id as string) as bdm_id,
         a.bdm_name,
-        a.bd_id,
+        cast(a.bd_id as string) as bd_id,
         a.bd_name,
 
-        a.city_id,
+        if(a.city_id='-',0,a.city_id) as city_id,
         a.city_name,
         a.country,
 
@@ -757,11 +1090,12 @@ insert_bi_bd_metrics = HiveToMySqlTransfer(
         left join 
         (select * from opos_temp.opos_active_user_daily where country_code = 'nal' and  dt = '{{ ds }}') b 
         on  
-        a.country_code = b.country_code 
-        and a.dt = b.dt 
-        and a.bd_id = b.bd_id 
-        and a.city_id = b.city_id  
-  
+a.hcm_id=b.hcm_id
+AND a.cm_id=b.cm_id
+AND a.rm_id=b.rm_id
+AND a.bdm_id=b.bdm_id
+AND a.bd_id=b.bd_id
+and a.city_id=b.city_id
         left join
         public_dw_dim.dim_date as d
         on
