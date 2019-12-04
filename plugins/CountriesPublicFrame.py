@@ -57,6 +57,7 @@ class CountriesPublicFrame(object):
             v_country_code_list="nal"
 
         if self.is_open.lower()=="true":
+
             v_country_code_list = Variable.get("country_code_list")
 
         logging.info('Executing 二位国家码: %s', v_country_code_list)
@@ -80,6 +81,8 @@ class CountriesPublicFrame(object):
             v_country_code_list=""
 
             self.v_country_code_map = Variable.get("country_code_dim")
+
+            print(type(self.v_country_code_map))
 
             print(self.v_country_code_map["NG"])
 
