@@ -116,7 +116,7 @@ active_base as (
 
   ,dt
   from 
-  opos_temp.dwd_pre_opos_payment_order_di
+  opos_dw.dwd_pre_opos_payment_order_di
   where 
   country_code = 'nal' 
   and dt in ('{pt}','{before_1_day}','{before_7_day}','{before_15_day}','{before_30_day}')
