@@ -308,10 +308,10 @@ def execution_data_task_id(ds,**kwargs):
 
     cf=CountriesPublicFrame("true",ds,db_name,table_name,hdfs_path,"true","true")
 
-    cf.exist_country_code_data_dir_dev()
+    #cf.exist_country_code_data_dir_dev()
 
     #删除分区
-    #cf.delete_partition()
+    cf.delete_partition()
 
     #读取sql
     _sql="\n"+cf.alter_partition()+"\n"+test_dim_oride_city_sql_task(ds)
