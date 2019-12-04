@@ -81,21 +81,17 @@ class CountriesPublicFrame(object):
 
             for val in self.v_country_code_map:
                 print(val)
-                country_code_info = json.loads(val)
-                country_code = country_code_info.get('country_code', None)
-                open_status = country_code_info.get('open_status', None)
+        #         country_code_info = json.loads(val)
+        #         country_code = country_code_info.get('country_code', None)
+        #         open_status = country_code_info.get('open_status', None)
 
-                v_country_code_list.append(country_code)
+        #         v_country_code_list.append(country_code)
 
-        logging.info('Executing 二位国家码: %s', v_country_code_list)
-        
-        #return v_country_code_list
+        # logging.info('Executing 二位国家码: %s', v_country_code_list)
 
-        #self.country_code_list=v_country_code_list
+        # print(v_country_code_list)
 
-        print(v_country_code_list)
-
-        print(self.v_country_code_map)
+        # print(self.v_country_code_map)
 
 
     def check_success_exist(self):
