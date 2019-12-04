@@ -26,7 +26,7 @@ import os
 
 args = {
     'owner': 'liushuzhen',
-    'start_date': datetime(2019, 11, 19),
+    'start_date': datetime(2019, 12, 3),
     'depends_on_past': False,
     'retries': 1,
     'retry_delay': timedelta(minutes=5),
@@ -43,7 +43,7 @@ dag = airflow.DAG(
 ##----------------------------------------- 依赖 ---------------------------------------##
 ods_sqoop_base_airtime_topup_record_hf_prev_day_task = UFileSensor(
     task_id='ods_sqoop_base_airtime_topup_record_hf_prev_day_task',
-    filepath='{hdfs_path_str}/dt={pt}/hour=18/_SUCCESS'.format(
+    filepath='{hdfs_path_str}/dt={pt}/hour=19/_SUCCESS'.format(
         hdfs_path_str="opay_dw_sqoop_hf/opay_transaction/airtime_topup_record",
         pt='{{macros.ds_add(ds, +1)}}'
     ),
@@ -54,7 +54,7 @@ ods_sqoop_base_airtime_topup_record_hf_prev_day_task = UFileSensor(
 
 ods_sqoop_base_mobiledata_topup_record_hf_prev_day_task = UFileSensor(
     task_id='ods_sqoop_base_mobiledata_topup_record_hf_prev_day_task',
-    filepath='{hdfs_path_str}/dt={pt}/hour=18/_SUCCESS'.format(
+    filepath='{hdfs_path_str}/dt={pt}/hour=19/_SUCCESS'.format(
         hdfs_path_str="opay_dw_sqoop_hf/opay_transaction/mobiledata_topup_record",
         pt='{{macros.ds_add(ds, +1)}}'
     ),
@@ -72,7 +72,7 @@ hdfs_path = "ufile://opay-datalake/opay/opay_dw/" + table_name
 def app_opay_owealth_air_mobile_d_sql_task(ds):
     HQL = '''
         INSERT overwrite TABLE opay_dw.app_opay_owealth_air_mobile_d partition (dt='{pt}')
-        SELECT dt,
+        SELECT 
                airtime_amt,
                airtime_c,
                mobiledata_amt,
@@ -82,21 +82,23 @@ def app_opay_owealth_air_mobile_d_sql_task(ds):
                   count(1) airtime_c,
                   sum(amount) airtime_amt
            FROM opay_dw_ods.ods_sqoop_base_airtime_topup_record_hf
-           WHERE dt='2019-11-25'
-             AND hour='18'
-             AND from_unixtime(unix_timestamp(create_time, 'yyyy-MM-dd HH:mm:ss')+3600)>'2019-11-24 18:00:00'
-             AND from_unixtime(unix_timestamp(create_time, 'yyyy-MM-dd HH:mm:ss')+3600)<'2019-11-25 19:00:00'
-             AND order_status='SUCCESS') m
+           WHERE dt='{pt}'
+             AND hour='19'
+             AND from_unixtime(unix_timestamp(create_time, 'yyyy-MM-dd HH:mm:ss')+3600)>='{yesterday} 19:00:00'
+             AND from_unixtime(unix_timestamp(create_time, 'yyyy-MM-dd HH:mm:ss')+3600)<'{pt} 19:00:00'
+             AND order_status='SUCCESS'
+            group by dt) m
         LEFT JOIN
           (SELECT dt,
                   count(1) airtime_c,
                   sum(amount) airtime_amt
            FROM opay_dw_ods.ods_sqoop_base_mobiledata_topup_record_hf
-           WHERE dt='2019-11-25'
-             AND hour='18'
-             AND from_unixtime(unix_timestamp(create_time, 'yyyy-MM-dd HH:mm:ss')+3600)>'2019-11-24 18:00:00'
-             AND from_unixtime(unix_timestamp(create_time, 'yyyy-MM-dd HH:mm:ss')+3600)<'2019-11-25 19:00:00'
-             AND order_status='SUCCESS') m1 ON m.dt=m1.dt
+           WHERE dt='{pt}'
+             AND hour='19'
+             AND from_unixtime(unix_timestamp(create_time, 'yyyy-MM-dd HH:mm:ss')+3600)>='{yesterday} 19:00:00'
+             AND from_unixtime(unix_timestamp(create_time, 'yyyy-MM-dd HH:mm:ss')+3600)<'{pt} 19:00:00'
+             AND order_status='SUCCESS'
+           group by dt) m1 ON m.dt=m1.dt
 
 
     '''.format(
@@ -152,7 +154,7 @@ def send_air_mobile_report_email(ds, **kwargs):
             dt <= '{dt}'
         ORDER BY dt DESC
         limit 14
-    '''.format(dt=ds)
+    '''.format(dt=airflow.macros.ds_add(ds, +1))
 
     cursor = get_hive_cursor()
     logging.info(sql)
@@ -212,8 +214,6 @@ def send_air_mobile_report_email(ds, **kwargs):
 
                         <tr>
                             <th>日期</th>
-                            <!--汇总数据-->
-
                             <th>话费成功交易额</th>
                             <th>话费成功交易笔数</th>
                             <th>流量成功交易额</th>
@@ -239,10 +239,10 @@ def send_air_mobile_report_email(ds, **kwargs):
         '''
         row_fmt = '''
                  <td>{0}</td>
-                <td>{1}</td>
-                <td>{2}</td>
-                <td>{3}</td>
-                <td>{4}</td>
+                 <td>{1}</td>
+                 <td>{2}</td>
+                 <td>{3}</td>
+                 <td>{4}</td>
 
         '''
 
@@ -260,7 +260,7 @@ def send_air_mobile_report_email(ds, **kwargs):
     # email_to = Variable.get("owealth_report_receivers").split()
     email_to = ['shuzhen.liu@opay-inc.com']
 
-    email_subject = '话费流量充值(19：00-19：00)_{}'.format(ds)
+    email_subject = '话费流量充值(19：00-19：00)_{}'.format(airflow.macros.ds_add(ds, +1))
     send_email(
         email_to
         , email_subject, html, mime_charset='utf-8')
