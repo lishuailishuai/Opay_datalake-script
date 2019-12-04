@@ -45,7 +45,7 @@ class CountriesPublicFrame(object):
 
         self.get_country_code()
 
-        #self.get_country_code_dev():
+        self.get_country_code_dev():
 
     def get_country_code(self):
 
@@ -79,22 +79,28 @@ class CountriesPublicFrame(object):
 
             v_country_code_list=""
 
-            self.v_country_code_map = Variable.get("country_code_dim").split("\n")
+            self.v_country_code_map = Variable.get("country_code_dim")
 
-            for val in self.v_country_code_map:
+            print(self.v_country_code_map["NG"])
 
-                print(val)
-                print(type(val))
+            print(self.v_country_code_map["GH"])
+
+            print(self.v_country_code_map["nal"])
+
+        #     for val in self.v_country_code_map:
+
+        #         print(val)
+        #         print(type(val))
        
-                #country_code_info = json.loads(val)
-                country_code = val.get('country_code', -1)
-                open_status = val.get('open_status', -1)
+        #         #country_code_info = json.loads(val)
+        #         country_code = val.get('country_code', -1)
+        #         open_status = val.get('open_status', -1)
 
-                v_country_code_list=v_country_code_list+","
+        #         v_country_code_list=v_country_code_list+","
 
-        logging.info('Executing 二位国家码: %s', v_country_code_list)
+        # logging.info('Executing 二位国家码: %s', v_country_code_list)
 
-        print(v_country_code_list)
+        # print(v_country_code_list)
 
 
     def check_success_exist(self):
