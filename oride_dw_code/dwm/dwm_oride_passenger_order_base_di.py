@@ -88,22 +88,33 @@ def dwm_oride_passenger_order_base_di_sql_task(ds):
     set hive.exec.dynamic.partition.mode=nonstrict;
 
 INSERT overwrite TABLE oride_dw.{table} partition(country_code,dt)
-select passenger_id,  --乘客ID
-       city_id,  --城市ID
-       product_id,  --下单业务类型
-       driver_serv_type,  --司机绑定的业务类型，两个业务类型区别在于同时呼叫下线前统计业务线完单量
-       count(order_id) as order_cnt,  --下单量
-       sum(is_td_finish) as finish_order_cnt,  --完单量
-       sum(is_td_finish_pay) as finished_pay_order_cnt, --支付完单量
-       sum(if(pay_mode=2,1,0)) as online_pay_ord_cnt, --线上支付订单量
-       sum(if(is_td_finish=1,price,0)) as finish_order_price,  --完单gmv
-       sum(if(is_td_finish_pay=1,price,0)) as finished_pay_order_price,  --完单支付gmv
-       sum(if(pay_mode=2,price,0)) as online_pay_ord_price,  --线上支付gmv
-       sum(pay_amount) as pay_amount,  --实际支付金额
-       country_code,
+select ord.passenger_id,  --乘客ID
+       ord.city_id,  --城市ID
+       ord.product_id,  --下单业务类型
+       ord.driver_serv_type,  --司机绑定的业务类型，两个业务类型区别在于同时呼叫下线前统计业务线完单量
+       if(user_df.first_finish_create_date='{pt}',1,0) as is_first_finish_user, --是否首次完单乘客
+       sum(if(user_df.is_td_reg=1,1,0)) as new_user_ord_cnt, --当日新注册乘客下单量
+       sum(if(user_df.is_td_reg=1 and ord.is_td_finish=1,1,0)) as new_user_finished_cnt, --当日新注册乘客完单量
+       sum(if(user_df.is_td_reg=1 and ord.is_td_finish=1,ord.price,0)) as new_user_gmv, --当日注册乘客完单gmv       
+       count(ord.order_id) as order_cnt,  --下单量
+       sum(ord.is_td_finish) as finish_order_cnt,  --完单量
+       sum(ord.is_td_finish_pay) as finished_pay_order_cnt, --支付完单量，订单表中status=5
+       sum(if(ord.pay_status=1 and ord.status not in(6,13),1,0)) as pay_succ_ord_cnt, --支付表支付成功且正常订单量
+       sum(if(ord.pay_status=1 and ord.pay_mode=2 and ord.status not in(6,13),1,0)) as online_pay_ord_cnt, --线上支付成功且正常订单量
+       sum(if(ord.is_td_finish=1,ord.price,0)) as finish_order_price,  --完单gmv
+       sum(if(ord.is_td_finish_pay=1,ord.price,0)) as finished_pay_order_price,  --完单支付gmv，订单表中status=5
+       sum(if(ord.pay_status=1 and ord.pay_mode=2 and ord.status not in(6,13),ord.price,0)) as online_pay_ord_price,  --线上支付成功且正常订单gmv
+       sum(ord.pay_amount) as pay_amount,  --实际支付金额
+       ord.country_code,
        '{pt}' as dt
+from(select *
 from oride_dw.dwd_oride_order_base_include_test_di
-where dt='{pt}'
+where dt='{pt}') ord
+left join
+(select *      
+from oride_dw.dwm_oride_passenger_base_df
+where dt='{pt}' and (is_td_reg=1 or (first_finish_create_date='{pt}'))) user_df
+on ord.passenger_id=user_df.passenger_id
 group by passenger_id,  --乘客ID
        city_id,  --城市ID
        product_id,  --下单业务类型

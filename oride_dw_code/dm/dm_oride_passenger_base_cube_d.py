@@ -142,9 +142,8 @@ def dm_oride_passenger_base_cube_d_sql_task(ds):
                and driver_id<>1) t1
             LEFT JOIN
               (SELECT passenger_id
-               FROM oride_dw.dwd_oride_order_base_include_test_df
-               WHERE dt in('{pt}','his')
-                 AND create_date<dt
+               FROM oride_dw.dwd_oride_order_base_include_test_di
+               WHERE dt<'{pt}'
                  AND status IN(4,
                                5)
                GROUP BY passenger_id) t2 ON t1.passenger_id=t2.passenger_id
