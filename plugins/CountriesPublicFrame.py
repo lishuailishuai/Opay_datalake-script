@@ -45,7 +45,7 @@ class CountriesPublicFrame(object):
 
         self.get_country_code()
 
-        self.get_country_code_dev():
+        #self.get_country_code_dev():
 
     def get_country_code(self):
 
