@@ -45,7 +45,7 @@ class CountriesPublicFrame(object):
 
         self.get_country_code()
 
-        self.get_country_code_dev():
+        #self.get_country_code_dev():
 
     def get_country_code(self):
 
@@ -86,9 +86,9 @@ class CountriesPublicFrame(object):
                 print(val)
                 print(type(val))
        
-                country_code_info = json.loads(val)
-                country_code = country_code_info.get('country_code', None)
-                open_status = country_code_info.get('open_status', None)
+                #country_code_info = json.loads(val)
+                country_code = val.get('country_code', -1)
+                open_status = val.get('open_status', -1)
 
                 v_country_code_list=v_country_code_list+","
 
