@@ -119,7 +119,7 @@ from(select *,
        min(if(is_td_finish=1,create_time,null)) over(partition by passenger_id) as first_finish_create_time,
        min(if(is_td_finish_pay=1,create_time,null)) over(partition by passenger_id) as first_finished_create_time
 from oride_dw.dwd_oride_order_base_include_test_di   --首次跑数需要用订单表所有数据
-where dt<'{pt}'
+where dt='{pt}'
 ) t
 )
 INSERT overwrite TABLE oride_dw.{table} partition(country_code,dt)
@@ -132,13 +132,15 @@ SELECT dim_user.passenger_id,
        if(yes_dwm_user.first_ord_id is not null,yes_dwm_user.first_create_date,first_order.create_date) as first_create_date,  --乘客首次下单时间   
        if(yes_dwm_user.first_ord_id is not null,yes_dwm_user.first_city_id,first_order.city_id) as first_city_id,  --乘客首次下单对应的city_id
        if(yes_dwm_user.first_ord_id is not null,yes_dwm_user.first_product_id,first_order.product_id) as first_product_id,  --乘客首次下单对应的product_id 
+       if(yes_dwm_user.first_ord_id is not null,yes_dwm_user.first_country_code,first_order.country_code) as first_country_code,  --乘客首次下单对应的国家码
        if(yes_dwm_user.first_ord_id is not null,yes_dwm_user.first_ord_price,first_order.price) as first_ord_price,  --首次下单订单对应的gmv
        if(yes_dwm_user.first_ord_id is not null,yes_dwm_user.first_ord_distance,first_order.distance) as first_ord_distance,  --首次下单订单对应的里程   
 
        if(yes_dwm_user.first_finish_ord_id is not null,yes_dwm_user.first_finish_ord_id,first_finish_order.order_id) as first_finish_ord_id,  --乘客首次完单order_id 
        if(yes_dwm_user.first_finish_ord_id is not null,yes_dwm_user.first_finish_create_date,first_finish_order.create_date) as first_finish_create_date,  --乘客首次完单时间   
        if(yes_dwm_user.first_finish_ord_id is not null,yes_dwm_user.first_finish_city_id,first_finish_order.city_id) as first_finish_city_id,  --乘客首次完单对应的city_id
-       if(yes_dwm_user.first_finish_ord_id is not null,yes_dwm_user.first_finish_product_id,first_finish_order.driver_serv_type) as first_finish_product_id,  --乘客首次完单对应的product_id 
+       if(yes_dwm_user.first_finish_ord_id is not null,yes_dwm_user.first_finish_product_id,first_finish_order.driver_serv_type) as first_finish_product_id,  --乘客首次完单对应的product_id
+       if(yes_dwm_user.first_finish_ord_id is not null,yes_dwm_user.first_finish_country_code,first_finish_order.country_code) as first_finish_country_code,  --乘客首次完单对应的国家码 
        if(yes_dwm_user.first_finish_ord_id is not null,yes_dwm_user.first_finish_ord_price,first_finish_order.price) as first_finish_ord_price,  --首次完单订单对应的gmv
        if(yes_dwm_user.first_finish_ord_id is not null,yes_dwm_user.first_finish_ord_distance,first_finish_order.distance) as first_finish_ord_distance,  --首次完单订单对应的里程 
        'nal' as country_code,
@@ -150,7 +152,7 @@ WHERE dt='{pt}') dim_user
 left join
 (select * 
 from oride_dw.dwm_oride_passenger_base_df
-where dt='{pt}') yes_dwm_user
+where dt='{bef_yes_day}') yes_dwm_user
 on dim_user.passenger_id=yes_dwm_user.passenger_id
 left join
 (select * from data_order where first_ord_mark=1) first_order
