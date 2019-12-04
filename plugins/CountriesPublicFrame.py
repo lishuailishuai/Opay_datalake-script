@@ -503,7 +503,8 @@ class CountriesPublicFrame(object):
 
                     if self.v_country_code_map[country_code_word].lower()=="new":
                         print(self.v_country_code_map[country_code_word]+" "+country_code_word)
-                        self.data_not_file_type_touchz()
+                        #self.data_not_file_type_touchz()
+                        print("成功")
 
                     
                     #必须有数据才可以生成Success 文件
