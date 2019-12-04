@@ -90,8 +90,8 @@ def app_opay_owealth_air_mobile_d_sql_task(ds):
             group by dt) m
         LEFT JOIN
           (SELECT dt,
-                  count(1) airtime_c,
-                  sum(amount) airtime_amt
+                  count(1) mobiledata_c,
+                  sum(amount) mobiledata_amt
            FROM opay_dw_ods.ods_sqoop_base_mobiledata_topup_record_hf
            WHERE dt='{pt}'
              AND hour='19'
