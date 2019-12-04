@@ -80,9 +80,9 @@ class CountriesPublicFrame(object):
 
             v_country_code_list=""
 
-            self.v_country_code_map = Variable.get("country_code_dim")
+            self.v_country_code_map = eval(Variable.get("country_code_dim"))
 
-            print(type(eval(self.v_country_code_map)))
+            print(type(self.v_country_code_map))
 
             print(self.v_country_code_map)
 
