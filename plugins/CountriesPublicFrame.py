@@ -472,11 +472,12 @@ class CountriesPublicFrame(object):
                     #刚刚开国的国家(按照false处理)
                     if self.v_country_code_map[country_code_word].lower()=="new":
 
+                        #删除多国家分区使用
                         if self.v_del_flag==1:
 
                             object_task()
                             continue 
-                            
+
                         else:
                             self.data_not_file_type_touchz()
 
