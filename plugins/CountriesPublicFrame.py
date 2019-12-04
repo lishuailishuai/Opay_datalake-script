@@ -77,21 +77,14 @@ class CountriesPublicFrame(object):
 
         if self.is_open.lower()=="true":
 
-            v_country_code_list=""
-
             self.v_country_code_map = eval(Variable.get("country_code_dim"))
 
-            print(type(self.v_country_code_map))
+            s=list(self.v_country_code_map.keys())
 
-            print(self.v_country_code_map)
+            v_country_code_list=" ".join(s)
 
-            print(self.v_country_code_map["NG"])
-
-            print(self.v_country_code_map["GH"])
-
-            print(self.v_country_code_map["nal"])
-
-            print(self.v_country_code_map.keys())
+        print(v_country_code_list)
+        print(self.v_country_code_map)
 
             
     def check_success_exist(self):
