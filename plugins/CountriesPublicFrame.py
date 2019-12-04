@@ -61,8 +61,6 @@ class CountriesPublicFrame(object):
             v_country_code_list = Variable.get("country_code_list")
 
         logging.info('Executing 二位国家码: %s', v_country_code_list)
-        
-        #return v_country_code_list
 
         self.country_code_list=v_country_code_list
 
@@ -74,6 +72,7 @@ class CountriesPublicFrame(object):
         """
 
         if self.is_open.lower()=="false":
+
             v_country_code_list="nal"
 
         if self.is_open.lower()=="true":
@@ -92,22 +91,9 @@ class CountriesPublicFrame(object):
 
             print(self.v_country_code_map["nal"])
 
-        #     for val in self.v_country_code_map:
+            print(self.v_country_code_map.keys())
 
-        #         print(val)
-        #         print(type(val))
-       
-        #         #country_code_info = json.loads(val)
-        #         country_code = val.get('country_code', -1)
-        #         open_status = val.get('open_status', -1)
-
-        #         v_country_code_list=v_country_code_list+","
-
-        # logging.info('Executing 二位国家码: %s', v_country_code_list)
-
-        # print(v_country_code_list)
-
-
+            
     def check_success_exist(self):
 
         """
