@@ -159,22 +159,22 @@ def send_balance_report_email(ds, **kwargs):
     sql = '''
         SELECT
             dt,
-            total/100,
-            bonus/100,
-            cash/100,
-            frozen/100,
-            customer/100,
-            customer_bouns/100,
-            customer_cash/100,
-            customer_frozen/100,
-            agent/100,
-            agent_bouns/100,
-            agent_cash/100,
-            agent_frozen/100,
-            merchant/100,
-            merchant_bouns/100,
-            merchant_cash/100,
-            merchant_frozen/100
+            cast(total/100 as decimal(20,2)),
+            cast(bonus/100 as decimal(20,2)),
+            cast(cash/100 as decimal(20,2)),
+            cast(frozen/100 as decimal(20,2)),
+            cast(customer/100 as decimal(20,2)),
+            cast(customer_bouns/100 as decimal(20,2)),
+            cast(customer_cash/100 as decimal(20,2)),
+            cast(customer_frozen/100 as decimal(20,2)),
+            cast(agent/100 as decimal(20,2)),
+            cast(agent_bouns/100 as decimal(20,2)),
+            cast(agent_cash/100 as decimal(20,2)),
+            cast(agent_frozen/100 as decimal(20,2)),
+            cast(merchant/100 as decimal(20,2)),
+            cast(merchant_bouns/100 as decimal(20,2)),
+            cast(merchant_cash/100 as decimal(20,2)),
+            cast(merchant_frozen/100 as decimal(20,2))
         
         FROM
            opay_dw.app_opay_account_report_d
@@ -240,37 +240,38 @@ def send_balance_report_email(ds, **kwargs):
                 <table width="95%" class="table">
                     <thead>
                         <tr>
-                            <th></th>
-                            <th colspan="4" class="th_title">subtotal_account</th>
-                            <th colspan="4" class="th_title">customer_account</th>
-                            <th colspan="4" class="th_title">agent_account</th>
-                            <th colspan="4" class="th_title">merchant_account</th>
+                           <th colspan="17" align="left">金额：奈拉</th>
                         </tr>
                         <tr>
-                            <th>日期</th>
-                            <!--subtotal-->
-
-                            <th>total</th>
-                            <th>bonus</th>
-                            <th>cash</th>
-                            <th>frozen</th>
+                            <th rowspan="2" align="center">日期</th>
+                            <th rowspan="2" align="center">total</th>
+                            <th colspan="4" align="center">subtotal_account</th>
+                            <th colspan="4" align="center">customer_account</th>
+                            <th colspan="4" align="center">agent_account</th>
+                            <th colspan="4" align="center">merchant_account</th>
+                        </tr>
+                        <tr>
+                            <th align="center">bonus</th>
+                            <th align="center">cash</th>
+                            <th align="center">frozen</th>
 
                             <!--customer-->
-                            <th>subtotal</th>
-                            <th>bonus</th>
-                            <th>cash</th>
-                            <th>frozen</th>
+                            <th align="center">subtotal</th>
+                            <th align="center">bonus</th>
+                            <th align="center">cash</th>
+                            <th align="center">frozen</th>
 
                             <!--agent数据-->
-                            <th>subtotal</th>
-                            <th>bonus</th>
-                            <th>cash</th>
-                            <th>frozen</th>
+                            <th align="center">subtotal</th>
+                            <th align="center">bonus</th>
+                            <th align="center">cash</th>
+                            <th align="center">frozen</th>
+                        
                             <!--merchant数据-->
-                            <th>subtotal</th>
-                            <th>bonus</th>
-                            <th>cash</th>
-                            <th>frozen</th>
+                            <th align="center">subtotal</th>
+                            <th align="center">bonus</th>
+                            <th align="center">cash</th>
+                            <th align="center">frozen</th>
 
 
                         </tr>
@@ -293,23 +294,23 @@ def send_balance_report_email(ds, **kwargs):
             <tr style="background:#F5F5F5">{row}</tr>
         '''
         row_fmt = '''
-                 <td>{0}</td>
-                <td>{1}</td>
-                <td>{2}</td>
-                <td>{3}</td>
-                <td>{4}</td>
-                <td>{5}</td>
-                <td>{6}</td>
-                <td>{7}</td>
-                <td>{8}</td>
-                <td>{9}</td>
-                <td>{10}</td>
-                <td>{11}</td>
-                <td>{12}</td>
-                <td>{13}</td>
-                <td>{14}</td>
-                <td>{15}</td>
-                <td>{16}</td>
+                 <td align="left">{0}</td>
+                <td align="right">₦{1}</td>
+                <td align="right">₦{2}</td>
+                <td align="right">₦{3}</td>
+                <td align="right">₦{4}</td>
+                <td align="right">₦{5}</td>
+                <td align="right">₦{6}</td>
+                <td align="right">₦{7}</td>
+                <td align="right">₦{8}</td>
+                <td align="right">₦{9}</td>
+                <td align="right">₦{10}</td>
+                <td align="right">₦{11}</td>
+                <td align="right">₦{12}</td>
+                <td align="right">₦{13}</td>
+                <td align="right">₦{14}</td>
+                <td align="right">₦{15}</td>
+                <td align="right">₦{16}</td>
 
         '''
 
