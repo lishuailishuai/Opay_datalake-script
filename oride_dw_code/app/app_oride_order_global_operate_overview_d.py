@@ -23,6 +23,7 @@ import logging
 from airflow.models import Variable
 import requests
 import os
+from airflow.sensors.s3_key_sensor import S3KeySensor
 
 args = {
     'owner': 'lijialong',
@@ -72,14 +73,14 @@ dependence_dim_oride_passenger_base_task = HivePartitionSensor(
     dag=dag
 )
 
-dependence_dwd_oride_order_finance_df_task = UFileSensor(
-    task_id='dwd_oride_order_finance_df_task',
-    filepath='{hdfs_path_str}/country_code=nal/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw/dwd_oride_order_finance_df",
+dependence_dwd_oride_order_finance_di_task = UFileSensor(
+    task_id='dwd_oride_order_finance_di_task',
+    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="oride/oride_dw/dwd_oride_order_finance_di/country_code=nal",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
-    poke_interval=60,
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
 
@@ -96,14 +97,14 @@ dependence_dm_oride_driver_base_task = UFileSensor(
 
 
 
-dependence_dwd_oride_order_base_include_test_df_task = UFileSensor(
-    task_id='dwd_oride_order_base_include_test_df_task',
-    filepath='{hdfs_path_str}/country_code=nal/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw/dwd_oride_order_base_include_test_df",
+dependence_dwd_oride_order_base_include_test_di_task = S3KeySensor(
+    task_id='dwd_oride_order_base_include_test_di_task',
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="oride/oride_dw/dwd_oride_order_base_include_test_di/country_code=NG",
         pt='{{ds}}'
     ),
-    bucket_name='opay-datalake',
-    poke_interval=60,
+    bucket_name='opay-bi',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
 
@@ -165,8 +166,8 @@ def app_oride_order_global_operate_overview_d_sql_task(ds):
                 product_id,
                 sum(recharge_amount+reward_amount) as allowance,
                 dt
-            from oride_dw.dwd_oride_order_finance_df
-            where dt = '{pt}' and create_date = '{pt}'
+            from oride_dw.dwd_oride_order_finance_di
+            where dt = '{pt}'
             group by city_id,product_id,dt
         ),
                 
@@ -410,8 +411,8 @@ def app_oride_order_global_operate_overview_d_sql_task(ds):
             select 
                 city_id,
                 min(create_date) as open_date
-            from oride_dw.dwd_oride_order_base_include_test_df
-            where dt in ( '{pt}','his') 
+            from oride_dw.dwd_oride_order_base_include_test_di
+            where dt <=  '{pt}' 
             and status in (4,5)and city_id <> '999001'
             group by city_id 
         )first_ord on ph.city_id = first_ord.city_id;'''.format(
@@ -453,6 +454,6 @@ app_oride_order_global_operate_overview_d_task = PythonOperator(
     dag=dag
 )
 
-dependence_dim_oride_city_task  >>  dependence_dim_oride_passenger_base_task  >> dependence_dwd_oride_order_base_include_test_df_task >>\
-dependence_dwd_oride_order_finance_df_task >> dependence_dm_oride_driver_base_task >> dependence_dwm_oride_order_base_di_task >> \
+dependence_dim_oride_city_task  >>  dependence_dim_oride_passenger_base_task  >> dependence_dwd_oride_order_base_include_test_di_task >>\
+dependence_dwd_oride_order_finance_di_task >> dependence_dm_oride_driver_base_task >> dependence_dwm_oride_order_base_di_task >> \
 app_oride_order_global_operate_overview_d_task

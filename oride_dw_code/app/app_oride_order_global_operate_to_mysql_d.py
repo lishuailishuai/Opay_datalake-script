@@ -85,14 +85,14 @@ dependence_dim_oride_driver_base_task = UFileSensor(
 )
 
 
-dependence_dwd_oride_order_finance_df_task = UFileSensor(
-    task_id='dwd_oride_order_finance_df_task',
-    filepath='{hdfs_path_str}/country_code=nal/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw/dwd_oride_order_finance_df",
+dependence_dwd_oride_order_finance_di_task = UFileSensor(
+    task_id='dwd_oride_order_finance_di_task',
+    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="oride/oride_dw/dwd_oride_order_finance_di/country_code=nal",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
-    poke_interval=60,
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
 
@@ -143,14 +143,14 @@ dependence_dm_oride_passenger_base_cube_d_task = UFileSensor(
 )
 
 
-dependence_dwd_oride_order_base_include_test_df_task = UFileSensor(
-    task_id='dwd_oride_order_base_include_test_df_task',
-    filepath='{hdfs_path_str}/country_code=nal/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw/dwd_oride_order_base_include_test_df",
+dependence_dwd_oride_order_base_include_test_di_task = S3KeySensor(
+    task_id='dwd_oride_order_base_include_test_di_task',
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="oride/oride_dw/dwd_oride_order_base_include_test_di/country_code=NG",
         pt='{{ds}}'
     ),
-    bucket_name='opay-datalake',
-    poke_interval=60,
+    bucket_name='opay-bi',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
 ##----------------------------------------- 变量 ---------------------------------------##
@@ -184,13 +184,14 @@ task_timeout_monitor = PythonOperator(
 ##----------------------------------------- 脚本 ---------------------------------------##
 
 def app_oride_order_global_operate_to_mysql_d_sql_task(ds):
-    HQL = '''
+    HQL ='''
+    
       SET hive.exec.parallel=TRUE;
       set hive.exec.dynamic.partition.mode=nonstrict;    
          --将数据加载到内存，临时表
 
              with 
-        dwd_order_df as
+        dwd_order_di as
         ( 
             select
                 city_id,
@@ -198,14 +199,14 @@ def app_oride_order_global_operate_to_mysql_d_sql_task(ds):
                 driver_id,
                 pay_amount,
                 create_date,
-                is_finish,
+                is_td_finish,
                 create_time,
                 dt 
-            from oride_dw.dwd_oride_order_base_include_test_df
-            where dt = '{pt}' and city_id != 999001 and is_finish=1
+            from oride_dw.dwd_oride_order_base_include_test_di
+            where city_id != 999001 and is_td_finish=1
         )
 
-    insert overwrite table oride_dw.{table} partition(country_code,dt)
+  insert overwrite table oride_dw.{table} partition(country_code,dt)
 
     select 
         nvl(od.city_id,-10000) as city_id,
@@ -308,35 +309,33 @@ def app_oride_order_global_operate_to_mysql_d_sql_task(ds):
             --C端补贴/月
             sum(b.b_subsidy_d + c_subsidy_d ) as sum_subsidy_d, 
             --总补贴/天
-            sum(b_subsidy_m + c_subsidy_m ) as sum_subsidy_m,
+            sum(b_subsidy_m + c_subsidy_m ) as sum_subsidy_m
             --累计总补贴/月
-            b.dt
+
         from
         ( --B端补贴  t1.recharge_amount+t1.reward_amount
             select 
                 city_id,
 
-                sum(if(create_date ='{pt}',reward_amount,0))+sum(if(create_date ='{pt}',recharge_amount,0)) as b_subsidy_d,--B端补贴、天
+                sum(if(dt ='{pt}',reward_amount,0))+sum(if(dt ='{pt}',recharge_amount,0)) as b_subsidy_d,--B端补贴、天
 
-                sum(reward_amount) + sum(recharge_amount) as b_subsidy_m,--B端补贴 月
-                dt
-            from oride_dw.dwd_oride_order_finance_df
-            where dt ='{pt}' and month(create_date) = month('{pt}')
-            group by city_id,dt
+                sum(reward_amount) + sum(recharge_amount) as b_subsidy_m--B端补贴 月
+
+            from oride_dw.dwd_oride_order_finance_di
+            where  month(dt) = month('{pt}')
+            group by city_id
         )b
         left join
-        (  --C端补贴  price - pay_amount is_finish=1
+        (  --C端补贴  price - pay_amount is_td_finish=1
            select 
                 city_id,
-                sum(if(create_date ='{pt}',price,0))-sum(if(create_date ='{pt}',pay_amount,0)) as c_subsidy_d,--C端补贴、天     
-                sum(price) - sum(pay_amount) as c_subsidy_m,
-                dt
-            from  dwd_order_df
-            where dt = '{pt}' and city_id != 999001 and is_finish=1
-            and   month(create_date) = month('{pt}')
-            group by city_id,dt
-        )c on  b.city_id =  c.city_id  and  c.dt =  b.dt
-        group by b.city_id,b.dt,b.b_subsidy_d,c.c_subsidy_d
+                sum(if(dt ='{pt}',price,0))-sum(if(dt ='{pt}',pay_amount,0)) as c_subsidy_d,--C端补贴、天     
+                sum(price) - sum(pay_amount) as c_subsidy_m
+            from     dwd_order_di
+            where month(dt) = month('{pt}') and city_id != 999001 and is_td_finish=1
+            group by city_id
+        )c on  b.city_id =  c.city_id  
+        group by b.city_id,b.b_subsidy_d,c.c_subsidy_d
     )sub on  nvl(od.city_id,-10000) = sub.city_id 
     left join 
     (--审核司机数
@@ -370,8 +369,8 @@ def app_oride_order_global_operate_to_mysql_d_sql_task(ds):
             select 
                 city_id,
                 driver_id
-            from dwd_order_df
-            where create_date = '{pt}'
+            from dwd_order_di
+            where dt = '{pt}'
             group by   city_id,driver_id,dt 
         )new
         left join
@@ -379,8 +378,8 @@ def app_oride_order_global_operate_to_mysql_d_sql_task(ds):
             select 
                 driver_id
 
-            from oride_dw.dwd_oride_order_base_include_test_df
-            where dt in ( '{pt}','his') and create_date < '{pt}' and city_id != 999001 and is_finish =1 
+            from dwd_order_di
+            where dt  < '{pt}' and city_id != 999001 and is_td_finish =1 
             group by   driver_id
         )old on new.driver_id = old.driver_id
         group by new.city_id with cube
@@ -465,7 +464,8 @@ def app_oride_order_global_operate_to_mysql_d_sql_task(ds):
         from oride_dw.app_oride_order_global_operate_to_mysql_d 
         where (dt =date_sub('{pt}',1) or  dt =date_sub('{pt}',7)) and city_id <> -10000
         group by city_id
-    )global on od.city_id = global.city_id;'''.format(
+    )global on od.city_id = global.city_id;
+''' .format(
         pt=ds,
         table=table_name,
         db=db_name
@@ -507,15 +507,15 @@ app_oride_order_global_operate_to_mysql_d_task = PythonOperator(
 # dependence_dwm_oride_order_base_di_task >> dependence_dim_oride_city_task >> dependence_dim_oride_passenger_base_task >> \
 # dependence_dim_oride_driver_base_task >> dependence_dwd_oride_order_finance_df_task >> dependence_dwd_oride_driver_records_day_df_task >> \
 # dependence_dwd_oride_driver_recharge_records_df_task >> dependence_dm_oride_driver_base_task>>dependence_dm_oride_passenger_base_cube_d_task>>\
-# dependence_dwd_oride_order_base_include_test_df_task>>app_oride_order_global_operate_to_mysql_d_task
+# dependence_dwd_oride_order_base_include_test_di_task>>app_oride_order_global_operate_to_mysql_d_task
 
 
 dependence_dwm_oride_order_base_di_task>>app_oride_order_global_operate_to_mysql_d_task
 dependence_dim_oride_city_task>>app_oride_order_global_operate_to_mysql_d_task
 dependence_dim_oride_passenger_base_task>>app_oride_order_global_operate_to_mysql_d_task
-dependence_dwd_oride_order_finance_df_task>>app_oride_order_global_operate_to_mysql_d_task
+dependence_dwd_oride_order_finance_di_task>>app_oride_order_global_operate_to_mysql_d_task
 dependence_dwd_oride_driver_records_day_df_task>>app_oride_order_global_operate_to_mysql_d_task
 dependence_dwd_oride_driver_recharge_records_df_task>>app_oride_order_global_operate_to_mysql_d_task
 dependence_dm_oride_driver_base_task>>app_oride_order_global_operate_to_mysql_d_task
 dependence_dm_oride_passenger_base_cube_d_task>>app_oride_order_global_operate_to_mysql_d_task
-dependence_dwd_oride_order_base_include_test_df_task>>app_oride_order_global_operate_to_mysql_d_task
+dependence_dwd_oride_order_base_include_test_di_task>>app_oride_order_global_operate_to_mysql_d_task
