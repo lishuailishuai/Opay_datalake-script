@@ -82,7 +82,7 @@ class CountriesPublicFrame(object):
 
             self.v_country_code_map = Variable.get("country_code_dim")
 
-            print(type(self.v_country_code_map))
+            print(type(eval(self.v_country_code_map)))
 
             print(self.v_country_code_map)
 
