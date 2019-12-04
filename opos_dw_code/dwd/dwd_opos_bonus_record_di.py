@@ -97,38 +97,373 @@ task_timeout_monitor = PythonOperator(
 
 def dwd_opos_bonus_record_di_sql_task(ds):
     HQL = '''
+
+
+--插入数据
 set hive.exec.parallel=true;
 set hive.exec.dynamic.partition.mode=nonstrict;
 
-insert overwrite table opos_dw.dwd_opos_bonus_record_di partition(country_code,dt)
+set mapred.max.split.size=256000000;
+set mapred.min.split.size.per.node=100000000;
+set mapred.min.split.size.per.rack=100000000;
+set hive.input.format=org.apache.hadoop.hive.ql.io.CombineHiveInputFormat;
+
+set hive.merge.mapfiles = true;
+set hive.merge.mapredfiles = true;
+set hive.merge.size.per.task = 256000000;
+set hive.merge.smallfiles.avgsize=16000000;
+
+--01.先取出管理者是bd的数据
+--创建临时表
+with 
+bd as (
 select
-o.id
-,o.activity_id
+  o.id
+  ,o.activity_id
+  
+  ,6 as job_id
+  ,cast(b.hcm_id as int) as hcm_id
+  ,b.hcm_name
+  ,cast(b.cm_id as int) as cm_id
+  ,b.cm_name
+  ,cast(b.rm_id as int) as rm_id
+  ,b.rm_name
+  ,cast(b.bdm_id as int) as bdm_id
+  ,b.bdm_name
+  ,cast(o.bd_id as int) as bd_id
+  ,b.bd_name
+  
+  ,o.city_id
+  
+  ,o.device_id
+  ,o.opay_account
+  
+  ,o.provider_account
+  ,o.receiver_account
+  ,o.amount
+  ,o.use_amount
+  ,o.bonus_rate
+  ,o.bonus_amount
+  
+  ,o.status
+  ,o.settle_status
+  ,o.settle_type
+  ,o.reason
+  ,o.risk_id
+  ,o.settle_time
+  ,o.expire_time
+  ,o.use_time
+  ,o.use_date
+  ,o.create_time
+  ,o.update_time
+  
+  ,'nal' as country_code
+  ,o.dt
+  from
+  (select * from opos_dw_ods.ods_sqoop_base_opos_bonus_record_di where dt='{pt}' and bd_id> 0) as o
+  inner join
+  (select * from opos_dw.dim_opos_bd_info_df where country_code='nal' and dt='{pt}') as b
+  on
+  o.bd_id=b.bd_id
+),
 
-,substr(o.create_time,0,10) as create_date
-,d.week_of_year as create_week
-,substr(o.create_time,0,7) as create_month
-,substr(o.create_time,0,4) as create_year
+--02.统计负责人是bdm的
+bdm as (
+select
+  o.id
+  ,o.activity_id
+  
+  ,5 as job_id
+  ,cast(b.hcm_id as int) as hcm_id
+  ,b.hcm_name
+  ,cast(b.cm_id as int) as cm_id
+  ,b.cm_name
+  ,cast(b.rm_id as int) as rm_id
+  ,b.rm_name
+  ,cast(o.bd_id as int) as bdm_id
+  ,b.bdm_name
+  ,cast(b.bd_id as int) as bd_id
+  ,b.bd_name
+  
+  ,o.city_id
+  
+  ,o.device_id
+  ,o.opay_account
+  
+  ,o.provider_account
+  ,o.receiver_account
+  
+  ,o.amount
+  ,o.use_amount
+  ,o.bonus_rate
+  ,o.bonus_amount
+  
+  ,o.status
+  ,o.settle_status
+  ,o.settle_type
+  ,o.reason
+  ,o.risk_id
+  ,o.settle_time
+  ,o.expire_time
+  ,o.use_time
+  ,o.use_date
+  ,o.create_time
+  ,o.update_time
+  
+  ,'nal' as country_code
+  ,o.dt
+  from
+  (select * from opos_dw_ods.ods_sqoop_base_opos_bonus_record_di where dt='{pt}' and bd_id> 0) as o
+  inner join
+  (select hcm_id,hcm_name,cm_id,cm_name,rm_id,rm_name,bdm_id,bdm_name,0 as bd_id,'-' as bd_name from opos_dw.dim_opos_bd_info_df where country_code='nal' and dt='{pt}' group by hcm_id,hcm_name,cm_id,cm_name,rm_id,rm_name,bdm_id,bdm_name) as b
+  on
+  o.bd_id=b.bdm_id
+),
 
-,b.hcm_id
-,b.hcm_name
-,b.cm_id
-,b.cm_name
-,b.rm_id
-,b.rm_name
-,b.bdm_id
-,b.bdm_name
-,o.bd_id
-,b.bd_name
+--03.统计负责人是rm的
+rm as (
+select
+  o.id
+  ,o.activity_id
+  
+  ,4 as job_id
+  ,cast(b.hcm_id as int) as hcm_id
+  ,b.hcm_name
+  ,cast(b.cm_id as int) as cm_id
+  ,b.cm_name
+  ,cast(o.bd_id as int) as rm_id
+  ,b.rm_name
+  ,cast(b.bdm_id as int) as bdm_id
+  ,b.bdm_name
+  ,cast(b.bd_id as int) as bd_id
+  ,b.bd_name
+  
+  ,o.city_id
 
-,o.city_id
-,c.name as city_name
-,c.country
+  ,o.device_id
+  ,o.opay_account
+  
+  ,o.provider_account
+  ,o.receiver_account
 
-,o.device_id
-,o.opay_account
+  ,o.amount
+  ,o.use_amount
+  ,o.bonus_rate
+  ,o.bonus_amount
+  
+  ,o.status
+  ,o.settle_status
+  ,o.settle_type
+  ,o.reason
+  ,o.risk_id
+  ,o.settle_time
+  ,o.expire_time
+  ,o.use_time
+  ,o.use_date
+  ,o.create_time
+  ,o.update_time
+  
+  ,'nal' as country_code
+  ,'{pt}' as dt
+  from
+  (select * from opos_dw_ods.ods_sqoop_base_opos_bonus_record_di where dt='{pt}' and bd_id> 0) as o
+  inner join
+  (select hcm_id,hcm_name,cm_id,cm_name,rm_id,rm_name,0 as bdm_id,'-' as bdm_name,0 as bd_id,'-' as bd_name from opos_dw.dim_opos_bd_info_df where country_code='nal' and dt='{pt}' group by hcm_id,hcm_name,cm_id,cm_name,rm_id,rm_name) as b
+  on
+  o.bd_id=b.rm_id
+),
 
-,o.provider_account
+--04.统计负责人是cm的
+cm as (
+select
+  o.id
+  ,o.activity_id
+  
+  ,3 as job_id
+  ,cast(b.hcm_id as int) as hcm_id
+  ,b.hcm_name
+  ,cast(o.bd_id as int) as cm_id
+  ,b.cm_name
+  ,cast(b.rm_id as int) as rm_id
+  ,b.rm_name
+  ,cast(b.bdm_id as int) as bdm_id
+  ,b.bdm_name
+  ,cast(b.bd_id as int) as bd_id
+  ,b.bd_name
+  
+  ,o.city_id
+  ,o.device_id
+  ,o.opay_account
+  
+  ,o.provider_account
+  ,o.receiver_account
+
+  ,o.amount
+  ,o.use_amount
+  ,o.bonus_rate
+  ,o.bonus_amount
+  
+  ,o.status
+  ,o.settle_status
+  ,o.settle_type
+  ,o.reason
+  ,o.risk_id
+  ,o.settle_time
+  ,o.expire_time
+  ,o.use_time
+  ,o.use_date
+  ,o.create_time
+  ,o.update_time
+  
+  ,'nal' as country_code
+  ,o.dt
+  from
+  (select * from opos_dw_ods.ods_sqoop_base_opos_bonus_record_di where dt='{pt}' and bd_id> 0) as o
+  inner join
+  (select hcm_id,hcm_name,cm_id,cm_name,0 as rm_id,'-' as rm_name,0 as bdm_id,'-' as bdm_name,0 as bd_id,'-' as bd_name from opos_dw.dim_opos_bd_info_df where country_code='nal' and dt='{pt}' group by hcm_id,hcm_name,cm_id,cm_name) as b
+  on
+  o.bd_id=b.cm_id
+),
+
+--05.统计负责人是hcm的
+hcm as (
+select
+  o.id
+  ,o.activity_id
+  
+  ,2 as job_id
+  ,cast(o.bd_id as int) as hcm_id
+  ,b.hcm_name
+  ,cast(b.cm_id as int) as cm_id
+  ,b.cm_name
+  ,cast(b.rm_id as int) as rm_id
+  ,b.rm_name
+  ,cast(b.bdm_id as int) as bdm_id
+  ,b.bdm_name
+  ,cast(b.bd_id as int) as bd_id
+  ,b.bd_name
+  
+  ,o.city_id
+
+  ,o.device_id
+  ,o.opay_account
+  
+  ,o.provider_account
+  ,o.receiver_account
+
+  ,o.amount
+  ,o.use_amount
+  ,o.bonus_rate
+  ,o.bonus_amount
+  
+  ,o.status
+  ,o.settle_status
+  ,o.settle_type
+  ,o.reason
+  ,o.risk_id
+  ,o.settle_time
+  ,o.expire_time
+  ,o.use_time
+  ,o.use_date
+  ,o.create_time
+  ,o.update_time
+  
+  ,'nal' as country_code
+  ,o.dt
+  from
+  (select * from opos_dw_ods.ods_sqoop_base_opos_bonus_record_di where dt='{pt}' and bd_id> 0) as o
+  inner join
+  (select hcm_id,hcm_name,0 as cm_id,'-' as cm_name,0 as rm_id,'-' as rm_name,0 as bdm_id,'-' as bdm_name,0 as bd_id,'-' as bd_name from opos_dw.dim_opos_bd_info_df where country_code='nal' and dt='{pt}' group by hcm_id,hcm_name) as b
+  on
+  o.bd_id=b.hcm_id
+),
+
+--06.统计关联不上任何bd信息的
+nobd as (
+select
+  o.id
+  ,o.activity_id
+  
+  ,-1 as job_id
+  ,0 as hcm_id
+  ,'' as hcm_name
+  ,0 as cm_id
+  ,'' as cm_name
+  ,0 as rm_id
+  ,'' as rm_name
+  ,0 as bdm_id
+  ,'' as bdm_name
+  ,o.bd_id as bd_id
+  ,'' as bd_name
+  
+  ,o.city_id
+
+  ,o.device_id
+  ,o.opay_account
+  
+  ,o.provider_account
+  ,o.receiver_account
+
+  ,o.amount
+  ,o.use_amount
+  ,o.bonus_rate
+  ,o.bonus_amount
+  
+  ,o.status
+  ,o.settle_status
+  ,o.settle_type
+  ,o.reason
+  ,o.risk_id
+  ,o.settle_time
+  ,o.expire_time
+  ,o.use_time
+  ,o.use_date
+  ,o.create_time
+  ,o.update_time
+  
+  ,'nal' as country_code
+  ,o.dt
+  from
+  (select * from opos_dw_ods.ods_sqoop_base_opos_bonus_record_di where dt='{pt}') as o
+  left join
+  (select id from  opos_dw_ods.ods_sqoop_base_bd_admin_users_df where dt = '{pt}') as b
+  on
+  o.bd_id=b.id
+  where
+  b.id is null
+)
+
+--07.将所有临时表汇总
+insert overwrite table opos_dw.dwd_opos_bonus_record_di partition(country_code,dt)
+select 
+v1.id
+,v1.activity_id
+
+,substr(v1.create_time,0,10) as create_date
+,v3.week_of_year as create_week
+,substr(v1.create_time,0,7) as create_month
+,substr(v1.create_time,0,4) as create_year
+  
+,v1.job_id
+,v1.hcm_id
+,v1.hcm_name
+,v1.cm_id
+,v1.cm_name
+,v1.rm_id
+,v1.rm_name
+,v1.bdm_id
+,v1.bdm_name
+,v1.bd_id
+,v1.bd_name
+
+,v1.city_id
+,v2.name as city_name
+,v2.country
+
+,v1.device_id
+,v1.opay_account
+
+,v1.provider_account
 ,provider.id as provider_shop_id
 ,provider.opay_id as provider_opay_id
 ,provider.shop_name as provider_shop_name
@@ -139,7 +474,7 @@ o.id
 ,provider.city_name as provider_city_name
 ,provider.country as provider_country
 
-,o.receiver_account
+,v1.receiver_account
 ,receiver.id as receiver_shop_id
 ,receiver.opay_id as receiver_opay_id
 ,receiver.shop_name as receiver_shop_name
@@ -150,47 +485,54 @@ o.id
 ,receiver.city_name as receiver_city_name
 ,receiver.country as receiver_country
 
-,o.amount
-,o.use_amount
-,o.bonus_rate
-,o.bonus_amount
-
-,o.status
-,o.settle_status
-,o.settle_type
-,o.reason
-,o.risk_id
-,o.settle_time
-,o.expire_time
-,o.use_time
-,o.use_date
-,o.create_time
-,o.update_time
+,v1.amount
+,v1.use_amount
+,v1.bonus_rate
+,v1.bonus_amount
+,v1.status
+,v1.settle_status
+,v1.settle_type
+,v1.reason
+,v1.risk_id
+,v1.settle_time
+,v1.expire_time
+,v1.use_time
+,v1.use_date
+,v1.create_time
+,v1.update_time
 
 ,'nal' as country_code
-,o.dt
+,v1.dt
 from
-(select * from opos_dw_ods.ods_sqoop_base_opos_bonus_record_di where dt='{pt}') as o
+  (
+    select * from bd
+    union
+    select * from bdm
+    union
+    select * from rm
+    union
+    select * from cm
+    union
+    select * from hcm
+    union
+    select * from nobd
+  ) as v1
 left join
-(select * from opos_dw.dim_opos_bd_info_df where country_code='nal' and dt='{pt}') as b
-on
-o.bd_id=b.bd_id
+  (select id,name,country from opos_dw_ods.ods_sqoop_base_bd_city_df where dt = '{pt}') as v2
+  on
+  v1.city_id=v2.id
 left join
-(select id,name,country from opos_dw_ods.ods_sqoop_base_bd_city_df where dt = '{pt}') as c
-on
-o.city_id=c.id
+  public_dw_dim.dim_date as v3
+  on
+  substr(v1.create_time,0,10)=v3.dt
 left join
-public_dw_dim.dim_date as d
-on
-substr(o.create_time,0,10)=d.dt
+  (select * from opos_dw.dim_opos_bd_relation_df where country_code='nal' and dt='{pt}') as provider
+  on
+  v1.provider_account=provider.opay_account
 left join
-(select * from opos_dw.dim_opos_bd_relation_df where country_code='nal' and dt='{pt}') as provider
-on
-o.provider_account=provider.opay_account
-left join
-(select * from opos_dw.dim_opos_bd_relation_df where country_code='nal' and dt='{pt}') as receiver
-on
-o.receiver_account=receiver.opay_account;
+  (select * from opos_dw.dim_opos_bd_relation_df where country_code='nal' and dt='{pt}') as receiver
+  on
+  v1.receiver_account=receiver.opay_account;
 
 
 

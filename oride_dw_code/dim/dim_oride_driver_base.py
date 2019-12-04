@@ -81,7 +81,7 @@ def fun_task_timeout_monitor(ds,dag,**op_kwargs):
     dag_ids=dag.dag_id
 
     msg = [
-        {"db": "oride_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "3000"}
+        {"db": "oride_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=NG/dt={pt}".format(pt=ds), "timeout": "3000"}
     ]
 
     TaskTimeoutMonitor().set_task_monitor(msg)
@@ -182,7 +182,7 @@ def dim_oride_driver_base_sql_task(ds):
     
            LANGUAGE, --客户端语言
     
-           'nal' AS country_code,
+           nvl(cit.country_code,'nal') AS country_code,
            --国家码字段
     
             '{pt}' as dt
@@ -266,7 +266,9 @@ def dim_oride_driver_base_sql_task(ds):
               city_id,
               --所属城市ID
     
-              LANGUAGE --客户端语言
+              LANGUAGE, --客户端语言
+              
+              country_id  --所属国家
     FROM oride_dw_ods.ods_sqoop_base_data_driver_extend_df
        WHERE dt = '{pt}') ext ON dri.driver_id=ext.driver_id
     LEFT OUTER JOIN
@@ -300,7 +302,6 @@ def check_key_data_task(ds):
     SELECT count(1)-count(distinct driver_id) as cnt
       FROM {db}.{table}
       WHERE dt='{pt}'
-      and country_code in ('nal')
     '''.format(
         pt=ds,
         now_day=airflow.macros.ds_add(ds, +1),

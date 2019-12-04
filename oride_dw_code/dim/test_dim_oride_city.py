@@ -44,7 +44,6 @@ dag = airflow.DAG( 'test_dim_oride_city',
 ##----------------------------------------- 依赖 ---------------------------------------## 
 
 
-
 test_snappy_dev_01_tesk = S3KeySensor(
     task_id='test_snappy_dev_01_tesk',
     bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(

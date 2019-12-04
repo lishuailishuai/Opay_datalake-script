@@ -15,6 +15,7 @@ from airflow.operators.bash_operator import BashOperator
 from airflow.sensors.named_hive_partition_sensor import NamedHivePartitionSensor
 from airflow.sensors.hive_partition_sensor import HivePartitionSensor
 from airflow.sensors import UFileSensor
+from airflow.sensors.s3_key_sensor import S3KeySensor
 import json
 import logging
 from airflow.models import Variable
@@ -46,17 +47,16 @@ sleep_time = BashOperator(
 
 
 # 依赖前一天分区
-dependence_dwd_oride_order_base_include_test_di_prev_day_task = UFileSensor(
+dependence_dwd_oride_order_base_include_test_di_prev_day_task = S3KeySensor(
     task_id='dwd_oride_order_base_include_test_di_prev_day_task',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
         hdfs_path_str="oride/oride_dw/dwd_oride_order_base_include_test_di/country_code=NG",
         pt='{{ds}}'
     ),
-    bucket_name='opay-datalake',
+    bucket_name='opay-bi',
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
-
 ##----------------------------------------- 变量 ---------------------------------------##
 def get_table_info(i):
     table_names = ['app_oride_new_user_cohort_w',
@@ -112,7 +112,7 @@ create_oride_cohort_mid_task = HiveOperator(
             --min(unix_timestamp(create_time)) over (partition by driver_id) as driver_first_time,--司机第一次完单时间
             from oride_dw.dwd_oride_order_base_include_test_di
             where dt>='2019-07-08'  --从20190705号开始加的city_id字段，因此从28周开始统计留存数据，按日的从20190705号开始统计
-            and dt<='{dt}'
+            and dt<='{pt}'
             and status in(4,5) and city_id<>999001 and driver_id<>1) t
             '''.format(
         dt='{{ds}}',

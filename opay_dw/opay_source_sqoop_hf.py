@@ -14,7 +14,7 @@ from utils.util import on_success_callback
 
 args = {
     'owner': 'yangmingze',
-    'start_date': datetime(2019, 11, 20),
+    'start_date': datetime(2019, 12, 1),
     'depends_on_past': False,
     'retries': 1,
     'retry_delay': timedelta(minutes=5),
@@ -24,7 +24,7 @@ args = {
     'on_success_callback':on_success_callback,
 }
 
-schedule_interval="01 19 * * *"
+schedule_interval="01 10 * * *"
 
 dag = airflow.DAG(
     'opay_source_sqoop_hf',
@@ -228,7 +228,7 @@ for db_name, table_name, conn_id, prefix_name,priority_weight_nm in table_list:
         task_id='add_partitions_{}'.format(hive_table_name),
         priority_weight=priority_weight_nm,
         hql='''
-                ALTER TABLE {table} ADD IF NOT EXISTS PARTITION (dt = '{{{{ ds }}}}',hour = '{{{{ execution_date.strftime("%H") }}}}')
+                ALTER TABLE {table} ADD IF NOT EXISTS PARTITION (dt = '{{{{ tomorrow_ds }}}}',hour = '{{{{ execution_date.strftime("%H") }}}}')
             '''.format(table=hive_table_name),
         schema=HIVE_DB,
         dag=dag)
