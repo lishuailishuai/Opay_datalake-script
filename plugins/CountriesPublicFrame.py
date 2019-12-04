@@ -488,12 +488,13 @@ class CountriesPublicFrame(object):
 
                     #必须有数据才可以生成Success 文件
                     if self.file_type.lower()=="true":
+                        pass
 
                         #object_task()
 
                     #数据为空也生成 Success 文件
                     if self.file_type.lower()=="false":
-
+                        pass
                         #object_task()
 
                 
@@ -512,7 +513,7 @@ class CountriesPublicFrame(object):
                         if self.v_del_flag==1:
 
                             #object_task()
-
+                            pass
                             continue
 
                         #在必须有数据条件下：国家是nal时，数据可以为空 
@@ -520,13 +521,14 @@ class CountriesPublicFrame(object):
                             self.data_not_file_type_touchz()
 
                         else:
-
+                            pass
                             #object_task()
 
 
                     #数据为空也生成 Success 文件
                     if self.file_type.lower()=="false":
-
+                        
+                        pass
                         #object_task()
 
                    
