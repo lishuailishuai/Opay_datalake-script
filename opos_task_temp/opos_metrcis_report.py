@@ -192,7 +192,9 @@ and a.city_id=b.city_id
 --得出最新维度下每个dbid的详细数据信息
 insert overwrite table opos_temp.opos_metrcis_report partition (country_code,dt)
 select
-nvl(a.cm_id,b.cm_id) as cm_id
+nvl(a.hcm_id,b.hcm_id) as hcm_id
+,nvl(a.hcm_name,b.hcm_name) as hcm_name
+,nvl(a.cm_id,b.cm_id) as cm_id
 ,nvl(a.cm_name,b.cm_name) as cm_name
 ,nvl(a.rm_id,b.rm_id) as rm_id
 ,nvl(a.rm_name,b.rm_name) as rm_name
@@ -234,7 +236,9 @@ nvl(a.cm_id,b.cm_id) as cm_id
 ,'{pt}' as dt
 from
   (select 
-  cm_id
+  hcm_id
+  ,hcm_name
+  ,cm_id
   ,cm_name
   ,rm_id
   ,rm_name
@@ -256,7 +260,9 @@ from
   where 
   country_code='nal' and dt='{pt}'
   group by
-  cm_id
+  hcm_id
+  ,hcm_name
+  ,cm_id
   ,cm_name
   ,rm_id
   ,rm_name
@@ -272,12 +278,14 @@ from
 full join
   (select * from opos_temp.app_opos_order_data_history_di where country_code='nal' and dt='{pt}') as b
 on
-a.cm_id=b.cm_id
+a.hcm_id=b.hcm_id
+AND a.cm_id=b.cm_id
 AND a.rm_id=b.rm_id
 AND a.bdm_id=b.bdm_id
 AND a.bd_id=b.bd_id
 and a.city_id=b.city_id
 ;
+
 
 
 
