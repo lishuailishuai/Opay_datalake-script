@@ -45,7 +45,7 @@ class CountriesPublicFrame(object):
 
         self.get_country_code()
 
-        #self.get_country_code_dev():
+        self.get_country_code_dev():
 
     def get_country_code(self):
 
@@ -73,7 +73,7 @@ class CountriesPublicFrame(object):
 
         if self.is_open.lower()=="false":
 
-            v_country_code_list="nal"
+            self.country_code_list="nal"
 
         if self.is_open.lower()=="true":
 
@@ -81,11 +81,9 @@ class CountriesPublicFrame(object):
 
             s=list(self.v_country_code_map.keys())
 
-            v_country_code_list=" ".join(s)
+            self.country_code_list=",".join(s)
 
-        print(v_country_code_list)
-        print(self.v_country_code_map)
-
+        print(self.country_code_list)
             
     def check_success_exist(self):
 
