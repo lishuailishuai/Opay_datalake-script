@@ -80,10 +80,10 @@ class CountriesPublicFrame(object):
             self.v_country_code_map = Variable.get("country_code_dim")
 
             for val in self.v_country_code_map:
-                print(val)
-        #         country_code_info = json.loads(val)
-        #         country_code = country_code_info.get('country_code', None)
-        #         open_status = country_code_info.get('open_status', None)
+                #print(val)
+                country_code_info = json.loads(val)
+                country_code = country_code_info.get('country_code', None)
+                open_status = country_code_info.get('open_status', None)
 
         #         v_country_code_list.append(country_code)
 
