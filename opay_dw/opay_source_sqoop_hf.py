@@ -24,7 +24,7 @@ args = {
     'on_success_callback':on_success_callback,
 }
 
-schedule_interval="01 09 * * *"
+schedule_interval="01 10 * * *"
 
 dag = airflow.DAG(
     'opay_source_sqoop_hf',
