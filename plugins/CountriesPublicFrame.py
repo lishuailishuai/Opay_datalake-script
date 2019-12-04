@@ -45,6 +45,8 @@ class CountriesPublicFrame(object):
 
         self.get_country_code()
 
+        self.get_country_code_dev():
+
     def get_country_code(self):
 
         """
@@ -75,23 +77,24 @@ class CountriesPublicFrame(object):
 
         if self.is_open.lower()=="true":
 
-            v_country_code_list=[]
+            v_country_code_list=""
 
             self.v_country_code_map = Variable.get("country_code_dim").split("\n")
 
             for val in self.v_country_code_map:
-                #print(val)
+
+                print(val)
+                print(type(val))
+       
                 country_code_info = json.loads(val)
                 country_code = country_code_info.get('country_code', None)
                 open_status = country_code_info.get('open_status', None)
 
-                v_country_code_list.append(country_code)
+                v_country_code_list=v_country_code_list+","
 
         logging.info('Executing 二位国家码: %s', v_country_code_list)
 
         print(v_country_code_list)
-
-        print(self.v_country_code_map)
 
 
     def check_success_exist(self):
@@ -304,6 +307,35 @@ class CountriesPublicFrame(object):
 
             self.exist_country_code_data_dir(self.data_not_file_type_touchz)
 
+
+
+     def touchz_success_dev(self):
+
+        """
+            生成 Success 函数
+        """
+
+         # 没有国家分区并且每个目录必须有数据才能生成 Success
+        if self.country_partition.lower()=="false" and self.file_type.lower()=="true":
+
+            self.not_exist_country_code_data_dir(self.data_file_type_touchz)
+
+        # 没有国家分区并且数据为空也生成 Success
+        if self.country_partition.lower()=="false" and self.file_type.lower()=="false":
+
+            self.not_exist_country_code_data_dir(self.data_not_file_type_touchz)
+
+
+        #有国家分区并且每个目录必须有数据才能生成 Success
+        if self.country_partition.lower()=="true" and self.file_type.lower()=="true":
+
+            self.exist_country_code_data_dir(self.data_file_type_touchz)
+        
+        
+        #有国家分区并且数据为空也生成 Success
+        if self.country_partition.lower()=="true" and self.file_type.lower()=="false":
+
+            self.exist_country_code_data_dir(self.data_not_file_type_touchz)
 
     #没有国家码分区
     def not_exist_country_code_data_dir(self,object_task):
