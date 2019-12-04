@@ -500,7 +500,6 @@ class CountriesPublicFrame(object):
                 #开通多国家业务
                 if self.country_partition.lower()=="true" and self.is_open.lower()=="true":
 
-                    print(country_code_word)
                     if self.v_country_code_map[country_code_word].lower()=="new":
                         print(self.v_country_code_map[country_code_word]+" "+country_code_word)
                         self.data_not_file_type_touchz()
