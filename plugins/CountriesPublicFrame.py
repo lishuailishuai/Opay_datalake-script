@@ -471,10 +471,16 @@ class CountriesPublicFrame(object):
 
                     #刚刚开国的国家(按照false处理)
                     if self.v_country_code_map[country_code_word].lower()=="new":
-               
-                        self.data_not_file_type_touchz()
 
-                        continue
+                        if self.v_del_flag==1:
+
+                            object_task()
+                            continue 
+                            
+                        else:
+                            self.data_not_file_type_touchz()
+
+                            continue
 
                     #必须有数据才可以生成Success 文件
                     if self.file_type.lower()=="true":
