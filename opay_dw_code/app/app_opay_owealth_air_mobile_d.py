@@ -145,8 +145,8 @@ def send_air_mobile_report_email(ds, **kwargs):
            dt,
            airtime_amt,
            airtime_c,
-           mobiledate_amt,
-           mobiledate_c
+           mobiledata_amt,
+           mobiledata_c
 
         FROM
            opay_dw.app_opay_owealth_air_mobile_d
