@@ -451,7 +451,7 @@ class CountriesPublicFrame(object):
             sys.exit(1)
 
 
-    def exist_country_code_data_dir_dev(self,object_task):
+    def exist_country_code_data_dir_dev(self):
 
         """
         country_partition:是否有国家分区
@@ -489,12 +489,12 @@ class CountriesPublicFrame(object):
                     #必须有数据才可以生成Success 文件
                     if self.file_type.lower()=="true":
 
-                        object_task()
+                        #object_task()
 
                     #数据为空也生成 Success 文件
                     if self.file_type.lower()=="false":
 
-                        object_task()
+                        #object_task()
 
                 
                 #开通多国家业务
@@ -511,7 +511,7 @@ class CountriesPublicFrame(object):
                         #删除多国家分区使用
                         if self.v_del_flag==1:
 
-                            object_task()
+                            #object_task()
 
                             continue
 
@@ -521,13 +521,13 @@ class CountriesPublicFrame(object):
 
                         else:
 
-                            object_task()
+                            #object_task()
 
 
                     #数据为空也生成 Success 文件
                     if self.file_type.lower()=="false":
 
-                        object_task()
+                        #object_task()
 
                    
         except Exception as e:
