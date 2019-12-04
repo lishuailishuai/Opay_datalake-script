@@ -427,8 +427,8 @@ week_data as (
     opos_dw.dwd_pre_opos_payment_order_di 
     where 
     country_code = 'nal' 
-    and dt >= '{pt}' 
-    and dt <= '{before_7_day}'
+    and dt <= '{pt}' 
+    and dt >= '{before_7_day}'
     and trade_status = 'SUCCESS'
     ) u 
   inner join 
@@ -490,8 +490,8 @@ month_data as (
     opos_dw.dwd_pre_opos_payment_order_di 
     where 
     country_code = 'nal' 
-    and dt >= '{pt}' 
-    and dt <= '{before_30_day}'
+    and dt <= '{pt}' 
+    and dt >= '{before_30_day}'
     and trade_status = 'SUCCESS'
     ) u 
   inner join 
