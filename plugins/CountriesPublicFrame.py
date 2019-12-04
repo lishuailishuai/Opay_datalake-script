@@ -82,8 +82,6 @@ class CountriesPublicFrame(object):
             s=list(self.v_country_code_map.keys())
 
             self.country_code_list=",".join(s)
-
-        print(self.country_code_list)
             
     def check_success_exist(self):
 
@@ -452,6 +450,94 @@ class CountriesPublicFrame(object):
 
             sys.exit(1)
 
+
+    def exist_country_code_data_dir_dev(self,object_task):
+
+        """
+        country_partition:是否有国家分区
+        file_type:是否空文件也生成 success
+            
+        """
+
+        try:
+
+            #获取国家列表
+
+            for country_code_word in self.country_code_list.split(","):
+
+                if country_code_word.lower()=='nal':
+                    country_code_word=country_code_word.lower()
+
+                else:
+                    country_code_word=country_code_word.upper()
+
+
+                #没有小时级分区
+                if self.hour is None:
+
+                    #输出不同国家的数据路径(没有小时级分区)
+                    self.hdfs_data_dir_str=self.data_hdfs_path+"/country_code="+country_code_word+"/dt="+self.ds
+                else:
+
+                    #输出不同国家的数据路径(有小时级分区)
+                    self.hdfs_data_dir_str=self.data_hdfs_path+"/country_code="+country_code_word+"/dt="+self.ds+"/hour="+self.hour
+
+
+                #没有开通多国家业务(国家码默认nal)
+                if self.country_partition.lower()=="true" and self.is_open.lower()=="false":
+
+                    #必须有数据才可以生成Success 文件
+                    if self.file_type.lower()=="true":
+
+                        object_task()
+
+                    #数据为空也生成 Success 文件
+                    if self.file_type.lower()=="false":
+
+                        object_task()
+
+                
+                #开通多国家业务
+                if self.country_partition.lower()=="true" and self.is_open.lower()=="true":
+
+
+                    if self.v_country_code_map[country_code_word].lower()=="new":
+                        print(self.v_country_code_map[country_code_word]+" "+country_code_word)
+                        self.data_not_file_type_touchz()
+
+                    
+                    #必须有数据才可以生成Success 文件
+                    if self.file_type.lower()=="true":
+
+                        #删除多国家分区使用
+                        if self.v_del_flag==1:
+
+                            object_task()
+
+                            continue
+
+                        #在必须有数据条件下：国家是nal时，数据可以为空 
+                        if country_code_word=="nal":
+                            self.data_not_file_type_touchz()
+
+                        else:
+
+                            object_task()
+
+
+                    #数据为空也生成 Success 文件
+                    if self.file_type.lower()=="false":
+
+                        object_task()
+
+                   
+        except Exception as e:
+
+            #self.comwx.postAppMessage('DW调度系统任务 {jobname} 数据产出异常'.format(jobname=table_name),'271')
+
+            logging.info(e)
+
+            sys.exit(1)
 
     # alter 语句
     def alter_partition(self):   
