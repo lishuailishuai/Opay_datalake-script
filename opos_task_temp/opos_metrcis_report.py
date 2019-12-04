@@ -25,7 +25,7 @@ import os
 
 args = {
     'owner': 'yuanfeng',
-    'start_date': datetime(2019, 11, 25),
+    'start_date': datetime(2019, 11, 28),
     'depends_on_past': False,
     'retries': 3,
     'retry_delay': timedelta(minutes=2),
@@ -93,7 +93,9 @@ set hive.exec.dynamic.partition.mode=nonstrict;
 --每天将历史数据和最新一天的数据累加，计算后放入历史表中,因为会有新增的情况，故需要用fulljoin
 insert overwrite table opos_temp.app_opos_order_data_history_di partition(country_code,dt)
 select 
-nvl(a.cm_id,b.cm_id) as cm_id
+nvl(a.hcm_id,b.hcm_id) as hcm_id
+,nvl(a.hcm_name,b.hcm_name) as hcm_name
+,nvl(a.cm_id,b.cm_id) as cm_id
 ,nvl(a.cm_name,b.cm_name) as cm_name
 ,nvl(a.rm_id,b.rm_id) as rm_id
 ,nvl(a.rm_name,b.rm_name) as rm_name
@@ -106,15 +108,16 @@ nvl(a.cm_id,b.cm_id) as cm_id
 ,nvl(a.city_name,b.city_name) as city_name
 ,nvl(a.country,b.country) as country
 
-,nvl(a.his_pos_complete_order_cnt,0) + nvl(b.his_pos_complete_order_cnt,0)  as his_pos_complete_order_cnt
-,nvl(a.his_qr_complete_order_cnt,0) + nvl(b.his_qr_complete_order_cnt,0)  as his_qr_complete_order_cnt
-,nvl(a.his_complete_order_cnt,0) + nvl(b.his_complete_order_cnt,0)  as his_complete_order_cnt
-,nvl(a.his_gmv,0) + nvl(b.his_gmv,0)  as his_gmv
-,nvl(a.his_actual_amount,0) + nvl(b.his_actual_amount,0)  as his_actual_amount
-,nvl(a.his_return_amount,0) + nvl(b.his_return_amount,0)  as his_return_amount
-,nvl(a.his_new_user_cost,0) + nvl(b.his_new_user_cost,0)  as his_new_user_cost
-,nvl(a.his_old_user_cost,0) + nvl(b.his_old_user_cost,0)  as his_old_user_cost
-,nvl(a.his_return_amount_order_cnt,0) + nvl(b.his_return_amount_order_cnt,0)  as his_return_amount_order_cnt
+--用昨天的历史数据+今天的最新一天的数据作为累计数据
+,nvl(a.his_pos_complete_order_cnt,0) + nvl(b.pos_complete_order_cnt,0)  as his_pos_complete_order_cnt
+,nvl(a.his_qr_complete_order_cnt,0) + nvl(b.qr_complete_order_cnt,0)  as his_qr_complete_order_cnt
+,nvl(a.his_complete_order_cnt,0) + nvl(b.complete_order_cnt,0)  as his_complete_order_cnt
+,nvl(a.his_gmv,0) + nvl(b.gmv,0)  as his_gmv
+,nvl(a.his_actual_amount,0) + nvl(b.actual_amount,0)  as his_actual_amount
+,nvl(a.his_return_amount,0) + nvl(b.return_amount,0)  as his_return_amount
+,nvl(a.his_new_user_cost,0) + nvl(b.new_user_cost,0)  as his_new_user_cost
+,nvl(a.his_old_user_cost,0) + nvl(b.old_user_cost,0)  as his_old_user_cost
+,nvl(a.his_return_amount_order_cnt,0) + nvl(b.return_amount_order_cnt,0)  as his_return_amount_order_cnt
 
 ,nvl(b.pos_complete_order_cnt,0)  as pos_complete_order_cnt
 ,nvl(b.qr_complete_order_cnt,0)  as qr_complete_order_cnt
@@ -129,71 +132,59 @@ nvl(a.cm_id,b.cm_id) as cm_id
 ,'nal' as country_code
 ,'{pt}' as dt
 from
-(select * from opos_temp.app_opos_order_data_history_di where country_code='nal' and dt='{before_1_day}' and length(bd_id)>0) as a
+  (select * from opos_temp.app_opos_order_data_history_di where country_code='nal' and dt='{before_1_day}') as a
 full join
-(
-select 
-cm_id
-,cm_name
-,rm_id
-,rm_name
-,bdm_id
-,bdm_name
-,bd_id
-,bd_name
-
-,city_id
-,city_name
-,country
-
-,create_date
-,create_week
-,create_month
-,create_year
-
-,count(if(order_type = 'pos',order_id,null)) as his_pos_complete_order_cnt
-,count(if(order_type = 'qrcode',order_id,null)) as his_qr_complete_order_cnt
-,count(order_id) as his_complete_order_cnt
-,sum(org_payment_amount) as his_gmv
-,sum(pay_amount) as his_actual_amount
-,sum(return_amount) as his_return_amount
-,sum(if(first_order = '1',org_payment_amount - pay_amount + user_subsidy,0)) as his_new_user_cost
-,sum(if(first_order <> '1',org_payment_amount - pay_amount + user_subsidy,0)) as his_old_user_cost
-,count(if(return_amount > 0,order_id,null)) as his_return_amount_order_cnt
-
-,count(if(dt = '{pt}' and order_type = 'pos',order_id,null)) as pos_complete_order_cnt
-,count(if(dt = '{pt}' and order_type = 'qrcode',order_id,null)) as qr_complete_order_cnt
-,count(if(dt = '{pt}',order_id,null)) as complete_order_cnt
-,sum(if(dt = '{pt}',org_payment_amount,0)) as gmv
-,sum(if(dt = '{pt}',pay_amount,0)) as actual_amount
-,sum(if(dt = '{pt}',return_amount,0)) as return_amount
-,sum(if(dt = '{pt}' and first_order = '1',org_payment_amount - pay_amount + user_subsidy,0)) as new_user_cost
-,sum(if(dt = '{pt}' and first_order <> '1',org_payment_amount - pay_amount + user_subsidy,0)) as old_user_cost
-,count(if(dt = '{pt}' and return_amount > 0,order_id,null)) as return_amount_order_cnt
-
-from 
-(select * from opos_dw.dwd_pre_opos_payment_order_di where country_code='nal' and dt='{pt}' and trade_status = 'SUCCESS' and length(bd_id)>0) as tmp
-group by 
-cm_id
-,cm_name
-,rm_id
-,rm_name
-,bdm_id
-,bdm_name
-,bd_id
-,bd_name
-
-,city_id
-,city_name
-,country
-
-,create_date
-,create_week
-,create_month
-,create_year
-) as b
+  (
+  select 
+  hcm_id
+  ,hcm_name
+  ,cm_id
+  ,cm_name
+  ,rm_id
+  ,rm_name
+  ,bdm_id
+  ,bdm_name
+  ,bd_id
+  ,bd_name
+  
+  ,city_id
+  ,city_name
+  ,country
+  
+  ,count(if(order_type = 'pos',order_id,null)) as pos_complete_order_cnt
+  ,count(if(order_type = 'qrcode',order_id,null)) as qr_complete_order_cnt
+  ,count(order_id) as complete_order_cnt
+  ,sum(org_payment_amount) as gmv
+  ,sum(pay_amount) as actual_amount
+  ,sum(return_amount) as return_amount
+  ,sum(if(first_order = '1',org_payment_amount - pay_amount + user_subsidy,0)) as new_user_cost
+  ,sum(if(first_order <> '1',org_payment_amount - pay_amount + user_subsidy,0)) as old_user_cost
+  ,count(if(return_amount > 0,order_id,null)) as return_amount_order_cnt
+  
+  from 
+  (select * from opos_dw.dwd_pre_opos_payment_order_di where country_code='nal' and dt='{pt}' and trade_status = 'SUCCESS') as tmp
+  group by 
+  hcm_id
+  ,hcm_name
+  ,cm_id
+  ,cm_name
+  ,rm_id
+  ,rm_name
+  ,bdm_id
+  ,bdm_name
+  ,bd_id
+  ,bd_name
+  
+  ,city_id
+  ,city_name
+  ,country
+  ) as b
 on
-a.bd_id=b.bd_id
+a.hcm_id=b.hcm_id
+AND a.cm_id=b.cm_id
+AND a.rm_id=b.rm_id
+AND a.bdm_id=b.bdm_id
+AND a.bd_id=b.bd_id
 and a.city_id=b.city_id
 ;
 
@@ -201,91 +192,94 @@ and a.city_id=b.city_id
 --得出最新维度下每个dbid的详细数据信息
 insert overwrite table opos_temp.opos_metrcis_report partition (country_code,dt)
 select
-nvl(bd.cm_id,ord.cm_id) cm_id
-,nvl(bd.cm_name,ord.cm_name) cm_name
-,nvl(bd.rm_id,ord.rm_id) rm_id
-,nvl(bd.rm_name,ord.rm_name) rm_name
-,nvl(bd.bdm_id,ord.bdm_id) bdm_id
-,nvl(bd.bdm_name,ord.bdm_name) bdm_name
-,nvl(bd.bd_id,ord.bd_id) bd_id
-,nvl(bd.bd_name,ord.bd_name) bd_name
+nvl(a.cm_id,b.cm_id) as cm_id
+,nvl(a.cm_name,b.cm_name) as cm_name
+,nvl(a.rm_id,b.rm_id) as rm_id
+,nvl(a.rm_name,b.rm_name) as rm_name
+,nvl(a.bdm_id,b.bdm_id) as bdm_id
+,nvl(a.bdm_name,b.bdm_name) as bdm_name
+,nvl(a.bd_id,b.bd_id) as bd_id
+,nvl(a.bd_name,b.bd_name) as bd_name
 
-,nvl(bd.city_id,ord.city_id) city_id
-,nvl(bd.city_name,ord.city_name) city_name
-,nvl(bd.country,ord.country) country
+,nvl(a.city_id,b.city_id) as city_id
+,nvl(a.city_name,b.city_name) as city_name
+,nvl(a.country,b.country) as country
 
-,nvl(bd.merchant_cnt,0) merchant_cnt
-,nvl(bd.pos_merchant_cnt,0) pos_merchant_cnt
-,nvl(bd.new_merchant_cnt,0) new_merchant_cnt
-,nvl(bd.new_pos_merchant_cnt,0) new_pos_merchant_cnt
+,nvl(a.merchant_cnt,0) as merchant_cnt
+,nvl(a.pos_merchant_cnt,0) as pos_merchant_cnt
+,nvl(a.new_merchant_cnt,0) as new_merchant_cnt
+,nvl(a.new_pos_merchant_cnt,0) as new_pos_merchant_cnt
 
-,nvl(ord.pos_complete_order_cnt,0) pos_complete_order_cnt
-,nvl(ord.qr_complete_order_cnt,0) qr_complete_order_cnt
-,nvl(ord.complete_order_cnt,0) complete_order_cnt
-,nvl(ord.gmv,0) gmv
-,nvl(ord.actual_amount,0) actual_amount
-,nvl(ord.return_amount,0) return_amount
-,nvl(ord.new_user_cost,0) new_user_cost
-,nvl(ord.old_user_cost,0) old_user_cost
-,nvl(ord.return_amount_order_cnt,0) return_amount_order_cnt
+,nvl(b.his_pos_complete_order_cnt,0) as his_pos_complete_order_cnt
+,nvl(b.his_qr_complete_order_cnt,0) as his_qr_complete_order_cnt
+,nvl(b.his_complete_order_cnt,0) as his_complete_order_cnt
+,nvl(b.his_gmv,0) as his_gmv
+,nvl(b.his_actual_amount,0) as his_actual_amount
+,nvl(b.his_return_amount,0) as his_return_amount
+,nvl(b.his_new_user_cost,0) as his_new_user_cost
+,nvl(b.his_old_user_cost,0) as his_old_user_cost
+,nvl(b.his_return_amount_order_cnt,0) as his_return_amount_order_cnt
 
-,nvl(ord.his_pos_complete_order_cnt,0) his_pos_complete_order_cnt
-,nvl(ord.his_qr_complete_order_cnt,0) his_qr_complete_order_cnt
-,nvl(ord.his_complete_order_cnt,0) his_complete_order_cnt
-,nvl(ord.his_gmv,0) his_gmv
-,nvl(ord.his_actual_amount,0) his_actual_amount
-,nvl(ord.his_return_amount,0) his_return_amount
-,nvl(ord.his_new_user_cost,0) his_new_user_cost
-,nvl(ord.his_old_user_cost,0) his_old_user_cost
-,nvl(ord.his_return_amount_order_cnt,0) his_return_amount_order_cnt
+,nvl(b.pos_complete_order_cnt,0) as pos_complete_order_cnt
+,nvl(b.qr_complete_order_cnt,0) as qr_complete_order_cnt
+,nvl(b.complete_order_cnt,0) as complete_order_cnt
+,nvl(b.gmv,0) as gmv
+,nvl(b.actual_amount,0) as actual_amount
+,nvl(b.return_amount,0) as return_amount
+,nvl(b.new_user_cost,0) as new_user_cost
+,nvl(b.old_user_cost,0) as old_user_cost
+,nvl(b.return_amount_order_cnt,0) as return_amount_order_cnt
 
 ,'nal' as country_code
 ,'{pt}' as dt
 from
-(select 
-cm_id
-,cm_name
-,rm_id
-,rm_name
-,bdm_id
-,bdm_name
-,bd_id
-,bd_name
-
-,city_code as city_id
-,city_name
-,country
-
-,count(id) as merchant_cnt
-,0 as pos_merchant_cnt
-,count(if(created_at = '{pt}',id,null)) as new_merchant_cnt
-,0 as new_pos_merchant_cnt
-from
-opos_dw.dim_opos_bd_relation_df
-where 
-country_code='nal' 
-and dt='{pt}'
-and length(bd_id)>0
-group by
-cm_id
-,cm_name
-,rm_id
-,rm_name
-,bdm_id
-,bdm_name
-,bd_id
-,bd_name
-
-,city_code
-,city_name
-,country
-) as bd
+  (select 
+  cm_id
+  ,cm_name
+  ,rm_id
+  ,rm_name
+  ,bdm_id
+  ,bdm_name
+  ,bd_id
+  ,bd_name
+  
+  ,city_code as city_id
+  ,city_name
+  ,country
+  
+  ,count(id) as merchant_cnt
+  ,0 as pos_merchant_cnt
+  ,count(if(created_at = '{pt}',id,null)) as new_merchant_cnt
+  ,0 as new_pos_merchant_cnt
+  from
+  opos_dw.dim_opos_bd_relation_df
+  where 
+  country_code='nal' and dt='{pt}'
+  group by
+  cm_id
+  ,cm_name
+  ,rm_id
+  ,rm_name
+  ,bdm_id
+  ,bdm_name
+  ,bd_id
+  ,bd_name
+  
+  ,city_code
+  ,city_name
+  ,country
+  ) as a
 full join
-(select * from opos_temp.app_opos_order_data_history_di where country_code='nal' and dt='{pt}') as ord
+  (select * from opos_temp.app_opos_order_data_history_di where country_code='nal' and dt='{pt}') as b
 on
-bd.bd_id = ord.bd_id
-and bd.city_id = ord.city_id
+a.cm_id=b.cm_id
+AND a.rm_id=b.rm_id
+AND a.bdm_id=b.bdm_id
+AND a.bd_id=b.bd_id
+and a.city_id=b.city_id
 ;
+
+
 
 
 '''.format(
