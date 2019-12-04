@@ -880,7 +880,7 @@ insert_crm_metrics = HiveToMySqlTransfer(
         null,
         a.dt,
         cast(a.bd_id as string) as bd_id,
-        cast(a.city_id as string) as city_id,
+        if(a.city_id='-',0,a.city_id) as city_id,
         a.merchant_cnt , 
         a.pos_merchant_cnt , 
         a.new_merchant_cnt , 
@@ -950,7 +950,7 @@ insert_bi_metrics = HiveToMySqlTransfer(
         null,
         a.dt,
         cast(a.bd_id as string) as bd_id,
-        cast(a.city_id as string) as city_id,
+        if(a.city_id='-',0,a.city_id) as city_id,
         a.merchant_cnt , 
         a.pos_merchant_cnt , 
         a.new_merchant_cnt , 
@@ -1033,7 +1033,7 @@ insert_bi_bd_metrics = HiveToMySqlTransfer(
         cast(a.bd_id as string) as bd_id,
         a.bd_name,
 
-        cast(a.city_id as string) as city_id,
+        if(a.city_id='-',0,a.city_id) as city_id,
         a.city_name,
         a.country,
 
