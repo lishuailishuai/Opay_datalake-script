@@ -932,10 +932,12 @@ insert_crm_metrics = HiveToMySqlTransfer(
         left join 
         (select * from opos_temp.opos_active_user_daily where country_code = 'nal' and  dt = '{{ ds }}') b 
         on  
-        a.country_code = b.country_code 
-        and a.dt = b.dt 
-        and a.bd_id = b.bd_id 
-        and a.city_id = b.city_id       
+a.hcm_id=b.hcm_id
+AND a.cm_id=b.cm_id
+AND a.rm_id=b.rm_id
+AND a.bdm_id=b.bdm_id
+AND a.bd_id=b.bd_id
+and a.city_id=b.city_id   
         
 
         """,
@@ -1001,11 +1003,13 @@ insert_bi_metrics = HiveToMySqlTransfer(
         (select * from opos_temp.opos_metrcis_report where country_code = 'nal' and  dt = '{{ ds }}') a
         left join 
         (select * from opos_temp.opos_active_user_daily where country_code = 'nal' and  dt = '{{ ds }}') b 
-        on  
-        a.country_code = b.country_code 
-        and a.dt = b.dt 
-        and a.bd_id = b.bd_id 
-        and a.city_id = b.city_id       
+        on    
+a.hcm_id=b.hcm_id
+AND a.cm_id=b.cm_id
+AND a.rm_id=b.rm_id
+AND a.bdm_id=b.bdm_id
+AND a.bd_id=b.bd_id
+and a.city_id=b.city_id  
 
 
     """,
@@ -1086,11 +1090,12 @@ insert_bi_bd_metrics = HiveToMySqlTransfer(
         left join 
         (select * from opos_temp.opos_active_user_daily where country_code = 'nal' and  dt = '{{ ds }}') b 
         on  
-        a.country_code = b.country_code 
-        and a.dt = b.dt 
-        and a.bd_id = b.bd_id 
-        and a.city_id = b.city_id  
-  
+a.hcm_id=b.hcm_id
+AND a.cm_id=b.cm_id
+AND a.rm_id=b.rm_id
+AND a.bdm_id=b.bdm_id
+AND a.bd_id=b.bd_id
+and a.city_id=b.city_id
         left join
         public_dw_dim.dim_date as d
         on
