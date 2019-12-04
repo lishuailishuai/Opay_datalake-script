@@ -103,27 +103,27 @@ set hive.exec.dynamic.partition.mode=nonstrict;
 --得出最新维度下每个dbid的详细数据信息
 insert overwrite table opos_dw.app_opos_bonus_shop_target_d partition (country_code,dt)
 select
-a.shop_id
-,a.opay_id
-,a.shop_name
-,a.opay_account
-,a.create_date
-,a.create_week
-,a.create_month
-,a.create_year
-,a.city_id
-,a.city_name
-,a.country
-,a.hcm_id
-,a.hcm_name
-,a.cm_id
-,a.cm_name
-,a.rm_id
-,a.rm_name
-,a.bdm_id
-,a.bdm_name
-,a.bd_id
-,a.bd_name
+nvl(a.shop_id,b.shop_id) as shop_id
+,nvl(a.opay_id,b.opay_id) as opay_id
+,nvl(a.shop_name,b.shop_name) as shop_name
+,nvl(a.opay_account,b.opay_account) as opay_account
+,nvl(a.create_date,b.create_date) as create_date
+,nvl(a.create_week,b.create_week) as create_week
+,nvl(a.create_month,b.create_month) as create_month
+,nvl(a.create_year,b.create_year) as create_year
+,nvl(a.city_id,b.city_id) as city_id
+,nvl(a.city_name,b.city_name) as city_name
+,nvl(a.country,b.country) as country
+,nvl(a.hcm_id,b.hcm_id) as hcm_id
+,nvl(a.hcm_name,b.hcm_name) as hcm_name
+,nvl(a.cm_id,b.cm_id) as cm_id
+,nvl(a.cm_name,b.cm_name) as cm_name
+,nvl(a.rm_id,b.rm_id) as rm_id
+,nvl(a.rm_name,b.rm_name) as rm_name
+,nvl(a.bdm_id,b.bdm_id) as bdm_id
+,nvl(a.bdm_name,b.bdm_name) as bdm_name
+,nvl(a.bd_id,b.bd_id) as bd_id
+,nvl(a.bd_name,b.bd_name) as bd_name
 
 ,nvl(a.order_cnt,0) as order_cnt
 ,nvl(a.bonus_order_cnt,0) as bonus_order_cnt
@@ -134,9 +134,9 @@ a.shop_id
 ,nvl(a.order_gmv,0) as order_gmv
 ,nvl(a.bonus_order_gmv,0) as bonus_order_gmv
 
-,b.bonus_order_amt
-,b.sweep_amt
-,b.bonus_use_percent
+,nvl(b.bonus_order_amt,0) as bonus_order_amt
+,nvl(b.sweep_amt,0) as sweep_amt
+,nvl(b.bonus_use_percent,0) as bonus_use_percent
 
 ,nvl(a.bonus_order_people,0) as bonus_order_people
 ,nvl(a.bonus_order_times,0) as bonus_order_times
@@ -225,7 +225,7 @@ from
 
 ) as a
 
-left join
+full join
 
 (
   select
@@ -286,13 +286,25 @@ left join
   ,bd_name
 
 ) as b
-
 on
+
 a.shop_id=b.shop_id
 and a.create_date=b.create_date
 and a.city_id=b.city_id
+and a.hcm_id=b.hcm_id
+and a.hcm_name=b.hcm_name
+and a.cm_id=b.cm_id
+and a.cm_name=b.cm_name
+and a.rm_id=b.rm_id
+and a.rm_name=b.rm_name
+and a.bdm_id=b.bdm_id
+and a.bdm_name=b.bdm_name
 and a.bd_id=b.bd_id
+and a.bd_name=b.bd_name
+
+
 ;
+
 
 
 

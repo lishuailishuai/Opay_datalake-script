@@ -26,7 +26,7 @@ import os
 
 args = {
     'owner': 'liushuzhen',
-    'start_date': datetime(2019, 12, 3),
+    'start_date': datetime(2019, 12, 2),
     'depends_on_past': False,
     'retries': 1,
     'retry_delay': timedelta(minutes=5),
@@ -37,7 +37,7 @@ args = {
 
 dag = airflow.DAG(
     'app_opay_owealth_air_mobile_d',
-    schedule_interval="00 17 * * *",
+    schedule_interval="00 19 * * *",
     default_args=args)
 
 ##----------------------------------------- 依赖 ---------------------------------------##
@@ -90,8 +90,8 @@ def app_opay_owealth_air_mobile_d_sql_task(ds):
             group by dt) m
         LEFT JOIN
           (SELECT dt,
-                  count(1) airtime_c,
-                  sum(amount) airtime_amt
+                  count(1) mobiledata_c,
+                  sum(amount) mobiledata_amt
            FROM opay_dw_ods.ods_sqoop_base_mobiledata_topup_record_hf
            WHERE dt='{pt}'
              AND hour='19'
@@ -128,7 +128,7 @@ def execution_data_task_id(ds, **kargs):
     第二个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
 
     """
-    TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "false", "true")
+    TaskTouchzSuccess().countries_touchz_success(airflow.macros.ds_add(ds, +1), db_name, table_name, hdfs_path, "false", "true")
 
 
 app_opay_owealth_air_mobile_d_task = PythonOperator(
@@ -145,8 +145,8 @@ def send_air_mobile_report_email(ds, **kwargs):
            dt,
            airtime_amt,
            airtime_c,
-           mobiledate_amt,
-           mobiledate_c
+           mobiledata_amt,
+           mobiledata_c
 
         FROM
            opay_dw.app_opay_owealth_air_mobile_d
@@ -258,7 +258,7 @@ def send_air_mobile_report_email(ds, **kwargs):
     # send mail
 
     # email_to = Variable.get("owealth_report_receivers").split()
-    email_to = ['shuzhen.liu@opay-inc.com']
+    email_to = ['bigdata@opay-inc.com']
 
     email_subject = '话费流量充值(19：00-19：00)_{}'.format(airflow.macros.ds_add(ds, +1))
     send_email(
