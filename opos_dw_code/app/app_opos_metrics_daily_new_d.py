@@ -100,92 +100,171 @@ set hive.exec.dynamic.partition.mode=nonstrict;
 
 
 insert overwrite table opos_dw.app_opos_metrics_daily_new_d partition(country_code,dt)
-select 
-0 as id
-,d.week_of_year as create_week
-,substr(a.dt,0,7) as create_month
-,substr(a.dt,0,4) as create_year
-
-,nvl(a.hcm_id,b.hcm_id) as hcm_id
-,nvl(a.hcm_name,b.hcm_name) as hcm_name
-,nvl(a.cm_id,b.cm_id) as cm_id
-,nvl(a.cm_name,b.cm_name) as cm_name
-,nvl(a.rm_id,b.rm_id) as rm_id
-,nvl(a.rm_name,b.rm_name) as rm_name
-,nvl(a.bdm_id,b.bdm_id) as bdm_id
-,nvl(a.bdm_name,b.bdm_name) as bdm_name
-,nvl(a.bd_id,b.bd_id) as bd_id
-,nvl(a.bd_name,b.bd_name) as bd_name
-
-,nvl(a.city_id,b.city_id) as city_id
-,nvl(a.city_name,b.city_name) as city_name
-,nvl(a.country,b.country) as country
-
-,nvl(a.merchant_cnt,0) as merchant_cnt
-,nvl(a.pos_merchant_cnt,0) as pos_merchant_cnt
-,nvl(a.new_merchant_cnt,0) as new_merchant_cnt
-,nvl(a.new_pos_merchant_cnt,0) as new_pos_merchant_cnt
-,nvl(a.pos_complete_order_cnt,0) as pos_complete_order_cnt
-,nvl(a.qr_complete_order_cnt,0) as qr_complete_order_cnt
-,nvl(a.complete_order_cnt,0) as complete_order_cnt
-,nvl(a.gmv,0) as gmv
-,nvl(a.actual_amount,0) as actual_amount
-
-,nvl(b.pos_user_active_cnt,0) as pos_user_active_cnt
-,nvl(b.qr_user_active_cnt,0) as qr_user_active_cnt
-,nvl(b.before_1_day_user_active_cnt,0) as before_1_day_user_active_cnt
-,nvl(b.before_7_day_user_active_cnt,0) as before_7_day_user_active_cnt
-,nvl(b.before_15_day_user_active_cnt,0) as before_15_day_user_active_cnt
-,nvl(b.before_30_day_user_active_cnt,0) as before_30_day_user_active_cnt
-,nvl(b.order_merchant_cnt,0) as order_merchant_cnt
-,nvl(b.pos_order_merchant_cnt,0) as pos_order_merchant_cnt
-,nvl(b.week_pos_user_active_cnt,0) as week_pos_user_active_cnt
-,nvl(b.week_qr_user_active_cnt,0) as week_qr_user_active_cnt
-,nvl(b.month_pos_user_active_cnt,0) as month_pos_user_active_cnt
-,nvl(b.month_qr_user_active_cnt,0) as month_qr_user_active_cnt
-,nvl(b.have_order_user_cnt,0) as have_order_user_cnt
-
-,nvl(a.return_amount,0) as return_amount
-,nvl(a.new_user_cost,0) as new_user_cost
-,nvl(a.old_user_cost,0) as old_user_cost
-,nvl(a.return_amount_order_cnt,0) as return_amount_order_cnt
-
-,nvl(a.his_pos_complete_order_cnt,0) as his_pos_complete_order_cnt
-,nvl(a.his_qr_complete_order_cnt,0) as his_qr_complete_order_cnt
-,nvl(a.his_complete_order_cnt,0) as his_complete_order_cnt
-,nvl(a.his_gmv,0) as his_gmv
-,nvl(a.his_actual_amount,0) as his_actual_amount
-,nvl(a.his_return_amount,0) as his_return_amount
-,nvl(a.his_new_user_cost,0) as his_new_user_cost
-,nvl(a.his_old_user_cost,0) as his_old_user_cost
-,nvl(a.his_return_amount_order_cnt,0) as his_return_amount_order_cnt
-
-,nvl(b.user_active_cnt,0) as user_active_cnt
-,nvl(b.new_user_cnt,0) as new_user_cnt
-,nvl(b.more_5_merchant_cnt,0) as more_5_merchant_cnt
-,nvl(b.his_order_merchant_cnt,0) as his_order_merchant_cnt
-,nvl(b.his_pos_order_merchant_cnt,0) as his_pos_order_merchant_cnt
-,nvl(b.his_user_active_cnt,0) as his_user_active_cnt
-,nvl(b.his_pos_user_active_cnt,0) as his_pos_user_active_cnt
-,nvl(b.his_qr_user_active_cnt,0) as his_qr_user_active_cnt
+select
+o.id
+,o.create_week
+,o.create_month
+,o.create_year
+,o.hcm_id
+,nvl(hcm.name,'-') as hcm_name
+,o.cm_id
+,nvl(cm.name,'-') as cm_name
+,o.rm_id
+,nvl(rm.name,'-') as rm_name
+,o.bdm_id
+,nvl(bdm.name,'-') as bdm_name
+,o.bd_id
+,nvl(bd.name,'-') as bd_name
+,o.city_id
+,nvl(c.name,'-') as city_name
+,nvl(c.country,'-') as country
+,o.merchant_cnt
+,o.pos_merchant_cnt
+,o.new_merchant_cnt
+,o.new_pos_merchant_cnt
+,o.pos_complete_order_cnt
+,o.qr_complete_order_cnt
+,o.complete_order_cnt
+,o.gmv
+,o.actual_amount
+,o.pos_user_active_cnt
+,o.qr_user_active_cnt
+,o.before_1_day_user_active_cnt
+,o.before_7_day_user_active_cnt
+,o.before_15_day_user_active_cnt
+,o.before_30_day_user_active_cnt
+,o.order_merchant_cnt
+,o.pos_order_merchant_cnt
+,o.week_pos_user_active_cnt
+,o.week_qr_user_active_cnt
+,o.month_pos_user_active_cnt
+,o.month_qr_user_active_cnt
+,o.have_order_user_cnt
+,o.return_amount
+,o.new_user_cost
+,o.old_user_cost
+,o.return_amount_order_cnt
+,o.his_pos_complete_order_cnt
+,o.his_qr_complete_order_cnt
+,o.his_complete_order_cnt
+,o.his_gmv
+,o.his_actual_amount
+,o.his_return_amount
+,o.his_new_user_cost
+,o.his_old_user_cost
+,o.his_return_amount_order_cnt
+,o.user_active_cnt
+,o.new_user_cnt
+,o.more_5_merchant_cnt
+,o.his_order_merchant_cnt
+,o.his_pos_order_merchant_cnt
+,o.his_user_active_cnt
+,o.his_pos_user_active_cnt
+,o.his_qr_user_active_cnt
 
 ,'nal' as country_code
 ,'{pt}' as dt
-from 
-(select * from opos_temp.opos_metrcis_report where country_code = 'nal' and  dt = '{pt}') a
-full join 
-(select * from opos_temp.opos_active_user_daily where country_code = 'nal' and  dt = '{pt}') b 
-on  
-a.hcm_id=b.hcm_id
-AND a.cm_id=b.cm_id
-AND a.rm_id=b.rm_id
-AND a.bdm_id=b.bdm_id
-AND a.bd_id=b.bd_id
-and a.city_id=b.city_id
+from
+  (
+  select 
+  0 as id
+  ,d.week_of_year as create_week
+  ,substr(a.dt,0,7) as create_month
+  ,substr(a.dt,0,4) as create_year
+  
+  ,nvl(a.hcm_id,b.hcm_id) as hcm_id
+  ,nvl(a.cm_id,b.cm_id) as cm_id
+  ,nvl(a.rm_id,b.rm_id) as rm_id
+  ,nvl(a.bdm_id,b.bdm_id) as bdm_id
+  ,nvl(a.bd_id,b.bd_id) as bd_id
+  
+  ,nvl(a.city_id,b.city_id) as city_id
+  
+  ,nvl(a.merchant_cnt,0) as merchant_cnt
+  ,nvl(a.pos_merchant_cnt,0) as pos_merchant_cnt
+  ,nvl(a.new_merchant_cnt,0) as new_merchant_cnt
+  ,nvl(a.new_pos_merchant_cnt,0) as new_pos_merchant_cnt
+  ,nvl(a.pos_complete_order_cnt,0) as pos_complete_order_cnt
+  ,nvl(a.qr_complete_order_cnt,0) as qr_complete_order_cnt
+  ,nvl(a.complete_order_cnt,0) as complete_order_cnt
+  ,nvl(a.gmv,0) as gmv
+  ,nvl(a.actual_amount,0) as actual_amount
+  
+  ,nvl(b.pos_user_active_cnt,0) as pos_user_active_cnt
+  ,nvl(b.qr_user_active_cnt,0) as qr_user_active_cnt
+  ,nvl(b.before_1_day_user_active_cnt,0) as before_1_day_user_active_cnt
+  ,nvl(b.before_7_day_user_active_cnt,0) as before_7_day_user_active_cnt
+  ,nvl(b.before_15_day_user_active_cnt,0) as before_15_day_user_active_cnt
+  ,nvl(b.before_30_day_user_active_cnt,0) as before_30_day_user_active_cnt
+  ,nvl(b.order_merchant_cnt,0) as order_merchant_cnt
+  ,nvl(b.pos_order_merchant_cnt,0) as pos_order_merchant_cnt
+  ,nvl(b.week_pos_user_active_cnt,0) as week_pos_user_active_cnt
+  ,nvl(b.week_qr_user_active_cnt,0) as week_qr_user_active_cnt
+  ,nvl(b.month_pos_user_active_cnt,0) as month_pos_user_active_cnt
+  ,nvl(b.month_qr_user_active_cnt,0) as month_qr_user_active_cnt
+  ,nvl(b.have_order_user_cnt,0) as have_order_user_cnt
+  
+  ,nvl(a.return_amount,0) as return_amount
+  ,nvl(a.new_user_cost,0) as new_user_cost
+  ,nvl(a.old_user_cost,0) as old_user_cost
+  ,nvl(a.return_amount_order_cnt,0) as return_amount_order_cnt
+  
+  ,nvl(a.his_pos_complete_order_cnt,0) as his_pos_complete_order_cnt
+  ,nvl(a.his_qr_complete_order_cnt,0) as his_qr_complete_order_cnt
+  ,nvl(a.his_complete_order_cnt,0) as his_complete_order_cnt
+  ,nvl(a.his_gmv,0) as his_gmv
+  ,nvl(a.his_actual_amount,0) as his_actual_amount
+  ,nvl(a.his_return_amount,0) as his_return_amount
+  ,nvl(a.his_new_user_cost,0) as his_new_user_cost
+  ,nvl(a.his_old_user_cost,0) as his_old_user_cost
+  ,nvl(a.his_return_amount_order_cnt,0) as his_return_amount_order_cnt
+  
+  ,nvl(b.user_active_cnt,0) as user_active_cnt
+  ,nvl(b.new_user_cnt,0) as new_user_cnt
+  ,nvl(b.more_5_merchant_cnt,0) as more_5_merchant_cnt
+  ,nvl(b.his_order_merchant_cnt,0) as his_order_merchant_cnt
+  ,nvl(b.his_pos_order_merchant_cnt,0) as his_pos_order_merchant_cnt
+  ,nvl(b.his_user_active_cnt,0) as his_user_active_cnt
+  ,nvl(b.his_pos_user_active_cnt,0) as his_pos_user_active_cnt
+  ,nvl(b.his_qr_user_active_cnt,0) as his_qr_user_active_cnt
+  
+  from 
+  (select * from opos_temp.opos_metrcis_report where country_code = 'nal' and  dt = '{pt}') a
+  full join 
+  (select * from opos_temp.opos_active_user_daily where country_code = 'nal' and  dt = '{pt}') b 
+  on  
+  a.hcm_id=b.hcm_id
+  AND a.cm_id=b.cm_id
+  AND a.rm_id=b.rm_id
+  AND a.bdm_id=b.bdm_id
+  AND a.bd_id=b.bd_id
+  and a.city_id=b.city_id
+  left join
+  (select dt,week_of_year from public_dw_dim.dim_date where dt = '{pt}') as d
+  on
+  1=1) as o
 left join
-(select dt,week_of_year from public_dw_dim.dim_date where dt = '{pt}') as d
-on
-1=1;
+  (select id,name from opos_dw_ods.ods_sqoop_base_bd_admin_users_df where dt = '{pt}') as bd
+  on o.bd_id=bd.id
+left join
+  (select id,name from opos_dw_ods.ods_sqoop_base_bd_admin_users_df where dt = '{pt}') as bdm
+on o.bdm_id=bdm.id
+left join
+  (select id,name from opos_dw_ods.ods_sqoop_base_bd_admin_users_df where dt = '{pt}') as rm
+on o.rm_id=rm.id
+left join
+  (select id,name from opos_dw_ods.ods_sqoop_base_bd_admin_users_df where dt = '{pt}') as cm
+on o.cm_id=cm.id
+left join
+  (select id,name from opos_dw_ods.ods_sqoop_base_bd_admin_users_df where dt = '{pt}') as hcm
+  on o.hcm_id=hcm.id
+left join
+  (select id,name,country from opos_dw_ods.ods_sqoop_base_bd_city_df where dt = '{pt}') as c
+on o.city_id=c.id
+
+;
+
+
 
 
 
