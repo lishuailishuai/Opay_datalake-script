@@ -26,7 +26,7 @@ import os
 
 args = {
     'owner': 'liushuzhen',
-    'start_date': datetime(2019, 12, 2),
+    'start_date': datetime(2019, 12, 3),
     'depends_on_past': False,
     'retries': 1,
     'retry_delay': timedelta(minutes=5),
@@ -128,7 +128,8 @@ def execution_data_task_id(ds, **kargs):
     第二个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
 
     """
-    TaskTouchzSuccess().countries_touchz_success(airflow.macros.ds_add(ds, +1), db_name, table_name, hdfs_path, "false", "true")
+    TaskTouchzSuccess().countries_touchz_success(airflow.macros.ds_add(ds, +1), db_name, table_name, hdfs_path, "false",
+                                                 "true")
 
 
 app_opay_owealth_air_mobile_d_task = PythonOperator(
@@ -143,9 +144,9 @@ def send_air_mobile_report_email(ds, **kwargs):
     sql = '''
         SELECT
            dt,
-           airtime_amt,
+           cast(airtime_amt/100 as decimal(20,2)) airtime_amt,
            airtime_c,
-           mobiledata_amt,
+           cast(mobiledata_amt/100 as decimal(20,2)) mobiledata_amt,
            mobiledata_c
 
         FROM
@@ -207,17 +208,17 @@ def send_air_mobile_report_email(ds, **kwargs):
                         <h2>话费流量充值(19：00-19：00)日报</h2>
                     </caption>
                 </table>
-
-
                 <table width="95%" class="table">
                     <thead>
-
+                       <tr>
+                       <th colspan="5" align="left">金额：奈拉</th>
+                       </tr>
                         <tr>
-                            <th>日期</th>
-                            <th>话费成功交易额</th>
-                            <th>话费成功交易笔数</th>
-                            <th>流量成功交易额</th>
-                            <th>流量成功交易笔数</th>
+                            <th align="center">日期</th>
+                            <th align="center">话费成功交易额</th>
+                            <th align="center">话费成功交易笔数</th>
+                            <th align="center">流量成功交易额</th>
+                            <th align="center">流量成功交易笔数</th>
                         </tr>
                     </thead>
                     {rows}
@@ -238,27 +239,42 @@ def send_air_mobile_report_email(ds, **kwargs):
             <tr style="background:#F5F5F5">{row}</tr>
         '''
         row_fmt = '''
-                 <td>{0}</td>
-                 <td>{1}</td>
-                 <td>{2}</td>
-                 <td>{3}</td>
-                 <td>{4}</td>
+                 <td align="right">{dt}</td>
+                 <td align="right">₦{airtime_amt}</td>
+                 <td align="right">{airtime_c}</td>
+                 <td align="right">₦{mobiledata_amt}</td>
+                 <td align="right">{mobiledata_c}</td>
 
         '''
 
         for data in data_list:
-            row = row_fmt.format(*list(data))
+            [
+                dt,
+                airtime_amt,
+                airtime_c,
+                mobiledata_amt,
+                mobiledata_c
+            ] = list(data)
+
+            row = row_fmt.format(
+                dt=dt,
+                airtime_amt=format(airtime_amt, ','),
+                airtime_c=format(int(airtime_c), ','),
+                mobiledata_amt=format(mobiledata_amt, ','),
+                mobiledata_c=format(int(mobiledata_c), ',')
+            )
             week = data[1]
             if week == '6' or week == '7':
                 row_html += weekend_tr_fmt.format(row=row)
             else:
                 row_html += tr_fmt.format(row=row)
 
+
     html = html_fmt.format(rows=row_html)
     # send mail
 
     # email_to = Variable.get("owealth_report_receivers").split()
-    email_to = ['bigdata@opay-inc.com']
+    email_to = ['shuzhen.liu@opay-inc.com']
 
     email_subject = '话费流量充值(19：00-19：00)_{}'.format(airflow.macros.ds_add(ds, +1))
     send_email(
@@ -277,5 +293,3 @@ send_air_mobile_report = PythonOperator(
 ods_sqoop_base_airtime_topup_record_hf_prev_day_task >> app_opay_owealth_air_mobile_d_task
 ods_sqoop_base_mobiledata_topup_record_hf_prev_day_task >> app_opay_owealth_air_mobile_d_task
 app_opay_owealth_air_mobile_d_task >> send_air_mobile_report
-
-
