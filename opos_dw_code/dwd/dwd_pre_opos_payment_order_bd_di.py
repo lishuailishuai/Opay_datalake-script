@@ -25,7 +25,7 @@ import os
 
 args = {
     'owner': 'yuanfeng',
-    'start_date': datetime(2019, 11, 24),
+    'start_date': datetime(2019, 11, 1),
     'depends_on_past': False,
     'retries': 3,
     'retry_delay': timedelta(minutes=2),
@@ -34,18 +34,29 @@ args = {
     'email_on_retry': False,
 }
 
-dag = airflow.DAG('app_opos_bonus_target_d',
-                  schedule_interval="10 03 * * *",
+dag = airflow.DAG('dwd_pre_opos_payment_order_bd_di',
+                  schedule_interval="10 02 * * *",
                   default_args=args,
                   catchup=False)
 
 ##----------------------------------------- 依赖 ---------------------------------------##
 
 # 依赖前一天分区，dim_opos_bd_relation_df表，ufile://opay-datalake/opos/opos_dw/dim_opos_bd_relation_df
-dwd_opos_bonus_record_di_task = UFileSensor(
-    task_id='dwd_opos_bonus_record_di_task',
+dim_opos_bd_relation_df_task = UFileSensor(
+    task_id='dim_opos_bd_relation_df_task',
     filepath='{hdfs_path_str}/country_code=nal/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opos/opos_dw/dwd_opos_bonus_record_di",
+        hdfs_path_str="opos/opos_dw/dim_opos_bd_relation_df",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
+ods_sqoop_base_pre_opos_payment_order_di_task = UFileSensor(
+    task_id='ods_sqoop_base_pre_opos_payment_order_di_task',
+    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="opos_dw_sqoop_di/pre_ptsp_db/pre_opos_payment_order",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -56,7 +67,7 @@ dwd_opos_bonus_record_di_task = UFileSensor(
 ##----------------------------------------- 变量 ---------------------------------------##
 
 db_name = "opos_dw"
-table_name = "app_opos_bonus_target_d"
+table_name = "dwd_pre_opos_payment_order_bd_di"
 hdfs_path = "ufile://opay-datalake/opos/opos_dw/" + table_name
 
 
@@ -83,99 +94,44 @@ task_timeout_monitor = PythonOperator(
 
 ##----------------------------------------- 脚本 ---------------------------------------##
 
-def app_opos_bonus_target_d_sql_task(ds):
+def dwd_pre_opos_payment_order_bd_di_sql_task(ds):
     HQL = '''
-    set hive.exec.parallel=true;
-    set hive.exec.dynamic.partition.mode=nonstrict;
 
+--插入数据
+set hive.exec.parallel=true;
+set hive.exec.dynamic.partition.mode=nonstrict;
 
-    set hive.exec.parallel=true;
-    set hive.exec.dynamic.partition.mode=nonstrict;
+--插入数据
+insert overwrite table opos_dw.dwd_pre_opos_payment_order_bd_di partition(country_code,dt)
+select
+o.order_id
+,o.receipt_id as opay_id
+,nvl(s.contact_phone,'-') as shop_phone
+,nvl(s.id,0) as shop_id
+,nvl(s.city_code,'-') as city_id
+,'-' as category
+,nvl(s.bd_id,0) as bd_id
+,nvl(s.bdm_id,0) as bdm_id
+,nvl(s.rm_id,0) as rm_id
+,nvl(s.cm_id,0) as cm_id
+,nvl(s.hcm_id,0) as hcm_id
+,nvl(s.created_at,'2019-10-25') as create_time
 
-    --02.先取红包record表
-    insert overwrite table opos_dw.app_opos_bonus_target_d partition(country_code,dt)
-    select
-    create_date,
-    create_week,
-    create_month,
-    create_year,
-
-    city_id as city_code,
-    city_name,
-    country,
-
-    hcm_id,
-    hcm_name,
-    cm_id,
-    cm_name,
-    rm_id,
-    rm_name,
-    bdm_id,
-    bdm_name,
-    bd_id,
-    bd_name,
-
-    --已入账金额
-    sum(if(status=1,bonus_amount,0)) as entered_account_amt,
-    --待入账金额
-    sum(if(status=0,bonus_amount,0)) as tobe_entered_account_amt,
-    --被扫者奖励金额
-    sum(bonus_amount) as swepted_award_amt,
-    --已结算金额
-    sum(if(status=1 and settle_status=1,bonus_amount,0)) as settled_amount,
-    --待结算金额
-    sum(if(status=1 and settle_status=0,bonus_amount,0)) as tobe_settled_amount,
-    --获取金额的被扫者
-    count(distinct(provider_account)) as swepted_award_cnt,
-
-    --扫描红包二维码次数
-    count(1) as sweep_times,
-    --扫描红包二维码人数
-    count(distinct(opay_account)) as sweep_people,
-    --主扫红包金额
-    sum(amount) as sweep_amt,
-
-    --红包使用率
-    sum(use_amount)/sum(bonus_amount) as bonus_use_percent,
-    --红包使用金额
-    sum(use_amount) as bonus_order_amt,
-
-    'nal' as country_code,
-    '{pt}' as dt
-    from
-    opos_dw.dwd_opos_bonus_record_di
-    where 
-    country_code='nal' 
-    and dt='{pt}'
-    group by
-    create_date,
-    create_week,
-    create_month,
-    create_year,
-
-    city_id,
-    city_name,
-    country,
-
-    hcm_id,
-    hcm_name,
-    cm_id,
-    cm_name,
-    rm_id,
-    rm_name,
-    bdm_id,
-    bdm_name,
-    bd_id,
-    bd_name;
-
-
-
+,'nal' as country_code
+,'{pt}' as dt
+from
+(select * from opos_dw_ods.ods_sqoop_base_pre_opos_payment_order_di where dt='{pt}') as o
+left join
+(select * from opos_dw.dim_opos_bd_relation_df where country_code='nal' and dt='{pt}') as s
+on
+o.receipt_id=s.opay_id;
 
 
 '''.format(
         pt=ds,
         table=table_name,
-        now_day='{{macros.ds_add(ds, +1)}}',
+        now_day=airflow.macros.ds_add(ds, +1),
+        before_1_day=airflow.macros.ds_add(ds, -1),
         db=db_name
     )
     return HQL
@@ -186,7 +142,7 @@ def execution_data_task_id(ds, **kargs):
     hive_hook = HiveCliHook()
 
     # 读取sql
-    _sql = app_opos_bonus_target_d_sql_task(ds)
+    _sql = dwd_pre_opos_payment_order_bd_di_sql_task(ds)
 
     logging.info('Executing: %s', _sql)
 
@@ -205,17 +161,19 @@ def execution_data_task_id(ds, **kargs):
     TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "true", "true")
 
 
-app_opos_bonus_target_d_task = PythonOperator(
-    task_id='app_opos_bonus_target_d_task',
+dwd_pre_opos_payment_order_bd_di_task = PythonOperator(
+    task_id='dwd_pre_opos_payment_order_bd_di_task',
     python_callable=execution_data_task_id,
     provide_context=True,
     dag=dag
 )
 
-dwd_opos_bonus_record_di_task >> app_opos_bonus_target_d_task
+dim_opos_bd_relation_df_task >> dwd_pre_opos_payment_order_bd_di_task
+ods_sqoop_base_pre_opos_payment_order_di_task >> dwd_pre_opos_payment_order_bd_di_task
 
 # 查看任务命令
-# airflow list_tasks app_opos_bonus_target_d -sd /home/feng.yuan/app_opos_bonus_target_d.py
+# airflow list_tasks dwd_pre_opos_payment_order_bd_di -sd /home/feng.yuan/dwd_pre_opos_payment_order_bd_di.py
 # 测试任务命令
-# airflow test app_opos_bonus_target_d app_opos_bonus_target_d_task 2019-11-24 -sd /home/feng.yuan/app_opos_bonus_target_d.py
+# airflow test dwd_pre_opos_payment_order_bd_di dwd_pre_opos_payment_order_bd_di_task 2019-11-24 -sd /home/feng.yuan/dwd_pre_opos_payment_order_bd_di.py
+
 

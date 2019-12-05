@@ -100,6 +100,8 @@ def app_opos_bonus_payment_target_d_sql_task(ds):
     city_name,
     country,
 
+    hcm_id,
+    hcm_name,
     cm_id,
     cm_name,
     rm_id,
@@ -167,6 +169,8 @@ def app_opos_bonus_payment_target_d_sql_task(ds):
     city_name,
     country,
 
+    hcm_id,
+    hcm_name,
     cm_id,
     cm_name,
     rm_id,
@@ -175,6 +179,7 @@ def app_opos_bonus_payment_target_d_sql_task(ds):
     bdm_name,
     bd_id,
     bd_name;
+
 
 
 

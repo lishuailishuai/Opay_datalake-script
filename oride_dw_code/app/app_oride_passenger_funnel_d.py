@@ -15,6 +15,7 @@ from airflow.operators.bash_operator import BashOperator
 from airflow.sensors.named_hive_partition_sensor import NamedHivePartitionSensor
 from airflow.sensors.hive_partition_sensor import HivePartitionSensor
 from airflow.sensors import UFileSensor
+from airflow.sensors.s3_key_sensor import S3KeySensor
 import json
 import logging
 from airflow.models import Variable
@@ -42,13 +43,13 @@ dag = airflow.DAG('app_oride_passenger_funnel_d',
 
 ##----------------------------------------- 依赖 ---------------------------------------##
 
-dwd_oride_order_base_include_test_di_task = UFileSensor(
+dwd_oride_order_base_include_test_di_task = S3KeySensor(
     task_id='dwd_oride_order_base_include_test_di_task',
-    filepath='{hdfs_path_str}/country_code=NG/dt={pt}/_SUCCESS'.format(
+    bucket_key='{hdfs_path_str}/country_code=NG/dt={pt}/_SUCCESS'.format(
         hdfs_path_str="oride/oride_dw/dwd_oride_order_base_include_test_di",
         pt='{{ds}}'
     ),
-    bucket_name='opay-datalake',
+    bucket_name='opay-bi',
     poke_interval=60,
     dag=dag
 )

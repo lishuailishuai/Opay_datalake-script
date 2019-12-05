@@ -15,6 +15,7 @@ from airflow.operators.bash_operator import BashOperator
 from airflow.sensors.named_hive_partition_sensor import NamedHivePartitionSensor
 from airflow.sensors.hive_partition_sensor import HivePartitionSensor
 from airflow.sensors import UFileSensor
+from airflow.sensors.s3_key_sensor import S3KeySensor
 from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
 from plugins.TaskTouchzSuccess import TaskTouchzSuccess
 from plugins.CountriesPublicFrame import CountriesPublicFrame
@@ -26,7 +27,7 @@ import os
 
 args = {
     'owner': 'lili.chen',
-    'start_date': datetime(2019, 12, 1),
+    'start_date': datetime(2019, 12, 3),
     'depends_on_past': False,
     'retries': 3,
     'retry_delay': timedelta(minutes=2),
@@ -42,10 +43,20 @@ dag = airflow.DAG('dwm_oride_passenger_order_base_di',
 ##----------------------------------------- 依赖 ---------------------------------------##
 
 # 依赖前一天分区
-dwd_oride_order_base_include_test_di_prev_day_task = UFileSensor(
+dwd_oride_order_base_include_test_di_prev_day_task = S3KeySensor(
     task_id='dwd_oride_order_base_include_test_di_prev_day_task',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
         hdfs_path_str="oride/oride_dw/dwd_oride_order_base_include_test_di/country_code=NG",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-bi',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+dwm_oride_passenger_base_df_prev_day_task = UFileSensor(
+    task_id='dwm_oride_passenger_base_df_prev_day_task',
+    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="oride/oride_dw/dwm_oride_passenger_base_df/country_code=nal",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -88,26 +99,46 @@ def dwm_oride_passenger_order_base_di_sql_task(ds):
     set hive.exec.dynamic.partition.mode=nonstrict;
 
 INSERT overwrite TABLE oride_dw.{table} partition(country_code,dt)
-select passenger_id,  --乘客ID
-       city_id,  --城市ID
-       product_id,  --下单业务类型
-       driver_serv_type,  --司机绑定的业务类型，两个业务类型区别在于同时呼叫下线前统计业务线完单量
-       count(order_id) as order_cnt,  --下单量
-       sum(is_td_finish) as finish_order_cnt,  --完单量
-       sum(is_td_finish_pay) as finished_pay_order_cnt, --支付完单量
-       sum(if(pay_mode=2,1,0)) as online_pay_ord_cnt, --线上支付订单量
-       sum(if(is_td_finish=1,price,0)) as finish_order_price,  --完单gmv
-       sum(if(is_td_finish_pay=1,price,0)) as finished_pay_order_price,  --完单支付gmv
-       sum(if(pay_mode=2,price,0)) as online_pay_ord_price,  --线上支付gmv
-       sum(pay_amount) as pay_amount,  --实际支付金额
-       country_code,
+select ord.passenger_id,  --乘客ID
+       ord.city_id,  --城市ID
+       ord.product_id,  --下单业务类型
+       ord.driver_serv_type,  --司机绑定的业务类型，两个业务类型区别在于同时呼叫下线前统计业务线完单量
+       if(multi_cit.city_id is not null,1,0) as is_multi_city,  --是否多城市业务线
+       if(user_df.first_finish_create_date='{pt}',1,0) as is_first_finish_user, --是否首次完单乘客
+       sum(if(user_df.if_td_register=1,1,0)) as new_user_ord_cnt, --当日新注册乘客下单量
+       sum(if(user_df.if_td_register=1 and ord.is_td_finish=1,1,0)) as new_user_finished_cnt, --当日新注册乘客完单量
+       sum(if(user_df.if_td_register=1 and ord.is_td_finish=1,ord.price,0)) as new_user_gmv, --当日注册乘客完单gmv       
+       count(ord.order_id) as order_cnt,  --下单量
+       sum(ord.is_td_finish) as finish_order_cnt,  --完单量
+       sum(ord.is_td_finish_pay) as finished_pay_order_cnt, --支付完单量，订单表中status=5
+       sum(if(ord.pay_status=1 and ord.status not in(6,13),1,0)) as pay_succ_ord_cnt, --支付表支付成功且正常订单量
+       sum(if(ord.pay_status=1 and ord.pay_mode=2 and ord.status not in(6,13),1,0)) as online_pay_succ_ord_cnt, --线上支付成功且正常订单量
+       sum(if(ord.is_td_finish=1,ord.price,0)) as finish_order_price,  --完单gmv
+       sum(if(ord.is_td_finish_pay=1,ord.price,0)) as finished_pay_order_price,  --完单支付gmv，订单表中status=5
+       sum(if(ord.pay_status=1 and ord.pay_mode=2 and ord.status not in(6,13),ord.price,0)) as online_pay_ord_price,  --线上支付成功且正常订单gmv
+       sum(ord.pay_amount) as pay_amount,  --实际支付金额
+       ord.country_code,
        '{pt}' as dt
+from(select *
 from oride_dw.dwd_oride_order_base_include_test_di
-where dt='{pt}'
-group by passenger_id,  --乘客ID
-       city_id,  --城市ID
-       product_id,  --下单业务类型
-       driver_serv_type;  --司机绑定的业务类型，两个业务类型区别在于同时呼叫下线前统计业务线完单量
+where dt='{pt}') ord
+left join
+(select *      
+from oride_dw.dwm_oride_passenger_base_df
+where dt='{pt}' and (if_td_register=1 or (first_finish_create_date='{pt}'))) user_df
+on ord.passenger_id=user_df.passenger_id
+left join
+(select city_id,product_id,size(split(product_id,',')) as product_id_cnt
+from oride_dw.dim_oride_city
+where dt='{pt}' and size(split(product_id,','))>1) multi_cit
+on ord.city_id=multi_cit.city_id
+group by ord.passenger_id,  --乘客ID
+       ord.city_id,  --城市ID
+       ord.product_id,  --下单业务类型
+       ord.driver_serv_type, --司机绑定的业务类型，两个业务类型区别在于同时呼叫下线前统计业务线完单量
+       if(multi_cit.city_id is not null,1,0), --是否多城市业务线
+       if(user_df.first_finish_create_date='{pt}',1,0), 
+       ord.country_code;  
     '''.format(
         pt=ds,
         bef_yes_day=airflow.macros.ds_add(ds, -1),
@@ -116,14 +147,13 @@ group by passenger_id,  --乘客ID
     )
     return HQL
 
-
-# 熔断数据，如果数据重复，报错
-def check_key_data_task(ds):
+# 熔断数据，如果数据为0，报错
+def check_key_data_cnt_task(ds):
     cursor = get_hive_cursor()
 
     # 主键重复校验
     check_sql = '''
-    SELECT count(1)-count(distinct passenger_id) as cnt
+    SELECT count(1) as cnt
       FROM {db}.{table}
       WHERE dt='{pt}'
     '''.format(
@@ -139,7 +169,7 @@ def check_key_data_task(ds):
 
     res = cursor.fetchone()
 
-    if res[0] > 1:
+    if res[0] == 0:
         flag = 1
         raise Exception("Error The primary key repeat !", res)
         sys.exit(1)
@@ -148,7 +178,6 @@ def check_key_data_task(ds):
         print("-----> Notice Data Export Success ......")
 
     return flag
-
 
 # 主流程
 def execution_data_task_id(ds, **kwargs):
@@ -192,7 +221,7 @@ def execution_data_task_id(ds, **kwargs):
     # check_key_data_cnt_task(ds)
 
     # 熔断数据
-    check_key_data_task(ds)
+    check_key_data_cnt_task(ds)
 
     # 生产success
     cf.touchz_success()
@@ -210,4 +239,5 @@ dwm_oride_passenger_order_base_di_task = PythonOperator(
 )
 
 dwd_oride_order_base_include_test_di_prev_day_task >> dwm_oride_passenger_order_base_di_task
+dwm_oride_passenger_base_df_prev_day_task >> dwm_oride_passenger_order_base_di_task
 

@@ -12,6 +12,7 @@ from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
 from plugins.TaskTouchzSuccess import TaskTouchzSuccess
 from airflow.hooks.hive_hooks import HiveCliHook, HiveServer2Hook
 from utils.connection_helper import get_hive_cursor
+from airflow.sensors.s3_key_sensor import S3KeySensor
 import logging
 
 args = {
@@ -43,13 +44,13 @@ dim_oride_driver_base_task = UFileSensor(
     dag=dag
 )
 
-dwd_oride_order_base_include_test_di_task = UFileSensor(
+dwd_oride_order_base_include_test_di_task = S3KeySensor(
     task_id='dwd_oride_order_base_include_test_di_task',
-    filepath='{hdfs_path_str}/country_code=NG/dt={pt}/_SUCCESS'.format(
+    bucket_key='{hdfs_path_str}/country_code=NG/dt={pt}/_SUCCESS'.format(
         hdfs_path_str="oride/oride_dw/dwd_oride_order_base_include_test_di",
         pt='{{ds}}'
     ),
-    bucket_name='opay-datalake',
+    bucket_name='opay-bi',
     poke_interval=60,
     dag=dag
 )
