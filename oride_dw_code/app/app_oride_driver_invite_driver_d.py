@@ -217,4 +217,3 @@ app_oride_driver_invite_driver_d_task = PythonOperator(
 
 dwd_oride_rider_signups_df_task>>app_oride_driver_invite_driver_d_task
 dim_oride_city_task>>app_oride_driver_invite_driver_d_task
-dwm_oride_driver_base_df_task>>app_oride_driver_invite_driver_d_task
