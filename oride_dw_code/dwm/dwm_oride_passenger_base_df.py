@@ -113,13 +113,21 @@ with data_order as(
 select if(create_time=first_ord_create_time,1,0) as first_ord_mark,  --首次下单标志
        if(create_time=first_finish_create_time,1,0) as first_finish_ord_mark, --首次完单标志
        if(create_time=first_finished_create_time,1,0) as first_finished_ord_mark, --首次完成支付标志
+       if(create_time=recent_ord_create_time,1,0) as recent_ord_mark,  --最近一次下单标志
+       if(create_time=recent_finish_create_time,1,0) as recent_finish_ord_mark, --最近一次完单标志
+       if(create_time=recent_finished_create_time,1,0) as recent_finished_ord_mark, --最近一次完成支付标志
        *
 from(select *,
-       min(create_time) over(partition by passenger_id) as first_ord_create_time,
-       min(if(is_td_finish=1,create_time,null)) over(partition by passenger_id) as first_finish_create_time,
-       min(if(is_td_finish_pay=1,create_time,null)) over(partition by passenger_id) as first_finished_create_time
+       min(create_time) over(partition by passenger_id) as first_ord_create_time, --首次下单订单时间
+       min(if(is_td_finish=1,create_time,null)) over(partition by passenger_id) as first_finish_create_time, --首次完单订单时间
+       min(if(is_td_finish_pay=1,create_time,null)) over(partition by passenger_id) as first_finished_create_time, --首次完成支付订单时间
+       max(create_time) over(partition by passenger_id) as recent_ord_create_time, --最近一次下单订单时间
+       max(if(is_td_finish=1,create_time,null)) over(partition by passenger_id) as recent_finish_create_time, --最近一次完单订单时间
+       max(if(is_td_finish_pay=1,create_time,null)) over(partition by passenger_id) as recent_finished_create_time  --最近一次完成支付订单时间
 from oride_dw.dwd_oride_order_base_include_test_di   --首次跑数需要用订单表所有数据
-where dt='{pt}'
+where dt='{pt}' 
+and city_id<>'999001' --去除测试数据
+and driver_id<>1
 ) t
 )
 INSERT overwrite TABLE oride_dw.{table} partition(country_code,dt)
@@ -143,6 +151,22 @@ SELECT dim_user.passenger_id,
        if(yes_dwm_user.first_finish_ord_id is not null,yes_dwm_user.first_finish_country_code,first_finish_order.country_code) as first_finish_country_code,  --乘客首次完单对应的国家码 
        if(yes_dwm_user.first_finish_ord_id is not null,yes_dwm_user.first_finish_ord_price,first_finish_order.price) as first_finish_ord_price,  --首次完单订单对应的gmv
        if(yes_dwm_user.first_finish_ord_id is not null,yes_dwm_user.first_finish_ord_distance,first_finish_order.distance) as first_finish_ord_distance,  --首次完单订单对应的里程 
+       
+       if(yes_dwm_user.recent_ord_id is not null,yes_dwm_user.recent_ord_id,recent_order.order_id) as recent_ord_id,  --乘客最近一次下单order_id 
+       if(yes_dwm_user.recent_ord_id is not null,yes_dwm_user.recent_create_date,recent_order.create_date) as recent_create_date,  --乘客最近一次下单时间   
+       if(yes_dwm_user.recent_ord_id is not null,yes_dwm_user.recent_city_id,recent_order.city_id) as recent_city_id,  --乘客最近一次下单对应的city_id
+       if(yes_dwm_user.recent_ord_id is not null,yes_dwm_user.recent_product_id,recent_order.product_id) as recent_product_id,  --乘客最近一次下单对应的product_id 
+       if(yes_dwm_user.recent_ord_id is not null,yes_dwm_user.recent_country_code,recent_order.country_code) as recent_country_code,  --乘客最近一次下单对应的国家码
+       if(yes_dwm_user.recent_ord_id is not null,yes_dwm_user.recent_ord_price,recent_order.price) as recent_ord_price,  --最近一次下单订单对应的gmv
+       if(yes_dwm_user.recent_ord_id is not null,yes_dwm_user.recent_ord_distance,recent_order.distance) as recent_ord_distance,  --最近一次下单订单对应的里程   
+
+       if(yes_dwm_user.recent_finish_ord_id is not null,yes_dwm_user.recent_finish_ord_id,recent_finish_order.order_id) as recent_finish_ord_id,  --乘客最近一次完单order_id 
+       if(yes_dwm_user.recent_finish_ord_id is not null,yes_dwm_user.recent_finish_create_date,recent_finish_order.create_date) as recent_finish_create_date,  --乘客最近一次完单时间   
+       if(yes_dwm_user.recent_finish_ord_id is not null,yes_dwm_user.recent_finish_city_id,recent_finish_order.city_id) as recent_finish_city_id,  --乘客最近一次完单对应的city_id
+       if(yes_dwm_user.recent_finish_ord_id is not null,yes_dwm_user.recent_finish_product_id,recent_finish_order.driver_serv_type) as recent_finish_product_id,  --乘客最近一次完单对应的product_id
+       if(yes_dwm_user.recent_finish_ord_id is not null,yes_dwm_user.recent_finish_country_code,recent_finish_order.country_code) as recent_finish_country_code,  --乘客最近一次完单对应的国家码 
+       if(yes_dwm_user.recent_finish_ord_id is not null,yes_dwm_user.recent_finish_ord_price,recent_finish_order.price) as recent_finish_ord_price,  --最近一次完单订单对应的gmv
+       if(yes_dwm_user.recent_finish_ord_id is not null,yes_dwm_user.recent_finish_ord_distance,recent_finish_order.distance) as recent_finish_ord_distance,
        'nal' as country_code,
        '{pt}' as dt
 
@@ -159,7 +183,13 @@ left join
 on dim_user.passenger_id=first_order.passenger_id
 left join
 (select * from data_order where first_finish_ord_mark=1) first_finish_order
-on dim_user.passenger_id=first_finish_order.passenger_id;
+on dim_user.passenger_id=first_finish_order.passenger_id
+left join
+(select * from data_order where recent_ord_mark=1) recent_order
+on dim_user.passenger_id=recent_order.passenger_id
+left join
+(select * from data_order where recent_finish_ord_mark=1) recent_finish_order
+on dim_user.passenger_id=recent_finish_order.passenger_id;
     '''.format(
         pt=ds,
         bef_yes_day=airflow.macros.ds_add(ds, -1),
