@@ -106,16 +106,16 @@ insert overwrite table opos_dw.dwd_pre_opos_payment_order_bd_di partition(countr
 select
 o.order_id
 ,o.receipt_id as opay_id
-,s.contact_phone as shop_phone
-,s.id as shop_id
-,s.city_code as city_id
+,nvl(s.contact_phone,'-') as shop_phone
+,nvl(s.id,0) as shop_id
+,nvl(s.city_code,'-') as city_id
 ,'-' as category
-,s.bd_id
-,s.bdm_id
-,s.rm_id
-,s.cm_id
-,s.hcm_id
-,s.created_at as create_time
+,nvl(s.bd_id,0) as bd_id
+,nvl(s.bdm_id,0) as bdm_id
+,nvl(s.rm_id,0) as rm_id
+,nvl(s.cm_id,0) as cm_id
+,nvl(s.hcm_id,0) as hcm_id
+,nvl(s.created_at,'2019-10-25') as create_time
 
 ,'nal' as country_code
 ,'{pt}' as dt
