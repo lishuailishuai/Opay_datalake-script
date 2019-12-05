@@ -93,78 +93,52 @@ set hive.exec.dynamic.partition.mode=nonstrict;
 --每天将历史数据和最新一天的数据累加，计算后放入历史表中,因为会有新增的情况，故需要用fulljoin
 insert overwrite table opos_temp.app_opos_order_data_history_di partition(country_code,dt)
 select 
-nvl(a.hcm_id,b.hcm_id) as hcm_id
-,nvl(a.cm_id,b.cm_id) as cm_id
-,nvl(a.rm_id,b.rm_id) as rm_id
-,nvl(a.bdm_id,b.bdm_id) as bdm_id
-,nvl(a.bd_id,b.bd_id) as bd_id
+hcm_id
+,cm_id
+,rm_id
+,bdm_id
+,bd_id
 
-,nvl(a.city_id,b.city_id) as city_id
+,city_id
 
---用昨天的历史数据+今天的最新一天的数据作为累计数据
-,nvl(a.his_pos_complete_order_cnt,0) + nvl(b.pos_complete_order_cnt,0)  as his_pos_complete_order_cnt
-,nvl(a.his_qr_complete_order_cnt,0) + nvl(b.qr_complete_order_cnt,0)  as his_qr_complete_order_cnt
-,nvl(a.his_complete_order_cnt,0) + nvl(b.complete_order_cnt,0)  as his_complete_order_cnt
-,nvl(a.his_gmv,0) + nvl(b.gmv,0)  as his_gmv
-,nvl(a.his_actual_amount,0) + nvl(b.actual_amount,0)  as his_actual_amount
-,nvl(a.his_return_amount,0) + nvl(b.return_amount,0)  as his_return_amount
-,nvl(a.his_new_user_cost,0) + nvl(b.new_user_cost,0)  as his_new_user_cost
-,nvl(a.his_old_user_cost,0) + nvl(b.old_user_cost,0)  as his_old_user_cost
-,nvl(a.his_return_amount_order_cnt,0) + nvl(b.return_amount_order_cnt,0)  as his_return_amount_order_cnt
+,nvl(count(if(order_type = 'pos',order_id,null)),0) as his_pos_complete_order_cnt
+,nvl(count(if(order_type = 'qrcode',order_id,null)),0) as his_qr_complete_order_cnt
+,nvl(count(order_id),0) as his_complete_order_cnt
+,nvl(sum(nvl(org_payment_amount,0)),0) as his_gmv
+,nvl(sum(nvl(pay_amount,0)),0) as his_actual_amount
+,nvl(sum(nvl(return_amount,0)),0) as his_return_amount
+,nvl(sum(if(first_order = '1',nvl(org_payment_amount,0) - nvl(pay_amount,0) + nvl(user_subsidy,0),0)),0) as his_new_user_cost
+,nvl(sum(if(first_order <> '1',nvl(org_payment_amount,0) - nvl(pay_amount,0) + nvl(user_subsidy,0),0)),0) as his_old_user_cost
+,nvl(count(if(return_amount > 0,order_id,null)),0) as his_return_amount_order_cnt
 
-,nvl(b.pos_complete_order_cnt,0)  as pos_complete_order_cnt
-,nvl(b.qr_complete_order_cnt,0)  as qr_complete_order_cnt
-,nvl(b.complete_order_cnt,0)  as complete_order_cnt
-,nvl(b.gmv,0)  as gmv
-,nvl(b.actual_amount,0)  as actual_amount
-,nvl(b.return_amount,0)  as return_amount
-,nvl(b.new_user_cost,0)  as new_user_cost
-,nvl(b.old_user_cost,0)  as old_user_cost
-,nvl(b.return_amount_order_cnt,0)  as return_amount_order_cnt
+,nvl(count(if(dt = '{pt}' and order_type = 'pos',order_id,null)),0) as pos_complete_order_cnt
+,nvl(count(if(dt = '{pt}' and order_type = 'qrcode',order_id,null)),0) as qr_complete_order_cnt
+,nvl(count(if(dt = '{pt}',order_id,null)),0) as complete_order_cnt
+,nvl(sum(if(dt = '{pt}',nvl(org_payment_amount,0),0)),0) as gmv
+,nvl(sum(if(dt = '{pt}',nvl(pay_amount,0),0)),0) as actual_amount
+,nvl(sum(if(dt = '{pt}',nvl(return_amount,0),0)),0) as return_amount
+,nvl(sum(if(dt = '{pt}' and first_order = '1',nvl(org_payment_amount,0) - nvl(pay_amount,0) + nvl(user_subsidy,0),0)),0) as new_user_cost
+,nvl(sum(if(dt = '{pt}' and first_order <> '1',nvl(org_payment_amount,0) - nvl(pay_amount,0) + nvl(user_subsidy,0),0)),0) as old_user_cost
+,nvl(count(if(dt = '{pt}' and return_amount > 0,order_id,null)),0) as return_amount_order_cnt
 
 ,'nal' as country_code
 ,'{pt}' as dt
-from
-  (select * from opos_temp.app_opos_order_data_history_di where country_code='nal' and dt='{before_1_day}') as a
-full join
-  (
-  select 
-  hcm_id
-  ,cm_id
-  ,rm_id
-  ,bdm_id
-  ,bd_id
-  
-  ,city_id
-  
-  ,count(if(order_type = 'pos',order_id,null)) as pos_complete_order_cnt
-  ,count(if(order_type = 'qrcode',order_id,null)) as qr_complete_order_cnt
-  ,count(order_id) as complete_order_cnt
-  ,sum(org_payment_amount) as gmv
-  ,sum(pay_amount) as actual_amount
-  ,sum(return_amount) as return_amount
-  ,sum(if(first_order = '1',org_payment_amount - pay_amount + user_subsidy,0)) as new_user_cost
-  ,sum(if(first_order <> '1',org_payment_amount - pay_amount + user_subsidy,0)) as old_user_cost
-  ,count(if(return_amount > 0,order_id,null)) as return_amount_order_cnt
-  
-  from 
-  (select * from opos_dw.dwd_pre_opos_payment_order_di where country_code='nal' and dt='{pt}' and trade_status = 'SUCCESS') as tmp
-  group by 
-  hcm_id
-  ,cm_id
-  ,rm_id
-  ,bdm_id
-  ,bd_id
-  
-  ,city_id
-  ) as b
-on
-a.hcm_id=b.hcm_id
-AND a.cm_id=b.cm_id
-AND a.rm_id=b.rm_id
-AND a.bdm_id=b.bdm_id
-AND a.bd_id=b.bd_id
-and a.city_id=b.city_id
+
+from 
+opos_dw.dwd_pre_opos_payment_order_di as p
+where 
+country_code='nal' 
+and dt >= '2019-10-25' 
+and dt <= '{pt}' 
+and trade_status = 'SUCCESS'
+group by
+hcm_id
+,cm_id
+,rm_id
+,bdm_id
+,bd_id
+
+,city_id
 ;
 
 --02.用shop表计算出每个bd下有
