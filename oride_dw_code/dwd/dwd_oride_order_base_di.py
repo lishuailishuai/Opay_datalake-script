@@ -422,7 +422,12 @@ SELECT base.id as order_id,
        wait_in_radius, --是否在接驾范围内
        wait_distance, --等待乘客上车距离
        cancel_wait_payment_time,  --乘客取消待支付时间  
-
+       premium_rate,  --溢价倍数
+       original_price, --溢价前费用 
+       premium_price_limit, --溢价金额上限
+       premium_adjust_price, --溢价金额
+       local_gov, --围栏ID
+       estimate_id,  --预估价记录表id  
        nvl(country.country_code,'nal') as country_code,
 
        '{pt}' AS dt

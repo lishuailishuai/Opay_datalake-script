@@ -429,7 +429,13 @@ SELECT base.order_id,
         cancel_wait_payment_time,  --乘客取消待支付时间          
         estimate_duration,  -- 预估时间
         estimate_distance,-- '预估距离'
-        estimate_price,  --预估价格     
+        estimate_price,  --预估价格  
+        premium_rate,  --溢价倍数
+        original_price, --溢价前费用 
+        premium_price_limit, --溢价金额上限
+        premium_adjust_price, --溢价金额
+        local_gov, --围栏ID
+        estimate_id,  --预估价记录表id   
        nvl(country.country_code,'nal') as country_code,
 
        '{pt}' AS dt
@@ -578,8 +584,13 @@ FROM
              is_carpool , -- '是否是拼车' 
              estimate_duration,  -- 预估时间
              estimate_distance,-- '预估距离'
-             estimate_price  --预估价格
-
+             estimate_price,  --预估价格
+             premium_rate,  --溢价倍数
+             original_price, --溢价前费用 
+             premium_price_limit, --溢价金额上限
+             premium_adjust_price, --溢价金额
+             local_gov, --围栏ID
+             estimate_id  --预估价记录表id
 
       FROM oride_dw_ods.ods_sqoop_base_data_order_df
       WHERE dt = '{pt}'
