@@ -88,8 +88,12 @@ def app_opos_bonus_target_d_sql_task(ds):
     set hive.exec.parallel=true;
     set hive.exec.dynamic.partition.mode=nonstrict;
 
+
+    set hive.exec.parallel=true;
+    set hive.exec.dynamic.partition.mode=nonstrict;
+
     --02.先取红包record表
-    insert overwrite table opos_dw.{table} partition(country_code,dt)
+    insert overwrite table opos_dw.app_opos_bonus_target_d partition(country_code,dt)
     select
     create_date,
     create_week,
@@ -100,6 +104,8 @@ def app_opos_bonus_target_d_sql_task(ds):
     city_name,
     country,
 
+    hcm_id,
+    hcm_name,
     cm_id,
     cm_name,
     rm_id,
@@ -151,6 +157,8 @@ def app_opos_bonus_target_d_sql_task(ds):
     city_name,
     country,
 
+    hcm_id,
+    hcm_name,
     cm_id,
     cm_name,
     rm_id,
@@ -159,6 +167,8 @@ def app_opos_bonus_target_d_sql_task(ds):
     bdm_name,
     bd_id,
     bd_name;
+
+
 
 
 
