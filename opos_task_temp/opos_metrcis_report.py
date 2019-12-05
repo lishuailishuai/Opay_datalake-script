@@ -94,19 +94,12 @@ set hive.exec.dynamic.partition.mode=nonstrict;
 insert overwrite table opos_temp.app_opos_order_data_history_di partition(country_code,dt)
 select 
 nvl(a.hcm_id,b.hcm_id) as hcm_id
-,nvl(a.hcm_name,b.hcm_name) as hcm_name
 ,nvl(a.cm_id,b.cm_id) as cm_id
-,nvl(a.cm_name,b.cm_name) as cm_name
 ,nvl(a.rm_id,b.rm_id) as rm_id
-,nvl(a.rm_name,b.rm_name) as rm_name
 ,nvl(a.bdm_id,b.bdm_id) as bdm_id
-,nvl(a.bdm_name,b.bdm_name) as bdm_name
 ,nvl(a.bd_id,b.bd_id) as bd_id
-,nvl(a.bd_name,b.bd_name) as bd_name
 
 ,nvl(a.city_id,b.city_id) as city_id
-,nvl(a.city_name,b.city_name) as city_name
-,nvl(a.country,b.country) as country
 
 --用昨天的历史数据+今天的最新一天的数据作为累计数据
 ,nvl(a.his_pos_complete_order_cnt,0) + nvl(b.pos_complete_order_cnt,0)  as his_pos_complete_order_cnt
@@ -137,19 +130,12 @@ full join
   (
   select 
   hcm_id
-  ,hcm_name
   ,cm_id
-  ,cm_name
   ,rm_id
-  ,rm_name
   ,bdm_id
-  ,bdm_name
   ,bd_id
-  ,bd_name
   
   ,city_id
-  ,city_name
-  ,country
   
   ,count(if(order_type = 'pos',order_id,null)) as pos_complete_order_cnt
   ,count(if(order_type = 'qrcode',order_id,null)) as qr_complete_order_cnt
@@ -165,19 +151,12 @@ full join
   (select * from opos_dw.dwd_pre_opos_payment_order_di where country_code='nal' and dt='{pt}' and trade_status = 'SUCCESS') as tmp
   group by 
   hcm_id
-  ,hcm_name
   ,cm_id
-  ,cm_name
   ,rm_id
-  ,rm_name
   ,bdm_id
-  ,bdm_name
   ,bd_id
-  ,bd_name
   
   ,city_id
-  ,city_name
-  ,country
   ) as b
 on
 a.hcm_id=b.hcm_id
@@ -193,19 +172,12 @@ and a.city_id=b.city_id
 insert overwrite table opos_temp.opos_metrcis_report partition (country_code,dt)
 select
 nvl(a.hcm_id,b.hcm_id) as hcm_id
-,nvl(a.hcm_name,b.hcm_name) as hcm_name
 ,nvl(a.cm_id,b.cm_id) as cm_id
-,nvl(a.cm_name,b.cm_name) as cm_name
 ,nvl(a.rm_id,b.rm_id) as rm_id
-,nvl(a.rm_name,b.rm_name) as rm_name
 ,nvl(a.bdm_id,b.bdm_id) as bdm_id
-,nvl(a.bdm_name,b.bdm_name) as bdm_name
 ,nvl(a.bd_id,b.bd_id) as bd_id
-,nvl(a.bd_name,b.bd_name) as bd_name
 
 ,nvl(a.city_id,b.city_id) as city_id
-,nvl(a.city_name,b.city_name) as city_name
-,nvl(a.country,b.country) as country
 
 ,nvl(a.merchant_cnt,0) as merchant_cnt
 ,nvl(a.pos_merchant_cnt,0) as pos_merchant_cnt
@@ -237,19 +209,12 @@ nvl(a.hcm_id,b.hcm_id) as hcm_id
 from
   (select 
   hcm_id
-  ,hcm_name
   ,cm_id
-  ,cm_name
   ,rm_id
-  ,rm_name
   ,bdm_id
-  ,bdm_name
   ,bd_id
-  ,bd_name
   
   ,city_code as city_id
-  ,city_name
-  ,country
   
   ,count(id) as merchant_cnt
   ,0 as pos_merchant_cnt
@@ -261,19 +226,12 @@ from
   country_code='nal' and dt='{pt}'
   group by
   hcm_id
-  ,hcm_name
   ,cm_id
-  ,cm_name
   ,rm_id
-  ,rm_name
   ,bdm_id
-  ,bdm_name
   ,bd_id
-  ,bd_name
   
   ,city_code
-  ,city_name
-  ,country
   ) as a
 full join
   (select * from opos_temp.app_opos_order_data_history_di where country_code='nal' and dt='{pt}') as b
@@ -285,6 +243,7 @@ AND a.bdm_id=b.bdm_id
 AND a.bd_id=b.bd_id
 and a.city_id=b.city_id
 ;
+
 
 
 

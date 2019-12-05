@@ -94,19 +94,12 @@ with
 active_base as (
   select 
   hcm_id
-  ,hcm_name
   ,cm_id
-  ,cm_name
   ,rm_id
-  ,rm_name
   ,bdm_id
-  ,bdm_name
   ,bd_id
-  ,bd_name 
 
   ,city_id
-  ,city_name
-  ,country
   
   ,sender_id
   ,receipt_id
@@ -127,19 +120,12 @@ active_base as (
 user_base as ( 
   select  
   hcm_id
-  ,hcm_name
   ,cm_id
-  ,cm_name
   ,rm_id
-  ,rm_name
   ,bdm_id
-  ,bdm_name
   ,bd_id
-  ,bd_name 
 
   ,city_id
-  ,city_name
-  ,country
 
   ,sender_id
   ,order_type
@@ -153,19 +139,12 @@ user_base as (
   active_base
   group by 
   hcm_id
-  ,hcm_name
   ,cm_id
-  ,cm_name
   ,rm_id
-  ,rm_name
   ,bdm_id
-  ,bdm_name
   ,bd_id
-  ,bd_name 
 
   ,city_id
-  ,city_name
-  ,country
 
   ,sender_id
   ,order_type
@@ -175,19 +154,12 @@ user_base as (
 current_user as (
   select 
   hcm_id
-  ,hcm_name
   ,cm_id
-  ,cm_name
   ,rm_id
-  ,rm_name
   ,bdm_id
-  ,bdm_name
   ,bd_id
-  ,bd_name 
 
   ,city_id
-  ,city_name
-  ,country
 
   ,count(distinct sender_id) as user_active_cnt
   ,count(distinct if(order_type = 'pos',sender_id,null)) as pos_user_active_cnt
@@ -200,19 +172,12 @@ current_user as (
   is_current_day > 0
   group by 
   hcm_id
-  ,hcm_name
   ,cm_id
-  ,cm_name
   ,rm_id
-  ,rm_name
   ,bdm_id
-  ,bdm_name
   ,bd_id
-  ,bd_name 
 
   ,city_id
-  ,city_name
-  ,country
 ),
 
 --03.04.统计近两天都有交易的客户对应到dbid下的人数
@@ -220,15 +185,10 @@ day_1_remain as (
 
   select 
   hcm_id
-  ,hcm_name
   ,cm_id
-  ,cm_name
   ,rm_id
-  ,rm_name
   ,bdm_id
-  ,bdm_name
   ,bd_id
-  ,bd_name 
 
   ,city_id
   ,count(distinct sender_id) as user_active_cnt
@@ -237,15 +197,10 @@ day_1_remain as (
   where is_current_day > 0 and is_before_1_day > 0
   group by 
   hcm_id
-  ,hcm_name
   ,cm_id
-  ,cm_name
   ,rm_id
-  ,rm_name
   ,bdm_id
-  ,bdm_name
   ,bd_id
-  ,bd_name 
 
   ,city_id
 ),
@@ -255,15 +210,10 @@ day_7_remain as (
 
   select 
   hcm_id
-  ,hcm_name
   ,cm_id
-  ,cm_name
   ,rm_id
-  ,rm_name
   ,bdm_id
-  ,bdm_name
   ,bd_id
-  ,bd_name 
 
   ,city_id
   ,count(distinct sender_id) as user_active_cnt
@@ -272,15 +222,10 @@ day_7_remain as (
   where is_current_day > 0 and is_before_7_day > 0
   group by 
   hcm_id
-  ,hcm_name
   ,cm_id
-  ,cm_name
   ,rm_id
-  ,rm_name
   ,bdm_id
-  ,bdm_name
   ,bd_id
-  ,bd_name 
 
   ,city_id
 ),
@@ -289,15 +234,10 @@ day_7_remain as (
 day_15_remain as (
   select 
   hcm_id
-  ,hcm_name
   ,cm_id
-  ,cm_name
   ,rm_id
-  ,rm_name
   ,bdm_id
-  ,bdm_name
   ,bd_id
-  ,bd_name 
 
   ,city_id
   ,count(distinct sender_id) as user_active_cnt
@@ -306,15 +246,10 @@ day_15_remain as (
   where is_current_day > 0 and is_before_15_day > 0
   group by 
   hcm_id
-  ,hcm_name
   ,cm_id
-  ,cm_name
   ,rm_id
-  ,rm_name
   ,bdm_id
-  ,bdm_name
   ,bd_id
-  ,bd_name 
 
   ,city_id
 ),
@@ -323,15 +258,10 @@ day_15_remain as (
 day_30_remain as (
   select 
   hcm_id
-  ,hcm_name
   ,cm_id
-  ,cm_name
   ,rm_id
-  ,rm_name
   ,bdm_id
-  ,bdm_name
   ,bd_id
-  ,bd_name 
 
   ,city_id
   ,count(distinct sender_id) as user_active_cnt
@@ -340,15 +270,10 @@ day_30_remain as (
   where is_current_day > 0 and is_before_30_day > 0
   group by 
   hcm_id
-  ,hcm_name
   ,cm_id
-  ,cm_name
   ,rm_id
-  ,rm_name
   ,bdm_id
-  ,bdm_name
   ,bd_id
-  ,bd_name 
 
   ,city_id
 ),
@@ -357,15 +282,10 @@ day_30_remain as (
 order_merchant_data as (
   select 
   hcm_id
-  ,hcm_name
   ,cm_id
-  ,cm_name
   ,rm_id
-  ,rm_name
   ,bdm_id
-  ,bdm_name
   ,bd_id
-  ,bd_name 
 
   ,city_id
   ,count(distinct(receipt_id)) as order_merchant_cnt
@@ -375,15 +295,10 @@ order_merchant_data as (
   where dt = '{pt}'
   group by 
   hcm_id
-  ,hcm_name
   ,cm_id
-  ,cm_name
   ,rm_id
-  ,rm_name
   ,bdm_id
-  ,bdm_name
   ,bd_id
-  ,bd_name 
 
   ,city_id
 ),
@@ -392,15 +307,10 @@ order_merchant_data as (
 week_data as (
   select 
   u.hcm_id
-  ,u.hcm_name
   ,u.cm_id
-  ,u.cm_name
   ,u.rm_id
-  ,u.rm_name
   ,u.bdm_id
-  ,u.bdm_name
   ,u.bd_id
-  ,u.bd_name 
 
   ,u.city_id
   ,mt.monday_of_year
@@ -410,15 +320,10 @@ week_data as (
     (
     select 
     hcm_id
-    ,hcm_name
     ,cm_id
-    ,cm_name
     ,rm_id
-    ,rm_name
     ,bdm_id
-    ,bdm_name
     ,bd_id
-    ,bd_name 
     ,city_id
     ,order_type
     ,sender_id
@@ -437,15 +342,10 @@ week_data as (
   on u.dt = mt.dt
   group by 
   u.hcm_id
-  ,u.hcm_name
   ,u.cm_id
-  ,u.cm_name
   ,u.rm_id
-  ,u.rm_name
   ,u.bdm_id
-  ,u.bdm_name
   ,u.bd_id
-  ,u.bd_name 
 
   ,u.city_id
   ,mt.monday_of_year
@@ -455,15 +355,10 @@ week_data as (
 month_data as (
   select 
   u.hcm_id
-  ,u.hcm_name
   ,u.cm_id
-  ,u.cm_name
   ,u.rm_id
-  ,u.rm_name
   ,u.bdm_id
-  ,u.bdm_name
   ,u.bd_id
-  ,u.bd_name 
 
   ,u.city_id
   ,mt.month
@@ -473,15 +368,10 @@ month_data as (
     (
     select 
     hcm_id
-    ,hcm_name
     ,cm_id
-    ,cm_name
     ,rm_id
-    ,rm_name
     ,bdm_id
-    ,bdm_name
     ,bd_id
-    ,bd_name 
     ,city_id
     ,order_type
     ,sender_id
@@ -500,15 +390,10 @@ month_data as (
   on u.dt = mt.dt
   group by 
   u.hcm_id
-  ,u.hcm_name
   ,u.cm_id
-  ,u.cm_name
   ,u.rm_id
-  ,u.rm_name
   ,u.bdm_id
-  ,u.bdm_name
   ,u.bd_id
-  ,u.bd_name 
 
   ,u.city_id
   ,mt.month
@@ -518,15 +403,10 @@ month_data as (
 have_order_user as (
   select 
   hcm_id
-  ,hcm_name
   ,cm_id
-  ,cm_name
   ,rm_id
-  ,rm_name
   ,bdm_id
-  ,bdm_name
   ,bd_id
-  ,bd_name 
 
   ,city_id
   ,count(distinct(sender_id)) as have_order_user_cnt
@@ -536,15 +416,10 @@ have_order_user as (
   dt = '{pt}'
   group by 
   hcm_id
-  ,hcm_name
   ,cm_id
-  ,cm_name
   ,rm_id
-  ,rm_name
   ,bdm_id
-  ,bdm_name
   ,bd_id
-  ,bd_name 
 
   ,city_id
 ),
@@ -554,19 +429,12 @@ his_data as (
   select 
   '{pt}' as dt
   ,hcm_id
-  ,hcm_name
   ,cm_id
-  ,cm_name
   ,rm_id
-  ,rm_name
   ,bdm_id
-  ,bdm_name
   ,bd_id
-  ,bd_name 
 
   ,city_id
-  ,city_name
-  ,country
   ,count(distinct(receipt_id)) as his_order_merchant_cnt
   ,count(distinct(if(order_type = 'pos',receipt_id,null))) as his_pos_order_merchant_cnt
 
@@ -578,19 +446,12 @@ his_data as (
     (
     select 
     hcm_id
-    ,hcm_name
     ,cm_id
-    ,cm_name
     ,rm_id
-    ,rm_name
     ,bdm_id
-    ,bdm_name
     ,bd_id
-    ,bd_name 
   
     ,city_id
-    ,city_name
-    ,country
     ,order_type
     ,receipt_id
     ,sender_id
@@ -603,19 +464,12 @@ his_data as (
     and trade_status = 'SUCCESS'
     group by 
     hcm_id
-    ,hcm_name
     ,cm_id
-    ,cm_name
     ,rm_id
-    ,rm_name
     ,bdm_id
-    ,bdm_name
     ,bd_id
-    ,bd_name 
   
     ,city_id
-    ,city_name
-    ,country
     ,order_type
     ,receipt_id
     ,sender_id
@@ -623,34 +477,22 @@ his_data as (
 
   group by 
   hcm_id
-  ,hcm_name
   ,cm_id
-  ,cm_name
   ,rm_id
-  ,rm_name
   ,bdm_id
-  ,bdm_name
   ,bd_id
-  ,bd_name 
 
   ,city_id
-  ,city_name
-  ,country
 ),
 
 --03.13.查出当天活跃的商户,然后计算成功交易次数大于5次的商户所属的bdid所对应的商户个数
 active_merchant as (
   select 
   hcm_id
-  ,hcm_name
   ,cm_id
-  ,cm_name
   ,rm_id
-  ,rm_name
   ,bdm_id
-  ,bdm_name
   ,bd_id
-  ,bd_name 
 
   ,city_id
   ,count(distinct(t.receipt_id)) as more_5_merchant_cnt
@@ -660,15 +502,10 @@ active_merchant as (
     (
     select 
     hcm_id
-    ,hcm_name
     ,cm_id
-    ,cm_name
     ,rm_id
-    ,rm_name
     ,bdm_id
-    ,bdm_name
     ,bd_id
-    ,bd_name 
   
     ,city_id
     ,receipt_id
@@ -681,15 +518,10 @@ active_merchant as (
     and trade_status = 'SUCCESS'
     group by 
     hcm_id
-    ,hcm_name
     ,cm_id
-    ,cm_name
     ,rm_id
-    ,rm_name
     ,bdm_id
-    ,bdm_name
     ,bd_id
-    ,bd_name 
   
     ,city_id
     ,receipt_id) t 
@@ -697,15 +529,10 @@ active_merchant as (
   current_complete_cnt > 5
   group by
   hcm_id
-  ,hcm_name
   ,cm_id
-  ,cm_name
   ,rm_id
-  ,rm_name
   ,bdm_id
-  ,bdm_name
   ,bd_id
-  ,bd_name 
 
   ,city_id
 )
@@ -713,19 +540,12 @@ active_merchant as (
 insert overwrite table opos_temp.opos_active_user_daily partition(country_code,dt)
 select 
 cu.hcm_id
-,cu.hcm_name
 ,cu.cm_id
-,cu.cm_name
 ,cu.rm_id
-,cu.rm_name
 ,cu.bdm_id
-,cu.bdm_name
 ,cu.bd_id
-,cu.bd_name 
 
 ,cu.city_id
-,cu.city_name
-,cu.country
 
 ,d.dt as create_date
 ,d.week_of_year as create_week
@@ -794,6 +614,7 @@ left join
 (select dt,week_of_year from public_dw_dim.dim_date where dt='{pt}') as d
 on cu.dt=d.dt
 ;
+
 
 
 
@@ -876,7 +697,8 @@ delete_bi_bd_data = MySqlOperator(
 insert_crm_metrics = HiveToMySqlTransfer(
     task_id='insert_crm_metrics',
     sql=""" 
-        select 
+        
+ select 
         null,
         a.dt,
         cast(a.bd_id as string) as bd_id,
@@ -903,8 +725,8 @@ insert_crm_metrics = HiveToMySqlTransfer(
         nvl(b.month_pos_user_active_cnt,0),
         nvl(b.month_qr_user_active_cnt,0),
         nvl(b.have_order_user_cnt,0),
-        a.city_name,
-        a.country,
+        nvl(c.name,'-') as city_name,
+        nvl(c.country,'-') as country,
 
         a.return_amount,
         a.new_user_cost,
@@ -938,7 +760,11 @@ AND a.rm_id=b.rm_id
 AND a.bdm_id=b.bdm_id
 AND a.bd_id=b.bd_id
 and a.city_id=b.city_id   
-        
+        left join
+  (select id,name,country from opos_dw_ods.ods_sqoop_base_bd_city_df where dt = '{{ ds }}') as c
+on
+  a.city_id=c.id
+   
 
         """,
     mysql_conn_id='mysql_dw',
@@ -948,7 +774,8 @@ and a.city_id=b.city_id
 insert_bi_metrics = HiveToMySqlTransfer(
     task_id='insert_bi_metrics',
     sql=""" 
-        select 
+           
+ select 
         null,
         a.dt,
         cast(a.bd_id as string) as bd_id,
@@ -975,8 +802,8 @@ insert_bi_metrics = HiveToMySqlTransfer(
         nvl(b.month_pos_user_active_cnt,0),
         nvl(b.month_qr_user_active_cnt,0),
         nvl(b.have_order_user_cnt,0),
-        a.city_name,
-        a.country,
+        nvl(c.name,'-') as city_name,
+        nvl(c.country,'-') as country,
 
         a.return_amount,
         a.new_user_cost,
@@ -1003,14 +830,18 @@ insert_bi_metrics = HiveToMySqlTransfer(
         (select * from opos_temp.opos_metrcis_report where country_code = 'nal' and  dt = '{{ ds }}') a
         left join 
         (select * from opos_temp.opos_active_user_daily where country_code = 'nal' and  dt = '{{ ds }}') b 
-        on    
+        on  
 a.hcm_id=b.hcm_id
 AND a.cm_id=b.cm_id
 AND a.rm_id=b.rm_id
 AND a.bdm_id=b.bdm_id
 AND a.bd_id=b.bd_id
-and a.city_id=b.city_id  
-
+and a.city_id=b.city_id   
+        left join
+  (select id,name,country from opos_dw_ods.ods_sqoop_base_bd_city_df where dt = '{{ ds }}') as c
+on
+  a.city_id=c.id
+   
 
     """,
     mysql_conn_id='mysql_bi',
@@ -1020,6 +851,9 @@ and a.city_id=b.city_id
 insert_bi_bd_metrics = HiveToMySqlTransfer(
     task_id='insert_bi_bd_metrics',
     sql=""" 
+    
+    
+
         select 
         null,
         a.dt,
@@ -1029,17 +863,17 @@ insert_bi_bd_metrics = HiveToMySqlTransfer(
         substr(a.dt,0,4) as create_year,
 
         cast(a.cm_id as string) as cm_id,
-        a.cm_name,
+        cm.name as cm_name,
         cast(a.rm_id as string) as rm_id,
-        a.rm_name,
+        rm.name as rm_name,
         cast(a.bdm_id as string) as bdm_id,
-        a.bdm_name,
+        bdm.name as bdm_name,
         cast(a.bd_id as string) as bd_id,
-        a.bd_name,
+        bd.name as bd_name,
 
         if(a.city_id='-',0,a.city_id) as city_id,
-        a.city_name,
-        a.country,
+        c.name as city_name,
+        c.country,
 
         a.merchant_cnt , 
         a.pos_merchant_cnt , 
@@ -1100,6 +934,28 @@ and a.city_id=b.city_id
         public_dw_dim.dim_date as d
         on
         a.dt=d.dt
+
+        left join
+    (select id,name from opos_dw_ods.ods_sqoop_base_bd_admin_users_df where dt = '{{ ds }}') as bd
+  on a.bd_id=bd.id
+  left join
+    (select id,name from opos_dw_ods.ods_sqoop_base_bd_admin_users_df where dt = '{{ ds }}') as bdm
+  on a.bdm_id=bdm.id
+  left join
+    (select id,name from opos_dw_ods.ods_sqoop_base_bd_admin_users_df where dt = '{{ ds }}') as rm
+  on a.rm_id=rm.id
+  left join
+    (select id,name from opos_dw_ods.ods_sqoop_base_bd_admin_users_df where dt = '{{ ds }}') as cm
+  on a.cm_id=cm.id
+  left join
+    (select id,name from opos_dw_ods.ods_sqoop_base_bd_admin_users_df where dt = '{{ ds }}') as hcm
+  on a.hcm_id=hcm.id
+left join
+  (select id,name,country from opos_dw_ods.ods_sqoop_base_bd_city_df where dt = '{{ ds }}') as c
+on
+  a.city_id=c.id
+
+
 
     """,
     mysql_conn_id='mysql_bi',
