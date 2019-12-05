@@ -863,17 +863,17 @@ insert_bi_bd_metrics = HiveToMySqlTransfer(
         substr(a.dt,0,4) as create_year,
 
         cast(a.cm_id as string) as cm_id,
-        cm.name as cm_name,
+        nvl(cm.name,'-') as cm_name,
         cast(a.rm_id as string) as rm_id,
-        rm.name as rm_name,
+        nvl(rm.name,'-') as rm_name,
         cast(a.bdm_id as string) as bdm_id,
-        bdm.name as bdm_name,
+        nvl(bdm.name,'-') as bdm_name,
         cast(a.bd_id as string) as bd_id,
-        bd.name as bd_name,
+        nvl(bd.name,'-') as bd_name,
 
         if(a.city_id='-',0,a.city_id) as city_id,
-        c.name as city_name,
-        c.country,
+        nvl(c.name,'-') as city_name,
+        nvl(c.country,'-') as country,
 
         a.merchant_cnt , 
         a.pos_merchant_cnt , 
