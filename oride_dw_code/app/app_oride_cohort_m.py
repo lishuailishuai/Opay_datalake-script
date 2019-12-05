@@ -24,7 +24,7 @@ import os
 
 args = {
     'owner': 'chenghui',
-    'start_date': datetime(2019, 11, 11),
+    'start_date': datetime(2019, 11, 30),
     'depends_on_past': False,
     'retries': 3,
     'retry_delay': timedelta(minutes=2),
@@ -44,10 +44,6 @@ sleep_time = BashOperator(
     dag=dag)
 
 ##----------------------------------------- 依赖 ---------------------------------------##
-
-partition_sql = "hive -e \"show partitions oride_dw.dwd_oride_order_base_include_test_di;\" " \
-                "2>/dev/null |tail -1|awk -F'/' '{print $2}'|awk -F'=' '{print $2}'"
-date_last = os.popen(partition_sql).read().strip("\n")
 
 # 依赖前一天分区
 dependence_dwd_oride_order_base_include_test_di_prev_day_task = S3KeySensor(
@@ -130,7 +126,7 @@ create_oride_cohort_mid_m_task = HiveOperator(
             ) t2
             on t.create_date=t2.dt_date;
             '''.format(
-        pt=date_last
+        pt='{{ds}}'
     ),
     dag=dag)
 
@@ -180,7 +176,7 @@ app_oride_new_user_cohort_m_task = HiveOperator(
         ) m
         where !(nvl(m.month_create_date,-10000)=-10000 or nvl(m.months,-10000)=-10000); 
                  '''.format(
-        pt=date_last,
+        pt='{{ds}}',
         now_day='{{macros.ds_add(ds, +1)}}',
         table=get_table_info(0)[0]
     ),
@@ -231,7 +227,7 @@ app_oride_new_driver_cohort_m_task = HiveOperator(
         with cube) m
         where !(nvl(m.month_create_date,-10000)=-10000 or nvl(m.months,-10000)=-10000); 
                  '''.format(
-        pt=date_last,
+        pt='{{ds}}',
         now_day='{{macros.ds_add(ds, +1)}}',
         table=get_table_info(1)[0]
     ),
@@ -281,7 +277,7 @@ app_oride_act_user_cohort_m_task = HiveOperator(
         with cube) m
         where !(nvl(m.month_create_date,-10000)=-10000 or nvl(m.months,-10000)=-10000); 
                  '''.format(
-        pt=date_last,
+        pt='{{ds}}',
         now_day='{{macros.ds_add(ds, +1)}}',
         table=get_table_info(2)[0]
     ),
@@ -331,7 +327,7 @@ app_oride_act_driver_cohort_m_task = HiveOperator(
         with cube) m
         where !(nvl(m.month_create_date,-10000)=-10000 or nvl(m.months,-10000)=-10000); 
                  '''.format(
-        pt=date_last,
+        pt='{{ds}}',
         now_day='{{macros.ds_add(ds, +1)}}',
         table=get_table_info(3)[0]
     ),
@@ -353,7 +349,7 @@ oride_cohort_mid_m_success = BashOperator(
         echo "DATA EXPORT Successed ......"
     fi
     """.format(
-        pt=date_last),
+        pt='{{ds}}'),
     dag=dag)
 
 new_user_cohort_m_touchz_success = BashOperator(
@@ -372,7 +368,7 @@ new_user_cohort_m_touchz_success = BashOperator(
         $HADOOP_HOME/bin/hadoop fs -touchz {hdfs_data_dir}/_SUCCESS
     fi
     """.format(
-        pt=date_last,
+        pt='{{ds}}',
         now_day='{{macros.ds_add(ds, +1)}}',
         hdfs_data_dir=get_table_info(0)[1] + '/country_code=nal/dt={{ds}}'
     ),
@@ -394,7 +390,7 @@ new_driver_cohort_m_touchz_success = BashOperator(
         $HADOOP_HOME/bin/hadoop fs -touchz {hdfs_data_dir}/_SUCCESS
     fi
     """.format(
-        pt=date_last,
+        pt='{{ds}}',
         now_day='{{macros.ds_add(ds, +1)}}',
         hdfs_data_dir=get_table_info(1)[1] + '/country_code=nal/dt={{ds}}'
     ),
@@ -416,7 +412,7 @@ act_user_cohort_m_touchz_success = BashOperator(
         $HADOOP_HOME/bin/hadoop fs -touchz {hdfs_data_dir}/_SUCCESS
     fi
     """.format(
-        pt=date_last,
+        pt='{{ds}}',
         now_day='{{macros.ds_add(ds, +1)}}',
         hdfs_data_dir=get_table_info(2)[1] + '/country_code=nal/dt={{ds}}'
     ),
@@ -438,7 +434,7 @@ act_driver_cohort_m_touchz_success = BashOperator(
         $HADOOP_HOME/bin/hadoop fs -touchz {hdfs_data_dir}/_SUCCESS
     fi
     """.format(
-        pt=date_last,
+        pt='{{ds}}',
         now_day='{{macros.ds_add(ds, +1)}}',
         hdfs_data_dir=get_table_info(3)[1] + '/country_code=nal/dt={{ds}}'
     ),
