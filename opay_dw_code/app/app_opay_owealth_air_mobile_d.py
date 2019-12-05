@@ -273,8 +273,8 @@ def send_air_mobile_report_email(ds, **kwargs):
     html = html_fmt.format(rows=row_html)
     # send mail
 
-    # email_to = Variable.get("owealth_report_receivers").split()
-    email_to = ['shuzhen.liu@opay-inc.com']
+    email_to = Variable.get("air_mobile_receives").split()
+    #email_to = ['shuzhen.liu@opay-inc.com']
 
     email_subject = '话费流量充值(19：00-19：00)_{}'.format(airflow.macros.ds_add(ds, +1))
     send_email(
