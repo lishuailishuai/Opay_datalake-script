@@ -56,17 +56,6 @@ dim_oride_city_task = HivePartitionSensor(
     dag=dag
 )
 
-dwm_oride_driver_base_df_task = UFileSensor(
-    task_id='dwm_oride_driver_base_df_task',
-    filepath='{hdfs_path_str}/country_code=nal/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw/dwm_oride_driver_base_df",
-        pt='{{ds}}'
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60,
-    dag=dag
-)
-
 ##----------------------------------------- 变量 ---------------------------------------##
 
 db_name = "oride_dw"
