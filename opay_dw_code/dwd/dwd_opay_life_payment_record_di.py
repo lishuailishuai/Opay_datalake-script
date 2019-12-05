@@ -172,7 +172,7 @@ def dwd_opay_life_payment_record_di_sql_task(ds):
     select 
         t1.order_no, t1.amount, t1.currency, 
         'USER' as originator_type, t2.role as originator_role, t2.kyc_level as originator_kyc_level, t1.originator_id, concat(t2.first_name, ' ', t2.middle_name, ' ', t2.surname) as originator_name,
-        'MERCHANT' as affiliate_type, 'merchant' as affiliate_role, t3.merchant_id as affiliate_id, t3.merchant_name as affiliate_name,
+        'MERCHANT' as affiliate_type, t3.merchant_type as affiliate_role, t3.merchant_id as affiliate_id, t3.merchant_name as affiliate_name,
         t1.recharge_service_provider, replace(t1.recharge_account, '+234', '') as recharge_account, t1.recharge_account_name, t1.recharge_set_meal,
         t1.create_time, t1.update_time, t1.country, 'Life Payment' as top_service_type, t1.sub_service_type,
         t1.order_status, t1.error_code, t1.error_msg, t1.client_source, t1.pay_way,
