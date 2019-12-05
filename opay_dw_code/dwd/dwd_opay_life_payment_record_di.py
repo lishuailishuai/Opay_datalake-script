@@ -162,7 +162,7 @@ def dwd_opay_life_payment_record_di_sql_task(ds):
         ),
         dim_merchant_data as (
             select 
-                merchant_id, merchant_name
+                merchant_id, merchant_name, merchant_type
             from opay_dw_ods.ods_sqoop_base_merchant_df
             where dt = '{pt}'
         )
