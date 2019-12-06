@@ -430,7 +430,7 @@ select dri.driver_id,
             left join
             (--首次完单信息
                 select 
-                    driver_id,
+                    distinct driver_id,
                     order_id,
                     create_time,
                     first_finish_ord_mark
@@ -439,7 +439,7 @@ select dri.driver_id,
             left join
             (--最近一次完单
                 select 
-                    driver_id,
+                    distinct driver_id,
                     order_id,
                     create_time
                 from data_order where recent_finish_ord_mark =1 --最近一次完单标志
@@ -448,7 +448,7 @@ select dri.driver_id,
             left join
             (--司机首次在线时间
                 select
-                    driver_id,
+                    distinct driver_id,
                     first_online_dt,
                     driver_first_online_mark
                 from driver_time where driver_first_online_mark  = 1
@@ -457,7 +457,7 @@ select dri.driver_id,
             left join
             (
                 select 
-                    driver_id,
+                    distinct driver_id,
                     nvl(amount_all,0) as amount_all,--'当日总收入'
                     nvl(amount_agenter,0) as amount_agenter--'当日骑手份子钱-小老板抽成20%'
                 from oride_dw.dwd_oride_driver_records_day_df
@@ -467,7 +467,7 @@ select dri.driver_id,
             left join 
             (
                 select  
-                    driver_id,
+                    distinct driver_id,
                     first_finish_order_id,
                     first_finish_order_create_time,
                     recent_finish_order_id,
