@@ -105,9 +105,9 @@ select ord.passenger_id,  --乘客ID
        ord.driver_serv_type,  --司机绑定的业务类型，两个业务类型区别在于同时呼叫下线前统计业务线完单量
        if(multi_cit.city_id is not null,1,0) as is_multi_city,  --是否多城市业务线
        if(user_df.first_finish_create_date='{pt}',1,0) as is_first_finish_user, --是否首次完单乘客
-       sum(if(user_df.if_td_register=1,1,0)) as new_user_ord_cnt, --当日新注册乘客下单量
-       sum(if(user_df.if_td_register=1 and ord.is_td_finish=1,1,0)) as new_user_finished_cnt, --当日新注册乘客完单量
-       sum(if(user_df.if_td_register=1 and ord.is_td_finish=1,ord.price,0)) as new_user_gmv, --当日注册乘客完单gmv       
+       sum(if(user_df.is_td_register=1,1,0)) as new_user_ord_cnt, --当日新注册乘客下单量
+       sum(if(user_df.is_td_register=1 and ord.is_td_finish=1,1,0)) as new_user_finished_cnt, --当日新注册乘客完单量
+       sum(if(user_df.is_td_register=1 and ord.is_td_finish=1,ord.price,0)) as new_user_gmv, --当日注册乘客完单gmv       
        count(ord.order_id) as order_cnt,  --下单量
        sum(ord.is_td_finish) as finish_order_cnt,  --完单量
        sum(ord.is_td_finish_pay) as finished_pay_order_cnt, --支付完单量，订单表中status=5
@@ -127,7 +127,7 @@ and driver_id<>1) ord
 left join
 (select *      
 from oride_dw.dwm_oride_passenger_base_df
-where dt='{pt}' and (if_td_register=1 or (first_finish_create_date='{pt}'))) user_df
+where dt='{pt}' and (is_td_register=1 or (first_finish_create_date='{pt}'))) user_df
 on ord.passenger_id=user_df.passenger_id
 left join
 (select city_id,product_id,size(split(product_id,',')) as product_id_cnt
