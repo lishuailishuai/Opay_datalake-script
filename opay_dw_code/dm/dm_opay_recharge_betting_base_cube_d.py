@@ -101,7 +101,7 @@ def dm_opay_recharge_betting_base_cube_d_sql_task(ds):
             else '[0, 100]'
         end as amount_range
         from {db}.dwd_opay_recharge_betting_record_di
-        where dt = '{pt}'
+        where dt = '{pt}' and service_provider != '' and service_provider != 'supabet' and service_provider is not null
     ) t1
     group by country_code, service_provider, amount_range, order_status
     GROUPING SETS (

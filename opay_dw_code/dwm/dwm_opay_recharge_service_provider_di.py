@@ -136,27 +136,27 @@ def dwm_opay_recharge_service_provider_di_sql_task(ds):
             select 
                 service_provider_id, user_role, 'TV' service_type, order_status, amount, order_no, country_code, dt
             from opay_dw.dwd_opay_recharge_tv_record_di
-            where dt='{pt}' and create_time BETWEEN date_format(date_sub('{pt}', 1), 'yyyy-MM-dd 23') AND date_format('{pt}', 'yyyy-MM-dd 23')
+            where dt='{pt}' and create_time BETWEEN date_format(date_sub('{pt}', 1), 'yyyy-MM-dd 23') AND date_format('{pt}', 'yyyy-MM-dd 23') and service_provider_id != '100'
             union all
             select 
                 service_provider_id, user_role, 'Betting' service_type, order_status, amount, order_no, country_code, dt
             from opay_dw.dwd_opay_recharge_betting_record_di
-            where dt='{pt}' and create_time BETWEEN date_format(date_sub('{pt}', 1), 'yyyy-MM-dd 23') AND date_format('{pt}', 'yyyy-MM-dd 23')
+            where dt='{pt}' and create_time BETWEEN date_format(date_sub('{pt}', 1), 'yyyy-MM-dd 23') AND date_format('{pt}', 'yyyy-MM-dd 23') and service_provider_id != '200'
             union all
             select 
                 service_provider_id, user_role, 'MobileData' service_type, order_status, amount, order_no, country_code, dt
             from opay_dw.dwd_opay_recharge_mobiledata_record_di
-            where dt='{pt}' and create_time BETWEEN date_format(date_sub('{pt}', 1), 'yyyy-MM-dd 23') AND date_format('{pt}', 'yyyy-MM-dd 23')
+            where dt='{pt}' and create_time BETWEEN date_format(date_sub('{pt}', 1), 'yyyy-MM-dd 23') AND date_format('{pt}', 'yyyy-MM-dd 23') and service_provider_id != '300'
             union all
             select 
                 service_provider_id, user_role, 'Airtime' service_type, order_status, amount, order_no, country_code, dt
             from opay_dw.dwd_opay_recharge_mobilebill_record_di
-            where dt='{pt}' and create_time BETWEEN date_format(date_sub('{pt}', 1), 'yyyy-MM-dd 23') AND date_format('{pt}', 'yyyy-MM-dd 23')
+            where dt='{pt}' and create_time BETWEEN date_format(date_sub('{pt}', 1), 'yyyy-MM-dd 23') AND date_format('{pt}', 'yyyy-MM-dd 23') and service_provider_id != '400'
             union all
             select 
                 service_provider_id, user_role, 'Electricity' service_type, order_status, amount, order_no, country_code, dt
             from opay_dw.dwd_opay_recharge_electricity_record_di
-            where dt='{pt}' and create_time BETWEEN date_format(date_sub('{pt}', 1), 'yyyy-MM-dd 23') AND date_format('{pt}', 'yyyy-MM-dd 23')
+            where dt='{pt}' and create_time BETWEEN date_format(date_sub('{pt}', 1), 'yyyy-MM-dd 23') AND date_format('{pt}', 'yyyy-MM-dd 23') and service_provider_id != '500'
         ) rechard_di group by country_code, dt, service_type, service_provider_id, user_role, order_status
     ) t1 
     join 
@@ -164,6 +164,7 @@ def dwm_opay_recharge_service_provider_di_sql_task(ds):
         select * from opay_dw.dim_opay_service_provider_df where dt = '{pt}'
     ) t2 
     on t1.service_provider_id = t2.id
+    
     '''.format(
         pt=ds,
         db=db_name,
