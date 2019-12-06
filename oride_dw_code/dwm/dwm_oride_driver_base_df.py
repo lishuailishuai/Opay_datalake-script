@@ -235,7 +235,7 @@ with
     
     )
 
-INSERT overwrite TABLE oride_dw.oride_dw.{table} partition(country_code,dt)
+INSERT overwrite TABLE oride_dw.{table} partition(country_code,dt)
 select dri.driver_id, 
             --司机ID
 
@@ -618,3 +618,4 @@ oride_driver_timerange_prev_day_task >> dwm_oride_driver_base_df_task
 dwd_oride_driver_accept_order_show_detail_di_prev_day_task >>dwm_oride_driver_base_df_task
 dwd_oride_driver_accept_order_click_detail_di_prev_day_task >>dwm_oride_driver_base_df_task
 dwd_oride_driver_records_day_df_task>>dwm_oride_driver_base_df_task
+dwm_oride_driver_base_df_prev_day_task>>dwm_oride_driver_base_df_task
