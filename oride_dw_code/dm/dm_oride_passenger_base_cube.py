@@ -27,7 +27,7 @@ import os
 
 args = {
     'owner': 'lili.chen',
-    'start_date': datetime(2019, 12, 3),
+    'start_date': datetime(2019, 12, 4),
     'depends_on_past': False,
     'retries': 3,
     'retry_delay': timedelta(minutes=2),
@@ -36,39 +36,24 @@ args = {
     'email_on_retry': False,
 }
 
-dag = airflow.DAG('dwm_oride_passenger_order_base_di',
+dag = airflow.DAG('dm_oride_passenger_base_cube',
                   schedule_interval="30 01 * * *",
                   default_args=args)
 
 ##----------------------------------------- 依赖 ---------------------------------------##
 
+
 # 依赖前一天分区
-dwd_oride_order_base_include_test_di_prev_day_task = S3KeySensor(
-    task_id='dwd_oride_order_base_include_test_di_prev_day_task',
+dwm_oride_passenger_order_base_di_prev_day_task = S3KeySensor(
+    task_id='dwm_oride_passenger_order_base_di_prev_day_task',
     bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw/dwd_oride_order_base_include_test_di/country_code=NG",
+        hdfs_path_str="oride/oride_dw/dwm_oride_passenger_order_base_di/country_code=NG",
         pt='{{ds}}'
     ),
     bucket_name='opay-bi',
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
-dwm_oride_passenger_base_df_prev_day_task = UFileSensor(
-    task_id='dwm_oride_passenger_base_df_prev_day_task',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw/dwm_oride_passenger_base_df/country_code=nal",
-        pt='{{ds}}'
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
-##----------------------------------------- 变量 ---------------------------------------##
-
-db_name = "oride_dw"
-table_name = "dwm_oride_passenger_order_base_di"
-hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
-
 
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
 
@@ -77,7 +62,7 @@ def fun_task_timeout_monitor(ds, dag, **op_kwargs):
 
     msg = [
         {"db": "oride_dw", "table": "{dag_name}".format(dag_name=dag_ids),
-         "partition": "country_code=NG/dt={pt}".format(pt=ds), "timeout": "800"}
+         "partition": "country_code=NG/dt={pt}".format(pt=ds), "timeout": "1800"}
     ]
 
     TaskTimeoutMonitor().set_task_monitor(msg)
@@ -90,60 +75,62 @@ task_timeout_monitor = PythonOperator(
     dag=dag
 )
 
+##----------------------------------------- 变量 ---------------------------------------##
+
+db_name = "oride_dw"
+table_name = "dm_oride_passenger_base_cube"
+hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
+
 
 ##----------------------------------------- 脚本 ---------------------------------------##
 
-def dwm_oride_passenger_order_base_di_sql_task(ds):
+def dm_oride_passenger_base_cube_sql_task(ds):
     HQL = '''
     set hive.exec.parallel=true;
     set hive.exec.dynamic.partition.mode=nonstrict;
+    with passenger_data as
+    (
+    select city_id,
+       product_id,
+       driver_serv_type,  --如果要看下单情况必须用product_id来看，如果看完单情况需要看招手停就通过product_id看，否则用driver_serv_type看
+       count(distinct (if(order_cnt>0,passenger_id,null))) as ord_users, --当日下单乘客数
+       count(distinct (if(finish_order_cnt>0,passenger_id,null))) as finished_users, --当日完单乘客数
+       count(distinct (if(is_first_finish_user=1,passenger_id,null))) as first_finished_users, --当日订单中首次完单乘客数
+       sum(new_user_ord_cnt) as new_user_ord_cnt, --当日新注册乘客下单量
+       sum(new_user_finished_cnt) as new_user_finished_cnt, --当日新注册乘客完单量
+       sum(new_user_gmv) as new_user_gmv, --当日注册乘客完单gmv
+       count(distinct (if(pay_succ_ord_cnt>0,passenger_id,null))) as paid_users, --当日所有支付成功乘客数
+       count(distinct (if(online_pay_succ_ord_cnt>0,passenger_id,null))) as online_paid_users, --当日线上支付成功乘客数
+       --if(dt<'2019-12-01' and country_code='nal','NG',country_code) as country_code    
+       country_code   
 
-INSERT overwrite TABLE oride_dw.{table} partition(country_code,dt)
-select ord.passenger_id,  --乘客ID
-       ord.city_id,  --城市ID
-       ord.product_id,  --下单业务类型
-       ord.driver_serv_type,  --司机绑定的业务类型，两个业务类型区别在于同时呼叫下线前统计业务线完单量
-       if(multi_cit.city_id is not null,1,0) as is_multi_city,  --是否多城市业务线
-       if(user_df.first_finish_create_date='{pt}',1,0) as is_first_finish_user, --是否首次完单乘客
-       sum(if(user_df.if_td_register=1,1,0)) as new_user_ord_cnt, --当日新注册乘客下单量
-       sum(if(user_df.if_td_register=1 and ord.is_td_finish=1,1,0)) as new_user_finished_cnt, --当日新注册乘客完单量
-       sum(if(user_df.if_td_register=1 and ord.is_td_finish=1,ord.price,0)) as new_user_gmv, --当日注册乘客完单gmv       
-       count(ord.order_id) as order_cnt,  --下单量
-       sum(ord.is_td_finish) as finish_order_cnt,  --完单量
-       sum(ord.is_td_finish_pay) as finished_pay_order_cnt, --支付完单量，订单表中status=5
-       sum(if(ord.pay_status=1 and ord.status not in(6,13),1,0)) as pay_succ_ord_cnt, --支付表支付成功且正常订单量
-       sum(if(ord.pay_status=1 and ord.pay_mode=2 and ord.status not in(6,13),1,0)) as online_pay_succ_ord_cnt, --线上支付成功且正常订单量
-       sum(if(ord.is_td_finish=1,ord.price,0)) as finish_order_price,  --完单gmv
-       sum(if(ord.is_td_finish_pay=1,ord.price,0)) as finished_pay_order_price,  --完单支付gmv，订单表中status=5
-       sum(if(ord.pay_status=1 and ord.pay_mode=2 and ord.status not in(6,13),ord.price,0)) as online_pay_ord_price,  --线上支付成功且正常订单gmv
-       sum(ord.pay_amount) as pay_amount,  --实际支付金额
-       ord.country_code,
-       '{pt}' as dt
-from(select *
-from oride_dw.dwd_oride_order_base_include_test_di
-where dt='{pt}' 
-and city_id<>'999001' --去除测试数据
-and driver_id<>1) ord
-left join
-(select *      
-from oride_dw.dwm_oride_passenger_base_df
-where dt='{pt}' and (if_td_register=1 or (first_finish_create_date='{pt}'))) user_df
-on ord.passenger_id=user_df.passenger_id
-left join
-(select city_id,product_id,size(split(product_id,',')) as product_id_cnt
-from oride_dw.dim_oride_city
-where dt='{pt}' and size(split(product_id,','))>1) multi_cit
-on ord.city_id=multi_cit.city_id
-group by ord.passenger_id,  --乘客ID
-       ord.city_id,  --城市ID
-       ord.product_id,  --下单业务类型
-       ord.driver_serv_type, --司机绑定的业务类型，两个业务类型区别在于同时呼叫下线前统计业务线完单量
-       if(multi_cit.city_id is not null,1,0), --是否多城市业务线
-       if(user_df.first_finish_create_date='{pt}',1,0), 
-       ord.country_code;  
+        from oride_dw.dwm_oride_passenger_order_base_di
+        where dt='{pt}' 
+        group by city_id,
+               product_id,
+               driver_serv_type,
+               --if(dt<'2019-12-01' and country_code='nal','NG',country_code)
+               country_code
+        with cube
+    )
+    INSERT overwrite TABLE oride_dw.{table} partition(country_code,dt)
+    select nvl(city_id,-10000) as city_id,
+           nvl(product_id,-10000) as product_id,
+           nvl(driver_serv_type,-10000) as driver_serv_type,
+           ord_users, --当日下单乘客数
+           finished_users, --当日完单乘客数
+           first_finished_users, --当日订单中首次完单乘客数
+           new_user_ord_cnt, --当日新注册乘客下单量
+           new_user_finished_cnt, --当日新注册乘客完单量
+           new_user_gmv, --当日注册乘客完单gmv
+           paid_users, --当日所有支付成功乘客数
+           online_paid_users, --当日线上支付成功乘客数
+           nvl(country_code,'total') as country_code,
+           '{pt}' as dt
+    from passenger_data t;
     '''.format(
         pt=ds,
-        bef_yes_day=airflow.macros.ds_add(ds, -1),
+        now_day=airflow.macros.ds_add(ds, +1),
         table=table_name,
         db=db_name
     )
@@ -212,7 +199,7 @@ def execution_data_task_id(ds, **kwargs):
     cf.delete_partition()
 
     # 读取sql
-    _sql = "\n" + cf.alter_partition() + "\n" + dwm_oride_passenger_order_base_di_sql_task(ds)
+    _sql = "\n" + cf.alter_partition() + "\n" + dm_oride_passenger_base_cube_sql_task(ds)
 
     logging.info('Executing: %s', _sql)
 
@@ -228,8 +215,8 @@ def execution_data_task_id(ds, **kwargs):
     # 生产success
     cf.touchz_success()
 
-dwm_oride_passenger_order_base_di_task = PythonOperator(
-    task_id='dwm_oride_passenger_order_base_di_task',
+dm_oride_passenger_base_cube_task = PythonOperator(
+    task_id='dm_oride_passenger_base_cube_task',
     python_callable=execution_data_task_id,
     provide_context=True,
     op_kwargs={
@@ -240,6 +227,6 @@ dwm_oride_passenger_order_base_di_task = PythonOperator(
     dag=dag
 )
 
-dwd_oride_order_base_include_test_di_prev_day_task >> dwm_oride_passenger_order_base_di_task
-dwm_oride_passenger_base_df_prev_day_task >> dwm_oride_passenger_order_base_di_task
+dwm_oride_passenger_order_base_di_prev_day_task >> dm_oride_passenger_base_cube_task
+
 
