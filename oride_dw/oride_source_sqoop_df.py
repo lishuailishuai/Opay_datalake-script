@@ -201,6 +201,11 @@ table_list = [
     # algorithm_db
     ("algorithm", "order_operation_info", "algorithm_db", "algorithm",1),
     ("anti_fraud_oride", "driver_virtual_device_login", "anti_fraud_oride", "base", 1),
+
+    #opay_assets
+    ("opay_assets", "oride_properties", "opay_assets_mysql", "base", 1),
+    ("opay_assets", "oride_assets_sku", "opay_assets_mysql", "base", 1),
+    ("opay_assets", "admin_business", "opay_assets_mysql", "base", 1),
 ]
 
 HIVE_DB = 'oride_dw_ods'

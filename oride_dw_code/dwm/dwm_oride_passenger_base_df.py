@@ -134,8 +134,8 @@ INSERT overwrite TABLE oride_dw.{table} partition(country_code,dt)
 SELECT dim_user.passenger_id,
        dim_user.city_id,
        dim_user.register_time, --乘客注册时间
-       if(substr(dim_user.register_time,1,10)=dim_user.dt,1,0) as if_td_register,  --是否当天注册
-       if(substr(dim_user.login_time,1,10)=dim_user.dt,1,0) as if_td_act,  --是否当天活跃
+       if(substr(dim_user.register_time,1,10)=dim_user.dt,1,0) as is_td_register,  --是否当天注册
+       if(substr(dim_user.login_time,1,10)=dim_user.dt,1,0) as is_td_act,  --是否当天活跃
        if(yes_dwm_user.first_ord_id is not null,yes_dwm_user.first_ord_id,first_order.order_id) as first_ord_id,  --乘客首次下单order_id 
        if(yes_dwm_user.first_ord_id is not null,yes_dwm_user.first_create_date,first_order.create_date) as first_create_date,  --乘客首次下单时间   
        if(yes_dwm_user.first_ord_id is not null,yes_dwm_user.first_city_id,first_order.city_id) as first_city_id,  --乘客首次下单对应的city_id

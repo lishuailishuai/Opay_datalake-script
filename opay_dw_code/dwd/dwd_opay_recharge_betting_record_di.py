@@ -95,8 +95,8 @@ def dwd_opay_recharge_betting_record_di_sql_task(ds):
         order_di.fee_amount,
         order_di.fee_pattern,
         order_di.error_msg,
-        upper(order_di.betting_provider) as service_provider,
-        case upper(order_di.betting_provider)
+        order_di.betting_provider as service_provider,
+        case order_di.betting_provider
             when 'BET9JA' then '201'
             when 'SUPABET' then '202'
             when 'NAIRABET' then '203'
