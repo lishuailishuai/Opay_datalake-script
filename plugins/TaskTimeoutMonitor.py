@@ -5,7 +5,6 @@
 
 import airflow
 from utils.connection_helper import get_hive_cursor
-from plugins.comwx import ComwxApi
 import logging
 import os,sys,time
 import asyncio
@@ -13,6 +12,7 @@ from airflow.utils.db import provide_session
 from airflow.utils.state import State
 from airflow import AirflowException
 from airflow.models import DAG, TaskInstance, BaseOperator
+from plugins.DingdingAlert import DingdingAlert
 
 
 """
@@ -43,11 +43,11 @@ t1
 class TaskTimeoutMonitor(object):
 
     hive_cursor = None
-    comwx = None
+    dingding_alert = None
 
     def __init__(self):
         self.hive_cursor = get_hive_cursor()
-        self.comwx = ComwxApi('wwd26d45f97ea74ad2', 'BLE_v25zCmnZaFUgum93j3zVBDK-DjtRkLisI_Wns4g', '1000011')
+        self.dingding_alert = DingdingAlert('https://oapi.dingtalk.com/robot/send?access_token=928e66bef8d88edc89fe0f0ddd52bfa4dd28bd4b1d24ab4626c804df8878bb48')
 
     def __del__(self):
         self.hive_cursor.close()
@@ -93,23 +93,17 @@ class TaskTimeoutMonitor(object):
                 #判断数据文件是否生成
                 if res == '' or res == 'None' or res == '0':
                     if sum_timeout >= int(timeout):
-
-                        self.comwx.postAppMessage(
-                            'DW调度任务 {dag_id} 产出超时'.format(
+                        self.dingding_alert.send('DW调度任务 {dag_id} 产出超时'.format(
                                 dag_id=dag_id_name,
                                 timeout=timeout
-                            ),
-                            '271'
-                        )
-    
+                        ))
+
                         logging.info("任务超时。。。。。")
                         sum_timeout=0
                 else:
                     break
 
         except Exception as e:
-
-            #self.comwx.postAppMessage('DW调度任务 {dag_id} code 异常'.format(dag_id=dag_id_name),'271')
 
             logging.info(e)
 

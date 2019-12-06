@@ -11,7 +11,6 @@ from airflow.operators.dagrun_operator import TriggerDagRunOperator
 from airflow.sensors.hive_partition_sensor import HivePartitionSensor
 from airflow.operators.bash_operator import BashOperator
 from airflow.sensors.named_hive_partition_sensor import NamedHivePartitionSensor
-from plugins.comwx import ComwxApi
 import json
 import logging
 from airflow.models import Variable
@@ -19,6 +18,7 @@ import requests
 import os,sys,time
 from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
 from airflow.utils.trigger_rule import TriggerRule
+from plugins.DingdingAlert import DingdingAlert
 
 """
 tb = [
@@ -30,8 +30,10 @@ tb = [
 
 class TaskTouchzSuccess(object):
 
+
+
     def __init__(self):
-        self.comwx = ComwxApi('wwd26d45f97ea74ad2', 'BLE_v25zCmnZaFUgum93j3zVBDK-DjtRkLisI_Wns4g', '1000011')
+        self.dingding_alet = DingdingAlert('https://oapi.dingtalk.com/robot/send?access_token=928e66bef8d88edc89fe0f0ddd52bfa4dd28bd4b1d24ab4626c804df8878bb48')
         self.table_name=""
         self.hdfs_data_dir_str=""
         self.db_name=""
@@ -58,7 +60,7 @@ class TaskTouchzSuccess(object):
             #数据为0，发微信报警通知
             if line_num[0] == str(0):
                 
-                self.comwx.postAppMessage('DW调度系统任务 {jobname} 数据产出异常'.format(jobname=self.table_name), '271')
+                self.dingding_alet.send('DW调度系统任务 {jobname} 数据产出异常'.format(jobname=self.table_name))
 
                 logging.info("Error : {hdfs_data_dir} is empty".format(hdfs_data_dir=self.hdfs_data_dir_str))
                 sys.exit(1)
@@ -76,8 +78,6 @@ class TaskTouchzSuccess(object):
 
     
         except Exception as e:
-
-            #self.comwx.postAppMessage('DW调度系统任务 {jobname} 数据产出异常'.format(jobname=self.table_name),'271')
 
             logging.info(e)
 
@@ -225,8 +225,6 @@ class TaskTouchzSuccess(object):
     
         except Exception as e:
 
-            #self.comwx.postAppMessage('DW调度系统任务 {jobname} 数据产出异常'.format(jobname=self.table_name),'271')
-
             logging.info(e)
 
             sys.exit(1)
@@ -253,7 +251,7 @@ class TaskTouchzSuccess(object):
             #数据为0，发微信报警通知
             if line_num[0] == str(0):
                 
-                self.comwx.postAppMessage('DW调度系统任务 {jobname} 数据产出异常'.format(jobname=self.table_name), '271')
+                self.dingding_alet.send('DW调度系统任务 {jobname} 数据产出异常'.format(jobname=self.table_name))
 
                 logging.info("Error : {hdfs_data_dir} is empty".format(hdfs_data_dir=self.hdfs_data_dir_str))
                 sys.exit(1)
@@ -274,8 +272,6 @@ class TaskTouchzSuccess(object):
 
     
         except Exception as e:
-
-            #self.comwx.postAppMessage('DW调度系统任务 {jobname} 数据产出异常'.format(jobname=self.table_name),'271')
 
             logging.info(e)
 
@@ -368,8 +364,6 @@ class TaskTouchzSuccess(object):
             
         except Exception as e:
 
-            #self.comwx.postAppMessage('DW调度系统任务 {jobname} 数据产出异常'.format(jobname=table_name),'271')
-
             logging.info(e)
 
             sys.exit(1)
@@ -461,8 +455,6 @@ class TaskTouchzSuccess(object):
 
             
         except Exception as e:
-
-            #self.comwx.postAppMessage('DW调度系统任务 {jobname} 数据产出异常'.format(jobname=table_name),'271')
 
             logging.info(e)
 
