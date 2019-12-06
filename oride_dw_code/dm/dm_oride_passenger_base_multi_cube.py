@@ -50,7 +50,7 @@ dwm_oride_passenger_order_base_di_prev_day_task = UFileSensor(
         hdfs_path_str="oride/oride_dw/dwm_oride_passenger_order_base_di/country_code=NG",
         pt='{{ds}}'
     ),
-    bucket_name='opay-bi',
+    bucket_name='opay-datalake',
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
