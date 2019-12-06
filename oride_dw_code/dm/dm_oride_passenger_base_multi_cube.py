@@ -46,7 +46,7 @@ dag = airflow.DAG('dm_oride_passenger_base_multi_cube',
 # 依赖前一天分区
 dwm_oride_passenger_order_base_di_prev_day_task = UFileSensor(
     task_id='dwm_oride_passenger_order_base_di_prev_day_task',
-    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
         hdfs_path_str="oride/oride_dw/dwm_oride_passenger_order_base_di/country_code=NG",
         pt='{{ds}}'
     ),
