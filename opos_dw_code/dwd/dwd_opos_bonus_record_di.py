@@ -55,7 +55,7 @@ ods_sqoop_base_opos_bonus_record_di_task = UFileSensor(
 ods_sqoop_base_opos_scan_history_di_task = UFileSensor(
     task_id='ods_sqoop_base_opos_scan_history_di_task',
     filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opos_dw_sqoop_di/opos_cashback",
+        hdfs_path_str="opos_dw_sqoop_di/opos_cashback/opos_scan_history",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
