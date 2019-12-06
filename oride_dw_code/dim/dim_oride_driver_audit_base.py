@@ -208,6 +208,11 @@ def dim_oride_driver_audit_base_sql_task(ds):
        
        (case when dri.know_orider = 14  then 1 else 0 end ) as is_onsite_audit_channel,
        --司机邀请司机渠道：现场审核
+       
+       case when base_finished_time > 0 or address is not null
+                 then 1
+                 else  0 
+       end as is_sign_up_success, --是否报名成功
     
        'nal' AS country_code,
            --国家码字段
