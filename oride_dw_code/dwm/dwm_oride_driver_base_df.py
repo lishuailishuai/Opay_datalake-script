@@ -473,7 +473,7 @@ select dri.driver_id,
                     recent_finish_order_id,
                     recent_finish_create_time,
                     driver_first_online_dt
-                from dwm_oride_driver_base_df
+                from oride_dw.dwm_oride_driver_base_df
                 where dt = '{bef_yes_day}'
             )yes_dwm_driver on  yes_dwm_driver.driver_id  =  dri.driver_id
            group by dri.driver_id, 
