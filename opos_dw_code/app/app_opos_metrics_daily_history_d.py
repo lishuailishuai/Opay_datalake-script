@@ -254,6 +254,7 @@ app_opos_metrics_daily_history_d_task = PythonOperator(
 )
 
 dwd_pre_opos_payment_order_di_task >> app_opos_metrics_daily_history_d_task
+ods_sqoop_base_bd_admin_users_df_task >> app_opos_metrics_daily_history_d_task
 
 # 查看任务命令
 # airflow list_tasks app_opos_metrics_daily_history_d -sd /home/feng.yuan/app_opos_metrics_daily_history_d.py
