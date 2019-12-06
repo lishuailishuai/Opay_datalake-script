@@ -103,8 +103,8 @@ insert overwrite table opos_dw.app_opos_metrics_daily_new_d partition(country_co
 select
 o.id
 ,o.create_week
-,o.create_month
-,o.create_year
+,substr('{pt}',0,7) as create_month
+,substr('{pt}',0,4) as create_year
 ,o.hcm_id
 ,nvl(hcm.name,'-') as hcm_name
 ,o.cm_id
