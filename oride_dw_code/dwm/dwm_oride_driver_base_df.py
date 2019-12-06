@@ -235,7 +235,7 @@ with
     
     )
 
-INSERT overwrite TABLE oride_dw.dwm_oride_driver_base_df partition(country_code,dt)
+INSERT overwrite TABLE oride_dw.oride_dw.{table} partition(country_code,dt)
 select dri.driver_id, 
             --司机ID
 
