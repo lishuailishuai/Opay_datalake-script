@@ -109,6 +109,27 @@ dwd_oride_driver_accept_order_click_detail_di_prev_day_task = UFileSensor(
     dag=dag
 )
 
+dwm_oride_driver_base_df_prev_day_task = UFileSensor(
+    task_id='dwm_oride_driver_base_df_prev_day_task',
+    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="oride/oride_dw/dwm_oride_driver_base_df/country_code=nal",
+        pt='{{macros.ds_add(ds, -1)}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
+dwd_oride_driver_records_day_df_task = UFileSensor(
+    task_id='dwd_oride_driver_records_day_df_task',
+    filepath='{hdfs_path_str}/country_code=nal/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="oride/oride_dw/dwd_oride_driver_records_day_df",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,
+    dag=dag
+)
 ##----------------------------------------- 变量 ---------------------------------------##
 
 db_name = "oride_dw"
@@ -143,6 +164,76 @@ def dwm_oride_driver_base_df_sql_task(ds):
     HQL = '''
     set hive.exec.parallel=true;
     set hive.exec.dynamic.partition.mode=nonstrict;
+
+with 
+    data_order as(
+        select 
+            driver_id,
+            is_td_request,
+            is_td_finish,
+            is_td_finish_pay,
+            td_billing_dur,
+            td_service_dur,
+            td_finish_order_dur,
+            td_cannel_pick_dur,
+            is_strong_dispatch,
+            order_id,
+            city_id,
+            price,
+            create_time,
+            dt,
+            first_finish_create_time,
+            recent_finish_create_time,
+            if(create_time= first_finish_create_time,1,0) as first_finish_ord_mark, --首次完单标志
+            if(create_time= recent_finish_create_time,1,0) as recent_finish_ord_mark --首次完单标志
+
+        from(
+            select
+                driver_id,
+                is_td_request,
+                is_td_finish,
+                is_td_finish_pay,
+                td_billing_dur,
+                td_service_dur,
+                td_finish_order_dur,
+                td_cannel_pick_dur,
+                is_strong_dispatch,
+                order_id,
+                create_time,
+                city_id,
+                price,
+                dt,
+                min(if(is_td_finish =1,create_time,null)) over(partition by driver_id) as first_finish_create_time,--首次完单时间
+                max(if(is_td_finish =1,create_time,null)) over(partition by driver_id) as recent_finish_create_time--最近一次完单时间
+            from oride_dw.dwd_oride_order_base_include_test_di
+            where dt = '{pt}'
+            AND city_id<>'999001' --去除测试数据
+                and driver_id<>1
+        )t
+    ),
+    driver_time as(
+        
+        select 
+            driver_id,
+                driver_freerange,
+                driver_onlinerange,
+                dt,
+                first_online_dt,--首次在线日期
+                if(dt = first_online_dt ,1 ,0) as driver_first_online_mark --首次在线日期标志
+        from
+        (
+            SELECT 
+                driver_id,
+                driver_freerange,
+                driver_onlinerange,
+                dt,
+                min(dt) over(partition by driver_id) as first_online_dt--首次在线日期
+            FROM oride_dw_ods.ods_log_oride_driver_timerange
+            WHERE dt ='{pt}'
+            and driver_id <> 1
+        )t
+    
+    )
 
 INSERT overwrite TABLE oride_dw.{table} partition(country_code,dt)
 select dri.driver_id, 
@@ -243,7 +334,26 @@ select dri.driver_id,
 
             sum(if(ord.is_td_finish>=1 and is_strong_dispatch>=1,(nvl(ord.td_service_dur,0)+nvl(ord.td_cannel_pick_dur,0)+nvl(dtr.driver_freerange,0)),0)) as strong_driver_finish_online_dur,
             --强派单完单司机在线时长
-           -- dri.country_code as country_code,
+        
+
+            if(yes_dwm_driver.first_finish_order_id is not null  ,yes_dwm_driver.first_finish_order_id,first_finish_order.order_id) as first_finish_order_id,
+            --首次完单id
+            
+            if(yes_dwm_driver.first_finish_order_id is not null  ,yes_dwm_driver.first_finish_order_create_time,first_finish_order.create_time) as first_finish_order_create_time,
+            --首次完单创建时间
+            
+            if(yes_dwm_driver.recent_finish_order_id is not null  ,yes_dwm_driver.recent_finish_order_id,recent_finish_order.order_id) as recent_finish_order_id,
+            --最近完单id
+            
+            if(yes_dwm_driver.recent_finish_order_id is not null  , yes_dwm_driver.recent_finish_create_time, recent_finish_order.create_time) as recent_finish_create_time,
+            --最近完单时间
+
+            if(yes_dwm_driver.driver_first_online_dt is not null  ,yes_dwm_driver.driver_first_online_dt,driver_online.first_online_dt) as driver_first_online_dt,
+            --司机首次在线时间
+            
+            driver_amount.amount_all,--'当日总收入'
+            driver_amount.amount_agenter,--'当日骑手份子钱-小老板抽成20%'
+            
             'nal' as country_code,
             dri.dt as dt
 
@@ -257,7 +367,7 @@ select dri.driver_id,
             LEFT OUTER JOIN
             (
                 SELECT *
-                FROM oride_dw_ods.ods_log_oride_driver_timerange
+                FROM driver_time
                 WHERE dt='{pt}'
             ) dtr ON dri.driver_id=dtr.driver_id
             AND dri.dt=dtr.dt
@@ -311,12 +421,72 @@ select dri.driver_id,
 
                 count(order_id) as succ_push_order_cnt  --该字段可以用于对比数据
 
-                FROM oride_dw.dwd_oride_order_base_include_test_di
+                FROM data_order
                 WHERE dt='{pt}'
                 AND city_id<>'999001' --去除测试数据
                 and driver_id<>1
                 group by driver_id
-            ) ord ON dri.driver_id=ord.driver_id     
+            ) ord ON dri.driver_id=ord.driver_id 
+            left join
+            (--首次完单信息
+                select 
+                     driver_id,
+                    order_id,
+                    create_time,
+                    first_finish_ord_mark
+                from data_order where first_finish_ord_mark =1  -- 首次完单标志
+            )first_finish_order on dri.driver_id = first_finish_order.driver_id
+            left join
+            (--最近一次完单
+                select 
+                    driver_id,
+                    order_id,
+                    create_time
+                from data_order where recent_finish_ord_mark =1 --最近一次完单标志
+            )recent_finish_order on dri.driver_id =  recent_finish_order.driver_id
+            
+            left join
+            (--司机首次在线时间
+                select
+                     driver_id,
+                    first_online_dt,
+                    driver_first_online_mark
+                from driver_time where driver_first_online_mark  = 1
+            )driver_online  on dri.driver_id =  driver_online.driver_id
+            
+            left join
+            (
+                select 
+                     driver_id,
+                    nvl(amount_all,0) as amount_all,--'当日总收入'
+                    nvl(amount_agenter,0) as amount_agenter--'当日骑手份子钱-小老板抽成20%'
+                from oride_dw.dwd_oride_driver_records_day_df
+                    where dt = '{pt}' and  from_unixtime(day,'yyyy-MM-dd') = '{pt}'
+            )driver_amount on dri.driver_id  = driver_amount.driver_id
+
+            left join 
+            (
+                select
+                    driver_id,
+                    first_finish_order_id,
+                    first_finish_order_create_time,
+                    recent_finish_order_id,
+                    recent_finish_create_time,
+                    driver_first_online_dt
+                from
+                (  
+                    select  
+                        driver_id,
+                        first_finish_order_id,
+                        first_finish_order_create_time,
+                        recent_finish_order_id,
+                        recent_finish_create_time,
+                        driver_first_online_dt,
+                        row_number() over(partition by driver_id order by recent_finish_order_id desc) rn 
+                    from oride_dw.dwm_oride_driver_base_df
+                    where dt = '{bef_yes_day}'
+                )t where t.rn = 1
+            )yes_dwm_driver on  yes_dwm_driver.driver_id  =  dri.driver_id
            group by dri.driver_id, 
             --司机ID
 
@@ -356,10 +526,31 @@ select dri.driver_id,
             --当天是否接单（应答）或者直接关联订单表不为空也可以判断司机是否接单
 
             if(ord.is_td_finish>=1,1,0),
+
+
+            if(yes_dwm_driver.first_finish_order_id is not null  ,yes_dwm_driver.first_finish_order_id,first_finish_order.order_id) ,
+            --首次完单id
+            
+            if(yes_dwm_driver.first_finish_order_id is not null  ,yes_dwm_driver.first_finish_order_create_time,first_finish_order.create_time) ,
+            --首次完单创建时间
+            
+            if(yes_dwm_driver.recent_finish_order_id is not null  ,yes_dwm_driver.recent_finish_order_id,recent_finish_order.order_id) ,
+            --最近完单id
+            
+            if(yes_dwm_driver.recent_finish_order_id is not null  , yes_dwm_driver.recent_finish_create_time, recent_finish_order.create_time) ,
+            --最近完单时间
+
+            if(yes_dwm_driver.driver_first_online_dt is not null  ,yes_dwm_driver.driver_first_online_dt,driver_online.first_online_dt),
+            --司机首次在线时间
+            driver_amount.amount_all,
+            driver_amount.amount_agenter,--当日骑手份子钱-小老板抽成20%
+
             dri.country_code,
             dri.dt;  
+            
     '''.format(
         pt=ds,
+        bef_yes_day=airflow.macros.ds_add(ds, -1),
         now_day=airflow.macros.ds_add(ds, +1),
         table=table_name,
         db=db_name
@@ -437,3 +628,5 @@ dwd_oride_order_push_driver_detail_di_prev_day_task >>dwm_oride_driver_base_df_t
 oride_driver_timerange_prev_day_task >> dwm_oride_driver_base_df_task
 dwd_oride_driver_accept_order_show_detail_di_prev_day_task >>dwm_oride_driver_base_df_task
 dwd_oride_driver_accept_order_click_detail_di_prev_day_task >>dwm_oride_driver_base_df_task
+dwd_oride_driver_records_day_df_task>>dwm_oride_driver_base_df_task
+dwm_oride_driver_base_df_prev_day_task>>dwm_oride_driver_base_df_task
