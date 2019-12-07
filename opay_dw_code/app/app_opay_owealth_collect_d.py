@@ -26,7 +26,7 @@ import os
 
 args = {
     'owner': 'liushuzhen',
-    'start_date': datetime(2019, 11, 19),
+    'start_date': datetime(2019, 12, 5),
     'depends_on_past': False,
     'retries': 1,
     'retry_delay': timedelta(minutes=5),
@@ -63,6 +63,27 @@ ods_sqoop_owealth_share_order_hf_prev_day_task = UFileSensor(
     dag=dag
 )
 
+ods_sqoop_base_owealth_user_subscribed_hf_prev_day_task = UFileSensor(
+    task_id='ods_sqoop_base_owealth_user_subscribed_hf_prev_day_task',
+    filepath='{hdfs_path_str}/dt={pt}/hour=19/_SUCCESS'.format(
+        hdfs_path_str="opay_dw_sqoop_hf/opay_owealth/owealth_user_subscribed",
+        pt='{{macros.ds_add(ds, +1)}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
+ods_sqoop_owealth_share_revenue_log_hf_prev_day_task = UFileSensor(
+    task_id='ods_sqoop_owealth_share_revenue_log_hf_prev_day_task',
+    filepath='{hdfs_path_str}/dt={pt}/hour=18/_SUCCESS'.format(
+        hdfs_path_str="opay_owealth_sqoop_hf/opay_owealth/share_revenue_log",
+        pt='{{macros.ds_add(ds, +1)}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
 ##----------------------------------------- 变量 ---------------------------------------##
 db_name = "opay_dw"
 table_name = "app_opay_owealth_collect_d"
@@ -70,50 +91,107 @@ hdfs_path = "ufile://opay-datalake/opay/opay_dw/" + table_name
 
 
 def app_opay_owealth_collect_d_sql_task(ds):
-    HQL = '''
+    HQL = '''WITH acct_base AS
+  (SELECT user_id,
+          create_time,
+          balance
+   FROM opay_owealth_ods.ods_sqoop_owealth_share_acct_hf
+   WHERE dt='{pt}'
+     AND hour='18'
+     AND from_unixtime(unix_timestamp(create_time, 'yyyy-MM-dd HH:mm:ss')+3600)<'{pt} 19:00:00' ),
+     order_base AS
+  (SELECT create_time,
+          order_type,
+          trans_amount,
+          user_id,
+          memo
+   FROM opay_owealth_ods.ods_sqoop_owealth_share_order_hf
+   WHERE dt='{pt}'
+     AND hour='18'
+     AND status="S"
+     AND from_unixtime(unix_timestamp(create_time, 'yyyy-MM-dd HH:mm:ss')+3600)>='{yesterday} 19:00:00'
+     AND from_unixtime(unix_timestamp(create_time, 'yyyy-MM-dd HH:mm:ss')+3600)<'{pt} 19:00:00' ),
+     user_subscribed AS
+  (SELECT user_id,
+          update_time,
+          subscribed
+   FROM opay_dw_ods.ods_sqoop_base_owealth_user_subscribed_hf
+   WHERE dt='{pt}'
+     AND hour='19'
+     AND from_unixtime(unix_timestamp(update_time, 'yyyy-MM-dd HH:mm:ss')+3600)<'{pt} 19:00:00' ),
+     revenue AS
+  (SELECT *
+   FROM opay_owealth_ods.ods_sqoop_owealth_share_revenue_log_hf
+   WHERE dt='{pt}'
+     AND hour='18'
+     AND from_unixtime(unix_timestamp(revenue_date, 'yyyy-MM-dd HH:mm:ss')+3600)>='{yesterday} 19:00:00' 
+    AND from_unixtime(unix_timestamp(revenue_date, 'yyyy-MM-dd HH:mm:ss')+3600)<'{pt} 19:00:00' ) 
+INSERT overwrite TABLE opay_dw.app_opay_owealth_collect_d partition (dt='{pt}')
 
-                    WITH acct_base AS
-              (SELECT user_id,
-                      create_time,
-                      balance
-               FROM opay_owealth_ods.ods_sqoop_owealth_share_acct_hf
-               WHERE dt='{pt}' and hour='18'
-               and from_unixtime(unix_timestamp(create_time, 'yyyy-MM-dd HH:mm:ss')+3600)<'{pt} 19:00:00'
-               
-              ),
-                 order_base AS
-              (SELECT create_time,
-                      order_type,
-                      trans_amount,
-                      user_id
-               FROM opay_owealth_ods.ods_sqoop_owealth_share_order_hf
-               WHERE dt='{pt}' and hour='18'
-                 AND status="S"
-                 AND from_unixtime(unix_timestamp(create_time, 'yyyy-MM-dd HH:mm:ss')+3600)>='{yesterday} 18:00:00'
-                 AND from_unixtime(unix_timestamp(create_time, 'yyyy-MM-dd HH:mm:ss')+3600)<'{pt} 19:00:00'
-              )
-            INSERT overwrite TABLE opay_dw.app_opay_owealth_collect_d partition (dt='{pt}')
-            SELECT total_balance, --总的累计金额
-             total_subscribe_amount,--总的手动申购金额
-             total_redeem_amount--总的赎回金额
-            
-            FROM
-              (SELECT '{pt}' AS dt,
-                      sum(balance) total_balance
-               FROM acct_base a) m
-            LEFT JOIN
-              (SELECT '{pt}' AS dt,
-                      sum(CASE
-                              WHEN order_type='1001' THEN trans_amount
-                          END) total_subscribe_amount,
-                      sum(CASE
-                              WHEN order_type='1002' THEN trans_amount
-                          END) total_redeem_amount
-               FROM order_base a)m1 ON m.dt=m1.dt
+SELECT total_balance, --总的累计金额
+ total_subscribe_amount,--总的申购金额
+ total_redeem_amount,--总的赎回金额
+ no_api_subscribe_amount,--总的手动申购金额
+ api_subscribe_amount,--总的自动申购金额
+ no_api_subscribe_user,--手动申购交易用户数
+ api_subscribe_user,--自动申购交易用户数
+ redeem_user,--赎回交易用户数
+ add_open_api_subscribe_user,--累计开通自动申购用户数
+ open_api_subscribe_user,--当天开通自动申购用户数
+ close_api_subscribe_user,--当天关闭自用申购用户数
+ revenue_amount --入账利息
 
-
-
-    '''.format(
+FROM
+  (SELECT '{pt}' AS dt,
+          sum(balance) total_balance
+   FROM acct_base a) m
+LEFT JOIN
+  (SELECT '{pt}' AS dt,
+          sum(CASE
+                  WHEN order_type='1001' THEN trans_amount
+              END) total_subscribe_amount,
+          sum(CASE
+                  WHEN order_type='1001'
+                       AND memo='申购' THEN trans_amount
+              END) no_api_subscribe_amount,
+          sum(CASE
+                  WHEN order_type='1001'
+                       AND memo='API' THEN trans_amount
+              END) api_subscribe_amount,
+          count(DISTINCT CASE
+                             WHEN memo='申购' THEN user_id
+                         END) no_api_subscribe_user,
+          count(DISTINCT CASE
+                             WHEN memo='API' THEN user_id
+                         END) api_subscribe_user,
+          sum(CASE
+                  WHEN order_type='1002' THEN trans_amount
+              END) total_redeem_amount,
+          count(DISTINCT CASE
+                             WHEN memo='赎回' THEN user_id
+                         END) redeem_user
+   FROM order_base a)m1 ON m.dt=m1.dt
+LEFT JOIN
+  (SELECT '{pt}' AS dt,
+          count(DISTINCT user_id) add_open_api_subscribe_user
+   FROM user_subscribed) m2 ON m.dt=m2.dt
+LEFT JOIN
+  (SELECT '{pt}' AS dt,
+          count(DISTINCT CASE
+                             WHEN subscribed='Y' THEN user_id
+                         END)open_api_subscribe_user,
+          count(DISTINCT CASE
+                             WHEN subscribed='N' THEN user_id
+                         END) close_api_subscribe_user
+   FROM user_subscribed
+   WHERE from_unixtime(unix_timestamp(update_time, 'yyyy-MM-dd HH:mm:ss')+3600)>='{yesterday} 19:00:00' ) m3 ON m.dt=m3.dt
+LEFT JOIN
+  (SELECT '{pt}' AS dt,
+          sum(revenue_amount) revenue_amount
+   FROM revenue) m4 ON m.dt=m4.dt
+   
+   
+'''.format(
         pt=airflow.macros.ds_add(ds, +1),
         yesterday=ds,
         db=db_name,
@@ -140,7 +218,7 @@ def execution_data_task_id(ds, **kargs):
     第二个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
 
     """
-    TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "false", "true")
+    TaskTouchzSuccess().countries_touchz_success(airflow.macros.ds_add(ds, +1), db_name, table_name, hdfs_path, "false", "true")
 
 
 app_opay_owealth_collect_d_task = PythonOperator(
@@ -155,9 +233,18 @@ def send_owealth_report_email(ds, **kwargs):
     sql = '''
         SELECT
            dt,
-           total_balance/100,
-           total_subscribe_amount/100,
-           total_redeem_amount/100
+           format_number(total_balance/100,2),
+           format_number(total_subscribe_amount/100,2),
+           format_number(total_redeem_amount/100,2),
+           format_number(no_api_subscribe_amount/100,2),
+           format_number(api_subscribe_amount/100,2),
+           format_number(no_api_subscribe_user,0),
+           format_number(api_subscribe_user,0),
+           format_number(redeem_user,0),
+           format_number(add_open_api_subscribe_user,0),
+           format_number(open_api_subscribe_user,0),
+           format_number(close_api_subscribe_user,0),
+           format_number(revenue_amount/100,2)
            
         FROM
            opay_dw.app_opay_owealth_collect_d
@@ -165,7 +252,7 @@ def send_owealth_report_email(ds, **kwargs):
             dt <= '{dt}'
         ORDER BY dt DESC
         limit 14
-    '''.format(dt=ds)
+    '''.format(dt=airflow.macros.ds_add(ds, +1))
 
     cursor = get_hive_cursor()
     logging.info(sql)
@@ -215,7 +302,7 @@ def send_owealth_report_email(ds, **kwargs):
             <body>
                 <table width="95%" class="table">
                     <caption>
-                        <h2>OWealth日报</h2>
+                        <h2>OWealth日报(19:00-19:00)</h2>
                     </caption>
                 </table>
 
@@ -228,7 +315,16 @@ def send_owealth_report_email(ds, **kwargs):
 
                             <th>累计总额</th>
                             <th>总申购金额</th>
-                            <th>赎回金额</th>
+                            <th>总赎回金额</th>
+                            <th>总的手动申购金额</th>
+                            <th>总的自动申购金额</th>
+                            <th>手动申购交易用户数</th>
+                            <th>自动申购交易用户数</th>
+                            <th>赎回交易用户数</th>
+                            <th>累计开通自动申购用户数</th>
+                            <th>当天开通自动申购用户数</th>
+                            <th>当天关闭自用申购用户数</th>
+                            <th>入账利息</th>
 
                         </tr>
                     </thead>
@@ -250,10 +346,19 @@ def send_owealth_report_email(ds, **kwargs):
             <tr style="background:#F5F5F5">{row}</tr>
         '''
         row_fmt = '''
-                 <td>{0}</td>
-                <td>{1}</td>
-                <td>{2}</td>
-                <td>{3}</td>
+                 <td align="left">{0}</td>
+                <td align="right">{1}</td>
+                <td align="right">{2}</td>
+                <td align="right">{3}</td>
+                <td align="right">{4}</td>
+                <td align="right">{5}</td>
+                <td align="right">{6}</td>
+                <td align="right">{7}</td>
+                <td align="right">{8}</td>
+                <td align="right">{9}</td>
+                <td align="right">{10}</td>
+                <td align="right">{11}</td>
+                <td align="right">{12}</td>
 
         '''
 
@@ -271,7 +376,7 @@ def send_owealth_report_email(ds, **kwargs):
     #email_to = Variable.get("owealth_report_receivers").split()
     email_to = ['shuzhen.liu@opay-inc.com']
 
-    email_subject = 'OWealth日报_{}'.format(ds)
+    email_subject = 'OWealth日报_{}'.format(airflow.macros.ds_add(ds, +1))
     send_email(
         email_to
         , email_subject, html, mime_charset='utf-8')
@@ -287,6 +392,8 @@ send_owealth_report = PythonOperator(
 )
 ods_sqoop_owealth_share_acct_hf_prev_day_task >> app_opay_owealth_collect_d_task
 ods_sqoop_owealth_share_order_hf_prev_day_task >> app_opay_owealth_collect_d_task
+ods_sqoop_base_owealth_user_subscribed_hf_prev_day_task >> app_opay_owealth_collect_d_task
+ods_sqoop_owealth_share_revenue_log_hf_prev_day_task >> app_opay_owealth_collect_d_task
 app_opay_owealth_collect_d_task >> send_owealth_report
 
 
