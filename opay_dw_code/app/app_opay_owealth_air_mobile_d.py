@@ -240,9 +240,9 @@ def send_air_mobile_report_email(ds, **kwargs):
         '''
         row_fmt = '''
                  <td align="right">{dt}</td>
-                 <td align="right">₦{airtime_amt}</td>
+                 <td align="right">{airtime_amt}</td>
                  <td align="right">{airtime_c}</td>
-                 <td align="right">₦{mobiledata_amt}</td>
+                 <td align="right">{mobiledata_amt}</td>
                  <td align="right">{mobiledata_c}</td>
 
         '''
