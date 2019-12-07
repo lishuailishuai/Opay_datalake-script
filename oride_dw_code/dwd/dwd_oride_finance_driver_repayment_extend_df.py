@@ -324,7 +324,7 @@ on dri.driver_id=avg1.driver_id
 
 '''.format(
         pt=ds,
-        now_day=macros.ds_add(ds, +1),
+        now_day=airflow.macros.ds_add(ds, +1),
         prev_6_day='{{macros.ds_add(ds, -6)}}',
         table=table_name
         )
