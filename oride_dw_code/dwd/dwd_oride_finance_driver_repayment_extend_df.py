@@ -328,6 +328,7 @@ on dri.driver_id=avg1.driver_id
         prev_6_day='{{macros.ds_add(ds, -6)}}',
         table=table_name
         )
+    return hql
 
  
 #熔断数据，如果数据重复，报错
@@ -343,7 +344,6 @@ def check_key_data_task(ds):
         now_day=airflow.macros.ds_add(ds, +1),
         table=table_name
         )
-    return hql
 
     cursor = get_hive_cursor()
     logging.info('Executing 主键重复校验: %s', HQL_DQC)
