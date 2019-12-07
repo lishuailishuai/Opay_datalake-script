@@ -89,7 +89,7 @@ def dwm_opay_consumption_relation_di_sql_task(ds):
         where dt='{pt}' and create_time BETWEEN date_format(date_sub('{pt}', 1), 'yyyy-MM-dd 23') AND date_format('{pt}', 'yyyy-MM-dd 23')
         group by country_code, dt, payment_relation_id, order_status
     ) t1
-    join
+    left join
     (
         select * from opay_dw.dim_opay_payment_relation_df where dt = '{pt}'
     ) t2

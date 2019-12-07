@@ -38,7 +38,7 @@ args = {
 }
 
 
-dag = airflow.DAG('dwd_opay_life_payment_record_di',
+dag = airflow.DAG('dwd_opay_transfer_of_account_record_di',
                   schedule_interval="00 03 * * *",
                   default_args=args,
                   catchup=False)
@@ -66,10 +66,10 @@ ods_sqoop_base_merchant_di_prev_day_task = UFileSensor(
     dag=dag
 )
 
-ods_sqoop_base_betting_topup_record_di_prev_day_task = UFileSensor(
-    task_id='ods_sqoop_base_betting_topup_record_di_prev_day_task',
+ods_sqoop_base_merchant_acquiring_record_di_prev_day_task = UFileSensor(
+    task_id='ods_sqoop_base_merchant_acquiring_record_di_prev_day_task',
     filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opay_dw_sqoop_di/opay_transaction/betting_topup_record",
+        hdfs_path_str="opay_dw_sqoop_di/opay_transaction/merchant_acquiring_record",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -77,10 +77,10 @@ ods_sqoop_base_betting_topup_record_di_prev_day_task = UFileSensor(
     dag=dag
 )
 
-ods_sqoop_base_tv_topup_record_di_prev_day_task = UFileSensor(
-    task_id='ods_sqoop_base_tv_topup_record_di_prev_day_task',
+ods_sqoop_base_merchant_transfer_user_record_di_prev_day_task = UFileSensor(
+    task_id='ods_sqoop_base_merchant_transfer_user_record_di_prev_day_task',
     filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opay_dw_sqoop_di/opay_transaction/tv_topup_record",
+        hdfs_path_str="opay_dw_sqoop_di/opay_transaction/merchant_transfer_user_record",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -88,10 +88,10 @@ ods_sqoop_base_tv_topup_record_di_prev_day_task = UFileSensor(
     dag=dag
 )
 
-ods_sqoop_base_electricity_topup_record_di_prev_day_task = UFileSensor(
-    task_id='ods_sqoop_base_electricity_topup_record_di_prev_day_task',
+ods_sqoop_base_user_transfer_user_record_di_prev_day_task = UFileSensor(
+    task_id='ods_sqoop_base_user_transfer_user_record_di_prev_day_task',
     filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opay_dw_sqoop_di/opay_transaction/electricity_topup_record",
+        hdfs_path_str="opay_dw_sqoop_di/opay_transaction/user_transfer_user_record",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -99,10 +99,10 @@ ods_sqoop_base_electricity_topup_record_di_prev_day_task = UFileSensor(
     dag=dag
 )
 
-ods_sqoop_base_airtime_topup_record_di_prev_day_task = UFileSensor(
-    task_id='ods_sqoop_base_airtime_topup_record_di_prev_day_task',
+ods_sqoop_base_cash_in_record_di_prev_day_task = UFileSensor(
+    task_id='ods_sqoop_base_cash_in_record_di_prev_day_task',
     filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opay_dw_sqoop_di/opay_transaction/airtime_topup_record",
+        hdfs_path_str="opay_dw_sqoop_di/opay_transaction/cash_in_record",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -110,10 +110,21 @@ ods_sqoop_base_airtime_topup_record_di_prev_day_task = UFileSensor(
     dag=dag
 )
 
-ods_sqoop_base_mobiledata_topup_record_di_prev_day_task = UFileSensor(
-    task_id='ods_sqoop_base_mobiledata_topup_record_di_prev_day_task',
+ods_sqoop_base_cash_out_record_di_prev_day_task = UFileSensor(
+    task_id='ods_sqoop_base_cash_out_record_di_prev_day_task',
     filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opay_dw_sqoop_di/opay_transaction/mobiledata_topup_record",
+        hdfs_path_str="opay_dw_sqoop_di/opay_transaction/cash_out_record",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
+ods_sqoop_base_business_collection_record_di_prev_day_task = UFileSensor(
+    task_id='ods_sqoop_base_business_collection_record_di_prev_day_task',
+    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="opay_dw_sqoop_di/opay_transaction/business_collection_record",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -141,28 +152,27 @@ task_timeout_monitor= PythonOperator(
 
 ##----------------------------------------- 变量 ---------------------------------------##
 db_name = "opay_dw"
-table_name = "dwd_opay_life_payment_record_di"
+table_name = "dwd_opay_transfer_of_account_record_di"
 hdfs_path="ufile://opay-datalake/opay/opay_dw/" + table_name
 
 
-def dwd_opay_life_payment_record_di_sql_task(ds):
+def dwd_opay_transfer_of_account_record_di_sql_task(ds):
     HQL='''
     set hive.exec.dynamic.partition.mode=nonstrict;
     set hive.exec.parallel=true;
-    with dim_user_data as (
+    with dim_user_merchant_data as (
             select 
-                user_id, `role`, kyc_level, first_name, middle_name, surname
+                trader_id, trader_name, trader_role, trader_kyc_level
             from (
                 select 
-                    user_id, `role`, kyc_level, first_name, middle_name, surname,
+                    user_id as trader_id, concat(first_name, ' ', middle_name, ' ', surname) as trader_name, `role` as trader_role, kyc_level as trader_kyc_level, 
                     row_number() over(partition by user_id order by update_time desc) rn
                 from opay_dw_ods.ods_sqoop_base_user_di
                 where dt <= '{pt}'
             ) uf where rn = 1
-        ),
-        dim_merchant_data as (
+            union all
             select 
-                merchant_id, merchant_name, merchant_type
+                merchant_id as trader_id, merchant_name as trader_name, merchant_type as trader_role, '-' as trader_kyc_level
             from opay_dw_ods.ods_sqoop_base_merchant_df
             where dt = '{pt}'
         )
@@ -170,12 +180,23 @@ def dwd_opay_life_payment_record_di_sql_task(ds):
     partition(country_code, dt)
     
     select 
-        t1.order_no, t1.amount, t1.currency, 
-        'USER' as originator_type, t2.role as originator_role, t2.kyc_level as originator_kyc_level, t1.originator_id, concat(t2.first_name, ' ', t2.middle_name, ' ', t2.surname) as originator_name,
-        'MERCHANT' as affiliate_type, t3.merchant_type as affiliate_role, t3.merchant_id as affiliate_id, t3.merchant_name as affiliate_name,
-        t1.recharge_service_provider, replace(t1.recharge_account, '+234', '') as recharge_account, t1.recharge_account_name, t1.recharge_set_meal,
-        t1.create_time, t1.update_time, t1.country, 'Life Payment' as top_service_type, t1.sub_service_type,
-        t1.order_status, t1.error_code, t1.error_msg, t1.client_source, t1.pay_way,
+        t1.order_no, t1.amount, 
+        t1.originator_type, t2.trader_role as originator_role, t2.trader_kyc_level as originator_kyc_level, t1.originator_id, t2.trader_name as originator_name,
+        t1.affiliate_type, t3.trader_role as affiliate_role, t1.affiliate_id, t3.trader_name as affiliate_name, 
+        case 
+            when t1.originator_type = 'MERCHANT' and t1.affiliate_type = 'MERCHANT' then 'm2m'
+            when t1.originator_type = 'MERCHANT' and t1.affiliate_type = 'USER' and t3.trader_role = 'customer' then 'm2c'
+            when t1.originator_type = 'MERCHANT' and t1.affiliate_type = 'USER' and t3.trader_role = 'agent' then 'm2a'
+            when t2.trader_role = 'customer' and t1.affiliate_type = 'MERCHANT' then 'c2m'
+            when t2.trader_role = 'agent' and t1.affiliate_type = 'MERCHANT' then 'a2m'
+            when t2.trader_role = 'agent' and t3.trader_role = 'customer' then 'a2c'
+            when t2.trader_role = 'agent' and t3.trader_role = 'agent' then 'a2a'
+            when t2.trader_role = 'customer' and t3.trader_role = 'agent' then 'c2a'
+            when t2.trader_role = 'customer' and t3.trader_role = 'customer' then 'c2c'
+            else 'unknow'
+            end as payment_relation_id,
+        t1.payment_order_no, t1.create_time, t1.update_time, t1.country, 'Transfer of Account' as top_service_type, t1.sub_service_type, t1.order_status,
+        t1.error_code, t1.error_msg, t1.client_source, t1.pay_way, t1.business_type,
         case t1.country
             when 'NG' then 'NG'
             when 'NO' then 'NO'
@@ -199,52 +220,62 @@ def dwd_opay_life_payment_record_di_sql_task(ds):
         
     from (
         select 
-            order_no, amount, currency, user_id as originator_id, 
-            merchant_id as affiliate_id, 
-            tv_provider as recharge_service_provider, recipient_tv_account_no as recharge_account, recipient_tv_account_name as recharge_account_name, tv_plan as recharge_set_meal,
-            create_time, update_time, country, 'TV' sub_service_type, 
-            order_status, error_code, error_msg, client_source, pay_channel as pay_way
-        from opay_dw_ods.ods_sqoop_base_tv_topup_record_di
+            order_no, amount, 'USER' as originator_type, user_id as originator_id, 'MERCHANT' as affiliate_type, merchant_id as affiliate_id, merchant_order_no as payment_order_no, 
+            create_time, update_time, country, 'MAcquiring' as sub_service_type, 
+            order_status, '-' as error_code, error_msg, '-' as client_source, pay_channel as pay_way, bussiness_type as business_type
+        from opay_dw_ods.ods_sqoop_base_merchant_acquiring_record_di
         where dt = '{pt}'
         union all
         select 
-            order_no, amount, currency, user_id as originator_id,
-            merchant_id as affiliate_id, 
-            betting_provider as recharge_service_provider, recipient_betting_account as recharge_account, recipient_betting_name as recharge_account_name, '-' as recharge_set_meal,
-            create_time, update_time, country, 'Betting' sub_service_type,
-            order_status, error_code, error_msg, client_source, pay_channel as pay_way
-        from opay_dw_ods.ods_sqoop_base_betting_topup_record_di
-        where dt = '{pt}'   
-        union all
-        select 
-            order_no, amount, currency, user_id as originator_id,
-            merchant_id as affiliate_id, 
-            telecom_perator as recharge_service_provider, recipient_mobile as recharge_account, '-' as recharge_account_name, '-' as recharge_set_meal,
-            create_time, update_time, country, 'Mobiledata' sub_service_type,
-            order_status, error_code, error_msg, client_source, pay_channel as pay_way
-        from opay_dw_ods.ods_sqoop_base_mobiledata_topup_record_di
-        where dt = '{pt}'   
-        union all
-        select 
-            order_no, amount, currency, user_id as originator_id,
-            merchant_id as affiliate_id,
-            telecom_perator as recharge_service_provider, recipient_mobile as recharge_account, '-' as recharge_account_name, '-' as recharge_set_meal,
-            create_time, update_time, country, 'Airtime' sub_service_type,
-            order_status, error_code, error_msg, client_source, pay_channel as pay_way
-        from opay_dw_ods.ods_sqoop_base_airtime_topup_record_di
-        where dt = '{pt}' 
-        union all
-        select 
-            order_no, amount, currency, user_id as originator_id,
-            merchant_id as affiliate_id,
-            recipient_elec_perator as recharge_service_provider, recipient_elec_account as recharge_account, '-' as recharge_account_name, electricity_payment_plan as recharge_set_meal,
-            create_time, update_time, country, 'Electricity' sub_service_type,
-            order_status, error_code, error_msg, client_source, pay_channel as pay_way
-        from opay_dw_ods.ods_sqoop_base_electricity_topup_record_di
+            order_no, amount, 'USER' as originator_type, user_id as originator_id, recipient_type as affiliate_type, recipient_id as affiliate_id, '-' as payment_order_no, 
+            create_time, update_time, country, 'AATransfer' as sub_service_type, 
+            case transfer_status
+                when 'CONFIRM_S' then 'SUCCESS'
+                when 'TRANSFER_S' then 'SUCCESS'
+                when 'TRANSFER_F' then 'FAIL'
+                when 'FREEZE_F' then 'FAIL'
+                when 'FREEZE_S' then 'PENDING'
+                when 'TRANSFER_P' then 'PENDING'
+                when 'FREEZE_P' then 'PENDING'
+                when 'UNFREEZ_P' then 'PENDING'
+                when 'CONFIRM_P' then 'PENDING'
+                when 'UNFREEZ_S' then 'FAIL'
+                end as order_status,
+            '-' as error_code, error_msg, client_source, pay_channel as pay_way, business_type
+        from opay_dw_ods.ods_sqoop_base_user_transfer_user_record_di
         where dt = '{pt}'
+        union all
+        select 
+            order_no, amount, 'MERCHANT' as originator_type, merchant_id as originator_id, recipient_type as affiliate_type, recipient_id as affiliate_id, merchant_order_no as payment_order_no, 
+            create_time, update_time, country, 'AATransfer' as sub_service_type, order_status,
+            '-' as error_code, error_msg, '-' as client_source, pay_channel as pay_way, business_type
+        from opay_dw_ods.ods_sqoop_base_merchant_transfer_user_record_di
+        where dt = '{pt}'
+        union all
+        select 
+            order_no, amount, sender_type as originator_type, sender_id as originator_id, recipient_type as affiliate_type, recipient_id as affiliate_id, platform_order_no as payment_order_no, 
+            create_time, update_time, country, 'Consumption' as sub_service_type, order_status,
+            error_code, error_msg, '-' as client_source, pay_channel as pay_way, '-' as business_type
+        from opay_dw_ods.ods_sqoop_base_business_collection_record_di
+        where dt = '{pt}'
+        union all
+        select 
+            order_no, amount, 'USER' as originator_type, sender_id as originator_id, 'USER' as affiliate_type, recipient_id as affiliate_id, '-' as payment_order_no, 
+            create_time, update_time, country, 'Cash In' as sub_service_type, order_status,
+            error_code, error_msg, client_source, pay_channel as pay_way, '-' as business_type
+        from opay_dw_ods.ods_sqoop_base_cash_in_record_di
+        where dt = '{pt}'
+        union all
+        select 
+            order_no, amount, 'USER' as originator_type, sender_id as originator_id, 'USER' as affiliate_type, recipient_id as affiliate_id, '-' as payment_order_no, 
+            create_time, update_time, country, 'Cash Out' as sub_service_type, order_status,
+            error_code, error_msg, client_source, pay_channel as pay_way, '-' as business_type
+        from opay_dw_ods.ods_sqoop_base_cash_out_record_di
+        where dt = '{pt}'
+        
     ) t1 
-    left join dim_user_data t2 on t1.originator_id = t2.user_id
-    left join dim_merchant_data t3 on t1.affiliate_id = t3.merchant_id
+    left join dim_user_merchant_data t2 on t1.originator_id = t2.trader_id
+    left join dim_user_merchant_data t3 on t1.affiliate_id = t3.trader_id
     '''.format(
         pt=ds,
         table=table_name,
@@ -259,7 +290,7 @@ def execution_data_task_id(ds, **kargs):
     hive_hook = HiveCliHook()
 
     # 读取sql
-    _sql = dwd_opay_life_payment_record_di_sql_task(ds)
+    _sql = dwd_opay_transfer_of_account_record_di_sql_task(ds)
 
     logging.info('Executing: %s', _sql)
 
@@ -276,17 +307,18 @@ def execution_data_task_id(ds, **kargs):
     TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "true", "true")
 
 
-dwd_opay_life_payment_record_di_task = PythonOperator(
-    task_id='dwd_opay_life_payment_record_di_task',
+dwd_opay_transfer_of_account_record_di_task = PythonOperator(
+    task_id='dwd_opay_transfer_of_account_record_di_task',
     python_callable=execution_data_task_id,
     provide_context=True,
     dag=dag
 )
 
-ods_sqoop_base_user_di_prev_day_task >> dwd_opay_life_payment_record_di_task
-ods_sqoop_base_merchant_di_prev_day_task >> dwd_opay_life_payment_record_di_task
-ods_sqoop_base_electricity_topup_record_di_prev_day_task >> dwd_opay_life_payment_record_di_task
-ods_sqoop_base_airtime_topup_record_di_prev_day_task >> dwd_opay_life_payment_record_di_task
-ods_sqoop_base_tv_topup_record_di_prev_day_task >> dwd_opay_life_payment_record_di_task
-ods_sqoop_base_mobiledata_topup_record_di_prev_day_task >> dwd_opay_life_payment_record_di_task
-ods_sqoop_base_betting_topup_record_di_prev_day_task >> dwd_opay_life_payment_record_di_task
+ods_sqoop_base_user_di_prev_day_task >> dwd_opay_transfer_of_account_record_di_task
+ods_sqoop_base_merchant_di_prev_day_task >> dwd_opay_transfer_of_account_record_di_task
+ods_sqoop_base_merchant_acquiring_record_di_prev_day_task >> dwd_opay_transfer_of_account_record_di_task
+ods_sqoop_base_user_transfer_user_record_di_prev_day_task >> dwd_opay_transfer_of_account_record_di_task
+ods_sqoop_base_merchant_transfer_user_record_di_prev_day_task >> dwd_opay_transfer_of_account_record_di_task
+ods_sqoop_base_cash_in_record_di_prev_day_task >> dwd_opay_transfer_of_account_record_di_task
+ods_sqoop_base_cash_out_record_di_prev_day_task >> dwd_opay_transfer_of_account_record_di_task
+ods_sqoop_base_business_collection_record_di_prev_day_task >> dwd_opay_transfer_of_account_record_di_task

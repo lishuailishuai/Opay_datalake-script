@@ -19,6 +19,7 @@ import requests
 import os,sys,time
 from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
 from airflow.utils.trigger_rule import TriggerRule
+from plugins.DingdingAlert import DingdingAlert
 
 
 
@@ -26,7 +27,9 @@ class CountriesPublicFrame(object):
 
     def __init__(self,v_is_open,v_ds,v_db_name,v_table_name,v_data_hdfs_path,v_country_partition="true",v_file_type="true",v_hour=None):
 
-        self.comwx = ComwxApi('wwd26d45f97ea74ad2', 'BLE_v25zCmnZaFUgum93j3zVBDK-DjtRkLisI_Wns4g', '1000011')
+        #self.comwx = ComwxApi('wwd26d45f97ea74ad2', 'BLE_v25zCmnZaFUgum93j3zVBDK-DjtRkLisI_Wns4g', '1000011')
+
+        self.dingding_alert = DingdingAlert('https://oapi.dingtalk.com/robot/send?access_token=928e66bef8d88edc89fe0f0ddd52bfa4dd28bd4b1d24ab4626c804df8878bb48')
 
         self.table_name=v_table_name
         self.hdfs_data_dir_str=""
@@ -43,27 +46,7 @@ class CountriesPublicFrame(object):
 
         self.country_code_list=""
 
-        #self.get_country_code()
-
         self.get_country_code()
-
-    def get_country_code_dev(self):
-
-        """
-            获取当前表中所有二位国家码
-        """
-
-        if self.is_open.lower()=="false":
-            v_country_code_list="nal"
-
-        if self.is_open.lower()=="true":
-
-            v_country_code_list = Variable.get("country_code_list")
-
-        logging.info('Executing 二位国家码: %s', v_country_code_list)
-
-        self.country_code_list=v_country_code_list
-
 
     def get_country_code(self):
 
@@ -188,7 +171,7 @@ class CountriesPublicFrame(object):
     
         except Exception as e:
 
-            #self.comwx.postAppMessage('DW调度系统任务 {jobname} 数据产出异常'.format(jobname=self.table_name),'271')
+            #self.dingding_alert.postAppMessage('DW调度系统任务 {jobname} 数据产出异常'.format(jobname=self.table_name),'271')
 
             logging.info(e)
 
@@ -216,7 +199,7 @@ class CountriesPublicFrame(object):
             #数据为0，发微信报警通知
             if line_num[0] == str(0):
                 
-                self.comwx.postAppMessage('DW调度系统任务 {jobname} 数据产出异常'.format(jobname=self.table_name), '271')
+                self.dingding_alert.postAppMessage('DW调度系统任务 {jobname} 数据产出异常'.format(jobname=self.table_name), '271')
 
                 logging.info("Error : {hdfs_data_dir} is empty".format(hdfs_data_dir=self.hdfs_data_dir_str))
                 sys.exit(1)
@@ -238,7 +221,7 @@ class CountriesPublicFrame(object):
     
         except Exception as e:
 
-            #self.comwx.postAppMessage('DW调度系统任务 {jobname} 数据产出异常'.format(jobname=self.table_name),'271')
+            #self.dingding_alert.postAppMessage('DW调度系统任务 {jobname} 数据产出异常'.format(jobname=self.table_name),'271')
 
             logging.info(e)
 
@@ -329,7 +312,7 @@ class CountriesPublicFrame(object):
 
         except Exception as e:
 
-            #self.comwx.postAppMessage('DW调度系统任务 {jobname} 数据产出异常'.format(jobname=table_name),'271')
+            #self.dingding_alert.postAppMessage('DW调度系统任务 {jobname} 数据产出异常'.format(jobname=table_name),'271')
 
             logging.info(e)
 
@@ -413,7 +396,7 @@ class CountriesPublicFrame(object):
                    
         except Exception as e:
 
-            #self.comwx.postAppMessage('DW调度系统任务 {jobname} 数据产出异常'.format(jobname=table_name),'271')
+            #self.dingding_alert.postAppMessage('DW调度系统任务 {jobname} 数据产出异常'.format(jobname=table_name),'271')
 
             logging.info(e)
 
@@ -509,7 +492,7 @@ class CountriesPublicFrame(object):
                    
         except Exception as e:
 
-            #self.comwx.postAppMessage('DW调度系统任务 {jobname} 数据产出异常'.format(jobname=table_name),'271')
+            #self.dingding_alert.postAppMessage('DW调度系统任务 {jobname} 数据产出异常'.format(jobname=table_name),'271')
 
             logging.info(e)
 

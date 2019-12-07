@@ -112,7 +112,7 @@ def dwm_opay_aatransfer_relation_di_sql_task(ds):
         ) ut 
         group by ut.country_code, ut.dt, ut.payment_relation_id, ut.order_status 
     ) t1
-    join
+    left join
     (
         select * from opay_dw.dim_opay_payment_relation_df where dt = '{pt}'
     ) t2
