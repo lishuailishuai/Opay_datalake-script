@@ -108,6 +108,7 @@ dim_oride_driver_base_prev_day_task = UFileSensor(
 
 ##----------------------------------------- 变量 ---------------------------------------## 
 
+db_name="oride_dw"
 table_name="dwd_oride_finance_driver_repayment_extend_df"
 hdfs_path="ufile://opay-datalake/oride/oride_dw/"+table_name
 
