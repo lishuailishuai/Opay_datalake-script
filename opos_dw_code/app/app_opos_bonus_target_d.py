@@ -85,88 +85,259 @@ task_timeout_monitor = PythonOperator(
 
 def app_opos_bonus_target_d_sql_task(ds):
     HQL = '''
-    set hive.exec.parallel=true;
-    set hive.exec.dynamic.partition.mode=nonstrict;
+    
+set hive.exec.parallel=true;
+set hive.exec.dynamic.partition.mode=nonstrict;
+
+--02.先取红包record表
+with
+app_opos_bonus_target_d as (
+select
+city_id as city_code,
+
+hcm_id,
+cm_id,
+rm_id,
+bdm_id,
+bd_id,
+
+--已入账金额
+sum(if(status=1,nvl(bonus_amount,0),0)) as entered_account_amt,
+--待入账金额
+sum(if(status=0,nvl(bonus_amount,0),0)) as tobe_entered_account_amt,
+--被扫者奖励金额
+sum(nvl(bonus_amount,0)) as swepted_award_amt,
+--已结算金额
+sum(if(status=1 and settle_status=1,nvl(bonus_amount,0),0)) as settled_amount,
+--待结算金额
+sum(if(status=1 and settle_status=0,nvl(bonus_amount,0),0)) as tobe_settled_amount,
+--获取金额的被扫者
+count(distinct(provider_account)) as swepted_award_cnt,
+
+--扫描红包二维码次数
+count(1) as sweep_times,
+--扫描红包二维码人数
+count(distinct(opay_account)) as sweep_people,
+--主扫红包金额
+sum(nvl(amount,0)) as sweep_amt,
+
+--红包使用率
+sum(nvl(use_amount,0))/sum(nvl(bonus_amount,0)) as bonus_use_percent,
+--红包使用金额
+sum(nvl(use_amount,0)) as bonus_order_amt,
+
+'nal' as country_code,
+'{pt}' as dt
+from
+opos_dw.dwd_opos_bonus_record_di
+where 
+country_code='nal' 
+and dt='{pt}'
+group by
+city_id,
+
+hcm_id,
+cm_id,
+rm_id,
+bdm_id,
+bd_id
 
 
-    set hive.exec.parallel=true;
-    set hive.exec.dynamic.partition.mode=nonstrict;
+),
 
-    --02.先取红包record表
-    insert overwrite table opos_dw.app_opos_bonus_target_d partition(country_code,dt)
-    select
-    create_date,
-    create_week,
-    create_month,
-    create_year,
+app_opos_bonus_payment_target_d as (
+select
+city_id as city_code,
 
-    city_id as city_code,
-    city_name,
-    country,
+hcm_id,
+cm_id,
+rm_id,
+bdm_id,
+bd_id,
 
-    hcm_id,
-    hcm_name,
-    cm_id,
-    cm_name,
-    rm_id,
-    rm_name,
-    bdm_id,
-    bdm_name,
-    bd_id,
-    bd_name,
+--红包订单数量
+count(if(length(discount_ids)>0,1,null)) as bonus_order_cnt,
+--红包订单GMV
+sum(if(length(discount_ids)>0,nvl(org_payment_amount,0),0)) as bonus_order_gmv,
+--首单用户占比（红包）,判断是否是首单需要确认,暂定0和1
+count(distinct(if(length(discount_ids)>0 and first_order='1',sender_id,null)))/count(distinct(if(length(discount_ids)>0,sender_id,null))) as first_order_percent,
+--红包支付用户数
+count(distinct(if(length(discount_ids)>0,sender_id,null))) as bonus_order_people,
+--红包支付次数
+count(if(length(discount_ids)>0,1,null)) as bonus_order_times,
 
-    --已入账金额
-    sum(if(status=1,bonus_amount,0)) as entered_account_amt,
-    --待入账金额
-    sum(if(status=0,bonus_amount,0)) as tobe_entered_account_amt,
-    --被扫者奖励金额
-    sum(bonus_amount) as swepted_award_amt,
-    --已结算金额
-    sum(if(status=1 and settle_status=1,bonus_amount,0)) as settled_amount,
-    --待结算金额
-    sum(if(status=1 and settle_status=0,bonus_amount,0)) as tobe_settled_amount,
-    --获取金额的被扫者
-    count(distinct(provider_account)) as swepted_award_cnt,
+--人均消费金额增幅（红包用户）,用红包支付的人均应付金额-没用红包支付的人均应付金额
+sum(if(length(discount_ids)>0,nvl(org_payment_amount,0),0))/count(distinct(if(length(discount_ids)>0,sender_id,null))) 
+  - sum(if(length(discount_ids)=0,nvl(org_payment_amount,0),0))/count(distinct(if(length(discount_ids)=0,sender_id,null))) as people_avg_amt_increase,
+--订单均消费金额增幅（红包用户）,用红包支付的单均应付金额-没用红包支付的单均应付金额,这个分母不需要加distinct,
+sum(if(length(discount_ids)>0,nvl(org_payment_amount,0),0))/count(if(length(discount_ids)>0,sender_id,null)) 
+  - sum(if(length(discount_ids)=0,nvl(org_payment_amount,0),0))/count(if(length(discount_ids)=0,sender_id,null)) as order_avg_amt_increase,
+--单均实付增幅（红包用户）,用实付
+sum(if(length(discount_ids)>0,nvl(pay_amount,0),0))/count(if(length(discount_ids)>0,sender_id,null)) 
+  - sum(if(length(discount_ids)=0,nvl(pay_amount,0),0))/count(if(length(discount_ids)=0,sender_id,null)) as order_avg_realamt_increase,
+--交易频次增幅（红包用户）,【使用红包支付订单的】交易频次-【不使用红包支付订单的】交易频次
+count(if(length(discount_ids)>0,1,null)) 
+  - count(if(length(discount_ids)=0,1,null)) as order_times_increase,
+--首单用户数（红包用户）
+count(distinct(if(length(discount_ids)>0 and first_order='1',sender_id,null))) as first_order_people,
 
-    --扫描红包二维码次数
-    count(1) as sweep_times,
-    --扫描红包二维码人数
-    count(distinct(opay_account)) as sweep_people,
-    --主扫红包金额
-    sum(amount) as sweep_amt,
+--新增字段
+--没用红包支付的应付金额
+sum(if(length(discount_ids)=0,nvl(org_payment_amount,0),0)) as useless_org_payment_amt,
+--没用红包支付的用户数
+count(distinct(if(length(discount_ids)=0,sender_id,null))) as useless_people,
+--没用红包支付的订单数
+count(if(length(discount_ids)=0,sender_id,null)) as useless_order_cnt,
 
-    --红包使用率
-    sum(use_amount)/sum(bonus_amount) as bonus_use_percent,
-    --红包使用金额
-    sum(use_amount) as bonus_order_amt,
+--用红包支付的实付总金额
+sum(if(length(discount_ids)>0,nvl(pay_amount,0),0)) as bonus_real_amt,
+--没用红包支付的实付总金额
+sum(if(length(discount_ids)=0,nvl(pay_amount,0),0)) as useless_bonus_real_amt,
 
-    'nal' as country_code,
-    '{pt}' as dt
-    from
-    opos_dw.dwd_opos_bonus_record_di
-    where 
-    country_code='nal' 
-    and dt='{pt}'
-    group by
-    create_date,
-    create_week,
-    create_month,
-    create_year,
+'nal' as country_code,
+'{pt}' as dt
 
-    city_id,
-    city_name,
-    country,
+from
+opos_dw.dwd_pre_opos_payment_order_di
+where 
+country_code='nal' 
+and dt='{pt}'
+and trade_status='SUCCESS'
+group by
+city_id,
 
-    hcm_id,
-    hcm_name,
-    cm_id,
-    cm_name,
-    rm_id,
-    rm_name,
-    bdm_id,
-    bdm_name,
-    bd_id,
-    bd_name;
+hcm_id,
+cm_id,
+rm_id,
+bdm_id,
+bd_id
+
+)
+
+insert overwrite table opos_dw.app_opos_bonus_target_d partition(country_code,dt)
+select
+'{pt}' as create_date
+,d.week_of_year as create_week
+,substr('{pt}',0,7) as create_month
+,substr('{pt}',0,4) as create_year
+
+,o.city_code
+,nvl(c.name,'-') as city_name
+,nvl(c.country,'-') as country
+
+,o.hcm_id
+,nvl(hcm.name,'-') as hcm_name
+,o.cm_id
+,nvl(cm.name,'-') as cm_name
+,o.rm_id
+,nvl(rm.name,'-') as rm_name
+,o.bdm_id
+,nvl(bdm.name,'-') as bdm_name
+,o.bd_id
+,nvl(bd.name,'-') as bd_name
+
+,o.entered_account_amt
+,o.tobe_entered_account_amt
+,o.swepted_award_amt
+,o.settled_amount
+,o.tobe_settled_amount
+,o.swepted_award_cnt
+,o.sweep_times
+,o.sweep_people
+,o.sweep_amt
+,o.bonus_use_percent
+,o.bonus_order_amt
+
+,o.bonus_order_cnt
+,o.bonus_order_gmv
+,o.first_order_percent
+,o.bonus_order_people
+,o.bonus_order_times
+,o.people_avg_amt_increase
+,o.order_avg_amt_increase
+,o.order_avg_realamt_increase
+,o.order_times_increase
+,o.first_order_people
+,o.useless_org_payment_amt
+,o.useless_people
+,o.useless_order_cnt
+,o.bonus_real_amt
+,o.useless_bonus_real_amt
+
+,'nal' as country_code
+,'{pt}' as dt
+from
+  (
+  select
+  nvl(a.city_code,b.city_code) as city_code
+  
+  ,nvl(a.hcm_id,b.hcm_id) as hcm_id
+  ,nvl(a.cm_id,b.cm_id) as cm_id
+  ,nvl(a.rm_id,b.rm_id) as rm_id
+  ,nvl(a.bdm_id,b.bdm_id) as bdm_id
+  ,nvl(a.bd_id,b.bd_id) as bd_id
+  
+  ,nvl(b.entered_account_amt,0) as entered_account_amt
+  ,nvl(b.tobe_entered_account_amt,0) as tobe_entered_account_amt
+  ,nvl(b.swepted_award_amt,0) as swepted_award_amt
+  ,nvl(b.settled_amount,0) as settled_amount
+  ,nvl(b.tobe_settled_amount,0) as tobe_settled_amount
+  ,nvl(b.swepted_award_cnt,0) as swepted_award_cnt
+  ,nvl(b.sweep_times,0) as sweep_times
+  ,nvl(b.sweep_people,0) as sweep_people
+  ,nvl(b.sweep_amt,0) as sweep_amt
+  ,nvl(b.bonus_use_percent,0) as bonus_use_percent
+  ,nvl(b.bonus_order_amt,0) as bonus_order_amt
+  
+  ,nvl(a.bonus_order_cnt,0) as bonus_order_cnt
+  ,nvl(a.bonus_order_gmv,0) as bonus_order_gmv
+  ,nvl(a.first_order_percent,0) as first_order_percent
+  ,nvl(a.bonus_order_people,0) as bonus_order_people
+  ,nvl(a.bonus_order_times,0) as bonus_order_times
+  ,nvl(a.people_avg_amt_increase,0) as people_avg_amt_increase
+  ,nvl(a.order_avg_amt_increase,0) as order_avg_amt_increase
+  ,nvl(a.order_avg_realamt_increase,0) as order_avg_realamt_increase
+  ,nvl(a.order_times_increase,0) as order_times_increase
+  ,nvl(a.first_order_people,0) as first_order_people
+  ,nvl(a.useless_org_payment_amt,0) as useless_org_payment_amt
+  ,nvl(a.useless_people,0) as useless_people
+  ,nvl(a.useless_order_cnt,0) as useless_order_cnt
+  ,nvl(a.bonus_real_amt,0) as bonus_real_amt
+  ,nvl(a.useless_bonus_real_amt,0) as useless_bonus_real_amt
+  from
+    app_opos_bonus_payment_target_d as a 
+  full join
+    app_opos_bonus_target_d as b
+  on  
+    a.hcm_id=b.hcm_id
+    AND a.cm_id=b.cm_id
+    AND a.rm_id=b.rm_id
+    AND a.bdm_id=b.bdm_id
+    AND a.bd_id=b.bd_id
+    and a.city_code=b.city_code
+  ) as o
+left join
+  (select id,name from opos_dw_ods.ods_sqoop_base_bd_admin_users_df where dt = '{pt}') as bd
+  on o.bd_id=bd.id
+left join
+  (select id,name from opos_dw_ods.ods_sqoop_base_bd_admin_users_df where dt = '{pt}') as bdm
+on o.bdm_id=bdm.id
+left join
+  (select id,name from opos_dw_ods.ods_sqoop_base_bd_admin_users_df where dt = '{pt}') as rm
+on o.rm_id=rm.id
+left join
+  (select id,name from opos_dw_ods.ods_sqoop_base_bd_admin_users_df where dt = '{pt}') as cm
+on o.cm_id=cm.id
+left join
+  (select id,name from opos_dw_ods.ods_sqoop_base_bd_admin_users_df where dt = '{pt}') as hcm
+  on o.hcm_id=hcm.id
+left join
+  (select id,name,country from opos_dw_ods.ods_sqoop_base_bd_city_df where dt = '{pt}') as c
+on o.city_code=c.id
+left join
+  (select dt,week_of_year from public_dw_dim.dim_date where dt = '{pt}') as d
+on 1=1
+;
 
 
 
