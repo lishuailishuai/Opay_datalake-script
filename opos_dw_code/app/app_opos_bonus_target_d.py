@@ -53,6 +53,40 @@ dwd_opos_bonus_record_di_task = UFileSensor(
     dag=dag
 )
 
+dwd_pre_opos_payment_order_di_task = UFileSensor(
+    task_id='dwd_pre_opos_payment_order_di_task',
+    filepath='{hdfs_path_str}/country_code=nal/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="opos/opos_dw/dwd_pre_opos_payment_order_di",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
+ods_sqoop_base_bd_admin_users_df_task = UFileSensor(
+    task_id='ods_sqoop_base_bd_admin_users_df_task',
+    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="opos_dw_sqoop/opay_crm/bd_admin_users",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
+ods_sqoop_base_bd_city_df_task = UFileSensor(
+    task_id='ods_sqoop_base_bd_city_df_task',
+    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="opos_dw_sqoop/opay_crm/bd_city",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
+
 ##----------------------------------------- 变量 ---------------------------------------##
 
 db_name = "opos_dw"
@@ -384,6 +418,9 @@ app_opos_bonus_target_d_task = PythonOperator(
 )
 
 dwd_opos_bonus_record_di_task >> app_opos_bonus_target_d_task
+dwd_pre_opos_payment_order_di_task >> app_opos_bonus_target_d_task
+ods_sqoop_base_bd_admin_users_df_task >> app_opos_bonus_target_d_task
+ods_sqoop_base_bd_city_df_task  >> app_opos_bonus_target_d_task
 
 # 查看任务命令
 # airflow list_tasks app_opos_bonus_target_d -sd /home/feng.yuan/app_opos_bonus_target_d.py
