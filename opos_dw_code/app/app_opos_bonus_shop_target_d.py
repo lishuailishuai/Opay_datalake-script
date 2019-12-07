@@ -96,6 +96,8 @@ task_timeout_monitor = PythonOperator(
 
 def app_opos_bonus_shop_target_d_sql_task(ds):
     HQL = '''
+
+
 set hive.exec.parallel=true;
 set hive.exec.dynamic.partition.mode=nonstrict;
 
@@ -103,206 +105,313 @@ set hive.exec.dynamic.partition.mode=nonstrict;
 --得出最新维度下每个dbid的详细数据信息
 insert overwrite table opos_dw.app_opos_bonus_shop_target_d partition (country_code,dt)
 select
-nvl(a.shop_id,b.shop_id) as shop_id
-,nvl(a.opay_id,b.opay_id) as opay_id
-,nvl(a.shop_name,b.shop_name) as shop_name
-,nvl(a.opay_account,b.opay_account) as opay_account
-,nvl(a.create_date,b.create_date) as create_date
-,nvl(a.create_week,b.create_week) as create_week
-,nvl(a.create_month,b.create_month) as create_month
-,nvl(a.create_year,b.create_year) as create_year
-,nvl(a.city_id,b.city_id) as city_id
-,nvl(a.city_name,b.city_name) as city_name
-,nvl(a.country,b.country) as country
-,nvl(a.hcm_id,b.hcm_id) as hcm_id
-,nvl(a.hcm_name,b.hcm_name) as hcm_name
-,nvl(a.cm_id,b.cm_id) as cm_id
-,nvl(a.cm_name,b.cm_name) as cm_name
-,nvl(a.rm_id,b.rm_id) as rm_id
-,nvl(a.rm_name,b.rm_name) as rm_name
-,nvl(a.bdm_id,b.bdm_id) as bdm_id
-,nvl(a.bdm_name,b.bdm_name) as bdm_name
-,nvl(a.bd_id,b.bd_id) as bd_id
-,nvl(a.bd_name,b.bd_name) as bd_name
+o.shop_id
+,o.opay_id
+,o.shop_name
+,o.opay_account
 
-,nvl(a.order_cnt,0) as order_cnt
-,nvl(a.bonus_order_cnt,0) as bonus_order_cnt
-,nvl(a.order_people,0) as order_people
-,nvl(a.not_first_order_people,0) as not_first_order_people
-,nvl(a.first_order_people,0) as first_order_people
-,nvl(a.first_bonus_order_people,0) as first_bonus_order_people
-,nvl(a.order_gmv,0) as order_gmv
-,nvl(a.bonus_order_gmv,0) as bonus_order_gmv
+,'{pt}' as create_date
+,d.week_of_year as create_week
+,substr('{pt}',0,7) as create_month
+,substr('{pt}',0,4) as create_year
 
-,nvl(b.bonus_order_amt,0) as bonus_order_amt
-,nvl(b.sweep_amt,0) as sweep_amt
-,nvl(b.bonus_use_percent,0) as bonus_use_percent
+,o.city_id as city_code
+,o.city_name
+,o.country
 
-,nvl(a.bonus_order_people,0) as bonus_order_people
-,nvl(a.bonus_order_times,0) as bonus_order_times
-,nvl(a.order_avg_amt,0) as order_avg_amt
-,nvl(a.people_avg_amt,0) as people_avg_amt
+,o.hcm_id
+,nvl(hcm.name,'-') as hcm_name
+,o.cm_id
+,nvl(cm.name,'-') as cm_name
+,o.rm_id
+,nvl(rm.name,'-') as rm_name
+,o.bdm_id
+,nvl(bdm.name,'-') as bdm_name
+,o.bd_id
+,nvl(bd.name,'-') as bd_name
 
+,o.order_cnt
+,o.bonus_order_cnt
+,o.order_people
+,o.not_first_order_people
+,o.first_order_people
+,o.first_bonus_order_people
+,o.order_gmv
+,o.bonus_order_gmv
+,o.bonus_order_amt
+,o.sweep_amt
+,o.bonus_use_percent
+,o.bonus_order_people
+,o.bonus_order_times
+,o.order_avg_amt
+,o.people_avg_amt
 
 ,'nal' as country_code
 ,'{pt}' as dt
 from
-(
+  (
   select
-  shop_id
-  ,receipt_id as opay_id
-  ,shop_name
-  ,opay_account
+  nvl(s.shop_id,m.shop_id) as shop_id
+  ,nvl(s.opay_id,m.opay_id) as opay_id
+  ,nvl(s.shop_name,m.shop_name) as shop_name
+  ,nvl(s.opay_account,m.opay_account) as opay_account
   
-  ,create_date
-  ,create_week
-  ,create_month
-  ,create_year
+  ,nvl(s.city_id,m.city_id) as city_id
+  ,nvl(s.city_name,m.city_name) as city_name
+  ,nvl(s.country,m.country) as country
   
-  ,city_id_shop as city_id
-  ,city_name_shop as city_name
-  ,country_shop as country
+  ,nvl(s.hcm_id,m.hcm_id) as hcm_id
+  ,nvl(s.cm_id,m.cm_id) as cm_id
+  ,nvl(s.rm_id,m.rm_id) as rm_id
+  ,nvl(s.bdm_id,m.bdm_id) as bdm_id
+  ,nvl(s.bd_id,m.bd_id) as bd_id
   
-  ,hcm_id
-  ,hcm_name
-  ,cm_id
-  ,cm_name
-  ,rm_id
-  ,rm_name
-  ,bdm_id
-  ,bdm_name
-  ,bd_id
-  ,bd_name
+  ,nvl(m.order_cnt,0) as order_cnt
+  ,nvl(m.bonus_order_cnt,0) as bonus_order_cnt
+  ,nvl(m.order_people,0) as order_people
+  ,nvl(m.not_first_order_people,0) as not_first_order_people
+  ,nvl(m.first_order_people,0) as first_order_people
+  ,nvl(m.first_bonus_order_people,0) as first_bonus_order_people
+  ,nvl(m.order_gmv,0) as order_gmv
+  ,nvl(m.bonus_order_gmv,0) as bonus_order_gmv
   
-  --使用红包起情况
-  ,count(1) as order_cnt
-  ,count(if(length(discount_ids)>0,1,null)) as bonus_order_cnt
+  ,nvl(m.bonus_order_amt,0) as bonus_order_amt
+  ,nvl(m.sweep_amt,0) as sweep_amt
+  ,nvl(m.bonus_use_percent,0) as bonus_use_percent
   
-  --用户数量板块
-  ,count(distinct(sender_id)) as order_people
-  ,count(distinct(if(first_order='0',sender_id,null))) as not_first_order_people
-  ,count(distinct(if(first_order='1',sender_id,null))) as first_order_people
-  ,count(distinct(if(length(discount_ids)>0 and first_order='1',sender_id,null))) as first_bonus_order_people
-  
-  --gmv板块
-  ,sum(nvl(org_payment_amount,0)) as order_gmv
-  ,sum(if(length(discount_ids)>0,nvl(org_payment_amount,0),0)) as bonus_order_gmv
-  
-  --用户角度
-  ,count(distinct(if(length(discount_ids)>0,sender_id,null))) as bonus_order_people
-  ,count(if(length(discount_ids)>0,1,null)) as bonus_order_times
-  
-  --与红包无关的指标
-  ,nvl(sum(nvl(org_payment_amount,0))/count(1),0) as order_avg_amt
-  ,nvl(sum(nvl(org_payment_amount,0))/count(distinct(sender_id)),0) as people_avg_amt
+  ,nvl(m.bonus_order_people,0) as bonus_order_people
+  ,nvl(m.bonus_order_times,0) as bonus_order_times
+  ,nvl(m.order_avg_amt,0) as order_avg_amt
+  ,nvl(m.people_avg_amt,0) as people_avg_amt
   from
-  (select * from opos_dw.dwd_pre_opos_payment_order_di where country_code='nal' and dt='{pt}' and trade_status='SUCCESS') as m
-  group BY
-  shop_id
-  ,receipt_id
-  ,shop_name
-  ,opay_account
+    (
+    select
+    id as shop_id
+    ,opay_id
+    ,shop_name
+    ,opay_account
   
-  ,create_date
-  ,create_week
-  ,create_month
-  ,create_year
+    ,city_code as city_id
+    ,city_name
+    ,country
   
-  ,city_id_shop
-  ,city_name_shop
-  ,country_shop
+    ,hcm_id
+    ,cm_id
+    ,rm_id
+    ,bdm_id
+    ,bd_id
+    FROM 
+    opos_dw.dim_opos_bd_relation_df 
+    where 
+    country_code='nal' 
+    and dt='{pt}'
+    group by 
+    id
+    ,opay_id
+    ,shop_name
+    ,opay_account
   
-  ,hcm_id
-  ,hcm_name
-  ,cm_id
-  ,cm_name
-  ,rm_id
-  ,rm_name
-  ,bdm_id
-  ,bdm_name
-  ,bd_id
-  ,bd_name
-
-) as a
-
-full join
-
-(
-  select
-  provider_shop_id as shop_id
-  ,provider_opay_id as opay_id
-  ,provider_shop_name as shop_name
-  ,provider_account as opay_account
+    ,city_code
+    ,city_name
+    ,country
   
-  ,create_date
-  ,create_week
-  ,create_month
-  ,create_year
+    ,hcm_id
+    ,cm_id
+    ,rm_id
+    ,bdm_id
+    ,bd_id
   
-  ,provider_city_id as city_id
-  ,provider_city_name as city_name
-  ,provider_country as country
-  
-  ,hcm_id
-  ,hcm_name
-  ,cm_id
-  ,cm_name
-  ,rm_id
-  ,rm_name
-  ,bdm_id
-  ,bdm_name
-  ,bd_id
-  ,bd_name
-
-  ,sum(use_amount) as bonus_order_amt
-  ,sum(bonus_amount) as sweep_amt
-  ,nvl(sum(use_amount)/sum(bonus_amount),0) as bonus_use_percent
-  from
-  (select * from opos_dw.dwd_opos_bonus_record_di where country_code='nal' and dt='{pt}') as n
-  group BY
-  provider_shop_id
-  ,provider_opay_id
-  ,provider_shop_name
-  ,provider_account
-  
-  ,create_date
-  ,create_week
-  ,create_month
-  ,create_year
-  
-  ,provider_city_id
-  ,provider_city_name
-  ,provider_country
-  
-  ,hcm_id
-  ,hcm_name
-  ,cm_id
-  ,cm_name
-  ,rm_id
-  ,rm_name
-  ,bdm_id
-  ,bdm_name
-  ,bd_id
-  ,bd_name
-
-) as b
-on
-
-a.shop_id=b.shop_id
-and a.create_date=b.create_date
-and a.city_id=b.city_id
-and a.hcm_id=b.hcm_id
-and a.hcm_name=b.hcm_name
-and a.cm_id=b.cm_id
-and a.cm_name=b.cm_name
-and a.rm_id=b.rm_id
-and a.rm_name=b.rm_name
-and a.bdm_id=b.bdm_id
-and a.bdm_name=b.bdm_name
-and a.bd_id=b.bd_id
-and a.bd_name=b.bd_name
-
-
+    ) as s
+  full join
+    (
+    select
+    nvl(a.shop_id,b.shop_id) as shop_id
+    ,nvl(a.opay_id,b.opay_id) as opay_id
+    ,nvl(a.shop_name,b.shop_name) as shop_name
+    ,nvl(a.opay_account,b.opay_account) as opay_account
+    
+    ,nvl(a.city_id,b.city_id) as city_id
+    ,nvl(a.city_name,b.city_name) as city_name
+    ,nvl(a.country,b.country) as country
+    
+    ,nvl(a.hcm_id,b.hcm_id) as hcm_id
+    ,nvl(a.cm_id,b.cm_id) as cm_id
+    ,nvl(a.rm_id,b.rm_id) as rm_id
+    ,nvl(a.bdm_id,b.bdm_id) as bdm_id
+    ,nvl(a.bd_id,b.bd_id) as bd_id
+    
+    ,nvl(a.order_cnt,0) as order_cnt
+    ,nvl(a.bonus_order_cnt,0) as bonus_order_cnt
+    ,nvl(a.order_people,0) as order_people
+    ,nvl(a.not_first_order_people,0) as not_first_order_people
+    ,nvl(a.first_order_people,0) as first_order_people
+    ,nvl(a.first_bonus_order_people,0) as first_bonus_order_people
+    ,nvl(a.order_gmv,0) as order_gmv
+    ,nvl(a.bonus_order_gmv,0) as bonus_order_gmv
+    
+    ,nvl(b.bonus_order_amt,0) as bonus_order_amt
+    ,nvl(b.sweep_amt,0) as sweep_amt
+    ,nvl(b.bonus_use_percent,0) as bonus_use_percent
+    
+    ,nvl(a.bonus_order_people,0) as bonus_order_people
+    ,nvl(a.bonus_order_times,0) as bonus_order_times
+    ,nvl(a.order_avg_amt,0) as order_avg_amt
+    ,nvl(a.people_avg_amt,0) as people_avg_amt
+    
+    from
+      (
+      select
+      shop_id
+      ,receipt_id as opay_id
+      ,shop_name
+      ,opay_account
+      
+      ,city_id_shop as city_id
+      ,city_name_shop as city_name
+      ,country_shop as country
+      
+      ,hcm_id
+      ,cm_id
+      ,rm_id
+      ,bdm_id
+      ,bd_id
+      
+      --使用红包起情况
+      ,count(1) as order_cnt
+      ,count(if(length(discount_ids)>0,1,null)) as bonus_order_cnt
+      
+      --用户数量板块
+      ,count(distinct(sender_id)) as order_people
+      ,count(distinct(if(first_order='0',sender_id,null))) as not_first_order_people
+      ,count(distinct(if(first_order='1',sender_id,null))) as first_order_people
+      ,count(distinct(if(length(discount_ids)>0 and first_order='1',sender_id,null))) as first_bonus_order_people
+      
+      --gmv板块
+      ,sum(nvl(org_payment_amount,0)) as order_gmv
+      ,sum(if(length(discount_ids)>0,nvl(org_payment_amount,0),0)) as bonus_order_gmv
+      
+      --用户角度
+      ,count(distinct(if(length(discount_ids)>0,sender_id,null))) as bonus_order_people
+      ,count(if(length(discount_ids)>0,1,null)) as bonus_order_times
+      
+      --与红包无关的指标
+      ,nvl(sum(nvl(org_payment_amount,0))/count(1),0) as order_avg_amt
+      ,nvl(sum(nvl(org_payment_amount,0))/count(distinct(sender_id)),0) as people_avg_amt
+      from
+      opos_dw.dwd_pre_opos_payment_order_di 
+      where country_code='nal' 
+      and dt='{pt}' 
+      and trade_status='SUCCESS'
+      group BY
+      shop_id
+      ,receipt_id
+      ,shop_name
+      ,opay_account
+      
+      ,city_id_shop
+      ,city_name_shop
+      ,country_shop
+      
+      ,hcm_id
+      ,cm_id
+      ,rm_id
+      ,bdm_id
+      ,bd_id
+    
+      ) as a
+      full join
+      (
+      select
+      provider_shop_id as shop_id
+      ,provider_opay_id as opay_id
+      ,provider_shop_name as shop_name
+      ,provider_account as opay_account
+      
+      ,provider_city_id as city_id
+      ,provider_city_name as city_name
+      ,provider_country as country
+      
+      ,hcm_id
+      ,cm_id
+      ,rm_id
+      ,bdm_id
+      ,bd_id
+    
+      ,sum(use_amount) as bonus_order_amt
+      ,sum(bonus_amount) as sweep_amt
+      ,nvl(sum(use_amount)/sum(bonus_amount),0) as bonus_use_percent
+      from
+      opos_dw.dwd_opos_bonus_record_di 
+      where 
+      country_code='nal' 
+      and dt='{pt}'
+      and provider_shop_id is not null
+      group BY
+      provider_shop_id
+      ,provider_opay_id
+      ,provider_shop_name
+      ,provider_account
+      
+      ,provider_city_id
+      ,provider_city_name
+      ,provider_country
+      
+      ,hcm_id
+      ,cm_id
+      ,rm_id
+      ,bdm_id
+      ,bd_id
+      ) as b
+      on
+      a.shop_id=b.shop_id
+      and a.opay_id=b.opay_id
+      and a.shop_name=b.shop_name
+      and a.opay_account=b.opay_account
+    
+      and a.city_id=b.city_id
+      and a.city_name=b.city_name
+      and a.country=b.country
+    
+      and a.hcm_id=b.hcm_id
+      and a.cm_id=b.cm_id
+      and a.rm_id=b.rm_id
+      and a.bdm_id=b.bdm_id
+      and a.bd_id=b.bd_id
+    ) as m
+    on
+    s.shop_id=m.shop_id
+    and s.opay_id=m.opay_id
+    and s.shop_name=m.shop_name
+    and s.opay_account=m.opay_account
+    
+    and s.city_id=m.city_id
+    and s.city_name=m.city_name
+    and s.country=m.country
+    
+    and s.hcm_id=m.hcm_id
+    and s.cm_id=m.cm_id
+    and s.rm_id=m.rm_id
+    and s.bdm_id=m.bdm_id
+    and s.bd_id=m.bd_id
+  ) as o
+left join
+  (select id,name from opos_dw_ods.ods_sqoop_base_bd_admin_users_df where dt = '{pt}') as bd
+  on o.bd_id=bd.id
+left join
+  (select id,name from opos_dw_ods.ods_sqoop_base_bd_admin_users_df where dt = '{pt}') as bdm
+on o.bdm_id=bdm.id
+left join
+  (select id,name from opos_dw_ods.ods_sqoop_base_bd_admin_users_df where dt = '{pt}') as rm
+on o.rm_id=rm.id
+left join
+  (select id,name from opos_dw_ods.ods_sqoop_base_bd_admin_users_df where dt = '{pt}') as cm
+on o.cm_id=cm.id
+left join
+  (select id,name from opos_dw_ods.ods_sqoop_base_bd_admin_users_df where dt = '{pt}') as hcm
+  on o.hcm_id=hcm.id
+left join
+  (select dt,week_of_year from public_dw_dim.dim_date where dt = '{pt}') as d
+on 1=1
 ;
 
 
