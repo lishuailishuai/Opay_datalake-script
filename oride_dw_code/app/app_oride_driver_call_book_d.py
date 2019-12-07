@@ -130,23 +130,30 @@ def app_oride_driver_call_book_d_sql_task(ds):
         
         insert overwrite table {db}.{table} partition(country_code,dt)
 
-        SELECT user_id, --司机ID
-    
-            contact_name, --联系人姓名
-            
-            phone_num, --联系人电话
-            max(end_time) as end_time, --最后一次通话时间
-            
-            sum(call_cnt) AS call_cnt, --与联系人通话次数
-            
-            'nal' AS country_code, --国家码
-            
-            '{pt}' as dt --日期
-        
-        from oride_dw.dwd_oride_driver_call_record_mid
-        WHERE dt BETWEEN date_sub('{pt}',14) AND '{pt}'
-        GROUP BY user_id,contact_name,phone_num;
-
+        SELECT base2.user_id,
+            base2.contact_name,
+            base2.phone_num,
+            base2.end_time,
+            base2.call_cnt,
+            'nal' as country_code,
+            '{pt}' as dt
+        from(
+            SELECT *,row_number() OVER(PARTITION BY user_id ORDER BY call_cnt DESC) as rn
+            from(
+                SELECT user_id, --司机ID
+                    
+                    contact_name, --联系人姓名
+                    
+                    phone_num, --联系人电话
+                    max(end_time) as end_time, --最后一次通话时间
+                    
+                    sum(call_cnt) AS call_cnt --与联系人通话次数
+                
+                from oride_dw.dwd_oride_driver_call_record_mid
+                WHERE dt BETWEEN date_sub('{pt}',14) AND '{pt}'
+                GROUP BY user_id,contact_name,phone_num
+            )as base
+        )as base2 where base2.rn<=10;
     '''.format(
         pt=ds,
         table=table_name,
