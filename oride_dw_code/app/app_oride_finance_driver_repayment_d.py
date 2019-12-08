@@ -163,6 +163,7 @@ def get_data_from_hive(ds,**op_kwargs):
             repayment_all,
             NVL(start_date, ''),
             repayment_amount,
+            NVL(numbers, 0),
             NVL(overdue_payment_cnt, 0),
             NVL(last_date, t1.dt),
             nvl(driver_finish_order_cnt,0),
