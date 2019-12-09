@@ -180,7 +180,7 @@ def dwd_opay_transfer_of_account_record_di_sql_task(ds):
     partition(country_code, dt)
     
     select 
-        t1.order_no, t1.amount, 
+        t1.order_no, t1.amount, t1.currency,
         t1.originator_type, t2.trader_role as originator_role, t2.trader_kyc_level as originator_kyc_level, t1.originator_id, t2.trader_name as originator_name,
         t1.affiliate_type, t3.trader_role as affiliate_role, t1.affiliate_id, t3.trader_name as affiliate_name, 
         case 
@@ -220,14 +220,14 @@ def dwd_opay_transfer_of_account_record_di_sql_task(ds):
         
     from (
         select 
-            order_no, amount, 'USER' as originator_type, user_id as originator_id, 'MERCHANT' as affiliate_type, merchant_id as affiliate_id, merchant_order_no as payment_order_no, 
+            order_no, amount, currency, 'USER' as originator_type, user_id as originator_id, 'MERCHANT' as affiliate_type, merchant_id as affiliate_id, merchant_order_no as payment_order_no, 
             create_time, update_time, country, 'MAcquiring' as sub_service_type, 
             order_status, '-' as error_code, error_msg, '-' as client_source, pay_channel as pay_way, bussiness_type as business_type
         from opay_dw_ods.ods_sqoop_base_merchant_acquiring_record_di
         where dt = '{pt}'
         union all
         select 
-            order_no, amount, 'USER' as originator_type, user_id as originator_id, recipient_type as affiliate_type, recipient_id as affiliate_id, '-' as payment_order_no, 
+            order_no, amount, currency, 'USER' as originator_type, user_id as originator_id, recipient_type as affiliate_type, recipient_id as affiliate_id, '-' as payment_order_no, 
             create_time, update_time, country, 'AATransfer' as sub_service_type, 
             case transfer_status
                 when 'CONFIRM_S' then 'SUCCESS'
@@ -246,28 +246,28 @@ def dwd_opay_transfer_of_account_record_di_sql_task(ds):
         where dt = '{pt}'
         union all
         select 
-            order_no, amount, 'MERCHANT' as originator_type, merchant_id as originator_id, recipient_type as affiliate_type, recipient_id as affiliate_id, merchant_order_no as payment_order_no, 
+            order_no, amount, currency, 'MERCHANT' as originator_type, merchant_id as originator_id, recipient_type as affiliate_type, recipient_id as affiliate_id, merchant_order_no as payment_order_no, 
             create_time, update_time, country, 'AATransfer' as sub_service_type, order_status,
             '-' as error_code, error_msg, '-' as client_source, pay_channel as pay_way, business_type
         from opay_dw_ods.ods_sqoop_base_merchant_transfer_user_record_di
         where dt = '{pt}'
         union all
         select 
-            order_no, amount, sender_type as originator_type, sender_id as originator_id, recipient_type as affiliate_type, recipient_id as affiliate_id, platform_order_no as payment_order_no, 
+            order_no, amount, currency, sender_type as originator_type, sender_id as originator_id, recipient_type as affiliate_type, recipient_id as affiliate_id, platform_order_no as payment_order_no, 
             create_time, update_time, country, 'Consumption' as sub_service_type, order_status,
             error_code, error_msg, '-' as client_source, pay_channel as pay_way, '-' as business_type
         from opay_dw_ods.ods_sqoop_base_business_collection_record_di
         where dt = '{pt}'
         union all
         select 
-            order_no, amount, 'USER' as originator_type, sender_id as originator_id, 'USER' as affiliate_type, recipient_id as affiliate_id, '-' as payment_order_no, 
+            order_no, amount, currency, 'USER' as originator_type, sender_id as originator_id, 'USER' as affiliate_type, recipient_id as affiliate_id, '-' as payment_order_no, 
             create_time, update_time, country, 'Cash In' as sub_service_type, order_status,
             error_code, error_msg, client_source, pay_channel as pay_way, '-' as business_type
         from opay_dw_ods.ods_sqoop_base_cash_in_record_di
         where dt = '{pt}'
         union all
         select 
-            order_no, amount, 'USER' as originator_type, sender_id as originator_id, 'USER' as affiliate_type, recipient_id as affiliate_id, '-' as payment_order_no, 
+            order_no, amount, currency, 'USER' as originator_type, sender_id as originator_id, 'USER' as affiliate_type, recipient_id as affiliate_id, '-' as payment_order_no, 
             create_time, update_time, country, 'Cash Out' as sub_service_type, order_status,
             error_code, error_msg, client_source, pay_channel as pay_way, '-' as business_type
         from opay_dw_ods.ods_sqoop_base_cash_out_record_di
