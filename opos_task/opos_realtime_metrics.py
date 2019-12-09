@@ -605,119 +605,151 @@ def insert_order(ds, yesterday, week, year):
     ptsp_mysql_cursor.execute(query_sql)
     results = ptsp_mysql_cursor.fetchall()
     logging.info(" record num : {num}".format(num=len(results)))
+
+
     for data in results:
-        [order_id,
-         device_no,
-         cfrom,
-         receipt_id,
-         sender_id,
-         bill_create_ip,
-         org_pp_trade_no,
-         pp_trade_no,
-         payment_id,
-         org_payment_amount,
-         pay_type,
-         pay_amount,
-         merchant_activity_id,
-         merchant_activity_type,
-         merchant_activity_title,
-         threshold_amount,
-         threshold_orders,
-         activity_type,
-         activity_title,
-         activity_id,
-         discount_ids,
-         discount_amount,
-         return_amount,
-         user_subsidy,
-         order_type,
-         pay_cur,
-         trade_type,
-         trade_status,
-         merchant_subsidy_status,
-         user_subsidy_status,
-         first_order,
-         resp_code,
-         resp_message,
-         query_resp_code,
-         query_resp_message,
-         auth_code,
-         trade_version,
-         reversal_type,
-         refund_code,
-         repaired,
-         create_time,
-         modify_time,
-         resp_time,
-         goods_desc,
-         remark,
-         sn,
-         pos_user_data,
-         user_risk_status,
-         user_risk_code,
-         user_risk_remark,
-         merchant_risk_status,
-         merchant_risk_code,
-         merchant_risk_remark] = list(data)
 
-        insert_sql = insert_order_sql_template.format(
-            order_id=order_id,
-            device_no=device_no,
-            cfrom=cfrom,
-            receipt_id=receipt_id,
-            sender_id=sender_id,
-            bill_create_ip=bill_create_ip,
-            org_pp_trade_no=org_pp_trade_no,
-            pp_trade_no=pp_trade_no,
-            payment_id=payment_id,
-            org_payment_amount=org_payment_amount,
-            pay_type=pay_type,
-            pay_amount=pay_amount,
-            merchant_activity_id=merchant_activity_id,
-            merchant_activity_type=merchant_activity_type,
-            merchant_activity_title=merchant_activity_title,
-            threshold_amount=threshold_amount,
-            threshold_orders=threshold_orders,
-            activity_type=activity_type,
-            activity_title=activity_title,
-            activity_id=activity_id,
-            discount_ids=discount_ids,
-            discount_amount=discount_amount,
-            return_amount=return_amount,
-            user_subsidy=user_subsidy,
-            order_type=order_type,
-            pay_cur=pay_cur,
-            trade_type=trade_type,
-            trade_status=trade_status,
-            merchant_subsidy_status=merchant_subsidy_status,
-            user_subsidy_status=user_subsidy_status,
-            first_order=first_order,
-            resp_code=resp_code,
-            resp_message=resp_message,
-            query_resp_code=query_resp_code,
-            query_resp_message=query_resp_message,
-            auth_code=auth_code,
-            trade_version=trade_version,
-            reversal_type=reversal_type,
-            refund_code=refund_code,
-            repaired=repaired,
-            create_time=create_time,
-            modify_time=modify_time,
-            resp_time=resp_time,
-            goods_desc=goods_desc,
-            remark=remark,
-            sn=sn,
-            pos_user_data=pos_user_data,
-            user_risk_status=user_risk_status,
-            user_risk_code=user_risk_code,
-            user_risk_remark=user_risk_remark,
-            merchant_risk_status=merchant_risk_status,
-            merchant_risk_code=merchant_risk_code,
-            merchant_risk_remark=merchant_risk_remark)
+        original_columns = list(data)
+        columns = list()
 
-        # logging.info(insert_sql)
-        opos_mysql_cursor.execute(insert_sql)
-        opos_mysql_conn.commit()
+        for i in original_columns:
+            if i is None:
+                i = ''
+            columns.append(i)
+        insert_sql = ''
+
+        try:
+            [order_id,
+             device_no,
+             cfrom,
+             receipt_id,
+             sender_id,
+             bill_create_ip,
+             org_pp_trade_no,
+             pp_trade_no,
+             payment_id,
+             org_payment_amount,
+             pay_type,
+             pay_amount,
+             merchant_activity_id,
+             merchant_activity_type,
+             merchant_activity_title,
+             threshold_amount,
+             threshold_orders,
+             activity_type,
+             activity_title,
+             activity_id,
+             discount_ids,
+             discount_amount,
+             return_amount,
+             user_subsidy,
+             order_type,
+             pay_cur,
+             trade_type,
+             trade_status,
+             merchant_subsidy_status,
+             user_subsidy_status,
+             first_order,
+             resp_code,
+             resp_message,
+             query_resp_code,
+             query_resp_message,
+             auth_code,
+             trade_version,
+             reversal_type,
+             refund_code,
+             repaired,
+             create_time,
+             modify_time,
+             resp_time,
+             goods_desc,
+             remark,
+             sn,
+             pos_user_data,
+             user_risk_status,
+             user_risk_code,
+             user_risk_remark,
+             merchant_risk_status,
+             merchant_risk_code,
+             merchant_risk_remark] = list(columns)
+
+            if org_payment_amount == '':
+                org_payment_amount = 0
+            if pay_amount == '':
+                pay_amount = 0
+            if threshold_amount == '':
+                threshold_amount = 0
+            if threshold_orders == '':
+                threshold_orders = 0
+            if discount_amount == '':
+                discount_amount = 0
+            if return_amount == '':
+                return_amount = 0
+            if user_subsidy == '':
+                user_subsidy = 0
+
+            insert_sql = insert_order_sql_template.format(
+                order_id=order_id,
+                device_no=device_no,
+                cfrom=cfrom,
+                receipt_id=receipt_id,
+                sender_id=sender_id,
+                bill_create_ip=bill_create_ip,
+                org_pp_trade_no=org_pp_trade_no,
+                pp_trade_no=pp_trade_no,
+                payment_id=payment_id,
+                org_payment_amount=org_payment_amount,
+                pay_type=pay_type,
+                pay_amount=pay_amount,
+                merchant_activity_id=merchant_activity_id,
+                merchant_activity_type=merchant_activity_type,
+                merchant_activity_title=merchant_activity_title,
+                threshold_amount=threshold_amount,
+                threshold_orders=threshold_orders,
+                activity_type=activity_type,
+                activity_title=activity_title,
+                activity_id=activity_id,
+                discount_ids=discount_ids,
+                discount_amount=discount_amount,
+                return_amount=return_amount,
+                user_subsidy=user_subsidy,
+                order_type=order_type,
+                pay_cur=pay_cur,
+                trade_type=trade_type,
+                trade_status=trade_status,
+                merchant_subsidy_status=merchant_subsidy_status,
+                user_subsidy_status=user_subsidy_status,
+                first_order=first_order,
+                resp_code=resp_code,
+                resp_message=resp_message,
+                query_resp_code=query_resp_code,
+                query_resp_message=query_resp_message,
+                auth_code=auth_code,
+                trade_version=trade_version,
+                reversal_type=reversal_type,
+                refund_code=refund_code,
+                repaired=repaired,
+                create_time=create_time,
+                modify_time=modify_time,
+                resp_time=resp_time,
+                goods_desc=goods_desc,
+                remark=remark,
+                sn=sn,
+                pos_user_data=pos_user_data,
+                user_risk_status=user_risk_status,
+                user_risk_code=user_risk_code,
+                user_risk_remark=user_risk_remark,
+                merchant_risk_status=merchant_risk_status,
+                merchant_risk_code=merchant_risk_code,
+                merchant_risk_remark=merchant_risk_remark)
+
+            # logging.info(insert_sql)
+            opos_mysql_cursor.execute(insert_sql)
+            opos_mysql_conn.commit()
+
+        except Exception as e:
+            logging.info(insert_sql)
+            logging.info(e)
 
 
 insert_order_data = PythonOperator(
