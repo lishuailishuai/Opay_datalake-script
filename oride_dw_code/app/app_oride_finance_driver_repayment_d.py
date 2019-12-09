@@ -151,6 +151,28 @@ def get_data_from_hive(ds,**op_kwargs):
            AND city_id<>'999001'
         GROUP BY driver_id) t3
         ON t1.driver_id=t3.driver_id
+
+        group by t1.dt,
+            NVL(t1.city_id, 0),
+            NVL(city_name, ''),
+            NVL(t1.driver_id, 0),
+            NVL(regexp_replace(driver_name,'\\\\\\\\',''), ''),
+            NVL(regexp_replace(bphone_number,'\\\\\\\\',''), ''),
+            NVL(t1.product_id, 0),
+            balance,
+            repayment_all,
+            NVL(start_date, ''),
+            repayment_amount,
+            NVL(numbers, 0),
+            NVL(overdue_payment_cnt, 0),
+            NVL(last_date, t1.dt),
+            nvl(driver_finish_order_cnt,0),
+            nvl(t3.order_agv,0),
+            fault,
+            plate_number,
+            register_time,
+            NVL(regexp_replace(driver_address,'\\\\\\\\',''), ''),
+            last_week_daily_due
     '''.format(
         hive_db=hive_db,
         hive_table=hive_table,
@@ -228,7 +250,7 @@ def __data_to_mysql(conn, data, column, update=''):
                 sval += ',(\'{}\')'.format('\',\''.join([str(x) for x in row]))
             cnt += 1
             if cnt >= 1000:
-                logging.info(esql.format(isql, sval, update))
+                #logging.info(esql.format(isql, sval, update))
                 conn.execute(esql.format(isql, sval, update))
                 cnt = 0
                 sval = ''

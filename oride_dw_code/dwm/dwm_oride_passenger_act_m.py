@@ -71,7 +71,7 @@ def dwm_oride_passenger_act_m_sql_task(ds):
     set hive.exec.parallel=true;
     set hive.exec.dynamic.partition.mode=nonstrict;
     
-    insert overwrite table {db}.{table} partition(contry_code,dm)
+    insert overwrite table {db}.{table} partition(country_code,dm)
     
     select passenger_id,
         city_id,

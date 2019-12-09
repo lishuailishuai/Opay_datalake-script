@@ -70,14 +70,14 @@ def dwm_oride_driver_act_m_sql_task(ds):
     set hive.exec.parallel=true;
     set hive.exec.dynamic.partition.mode=nonstrict;
     
-    insert overwrite table {db}.{table} partition(contry_code,dm)
+    insert overwrite table {db}.{table} partition(country_code,dm)
     
     select driver_id,
         city_id,
         driver_serv_type,
         country_code,
         substr(dt,1,7) as dm
-    from dwd_oride_order_base_include_test_di
+    from oride_dw.dwd_oride_order_base_include_test_di
     where substr(date_sub('{pt}',1),1,7)=substr(dt,1,7)
     and status in(4,5) and city_id<>999001 and driver_id<>1
     group by country_code,substr(dt,1,7),
