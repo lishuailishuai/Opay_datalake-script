@@ -148,6 +148,44 @@ def dwd_opay_transaction_record_di_sql_task(ds):
     HQL='''
     set hive.exec.dynamic.partition.mode=nonstrict;
     set hive.exec.parallel=true;
+    with 
+        dwd_opay_account_recharge_di as (
+            select 
+                order_no, amount, currency, 
+                originator_type, originator_role, originator_kyc_level, originator_id, originator_name, 'IN' as originator_money_flow,
+                '-' as affiliate_type, '-' as affiliate_role, affiliate_bank_card_no_encrypted as affiliate_id, '-' as affiliate_name, 'OUT' as affiliate_money_flow,
+                create_time, update_time, 'Account Recharge' as top_service_type, 'TopupWithCard' as sub_service_type, 
+                order_status, error_code, error_msg, client_source, pay_way, country_code, dt
+            from opay_dw.dwd_opay_topup_with_card_record_di
+            where dt = '{pt}'
+            union all
+            select 
+                order_no, amount, currency, 
+                originator_type, originator_role, originator_kyc_level, originator_id, originator_name, 'IN' as originator_money_flow,
+                '-' as affiliate_type, '-' as affiliate_role, affiliate_bank_account_code as affiliate_id, '-' as affiliate_name, 'OUT' as affiliate_money_flow,
+                create_time, update_time, 'Account Recharge' as top_service_type, 'receivemoney' as sub_service_type, 
+                order_status, error_code, error_msg, '-' as client_source, '-' as pay_way, country_code, dt
+            from opay_dw.dwd_opay_receive_money_record_di
+            where dt = '{pt}'
+            union all
+            select 
+                order_no, amount, currency, 
+                originator_type, originator_role, originator_kyc_level, originator_id, originator_name, 'IN' as originator_money_flow,
+                '-' as affiliate_type, '-' as affiliate_role, affiliate_terminal_id as affiliate_id, '-' as affiliate_name, 'OUT' as affiliate_money_flow,
+                create_time, update_time, 'Account Recharge' as top_service_type, 'pos' as sub_service_type, 
+                order_status, error_code, error_msg, '-' as client_source, '-' as pay_way, country_code, dt
+            from opay_dw.dwd_opay_pos_transaction_record_di
+            where dt = '{pt}'
+            union all
+            select 
+                order_no, amount, currency, 
+                originator_type, originator_role, originator_kyc_level, originator_id, originator_name, 'IN' as originator_money_flow,
+                '-' as affiliate_type, '-' as affiliate_role, affiliate_mobile as affiliate_id, '-' as affiliate_name, 'OUT' as affiliate_money_flow,
+                create_time, update_time, 'Account Recharge' as top_service_type, 'pos' as sub_service_type, 
+                order_status, error_code, error_msg, '-' as client_source, '-' as pay_way, country_code, dt
+            from opay_dw.dwd_opay_easycash_record_di
+            where dt = '{pt}'
+        )
     insert overwrite table {db}.{table} 
     partition(country_code, dt)
     select 
@@ -158,7 +196,7 @@ def dwd_opay_transaction_record_di_sql_task(ds):
         order_status, error_code, error_msg, client_source, pay_way, country_code, dt
     from opay_dw.dwd_opay_life_payment_record_di 
     where dt = '{pt}' 
-    union all
+    union
     select 
         order_no, amount, currency, 
         originator_type, originator_role, originator_kyc_level, originator_id, originator_name, 'OUT' as originator_money_flow,
@@ -167,7 +205,7 @@ def dwd_opay_transaction_record_di_sql_task(ds):
         order_status, error_code, error_msg, client_source, pay_way, country_code, dt
     from opay_dw.dwd_opay_transfer_of_account_record_di 
     where dt = '{pt}' 
-    union all
+    union
     select 
         order_no, amount, currency, 
         originator_type, originator_role, originator_kyc_level, originator_id, originator_name, 'OUT' as originator_money_flow,
@@ -176,42 +214,8 @@ def dwd_opay_transaction_record_di_sql_task(ds):
         order_status, error_code, error_msg, client_source, pay_way, country_code, dt
     from opay_dw.dwd_opay_cash_to_card_record_di 
     where dt = '{pt}'
-    union all
-    select 
-        order_no, amount, currency, 
-        originator_type, originator_role, originator_kyc_level, originator_id, originator_name, 'IN' as originator_money_flow,
-        '-' as affiliate_type, '-' as affiliate_role, affiliate_bank_card_no_encrypted as affiliate_id, '-' as affiliate_name, 'OUT' as affiliate_money_flow,
-        create_time, update_time, 'Account Recharge' as top_service_type, 'TopupWithCard' as sub_service_type, 
-        order_status, error_code, error_msg, client_source, pay_way, country_code, dt
-    from opay_dw.dwd_opay_topup_with_card_record_di
-    where dt = '{pt}'
-    union all
-    select 
-        order_no, amount, currency, 
-        originator_type, originator_role, originator_kyc_level, originator_id, originator_name, 'IN' as originator_money_flow,
-        '-' as affiliate_type, '-' as affiliate_role, affiliate_bank_account_code as affiliate_id, '-' as affiliate_name, 'OUT' as affiliate_money_flow,
-        create_time, update_time, 'Account Recharge' as top_service_type, 'receivemoney' as sub_service_type, 
-        order_status, error_code, error_msg, '-' as client_source, '-' as pay_way, country_code, dt
-    from opay_dw.dwd_opay_receive_money_record_di
-    where dt = '{pt}'
-    union all
-    select 
-        order_no, amount, currency, 
-        originator_type, originator_role, originator_kyc_level, originator_id, originator_name, 'IN' as originator_money_flow,
-        '-' as affiliate_type, '-' as affiliate_role, affiliate_terminal_id as affiliate_id, '-' as affiliate_name, 'OUT' as affiliate_money_flow,
-        create_time, update_time, 'Account Recharge' as top_service_type, 'pos' as sub_service_type, 
-        order_status, error_code, error_msg, '-' as client_source, '-' as pay_way, country_code, dt
-    from opay_dw.dwd_opay_pos_transaction_record_di
-    where dt = '{pt}'
-    union all
-    select 
-        order_no, amount, currency, 
-        originator_type, originator_role, originator_kyc_level, originator_id, originator_name, 'IN' as originator_money_flow,
-        '-' as affiliate_type, '-' as affiliate_role, affiliate_mobile as affiliate_id, '-' as affiliate_name, 'OUT' as affiliate_money_flow,
-        create_time, update_time, 'Account Recharge' as top_service_type, 'pos' as sub_service_type, 
-        order_status, error_code, error_msg, '-' as client_source, '-' as pay_way, country_code, dt
-    from opay_dw.dwd_opay_easycash_record_di
-    where dt = '{pt}'
+    union
+    select * from dwd_opay_account_recharge_di
     '''.format(
         pt=ds,
         table=table_name,
