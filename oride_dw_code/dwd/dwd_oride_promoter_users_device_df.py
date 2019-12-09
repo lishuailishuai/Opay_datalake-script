@@ -104,7 +104,7 @@ phone,--æ‰‹æœºå·
 device_id,--device id
 register_time,--未知
 bind_time,--æ–°ç”¨æˆ·ç»‘å®šæŽ¨å¹¿ç æ—¶é—´
-s_dt,--未知
+`_dt` as s_dt,--未知
 hour,--未知
 ip,--未知
 'nal' as country_code,
