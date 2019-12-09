@@ -37,7 +37,7 @@ args = {
 }
 
 dag = airflow.DAG('dm_oride_passenger_base_multi_cube',
-                  schedule_interval="30 01 * * *",
+                  schedule_interval="40 01 * * *",
                   default_args=args)
 
 ##----------------------------------------- 依赖 ---------------------------------------##
@@ -88,6 +88,13 @@ def dm_oride_passenger_base_multi_cube_sql_task(ds):
     HQL = '''
     set hive.exec.parallel=true;
     set hive.exec.dynamic.partition.mode=nonstrict;
+    SET hive.map.aggr=true;
+    --设置map端输出进行合并，默认为true  
+    set hive.merge.mapfiles = true;  
+    --设置reduce端输出进行合并，默认为false  
+    set hive.merge.mapredfiles = true ;
+    set hive.input.format=org.apache.hadoop.hive.ql.io.CombineHiveInputFormat;
+    
     with passenger_data as
     (
     select city_id,
