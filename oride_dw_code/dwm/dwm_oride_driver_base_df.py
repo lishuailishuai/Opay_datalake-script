@@ -230,7 +230,7 @@ def dwm_oride_driver_base_df_sql_task(ds):
                     and driver_id<>1
             )t
         )t_recent
-        where t_first.rn = 1 
+        where t_recent.rn = 1 
     ), 
 
     driver_time as(
