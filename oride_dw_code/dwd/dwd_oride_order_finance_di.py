@@ -85,7 +85,7 @@ def fun_task_timeout_monitor(ds, dag, **op_kwargs):
 
     msg = [
         {"db": "oride_dw", "table": "{dag_name}".format(dag_name=dag_ids),
-         "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "3600"}
+         "partition": "country_code=NG/dt={pt}".format(pt=ds), "timeout": "3600"}
     ]
 
     TaskTimeoutMonitor().set_task_monitor(msg)
@@ -122,8 +122,8 @@ def dwd_oride_order_finance_di_sql_task(ds):
      sum(nvl(reward.amount,0.0)) AS reward_amount, --奖励金额
      ord.driver_serv_type, --订单表中司机业务类型字段
      sum(nvl(if(recharge.amount_reason=6,abs(recharge.amount),0),0.0)) AS phone_amount, --手机还款
-     --ord.country_code as country_code,
-     'nal' as country_code,
+     ord.country_code as country_code,
+     --'nal' as country_code,
      '{pt}' as dt
     FROM
       (SELECT *
@@ -143,7 +143,8 @@ def dwd_oride_order_finance_di_sql_task(ds):
     ord.order_id, --订单号
      ord.create_date,--订单日期
      ord.driver_id,
-     ord.driver_serv_type;
+     ord.driver_serv_type,
+     ord.country_code;
     '''.format(
         pt=ds,
         now_day=airflow.macros.ds_add(ds, +1),
