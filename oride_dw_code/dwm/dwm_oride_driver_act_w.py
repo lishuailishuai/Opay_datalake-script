@@ -74,7 +74,7 @@ def dwm_oride_driver_act_w_sql_task(ds):
     set hive.exec.parallel=true;
     set hive.exec.dynamic.partition.mode=nonstrict;
     
-    insert overwrite table {db}.{table} partition(contry_code,dw)
+    insert overwrite table {db}.{table} partition(country_code,dw)
     
     select driver_id,
         city_id,
