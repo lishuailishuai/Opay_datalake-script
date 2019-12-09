@@ -84,7 +84,7 @@ def dwm_oride_passenger_act_w_sql_task(ds):
         driver_serv_type,
         country_code,
         concat(substr(dt,1,4),'_',weekofyear(dt))as dw
-    from dwd_oride_order_base_include_test_di
+    from oride_dw.dwd_oride_order_base_include_test_di
     where dt between '{pt}' and date_add('{pt}',6)
     and status in(4,5) and city_id<>999001 and driver_id<>1
     group by country_code,concat(substr(dt,1,4),'_',weekofyear(dt)),
