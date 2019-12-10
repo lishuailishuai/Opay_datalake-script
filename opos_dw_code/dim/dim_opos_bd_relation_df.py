@@ -113,6 +113,7 @@ def dim_opos_bd_relation_df_sql_task(ds):
 set hive.exec.parallel=true;
 set hive.exec.dynamic.partition.mode=nonstrict;
 
+
 --01.首先清空组织机构层级临时表,然后插入最新的组织机构层级数据
 --插入最新的数据
 insert overwrite table opos_dw.dim_opos_bd_info_df partition(country_code,dt)
@@ -336,7 +337,7 @@ nobd as (
 
 )
 
-insert overwrite table opos_dw.dim_opos_bd_relation_df partition(country_code,dt)
+insert overwrite table opos_dw.dim_opos_bd_relation_tmp_df partition(country_code,dt)
 select 
 b.id
 ,b.opay_id
@@ -382,6 +383,46 @@ left join
 on
   b.city_code=c.id
 ;
+
+--03.将最新的首单交易日期数据插入到最终表中
+insert overwrite table opos_dw.dim_opos_bd_relation_df partition(country_code,dt)
+select 
+a.id
+,a.opay_id
+,a.shop_name
+,a.opay_account
+,a.city_code
+,a.city_name
+,a.country
+,a.job_id
+,a.hcm_id
+,a.hcm_name
+,a.cm_id
+,a.cm_name
+,a.rm_id
+,a.rm_name
+,a.bdm_id
+,a.bdm_name
+,a.bd_id
+,a.bd_name
+,a.contact_name
+,a.contact_phone
+,a.cate_id
+,a.status
+,a.created_at
+,nvl(b.dt,'-') as first_order_date
+
+,'nal' as country_code
+,'{pt}' as dt 
+from
+  (select * from opos_dw.dim_opos_bd_relation_tmp_df where country_code='nal' and dt='{pt}') as a
+left join
+  (select receipt_id,'{pt}' as dt from opos_dw_ods.ods_sqoop_base_pre_opos_payment_order_di where dt='{pt}' group by receipt_id) as b
+on
+  if(a.opay_id='-',a.opay_id,'having')=b.receipt_id;
+
+
+
 
 
 
