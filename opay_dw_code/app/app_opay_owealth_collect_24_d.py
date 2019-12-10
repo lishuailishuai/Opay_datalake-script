@@ -109,7 +109,7 @@ def app_opay_owealth_collect_24_d_sql_task(ds):
        FROM opay_owealth_ods.ods_sqoop_owealth_share_order_df
        WHERE dt='{pt}'
          AND status="S"
-         AND from_unixtime(unix_timestamp(create_time, 'yyyy-MM-dd HH:mm:ss')+3600)>='{yesterday}'
+         AND from_unixtime(unix_timestamp(create_time, 'yyyy-MM-dd HH:mm:ss')+3600)>'{pt}'
          AND from_unixtime(unix_timestamp(create_time, 'yyyy-MM-dd HH:mm:ss')+3600)<'{pt} 24:00:00' ),
          user_subscribed AS
       (SELECT user_id,
@@ -122,7 +122,7 @@ def app_opay_owealth_collect_24_d_sql_task(ds):
       (SELECT *  
        FROM opay_owealth_ods.ods_sqoop_owealth_share_revenue_log_df
        WHERE dt='{pt}'
-         AND from_unixtime(unix_timestamp(revenue_date, 'yyyy-MM-dd HH:mm:ss')+3600)>='{yesterday}' 
+         AND from_unixtime(unix_timestamp(revenue_date, 'yyyy-MM-dd HH:mm:ss')+3600)>'{pt}' 
          AND from_unixtime(unix_timestamp(revenue_date, 'yyyy-MM-dd HH:mm:ss')+3600)<'{pt} 24:00:00' ) 
     INSERT overwrite TABLE opay_dw.app_opay_owealth_collect_24_d partition (dt='{pt}')
     
@@ -163,7 +163,7 @@ def app_opay_owealth_collect_24_d_sql_task(ds):
                                  WHEN memo='API' THEN user_id
                              END) api_subscribe_user,
               sum(CASE
-                      WHEN order_type='1002' THEN trans_amount
+                      WHEN order_type='1002' and memo='赎回' THEN trans_amount
                   END) total_redeem_amount,
               count(DISTINCT CASE
                                  WHEN memo='赎回' THEN user_id
@@ -171,7 +171,8 @@ def app_opay_owealth_collect_24_d_sql_task(ds):
        FROM order_base a)m1 ON m.dt=m1.dt
     LEFT JOIN
       (SELECT '{pt}' AS dt,
-              count(DISTINCT user_id) add_open_api_subscribe_user
+              count(DISTINCT CASE
+                                 WHEN subscribed='Y' THEN user_id end) add_open_api_subscribe_user
        FROM user_subscribed) m2 ON m.dt=m2.dt
     LEFT JOIN
       (SELECT '{pt}' AS dt,
@@ -182,17 +183,15 @@ def app_opay_owealth_collect_24_d_sql_task(ds):
                                  WHEN subscribed='N' THEN user_id
                              END) close_api_subscribe_user
        FROM user_subscribed
-       WHERE from_unixtime(unix_timestamp(update_time, 'yyyy-MM-dd HH:mm:ss')+3600)>='{yesterday}') m3 ON m.dt=m3.dt
+       WHERE from_unixtime(unix_timestamp(update_time, 'yyyy-MM-dd HH:mm:ss')+3600)>'{pt}') m3 ON m.dt=m3.dt
     LEFT JOIN
       (SELECT '{pt}' AS dt,
               sum(revenue_amount) revenue_amount
        FROM revenue) m4 ON m.dt=m4.dt
    
    
-   
     '''.format(
         pt=ds,
-        yesterday=airflow.macros.ds_add(ds, -1),
         db=db_name,
         table=table_name
     )
