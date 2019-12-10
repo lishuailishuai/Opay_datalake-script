@@ -88,7 +88,7 @@ dependence_dim_oride_driver_base_task = UFileSensor(
 dependence_dwd_oride_order_finance_di_task = UFileSensor(
     task_id='dwd_oride_order_finance_di_task',
     filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw/dwd_oride_order_finance_di/country_code=nal",
+        hdfs_path_str="oride/oride_dw/dwd_oride_order_finance_di/country_code=NG",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -153,6 +153,7 @@ dependence_dwd_oride_order_base_include_test_di_task = S3KeySensor(
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
+
 ##----------------------------------------- 变量 ---------------------------------------##
 
 db_name = "oride_dw"

@@ -33,24 +33,22 @@ args = {
     'email_on_retry': False,
 }
 
-dag = airflow.DAG('dm_opay_recharge_betting_base_cube_d',
+dag = airflow.DAG('dm_opay_topup_with_card_originator_base_cube_d',
                   schedule_interval="00 03 * * *",
                   default_args=args
                   )
 
 ##----------------------------------------- 依赖 ---------------------------------------##
-# 依赖前一天分区
-dependence_dwd_opay_recharge_betting_record_di_prev_day_task = UFileSensor(
-    task_id='dependence_dwd_opay_recharge_betting_record_di_prev_day_task',
+dwd_opay_topup_with_card_record_di_prev_day_task = UFileSensor(
+    task_id='dwd_opay_topup_with_card_record_di_prev_day_task',
     filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opay/opay_dw/dwd_opay_recharge_betting_record_di/country_code=NG",
+        hdfs_path_str="opay/opay_dw/dwd_opay_topup_with_card_record_di/country_code=NG",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
-
 
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
 def fun_task_timeout_monitor(ds,dag,**op_kwargs):
@@ -72,51 +70,33 @@ task_timeout_monitor= PythonOperator(
 
 ##----------------------------------------- 变量 ---------------------------------------##
 db_name="opay_dw"
-table_name="dm_opay_recharge_betting_base_cube_d"
+table_name="dm_opay_topup_with_card_originator_base_cube_d"
 hdfs_path="ufile://opay-datalake/opay/opay_dw/"+table_name
 
 ##---- hive operator ---##
-def dm_opay_recharge_betting_base_cube_d_sql_task(ds):
+def dm_opay_topup_with_card_originator_base_cube_d_sql_task(ds):
     HQL='''
     set hive.exec.dynamic.partition.mode=nonstrict;
     set hive.exec.parallel=true; --default false
 
-    insert overwrite table {db}.{table} partition(country_code, dt)
+    insert overwrite table {db}.{table} partition(dt = '{pt}')
     select 
-        nvl(service_provider, 'ALL') as service_provider, 
-        nvl(amount_range, 'ALL') as amount_range, 
+        nvl(country_code, 'ALL') as country_code, 
+        nvl(out_channel_id, 'ALL') as out_channel_id, 
+        nvl(originator_type, 'ALL') as originator_type, 
+        nvl(originator_role, 'ALL') as originator_role, 
         nvl(order_status, 'ALL') as order_status, 
-        count(distinct user_id) user_cnt, sum(amount) amt, count(*) cnt,
-        country_code,
-        '{pt}' dt
+        sum(amount) order_amt, count(*) order_cnt
     from (
-        select order_no, order_status, user_id, amount, service_provider, country_code,
-        case
-            when amount > 200000 then '(2000, more)'
-            when amount > 100000 then '(1000, 2000]'
-            when amount > 50000 then '(500, 1000]'
-            when amount > 30000 then '(300, 500]'
-            when amount > 20000 then '(200, 300]'
-            when amount > 10000 then '(100, 200]'
-            else '[0, 100]'
-        end as amount_range
-        from {db}.dwd_opay_recharge_betting_record_di
-        where dt = '{pt}'
-            and create_time BETWEEN date_format(date_sub('{pt}', 1), 'yyyy-MM-dd 23') AND date_format('{pt}', 'yyyy-MM-dd 23') 
-            and service_provider != '' and service_provider != 'supabet' and service_provider is not null
+        select 
+            country_code, out_channel_id, originator_type, originator_role, order_status, order_no,  
+            amount
+        from {db}.dwd_opay_topup_with_card_record_di
+        where dt = '{pt}' 
+            and create_time BETWEEN date_format(date_sub('{pt}', 1), 'yyyy-MM-dd 23') AND date_format('{pt}', 'yyyy-MM-dd 23')
     ) t1
-    group by country_code, service_provider, amount_range, order_status
-    GROUPING SETS (
-        (country_code, service_provider, amount_range, order_status), 
-        (country_code, service_provider, amount_range), 
-        (country_code, service_provider, order_status),
-        (country_code, amount_range, order_status),
-        (country_code, service_provider), 
-        (country_code, amount_range), 
-        (country_code, order_status), 
-        (country_code)
-    )
-
+    group by country_code, out_channel_id, originator_type, originator_role, order_status
+    with cube
     '''.format(
         pt=ds,
         table=table_name,
@@ -130,7 +110,7 @@ def execution_data_task_id(ds, **kargs):
     hive_hook = HiveCliHook()
 
     # 读取sql
-    _sql = dm_opay_recharge_betting_base_cube_d_sql_task(ds)
+    _sql = dm_opay_topup_with_card_originator_base_cube_d_sql_task(ds)
 
     logging.info('Executing: %s', _sql)
 
@@ -145,13 +125,13 @@ def execution_data_task_id(ds, **kargs):
     第二个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
 
     """
-    TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "true", "true")
+    TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "false", "true")
 
-dm_opay_recharge_betting_base_cube_d_task = PythonOperator(
-    task_id='dm_opay_recharge_betting_base_cube_d_task',
+dm_opay_topup_with_card_originator_base_cube_d_task = PythonOperator(
+    task_id='dm_opay_topup_with_card_originator_base_cube_d_task',
     python_callable=execution_data_task_id,
     provide_context=True,
     dag=dag
 )
 
-dependence_dwd_opay_recharge_betting_record_di_prev_day_task >> dm_opay_recharge_betting_base_cube_d_task
+dwd_opay_topup_with_card_record_di_prev_day_task >> dm_opay_topup_with_card_originator_base_cube_d_task
