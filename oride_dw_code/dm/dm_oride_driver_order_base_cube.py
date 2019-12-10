@@ -17,6 +17,7 @@ from airflow.sensors.hive_partition_sensor import HivePartitionSensor
 from airflow.sensors import UFileSensor
 from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
 from plugins.TaskTouchzSuccess import TaskTouchzSuccess
+from plugins.CountriesPublicFrame import CountriesPublicFrame
 import json
 import logging
 from airflow.models import Variable
@@ -44,7 +45,7 @@ dag = airflow.DAG('dm_oride_driver_order_base_cube',
 dependence_dwm_oride_driver_order_base_di_prev_day_task = UFileSensor(
     task_id='dwm_oride_driver_order_base_di_prev_day_task',
     filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw/dwm_oride_driver_order_base_di/country_code=nal",
+        hdfs_path_str="oride/oride_dw/dwm_oride_driver_order_base_di/country_code=NG",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -66,7 +67,7 @@ def fun_task_timeout_monitor(ds, dag, **op_kwargs):
 
     msg = [
         {"db": "oride_dw", "table": "{dag_name}".format(dag_name=dag_ids),
-         "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "2400"}
+         "partition": "country_code=NG/dt={pt}".format(pt=ds), "timeout": "2400"}
     ]
 
     TaskTimeoutMonitor().set_task_monitor(msg)
@@ -123,7 +124,7 @@ def dm_oride_driver_order_base_cube_sql_task(ds):
        driver_cannel_pick_dur,
        -- 司机当天订单被取消时长,不可用于计算司机在线时长 
        
-       country_code,
+       nvl(country_code,'total') as country_code,
        
        '{pt}' as dt              
 from (select city_id,
@@ -161,7 +162,7 @@ from (select city_id,
            sum(driver_cannel_pick_dur) as driver_cannel_pick_dur,
            -- 司机当天订单被取消时长,不可用于计算司机在线时长
            
-           nvl(country_code,'-999') as country_code
+           country_code
            --二位国家码  --(去除with cube为空的BUG)
               
         from oride_dw.dwm_oride_driver_order_base_di
@@ -174,8 +175,7 @@ from (select city_id,
                country_code
                --二位国家码
                
-               with cube) t
-        where t.country_code<>'-999';   
+               with cube) t;   
 
 '''.format(
         pt=ds,
@@ -186,33 +186,58 @@ from (select city_id,
 
 
 # 主流程
-def execution_data_task_id(ds, **kargs):
+def execution_data_task_id(ds, **kwargs):
+    v_date = kwargs.get('v_execution_date')
+    v_day = kwargs.get('v_execution_day')
+    v_hour = kwargs.get('v_execution_hour')
+
     hive_hook = HiveCliHook()
+    """
+            #功能函数
+            alter语句: alter_partition
+            删除分区: delete_partition
+            生产success: touchz_success
+
+            #参数
+            第一个参数true: 所有国家是否上线。false 没有
+            第二个参数true: 数据目录是有country_code分区。false 没有
+            第三个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
+
+            #读取sql
+            %_sql(ds,v_hour)
+
+            第一个参数ds: 天级任务
+            第二个参数v_hour: 小时级任务，需要使用
+
+        """
+    cf = CountriesPublicFrame("true", ds, db_name, table_name, hdfs_path, "true", "true")
+
+    # 删除分区
+    cf.delete_partition()
 
     # 读取sql
-    _sql = dm_oride_driver_order_base_cube_sql_task(ds)
+    _sql = "\n" + cf.alter_partition() + "\n" + dm_oride_driver_order_base_cube_sql_task(ds)
 
     logging.info('Executing: %s', _sql)
 
     # 执行Hive
     hive_hook.run_cli(_sql)
 
-    # 熔断数据
-    # check_key_data_task(ds)
+    # 熔断数据，如果数据不能为0
+    # check_key_data_cnt_task(ds)
 
-    # 生成_SUCCESS
-    """
-    第一个参数true: 数据目录是有country_code分区。false 没有
-    第二个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
-
-    """
-    TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "true", "true")
-
+    # 生产success
+    cf.touchz_success()
 
 dm_oride_driver_order_base_cube_task = PythonOperator(
     task_id='dm_oride_driver_order_base_cube_task',
     python_callable=execution_data_task_id,
     provide_context=True,
+    op_kwargs={
+        'v_execution_date': '{{execution_date.strftime("%Y-%m-%d %H:%M:%S")}}',
+        'v_execution_day': '{{execution_date.strftime("%Y-%m-%d")}}',
+        'v_execution_hour': '{{execution_date.strftime("%H")}}'
+    },
     dag=dag
 )
 

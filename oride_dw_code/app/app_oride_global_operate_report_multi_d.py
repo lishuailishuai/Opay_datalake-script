@@ -17,6 +17,7 @@ from airflow.sensors.hive_partition_sensor import HivePartitionSensor
 from airflow.sensors import UFileSensor
 from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
 from plugins.TaskTouchzSuccess import TaskTouchzSuccess
+from plugins.CountriesPublicFrame import CountriesPublicFrame
 import json
 import logging
 from airflow.models import Variable
@@ -41,10 +42,10 @@ dag = airflow.DAG('app_oride_global_operate_report_multi_d',
 ##----------------------------------------- 依赖 ---------------------------------------##
 
 # 依赖前一天分区
-dependence_dm_oride_passenger_base_multi_cube_d_prev_day_task = UFileSensor(
-    task_id='dm_oride_passenger_base_multi_cube_d_prev_day_task',
+dependence_dm_oride_passenger_base_multi_cube_prev_day_task = UFileSensor(
+    task_id='dm_oride_passenger_base_multi_cube_prev_day_task',
     filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw/dm_oride_passenger_base_multi_cube_d/country_code=nal",
+        hdfs_path_str="oride/oride_dw/dm_oride_passenger_base_multi_cube/country_code=NG",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -55,7 +56,7 @@ dependence_dm_oride_passenger_base_multi_cube_d_prev_day_task = UFileSensor(
 dependence_dm_oride_order_base_d_prev_day_task = UFileSensor(
     task_id='dm_oride_order_base_d_prev_day_task',
     filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw/dm_oride_order_base_d/country_code=nal",
+        hdfs_path_str="oride/oride_dw/dm_oride_order_base_d/country_code=NG",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -97,7 +98,8 @@ def app_oride_global_operate_report_multi_d_sql_task(ds):
     SET hive.exec.dynamic.partition.mode=nonstrict;
 
     with order_data as 
- (SELECT dt,country_code,
+ (SELECT dt,
+       if(dt<'2019-12-08' and country_code='nal','NG',country_code) as country_code,
        city_id,
        driver_serv_type, --订单表司机业务类型
        sum(ride_order_cnt) as ride_order_cnt, --当日下单量
@@ -110,16 +112,17 @@ def app_oride_global_operate_report_multi_d_sql_task(ds):
 
 FROM (SELECT sum(if(dt>=date_add('{pt}',-28)
               AND dt<'{pt}'
-              AND from_unixtime(unix_timestamp(dt,'yyyy-MM-dd'),'u')=from_unixtime(unix_timestamp('{pt}', 'yyyy-MM-dd'),'u'),ride_order_cnt,0)) over (partition BY '{pt}',country_code, city_id, driver_serv_type)/4 AS order_cnt_lfw,--近四周同期下单数据均值
+              AND from_unixtime(unix_timestamp(dt,'yyyy-MM-dd'),'u')=from_unixtime(unix_timestamp('{pt}', 'yyyy-MM-dd'),'u'),ride_order_cnt,0)) over (partition BY '{pt}',country_code_new, city_id, driver_serv_type)/4 AS order_cnt_lfw,--近四周同期下单数据均值
        sum(if(dt>=date_add('{pt}',-28)
               AND dt<'{pt}'
-              AND from_unixtime(unix_timestamp(dt,'yyyy-MM-dd'),'u')=from_unixtime(unix_timestamp('{pt}', 'yyyy-MM-dd'),'u'),finish_order_cnt,0)) over (partition BY '{pt}',country_code, city_id, driver_serv_type)/4 AS finish_order_cnt_lfw,--近四周同期完单数据
+              AND from_unixtime(unix_timestamp(dt,'yyyy-MM-dd'),'u')=from_unixtime(unix_timestamp('{pt}', 'yyyy-MM-dd'),'u'),finish_order_cnt,0)) over (partition BY '{pt}',country_code_new, city_id, driver_serv_type)/4 AS finish_order_cnt_lfw,--近四周同期完单数据
        *
+from (select *,if(dt<'2019-12-08' and country_code='nal','NG',country_code) as country_code_new  --此处由于新上线国家码，因此需要处理下统计近四周数据
 FROM oride_dw.dm_oride_order_base_d
 WHERE dt>=date_add('{pt}',-28)
-  AND dt<='{pt}') m 
+  AND dt<='{pt}') t) m 
   where m.dt='{pt}'
-  group by m.dt,m.country_code,
+  group by m.dt,if(dt<'2019-12-08' and country_code='nal','NG',country_code),
              m.city_id,
              m.driver_serv_type,
              m.order_cnt_lfw,
@@ -139,12 +142,13 @@ select nvl(city_id,-10000) as city_id,
        sum(finished_users) as finished_users,  --当日完单乘客数
        sum(paid_users) as paid_users,  --当日总支付乘客数
        sum(online_paid_users) as online_paid_users,  --当日线上支付乘客数
-       country_code,
+       --nvl(country_code,'total') as country_code,
+       if(nvl(country_code,'total')='total','nal','nal') as country_code,
        '{pt}' as dt
         
-from (select nvl(ord.country_code,'-999') as country_code,
-       ord.city_id,
-       ord.driver_serv_type,
+from (select nvl(ord.country_code,'total') as country_code,
+       city_id,
+       driver_serv_type,
        sum(ride_order_cnt) as ride_order_cnt, --当日下单量
        sum(valid_ord_cnt) as valid_ord_cnt,  --当日有效订单量
        sum(finish_order_cnt) as finish_order_cnt, --当日完单量
@@ -162,7 +166,7 @@ inner join
 from oride_dw.dim_oride_city
 where dt='{pt}' and size(split(product_id,','))>1) multi_cit
 on ord.city_id=multi_cit.city_id
-group by nvl(ord.country_code,'-999'),
+group by nvl(ord.country_code,'total'),
        ord.city_id,
        ord.driver_serv_type
 with cube
@@ -183,10 +187,10 @@ select country_code,
        finished_users,  --当日完单乘客数
        paid_users,  --当日总支付乘客数
        online_paid_users  --当日线上支付乘客数
-from oride_dw.dm_oride_passenger_base_multi_cube_d
+from oride_dw.dm_oride_passenger_base_multi_cube
 where dt='{pt}' and product_id=-10000) m
-where m.country_code<>'-999'
-group by country_code,
+where nvl(m.country_code,'total')='total'
+group by if(nvl(country_code,'total')='total','nal','nal'),
        nvl(city_id,-10000),
        nvl(driver_serv_type,-10000);
     '''.format(
@@ -198,33 +202,60 @@ group by country_code,
     return HQL
 
 # 主流程
-def execution_data_task_id(ds, **kargs):
+def execution_data_task_id(ds, **kwargs):
+    v_date = kwargs.get('v_execution_date')
+    v_day = kwargs.get('v_execution_day')
+    v_hour = kwargs.get('v_execution_hour')
+
     hive_hook = HiveCliHook()
+    """
+            #功能函数
+            alter语句: alter_partition
+            删除分区: delete_partition
+            生产success: touchz_success
+
+            #参数
+            第一个参数true: 所有国家是否上线。false 没有
+            第二个参数true: 数据目录是有country_code分区。false 没有
+            第三个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
+
+            #读取sql
+            %_sql(ds,v_hour)
+
+            第一个参数ds: 天级任务
+            第二个参数v_hour: 小时级任务，需要使用
+
+        """
+    cf = CountriesPublicFrame("false", ds, db_name, table_name, hdfs_path, "true", "true")
+
+    # 删除分区
+    cf.delete_partition()
 
     # 读取sql
-    _sql = app_oride_global_operate_report_multi_d_sql_task(ds)
+    _sql = "\n" + cf.alter_partition() + "\n" + app_oride_global_operate_report_multi_d_sql_task(ds)
 
     logging.info('Executing: %s', _sql)
 
     # 执行Hive
     hive_hook.run_cli(_sql)
 
-    # 生成_SUCCESS
-    """
-    第一个参数true: 数据目录是有country_code分区。false 没有
-    第二个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
+    # 熔断数据，如果数据不能为0
+    # check_key_data_cnt_task(ds)
 
-    """
-    TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "true", "true")
-
+    # 生产success
+    cf.touchz_success()
 
 app_oride_global_operate_report_multi_d_task = PythonOperator(
     task_id='app_oride_global_operate_report_multi_d_task',
     python_callable=execution_data_task_id,
     provide_context=True,
+    op_kwargs={
+        'v_execution_date': '{{execution_date.strftime("%Y-%m-%d %H:%M:%S")}}',
+        'v_execution_day': '{{execution_date.strftime("%Y-%m-%d")}}',
+        'v_execution_hour': '{{execution_date.strftime("%H")}}'
+    },
     dag=dag
 )
 
-dependence_dm_oride_passenger_base_multi_cube_d_prev_day_task >> \
-dependence_dm_oride_order_base_d_prev_day_task >> \
-app_oride_global_operate_report_multi_d_task
+dependence_dm_oride_passenger_base_multi_cube_prev_day_task >> app_oride_global_operate_report_multi_d_task
+dependence_dm_oride_order_base_d_prev_day_task >> app_oride_global_operate_report_multi_d_task

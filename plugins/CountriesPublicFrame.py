@@ -171,7 +171,7 @@ class CountriesPublicFrame(object):
     
         except Exception as e:
 
-            #self.dingding_alert.postAppMessage('DW调度系统任务 {jobname} 数据产出异常'.format(jobname=self.table_name),'271')
+            #self.dingding_alert.send('DW调度系统任务 {jobname} 数据产出异常'.format(jobname=self.table_name),'271')
 
             logging.info(e)
 
@@ -199,7 +199,7 @@ class CountriesPublicFrame(object):
             #数据为0，发微信报警通知
             if line_num[0] == str(0):
                 
-                self.dingding_alert.postAppMessage('DW调度系统任务 {jobname} 数据产出异常'.format(jobname=self.table_name), '271')
+                self.dingding_alert.send('DW调度系统任务 {jobname} 数据产出异常'.format(jobname=self.table_name), '271')
 
                 logging.info("Error : {hdfs_data_dir} is empty".format(hdfs_data_dir=self.hdfs_data_dir_str))
                 sys.exit(1)
@@ -221,7 +221,7 @@ class CountriesPublicFrame(object):
     
         except Exception as e:
 
-            #self.dingding_alert.postAppMessage('DW调度系统任务 {jobname} 数据产出异常'.format(jobname=self.table_name),'271')
+            #self.dingding_alert.send('DW调度系统任务 {jobname} 数据产出异常'.format(jobname=self.table_name),'271')
 
             logging.info(e)
 
@@ -312,7 +312,7 @@ class CountriesPublicFrame(object):
 
         except Exception as e:
 
-            #self.dingding_alert.postAppMessage('DW调度系统任务 {jobname} 数据产出异常'.format(jobname=table_name),'271')
+            #self.dingding_alert.send('DW调度系统任务 {jobname} 数据产出异常'.format(jobname=table_name),'271')
 
             logging.info(e)
 
@@ -396,7 +396,7 @@ class CountriesPublicFrame(object):
                    
         except Exception as e:
 
-            #self.dingding_alert.postAppMessage('DW调度系统任务 {jobname} 数据产出异常'.format(jobname=table_name),'271')
+            #self.dingding_alert.send('DW调度系统任务 {jobname} 数据产出异常'.format(jobname=table_name),'271')
 
             logging.info(e)
 
@@ -492,7 +492,7 @@ class CountriesPublicFrame(object):
                    
         except Exception as e:
 
-            #self.dingding_alert.postAppMessage('DW调度系统任务 {jobname} 数据产出异常'.format(jobname=table_name),'271')
+            #self.dingding_alert.send('DW调度系统任务 {jobname} 数据产出异常'.format(jobname=table_name),'271')
 
             logging.info(e)
 

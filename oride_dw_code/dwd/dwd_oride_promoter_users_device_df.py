@@ -18,6 +18,7 @@ from airflow.sensors.hive_partition_sensor import HivePartitionSensor
 from airflow.sensors import UFileSensor
 from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
 from plugins.TaskTouchzSuccess import TaskTouchzSuccess
+from plugins.CountriesPublicFrame import CountriesPublicFrame
 import json
 import logging
 from airflow.models import Variable
@@ -26,7 +27,7 @@ import os
 
 args = {
         'owner': 'yangmingze',
-        'start_date': datetime(2019, 11, 9),
+        'start_date': datetime(2019, 12, 6),
         'depends_on_past': False,
         'retries': 3,
         'retry_delay': timedelta(minutes=2),
@@ -36,7 +37,7 @@ args = {
 } 
 
 dag = airflow.DAG( 'dwd_oride_promoter_users_device_df', 
-    schedule_interval="00 01 * * *", 
+    schedule_interval="00 03 * * *", 
     default_args=args,
     catchup=False) 
 
@@ -70,7 +71,7 @@ def fun_task_timeout_monitor(ds,dag,**op_kwargs):
     dag_ids=dag.dag_id
 
     msg = [
-        {"db": "oride_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=NG/dt={pt}".format(pt=ds), "timeout": "800"}
+        {"db": "oride_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "800"}
     ]
 
     TaskTimeoutMonitor().set_task_monitor(msg)
@@ -103,7 +104,7 @@ phone,--æ‰‹æœºå·
 device_id,--device id
 register_time,--未知
 bind_time,--æ–°ç”¨æˆ·ç»‘å®šæŽ¨å¹¿ç æ—¶é—´
-_dt,--未知
+`_dt` as s_dt,--未知
 hour,--未知
 ip,--未知
 'nal' as country_code,
@@ -185,10 +186,10 @@ def execution_data_task_id(ds,**kwargs):
 
     """
 
-    cf=CountriesPublicFrame("true",ds,db_name,table_name,hdfs_path,"true","true")
+    cf=CountriesPublicFrame("false",ds,db_name,table_name,hdfs_path,"true","false")
 
     #删除分区
-    cf.delete_partition()
+    #cf.delete_partition()
 
     #拼接SQL
 
