@@ -384,43 +384,76 @@ on
   b.city_code=c.id
 ;
 
+
 --03.将最新的首单交易日期数据插入到最终表中
 insert overwrite table opos_dw.dim_opos_bd_relation_df partition(country_code,dt)
 select 
-a.id
-,a.opay_id
-,a.shop_name
-,a.opay_account
-,a.city_code
-,a.city_name
-,a.country
-,a.job_id
-,a.hcm_id
-,a.hcm_name
-,a.cm_id
-,a.cm_name
-,a.rm_id
-,a.rm_name
-,a.bdm_id
-,a.bdm_name
-,a.bd_id
-,a.bd_name
-,a.contact_name
-,a.contact_phone
-,a.cate_id
-,a.status
-,a.created_at
-,nvl(b.dt,'-') as first_order_date
+m.id
+,m.opay_id
+,m.shop_name
+,m.opay_account
+,m.city_code
+,m.city_name
+,m.country
+,m.job_id
+,m.hcm_id
+,m.hcm_name
+,m.cm_id
+,m.cm_name
+,m.rm_id
+,m.rm_name
+,m.bdm_id
+,m.bdm_name
+,m.bd_id
+,m.bd_name
+,m.contact_name
+,m.contact_phone
+,m.cate_id
+,m.status
+,m.created_at
+--如果关联上当天交易的商户,说明商户当天是第一笔交易,那就去当天时间作为第一笔,反之还是取历史表中的日期作为第一笔
+,if(n.dt is null,m.first_order_date,n.dt) as first_order_date
 
 ,'nal' as country_code
 ,'{pt}' as dt 
 from
-  (select * from opos_dw.dim_opos_bd_relation_tmp_df where country_code='nal' and dt='{pt}') as a
+  (
+  select
+  a.id
+  ,a.opay_id
+  ,a.shop_name
+  ,a.opay_account
+  ,a.city_code
+  ,a.city_name
+  ,a.country
+  ,a.job_id
+  ,a.hcm_id
+  ,a.hcm_name
+  ,a.cm_id
+  ,a.cm_name
+  ,a.rm_id
+  ,a.rm_name
+  ,a.bdm_id
+  ,a.bdm_name
+  ,a.bd_id
+  ,a.bd_name
+  ,a.contact_name
+  ,a.contact_phone
+  ,a.cate_id
+  ,a.status
+  ,a.created_at
+  ,nvl(b.first_order_date,'-') as first_order_date
+  from
+    (select * from opos_dw.dim_opos_bd_relation_tmp_df where country_code='nal' and dt='{pt}') as a
+  left join
+    (select id,first_order_date from opos_dw.dim_opos_bd_relation_df where country_code='nal' and dt='{before_1_day}') as b
+  on a.id=b.id
+  ) as m
 left join
-  (select receipt_id,'{pt}' as dt from opos_dw_ods.ods_sqoop_base_pre_opos_payment_order_di where dt='{pt}' group by receipt_id) as b
-on
-  if(a.opay_id='-',a.opay_id,'having')=b.receipt_id;
+  (select receipt_id,'{pt}' as dt from opos_dw_ods.ods_sqoop_base_pre_opos_payment_order_di where dt='{pt}' group by receipt_id) as n
+on if(m.first_order_date='-',m.opay_id,'having')=n.receipt_id
 
+;
 
 
 
@@ -429,6 +462,7 @@ on
 
 '''.format(
         pt=ds,
+        before_1_day=airflow.macros.ds_add(ds, -1),
         table=table_name,
         now_day='{{macros.ds_add(ds, +1)}}',
         db=db_name
@@ -443,7 +477,7 @@ def check_key_data_task(ds):
     # 主键重复校验
     check_sql = '''
     SELECT count(1)-count(distinct id) as cnt
-      FROM {db}.{table}
+      FROM opos_dw.dim_opos_bd_relation_df
       WHERE country_code='nal' and dt='{pt}'
     '''.format(
         pt=ds,
