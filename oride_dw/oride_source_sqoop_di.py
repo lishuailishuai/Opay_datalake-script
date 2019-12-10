@@ -11,6 +11,7 @@ import logging
 from plugins.SqoopSchemaUpdate import SqoopSchemaUpdate
 from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
 from utils.util import on_success_callback
+from airflow.models import Variable
 
 
 args = {
@@ -66,7 +67,7 @@ table_list = [
 
 HIVE_DB = 'oride_dw_ods'
 HIVE_TABLE = 'ods_sqoop_%s_%s_di'
-UFILE_PATH = 'ufile://opay-datalake/oride_dw_sqoop_di/%s/%s'
+UFILE_PATH = Variable.get("OBJECT_STORAGE_PROTOCOL") + 'opay-datalake/oride_dw_sqoop_di/%s/%s'
 ODS_CREATE_TABLE_SQL = '''
     CREATE EXTERNAL TABLE IF NOT EXISTS {db_name}.`{table_name}`(
         {columns}
