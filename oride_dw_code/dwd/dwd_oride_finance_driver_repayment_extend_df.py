@@ -104,7 +104,24 @@ dim_oride_driver_base_prev_day_task = UFileSensor(
     bucket_name='opay-datalake',
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
-) 
+)
+
+
+
+#依赖前一天分区
+ods_sqoop_base_data_driver_pay_records_df_prev_day_task=UFileSensor(
+    task_id="ods_sqoop_base_data_driver_pay_records_df_prev_day_task",
+    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="oride_dw_sqoop/oride_data/data_driver_pay_records",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60, #依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+    )
+
+
+
 
 ##----------------------------------------- 变量 ---------------------------------------## 
 
@@ -322,6 +339,46 @@ group by age.driver_id
 ) avg1
 on dri.driver_id=avg1.driver_id
 
+left join
+(--新增实际还款金额、换算逾期天数（不分专快，专车是lagos的 ）
+    select 
+        driver_id,
+        repaid_numbers,--已还款期数
+        amount,--每期贷款金额
+    from oride_dw_ods.ods_sqoop_base_data_driver_repayment_df
+    where  dt='{pt}' and repayment_type = 0
+)ddrd on  dri.driver_id =  ddrd.driver_id
+
+left join
+(--新增实际还款金额、换算逾期天数（不分专快，专车是lagos的 ）
+    
+    select 
+        rechages.driver_id,
+        sum(rechages.amount) as rechages_amount --财务实际到账
+    from
+    (
+        select 
+            days.driver_id,
+            days.day
+        from oride_dw_ods.ods_sqoop_base_data_driver_pay_records_df pays
+        left join oride_dw_ods.ods_sqoop_base_data_driver_records_day_df days on pays.driver_id = day.driver_id
+        where pays.status=1 
+            and FROM_UNIXTIME(pays.created_at,'%Y-%m-%d')='{pt}' 
+            and find_in_set(days.day,pays.record_days)
+    ) as driver_days
+    
+    left join 
+    (
+        select
+            driver_id,
+            amount,
+        from oride_dw_ods.ods_sqoop_base_data_driver_recharge_records_df
+        where driver_id is not null and  amount_reason = 6
+    ) recharges
+    on driver_days.driver_id=recharges.driver_id and FROM_UNIXTIME(recharges.created_at,'%Y-%m-%d')=FROM_UNIXTIME(driver_days.day,'%Y-%m-%d')
+
+    
+)
 '''.format(
         pt=ds,
         now_day=airflow.macros.ds_add(ds, +1),
@@ -427,3 +484,4 @@ ods_sqoop_base_data_driver_records_day_df_prev_day_tesk>>dwd_oride_finance_drive
 ods_sqoop_base_data_driver_recharge_records_df_prev_day_tesk>>dwd_oride_finance_driver_repayment_extend_df_task
 ods_sqoop_base_data_driver_repayment_df_prev_day_tesk>>dwd_oride_finance_driver_repayment_extend_df_task
 dim_oride_driver_base_prev_day_task>>dwd_oride_finance_driver_repayment_extend_df_task
+ods_sqoop_base_data_driver_pay_records_df_prev_day_task>>dwd_oride_finance_driver_repayment_extend_df_task
