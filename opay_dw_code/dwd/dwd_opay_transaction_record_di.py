@@ -181,7 +181,7 @@ def dwd_opay_transaction_record_di_sql_task(ds):
                 order_no, amount, currency, 
                 originator_type, originator_role, originator_kyc_level, originator_id, originator_name, 'IN' as originator_money_flow,
                 '-' as affiliate_type, '-' as affiliate_role, affiliate_mobile as affiliate_id, '-' as affiliate_name, 'OUT' as affiliate_money_flow,
-                create_time, update_time, 'Account Recharge' as top_service_type, 'pos' as sub_service_type, 
+                create_time, update_time, 'Account Recharge' as top_service_type, 'easycash' as sub_service_type, 
                 order_status, error_code, error_msg, '-' as client_source, '-' as pay_way, country_code, dt
             from opay_dw.dwd_opay_easycash_record_di
             where dt = '{pt}'
