@@ -185,6 +185,7 @@ def dwd_opay_transaction_record_di_sql_task(ds):
                 order_status, error_code, error_msg, '-' as client_source, '-' as pay_way, country_code, dt
             from opay_dw.dwd_opay_easycash_record_di
             where dt = '{pt}'
+            
         )
     insert overwrite table {db}.{table} 
     partition(country_code, dt)
