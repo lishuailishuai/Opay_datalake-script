@@ -169,7 +169,8 @@ def dm_opay_transaction_originator_base_cube_d_sql_task(ds):
         (country_code, top_service_type, sub_service_type, originator_type),
         (country_code, top_service_type, sub_service_type),
         (country_code, top_service_type),
-        (country_code)
+        (country_code),
+        ()
     )
 
     '''.format(
