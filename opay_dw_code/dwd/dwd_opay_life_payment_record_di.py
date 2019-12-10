@@ -214,7 +214,7 @@ def dwd_opay_life_payment_record_di_sql_task(ds):
             create_time, update_time, country, 'Betting' sub_service_type,
             order_status, error_code, error_msg, client_source, pay_channel as pay_way
         from opay_dw_ods.ods_sqoop_base_betting_topup_record_di
-        where dt = '{pt}'   
+        where dt = '{pt}' and recharge_service_provider != '' and recharge_service_provider != 'supabet' and recharge_service_provider is not null
         union all
         select 
             order_no, amount, currency, user_id as originator_id,
