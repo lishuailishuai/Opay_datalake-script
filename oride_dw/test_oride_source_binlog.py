@@ -66,8 +66,12 @@ def run_insert_ods(ds, execution_date, **kwargs):
     mysql_cursor = mysql_conn.cursor()
     mysql_cursor.execute(column_sql)
     results = mysql_cursor.fetchall()
+
+    print(hive_table_columns)
     add_columns=[]
     for result in results:
+
+        print(result[0])
         if result[1]=='timestamp' or result[1]=='varchar' or result[1]=='char' or result[1]=='text':
             data_type='string'
         elif result[1]=='decimal':
