@@ -373,17 +373,17 @@ b.id
 ,'nal' as country_code
 ,'{pt}' as dt 
 from
-  (select id,opay_id,shop_name,opay_account,city_code,6 as job_id,hcm_id,hcm_name,cm_id,cm_name,rm_id,rm_name,bdm_id,bdm_name,bd_id,bd_name,contact_name,contact_phone,cate_id,status,created_at from bd
+  (select id,opay_id,shop_name,opay_account,city_code,6 as job_id,hcm_id,hcm_name,cm_id,cm_name,rm_id,rm_name,bdm_id,bdm_name,bd_id,bd_name,contact_name,contact_phone,cate_id,status,created_at,shop_class from bd
   union
-  select id,opay_id,shop_name,opay_account,city_code,5 as job_id,hcm_id,hcm_name,cm_id,cm_name,rm_id,rm_name,bdm_id,bdm_name,bd_id,bd_name,contact_name,contact_phone,cate_id,status,created_at from bdm
+  select id,opay_id,shop_name,opay_account,city_code,5 as job_id,hcm_id,hcm_name,cm_id,cm_name,rm_id,rm_name,bdm_id,bdm_name,bd_id,bd_name,contact_name,contact_phone,cate_id,status,created_at,shop_class from bdm
   union
-  select id,opay_id,shop_name,opay_account,city_code,4 as job_id,hcm_id,hcm_name,cm_id,cm_name,rm_id,rm_name,bdm_id,bdm_name,bd_id,bd_name,contact_name,contact_phone,cate_id,status,created_at from rm
+  select id,opay_id,shop_name,opay_account,city_code,4 as job_id,hcm_id,hcm_name,cm_id,cm_name,rm_id,rm_name,bdm_id,bdm_name,bd_id,bd_name,contact_name,contact_phone,cate_id,status,created_at,shop_class from rm
   union
-  select id,opay_id,shop_name,opay_account,city_code,3 as job_id,hcm_id,hcm_name,cm_id,cm_name,rm_id,rm_name,bdm_id,bdm_name,bd_id,bd_name,contact_name,contact_phone,cate_id,status,created_at from cm
+  select id,opay_id,shop_name,opay_account,city_code,3 as job_id,hcm_id,hcm_name,cm_id,cm_name,rm_id,rm_name,bdm_id,bdm_name,bd_id,bd_name,contact_name,contact_phone,cate_id,status,created_at,shop_class from cm
   union
-  select id,opay_id,shop_name,opay_account,city_code,2 as job_id,hcm_id,hcm_name,cm_id,cm_name,rm_id,rm_name,bdm_id,bdm_name,bd_id,bd_name,contact_name,contact_phone,cate_id,status,created_at from hcm
+  select id,opay_id,shop_name,opay_account,city_code,2 as job_id,hcm_id,hcm_name,cm_id,cm_name,rm_id,rm_name,bdm_id,bdm_name,bd_id,bd_name,contact_name,contact_phone,cate_id,status,created_at,shop_class from hcm
   union
-  select id,opay_id,shop_name,opay_account,city_code,-1 as job_id,hcm_id,hcm_name,cm_id,cm_name,rm_id,rm_name,bdm_id,bdm_name,bd_id,bd_name,contact_name,contact_phone,cate_id,status,created_at from nobd
+  select id,opay_id,shop_name,opay_account,city_code,-1 as job_id,hcm_id,hcm_name,cm_id,cm_name,rm_id,rm_name,bdm_id,bdm_name,bd_id,bd_name,contact_name,contact_phone,cate_id,status,created_at,shop_class from nobd
   ) as b
 left join
   (select id,name,country from opos_dw_ods.ods_sqoop_base_bd_city_df where dt = '{pt}') as c
