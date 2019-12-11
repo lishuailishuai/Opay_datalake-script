@@ -79,7 +79,7 @@ ods_sqoop_base_data_driver_recharge_records_df_prev_day_tesk = UFileSensor(
 
 # 依赖前一天分区
 ods_sqoop_base_data_driver_repayment_df_prev_day_tesk = UFileSensor(
-    task_id="od s_sqoop_base_data_driver_repayment_df_prev_day_tesk",
+    task_id="ods_sqoop_base_data_driver_repayment_df_prev_day_tesk",
     filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
         hdfs_path_str="oride_dw_sqoop/oride_data/data_driver_repayment",
         pt='{{ds}}'
