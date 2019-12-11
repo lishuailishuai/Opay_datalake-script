@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+#  -*-  coding:  utf-8  -*-
 import airflow
 from datetime import datetime, timedelta
 from airflow.operators.hive_operator import HiveOperator
@@ -22,26 +22,26 @@ import logging
 from airflow.models import Variable
 import requests
 import os
- 
+
 args = {
-        'owner': 'yangmingze',
-        'start_date': datetime(2019, 5, 20),
-        'depends_on_past': False,
-        'retries': 3,
-        'retry_delay': timedelta(minutes=2),
-        'email': ['bigdata_dw@opay-inc.com'],
-        'email_on_failure': True,
-        'email_on_retry': False,
-} 
+    'owner': 'yangmingze',
+    'start_date': datetime(2019, 5, 20),
+    'depends_on_past': False,
+    'retries': 3,
+    'retry_delay': timedelta(minutes=2),
+    'email': ['bigdata_dw@opay-inc.com'],
+    'email_on_failure': True,
+    'email_on_retry': False,
+}
 
-dag = airflow.DAG( 'dwd_oride_finance_driver_repayment_extend_df', 
-    schedule_interval="30 02 * * *", 
-    default_args=args,
-    catchup=False) 
+dag = airflow.DAG('dwd_oride_finance_driver_repayment_extend_df',
+                  schedule_interval="30  02  *  *  *",
+                  default_args=args,
+                  catchup=False)
 
-##----------------------------------------- 依赖 ---------------------------------------## 
+##-----------------------------------------  依赖  ---------------------------------------##
 
-#依赖前一天分区
+# 依赖前一天分区
 ods_sqoop_base_data_driver_balance_extend_df_prev_day_tesk = UFileSensor(
     task_id='ods_sqoop_base_data_driver_balance_extend_df_prev_day_tesk',
     filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
@@ -51,48 +51,43 @@ ods_sqoop_base_data_driver_balance_extend_df_prev_day_tesk = UFileSensor(
     bucket_name='opay-datalake',
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
-) 
+)
 
-
-
-#依赖前一天分区
-ods_sqoop_base_data_driver_records_day_df_prev_day_tesk=UFileSensor(
+# 依赖前一天分区
+ods_sqoop_base_data_driver_records_day_df_prev_day_tesk = UFileSensor(
     task_id="ods_sqoop_base_data_driver_records_day_df_prev_day_tesk",
     filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
         hdfs_path_str="oride_dw_sqoop/oride_data/data_driver_records_day",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
-    poke_interval=60, #依赖不满足时，一分钟检查一次依赖状态 
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
-    )
+)
 
-
-#依赖前一天分区
-ods_sqoop_base_data_driver_recharge_records_df_prev_day_tesk=UFileSensor(
+# 依赖前一天分区
+ods_sqoop_base_data_driver_recharge_records_df_prev_day_tesk = UFileSensor(
     task_id="ods_sqoop_base_data_driver_recharge_records_df_prev_day_tesk",
     filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
         hdfs_path_str="oride_dw_sqoop/oride_data/data_driver_recharge_records",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
-    poke_interval=60, #依赖不满足时，一分钟检查一次依赖状态 
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
-    )
+)
 
-
-#依赖前一天分区
-ods_sqoop_base_data_driver_repayment_df_prev_day_tesk=UFileSensor(
+# 依赖前一天分区
+ods_sqoop_base_data_driver_repayment_df_prev_day_tesk = UFileSensor(
     task_id="ods_sqoop_base_data_driver_repayment_df_prev_day_tesk",
     filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
         hdfs_path_str="oride_dw_sqoop/oride_data/data_driver_repayment",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
-    poke_interval=60, #依赖不满足时，一分钟检查一次依赖状态
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
-    )
-
+)
 
 # 依赖前一天分区
 dim_oride_driver_base_prev_day_task = UFileSensor(
@@ -106,42 +101,27 @@ dim_oride_driver_base_prev_day_task = UFileSensor(
     dag=dag
 )
 
+##----------------------------------------- 变量 ---------------------------------------##
+
+db_name = "oride_dw"
+table_name = "dwd_oride_finance_driver_repayment_extend_df"
+hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
 
 
-#依赖前一天分区
-ods_sqoop_base_data_driver_pay_records_df_prev_day_task=UFileSensor(
-    task_id="ods_sqoop_base_data_driver_pay_records_df_prev_day_task",
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride_dw_sqoop/oride_data/data_driver_pay_records",
-        pt='{{ds}}'
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60, #依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-    )
+##----------------------------------------- 任务超时监控 ---------------------------------------##
 
-
-
-
-##----------------------------------------- 变量 ---------------------------------------## 
-
-db_name="oride_dw"
-table_name="dwd_oride_finance_driver_repayment_extend_df"
-hdfs_path="ufile://opay-datalake/oride/oride_dw/"+table_name
-
-##----------------------------------------- 任务超时监控 ---------------------------------------## 
-
-def fun_task_timeout_monitor(ds,dag,**op_kwargs):
-
-    dag_ids=dag.dag_id
+def fun_task_timeout_monitor(ds, dag, **op_kwargs):
+    dag_ids = dag.dag_id
 
     tb = [
-        {"db": "oride_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "2400"}
+        {"db": "oride_dw", "table": "{dag_name}".format(dag_name=dag_ids),
+         "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "2400"}
     ]
 
     TaskTimeoutMonitor().set_task_monitor(tb)
 
-task_timeout_monitor= PythonOperator(
+
+task_timeout_monitor = PythonOperator(
     task_id='task_timeout_monitor',
     python_callable=fun_task_timeout_monitor,
     provide_context=True,
@@ -149,11 +129,10 @@ task_timeout_monitor= PythonOperator(
 )
 
 
-##----------------------------------------- 脚本 ---------------------------------------## 
+##----------------------------------------- 脚本 ---------------------------------------##
 
 def dwd_oride_finance_driver_repayment_extend_df_sql_task(ds):
-
-    hql='''
+    hql = '''
     set hive.exec.parallel=true;
     set hive.exec.dynamic.partition.mode=nonstrict;
 
@@ -337,62 +316,21 @@ sum(abs(amount)) as amount
 ON age.driver_id = tb1.driver_id and age.day = tb1.created_at
 group by age.driver_id
 ) avg1
-on dri.driver_id=avg1.driver_id
+on dri.driver_id=avg1.driver_id 
 
-left join
-(--新增实际还款金额、换算逾期天数（不分专快，专车是lagos的 ）
-    select 
-        driver_id,
-        repaid_numbers,--已还款期数
-        amount,--每期贷款金额
-    from oride_dw_ods.ods_sqoop_base_data_driver_repayment_df
-    where  dt='{pt}' and repayment_type = 0
-)ddrd on  dri.driver_id =  ddrd.driver_id
-
-left join
-(--新增实际还款金额、换算逾期天数（不分专快，专车是lagos的 ）
-    
-    select 
-        rechages.driver_id,
-        sum(rechages.amount) as rechages_amount --财务实际到账
-    from
-    (
-        select 
-            days.driver_id,
-            days.day
-        from oride_dw_ods.ods_sqoop_base_data_driver_pay_records_df pays
-        left join oride_dw_ods.ods_sqoop_base_data_driver_records_day_df days on pays.driver_id = day.driver_id
-        where pays.status=1 
-            and FROM_UNIXTIME(pays.created_at,'%Y-%m-%d')='{pt}' 
-            and find_in_set(days.day,pays.record_days)
-    ) as driver_days
-    
-    left join 
-    (
-        select
-            driver_id,
-            amount,
-        from oride_dw_ods.ods_sqoop_base_data_driver_recharge_records_df
-        where driver_id is not null and  amount_reason = 6
-    ) recharges
-    on driver_days.driver_id=recharges.driver_id and FROM_UNIXTIME(recharges.created_at,'%Y-%m-%d')=FROM_UNIXTIME(driver_days.day,'%Y-%m-%d')
-
-    
-)
 '''.format(
         pt=ds,
         now_day=airflow.macros.ds_add(ds, +1),
         prev_6_day='{{macros.ds_add(ds, -6)}}',
         table=table_name
-        )
+    )
     return hql
 
- 
-#熔断数据，如果数据重复，报错
-def check_key_data_task(ds):
 
-    #主键重复校验
-    HQL_DQC='''
+# 熔断数据，如果数据重复，报错
+def check_key_data_task(ds):
+    # 主键重复校验
+    HQL_DQC = '''
     SELECT count(1)-count(distinct driver_id) as cnt
       FROM oride_dw.{table}
       WHERE dt='{pt}'
@@ -400,7 +338,7 @@ def check_key_data_task(ds):
         pt=ds,
         now_day=airflow.macros.ds_add(ds, +1),
         table=table_name
-        )
+    )
 
     cursor = get_hive_cursor()
     logging.info('Executing 主键重复校验: %s', HQL_DQC)
@@ -408,19 +346,17 @@ def check_key_data_task(ds):
     cursor.execute(HQL_DQC)
     res = cursor.fetchone()
 
-    if res[0] >1:
-        raise Exception ("Error The primary key repeat !", res)
+    if res[0] > 1:
+        raise Exception("Error The primary key repeat !", res)
     else:
         print("-----> Notice Data Export Success ......")
-    
 
 
-#主流程
-def execution_data_task_id(ds,**kwargs):
-
-    v_date=kwargs.get('v_execution_date')
-    v_day=kwargs.get('v_execution_day')
-    v_hour=kwargs.get('v_execution_hour')
+# 主流程
+def execution_data_task_id(ds, **kwargs):
+    v_date = kwargs.get('v_execution_date')
+    v_day = kwargs.get('v_execution_day')
+    v_hour = kwargs.get('v_execution_hour')
 
     hive_hook = HiveCliHook()
 
@@ -443,45 +379,43 @@ def execution_data_task_id(ds,**kwargs):
 
     """
 
-    cf=CountriesPublicFrame("true",ds,db_name,table_name,hdfs_path,"true","true")
+    cf = CountriesPublicFrame("true", ds, db_name, table_name, hdfs_path, "true", "true")
 
-    #删除分区
-    #cf.delete_partition()
+    # 删除分区
+    # cf.delete_partition()
 
-    #读取sql
-    _sql="\n"+cf.alter_partition()+"\n"+dwd_oride_finance_driver_repayment_extend_df_sql_task(ds)
+    # 读取sql
+    _sql = "\n" + cf.alter_partition() + "\n" + dwd_oride_finance_driver_repayment_extend_df_sql_task(ds)
 
-    logging.info('Executing: %s',_sql)
+    logging.info('Executing: %s', _sql)
 
-    #执行Hive
+    # 执行Hive
     hive_hook.run_cli(_sql)
 
-    #熔断数据，如果数据不能为0
-    #check_key_data_cnt_task(ds)
+    # 熔断数据，如果数据不能为0
+    # check_key_data_cnt_task(ds)
 
-    #熔断数据
+    # 熔断数据
     check_key_data_task(ds)
 
-    #生产success
+    # 生产success
     cf.touchz_success()
 
-    
-dwd_oride_finance_driver_repayment_extend_df_task= PythonOperator(
+
+dwd_oride_finance_driver_repayment_extend_df_task = PythonOperator(
     task_id='dwd_oride_finance_driver_repayment_extend_df_task',
     python_callable=execution_data_task_id,
     provide_context=True,
     op_kwargs={
-        'v_execution_date':'{{execution_date.strftime("%Y-%m-%d %H:%M:%S")}}',
-        'v_execution_day':'{{execution_date.strftime("%Y-%m-%d")}}',
-        'v_execution_hour':'{{execution_date.strftime("%H")}}'
+        'v_execution_date': '{{execution_date.strftime("%Y-%m-%d %H:%M:%S")}}',
+        'v_execution_day': '{{execution_date.strftime("%Y-%m-%d")}}',
+        'v_execution_hour': '{{execution_date.strftime("%H")}}'
     },
     dag=dag
 )
 
-
-ods_sqoop_base_data_driver_balance_extend_df_prev_day_tesk>>dwd_oride_finance_driver_repayment_extend_df_task
-ods_sqoop_base_data_driver_records_day_df_prev_day_tesk>>dwd_oride_finance_driver_repayment_extend_df_task
-ods_sqoop_base_data_driver_recharge_records_df_prev_day_tesk>>dwd_oride_finance_driver_repayment_extend_df_task
-ods_sqoop_base_data_driver_repayment_df_prev_day_tesk>>dwd_oride_finance_driver_repayment_extend_df_task
-dim_oride_driver_base_prev_day_task>>dwd_oride_finance_driver_repayment_extend_df_task
-ods_sqoop_base_data_driver_pay_records_df_prev_day_task>>dwd_oride_finance_driver_repayment_extend_df_task
+ods_sqoop_base_data_driver_balance_extend_df_prev_day_tesk >> dwd_oride_finance_driver_repayment_extend_df_task
+ods_sqoop_base_data_driver_records_day_df_prev_day_tesk >> dwd_oride_finance_driver_repayment_extend_df_task
+ods_sqoop_base_data_driver_recharge_records_df_prev_day_tesk >> dwd_oride_finance_driver_repayment_extend_df_task
+ods_sqoop_base_data_driver_repayment_df_prev_day_tesk >> dwd_oride_finance_driver_repayment_extend_df_task
+dim_oride_driver_base_prev_day_task >> dwd_oride_finance_driver_repayment_extend_df_task
