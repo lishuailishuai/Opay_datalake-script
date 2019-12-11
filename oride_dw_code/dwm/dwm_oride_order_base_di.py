@@ -189,7 +189,7 @@ def dwm_oride_order_base_di_sql_task(ds):
            --是否成功播单（push节点）dm层成功播单量没有限定success=1
 
            if(show.order_id is not null,1,0) as is_accpet_show,
-           --是否推送给骑手（骑手端打点show节点）
+           --是否推送给骑手（骑手端打点show节点，包含骑手端前端show和后端push show）
 
            if(click.order_id is not null,1,0) as is_accpet_click,
            --是否应答（骑手端打点click节点）
@@ -312,6 +312,9 @@ def dwm_oride_order_base_di_sql_task(ds):
            --订单状态 (0: wait assign, 1: pick up passenger, 2: wait passenger, 3: send passenger, 4: arrive destination, 5: finished, 6: cancel,13:乘客取消待支付)
            
            ord.estimate_price,  --预估价格
+           
+           if(show.order_id is not null and driver_accept_show_times>0,1,0) as is_driver_accept_show, 
+           --骑手端是否被展示（骑手端埋点数据，只是包含骑手端前端show部分）
 
  		   ord.country_code as country_code,
 
@@ -362,7 +365,8 @@ def dwm_oride_order_base_di_sql_task(ds):
     (
         SELECT 
         order_id,
-        count(1) as driver_show_times   --骑手段推送司机总次数
+        count(1) as driver_show_times,   --骑手端推送司机总次数
+        sum(if(event_name='accept_order_show',1,0)) as driver_accept_show_times  --骑手端被展示次数
         FROM 
         oride_dw.dwd_oride_driver_accept_order_show_detail_di  --骑手show埋点
         WHERE dt='{pt}'
