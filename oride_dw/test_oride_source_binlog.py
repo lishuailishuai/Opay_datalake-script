@@ -60,14 +60,16 @@ def run_insert_ods(ds, execution_date, **kwargs):
             information_schema.columns
         WHERE
             table_schema='{db_name}' and table_name='{table_name}'
-    '''.format(db_name='oride_data', table_name=kwargs["params"]["table"])
-    mysql_hook=MySqlHook('sqoop_db')
+    '''.format(db_name='data', table_name=kwargs["params"]["table"])
+    mysql_hook=MySqlHook('sqoop_db_test')
     mysql_conn = mysql_hook.get_conn()
     mysql_cursor = mysql_conn.cursor()
     mysql_cursor.execute(column_sql)
     results = mysql_cursor.fetchall()
 
     print(hive_table_columns)
+
+    #新字段增加
     add_columns=[]
     for result in results:
 
@@ -78,6 +80,8 @@ def run_insert_ods(ds, execution_date, **kwargs):
             data_type=result[1]+"("+str(result[2]) + "," + str(result[3])+")"
         else:
             data_type=result[1]
+
+        #与当前hive 表结构进行对比
         if result[0] not in hive_table_columns:
             add_columns.append("`%s` %s comment '%s'" % (result[0], data_type, result[4]))
             hive_table_columns.append(result[0])
