@@ -441,6 +441,154 @@ SELECT base.order_id,
 
        '{pt}' AS dt
 FROM
+(
+
+            order_id ,
+             --订单 ID
+
+             passenger_id,
+             --乘客 ID
+
+             start_name,
+             --起点名称
+
+             start_lng ,
+             --起点经度
+
+             start_lat,
+             --起点纬度
+
+             end_name,
+             --终点名称
+
+             end_lng ,
+             --终点经度
+
+             end_lat ,
+             --终点纬度
+
+             duration ,
+             --订单持续时间
+
+             distance ,
+             --订单距离
+
+             basic_fare ,
+             --起步价
+
+             dst_fare ,
+             --里程费
+
+             dut_fare ,
+             --时长费
+
+             dut_price ,
+             --时长价格
+
+             dst_price ,
+             --距离价格
+
+             price ,
+             --订单价格
+
+             reward ,
+             --司机奖励
+
+             driver_id ,
+             --司机 ID
+
+             plate_num ,
+             --车牌号
+
+             take_time ,
+             --接单时间
+
+             wait_time ,
+             --到达接送点时间
+
+             pickup_time ,
+             --接到乘客时间
+
+             arrive_time ,
+             --到达终点时间
+
+             finish_time ,
+             --订单完成时间
+
+             cancel_role ,
+             --取消人角色(1: 用户, 2: 司机, 3:系统 4:Admin)
+
+             cancel_time ,
+             --取消时间
+
+             cancel_type ,
+             --取消原因类型
+
+             cancel_reason ,
+             --取消原因
+
+             status ,
+             --订单状态 (0: wait assign, 1: pick up passenger, 2: wait passenger, 3: send passenger, 4: arrive destination, 5: finished, 6: cancel)
+
+             create_time ,
+             --创建时间
+
+             fraud ,
+             --是否欺诈(0否1是)
+
+             driver_serv_type ,
+             --司机服务类型(1: Direct 2:Street)
+
+             product_id,
+             --订单车辆类型(0: 专快混合 1:driect[专车] 2: street[快车] 99:招手停)
+
+             refund_before_pay ,
+             --支付前资金调整
+
+             refund_after_pay ,
+             --支付后资金调整
+
+             abnormal ,
+             --异常状态(0 否 1 逃单)
+
+             flag_down_phone ,
+             --招手停上报手机号
+
+             zone_hash ,
+             --所属区域 hash
+
+             updated_time ,
+             --最后更新时间
+
+             city_id,
+             --所属城市(-999 无效数据)
+
+             trip_id, --'行程 ID'
+             wait_carpool,--'是否在等在拼车',
+             pax_num, -- 乘客数量 
+             tip,  --小费
+             serv_union_type,  --业务类型，下单类型+司机类型(serv_type+driver_serv_type)
+             falsify, --取消罚款
+             falsify_get, --取消罚款实际获得
+             falsify_driver_cancel, --司机取消罚款
+             falsify_get_driver_cancel, --司机取消罚款用户实际获得
+             wait_lng, --等待乘客上车位置经度
+             wait_lat, --等待乘客上车位置纬度
+             wait_in_radius, --是否在接驾范围内
+             wait_distance, --等待乘客上车距离
+             cancel_wait_payment_time,  --乘客取消待支付时间
+             country_id,  --国家ID
+             is_carpool , -- '是否是拼车' 
+             estimate_duration,  -- 预估时间
+             estimate_distance,-- '预估距离'
+             estimate_price,  --预估价格
+             premium_rate,  --溢价倍数
+             original_price, --溢价前费用 
+             premium_price_limit, --溢价金额上限
+             premium_adjust_price, --溢价金额
+             local_gov, --围栏ID
+             estimate_id,  --预估价记录表id
+             from 
      (SELECT 
 
              id AS order_id ,
@@ -562,10 +710,7 @@ FROM
 
              nvl(city_id,-999) AS city_id,
              --所属城市(-999 无效数据)
-
-             'nal' AS country_code,
-             --国家码字段
-
+             
              trip_id, --'行程 ID'
              wait_carpool,--'是否在等在拼车',
              pax_num, -- 乘客数量 
@@ -595,7 +740,7 @@ FROM
 
              row_number() OVER(partition BY id ORDER BY updated_at desc,pos DESC) AS rn1
 
-        FROM oride_dw.ods_binlog_data_order_hi
+        FROM oride_dw_ods.ods_binlog_data_order_hi
             
         WHERE concat_ws(' ',dt,hour) BETWEEN '{pt} 00' AND '{now_day} 00' --取昨天1天数据与今天早上00数据
             
@@ -603,7 +748,8 @@ FROM
             
         AND op IN ('c','u')
 
-         ) base
+         ) t1
+where rn1=1) base
 LEFT OUTER JOIN
 (SELECT id AS order_id,
        status AS pay_status,
