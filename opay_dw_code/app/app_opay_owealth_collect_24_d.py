@@ -421,7 +421,8 @@ ods_sqoop_owealth_share_acct_df_prev_day_task >> app_opay_owealth_collect_24_d_t
 ods_sqoop_owealth_share_order_df_prev_day_task >> app_opay_owealth_collect_24_d_task
 ods_sqoop_owealth_owealth_user_subscribed_df_prev_day_task >> app_opay_owealth_collect_24_d_task
 ods_sqoop_owealth_share_revenue_log_df_prev_day_task >> app_opay_owealth_collect_24_d_task
-app_opay_owealth_collect_24_d_task >> send_owealth_report
+
+
 
 
 
