@@ -139,7 +139,7 @@ def app_opay_owealth_collect_24_d_sql_task(ds):
           WHERE dt <= '{pt}' ) t1
        WHERE rn = 1)
     INSERT overwrite TABLE opay_dw.app_opay_owealth_collect_24_d partition (dt='{pt}')
-    SELECT '{pt}',
+    SELECT
     total_balance, --总的累计金额
      total_subscribe_amount,--总的申购金额
      total_redeem_amount,--总的赎回金额
