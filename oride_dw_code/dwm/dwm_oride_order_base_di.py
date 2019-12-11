@@ -315,6 +315,9 @@ def dwm_oride_order_base_di_sql_task(ds):
            
            if(show.order_id is not null and driver_accept_show_times>0,1,0) as is_driver_accept_show, 
            --骑手端是否被展示（骑手端埋点数据，只是包含骑手端前端show部分）
+           
+           if(ord.wait_time>0,1,0) as is_arrive_receive_point,
+           --司机是否到达接客点
 
  		   ord.country_code as country_code,
 
