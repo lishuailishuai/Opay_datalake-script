@@ -159,7 +159,7 @@ def dwm_opay_recharge_service_provider_di_sql_task(ds):
             where dt='{pt}' and create_time BETWEEN date_format(date_sub('{pt}', 1), 'yyyy-MM-dd 23') AND date_format('{pt}', 'yyyy-MM-dd 23') and service_provider_id != '500'
         ) rechard_di group by country_code, dt, service_type, service_provider_id, user_role, order_status
     ) t1 
-    join 
+    left join 
     (
         select * from opay_dw.dim_opay_service_provider_df where dt = '{pt}'
     ) t2 

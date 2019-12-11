@@ -37,6 +37,7 @@ add_algo_partitions = HiveOperator(
     hql="""
             ALTER TABLE oride_algo_score_data ADD IF NOT EXISTS PARTITION (dt = '{{ ds }}', hour = '{{ execution_date.strftime("%H") }}');
             ALTER TABLE oride_algo_trip_score_data ADD IF NOT EXISTS PARTITION (dt = '{{ ds }}', hour = '{{ execution_date.strftime("%H") }}');
+            ALTER TABLE can_carpool_order ADD IF NOT EXISTS PARTITION (dt = '{{ ds }}', hour = '{{ execution_date.strftime("%H") }}');
         """,
     schema='algo',
     dag=dag)
@@ -74,6 +75,7 @@ add_partitions = HiveOperator(
             ALTER TABLE uops_user_driver_tag ADD IF NOT EXISTS PARTITION (dt = '{{ ds }}', hour = '{{ execution_date.strftime("%H") }}');
             ALTER TABLE order_driver_feature_new ADD IF NOT EXISTS PARTITION (dt = '{{ ds }}', hour = '{{ execution_date.strftime("%H") }}');
             ALTER TABLE hex_supply_demand_feature ADD IF NOT EXISTS PARTITION (dt = '{{ ds }}', hour = '{{ execution_date.strftime("%H") }}');
+
         """,
     schema='oride_source',
     dag=dag)
