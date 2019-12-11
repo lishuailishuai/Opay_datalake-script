@@ -14,6 +14,7 @@ from airflow.sensors.external_task_sensor import ExternalTaskSensor
 from airflow.operators.bash_operator import BashOperator
 from airflow.sensors.named_hive_partition_sensor import NamedHivePartitionSensor
 from airflow.sensors.hive_partition_sensor import HivePartitionSensor
+from airflow.sensors.web_hdfs_sensor import WebHdfsSensor
 from airflow.sensors import UFileSensor
 from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
 from plugins.TaskTouchzSuccess import TaskTouchzSuccess
