@@ -587,7 +587,7 @@ FROM
              premium_price_limit, --溢价金额上限
              premium_adjust_price, --溢价金额
              local_gov, --围栏ID
-             estimate_id,  --预估价记录表id
+             estimate_id  --预估价记录表id
              from 
      (SELECT 
 
@@ -710,7 +710,7 @@ FROM
 
              nvl(city_id,-999) AS city_id,
              --所属城市(-999 无效数据)
-             
+
              trip_id, --'行程 ID'
              wait_carpool,--'是否在等在拼车',
              pax_num, -- 乘客数量 
