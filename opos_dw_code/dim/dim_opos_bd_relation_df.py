@@ -110,9 +110,9 @@ task_timeout_monitor = PythonOperator(
 def dim_opos_bd_relation_df_sql_task(ds):
     HQL = '''
 
+
 set hive.exec.parallel=true;
 set hive.exec.dynamic.partition.mode=nonstrict;
-
 
 --01.首先清空组织机构层级临时表,然后插入最新的组织机构层级数据
 --插入最新的数据
@@ -175,6 +175,7 @@ bd as (
   ,s.cate_id
   ,s.status
   ,substr(s.created_at,0,10) as created_at
+  ,s.shop_class
   from
     (select * from opos_dw_ods.ods_sqoop_base_bd_shop_df where dt = '{pt}' and bd_id>0) as s
   inner join
@@ -206,6 +207,7 @@ bdm as (
   ,s.cate_id
   ,s.status
   ,substr(s.created_at,0,10) as created_at
+  ,s.shop_class
   from
     (select * from opos_dw_ods.ods_sqoop_base_bd_shop_df where dt = '{pt}' and bd_id>0) as s
   inner join
@@ -236,6 +238,7 @@ rm as (
   ,s.cate_id
   ,s.status
   ,substr(s.created_at,0,10) as created_at
+  ,s.shop_class
   from
     (select * from opos_dw_ods.ods_sqoop_base_bd_shop_df where dt = '{pt}' and bd_id>0) as s
   inner join
@@ -266,6 +269,7 @@ cm as (
   ,s.cate_id
   ,s.status
   ,substr(s.created_at,0,10) as created_at
+  ,s.shop_class
   from
     (select * from opos_dw_ods.ods_sqoop_base_bd_shop_df where dt = '{pt}' and bd_id>0) as s
   inner join
@@ -297,6 +301,7 @@ hcm as (
   ,s.cate_id
   ,s.status
   ,substr(s.created_at,0,10) as created_at
+  ,s.shop_class
   from
     (select * from opos_dw_ods.ods_sqoop_base_bd_shop_df where dt = '{pt}' and bd_id>0) as s
   inner join
@@ -328,6 +333,7 @@ nobd as (
   ,s.cate_id
   ,s.status
   ,substr(s.created_at,0,10) as created_at
+  ,s.shop_class
   from
     (select * from opos_dw_ods.ods_sqoop_base_bd_shop_df where dt = '{pt}' and bd_id>0) as s
   left join
@@ -362,6 +368,7 @@ b.id
 ,b.cate_id
 ,b.status
 ,b.created_at
+,b.shop_class
 
 ,'nal' as country_code
 ,'{pt}' as dt 
@@ -383,7 +390,6 @@ left join
 on
   b.city_code=c.id
 ;
-
 
 --03.将最新的首单交易日期数据插入到最终表中
 insert overwrite table opos_dw.dim_opos_bd_relation_df partition(country_code,dt)
@@ -413,6 +419,7 @@ m.id
 ,m.created_at
 --如果关联上当天交易的商户,说明商户当天是第一笔交易,那就去当天时间作为第一笔,反之还是取历史表中的日期作为第一笔
 ,if(n.dt is null,m.first_order_date,n.dt) as first_order_date
+,m.shop_class
 
 ,'nal' as country_code
 ,'{pt}' as dt 
@@ -442,6 +449,7 @@ from
   ,a.cate_id
   ,a.status
   ,a.created_at
+  ,a.shop_class
   ,nvl(b.first_order_date,'-') as first_order_date
   from
     (select * from opos_dw.dim_opos_bd_relation_tmp_df where country_code='nal' and dt='{pt}') as a
@@ -454,6 +462,10 @@ left join
 on if(m.first_order_date='-',m.opay_id,'having')=n.receipt_id
 
 ;
+
+
+
+
 
 
 
