@@ -93,7 +93,7 @@ hdfs_path = "ufile://opay-datalake/opay/opay_dw/" + table_name
 
 def app_opay_owealth_collect_24_d_sql_task(ds):
     HQL = '''
-    WITH acct_base AS
+        WITH acct_base AS
       (SELECT user_id,
               create_time,
               balance
@@ -114,19 +114,33 @@ def app_opay_owealth_collect_24_d_sql_task(ds):
          user_subscribed AS
       (SELECT user_id,
               update_time,
-              subscribed  
+              subscribed,
+              mobile
        FROM opay_owealth_ods.ods_sqoop_owealth_owealth_user_subscribed_df
        WHERE dt='{pt}'
          AND from_unixtime(unix_timestamp(update_time, 'yyyy-MM-dd HH:mm:ss')+3600)<'{pt} 24:00:00' ),
          revenue AS
-      (SELECT *  
+      (SELECT *
        FROM opay_owealth_ods.ods_sqoop_owealth_share_revenue_log_df
        WHERE dt='{pt}'
-         AND from_unixtime(unix_timestamp(revenue_date, 'yyyy-MM-dd HH:mm:ss')+3600)>'{pt}' 
-         AND from_unixtime(unix_timestamp(revenue_date, 'yyyy-MM-dd HH:mm:ss')+3600)<'{pt} 24:00:00' ) 
+         AND from_unixtime(unix_timestamp(revenue_date, 'yyyy-MM-dd HH:mm:ss')+3600)>'{pt}'
+         AND from_unixtime(unix_timestamp(revenue_date, 'yyyy-MM-dd HH:mm:ss')+3600)<'{pt} 24:00:00' ),
+         user_role AS
+      (SELECT user_id,
+              ROLE,
+              mobile
+       FROM
+         (SELECT user_id,
+                 ROLE,
+                 mobile,
+                 row_number() over(partition BY user_id
+                                   ORDER BY update_time DESC) rn
+          FROM opay_dw_ods.ods_sqoop_base_user_di
+          WHERE dt <= '{pt}' ) t1
+       WHERE rn = 1)
     INSERT overwrite TABLE opay_dw.app_opay_owealth_collect_24_d partition (dt='{pt}')
-    
-    SELECT total_balance, --总的累计金额
+    SELECT '{pt}',
+    total_balance, --总的累计金额
      total_subscribe_amount,--总的申购金额
      total_redeem_amount,--总的赎回金额
      no_api_subscribe_amount,--总的手动申购金额
@@ -137,14 +151,19 @@ def app_opay_owealth_collect_24_d_sql_task(ds):
      add_open_api_subscribe_user,--累计开通自动申购用户数
      open_api_subscribe_user,--当天开通自动申购用户数
      close_api_subscribe_user,--当天关闭自用申购用户数
-     revenue_amount --入账利息
+     revenue_amount, --入账利息
+     m.ROLE
     
     FROM
       (SELECT '{pt}' AS dt,
+              ROLE,
               sum(balance) total_balance
-       FROM acct_base a) m
+       FROM acct_base a
+       INNER JOIN user_role b ON a.user_id=b.mobile
+       GROUP BY b.ROLE) m
     LEFT JOIN
       (SELECT '{pt}' AS dt,
+              ROLE,
               sum(CASE
                       WHEN order_type='1001' THEN trans_amount
                   END) total_subscribe_amount,
@@ -157,37 +176,50 @@ def app_opay_owealth_collect_24_d_sql_task(ds):
                            AND memo='API' THEN trans_amount
                   END) api_subscribe_amount,
               count(DISTINCT CASE
-                                 WHEN memo='申购' THEN user_id
+                                 WHEN memo='申购' THEN a.user_id
                              END) no_api_subscribe_user,
               count(DISTINCT CASE
-                                 WHEN memo='API' THEN user_id
+                                 WHEN memo='API' THEN a.user_id
                              END) api_subscribe_user,
               sum(CASE
-                      WHEN order_type='1002' and memo='赎回' THEN trans_amount
+                      WHEN order_type='1002'
+                           AND memo='赎回' THEN trans_amount
                   END) total_redeem_amount,
               count(DISTINCT CASE
-                                 WHEN memo='赎回' THEN user_id
+                                 WHEN memo='赎回' THEN a.user_id
                              END) redeem_user
-       FROM order_base a)m1 ON m.dt=m1.dt
+       FROM order_base a
+       INNER JOIN user_role b ON a.user_id=b.mobile
+       GROUP BY ROLE)m1 ON m.dt=m1.dt and m.ROLE=m1.role
     LEFT JOIN
       (SELECT '{pt}' AS dt,
+              ROLE,
               count(DISTINCT CASE
-                                 WHEN subscribed='Y' THEN user_id end) add_open_api_subscribe_user
-       FROM user_subscribed) m2 ON m.dt=m2.dt
+                                 WHEN subscribed='Y' THEN a.user_id
+                             END) add_open_api_subscribe_user
+       FROM user_subscribed a
+       INNER JOIN user_role b ON a.mobile=b.mobile
+       GROUP BY ROLE) m2 ON m.dt=m2.dt and m.ROLE=m2.ROLE
     LEFT JOIN
       (SELECT '{pt}' AS dt,
+              ROLE,
               count(DISTINCT CASE
-                                 WHEN subscribed='Y' THEN user_id
+                                 WHEN subscribed='Y' THEN a.user_id
                              END)open_api_subscribe_user,
               count(DISTINCT CASE
-                                 WHEN subscribed='N' THEN user_id
+                                 WHEN subscribed='N' THEN a.user_id
                              END) close_api_subscribe_user
-       FROM user_subscribed
-       WHERE from_unixtime(unix_timestamp(update_time, 'yyyy-MM-dd HH:mm:ss')+3600)>'{pt}') m3 ON m.dt=m3.dt
+       FROM user_subscribed a
+       INNER JOIN user_role b ON a.mobile=b.mobile
+       WHERE from_unixtime(unix_timestamp(update_time, 'yyyy-MM-dd HH:mm:ss')+3600)>'{pt}'
+       GROUP BY ROLE) m3 ON m.dt=m3.dt and m.ROLE=m3.ROLE
     LEFT JOIN
       (SELECT '{pt}' AS dt,
+              ROLE,
               sum(revenue_amount) revenue_amount
-       FROM revenue) m4 ON m.dt=m4.dt
+       FROM revenue a
+       INNER JOIN user_role b ON a.user_id=b.mobile
+       GROUP BY ROLE) m4 ON m.dt=m4.dt and m.ROLE=m4.ROLE
    
    
     '''.format(
