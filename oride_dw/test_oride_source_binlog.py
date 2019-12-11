@@ -26,7 +26,7 @@ args = {
 
 dag = airflow.DAG(
     'test_oride_source_binlog',
-    schedule_interval="05 * * * *",
+    schedule_interval="*/10 * * * *",
     default_args=args)
 
 ODS_DB='oride_dw_ods'
