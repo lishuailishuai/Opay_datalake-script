@@ -32,8 +32,8 @@ class OssSensor(BaseSensorOperator):
             *args,
             **kwargs):
         super().__init__(*args, **kwargs)
-        self.bucket_key = bucket_key,
-        self.bucket_name = bucket_name,
+        self.bucket_key = bucket_key
+        self.bucket_name = bucket_name
         self.oss_conn_id = oss_conn_id
 
     def poke(self, context):
