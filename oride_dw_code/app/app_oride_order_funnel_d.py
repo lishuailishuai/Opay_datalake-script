@@ -100,7 +100,7 @@ def app_oride_order_funnel_d_sql_task(ds):
     SET hive.exec.parallel=true;
     SET hive.exec.dynamic.partition=true;
     SET hive.exec.dynamic.partition.mode=nonstrict;
-
+    insert overwrite table {db}.{table} partition(country_code,dt)
     select nvl(ord.city_id,-10000) as city_id,
        nvl(ord.product_id,-10000) as product_id,
        nvl(ord.driver_serv_type,-10000) as driver_serv_type,
