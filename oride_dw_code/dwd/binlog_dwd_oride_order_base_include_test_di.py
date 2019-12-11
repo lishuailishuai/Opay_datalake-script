@@ -45,7 +45,7 @@ dag = airflow.DAG('binlog_dwd_oride_order_base_include_test_di',
 # 依赖前一天分区
 ods_binlog_data_order_hi_prev_day_task = WebHdfsSensor(
     task_id='ods_binlog_data_order_hi_prev_day_task',
-    filepath='{hdfs_path_str}/dt={now_day}/hour='00'/_SUCCESS'.format(
+    filepath='{hdfs_path_str}/dt={now_day}/hour=00/_SUCCESS'.format(
         hdfs_path_str="/user/hive/warehouse/oride_dw_ods.db/ods_binlog_data_order_hi",
         pt='{{ds}}',
         now_day='{{macros.ds_add(ds, +1)}}'
