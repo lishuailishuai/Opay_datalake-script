@@ -316,8 +316,6 @@ on 1=1
 
 
 
-
-
 '''.format(
         pt=ds,
         table=table_name,
