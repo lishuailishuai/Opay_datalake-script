@@ -15,6 +15,7 @@ from airflow.operators.bash_operator import BashOperator
 from airflow.sensors.named_hive_partition_sensor import NamedHivePartitionSensor
 from airflow.sensors.hive_partition_sensor import HivePartitionSensor
 from airflow.sensors import UFileSensor
+from airflow.sensors import OssSensor
 from airflow.sensors.s3_key_sensor import S3KeySensor
 from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
 from plugins.CountriesPublicFrame import CountriesPublicFrame
@@ -51,6 +52,17 @@ test_snappy_dev_01_tesk = S3KeySensor(
         pt='{{ds}}'
     ),
     bucket_name='opay-bi',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
+test_oss_tesk = OssSensor(
+    task_id='test_oss_tesk',
+    bucket_key='{hdfs_path_str}/_SUCCESS'.format(
+        hdfs_path_str="test",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
@@ -306,12 +318,12 @@ def execution_data_task_id(ds,**kwargs):
 
     """
 
-    cf=CountriesPublicFrame("true",ds,db_name,table_name,hdfs_path,"true","true")
+    #cf=CountriesPublicFrame("true",ds,db_name,table_name,hdfs_path,"true","true")
 
     #cf.exist_country_code_data_dir_dev()
 
     #删除分区
-    cf.delete_partition()
+    #cf.delete_partition()
 
     #读取sql
     _sql="\n"+cf.alter_partition()+"\n"+test_dim_oride_city_sql_task(ds)
@@ -343,7 +355,7 @@ test_dim_oride_city_task= PythonOperator(
     dag=dag
 )
 
-
+test_oss_tesk>>test_dim_oride_city_task
 ods_sqoop_base_data_city_conf_df_tesk>>test_dim_oride_city_task
 ods_sqoop_base_data_country_conf_df_tesk>>test_dim_oride_city_task
 ods_sqoop_base_weather_per_10min_df_task>>test_dim_oride_city_task
