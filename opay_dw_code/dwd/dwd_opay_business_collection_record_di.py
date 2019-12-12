@@ -45,16 +45,6 @@ dag = airflow.DAG('dwd_opay_business_collection_record_di',
                   catchup=False)
 
 ##----------------------------------------- 依赖 ---------------------------------------##
-ods_sqoop_base_user_di_prev_day_task = UFileSensor(
-    task_id='ods_sqoop_base_user_di_prev_day_task',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opay_dw_sqoop_di/opay_user/user",
-        pt='{{ds}}'
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
 
 ods_sqoop_base_user_di_prev_day_task = OssSensor(
     task_id='ods_sqoop_base_user_di_prev_day_task',
