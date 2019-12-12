@@ -171,7 +171,7 @@ ODS_CREATE_TABLE_SQL = '''
       '{ufile_path}';
     MSCK REPAIR TABLE {db_name}.`{table_name}`;
     -- delete opay_dw table
-    DROP TABLE IF EXISTS {db_name}.`{table_name}`;
+    -- DROP TABLE IF EXISTS {db_name}.`{table_name}`;
 '''
 
 # 需要验证的核心业务表
