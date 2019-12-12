@@ -59,7 +59,7 @@ test_snappy_dev_01_tesk = S3KeySensor(
 test_oss_tesk = OssSensor(
     task_id='test_oss_tesk',
     bucket_key='{hdfs_path_str}/_SUCCESS'.format(
-        hdfs_path_str="/test",
+        hdfs_path_str="test",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
