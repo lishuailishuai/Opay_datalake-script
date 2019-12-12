@@ -72,7 +72,7 @@ task_timeout_monitor= PythonOperator(
 ##----------------------------------------- 变量 ---------------------------------------##
 db_name="opay_dw"
 table_name="dm_opay_topup_with_card_originator_base_cube_d"
-hdfs_path="ufile://opay-datalake/opay/opay_dw/"+table_name
+hdfs_path="oss://opay-datalake/opay/opay_dw/"+table_name
 
 ##---- hive operator ---##
 def dm_opay_topup_with_card_originator_base_cube_d_sql_task(ds):
