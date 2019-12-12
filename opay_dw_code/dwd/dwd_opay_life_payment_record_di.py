@@ -56,10 +56,10 @@ ods_sqoop_base_user_di_prev_day_task = OssSensor(
     dag=dag
 )
 
-ods_sqoop_base_merchant_di_prev_day_task = OssSensor(
-    task_id='ods_sqoop_base_merchant_di_prev_day_task',
+ods_sqoop_base_merchant_df_prev_day_task = OssSensor(
+    task_id='ods_sqoop_base_merchant_df_prev_day_task',
     bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opay_dw_ods/opay_merchant/merchant",
+        hdfs_path_str="/opay_dw_sqoop/opay_merchant/merchant",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -165,7 +165,7 @@ def dwd_opay_life_payment_record_di_sql_task(ds):
             select 
                 merchant_id, merchant_name, merchant_type
             from opay_dw_ods.ods_sqoop_base_merchant_df
-            where dt = '{pt}'
+            where dt = if('{pt}' <= '2019-12-11', '2019-12-11', '{pt}')
         )
     insert overwrite table {db}.{table} 
     partition(country_code, dt)
@@ -285,7 +285,7 @@ dwd_opay_life_payment_record_di_task = PythonOperator(
 )
 
 ods_sqoop_base_user_di_prev_day_task >> dwd_opay_life_payment_record_di_task
-ods_sqoop_base_merchant_di_prev_day_task >> dwd_opay_life_payment_record_di_task
+ods_sqoop_base_merchant_df_prev_day_task >> dwd_opay_life_payment_record_di_task
 ods_sqoop_base_electricity_topup_record_di_prev_day_task >> dwd_opay_life_payment_record_di_task
 ods_sqoop_base_airtime_topup_record_di_prev_day_task >> dwd_opay_life_payment_record_di_task
 ods_sqoop_base_tv_topup_record_di_prev_day_task >> dwd_opay_life_payment_record_di_task
