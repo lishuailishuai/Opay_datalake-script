@@ -176,6 +176,7 @@ bd as (
   ,s.status
   ,substr(s.created_at,0,10) as created_at
   ,s.shop_class
+  ,s.bd_id as created_bd_id
   from
     (select * from opos_dw_ods.ods_sqoop_base_bd_shop_df where dt = '{pt}' and bd_id>0) as s
   inner join
@@ -208,6 +209,7 @@ bdm as (
   ,s.status
   ,substr(s.created_at,0,10) as created_at
   ,s.shop_class
+  ,s.bd_id as created_bd_id
   from
     (select * from opos_dw_ods.ods_sqoop_base_bd_shop_df where dt = '{pt}' and bd_id>0) as s
   inner join
@@ -239,6 +241,7 @@ rm as (
   ,s.status
   ,substr(s.created_at,0,10) as created_at
   ,s.shop_class
+  ,s.bd_id as created_bd_id
   from
     (select * from opos_dw_ods.ods_sqoop_base_bd_shop_df where dt = '{pt}' and bd_id>0) as s
   inner join
@@ -270,6 +273,7 @@ cm as (
   ,s.status
   ,substr(s.created_at,0,10) as created_at
   ,s.shop_class
+  ,s.bd_id as created_bd_id
   from
     (select * from opos_dw_ods.ods_sqoop_base_bd_shop_df where dt = '{pt}' and bd_id>0) as s
   inner join
@@ -302,6 +306,7 @@ hcm as (
   ,s.status
   ,substr(s.created_at,0,10) as created_at
   ,s.shop_class
+  ,s.bd_id as created_bd_id
   from
     (select * from opos_dw_ods.ods_sqoop_base_bd_shop_df where dt = '{pt}' and bd_id>0) as s
   inner join
@@ -334,6 +339,7 @@ nobd as (
   ,s.status
   ,substr(s.created_at,0,10) as created_at
   ,s.shop_class
+  ,s.bd_id as created_bd_id
   from
     (select * from opos_dw_ods.ods_sqoop_base_bd_shop_df where dt = '{pt}' and bd_id>0) as s
   left join
@@ -369,21 +375,22 @@ b.id
 ,b.status
 ,b.created_at
 ,b.shop_class
+,b.created_bd_id
 
 ,'nal' as country_code
 ,'{pt}' as dt 
 from
-  (select id,opay_id,shop_name,opay_account,city_code,6 as job_id,hcm_id,hcm_name,cm_id,cm_name,rm_id,rm_name,bdm_id,bdm_name,bd_id,bd_name,contact_name,contact_phone,cate_id,status,created_at,shop_class from bd
+  (select id,opay_id,shop_name,opay_account,city_code,6 as job_id,hcm_id,hcm_name,cm_id,cm_name,rm_id,rm_name,bdm_id,bdm_name,bd_id,bd_name,contact_name,contact_phone,cate_id,status,created_at,shop_class,created_bd_id from bd
   union
-  select id,opay_id,shop_name,opay_account,city_code,5 as job_id,hcm_id,hcm_name,cm_id,cm_name,rm_id,rm_name,bdm_id,bdm_name,bd_id,bd_name,contact_name,contact_phone,cate_id,status,created_at,shop_class from bdm
+  select id,opay_id,shop_name,opay_account,city_code,5 as job_id,hcm_id,hcm_name,cm_id,cm_name,rm_id,rm_name,bdm_id,bdm_name,bd_id,bd_name,contact_name,contact_phone,cate_id,status,created_at,shop_class,created_bd_id from bdm
   union
-  select id,opay_id,shop_name,opay_account,city_code,4 as job_id,hcm_id,hcm_name,cm_id,cm_name,rm_id,rm_name,bdm_id,bdm_name,bd_id,bd_name,contact_name,contact_phone,cate_id,status,created_at,shop_class from rm
+  select id,opay_id,shop_name,opay_account,city_code,4 as job_id,hcm_id,hcm_name,cm_id,cm_name,rm_id,rm_name,bdm_id,bdm_name,bd_id,bd_name,contact_name,contact_phone,cate_id,status,created_at,shop_class,created_bd_id from rm
   union
-  select id,opay_id,shop_name,opay_account,city_code,3 as job_id,hcm_id,hcm_name,cm_id,cm_name,rm_id,rm_name,bdm_id,bdm_name,bd_id,bd_name,contact_name,contact_phone,cate_id,status,created_at,shop_class from cm
+  select id,opay_id,shop_name,opay_account,city_code,3 as job_id,hcm_id,hcm_name,cm_id,cm_name,rm_id,rm_name,bdm_id,bdm_name,bd_id,bd_name,contact_name,contact_phone,cate_id,status,created_at,shop_class,created_bd_id from cm
   union
-  select id,opay_id,shop_name,opay_account,city_code,2 as job_id,hcm_id,hcm_name,cm_id,cm_name,rm_id,rm_name,bdm_id,bdm_name,bd_id,bd_name,contact_name,contact_phone,cate_id,status,created_at,shop_class from hcm
+  select id,opay_id,shop_name,opay_account,city_code,2 as job_id,hcm_id,hcm_name,cm_id,cm_name,rm_id,rm_name,bdm_id,bdm_name,bd_id,bd_name,contact_name,contact_phone,cate_id,status,created_at,shop_class,created_bd_id from hcm
   union
-  select id,opay_id,shop_name,opay_account,city_code,-1 as job_id,hcm_id,hcm_name,cm_id,cm_name,rm_id,rm_name,bdm_id,bdm_name,bd_id,bd_name,contact_name,contact_phone,cate_id,status,created_at,shop_class from nobd
+  select id,opay_id,shop_name,opay_account,city_code,-1 as job_id,hcm_id,hcm_name,cm_id,cm_name,rm_id,rm_name,bdm_id,bdm_name,bd_id,bd_name,contact_name,contact_phone,cate_id,status,created_at,shop_class,created_bd_id from nobd
   ) as b
 left join
   (select id,name,country from opos_dw_ods.ods_sqoop_base_bd_city_df where dt = '{pt}') as c
@@ -420,6 +427,10 @@ m.id
 --如果关联上当天交易的商户,说明商户当天是第一笔交易,那就去当天时间作为第一笔,反之还是取历史表中的日期作为第一笔
 ,if(n.dt is null,m.first_order_date,n.dt) as first_order_date
 ,m.shop_class
+,m.created_bd_id
+,o.phone as created_bd_phone
+,o.name as created_bd_name
+,o.job_id as created_bd_job_id
 
 ,'nal' as country_code
 ,'{pt}' as dt 
@@ -451,6 +462,7 @@ from
   ,a.created_at
   ,a.shop_class
   ,nvl(b.first_order_date,'-') as first_order_date
+  ,a.created_bd_id
   from
     (select * from opos_dw.dim_opos_bd_relation_tmp_df where country_code='nal' and dt='{pt}') as a
   left join
@@ -460,14 +472,10 @@ from
 left join
   (select receipt_id,'{pt}' as dt from opos_dw_ods.ods_sqoop_base_pre_opos_payment_order_di where dt='{pt}' group by receipt_id) as n
 on if(m.first_order_date='-',m.opay_id,'having')=n.receipt_id
-
+left join
+  (select id,name,job_id,phone from  opos_dw_ods.ods_sqoop_base_bd_admin_users_df where dt = '{pt}') as o
+on m.created_bd_id=o.id
 ;
-
-
-
-
-
-
 
 
 
