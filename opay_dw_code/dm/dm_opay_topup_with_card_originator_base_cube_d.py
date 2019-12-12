@@ -34,7 +34,7 @@ args = {
 }
 
 dag = airflow.DAG('dm_opay_topup_with_card_originator_base_cube_d',
-                  schedule_interval="00 03 * * *",
+                  schedule_interval="30 03 * * *",
                   default_args=args
                   )
 
@@ -79,14 +79,15 @@ def dm_opay_topup_with_card_originator_base_cube_d_sql_task(ds):
     set hive.exec.dynamic.partition.mode=nonstrict;
     set hive.exec.parallel=true; --default false
 
-    insert overwrite table {db}.{table} partition(dt = '{pt}')
+    insert overwrite table {db}.{table} partition(country_code, dt)
     select 
-        nvl(country_code, 'ALL') as country_code, 
         nvl(out_channel_id, 'ALL') as out_channel_id, 
         nvl(originator_type, 'ALL') as originator_type, 
         nvl(originator_role, 'ALL') as originator_role, 
         nvl(order_status, 'ALL') as order_status, 
-        sum(amount) order_amt, count(*) order_cnt
+        sum(amount) order_amt, count(*) order_cnt,
+        nvl(country_code, 'ALL') as country_code, 
+        '{pt}'
     from (
         select 
             country_code, out_channel_id, originator_type, originator_role, order_status, order_no,  

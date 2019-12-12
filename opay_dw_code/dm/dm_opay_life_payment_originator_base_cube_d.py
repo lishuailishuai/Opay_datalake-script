@@ -79,14 +79,15 @@ def dm_opay_life_payment_originator_base_cube_d_sql_task(ds):
     set hive.exec.dynamic.partition.mode=nonstrict;
     set hive.exec.parallel=true; --default false
 
-    insert overwrite table {db}.{table} partition(dt = '{pt}')
+    insert overwrite table {db}.{table} partition(country_code, dt)
     select 
-        nvl(country_code, 'ALL') as country_code, 
         nvl(sub_service_type, 'ALL') as sub_service_type, 
         nvl(recharge_service_provider, 'ALL') as recharge_service_provider, 
         nvl(originator_role, 'ALL') as originator_role, 
         nvl(order_status, 'ALL') as order_status, 
-        sum(amount) order_amt, count(*) order_cnt
+        sum(amount) order_amt, count(*) order_cnt,
+        nvl(country_code, 'ALL') as country_code, 
+        '{pt}'
     from (
         select 
             country_code, sub_service_type, recharge_service_provider, originator_role, order_status, order_no,  

@@ -146,15 +146,16 @@ def dm_opay_transaction_originator_base_cube_d_sql_task(ds):
     set hive.exec.dynamic.partition.mode=nonstrict;
     set hive.exec.parallel=true; --default false
 
-    insert overwrite table {db}.{table} partition(dt = '{pt}')
+    insert overwrite table {db}.{table} partition(country_code, dt)
     select 
-        nvl(country_code, 'ALL') as country_code,
         nvl(top_service_type, 'ALL') as top_service_type,
         nvl(sub_service_type, 'ALL') as sub_service_type,
         nvl(originator_type, 'ALL') as originator_type,
         nvl(originator_role, 'ALL') as originator_role,
         nvl(order_status, 'ALL') as order_status, 
-        sum(amount) order_amt, count(*) order_cnt, count(distinct originator_id) originator_cnt
+        sum(amount) order_amt, count(*) order_cnt, count(distinct originator_id) originator_cnt,
+        nvl(country_code, 'ALL') as country_code,
+        '{pt}'
     from (
         select 
             country_code, top_service_type, sub_service_type, originator_type, originator_role, originator_kyc_level, originator_money_flow, order_status,
