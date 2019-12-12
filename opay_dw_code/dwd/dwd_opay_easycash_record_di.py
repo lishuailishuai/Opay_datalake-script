@@ -87,7 +87,7 @@ task_timeout_monitor= PythonOperator(
 ##----------------------------------------- 变量 ---------------------------------------##
 db_name="opay_dw"
 table_name = "dwd_opay_easycash_record_di"
-hdfs_path="ufile://opay-datalake/opay/opay_dw/" + table_name
+hdfs_path="oss://opay-datalake/opay/opay_dw/" + table_name
 
 
 
