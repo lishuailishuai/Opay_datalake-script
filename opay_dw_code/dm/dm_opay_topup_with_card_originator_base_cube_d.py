@@ -16,6 +16,7 @@ from airflow.sensors.hive_partition_sensor import HivePartitionSensor
 from airflow.sensors import UFileSensor
 from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
 from plugins.TaskTouchzSuccess import TaskTouchzSuccess
+from airflow.sensors import OssSensor
 import json
 import logging
 from airflow.models import Variable
@@ -39,9 +40,9 @@ dag = airflow.DAG('dm_opay_topup_with_card_originator_base_cube_d',
                   )
 
 ##----------------------------------------- 依赖 ---------------------------------------##
-dwd_opay_topup_with_card_record_di_prev_day_task = UFileSensor(
+dwd_opay_topup_with_card_record_di_prev_day_task = OssSensor(
     task_id='dwd_opay_topup_with_card_record_di_prev_day_task',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
         hdfs_path_str="opay/opay_dw/dwd_opay_topup_with_card_record_di/country_code=NG",
         pt='{{ds}}'
     ),
