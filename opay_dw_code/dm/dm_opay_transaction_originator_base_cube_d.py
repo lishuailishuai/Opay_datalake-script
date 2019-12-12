@@ -41,7 +41,7 @@ dag = airflow.DAG('dm_opay_transaction_originator_base_cube_d',
 ##----------------------------------------- 依赖 ---------------------------------------##
 
 dwd_opay_transaction_record_di_prev_day_task = UFileSensor(
-    task_id='dwd_opay_pos_transaction_record_di_prev_day_task',
+    task_id='dwd_opay_transaction_record_di_prev_day_task',
     filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
         hdfs_path_str="opay/opay_dw/dwd_opay_transaction_record_di/country_code=NG",
         pt='{{ds}}'
