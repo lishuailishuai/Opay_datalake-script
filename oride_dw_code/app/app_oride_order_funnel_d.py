@@ -104,21 +104,21 @@ def app_oride_order_funnel_d_sql_task(ds):
     select nvl(ord.city_id,-10000) as city_id,
        nvl(ord.product_id,-10000) as product_id,
        nvl(ord.driver_serv_type,-10000) as driver_serv_type,
+       user_event.act_num, --乘客端打开页面活跃量
+       user_event.choose_end_point_num, --地址选择次数
+       user_event.valuation_num,  --估价次数,即所谓的冒泡数量
        ord.order_cnt,  --下单量
-       ord.valid_order_cnt, --有效订单量
        ord.broadcast_ord_cnt,  --播单量
        ord.succ_broadcast_ord_cnt,  --成功播单量
        ord.driver_show_ord_cnt,  --司机端推送给骑手订单量
+       ord.accpet_show_ord_cnt,  --司机端前端show订单量
        ord.request_ord_cnt,  --接单量，理论和骑手端司机应答量一致，由于骑手端click打点数据缺失，所以用订单表统计
        ord.driver_arri_bef_cancel_cnt,  --司机到达接客点前取消量
        ord.driver_arri_aft_cancel_cnt,  --司机到达接客点后取消量
        ord.user_before_cancel_cnt,  --应答前乘客取消量
        ord.user_after_cancel_cnt,  --应答后乘客取消量
        ord.finish_ord_cnt,  --完单量
-       ord.finished_pay_ord_cnt,  --完成支付订单量
-       user_event.act_num, --乘客端打开页面活跃量
-       user_event.choose_end_point_num, --地址选择次数
-       user_event.valuation_num,  --估价次数,即所谓的冒泡数量
+       ord.finished_pay_ord_cnt,  --完成支付订单量   
        if(nvl(ord.country_code,'total')='total','nal','nal') as country_code,
        '{pt}' as dt
 

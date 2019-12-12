@@ -117,7 +117,8 @@ a.shop_id
 ,a.bd_id
 ,nvl(bd.name,'-') as bd_name
 
-,b.first_order_date as shop_first_order_date
+,nvl(b.shop_class,'-') as shop_class
+,nvl(b.first_order_date,'-')  as shop_first_order_date
 
 ,a.order_cnt
 ,a.cashback_order_cnt
@@ -290,7 +291,7 @@ from
     and s.bd_id=m.bd_id
   ) as a
 left join
-  (select opay_id,first_order_date from opos_dw.dim_opos_bd_relation_df where country_code='nal' and dt='{pt}') as b
+  (select opay_id,first_order_date,shop_class from opos_dw.dim_opos_bd_relation_df where country_code='nal' and dt='{pt}') as b
 on a.opay_id=b.opay_id
 left join
   (select id,name from opos_dw_ods.ods_sqoop_base_bd_admin_users_df where dt = '{pt}') as bd
@@ -311,11 +312,6 @@ left join
   (select dt,week_of_year from public_dw_dim.dim_date where dt = '{pt}') as d
 on 1=1
 ;
-
-
-
-
-
 
 
 

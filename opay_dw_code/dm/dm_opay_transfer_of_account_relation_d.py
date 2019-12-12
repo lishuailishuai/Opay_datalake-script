@@ -34,7 +34,7 @@ args = {
 }
 
 dag = airflow.DAG('dm_opay_transfer_of_account_relation_d',
-                  schedule_interval="00 03 * * *",
+                  schedule_interval="30 03 * * *",
                   default_args=args
                   )
 
@@ -79,13 +79,14 @@ def dm_opay_transfer_of_account_relation_d_sql_task(ds):
     set hive.exec.dynamic.partition.mode=nonstrict;
     set hive.exec.parallel=true; --default false
 
-    insert overwrite table {db}.{table} partition(dt = '{pt}')
+    insert overwrite table {db}.{table} partition(country_code, dt)
     select 
-        nvl(country_code, 'ALL') as country_code, 
         nvl(sub_service_type, 'ALL') as sub_service_type, 
         nvl(payment_relation_id, 'ALL') as payment_relation_id,  
         nvl(order_status, 'ALL') as order_status, 
-        sum(amount) order_amt, count(*) order_cnt
+        sum(amount) order_amt, count(*) order_cnt,
+        nvl(country_code, 'ALL') as country_code, 
+        '{pt}'
     from (
         select 
             country_code, sub_service_type, payment_relation_id, order_status,  
@@ -124,7 +125,7 @@ def execution_data_task_id(ds, **kargs):
     第二个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
 
     """
-    TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "false", "true")
+    TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "true", "true")
 
 dm_opay_transfer_of_account_relation_d_task = PythonOperator(
     task_id='dm_opay_transfer_of_account_relation_d_task',
