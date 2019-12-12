@@ -17,6 +17,7 @@ from airflow.sensors.hive_partition_sensor import HivePartitionSensor
 from airflow.sensors import UFileSensor
 from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
 from plugins.TaskTouchzSuccess import TaskTouchzSuccess
+from airflow.sensors import OssSensor
 import json
 import logging
 from airflow.models import Variable
@@ -55,7 +56,18 @@ ods_sqoop_base_user_di_prev_day_task = UFileSensor(
     dag=dag
 )
 
-ods_sqoop_base_business_collection_record_di_prev_day_task = UFileSensor(
+ods_sqoop_base_user_di_prev_day_task = OssSensor(
+    task_id='ods_sqoop_base_user_di_prev_day_task',
+    bucket_key='{hdfs_path_str}/_SUCCESS'.format(
+        hdfs_path_str="opay_dw_sqoop_di/opay_user/user",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
+ods_sqoop_base_business_collection_record_di_prev_day_task = OssSensor(
     task_id='ods_sqoop_base_business_collection_record_di_prev_day_task',
     filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
         hdfs_path_str="opay_dw_sqoop_di/opay_transaction/business_collection_record",
