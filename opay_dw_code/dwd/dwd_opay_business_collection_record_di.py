@@ -69,7 +69,7 @@ ods_sqoop_base_user_di_prev_day_task = OssSensor(
 
 ods_sqoop_base_business_collection_record_di_prev_day_task = OssSensor(
     task_id='ods_sqoop_base_business_collection_record_di_prev_day_task',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
         hdfs_path_str="opay_dw_sqoop_di/opay_transaction/business_collection_record",
         pt='{{ds}}'
     ),
