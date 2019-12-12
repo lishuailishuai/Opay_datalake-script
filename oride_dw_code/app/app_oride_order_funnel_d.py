@@ -104,6 +104,7 @@ def app_oride_order_funnel_d_sql_task(ds):
     select nvl(ord.city_id,-10000) as city_id,
        nvl(ord.product_id,-10000) as product_id,
        nvl(ord.driver_serv_type,-10000) as driver_serv_type,
+       nvl(ord.is_strong_dispatch,-10000) as is_strong_dispatch,
        user_event.act_num, --乘客端打开页面活跃量
        user_event.choose_end_point_num, --地址选择次数
        user_event.valuation_num,  --估价次数,即所谓的冒泡数量
@@ -115,8 +116,9 @@ def app_oride_order_funnel_d_sql_task(ds):
        ord.request_ord_cnt,  --接单量，理论和骑手端司机应答量一致，由于骑手端click打点数据缺失，所以用订单表统计
        ord.driver_arri_bef_cancel_cnt,  --司机到达接客点前取消量
        ord.driver_arri_aft_cancel_cnt,  --司机到达接客点后取消量
-       ord.user_before_cancel_cnt,  --应答前乘客取消量
-       ord.user_after_cancel_cnt,  --应答后乘客取消量
+       ord.user_befreply_cancel_cnt,  --应答前乘客取消量
+       ord.user_aftreply_befarri_cancel_cnt,  --应答后-司机到达前乘客取消量
+       ord.user_aftreply_aftarri_cancel_cnt,  --应答后-司机到达后乘客取消量
        ord.finish_ord_cnt,  --完单量
        ord.finished_pay_ord_cnt,  --完成支付订单量   
        if(nvl(ord.country_code,'total')='total','nal','nal') as country_code,
@@ -126,6 +128,7 @@ def app_oride_order_funnel_d_sql_task(ds):
                city_id,
                product_id, 
                driver_serv_type,
+               is_strong_dispatch,
                count(1) as order_cnt, --下单量
                sum(is_valid) as valid_order_cnt, --有效订单量
                sum(is_broadcast) as broadcast_ord_cnt,  --播单量
@@ -135,8 +138,9 @@ def app_oride_order_funnel_d_sql_task(ds):
                sum(is_request) as request_ord_cnt,  --接单量，理论和骑手端司机应答量一致，由于骑手端click打点数据缺失，所以用订单表统计
                sum(if(is_driver_after_cancel=1 and is_arrive_receive_point=0,1,0)) as driver_arri_bef_cancel_cnt,  --司机到达接客点前取消量
                sum(if(is_driver_after_cancel=1 and is_arrive_receive_point=1,1,0)) as driver_arri_aft_cancel_cnt,  --司机到达接客点后取消量
-               sum(is_passanger_before_cancel) as user_before_cancel_cnt,  --应答前乘客取消量
-               sum(is_passanger_after_cancel) as user_after_cancel_cnt,  --应答后乘客取消量
+               sum(is_passanger_before_cancel) as user_befreply_cancel_cnt,  --应答前乘客取消量
+               sum(if(is_passanger_after_cancel=1 and is_arrive_receive_point=0,1,0)) as user_aftreply_befarri_cancel_cnt,  --应答后-司机到达前乘客取消量
+               sum(if(is_passanger_after_cancel=1 and is_arrive_receive_point=1,1,0)) as user_aftreply_aftarri_cancel_cnt,  --应答后-司机到达后乘客取消量
                sum(is_finish) as finish_ord_cnt,  --完单量
                sum(is_finished_pay) as finished_pay_ord_cnt  --完成支付订单量
         from oride_dw.dwm_oride_order_base_di
@@ -144,7 +148,8 @@ def app_oride_order_funnel_d_sql_task(ds):
         group by country_code,
                city_id,
                product_id, 
-               driver_serv_type
+               driver_serv_type,
+               is_strong_dispatch
         with cube) ord
         
         left join 
@@ -153,6 +158,7 @@ def app_oride_order_funnel_d_sql_task(ds):
                -10000 as city_id,
                -10000 as product_id,
                -10000 as driver_serv_type,
+               -10000 as is_strong_dispatch,
                act_num,  --乘客端打开页面活跃量
                choose_end_point_num, --地址选择次数
                valuation_num  --估价次数,即所谓的冒泡数量
@@ -161,7 +167,8 @@ def app_oride_order_funnel_d_sql_task(ds):
         on nvl(ord.country_code,'total')=user_event.country_code 
         and nvl(ord.city_id,-10000)=user_event.city_id
         and nvl(ord.product_id,-10000)=user_event.product_id
-        and nvl(ord.driver_serv_type,-10000)=user_event.driver_serv_type;
+        and nvl(ord.driver_serv_type,-10000)=user_event.driver_serv_type
+        and nvl(ord.is_strong_dispatch,-10000)=user_event.is_strong_dispatch;
     '''.format(
         pt=ds,
         now_day=airflow.macros.ds_add(ds, +1),
