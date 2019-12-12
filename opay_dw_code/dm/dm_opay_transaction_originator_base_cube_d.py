@@ -39,82 +39,17 @@ dag = airflow.DAG('dm_opay_transaction_originator_base_cube_d',
                   )
 
 ##----------------------------------------- 依赖 ---------------------------------------##
-# 依赖前一天分区
-dwd_opay_life_payment_record_di_prev_day_task = UFileSensor(
-    task_id='dwd_opay_life_payment_record_di_prev_day_task',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opay/opay_dw/dwd_opay_life_payment_record_di/country_code=NG",
-        pt='{{ds}}'
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
 
-dwd_opay_cash_to_card_record_di_prev_day_task = UFileSensor(
-    task_id='dwd_opay_cash_to_card_record_di_prev_day_task',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opay/opay_dw/dwd_opay_cash_to_card_record_di/country_code=NG",
-        pt='{{ds}}'
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
-dwd_opay_transfer_of_account_record_di_prev_day_task = UFileSensor(
-    task_id='dwd_opay_transfer_of_account_record_di_prev_day_task',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opay/opay_dw/dwd_opay_transfer_of_account_record_di/country_code=NG",
-        pt='{{ds}}'
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
-dwd_opay_pos_transaction_record_di_prev_day_task = UFileSensor(
+dwd_opay_transaction_record_di_prev_day_task = UFileSensor(
     task_id='dwd_opay_pos_transaction_record_di_prev_day_task',
     filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opay/opay_dw/dwd_opay_pos_transaction_record_di/country_code=NG",
+        hdfs_path_str="opay/opay_dw/dwd_opay_transaction_record_di/country_code=NG",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
-
-dwd_opay_topup_with_card_record_di_prev_day_task = UFileSensor(
-    task_id='dwd_opay_topup_with_card_record_di_prev_day_task',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opay/opay_dw/dwd_opay_topup_with_card_record_di/country_code=NG",
-        pt='{{ds}}'
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
-
-dwd_opay_easycash_record_di_prev_day_task = UFileSensor(
-    task_id='dwd_opay_easycash_record_di_prev_day_task',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opay/opay_dw/dwd_opay_easycash_record_di/country_code=NG",
-        pt='{{ds}}'
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
-
-dwd_opay_receive_money_record_di_prev_day_task = UFileSensor(
-    task_id='dwd_opay_receive_money_record_di_prev_day_task',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opay/opay_dw/dwd_opay_receive_money_record_di/country_code=NG",
-        pt='{{ds}}'
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
-
 
 
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
@@ -211,10 +146,4 @@ dm_opay_transaction_originator_base_cube_d_task = PythonOperator(
     dag=dag
 )
 
-dwd_opay_life_payment_record_di_prev_day_task >> dm_opay_transaction_originator_base_cube_d_task
-dwd_opay_cash_to_card_record_di_prev_day_task >> dm_opay_transaction_originator_base_cube_d_task
-dwd_opay_transfer_of_account_record_di_prev_day_task >> dm_opay_transaction_originator_base_cube_d_task
-dwd_opay_topup_with_card_record_di_prev_day_task >> dm_opay_transaction_originator_base_cube_d_task
-dwd_opay_receive_money_record_di_prev_day_task >> dm_opay_transaction_originator_base_cube_d_task
-dwd_opay_pos_transaction_record_di_prev_day_task >> dm_opay_transaction_originator_base_cube_d_task
-dwd_opay_easycash_record_di_prev_day_task >> dm_opay_transaction_originator_base_cube_d_task
+dwd_opay_transaction_record_di_prev_day_task >> dm_opay_transaction_originator_base_cube_d_task
