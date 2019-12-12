@@ -165,7 +165,7 @@ LEFT JOIN
                              WHEN memo='API' THEN user_id
                          END) api_subscribe_user,
           sum(CASE
-                  WHEN order_type='1002' THEN trans_amount
+                  WHEN order_type='1002' and memo='赎回' THEN trans_amount
               END) total_redeem_amount,
           count(DISTINCT CASE
                              WHEN memo='赎回' THEN user_id
@@ -173,7 +173,8 @@ LEFT JOIN
    FROM order_base a)m1 ON m.dt=m1.dt
 LEFT JOIN
   (SELECT '{pt}' AS dt,
-          count(DISTINCT user_id) add_open_api_subscribe_user
+          count(DISTINCT CASE
+                                 WHEN subscribed='Y' THEN user_id end) add_open_api_subscribe_user
    FROM user_subscribed) m2 ON m.dt=m2.dt
 LEFT JOIN
   (SELECT '{pt}' AS dt,

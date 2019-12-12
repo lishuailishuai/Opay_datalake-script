@@ -93,7 +93,7 @@ hdfs_path = "ufile://opay-datalake/opay/opay_dw/" + table_name
 
 def app_opay_owealth_collect_24_d_sql_task(ds):
     HQL = '''
-    WITH acct_base AS
+        WITH acct_base AS
       (SELECT user_id,
               create_time,
               balance
@@ -114,19 +114,33 @@ def app_opay_owealth_collect_24_d_sql_task(ds):
          user_subscribed AS
       (SELECT user_id,
               update_time,
-              subscribed  
+              subscribed,
+              mobile
        FROM opay_owealth_ods.ods_sqoop_owealth_owealth_user_subscribed_df
        WHERE dt='{pt}'
          AND from_unixtime(unix_timestamp(update_time, 'yyyy-MM-dd HH:mm:ss')+3600)<'{pt} 24:00:00' ),
          revenue AS
-      (SELECT *  
+      (SELECT *
        FROM opay_owealth_ods.ods_sqoop_owealth_share_revenue_log_df
        WHERE dt='{pt}'
-         AND from_unixtime(unix_timestamp(revenue_date, 'yyyy-MM-dd HH:mm:ss')+3600)>'{pt}' 
-         AND from_unixtime(unix_timestamp(revenue_date, 'yyyy-MM-dd HH:mm:ss')+3600)<'{pt} 24:00:00' ) 
+         AND from_unixtime(unix_timestamp(revenue_date, 'yyyy-MM-dd HH:mm:ss')+3600)>'{pt}'
+         AND from_unixtime(unix_timestamp(revenue_date, 'yyyy-MM-dd HH:mm:ss')+3600)<'{pt} 24:00:00' ),
+         user_role AS
+      (SELECT user_id,
+              ROLE,
+              mobile
+       FROM
+         (SELECT user_id,
+                 ROLE,
+                 mobile,
+                 row_number() over(partition BY user_id
+                                   ORDER BY update_time DESC) rn
+          FROM opay_dw_ods.ods_sqoop_base_user_di
+          WHERE dt <= '{pt}' ) t1
+       WHERE rn = 1)
     INSERT overwrite TABLE opay_dw.app_opay_owealth_collect_24_d partition (dt='{pt}')
-    
-    SELECT total_balance, --总的累计金额
+    SELECT
+    total_balance, --总的累计金额
      total_subscribe_amount,--总的申购金额
      total_redeem_amount,--总的赎回金额
      no_api_subscribe_amount,--总的手动申购金额
@@ -137,14 +151,19 @@ def app_opay_owealth_collect_24_d_sql_task(ds):
      add_open_api_subscribe_user,--累计开通自动申购用户数
      open_api_subscribe_user,--当天开通自动申购用户数
      close_api_subscribe_user,--当天关闭自用申购用户数
-     revenue_amount --入账利息
+     revenue_amount, --入账利息
+     m.ROLE
     
     FROM
       (SELECT '{pt}' AS dt,
+              ROLE,
               sum(balance) total_balance
-       FROM acct_base a) m
+       FROM acct_base a
+       INNER JOIN user_role b ON a.user_id=b.mobile
+       GROUP BY b.ROLE) m
     LEFT JOIN
       (SELECT '{pt}' AS dt,
+              ROLE,
               sum(CASE
                       WHEN order_type='1001' THEN trans_amount
                   END) total_subscribe_amount,
@@ -157,37 +176,50 @@ def app_opay_owealth_collect_24_d_sql_task(ds):
                            AND memo='API' THEN trans_amount
                   END) api_subscribe_amount,
               count(DISTINCT CASE
-                                 WHEN memo='申购' THEN user_id
+                                 WHEN memo='申购' THEN a.user_id
                              END) no_api_subscribe_user,
               count(DISTINCT CASE
-                                 WHEN memo='API' THEN user_id
+                                 WHEN memo='API' THEN a.user_id
                              END) api_subscribe_user,
               sum(CASE
-                      WHEN order_type='1002' and memo='赎回' THEN trans_amount
+                      WHEN order_type='1002'
+                           AND memo='赎回' THEN trans_amount
                   END) total_redeem_amount,
               count(DISTINCT CASE
-                                 WHEN memo='赎回' THEN user_id
+                                 WHEN memo='赎回' THEN a.user_id
                              END) redeem_user
-       FROM order_base a)m1 ON m.dt=m1.dt
+       FROM order_base a
+       INNER JOIN user_role b ON a.user_id=b.mobile
+       GROUP BY ROLE)m1 ON m.dt=m1.dt and m.ROLE=m1.role
     LEFT JOIN
       (SELECT '{pt}' AS dt,
+              ROLE,
               count(DISTINCT CASE
-                                 WHEN subscribed='Y' THEN user_id end) add_open_api_subscribe_user
-       FROM user_subscribed) m2 ON m.dt=m2.dt
+                                 WHEN subscribed='Y' THEN a.user_id
+                             END) add_open_api_subscribe_user
+       FROM user_subscribed a
+       INNER JOIN user_role b ON a.mobile=b.mobile
+       GROUP BY ROLE) m2 ON m.dt=m2.dt and m.ROLE=m2.ROLE
     LEFT JOIN
       (SELECT '{pt}' AS dt,
+              ROLE,
               count(DISTINCT CASE
-                                 WHEN subscribed='Y' THEN user_id
+                                 WHEN subscribed='Y' THEN a.user_id
                              END)open_api_subscribe_user,
               count(DISTINCT CASE
-                                 WHEN subscribed='N' THEN user_id
+                                 WHEN subscribed='N' THEN a.user_id
                              END) close_api_subscribe_user
-       FROM user_subscribed
-       WHERE from_unixtime(unix_timestamp(update_time, 'yyyy-MM-dd HH:mm:ss')+3600)>'{pt}') m3 ON m.dt=m3.dt
+       FROM user_subscribed a
+       INNER JOIN user_role b ON a.mobile=b.mobile
+       WHERE from_unixtime(unix_timestamp(update_time, 'yyyy-MM-dd HH:mm:ss')+3600)>'{pt}'
+       GROUP BY ROLE) m3 ON m.dt=m3.dt and m.ROLE=m3.ROLE
     LEFT JOIN
       (SELECT '{pt}' AS dt,
+              ROLE,
               sum(revenue_amount) revenue_amount
-       FROM revenue) m4 ON m.dt=m4.dt
+       FROM revenue a
+       INNER JOIN user_role b ON a.user_id=b.mobile
+       GROUP BY ROLE) m4 ON m.dt=m4.dt and m.ROLE=m4.ROLE
    
    
     '''.format(
@@ -226,170 +258,12 @@ app_opay_owealth_collect_24_d_task = PythonOperator(
     dag=dag
 )
 
-
-def send_owealth_report_email(ds, **kwargs):
-    sql = '''
-        SELECT
-           dt,
-           format_number(total_balance/100,2),
-           format_number(total_subscribe_amount/100,2),
-           format_number(total_redeem_amount/100,2),
-           format_number(no_api_subscribe_amount/100,2),
-           format_number(api_subscribe_amount/100,2),
-           format_number(no_api_subscribe_user,0),
-           format_number(api_subscribe_user,0),
-           format_number(redeem_user,0),
-           format_number(add_open_api_subscribe_user,0),
-           format_number(open_api_subscribe_user,0),
-           format_number(close_api_subscribe_user,0),
-           format_number(revenue_amount/100,2)
-        FROM
-           opay_dw.app_opay_owealth_collect_24_d
-        WHERE
-            dt <= '{dt}'
-        ORDER BY dt DESC
-        limit 14
-    '''.format(dt=ds)
-
-    cursor = get_hive_cursor()
-    logging.info(sql)
-    cursor.execute(sql)
-    data_list = cursor.fetchall()
-
-    html_fmt = '''
-            <html>
-            <head>
-            <title></title>
-            <style type="text/css">
-                table
-                {{
-                    font-family:'黑体';
-                    border-collapse: collapse;
-                    margin: 0 auto;
-                    text-align: left;
-                    font-size:12px;
-                    color:#29303A;
-                }}
-                table h2
-                {{
-                    font-size:20px;
-                    color:#000000;
-                }}
-                .th_title
-                {{
-                    font-size:16px;
-                    color:#000000;
-                    text-align: center;
-                }}
-                table td, table th
-                {{
-                    border: 1px solid #000000;
-                    color: #000000;
-                    height: 30px;
-                    padding: 5px 10px 5px 5px;
-                }}
-                table thead th
-                {{
-                    background-color: #FFCC94;
-                    //color: white;
-                    width: 100px;
-                }}
-            </style>
-            </head>
-            <body>
-                <table width="95%" class="table">
-                    <caption>
-                        <h2>OWealth日报(24:00-24:00)</h2>
-                    </caption>
-                </table>
-
-
-                <table width="95%" class="table">
-                    <thead>
-                        <tr>
-                            <th>日期</th>
-
-                            <th>累计总额</th>
-                            <th>总申购金额</th>
-                            <th>总赎回金额</th>
-                            <th>总的手动申购金额</th>
-                            <th>总的自动申购金额</th>
-                            <th>手动申购交易用户数</th>
-                            <th>自动申购交易用户数</th>
-                            <th>赎回交易用户数</th>
-                            <th>累计开通自动申购用户数</th>
-                            <th>当天开通自动申购用户数</th>
-                            <th>当天关闭自用申购用户数</th>
-                            <th>入账利息</th>
-                        </tr>
-                    </thead>
-                    {rows}
-                </table>
-
-            </body>
-            </html>
-            '''
-
-    row_html = ''
-
-    if len(data_list) > 0:
-
-        tr_fmt = '''
-            <tr style="background-color:#F5F5F5;">{row}</tr>
-        '''
-        weekend_tr_fmt = '''
-            <tr style="background:#F5F5F5">{row}</tr>
-        '''
-        row_fmt = '''
-                 <td align="left">{0}</td>
-                <td align="right">{1}</td>
-                <td align="right">{2}</td>
-                <td align="right">{3}</td>
-                <td align="right">{4}</td>
-                <td align="right">{5}</td>
-                <td align="right">{6}</td>
-                <td align="right">{7}</td>
-                <td align="right">{8}</td>
-                <td align="right">{9}</td>
-                <td align="right">{10}</td>
-                <td align="right">{11}</td>
-                <td align="right">{12}</td>
-
-        '''
-
-        for data in data_list:
-            row = row_fmt.format(*list(data))
-            week = data[1]
-            if week == '6' or week == '7':
-                row_html += weekend_tr_fmt.format(row=row)
-            else:
-                row_html += tr_fmt.format(row=row)
-
-    html = html_fmt.format(rows=row_html)
-    # send mail
-
-    # email_to = Variable.get("owealth_report_receivers").split()
-    email_to = ['shuzhen.liu@opay-inc.com']
-
-    email_subject = 'OWealth日报_{}'.format(ds)
-    send_email(
-        email_to
-        , email_subject, html, mime_charset='utf-8')
-    cursor.close()
-    return
-
-
-send_owealth_report = PythonOperator(
-    task_id='send_owealth_report',
-    python_callable=send_owealth_report_email,
-    provide_context=True,
-    dag=dag
-)
 ods_sqoop_owealth_share_acct_df_prev_day_task >> app_opay_owealth_collect_24_d_task
 ods_sqoop_owealth_share_order_df_prev_day_task >> app_opay_owealth_collect_24_d_task
 ods_sqoop_owealth_owealth_user_subscribed_df_prev_day_task >> app_opay_owealth_collect_24_d_task
 ods_sqoop_owealth_share_revenue_log_df_prev_day_task >> app_opay_owealth_collect_24_d_task
-app_opay_owealth_collect_24_d_task >> send_owealth_report
+
+
 
 
 
