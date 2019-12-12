@@ -18,6 +18,7 @@ from airflow.sensors.hive_partition_sensor import HivePartitionSensor
 from airflow.sensors import UFileSensor
 from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
 from plugins.TaskTouchzSuccess import TaskTouchzSuccess
+from airflow.sensors import OssSensor
 import json
 import logging
 from airflow.models import Variable
@@ -41,9 +42,9 @@ dag = airflow.DAG(
     default_args=args)
 
 ##----------------------------------------- 依赖 ---------------------------------------##
-ods_sqoop_owealth_share_acct_df_prev_day_task = UFileSensor(
+ods_sqoop_owealth_share_acct_df_prev_day_task = OssSensor(
     task_id='ods_sqoop_owealth_share_acct_df_prev_day_task',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
         hdfs_path_str="opay_owealth_ods/opay_owealth/share_acct",
         pt='{{ds}}'
     ),
@@ -52,9 +53,9 @@ ods_sqoop_owealth_share_acct_df_prev_day_task = UFileSensor(
     dag=dag
 )
 
-ods_sqoop_owealth_share_order_df_prev_day_task = UFileSensor(
+ods_sqoop_owealth_share_order_df_prev_day_task = OssSensor(
     task_id='ods_sqoop_owealth_share_order_df_prev_day_task',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
         hdfs_path_str="opay_owealth_ods/opay_owealth/share_order",
         pt='{{ds}}'
     ),
@@ -63,9 +64,9 @@ ods_sqoop_owealth_share_order_df_prev_day_task = UFileSensor(
     dag=dag
 )
 
-ods_sqoop_owealth_owealth_user_subscribed_df_prev_day_task = UFileSensor(
+ods_sqoop_owealth_owealth_user_subscribed_df_prev_day_task = OssSensor(
     task_id='ods_sqoop_owealth_owealth_user_subscribed_df_prev_day_task',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
         hdfs_path_str="opay_owealth_ods/opay_owealth/owealth_user_subscribed",
         pt='{{ds}}'
     ),
@@ -74,9 +75,9 @@ ods_sqoop_owealth_owealth_user_subscribed_df_prev_day_task = UFileSensor(
     dag=dag
 )
 
-ods_sqoop_owealth_share_revenue_log_df_prev_day_task = UFileSensor(
+ods_sqoop_owealth_share_revenue_log_df_prev_day_task = OssSensor(
     task_id='ods_sqoop_owealth_share_revenue_log_df_prev_day_task',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
         hdfs_path_str="opay_owealth_ods/opay_owealth/share_revenue_log",
         pt='{{ds}}'
     ),

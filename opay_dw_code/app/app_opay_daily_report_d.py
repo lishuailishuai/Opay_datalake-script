@@ -14,6 +14,8 @@ from utils.connection_helper import get_hive_cursor
 from datetime import datetime, timedelta
 import re
 import logging
+from airflow.sensors import OssSensor
+
 
 args = {
     'owner': 'xiedong',
@@ -43,59 +45,71 @@ sleep_time = BashOperator(
 ##----依赖数据源---##
 """
 # ods_sqoop_base_user_di
-dependence_ods_sqoop_base_user_di = HivePartitionSensor(
-    task_id="ods_sqoop_base_user_di",
-    table="ods_sqoop_base_user_di", # 表名一至
-    partition="dt='{{ ds }}'",
-    schema="opay_dw_ods",
-    poke_interval=60,
+ods_sqoop_base_user_di_prev_day_task = OssSensor(
+    task_id='ods_sqoop_base_user_di_prev_day_task',
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="opay_dw_sqoop_di/opay_user/user",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
 
 # ods_sqoop_base_big_order_di
-dependence_ods_sqoop_base_big_order_di = HivePartitionSensor(
-    task_id="dependence_ods_sqoop_base_big_order_di",
-    table="ods_sqoop_base_big_order_di", # 表名一至
-    partition="dt='{{ ds }}'",
-    schema="opay_dw_ods",
-    poke_interval=60,
+ods_sqoop_base_big_order_di_prev_day_task = OssSensor(
+    task_id='ods_sqoop_base_big_order_di_prev_day_task',
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="opay_dw_sqoop_di/opay_bigorder/big_order",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
 # ods_sqoop_base_user_transfer_user_record_di
-dependence_ods_sqoop_base_user_transfer_user_record_di = HivePartitionSensor(
-    task_id="dependence_ods_sqoop_base_user_transfer_user_record_di",
-    table="ods_sqoop_base_user_transfer_user_record_di", # 表名一至
-    partition="dt='{{ ds }}'",
-    schema="opay_dw_ods",
-    poke_interval=60,
+ods_sqoop_base_user_transfer_user_record_di_prev_day_task = OssSensor(
+    task_id='ods_sqoop_base_user_transfer_user_record_di_prev_day_task',
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="opay_dw_sqoop_di/opay_transaction/user_transfer_user_record",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
 
 # ods_sqoop_base_merchant_transfer_user_record_di
-dependence_ods_sqoop_base_merchant_transfer_user_record_di = HivePartitionSensor(
-    task_id="dependence_ods_sqoop_base_merchant_transfer_user_record_di",
-    table="ods_sqoop_base_merchant_transfer_user_record_di", # 表名一至
-    partition="dt='{{ ds }}'",
-    schema="opay_dw_ods",
-    poke_interval=60,
+ods_sqoop_base_merchant_transfer_user_record_di_prev_day_task = OssSensor(
+    task_id='ods_sqoop_base_merchant_transfer_user_record_di_prev_day_task',
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="opay_dw_sqoop_di/opay_transaction/merchant_transfer_user_record",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
 # ods_sqoop_base_airtime_topup_record_di
-dependence_ods_sqoop_base_airtime_topup_record_di = HivePartitionSensor(
-    task_id="dependence_ods_sqoop_base_airtime_topup_record_di",
-    table="ods_sqoop_base_airtime_topup_record_di", # 表名一至
-    partition="dt='{{ ds }}'",
-    schema="opay_dw_ods",
-    poke_interval=60,
+ods_sqoop_base_airtime_topup_record_di_prev_day_task = OssSensor(
+    task_id='ods_sqoop_base_airtime_topup_record_di_prev_day_task',
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="opay_dw_sqoop_di/opay_transaction/airtime_topup_record",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
 # ods_sqoop_base_user_topup_record_di
-dependence_ods_sqoop_base_user_topup_record_di = HivePartitionSensor(
-    task_id="dependence_ods_sqoop_base_user_topup_record_di",
-    table="ods_sqoop_base_user_topup_record_di", # 表名一至
-    partition="dt='{{ ds }}'",
-    schema="opay_dw_ods",
-    poke_interval=60,
+ods_sqoop_base_user_topup_record_di_prev_day_task = OssSensor(
+    task_id='ods_sqoop_base_user_topup_record_di_prev_day_task',
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="opay_dw_sqoop_di/opay_transaction/user_topup_record",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
 
@@ -402,4 +416,4 @@ app_opay_daily_report_d_task = HiveOperator(
     dag=dag
 )
 
-dependence_ods_sqoop_base_user_di >> dependence_ods_sqoop_base_big_order_di >> dependence_ods_sqoop_base_user_transfer_user_record_di >> dependence_ods_sqoop_base_merchant_transfer_user_record_di >> dependence_ods_sqoop_base_airtime_topup_record_di >> dependence_ods_sqoop_base_user_topup_record_di >> app_opay_daily_report_d_task
+ods_sqoop_base_user_di_prev_day_task >> ods_sqoop_base_big_order_di_prev_day_task >> ods_sqoop_base_user_transfer_user_record_di_prev_day_task >> ods_sqoop_base_merchant_transfer_user_record_di_prev_day_task >> ods_sqoop_base_airtime_topup_record_di_prev_day_task >> ods_sqoop_base_user_topup_record_di_prev_day_task >> app_opay_daily_report_d_task

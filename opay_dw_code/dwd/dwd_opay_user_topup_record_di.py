@@ -16,6 +16,7 @@ from airflow.sensors.hive_partition_sensor import HivePartitionSensor
 from airflow.sensors import UFileSensor
 from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
 from plugins.TaskTouchzSuccess import TaskTouchzSuccess
+from airflow.sensors import OssSensor
 import json
 import logging
 from airflow.models import Variable
@@ -43,9 +44,9 @@ dag = airflow.DAG('dwd_opay_user_topup_record_di',
                   catchup=False)
 
 ##----------------------------------------- 依赖 ---------------------------------------##
-ods_sqoop_base_user_di_prev_day_task = UFileSensor(
+ods_sqoop_base_user_di_prev_day_task = OssSensor(
     task_id='ods_sqoop_base_user_di_prev_day_task',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
         hdfs_path_str="opay_dw_sqoop_di/opay_user/user",
         pt='{{ds}}'
     ),
@@ -54,9 +55,9 @@ ods_sqoop_base_user_di_prev_day_task = UFileSensor(
     dag=dag
 )
 
-ods_sqoop_base_user_topup_record_di_prev_day_task = UFileSensor(
+ods_sqoop_base_user_topup_record_di_prev_day_task = OssSensor(
     task_id='ods_sqoop_base_user_topup_record_di_prev_day_task',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
         hdfs_path_str="opay_dw_sqoop_di/opay_transaction/user_topup_record",
         pt='{{ds}}'
     ),

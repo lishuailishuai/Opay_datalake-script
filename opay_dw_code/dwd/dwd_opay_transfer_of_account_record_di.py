@@ -22,6 +22,7 @@ import logging
 from airflow.models import Variable
 import requests
 import os
+from airflow.sensors import OssSensor
 
 ##
 # 央行月报汇报指标
@@ -44,9 +45,9 @@ dag = airflow.DAG('dwd_opay_transfer_of_account_record_di',
                   catchup=False)
 
 ##----------------------------------------- 依赖 ---------------------------------------##
-ods_sqoop_base_user_di_prev_day_task = UFileSensor(
+ods_sqoop_base_user_di_prev_day_task = OssSensor(
     task_id='ods_sqoop_base_user_di_prev_day_task',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
         hdfs_path_str="opay_dw_sqoop_di/opay_user/user",
         pt='{{ds}}'
     ),
@@ -55,9 +56,9 @@ ods_sqoop_base_user_di_prev_day_task = UFileSensor(
     dag=dag
 )
 
-ods_sqoop_base_merchant_di_prev_day_task = UFileSensor(
+ods_sqoop_base_merchant_di_prev_day_task = OssSensor(
     task_id='ods_sqoop_base_merchant_di_prev_day_task',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
         hdfs_path_str="opay_dw_ods/opay_merchant/merchant",
         pt='{{ds}}'
     ),
@@ -66,9 +67,9 @@ ods_sqoop_base_merchant_di_prev_day_task = UFileSensor(
     dag=dag
 )
 
-ods_sqoop_base_merchant_acquiring_record_di_prev_day_task = UFileSensor(
+ods_sqoop_base_merchant_acquiring_record_di_prev_day_task = OssSensor(
     task_id='ods_sqoop_base_merchant_acquiring_record_di_prev_day_task',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
         hdfs_path_str="opay_dw_sqoop_di/opay_transaction/merchant_acquiring_record",
         pt='{{ds}}'
     ),
@@ -77,9 +78,9 @@ ods_sqoop_base_merchant_acquiring_record_di_prev_day_task = UFileSensor(
     dag=dag
 )
 
-ods_sqoop_base_merchant_transfer_user_record_di_prev_day_task = UFileSensor(
+ods_sqoop_base_merchant_transfer_user_record_di_prev_day_task = OssSensor(
     task_id='ods_sqoop_base_merchant_transfer_user_record_di_prev_day_task',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
         hdfs_path_str="opay_dw_sqoop_di/opay_transaction/merchant_transfer_user_record",
         pt='{{ds}}'
     ),
@@ -88,9 +89,9 @@ ods_sqoop_base_merchant_transfer_user_record_di_prev_day_task = UFileSensor(
     dag=dag
 )
 
-ods_sqoop_base_user_transfer_user_record_di_prev_day_task = UFileSensor(
+ods_sqoop_base_user_transfer_user_record_di_prev_day_task = OssSensor(
     task_id='ods_sqoop_base_user_transfer_user_record_di_prev_day_task',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
         hdfs_path_str="opay_dw_sqoop_di/opay_transaction/user_transfer_user_record",
         pt='{{ds}}'
     ),
@@ -99,9 +100,9 @@ ods_sqoop_base_user_transfer_user_record_di_prev_day_task = UFileSensor(
     dag=dag
 )
 
-ods_sqoop_base_cash_in_record_di_prev_day_task = UFileSensor(
+ods_sqoop_base_cash_in_record_di_prev_day_task = OssSensor(
     task_id='ods_sqoop_base_cash_in_record_di_prev_day_task',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
         hdfs_path_str="opay_dw_sqoop_di/opay_transaction/cash_in_record",
         pt='{{ds}}'
     ),
@@ -110,9 +111,9 @@ ods_sqoop_base_cash_in_record_di_prev_day_task = UFileSensor(
     dag=dag
 )
 
-ods_sqoop_base_cash_out_record_di_prev_day_task = UFileSensor(
+ods_sqoop_base_cash_out_record_di_prev_day_task = OssSensor(
     task_id='ods_sqoop_base_cash_out_record_di_prev_day_task',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
         hdfs_path_str="opay_dw_sqoop_di/opay_transaction/cash_out_record",
         pt='{{ds}}'
     ),
@@ -121,9 +122,9 @@ ods_sqoop_base_cash_out_record_di_prev_day_task = UFileSensor(
     dag=dag
 )
 
-ods_sqoop_base_business_collection_record_di_prev_day_task = UFileSensor(
+ods_sqoop_base_business_collection_record_di_prev_day_task = OssSensor(
     task_id='ods_sqoop_base_business_collection_record_di_prev_day_task',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
         hdfs_path_str="opay_dw_sqoop_di/opay_transaction/business_collection_record",
         pt='{{ds}}'
     ),

@@ -22,6 +22,7 @@ import logging
 from airflow.models import Variable
 import requests
 import os
+from airflow.sensors import OssSensor
 
 args = {
     'owner': 'xiedong',
@@ -44,9 +45,9 @@ dag = airflow.DAG('app_opay_activity_stat_di',
 ##----------------------------------------- 依赖 ---------------------------------------##
 
 # 依赖前一天分区
-dependence_ods_sqoop_base_preferential_record_di_prev_day_task = UFileSensor(
+dependence_ods_sqoop_base_preferential_record_di_prev_day_task = OssSensor(
     task_id='dependence_ods_sqoop_base_preferential_record_di_prev_day_task',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
         hdfs_path_str="opay_dw_sqoop_di/opay_activity/preferential_record",
         pt='{{ds}}'
     ),

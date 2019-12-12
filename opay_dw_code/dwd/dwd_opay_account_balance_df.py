@@ -16,6 +16,8 @@ from airflow.sensors.named_hive_partition_sensor import NamedHivePartitionSensor
 from airflow.sensors.hive_partition_sensor import HivePartitionSensor
 from airflow.sensors import UFileSensor
 from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
+from airflow.sensors import OssSensor
+
 from plugins.TaskTouchzSuccess import TaskTouchzSuccess
 import json
 import logging
@@ -40,9 +42,9 @@ dag = airflow.DAG('dwd_opay_account_balance_df',
                   catchup=False)
 
 ##----------------------------------------- 依赖 ---------------------------------------##
-ods_sqoop_base_account_user_df_prev_day_task = UFileSensor(
+ods_sqoop_base_account_user_df_prev_day_task = OssSensor(
     task_id='ods_sqoop_base_account_user_df_prev_day_task',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
         hdfs_path_str="opay_dw_ods/opay_account/account_user",
         pt='{{ds}}'
     ),
@@ -51,9 +53,9 @@ ods_sqoop_base_account_user_df_prev_day_task = UFileSensor(
     dag=dag
 )
 
-ods_sqoop_base_account_merchant_df_prev_day_task = UFileSensor(
+ods_sqoop_base_account_merchant_df_prev_day_task = OssSensor(
     task_id='ods_sqoop_base_account_merchant_df_prev_day_task',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
         hdfs_path_str="opay_dw_ods/opay_account/account_merchant",
         pt='{{ds}}'
     ),
@@ -62,9 +64,9 @@ ods_sqoop_base_account_merchant_df_prev_day_task = UFileSensor(
     dag=dag
 )
 
-ods_sqoop_base_user_di_prev_day_task = UFileSensor(
+ods_sqoop_base_user_di_prev_day_task = OssSensor(
     task_id='ods_sqoop_base_user_di_prev_day_task',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
         hdfs_path_str="opay_dw_sqoop_di/opay_user/user",
         pt='{{ds}}'
     ),
@@ -73,9 +75,9 @@ ods_sqoop_base_user_di_prev_day_task = UFileSensor(
     dag=dag
 )
 
-ods_sqoop_base_merchant_df_prev_day_task = UFileSensor(
+ods_sqoop_base_merchant_df_prev_day_task = OssSensor(
     task_id='ods_sqoop_base_merchant_df_prev_day_task',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
         hdfs_path_str="opay_dw_ods/opay_merchant/merchant",
         pt='{{ds}}'
     ),
