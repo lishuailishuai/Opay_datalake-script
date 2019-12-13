@@ -40,7 +40,7 @@ args = {
 
 
 dag = airflow.DAG('dwd_opay_transaction_record_di',
-                  schedule_interval="00 03 * * *",
+                  schedule_interval="30 03 * * *",
                   default_args=args,
                   catchup=False)
 
@@ -142,7 +142,7 @@ task_timeout_monitor= PythonOperator(
 ##----------------------------------------- 变量 ---------------------------------------##
 db_name = "opay_dw"
 table_name = "dwd_opay_transaction_record_di"
-hdfs_path="ufile://opay-datalake/opay/opay_dw/" + table_name
+hdfs_path="oss://opay-datalake/opay/opay_dw/" + table_name
 
 
 def dwd_opay_transaction_record_di_sql_task(ds):
