@@ -42,6 +42,7 @@ dag = airflow.DAG('dim_opos_bd_relation_df',
 
 ##----------------------------------------- 依赖 ---------------------------------------##
 
+
 ods_sqoop_base_bd_admin_users_df_task = OssSensor(
     task_id='ods_sqoop_base_bd_admin_users_df_task',
     bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
