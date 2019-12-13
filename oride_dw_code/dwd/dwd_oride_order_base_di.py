@@ -14,6 +14,7 @@ from airflow.sensors.external_task_sensor import ExternalTaskSensor
 from airflow.operators.bash_operator import BashOperator
 from airflow.sensors.named_hive_partition_sensor import NamedHivePartitionSensor
 from airflow.sensors.hive_partition_sensor import HivePartitionSensor
+from airflow.sensors.web_hdfs_sensor import WebHdfsSensor
 from airflow.sensors import UFileSensor
 from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
 from plugins.TaskTouchzSuccess import TaskTouchzSuccess
@@ -43,13 +44,13 @@ dag = airflow.DAG('dwd_oride_order_base_di',
 ##----------------------------------------- 依赖 ---------------------------------------##
 
 # 依赖前一天分区
-ods_sqoop_base_data_order_df_prev_day_task = UFileSensor(
-    task_id='ods_sqoop_base_data_order_df_prev_day_task',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride_dw_sqoop/oride_data/data_order",
-        pt='{{ds}}'
+ods_binlog_data_order_hi_prev_day_task = WebHdfsSensor(
+    task_id='ods_binlog_data_order_hi_prev_day_task',
+    filepath='{hdfs_path_str}/dt={now_day}/hour=00/_SUCCESS'.format(
+        hdfs_path_str="/user/hive/warehouse/oride_dw_ods.db/ods_binlog_data_order_hi",
+        pt='{{ds}}',
+        now_day='{{macros.ds_add(ds, +1)}}'
     ),
-    bucket_name='opay-datalake',
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
@@ -431,12 +432,14 @@ SELECT base.id as order_id,
        nvl(country.country_code,'nal') as country_code,
 
        '{pt}' AS dt
-FROM
-     (SELECT *
-      FROM oride_dw_ods.ods_sqoop_base_data_order_df
-      WHERE dt = '{pt}'
-         AND (from_unixtime(create_time,'yyyy-MM-dd') = '{pt}' or substr(updated_at,1,10) = '{pt}')
-         ) base
+FROM (select *
+     from (SELECT *,
+             row_number() OVER(partition BY id ORDER BY updated_at desc,pos DESC) AS rn1
+FROM oride_dw_ods.ods_binlog_data_order_hi           
+WHERE concat_ws(' ',dt,hour) BETWEEN '{pt} 00' AND '{now_day} 00' --取昨天1天数据与今天早上00数据        
+      AND from_unixtime(create_time,'yyyy-MM-dd') = '{pt}'          
+      AND op IN ('c','u')) t1
+where rn1=1) base
 LEFT OUTER JOIN
 (SELECT id AS order_id,
        status AS pay_status,
@@ -586,7 +589,7 @@ dwd_oride_order_base_di_task= PythonOperator(
     dag=dag
 )
 
-ods_sqoop_base_data_order_df_prev_day_task >> dwd_oride_order_base_di_task
+ods_binlog_data_order_hi_prev_day_task >> dwd_oride_order_base_di_task
 ods_sqoop_base_data_order_payment_df_prev_day_task >> dwd_oride_order_base_di_task
 oride_client_event_detail_prev_day_task >> dwd_oride_order_base_di_task
 dependence_dispatch_tracker_server_magic_task >> dwd_oride_order_base_di_task

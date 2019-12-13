@@ -101,7 +101,29 @@ def app_oride_order_funnel_d_sql_task(ds):
     SET hive.exec.dynamic.partition=true;
     SET hive.exec.dynamic.partition.mode=nonstrict;
     insert overwrite table {db}.{table} partition(country_code,dt)
-    select nvl(ord.city_id,-10000) as city_id,
+    select city_id,
+       product_id,
+       driver_serv_type,
+       is_strong_dispatch,
+       act_num, --乘客端打开页面活跃量
+       choose_end_point_num, --地址选择次数
+       valuation_num,  --估价次数,即所谓的冒泡数量
+       order_cnt,  --下单量
+       broadcast_ord_cnt,  --播单量
+       succ_broadcast_ord_cnt,  --成功播单量
+       driver_show_ord_cnt,  --司机端推送给骑手订单量
+       accpet_show_ord_cnt,  --司机端前端show订单量
+       request_ord_cnt,  --接单量，理论和骑手端司机应答量一致，由于骑手端click打点数据缺失，所以用订单表统计
+       driver_arri_bef_cancel_cnt,  --司机到达接客点前取消量
+       driver_arri_aft_cancel_cnt,  --司机到达接客点后取消量
+       user_befreply_cancel_cnt,  --应答前乘客取消量
+       user_aftreply_befarri_cancel_cnt,  --应答后-司机到达前乘客取消量
+       user_aftreply_aftarri_cancel_cnt,  --应答后-司机到达后乘客取消量
+       finish_ord_cnt,  --完单量
+       finished_pay_ord_cnt,  --完成支付订单量   
+       if(m.country_code='total','nal','nal') as country_code,
+       '${pt}' as dt
+    from (select nvl(ord.city_id,-10000) as city_id,
        nvl(ord.product_id,-10000) as product_id,
        nvl(ord.driver_serv_type,-10000) as driver_serv_type,
        nvl(ord.is_strong_dispatch,-10000) as is_strong_dispatch,
@@ -121,8 +143,7 @@ def app_oride_order_funnel_d_sql_task(ds):
        ord.user_aftreply_aftarri_cancel_cnt,  --应答后-司机到达后乘客取消量
        ord.finish_ord_cnt,  --完单量
        ord.finished_pay_ord_cnt,  --完成支付订单量   
-       if(nvl(ord.country_code,'total')='total','nal','nal') as country_code,
-       '{pt}' as dt
+       nvl(ord.country_code,'total') as country_code
 
         from (select country_code,
                city_id,
@@ -168,7 +189,8 @@ def app_oride_order_funnel_d_sql_task(ds):
         and nvl(ord.city_id,-10000)=user_event.city_id
         and nvl(ord.product_id,-10000)=user_event.product_id
         and nvl(ord.driver_serv_type,-10000)=user_event.driver_serv_type
-        and nvl(ord.is_strong_dispatch,-10000)=user_event.is_strong_dispatch;
+        and nvl(ord.is_strong_dispatch,-10000)=user_event.is_strong_dispatch) m
+        where m.country_code='total';
     '''.format(
         pt=ds,
         now_day=airflow.macros.ds_add(ds, +1),
