@@ -122,7 +122,7 @@ def app_oride_order_funnel_d_sql_task(ds):
        finish_ord_cnt,  --完单量
        finished_pay_ord_cnt,  --完成支付订单量   
        if(m.country_code='total','nal','nal') as country_code,
-       '${pt}' as dt
+       '{pt}' as dt
     from (select nvl(ord.city_id,-10000) as city_id,
        nvl(ord.product_id,-10000) as product_id,
        nvl(ord.driver_serv_type,-10000) as driver_serv_type,
