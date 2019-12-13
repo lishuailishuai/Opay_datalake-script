@@ -14,6 +14,7 @@ from airflow.sensors.external_task_sensor import ExternalTaskSensor
 from airflow.operators.bash_operator import BashOperator
 from airflow.sensors.named_hive_partition_sensor import NamedHivePartitionSensor
 from airflow.sensors.hive_partition_sensor import HivePartitionSensor
+from airflow.sensors.web_hdfs_sensor import WebHdfsSensor
 from airflow.sensors import UFileSensor
 from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
 from plugins.TaskTouchzSuccess import TaskTouchzSuccess
@@ -43,13 +44,13 @@ dag = airflow.DAG('dwd_oride_order_base_di',
 ##----------------------------------------- 依赖 ---------------------------------------##
 
 # 依赖前一天分区
-ods_sqoop_base_data_order_df_prev_day_task = UFileSensor(
-    task_id='ods_sqoop_base_data_order_df_prev_day_task',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride_dw_sqoop/oride_data/data_order",
-        pt='{{ds}}'
+ods_binlog_data_order_hi_prev_day_task = WebHdfsSensor(
+    task_id='ods_binlog_data_order_hi_prev_day_task',
+    filepath='{hdfs_path_str}/dt={now_day}/hour=00/_SUCCESS'.format(
+        hdfs_path_str="/user/hive/warehouse/oride_dw_ods.db/ods_binlog_data_order_hi",
+        pt='{{ds}}',
+        now_day='{{macros.ds_add(ds, +1)}}'
     ),
-    bucket_name='opay-datalake',
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
@@ -72,16 +73,6 @@ oride_client_event_detail_prev_day_task = HivePartitionSensor(
     table="dwd_oride_client_event_detail_hi",
     partition="""dt='{{ ds }}' and hour='23'""",
     schema="oride_dw",
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
-
-# 依赖前一天分区
-dependence_dispatch_tracker_server_magic_task = HivePartitionSensor(
-    task_id="dispatch_tracker_server_magic_task",
-    table="dispatch_tracker_server_magic",
-    partition="dt='{{macros.ds_add(ds, +1)}}' and hour='00'",
-    schema="oride_source",
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
@@ -406,7 +397,7 @@ SELECT base.id as order_id,
        pax_num, -- 乘客数量 
        tip,  --小费
        trip_id, --'行程 ID'
-       if(push_ord.order_id is not null and push_ord.driver_id is not null,1,0) as is_strong_dispatch,  
+       null as is_strong_dispatch,  
        --是否强制派单1:是，0:否
        wait_carpool,--'是否在等在拼车'
        estimate_duration,  -- 预估时间                
@@ -431,12 +422,14 @@ SELECT base.id as order_id,
        nvl(country.country_code,'nal') as country_code,
 
        '{pt}' AS dt
-FROM
-     (SELECT *
-      FROM oride_dw_ods.ods_sqoop_base_data_order_df
-      WHERE dt = '{pt}'
-         AND (from_unixtime(create_time,'yyyy-MM-dd') = '{pt}' or substr(updated_at,1,10) = '{pt}')
-         ) base
+FROM (select *
+     from (SELECT *,
+             row_number() OVER(partition BY id ORDER BY updated_at desc,pos DESC) AS rn1
+FROM oride_dw_ods.ods_binlog_data_order_hi           
+WHERE concat_ws(' ',dt,hour) BETWEEN '{pt} 00' AND '{now_day} 00' --取昨天1天数据与今天早上00数据        
+      AND from_unixtime(create_time,'yyyy-MM-dd') = '{pt}'          
+      AND op IN ('c','u')) t1
+where rn1=1) base
 LEFT OUTER JOIN
 (SELECT id AS order_id,
        status AS pay_status,
@@ -453,31 +446,6 @@ LEFT OUTER JOIN
        
 FROM oride_dw_ods.ods_sqoop_base_data_order_payment_df
 WHERE dt = '{pt}') pay ON base.id=pay.order_id
---LEFT OUTER JOIN
---(SELECT get_json_object(event_value, '$.order_id') AS order_id,
-       --min(get_json_object(event_value, '$.estimated_price')) AS estimated_price --预估价格区间（最小值,最大值）
---FROM oride_dw.dwd_oride_client_event_detail_hi
---WHERE event_name='successful_order_show'
---  AND dt='{pt}'
---  AND length(get_json_object(event_value, '$.estimated_price'))>1
---GROUP BY get_json_object(event_value, '$.order_id')) ep
---ON base.order_id=ep.order_id
-left outer join
-(SELECT order_id,driver_id
-FROM
-  (SELECT get_json_object(event_values, '$.order_id') AS order_id,
-          --订单ID
-          cast(get_json_object(event_values, '$.driver_id') as bigint) as driver_id,
-          cast(get_json_object(event_values, '$.assign_type') AS bigint) AS assign_type
-          --0=非强派单，1=强派单
-
-   FROM oride_source.dispatch_tracker_server_magic
-   WHERE dt = '{pt}'
-     AND event_name='dispatch_push_driver') a1
-WHERE assign_type=1
-GROUP BY order_id,driver_id) push_ord
-on base.id=push_ord.order_id
-and base.driver_id=push_ord.driver_id
 
 left join
 (SELECT *
@@ -586,8 +554,7 @@ dwd_oride_order_base_di_task= PythonOperator(
     dag=dag
 )
 
-ods_sqoop_base_data_order_df_prev_day_task >> dwd_oride_order_base_di_task
+ods_binlog_data_order_hi_prev_day_task >> dwd_oride_order_base_di_task
 ods_sqoop_base_data_order_payment_df_prev_day_task >> dwd_oride_order_base_di_task
 oride_client_event_detail_prev_day_task >> dwd_oride_order_base_di_task
-dependence_dispatch_tracker_server_magic_task >> dwd_oride_order_base_di_task
 ods_sqoop_base_data_country_conf_df_prev_day_task >> dwd_oride_order_base_di_task
