@@ -43,9 +43,9 @@ dag = airflow.DAG(
     default_args=args)
 
 ##----------------------------------------- 依赖 ---------------------------------------##
-ods_sqoop_owealth_share_acct_df_prev_day_task = OssSensor(
+ods_sqoop_owealth_share_acct_df_prev_day_task = UFileSensor(
     task_id='ods_sqoop_owealth_share_acct_df_prev_day_task',
-    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
         hdfs_path_str="opay_owealth_ods/opay_owealth/share_acct",
         pt='{{ds}}'
     ),
@@ -54,9 +54,9 @@ ods_sqoop_owealth_share_acct_df_prev_day_task = OssSensor(
     dag=dag
 )
 
-ods_sqoop_owealth_share_order_df_prev_day_task = OssSensor(
+ods_sqoop_owealth_share_order_df_prev_day_task = UFileSensor(
     task_id='ods_sqoop_owealth_share_order_df_prev_day_task',
-    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
         hdfs_path_str="opay_owealth_ods/opay_owealth/share_order",
         pt='{{ds}}'
     ),
