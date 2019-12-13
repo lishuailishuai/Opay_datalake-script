@@ -86,6 +86,17 @@ ods_sqoop_owealth_share_revenue_log_df_prev_day_task = UFileSensor(
     dag=dag
 )
 
+ods_sqoop_base_user_di_prev_day_task = OssSensor(
+    task_id='ods_sqoop_base_user_di_prev_day_task',
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="opay_dw_sqoop_di/opay_user/user",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
 ##----------------------------------------- 变量 ---------------------------------------##
 db_name = "opay_dw"
 table_name = "app_opay_owealth_collect_24_d"
@@ -263,6 +274,8 @@ ods_sqoop_owealth_share_acct_df_prev_day_task >> app_opay_owealth_collect_24_d_t
 ods_sqoop_owealth_share_order_df_prev_day_task >> app_opay_owealth_collect_24_d_task
 ods_sqoop_owealth_owealth_user_subscribed_df_prev_day_task >> app_opay_owealth_collect_24_d_task
 ods_sqoop_owealth_share_revenue_log_df_prev_day_task >> app_opay_owealth_collect_24_d_task
+ods_sqoop_base_user_di_prev_day_task >> app_opay_owealth_collect_24_d_task
+
 
 
 
