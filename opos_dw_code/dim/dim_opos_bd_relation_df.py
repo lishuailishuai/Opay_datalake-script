@@ -17,6 +17,7 @@ from airflow.sensors.hive_partition_sensor import HivePartitionSensor
 from airflow.sensors import UFileSensor
 from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
 from plugins.TaskTouchzSuccess import TaskTouchzSuccess
+from airflow.sensors import OssSensor
 import json
 import logging
 from airflow.models import Variable
@@ -41,8 +42,7 @@ dag = airflow.DAG('dim_opos_bd_relation_df',
 
 ##----------------------------------------- 依赖 ---------------------------------------##
 
-# 依赖前一天分区，ods_sqoop_base_bd_admin_users_df表，ufile://opay-datalake/opos_dw_sqoop/opay_crm/bd_admin_users
-ods_sqoop_base_bd_admin_users_df_task = UFileSensor(
+ods_sqoop_base_bd_admin_users_df_task = OssSensor(
     task_id='ods_sqoop_base_bd_admin_users_df_task',
     filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
         hdfs_path_str="opos_dw_sqoop/opay_crm/bd_admin_users",
@@ -53,10 +53,9 @@ ods_sqoop_base_bd_admin_users_df_task = UFileSensor(
     dag=dag
 )
 
-# 依赖前一天分区，ods_sqoop_base_bd_shop_df表，ufile://opay-datalake/opos_dw_sqoop/opay_crm/bd_shop
-ods_sqoop_base_bd_shop_df_task = UFileSensor(
+ods_sqoop_base_bd_shop_df_task = OssSensor(
     task_id='ods_sqoop_base_bd_shop_df_task',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
         hdfs_path_str="opos_dw_sqoop/opay_crm/bd_shop",
         pt='{{ds}}'
     ),
@@ -65,10 +64,9 @@ ods_sqoop_base_bd_shop_df_task = UFileSensor(
     dag=dag
 )
 
-# 依赖前一天分区，ods_sqoop_base_bd_city_df表,ufile://opay-datalake/opos_dw_sqoop/opay_crm/bd_city
-ods_sqoop_base_bd_city_df_task = UFileSensor(
+ods_sqoop_base_bd_city_df_task = OssSensor(
     task_id='ods_sqoop_base_bd_city_df_task',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
         hdfs_path_str="opos_dw_sqoop/opay_crm/bd_city",
         pt='{{ds}}'
     ),
@@ -81,7 +79,7 @@ ods_sqoop_base_bd_city_df_task = UFileSensor(
 
 db_name = "opos_dw"
 table_name = "dim_opos_bd_relation_df"
-hdfs_path = "ufile://opay-datalake/opos/opos_dw/" + table_name
+hdfs_path = "oss://opay-datalake/opos/opos_dw/" + table_name
 
 
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
