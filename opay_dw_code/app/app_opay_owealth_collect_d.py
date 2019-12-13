@@ -42,9 +42,9 @@ dag = airflow.DAG(
     default_args=args)
 
 ##----------------------------------------- 依赖 ---------------------------------------##
-ods_sqoop_owealth_share_acct_hf_prev_day_task = UFileSensor(
+ods_sqoop_owealth_share_acct_hf_prev_day_task = OssSensor(
     task_id='ods_sqoop_owealth_share_acct_hf_prev_day_task',
-    filepath='{hdfs_path_str}/dt={pt}/hour=18/_SUCCESS'.format(
+    bucket_key='{hdfs_path_str}/dt={pt}/hour=18/_SUCCESS'.format(
         hdfs_path_str="opay_owealth_sqoop_hf/opay_owealth/share_acct",
         pt='{{macros.ds_add(ds, +1)}}'
     ),
@@ -53,9 +53,9 @@ ods_sqoop_owealth_share_acct_hf_prev_day_task = UFileSensor(
     dag=dag
 )
 
-ods_sqoop_owealth_share_order_hf_prev_day_task = UFileSensor(
+ods_sqoop_owealth_share_order_hf_prev_day_task = OssSensor(
     task_id='ods_sqoop_owealth_share_order_hf_prev_day_task',
-    filepath='{hdfs_path_str}/dt={pt}/hour=18/_SUCCESS'.format(
+    bucket_key='{hdfs_path_str}/dt={pt}/hour=18/_SUCCESS'.format(
         hdfs_path_str="opay_owealth_sqoop_hf/opay_owealth/share_order",
         pt='{{macros.ds_add(ds, +1)}}'
     ),
@@ -75,9 +75,9 @@ ods_sqoop_base_owealth_user_subscribed_hf_prev_day_task = OssSensor(
     dag=dag
 )
 
-ods_sqoop_owealth_share_revenue_log_hf_prev_day_task = UFileSensor(
+ods_sqoop_owealth_share_revenue_log_hf_prev_day_task = OssSensor(
     task_id='ods_sqoop_owealth_share_revenue_log_hf_prev_day_task',
-    filepath='{hdfs_path_str}/dt={pt}/hour=18/_SUCCESS'.format(
+    bucket_key='{hdfs_path_str}/dt={pt}/hour=18/_SUCCESS'.format(
         hdfs_path_str="opay_owealth_sqoop_hf/opay_owealth/share_revenue_log",
         pt='{{macros.ds_add(ds, +1)}}'
     ),
@@ -88,7 +88,7 @@ ods_sqoop_owealth_share_revenue_log_hf_prev_day_task = UFileSensor(
 ##----------------------------------------- 变量 ---------------------------------------##
 db_name = "opay_dw"
 table_name = "app_opay_owealth_collect_d"
-hdfs_path = "ufile://opay-datalake/opay/opay_dw/" + table_name
+hdfs_path = "oss://opay-datalake/opay/opay_dw/" + table_name
 
 
 def app_opay_owealth_collect_d_sql_task(ds):

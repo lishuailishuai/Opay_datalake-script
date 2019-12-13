@@ -90,7 +90,7 @@ ods_sqoop_base_merchant_df_prev_day_task = OssSensor(
 db_name="opay_dw"
 
 table_name = "dwd_opay_account_balance_df"
-hdfs_path="ufile://opay-datalake/opay/opay_dw/" + table_name
+hdfs_path="oss://opay-datalake/opay/opay_dw/" + table_name
 
 def dwd_opay_account_balance_df_sql_task(ds):
     HQL = '''

@@ -67,7 +67,7 @@ ods_sqoop_base_mobiledata_topup_record_hf_prev_day_task = OssSensor(
 ##----------------------------------------- 变量 ---------------------------------------##
 db_name = "opay_dw"
 table_name = "app_opay_owealth_air_mobile_d"
-hdfs_path = "ufile://opay-datalake/opay/opay_dw/" + table_name
+hdfs_path = "oss://opay-datalake/opay/opay_dw/" + table_name
 
 
 def app_opay_owealth_air_mobile_d_sql_task(ds):
