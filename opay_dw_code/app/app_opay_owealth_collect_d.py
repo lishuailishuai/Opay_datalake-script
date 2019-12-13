@@ -64,9 +64,9 @@ ods_sqoop_owealth_share_order_hf_prev_day_task = UFileSensor(
     dag=dag
 )
 
-ods_sqoop_base_owealth_user_subscribed_hf_prev_day_task = UFileSensor(
+ods_sqoop_base_owealth_user_subscribed_hf_prev_day_task = OssSensor(
     task_id='ods_sqoop_base_owealth_user_subscribed_hf_prev_day_task',
-    filepath='{hdfs_path_str}/dt={pt}/hour=19/_SUCCESS'.format(
+    bucket_key='{hdfs_path_str}/dt={pt}/hour=19/_SUCCESS'.format(
         hdfs_path_str="opay_dw_sqoop_hf/opay_owealth/owealth_user_subscribed",
         pt='{{macros.ds_add(ds, +1)}}'
     ),
