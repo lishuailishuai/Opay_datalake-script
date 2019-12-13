@@ -42,9 +42,9 @@ dag = airflow.DAG(
     default_args=args)
 
 ##----------------------------------------- 依赖 ---------------------------------------##
-ods_sqoop_owealth_share_acct_hf_prev_day_task = OssSensor(
+ods_sqoop_owealth_share_acct_hf_prev_day_task = UFileSensor(
     task_id='ods_sqoop_owealth_share_acct_hf_prev_day_task',
-    bucket_key='{hdfs_path_str}/dt={pt}/hour=18/_SUCCESS'.format(
+    filepath='{hdfs_path_str}/dt={pt}/hour=18/_SUCCESS'.format(
         hdfs_path_str="opay_owealth_sqoop_hf/opay_owealth/share_acct",
         pt='{{macros.ds_add(ds, +1)}}'
     ),
@@ -53,9 +53,9 @@ ods_sqoop_owealth_share_acct_hf_prev_day_task = OssSensor(
     dag=dag
 )
 
-ods_sqoop_owealth_share_order_hf_prev_day_task = OssSensor(
+ods_sqoop_owealth_share_order_hf_prev_day_task = UFileSensor(
     task_id='ods_sqoop_owealth_share_order_hf_prev_day_task',
-    bucket_key='{hdfs_path_str}/dt={pt}/hour=18/_SUCCESS'.format(
+    filepath='{hdfs_path_str}/dt={pt}/hour=18/_SUCCESS'.format(
         hdfs_path_str="opay_owealth_sqoop_hf/opay_owealth/share_order",
         pt='{{macros.ds_add(ds, +1)}}'
     ),
@@ -64,9 +64,9 @@ ods_sqoop_owealth_share_order_hf_prev_day_task = OssSensor(
     dag=dag
 )
 
-ods_sqoop_base_owealth_user_subscribed_hf_prev_day_task = OssSensor(
+ods_sqoop_base_owealth_user_subscribed_hf_prev_day_task = UFileSensor(
     task_id='ods_sqoop_base_owealth_user_subscribed_hf_prev_day_task',
-    bucket_key='{hdfs_path_str}/dt={pt}/hour=19/_SUCCESS'.format(
+    filepath='{hdfs_path_str}/dt={pt}/hour=19/_SUCCESS'.format(
         hdfs_path_str="opay_dw_sqoop_hf/opay_owealth/owealth_user_subscribed",
         pt='{{macros.ds_add(ds, +1)}}'
     ),
@@ -75,9 +75,9 @@ ods_sqoop_base_owealth_user_subscribed_hf_prev_day_task = OssSensor(
     dag=dag
 )
 
-ods_sqoop_owealth_share_revenue_log_hf_prev_day_task = OssSensor(
+ods_sqoop_owealth_share_revenue_log_hf_prev_day_task = UFileSensor(
     task_id='ods_sqoop_owealth_share_revenue_log_hf_prev_day_task',
-    bucket_key='{hdfs_path_str}/dt={pt}/hour=18/_SUCCESS'.format(
+    filepath='{hdfs_path_str}/dt={pt}/hour=18/_SUCCESS'.format(
         hdfs_path_str="opay_owealth_sqoop_hf/opay_owealth/share_revenue_log",
         pt='{{macros.ds_add(ds, +1)}}'
     ),
