@@ -70,7 +70,7 @@ table_list = [
 
 HIVE_DB = 'opay_owealth_ods'
 HIVE_TABLE = 'ods_sqoop_%s_%s_hf'
-UFILE_PATH = Variable.get("OBJECT_STORAGE_PROTOCOL") + 'opay-datalake/opay_owealth_sqoop_hf/%s/%s'
+UFILE_PATH = 'oss://opay-datalake/opay_owealth_sqoop_hf/%s/%s'
 ODS_CREATE_TABLE_SQL = '''
     CREATE EXTERNAL TABLE IF NOT EXISTS {db_name}.`{table_name}`(
         {columns}
