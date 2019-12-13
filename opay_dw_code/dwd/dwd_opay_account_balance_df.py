@@ -45,7 +45,7 @@ dag = airflow.DAG('dwd_opay_account_balance_df',
 ods_sqoop_base_account_user_df_prev_day_task = OssSensor(
     task_id='ods_sqoop_base_account_user_df_prev_day_task',
     bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opay_dw_ods/opay_account/account_user",
+        hdfs_path_str="opay_dw_sqoop/opay_account/account_user",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -56,7 +56,7 @@ ods_sqoop_base_account_user_df_prev_day_task = OssSensor(
 ods_sqoop_base_account_merchant_df_prev_day_task = OssSensor(
     task_id='ods_sqoop_base_account_merchant_df_prev_day_task',
     bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opay_dw_ods/opay_account/account_merchant",
+        hdfs_path_str="opay_dw_sqoop/opay_account/account_merchant",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -78,7 +78,7 @@ ods_sqoop_base_user_di_prev_day_task = OssSensor(
 ods_sqoop_base_merchant_df_prev_day_task = OssSensor(
     task_id='ods_sqoop_base_merchant_df_prev_day_task',
     bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opay_dw_ods/opay_merchant/merchant",
+        hdfs_path_str="opay_dw_sqoop/opay_merchant/merchant",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
