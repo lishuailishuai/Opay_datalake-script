@@ -44,7 +44,7 @@ dag = airflow.DAG('dim_opos_bd_relation_df',
 
 ods_sqoop_base_bd_admin_users_df_task = OssSensor(
     task_id='ods_sqoop_base_bd_admin_users_df_task',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
         hdfs_path_str="opos_dw_sqoop/opay_crm/bd_admin_users",
         pt='{{ds}}'
     ),
