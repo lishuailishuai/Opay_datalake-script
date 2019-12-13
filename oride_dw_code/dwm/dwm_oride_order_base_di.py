@@ -302,7 +302,7 @@ def dwm_oride_order_base_di_sql_task(ds):
            ord.is_carpool_success,
            --是否拼车成功
 
-           ord.is_strong_dispatch,
+           if(push1.assign_type=1,1,0) as is_strong_dispatch,
            --是否强派1：是，0:否
            
            if(ord.cancel_reason<>'',1,0) as cancel_feedback,
@@ -358,11 +358,12 @@ def dwm_oride_order_base_di_sql_task(ds):
         SELECT 
         if(lower(is_multiple)='true',order_id_multiple,order_id) as order_id,  --成功播单的订单
         driver_id,
+        assign_type,
         max(order_round) as max_order_round, --播单最大轮数，要么被抢单了要么超时了
         min(distance) as distance --抢单阶段的接驾距离
         FROM oride_dw.dwd_oride_order_push_driver_detail_di   --调度算法push节点
         WHERE dt='{pt}' and success=1 
-        GROUP BY if(lower(is_multiple)='true',order_id_multiple,order_id),driver_id
+        GROUP BY if(lower(is_multiple)='true',order_id_multiple,order_id),driver_id,assign_type
         ) push1 ON ord.order_id=push1.order_id and ord.driver_id=push1.driver_id    
     LEFT OUTER JOIN 
     (

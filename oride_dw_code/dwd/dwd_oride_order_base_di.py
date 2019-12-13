@@ -78,16 +78,6 @@ oride_client_event_detail_prev_day_task = HivePartitionSensor(
 )
 
 # 依赖前一天分区
-dependence_dispatch_tracker_server_magic_task = HivePartitionSensor(
-    task_id="dispatch_tracker_server_magic_task",
-    table="dispatch_tracker_server_magic",
-    partition="dt='{{macros.ds_add(ds, +1)}}' and hour='00'",
-    schema="oride_source",
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
-
-# 依赖前一天分区
 ods_sqoop_base_data_country_conf_df_prev_day_task = UFileSensor(
     task_id='ods_sqoop_base_data_country_conf_df_prev_day_task',
     filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
@@ -407,7 +397,7 @@ SELECT base.id as order_id,
        pax_num, -- 乘客数量 
        tip,  --小费
        trip_id, --'行程 ID'
-       if(push_ord.order_id is not null and push_ord.driver_id is not null,1,0) as is_strong_dispatch,  
+       null as is_strong_dispatch,  
        --是否强制派单1:是，0:否
        wait_carpool,--'是否在等在拼车'
        estimate_duration,  -- 预估时间                
@@ -456,31 +446,6 @@ LEFT OUTER JOIN
        
 FROM oride_dw_ods.ods_sqoop_base_data_order_payment_df
 WHERE dt = '{pt}') pay ON base.id=pay.order_id
---LEFT OUTER JOIN
---(SELECT get_json_object(event_value, '$.order_id') AS order_id,
-       --min(get_json_object(event_value, '$.estimated_price')) AS estimated_price --预估价格区间（最小值,最大值）
---FROM oride_dw.dwd_oride_client_event_detail_hi
---WHERE event_name='successful_order_show'
---  AND dt='{pt}'
---  AND length(get_json_object(event_value, '$.estimated_price'))>1
---GROUP BY get_json_object(event_value, '$.order_id')) ep
---ON base.order_id=ep.order_id
-left outer join
-(SELECT order_id,driver_id
-FROM
-  (SELECT get_json_object(event_values, '$.order_id') AS order_id,
-          --订单ID
-          cast(get_json_object(event_values, '$.driver_id') as bigint) as driver_id,
-          cast(get_json_object(event_values, '$.assign_type') AS bigint) AS assign_type
-          --0=非强派单，1=强派单
-
-   FROM oride_source.dispatch_tracker_server_magic
-   WHERE dt = '{pt}'
-     AND event_name='dispatch_push_driver') a1
-WHERE assign_type=1
-GROUP BY order_id,driver_id) push_ord
-on base.id=push_ord.order_id
-and base.driver_id=push_ord.driver_id
 
 left join
 (SELECT *
@@ -592,5 +557,4 @@ dwd_oride_order_base_di_task= PythonOperator(
 ods_binlog_data_order_hi_prev_day_task >> dwd_oride_order_base_di_task
 ods_sqoop_base_data_order_payment_df_prev_day_task >> dwd_oride_order_base_di_task
 oride_client_event_detail_prev_day_task >> dwd_oride_order_base_di_task
-dependence_dispatch_tracker_server_magic_task >> dwd_oride_order_base_di_task
 ods_sqoop_base_data_country_conf_df_prev_day_task >> dwd_oride_order_base_di_task
