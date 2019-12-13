@@ -9,6 +9,8 @@ import logging
 from airflow.hooks.hive_hooks import HiveCliHook
 from plugins.TaskTouchzSuccess import TaskTouchzSuccess
 import os
+from airflow.sensors import UFileSensor
+from airflow.operators.bash_operator import BashOperator
 
 args = {
     'owner':"chenghui",
@@ -48,15 +50,9 @@ hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
 def fun_task_timeout_monitor(ds, dag, **op_kwargs):
     dag_ids = dag.dag_id
 
-    date = "{pt}".format(pt=ds)
-    year = date[0:4]
-
-    sql = "hive -e \"select weekofyear('{pt}');\"".format(pt=ds)
-    week = os.popen(sql).read().strip("\n")
-
     msg = [
         {"db": "oride_dw", "table": "{dag_name}".format(dag_name=dag_ids),
-         "partition": "country_code=NG/dw="+year+"_"+week, "timeout": "800"}
+         "partition": "country_code=NG/dt={pt}".format(pt=airflow.macros.ds_add(ds, +6)), "timeout": "800"}
     ]
 
     TaskTimeoutMonitor().set_task_monitor(msg)
@@ -68,30 +64,34 @@ task_timeout_monitor = PythonOperator(
     provide_context=True,
     dag=dag
 )
+
 ##----------------------------------------- 脚本 ---------------------------------------##
 def dwm_oride_driver_act_w_sql_task(ds):
     HQL = '''
     set hive.exec.parallel=true;
     set hive.exec.dynamic.partition.mode=nonstrict;
     
-    insert overwrite table {db}.{table} partition(country_code,dw)
+    insert overwrite table {db}.{table} partition(country_code,dt)
     
     select driver_id,
         city_id,
         driver_serv_type,
+        weekofyear(dt) as week,
         country_code,
-        concat(substr(dt,1,4),'_',weekofyear(dt)) as dw
+        '{pt}' as dt
     from oride_dw.dwd_oride_order_base_include_test_di
-    where dt between '{pt}' and date_add('{pt}',6)
+    where dt between date_sub('{pt}',6) and '{pt}'
     and status in(4,5) and city_id<>999001 and driver_id<>1
-    group by country_code,concat(substr(dt,1,4),'_',weekofyear(dt)),
+    group by country_code,weekofyear(dt),
         city_id,driver_serv_type,driver_id;
     '''.format(
-        pt=ds,
+        pt=airflow.macros.ds_add(ds, +6),
         db=db_name,
         table=table_name
     )
     return HQL
+
+
 
 # 主流程
 def execution_data_task_id(ds, **kargs):
@@ -105,14 +105,14 @@ def execution_data_task_id(ds, **kargs):
     # 执行Hive
     hive_hook.run_cli(_sql)
 
-
     # 生成_SUCCESS
     """
     第一个参数true: 数据目录是有country_code分区。false 没有
     第二个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
 
     """
-    TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "true", "true")
+    TaskTouchzSuccess().countries_touchz_success('{pt}'.format(pt=airflow.macros.ds_add(ds, +6)), db_name, table_name, hdfs_path, "true", "true")
+
 
 dwm_oride_driver_act_w_task = PythonOperator(
     task_id='dwm_oride_driver_act_w_task',
@@ -120,5 +120,6 @@ dwm_oride_driver_act_w_task = PythonOperator(
     provide_context=True,
     dag=dag
 )
+
 
 dependence_dwd_oride_order_base_include_test_di_prev_day_task>>dwm_oride_driver_act_w_task
