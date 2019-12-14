@@ -113,7 +113,7 @@ class TaskHourSuccessCountMonitor(object):
 
         return res
     
-    def HourSuccessCountMonitor(self,s):
+    def HourSuccessCountMonitor(self):
 
         res_list=[]
 
