@@ -39,6 +39,9 @@ class TaskHourSuccessCountMonitor(object):
         self.nm=in_text.split(":")[0]
         self.symbol=in_text.split(":")[1]
         self.v_data_dir=in_data_dir
+
+        self.less_res=[]
+        self.greater_res=[]
         
         self.syl=self.number_rebuild(self.nm)
 
@@ -75,13 +78,10 @@ class TaskHourSuccessCountMonitor(object):
             s_nm="0"+n
         else:
             s_nm=n
-    
+       
         return s_nm
     
-    
     def nm_less_diff(self,s):
-
-        res=[]
     
         sylstr=str(s)+"/_SUCCESS"
     
@@ -90,14 +90,11 @@ class TaskHourSuccessCountMonitor(object):
     
         if int(s)<=int(v_in_number):
     
-            if sylstr not in res:
-                res.append(sylstr)
+            if sylstr not in self.less_res:
+                self.less_res.append(sylstr)
 
-        return res
     
     def nm_greater_diff(self,s):
-
-        res=[]
     
         sylstr=str(s)+"/_SUCCESS"
     
@@ -106,11 +103,10 @@ class TaskHourSuccessCountMonitor(object):
     
         if int(s)>=int(v_in_number):
     
-            if sylstr not in res:
+            if sylstr not in self.greater_res:
          
-                res.append(sylstr)
+                self.greater_res.append(sylstr)
 
-        return res
     
     def HourSuccessCountMonitor(self):
 
@@ -124,11 +120,17 @@ class TaskHourSuccessCountMonitor(object):
         
             if self.symbol=="<":
         
-                res_list=self.nm_less_diff(source_nm)
+                self.nm_less_diff(source_nm)
+
+                return len(less_res)
         
             if self.symbol==">":
         
-                res_list=self.nm_greater_diff(source_nm)
+                self.nm_greater_diff(source_nm)
+
+                return len(greater_res)
+
+
         
-        return len(res_list)
+        
 
