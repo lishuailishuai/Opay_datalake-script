@@ -54,7 +54,7 @@ class TaskHourSuccessCountMonitor(object):
 
         print(res[0])
         
-        res = 0 if res is None else res[0].lower().strip()
+        res[0] = 0 if res[0] is None else res[0].lower().strip()
         out.close()
 
         #判断 _SUCCESS 文件是否生成
@@ -65,7 +65,7 @@ class TaskHourSuccessCountMonitor(object):
         
         else:
         
-            logging.info(res)
+            logging.info(res[0])
 
             return res[0]
 
