@@ -104,7 +104,7 @@ def dm_opay_recharge_betting_base_cube_d_sql_task(ds):
         where dt = '{pt}'
             and create_time BETWEEN date_format(date_sub('{pt}', 1), 'yyyy-MM-dd 23') AND date_format('{pt}', 'yyyy-MM-dd 23') 
             and sub_service_type = 'Betting'
-            and service_provider <> '' and recharge_service_provider <> 'supabet' and recharge_service_provider is not null
+            and recharge_service_provider <> '' and recharge_service_provider <> 'supabet' and recharge_service_provider is not null
     ) t1
     group by country_code, recharge_service_provider, amount_range, order_status
     GROUPING SETS (
