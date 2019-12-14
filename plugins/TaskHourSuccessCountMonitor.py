@@ -51,6 +51,8 @@ class TaskHourSuccessCountMonitor(object):
 
         out = os.popen(command, 'r')
         res = out.readlines()
+
+        print(res)
         
         res = 0 if res is None else res[0].lower().strip()
         out.close()
