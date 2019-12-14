@@ -19,6 +19,7 @@ from airflow.sensors import OssSensor
 from airflow.sensors.s3_key_sensor import S3KeySensor
 from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
 from plugins.CountriesPublicFrame import CountriesPublicFrame
+from plugins.TaskHourSuccessCountMonitor import TaskHourSuccessCountMonitor
 import json
 import logging
 from airflow.models import Variable
@@ -107,6 +108,9 @@ db_name="test_db"
 table_name="test_dim_oride_city"
 hdfs_path="s3a://opay-bi/oride/oride_dw/"+table_name
 
+in_text="2:>"
+
+hour_hdfs_path='hdfs://warehourse/user/hive/warehouse/oride_dw_ods.db/ods_binlog_data_order_hi/dt=2019-12-12'
 
 ##----------------------------------------- 脚本 ---------------------------------------## 
 
@@ -298,6 +302,10 @@ def execution_data_task_id(ds,**kwargs):
     v_hour=kwargs.get('v_execution_hour')
 
     hive_hook = HiveCliHook()
+
+    cm=TaskHourSuccessCountMonitor(in_text,hour_hdfs_path)
+
+    print(cm.HourSuccessCountMonitor())
 
     """
         #功能函数
