@@ -17,6 +17,7 @@ from airflow.sensors.hive_partition_sensor import HivePartitionSensor
 from airflow.sensors import UFileSensor
 from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
 from plugins.TaskTouchzSuccess import TaskTouchzSuccess
+from airflow.sensors import OssSensor
 import json
 import logging
 from airflow.models import Variable
@@ -41,9 +42,9 @@ dag = airflow.DAG('app_opos_metrics_daily_new_d',
 
 ##----------------------------------------- 依赖 ---------------------------------------##
 
-dwd_pre_opos_payment_order_di_task = UFileSensor(
+dwd_pre_opos_payment_order_di_task = OssSensor(
     task_id='dwd_pre_opos_payment_order_di_task',
-    filepath='{hdfs_path_str}/country_code=nal/dt={pt}/_SUCCESS'.format(
+    bucket_key='{hdfs_path_str}/country_code=nal/dt={pt}/_SUCCESS'.format(
         hdfs_path_str="opos/opos_dw/dwd_pre_opos_payment_order_di",
         pt='{{ds}}'
     ),
@@ -52,9 +53,9 @@ dwd_pre_opos_payment_order_di_task = UFileSensor(
     dag=dag
 )
 
-ods_sqoop_base_bd_admin_users_df_task = UFileSensor(
+ods_sqoop_base_bd_admin_users_df_task = OssSensor(
     task_id='ods_sqoop_base_bd_admin_users_df_task',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
         hdfs_path_str="opos_dw_sqoop/opay_crm/bd_admin_users",
         pt='{{ds}}'
     ),
@@ -68,7 +69,7 @@ ods_sqoop_base_bd_admin_users_df_task = UFileSensor(
 
 db_name = "opos_dw"
 table_name = "app_opos_metrics_daily_new_d"
-hdfs_path = "ufile://opay-datalake/opos/opos_dw/" + table_name
+hdfs_path = "oss://opay-datalake/opos/opos_dw/" + table_name
 
 
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
@@ -127,8 +128,28 @@ nvl(a.hcm_id,b.hcm_id) as hcm_id
 ,nvl(b.old_user_cost,0) as old_user_cost
 ,nvl(b.return_amount_order_cnt,0) as return_amount_order_cnt
 
+,nvl(b.cashback_order_cnt,0) as cashback_order_cnt
+,nvl(b.cashback_fail_order_cnt,0) as cashback_fail_order_cnt
+,nvl(b.cashback_order_gmv,0) as cashback_order_gmv
+,nvl(b.cashback_per_order_amt,0) as cashback_per_order_amt
+,nvl(b.cashback_per_people_amt,0) as cashback_per_people_amt
+,nvl(b.cashback_people_cnt,0) as cashback_people_cnt
+,nvl(b.cashback_first_people_cnt,0) as cashback_first_people_cnt
+,nvl(b.cashback_zero_order_cnt,0) as cashback_zero_order_cnt
+,nvl(b.cashback_order_percent,0) as cashback_order_percent
+,nvl(b.cashback_amt,0) as cashback_amt
+
+,nvl(b.reduce_order_cnt,0) as reduce_order_cnt
+,nvl(b.reduce_zero_order_cnt,0) as reduce_zero_order_cnt
+,nvl(b.reduce_amt,0) as reduce_amt
+,nvl(b.reduce_order_gmv,0) as reduce_order_gmv
+,nvl(b.reduce_per_order_amt,0) as reduce_per_order_amt
+,nvl(b.reduce_per_people_amt,0) as reduce_per_people_amt
+,nvl(b.reduce_people_cnt,0) as reduce_people_cnt
+,nvl(b.reduce_first_people_cnt,0) as reduce_first_people_cnt
+
 ,'nal' as country_code
-,'{pt}' as dt
+,'2019-12-11' as dt
 from
   (select 
   hcm_id
@@ -141,12 +162,12 @@ from
   
   ,count(id) as merchant_cnt
   ,0 as pos_merchant_cnt
-  ,count(if(created_at = '{pt}',id,null)) as new_merchant_cnt
+  ,count(if(created_at = '2019-12-11',id,null)) as new_merchant_cnt
   ,0 as new_pos_merchant_cnt
   from
   opos_dw.dim_opos_bd_relation_df
   where 
-  country_code='nal' and dt='{pt}'
+  country_code='nal' and dt='2019-12-11'
   group by
   hcm_id
   ,cm_id
@@ -177,14 +198,36 @@ full join
   ,nvl(sum(if(first_order <> '1',nvl(org_payment_amount,0) - nvl(pay_amount,0) + nvl(user_subsidy,0),0)),0) as old_user_cost
   ,nvl(count(if(return_amount > 0,order_id,null)),0) as return_amount_order_cnt
   
+  --返现活动情况分析
+  ,count(1) as order_cnt
+  ,count(if(user_subsidy_status='SUCCESS',1,null)) as cashback_order_cnt
+  ,count(if(user_subsidy_status='FAIL',1,null)) as cashback_fail_order_cnt
+  ,sum(if(user_subsidy_status='SUCCESS',nvl(org_payment_amount,0),0)) as cashback_order_gmv
+  ,nvl(sum(if(user_subsidy_status='SUCCESS',nvl(org_payment_amount,0),0))/count(if(user_subsidy_status='SUCCESS',1,null)),0) as cashback_per_order_amt
+  ,nvl(sum(if(user_subsidy_status='SUCCESS',nvl(org_payment_amount,0),0))/count(distinct(if(user_subsidy_status='SUCCESS',sender_id,null))),0) as cashback_per_people_amt
+  ,count(distinct(if(user_subsidy_status='SUCCESS',sender_id,null))) as cashback_people_cnt
+  ,count(distinct(if(user_subsidy_status='SUCCESS' and first_order='1',sender_id,null))) as cashback_first_people_cnt
+  ,count(if(user_subsidy=0,1,null)) as cashback_zero_order_cnt
+  ,nvl(count(if(user_subsidy_status='SUCCESS',1,null))/count(1),0) as cashback_order_percent
+  ,sum(if(user_subsidy>0 and user_subsidy_status='SUCCESS',nvl(user_subsidy,0),0)) as cashback_amt
+  
+  ,count(if(activity_type in ('RCB','CB'),1,null)) as reduce_order_cnt
+  ,0 as reduce_zero_order_cnt
+  ,sum(if(activity_type in ('RCB','CB'),nvl(discount_amount,0),0)) as reduce_amt
+  ,sum(if(activity_type in ('RCB','CB'),nvl(org_payment_amount,0),0)) as reduce_order_gmv
+  ,nvl(sum(if(activity_type in ('RCB','CB'),nvl(org_payment_amount,0),0))/count(if(activity_type in ('RCB','CB'),1,null)),0) as reduce_per_order_amt
+  ,nvl(sum(if(activity_type in ('RCB','CB'),nvl(org_payment_amount,0),0))/count(distinct(if(activity_type not in ('RCB','CB'),sender_id,null))),0) as reduce_per_people_amt
+  ,count(distinct(if(activity_type in ('RCB','CB'),sender_id,null))) as reduce_people_cnt
+  ,count(distinct(if(activity_type in ('RCB','CB') and first_order='1',sender_id,null))) as reduce_first_people_cnt
+  
   ,'nal' as country_code
-  ,'{pt}' as dt
+  ,'2019-12-11' as dt
   
   from 
   opos_dw.dwd_pre_opos_payment_order_di as p
   where 
   country_code='nal'
-  and dt = '{pt}' 
+  and dt = '2019-12-11' 
   and trade_status = 'SUCCESS'
   group by
   hcm_id
@@ -720,6 +763,25 @@ o.id
 ,o.new_user_cnt
 ,o.more_5_merchant_cnt
 
+,o.cashback_order_cnt
+,o.cashback_fail_order_cnt
+,o.cashback_order_gmv
+,o.cashback_per_order_amt
+,o.cashback_per_people_amt
+,o.cashback_people_cnt
+,o.cashback_first_people_cnt
+,o.cashback_zero_order_cnt
+,o.cashback_order_percent
+,o.cashback_amt
+,o.reduce_order_cnt
+,o.reduce_zero_order_cnt
+,o.reduce_amt
+,o.reduce_order_gmv
+,o.reduce_per_order_amt
+,o.reduce_per_people_amt
+,o.reduce_people_cnt
+,o.reduce_first_people_cnt
+
 ,'nal' as country_code
 ,'{pt}' as dt
 from
@@ -769,6 +831,26 @@ from
   ,nvl(b.user_active_cnt,0) as user_active_cnt
   ,nvl(b.new_user_cnt,0) as new_user_cnt
   ,nvl(b.more_5_merchant_cnt,0) as more_5_merchant_cnt
+
+  ,nvl(a.cashback_order_cnt,0) as cashback_order_cnt
+  ,nvl(a.cashback_fail_order_cnt,0) as cashback_fail_order_cnt
+  ,nvl(a.cashback_order_gmv,0) as cashback_order_gmv
+  ,nvl(a.cashback_per_order_amt,0) as cashback_per_order_amt
+  ,nvl(a.cashback_per_people_amt,0) as cashback_per_people_amt
+  ,nvl(a.cashback_people_cnt,0) as cashback_people_cnt
+  ,nvl(a.cashback_first_people_cnt,0) as cashback_first_people_cnt
+  ,nvl(a.cashback_zero_order_cnt,0) as cashback_zero_order_cnt
+  ,nvl(a.cashback_order_percent,0) as cashback_order_percent
+  ,nvl(a.cashback_amt,0) as cashback_amt
+  
+  ,nvl(a.reduce_order_cnt,0) as reduce_order_cnt
+  ,nvl(a.reduce_zero_order_cnt,0) as reduce_zero_order_cnt
+  ,nvl(a.reduce_amt,0) as reduce_amt
+  ,nvl(a.reduce_order_gmv,0) as reduce_order_gmv
+  ,nvl(a.reduce_per_order_amt,0) as reduce_per_order_amt
+  ,nvl(a.reduce_per_people_amt,0) as reduce_per_people_amt
+  ,nvl(a.reduce_people_cnt,0) as reduce_people_cnt
+  ,nvl(a.reduce_first_people_cnt,0) as reduce_first_people_cnt
   
   from 
   (select * from opos_dw.app_opos_metrcis_report_tmp_d where country_code = 'nal' and  dt = '{pt}') a
@@ -804,6 +886,7 @@ left join
   (select dt,week_of_year from public_dw_dim.dim_date where dt = '{pt}') as d
 on 1=1
 ;
+
 
 
 

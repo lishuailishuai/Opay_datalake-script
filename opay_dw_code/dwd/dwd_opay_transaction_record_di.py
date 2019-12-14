@@ -17,6 +17,7 @@ from airflow.sensors.hive_partition_sensor import HivePartitionSensor
 from airflow.sensors import UFileSensor
 from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
 from plugins.TaskTouchzSuccess import TaskTouchzSuccess
+from airflow.sensors import OssSensor
 import json
 import logging
 from airflow.models import Variable
@@ -39,15 +40,15 @@ args = {
 
 
 dag = airflow.DAG('dwd_opay_transaction_record_di',
-                  schedule_interval="00 03 * * *",
+                  schedule_interval="30 03 * * *",
                   default_args=args,
                   catchup=False)
 
 ##----------------------------------------- 依赖 ---------------------------------------##
 #依赖前一天分区
-dwd_opay_life_payment_record_di_task = UFileSensor(
+dwd_opay_life_payment_record_di_task = OssSensor(
     task_id='dwd_opay_life_payment_record_di_task',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
         hdfs_path_str="opay/opay_dw/dwd_opay_life_payment_record_di/country_code=NG",
         pt='{{ds}}'
     ),
@@ -56,9 +57,9 @@ dwd_opay_life_payment_record_di_task = UFileSensor(
     dag=dag
 )
 
-dwd_opay_transfer_of_account_record_di_task = UFileSensor(
+dwd_opay_transfer_of_account_record_di_task = OssSensor(
     task_id='dwd_opay_transfer_of_account_record_di_task',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
         hdfs_path_str="opay/opay_dw/dwd_opay_transfer_of_account_record_di/country_code=NG",
         pt='{{ds}}'
     ),
@@ -67,9 +68,9 @@ dwd_opay_transfer_of_account_record_di_task = UFileSensor(
     dag=dag
 )
 
-dwd_opay_cash_to_card_record_di_task = UFileSensor(
+dwd_opay_cash_to_card_record_di_task = OssSensor(
     task_id='dwd_opay_cash_to_card_record_di_task',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
         hdfs_path_str="opay/opay_dw/dwd_opay_cash_to_card_record_di/country_code=NG",
         pt='{{ds}}'
     ),
@@ -78,9 +79,9 @@ dwd_opay_cash_to_card_record_di_task = UFileSensor(
     dag=dag
 )
 
-dwd_opay_topup_with_card_record_di_task = UFileSensor(
+dwd_opay_topup_with_card_record_di_task = OssSensor(
     task_id='dwd_opay_topup_with_card_record_di_task',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
         hdfs_path_str="opay/opay_dw/dwd_opay_topup_with_card_record_di/country_code=NG",
         pt='{{ds}}'
     ),
@@ -89,9 +90,9 @@ dwd_opay_topup_with_card_record_di_task = UFileSensor(
     dag=dag
 )
 
-dwd_opay_receive_money_record_di_task = UFileSensor(
+dwd_opay_receive_money_record_di_task = OssSensor(
     task_id='dwd_opay_receive_money_record_di_task',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
         hdfs_path_str="opay/opay_dw/dwd_opay_receive_money_record_di/country_code=NG",
         pt='{{ds}}'
     ),
@@ -100,9 +101,9 @@ dwd_opay_receive_money_record_di_task = UFileSensor(
     dag=dag
 )
 
-dwd_opay_pos_transaction_record_di_task = UFileSensor(
+dwd_opay_pos_transaction_record_di_task = OssSensor(
     task_id='dwd_opay_pos_transaction_record_di_task',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
         hdfs_path_str="opay/opay_dw/dwd_opay_pos_transaction_record_di/country_code=NG",
         pt='{{ds}}'
     ),
@@ -110,9 +111,9 @@ dwd_opay_pos_transaction_record_di_task = UFileSensor(
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
-dwd_opay_easycash_record_di_task = UFileSensor(
+dwd_opay_easycash_record_di_task = OssSensor(
     task_id='dwd_opay_easycash_record_di_task',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
         hdfs_path_str="opay/opay_dw/dwd_opay_easycash_record_di/country_code=NG",
         pt='{{ds}}'
     ),
@@ -141,7 +142,7 @@ task_timeout_monitor= PythonOperator(
 ##----------------------------------------- 变量 ---------------------------------------##
 db_name = "opay_dw"
 table_name = "dwd_opay_transaction_record_di"
-hdfs_path="ufile://opay-datalake/opay/opay_dw/" + table_name
+hdfs_path="oss://opay-datalake/opay/opay_dw/" + table_name
 
 
 def dwd_opay_transaction_record_di_sql_task(ds):

@@ -17,6 +17,7 @@ from airflow.sensors.hive_partition_sensor import HivePartitionSensor
 from airflow.sensors import UFileSensor
 from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
 from plugins.TaskTouchzSuccess import TaskTouchzSuccess
+from airflow.sensors import OssSensor
 import json
 import logging
 from airflow.models import Variable
@@ -41,9 +42,9 @@ dag = airflow.DAG('app_opos_shop_target_d',
 
 ##----------------------------------------- 依赖 ---------------------------------------##
 
-dwd_pre_opos_payment_order_di_task = UFileSensor(
+dwd_pre_opos_payment_order_di_task = OssSensor(
     task_id='dwd_pre_opos_payment_order_di_task',
-    filepath='{hdfs_path_str}/country_code=nal/dt={pt}/_SUCCESS'.format(
+    bucket_key='{hdfs_path_str}/country_code=nal/dt={pt}/_SUCCESS'.format(
         hdfs_path_str="opos/opos_dw/dwd_pre_opos_payment_order_di",
         pt='{{ds}}'
     ),
@@ -56,7 +57,7 @@ dwd_pre_opos_payment_order_di_task = UFileSensor(
 
 db_name = "opos_dw"
 table_name = "app_opos_shop_target_d"
-hdfs_path = "ufile://opay-datalake/opos/opos_dw/" + table_name
+hdfs_path = "oss://opay-datalake/opos/opos_dw/" + table_name
 
 
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
@@ -119,6 +120,11 @@ a.shop_id
 
 ,nvl(b.shop_class,'-') as shop_class
 ,nvl(b.first_order_date,'-')  as shop_first_order_date
+,nvl(b.created_at,'-') as created_at
+,nvl(b.created_bd_id,0) as created_bd_id
+,nvl(b.created_bd_phone,'-') as created_bd_phone
+,nvl(b.created_bd_name,'-') as created_bd_name
+,nvl(b.created_bd_job_id,'-') as created_bd_job_id
 
 ,a.order_cnt
 ,a.cashback_order_cnt
@@ -139,6 +145,21 @@ a.shop_id
 ,a.reduce_per_people_amt
 ,a.reduce_people_cnt
 ,a.reduce_first_people_cnt
+
+,a.bonus_order_cnt
+,a.order_people
+,a.not_first_order_people
+,a.first_order_people
+,a.first_bonus_order_people
+,a.order_gmv
+,a.bonus_order_gmv
+,a.bonus_order_amt
+,a.sweep_amt
+,a.bonus_use_percent
+,a.bonus_order_people
+,a.bonus_order_times
+,a.order_avg_amt
+,a.people_avg_amt
 
 ,'nal' as country_code
 ,'{pt}' as dt
@@ -181,7 +202,23 @@ from
   ,nvl(reduce_per_people_amt,0) as reduce_per_people_amt
   ,nvl(reduce_people_cnt,0) as reduce_people_cnt
   ,nvl(reduce_first_people_cnt,0) as reduce_first_people_cnt
+
+  ,nvl(bonus_order_cnt,0) as bonus_order_cnt
+  ,nvl(order_people,0) as order_people
+  ,nvl(not_first_order_people,0) as not_first_order_people
+  ,nvl(first_order_people,0) as first_order_people
+  ,nvl(first_bonus_order_people,0) as first_bonus_order_people
+  ,nvl(order_gmv,0) as order_gmv
+  ,nvl(bonus_order_gmv,0) as bonus_order_gmv
+  ,nvl(bonus_order_amt,0) as bonus_order_amt
+  ,nvl(sweep_amt,0) as sweep_amt
+  ,nvl(bonus_use_percent,0) as bonus_use_percent
+  ,nvl(bonus_order_people,0) as bonus_order_people
+  ,nvl(bonus_order_times,0) as bonus_order_times
+  ,nvl(order_avg_amt,0) as order_avg_amt
+  ,nvl(people_avg_amt,0) as people_avg_amt
   from
+    --商铺全量数据
     (
     select
     id as shop_id
@@ -221,65 +258,201 @@ from
     
     ) as s
   full join
+    --交易和红包全量数据
     (
     select
-    shop_id
-    ,receipt_id as opay_id
-    ,shop_name
-    ,opay_account
+    nvl(p.shop_id,bo.shop_id) as shop_id
+    ,nvl(p.opay_id,bo.opay_id) as opay_id
+    ,nvl(p.shop_name,bo.shop_name) as shop_name
+    ,nvl(p.opay_account,bo.opay_account) as opay_account
     
-    ,city_id_shop as city_id
-    ,city_name_shop as city_name
-    ,country_shop as country
+    ,nvl(p.city_id,bo.city_id) as city_id
+    ,nvl(p.city_name,bo.city_name) as city_name
+    ,nvl(p.country,bo.country) as country
     
-    ,hcm_id
-    ,cm_id
-    ,rm_id
-    ,bdm_id
-    ,bd_id
-  
-    --返现活动情况分析
-    ,count(1) as order_cnt
-    ,count(if(user_subsidy_status='SUCCESS',1,null)) as cashback_order_cnt
-    ,count(if(user_subsidy_status!='SUCCESS',1,null)) as cashback_fail_order_cnt
-    ,sum(if(user_subsidy_status='SUCCESS',nvl(org_payment_amount,0),0)) as cashback_order_gmv
-    ,nvl(sum(if(user_subsidy_status='SUCCESS',nvl(org_payment_amount,0),0))/count(if(user_subsidy_status='SUCCESS',1,null)),0) as cashback_per_order_amt
-    ,nvl(sum(if(user_subsidy_status='SUCCESS',nvl(org_payment_amount,0),0))/count(distinct(if(user_subsidy_status='SUCCESS',sender_id,null))),0) as cashback_per_people_amt
-    ,count(distinct(if(user_subsidy_status='SUCCESS',sender_id,null))) as cashback_people_cnt
-    ,count(distinct(if(user_subsidy_status='SUCCESS' and first_order='1',sender_id,null))) as cashback_first_people_cnt
-    ,count(if(user_subsidy=0,1,null)) as cashback_zero_order_cnt
-    ,nvl(count(if(user_subsidy_status='SUCCESS',1,null))/count(1),0) as cashback_order_percent
-    ,sum(if(user_subsidy>0,nvl(user_subsidy,0),0)) as cashback_amt
-  
-    ,count(if(activity_type in ('RCB','CB'),1,null)) as reduce_order_cnt
-    ,count(if(activity_type not in ('RCB','CB'),1,null)) as reduce_zero_order_cnt
-    ,sum(if(activity_type not in ('RCB','CB'),nvl(discount_amount,0),0)) as reduce_amt
-    ,sum(if(activity_type not in ('RCB','CB'),nvl(org_payment_amount,0),0)) as reduce_order_gmv
-    ,nvl(sum(if(activity_type not in ('RCB','CB'),nvl(org_payment_amount,0),0))/count(if(activity_type in ('RCB','CB'),1,null)),0) as reduce_per_order_amt
-    ,nvl(sum(if(activity_type not in ('RCB','CB'),nvl(org_payment_amount,0),0))/count(distinct(if(activity_type not in ('RCB','CB'),sender_id,null))),0) as reduce_per_people_amt
-    ,count(distinct(if(activity_type not in ('RCB','CB'),sender_id,null))) as reduce_people_cnt
-    ,count(distinct(if(activity_type not in ('RCB','CB') and first_order='1',sender_id,null))) as reduce_first_people_cnt
-  
+    ,nvl(p.hcm_id,bo.hcm_id) as hcm_id
+    ,nvl(p.cm_id,bo.cm_id) as cm_id
+    ,nvl(p.rm_id,bo.rm_id) as rm_id
+    ,nvl(p.bdm_id,bo.bdm_id) as bdm_id
+    ,nvl(p.bd_id,bo.bd_id) as bd_id
+
+    ,nvl(p.order_cnt,0) as order_cnt
+    ,nvl(p.cashback_order_cnt,0) as cashback_order_cnt
+    ,nvl(p.cashback_fail_order_cnt,0) as cashback_fail_order_cnt
+    ,nvl(p.cashback_order_gmv,0) as cashback_order_gmv
+    ,nvl(p.cashback_per_order_amt,0) as cashback_per_order_amt
+    ,nvl(p.cashback_per_people_amt,0) as cashback_per_people_amt
+    ,nvl(p.cashback_people_cnt,0) as cashback_people_cnt
+    ,nvl(p.cashback_first_people_cnt,0) as cashback_first_people_cnt
+    ,nvl(p.cashback_zero_order_cnt,0) as cashback_zero_order_cnt
+    ,nvl(p.cashback_order_percent,0) as cashback_order_percent
+    ,nvl(p.cashback_amt,0) as cashback_amt
+    
+    ,nvl(p.reduce_order_cnt,0) as reduce_order_cnt
+    ,0 as reduce_zero_order_cnt
+    ,nvl(p.reduce_amt,0) as reduce_amt
+    ,nvl(p.reduce_order_gmv,0) as reduce_order_gmv
+    ,nvl(p.reduce_per_order_amt,0) as reduce_per_order_amt
+    ,nvl(p.reduce_per_people_amt,0) as reduce_per_people_amt
+    ,nvl(p.reduce_people_cnt,0) as reduce_people_cnt
+    ,nvl(p.reduce_first_people_cnt,0) as reduce_first_people_cnt
+    
+    ,nvl(p.bonus_order_cnt,0) as bonus_order_cnt
+    ,nvl(p.order_people,0) as order_people
+    ,nvl(p.not_first_order_people,0) as not_first_order_people
+    ,nvl(p.first_order_people,0) as first_order_people
+    ,nvl(p.first_bonus_order_people,0) as first_bonus_order_people
+    ,nvl(p.order_gmv,0) as order_gmv
+    ,nvl(p.bonus_order_gmv,0) as bonus_order_gmv
+    
+    ,nvl(bo.bonus_order_amt,0) as bonus_order_amt
+    ,nvl(bo.sweep_amt,0) as sweep_amt
+    ,nvl(bo.bonus_use_percent,0) as bonus_use_percent
+    
+    ,nvl(p.bonus_order_people,0) as bonus_order_people
+    ,nvl(p.bonus_order_times,0) as bonus_order_times
+    ,nvl(p.order_avg_amt,0) as order_avg_amt
+    ,nvl(p.people_avg_amt,0) as people_avg_amt
     from
-    opos_dw.dwd_pre_opos_payment_order_di 
-    where country_code='nal' 
-    and dt='{pt}' 
-    and trade_status='SUCCESS'
-    group BY
-    shop_id
-    ,receipt_id
-    ,shop_name
-    ,opay_account
+      (
+      select
+      shop_id
+      ,receipt_id as opay_id
+      ,shop_name
+      ,opay_account
+      
+      ,city_id_shop as city_id
+      ,city_name_shop as city_name
+      ,country_shop as country
+      
+      ,hcm_id
+      ,cm_id
+      ,rm_id
+      ,bdm_id
+      ,bd_id
     
-    ,city_id_shop
-    ,city_name_shop
-    ,country_shop
+      --返现活动情况分析
+      ,count(1) as order_cnt
+      ,count(if(user_subsidy_status='SUCCESS',1,null)) as cashback_order_cnt
+      ,count(if(user_subsidy_status='FAIL',1,null)) as cashback_fail_order_cnt
+      ,sum(if(user_subsidy_status='SUCCESS',nvl(org_payment_amount,0),0)) as cashback_order_gmv
+      ,nvl(sum(if(user_subsidy_status='SUCCESS',nvl(org_payment_amount,0),0))/count(if(user_subsidy_status='SUCCESS',1,null)),0) as cashback_per_order_amt
+      ,nvl(sum(if(user_subsidy_status='SUCCESS',nvl(org_payment_amount,0),0))/count(distinct(if(user_subsidy_status='SUCCESS',sender_id,null))),0) as cashback_per_people_amt
+      ,count(distinct(if(user_subsidy_status='SUCCESS',sender_id,null))) as cashback_people_cnt
+      ,count(distinct(if(user_subsidy_status='SUCCESS' and first_order='1',sender_id,null))) as cashback_first_people_cnt
+      ,count(if(user_subsidy=0,1,null)) as cashback_zero_order_cnt
+      ,nvl(count(if(user_subsidy_status='SUCCESS',1,null))/count(1),0) as cashback_order_percent
+      ,sum(if(user_subsidy>0 and user_subsidy_status='SUCCESS',nvl(user_subsidy,0),0)) as cashback_amt
     
-    ,hcm_id
-    ,cm_id
-    ,rm_id
-    ,bdm_id
-    ,bd_id   
+      ,count(if(activity_type in ('RCB','CB'),1,null)) as reduce_order_cnt
+      ,count(if(activity_type not in ('RCB','CB'),1,null)) as reduce_zero_order_cnt
+      ,sum(if(activity_type in ('RCB','CB'),nvl(discount_amount,0),0)) as reduce_amt
+      ,sum(if(activity_type in ('RCB','CB'),nvl(org_payment_amount,0),0)) as reduce_order_gmv
+      ,nvl(sum(if(activity_type in ('RCB','CB'),nvl(org_payment_amount,0),0))/count(if(activity_type in ('RCB','CB'),1,null)),0) as reduce_per_order_amt
+      ,nvl(sum(if(activity_type in ('RCB','CB'),nvl(org_payment_amount,0),0))/count(distinct(if(activity_type not in ('RCB','CB'),sender_id,null))),0) as reduce_per_people_amt
+      ,count(distinct(if(activity_type in ('RCB','CB'),sender_id,null))) as reduce_people_cnt
+      ,count(distinct(if(activity_type in ('RCB','CB') and first_order='1',sender_id,null))) as reduce_first_people_cnt
+  
+      --使用红包起情况
+      ,count(if(length(discount_ids)>0,1,null)) as bonus_order_cnt
+      
+      --用户数量板块
+      ,count(distinct(sender_id)) as order_people
+      ,count(distinct(if(first_order='0',sender_id,null))) as not_first_order_people
+      ,count(distinct(if(first_order='1',sender_id,null))) as first_order_people
+      ,count(distinct(if(length(discount_ids)>0 and first_order='1',sender_id,null))) as first_bonus_order_people
+      
+      --gmv板块
+      ,sum(nvl(org_payment_amount,0)) as order_gmv
+      ,sum(if(length(discount_ids)>0,nvl(org_payment_amount,0),0)) as bonus_order_gmv
+      
+      --用户角度
+      ,count(distinct(if(length(discount_ids)>0,sender_id,null))) as bonus_order_people
+      ,count(if(length(discount_ids)>0,1,null)) as bonus_order_times
+      
+      --与红包无关的指标
+      ,nvl(sum(nvl(org_payment_amount,0))/count(1),0) as order_avg_amt
+      ,nvl(sum(nvl(org_payment_amount,0))/count(distinct(sender_id)),0) as people_avg_amt
+    
+      from
+      opos_dw.dwd_pre_opos_payment_order_di 
+      where country_code='nal' 
+      and dt='{pt}' 
+      and trade_status='SUCCESS'
+      group BY
+      shop_id
+      ,receipt_id
+      ,shop_name
+      ,opay_account
+      
+      ,city_id_shop
+      ,city_name_shop
+      ,country_shop
+      
+      ,hcm_id
+      ,cm_id
+      ,rm_id
+      ,bdm_id
+      ,bd_id
+      ) as p
+      full join
+      (
+      select
+      provider_shop_id as shop_id
+      ,provider_opay_id as opay_id
+      ,provider_shop_name as shop_name
+      ,provider_account as opay_account
+      
+      ,provider_city_id as city_id
+      ,provider_city_name as city_name
+      ,provider_country as country
+      
+      ,hcm_id
+      ,cm_id
+      ,rm_id
+      ,bdm_id
+      ,bd_id
+    
+      ,sum(use_amount) as bonus_order_amt
+      ,sum(bonus_amount) as sweep_amt
+      ,nvl(sum(use_amount)/sum(bonus_amount),0) as bonus_use_percent
+      from
+      opos_dw.dwd_opos_bonus_record_di 
+      where 
+      country_code='nal' 
+      and dt='{pt}'
+      and provider_shop_id is not null
+      group BY
+      provider_shop_id
+      ,provider_opay_id
+      ,provider_shop_name
+      ,provider_account
+      
+      ,provider_city_id
+      ,provider_city_name
+      ,provider_country
+      
+      ,hcm_id
+      ,cm_id
+      ,rm_id
+      ,bdm_id
+      ,bd_id
+      ) as bo
+      on
+      p.shop_id=bo.shop_id
+      and p.opay_id=bo.opay_id
+      and p.shop_name=bo.shop_name
+      and p.opay_account=bo.opay_account
+    
+      and p.city_id=bo.city_id
+      and p.city_name=bo.city_name
+      and p.country=bo.country
+    
+      and p.hcm_id=bo.hcm_id
+      and p.cm_id=bo.cm_id
+      and p.rm_id=bo.rm_id
+      and p.bdm_id=bo.bdm_id
+      and p.bd_id=bo.bd_id
     ) as m
   on
     s.shop_id=m.shop_id
@@ -291,7 +464,7 @@ from
     and s.bd_id=m.bd_id
   ) as a
 left join
-  (select opay_id,first_order_date,shop_class from opos_dw.dim_opos_bd_relation_df where country_code='nal' and dt='{pt}') as b
+  (select * from opos_dw.dim_opos_bd_relation_df where country_code='nal' and dt='{pt}') as b
 on a.opay_id=b.opay_id
 left join
   (select id,name from opos_dw_ods.ods_sqoop_base_bd_admin_users_df where dt = '{pt}') as bd
@@ -312,6 +485,10 @@ left join
   (select dt,week_of_year from public_dw_dim.dim_date where dt = '{pt}') as d
 on 1=1
 ;
+
+
+
+
 
 
 

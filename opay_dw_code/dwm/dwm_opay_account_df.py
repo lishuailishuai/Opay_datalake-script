@@ -17,6 +17,8 @@ from airflow.sensors.hive_partition_sensor import HivePartitionSensor
 from airflow.sensors import UFileSensor
 from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
 from plugins.TaskTouchzSuccess import TaskTouchzSuccess
+from airflow.sensors import OssSensor
+
 import json
 import logging
 from airflow.models import Variable
@@ -40,9 +42,9 @@ dag = airflow.DAG('dwm_opay_account_df',
                   catchup=False)
 
 ##----------------------------------------- 依赖 ---------------------------------------##
-dwd_opay_account_balance_df_prev_day_task = UFileSensor(
+dwd_opay_account_balance_df_prev_day_task = OssSensor(
     task_id='dwd_opay_account_balance_df_prev_day_task',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
         hdfs_path_str="opay/opay_dw/dwd_opay_account_balance_df/country_code=NG",
         pt='{{ds}}'
     ),
@@ -57,7 +59,7 @@ dwd_opay_account_balance_df_prev_day_task = UFileSensor(
 db_name = "opay_dw"
 
 table_name = "dwm_opay_account_df"
-hdfs_path = "ufile://opay-datalake/opay/opay_dw/" + table_name
+hdfs_path = "oss://opay-datalake/opay/opay_dw/" + table_name
 
 
 def dwm_opay_account_df_sql_task(ds):

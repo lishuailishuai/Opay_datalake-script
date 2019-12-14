@@ -17,6 +17,7 @@ from airflow.sensors.hive_partition_sensor import HivePartitionSensor
 from airflow.sensors import UFileSensor
 from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
 from plugins.TaskTouchzSuccess import TaskTouchzSuccess
+from airflow.sensors import OssSensor
 import json
 import logging
 from airflow.models import Variable
@@ -44,9 +45,9 @@ dag = airflow.DAG('dwd_opay_topup_with_card_record_di',
                   catchup=False)
 
 ##----------------------------------------- 依赖 ---------------------------------------##
-ods_sqoop_base_user_di_prev_day_task = UFileSensor(
+ods_sqoop_base_user_di_prev_day_task = OssSensor(
     task_id='ods_sqoop_base_user_di_prev_day_task',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
         hdfs_path_str="opay_dw_sqoop_di/opay_user/user",
         pt='{{ds}}'
     ),
@@ -55,10 +56,10 @@ ods_sqoop_base_user_di_prev_day_task = UFileSensor(
     dag=dag
 )
 
-ods_sqoop_base_merchant_di_prev_day_task = UFileSensor(
-    task_id='ods_sqoop_base_merchant_di_prev_day_task',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opay_dw_ods/opay_merchant/merchant",
+ods_sqoop_base_merchant_df_prev_day_task = OssSensor(
+    task_id='ods_sqoop_base_merchant_df_prev_day_task',
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="opay_dw_sqoop/opay_merchant/merchant",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -66,9 +67,9 @@ ods_sqoop_base_merchant_di_prev_day_task = UFileSensor(
     dag=dag
 )
 
-ods_sqoop_base_user_topup_record_di_prev_day_task = UFileSensor(
+ods_sqoop_base_user_topup_record_di_prev_day_task = OssSensor(
     task_id='ods_sqoop_base_user_topup_record_di_prev_day_task',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
         hdfs_path_str="opay_dw_sqoop_di/opay_transaction/user_topup_record",
         pt='{{ds}}'
     ),
@@ -77,9 +78,9 @@ ods_sqoop_base_user_topup_record_di_prev_day_task = UFileSensor(
     dag=dag
 )
 
-ods_sqoop_base_merchant_topup_record_di_prev_day_task = UFileSensor(
+ods_sqoop_base_merchant_topup_record_di_prev_day_task = OssSensor(
     task_id='ods_sqoop_base_merchant_topup_record_di_prev_day_task',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
         hdfs_path_str="opay_dw_sqoop_di/opay_transaction/merchant_topup_record",
         pt='{{ds}}'
     ),
@@ -109,7 +110,7 @@ task_timeout_monitor= PythonOperator(
 ##----------------------------------------- 变量 ---------------------------------------##
 db_name = "opay_dw"
 table_name = "dwd_opay_topup_with_card_record_di"
-hdfs_path="ufile://opay-datalake/opay/opay_dw/" + table_name
+hdfs_path="oss://opay-datalake/opay/opay_dw/" + table_name
 
 
 def dwd_opay_topup_with_card_record_di_sql_task(ds):
@@ -130,7 +131,7 @@ def dwd_opay_topup_with_card_record_di_sql_task(ds):
             select 
                 merchant_id as trader_id, merchant_name as trader_name, merchant_type as trader_role, '-' as trader_kyc_level
             from opay_dw_ods.ods_sqoop_base_merchant_df
-            where dt = '{pt}'
+            where dt = if('{pt}' <= '2019-12-11', '2019-12-11', '{pt}')
         )
     insert overwrite table {db}.{table} 
     partition(country_code, dt)
@@ -220,6 +221,6 @@ dwd_opay_topup_with_card_record_di_task = PythonOperator(
 )
 
 ods_sqoop_base_user_di_prev_day_task >> dwd_opay_topup_with_card_record_di_task
-ods_sqoop_base_merchant_di_prev_day_task >> dwd_opay_topup_with_card_record_di_task
+ods_sqoop_base_merchant_df_prev_day_task >> dwd_opay_topup_with_card_record_di_task
 ods_sqoop_base_user_topup_record_di_prev_day_task >> dwd_opay_topup_with_card_record_di_task
 ods_sqoop_base_merchant_topup_record_di_prev_day_task >> dwd_opay_topup_with_card_record_di_task

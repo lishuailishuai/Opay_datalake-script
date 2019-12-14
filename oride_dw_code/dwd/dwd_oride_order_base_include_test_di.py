@@ -40,7 +40,7 @@ dag = airflow.DAG('dwd_oride_order_base_include_test_di',
                   default_args=args,
                   catchup=False)
 
-##----------------------------------------- 依赖 ---------------------------------------## 
+##----------------------------------------- 依赖 ---------------------------------------##
 
 # 依赖前一天分区
 ods_sqoop_base_data_order_df_prev_day_task = UFileSensor(
@@ -99,33 +99,36 @@ ods_sqoop_base_data_country_conf_df_prev_day_task = UFileSensor(
 )
 ##----------------------------------------- 变量 ---------------------------------------##
 
-db_name="oride_dw"
+db_name = "oride_dw"
 table_name = "dwd_oride_order_base_include_test_di"
 hdfs_path = "s3a://opay-bi/oride/oride_dw/" + table_name
 
-##----------------------------------------- 任务超时监控 ---------------------------------------## 
 
-def fun_task_timeout_monitor(ds,dag,**op_kwargs):
+##----------------------------------------- 任务超时监控 ---------------------------------------##
 
-    dag_ids=dag.dag_id
+def fun_task_timeout_monitor(ds, dag, **op_kwargs):
+    dag_ids = dag.dag_id
 
     tb = [
-        {"db": "oride_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=NG/dt={pt}".format(pt=ds), "timeout": "3600"}
+        {"db": "oride_dw", "table": "{dag_name}".format(dag_name=dag_ids),
+         "partition": "country_code=NG/dt={pt}".format(pt=ds), "timeout": "3600"}
     ]
 
     TaskTimeoutMonitor().set_task_monitor(tb)
 
-task_timeout_monitor= PythonOperator(
+
+task_timeout_monitor = PythonOperator(
     task_id='task_timeout_monitor',
     python_callable=fun_task_timeout_monitor,
     provide_context=True,
     dag=dag
 )
 
-##----------------------------------------- 脚本 ---------------------------------------## 
+
+##----------------------------------------- 脚本 ---------------------------------------##
 
 def dwd_oride_order_base_include_test_di_sql_task(ds):
-    hql='''
+    hql = '''
 SET hive.exec.parallel=TRUE;
 SET hive.exec.dynamic.partition.mode=nonstrict;
 
@@ -266,7 +269,7 @@ SELECT base.order_id,
             ELSE 0
         END) AS is_td_finish,
        --当天是否完单
-       
+
 
        (CASE
             WHEN pickup_time <> 0 THEN pickup_time - take_time
@@ -293,8 +296,8 @@ SELECT base.order_id,
             ELSE 0
         END) AS td_wait_dur,
        --当天等待上车时长（秒）
-       
-       
+
+
        (CASE
             WHEN arrive_time>0
                  AND take_time > 0 THEN arrive_time - take_time
@@ -410,13 +413,13 @@ SELECT base.order_id,
        serv_union_type,  --业务类型，下单类型+司机类型(serv_type+driver_serv_type)
 
        is_carpool, --'是否拼车'
-        
+
        null as is_chartered_bus,--'是否包车' (已经废弃)
-        
+
        null as is_carpool_success, --'是否拼车成功' (已经废弃)
-       
+
         null as is_carpool_accept, --是否拼车应答单(司机) (已经废弃)
-       
+
         null as is_carpool_success_and_finish, --拼车成功且订单完成 (已经废弃)
         falsify, --取消罚款
         falsify_get, --取消罚款实际获得
@@ -580,7 +583,7 @@ FROM
              wait_distance, --等待乘客上车距离
              cancel_wait_payment_time,  --乘客取消待支付时间
              country_id,  --国家ID
-             
+
              is_carpool , -- '是否是拼车' 
              estimate_duration,  -- 预估时间
              estimate_distance,-- '预估距离'
@@ -624,11 +627,6 @@ LEFT OUTER JOIN
 --ON base.order_id=ep.order_id
 --left outer join
 
---(select order_id from oride_dw.dwd_oride_order_dispatch_funnel_di
---   WHERE dt='{pt}'
---     AND event_name='dispatch_push_driver'
---     AND assign_type=1
---     group by order_id) push_ord
 
 (SELECT order_id,driver_id
 FROM
@@ -674,9 +672,8 @@ on base.country_id=country.id;
         now_hour='{{ execution_date.strftime("%H") }}',
         table=table_name,
         db=db_name
-        )
+    )
     return hql
-
 
 
 def check_key_data_task(ds):
@@ -708,12 +705,11 @@ def check_key_data_task(ds):
         print("-----> Notice Data Export Success ......")
 
 
-#主流程
-def execution_data_task_id(ds,**kwargs):
-
-    v_date=kwargs.get('v_execution_date')
-    v_day=kwargs.get('v_execution_day')
-    v_hour=kwargs.get('v_execution_hour')
+# 主流程
+def execution_data_task_id(ds, **kwargs):
+    v_date = kwargs.get('v_execution_date')
+    v_day = kwargs.get('v_execution_day')
+    v_hour = kwargs.get('v_execution_hour')
 
     hive_hook = HiveCliHook()
 
@@ -736,43 +732,42 @@ def execution_data_task_id(ds,**kwargs):
 
     """
 
+    cf = CountriesPublicFrame("true", ds, db_name, table_name, hdfs_path, "true", "true")
 
-    cf=CountriesPublicFrame("true",ds,db_name,table_name,hdfs_path,"true","true")
+    # 删除分区
+    # cf.delete_partition()
 
-    #删除分区
-    #cf.delete_partition()
+    # 读取sql
+    _sql = "\n" + cf.alter_partition() + "\n" + dwd_oride_order_base_include_test_di_sql_task(ds)
 
-    #读取sql
-    _sql="\n"+cf.alter_partition()+"\n"+dwd_oride_order_base_include_test_di_sql_task(ds)
+    logging.info('Executing: %s', _sql)
 
-    logging.info('Executing: %s',_sql)
-
-    #执行Hive
+    # 执行Hive
     hive_hook.run_cli(_sql)
 
-    #熔断数据，如果数据不能为0
-    #check_key_data_cnt_task(ds)
+    # 熔断数据，如果数据不能为0
+    # check_key_data_cnt_task(ds)
 
-    #熔断数据
+    # 熔断数据
     check_key_data_task(ds)
 
-    #生产success
+    # 生产success
     cf.touchz_success()
 
-    
-dwd_oride_order_base_include_test_di_task= PythonOperator(
+
+dwd_oride_order_base_include_test_di_task = PythonOperator(
     task_id='dwd_oride_order_base_include_test_di_task',
     python_callable=execution_data_task_id,
     provide_context=True,
     op_kwargs={
-        'v_execution_date':'{{execution_date.strftime("%Y-%m-%d %H:%M:%S")}}',
-        'v_execution_day':'{{execution_date.strftime("%Y-%m-%d")}}',
-        'v_execution_hour':'{{execution_date.strftime("%H")}}'
+        'v_execution_date': '{{execution_date.strftime("%Y-%m-%d %H:%M:%S")}}',
+        'v_execution_day': '{{execution_date.strftime("%Y-%m-%d")}}',
+        'v_execution_hour': '{{execution_date.strftime("%H")}}'
     },
     dag=dag
 )
 
-ods_sqoop_base_data_order_df_prev_day_task >>  dwd_oride_order_base_include_test_di_task
+ods_sqoop_base_data_order_df_prev_day_task >> dwd_oride_order_base_include_test_di_task
 ods_sqoop_base_data_order_payment_df_prev_day_task >> dwd_oride_order_base_include_test_di_task
 oride_client_event_detail_prev_day_task >> dwd_oride_order_base_include_test_di_task
 dependence_dispatch_tracker_server_magic_task >> dwd_oride_order_base_include_test_di_task
