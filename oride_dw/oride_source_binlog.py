@@ -129,7 +129,7 @@ def check_s3_prefix(ds, execution_date, **kwargs):
 
         print("-----------")
         print(try_max_num)
-        print(nm)
+        print(num)
 
         print("-----------")
         if num >= try_max_num:
