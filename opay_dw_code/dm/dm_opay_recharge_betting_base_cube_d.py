@@ -16,6 +16,7 @@ from airflow.sensors.hive_partition_sensor import HivePartitionSensor
 from airflow.sensors import UFileSensor
 from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
 from plugins.TaskTouchzSuccess import TaskTouchzSuccess
+from airflow.sensors import OssSensor
 import json
 import logging
 from airflow.models import Variable
@@ -34,16 +35,15 @@ args = {
 }
 
 dag = airflow.DAG('dm_opay_recharge_betting_base_cube_d',
-                  schedule_interval="00 03 * * *",
+                  schedule_interval="30 03 * * *",
                   default_args=args
                   )
 
 ##----------------------------------------- 依赖 ---------------------------------------##
-# 依赖前一天分区
-dependence_dwd_opay_recharge_betting_record_di_prev_day_task = UFileSensor(
-    task_id='dependence_dwd_opay_recharge_betting_record_di_prev_day_task',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opay/opay_dw/dwd_opay_recharge_betting_record_di/country_code=NG",
+dwd_opay_life_payment_record_di_prev_day_task = OssSensor(
+    task_id='dwd_opay_life_payment_record_di_prev_day_task',
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="opay/opay_dw/dwd_opay_life_payment_record_di/country_code=NG",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -73,7 +73,7 @@ task_timeout_monitor= PythonOperator(
 ##----------------------------------------- 变量 ---------------------------------------##
 db_name="opay_dw"
 table_name="dm_opay_recharge_betting_base_cube_d"
-hdfs_path="ufile://opay-datalake/opay/opay_dw/"+table_name
+hdfs_path="oss://opay-datalake/opay/opay_dw/"+table_name
 
 ##---- hive operator ---##
 def dm_opay_recharge_betting_base_cube_d_sql_task(ds):
@@ -83,14 +83,14 @@ def dm_opay_recharge_betting_base_cube_d_sql_task(ds):
 
     insert overwrite table {db}.{table} partition(country_code, dt)
     select 
-        nvl(service_provider, 'ALL') as service_provider, 
+        nvl(recharge_service_provider, 'ALL') as service_provider, 
         nvl(amount_range, 'ALL') as amount_range, 
         nvl(order_status, 'ALL') as order_status, 
-        count(distinct user_id) user_cnt, sum(amount) amt, count(*) cnt,
+        count(distinct originator_id) user_cnt, sum(amount) amt, count(*) cnt,
         country_code,
         '{pt}' dt
     from (
-        select order_no, order_status, user_id, amount, service_provider, country_code,
+        select order_no, order_status, originator_id, amount, recharge_service_provider, country_code,
         case
             when amount > 200000 then '(2000, more)'
             when amount > 100000 then '(1000, 2000]'
@@ -100,18 +100,19 @@ def dm_opay_recharge_betting_base_cube_d_sql_task(ds):
             when amount > 10000 then '(100, 200]'
             else '[0, 100]'
         end as amount_range
-        from {db}.dwd_opay_recharge_betting_record_di
+        from {db}.dwd_opay_life_payment_record_di
         where dt = '{pt}'
             and create_time BETWEEN date_format(date_sub('{pt}', 1), 'yyyy-MM-dd 23') AND date_format('{pt}', 'yyyy-MM-dd 23') 
-            and service_provider != '' and service_provider != 'supabet' and service_provider is not null
+            and sub_service_type = 'Betting'
+            and service_provider <> '' and recharge_service_provider <> 'supabet' and recharge_service_provider is not null
     ) t1
-    group by country_code, service_provider, amount_range, order_status
+    group by country_code, recharge_service_provider, amount_range, order_status
     GROUPING SETS (
-        (country_code, service_provider, amount_range, order_status), 
-        (country_code, service_provider, amount_range), 
-        (country_code, service_provider, order_status),
-        (country_code, amount_range, order_status),
-        (country_code, service_provider), 
+        (country_code, recharge_service_provider, amount_range, order_status), 
+        (country_code, recharge_service_provider, amount_range), 
+        (country_code, recharge_service_provider, order_status),
+        (country_code, recharge_service_provider, order_status),
+        (country_code, recharge_service_provider), 
         (country_code, amount_range), 
         (country_code, order_status), 
         (country_code)
@@ -154,4 +155,4 @@ dm_opay_recharge_betting_base_cube_d_task = PythonOperator(
     dag=dag
 )
 
-dependence_dwd_opay_recharge_betting_record_di_prev_day_task >> dm_opay_recharge_betting_base_cube_d_task
+dwd_opay_life_payment_record_di_prev_day_task >> dm_opay_recharge_betting_base_cube_d_task
