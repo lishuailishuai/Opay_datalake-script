@@ -88,7 +88,7 @@ class TaskHourSuccessCountMonitor(object):
         sylstr=str(s)+"/_SUCCESS"
     
         #每个数字前增加 1(01,101)
-        v_in_number="1"+syl
+        v_in_number="1"+self.syl
     
         if int(s)<=int(v_in_number):
     
@@ -104,7 +104,7 @@ class TaskHourSuccessCountMonitor(object):
         sylstr=str(s)+"/_SUCCESS"
     
         #每个数字前增加 1(01,101)
-        v_in_number="1"+syl
+        v_in_number="1"+self.syl
     
         if int(s)>=int(v_in_number):
     
@@ -124,11 +124,11 @@ class TaskHourSuccessCountMonitor(object):
         
             source_nm=int("1"+i.split("/")[0])
         
-            if symbol=="<":
+            if self.symbol=="<":
         
                 res_list=nm_less_diff(source_nm)
         
-            if symbol==">":
+            if self.symbol==">":
         
                 res_list=nm_greater_diff(source_nm)
         
