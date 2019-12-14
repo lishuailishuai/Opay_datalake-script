@@ -235,8 +235,8 @@ def app_oride_order_global_operate_to_mysql_d_sql_task(ds):
         nvl(round(od.finish_order_cnt /  od.finish_order_cnt_1,8),0)  as  finish_order_mom_d, --完单日环比
         nvl(round(od.finish_order_cnt /  od.finish_order_cnt_7,8),0)  as  finish_order_yoy_d, --完单日同比
 
-        nvl(round(od.gmv /  od.gmv_1,8),0)  as  gmv_mom_d, --gmv日环比
-        nvl(round(od.gmv /  od.gmv_7,8),0)  as  gmv_yoy_d, --gmv日同比
+        nvl(round(od.gmv /  od.gmv_1,8)-1,0)  gmv_mom_d, --gmv日环比
+        nvl(round(od.gmv /  od.gmv_7,8) -1,0)  as  gmv_yoy_d, --gmv日同比
         nvl(round(sub.sum_subsidy_m / global.sum_subsidy_d_1,8),0) as sum_subsidy_mom_d , --总补贴日环比
         nvl(round(sub.sum_subsidy_m / global.sum_subsidy_d_7,8),0) as sum_subsidy_yoy_d , --总补贴日同比
 
