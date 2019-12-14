@@ -334,9 +334,9 @@ def execution_data_task_id(ds,**kwargs):
     #cf.delete_partition()
 
     #读取sql
-    _sql="\n"+cf.alter_partition()+"\n"+test_dim_oride_city_sql_task(ds)
+    #_sql="\n"+cf.alter_partition()+"\n"+test_dim_oride_city_sql_task(ds)
 
-    logging.info('Executing: %s',_sql)
+    #logging.info('Executing: %s',_sql)
 
     #执行Hive
     #hive_hook.run_cli(_sql)
