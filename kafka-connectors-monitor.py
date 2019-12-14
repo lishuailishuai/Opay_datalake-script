@@ -2,7 +2,7 @@
 import airflow
 from datetime import datetime, timedelta
 from airflow.operators.python_operator import PythonOperator
-from plugins.comwx import ComwxApi
+from plugins.DingdingAlert import DingdingAlert
 import requests
 
 args = {
@@ -39,10 +39,10 @@ def connectors_status_check():
             tasks = content['tasks']
             for task in tasks:
                 if task['state'] != 'RUNNING':
-                    #微信报警
-                    comwx = ComwxApi('wwd26d45f97ea74ad2', 'BLE_v25zCmnZaFUgum93j3zVBDK-DjtRkLisI_Wns4g', '1000011')
+                    #钉钉报警
+                    dingding_alet = DingdingAlert('https://oapi.dingtalk.com/robot/send?access_token=928e66bef8d88edc89fe0f0ddd52bfa4dd28bd4b1d24ab4626c804df8878bb48')
                     msg="""
-                        kafka connectors状态异常，请检查。
+                        DW kafka connectors状态异常，请检查。
                         {connector}, task_len:{task_len}, error_task_id:{task_id}, error_msg:{error_msg}
                     """.format(
                         connector=connector,
@@ -50,7 +50,7 @@ def connectors_status_check():
                         task_id=task['id'],
                         error_msg=task['trace']
                     )
-                    comwx.postAppMessage(msg,'271')
+                    dingding_alet.send(msg)
 
 connectors_status = PythonOperator(
     task_id='connectors_status',
