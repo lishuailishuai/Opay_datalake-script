@@ -59,7 +59,7 @@ dependence_ods_sqoop_base_preferential_record_di_prev_day_task = OssSensor(
 ##----------------------------------------- 变量 ---------------------------------------##
 db_name = "opay_dw"
 table_name = "app_opay_activity_stat_di"
-hdfs_path = "ufile://opay-datalake/opay/opay_dw/" + table_name
+hdfs_path = "oss://opay-datalake/opay/opay_dw/" + table_name
 
 ##----------------------------------------- 脚本 ---------------------------------------##
 
