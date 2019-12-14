@@ -45,7 +45,7 @@ class TaskHourSuccessCountMonitor(object):
 
     def get_string_list(self):
 
-        command="hadoop dfs -ls {data_dir}/hour=*/_SUCCESS|awk -F\"hour=\" \'{{print $2}}\'|tr \"\n\" \",\"|sed -e 's/,$/\n/'".format(data_dir=self.v_data_dir)
+        command="hadoop dfs -ls {data_dir}/hour=*/_SUCCESS|awk -F\"hour=\" \'{{print $2}}\'|tr \"\\n\" \",\"|sed -e 's/,$/\\n/'".format(data_dir=self.v_data_dir)
 
         logging.info(command)
 
