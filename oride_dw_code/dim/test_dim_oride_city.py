@@ -303,7 +303,7 @@ def execution_data_task_id(ds,**kwargs):
 
     hive_hook = HiveCliHook()
 
-    cm=TaskHourSuccessCountMonitor(in_text,hour_hdfs_path)
+    cm=TaskHourSuccessCountMonitor(ds,in_text,hour_hdfs_path)
 
     print(cm.HourSuccessCountMonitor())
 
