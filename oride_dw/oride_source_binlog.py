@@ -126,6 +126,12 @@ def check_s3_prefix(ds, execution_date, **kwargs):
     num=1
     while not hook.check_for_prefix(prefix=prefix, delimiter='/', bucket_name=BUCKET_NAME):
         logging.info('Check s3 prefix : %s in bucket s3://%s', prefix, BUCKET_NAME)
+
+        print("-----------")
+        print(try_max_num)
+        print(nm)
+
+        print("-----------")
         if num >= try_max_num:
             #comwx = ComwxApi('wwd26d45f97ea74ad2', 'BLE_v25zCmnZaFUgum93j3zVBDK-DjtRkLisI_Wns4g', '1000011')
             #comwx.postAppMessage('oride binlog 数据采集，table:{0} date:{1} hour:{2} 数据记录为0，请及时排查，谢谢'.format(table, ds, hour), '271')
@@ -135,6 +141,7 @@ def check_s3_prefix(ds, execution_date, **kwargs):
             dingding_alert.send('oride binlog 数据采集，table:{0} date:{1} hour:{2} 数据记录为0，请及时排查，谢谢'.format(table, ds, hour))
             
             raise AirflowException("check s3 prefix failed!")
+
         else:
             time.sleep(poke_interval)
             num+=1
