@@ -51,8 +51,6 @@ class TaskHourSuccessCountMonitor(object):
 
         out = os.popen(command, 'r')
         res = out.readlines()
-
-        print(res[0])
         
         res[0] = 0 if res[0] is None else res[0].lower().strip()
         out.close()
@@ -65,7 +63,7 @@ class TaskHourSuccessCountMonitor(object):
         
         else:
         
-            logging.info(res[0])
+            #logging.info(res[0])
 
             return res[0]
 

@@ -108,7 +108,7 @@ db_name="test_db"
 table_name="test_dim_oride_city"
 hdfs_path="s3a://opay-bi/oride/oride_dw/"+table_name
 
-in_text="2:>"
+in_text="9:>"
 
 hour_hdfs_path='hdfs://warehourse/user/hive/warehouse/oride_dw_ods.db/ods_binlog_data_order_hi/dt=2019-12-12'
 
