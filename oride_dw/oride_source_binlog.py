@@ -9,6 +9,7 @@ from plugins.comwx import ComwxApi
 from airflow.hooks.S3_hook import S3Hook
 from airflow.exceptions import AirflowException
 from airflow.operators.bash_operator import BashOperator
+from plugins.DingdingAlert import DingdingAlert
 import time
 import logging
 
@@ -125,10 +126,25 @@ def check_s3_prefix(ds, execution_date, **kwargs):
     num=1
     while not hook.check_for_prefix(prefix=prefix, delimiter='/', bucket_name=BUCKET_NAME):
         logging.info('Check s3 prefix : %s in bucket s3://%s', prefix, BUCKET_NAME)
+
         if num >= try_max_num:
-            comwx = ComwxApi('wwd26d45f97ea74ad2', 'BLE_v25zCmnZaFUgum93j3zVBDK-DjtRkLisI_Wns4g', '1000011')
-            comwx.postAppMessage('oride binlog 数据采集，table:{0} date:{1} hour:{2} 数据记录为0，请及时排查，谢谢'.format(table, ds, hour), '271')
+
+            print("+++++++++++++")
+            #comwx = ComwxApi('wwd26d45f97ea74ad2', 'BLE_v25zCmnZaFUgum93j3zVBDK-DjtRkLisI_Wns4g', '1000011')
+            #comwx.postAppMessage('oride binlog 数据采集，table:{0} date:{1} hour:{2} 数据记录为0，请及时排查，谢谢'.format(table, ds, hour), '271')
+
+            dingding_alert = DingdingAlert('https://oapi.dingtalk.com/robot/send?access_token=928e66bef8d88edc89fe0f0ddd52bfa4dd28bd4b1d24ab4626c804df8878bb48')
+
+            #dingding_alert.send('oride binlog 数据采集，table:{0} date:{1} hour:{2} 数据记录为0，请及时排查，谢谢'.format(table, ds, hour))
+
+            #dingding_alert.send('oride binlog 数据采集，table:{0} date:{1} hour:{2} 数据记录为0，请及时排查，谢谢'.format(table, ds, hour))
+
+            dingding_alert.send('oride binlog 数据采集 test')
+
+            print("*************")
+            
             raise AirflowException("check s3 prefix failed!")
+
         else:
             time.sleep(poke_interval)
             num+=1
