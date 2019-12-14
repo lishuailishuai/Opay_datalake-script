@@ -42,9 +42,9 @@ dag = airflow.DAG(
     default_args=args)
 
 ##----------------------------------------- 依赖 ---------------------------------------##
-ods_sqoop_owealth_share_acct_df_prev_day_task = UFileSensor(
+ods_sqoop_owealth_share_acct_df_prev_day_task = OssSensor(
     task_id='ods_sqoop_owealth_share_acct_df_prev_day_task',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
         hdfs_path_str="opay_owealth_ods/opay_owealth/share_acct",
         pt='{{ds}}'
     ),
@@ -53,9 +53,9 @@ ods_sqoop_owealth_share_acct_df_prev_day_task = UFileSensor(
     dag=dag
 )
 
-ods_sqoop_owealth_share_order_df_prev_day_task = UFileSensor(
+ods_sqoop_owealth_share_order_df_prev_day_task = OssSensor(
     task_id='ods_sqoop_owealth_share_order_df_prev_day_task',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
         hdfs_path_str="opay_owealth_ods/opay_owealth/share_order",
         pt='{{ds}}'
     ),
@@ -64,9 +64,9 @@ ods_sqoop_owealth_share_order_df_prev_day_task = UFileSensor(
     dag=dag
 )
 
-ods_sqoop_owealth_owealth_user_subscribed_df_prev_day_task = UFileSensor(
+ods_sqoop_owealth_owealth_user_subscribed_df_prev_day_task = OssSensor(
     task_id='ods_sqoop_owealth_owealth_user_subscribed_df_prev_day_task',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
         hdfs_path_str="opay_owealth_ods/opay_owealth/owealth_user_subscribed",
         pt='{{ds}}'
     ),
@@ -75,9 +75,9 @@ ods_sqoop_owealth_owealth_user_subscribed_df_prev_day_task = UFileSensor(
     dag=dag
 )
 
-ods_sqoop_owealth_share_revenue_log_df_prev_day_task = UFileSensor(
+ods_sqoop_owealth_share_revenue_log_df_prev_day_task = OssSensor(
     task_id='ods_sqoop_owealth_share_revenue_log_df_prev_day_task',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
         hdfs_path_str="opay_owealth_ods/opay_owealth/share_revenue_log",
         pt='{{ds}}'
     ),
@@ -100,7 +100,7 @@ ods_sqoop_base_user_di_prev_day_task = OssSensor(
 ##----------------------------------------- 变量 ---------------------------------------##
 db_name = "opay_dw"
 table_name = "app_opay_owealth_collect_24_d"
-hdfs_path = "ufile://opay-datalake/opay/opay_dw/" + table_name
+hdfs_path = "oss://opay-datalake/opay/opay_dw/" + table_name
 
 
 def app_opay_owealth_collect_24_d_sql_task(ds):

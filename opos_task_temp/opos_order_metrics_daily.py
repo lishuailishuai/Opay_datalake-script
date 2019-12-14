@@ -17,6 +17,7 @@ from airflow.sensors.hive_partition_sensor import HivePartitionSensor
 from airflow.sensors import UFileSensor
 from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
 from plugins.TaskTouchzSuccess import TaskTouchzSuccess
+from airflow.sensors import OssSensor
 import json
 import logging
 from airflow.models import Variable
@@ -41,9 +42,9 @@ dag = airflow.DAG(
 
 ##----------------------------------------- 依赖 ---------------------------------------##
 
-dwd_pre_opos_payment_order_di_task = UFileSensor(
+dwd_pre_opos_payment_order_di_task = OssSensor(
     task_id='dwd_pre_opos_payment_order_di_task',
-    filepath='{hdfs_path_str}/country_code=nal/dt={pt}/_SUCCESS'.format(
+    bucket_key='{hdfs_path_str}/country_code=nal/dt={pt}/_SUCCESS'.format(
         hdfs_path_str="opos/opos_dw/dwd_pre_opos_payment_order_di",
         pt='{{ds}}'
     ),
@@ -52,9 +53,9 @@ dwd_pre_opos_payment_order_di_task = UFileSensor(
     dag=dag
 )
 
-opos_metrcis_report_task = UFileSensor(
+opos_metrcis_report_task = OssSensor(
     task_id='opos_metrcis_report_task',
-    filepath='{hdfs_path_str}/country_code=nal/dt={pt}/_SUCCESS'.format(
+    bucket_key='{hdfs_path_str}/country_code=nal/dt={pt}/_SUCCESS'.format(
         hdfs_path_str="opos/opos_temp/opos_metrcis_report",
         pt='{{ds}}'
     ),
@@ -66,7 +67,7 @@ opos_metrcis_report_task = UFileSensor(
 ##----------------------------------------- 变量 ---------------------------------------##
 db_name = "opos_temp"
 table_name = "opos_active_user_daily"
-hdfs_path = "ufile://opay-datalake/opos/opos_temp/" + table_name
+hdfs_path = "oss://opay-datalake/opos/opos_temp/" + table_name
 
 
 ##----------------------------------------- 任务超时监控 ---------------------------------------##

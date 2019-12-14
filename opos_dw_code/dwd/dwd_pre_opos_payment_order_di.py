@@ -17,6 +17,7 @@ from airflow.sensors.hive_partition_sensor import HivePartitionSensor
 from airflow.sensors import UFileSensor
 from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
 from plugins.TaskTouchzSuccess import TaskTouchzSuccess
+from airflow.sensors import OssSensor
 import json
 import logging
 from airflow.models import Variable
@@ -41,10 +42,9 @@ dag = airflow.DAG('dwd_pre_opos_payment_order_di',
 
 ##----------------------------------------- 依赖 ---------------------------------------##
 
-# 依赖前一天分区，dim_opos_bd_relation_df表，ufile://opay-datalake/opos/opos_dw/dim_opos_bd_relation_df
-dim_opos_bd_relation_df_task = UFileSensor(
+dim_opos_bd_relation_df_task = OssSensor(
     task_id='dim_opos_bd_relation_df_task',
-    filepath='{hdfs_path_str}/country_code=nal/dt={pt}/_SUCCESS'.format(
+    bucket_key='{hdfs_path_str}/country_code=nal/dt={pt}/_SUCCESS'.format(
         hdfs_path_str="opos/opos_dw/dim_opos_bd_relation_df",
         pt='{{ds}}'
     ),
@@ -53,9 +53,9 @@ dim_opos_bd_relation_df_task = UFileSensor(
     dag=dag
 )
 
-ods_sqoop_base_pre_opos_payment_order_di_task = UFileSensor(
+ods_sqoop_base_pre_opos_payment_order_di_task = OssSensor(
     task_id='ods_sqoop_base_pre_opos_payment_order_di_task',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
         hdfs_path_str="opos_dw_sqoop_di/pre_ptsp_db/pre_opos_payment_order",
         pt='{{ds}}'
     ),
@@ -64,9 +64,9 @@ ods_sqoop_base_pre_opos_payment_order_di_task = UFileSensor(
     dag=dag
 )
 
-ods_sqoop_base_pre_opos_payment_order_bd_di_task = UFileSensor(
+ods_sqoop_base_pre_opos_payment_order_bd_di_task = OssSensor(
     task_id='ods_sqoop_base_pre_opos_payment_order_bd_di_task',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
         hdfs_path_str="opos_dw_sqoop_di/pre_ptsp_db/pre_opos_payment_order_bd",
         pt='{{ds}}'
     ),
@@ -79,7 +79,7 @@ ods_sqoop_base_pre_opos_payment_order_bd_di_task = UFileSensor(
 
 db_name = "opos_dw"
 table_name = "dwd_pre_opos_payment_order_di"
-hdfs_path = "ufile://opay-datalake/opos/opos_dw/" + table_name
+hdfs_path = "oss://opay-datalake/opos/opos_dw/" + table_name
 
 
 ##----------------------------------------- 任务超时监控 ---------------------------------------##

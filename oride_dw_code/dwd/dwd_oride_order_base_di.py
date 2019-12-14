@@ -454,7 +454,7 @@ left join
 on base.country_id=country.id;
 '''.format(
         pt=ds,
-        now_day='{{macros.ds_add(ds, +1)}}',
+        now_day=airflow.macros.ds_add(ds, +1),
         now_hour='{{ execution_date.strftime("%H") }}',
         table=table_name,
         db=db_name
