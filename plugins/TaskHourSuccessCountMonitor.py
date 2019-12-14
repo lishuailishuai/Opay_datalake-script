@@ -52,13 +52,13 @@ class TaskHourSuccessCountMonitor(object):
         out = os.popen(command, 'r')
         res = out.readlines()
 
-        print(res)
+        print(res[0])
         
         res = 0 if res is None else res[0].lower().strip()
         out.close()
 
         #判断 _SUCCESS 文件是否生成
-        if res== '' or res == 'None' or res[0] == '0':
+        if res[0]== '' or res[0] == 'None' or res[0] == '0':
             logging.info("_SUCCESS list 获取失败")
 
             sys.exit(1)
@@ -67,8 +67,7 @@ class TaskHourSuccessCountMonitor(object):
         
             logging.info(res)
 
-            return res
-
+            return res[0]
 
     def number_rebuild(self,s):
     
