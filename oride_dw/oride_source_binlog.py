@@ -142,7 +142,7 @@ def check_s3_prefix(ds, execution_date, **kwargs):
 
             dingding_alert.send('oride binlog 数据采集，table:{0} date:{1} hour:{2} 数据记录为0，请及时排查，谢谢'.format(table, ds, hour))
             
-            raise AirflowException("check s3 prefix failed!")
+            #raise AirflowException("check s3 prefix failed!")
 
         else:
             time.sleep(poke_interval)
