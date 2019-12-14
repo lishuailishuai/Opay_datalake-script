@@ -627,11 +627,6 @@ LEFT OUTER JOIN
 --ON base.order_id=ep.order_id
 --left outer join
 
---(select order_id from oride_dw.dwd_oride_order_dispatch_funnel_di
---   WHERE dt='{pt}'
---     AND event_name='dispatch_push_driver'
---     AND assign_type=1
---     group by order_id) push_ord
 
 (SELECT order_id,driver_id
 FROM
