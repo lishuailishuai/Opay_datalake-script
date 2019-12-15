@@ -120,6 +120,8 @@ class TaskHourSuccessCountMonitor(object):
         for i in str_list.split(","):
         
             source_nm=int("1"+i.split("/")[0])
+
+            print(self.symbol)
         
             if self.symbol=="<":
         
