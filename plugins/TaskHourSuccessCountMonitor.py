@@ -122,15 +122,12 @@ class TaskHourSuccessCountMonitor(object):
         
                 self.nm_less_diff(source_nm)
 
-                return len(less_res)
+                return len(self.less_res)
         
             if self.symbol==">":
         
                 self.nm_greater_diff(source_nm)
 
-                return len(greater_res)
+                return len(self.greater_res)
 
-
-        
-        
 
