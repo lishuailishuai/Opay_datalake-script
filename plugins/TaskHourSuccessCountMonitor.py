@@ -100,6 +100,9 @@ class TaskHourSuccessCountMonitor(object):
     
         #每个数字前增加 1(01,101)
         v_in_number="1"+self.syl
+
+        print(s)
+        print(v_in_number)
     
         if int(s)>=int(v_in_number):
 
@@ -117,12 +120,9 @@ class TaskHourSuccessCountMonitor(object):
 
         str_list=self.get_string_list()
 
-        print(str_list)
         for i in str_list.split(","):
         
             source_nm=int("1"+i.split("/")[0])
-
-            print(self.symbol)
         
             if self.symbol=="<":
         
@@ -131,8 +131,6 @@ class TaskHourSuccessCountMonitor(object):
                 return len(self.less_res)
         
             if self.symbol==">":
-
-                print("--------")
         
                 self.nm_greater_diff(source_nm)
 
