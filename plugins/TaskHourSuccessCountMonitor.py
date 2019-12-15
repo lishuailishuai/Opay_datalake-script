@@ -131,6 +131,8 @@ class TaskHourSuccessCountMonitor(object):
                 return len(self.less_res)
         
             if self.symbol==">":
+
+                print("--------")
         
                 self.nm_greater_diff(source_nm)
 
