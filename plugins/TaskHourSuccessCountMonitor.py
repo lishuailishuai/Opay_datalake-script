@@ -115,8 +115,6 @@ class TaskHourSuccessCountMonitor(object):
         str_list=self.get_string_list()
 
         for i in str_list.split(","):
-
-            print(i)
         
             source_nm=int("1"+i.split("/")[0])
         

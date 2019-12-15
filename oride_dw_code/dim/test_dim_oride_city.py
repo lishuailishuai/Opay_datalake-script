@@ -46,16 +46,16 @@ dag = airflow.DAG( 'test_dim_oride_city',
 ##----------------------------------------- 依赖 ---------------------------------------## 
 
 
-test_snappy_dev_01_tesk = S3KeySensor(
-    task_id='test_snappy_dev_01_tesk',
-    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw/test_snappy_dev_01",
-        pt='{{ds}}'
-    ),
-    bucket_name='opay-bi',
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
+# test_snappy_dev_01_tesk = S3KeySensor(
+#     task_id='test_snappy_dev_01_tesk',
+#     bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+#         hdfs_path_str="oride/oride_dw/test_snappy_dev_01",
+#         pt='{{ds}}'
+#     ),
+#     bucket_name='opay-bi',
+#     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+#     dag=dag
+# )
 
 test_oss_tesk = OssSensor(
     task_id='test_oss_tesk',
@@ -108,7 +108,7 @@ db_name="test_db"
 table_name="test_dim_oride_city"
 hdfs_path="s3a://opay-bi/oride/oride_dw/"+table_name
 
-in_text="9:>"
+in_text="9:<"
 
 hour_hdfs_path='hdfs://warehourse/user/hive/warehouse/oride_dw_ods.db/ods_binlog_data_order_hi/dt=2019-12-12'
 
