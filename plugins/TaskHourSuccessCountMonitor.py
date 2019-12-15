@@ -102,6 +102,9 @@ class TaskHourSuccessCountMonitor(object):
         v_in_number="1"+self.syl
     
         if int(s)>=int(v_in_number):
+
+            print(s)
+            print(v_in_number)
     
             if sylstr not in self.greater_res:
          
