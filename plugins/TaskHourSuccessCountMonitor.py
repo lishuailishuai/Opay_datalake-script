@@ -22,16 +22,10 @@ from airflow.utils.trigger_rule import TriggerRule
 from plugins.DingdingAlert import DingdingAlert
 
 """
-in_text="2:>"
 
 tb = [
-        {"start_timeThour": "2019-12-12T07", "end_dateThour": "2019-12-13T07", "partition": "/country_code=nal/dt=2019-09-20/"}
+        {"start_timeThour": "2019-12-12T07", "end_dateThour": "2019-12-13T07", "depend_dir": "hdfs://warehourse/user/hive/warehouse/oride_dw_ods.db/ods_binlog_data_order_hi"}
     ]
-
-
-str_list="00/_SUCCESS,01/_SUCCESS,02/_SUCCESS,03/_SUCCESS,04/_SUCCESS,05/_SUCCESS,06/_SUCCESS,07/_SUCCESS,08/_SUCCESS,09/_SUCCESS,10/_SUCCESS,11/_SUCCESS,12/_SUCCESS,13/_SUCCESS,14/_SUCCESS,15/_SUCCESS,16/_SUCCESS,17/_SUCCESS,18/_SUCCESS,19/_SUCCESS,20/_SUCCESS,21/_SUCCESS,22/_SUCCESS,23/_SUCCESS"
-
-hadoop dfs -ls hdfs://warehourse/user/hive/warehouse/oride_dw_ods.db/ods_binlog_data_order_hi/dt=2019-12-12/hour=*/_SUCCESS|awk -F"hour=" '{print $2}'|tr "\n" ","|sed -e 's/,$/\n/'
 
 """
 
@@ -219,7 +213,9 @@ class TaskHourSuccessCountMonitor(object):
         #不等于24，属于依赖不成立
         if hour_res_nm!=24:
 
-            logging.info("小时级分区不完整，异常退出.....")
+            logging.info("小时级分区文件SUCCESS 个数 {hour_res_nm} 不完整，异常退出.....".format(hour_res_nm=hour_res_nm))
+
+            self.dingding_alert.send("小时级分区文件SUCCESS 个数 {hour_res_nm} 不完整，异常退出.....".format(hour_res_nm=hour_res_nm))
 
             sys.exit(1)
         else:
