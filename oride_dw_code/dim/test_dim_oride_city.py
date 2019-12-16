@@ -299,7 +299,7 @@ def execution_data_task_id(ds,**kwargs):
 
     #owner=kwargs.get('owner')
 
-    3print(owner)
+    #print(owner)
 
     hive_hook = HiveCliHook()
 
