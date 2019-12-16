@@ -303,9 +303,13 @@ def execution_data_task_id(ds,**kwargs):
 
     hive_hook = HiveCliHook()
 
-    cm=TaskHourSuccessCountMonitor(ds,in_text,hour_hdfs_path)
+    v_info = [
+        {"start_timeThour": "2019-12-12T07", "end_dateThour": "2019-12-13T07", "depend_dir": "hdfs://warehourse/user/hive/warehouse/oride_dw_ods.db/ods_binlog_data_order_hi"}
+    ]
 
-    print(cm.HourSuccessCountMonitor())
+    cm=TaskHourSuccessCountMonitor(ds,v_info)
+
+    cm.HourSuccessCountMonitor()
 
     """
         #功能函数
@@ -350,6 +354,7 @@ def execution_data_task_id(ds,**kwargs):
     #生产success
     #cf.touchz_success()
 
+    
     
 test_dim_oride_city_task= PythonOperator(
     task_id='test_dim_oride_city_task',

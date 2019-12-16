@@ -24,6 +24,11 @@ from plugins.DingdingAlert import DingdingAlert
 """
 in_text="2:>"
 
+tb = [
+        {"start_timeThour": "2019-12-12T07", "end_dateThour": "2019-12-13T07", "partition": "/country_code=nal/dt=2019-09-20/"}
+    ]
+
+
 str_list="00/_SUCCESS,01/_SUCCESS,02/_SUCCESS,03/_SUCCESS,04/_SUCCESS,05/_SUCCESS,06/_SUCCESS,07/_SUCCESS,08/_SUCCESS,09/_SUCCESS,10/_SUCCESS,11/_SUCCESS,12/_SUCCESS,13/_SUCCESS,14/_SUCCESS,15/_SUCCESS,16/_SUCCESS,17/_SUCCESS,18/_SUCCESS,19/_SUCCESS,20/_SUCCESS,21/_SUCCESS,22/_SUCCESS,23/_SUCCESS"
 
 hadoop dfs -ls hdfs://warehourse/user/hive/warehouse/oride_dw_ods.db/ods_binlog_data_order_hi/dt=2019-12-12/hour=*/_SUCCESS|awk -F"hour=" '{print $2}'|tr "\n" ","|sed -e 's/,$/\n/'
@@ -32,13 +37,21 @@ hadoop dfs -ls hdfs://warehourse/user/hive/warehouse/oride_dw_ods.db/ods_binlog_
 
 class TaskHourSuccessCountMonitor(object):
 
-    def __init__(self,ds,in_text,in_data_dir):
+    def __init__(self,ds,v_info):
 
         self.dingding_alert = DingdingAlert('https://oapi.dingtalk.com/robot/send?access_token=928e66bef8d88edc89fe0f0ddd52bfa4dd28bd4b1d24ab4626c804df8878bb48')
 
-        self.nm=in_text.split(":")[0]
-        self.symbol=in_text.split(":")[1]
-        self.v_data_dir=in_data_dir
+        # self.nm=in_text.split(":")[0]
+        # self.symbol=in_text.split(":")[1]
+        # self.v_data_dir=in_data_dir
+
+        self.nm=""
+        self.symbol=""
+        self.v_data_dir=""
+
+        self.start_timeThour=""
+        self.end_dateThour=""
+        self.partition=""
 
         self.less_res=[]
         self.greater_res=[]
@@ -65,8 +78,6 @@ class TaskHourSuccessCountMonitor(object):
             sys.exit(1)
         
         else:
-        
-            #logging.info(res[0])
 
             return res[0]
 
@@ -107,8 +118,9 @@ class TaskHourSuccessCountMonitor(object):
          
                 self.greater_res.append(sylstr)
 
-    
-    def HourSuccessCountMonitor(self):
+    def summary_results(self,depend_data_dir):
+
+        self.v_data_dir=depend_data_dir.strip()
 
         res_list=[]
 
@@ -131,3 +143,34 @@ class TaskHourSuccessCountMonitor(object):
                 res_list=self.greater_res
 
         return len(res_list)
+
+    
+    def HourSuccessCountMonitor(self):
+
+
+        for item in v_info:
+
+            #Json 变量信息
+            start_timeThour = item.get('start_timeThour', None)
+            end_dateThour = item.get('end_dateThour', None)
+            depend_dir= item.get('depend_dir', None)
+
+            #开始时间和小时
+            start_time=start_timeThour.split("T")[0]
+            start_time_hour=start_timeThour.split("T")[1]
+
+            #开始路径
+            depend_start_dir=depend_dir+"/dt="+start_time
+
+            #结束时间和小时
+            end_time=end_dateThour.split("T")[0]
+            end_time_hour=end_dateThour.split("T")[1]
+
+            #结束路径
+            depend_end_dir=depend_dir+"/dt="+end_time
+
+        res=self.summary_results(depend_start_dir)+self.summary_results(depend_end_dir)
+
+        print(res)
+
+        
