@@ -189,7 +189,7 @@ class TaskHourSuccessCountMonitor(object):
             end_dateThour = item.get('end_dateThour', None)
             depend_dir= item.get('depend_dir', None)
             table_name= item.get('table', None)
-            print(table_name)
+
             #开始日期和小时
             self.start_time=start_timeThour.split("T")[0]
             start_time_hour=start_timeThour.split("T")[1]
@@ -225,7 +225,7 @@ class TaskHourSuccessCountMonitor(object):
 
             logging.info("小时级分区文件SUCCESS 个数 {hour_res_nm} 不完整，异常退出.....".format(hour_res_nm=hour_res_nm))
 
-            self.dingding_alert.send("DW 依赖数据源 {table_name} 小时级分区文件SUCCESS 个数 {hour_res_nm} 缺失，异常退出.....".format(hour_res_nm=hour_res_nm))
+            self.dingding_alert.send("DW 依赖数据源 {table_name} 小时级分区文件SUCCESS 个数 {hour_res_nm} 缺失，异常退出.....".format(hour_res_nm=hour_res_nm,table_name=table_name))
 
             sys.exit(1)
         else:
