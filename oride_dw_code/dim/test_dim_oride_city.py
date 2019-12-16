@@ -297,9 +297,9 @@ def execution_data_task_id(ds,**kwargs):
     v_day=kwargs.get('v_execution_day')
     v_hour=kwargs.get('v_execution_hour')
 
-    owner=kwargs.get('owner')
+    #owner=kwargs.get('owner')
 
-    print(owner)
+    3print(owner)
 
     hive_hook = HiveCliHook()
 
@@ -365,7 +365,7 @@ test_dim_oride_city_task= PythonOperator(
     op_kwargs={
         'v_execution_date':'{{execution_date.strftime("%Y-%m-%d %H:%M:%S")}}',
         'v_execution_day':'{{execution_date.strftime("%Y-%m-%d")}}',
-        'v_execution_hour':'{{execution_date.strftime("%H")}}'
+        'v_execution_hour':'{{execution_date.strftime("%H")}}',
         'owner':'{{owner}}'
     },
     dag=dag
