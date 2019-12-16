@@ -210,7 +210,7 @@ class TaskHourSuccessCountMonitor(object):
             depend_end_dir=depend_dir+"/dt="+self.end_time
 
         #统计依赖小时级分区个数
-        hour_res_nm=self.summary_results(depend_start_dir,">",start_time_hour)+self.summary_results(depend_end_dir,"<",end_time_hour)-1
+        hour_res_nm=self.summary_results(depend_start_dir,">",start_time_hour)+self.summary_results(depend_end_dir,"<",end_time_hour)
 
         logging.info(self.log_unite_dist)
 
