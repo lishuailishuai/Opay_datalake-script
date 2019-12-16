@@ -44,7 +44,6 @@ class TaskHourSuccessCountMonitor(object):
         self.v_info=v_info
 
         self.nm=""
-        self.symbol=""
         self.v_data_dir=""
 
         self.start_timeThour=""
@@ -54,10 +53,11 @@ class TaskHourSuccessCountMonitor(object):
         self.less_res=[]
         self.greater_res=[]
         
-        self.syl=self.number_rebuild(self.nm)
-
-
     def get_string_list(self):
+
+        """
+            获取小时级分区所有_SUCCESS文件
+        """
 
         command="hadoop dfs -ls {data_dir}/hour=*/_SUCCESS|awk -F\"hour=\" \'{{print $2}}\'|tr \"\\n\" \",\"|sed -e 's/,$/\\n/'".format(data_dir=self.v_data_dir)
 
@@ -80,6 +80,10 @@ class TaskHourSuccessCountMonitor(object):
             return res[0]
 
     def number_rebuild(self,s):
+
+        """
+            将基准小时格式进行格式化(1->01)
+        """
     
         n=str(s)
     
@@ -91,6 +95,10 @@ class TaskHourSuccessCountMonitor(object):
         return s_nm
     
     def nm_less_diff(self,s):
+
+        """
+            小于时间范围的判断
+        """
     
         sylstr=str(s)+"/_SUCCESS"
     
@@ -104,7 +112,11 @@ class TaskHourSuccessCountMonitor(object):
 
     
     def nm_greater_diff(self,s):
-    
+
+        """
+            大于时间范围的判断
+        """    
+
         sylstr=str(s)+"/_SUCCESS"
     
         #每个数字前增加 1(01->101)
@@ -117,11 +129,19 @@ class TaskHourSuccessCountMonitor(object):
                 self.greater_res.append(sylstr)
 
 
-    def summary_results(self,depend_data_dir,symbol):
+    def summary_results(self,depend_data_dir,symbol,start_hour):
 
-        self.symbol=symbol.strip()
+        """
+            执行函数
+        """
 
+        #对比符号("<" and ">")
+        symbol=symbol.strip()
+
+        #数据目录分区地址
         self.v_data_dir=depend_data_dir.strip()
+
+        self.syl=self.number_rebuild(start_hour)
 
         res_list=[]
 
@@ -129,15 +149,16 @@ class TaskHourSuccessCountMonitor(object):
 
         for i in str_list.split(","):
         
+            #将原有小时分区，前面加1，进行数据对比
             source_nm=int("1"+i.split("/")[0])
         
-            if self.symbol=="<":
+            if symbol=="<":
         
                 self.nm_less_diff(source_nm)
 
                 res_list=self.less_res
         
-            if self.symbol==">":
+            if symbol==">":
         
                 self.nm_greater_diff(source_nm)
 
@@ -156,21 +177,22 @@ class TaskHourSuccessCountMonitor(object):
             end_dateThour = item.get('end_dateThour', None)
             depend_dir= item.get('depend_dir', None)
 
-            #开始时间和小时
+            #开始日期和小时
             start_time=start_timeThour.split("T")[0]
             start_time_hour=start_timeThour.split("T")[1]
 
-            #开始路径
+            #开始依赖小时路径
             depend_start_dir=depend_dir+"/dt="+start_time
 
-            #结束时间和小时
+            #结束日期和小时
             end_time=end_dateThour.split("T")[0]
             end_time_hour=end_dateThour.split("T")[1]
 
-            #结束路径
+            #结束依赖小时路径
             depend_end_dir=depend_dir+"/dt="+end_time
 
-        res=self.summary_results(depend_start_dir,"<")+self.summary_results(depend_end_dir,">")
+
+        res=self.summary_results(depend_start_dir,"<",start_time_hour)+self.summary_results(depend_end_dir,">",end_time_hour)
 
         print(res)
 
