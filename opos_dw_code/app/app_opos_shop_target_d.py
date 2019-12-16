@@ -93,7 +93,8 @@ set hive.exec.dynamic.partition.mode=nonstrict;
 --得出最新维度下每个dbid的详细数据信息
 insert overwrite table opos_dw.app_opos_shop_target_d partition (country_code,dt)
 select
-a.shop_id
+0 as id
+,a.shop_id
 ,a.opay_id
 ,a.shop_name
 ,a.opay_account
@@ -344,14 +345,14 @@ from
       ,nvl(count(if(user_subsidy_status='SUCCESS',1,null))/count(1),0) as cashback_order_percent
       ,sum(if(user_subsidy>0 and user_subsidy_status='SUCCESS',nvl(user_subsidy,0),0)) as cashback_amt
     
-      ,count(if(activity_type in ('RCB','CB'),1,null)) as reduce_order_cnt
-      ,count(if(activity_type not in ('RCB','CB'),1,null)) as reduce_zero_order_cnt
-      ,sum(if(activity_type in ('RCB','CB'),nvl(discount_amount,0),0)) as reduce_amt
-      ,sum(if(activity_type in ('RCB','CB'),nvl(org_payment_amount,0),0)) as reduce_order_gmv
-      ,nvl(sum(if(activity_type in ('RCB','CB'),nvl(org_payment_amount,0),0))/count(if(activity_type in ('RCB','CB'),1,null)),0) as reduce_per_order_amt
-      ,nvl(sum(if(activity_type in ('RCB','CB'),nvl(org_payment_amount,0),0))/count(distinct(if(activity_type not in ('RCB','CB'),sender_id,null))),0) as reduce_per_people_amt
-      ,count(distinct(if(activity_type in ('RCB','CB'),sender_id,null))) as reduce_people_cnt
-      ,count(distinct(if(activity_type in ('RCB','CB') and first_order='1',sender_id,null))) as reduce_first_people_cnt
+      ,count(if(activity_type in ('RFR','FR'),1,null)) as reduce_order_cnt
+      ,count(if(activity_type not in ('RFR','FR'),1,null)) as reduce_zero_order_cnt
+      ,sum(if(activity_type in ('RFR','FR'),nvl(discount_amount,0),0)) as reduce_amt
+      ,sum(if(activity_type in ('RFR','FR'),nvl(org_payment_amount,0),0)) as reduce_order_gmv
+      ,nvl(sum(if(activity_type in ('RFR','FR'),nvl(org_payment_amount,0),0))/count(if(activity_type in ('RFR','FR'),1,null)),0) as reduce_per_order_amt
+      ,nvl(sum(if(activity_type in ('RFR','FR'),nvl(org_payment_amount,0),0))/count(distinct(if(activity_type not in ('RFR','FR'),sender_id,null))),0) as reduce_per_people_amt
+      ,count(distinct(if(activity_type in ('RFR','FR'),sender_id,null))) as reduce_people_cnt
+      ,count(distinct(if(activity_type in ('RFR','FR') and first_order='1',sender_id,null))) as reduce_first_people_cnt
   
       --使用红包起情况
       ,count(if(length(discount_ids)>0,1,null)) as bonus_order_cnt
