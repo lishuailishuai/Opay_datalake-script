@@ -606,7 +606,6 @@ def insert_order(ds, yesterday, week, year):
     results = ptsp_mysql_cursor.fetchall()
     logging.info(" record num : {num}".format(num=len(results)))
 
-
     for data in results:
 
         original_columns = list(data)
@@ -846,7 +845,7 @@ create_order_metrics_data = BashOperator(
                                ,first_order
                                ,discount_ids
                         FROM opos_order
-                        WHERE (DATE_FORMAT(create_time,'%Y-%m-%d') = '{{ ds }}' or DATE_FORMAT(create_time,'%Y-%m-%d') = '{{ macros.ds_add(ds, -1) }}' )
+                        WHERE (DATE_FORMAT(create_time,'%Y-%m-%d') = '{{ ds }}' )
                     ) o
                     ON o.order_id = s.order_id
                 ) t
@@ -908,11 +907,128 @@ create_bonus_metrics_data = BashOperator(
     dag=dag,
 )
 
+create_shop_metrics_data = BashOperator(
+    task_id='create_shop_metrics_data',
+    bash_command="""
+        mysql -udml_insert -p6VaEyu -h10.52.149.112 opos_dw  -e "
+
+            INSERT INTO opos_dw.opos_shop_metrics_realtime ( dt, city_id, bd_id,shop_id ,complete_order_cnt ,gmv ,active_user_cnt ,new_user_cnt ,bonus_complete_order_cnt ,bonus_gmv ,bonus_active_user_cnt ,bonus_new_user_cnt ,merchant_return_amount_sum ,all_order_cnt ,fail_order_cnt ,user_activity_order_cnt ,merchant_return_order_cnt )
+            SELECT  t.dt 
+                   ,t.city_id 
+                   ,t.bd_id 
+                   ,t.shop_id 
+                   ,t.complete_order_cnt 
+                   ,t.gmv 
+                   ,t.active_user_cnt 
+                   ,t.new_user_cnt 
+                   ,t.bonus_complete_order_cnt 
+                   ,t.bonus_gmv 
+                   ,t.bonus_active_user_cnt 
+                   ,t.bonus_new_user_cnt 
+                   ,t.merchant_return_amount_sum 
+                   ,t.all_order_cnt 
+                   ,t.fail_order_cnt 
+                   ,t.user_activity_order_cnt 
+                   ,t.merchant_return_order_cnt
+            FROM 
+            (
+            SELECT  t.dt 
+                   ,t.city_id 
+                   ,t.bd_id 
+                   ,t.shop_id 
+                   ,COUNT(if(t.trade_status = 'SUCCESS',t.order_id,null))                                                                  AS complete_order_cnt 
+                   ,SUM(if(t.trade_status = 'SUCCESS',t.org_payment_amount,0))                                                             AS gmv 
+                   ,COUNT(distinct if(t.trade_status = 'SUCCESS',sender_id,null))                                                          AS active_user_cnt 
+                   ,COUNT(distinct if(t.trade_status = 'SUCCESS' AND t.first_order = '1',t.sender_id,null))                                AS new_user_cnt 
+                   ,COUNT(if(t.trade_status = 'SUCCESS' AND length(t.discount_ids) > 0,t.order_id,null))                                   AS bonus_complete_order_cnt 
+                   ,SUM(if(t.trade_status = 'SUCCESS' AND length(t.discount_ids) > 0,t.org_payment_amount,0))                              AS bonus_gmv 
+                   ,COUNT(distinct if(t.trade_status = 'SUCCESS' AND length(t.discount_ids) > 0,sender_id,null))                           AS bonus_active_user_cnt 
+                   ,COUNT(distinct if(t.trade_status = 'SUCCESS' AND t.first_order = '1' AND length(t.discount_ids) > 0,t.sender_id,null)) AS bonus_new_user_cnt 
+                   ,SUM(if(t.trade_status = 'SUCCESS',t.return_amount,0))                                                                  AS merchant_return_amount_sum 
+                   ,COUNT(t.order_id)                                                                                                      AS all_order_cnt 
+                   ,COUNT(if(t.trade_status = 'FAIL',t.order_id,null))                                                                     AS fail_order_cnt 
+                   ,COUNT(if(t.org_payment_amount - t.payment_amount > 0,t.order_id,null))                                                 AS user_activity_order_cnt 
+                   ,COUNT(if(t.trade_status = 'SUCCESS' AND t.return_amount > 0,t.order_id,null))                                          AS merchant_return_order_cnt
+            FROM 
+            (
+                SELECT  o.dt 
+                       ,o.order_id 
+                       ,o.receipt_id 
+                       ,o.sender_id 
+                       ,o.order_type 
+                       ,o.trade_status 
+                       ,o.org_payment_amount 
+                       ,o.payment_amount 
+                       ,s.bd_id 
+                       ,s.city_id 
+                       ,s.shop_id 
+                       ,o.first_order 
+                       ,o.discount_ids 
+                       ,o.return_amount
+                FROM 
+                (
+                    SELECT  order_id 
+                           ,shop_id 
+                           ,opay_id 
+                           ,bd_id 
+                           ,city_id
+                    FROM opos_order_extend 
+                ) s
+                JOIN 
+                (
+                    SELECT  DATE_FORMAT(create_time,'%Y-%m-%d') AS dt 
+                           ,order_id 
+                           ,receipt_id 
+                           ,sender_id 
+                           ,order_type 
+                           ,trade_status 
+                           ,ifnull(org_payment_amount,0)        AS org_payment_amount 
+                           ,ifnull(pay_amount,0)                AS payment_amount 
+                           ,first_order 
+                           ,discount_ids 
+                           ,return_amount
+                    FROM opos_order
+                    WHERE (DATE_FORMAT(create_time,'%Y-%m-%d') = '{{ ds }}' )  
+                ) o
+                ON o.order_id = s.order_id 
+            ) t
+            GROUP BY  t.dt 
+                     ,t.bd_id 
+                     ,t.city_id 
+                     ,t.shop_id 
+            ) t
+            ON DUPLICATE KEY UPDATE dt=VALUES(dt), city_id=VALUES(city_id), bd_id=VALUES(bd_id), complete_order_cnt =VALUES(complete_order_cnt) , gmv =VALUES(gmv) , active_user_cnt =VALUES(active_user_cnt) ,new_user_cnt =VALUES(new_user_cnt) , bonus_complete_order_cnt =VALUES(bonus_complete_order_cnt) , bonus_gmv =VALUES(bonus_gmv) , bonus_active_user_cnt =VALUES(bonus_active_user_cnt) , bonus_new_user_cnt =VALUES(bonus_new_user_cnt) , merchant_return_amount_sum =VALUES(merchant_return_amount_sum) ,all_order_cnt =VALUES(all_order_cnt) ,fail_order_cnt =VALUES(fail_order_cnt) ,user_activity_order_cnt =VALUES(user_activity_order_cnt) ,merchant_return_order_cnt=VALUES(merchant_return_order_cnt) ;
+
+        "
+    """,
+    dag=dag,
+)
+
 delete_old_order = BashOperator(
     task_id='delete_old_order',
     bash_command="""
         mysql -uroot -p78c5f1142124334 -h10.52.149.112 opos_dw  -e "
             delete from opos_order where DATE_FORMAT(create_time,'%Y-%m-%d') < '{{ macros.ds_add(ds, -1) }}';
+        "
+    """,
+    dag=dag,
+)
+
+delete_old_order_extend = BashOperator(
+    task_id='delete_old_order_extend',
+    bash_command="""
+        mysql -uroot -p78c5f1142124334 -h10.52.149.112 opos_dw  -e "
+            delete from opos_order_extend where DATE_FORMAT(create_time,'%Y-%m-%d') < '{{ macros.ds_add(ds, -1) }}';
+        "
+    """,
+    dag=dag,
+)
+
+delete_shop_metrics = BashOperator(
+    task_id='delete_shop_metrics',
+    bash_command="""
+        mysql -uroot -p78c5f1142124334 -h10.52.149.112 opos_dw  -e "
+            delete from opos_shop_metrics_realtime where dt < '{{ macros.ds_add(ds, -1) }}';
         "
     """,
     dag=dag,
@@ -928,5 +1044,5 @@ delete_old_order_bonus = BashOperator(
     dag=dag,
 )
 
-insert_order_data >> create_order_metrics_data >> delete_old_order
+insert_order_data >> create_order_metrics_data >> create_shop_metrics_data >> delete_old_order >> delete_old_order_extend >> delete_shop_metrics
 insert_order_data >> create_bonus_metrics_data >> delete_old_order_bonus
