@@ -162,26 +162,21 @@ class TaskHourSuccessCountMonitor(object):
         
                 self.nm_less_diff(source_nm)
 
-                self.log_unite_list.append(i)
-
-        
             if symbol==">":
         
                 self.nm_greater_diff(source_nm)
-
-                self.log_unite_list.append(i)
 
         if symbol=="<":
 
             res_list=self.less_res
 
-            self.log_unite_dist[self.end_time]=self.log_unite_list
+            self.log_unite_dist[self.end_time]=res_list
         
         if symbol==">":
 
             res_list=self.greater_res
 
-            self.log_unite_dist[self.start_time]=self.log_unite_list
+            self.log_unite_dist[self.start_time]=res_list
 
         return len(res_list)
 
@@ -218,7 +213,7 @@ class TaskHourSuccessCountMonitor(object):
 
         print(res)
 
-        logging.info(self.log_unite_list)
+        #logging.info(self.log_unite_list)
 
         print(self.log_unite_dist)
 
