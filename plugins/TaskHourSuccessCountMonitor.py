@@ -43,7 +43,6 @@ class TaskHourSuccessCountMonitor(object):
 
         self.v_info=v_info
 
-        self.nm=""
         self.v_data_dir=""
 
         self.start_timeThour=""
@@ -52,6 +51,8 @@ class TaskHourSuccessCountMonitor(object):
 
         self.less_res=[]
         self.greater_res=[]
+
+        self.log_unite_list=[]
         
     def get_partition_list(self):
 
@@ -132,7 +133,7 @@ class TaskHourSuccessCountMonitor(object):
     def summary_results(self,depend_data_dir,symbol,start_hour):
 
         """
-            执行函数
+            分支sub函数
         """
 
         #对比符号("<" and ">")
@@ -161,21 +162,26 @@ class TaskHourSuccessCountMonitor(object):
         
                 self.nm_greater_diff(source_nm)
 
-
         if symbol=="<":
-            print("less_res")
+
             res_list=self.less_res
+
+            self.log_unite_list=res_list
         
         if symbol==">":
-            print("greater_res")
+
             res_list=self.greater_res
 
-        print(res_list)
+            self.log_unite_list=res_list
 
         return len(res_list)
 
     
     def HourSuccessCountMonitor(self):
+
+        """
+            主函数
+        """
 
         for item in self.v_info:
 
@@ -199,8 +205,20 @@ class TaskHourSuccessCountMonitor(object):
             depend_end_dir=depend_dir+"/dt="+end_time
 
 
-        res=self.summary_results(depend_start_dir,">",start_time_hour)+self.summary_results(depend_end_dir,"<",end_time_hour)
+        res=self.summary_results(depend_start_dir,">",start_time_hour)+self.summary_results(depend_end_dir,"<",end_time_hour)-1
 
         print(res)
+
+        logging.info(self.log_unite_list)
+
+        if res!=24:
+
+            logging.info("小时级分区不完整，异常退出.....")
+
+            sys.exit(1)
+        else:
+            pass
+
+        
 
         
