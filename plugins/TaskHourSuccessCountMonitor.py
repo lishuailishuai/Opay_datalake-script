@@ -224,7 +224,7 @@ class TaskHourSuccessCountMonitor(object):
 
             logging.info("小时级分区文件SUCCESS 个数 {hour_res_nm} 不完整，异常退出.....".format(hour_res_nm=hour_res_nm))
 
-            self.dingding_alert.send("小时级分区文件SUCCESS 个数 {hour_res_nm} 不完整，异常退出.....".format(hour_res_nm=hour_res_nm))
+            self.dingding_alert.send("DW 小时级分区文件SUCCESS 个数 {hour_res_nm} 不完整，异常退出.....".format(hour_res_nm=hour_res_nm))
 
             sys.exit(1)
         else:
