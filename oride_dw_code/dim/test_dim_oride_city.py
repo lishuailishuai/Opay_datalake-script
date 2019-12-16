@@ -304,7 +304,7 @@ def execution_data_task_id(ds,**kwargs):
     hive_hook = HiveCliHook()
 
     v_info = [
-        {"start_timeThour": "2019-12-12T07", "end_dateThour": "2019-12-13T07", "depend_dir": "hdfs://warehourse/user/hive/warehouse/oride_dw_ods.db/ods_binlog_data_order_hi"}
+        {"start_timeThour": "2019-12-12T07", "end_dateThour": "2019-12-14T07", "depend_dir": "hdfs://warehourse/user/hive/warehouse/oride_dw_ods.db/ods_binlog_data_order_hi"}
     ]
 
     cm=TaskHourSuccessCountMonitor(ds,v_info)

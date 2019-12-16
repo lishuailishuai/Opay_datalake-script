@@ -214,7 +214,7 @@ class TaskHourSuccessCountMonitor(object):
 
         logging.info(self.log_unite_dist)
 
-        self.log_unite_list=[]
+        self.log_unite_dist={}
 
         #不等于24，属于依赖不成立
         if hour_res_nm!=24:
