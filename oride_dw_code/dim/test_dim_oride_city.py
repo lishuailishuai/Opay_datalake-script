@@ -307,7 +307,7 @@ def execution_data_task_id(ds,**kwargs):
         {"table":"ods_binlog_data_order_hi","start_timeThour": "{v_day}T00".format(v_day=v_day), "end_dateThour": "{v_day}T23".format(v_day=v_day), "depend_dir": "hdfs://warehourse/user/hive/warehouse/oride_dw_ods.db"}
     ]
 
-    print(dag.)
+    #print(dag.)
 
     cm=TaskHourSuccessCountMonitor(ds,v_info)
 
