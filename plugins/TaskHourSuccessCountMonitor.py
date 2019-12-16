@@ -53,6 +53,10 @@ class TaskHourSuccessCountMonitor(object):
         self.greater_res=[]
 
         self.log_unite_list=[]
+        self.log_unite_dist={}
+
+        self.start_time=""
+        self.end_time=""
         
     def get_partition_list(self):
 
@@ -157,10 +161,14 @@ class TaskHourSuccessCountMonitor(object):
             if symbol=="<":
         
                 self.nm_less_diff(source_nm)
+
+                self.log_unite_dist[self.end_time]=i
         
             if symbol==">":
         
                 self.nm_greater_diff(source_nm)
+
+                self.log_unite_dist[self.start_time]=i
 
         if symbol=="<":
 
@@ -191,18 +199,18 @@ class TaskHourSuccessCountMonitor(object):
             depend_dir= item.get('depend_dir', None)
 
             #开始日期和小时
-            start_time=start_timeThour.split("T")[0]
+            self.start_time=start_timeThour.split("T")[0]
             start_time_hour=start_timeThour.split("T")[1]
 
             #开始依赖小时路径
-            depend_start_dir=depend_dir+"/dt="+start_time
+            depend_start_dir=depend_dir+"/dt="+self.start_time
 
             #结束日期和小时
-            end_time=end_dateThour.split("T")[0]
+            self.end_time=end_dateThour.split("T")[0]
             end_time_hour=end_dateThour.split("T")[1]
 
             #结束依赖小时路径
-            depend_end_dir=depend_dir+"/dt="+end_time
+            depend_end_dir=depend_dir+"/dt="+self.end_time
 
 
         res=self.summary_results(depend_start_dir,">",start_time_hour)+self.summary_results(depend_end_dir,"<",end_time_hour)-1
@@ -211,6 +219,8 @@ class TaskHourSuccessCountMonitor(object):
 
         logging.info(self.log_unite_list)
 
+        print(self.log_unite_dist)
+        
         self.log_unite_list=[]
 
         if res!=24:
