@@ -860,14 +860,12 @@ def execution_data_task_id(ds,**kwargs):
 
     cf=CountriesPublicFrame("true",ds,db_name,table_name,hdfs_path,"true","true")
 
+    #小时级分区完成标识个数判断
     v_info = [
         {"table":"ods_binlog_data_order_hi","start_timeThour": "{v_day}T00".format(v_day=v_day), "end_dateThour": "{v_day}T23".format(v_day=v_day), "depend_dir": "hdfs://warehourse/user/hive/warehouse/oride_dw_ods.db"}
     ]
 
-    hcm=TaskHourSuccessCountMonitor(ds,v_info)
-
-    hcm.HourSuccessCountMonitor()
-
+    TaskHourSuccessCountMonitor(ds,v_info).HourSuccessCountMonitor()
 
     #删除分区
     #cf.delete_partition()
