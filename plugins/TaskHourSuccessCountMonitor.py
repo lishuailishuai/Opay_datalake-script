@@ -229,7 +229,7 @@ class TaskHourSuccessCountMonitor(object):
 
             sys.exit(1)
         else:
-            pass
+            logging.info("小时级分区文件SUCCESS 个数 {hour_res_nm} 完整，依赖成功".format(hour_res_nm=hour_res_nm))
             self.log_unite_dist={}
 
         
