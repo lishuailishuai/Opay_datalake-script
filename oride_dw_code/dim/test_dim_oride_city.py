@@ -108,10 +108,6 @@ db_name="test_db"
 table_name="test_dim_oride_city"
 hdfs_path="s3a://opay-bi/oride/oride_dw/"+table_name
 
-in_text="9:<"
-
-hour_hdfs_path='hdfs://warehourse/user/hive/warehouse/oride_dw_ods.db/ods_binlog_data_order_hi/dt=2019-12-12'
-
 ##----------------------------------------- 脚本 ---------------------------------------## 
 
 def test_dim_oride_city_sql_task(ds):
@@ -307,7 +303,7 @@ def execution_data_task_id(ds,**kwargs):
         {"table":"ods_binlog_data_order_hi","start_timeThour": "{v_day}T00".format(v_day=v_day), "end_dateThour": "{v_day}T23".format(v_day=v_day), "depend_dir": "hdfs://warehourse/user/hive/warehouse/oride_dw_ods.db"}
     ]
 
-    print(dag.)
+    #print(dag.)
 
     cm=TaskHourSuccessCountMonitor(ds,v_info)
 
