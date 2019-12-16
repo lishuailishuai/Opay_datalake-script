@@ -178,7 +178,8 @@ def dwm_oride_driver_finance_di_sql_task(ds):
            reward.reward_amount,  --司机奖励金，用于统计理论b端补贴
            pay.amount_recharge,  --资金调整金额，用于统计实际b端补贴
            pay.amount_reward,  --司机奖励金，用于统计实际b端补贴
-           repay.start_date, --司机开始还款日期
+           repay.start_date, --司机实际开始还款日期
+           repay.theory_start_date, --司机理论开始还款日期
            repay.amount,  --司机每期还款金额
            repay.numbers, --总期数,总贷款金额=amount*numbers，理论应还金额=amount*repaid_numbers
            repay.repaid_numbers,  --已还款期数,剩余还款期数=numbers-repaid_numbers
@@ -289,7 +290,8 @@ def dwm_oride_driver_finance_di_sql_task(ds):
         (
         select repay.driver_id,
                repay.dt,  --日期
-               recharge.start_date, --司机开始还款日期
+               recharge.start_date, --司机实际开始还款日期
+               repay.start_date as theory_start_date, --司机理论开始还款日期
                repay.amount,  --司机每期还款金额
                repay.numbers, --总期数,总贷款金额=amount*numbers，理论应还金额=amount*repaid_numbers
                repay.repaid_numbers,  --已还款期数,剩余还款期数=numbers-repaid_numbers
