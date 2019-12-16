@@ -53,7 +53,7 @@ class TaskHourSuccessCountMonitor(object):
         self.less_res=[]
         self.greater_res=[]
         
-    def get_string_list(self):
+    def get_partition_list(self):
 
         """
             获取小时级分区所有_SUCCESS文件
@@ -145,9 +145,10 @@ class TaskHourSuccessCountMonitor(object):
 
         res_list=[]
 
-        str_list=self.get_string_list()
+        #获取分区列表
+        partition_list=self.get_partition_list()
 
-        for i in str_list.split(","):
+        for i in partition_list.split(","):
         
             #将原有小时分区，前面加1，进行数据对比
             source_nm=int("1"+i.split("/")[0])
@@ -155,16 +156,22 @@ class TaskHourSuccessCountMonitor(object):
             if symbol=="<":
         
                 self.nm_less_diff(source_nm)
-
-                res_list=self.less_res
         
             if symbol==">":
         
                 self.nm_greater_diff(source_nm)
 
-                res_list=self.greater_res
+
+        if symbol=="<":
+            print("less_res")
+            res_list=self.less_res
+        
+        if symbol==">":
+            print("greater_res")
+            res_list=self.greater_res
 
         print(res_list)
+
         return len(res_list)
 
     
@@ -192,7 +199,7 @@ class TaskHourSuccessCountMonitor(object):
             depend_end_dir=depend_dir+"/dt="+end_time
 
 
-        res=self.summary_results(depend_start_dir,"<",start_time_hour)+self.summary_results(depend_end_dir,">",end_time_hour)
+        res=self.summary_results(depend_start_dir,">",start_time_hour)+self.summary_results(depend_end_dir,"<",end_time_hour)
 
         print(res)
 
