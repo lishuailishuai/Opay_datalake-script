@@ -45,6 +45,8 @@ class TaskHourSuccessCountMonitor(object):
         # self.symbol=in_text.split(":")[1]
         # self.v_data_dir=in_data_dir
 
+        self.v_info=v_info
+
         self.nm=""
         self.symbol=""
         self.v_data_dir=""
@@ -118,6 +120,7 @@ class TaskHourSuccessCountMonitor(object):
          
                 self.greater_res.append(sylstr)
 
+
     def summary_results(self,depend_data_dir):
 
         self.v_data_dir=depend_data_dir.strip()
@@ -148,7 +151,7 @@ class TaskHourSuccessCountMonitor(object):
     def HourSuccessCountMonitor(self):
 
 
-        for item in v_info:
+        for item in self.v_info:
 
             #Json 变量信息
             start_timeThour = item.get('start_timeThour', None)
