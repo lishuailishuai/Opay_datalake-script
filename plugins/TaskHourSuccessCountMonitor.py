@@ -41,10 +41,6 @@ class TaskHourSuccessCountMonitor(object):
 
         self.dingding_alert = DingdingAlert('https://oapi.dingtalk.com/robot/send?access_token=928e66bef8d88edc89fe0f0ddd52bfa4dd28bd4b1d24ab4626c804df8878bb48')
 
-        # self.nm=in_text.split(":")[0]
-        # self.symbol=in_text.split(":")[1]
-        # self.v_data_dir=in_data_dir
-
         self.v_info=v_info
 
         self.nm=""
@@ -98,7 +94,7 @@ class TaskHourSuccessCountMonitor(object):
     
         sylstr=str(s)+"/_SUCCESS"
     
-        #每个数字前增加 1(01,101)
+        #每个数字前增加 1(01->101)
         v_in_number="1"+self.syl
     
         if int(s)<=int(v_in_number):
@@ -111,7 +107,7 @@ class TaskHourSuccessCountMonitor(object):
     
         sylstr=str(s)+"/_SUCCESS"
     
-        #每个数字前增加 1(01,101)
+        #每个数字前增加 1(01->101)
         v_in_number="1"+self.syl
     
         if int(s)>=int(v_in_number):
@@ -121,7 +117,9 @@ class TaskHourSuccessCountMonitor(object):
                 self.greater_res.append(sylstr)
 
 
-    def summary_results(self,depend_data_dir):
+    def summary_results(self,depend_data_dir,symbol):
+
+        self.symbol=symbol.strip()
 
         self.v_data_dir=depend_data_dir.strip()
 
@@ -150,7 +148,6 @@ class TaskHourSuccessCountMonitor(object):
     
     def HourSuccessCountMonitor(self):
 
-
         for item in self.v_info:
 
             #Json 变量信息
@@ -172,7 +169,7 @@ class TaskHourSuccessCountMonitor(object):
             #结束路径
             depend_end_dir=depend_dir+"/dt="+end_time
 
-        res=self.summary_results(depend_start_dir)+self.summary_results(depend_end_dir)
+        res=self.summary_results(depend_start_dir,"<")+self.summary_results(depend_end_dir,">")
 
         print(res)
 
