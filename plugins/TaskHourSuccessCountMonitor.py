@@ -22,16 +22,10 @@ from airflow.utils.trigger_rule import TriggerRule
 from plugins.DingdingAlert import DingdingAlert
 
 """
-in_text="2:>"
 
 tb = [
-        {"start_timeThour": "2019-12-12T07", "end_dateThour": "2019-12-13T07", "partition": "/country_code=nal/dt=2019-09-20/"}
+        {"start_timeThour": "2019-12-12T07", "end_dateThour": "2019-12-13T07", "depend_dir": "hdfs://warehourse/user/hive/warehouse/oride_dw_ods.db/ods_binlog_data_order_hi"}
     ]
-
-
-str_list="00/_SUCCESS,01/_SUCCESS,02/_SUCCESS,03/_SUCCESS,04/_SUCCESS,05/_SUCCESS,06/_SUCCESS,07/_SUCCESS,08/_SUCCESS,09/_SUCCESS,10/_SUCCESS,11/_SUCCESS,12/_SUCCESS,13/_SUCCESS,14/_SUCCESS,15/_SUCCESS,16/_SUCCESS,17/_SUCCESS,18/_SUCCESS,19/_SUCCESS,20/_SUCCESS,21/_SUCCESS,22/_SUCCESS,23/_SUCCESS"
-
-hadoop dfs -ls hdfs://warehourse/user/hive/warehouse/oride_dw_ods.db/ods_binlog_data_order_hi/dt=2019-12-12/hour=*/_SUCCESS|awk -F"hour=" '{print $2}'|tr "\n" ","|sed -e 's/,$/\n/'
 
 """
 
@@ -43,7 +37,6 @@ class TaskHourSuccessCountMonitor(object):
 
         self.v_info=v_info
 
-        self.nm=""
         self.v_data_dir=""
 
         self.start_timeThour=""
@@ -52,8 +45,13 @@ class TaskHourSuccessCountMonitor(object):
 
         self.less_res=[]
         self.greater_res=[]
+
+        self.log_unite_dist={}
+
+        self.start_time=""
+        self.end_time=""
         
-    def get_string_list(self):
+    def get_partition_list(self):
 
         """
             获取小时级分区所有_SUCCESS文件
@@ -132,7 +130,7 @@ class TaskHourSuccessCountMonitor(object):
     def summary_results(self,depend_data_dir,symbol,start_hour):
 
         """
-            执行函数
+            分支sub函数
         """
 
         #对比符号("<" and ">")
@@ -145,9 +143,10 @@ class TaskHourSuccessCountMonitor(object):
 
         res_list=[]
 
-        str_list=self.get_string_list()
+        #获取分区列表
+        partition_list=self.get_partition_list()
 
-        for i in str_list.split(","):
+        for i in partition_list.split(","):
         
             #将原有小时分区，前面加1，进行数据对比
             source_nm=int("1"+i.split("/")[0])
@@ -156,19 +155,32 @@ class TaskHourSuccessCountMonitor(object):
         
                 self.nm_less_diff(source_nm)
 
-                res_list=self.less_res
-        
             if symbol==">":
         
                 self.nm_greater_diff(source_nm)
 
-                res_list=self.greater_res
+        if symbol=="<":
 
-        print(res_list)
+            res_list=self.less_res
+
+            #输入日志
+            self.log_unite_dist[self.end_time]=res_list
+        
+        if symbol==">":
+
+            res_list=self.greater_res
+
+            #输入日志
+            self.log_unite_dist[self.start_time]=res_list
+
         return len(res_list)
 
     
     def HourSuccessCountMonitor(self):
+
+        """
+            主函数
+        """
 
         for item in self.v_info:
 
@@ -176,24 +188,50 @@ class TaskHourSuccessCountMonitor(object):
             start_timeThour = item.get('start_timeThour', None)
             end_dateThour = item.get('end_dateThour', None)
             depend_dir= item.get('depend_dir', None)
+            table_name= item.get('table', None)
 
             #开始日期和小时
-            start_time=start_timeThour.split("T")[0]
+            self.start_time=start_timeThour.split("T")[0]
             start_time_hour=start_timeThour.split("T")[1]
 
             #开始依赖小时路径
-            depend_start_dir=depend_dir+"/dt="+start_time
+            depend_start_dir=depend_dir+"/"+table_name+"/dt="+self.start_time
 
             #结束日期和小时
-            end_time=end_dateThour.split("T")[0]
+            self.end_time=end_dateThour.split("T")[0]
             end_time_hour=end_dateThour.split("T")[1]
 
             #结束依赖小时路径
-            depend_end_dir=depend_dir+"/dt="+end_time
+            depend_end_dir=depend_dir+"/"+table_name+"/dt="+self.end_time
+
+        #开始时间与结束时间不相同时
+        if self.start_time!=self.end_time:
+
+            #统计依赖小时级分区个数
+            hour_res_nm=self.summary_results(depend_start_dir,">",start_time_hour)+self.summary_results(depend_end_dir,"<",end_time_hour)
+
+        #开始时间与结束时间相同时
+        if self.start_time==self.end_time:
+
+            #统计依赖小时级分区个数
+            hour_res_nm=self.summary_results(depend_start_dir,">",start_time_hour)
 
 
-        res=self.summary_results(depend_start_dir,"<",start_time_hour)+self.summary_results(depend_end_dir,">",end_time_hour)
+        logging.info(self.log_unite_dist)
 
-        print(res)
+
+        #不等于24，属于依赖不成立
+        if hour_res_nm!=24:
+
+            logging.info("小时级分区文件SUCCESS 个数 {hour_res_nm} 不完整，异常退出.....".format(hour_res_nm=hour_res_nm))
+
+            self.dingding_alert.send("DW 依赖数据源 {table_name} 小时级分区文件SUCCESS 个数 {hour_res_nm} 缺失，异常退出.....".format(hour_res_nm=hour_res_nm,table_name=table_name))
+
+            sys.exit(1)
+        else:
+            pass
+            self.log_unite_dist={}
+
+        
 
         
