@@ -143,6 +143,7 @@ class TaskHourSuccessCountMonitor(object):
 
                 res_list=self.greater_res
 
+        print(res_list)
         return len(res_list)
 
     
