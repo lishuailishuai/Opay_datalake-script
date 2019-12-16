@@ -189,7 +189,7 @@ class TaskHourSuccessCountMonitor(object):
             end_dateThour = item.get('end_dateThour', None)
             depend_dir= item.get('depend_dir', None)
             table_name= item.get('table', None)
-
+            print(table_name)
             #开始日期和小时
             self.start_time=start_timeThour.split("T")[0]
             start_time_hour=start_timeThour.split("T")[1]
