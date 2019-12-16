@@ -195,7 +195,7 @@ class TaskHourSuccessCountMonitor(object):
             start_time_hour=start_timeThour.split("T")[1]
 
             #开始依赖小时路径
-            depend_start_dir=depend_dir+"/dt="+self.start_time
+            depend_start_dir=depend_dir+"/"+table_name+"/dt="+self.start_time
 
             #结束日期和小时
             self.end_time=end_dateThour.split("T")[0]
