@@ -166,13 +166,13 @@ class TaskHourSuccessCountMonitor(object):
 
             res_list=self.less_res
 
-            self.log_unite_list=res_list
+            self.log_unite_list=self.log_unite_list+res_list
         
         if symbol==">":
 
             res_list=self.greater_res
 
-            self.log_unite_list=res_list
+            self.log_unite_list=self.log_unite_list+res_list
 
         return len(res_list)
 
@@ -210,6 +210,8 @@ class TaskHourSuccessCountMonitor(object):
         print(res)
 
         logging.info(self.log_unite_list)
+
+        self.log_unite_list=[]
 
         if res!=24:
 
