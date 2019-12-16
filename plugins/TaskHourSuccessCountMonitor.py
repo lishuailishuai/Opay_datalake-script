@@ -52,7 +52,6 @@ class TaskHourSuccessCountMonitor(object):
         self.less_res=[]
         self.greater_res=[]
 
-        self.log_unite_list=[]
         self.log_unite_dist={}
 
         self.start_time=""
@@ -170,12 +169,14 @@ class TaskHourSuccessCountMonitor(object):
 
             res_list=self.less_res
 
+            #输入日志
             self.log_unite_dist[self.end_time]=res_list
         
         if symbol==">":
 
             res_list=self.greater_res
 
+            #输入日志
             self.log_unite_dist[self.start_time]=res_list
 
         return len(res_list)
@@ -208,18 +209,15 @@ class TaskHourSuccessCountMonitor(object):
             #结束依赖小时路径
             depend_end_dir=depend_dir+"/dt="+self.end_time
 
+        #统计依赖小时级分区个数
+        hour_res_nm=self.summary_results(depend_start_dir,">",start_time_hour)+self.summary_results(depend_end_dir,"<",end_time_hour)-1
 
-        res=self.summary_results(depend_start_dir,">",start_time_hour)+self.summary_results(depend_end_dir,"<",end_time_hour)-1
-
-        print(res)
-
-        #logging.info(self.log_unite_list)
-
-        print(self.log_unite_dist)
+        logging.info(self.log_unite_dist)
 
         self.log_unite_list=[]
 
-        if res!=24:
+        #不等于24，属于依赖不成立
+        if hour_res_nm!=24:
 
             logging.info("小时级分区不完整，异常退出.....")
 
