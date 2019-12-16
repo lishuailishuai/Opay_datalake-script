@@ -297,13 +297,17 @@ def execution_data_task_id(ds,**kwargs):
     v_day=kwargs.get('v_execution_day')
     v_hour=kwargs.get('v_execution_hour')
 
+    owner=kwargs.get('owner')
+
+    print(owner)
+
     hive_hook = HiveCliHook()
 
     v_info = [
         {"table":"ods_binlog_data_order_hi","start_timeThour": "{v_day}T00".format(v_day=v_day), "end_dateThour": "{v_day}T23".format(v_day=v_day), "depend_dir": "hdfs://warehourse/user/hive/warehouse/oride_dw_ods.db"}
     ]
 
-    #print(dag.)
+    print(dag.)
 
     cm=TaskHourSuccessCountMonitor(ds,v_info)
 
@@ -362,6 +366,7 @@ test_dim_oride_city_task= PythonOperator(
         'v_execution_date':'{{execution_date.strftime("%Y-%m-%d %H:%M:%S")}}',
         'v_execution_day':'{{execution_date.strftime("%Y-%m-%d")}}',
         'v_execution_hour':'{{execution_date.strftime("%H")}}'
+        'owner':'{{owner}}'
     },
     dag=dag
 )
