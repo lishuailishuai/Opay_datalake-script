@@ -185,7 +185,7 @@ def dwm_oride_driver_finance_di_sql_task(ds):
            repay.repaid_numbers,  --已还款期数,剩余还款期数=numbers-repaid_numbers
            repay.balance,  --司机账户余额
            repay.amount*repay.repaid_numbers as theory_repay_amount,  --理论应还金额
-           if(repay.balance>=0,repay.amount*repay.repaid_numbers,(pay.phone_amount+repay.balance)) as act_repay_amount,  --实际还款金额
+           if(repay.balance>=0,repay.amount*repay.repaid_numbers,(repay.balance - pay.phone_amount)) as act_repay_amount,  --实际还款金额
            dri.country_code,
            '{pt}' as dt
 
