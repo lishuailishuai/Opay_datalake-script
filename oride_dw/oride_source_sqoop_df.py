@@ -133,7 +133,7 @@ table_list = [
     ("oride_data", "data_trip", "sqoop_db", "base", 1),
     ("oride_data", "data_driver_records_day", "sqoop_db", "base",1),
     ("oride_data", "data_driver_balance_extend", "sqoop_db", "base",1),
-    ("oride_data", "data_driver_assign_info", "sqoop_db", "base",1),
+    #("oride_data", "data_driver_assign_info", "sqoop_db", "base",1),
     ("oride_data", "data_operation_driver_log", "sqoop_db", "base",2),
 
     #2019.10.20上线
@@ -149,7 +149,7 @@ table_list = [
     ("oride_data", "data_city_repayment_conf", "sqoop_db", "base",1),
 
     ("oride_data", "data_trip_history", "sqoop_db", "base",1),
-    ("oride_data", "data_driver_assign_info_history", "sqoop_db", "base",1),
+    #("oride_data", "data_driver_assign_info_history", "sqoop_db", "base",1),
     ("oride_data", "data_opay_transaction_history", "sqoop_db", "base",1),
 
     ("bi", "weather_per_10min", "mysql_bi", "base",3),
