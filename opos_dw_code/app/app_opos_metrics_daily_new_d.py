@@ -149,7 +149,7 @@ nvl(a.hcm_id,b.hcm_id) as hcm_id
 ,nvl(b.reduce_first_people_cnt,0) as reduce_first_people_cnt
 
 ,'nal' as country_code
-,'2019-12-11' as dt
+,'{pt}' as dt
 from
   (select 
   hcm_id
@@ -162,12 +162,12 @@ from
   
   ,count(id) as merchant_cnt
   ,0 as pos_merchant_cnt
-  ,count(if(created_at = '2019-12-11',id,null)) as new_merchant_cnt
+  ,count(if(created_at = '{pt}',id,null)) as new_merchant_cnt
   ,0 as new_pos_merchant_cnt
   from
   opos_dw.dim_opos_bd_relation_df
   where 
-  country_code='nal' and dt='2019-12-11'
+  country_code='nal' and dt='{pt}'
   group by
   hcm_id
   ,cm_id
@@ -221,13 +221,13 @@ full join
   ,count(distinct(if(activity_type in ('RFR','FR') and first_order='1',sender_id,null))) as reduce_first_people_cnt
   
   ,'nal' as country_code
-  ,'2019-12-11' as dt
+  ,'{pt}' as dt
   
   from 
   opos_dw.dwd_pre_opos_payment_order_di as p
   where 
   country_code='nal'
-  and dt = '2019-12-11' 
+  and dt = '{pt}' 
   and trade_status = 'SUCCESS'
   group by
   hcm_id
@@ -940,9 +940,4 @@ app_opos_metrics_daily_new_d_task = PythonOperator(
 
 dwd_pre_opos_payment_order_di_task >> app_opos_metrics_daily_new_d_task
 ods_sqoop_base_bd_admin_users_df_task >> app_opos_metrics_daily_new_d_task
-
-# 查看任务命令
-# airflow list_tasks app_opos_metrics_daily_new_d -sd /home/feng.yuan/app_opos_metrics_daily_new_d.py
-# 测试任务命令
-# airflow test app_opos_metrics_daily_new_d app_opos_metrics_daily_new_d_task 2019-11-24 -sd /home/feng.yuan/app_opos_metrics_daily_new_d.py
 
