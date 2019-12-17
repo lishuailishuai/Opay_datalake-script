@@ -131,10 +131,10 @@ dependence_dm_oride_driver_base_task = UFileSensor(
     dag=dag
 )
 
-dependence_dm_oride_passenger_base_cube_d_task = UFileSensor(
-    task_id='dm_oride_passenger_base_cube_d_task',
+dependence_dm_oride_passenger_base_cube_task = UFileSensor(
+    task_id='dm_oride_passenger_base_cube_task',
     filepath='{hdfs_path_str}/country_code=nal/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw/dm_oride_passenger_base_cube_d",
+        hdfs_path_str="oride/oride_dw/dm_oride_passenger_base_cube",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -341,7 +341,7 @@ def app_oride_order_global_operate_to_mysql_d_sql_task(ds):
     left join 
     (--审核司机数
         select 
-            city_id,
+            city_id, 
             sum(td_audit_finish_driver_num) as td_audit_finish_driver_num --审核司机数
         from oride_dw.dm_oride_driver_base
         where dt ='{pt}' 
@@ -354,7 +354,7 @@ def app_oride_order_global_operate_to_mysql_d_sql_task(ds):
             finished_users,--当日完单用户数
             first_finished_users,--当日新增完单用户
             dt
-        from  oride_dw.dm_oride_passenger_base_cube_d
+        from  oride_dw.dm_oride_passenger_base_cube
         where dt ='{pt}' 
         and product_id = -10000 and driver_serv_type = -10000
     )users on nvl(od.city_id,-10000) = nvl(users.city_id ,-10000)
@@ -507,7 +507,7 @@ app_oride_order_global_operate_to_mysql_d_task = PythonOperator(
 
 # dependence_dwm_oride_order_base_di_task >> dependence_dim_oride_city_task >> dependence_dim_oride_passenger_base_task >> \
 # dependence_dim_oride_driver_base_task >> dependence_dwd_oride_order_finance_df_task >> dependence_dwd_oride_driver_records_day_df_task >> \
-# dependence_dwd_oride_driver_recharge_records_df_task >> dependence_dm_oride_driver_base_task>>dependence_dm_oride_passenger_base_cube_d_task>>\
+# dependence_dwd_oride_driver_recharge_records_df_task >> dependence_dm_oride_driver_base_task>>dependence_dm_oride_passenger_base_cube_task>>\
 # dependence_dwd_oride_order_base_include_test_di_task>>app_oride_order_global_operate_to_mysql_d_task
 
 
@@ -518,5 +518,5 @@ dependence_dwd_oride_order_finance_di_task>>app_oride_order_global_operate_to_my
 dependence_dwd_oride_driver_records_day_df_task>>app_oride_order_global_operate_to_mysql_d_task
 dependence_dwd_oride_driver_recharge_records_df_task>>app_oride_order_global_operate_to_mysql_d_task
 dependence_dm_oride_driver_base_task>>app_oride_order_global_operate_to_mysql_d_task
-dependence_dm_oride_passenger_base_cube_d_task>>app_oride_order_global_operate_to_mysql_d_task
+dependence_dm_oride_passenger_base_cube_task>>app_oride_order_global_operate_to_mysql_d_task
 dependence_dwd_oride_order_base_include_test_di_task>>app_oride_order_global_operate_to_mysql_d_task
