@@ -101,16 +101,15 @@ select sum(if(event_name='oride_show',1,0)) as act_num, --乘客端打开页面�
        count(distinct if(event_name='request_a_ride_click',user_id,null)) as request_user_cnt,  --乘客埋点下单乘客数
        'nal' as country_code,
        '{pt}' as dt
-from (select event_name,
-       user_id,
-       event_time 
+from (select * 
 from oride_dw.dwd_oride_client_event_detail_hi
 where dt='{pt}' and app_version>='4.4.405' 
 and from_unixtime(cast(event_time as int),'yyyy-MM-dd')='{pt}' 
 and event_name in('oride_show','choose_end_point_click','request_a_ride_show','request_a_ride_click')
-group by event_name,
-       user_id,
-       event_time) t;
+--group by event_name,
+     --  user_id,
+      -- event_time
+       ) t;
  '''.format(
         pt=ds,
         table=table_name,
