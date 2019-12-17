@@ -205,7 +205,7 @@ def dim_oride_driver_base_sql_task(ds):
     FROM
   (SELECT *
    FROM oride_dw.dim_oride_driver_base
-   WHERE dt='${bef_yes_day}') dri_bef
+   WHERE dt='{bef_yes_day}') dri_bef
 FULL OUTER JOIN
   (SELECT *
    FROM
