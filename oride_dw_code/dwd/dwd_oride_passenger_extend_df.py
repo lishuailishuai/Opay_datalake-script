@@ -56,6 +56,18 @@ ods_binlog_data_user_extend_hi_prev_day_task = WebHdfsSensor(
     dag=dag
 )
 
+#依赖前天分区
+dwd_oride_passenger_extend_df_prev_day_tesk = UFileSensor(
+    task_id='dwd_oride_passenger_extend_df_prev_day_tesk',
+    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="oride/oride_dw/dwd_oride_passenger_extend_df/country_code=nal",
+        pt='{{macros.ds_add(ds, -1)}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
 ##----------------------------------------- 变量 ---------------------------------------##
 
 db_name="oride_dw"
@@ -203,3 +215,4 @@ dwd_oride_passenger_extend_df_task=PythonOperator(
 )
 
 ods_binlog_data_user_extend_hi_prev_day_task >>  dwd_oride_passenger_extend_df_task
+dwd_oride_passenger_extend_df_prev_day_tesk >> dwd_oride_passenger_extend_df_task
