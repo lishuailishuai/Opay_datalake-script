@@ -15,6 +15,7 @@ from airflow.operators.bash_operator import BashOperator
 from airflow.sensors.named_hive_partition_sensor import NamedHivePartitionSensor
 from airflow.sensors.hive_partition_sensor import HivePartitionSensor
 from airflow.sensors import UFileSensor
+from airflow.sensors.web_hdfs_sensor import WebHdfsSensor
 from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
 from plugins.TaskTouchzSuccess import TaskTouchzSuccess
 import json
@@ -44,13 +45,13 @@ dag = airflow.DAG('dwd_oride_passenger_extend_df',
 
 
 # 依赖前一天分区
-ods_sqoop_base_data_user_extend_df_task = UFileSensor(
-    task_id='ods_sqoop_base_data_user_extend_df_task',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride_dw_sqoop/oride_data/data_user_extend",
-        pt='{{ds}}'
+ods_binlog_data_user_extend_hi_prev_day_task = WebHdfsSensor(
+    task_id='ods_binlog_data_user_extend_hi_prev_day_task',
+    filepath='{hdfs_path_str}/dt={pt}/hour=23/_SUCCESS'.format(
+        hdfs_path_str="/user/hive/warehouse/oride_dw_ods.db/ods_binlog_data_user_extend_hi",
+        pt='{{ds}}',
+        now_day='{{macros.ds_add(ds, +1)}}'
     ),
-    bucket_name='opay-datalake',
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
@@ -91,34 +92,45 @@ def dwd_oride_passenger_extend_df_sql_task(ds):
         insert overwrite table {db}.{table} partition(country_code,dt)
 
         SELECT
-            id as passenger_id,--'用户 ID', 
-            take_order,--'接单数量', 
-            avg_score,--'平均评分', 
-            total_score,--'总评分', 
-            score_times,--'评分次数', 
-            bonus,--'奖励金', 
-            balance,--'余额', 
-            last_order_id,--'最近一个订单的ID', 
-            register_time,--'注册时间', 
-            login_time,--'最后登陆时间', 
-            inviter_role,--'', 
-            inviter_id,--'', 
-            invite_num,--'', 
-            invite_complete_num,--'', 
-            invite_award,--'', 
-            updated_at,--'最后更新时间', 
-            pay_type,--'user auto pay settings(-1: not set 0: manual payment 1: auto payment)', 
-            city_id,--'注册城市', 
-            language,--'客户端语言', 
-            finish_order,--'完单数量', 
-            mark,--'按位通用标记'
+            nvl(data_user_ext.id,data_user_ext_bef.passenger_id) as passenger_id,--'用户 ID', 
+            nvl(data_user_ext.take_order,data_user_ext_bef.take_order) as take_order,--'接单数量', 
+            nvl(data_user_ext.avg_score,data_user_ext_bef.avg_score) as avg_score,--'平均评分', 
+            nvl(data_user_ext.total_score,data_user_ext_bef.total_score) as total_score,--'总评分', 
+            nvl(data_user_ext.score_times,data_user_ext_bef.score_times) as score_times,--'评分次数', 
+            nvl(data_user_ext.bonus,data_user_ext_bef.bonus) as bonus,--'奖励金', 
+            nvl(data_user_ext.balance,data_user_ext_bef.balance) as balance,--'余额', 
+            nvl(data_user_ext.last_order_id,data_user_ext_bef.last_order_id) as last_order_id,--'最近一个订单的ID', 
+            nvl(data_user_ext.register_time,data_user_ext_bef.register_time) as register_time,--'注册时间', 
+            nvl(data_user_ext.login_time,data_user_ext_bef.login_time) as login_time,--'最后登陆时间', 
+            nvl(data_user_ext.inviter_role,data_user_ext_bef.inviter_role) as inviter_role,--'', 
+            nvl(data_user_ext.inviter_id,data_user_ext_bef.inviter_id) as inviter_id,--'', 
+            nvl(data_user_ext.invite_num,data_user_ext_bef.invite_num) as invite_num,--'', 
+            nvl(data_user_ext.invite_complete_num,data_user_ext_bef.invite_complete_num) as invite_complete_num,--'', 
+            nvl(data_user_ext.invite_award,data_user_ext_bef.invite_award) as invite_award,--'', 
+            nvl(data_user_ext.updated_at,data_user_ext_bef.updated_at) as updated_at,--'最后更新时间', 
+            nvl(data_user_ext.pay_type,data_user_ext_bef.pay_type) as pay_type,--'user auto pay settings(-1: not set 0: manual payment 1: auto payment)', 
+            nvl(data_user_ext.city_id,data_user_ext_bef.city_id) as city_id,--'注册城市', 
+            nvl(data_user_ext.language,data_user_ext_bef.language) as language,--'客户端语言', 
+            nvl(data_user_ext.finish_order,data_user_ext_bef.finish_order) as finish_order,--'完单数量', 
+            nvl(data_user_ext.mark,data_user_ext_bef.mark) as mark,--'按位通用标记'
             'nal' as country_code,
             '{pt}' as dt
         FROM
-            oride_dw_ods.ods_sqoop_base_data_user_extend_df
-        WHERE
-            dt='{pt}'
-        ;
+        (select * 
+        from oride_dw.dwd_oride_passenger_extend_df 
+        where dt='{pt}') data_user_ext_bef
+        full outer join 
+        (SELECT *
+           FROM
+             (SELECT *,
+                     row_number() OVER(partition BY id
+                                       ORDER BY updated_at DESC,pos DESC) AS rn1
+              FROM oride_dw_ods.ods_binlog_data_user_extend_hi
+              WHERE dt = '{pt}'
+                AND op IN ('c',
+                           'u')) m
+           WHERE rn1=1) data_user_ext
+        on data_user_ext_bef.passenger_id=data_user_ext.id;
 '''.format(
         pt=ds,
         table=table_name,
@@ -190,4 +202,4 @@ dwd_oride_passenger_extend_df_task=PythonOperator(
     dag=dag
 )
 
-ods_sqoop_base_data_user_extend_df_task >>  dwd_oride_passenger_extend_df_task
+ods_binlog_data_user_extend_hi_prev_day_task >>  dwd_oride_passenger_extend_df_task
