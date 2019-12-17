@@ -299,3 +299,4 @@ dwd_pre_opos_payment_order_di_task >> dwd_active_user_week_di_task
 # 测试任务命令
 # airflow test dwd_active_user_week_di dwd_active_user_week_di_task 2019-11-28 -sd /root/feng.yuan/dwd_active_user_week_di.py
 
+
