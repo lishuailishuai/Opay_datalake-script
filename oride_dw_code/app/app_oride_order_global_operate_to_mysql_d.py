@@ -237,9 +237,19 @@ def app_oride_order_global_operate_to_mysql_d_sql_task(ds):
 
         nvl(round(od.gmv /  od.gmv_1,8)-1,0)  gmv_mom_d, --gmv日环比
         nvl(round(od.gmv /  od.gmv_7,8) -1,0)  as  gmv_yoy_d, --gmv日同比
+        
         nvl(round(sub.sum_subsidy_d / global.sum_subsidy_d_1,8)-1,0) as sum_subsidy_mom_d , --总补贴日环比
         nvl(round(sub.sum_subsidy_d / global.sum_subsidy_d_7,8)-1,0) as sum_subsidy_yoy_d , --总补贴日同比
-
+        
+        nvl(od.finish_order_cnt_1,0) as  finish_order_cnt_1, --第前一天的完单量
+        nvl(od.finish_order_cnt_7,0) as  finish_order_cnt_7, --第前7天的完单量
+        
+        nvl(od.gmv_1,0) as gmv_1 , --第前一天的gmv
+        nvl(od.gmv_7,0) as gmv_7, --第前七天的gmv
+        
+        nvl(global.sum_subsidy_d_1,0) as sum_subsidy_d_1,--第前一天的总补贴
+        nvl(global.sum_subsidy_d_7,0) as sum_subsidy_d_7,--第前7天的总补贴
+    
         'nal' as country_code,
         '{pt}' as  dt
     from 
@@ -356,7 +366,7 @@ def app_oride_order_global_operate_to_mysql_d_sql_task(ds):
             dt
         from  oride_dw.dm_oride_passenger_base_cube
         where dt ='{pt}' 
-        and product_id = -10000 and driver_serv_type = -10000
+        and product_id = -10000 and driver_serv_type = -10000 and country_code  = 'NG'
     )users on nvl(od.city_id,-10000) = nvl(users.city_id ,-10000)
 
     left join
