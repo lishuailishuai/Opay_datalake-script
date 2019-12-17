@@ -414,7 +414,7 @@ for db_name, table_name, conn_id, prefix_name,priority_weight_nm in table_list:
         dag=dag_monitor
     )
 
-    if table_name in ['data_driver_records_day', 'data_driver_balance_extend']:
+    if table_name in ['data_driver_records_day', 'data_driver_balance_extend','data_driver_repayment']:
         check_data_driver_records_finish >> import_table
 
     import_table >> check_table >> add_partitions
