@@ -146,7 +146,7 @@ def check_s3_prefix(ds, execution_date, **kwargs):
 
 HDFS_PATH = "/user/hive/warehouse/oride_dw_ods.db/ods_binlog_{table}_hi/dt={dt}/hour={hour}"
 IGNORE_TABLE_LIST = [
-    'data_driver'
+    #'data_driver'
 ]
 if binlog_table_list!='':
     for table in binlog_table_list.split():
