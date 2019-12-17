@@ -366,7 +366,7 @@ def app_oride_order_global_operate_to_mysql_d_sql_task(ds):
             dt
         from  oride_dw.dm_oride_passenger_base_cube
         where dt ='{pt}' 
-        and product_id = -10000 and driver_serv_type = -10000
+        and product_id = -10000 and driver_serv_type = -10000 and country_code  = 'NG'
     )users on nvl(od.city_id,-10000) = nvl(users.city_id ,-10000)
 
     left join
