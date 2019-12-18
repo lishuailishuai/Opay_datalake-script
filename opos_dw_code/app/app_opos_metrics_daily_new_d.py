@@ -212,7 +212,7 @@ full join
   ,sum(if(user_subsidy>0 and user_subsidy_status='SUCCESS',nvl(user_subsidy,0),0)) as cashback_amt
   
   ,count(if(activity_type in ('RFR','FR'),1,null)) as reduce_order_cnt
-  ,nvl(p.reduce_zero_order_cnt,0) as reduce_zero_order_cnt
+  ,count(if(activity_type not in ('RFR','FR'),1,null)) as reduce_zero_order_cnt
   ,sum(if(activity_type in ('RFR','FR'),nvl(discount_amount,0),0)) as reduce_amt
   ,sum(if(activity_type in ('RFR','FR'),nvl(org_payment_amount,0),0)) as reduce_order_gmv
   ,nvl(sum(if(activity_type in ('RFR','FR'),nvl(org_payment_amount,0),0))/count(if(activity_type in ('RFR','FR'),1,null)),0) as reduce_per_order_amt
