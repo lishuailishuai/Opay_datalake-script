@@ -127,6 +127,7 @@ first_order_sender_id as (
   and dt>='{pt}'
   and dt<=concat(substr('{pt}',0,7),'-31')
   and trade_status='SUCCESS'
+  and first_order='1'
   group by
   create_year
   ,create_month

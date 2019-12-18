@@ -129,6 +129,7 @@ first_order_sender_id as (
   and dt>='{pt}'
   and dt<='{after_6_day}'
   and trade_status='SUCCESS'
+  and first_order='1'
   group by
   create_year
   ,create_week
