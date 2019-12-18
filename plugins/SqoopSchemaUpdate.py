@@ -236,7 +236,7 @@ class SqoopSchemaUpdate(object):
             mysql_column = mysql_info[1]
             add_column = set(mysql_column).difference(set(hive_schema))
 
-            if len(add_column == 0):
+            if len(add_column) == 0:
                 return True
 
             columns = []
