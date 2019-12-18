@@ -104,8 +104,8 @@ sender_id as (
   opos_dw.dwd_pre_opos_payment_order_di
   where
   country_code='nal' 
-  and dt>'{before_7_day}'
-  and dt<='{pt}'
+  and dt>='{pt}'
+  and dt<='{after_6_day}'
   and trade_status='SUCCESS'
   group by
   create_year
@@ -126,8 +126,8 @@ first_order_sender_id as (
   opos_dw.dwd_pre_opos_payment_order_di
   where
   country_code='nal' 
-  and dt>'{before_7_day}'
-  and dt<='{pt}'
+  and dt>='{pt}'
+  and dt<='{after_6_day}'
   and trade_status='SUCCESS'
   group by
   create_year
@@ -146,7 +146,7 @@ a.create_year
 ,if(b.sender_id is null,'0','1') as first_order
 
 ,'nal' as country_code
-,'{pt}' as dt
+,'{after_6_day}' as dt
 from
 sender_id as a
 left join
@@ -168,8 +168,8 @@ receipt_id as (
   opos_dw.dwd_pre_opos_payment_order_di
   where
   country_code='nal' 
-  and dt>'{before_7_day}'
-  and dt<='{pt}'
+  and dt>='{pt}'
+  and dt<='{after_6_day}'
   and trade_status='SUCCESS'
   group by
   create_year
@@ -200,8 +200,8 @@ first_order_receipt_id as (
     opos_dw.dwd_pre_opos_payment_order_di
     where
     country_code='nal' 
-    and dt>'{before_7_day}'
-    and dt<='{pt}'
+    and dt>='{pt}'
+    and dt<='{after_6_day}'
     and trade_status='SUCCESS'
     group by
     create_year
@@ -219,8 +219,8 @@ first_order_receipt_id as (
     from
     public_dw_dim.dim_date
     where
-    dt>'{before_7_day}'
-    and dt<='{pt}'
+    and dt>='{pt}'
+    and dt<='{after_6_day}'
     ) as d
     on a.created_at=d.dt
   group by
@@ -241,7 +241,7 @@ a.create_year
 ,if(b.receipt_id is null,'0','1') as first_order
 
 ,'nal' as country_code
-,'{pt}' as dt
+,'{after_6_day}' as dt
 from
 receipt_id as a
 left join
@@ -252,9 +252,10 @@ and a.receipt_id=b.receipt_id;
 
 
 
+
 '''.format(
         pt=ds,
-        before_7_day=airflow.macros.ds_add(ds, -7),
+        after_6_day=airflow.macros.ds_add(ds, +6),
         table=table_name,
         now_day='{{macros.ds_add(ds, +1)}}',
         db=db_name
