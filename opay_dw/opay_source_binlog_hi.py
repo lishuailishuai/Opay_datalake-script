@@ -244,7 +244,7 @@ for db_name, table_name, conn_id, prefix_name, priority_weight_nm, server_name i
         task_id='add_partitions_{}'.format(hive_table_name),
         priority_weight=priority_weight_nm,
         hql='''
-                ALTER TABLE {table} ADD IF NOT EXISTS PARTITION (dt = '{{{{ ds }}}}')
+                ALTER TABLE {table} ADD IF NOT EXISTS PARTITION (dt = '{{{{ ds }}}}', hour = '{{ execution_date.strftime("%H") }}');
             '''.format(table=hive_table_name),
         schema=HIVE_DB,
         dag=dag)
