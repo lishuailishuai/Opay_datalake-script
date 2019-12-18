@@ -219,7 +219,7 @@ first_order_receipt_id as (
     from
     public_dw_dim.dim_date
     where
-    and dt>='{pt}'
+    dt>='{pt}'
     and dt<='{after_6_day}'
     ) as d
     on a.created_at=d.dt
