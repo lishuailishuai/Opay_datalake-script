@@ -68,7 +68,7 @@ table_list = [
     ("opay_user", "user_operator", "opay_user", "base", 1, "opay_user"),
     ("opay_user", "user_payment_instrument", "opay_user", "base", 1, "opay_user"),
     ("opay_user", "user_token", "opay_user", "base", 1, "opay_user"),
-    ("opay_user", "user_telesale", "opay=user", "base", 1, "opay_user"),
+    ("opay_user", "user_telesale", "opay_user", "base", 1, "opay_user"),
     ("opay_user", "user_reseller", "opay_user", "base", 1, "opay_user"),
     ("opay_user", "user_push_token", "opay_user", "base", 1, "opay_user"),
     ("opay_user", "user_operator", "opay_user", "base", 1, "opay_user"),
