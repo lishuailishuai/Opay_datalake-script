@@ -27,7 +27,7 @@ from airflow.operators.python_operator import PythonOperator
 
 args = {
     'owner': 'chenghui',
-    'start_date': datetime(2019, 11, 30),
+    'start_date': datetime(2019, 9, 30),
     'depends_on_past': False,
     'retries': 3,
     'retry_delay': timedelta(minutes=2),

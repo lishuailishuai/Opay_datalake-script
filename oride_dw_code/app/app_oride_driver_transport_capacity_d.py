@@ -153,7 +153,7 @@ from
         count(if(date_format(register_time,'yyyy-MM-dd') = '{pt}' and is_td_finish = 1 ,driver_id,null)) as register_and_finish_driver_num,--注册成功且完单司机数(应是注册成功的完单司机数)
         count(driver_id) as agg_register_driver_num,--累计注册成功司机数(应是注册成功的司机数)
         count(if(first_finish_order_id is not null,driver_id,null)) as agg_finish_driver_cnt,--累计完单司机数
-        sum(amount_all)  as amount_all,--司机总收入
+        sum(if(is_td_finish = 1,amount_all,0))  as amount_all,--司机总收入 (完单司机总收入)
         country_code,
         dt
     from oride_dw.dwm_oride_driver_base_df
