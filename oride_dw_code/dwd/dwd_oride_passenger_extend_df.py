@@ -130,7 +130,7 @@ def dwd_oride_passenger_extend_df_sql_task(ds):
         FROM
         (select * 
         from oride_dw.dwd_oride_passenger_extend_df 
-        where dt='{pt}') data_user_ext_bef
+        where dt='{bef_yes_day}') data_user_ext_bef
         full outer join 
         (SELECT *
            FROM
@@ -145,6 +145,7 @@ def dwd_oride_passenger_extend_df_sql_task(ds):
         on data_user_ext_bef.passenger_id=data_user_ext.id;
 '''.format(
         pt=ds,
+        bef_yes_day=airflow.macros.ds_add(ds, -1),
         table=table_name,
         db=db_name
     )
