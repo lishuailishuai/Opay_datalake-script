@@ -133,10 +133,10 @@ def dwd_oride_coupon_base_df_sql_task(ds):
        FROM oride_dw_ods.ods_sqoop_base_data_coupon_df
        WHERE dt='{pt}') a
     LEFT JOIN
-      (SELECT id,
+      (SELECT passenger_id,
               register_time
        FROM oride_dw.dwd_oride_passenger_extend_df
-       WHERE dt='{pt}') b ON a.user_id=b.id
+       WHERE dt='{pt}') b ON a.user_id=b.passenger_id
     LEFT JOIN
       (SELECT *
        FROM oride_dw_ods.ods_sqoop_base_data_order_payment_df

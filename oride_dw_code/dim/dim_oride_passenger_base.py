@@ -190,7 +190,7 @@ FROM
    FROM oride_dw_ods.ods_sqoop_base_data_user_df
    WHERE dt= '{pt}') t1
 LEFT OUTER JOIN
-  (SELECT id,
+  (SELECT passenger_id,
           -- 用户 ID
 
           avg_score,
@@ -240,7 +240,7 @@ LEFT OUTER JOIN
 
           LANGUAGE -- 客户端语言
 FROM oride_dw.dwd_oride_passenger_extend_df
-   WHERE dt= '{pt}') t2 ON t1.passenger_id=t2.id;
+   WHERE dt= '{pt}') t2 ON t1.passenger_id=t2.passenger_id;
 '''.format(
         pt=ds,
         table=table_name,
