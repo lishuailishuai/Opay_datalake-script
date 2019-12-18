@@ -78,7 +78,7 @@ def dwm_oride_driver_act_m_sql_task(ds):
         country_code,
         '{pt}' as dt
     from oride_dw.dwd_oride_order_base_include_test_di
-    where substr(date_sub('{pt}',1),1,7)=substr(dt,1,7)
+    where substr('{pt}',1,7)=substr(dt,1,7)
     and status in(4,5) and city_id<>999001 and driver_id<>1
     group by country_code,month(dt),
         city_id,driver_serv_type,driver_id;

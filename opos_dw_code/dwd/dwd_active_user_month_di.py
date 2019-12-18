@@ -26,7 +26,7 @@ import os
 
 args = {
     'owner': 'yuanfeng',
-    'start_date': datetime(2019, 11, 24),
+    'start_date': datetime(2019, 10, 24),
     'depends_on_past': False,
     'retries': 3,
     'retry_delay': timedelta(minutes=2),
@@ -35,8 +35,8 @@ args = {
     'email_on_retry': False,
 }
 
-dag = airflow.DAG('dwd_active_user_week_di',
-                  schedule_interval="30 03 * * 1",
+dag = airflow.DAG('dwd_active_user_month_di',
+                  schedule_interval="30 03 1 * *",
                   default_args=args,
                   catchup=False)
 
@@ -56,7 +56,7 @@ dwd_pre_opos_payment_order_di_task = OssSensor(
 ##----------------------------------------- 变量 ---------------------------------------##
 
 db_name = "opos_dw"
-table_name = "dwd_active_user_week_di"
+table_name = "dwd_active_user_month_di"
 hdfs_path = "oss://opay-datalake/opos/opos_dw/" + table_name
 
 
@@ -83,7 +83,7 @@ task_timeout_monitor = PythonOperator(
 
 ##----------------------------------------- 脚本 ---------------------------------------##
 
-def dwd_active_user_week_di_sql_task(ds):
+def dwd_active_user_month_di_sql_task(ds):
     HQL = '''
 
 
@@ -96,8 +96,7 @@ with
 sender_id as (
   select
   create_year
-  ,create_week
-  ,concat(create_year,substr(concat('0',cast(create_week as string)),-2)) as combine_year_week 
+  ,create_month
   ,city_id
   ,sender_id
   from
@@ -105,11 +104,11 @@ sender_id as (
   where
   country_code='nal' 
   and dt>='{pt}'
-  and dt<='{after_6_day}'
+  and dt<=concat(substr('{pt}',0,7),'-31')
   and trade_status='SUCCESS'
   group by
   create_year
-  ,create_week
+  ,create_month
   ,city_id
   ,sender_id
 ),
@@ -118,8 +117,7 @@ sender_id as (
 first_order_sender_id as (
   select
   create_year
-  ,create_week
-  ,concat(create_year,substr(concat('0',cast(create_week as string)),-2)) as combine_year_week 
+  ,create_month
   ,city_id
   ,sender_id
   from
@@ -127,32 +125,31 @@ first_order_sender_id as (
   where
   country_code='nal' 
   and dt>='{pt}'
-  and dt<='{after_6_day}'
+  and dt<=concat(substr('{pt}',0,7),'-31')
   and trade_status='SUCCESS'
   and first_order='1'
   group by
   create_year
-  ,create_week
+  ,create_month
   ,city_id
   ,sender_id
 )
 
-insert overwrite table opos_dw.dwd_active_user_week_di partition(country_code,dt)
+insert overwrite table opos_dw.dwd_active_user_month_di partition(country_code,dt)
 select
 a.create_year
-,a.create_week
-,a.combine_year_week
+,a.create_month
 ,a.city_id
 ,a.sender_id
 ,if(b.sender_id is null,'0','1') as first_order
 
 ,'nal' as country_code
-,'{after_6_day}' as dt
+,'{pt}' as dt
 from
 sender_id as a
 left join
 first_order_sender_id as b
-on a.combine_year_week=b.combine_year_week
+on a.create_month=b.create_month
 and a.city_id=b.city_id
 and a.sender_id=b.sender_id;
 
@@ -161,8 +158,7 @@ with
 receipt_id as (
   select
   create_year
-  ,create_week
-  ,concat(create_year,substr(concat('0',cast(create_week as string)),-2)) as combine_year_week 
+  ,create_month
   ,city_id
   ,receipt_id
   from
@@ -170,11 +166,11 @@ receipt_id as (
   where
   country_code='nal' 
   and dt>='{pt}'
-  and dt<='{after_6_day}'
+  and dt<=concat(substr('{pt}',0,7),'-31')
   and trade_status='SUCCESS'
   group by
   create_year
-  ,create_week
+  ,create_month
   ,city_id
   ,receipt_id
 ),
@@ -182,81 +178,48 @@ receipt_id as (
 --04.求有多少新增商铺
 first_order_receipt_id as (
   select
-  a.create_year
-  ,a.create_week
-  ,a.combine_year_week
-  ,a.city_id
-  ,a.receipt_id
+  create_year
+  ,create_month
+  ,city_id
+  ,receipt_id
   from
-  --使用inner join,取出created_at在本周内的商铺
-    (
-    select
-    create_year
-    ,create_week
-    ,concat(create_year,substr(concat('0',cast(create_week as string)),-2)) as combine_year_week 
-    ,city_id
-    ,receipt_id
-    ,created_at
-    from
-    opos_dw.dwd_pre_opos_payment_order_di
-    where
-    country_code='nal' 
-    and dt>='{pt}'
-    and dt<='{after_6_day}'
-    and trade_status='SUCCESS'
-    group by
-    create_year
-    ,create_week
-    ,city_id
-    ,receipt_id
-    ,created_at
-    ) as a
-    inner join
-    (
-    select 
-    dt
-    ,week_of_year
-    ,year 
-    from
-    public_dw_dim.dim_date
-    where
-    dt>='{pt}'
-    and dt<='{after_6_day}'
-    ) as d
-    on a.created_at=d.dt
+  opos_dw.dwd_pre_opos_payment_order_di
+  where
+  country_code='nal' 
+  and dt>='{pt}'
+  and dt<=concat(substr('{pt}',0,7),'-31')
+  and trade_status='SUCCESS'
+  and substr(created_at,0,7)=substr('{pt}',0,7)
   group by
-  a.create_year
-  ,a.create_week
-  ,a.combine_year_week
-  ,a.city_id
-  ,a.receipt_id
+  create_year
+  ,create_month
+  ,city_id
+  ,receipt_id
 )
 
-insert overwrite table opos_dw.dwd_active_shop_week_di partition(country_code,dt)
+insert overwrite table opos_dw.dwd_active_shop_month_di partition(country_code,dt)
 select
 a.create_year
-,a.create_week
-,a.combine_year_week
+,a.create_month
 ,a.city_id
 ,a.receipt_id
 ,if(b.receipt_id is null,'0','1') as first_order
 
 ,'nal' as country_code
-,'{after_6_day}' as dt
+,'{pt}' as dt
 from
 receipt_id as a
 left join
 first_order_receipt_id as b
-on a.combine_year_week=b.combine_year_week
+on a.create_month=b.create_month
 and a.city_id=b.city_id
 and a.receipt_id=b.receipt_id;
 
 
 
-
 '''.format(
         pt=ds,
-        after_6_day=airflow.macros.ds_add(ds, +6),
+        before_7_day=airflow.macros.ds_add(ds, -7),
         table=table_name,
         now_day='{{macros.ds_add(ds, +1)}}',
         db=db_name
@@ -269,7 +232,7 @@ def execution_data_task_id(ds, **kargs):
     hive_hook = HiveCliHook()
 
     # 读取sql
-    _sql = dwd_active_user_week_di_sql_task(ds)
+    _sql = dwd_active_user_month_di_sql_task(ds)
 
     logging.info('Executing: %s', _sql)
 
@@ -288,17 +251,17 @@ def execution_data_task_id(ds, **kargs):
     TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "true", "true")
 
 
-dwd_active_user_week_di_task = PythonOperator(
-    task_id='dwd_active_user_week_di_task',
+dwd_active_user_month_di_task = PythonOperator(
+    task_id='dwd_active_user_month_di_task',
     python_callable=execution_data_task_id,
     provide_context=True,
     dag=dag
 )
 
-dwd_pre_opos_payment_order_di_task >> dwd_active_user_week_di_task
+dwd_pre_opos_payment_order_di_task >> dwd_active_user_month_di_task
 # 查看任务命令
-# airflow list_tasks dwd_active_user_week_di -sd /root/feng.yuan/dwd_active_user_week_di.py
+# airflow list_tasks dwd_active_user_month_di -sd /root/feng.yuan/dwd_active_user_month_di.py
 # 测试任务命令
-# airflow test dwd_active_user_week_di dwd_active_user_week_di_task 2019-11-28 -sd /root/feng.yuan/dwd_active_user_week_di.py
+# airflow test dwd_active_user_month_di dwd_active_user_month_di_task 2019-11-28 -sd /root/feng.yuan/dwd_active_user_month_di.py
 
 
