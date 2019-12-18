@@ -782,7 +782,9 @@ def send_report_email(ds, **kwargs):
     logging.info("==============")
     # logging.info(html)
 
-    email_to = Variable.get("oride_global_operate_report_receivers").split()
+    #email_to = Variable.get("oride_global_operate_report_receivers").split()
+
+    email_to = ['bigdata@opay-inc.com','lili.chen@opay-inc.com']
 
     #email_to = ['lili.chen@opay-inc.com']
     # send mail
