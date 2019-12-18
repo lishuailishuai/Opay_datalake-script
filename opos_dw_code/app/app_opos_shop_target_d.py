@@ -290,7 +290,7 @@ from
     ,nvl(p.cashback_amt,0) as cashback_amt
     
     ,nvl(p.reduce_order_cnt,0) as reduce_order_cnt
-    ,0 as reduce_zero_order_cnt
+    ,nvl(p.reduce_zero_order_cnt,0) as reduce_zero_order_cnt
     ,nvl(p.reduce_amt,0) as reduce_amt
     ,nvl(p.reduce_order_gmv,0) as reduce_order_gmv
     ,nvl(p.reduce_per_order_amt,0) as reduce_per_order_amt
