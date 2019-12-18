@@ -154,8 +154,10 @@ def app_oride_new_user_cohort_w_sql_task(ds):
                     passenger_id,
                     weekofyear(first_finish_create_date)as week_create_date
                 from oride_dw.dwm_oride_passenger_base_df
-                where dt='{pt}' and first_finish_ord_id is not null 
+                where dt='{pt}' 
+                and first_finish_ord_id is not null 
                 and datediff('{pt}',first_finish_create_date)<=90
+                and datediff('{pt}',first_finish_create_date)>=0
                 group by weekofyear(first_finish_create_date),first_finish_city_id,first_finish_product_id,passenger_id
             )as new_user
             on a.city_id=new_user.city_id
@@ -182,6 +184,7 @@ def app_oride_new_driver_cohort_w_sql_task(ds):
     -- set hive.merge.mapredfiles=true;
     INSERT overwrite TABLE oride_dw.{table} partition(country_code,dt)
         --司机新客留存数据统计【上线后的统计，上线后用每周的数据关联历史所有周的司机新客数据,但是由于每天有些订单并不是终态数据，因此每次都需要重新判定新客和活跃】
+        
         select nvl(m.week_create_date,-10000) as week_create_date,
             nvl(m.weeks,-10000) as weeks,
             nvl(m.city_id,-10000) as city_id,
@@ -217,8 +220,10 @@ def app_oride_new_driver_cohort_w_sql_task(ds):
                 select city_id,product_id,driver_id,
                     weekofyear(from_unixtime(first_finish_order_create_time,'yyyy-MM-dd')) as week_create_date
                 from oride_dw.dwm_oride_driver_base_df
-                where dt='{pt}' and first_finish_order_id is not null
+                where dt='{pt}' 
+                and first_finish_order_id is not null
                 and datediff('{pt}',from_unixtime(first_finish_order_create_time,'yyyy-MM-dd'))<=90
+                and datediff('{pt}',from_unixtime(first_finish_order_create_time,'yyyy-MM-dd'))>=0
                 group by weekofyear(from_unixtime(first_finish_order_create_time,'yyyy-MM-dd')),
                     city_id,product_id,driver_id
             )as new_driver
@@ -283,7 +288,7 @@ def app_oride_act_user_cohort_w_sql_task(ds):
                     product_id,
                     passenger_id 
                 from oride_dw.dwm_oride_passenger_act_w
-                where dt>=date_sub('{pt}',90)
+                where datediff('{pt}',dt)<=90 and datediff('{pt}',dt)>=0
                 group by week,city_id,product_id,passenger_id
             )as act_user
             on a.city_id=act_user.city_id
@@ -350,7 +355,7 @@ def app_oride_act_driver_cohort_w_sql_task(ds):
                     product_id,
                     driver_id 
                 from oride_dw.dwm_oride_driver_act_w 
-                where dt>=date_sub('{pt}',90)
+                where datediff('{pt}',dt)<=90 and datediff('{pt}',dt)>=0
                 group by week,city_id,product_id,driver_id
             )as act_driver
             on a.city_id=act_driver.city_id
