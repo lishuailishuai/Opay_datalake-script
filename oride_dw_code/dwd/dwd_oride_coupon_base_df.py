@@ -72,16 +72,17 @@ dependence_ods_sqoop_base_data_order_payment_df_prev_day_task = UFileSensor(
 )
 
 # 依赖前一天分区
-dependence_ods_sqoop_base_data_user_extend_df_prev_day_task = UFileSensor(
-    task_id='dependence_ods_sqoop_base_data_user_extend_df_prev_day_task',
+dwd_oride_passenger_extend_df_prev_day_task = UFileSensor(
+    task_id='dwd_oride_passenger_extend_df_prev_day_task',
     filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride_dw_sqoop/oride_data/data_user_extend",
+        hdfs_path_str="oride/oride_dw/dwd_oride_passenger_extend_df/country_code=nal",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
+
 dependence_ods_sqoop_base_data_order_df_prev_day_task = UFileSensor(
     task_id='dependence_ods_sqoop_base_data_order_df_prev_day_task',
     filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
@@ -134,7 +135,7 @@ def dwd_oride_coupon_base_df_sql_task(ds):
     LEFT JOIN
       (SELECT id,
               register_time
-       FROM oride_dw_ods.ods_sqoop_base_data_user_extend_df
+       FROM oride_dw.dwd_oride_passenger_extend_df
        WHERE dt='{pt}') b ON a.user_id=b.id
     LEFT JOIN
       (SELECT *
@@ -188,6 +189,6 @@ dwd_oride_coupon_base_df_task = PythonOperator(
 
 dependence_ods_sqoop_base_data_coupon_df_prev_day_task>>dwd_oride_coupon_base_df_task
 dependence_ods_sqoop_base_data_order_payment_df_prev_day_task>>dwd_oride_coupon_base_df_task
-dependence_ods_sqoop_base_data_user_extend_df_prev_day_task>>dwd_oride_coupon_base_df_task
+dwd_oride_passenger_extend_df_prev_day_task>>dwd_oride_coupon_base_df_task
 dependence_ods_sqoop_base_data_order_df_prev_day_task>>dwd_oride_coupon_base_df_task
 

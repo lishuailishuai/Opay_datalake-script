@@ -53,14 +53,17 @@ ods_sqoop_base_data_user_df_prev_day_tesk=HivePartitionSensor(
       dag=dag
     )
 #依赖前一天分区
-ods_sqoop_base_data_user_extend_df_prev_day_tesk=HivePartitionSensor(
-      task_id="ods_sqoop_base_data_user_extend_df_prev_day_tesk",
-      table="ods_sqoop_base_data_user_extend_df",
-      partition="dt='{{ds}}'",
-      schema="oride_dw_ods",
-      poke_interval=60, #依赖不满足时，一分钟检查一次依赖状态
-      dag=dag
-    )
+dwd_oride_passenger_extend_df_prev_day_task = UFileSensor(
+    task_id='dwd_oride_passenger_extend_df_prev_day_task',
+    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="oride/oride_dw/dwd_oride_passenger_extend_df/country_code=nal",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
 
 def fun_task_timeout_monitor(ds,dag,**op_kwargs):
@@ -236,7 +239,7 @@ LEFT OUTER JOIN
           -- 注册城市
 
           LANGUAGE -- 客户端语言
-FROM oride_dw_ods.ods_sqoop_base_data_user_extend_df
+FROM oride_dw.dwd_oride_passenger_extend_df
    WHERE dt= '{pt}') t2 ON t1.passenger_id=t2.id;
 '''.format(
         pt=ds,
@@ -311,5 +314,5 @@ dim_oride_passenger_base_task = PythonOperator(
 )
 
 ods_sqoop_base_data_user_df_prev_day_tesk>>dim_oride_passenger_base_task
-ods_sqoop_base_data_user_extend_df_prev_day_tesk>>dim_oride_passenger_base_task
+dwd_oride_passenger_extend_df_prev_day_task>>dim_oride_passenger_base_task
 
