@@ -283,7 +283,7 @@ def app_oride_order_global_operate_to_mysql_d_sql_task(ds):
 
         )tmp01
 
-        inner join
+        left join
         (   
             select 
                 city_id,
