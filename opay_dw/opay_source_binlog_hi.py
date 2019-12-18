@@ -27,7 +27,7 @@ args = {
 schedule_interval = "*/30 * * * *"
 
 dag = airflow.DAG(
-    'opay_binlog_hi',
+    'opay_source_binlog_hi',
     schedule_interval=schedule_interval,
     concurrency=40,
     max_active_runs=1,
