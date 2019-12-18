@@ -36,7 +36,7 @@ args = {
 }
 
 dag = airflow.DAG('dwd_active_user_month_di',
-                  schedule_interval="30 03 * * 1",
+                  schedule_interval="30 03 1 * *",
                   default_args=args,
                   catchup=False)
 
@@ -96,20 +96,19 @@ with
 sender_id as (
   select
   create_year
-  ,create_week
-  ,concat(create_year,substr(concat('0',cast(create_week as string)),-2)) as combine_year_week 
+  ,create_month
   ,city_id
   ,sender_id
   from
   opos_dw.dwd_pre_opos_payment_order_di
   where
   country_code='nal' 
-  and dt>'{before_7_day}'
-  and dt<='{pt}'
+  and dt>='{pt}'
+  and dt<=concat(substr('{pt}',0,7),'-31')
   and trade_status='SUCCESS'
   group by
   create_year
-  ,create_week
+  ,create_month
   ,city_id
   ,sender_id
 ),
@@ -118,20 +117,19 @@ sender_id as (
 first_order_sender_id as (
   select
   create_year
-  ,create_week
-  ,concat(create_year,substr(concat('0',cast(create_week as string)),-2)) as combine_year_week 
+  ,create_month
   ,city_id
   ,sender_id
   from
   opos_dw.dwd_pre_opos_payment_order_di
   where
   country_code='nal' 
-  and dt>'{before_7_day}'
-  and dt<='{pt}'
+  and dt>='{pt}'
+  and dt<=concat(substr('{pt}',0,7),'-31')
   and trade_status='SUCCESS'
   group by
   create_year
-  ,create_week
+  ,create_month
   ,city_id
   ,sender_id
 )
@@ -139,8 +137,7 @@ first_order_sender_id as (
 insert overwrite table opos_dw.dwd_active_user_month_di partition(country_code,dt)
 select
 a.create_year
-,a.create_week
-,a.combine_year_week
+,a.create_month
 ,a.city_id
 ,a.sender_id
 ,if(b.sender_id is null,'0','1') as first_order
@@ -151,7 +148,7 @@ from
 sender_id as a
 left join
 first_order_sender_id as b
-on a.combine_year_week=b.combine_year_week
+on a.create_month=b.create_month
 and a.city_id=b.city_id
 and a.sender_id=b.sender_id;
 
@@ -160,20 +157,19 @@ with
 receipt_id as (
   select
   create_year
-  ,create_week
-  ,concat(create_year,substr(concat('0',cast(create_week as string)),-2)) as combine_year_week 
+  ,create_month
   ,city_id
   ,receipt_id
   from
   opos_dw.dwd_pre_opos_payment_order_di
   where
   country_code='nal' 
-  and dt>'{before_7_day}'
-  and dt<='{pt}'
+  and dt>='{pt}'
+  and dt<=concat(substr('{pt}',0,7),'-31')
   and trade_status='SUCCESS'
   group by
   create_year
-  ,create_week
+  ,create_month
   ,city_id
   ,receipt_id
 ),
@@ -181,61 +177,29 @@ receipt_id as (
 --04.求有多少新增商铺
 first_order_receipt_id as (
   select
-  a.create_year
-  ,a.create_week
-  ,a.combine_year_week
-  ,a.city_id
-  ,a.receipt_id
+  create_year
+  ,create_month
+  ,city_id
+  ,receipt_id
   from
-  --使用inner join,取出created_at在本周内的商铺
-    (
-    select
-    create_year
-    ,create_week
-    ,concat(create_year,substr(concat('0',cast(create_week as string)),-2)) as combine_year_week 
-    ,city_id
-    ,receipt_id
-    ,created_at
-    from
-    opos_dw.dwd_pre_opos_payment_order_di
-    where
-    country_code='nal' 
-    and dt>'{before_7_day}'
-    and dt<='{pt}'
-    and trade_status='SUCCESS'
-    group by
-    create_year
-    ,create_week
-    ,city_id
-    ,receipt_id
-    ,created_at
-    ) as a
-    inner join
-    (
-    select 
-    dt
-    ,week_of_year
-    ,year 
-    from
-    public_dw_dim.dim_date
-    where
-    dt>'{before_7_day}'
-    and dt<='{pt}'
-    ) as d
-    on a.created_at=d.dt
+  opos_dw.dwd_pre_opos_payment_order_di
+  where
+  country_code='nal' 
+  and dt>='{pt}'
+  and dt<=concat(substr('{pt}',0,7),'-31')
+  and trade_status='SUCCESS'
+  and substr(created_at,0,7)=substr('{pt}',0,7)
   group by
-  a.create_year
-  ,a.create_week
-  ,a.combine_year_week
-  ,a.city_id
-  ,a.receipt_id
+  create_year
+  ,create_month
+  ,city_id
+  ,receipt_id
 )
 
-insert overwrite table opos_dw.dwd_active_shop_week_di partition(country_code,dt)
+insert overwrite table opos_dw.dwd_active_shop_month_di partition(country_code,dt)
 select
 a.create_year
-,a.create_week
-,a.combine_year_week
+,a.create_month
 ,a.city_id
 ,a.receipt_id
 ,if(b.receipt_id is null,'0','1') as first_order
@@ -246,7 +210,7 @@ from
 receipt_id as a
 left join
 first_order_receipt_id as b
-on a.combine_year_week=b.combine_year_week
+on a.create_month=b.create_month
 and a.city_id=b.city_id
 and a.receipt_id=b.receipt_id;
 
