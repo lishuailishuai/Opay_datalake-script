@@ -250,6 +250,9 @@ from
     (select * from user_remain_cnt) as a
     left join
     (select * from new_user_remain_cnt) as b
+    on  a.create_year_week=b.create_year_week
+    and a.remain_year_week=b.remain_year_week
+    and a.city_id=b.city_id
     ) as m
   full join
     (
@@ -263,6 +266,9 @@ from
     (select * from shop_remain_cnt) as c
     left join
     (select * from new_shop_remain_cnt) as d
+    on  c.create_year_week=d.create_year_week
+    and c.remain_year_week=d.remain_year_week
+    and c.city_id=d.city_id
     ) as n
   on
     m.create_year_week=n.create_year_week
