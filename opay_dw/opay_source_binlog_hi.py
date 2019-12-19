@@ -230,7 +230,7 @@ def run_check_table(db_name, table_name, conn_id, hive_table_name, server_name, 
                 data_type = result[1] + "(" + str(result[2]) + "," + str(result[3]) + ")"
             else:
                 data_type = result[1]
-            rows.append("`%s` %s comment '%s'" % (col_name, data_type, result[4]))
+            rows.append("`%s` %s comment '%s'" % (col_name, data_type, str(result[4]).replace('\n', '')))
         mysql_conn.close()
 
         # hive create table
