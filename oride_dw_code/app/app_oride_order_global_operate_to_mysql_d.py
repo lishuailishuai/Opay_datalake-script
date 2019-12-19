@@ -85,10 +85,10 @@ dependence_dim_oride_driver_base_task = UFileSensor(
 )
 
 
-dependence_dwd_oride_order_finance_di_task = UFileSensor(
-    task_id='dwd_oride_order_finance_di_task',
+dependence_dwm_oride_driver_finance_di_task = UFileSensor(
+    task_id='dwm_oride_driver_finance_di',
     filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw/dwd_oride_order_finance_di/country_code=NG",
+        hdfs_path_str="oride/oride_dw/dwm_oride_driver_finance_di/country_code=NG",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -324,26 +324,27 @@ def app_oride_order_global_operate_to_mysql_d_sql_task(ds):
             --累计总补贴/月
 
         from
-        ( --B端补贴  t1.recharge_amount+t1.reward_amount
-            select 
+        ( --B端补贴  amount_recharge + amount_reward
+               select 
                 city_id,
 
-                sum(if(dt ='{pt}',reward_amount,0))+sum(if(dt ='{pt}',recharge_amount,0)) as b_subsidy_d,--B端补贴、天
+                sum(if(dt ='{pt}',amount_recharge,0))+sum(if(dt ='{pt}',amount_reward,0)) as b_subsidy_d,--B端补贴、天(实际b补)
 
-                sum(reward_amount) + sum(recharge_amount) as b_subsidy_m--B端补贴 月
+                sum(amount_recharge) + sum(amount_reward) as b_subsidy_m--B端补贴 月
 
-            from oride_dw.dwd_oride_order_finance_di
-            where  month(dt) = month('{pt}')
+            from oride_dw.dwm_oride_driver_finance_di 
+            where  month(dt) = month('{pt}') and city_id != 999001
             group by city_id
         )b
         left join
-        (  --C端补贴  price - pay_amount is_td_finish=1
+        (    --C端补贴(实际C补贴)  pay的订单金额 - opay实付金额   12.18号开始
            select 
                 city_id,
-                sum(if(dt ='{pt}',price,0))-sum(if(dt ='{pt}',pay_amount,0)) as c_subsidy_d,--C端补贴、天     
+                sum(if(dt ='{pt}',price,0)) - sum(if(dt ='{pt}',pay_amount,0)) as c_subsidy_d, --C端补贴、天
                 sum(price) - sum(pay_amount) as c_subsidy_m
-            from     dwd_order_di
-            where month(dt) = month('{pt}') and city_id != 999001 and is_td_finish=1
+            from oride_dw.dwm_oride_order_base_di
+            where month(dt) = month('{pt}') and city_id != 999001
+                and is_opay_pay=1 and is_succ_pay=1 and product_id<>99
             group by city_id
         )c on  b.city_id =  c.city_id  
         group by b.city_id,b.b_subsidy_d,c.c_subsidy_d
@@ -524,7 +525,7 @@ app_oride_order_global_operate_to_mysql_d_task = PythonOperator(
 dependence_dwm_oride_order_base_di_task>>app_oride_order_global_operate_to_mysql_d_task
 dependence_dim_oride_city_task>>app_oride_order_global_operate_to_mysql_d_task
 dependence_dim_oride_passenger_base_task>>app_oride_order_global_operate_to_mysql_d_task
-dependence_dwd_oride_order_finance_di_task>>app_oride_order_global_operate_to_mysql_d_task
+dependence_dwm_oride_driver_finance_di_task>>app_oride_order_global_operate_to_mysql_d_task
 dependence_dwd_oride_driver_records_day_df_task>>app_oride_order_global_operate_to_mysql_d_task
 dependence_dwd_oride_driver_recharge_records_df_task>>app_oride_order_global_operate_to_mysql_d_task
 dependence_dm_oride_driver_base_task>>app_oride_order_global_operate_to_mysql_d_task
