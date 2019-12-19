@@ -320,9 +320,6 @@ app_user_shop_remain_week_w_task = PythonOperator(
 )
 
 dwd_active_user_week_di_task >> app_user_shop_remain_week_w_task
-# 查看任务命令
-# airflow list_tasks app_user_shop_remain_week_w -sd /root/feng.yuan/app_user_shop_remain_week_w.py
-# 测试任务命令
-# airflow test app_user_shop_remain_week_w app_user_shop_remain_week_w_task 2019-11-28 -sd /root/feng.yuan/app_user_shop_remain_week_w.py
+
 
 
