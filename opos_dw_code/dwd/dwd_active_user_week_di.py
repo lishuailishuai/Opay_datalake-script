@@ -285,7 +285,8 @@ def execution_data_task_id(ds, **kargs):
     第二个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
 
     """
-    TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "true", "true")
+    after_6_day = airflow.macros.ds_add(ds, +6)
+    TaskTouchzSuccess().countries_touchz_success(after_6_day, db_name, table_name, hdfs_path, "true", "true")
 
 
 dwd_active_user_week_di_task = PythonOperator(
