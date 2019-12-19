@@ -90,22 +90,26 @@ def dm_opay_transaction_originator_base_cube_d_sql_task(ds):
         nvl(originator_role, 'ALL') as originator_role,
         nvl(order_status, 'ALL') as order_status, 
         sum(amount) order_amt, count(*) order_cnt, count(distinct originator_id) originator_cnt,
+        nvl(client_source, 'ALL') as client_source,
         nvl(country_code, 'ALL') as country_code,
         '{pt}'
     from (
         select 
-            country_code, top_service_type, sub_service_type, originator_type, originator_role, originator_kyc_level, originator_money_flow, order_status,
+            country_code, top_service_type, sub_service_type, originator_type, originator_role, originator_kyc_level, originator_money_flow, order_status, client_source, 
             amount, originator_id
         from {db}.dwd_opay_transaction_record_di
         where dt = '{pt}' and create_time BETWEEN date_format(date_sub('{pt}', 1), 'yyyy-MM-dd 23') AND date_format('{pt}', 'yyyy-MM-dd 23')
     ) t1
-    group by country_code, top_service_type, sub_service_type, originator_type, originator_role, order_status
+    group by country_code, top_service_type, sub_service_type, originator_type, originator_role, order_status, client_source
     GROUPING SETS ( 
         (country_code, top_service_type, sub_service_type, originator_type, originator_role, order_status),
         (country_code, top_service_type, sub_service_type, originator_type, originator_role),
         (country_code, top_service_type, sub_service_type, originator_type),
         (country_code, top_service_type, sub_service_type),
+        (country_code, top_service_type, sub_service_type, client_source, order_status),
+        (country_code, top_service_type, sub_service_type, client_source),
         (country_code, top_service_type),
+        (country_code, client_source),
         (country_code),
         ()
     )
