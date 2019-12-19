@@ -108,9 +108,9 @@ new_user_remain_cnt as (
     ,a.city_id
     ,a.sender_id as ids
     from
-    (select * from opos_dw.dwd_active_user_week_di where country_code='nal' and dt>='{before_75_day}' and dt<='{after_6_day}') as a
+    (select * from opos_dw.dwd_active_user_week_di where country_code='nal' and dt>='{before_75_day}' and dt<='{after_6_day}' and first_order='1') as a
     inner join
-    (select * from opos_dw.dwd_active_user_week_di where country_code='nal' and dt='{after_6_day}' and first_order='1') as b
+    (select * from opos_dw.dwd_active_user_week_di where country_code='nal' and dt='{after_6_day}') as b
     on
     a.city_id=b.city_id
     and a.sender_id=b.sender_id
@@ -164,9 +164,9 @@ new_shop_remain_cnt as (
     ,a.city_id
     ,a.receipt_id as ids
     from
-    (select * from opos_dw.dwd_active_shop_week_di where country_code='nal' and dt>='{before_75_day}' and dt<='{after_6_day}') as a
+    (select * from opos_dw.dwd_active_shop_week_di where country_code='nal' and dt>='{before_75_day}' and dt<='{after_6_day}' and first_order='1') as a
     inner join
-    (select * from opos_dw.dwd_active_shop_week_di where country_code='nal' and dt='{after_6_day}' and first_order='1') as b
+    (select * from opos_dw.dwd_active_shop_week_di where country_code='nal' and dt='{after_6_day}') as b
     on
     a.city_id=b.city_id
     and a.receipt_id=b.receipt_id
