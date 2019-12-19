@@ -182,54 +182,25 @@ receipt_id as (
 --04.求有多少新增商铺
 first_order_receipt_id as (
   select
-  a.create_year
-  ,a.create_week
-  ,a.combine_year_week
-  ,a.city_id
-  ,a.receipt_id
+  create_year
+  ,create_week
+  ,concat(create_year,substr(concat('0',cast(create_week as string)),-2)) as combine_year_week 
+  ,city_id
+  ,receipt_id
   from
-  --使用inner join,取出created_at在本周内的商铺
-    (
-    select
-    create_year
-    ,create_week
-    ,concat(create_year,substr(concat('0',cast(create_week as string)),-2)) as combine_year_week 
-    ,city_id
-    ,receipt_id
-    ,created_at
-    from
-    opos_dw.dwd_pre_opos_payment_order_di
-    where
-    country_code='nal' 
-    and dt>='{pt}'
-    and dt<='{after_6_day}'
-    and trade_status='SUCCESS'
-    group by
-    create_year
-    ,create_week
-    ,city_id
-    ,receipt_id
-    ,created_at
-    ) as a
-    inner join
-    (
-    select 
-    dt
-    ,week_of_year
-    ,year 
-    from
-    public_dw_dim.dim_date
-    where
-    dt>='{pt}'
-    and dt<='{after_6_day}'
-    ) as d
-    on a.created_at=d.dt
+  opos_dw.dwd_pre_opos_payment_order_di
+  where
+  country_code='nal' 
+  and dt>='{pt}'
+  and dt<='{after_6_day}'
+  and trade_status='SUCCESS'
+  and created_at>='{pt}'
+  and created_at<='{after_6_day}'
   group by
-  a.create_year
-  ,a.create_week
-  ,a.combine_year_week
-  ,a.city_id
-  ,a.receipt_id
+  create_year
+  ,create_week
+  ,city_id
+  ,receipt_id
 )
 
 insert overwrite table opos_dw.dwd_active_shop_week_di partition(country_code,dt)
