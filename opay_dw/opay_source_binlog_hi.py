@@ -112,6 +112,7 @@ ODS_CREATE_TABLE_SQL = '''
         `__version` string COMMENT 'from deserializer', 
         `__connector` string COMMENT 'from deserializer', 
         `__ts_ms` bigint COMMENT 'from deserializer', 
+        `uuid` bigint COMMENT 'from deserializer', 
         {columns}
     )
     PARTITIONED BY (
