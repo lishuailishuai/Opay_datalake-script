@@ -332,8 +332,8 @@ def app_oride_order_global_operate_to_mysql_d_sql_task(ds):
 
                 sum(amount_recharge) + sum(amount_reward) as b_subsidy_m--B端补贴 月
 
-            from oride_dw.dwm_oride_driver_finance_di city_id != 999001
-            where  month(dt) = month('{pt}')
+            from oride_dw.dwm_oride_driver_finance_di 
+            where  month(dt) = month('{pt}') and city_id != 999001
             group by city_id
         )b
         left join
