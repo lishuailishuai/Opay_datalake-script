@@ -332,18 +332,19 @@ def app_oride_order_global_operate_to_mysql_d_sql_task(ds):
 
                 sum(amount_recharge) + sum(amount_reward) as b_subsidy_m--B端补贴 月
 
-            from oride_dw.dwm_oride_driver_finance_di
+            from oride_dw.dwm_oride_driver_finance_di city_id != 999001
             where  month(dt) = month('{pt}')
             group by city_id
         )b
         left join
-        (  --C端补贴  price - pay_amount is_td_finish=1
+        (    --C端补贴(实际C补贴)  pay的订单金额 - opay实付金额   12.18号开始
            select 
                 city_id,
-                sum(if(dt ='{pt}',price,0))-sum(if(dt ='{pt}',pay_amount,0)) as c_subsidy_d,--C端补贴、天     
+                sum(if(dt ='{pt}',price,0)) - sum(if(dt ='{pt}',pay_amount,0)) as c_subsidy_d, --C端补贴、天
                 sum(price) - sum(pay_amount) as c_subsidy_m
-            from     dwd_order_di
-            where month(dt) = month('{pt}') and city_id != 999001 and is_td_finish=1
+            from oride_dw.dwm_oride_order_base_di
+            where month(dt) = month('{pt}') and city_id != 999001
+                and is_opay_pay=1 and is_succ_pay=1 and product_id<>99
             group by city_id
         )c on  b.city_id =  c.city_id  
         group by b.city_id,b.b_subsidy_d,c.c_subsidy_d
