@@ -85,10 +85,10 @@ dependence_dim_oride_driver_base_task = UFileSensor(
 )
 
 
-dependence_dwd_oride_order_finance_di_task = UFileSensor(
-    task_id='dwd_oride_order_finance_di_task',
+dependence_dwm_oride_driver_finance_di_task = UFileSensor(
+    task_id='dwm_oride_driver_finance_di',
     filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw/dwd_oride_order_finance_di/country_code=NG",
+        hdfs_path_str="oride/oride_dw/dwm_oride_driver_finance_di/country_code=NG",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -324,15 +324,15 @@ def app_oride_order_global_operate_to_mysql_d_sql_task(ds):
             --累计总补贴/月
 
         from
-        ( --B端补贴  t1.recharge_amount+t1.reward_amount
-            select 
+        ( --B端补贴  amount_recharge + amount_reward
+               select 
                 city_id,
 
-                sum(if(dt ='{pt}',reward_amount,0))+sum(if(dt ='{pt}',recharge_amount,0)) as b_subsidy_d,--B端补贴、天
+                sum(if(dt ='{pt}',amount_recharge,0))+sum(if(dt ='{pt}',amount_reward,0)) as b_subsidy_d,--B端补贴、天(实际b补)
 
-                sum(reward_amount) + sum(recharge_amount) as b_subsidy_m--B端补贴 月
+                sum(amount_recharge) + sum(amount_reward) as b_subsidy_m--B端补贴 月
 
-            from oride_dw.dwd_oride_order_finance_di
+            from oride_dw.dwm_oride_driver_finance_di
             where  month(dt) = month('{pt}')
             group by city_id
         )b
@@ -524,7 +524,7 @@ app_oride_order_global_operate_to_mysql_d_task = PythonOperator(
 dependence_dwm_oride_order_base_di_task>>app_oride_order_global_operate_to_mysql_d_task
 dependence_dim_oride_city_task>>app_oride_order_global_operate_to_mysql_d_task
 dependence_dim_oride_passenger_base_task>>app_oride_order_global_operate_to_mysql_d_task
-dependence_dwd_oride_order_finance_di_task>>app_oride_order_global_operate_to_mysql_d_task
+dependence_dwm_oride_driver_finance_di_task>>app_oride_order_global_operate_to_mysql_d_task
 dependence_dwd_oride_driver_records_day_df_task>>app_oride_order_global_operate_to_mysql_d_task
 dependence_dwd_oride_driver_recharge_records_df_task>>app_oride_order_global_operate_to_mysql_d_task
 dependence_dm_oride_driver_base_task>>app_oride_order_global_operate_to_mysql_d_task

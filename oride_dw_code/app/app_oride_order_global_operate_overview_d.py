@@ -73,10 +73,10 @@ dependence_dim_oride_passenger_base_task = HivePartitionSensor(
     dag=dag
 )
 
-dependence_dwd_oride_order_finance_di_task = UFileSensor(
-    task_id='dwd_oride_order_finance_di_task',
+dependence_dwm_oride_driver_finance_di_task = UFileSensor(
+    task_id='dwm_oride_driver_finance_di',
     filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw/dwd_oride_order_finance_di/country_code=NG",
+        hdfs_path_str="oride/oride_dw/dwm_oride_driver_finance_di/country_code=NG",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -165,9 +165,9 @@ def app_oride_order_global_operate_overview_d_sql_task(ds):
             select  --补贴金额 天 业务线
                 city_id,
                 product_id,
-                sum(recharge_amount+reward_amount) as allowance,
+                sum(amount_recharge+amount_reward) as allowance,
                 dt
-            from oride_dw.dwd_oride_order_finance_di
+            from oride_dw.dwm_oride_driver_finance_di
             where dt = '{pt}'
             group by city_id,product_id,dt
         ),
@@ -456,5 +456,5 @@ app_oride_order_global_operate_overview_d_task = PythonOperator(
 )
 
 dependence_dim_oride_city_task  >>  dependence_dim_oride_passenger_base_task  >> dependence_dwd_oride_order_base_include_test_di_task >>\
-dependence_dwd_oride_order_finance_di_task >> dependence_dm_oride_driver_base_task >> dependence_dwm_oride_order_base_di_task >> \
+dependence_dwm_oride_driver_finance_di_task >> dependence_dm_oride_driver_base_task >> dependence_dwm_oride_order_base_di_task >> \
 app_oride_order_global_operate_overview_d_task
