@@ -139,7 +139,7 @@ all_shop as (
 insert overwrite table opos_dw.app_opos_metrics_daily_history_d partition(country_code,dt)
 select
 0 as id
-,v3.week_of_year as create_week
+,weekofyear('{pt}') as create_week
 ,substr('{pt}',0,7) as create_month
 ,substr('{pt}',0,4) as create_year
 
@@ -276,11 +276,8 @@ left join
 left join
   (select id,name,country from opos_dw_ods.ods_sqoop_base_bd_city_df where dt = '{pt}') as v2
 on v1.city_id=v2.id
-left join
-  (select dt,week_of_year from public_dw_dim.dim_date where dt = '{pt}') as v3
-on 1=1
-
 ;
+
 
 
 

@@ -110,8 +110,8 @@ o.shop_id
 ,o.shop_name
 ,o.opay_account
 
-,'{pt}' as create_date
-,d.week_of_year as create_week
+,substr('{pt}',0,10) as create_date
+,weekofyear('{pt}') as create_week
 ,substr('{pt}',0,7) as create_month
 ,substr('{pt}',0,4) as create_year
 
@@ -409,9 +409,6 @@ on o.cm_id=cm.id
 left join
   (select id,name from opos_dw_ods.ods_sqoop_base_bd_admin_users_df where dt = '{pt}') as hcm
   on o.hcm_id=hcm.id
-left join
-  (select dt,week_of_year from public_dw_dim.dim_date where dt = '{pt}') as d
-on 1=1
 ;
 
 

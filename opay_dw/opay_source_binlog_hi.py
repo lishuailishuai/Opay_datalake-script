@@ -95,6 +95,50 @@ table_list = [
     ("opay_commission", "commission_order", "opay_commission", "base", 1, "opay_merchant_overlord_recon"),
     ("opay_commission", "commission_top_up_record", "opay_commission", "base", 1,
      "opay_merchant_overlord_recon"),
+
+    ("opay_sms", "message_record", "opay_sms", "base", 3, "opay_idgen_xxljob_apollo"),
+
+    ("opay_user", "user_email", "opay_user", "base", 3, "opay_user"),
+    ("opay_user", "user", "opay_user", "base", 3, "opay_user"),
+
+    ("opay_bigorder", "big_order", "opay_bigorder", "base", 3, "opay_bigorder"),
+
+    ("opay_transaction", "adjustment_decrease_record", "opay_transaction", "base", 3, "opay_transaction"),
+    ("opay_transaction", "adjustment_increase_record", "opay_transaction", "base", 3, "opay_transaction"),
+    ("opay_transaction", "airtime_topup_record", "opay_transaction", "base", 3, "opay_transaction"),
+    ("opay_transaction", "betting_topup_record", "opay_transaction", "base", 3, "opay_transaction"),
+    ("opay_transaction", "business_collection_record", "opay_transaction", "base", 3, "opay_transaction"),
+    ("opay_transaction", "electricity_topup_record", "opay_transaction", "base", 3, "opay_transaction"),
+    ("opay_transaction", "merchant_acquiring_record", "opay_transaction", "base", 3, "opay_transaction"),
+    ("opay_transaction", "merchant_pos_transaction_record", "opay_transaction", "base", 3, "opay_transaction"),
+    ("opay_transaction", "merchant_receive_money_record", "opay_transaction", "base", 3, "opay_transaction"),
+    ("opay_transaction", "merchant_topup_record", "opay_transaction", "base", 3, "opay_transaction"),
+    ("opay_transaction", "merchant_transfer_card_record", "opay_transaction", "base", 3, "opay_transaction"),
+    ("opay_transaction", "merchant_transfer_user_record", "opay_transaction", "base", 3, "opay_transaction"),
+    ("opay_transaction", "mobiledata_topup_record", "opay_transaction", "base", 3, "opay_transaction"),
+    ("opay_transaction", "receive_money_request_record", "opay_transaction", "base", 3, "opay_transaction"),
+    ("opay_transaction", "transfer_not_register_record", "opay_transaction", "base", 3, "opay_transaction"),
+    ("opay_transaction", "tv_topup_record", "opay_transaction", "base", 3, "opay_transaction"),
+    ("opay_transaction", "user_easycash_record", "opay_transaction", "base", 3, "opay_transaction"),
+    ("opay_transaction", "user_pos_transaction_record", "opay_transaction", "base", 3, "opay_transaction"),
+    ("opay_transaction", "user_receive_money_record", "opay_transaction", "base", 3, "opay_transaction"),
+    ("opay_transaction", "user_topup_record", "opay_transaction", "base", 3, "opay_transaction"),
+    ("opay_transaction", "user_transfer_card_record", "opay_transaction", "base", 3, "opay_transaction"),
+    ("opay_transaction", "user_transfer_user_record", "opay_transaction", "base", 3, "opay_transaction"),
+    ("opay_transaction", "cash_in_record", "opay_transaction", "base", 2, "opay_transaction"),
+    ("opay_transaction", "cash_out_record", "opay_transaction", "base", 2, "opay_transaction"),
+    ("opay_transaction", "business_activity_record", "opay_transaction", "base", 2, "opay_transaction"),
+    ("opay_transaction", "activity_record", "opay_transaction", "base", 2, "opay_transaction"),
+
+    ("opay_fee", "user_fee_record", "opay_fee", "base", 3, "opay_merchant_overlord_recon"),
+    ("opay_fee", "merchant_fee_record", "opay_fee", "base", 3, "opay_merchant_overlord_recon"),
+
+    ("opay_account", "account_user_record", "opay_account", "base", 2, "opay_account"),
+    ("opay_account", "accounting_request_record", "opay_account", "base", 2, "opay_account"),
+
+    ("opay_activity", "preferential_record", "opay_activity", "base", 3, "opay_merchant_overlord_recon"),
+
+    ("opay_channel", "channel_transaction", "opay_channel", "base", 3, "opay_channel")
 ]
 
 HIVE_DB = 'opay_dw_ods'
@@ -112,6 +156,7 @@ ODS_CREATE_TABLE_SQL = '''
         `__version` string COMMENT 'from deserializer', 
         `__connector` string COMMENT 'from deserializer', 
         `__ts_ms` bigint COMMENT 'from deserializer', 
+        `uuid` string COMMENT 'from deserializer', 
         {columns}
     )
     PARTITIONED BY (
@@ -185,7 +230,8 @@ def run_check_table(db_name, table_name, conn_id, hive_table_name, server_name, 
                 data_type = result[1] + "(" + str(result[2]) + "," + str(result[3]) + ")"
             else:
                 data_type = result[1]
-            rows.append("`%s` %s comment '%s'" % (col_name, data_type, result[4]))
+            rows.append(
+                "`%s` %s comment '%s'" % (col_name, data_type, str(result[4]).replace('\n', '').replace('\r', '')))
         mysql_conn.close()
 
         # hive create table
