@@ -46,7 +46,7 @@ dwd_active_user_week_di_task = OssSensor(
     task_id='dwd_active_user_week_di_task',
     bucket_key='{hdfs_path_str}/country_code=nal/dt={pt}/_SUCCESS'.format(
         hdfs_path_str="opos/opos_dw/dwd_active_user_week_di",
-        pt='{{ds}}'
+        pt='{{macros.ds_add(ds, +6)}}'
     ),
     bucket_name='opay-datalake',
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
