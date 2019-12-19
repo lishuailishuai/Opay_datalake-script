@@ -100,10 +100,10 @@ dependence_server_magic_now_day_task = HivePartitionSensor(
 )
 
 # 依赖前一天分区
-dependence_dwd_oride_order_finance_di_prev_day_task = UFileSensor(
-    task_id='dwd_oride_order_finance_di_prev_day_task',
+dependence_dwm_oride_driver_finance_di_prev_day_task = UFileSensor(
+    task_id='dwm_oride_driver_finance_di_prev_day_task',
     filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw/dwd_oride_order_finance_di/country_code=NG",
+        hdfs_path_str="oride/oride_dw/dwm_oride_driver_finance_di/country_code=NG",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -168,7 +168,9 @@ order_data_null = """
            null as opay_pay_cnt, --opay支付订单数,pay_mode=2
            null as opay_pay_failed_cnt, --opay支付失败订单数,pay_mode=2 and pay_status in(0,2)
            null as order_cnt_lfw, --近四周同期下单数据
-           null as finish_order_cnt_lfw  --近四周同期完单数据
+           null as finish_order_cnt_lfw,  --近四周同期完单数据
+           null as opay_pay_price,  --当日用opay的订单金额12.18号开始
+           null as opay_pay_amount  --当日用opay实付金额12.18号开始
            """
 
 passenger_data_null = """
@@ -244,6 +246,8 @@ select nvl(t.country_code,'total') as country_code,
        sum(opay_pay_failed_cnt) as opay_pay_failed_cnt, --opay支付失败订单数,pay_mode=2 and pay_status in(0,2)
        sum(order_cnt_lfw) as order_cnt_lfw,  --近四周同期下单数据 
        sum(finish_order_cnt_lfw) as finish_order_cnt_lfw,  --近四周同期完单数据
+       sum(opay_pay_price) as opay_pay_price,  --当日用opay的订单金额12.18号开始
+       sum(opay_pay_amount) as opay_pay_amount, --当日用opay实付金额12.18号开始
        {passenger_data_null},
        {passenger_order_data_null},
        {driver_data_null},
@@ -271,7 +275,9 @@ from (SELECT dt,country_code,
        sum(opay_pay_cnt) as opay_pay_cnt, --opay支付订单数,pay_mode=2
        sum(opay_pay_failed_cnt) as opay_pay_failed_cnt, --opay支付失败订单数,pay_mode=2 and pay_status in(0,2)
        order_cnt_lfw, --近四周同期下单数据均值
-       finish_order_cnt_lfw  --近四周同期完单数据
+       finish_order_cnt_lfw,  --近四周同期完单数据
+       sum(opay_pay_price) as opay_pay_price,  --当日用opay的订单金额12.18号开始
+       sum(opay_pay_amount) as opay_pay_amount  --当日用opay实付金额12.18号开始
        
 FROM (SELECT sum(if(dt>=date_add('{pt}',-28)
               AND dt<'{pt}'
@@ -405,12 +411,11 @@ select nvl(country_code,'total') as country_code,
        {passenger_order_data_null},
        {driver_data_null},
        null as map_request_num,  --地图调用次数
-       sum(recharge_amount) AS recharge_amount, --资金调整金额
-       sum(reward_amount) AS reward_amount, --奖励金额
+       sum(amount_recharge) AS recharge_amount, --资金调整金额,用于统计实际b补
+       sum(amount_reward) AS reward_amount, --奖励金额,用于统计实际b补
        {union_product_data_null}   
-from (select * from oride_dw.dwd_oride_order_finance_di 
-where dt='{pt}'
-and create_date='{pt}') t1 
+from (select * from oride_dw.dwm_oride_driver_finance_di 
+where dt='{pt}' and city_id<>999001 and driver_id<>1) t1 
 group by nvl(country_code,'total'),
          city_id,
          product_id
@@ -504,8 +509,8 @@ SELECT nvl(city_id,-10000) as city_id,
        sum(map_request_num) as map_request_num,  --地图调用次数
        sum(recharge_amount) as recharge_amount, --充值金额
        sum(reward_amount) AS reward_amount, --奖励金额
-       null AS amount_pay_online, --当日总收入-线上支付金额
-       null AS amount_pay_offline, --当日总收入-线下支付金额 
+       sum(opay_pay_price) as opay_pay_price,  --当日用opay的订单金额12.18号开始,历史数据不可看
+       sum(opay_pay_amount) as opay_pay_amount, --当日用opay实付金额12.18号开始，历史数据不可看
        null as recharge_users, --每天充值用户数
        null as user_recharge_succ_balance,  --每天用户充值真实金额
        sum(wet_ord_cnt) as wet_ord_cnt, --当日湿单订单量
@@ -513,7 +518,7 @@ SELECT nvl(city_id,-10000) as city_id,
        sum(finish_order_cnt_inSimulRing) as finish_order_cnt_inSimulRing, --当日完单量(包含同时呼叫)
        sum(td_request_driver_num) as td_request_driver_num, --当日接单司机数（不包含同时呼叫）
        sum(td_finish_order_driver_num) as td_finish_order_driver_num,  --当日完单司机数（不包含同时呼叫）
-       null as iph_fenzi_inSimulRing, --iph分子（包含同时呼叫）
+       null as iph_fenzi_inSimulRing, --iph分子（包含同时呼叫）       
        --nvl(country_code,'total') as country_code,
        if(nvl(country_code,'total')='total','nal','nal') as country_code,
        '{pt}' as dt
@@ -608,7 +613,7 @@ dependence_dm_oride_passenger_base_cube_prev_day_task >> app_oride_global_operat
 dwm_oride_passenger_base_df_prev_day_task >> app_oride_global_operate_report_d_task
 dependence_dm_oride_driver_base_prev_day_task >> app_oride_global_operate_report_d_task
 dependence_server_magic_now_day_task >> app_oride_global_operate_report_d_task
-dependence_dwd_oride_order_finance_di_prev_day_task >> app_oride_global_operate_report_d_task
+dependence_dwm_oride_driver_finance_di_prev_day_task >> app_oride_global_operate_report_d_task
 dependence_dm_oride_driver_order_base_cube_prev_day_task >> app_oride_global_operate_report_d_task
 
 
