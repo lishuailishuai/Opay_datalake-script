@@ -228,8 +228,9 @@ bd_id
 
 insert overwrite table opos_dw.app_opos_bonus_target_d partition(country_code,dt)
 select
-'{pt}' as create_date
-,d.week_of_year as create_week
+
+substr('{pt}',0,10) as create_date
+,weekofyear('{pt}') as create_week
 ,substr('{pt}',0,7) as create_month
 ,substr('{pt}',0,4) as create_year
 
