@@ -10,6 +10,7 @@ from utils.validate_metrics_utils import *
 import logging
 from plugins.SqoopSchemaUpdate import SqoopSchemaUpdate
 from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
+from plugins.TaskTouchzSuccess import TaskTouchzSuccess
 from utils.util import on_success_callback
 from airflow.models import Variable
 
@@ -57,88 +58,87 @@ IGNORED_TABLE_LIST = [
 
 '''
 导入数据的列表
-db_name,table_name,conn_id,prefix_name,priority_weight,server_name (采集配置，定位oss数据位置使用)
+db_name,table_name,conn_id,prefix_name,priority_weight,server_name (采集配置，定位oss数据位置使用),是否验证数据存在
 '''
 #
 
 table_list = [
 
-    ("opay_user", "user_upgrade", "opay_user", "base", 3, "opay_user"),
-    # ("opay_user","user", "opay_user", "base",1, "opay_user"),
-    ("opay_user", "user_operator", "opay_user", "base", 1, "opay_user"),
-    ("opay_user", "user_payment_instrument", "opay_user", "base", 1, "opay_user"),
-    ("opay_user", "user_token", "opay_user", "base", 1, "opay_user"),
-    ("opay_user", "user_telesale", "opay_user", "base", 1, "opay_user"),
-    ("opay_user", "user_reseller", "opay_user", "base", 1, "opay_user"),
-    ("opay_user", "user_push_token", "opay_user", "base", 1, "opay_user"),
-    ("opay_user", "user_operator", "opay_user", "base", 1, "opay_user"),
-    ("opay_user", "user_nearby_agent", "opay_user", "base", 1, "opay_user"),
-    ("opay_user", "user_message", "opay_user", "base", 1, "opay_user"),
+    ("opay_user", "user_upgrade", "opay_user", "base", 3, "opay_user", "false"),
+    ("opay_user", "user_operator", "opay_user", "base", 1, "opay_user", "false"),
+    ("opay_user", "user_payment_instrument", "opay_user", "base", 1, "opay_user", "false"),
+    ("opay_user", "user_token", "opay_user", "base", 1, "opay_user", "false"),
+    ("opay_user", "user_telesale", "opay_user", "base", 1, "opay_user", "false"),
+    ("opay_user", "user_reseller", "opay_user", "base", 1, "opay_user", "false"),
+    ("opay_user", "user_push_token", "opay_user", "base", 1, "opay_user", "false"),
+    ("opay_user", "user_operator", "opay_user", "base", 1, "opay_user", "false"),
+    ("opay_user", "user_nearby_agent", "opay_user", "base", 1, "opay_user", "false"),
+    ("opay_user", "user_message", "opay_user", "base", 1, "opay_user", "false"),
 
-    ("opay_account", "account_user", "opay_account", "base", 2, "opay_account"),
-    ("opay_account", "account_merchant", "opay_account", "base", 2, "opay_account"),
-    ("opay_account", "accounting_merchant_record", "opay_account", "base", 1, "opay_account"),
-    ("opay_account", "accounting_record", "opay_account", "base", 1, "opay_account"),
+    ("opay_account", "account_user", "opay_account", "base", 2, "opay_account", "false"),
+    ("opay_account", "account_merchant", "opay_account", "base", 2, "opay_account", "false"),
+    ("opay_account", "accounting_merchant_record", "opay_account", "base", 1, "opay_account", "false"),
+    ("opay_account", "accounting_record", "opay_account", "base", 1, "opay_account", "false"),
 
-    ("opay_overlord", "overlord_user", "opay_overlord", "base", 1, "opay_merchant_overlord_recon"),
+    ("opay_overlord", "overlord_user", "opay_overlord", "base", 1, "opay_merchant_overlord_recon", "false"),
 
-    ("opay_merchant", "merchant", "opay_merchant", "base", 1, "opay_merchant_overlord_recon"),
+    ("opay_merchant", "merchant", "opay_merchant", "base", 1, "opay_merchant_overlord_recon", "false"),
 
-    ("opay_sms", "message_template", "opay_sms", "base", 1, "opay_idgen_xxljob_apollo"),
+    ("opay_sms", "message_template", "opay_sms", "base", 1, "opay_idgen_xxljob_apollo", "false"),
 
-    ("opay_activity", "activity", "opay_activity", "base", 1, "opay_merchant_overlord_recon"),
-    ("opay_activity", "activity_rules", "opay_activity", "base", 1, "opay_merchant_overlord_recon"),
+    ("opay_activity", "activity", "opay_activity", "base", 1, "opay_merchant_overlord_recon", "false"),
+    ("opay_activity", "activity_rules", "opay_activity", "base", 1, "opay_merchant_overlord_recon", "false"),
     # ("opay_activity", "preferential_record", "opay_merchant_overlord_recon", "base", 1, "opay_merchant_overlord_recon"),
 
     ("opay_commission", "commission_account_balance", "opay_commission", "base", 1,
-     "opay_merchant_overlord_recon"),
+     "opay_merchant_overlord_recon", "false"),
     ("opay_commission", "commission_order", "opay_commission", "base", 1, "opay_merchant_overlord_recon"),
     ("opay_commission", "commission_top_up_record", "opay_commission", "base", 1,
-     "opay_merchant_overlord_recon"),
+     "opay_merchant_overlord_recon", "false"),
 
-    ("opay_sms", "message_record", "opay_sms", "base", 3, "opay_idgen_xxljob_apollo"),
+    ("opay_sms", "message_record", "opay_sms", "base", 3, "opay_idgen_xxljob_apollo", "true"),
 
-    ("opay_user", "user_email", "opay_user", "base", 3, "opay_user"),
-    ("opay_user", "user", "opay_user", "base", 3, "opay_user"),
+    ("opay_user", "user_email", "opay_user", "base", 3, "opay_user", "true"),
+    ("opay_user", "user", "opay_user", "base", 3, "opay_user", "true"),
 
-    ("opay_bigorder", "big_order", "opay_bigorder", "base", 3, "opay_bigorder"),
+    ("opay_bigorder", "big_order", "opay_bigorder", "base", 3, "opay_bigorder", "true"),
 
-    ("opay_transaction", "adjustment_decrease_record", "opay_transaction", "base", 3, "opay_transaction"),
-    ("opay_transaction", "adjustment_increase_record", "opay_transaction", "base", 3, "opay_transaction"),
-    ("opay_transaction", "airtime_topup_record", "opay_transaction", "base", 3, "opay_transaction"),
-    ("opay_transaction", "betting_topup_record", "opay_transaction", "base", 3, "opay_transaction"),
-    ("opay_transaction", "business_collection_record", "opay_transaction", "base", 3, "opay_transaction"),
-    ("opay_transaction", "electricity_topup_record", "opay_transaction", "base", 3, "opay_transaction"),
-    ("opay_transaction", "merchant_acquiring_record", "opay_transaction", "base", 3, "opay_transaction"),
-    ("opay_transaction", "merchant_pos_transaction_record", "opay_transaction", "base", 3, "opay_transaction"),
-    ("opay_transaction", "merchant_receive_money_record", "opay_transaction", "base", 3, "opay_transaction"),
-    ("opay_transaction", "merchant_topup_record", "opay_transaction", "base", 3, "opay_transaction"),
-    ("opay_transaction", "merchant_transfer_card_record", "opay_transaction", "base", 3, "opay_transaction"),
-    ("opay_transaction", "merchant_transfer_user_record", "opay_transaction", "base", 3, "opay_transaction"),
-    ("opay_transaction", "mobiledata_topup_record", "opay_transaction", "base", 3, "opay_transaction"),
-    ("opay_transaction", "receive_money_request_record", "opay_transaction", "base", 3, "opay_transaction"),
-    ("opay_transaction", "transfer_not_register_record", "opay_transaction", "base", 3, "opay_transaction"),
-    ("opay_transaction", "tv_topup_record", "opay_transaction", "base", 3, "opay_transaction"),
+    ("opay_transaction", "adjustment_decrease_record", "opay_transaction", "base", 3, "opay_transaction", "true"),
+    ("opay_transaction", "adjustment_increase_record", "opay_transaction", "base", 3, "opay_transaction", "true"),
+    ("opay_transaction", "airtime_topup_record", "opay_transaction", "base", 3, "opay_transaction", "true"),
+    ("opay_transaction", "betting_topup_record", "opay_transaction", "base", 3, "opay_transaction", "true"),
+    ("opay_transaction", "business_collection_record", "opay_transaction", "base", 3, "opay_transaction", "true"),
+    ("opay_transaction", "electricity_topup_record", "opay_transaction", "base", 3, "opay_transaction", "true"),
+    ("opay_transaction", "merchant_acquiring_record", "opay_transaction", "base", 3, "opay_transaction", "true"),
+    ("opay_transaction", "merchant_pos_transaction_record", "opay_transaction", "base", 3, "opay_transaction", "true"),
+    ("opay_transaction", "merchant_receive_money_record", "opay_transaction", "base", 3, "opay_transaction", "true"),
+    ("opay_transaction", "merchant_topup_record", "opay_transaction", "base", 3, "opay_transaction", "true"),
+    ("opay_transaction", "merchant_transfer_card_record", "opay_transaction", "base", 3, "opay_transaction", "true"),
+    ("opay_transaction", "merchant_transfer_user_record", "opay_transaction", "base", 3, "opay_transaction", "true"),
+    ("opay_transaction", "mobiledata_topup_record", "opay_transaction", "base", 3, "opay_transaction", "true"),
+    ("opay_transaction", "receive_money_request_record", "opay_transaction", "base", 3, "opay_transaction", "true"),
+    ("opay_transaction", "transfer_not_register_record", "opay_transaction", "base", 3, "opay_transaction", "true"),
+    ("opay_transaction", "tv_topup_record", "opay_transaction", "base", 3, "opay_transaction", "true"),
     ("opay_transaction", "user_easycash_record", "opay_transaction", "base", 3, "opay_transaction"),
-    ("opay_transaction", "user_pos_transaction_record", "opay_transaction", "base", 3, "opay_transaction"),
-    ("opay_transaction", "user_receive_money_record", "opay_transaction", "base", 3, "opay_transaction"),
-    ("opay_transaction", "user_topup_record", "opay_transaction", "base", 3, "opay_transaction"),
-    ("opay_transaction", "user_transfer_card_record", "opay_transaction", "base", 3, "opay_transaction"),
-    ("opay_transaction", "user_transfer_user_record", "opay_transaction", "base", 3, "opay_transaction"),
-    ("opay_transaction", "cash_in_record", "opay_transaction", "base", 2, "opay_transaction"),
-    ("opay_transaction", "cash_out_record", "opay_transaction", "base", 2, "opay_transaction"),
-    ("opay_transaction", "business_activity_record", "opay_transaction", "base", 2, "opay_transaction"),
-    ("opay_transaction", "activity_record", "opay_transaction", "base", 2, "opay_transaction"),
+    ("opay_transaction", "user_pos_transaction_record", "opay_transaction", "base", 3, "opay_transaction", "true"),
+    ("opay_transaction", "user_receive_money_record", "opay_transaction", "base", 3, "opay_transaction", "true"),
+    ("opay_transaction", "user_topup_record", "opay_transaction", "base", 3, "opay_transaction", "true"),
+    ("opay_transaction", "user_transfer_card_record", "opay_transaction", "base", 3, "opay_transaction", "true"),
+    ("opay_transaction", "user_transfer_user_record", "opay_transaction", "base", 3, "opay_transaction", "true"),
+    ("opay_transaction", "cash_in_record", "opay_transaction", "base", 2, "opay_transaction", "true"),
+    ("opay_transaction", "cash_out_record", "opay_transaction", "base", 2, "opay_transaction", "true"),
+    ("opay_transaction", "business_activity_record", "opay_transaction", "base", 2, "opay_transaction", "true"),
+    ("opay_transaction", "activity_record", "opay_transaction", "base", 2, "opay_transaction", "true"),
 
-    ("opay_fee", "user_fee_record", "opay_fee", "base", 3, "opay_merchant_overlord_recon"),
-    ("opay_fee", "merchant_fee_record", "opay_fee", "base", 3, "opay_merchant_overlord_recon"),
+    ("opay_fee", "user_fee_record", "opay_fee", "base", 3, "opay_merchant_overlord_recon", "true"),
+    ("opay_fee", "merchant_fee_record", "opay_fee", "base", 3, "opay_merchant_overlord_recon", "true"),
 
-    ("opay_account", "account_user_record", "opay_account", "base", 2, "opay_account"),
-    ("opay_account", "accounting_request_record", "opay_account", "base", 2, "opay_account"),
+    ("opay_account", "account_user_record", "opay_account", "base", 2, "opay_account", "true"),
+    ("opay_account", "accounting_request_record", "opay_account", "base", 2, "opay_account", "true"),
 
-    ("opay_activity", "preferential_record", "opay_activity", "base", 3, "opay_merchant_overlord_recon"),
+    ("opay_activity", "preferential_record", "opay_activity", "base", 3, "opay_merchant_overlord_recon", "true"),
 
-    ("opay_channel", "channel_transaction", "opay_channel", "base", 3, "opay_channel")
+    ("opay_channel", "channel_transaction", "opay_channel", "base", 3, "opay_channel", "true")
 ]
 
 HIVE_DB = 'opay_dw_ods'
@@ -188,6 +188,35 @@ table_dim_list = []
 
 # 需要验证的非核心业务表，根据需求陆续添加
 table_not_core_list = []
+
+
+def add_partition(v_execution_date, v_execution_day, v_execution_hour, db_name, table_name, conn_id, hive_table_name,
+                  server_name, hive_db, is_must_have_data, **kwargs):
+    # 生成_SUCCESS
+    """
+    第一个参数true: 数据目录是有country_code分区。false 没有
+    第二个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS
+
+    """
+    TaskTouchzSuccess().countries_touchz_success(
+        v_execution_day,
+        hive_db,
+        hive_table_name,
+        OSS_PATH % ("{server_name}.{db_name}.{table_name}".format(
+            server_name=server_name,
+            db_name=db_name,
+            table_name=table_name
+        )), "false", is_must_have_data, v_execution_hour)
+
+    sql = '''
+            ALTER TABLE {hive_db}.{table} ADD IF NOT EXISTS PARTITION (dt = '{ds}', hour = '{hour}')
+        '''.format(hive_db=hive_db, table=hive_table_name, ds=v_execution_day, hour=v_execution_hour)
+
+    hive2_conn = HiveServer2Hook().get_conn()
+    cursor = hive2_conn.cursor()
+    cursor.execute(sql)
+
+    return
 
 
 def run_check_table(db_name, table_name, conn_id, hive_table_name, server_name, **kwargs):
@@ -264,7 +293,7 @@ def run_check_table(db_name, table_name, conn_id, hive_table_name, server_name, 
 
 
 conn_conf_dict = {}
-for db_name, table_name, conn_id, prefix_name, priority_weight_nm, server_name in table_list:
+for db_name, table_name, conn_id, prefix_name, priority_weight_nm, server_name, is_must_have_data in table_list:
     if conn_id not in conn_conf_dict:
         conn_conf_dict[conn_id] = BaseHook.get_connection(conn_id)
 
@@ -285,15 +314,27 @@ for db_name, table_name, conn_id, prefix_name, priority_weight_nm, server_name i
         },
         dag=dag
     )
+
     # add partitions
-    add_partitions = HiveOperator(
+    add_partitions = PythonOperator(
         task_id='add_partitions_{}'.format(hive_table_name),
         priority_weight=priority_weight_nm,
-        hql='''
-                ALTER TABLE {table} ADD IF NOT EXISTS PARTITION (dt = '{{{{ ds }}}}', hour = '{{{{ execution_date.strftime("%H") }}}}');
-            '''.format(table=hive_table_name),
-        schema=HIVE_DB,
-        dag=dag)
+        python_callable=add_partition,
+        provide_context=True,
+        op_kwargs={
+            'db_name': db_name,
+            'table_name': table_name,
+            'conn_id': conn_id,
+            'hive_table_name': hive_table_name,
+            'server_name': server_name,
+            'hive_db': HIVE_DB,
+            'is_must_have_data': is_must_have_data,
+            'v_execution_date': '{{execution_date.strftime("%Y-%m-%d %H:%M:%S")}}',
+            'v_execution_day': '{{execution_date.strftime("%Y-%m-%d")}}',
+            'v_execution_hour': '{{execution_date.strftime("%H")}}'
+        },
+        dag=dag
+    )
 
     validate_all_data = PythonOperator(
         task_id='validate_data_{}'.format(hive_table_name),
