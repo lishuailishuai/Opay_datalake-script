@@ -92,7 +92,7 @@ table_list = [
 
     ("opay_commission", "commission_account_balance", "opay_commission", "base", 1,
      "opay_merchant_overlord_recon", "false"),
-    ("opay_commission", "commission_order", "opay_commission", "base", 1, "opay_merchant_overlord_recon"),
+    ("opay_commission", "commission_order", "opay_commission", "base", 1, "opay_merchant_overlord_recon", "false"),
     ("opay_commission", "commission_top_up_record", "opay_commission", "base", 1,
      "opay_merchant_overlord_recon", "false"),
 
