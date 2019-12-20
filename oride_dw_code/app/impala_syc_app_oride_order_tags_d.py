@@ -22,7 +22,7 @@ dingding_alert = DingdingAlert('https://oapi.dingtalk.com/robot/send?access_toke
 
 args = {
     'owner': 'yangmingze',
-    'start_date': datetime(2019, 8, 25),
+    'start_date': datetime(2019, 12, 19),
     'depends_on_past': False,
     'retries': 3,
     'retry_delay': timedelta(minutes=5),
