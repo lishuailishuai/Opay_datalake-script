@@ -19,6 +19,7 @@ from airflow.sensors import OssSensor
 from airflow.sensors.s3_key_sensor import S3KeySensor
 from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
 from plugins.CountriesPublicFrame import CountriesPublicFrame
+from plugins.TaskHourSuccessCountMonitor import TaskHourSuccessCountMonitor
 import json
 import logging
 from airflow.models import Variable
@@ -45,16 +46,16 @@ dag = airflow.DAG( 'test_dim_oride_city',
 ##----------------------------------------- 依赖 ---------------------------------------## 
 
 
-test_snappy_dev_01_tesk = S3KeySensor(
-    task_id='test_snappy_dev_01_tesk',
-    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw/test_snappy_dev_01",
-        pt='{{ds}}'
-    ),
-    bucket_name='opay-bi',
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
+# test_snappy_dev_01_tesk = S3KeySensor(
+#     task_id='test_snappy_dev_01_tesk',
+#     bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+#         hdfs_path_str="oride/oride_dw/test_snappy_dev_01",
+#         pt='{{ds}}'
+#     ),
+#     bucket_name='opay-bi',
+#     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+#     dag=dag
+# )
 
 test_oss_tesk = OssSensor(
     task_id='test_oss_tesk',
@@ -106,7 +107,6 @@ ods_sqoop_base_weather_per_10min_df_task = UFileSensor(
 db_name="test_db"
 table_name="test_dim_oride_city"
 hdfs_path="s3a://opay-bi/oride/oride_dw/"+table_name
-
 
 ##----------------------------------------- 脚本 ---------------------------------------## 
 
@@ -297,7 +297,21 @@ def execution_data_task_id(ds,**kwargs):
     v_day=kwargs.get('v_execution_day')
     v_hour=kwargs.get('v_execution_hour')
 
+    #owner=kwargs.get('owner')
+
+    #print(owner)
+
     hive_hook = HiveCliHook()
+
+    v_info = [
+        {"table":"ods_binlog_data_order_hi","start_timeThour": "{v_day}T00".format(v_day=v_day), "end_dateThour": "{v_day}T23".format(v_day=v_day), "depend_dir": "hdfs://warehourse/user/hive/warehouse/oride_dw_ods.db"}
+    ]
+
+    #print(dag.)
+
+    cm=TaskHourSuccessCountMonitor(ds,v_info)
+
+    cm.HourSuccessCountMonitor()
 
     """
         #功能函数
@@ -326,9 +340,9 @@ def execution_data_task_id(ds,**kwargs):
     #cf.delete_partition()
 
     #读取sql
-    _sql="\n"+cf.alter_partition()+"\n"+test_dim_oride_city_sql_task(ds)
+    #_sql="\n"+cf.alter_partition()+"\n"+test_dim_oride_city_sql_task(ds)
 
-    logging.info('Executing: %s',_sql)
+    #logging.info('Executing: %s',_sql)
 
     #执行Hive
     #hive_hook.run_cli(_sql)
@@ -343,6 +357,7 @@ def execution_data_task_id(ds,**kwargs):
     #cf.touchz_success()
 
     
+    
 test_dim_oride_city_task= PythonOperator(
     task_id='test_dim_oride_city_task',
     python_callable=execution_data_task_id,
@@ -350,7 +365,8 @@ test_dim_oride_city_task= PythonOperator(
     op_kwargs={
         'v_execution_date':'{{execution_date.strftime("%Y-%m-%d %H:%M:%S")}}',
         'v_execution_day':'{{execution_date.strftime("%Y-%m-%d")}}',
-        'v_execution_hour':'{{execution_date.strftime("%H")}}'
+        'v_execution_hour':'{{execution_date.strftime("%H")}}',
+        'owner':'{{owner}}'
     },
     dag=dag
 )

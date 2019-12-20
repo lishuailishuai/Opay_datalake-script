@@ -21,6 +21,8 @@ import logging
 from airflow.models import Variable
 import requests
 import os
+from plugins.TaskTouchzSuccess import TaskTouchzSuccess
+from airflow.operators.python_operator import PythonOperator
 
 args = {
     'owner': 'chenghui',
@@ -37,27 +39,42 @@ dag = airflow.DAG('app_oride_cohort_d',
                   schedule_interval="00 03 * * *",
                   default_args=args)
 
-sleep_time = BashOperator(
-    task_id='sleep_id',
-    depends_on_past=False,
-    bash_command='sleep 30',
-    dag=dag)
+
 
 ##----------------------------------------- 依赖 ---------------------------------------##
 
-
-# 依赖前一天分区
-dependence_dwd_oride_order_base_include_test_di_prev_day_task = S3KeySensor(
-    task_id='dwd_oride_order_base_include_test_di_prev_day_task',
-    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw/dwd_oride_order_base_include_test_di/country_code=NG",
+dwm_oride_order_base_di_task = UFileSensor(
+    task_id='dwm_oride_order_base_di_task',
+    filepath='{hdfs_path_str}/country_code=NG/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="oride/oride_dw/dwm_oride_order_base_di",
         pt='{{ds}}'
     ),
-    bucket_name='opay-bi',
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    bucket_name='opay-datalake',
+    poke_interval=60,
     dag=dag
 )
 
+dwm_oride_passenger_base_df_task = UFileSensor(
+    task_id='dwm_oride_passenger_base_df_task',
+    filepath='{hdfs_path_str}/country_code=nal/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="oride/oride_dw/dwm_oride_passenger_base_df",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,
+    dag=dag
+)
+
+dwm_oride_driver_base_df_task = UFileSensor(
+    task_id='dwm_oride_driver_base_df_task',
+    filepath='{hdfs_path_str}/country_code=NG/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="oride/oride_dw/dwm_oride_driver_base_df",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,
+    dag=dag
+)
 ##----------------------------------------- 变量 ---------------------------------------##
 def get_table_info(i):
     table_names = ['app_oride_new_user_cohort_d',
@@ -68,400 +85,451 @@ def get_table_info(i):
     return table_names[i], hdfs_paths + table_names[i]
 
 ##----------------------------------------- 脚本 ---------------------------------------##
-create_oride_cohort_mid_d_task = HiveOperator(
 
-    task_id='create_oride_cohort_mid_d_task',
-    hql='''drop table if exists oride_dw.oride_cohort_mid_d ;
-     create table oride_dw.oride_cohort_mid_d as 
-           select day(to_date(dt)) as day_now, --当前所在天
-            t2.day_of_year as day_create_date, --下单时间所在天（一年中的第几天）
-            
-            city_id,
-            driver_serv_type as product_id,
-            order_id, 
-            passenger_id,
-            driver_id,
-            user_first_time,--乘客第一次完单时间
-            day(user_first_time) as day_user_first_time, --乘客首次完单时间所在天
-            month(user_first_time) as month_user_first_time, --乘客首次完单时间所在月
-            weekofyear(to_date(substr(user_first_time,1,10))) as week_user_first_time, --乘客首次完单时间所在周
-            if(user_first_time=create_time,1,0) as is_new_user, --是否新乘客
-            driver_first_time,--司机第一次完单时间
-            day(driver_first_time) as day_driver_first_time, --司机首次完单时间所在天
-            month(driver_first_time) as month_driver_first_time, --司机首次完单时间所在月
-            weekofyear(to_date(substr(driver_first_time,1,10))) as week_driver_first_time, --司机首次完单时间所在周
-            if(driver_first_time=create_time,1,0) as is_new_driver, --是否新司机
-            price,
-            distance,
-            create_date,
-            create_time
-            from 
-            (  
-                select dt,
-                city_id,
-                product_id,
-                driver_serv_type,
-                order_id,
-                passenger_id,
-                driver_id,
-                min(from_unixtime(create_time,'yyyy-MM-dd HH:mm:ss')) over (partition by passenger_id) as user_first_time,--乘客第一次完单时间
-                min(from_unixtime(create_time,'yyyy-MM-dd HH:mm:ss')) over (partition by driver_id) as driver_first_time,--司机第一次完单时间
-                price,
-                distance,
-                create_date,
-                from_unixtime(create_time,'yyyy-MM-dd HH:mm:ss') as create_time
-                --min(unix_timestamp(create_time)) over (partition by passenger_id) as user_first_time,--乘客第一次完单时间
-                --min(unix_timestamp(create_time)) over (partition by driver_id) as driver_first_time,--司机第一次完单时间
-                from oride_dw.dwd_oride_order_base_include_test_di
-                where dt>='2019-07-08'  --从20190705号开始加的city_id字段，因此从28周开始统计留存数据，按日的从20190705号开始统计
-                and status in(4,5) and city_id<>999001 and driver_id<>1 and product_id<>99
-            ) t
-            left join 
-            (select dt dt_date,
-                day_of_year, --一年中的第几天
-                month, --一年中的第几月
-                week_of_year --一年中的第几周
-            from public_dw_dim.dim_date 
-            ) t2
-            on t.create_date=t2.dt_date;
-            '''.format(
-        pt='{{ds}}'
-    ),
-    dag=dag)
 
-app_oride_new_user_cohort_d_task = HiveOperator(
+def app_oride_new_user_cohort_d_sql_task(ds):
 
-    task_id='app_oride_new_user_cohort_d_task',
-    hql='''set hive.exec.parallel=true;
+    HQL='''set hive.exec.parallel=true;
     set hive.exec.dynamic.partition.mode=nonstrict;
     -- set hive.merge.mapredfiles=true;
     INSERT overwrite TABLE oride_dw.{table} partition(country_code,dt)
         --乘客新客留存数据统计【上线后的统计，上线后用每天的数据关联历史所有天的乘客新客数据】
-        select nvl(day_create_date,-10000) as day_create_date,
-        nvl(m.days,-10000) as days,
-        nvl(m.city_id,-10000) as city_id,
-        nvl(product_id,-10000) as product_id,
-        new_user_liucun_cnt, --第一天对应的就是新客
-        new_user_liucun_ord_cnt, --新客留存完单量
-        new_user_liucun_gmv, --新客留存完单gmv
-        new_user_liucun_dis, --新客留存完单里程
-        'nal' as country_code,
-        '{pt}' as dt
-        from (
-            select nvl(a.day_create_date,-10000) as day_create_date,
-            nvl((a.day_create_date-new_user.day_create_date),-10000) as days,
-            nvl(a.city_id,-10000) as city_id,
-            nvl(a.product_id,-10000) as product_id,
-            count(distinct (nvl(new_user.passenger_id,null))) as new_user_liucun_cnt,  --第一天对应的就是新客
-            count(if(new_user.passenger_id is not null,a.order_id,null)) as new_user_liucun_ord_cnt, --新客留存完单量
-            sum(if(new_user.passenger_id is not null,a.price,0)) as new_user_liucun_gmv, --新客留存完单gmv
-            sum(if(new_user.passenger_id is not null,a.distance,0)) as new_user_liucun_dis --新客留存完单里程     
-
-            from oride_dw.oride_cohort_mid_d a
-            left join
-            (select order_id,city_id,product_id,passenger_id,is_new_user,day_create_date
-                from oride_dw.oride_cohort_mid_d
-                where is_new_user=1
-            ) new_user
-            on a.city_id=new_user.city_id
-            and a.product_id=new_user.product_id
-            and a.passenger_id=new_user.passenger_id
-
-            group by nvl(a.day_create_date,-10000),
-            nvl((a.day_create_date-new_user.day_create_date),-10000),
-            nvl(a.city_id,-10000),
-            nvl(a.product_id,-10000)
-            with cube
-        ) m
-        where !(nvl(m.day_create_date,-10000)=-10000 or nvl(m.days,-10000)=-10000); 
+        
+        select t2.day_of_year as day_create_date,
+            cohort.days,
+            cohort.city_id,
+            cohort.product_id,
+            cohort.new_user_liucun_cnt,
+            cohort.new_user_liucun_ord_cnt,
+            cohort.new_user_liucun_gmv,
+            cohort.new_user_liucun_dis,
+            'nal' as country_code,
+            cohort.dt
+        from(
+            select nvl(day_create_date,-10000) as day_create_date,
+                nvl(m.days,-10000) as days,
+                nvl(m.city_id,-10000) as city_id,
+                nvl(product_id,-10000) as product_id,
+                new_user_liucun_cnt, --第一天对应的就是新客
+                new_user_liucun_ord_cnt, --新客留存完单量
+                new_user_liucun_gmv, --新客留存完单gmv
+                new_user_liucun_dis, --新客留存完单里程
+                '{pt}' as dt
+            from (
+                select nvl(a.day_create_date,-10000) as day_create_date,
+                    nvl(datediff('{pt}',new_user.first_finish_create_date),-10000) as days,
+                    nvl(a.city_id,-10000) as city_id,
+                    nvl(a.product_id,-10000) as product_id,
+                    count(distinct (nvl(new_user.passenger_id,null))) as new_user_liucun_cnt,  --第一天对应的就是新客
+                    count(if(new_user.passenger_id is not null,a.order_id,null)) as new_user_liucun_ord_cnt, --新客留存完单量
+                    sum(if(new_user.passenger_id is not null,a.price,0)) as new_user_liucun_gmv, --新客留存完单gmv
+                    sum(if(new_user.passenger_id is not null,a.distance,0)) as new_user_liucun_dis --新客留存完单里程     
+            
+                from (
+                    select passenger_id,city_id,
+                        driver_serv_type as product_id,
+                        order_id,price,
+                        order_onride_distance as distance,
+                        day(dt) as day_create_date
+                    from oride_dw.dwm_oride_order_base_di
+                    where dt='{pt}'
+                    and is_finish=1 and city_id<>999001 and driver_id<>1
+                )as a
+                left join
+                (
+                    select first_finish_city_id as city_id,
+                        first_finish_product_id as product_id,
+                        passenger_id,
+                        day(first_finish_create_date)as day_create_date,
+                        first_finish_create_date
+                    from oride_dw.dwm_oride_passenger_base_df
+                    where dt='{pt}' and first_finish_ord_id is not null
+                    and datediff('{pt}',first_finish_create_date)<=30
+                ) new_user
+                on a.city_id=new_user.city_id
+                and a.product_id=new_user.product_id
+                and a.passenger_id=new_user.passenger_id
+            
+                group by nvl(a.day_create_date,-10000),
+                nvl(datediff('{pt}',new_user.first_finish_create_date),-10000),
+                nvl(a.city_id,-10000),
+                nvl(a.product_id,-10000)
+                with cube
+            ) m
+            where !(nvl(m.day_create_date,-10000)=-10000 or nvl(m.days,-10000)=-10000)
+        )as cohort
+        left join 
+        (select dt dt_date,
+            day_of_year, --一年中的第几天
+            month, --一年中的第几月
+            week_of_year --一年中的第几周
+        from public_dw_dim.dim_date 
+        )as t2
+        on cohort.dt=t2.dt_date; 
                  '''.format(
-        pt='{{ds}}',
-        now_day='{{macros.ds_add(ds, +1)}}',
+        pt=ds,
         table=get_table_info(0)[0]
-    ),
-    dag=dag)
+    )
+    return HQL
 
-app_oride_new_driver_cohort_d_task = HiveOperator(
+def app_oride_new_driver_cohort_d_sql_task(ds):
 
-    task_id='app_oride_new_driver_cohort_d_task',
-    hql='''set hive.exec.parallel=true;
+    HQL='''set hive.exec.parallel=true;
     set hive.exec.dynamic.partition.mode=nonstrict;
     -- set hive.merge.mapredfiles=true;
     INSERT overwrite TABLE oride_dw.{table} partition(country_code,dt)
         --司机新客留存数据统计【上线后的统计，上线后用每天的数据关联历史所有天的司机新客数据,但是由于每天有些订单并不是终态数据，因此每次都需要重新判定新客和活跃】
-        select nvl(m.day_create_date,-10000) as day_create_date,
-        nvl(m.days,-10000) as days,
-        nvl(m.city_id,-10000) as city_id,
-        nvl(m.product_id,-10000) as product_id,
-        new_driver_liucun_cnt,  --第一天对应的就是新客
-        new_driver_liucun_ord_cnt, --新客留存完单量
-        new_driver_liucun_gmv, --新客留存完单gmv
-        new_driver_liucun_dis, --新客留存完单里程
-        'nal' as country_code,
-        '{pt}' as dt
-        from (select nvl(a.day_create_date,-10000) as day_create_date,
-        nvl((a.day_create_date-new_driver.day_create_date),-10000) as days,
-        nvl(a.city_id,-10000) as city_id,
-        nvl(a.product_id,-10000) as product_id,
-        count(distinct (nvl(new_driver.driver_id,null))) as new_driver_liucun_cnt,  --第一天对应的就是新客
-        count(if(new_driver.driver_id is not null,a.order_id,null)) as new_driver_liucun_ord_cnt, --新客留存完单量
-        sum(if(new_driver.driver_id is not null,a.price,0)) as new_driver_liucun_gmv, --新客留存完单gmv
-        sum(if(new_driver.driver_id is not null,a.distance,0)) as new_driver_liucun_dis --新客留存完单里程
-
-
-        from oride_dw.oride_cohort_mid_d a
-        left join
-        (select order_id,city_id,product_id,driver_id,is_new_driver,day_create_date
-        from oride_dw.oride_cohort_mid_d
-        where is_new_driver=1) new_driver
-        on a.city_id=new_driver.city_id
-        and a.product_id=new_driver.product_id
-        and a.driver_id=new_driver.driver_id
-
-        group by nvl(a.day_create_date,-10000),
-        nvl((a.day_create_date-new_driver.day_create_date),-10000),
-        nvl(a.city_id,-10000),
-        nvl(a.product_id,-10000)
-        with cube) m
-        where !(nvl(m.day_create_date,-10000)=-10000 or nvl(m.days,-10000)=-10000); 
+        
+        select t2.day_of_year as day_create_date,
+            days,
+            city_id,
+            product_id,
+            new_driver_liucun_cnt,  --第一天对应的就是新客
+            new_driver_liucun_ord_cnt, --新客留存完单量
+            new_driver_liucun_gmv, --新客留存完单gmv
+            new_driver_liucun_dis, --新客留存完单里程
+            'nal' as country_code,
+            dt
+        from(
+            select nvl(m.day_create_date,-10000) as day_create_date,
+                nvl(m.days,-10000) as days,
+                nvl(m.city_id,-10000) as city_id,
+                nvl(m.product_id,-10000) as product_id,
+                new_driver_liucun_cnt,  --第一天对应的就是新客
+                new_driver_liucun_ord_cnt, --新客留存完单量
+                new_driver_liucun_gmv, --新客留存完单gmv
+                new_driver_liucun_dis, --新客留存完单里程
+                'nal' as country_code,
+                '{pt}' as dt
+            from (
+                select nvl(a.day_create_date,-10000) as day_create_date,
+                    nvl(datediff('{pt}',new_driver.day_create_date),-10000) as days,
+                    nvl(a.city_id,-10000) as city_id,
+                    nvl(a.product_id,-10000) as product_id,
+                    count(distinct (nvl(new_driver.driver_id,null))) as new_driver_liucun_cnt,  --第一天对应的就是新客
+                    count(if(new_driver.driver_id is not null,a.order_id,null)) as new_driver_liucun_ord_cnt, --新客留存完单量
+                    sum(if(new_driver.driver_id is not null,a.price,0)) as new_driver_liucun_gmv, --新客留存完单gmv
+                    sum(if(new_driver.driver_id is not null,a.distance,0)) as new_driver_liucun_dis --新客留存完单里程
+                
+                from(
+                    select driver_id,city_id,
+                        driver_serv_type as product_id,
+                        order_id,price,
+                        order_onride_distance as distance,
+                        day(dt) as day_create_date
+                    from oride_dw.dwm_oride_order_base_di
+                    where dt='{pt}'
+                    and is_finish=1 and city_id<>999001 and driver_id<>1
+                )as a
+                left join
+                (
+                    select city_id,product_id,driver_id,
+                        from_unixtime(first_finish_order_create_time,'yyyy-MM-dd') as day_create_date
+                    from oride_dw.dwm_oride_driver_base_df
+                    where dt='{pt}' and first_finish_order_id is not null
+                    and datediff('{pt}',from_unixtime(first_finish_order_create_time,'yyyy-MM-dd'))<=30
+                ) new_driver
+                on a.city_id=new_driver.city_id
+                and a.product_id=new_driver.product_id
+                and a.driver_id=new_driver.driver_id
+                
+                group by nvl(a.day_create_date,-10000),
+                nvl(datediff('{pt}',new_driver.day_create_date),-10000),
+                nvl(a.city_id,-10000),
+                nvl(a.product_id,-10000)
+                with cube
+            ) m
+            where !(nvl(m.day_create_date,-10000)=-10000 or nvl(m.days,-10000)=-10000)
+        )as cohort
+        left join 
+        (select dt dt_date,
+            day_of_year, --一年中的第几天
+            month, --一年中的第几月
+            week_of_year --一年中的第几周
+        from public_dw_dim.dim_date 
+        )as t2
+        on cohort.dt=t2.dt_date; 
         '''.format(
-        pt='{{ds}}',
-        now_day='{{macros.ds_add(ds, +1)}}',
+        pt=ds,
         table=get_table_info(1)[0]
-    ),
-    dag=dag)
+    )
+    return HQL
 
-app_oride_act_user_cohort_d_task = HiveOperator(
 
-    task_id='app_oride_act_user_cohort_d_task',
-    hql='''set hive.exec.parallel=true;
+def app_oride_act_user_cohort_d_sql_task(ds):
+
+    HQL='''set hive.exec.parallel=true;
     set hive.exec.dynamic.partition.mode=nonstrict;
     -- set hive.merge.mapredfiles=true;
     INSERT overwrite TABLE oride_dw.{table} partition(country_code,dt)
         --活跃乘客留存数据统计【上线后的统计，上线后用每天的数据关联历史所有天的活跃乘客数据】
-        select nvl(m.day_create_date,-10000) as day_create_date,
-        nvl(m.days,-10000) as days,
-        nvl(m.city_id,-10000) as city_id,
-        nvl(m.product_id,-10000) as product_id,
-        act_user_liucun_cnt,  --第一天对应的就是活跃乘客数
-        act_user_liucun_ord_cnt, --活跃乘客留存完单量
-        act_user_liucun_gmv, --活跃乘客留存完单gmv
-        act_user_liucun_dis, --活跃乘客留存完单里程
-        'nal' as country_code,
-        '{pt}' as dt
-
-        from(select nvl(a.day_create_date,-10000) as day_create_date,
-        nvl((a.day_create_date-act_user.day_create_date),-10000) as days,
-        nvl(a.city_id,-10000) as city_id,
-        nvl(a.product_id,-10000) as product_id,
-        count(distinct act_user.passenger_id) as act_user_liucun_cnt,  --第一天对应的就是活跃乘客数
-        count(if(act_user.passenger_id is not null,a.order_id,null)) as act_user_liucun_ord_cnt, --活跃乘客留存完单量
-        sum(if(act_user.passenger_id is not null,a.price,0)) as act_user_liucun_gmv, --活跃乘客留存完单gmv
-        sum(if(act_user.passenger_id is not null,a.distance,0)) as act_user_liucun_dis --活跃乘客留存完单里程
-
-        from oride_dw.oride_cohort_mid_d a
-        left join
-        (select day_create_date,city_id,product_id,passenger_id 
-        from oride_dw.oride_cohort_mid_d 
-        group by day_create_date,city_id,product_id,passenger_id) act_user
-        on a.city_id=act_user.city_id
-        and a.product_id=act_user.product_id
-        and a.passenger_id=act_user.passenger_id
-        where a.day_create_date>=act_user.day_create_date
-        group by nvl(a.day_create_date,-10000),
-        nvl((a.day_create_date-act_user.day_create_date),-10000),
-        nvl(a.city_id,-10000),
-        nvl(a.product_id,-10000)
-        with cube) m
-        where !(nvl(m.day_create_date,-10000)=-10000 or nvl(m.days,-10000)=-10000); 
+        
+        select t2.day_of_year as day_create_date,
+            days,
+            nvl(city_id,-10000) as city_id,
+            nvl(product_id,-10000) as product_id,
+            act_user_liucun_cnt,  --第一天对应的就是活跃乘客数
+            act_user_liucun_ord_cnt, --活跃乘客留存完单量
+            act_user_liucun_gmv, --活跃乘客留存完单gmv
+            act_user_liucun_dis, --活跃乘客留存完单里程
+            'nal' as country_code,
+            cohort.dt
+        from(
+        
+                select nvl(a.day_create_date,-10000) as day_create_date,
+                    nvl(datediff(a.day_create_date,act_user.day_create_date),-10000) as days,
+                    nvl(a.city_id,-10000) as city_id,
+                    nvl(a.product_id,-10000) as product_id,
+                    count(distinct act_user.passenger_id) as act_user_liucun_cnt,  --第一天对应的就是活跃乘客数
+                    count(if(act_user.passenger_id is not null,a.order_id,null)) as act_user_liucun_ord_cnt, --活跃乘客留存完单量
+                    sum(if(act_user.passenger_id is not null,a.price,0)) as act_user_liucun_gmv, --活跃乘客留存完单gmv
+                    sum(if(act_user.passenger_id is not null,a.distance,0)) as act_user_liucun_dis, --活跃乘客留存完单里程
+                    '{pt}' as dt
+                from (
+                    select passenger_id,
+                        city_id,
+                        driver_serv_type as product_id,
+                        order_id,price,
+                        order_onride_distance as distance,
+                        dt as day_create_date
+                    from oride_dw.dwm_oride_order_base_di
+                    where dt='{pt}'
+                    and is_finish=1 and city_id<>999001 and driver_id<>1
+                )as a
+                left join
+                (
+                    select dt as day_create_date,
+                        city_id,
+                        driver_serv_type as product_id,
+                        passenger_id 
+                    from oride_dw.dwm_oride_order_base_di 
+                    where datediff('{pt}',dt)<=30
+                    group by dt,city_id,driver_serv_type,passenger_id
+                ) act_user
+                on a.city_id=act_user.city_id
+                and a.product_id=act_user.product_id
+                and a.passenger_id=act_user.passenger_id
+                where a.day_create_date>=act_user.day_create_date
+                group by nvl(a.day_create_date,-10000),
+                    nvl(datediff(a.day_create_date,act_user.day_create_date),-10000),
+                    nvl(a.city_id,-10000),
+                    nvl(a.product_id,-10000)
+                grouping sets(
+                    (nvl(a.day_create_date,-10000),nvl(datediff(a.day_create_date,act_user.day_create_date),-10000)),
+                    (nvl(a.day_create_date,-10000),nvl(datediff(a.day_create_date,act_user.day_create_date),-10000),nvl(a.city_id,-10000)),
+                    (nvl(a.day_create_date,-10000),nvl(datediff(a.day_create_date,act_user.day_create_date),-10000),nvl(a.product_id,-10000)),
+                    (nvl(a.day_create_date,-10000),nvl(datediff(a.day_create_date,act_user.day_create_date),-10000),nvl(a.city_id,-10000),nvl(a.product_id,-10000))
+                )
+        )as cohort
+        left join 
+        (select dt dt_date,
+            day_of_year, --一年中的第几天
+            month, --一年中的第几月
+            week_of_year --一年中的第几周
+        from public_dw_dim.dim_date 
+        )as t2
+        on cohort.dt=t2.dt_date; 
                  '''.format(
-        pt='{{ds}}',
-        now_day='{{macros.ds_add(ds, +1)}}',
+        pt=ds,
         table=get_table_info(2)[0]
-    ),
-    dag=dag)
+    )
+    return HQL
 
-app_oride_act_driver_cohort_d_task = HiveOperator(
+def app_oride_act_driver_cohort_d_sql_task(ds):
 
-    task_id='app_oride_act_driver_cohort_d_task',
-    hql='''set hive.exec.parallel=true;
+    HQL='''set hive.exec.parallel=true;
     set hive.exec.dynamic.partition.mode=nonstrict;
     -- set hive.merge.mapredfiles=true;
     INSERT overwrite TABLE oride_dw.{table} partition(country_code,dt)
         --活跃司机留存数据统计【上线后的统计，上线后用每天的数据关联历史所有天的活跃司机数据】
-        select nvl(m.day_create_date,-10000) as day_create_date,
-        nvl(m.days,-10000) as days,
-        nvl(m.city_id,-10000) as city_id,
-        nvl(m.product_id,-10000) as product_id,
-        act_driver_liucun_cnt,  --第一天对应的就是活跃司机数
-        act_driver_liucun_ord_cnt, --活跃司机留存完单量
-        act_driver_liucun_gmv, --活跃司机留存完单gmv
-        act_driver_liucun_dis, --活跃司机留存完单里程
-        'nal' as country_code,
-        '{pt}' as dt
-
-        from(select nvl(a.day_create_date,-10000) as day_create_date,
-        nvl((a.day_create_date-act_driver.day_create_date),-10000) as days,
-        nvl(a.city_id,-10000) as city_id,
-        nvl(a.product_id,-10000) as product_id,
-        count(distinct act_driver.driver_id) as act_driver_liucun_cnt,  --第一天对应的就是活跃司机数
-        count(if(act_driver.driver_id is not null,a.order_id,null)) as act_driver_liucun_ord_cnt, --活跃司机留存完单量
-        sum(if(act_driver.driver_id is not null,a.price,0)) as act_driver_liucun_gmv, --活跃司机留存完单gmv
-        sum(if(act_driver.driver_id is not null,a.distance,0)) as act_driver_liucun_dis --活跃司机留存完单里程
-
-        from oride_dw.oride_cohort_mid_d a
-        left join
-        (select day_create_date,city_id,product_id,driver_id 
-        from oride_dw.oride_cohort_mid_d 
-        group by day_create_date,city_id,product_id,driver_id) act_driver
-        on a.city_id=act_driver.city_id
-        and a.product_id=act_driver.product_id
-        and a.driver_id=act_driver.driver_id
-        where a.day_create_date>=act_driver.day_create_date
-        group by nvl(a.day_create_date,-10000),
-        nvl((a.day_create_date-act_driver.day_create_date),-10000),
-        nvl(a.city_id,-10000),
-        nvl(a.product_id,-10000)
-        with cube) m
-        where !(nvl(m.day_create_date,-10000)=-10000 or nvl(m.days,-10000)=-10000); 
+        
+        select t2.day_of_year as day_create_date,
+            nvl(days,-10000) as days,
+            nvl(city_id,-10000) as city_id,
+            nvl(product_id,-10000) as product_id,
+            act_driver_liucun_cnt,  --第一天对应的就是活跃司机数
+            act_driver_liucun_ord_cnt, --活跃司机留存完单量
+            act_driver_liucun_gmv, --活跃司机留存完单gmv
+            act_driver_liucun_dis, --活跃司机留存完单里程
+            'nal' as country_code,
+            cohort.dt
+        
+        from(
+            select nvl(a.day_create_date,-10000) as day_create_date,
+            nvl(datediff(a.day_create_date,act_driver.day_create_date),-10000) as days,
+            nvl(a.city_id,-10000) as city_id,
+            nvl(a.product_id,-10000) as product_id,
+            count(distinct act_driver.driver_id) as act_driver_liucun_cnt,  --第一天对应的就是活跃司机数
+            count(if(act_driver.driver_id is not null,a.order_id,null)) as act_driver_liucun_ord_cnt, --活跃司机留存完单量
+            sum(if(act_driver.driver_id is not null,a.price,0)) as act_driver_liucun_gmv, --活跃司机留存完单gmv
+            sum(if(act_driver.driver_id is not null,a.distance,0)) as act_driver_liucun_dis, --活跃司机留存完单里程
+            '{pt}' as dt
+            from (
+                select driver_id,
+                    city_id,
+                    driver_serv_type as product_id,
+                    order_id,price,
+                    order_onride_distance as distance,
+                    dt as day_create_date
+                from oride_dw.dwm_oride_order_base_di
+                where dt='{pt}'
+                and is_finish=1 and city_id<>999001 and driver_id<>1
+            )as a
+            left join
+            (
+                select dt as day_create_date,
+                    city_id,
+                    driver_serv_type as product_id,
+                    driver_id 
+                from oride_dw.dwm_oride_order_base_di 
+                where datediff('{pt}',dt)<=30
+                group by dt,city_id,driver_serv_type,driver_id
+            ) act_driver
+            on a.city_id=act_driver.city_id
+            and a.product_id=act_driver.product_id
+            and a.driver_id=act_driver.driver_id
+            where a.day_create_date>=act_driver.day_create_date
+            group by nvl(a.day_create_date,-10000),
+                nvl(datediff(a.day_create_date,act_driver.day_create_date),-10000),
+                nvl(a.city_id,-10000),
+                nvl(a.product_id,-10000)
+            grouping sets(
+                    (nvl(a.day_create_date,-10000),nvl(datediff(a.day_create_date,act_driver.day_create_date),-10000)),
+                    (nvl(a.day_create_date,-10000),nvl(datediff(a.day_create_date,act_driver.day_create_date),-10000),nvl(a.city_id,-10000)),
+                    (nvl(a.day_create_date,-10000),nvl(datediff(a.day_create_date,act_driver.day_create_date),-10000),nvl(a.product_id,-10000)),
+                    (nvl(a.day_create_date,-10000),nvl(datediff(a.day_create_date,act_driver.day_create_date),-10000),nvl(a.city_id,-10000),nvl(a.product_id,-10000))
+            )
+        ) as cohort
+        left join 
+        (select dt dt_date,
+            day_of_year, --一年中的第几天
+            month, --一年中的第几月
+            week_of_year --一年中的第几周
+        from public_dw_dim.dim_date 
+        )as t2
+        on cohort.dt=t2.dt_date;
+        
                  '''.format(
-        pt='{{ds}}',
-        now_day='{{macros.ds_add(ds, +1)}}',
+        pt=ds,
         table=get_table_info(3)[0]
-    ),
-    dag=dag)
+    )
+    return HQL
 
-# 生成_SUCCESS
-oride_cohort_mid_d_success = BashOperator(
+# 主流程
+def execution_new_user_task(ds, **kargs):
+    hive_hook = HiveCliHook()
 
-    task_id='oride_cohort_mid_d_success',
+    #读取sql
+    _sql = app_oride_new_user_cohort_d_sql_task(ds)
 
-    bash_command="""
-    line_num=`$HADOOP_HOME/bin/hadoop fs -du -s hdfs://warehourse/user/hive/warehouse/oride_dw.db/oride_cohort_mid_d | tail -1 | awk '{{print $1}}'`
+    logging.info('Executing: %s', _sql)
 
-    if [ $line_num -eq 0 ]
-    then
-        echo "table oride_dw.oride_cohort_mid_d is empty"
-        exit 1
-    else
-        echo "DATA EXPORT Successed ......"
-    fi
-    """.format(
-        pt='{{ds}}'),
-    dag=dag)
+    #执行hive
+    hive_hook.run_cli(_sql)
 
-new_user_cohort_d_touchz_success = BashOperator(
+    # 生成_SUCCESS
+    """
+    第一个参数true: 数据目录是有country_code分区。false 没有
+    第二个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
 
-    task_id='new_user_cohort_d_touchz_success',
+    """
 
-    bash_command="""
-    line_num=`$HADOOP_HOME/bin/hadoop fs -du -s {hdfs_data_dir} | tail -1 | awk '{{print $1}}'`
+    hdfs_path = get_table_info(0)[1]
+    TaskTouchzSuccess().countries_touchz_success(ds, "oride_dw", get_table_info(0)[0], hdfs_path, "true", "true")
 
-    if [ $line_num -eq 0 ]
-    then
-        echo "FATAL {hdfs_data_dir} is empty"
-        exit 1
-    else
-        echo "DATA EXPORT Successed ......"
-        $HADOOP_HOME/bin/hadoop fs -touchz {hdfs_data_dir}/_SUCCESS
-    fi
-    """.format(
-        pt='{{ds}}',
-        now_day='{{macros.ds_add(ds, +1)}}',
-        hdfs_data_dir=get_table_info(0)[1] + '/country_code=nal/dt={{ds}}'
-    ),
-    dag=dag)
 
-new_driver_cohort_d_touchz_success = BashOperator(
+def execution_new_driver_task(ds, **kargs):
+    hive_hook = HiveCliHook()
 
-    task_id='new_driver_cohort_d_touchz_success',
+    # 读取sql
+    _sql = app_oride_new_driver_cohort_d_sql_task(ds)
 
-    bash_command="""
-    line_num=`$HADOOP_HOME/bin/hadoop fs -du -s {hdfs_data_dir} | tail -1 | awk '{{print $1}}'`
+    # 执行hive
+    hive_hook.run_cli(_sql)
 
-    if [ $line_num -eq 0 ]
-    then
-        echo "FATAL {hdfs_data_dir} is empty"
-        exit 1
-    else
-        echo "DATA EXPORT Successed ......"
-        $HADOOP_HOME/bin/hadoop fs -touchz {hdfs_data_dir}/_SUCCESS
-    fi
-    """.format(
-        pt='{{ds}}',
-        now_day='{{macros.ds_add(ds, +1)}}',
-        hdfs_data_dir=get_table_info(1)[1] + '/country_code=nal/dt={{ds}}'
-    ),
-    dag=dag)
+    # 生成_SUCCESS
+    """
+    第一个参数true: 数据目录是有country_code分区。false 没有
+    第二个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
 
-act_user_cohort_d_touchz_success = BashOperator(
+    """
+    hdfs_path = get_table_info(1)[1]
+    TaskTouchzSuccess().countries_touchz_success(ds, "oride_dw", get_table_info(1)[0], hdfs_path, "true", "true")
 
-    task_id='act_user_cohort_d_touchz_success',
 
-    bash_command="""
-    line_num=`$HADOOP_HOME/bin/hadoop fs -du -s {hdfs_data_dir} | tail -1 | awk '{{print $1}}'`
+def execution_act_user_task(ds, **kargs):
+    hive_hook = HiveCliHook()
 
-    if [ $line_num -eq 0 ]
-    then
-        echo "FATAL {hdfs_data_dir} is empty"
-        exit 1
-    else
-        echo "DATA EXPORT Successed ......"
-        $HADOOP_HOME/bin/hadoop fs -touchz {hdfs_data_dir}/_SUCCESS
-    fi
-    """.format(
-        pt='{{ds}}',
-        now_day='{{macros.ds_add(ds, +1)}}',
-        hdfs_data_dir=get_table_info(2)[1] + '/country_code=nal/dt={{ds}}'
-    ),
-    dag=dag)
+    # 读取sql
+    _sql = app_oride_act_user_cohort_d_sql_task(ds)
 
-act_driver_cohort_d_touchz_success = BashOperator(
+    # 执行hive
+    hive_hook.run_cli(_sql)
 
-    task_id='act_driver_cohort_touchz_success',
+    # 生成_SUCCESS
+    """
+    第一个参数true: 数据目录是有country_code分区。false 没有
+    第二个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
 
-    bash_command="""
-    line_num=`$HADOOP_HOME/bin/hadoop fs -du -s {hdfs_data_dir} | tail -1 | awk '{{print $1}}'`
+    """
+    hdfs_path = get_table_info(2)[1]
+    TaskTouchzSuccess().countries_touchz_success(ds, "oride_dw", get_table_info(2)[0], hdfs_path, "true", "true")
 
-    if [ $line_num -eq 0 ]
-    then
-        echo "FATAL {hdfs_data_dir} is empty"
-        exit 1
-    else
-        echo "DATA EXPORT Successed ......"
-        $HADOOP_HOME/bin/hadoop fs -touchz {hdfs_data_dir}/_SUCCESS
-    fi
-    """.format(
-        pt='{{ds}}',
-        now_day='{{macros.ds_add(ds, +1)}}',
-        hdfs_data_dir=get_table_info(3)[1] + '/country_code=nal/dt={{ds}}'
-    ),
-    dag=dag)
 
-dependence_dwd_oride_order_base_include_test_di_prev_day_task >> \
-sleep_time >> \
-create_oride_cohort_mid_d_task >> \
-oride_cohort_mid_d_success >> \
-app_oride_new_user_cohort_d_task >> \
-new_user_cohort_d_touchz_success
+def execution_act_driver_task(ds, **kargs):
+    hive_hook = HiveCliHook()
 
-dependence_dwd_oride_order_base_include_test_di_prev_day_task >> \
-sleep_time >> \
-create_oride_cohort_mid_d_task >> \
-oride_cohort_mid_d_success >> \
-app_oride_new_driver_cohort_d_task >> \
-new_driver_cohort_d_touchz_success
+    # 读取sql
+    _sql = app_oride_act_driver_cohort_d_sql_task(ds)
 
-dependence_dwd_oride_order_base_include_test_di_prev_day_task >> \
-sleep_time >> \
-create_oride_cohort_mid_d_task >> \
-oride_cohort_mid_d_success >> \
-app_oride_act_user_cohort_d_task >> \
-act_user_cohort_d_touchz_success
+    # 执行hive
+    hive_hook.run_cli(_sql)
 
-dependence_dwd_oride_order_base_include_test_di_prev_day_task >> \
-sleep_time >> \
-create_oride_cohort_mid_d_task >> \
-oride_cohort_mid_d_success >> \
-app_oride_act_driver_cohort_d_task >> \
-act_driver_cohort_d_touchz_success
+    # 生成_SUCCESS
+    """
+    第一个参数true: 数据目录是有country_code分区。false 没有
+    第二个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
+
+    """
+    hdfs_path = get_table_info(3)[1]
+    TaskTouchzSuccess().countries_touchz_success(ds, "oride_dw", get_table_info(3)[0], hdfs_path, "true", "true")
+
+
+app_oride_new_user_cohort_m_task = PythonOperator(
+    task_id='app_oride_new_user_cohort_m_task',
+    python_callable=execution_new_user_task,
+    provide_context=True,
+    dag=dag
+)
+
+app_oride_new_driver_cohort_m_task = PythonOperator(
+    task_id='app_oride_new_driver_cohort_m_task',
+    python_callable=execution_new_driver_task,
+    provide_context=True,
+    dag=dag
+)
+
+app_oride_act_user_cohort_m_task = PythonOperator(
+    task_id='app_oride_act_user_cohort_m_task',
+    python_callable=execution_act_user_task,
+    provide_context=True,
+    dag=dag
+)
+
+app_oride_act_driver_cohort_m_task = PythonOperator(
+    task_id='app_oride_act_driver_cohort_m_task',
+    python_callable=execution_act_driver_task,
+    provide_context=True,
+    dag=dag
+)
+
+
+dwm_oride_order_base_di_task>>app_oride_new_user_cohort_m_task
+dwm_oride_passenger_base_df_task>>app_oride_new_user_cohort_m_task
+
+dwm_oride_order_base_di_task>>app_oride_new_driver_cohort_m_task
+dwm_oride_driver_base_df_task>>app_oride_new_driver_cohort_m_task
+
+dwm_oride_order_base_di_task>>app_oride_act_user_cohort_m_task
+
+dwm_oride_order_base_di_task>>app_oride_act_driver_cohort_m_task

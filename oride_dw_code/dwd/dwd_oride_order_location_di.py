@@ -14,6 +14,8 @@ from airflow.sensors.external_task_sensor import ExternalTaskSensor
 from airflow.operators.bash_operator import BashOperator
 from airflow.sensors.named_hive_partition_sensor import NamedHivePartitionSensor
 from airflow.sensors.hive_partition_sensor import HivePartitionSensor
+from airflow.sensors.s3_key_sensor import S3KeySensor
+from airflow.sensors.web_hdfs_sensor import WebHdfsSensor
 from airflow.sensors import UFileSensor
 from airflow.hooks.hive_hooks import HiveCliHook, HiveServer2Hook
 import json
@@ -71,12 +73,13 @@ dependence_dwd_oride_driver_location_event_hi_prev_day_task = HivePartitionSenso
     dag=dag
 )
 
-# 依赖前一天分区
-dependence_dwd_oride_passanger_location_event_hi_prev_day_task = HivePartitionSensor(
-    task_id="dwd_oride_passanger_location_event_hi_prev_day_task",
-    table="ods_sqoop_base_data_order_df",
-    partition="""dt='{{ ds }}'""",
-    schema="oride_dw_ods",
+dwd_oride_order_base_include_test_di_prev_day_task = S3KeySensor(
+    task_id='dwd_oride_order_base_include_test_di_prev_day_task',
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="oride/oride_dw/dwd_oride_order_base_include_test_di/country_code=NG",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-bi',
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
@@ -130,17 +133,16 @@ def dwd_oride_order_location_di_sql_task(ds):
                ,NVL(ct.country_code,'nal') AS country_code
         FROM 
         (
-            SELECT  id                              AS order_id
-                   ,user_id                         AS user_id
+            SELECT  order_id                        AS order_id
+                   ,passenger_id                    AS user_id
                    ,driver_id                       AS driver_id
                    ,create_time                     AS create_time
                    ,status                          AS status
                    ,city_id                         AS city_id
                    ,concat(start_lat,'_',start_lng) AS start_loc
                    ,concat(end_lat,'_',end_lng)     AS end_loc
-            FROM oride_dw_ods.ods_sqoop_base_data_order_df
+            FROM oride_dw.dwd_oride_order_base_include_test_di
             WHERE dt = '{pt}' 
-            AND from_unixtime(create_time,'yyyy-MM-dd') = '{pt}' 
             AND (status = 4 or status = 5)  
         ) ord
         LEFT JOIN 
@@ -398,5 +400,5 @@ dwd_oride_order_location_di_task = PythonOperator(
 
 dependence_dwd_oride_client_event_detail_hi_prev_day_task >> \
 dependence_dwd_oride_driver_location_event_hi_prev_day_task >> \
-dependence_dwd_oride_passanger_location_event_hi_prev_day_task >> \
+dwd_oride_order_base_include_test_di_prev_day_task >> \
 sleep_time >> dwd_oride_order_location_di_task

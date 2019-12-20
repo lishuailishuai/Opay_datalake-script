@@ -17,6 +17,7 @@ from airflow.sensors.hive_partition_sensor import HivePartitionSensor
 from airflow.sensors import UFileSensor
 from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
 from plugins.TaskTouchzSuccess import TaskTouchzSuccess
+from airflow.sensors import OssSensor
 import json
 import logging
 from airflow.models import Variable
@@ -41,10 +42,9 @@ dag = airflow.DAG('app_opos_bonus_shop_target_d',
 
 ##----------------------------------------- 依赖 ---------------------------------------##
 
-# 依赖前一天分区，dim_opos_bd_relation_df表，ufile://opay-datalake/opos/opos_dw/dim_opos_bd_relation_df
-dwd_opos_bonus_record_di_task = UFileSensor(
+dwd_opos_bonus_record_di_task = OssSensor(
     task_id='dwd_opos_bonus_record_di_task',
-    filepath='{hdfs_path_str}/country_code=nal/dt={pt}/_SUCCESS'.format(
+    bucket_key='{hdfs_path_str}/country_code=nal/dt={pt}/_SUCCESS'.format(
         hdfs_path_str="opos/opos_dw/dwd_opos_bonus_record_di",
         pt='{{ds}}'
     ),
@@ -53,9 +53,9 @@ dwd_opos_bonus_record_di_task = UFileSensor(
     dag=dag
 )
 
-dwd_pre_opos_payment_order_di_task = UFileSensor(
+dwd_pre_opos_payment_order_di_task = OssSensor(
     task_id='dwd_pre_opos_payment_order_di_task',
-    filepath='{hdfs_path_str}/country_code=nal/dt={pt}/_SUCCESS'.format(
+    bucket_key='{hdfs_path_str}/country_code=nal/dt={pt}/_SUCCESS'.format(
         hdfs_path_str="opos/opos_dw/dwd_pre_opos_payment_order_di",
         pt='{{ds}}'
     ),
@@ -68,7 +68,7 @@ dwd_pre_opos_payment_order_di_task = UFileSensor(
 
 db_name = "opos_dw"
 table_name = "app_opos_bonus_shop_target_d"
-hdfs_path = "ufile://opay-datalake/opos/opos_dw/" + table_name
+hdfs_path = "oss://opay-datalake/opos/opos_dw/" + table_name
 
 
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
@@ -78,7 +78,7 @@ def fun_task_timeout_monitor(ds, dag, **op_kwargs):
 
     tb = [
         {"db": "opos_dw", "table": "{dag_name}".format(dag_name=dag_ids),
-         "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "600"}
+         "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "6000"}
     ]
 
     TaskTimeoutMonitor().set_task_monitor(tb)
@@ -110,8 +110,8 @@ o.shop_id
 ,o.shop_name
 ,o.opay_account
 
-,'{pt}' as create_date
-,d.week_of_year as create_week
+,substr('{pt}',0,10) as create_date
+,weekofyear('{pt}') as create_week
 ,substr('{pt}',0,7) as create_month
 ,substr('{pt}',0,4) as create_year
 
@@ -409,9 +409,6 @@ on o.cm_id=cm.id
 left join
   (select id,name from opos_dw_ods.ods_sqoop_base_bd_admin_users_df where dt = '{pt}') as hcm
   on o.hcm_id=hcm.id
-left join
-  (select dt,week_of_year from public_dw_dim.dim_date where dt = '{pt}') as d
-on 1=1
 ;
 
 

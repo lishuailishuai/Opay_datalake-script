@@ -17,6 +17,7 @@ from airflow.sensors.hive_partition_sensor import HivePartitionSensor
 from airflow.sensors import UFileSensor
 from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
 from plugins.TaskTouchzSuccess import TaskTouchzSuccess
+from airflow.sensors import OssSensor
 import json
 import logging
 from airflow.models import Variable
@@ -41,9 +42,9 @@ dag = airflow.DAG('dwd_opos_bonus_record_di',
 
 ##----------------------------------------- 依赖 ---------------------------------------##
 
-ods_sqoop_base_opos_bonus_record_di_task = UFileSensor(
+ods_sqoop_base_opos_bonus_record_di_task = OssSensor(
     task_id='ods_sqoop_base_opos_bonus_record_di_task',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
         hdfs_path_str="opos_dw_sqoop/opay_crm/bd_admin_users",
         pt='{{ds}}'
     ),
@@ -52,9 +53,9 @@ ods_sqoop_base_opos_bonus_record_di_task = UFileSensor(
     dag=dag
 )
 
-ods_sqoop_base_opos_scan_history_di_task = UFileSensor(
+ods_sqoop_base_opos_scan_history_di_task = OssSensor(
     task_id='ods_sqoop_base_opos_scan_history_di_task',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
         hdfs_path_str="opos_dw_sqoop_di/opos_cashback/opos_scan_history",
         pt='{{ds}}'
     ),
@@ -63,9 +64,9 @@ ods_sqoop_base_opos_scan_history_di_task = UFileSensor(
     dag=dag
 )
 
-dim_opos_bd_relation_df_task = UFileSensor(
+dim_opos_bd_relation_df_task = OssSensor(
     task_id='dim_opos_bd_relation_df_task',
-    filepath='{hdfs_path_str}/country_code=nal/dt={pt}/_SUCCESS'.format(
+    bucket_key='{hdfs_path_str}/country_code=nal/dt={pt}/_SUCCESS'.format(
         hdfs_path_str="opos/opos_dw/dim_opos_bd_relation_df",
         pt='{{ds}}'
     ),
@@ -78,7 +79,7 @@ dim_opos_bd_relation_df_task = UFileSensor(
 
 db_name = "opos_dw"
 table_name = "dwd_opos_bonus_record_di"
-hdfs_path = "ufile://opay-datalake/opos/opos_dw/" + table_name
+hdfs_path = "oss://opay-datalake/opos/opos_dw/" + table_name
 
 
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
@@ -88,7 +89,7 @@ def fun_task_timeout_monitor(ds, dag, **op_kwargs):
 
     tb = [
         {"db": "opos_dw", "table": "{dag_name}".format(dag_name=dag_ids),
-         "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "600"}
+         "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "6000"}
     ]
 
     TaskTimeoutMonitor().set_task_monitor(tb)
@@ -119,7 +120,7 @@ v1.id
 ,v1.activity_id
 
 ,substr('{pt}',0,10) as create_date
-,v3.week_of_year as create_week
+,weekofyear('{pt}') as create_week
 ,substr('{pt}',0,7) as create_month
 ,substr('{pt}',0,4) as create_year
   
@@ -189,10 +190,6 @@ left join
 on
   v1.city_id=v2.id
 left join
-  (select dt,week_of_year from public_dw_dim.dim_date where dt = '{pt}') as v3
-on
-  v1.dt=v3.dt
-left join
   (select * from opos_dw.dim_opos_bd_relation_df where country_code='nal' and dt='{pt}') as provider
 on
   v1.provider_account=provider.opay_account
@@ -237,8 +234,9 @@ left join
   ) as v4
 on
   v1.id=v4.bonus_id
-
 ;
+
+
 
 
 

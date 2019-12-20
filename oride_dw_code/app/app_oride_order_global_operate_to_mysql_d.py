@@ -85,10 +85,10 @@ dependence_dim_oride_driver_base_task = UFileSensor(
 )
 
 
-dependence_dwd_oride_order_finance_di_task = UFileSensor(
-    task_id='dwd_oride_order_finance_di_task',
+dependence_dwm_oride_driver_finance_di_task = UFileSensor(
+    task_id='dwm_oride_driver_finance_di',
     filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw/dwd_oride_order_finance_di/country_code=NG",
+        hdfs_path_str="oride/oride_dw/dwm_oride_driver_finance_di/country_code=NG",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -131,10 +131,10 @@ dependence_dm_oride_driver_base_task = UFileSensor(
     dag=dag
 )
 
-dependence_dm_oride_passenger_base_cube_d_task = UFileSensor(
-    task_id='dm_oride_passenger_base_cube_d_task',
+dependence_dm_oride_passenger_base_cube_task = UFileSensor(
+    task_id='dm_oride_passenger_base_cube_task',
     filepath='{hdfs_path_str}/country_code=nal/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw/dm_oride_passenger_base_cube_d",
+        hdfs_path_str="oride/oride_dw/dm_oride_passenger_base_cube",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -232,14 +232,24 @@ def app_oride_order_global_operate_to_mysql_d_sql_task(ds):
         nvl(users.first_finished_users,0)  as new_finished_users,----新增完单乘客数
         nvl(round(od.wet_order_cnt / od.order_cnt,8),0) as wet_order_rate,--湿单占比
 
-        nvl(round(od.finish_order_cnt /  od.finish_order_cnt_1,8),0)  as  finish_order_mom_d, --完单日环比
-        nvl(round(od.finish_order_cnt /  od.finish_order_cnt_7,8),0)  as  finish_order_yoy_d, --完单日同比
+        nvl(round(od.finish_order_cnt /  od.finish_order_cnt_1,8)-1,0)  as  finish_order_mom_d, --完单日环比
+        nvl(round(od.finish_order_cnt /  od.finish_order_cnt_7,8)-1,0)  as  finish_order_yoy_d, --完单日同比
 
-        nvl(round(od.gmv /  od.gmv_1,8),0)  as  gmv_mom_d, --gmv日环比
-        nvl(round(od.gmv /  od.gmv_7,8),0)  as  gmv_yoy_d, --gmv日同比
-        nvl(round(sub.sum_subsidy_m / global.sum_subsidy_d_1,8),0) as sum_subsidy_mom_d , --总补贴日环比
-        nvl(round(sub.sum_subsidy_m / global.sum_subsidy_d_7,8),0) as sum_subsidy_yoy_d , --总补贴日同比
-
+        nvl(round(od.gmv /  od.gmv_1,8)-1,0)  gmv_mom_d, --gmv日环比
+        nvl(round(od.gmv /  od.gmv_7,8) -1,0)  as  gmv_yoy_d, --gmv日同比
+        
+        nvl(round(sub.sum_subsidy_d / global.sum_subsidy_d_1,8)-1,0) as sum_subsidy_mom_d , --总补贴日环比
+        nvl(round(sub.sum_subsidy_d / global.sum_subsidy_d_7,8)-1,0) as sum_subsidy_yoy_d , --总补贴日同比
+        
+        nvl(od.finish_order_cnt_1,0) as  finish_order_cnt_1, --第前一天的完单量
+        nvl(od.finish_order_cnt_7,0) as  finish_order_cnt_7, --第前7天的完单量
+        
+        nvl(od.gmv_1,0) as gmv_1 , --第前一天的gmv
+        nvl(od.gmv_7,0) as gmv_7, --第前七天的gmv
+        
+        nvl(global.sum_subsidy_d_1,0) as sum_subsidy_d_1,--第前一天的总补贴
+        nvl(global.sum_subsidy_d_7,0) as sum_subsidy_d_7,--第前7天的总补贴
+    
         'nal' as country_code,
         '{pt}' as  dt
     from 
@@ -273,7 +283,7 @@ def app_oride_order_global_operate_to_mysql_d_sql_task(ds):
 
         )tmp01
 
-        inner join
+        left join
         (   
             select 
                 city_id,
@@ -314,26 +324,27 @@ def app_oride_order_global_operate_to_mysql_d_sql_task(ds):
             --累计总补贴/月
 
         from
-        ( --B端补贴  t1.recharge_amount+t1.reward_amount
-            select 
+        ( --B端补贴  amount_recharge + amount_reward
+               select 
                 city_id,
 
-                sum(if(dt ='{pt}',reward_amount,0))+sum(if(dt ='{pt}',recharge_amount,0)) as b_subsidy_d,--B端补贴、天
+                sum(if(dt ='{pt}',amount_recharge,0))+sum(if(dt ='{pt}',amount_reward,0)) as b_subsidy_d,--B端补贴、天(实际b补)
 
-                sum(reward_amount) + sum(recharge_amount) as b_subsidy_m--B端补贴 月
+                sum(amount_recharge) + sum(amount_reward) as b_subsidy_m--B端补贴 月
 
-            from oride_dw.dwd_oride_order_finance_di
-            where  month(dt) = month('{pt}')
+            from oride_dw.dwm_oride_driver_finance_di 
+            where  month(dt) = month('{pt}') and city_id != 999001
             group by city_id
         )b
         left join
-        (  --C端补贴  price - pay_amount is_td_finish=1
+        (    --C端补贴(实际C补贴)  pay的订单金额 - opay实付金额   12.18号开始
            select 
                 city_id,
-                sum(if(dt ='{pt}',price,0))-sum(if(dt ='{pt}',pay_amount,0)) as c_subsidy_d,--C端补贴、天     
+                sum(if(dt ='{pt}',price,0)) - sum(if(dt ='{pt}',pay_amount,0)) as c_subsidy_d, --C端补贴、天
                 sum(price) - sum(pay_amount) as c_subsidy_m
-            from     dwd_order_di
-            where month(dt) = month('{pt}') and city_id != 999001 and is_td_finish=1
+            from oride_dw.dwm_oride_order_base_di
+            where month(dt) = month('{pt}') and city_id != 999001
+                and is_opay_pay=1 and is_succ_pay=1 and product_id<>99
             group by city_id
         )c on  b.city_id =  c.city_id  
         group by b.city_id,b.b_subsidy_d,c.c_subsidy_d
@@ -341,7 +352,7 @@ def app_oride_order_global_operate_to_mysql_d_sql_task(ds):
     left join 
     (--审核司机数
         select 
-            city_id,
+            city_id, 
             sum(td_audit_finish_driver_num) as td_audit_finish_driver_num --审核司机数
         from oride_dw.dm_oride_driver_base
         where dt ='{pt}' 
@@ -354,9 +365,9 @@ def app_oride_order_global_operate_to_mysql_d_sql_task(ds):
             finished_users,--当日完单用户数
             first_finished_users,--当日新增完单用户
             dt
-        from  oride_dw.dm_oride_passenger_base_cube_d
+        from  oride_dw.dm_oride_passenger_base_cube
         where dt ='{pt}' 
-        and product_id = -10000 and driver_serv_type = -10000
+        and product_id = -10000 and driver_serv_type = -10000 and country_code  = 'NG'
     )users on nvl(od.city_id,-10000) = nvl(users.city_id ,-10000)
 
     left join
@@ -507,16 +518,16 @@ app_oride_order_global_operate_to_mysql_d_task = PythonOperator(
 
 # dependence_dwm_oride_order_base_di_task >> dependence_dim_oride_city_task >> dependence_dim_oride_passenger_base_task >> \
 # dependence_dim_oride_driver_base_task >> dependence_dwd_oride_order_finance_df_task >> dependence_dwd_oride_driver_records_day_df_task >> \
-# dependence_dwd_oride_driver_recharge_records_df_task >> dependence_dm_oride_driver_base_task>>dependence_dm_oride_passenger_base_cube_d_task>>\
+# dependence_dwd_oride_driver_recharge_records_df_task >> dependence_dm_oride_driver_base_task>>dependence_dm_oride_passenger_base_cube_task>>\
 # dependence_dwd_oride_order_base_include_test_di_task>>app_oride_order_global_operate_to_mysql_d_task
 
 
 dependence_dwm_oride_order_base_di_task>>app_oride_order_global_operate_to_mysql_d_task
 dependence_dim_oride_city_task>>app_oride_order_global_operate_to_mysql_d_task
 dependence_dim_oride_passenger_base_task>>app_oride_order_global_operate_to_mysql_d_task
-dependence_dwd_oride_order_finance_di_task>>app_oride_order_global_operate_to_mysql_d_task
+dependence_dwm_oride_driver_finance_di_task>>app_oride_order_global_operate_to_mysql_d_task
 dependence_dwd_oride_driver_records_day_df_task>>app_oride_order_global_operate_to_mysql_d_task
 dependence_dwd_oride_driver_recharge_records_df_task>>app_oride_order_global_operate_to_mysql_d_task
 dependence_dm_oride_driver_base_task>>app_oride_order_global_operate_to_mysql_d_task
-dependence_dm_oride_passenger_base_cube_d_task>>app_oride_order_global_operate_to_mysql_d_task
+dependence_dm_oride_passenger_base_cube_task>>app_oride_order_global_operate_to_mysql_d_task
 dependence_dwd_oride_order_base_include_test_di_task>>app_oride_order_global_operate_to_mysql_d_task

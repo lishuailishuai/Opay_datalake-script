@@ -17,6 +17,7 @@ from airflow.sensors.hive_partition_sensor import HivePartitionSensor
 from airflow.sensors import UFileSensor
 from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
 from plugins.TaskTouchzSuccess import TaskTouchzSuccess
+from airflow.sensors import OssSensor
 import json
 import logging
 from airflow.models import Variable
@@ -41,9 +42,9 @@ dag = airflow.DAG('app_opos_shop_target_d',
 
 ##----------------------------------------- 依赖 ---------------------------------------##
 
-dwd_pre_opos_payment_order_di_task = UFileSensor(
+dwd_pre_opos_payment_order_di_task = OssSensor(
     task_id='dwd_pre_opos_payment_order_di_task',
-    filepath='{hdfs_path_str}/country_code=nal/dt={pt}/_SUCCESS'.format(
+    bucket_key='{hdfs_path_str}/country_code=nal/dt={pt}/_SUCCESS'.format(
         hdfs_path_str="opos/opos_dw/dwd_pre_opos_payment_order_di",
         pt='{{ds}}'
     ),
@@ -56,7 +57,7 @@ dwd_pre_opos_payment_order_di_task = UFileSensor(
 
 db_name = "opos_dw"
 table_name = "app_opos_shop_target_d"
-hdfs_path = "ufile://opay-datalake/opos/opos_dw/" + table_name
+hdfs_path = "oss://opay-datalake/opos/opos_dw/" + table_name
 
 
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
@@ -66,7 +67,7 @@ def fun_task_timeout_monitor(ds, dag, **op_kwargs):
 
     tb = [
         {"db": "opos_dw", "table": "{dag_name}".format(dag_name=dag_ids),
-         "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "600"}
+         "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "6000"}
     ]
 
     TaskTimeoutMonitor().set_task_monitor(tb)
@@ -92,13 +93,14 @@ set hive.exec.dynamic.partition.mode=nonstrict;
 --得出最新维度下每个dbid的详细数据信息
 insert overwrite table opos_dw.app_opos_shop_target_d partition (country_code,dt)
 select
-a.shop_id
+0 as id
+,a.shop_id
 ,a.opay_id
 ,a.shop_name
 ,a.opay_account
 
-,'{pt}' as create_date
-,d.week_of_year as create_week
+,substr('{pt}',0,10) as create_date
+,weekofyear('{pt}') as create_week
 ,substr('{pt}',0,7) as create_month
 ,substr('{pt}',0,4) as create_year
 
@@ -333,7 +335,7 @@ from
       --返现活动情况分析
       ,count(1) as order_cnt
       ,count(if(user_subsidy_status='SUCCESS',1,null)) as cashback_order_cnt
-      ,count(if(user_subsidy_status!='SUCCESS',1,null)) as cashback_fail_order_cnt
+      ,count(if(user_subsidy_status='FAIL',1,null)) as cashback_fail_order_cnt
       ,sum(if(user_subsidy_status='SUCCESS',nvl(org_payment_amount,0),0)) as cashback_order_gmv
       ,nvl(sum(if(user_subsidy_status='SUCCESS',nvl(org_payment_amount,0),0))/count(if(user_subsidy_status='SUCCESS',1,null)),0) as cashback_per_order_amt
       ,nvl(sum(if(user_subsidy_status='SUCCESS',nvl(org_payment_amount,0),0))/count(distinct(if(user_subsidy_status='SUCCESS',sender_id,null))),0) as cashback_per_people_amt
@@ -341,16 +343,16 @@ from
       ,count(distinct(if(user_subsidy_status='SUCCESS' and first_order='1',sender_id,null))) as cashback_first_people_cnt
       ,count(if(user_subsidy=0,1,null)) as cashback_zero_order_cnt
       ,nvl(count(if(user_subsidy_status='SUCCESS',1,null))/count(1),0) as cashback_order_percent
-      ,sum(if(user_subsidy>0,nvl(user_subsidy,0),0)) as cashback_amt
+      ,sum(if(user_subsidy>0 and user_subsidy_status='SUCCESS',nvl(user_subsidy,0),0)) as cashback_amt
     
-      ,count(if(activity_type in ('RCB','CB'),1,null)) as reduce_order_cnt
-      ,count(if(activity_type not in ('RCB','CB'),1,null)) as reduce_zero_order_cnt
-      ,sum(if(activity_type not in ('RCB','CB'),nvl(discount_amount,0),0)) as reduce_amt
-      ,sum(if(activity_type not in ('RCB','CB'),nvl(org_payment_amount,0),0)) as reduce_order_gmv
-      ,nvl(sum(if(activity_type not in ('RCB','CB'),nvl(org_payment_amount,0),0))/count(if(activity_type in ('RCB','CB'),1,null)),0) as reduce_per_order_amt
-      ,nvl(sum(if(activity_type not in ('RCB','CB'),nvl(org_payment_amount,0),0))/count(distinct(if(activity_type not in ('RCB','CB'),sender_id,null))),0) as reduce_per_people_amt
-      ,count(distinct(if(activity_type not in ('RCB','CB'),sender_id,null))) as reduce_people_cnt
-      ,count(distinct(if(activity_type not in ('RCB','CB') and first_order='1',sender_id,null))) as reduce_first_people_cnt
+      ,count(if(activity_type in ('RFR','FR'),1,null)) as reduce_order_cnt
+      ,count(if(activity_type not in ('RFR','FR'),1,null)) as reduce_zero_order_cnt
+      ,sum(if(activity_type in ('RFR','FR'),nvl(discount_amount,0),0)) as reduce_amt
+      ,sum(if(activity_type in ('RFR','FR'),nvl(org_payment_amount,0),0)) as reduce_order_gmv
+      ,nvl(sum(if(activity_type in ('RFR','FR'),nvl(org_payment_amount,0),0))/count(if(activity_type in ('RFR','FR'),1,null)),0) as reduce_per_order_amt
+      ,nvl(sum(if(activity_type in ('RFR','FR'),nvl(org_payment_amount,0),0))/count(distinct(if(activity_type not in ('RFR','FR'),sender_id,null))),0) as reduce_per_people_amt
+      ,count(distinct(if(activity_type in ('RFR','FR'),sender_id,null))) as reduce_people_cnt
+      ,count(distinct(if(activity_type in ('RFR','FR') and first_order='1',sender_id,null))) as reduce_first_people_cnt
   
       --使用红包起情况
       ,count(if(length(discount_ids)>0,1,null)) as bonus_order_cnt
@@ -480,9 +482,6 @@ on a.cm_id=cm.id
 left join
   (select id,name from opos_dw_ods.ods_sqoop_base_bd_admin_users_df where dt = '{pt}') as hcm
 on a.hcm_id=hcm.id
-left join
-  (select dt,week_of_year from public_dw_dim.dim_date where dt = '{pt}') as d
-on 1=1
 ;
 
 

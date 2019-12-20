@@ -47,11 +47,10 @@ hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
 def fun_task_timeout_monitor(ds, dag, **op_kwargs):
     dag_ids = dag.dag_id
-    date = "{yest_day}".format(yest_day=airflow.macros.ds_add(ds, -1))
-    month = date[0:7]
+
     msg = [
         {"db": "oride_dw", "table": "{dag_name}".format(dag_name=dag_ids),
-         "partition": "country_code=NG/dm="+month, "timeout": "800"}
+         "partition": "country_code=NG/dt={pt}".format(pt=ds), "timeout": "800"}
     ]
 
     TaskTimeoutMonitor().set_task_monitor(msg)
@@ -70,18 +69,20 @@ def dwm_oride_driver_act_m_sql_task(ds):
     set hive.exec.parallel=true;
     set hive.exec.dynamic.partition.mode=nonstrict;
     
-    insert overwrite table {db}.{table} partition(country_code,dm)
+    insert overwrite table {db}.{table} partition(country_code,dt)
     
     select driver_id,
         city_id,
         driver_serv_type,
+        month(dt) as month,
         country_code,
-        substr(dt,1,7) as dm
+        '{pt}' as dt
     from oride_dw.dwd_oride_order_base_include_test_di
-    where substr(date_sub('{pt}',1),1,7)=substr(dt,1,7)
+    where substr('{pt}',1,7)=substr(dt,1,7)
     and status in(4,5) and city_id<>999001 and driver_id<>1
-    group by country_code,substr(dt,1,7),
+    group by country_code,month(dt),
         city_id,driver_serv_type,driver_id;
+        
     '''.format(
         pt=ds,
         db=db_name,

@@ -17,6 +17,7 @@ from airflow.sensors.hive_partition_sensor import HivePartitionSensor
 from airflow.sensors import UFileSensor
 from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
 from plugins.TaskTouchzSuccess import TaskTouchzSuccess
+from airflow.sensors import OssSensor
 import json
 import logging
 from airflow.models import Variable
@@ -41,9 +42,9 @@ dag = airflow.DAG('app_opos_metrics_daily_new_d',
 
 ##----------------------------------------- 依赖 ---------------------------------------##
 
-dwd_pre_opos_payment_order_di_task = UFileSensor(
+dwd_pre_opos_payment_order_di_task = OssSensor(
     task_id='dwd_pre_opos_payment_order_di_task',
-    filepath='{hdfs_path_str}/country_code=nal/dt={pt}/_SUCCESS'.format(
+    bucket_key='{hdfs_path_str}/country_code=nal/dt={pt}/_SUCCESS'.format(
         hdfs_path_str="opos/opos_dw/dwd_pre_opos_payment_order_di",
         pt='{{ds}}'
     ),
@@ -52,9 +53,9 @@ dwd_pre_opos_payment_order_di_task = UFileSensor(
     dag=dag
 )
 
-ods_sqoop_base_bd_admin_users_df_task = UFileSensor(
+ods_sqoop_base_bd_admin_users_df_task = OssSensor(
     task_id='ods_sqoop_base_bd_admin_users_df_task',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
         hdfs_path_str="opos_dw_sqoop/opay_crm/bd_admin_users",
         pt='{{ds}}'
     ),
@@ -68,7 +69,7 @@ ods_sqoop_base_bd_admin_users_df_task = UFileSensor(
 
 db_name = "opos_dw"
 table_name = "app_opos_metrics_daily_new_d"
-hdfs_path = "ufile://opay-datalake/opos/opos_dw/" + table_name
+hdfs_path = "oss://opay-datalake/opos/opos_dw/" + table_name
 
 
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
@@ -78,7 +79,7 @@ def fun_task_timeout_monitor(ds, dag, **op_kwargs):
 
     tb = [
         {"db": "opos_dw", "table": "{dag_name}".format(dag_name=dag_ids),
-         "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "600"}
+         "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "6000"}
     ]
 
     TaskTimeoutMonitor().set_task_monitor(tb)
@@ -148,7 +149,7 @@ nvl(a.hcm_id,b.hcm_id) as hcm_id
 ,nvl(b.reduce_first_people_cnt,0) as reduce_first_people_cnt
 
 ,'nal' as country_code
-,'2019-12-11' as dt
+,'{pt}' as dt
 from
   (select 
   hcm_id
@@ -161,12 +162,12 @@ from
   
   ,count(id) as merchant_cnt
   ,0 as pos_merchant_cnt
-  ,count(if(created_at = '2019-12-11',id,null)) as new_merchant_cnt
+  ,count(if(created_at = '{pt}',id,null)) as new_merchant_cnt
   ,0 as new_pos_merchant_cnt
   from
   opos_dw.dim_opos_bd_relation_df
   where 
-  country_code='nal' and dt='2019-12-11'
+  country_code='nal' and dt='{pt}'
   group by
   hcm_id
   ,cm_id
@@ -200,7 +201,7 @@ full join
   --返现活动情况分析
   ,count(1) as order_cnt
   ,count(if(user_subsidy_status='SUCCESS',1,null)) as cashback_order_cnt
-  ,count(if(user_subsidy_status!='SUCCESS',1,null)) as cashback_fail_order_cnt
+  ,count(if(user_subsidy_status='FAIL',1,null)) as cashback_fail_order_cnt
   ,sum(if(user_subsidy_status='SUCCESS',nvl(org_payment_amount,0),0)) as cashback_order_gmv
   ,nvl(sum(if(user_subsidy_status='SUCCESS',nvl(org_payment_amount,0),0))/count(if(user_subsidy_status='SUCCESS',1,null)),0) as cashback_per_order_amt
   ,nvl(sum(if(user_subsidy_status='SUCCESS',nvl(org_payment_amount,0),0))/count(distinct(if(user_subsidy_status='SUCCESS',sender_id,null))),0) as cashback_per_people_amt
@@ -208,25 +209,25 @@ full join
   ,count(distinct(if(user_subsidy_status='SUCCESS' and first_order='1',sender_id,null))) as cashback_first_people_cnt
   ,count(if(user_subsidy=0,1,null)) as cashback_zero_order_cnt
   ,nvl(count(if(user_subsidy_status='SUCCESS',1,null))/count(1),0) as cashback_order_percent
-  ,sum(if(user_subsidy>0,nvl(user_subsidy,0),0)) as cashback_amt
+  ,sum(if(user_subsidy>0 and user_subsidy_status='SUCCESS',nvl(user_subsidy,0),0)) as cashback_amt
   
-  ,count(if(activity_type in ('RCB','CB'),1,null)) as reduce_order_cnt
-  ,count(if(activity_type not in ('RCB','CB'),1,null)) as reduce_zero_order_cnt
-  ,sum(if(activity_type not in ('RCB','CB'),nvl(discount_amount,0),0)) as reduce_amt
-  ,sum(if(activity_type not in ('RCB','CB'),nvl(org_payment_amount,0),0)) as reduce_order_gmv
-  ,nvl(sum(if(activity_type not in ('RCB','CB'),nvl(org_payment_amount,0),0))/count(if(activity_type in ('RCB','CB'),1,null)),0) as reduce_per_order_amt
-  ,nvl(sum(if(activity_type not in ('RCB','CB'),nvl(org_payment_amount,0),0))/count(distinct(if(activity_type not in ('RCB','CB'),sender_id,null))),0) as reduce_per_people_amt
-  ,count(distinct(if(activity_type not in ('RCB','CB'),sender_id,null))) as reduce_people_cnt
-  ,count(distinct(if(activity_type not in ('RCB','CB') and first_order='1',sender_id,null))) as reduce_first_people_cnt
+  ,count(if(activity_type in ('RFR','FR'),1,null)) as reduce_order_cnt
+  ,count(if(activity_type not in ('RFR','FR'),1,null)) as reduce_zero_order_cnt
+  ,sum(if(activity_type in ('RFR','FR'),nvl(discount_amount,0),0)) as reduce_amt
+  ,sum(if(activity_type in ('RFR','FR'),nvl(org_payment_amount,0),0)) as reduce_order_gmv
+  ,nvl(sum(if(activity_type in ('RFR','FR'),nvl(org_payment_amount,0),0))/count(if(activity_type in ('RFR','FR'),1,null)),0) as reduce_per_order_amt
+  ,nvl(sum(if(activity_type in ('RFR','FR'),nvl(org_payment_amount,0),0))/count(distinct(if(activity_type not in ('RFR','FR'),sender_id,null))),0) as reduce_per_people_amt
+  ,count(distinct(if(activity_type in ('RFR','FR'),sender_id,null))) as reduce_people_cnt
+  ,count(distinct(if(activity_type in ('RFR','FR') and first_order='1',sender_id,null))) as reduce_first_people_cnt
   
   ,'nal' as country_code
-  ,'2019-12-11' as dt
+  ,'{pt}' as dt
   
   from 
   opos_dw.dwd_pre_opos_payment_order_di as p
   where 
   country_code='nal'
-  and dt = '2019-12-11' 
+  and dt = '{pt}' 
   and trade_status = 'SUCCESS'
   group by
   hcm_id
@@ -520,33 +521,17 @@ month_data as (
   ,u.bd_id
 
   ,u.city_id
-  ,mt.month
+  ,substr('{pt}',0,7) as month
   ,count(distinct(if(u.order_type = 'pos',u.sender_id,null))) as pos_user_active_cnt
   ,count(distinct(if(u.order_type = 'qrcode',u.sender_id,null))) as qr_user_active_cnt
+  ,count(distinct(if(u.created_at>=concat(substr('{pt}',0,7),'-01') and u.created_at<='{pt}' and first_order='1',u.receipt_id,null))) as month_order_newshop_cnt
   from 
-    (
-    select 
-    hcm_id
-    ,cm_id
-    ,rm_id
-    ,bdm_id
-    ,bd_id
-    ,city_id
-    ,order_type
-    ,sender_id
-    ,dt
-    from 
-    opos_dw.dwd_pre_opos_payment_order_di 
-    where 
-    country_code = 'nal' 
-    and dt <= '{pt}' 
-    and dt >= '{before_30_day}'
-    and trade_status = 'SUCCESS'
-    ) u 
-  inner join 
-  --取出当日所在日期的本月的所有的日期
-    (select d.dt,d.month from public_dw_dim.dim_date d inner join (select * from public_dw_dim.dim_date where dt = '{pt}') t on d.month = t.month) as mt
-  on u.dt = mt.dt
+  opos_dw.dwd_pre_opos_payment_order_di as u
+  where 
+  country_code = 'nal' 
+  and dt <= '{pt}' 
+  and dt >= concat(substr('{pt}',0,7),'-01')
+  and trade_status = 'SUCCESS'
   group by 
   u.hcm_id
   ,u.cm_id
@@ -555,7 +540,6 @@ month_data as (
   ,u.bd_id
 
   ,u.city_id
-  ,mt.month
 ),
 
 --03.11.取出当天所有付款者的数量
@@ -646,8 +630,8 @@ cu.hcm_id
 
 ,cu.city_id
 
-,'{pt}' as create_date
-,d.week_of_year as create_week
+,substr('{pt}',0,10) as create_date
+,weekofyear('{pt}') as create_week
 ,substr('{pt}',0,7) as create_month
 ,substr('{pt}',0,4) as create_year
 
@@ -668,6 +652,8 @@ cu.hcm_id
 ,nvl(hd.user_active_cnt,0) user_active_cnt
 ,nvl(hd.new_user_cnt,0) new_user_cnt
 ,nvl(am.more_5_merchant_cnt,0) more_5_merchant_cnt
+
+,nvl(cu.month_order_newshop_cnt,0) month_order_newshop_cnt
 
 ,'nal' as country_code
 ,'{pt}' as dt
@@ -701,9 +687,6 @@ on cu.hcm_id = hd.hcm_id and cu.cm_id = hd.cm_id and cu.rm_id = hd.rm_id and cu.
 left join 
 active_merchant am 
 on cu.hcm_id = am.hcm_id and cu.cm_id = am.cm_id and cu.rm_id = am.rm_id and cu.bdm_id = am.bdm_id and cu.bd_id = am.bd_id and cu.city_id = am.city_id
-left join
-(select dt,week_of_year from public_dw_dim.dim_date where dt='{pt}') as d
-on 1=1
 ;
 
 
@@ -711,7 +694,7 @@ on 1=1
 insert overwrite table opos_dw.app_opos_metrics_daily_new_d partition(country_code,dt)
 select
 o.id
-,d.week_of_year as create_week
+,weekofyear('{pt}') as create_week
 ,substr('{pt}',0,7) as create_month
 ,substr('{pt}',0,4) as create_year
 ,o.hcm_id
@@ -780,6 +763,7 @@ o.id
 ,o.reduce_per_people_amt
 ,o.reduce_people_cnt
 ,o.reduce_first_people_cnt
+,o.month_order_newshop_cnt
 
 ,'nal' as country_code
 ,'{pt}' as dt
@@ -850,7 +834,9 @@ from
   ,nvl(a.reduce_per_people_amt,0) as reduce_per_people_amt
   ,nvl(a.reduce_people_cnt,0) as reduce_people_cnt
   ,nvl(a.reduce_first_people_cnt,0) as reduce_first_people_cnt
-  
+
+  ,nvl(b.month_order_newshop_cnt,0) as month_order_newshop_cnt
+
   from 
   (select * from opos_dw.app_opos_metrcis_report_tmp_d where country_code = 'nal' and  dt = '{pt}') a
   full join 
@@ -881,9 +867,6 @@ left join
 left join
   (select id,name,country from opos_dw_ods.ods_sqoop_base_bd_city_df where dt = '{pt}') as c
 on o.city_id=c.id
-left join
-  (select dt,week_of_year from public_dw_dim.dim_date where dt = '{pt}') as d
-on 1=1
 ;
 
 
@@ -939,9 +922,4 @@ app_opos_metrics_daily_new_d_task = PythonOperator(
 
 dwd_pre_opos_payment_order_di_task >> app_opos_metrics_daily_new_d_task
 ods_sqoop_base_bd_admin_users_df_task >> app_opos_metrics_daily_new_d_task
-
-# 查看任务命令
-# airflow list_tasks app_opos_metrics_daily_new_d -sd /home/feng.yuan/app_opos_metrics_daily_new_d.py
-# 测试任务命令
-# airflow test app_opos_metrics_daily_new_d app_opos_metrics_daily_new_d_task 2019-11-24 -sd /home/feng.yuan/app_opos_metrics_daily_new_d.py
 

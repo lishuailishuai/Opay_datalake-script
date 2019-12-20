@@ -106,6 +106,8 @@ table_list = [
     ("opay_account","accounting_request_record", "opay_db_3318", "base", 2,"false"),
 
     ("opay_activity","preferential_record", "opay_db_3322", "base",3,"false"),
+
+    ("opay_channel","channel_transaction", "opay_db_3320", "base", 3, "false")
 ]
 
 HIVE_DB = 'opay_dw_ods'

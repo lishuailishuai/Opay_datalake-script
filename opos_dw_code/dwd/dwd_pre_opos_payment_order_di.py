@@ -17,6 +17,7 @@ from airflow.sensors.hive_partition_sensor import HivePartitionSensor
 from airflow.sensors import UFileSensor
 from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
 from plugins.TaskTouchzSuccess import TaskTouchzSuccess
+from airflow.sensors import OssSensor
 import json
 import logging
 from airflow.models import Variable
@@ -41,10 +42,9 @@ dag = airflow.DAG('dwd_pre_opos_payment_order_di',
 
 ##----------------------------------------- 依赖 ---------------------------------------##
 
-# 依赖前一天分区，dim_opos_bd_relation_df表，ufile://opay-datalake/opos/opos_dw/dim_opos_bd_relation_df
-dim_opos_bd_relation_df_task = UFileSensor(
+dim_opos_bd_relation_df_task = OssSensor(
     task_id='dim_opos_bd_relation_df_task',
-    filepath='{hdfs_path_str}/country_code=nal/dt={pt}/_SUCCESS'.format(
+    bucket_key='{hdfs_path_str}/country_code=nal/dt={pt}/_SUCCESS'.format(
         hdfs_path_str="opos/opos_dw/dim_opos_bd_relation_df",
         pt='{{ds}}'
     ),
@@ -53,9 +53,9 @@ dim_opos_bd_relation_df_task = UFileSensor(
     dag=dag
 )
 
-ods_sqoop_base_pre_opos_payment_order_di_task = UFileSensor(
+ods_sqoop_base_pre_opos_payment_order_di_task = OssSensor(
     task_id='ods_sqoop_base_pre_opos_payment_order_di_task',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
         hdfs_path_str="opos_dw_sqoop_di/pre_ptsp_db/pre_opos_payment_order",
         pt='{{ds}}'
     ),
@@ -64,9 +64,9 @@ ods_sqoop_base_pre_opos_payment_order_di_task = UFileSensor(
     dag=dag
 )
 
-ods_sqoop_base_pre_opos_payment_order_bd_di_task = UFileSensor(
+ods_sqoop_base_pre_opos_payment_order_bd_di_task = OssSensor(
     task_id='ods_sqoop_base_pre_opos_payment_order_bd_di_task',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
         hdfs_path_str="opos_dw_sqoop_di/pre_ptsp_db/pre_opos_payment_order_bd",
         pt='{{ds}}'
     ),
@@ -79,7 +79,7 @@ ods_sqoop_base_pre_opos_payment_order_bd_di_task = UFileSensor(
 
 db_name = "opos_dw"
 table_name = "dwd_pre_opos_payment_order_di"
-hdfs_path = "ufile://opay-datalake/opos/opos_dw/" + table_name
+hdfs_path = "oss://opay-datalake/opos/opos_dw/" + table_name
 
 
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
@@ -89,7 +89,7 @@ def fun_task_timeout_monitor(ds, dag, **op_kwargs):
 
     tb = [
         {"db": "opos_dw", "table": "{dag_name}".format(dag_name=dag_ids),
-         "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "600"}
+         "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "6000"}
     ]
 
     TaskTimeoutMonitor().set_task_monitor(tb)
@@ -108,6 +108,7 @@ task_timeout_monitor = PythonOperator(
 def dwd_pre_opos_payment_order_di_sql_task(ds):
     HQL = '''
 
+
 --插入数据
 set hive.exec.parallel=true;
 set hive.exec.dynamic.partition.mode=nonstrict;
@@ -118,10 +119,10 @@ p.order_id
 ,p.device_no
 ,p.cfrom
 
-,p.dt as create_date
-,d.week_of_year as create_week
-,substr(p.dt,0,7) as create_month
-,substr(p.dt,0,4) as create_year
+,substr('{pt}',0,10) as create_date
+,weekofyear('{pt}') as create_week
+,substr('{pt}',0,7) as create_month
+,substr('{pt}',0,4) as create_year
 
 ,p.receipt_id
 ,p.sender_id
@@ -203,7 +204,7 @@ p.order_id
 ,p.merchant_risk_remark
 
 ,'nal' as country_code
-,p.dt
+,'{pt}' as dt
 from
 (select * from opos_dw_ods.ods_sqoop_base_pre_opos_payment_order_di where dt = '{pt}') as p 
 left join
@@ -262,11 +263,8 @@ left join
   on s.shop_id=shop.id
 ) as bd
 on
-  p.order_id=bd.order_id
-left join
-  public_dw_dim.dim_date as d
-on
-  p.dt=d.dt;
+  p.order_id=bd.order_id;
+
 
 
 

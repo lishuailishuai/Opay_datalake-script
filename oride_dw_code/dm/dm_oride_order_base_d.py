@@ -140,13 +140,14 @@ def dm_oride_order_base_d_sql_task(ds):
        sum(if(is_request=1,pick_up_distance,0)) as accept_order_pick_up_dis, --应答单接驾距离(米)（计算平均接驾距离（应答单使用））先使用接单标志？？？？
        sum(if(is_request=1,order_assigned_cnt,0)) as accept_order_pick_up_assigned_cnt, 
        -- 应答单分配次数（应答单接驾距离(米)（计算平均接驾距离（应答单使用））先使用接单标志？？？？之前逻辑有问题
-       null as column1,
+       sum(if(is_opay_pay=1 and is_succ_pay=1 and product_id<>99,pay_amount,0)) as opay_pay_amount,  --当日用opay实付金额12.18号开始
        driver_serv_type, --订单表与司机绑定的业务类型
        sum(is_carpool) as carpool_num, --拼车订单数
        sum(is_chartered_bus) as chartered_bus_num, --包车订单数
        sum(is_carpool_success) as carpool_success_num, --拼成订单数
        sum(if(is_request=1 and is_carpool=1,1,0)) as carpool_accept_num, -- 拼车应答订单数
        sum(if(is_finish=1 and is_carpool_success=1,1,0)) as carpool_success_and_finish_num, --拼车成功且完单数
+       sum(if(is_opay_pay=1 and is_succ_pay=1 and product_id<>99,price,0)) as opay_pay_price,  --当日用opay的订单金额12.18号开始
        country_code,
        dt as dt
 from oride_dw.dwm_oride_order_base_di

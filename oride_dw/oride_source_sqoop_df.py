@@ -120,14 +120,11 @@ table_list = [
     ("oride_data", "data_opay_transaction", "sqoop_db", "base",1),
     ("oride_data", "data_payconf", "sqoop_db", "base",1),
     ("oride_data", "data_promo_code", "sqoop_db", "base",1),
-    ("oride_data", "data_recharge_conf", "sqoop_db", "base",1),
-    ("oride_data", "data_recharge_options", "sqoop_db", "base",1),
     ("oride_data", "data_reward_conf", "sqoop_db", "base",1),
     ("oride_data", "data_role_invite", "sqoop_db", "base",1),
     ("oride_data", "data_sms_template", "sqoop_db", "base",1),
     ("oride_data", "data_user_comment", "sqoop_db", "base",1),
     ("oride_data", "data_user_complaint", "sqoop_db", "base",1),
-    # ("oride_data", "data_user_recharge", "sqoop_db", "base",1),
     ("oride_data", "data_user_whitelist", "sqoop_db", "base",1),
     ("oride_data", "data_driver_whitelist", "sqoop_db", "base",1),
     ("oride_data", "data_user_blacklist", "sqoop_db", "base",1),
@@ -136,7 +133,7 @@ table_list = [
     ("oride_data", "data_trip", "sqoop_db", "base", 1),
     ("oride_data", "data_driver_records_day", "sqoop_db", "base",1),
     ("oride_data", "data_driver_balance_extend", "sqoop_db", "base",1),
-    ("oride_data", "data_driver_assign_info", "sqoop_db", "base",1),
+    #("oride_data", "data_driver_assign_info", "sqoop_db", "base",1),
     ("oride_data", "data_operation_driver_log", "sqoop_db", "base",2),
 
     #2019.10.20上线
@@ -152,7 +149,7 @@ table_list = [
     ("oride_data", "data_city_repayment_conf", "sqoop_db", "base",1),
 
     ("oride_data", "data_trip_history", "sqoop_db", "base",1),
-    ("oride_data", "data_driver_assign_info_history", "sqoop_db", "base",1),
+    #("oride_data", "data_driver_assign_info_history", "sqoop_db", "base",1),
     ("oride_data", "data_opay_transaction_history", "sqoop_db", "base",1),
 
     ("bi", "weather_per_10min", "mysql_bi", "base",3),
@@ -417,7 +414,7 @@ for db_name, table_name, conn_id, prefix_name,priority_weight_nm in table_list:
         dag=dag_monitor
     )
 
-    if table_name in ['data_driver_records_day', 'data_driver_balance_extend']:
+    if table_name in ['data_driver_records_day', 'data_driver_balance_extend','data_driver_repayment']:
         check_data_driver_records_finish >> import_table
 
     import_table >> check_table >> add_partitions
