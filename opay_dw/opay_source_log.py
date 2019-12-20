@@ -10,7 +10,7 @@ from airflow.operators.hive_operator import HiveOperator
 import logging
 
 args = {
-    'owner': 'wuduo',
+    'owner': 'yangmingze',
     'start_date': datetime(2019, 9, 10),
     'depends_on_past': False,
     'retries': 1,
