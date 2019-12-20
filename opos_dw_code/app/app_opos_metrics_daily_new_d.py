@@ -249,9 +249,6 @@ and a.city_id=b.city_id
 
 
 
-set hive.exec.parallel=true;
-set hive.exec.dynamic.partition.mode=nonstrict;
-
 --02.插入当日客户数据,左表为本月数据情况
 with
 active_base as (
@@ -527,6 +524,7 @@ month_data as (
   ,substr('{pt}',0,7) as month
   ,count(distinct(if(u.order_type = 'pos',u.sender_id,null))) as pos_user_active_cnt
   ,count(distinct(if(u.order_type = 'qrcode',u.sender_id,null))) as qr_user_active_cnt
+  ,count(distinct(if(u.created_at>=concat(substr('{pt}',0,7),'-01') and u.created_at<='{pt}',u.receipt_id,null))) as month_order_newshop_cnt
   from 
   opos_dw.dwd_pre_opos_payment_order_di as u
   where 
@@ -655,6 +653,8 @@ cu.hcm_id
 ,nvl(hd.new_user_cnt,0) new_user_cnt
 ,nvl(am.more_5_merchant_cnt,0) more_5_merchant_cnt
 
+,nvl(cu.month_order_newshop_cnt,0) month_order_newshop_cnt
+
 ,'nal' as country_code
 ,'{pt}' as dt
 
@@ -689,9 +689,6 @@ active_merchant am
 on cu.hcm_id = am.hcm_id and cu.cm_id = am.cm_id and cu.rm_id = am.rm_id and cu.bdm_id = am.bdm_id and cu.bd_id = am.bd_id and cu.city_id = am.city_id
 ;
 
-
-set hive.exec.parallel=true;
-set hive.exec.dynamic.partition.mode=nonstrict;
 
 --03.将两个表的数据汇总到结果表
 insert overwrite table opos_dw.app_opos_metrics_daily_new_d partition(country_code,dt)
@@ -766,6 +763,7 @@ o.id
 ,o.reduce_per_people_amt
 ,o.reduce_people_cnt
 ,o.reduce_first_people_cnt
+,o.month_order_newshop_cnt
 
 ,'nal' as country_code
 ,'{pt}' as dt
@@ -836,7 +834,9 @@ from
   ,nvl(a.reduce_per_people_amt,0) as reduce_per_people_amt
   ,nvl(a.reduce_people_cnt,0) as reduce_people_cnt
   ,nvl(a.reduce_first_people_cnt,0) as reduce_first_people_cnt
-  
+
+  ,nvl(b.month_order_newshop_cnt,0) as month_order_newshop_cnt
+
   from 
   (select * from opos_dw.app_opos_metrcis_report_tmp_d where country_code = 'nal' and  dt = '{pt}') a
   full join 
