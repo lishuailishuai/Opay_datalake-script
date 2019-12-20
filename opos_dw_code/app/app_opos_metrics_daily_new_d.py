@@ -528,7 +528,7 @@ month_data as (
   ,count(distinct(if(u.order_type = 'pos',u.sender_id,null))) as pos_user_active_cnt
   ,count(distinct(if(u.order_type = 'qrcode',u.sender_id,null))) as qr_user_active_cnt
   from 
-  opos_dw.dwd_pre_opos_payment_order_di 
+  opos_dw.dwd_pre_opos_payment_order_di as u
   where 
   country_code = 'nal' 
   and dt <= '{pt}' 
