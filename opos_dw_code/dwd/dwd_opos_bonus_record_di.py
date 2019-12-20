@@ -120,7 +120,7 @@ v1.id
 ,v1.activity_id
 
 ,substr('{pt}',0,10) as create_date
-,v3.week_of_year as create_week
+,weekofyear('{pt}') as create_week
 ,substr('{pt}',0,7) as create_month
 ,substr('{pt}',0,4) as create_year
   
@@ -190,10 +190,6 @@ left join
 on
   v1.city_id=v2.id
 left join
-  (select dt,week_of_year from public_dw_dim.dim_date where dt = '{pt}') as v3
-on
-  v1.dt=v3.dt
-left join
   (select * from opos_dw.dim_opos_bd_relation_df where country_code='nal' and dt='{pt}') as provider
 on
   v1.provider_account=provider.opay_account
@@ -238,8 +234,9 @@ left join
   ) as v4
 on
   v1.id=v4.bonus_id
-
 ;
+
+
 
 
 

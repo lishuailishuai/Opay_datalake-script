@@ -212,7 +212,7 @@ def dwm_oride_driver_finance_di_sql_task(ds):
                amount_tip_offline, --当日-小费收入(线下支付)   
                amount_additional, --附加费-线上
                amount_additional_offline --附加费-线下 
-        from oride_dw_ods.ods_sqoop_base_data_driver_records_day_df
+        from oride_dw.dwd_oride_driver_records_day_df
         where dt='{pt}' and from_unixtime(day,'yyyy-MM-dd')='{pt}'
         ) day
         on dri.driver_id=day.driver_id

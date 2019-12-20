@@ -108,6 +108,7 @@ task_timeout_monitor = PythonOperator(
 def dwd_pre_opos_payment_order_di_sql_task(ds):
     HQL = '''
 
+
 --插入数据
 set hive.exec.parallel=true;
 set hive.exec.dynamic.partition.mode=nonstrict;
@@ -118,10 +119,10 @@ p.order_id
 ,p.device_no
 ,p.cfrom
 
-,p.dt as create_date
-,d.week_of_year as create_week
-,substr(p.dt,0,7) as create_month
-,substr(p.dt,0,4) as create_year
+,substr('{pt}',0,10) as create_date
+,weekofyear('{pt}') as create_week
+,substr('{pt}',0,7) as create_month
+,substr('{pt}',0,4) as create_year
 
 ,p.receipt_id
 ,p.sender_id
@@ -203,7 +204,7 @@ p.order_id
 ,p.merchant_risk_remark
 
 ,'nal' as country_code
-,p.dt
+,'{pt}' as dt
 from
 (select * from opos_dw_ods.ods_sqoop_base_pre_opos_payment_order_di where dt = '{pt}') as p 
 left join
@@ -262,11 +263,8 @@ left join
   on s.shop_id=shop.id
 ) as bd
 on
-  p.order_id=bd.order_id
-left join
-  public_dw_dim.dim_date as d
-on
-  p.dt=d.dt;
+  p.order_id=bd.order_id;
+
 
 
 

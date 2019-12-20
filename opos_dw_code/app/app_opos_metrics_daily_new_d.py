@@ -521,33 +521,17 @@ month_data as (
   ,u.bd_id
 
   ,u.city_id
-  ,mt.month
+  ,substr('{pt}',0,7) as month
   ,count(distinct(if(u.order_type = 'pos',u.sender_id,null))) as pos_user_active_cnt
   ,count(distinct(if(u.order_type = 'qrcode',u.sender_id,null))) as qr_user_active_cnt
+  ,count(distinct(if(u.created_at>=concat(substr('{pt}',0,7),'-01') and u.created_at<='{pt}' and first_order='1',u.receipt_id,null))) as month_order_newshop_cnt
   from 
-    (
-    select 
-    hcm_id
-    ,cm_id
-    ,rm_id
-    ,bdm_id
-    ,bd_id
-    ,city_id
-    ,order_type
-    ,sender_id
-    ,dt
-    from 
-    opos_dw.dwd_pre_opos_payment_order_di 
-    where 
-    country_code = 'nal' 
-    and dt <= '{pt}' 
-    and dt >= '{before_30_day}'
-    and trade_status = 'SUCCESS'
-    ) u 
-  inner join 
-  --取出当日所在日期的本月的所有的日期
-    (select d.dt,d.month from public_dw_dim.dim_date d inner join (select * from public_dw_dim.dim_date where dt = '{pt}') t on d.month = t.month) as mt
-  on u.dt = mt.dt
+  opos_dw.dwd_pre_opos_payment_order_di as u
+  where 
+  country_code = 'nal' 
+  and dt <= '{pt}' 
+  and dt >= concat(substr('{pt}',0,7),'-01')
+  and trade_status = 'SUCCESS'
   group by 
   u.hcm_id
   ,u.cm_id
@@ -556,7 +540,6 @@ month_data as (
   ,u.bd_id
 
   ,u.city_id
-  ,mt.month
 ),
 
 --03.11.取出当天所有付款者的数量
@@ -647,8 +630,8 @@ cu.hcm_id
 
 ,cu.city_id
 
-,'{pt}' as create_date
-,d.week_of_year as create_week
+,substr('{pt}',0,10) as create_date
+,weekofyear('{pt}') as create_week
 ,substr('{pt}',0,7) as create_month
 ,substr('{pt}',0,4) as create_year
 
@@ -669,6 +652,8 @@ cu.hcm_id
 ,nvl(hd.user_active_cnt,0) user_active_cnt
 ,nvl(hd.new_user_cnt,0) new_user_cnt
 ,nvl(am.more_5_merchant_cnt,0) more_5_merchant_cnt
+
+,nvl(cu.month_order_newshop_cnt,0) month_order_newshop_cnt
 
 ,'nal' as country_code
 ,'{pt}' as dt
@@ -702,9 +687,6 @@ on cu.hcm_id = hd.hcm_id and cu.cm_id = hd.cm_id and cu.rm_id = hd.rm_id and cu.
 left join 
 active_merchant am 
 on cu.hcm_id = am.hcm_id and cu.cm_id = am.cm_id and cu.rm_id = am.rm_id and cu.bdm_id = am.bdm_id and cu.bd_id = am.bd_id and cu.city_id = am.city_id
-left join
-(select dt,week_of_year from public_dw_dim.dim_date where dt='{pt}') as d
-on 1=1
 ;
 
 
@@ -712,7 +694,7 @@ on 1=1
 insert overwrite table opos_dw.app_opos_metrics_daily_new_d partition(country_code,dt)
 select
 o.id
-,d.week_of_year as create_week
+,weekofyear('{pt}') as create_week
 ,substr('{pt}',0,7) as create_month
 ,substr('{pt}',0,4) as create_year
 ,o.hcm_id
@@ -781,6 +763,7 @@ o.id
 ,o.reduce_per_people_amt
 ,o.reduce_people_cnt
 ,o.reduce_first_people_cnt
+,o.month_order_newshop_cnt
 
 ,'nal' as country_code
 ,'{pt}' as dt
@@ -851,7 +834,9 @@ from
   ,nvl(a.reduce_per_people_amt,0) as reduce_per_people_amt
   ,nvl(a.reduce_people_cnt,0) as reduce_people_cnt
   ,nvl(a.reduce_first_people_cnt,0) as reduce_first_people_cnt
-  
+
+  ,nvl(b.month_order_newshop_cnt,0) as month_order_newshop_cnt
+
   from 
   (select * from opos_dw.app_opos_metrcis_report_tmp_d where country_code = 'nal' and  dt = '{pt}') a
   full join 
@@ -882,9 +867,6 @@ left join
 left join
   (select id,name,country from opos_dw_ods.ods_sqoop_base_bd_city_df where dt = '{pt}') as c
 on o.city_id=c.id
-left join
-  (select dt,week_of_year from public_dw_dim.dim_date where dt = '{pt}') as d
-on 1=1
 ;
 
 
