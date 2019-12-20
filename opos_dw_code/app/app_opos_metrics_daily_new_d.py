@@ -251,9 +251,38 @@ and a.city_id=b.city_id
 ;
 
 
-
---02.插入当日客户数据,左表为本月数据情况
+--02.00.计算订单漏斗
 with
+order_funnel as (
+  select
+  hcm_id
+  ,cm_id
+  ,rm_id
+  ,bdm_id
+  ,bd_id
+
+  ,city_id
+  
+  ,count(1) as order_create_cnt
+  ,count(if(trade_status in ('SUCCESS','FAIL','PENDING'),1,null)) as order_pay_cnt
+  ,count(if(trade_status = 'FAIL',1,null)) as order_fail_cnt
+  ,count(if(trade_status = 'PENDING',1,null)) as order_pending_cnt
+  from 
+  opos_dw.dwd_pre_opos_payment_order_di
+  where 
+  country_code = 'nal' 
+  and dt = '{pt}' 
+  group by
+  hcm_id
+  ,cm_id
+  ,rm_id
+  ,bdm_id
+  ,bd_id
+
+  ,city_id
+),
+
+--02.01.插入当日客户数据,左表为本月数据情况
 active_base as (
   select 
   hcm_id
@@ -648,21 +677,55 @@ cu.hcm_id
 ,nvl(omd.pos_order_merchant_cnt,0) pos_order_merchant_cnt
 ,nvl(wd.pos_user_active_cnt,0) week_pos_user_active_cnt
 ,nvl(wd.qr_user_active_cnt,0) week_qr_user_active_cnt
-,nvl(cu.pos_user_active_cnt,0) month_pos_user_active_cnt
-,nvl(cu.qr_user_active_cnt,0) month_qr_user_active_cnt
+,cu.pos_user_active_cnt
+,cu.qr_user_active_cnt
 ,nvl(ou.have_order_user_cnt,0) have_order_user_cnt
 
 ,nvl(hd.user_active_cnt,0) user_active_cnt
 ,nvl(hd.new_user_cnt,0) new_user_cnt
 ,nvl(am.more_5_merchant_cnt,0) more_5_merchant_cnt
 
-,nvl(cu.month_order_newshop_cnt,0) month_order_newshop_cnt
+,cu.month_order_newshop_cnt
+
+,cu.order_create_cnt
+,cu.order_pay_cnt
+,cu.order_fail_cnt
+,cu.order_pending_cnt
 
 ,'nal' as country_code
 ,'{pt}' as dt
 
 from 
-month_data cu
+(
+  select
+  nvl(a.hcm_id,b.hcm_id) as hcm_id
+  ,nvl(a.cm_id,b.cm_id) as cm_id
+  ,nvl(a.rm_id,b.rm_id) as rm_id
+  ,nvl(a.bdm_id,b.bdm_id) as bdm_id
+  ,nvl(a.bd_id,b.bd_id) as bd_id
+  ,nvl(a.city_id,b.city_id) as city_id
+
+  ,nvl(a.pos_user_active_cnt,0) as pos_user_active_cnt
+  ,nvl(a.qr_user_active_cnt,0) as qr_user_active_cnt
+  ,nvl(a.month_order_newshop_cnt,0) as month_order_newshop_cnt
+
+  ,nvl(b.order_create_cnt,0) as order_create_cnt
+  ,nvl(b.order_pay_cnt,0) as order_pay_cnt
+  ,nvl(b.order_fail_cnt,0) as order_fail_cnt
+  ,nvl(b.order_pending_cnt,0) as order_pending_cnt
+  
+  from
+  month_data as a
+  full join
+  order_funnel as b
+  on 
+  a.hcm_id=b.hcm_id
+  and a.cm_id=b.cm_id
+  and a.rm_id=b.rm_id
+  and a.bdm_id=b.bdm_id
+  and a.bd_id=b.bd_id
+  and a.city_id=b.city_id
+) cu
 left join 
 day_1_remain dr1 
 on cu.hcm_id = dr1.hcm_id and cu.cm_id = dr1.cm_id and cu.rm_id = dr1.rm_id and cu.bdm_id = dr1.bdm_id and cu.bd_id = dr1.bd_id and cu.city_id = dr1.city_id
@@ -770,6 +833,11 @@ o.id
 ,o.month_order_newshop_cnt
 ,o.month_newshop_cnt
 
+,o.order_create_cnt
+,o.order_pay_cnt
+,o.order_fail_cnt
+,o.order_pending_cnt
+
 ,'nal' as country_code
 ,'{pt}' as dt
 from
@@ -843,6 +911,11 @@ from
   ,nvl(b.month_order_newshop_cnt,0) as month_order_newshop_cnt
   ,nvl(a.month_newshop_cnt,0) as month_newshop_cnt
 
+  ,nvl(b.order_create_cnt,0) as order_create_cnt
+  ,nvl(b.order_pay_cnt,0) as order_pay_cnt
+  ,nvl(b.order_fail_cnt,0) as order_fail_cnt
+  ,nvl(b.order_pending_cnt,0) as order_pending_cnt
+
   from 
   (select * from opos_dw.app_opos_report_mid where country_code = 'nal' and  dt = '{pt}') a
   full join 
@@ -874,6 +947,7 @@ left join
   (select id,name,country from opos_dw_ods.ods_sqoop_base_bd_city_df where dt = '{pt}') as c
 on o.city_id=c.id
 ;
+
 
 
 
