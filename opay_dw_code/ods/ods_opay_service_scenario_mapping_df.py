@@ -65,7 +65,7 @@ hdfs_path="oss://opay-datalake/opay/opay_dw/"+table_name
 ##---- hive operator ---##
 def ods_opay_service_scenario_mapping_df_sql_task(ds):
     HQL='''
-    load data inpath 'oss://opay-datalake/opay/opay_dw/ods_init_data/service_scenario_20191209.data' 
+    load data inpath 'opay/opay_dw/ods_init_data/service_scenario_20191209.data' 
     overwrite into table {db}.{table} partition(dt='{pt}')
     '''.format(
         pt=ds,
