@@ -103,7 +103,7 @@ set hive.exec.parallel=true;
 set hive.exec.dynamic.partition.mode=nonstrict;
 
 --01.向report临时表中插入当日销售和订单的数据
-insert overwrite table opos_dw.app_opos_metrcis_report_tmp_d partition (country_code,dt)
+insert overwrite table opos_dw.app_opos_metrcis_report_mid partition (country_code,dt)
 select
 nvl(a.hcm_id,b.hcm_id) as hcm_id
 ,nvl(a.cm_id,b.cm_id) as cm_id
@@ -620,7 +620,7 @@ active_merchant as (
 )
 
 --最后将各个视图的数据插入到最终表中,其中,用本月二维码活跃用户作为最左表
-insert overwrite table opos_dw.app_opos_active_user_daily_tmp_b partition(country_code,dt)
+insert overwrite table opos_dw.app_opos_active_user_daily_mid partition(country_code,dt)
 select 
 cu.hcm_id
 ,cu.cm_id
@@ -838,9 +838,9 @@ from
   ,nvl(b.month_order_newshop_cnt,0) as month_order_newshop_cnt
 
   from 
-  (select * from opos_dw.app_opos_metrcis_report_tmp_d where country_code = 'nal' and  dt = '{pt}') a
+  (select * from opos_dw.app_opos_report_mid where country_code = 'nal' and  dt = '{pt}') a
   full join 
-  (select * from opos_dw.app_opos_active_user_daily_tmp_b where country_code = 'nal' and  dt = '{pt}') b 
+  (select * from opos_dw.app_opos_active_user_daily_mid where country_code = 'nal' and  dt = '{pt}') b 
   on  
   a.hcm_id=b.hcm_id
   AND a.cm_id=b.cm_id
