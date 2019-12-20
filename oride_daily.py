@@ -527,15 +527,15 @@ insert_oride_driver_daily_summary  = HiveOperator(
             select
                 driver_id,
                 sum(if(status=5, 1, 0)) as order_finished_num,
-                count(id) as order_num,
+                count(order_id) as order_num,
                 sum(if(status=6 and cancel_role=2, 1, 0)) as order_cancel_num,
                 sum(if(status=5, duration, 0)) as duration_total,
                 sum(if(status=5, distance, 0)) as distance_total,
                 sum(if(status=5 and cast(from_unixtime(create_time,'HH') as int)>=16 and cast(from_unixtime(create_time,'HH') as int)<20, 1, 0)) as peak_time_order_num
             from
-                oride_dw_ods.ods_sqoop_base_data_order_df
+                oride_dw.dwd_oride_order_base_include_test_di 
             where
-                dt='{{ ds }}' and from_unixtime(create_time,'yyyy-MM-dd')='{{ ds }}'
+                dt='{{ ds }}' 
             group by driver_id
         )
         INSERT OVERWRITE TABLE oride_driver_daily_summary PARTITION (dt='{{ ds }}')
