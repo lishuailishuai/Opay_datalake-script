@@ -249,7 +249,10 @@ def app_oride_order_global_operate_to_mysql_d_sql_task(ds):
         
         nvl(global.sum_subsidy_d_1,0) as sum_subsidy_d_1,--第前一天的总补贴
         nvl(global.sum_subsidy_d_7,0) as sum_subsidy_d_7,--第前7天的总补贴
-    
+        
+        nvl(sub.c_gmv_d,0) as c_gmv_d, --计算c端补贴率的gmv/天
+        nvl(sub.c_gmv_m,0) as c_gmv_m, --计算c端补贴率的gmv/月
+
         'nal' as country_code,
         '{pt}' as  dt
     from 
@@ -320,8 +323,11 @@ def app_oride_order_global_operate_to_mysql_d_sql_task(ds):
             --C端补贴/月
             sum(b.b_subsidy_d + c_subsidy_d ) as sum_subsidy_d, 
             --总补贴/天
-            sum(b_subsidy_m + c_subsidy_m ) as sum_subsidy_m
+            sum(b_subsidy_m + c_subsidy_m ) as sum_subsidy_m,
             --累计总补贴/月
+            
+            c.c_gmv_d, --c端补贴、天
+            c.c_gmv_m  --c端补贴、月
 
         from
         ( --B端补贴  amount_recharge + amount_reward
@@ -340,6 +346,8 @@ def app_oride_order_global_operate_to_mysql_d_sql_task(ds):
         (    --C端补贴(实际C补贴)  pay的订单金额 - opay实付金额   12.18号开始
            select 
                 city_id,
+                sum(if(dt ='{pt}',price,0)) as c_gmv_d,
+                sum(price) as c_gmv_m,
                 sum(if(dt ='{pt}',price,0)) - sum(if(dt ='{pt}',pay_amount,0)) as c_subsidy_d, --C端补贴、天
                 sum(price) - sum(pay_amount) as c_subsidy_m
             from oride_dw.dwm_oride_order_base_di
@@ -347,7 +355,7 @@ def app_oride_order_global_operate_to_mysql_d_sql_task(ds):
                 and is_opay_pay=1 and is_succ_pay=1 and product_id<>99
             group by city_id
         )c on  b.city_id =  c.city_id  
-        group by b.city_id,b.b_subsidy_d,c.c_subsidy_d
+        group by b.city_id,b.b_subsidy_d,c.c_subsidy_d,c.c_gmv_d, c.c_gmv_m  
     )sub on  nvl(od.city_id,-10000) = sub.city_id 
     left join 
     (--审核司机数
