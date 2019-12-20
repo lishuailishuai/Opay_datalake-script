@@ -148,6 +148,8 @@ nvl(a.hcm_id,b.hcm_id) as hcm_id
 ,nvl(b.reduce_people_cnt,0) as reduce_people_cnt
 ,nvl(b.reduce_first_people_cnt,0) as reduce_first_people_cnt
 
+,nvl(a.month_newshop_cnt,0) as month_newshop_cnt
+
 ,'nal' as country_code
 ,'{pt}' as dt
 from
@@ -164,6 +166,7 @@ from
   ,0 as pos_merchant_cnt
   ,count(if(created_at = '{pt}',id,null)) as new_merchant_cnt
   ,0 as new_pos_merchant_cnt
+  ,count(distinct(if(created_at>=concat(substr('{pt}',0,7),'-01') and created_at<='{pt}',id,null))) as month_newshop_cnt
   from
   opos_dw.dim_opos_bd_relation_df
   where 
@@ -763,7 +766,9 @@ o.id
 ,o.reduce_per_people_amt
 ,o.reduce_people_cnt
 ,o.reduce_first_people_cnt
+
 ,o.month_order_newshop_cnt
+,o.month_newshop_cnt
 
 ,'nal' as country_code
 ,'{pt}' as dt
@@ -836,6 +841,7 @@ from
   ,nvl(a.reduce_first_people_cnt,0) as reduce_first_people_cnt
 
   ,nvl(b.month_order_newshop_cnt,0) as month_order_newshop_cnt
+  ,nvl(a.month_newshop_cnt,0) as month_newshop_cnt
 
   from 
   (select * from opos_dw.app_opos_report_mid where country_code = 'nal' and  dt = '{pt}') a
