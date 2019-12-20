@@ -107,7 +107,28 @@ def get_table_info(i):
     return table_names[i], hdfs_paths + table_names[i]
 
 
+def get_max_week(ds):
+    sql = '''
+        select 
+            max(week) as max_week
+        from oride_dw.dwm_oride_passenger_act_w
+        where datediff('{pt}',dt)<=90 and datediff('{pt}',dt)>=0
+    '''.format(
+        pt=airflow.macros.ds_add(ds, +6)
+    )
+
+    cursor = get_hive_cursor()
+    logging.info('Executing: %s', sql)
+    cursor.execute(sql)
+    week_list = cursor.fetchall()
+    cursor.close
+    if len(week_list) > 0:
+        for week in week_list:
+            max_week = week[0]
+    return max_week
+
 ##----------------------------------------- 脚本 ---------------------------------------##
+
 
 def app_oride_new_user_cohort_w_sql_task(ds):
 
@@ -129,7 +150,11 @@ def app_oride_new_user_cohort_w_sql_task(ds):
             '{pt}' as dt
         from (
             select nvl(a.week_create_date,-10000) as week_create_date,
-                nvl((a.week_create_date-new_user.week_create_date),-10000) as weeks,
+                nvl(
+                    if(a.week_create_date<new_user.week_create_date,
+                        a.week_create_date-new_user.week_create_date+{max_week},
+                        a.week_create_date-new_user.week_create_date)
+                ,-10000) as weeks,
                 nvl(a.city_id,-10000) as city_id,
                 nvl(a.product_id,-10000) as product_id,
                 count(distinct (nvl(new_user.passenger_id,null))) as new_user_liucun_cnt,  --第一周对应的就是新客
@@ -165,7 +190,11 @@ def app_oride_new_user_cohort_w_sql_task(ds):
             and a.passenger_id=new_user.passenger_id
         
             group by nvl(a.week_create_date,-10000),
-            nvl((a.week_create_date-new_user.week_create_date),-10000),
+            nvl(
+                if(a.week_create_date<new_user.week_create_date,
+                    a.week_create_date-new_user.week_create_date+{max_week},
+                    a.week_create_date-new_user.week_create_date)
+            ,-10000),
             nvl(a.city_id,-10000),
             nvl(a.product_id,-10000)
             with cube
@@ -173,16 +202,18 @@ def app_oride_new_user_cohort_w_sql_task(ds):
         where !(nvl(m.week_create_date,-10000)=-10000 or nvl(m.weeks,-10000)=-10000);
                  '''.format(
         pt=airflow.macros.ds_add(ds, +6),
-        table=get_table_info(0)[0]
+        table=get_table_info(0)[0],
+        max_week=get_max_week(ds)
     )
     return HQL
+
 
 def app_oride_new_driver_cohort_w_sql_task(ds):
 
     HQL='''set hive.exec.parallel=true;
     set hive.exec.dynamic.partition.mode=nonstrict;
     -- set hive.merge.mapredfiles=true;
-    INSERT overwrite TABLE oride_dw.{table} partition(country_code,dt)
+     INSERT overwrite TABLE oride_dw.{table} partition(country_code,dt)
         --司机新客留存数据统计【上线后的统计，上线后用每周的数据关联历史所有周的司机新客数据,但是由于每天有些订单并不是终态数据，因此每次都需要重新判定新客和活跃】
         
         select nvl(m.week_create_date,-10000) as week_create_date,
@@ -197,7 +228,11 @@ def app_oride_new_driver_cohort_w_sql_task(ds):
             '{pt}' as dt
         from (
             select nvl(a.week_create_date,-10000) as week_create_date,
-            nvl((a.week_create_date-new_driver.week_create_date),-10000) as weeks,
+            nvl(
+                if(a.week_create_date<new_driver.week_create_date,
+                    a.week_create_date-new_driver.week_create_date+{max_week},
+                    a.week_create_date-new_driver.week_create_date)
+            ,-10000) as weeks,
             nvl(a.city_id,-10000) as city_id,
             nvl(a.product_id,-10000) as product_id,
             count(distinct (nvl(new_driver.driver_id,null))) as new_driver_liucun_cnt,  --第一周对应的就是新客
@@ -232,7 +267,11 @@ def app_oride_new_driver_cohort_w_sql_task(ds):
             and a.driver_id=new_driver.driver_id
             
             group by nvl(a.week_create_date,-10000),
-            nvl((a.week_create_date-new_driver.week_create_date),-10000),
+            nvl(
+                if(a.week_create_date<new_driver.week_create_date,
+                    a.week_create_date-new_driver.week_create_date+{max_week},
+                    a.week_create_date-new_driver.week_create_date)
+            ,-10000),
             nvl(a.city_id,-10000),
             nvl(a.product_id,-10000)
             with cube
@@ -240,16 +279,18 @@ def app_oride_new_driver_cohort_w_sql_task(ds):
         where !(nvl(m.week_create_date,-10000)=-10000 or nvl(m.weeks,-10000)=-10000); 
                  '''.format(
         pt=airflow.macros.ds_add(ds, +6),
-        table=get_table_info(1)[0]
+        table=get_table_info(1)[0],
+        max_week=get_max_week(ds)
     )
     return HQL
+
 
 def app_oride_act_user_cohort_w_sql_task(ds):
 
     HQL='''set hive.exec.parallel=true;
     set hive.exec.dynamic.partition.mode=nonstrict;
     -- set hive.merge.mapredfiles=true;
-    INSERT overwrite TABLE oride_dw.{table} partition(country_code,dt)
+     INSERT overwrite TABLE oride_dw.{table} partition(country_code,dt)
         --活跃乘客留存数据统计【上线后的统计，上线后用每周的数据关联历史所有周的活跃乘客数据】
         select nvl(m.week_create_date,-10000) as week_create_date,
             nvl(m.weeks,-10000) as weeks,
@@ -263,7 +304,11 @@ def app_oride_act_user_cohort_w_sql_task(ds):
             '{pt}' as dt
         from(
             select nvl(a.week_create_date,-10000) as week_create_date,
-            nvl((a.week_create_date-act_user.week_create_date),-10000) as weeks,
+            nvl(
+                if(a.week_create_date<act_user.week_create_date,
+                    a.week_create_date-act_user.week_create_date+{max_week},
+                    a.week_create_date-act_user.week_create_date)
+            ,-10000) as weeks,
             nvl(a.city_id,-10000) as city_id,
             nvl(a.product_id,-10000) as product_id,
             count(distinct act_user.passenger_id) as act_user_liucun_cnt,  --第一周对应的就是活跃乘客数
@@ -296,7 +341,11 @@ def app_oride_act_user_cohort_w_sql_task(ds):
             and a.passenger_id=act_user.passenger_id
             where a.week_create_date>=act_user.week_create_date
             group by nvl(a.week_create_date,-10000),
-            nvl((a.week_create_date-act_user.week_create_date),-10000),
+            nvl(
+                if(a.week_create_date<act_user.week_create_date,
+                    a.week_create_date-act_user.week_create_date+{max_week},
+                    a.week_create_date-act_user.week_create_date)
+            ,-10000),
             nvl(a.city_id,-10000),
             nvl(a.product_id,-10000)
             with cube
@@ -305,9 +354,11 @@ def app_oride_act_user_cohort_w_sql_task(ds):
         
                  '''.format(
         pt=airflow.macros.ds_add(ds, +6),
-        table=get_table_info(2)[0]
+        table=get_table_info(2)[0],
+        max_week=get_max_week(ds)
     )
     return HQL
+
 
 def app_oride_act_driver_cohort_w_sql_task(ds):
 
@@ -330,7 +381,11 @@ def app_oride_act_driver_cohort_w_sql_task(ds):
         
         from(
             select nvl(a.week_create_date,-10000) as week_create_date,
-            nvl((a.week_create_date-act_driver.week_create_date),-10000) as weeks,
+            nvl(
+                if(a.week_create_date<act_driver.week_create_date,
+                    a.week_create_date-act_driver.week_create_date+{max_week},
+                    a.week_create_date-act_driver.week_create_date)
+            ,-10000) as weeks,
             nvl(a.city_id,-10000) as city_id,
             nvl(a.product_id,-10000) as product_id,
             count(distinct act_driver.driver_id) as act_driver_liucun_cnt,  --第一周对应的就是活跃司机数
@@ -363,7 +418,11 @@ def app_oride_act_driver_cohort_w_sql_task(ds):
             and a.driver_id=act_driver.driver_id
             where a.week_create_date>=act_driver.week_create_date
             group by nvl(a.week_create_date,-10000),
-            nvl((a.week_create_date-act_driver.week_create_date),-10000),
+            nvl(
+                if(a.week_create_date<act_driver.week_create_date,
+                    a.week_create_date-act_driver.week_create_date+{max_week},
+                    a.week_create_date-act_driver.week_create_date)
+            ,-10000),
             nvl(a.city_id,-10000),
             nvl(a.product_id,-10000)
             with cube
@@ -371,7 +430,8 @@ def app_oride_act_driver_cohort_w_sql_task(ds):
         where !(nvl(m.week_create_date,-10000)=-10000 or nvl(m.weeks,-10000)=-10000); 
                  '''.format(
         pt=airflow.macros.ds_add(ds, +6),
-        table=get_table_info(3)[0]
+        table=get_table_info(3)[0],
+        max_week=get_max_week(ds)
     )
     return HQL
 
@@ -398,6 +458,7 @@ def execution_new_user_task(ds, **kargs):
     hdfs_path = get_table_info(0)[1]
     TaskTouchzSuccess().countries_touchz_success(pt, "oride_dw", get_table_info(0)[0], hdfs_path, "true", "true")
 
+
 def execution_new_driver_task(ds, **kargs):
     hive_hook = HiveCliHook()
 
@@ -417,6 +478,7 @@ def execution_new_driver_task(ds, **kargs):
     hdfs_path = get_table_info(1)[1]
     TaskTouchzSuccess().countries_touchz_success(pt, "oride_dw", get_table_info(1)[0], hdfs_path, "true", "true")
 
+
 def execution_act_user_task(ds, **kargs):
     hive_hook = HiveCliHook()
 
@@ -435,6 +497,7 @@ def execution_act_user_task(ds, **kargs):
     pt = airflow.macros.ds_add(ds, +6)
     hdfs_path = get_table_info(2)[1]
     TaskTouchzSuccess().countries_touchz_success(pt, "oride_dw", get_table_info(2)[0], hdfs_path, "true", "true")
+
 
 def execution_act_driver_task(ds, **kargs):
     hive_hook = HiveCliHook()
@@ -483,8 +546,6 @@ app_oride_act_driver_cohort_w_task = PythonOperator(
     provide_context=True,
     dag=dag
 )
-
-
 
 
 dwm_oride_order_base_di_task>>app_oride_new_user_cohort_w_task
