@@ -39,18 +39,6 @@ dag = airflow.DAG('dim_opay_service_scenario_mapping_df',
                   default_args=args
                   )
 
-##----------------------------------------- 依赖 ---------------------------------------##
-ods_opay_service_scenario_mapping_df_prev_day_task = OssSensor(
-    task_id='ods_opay_service_scenario_mapping_df_prev_day_task',
-    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opay/opay_dw/ods_opay_service_scenario_mapping_df",
-        pt='{{ds}}'
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
-
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
 def fun_task_timeout_monitor(ds,dag,**op_kwargs):
 
@@ -80,11 +68,11 @@ def dim_opay_service_scenario_mapping_df_sql_task(ds):
     set hive.exec.dynamic.partition.mode=nonstrict;
     set hive.exec.parallel=true; --default false
     
-    insert overwrite table {db}.{table} partition(dt='{pt}')
+    insert overwrite table {db}.{table} partition(country_code='NG', dt='{pt}')
     select 
         sub_service_type,top_consume_scenario,sub_consume_scenario,affiliate_id
     from opay_dw_ods.ods_opay_service_scenario_mapping_df
-    where dt = '{pt}'
+    where dt = if('{pt}' < '2019-12-09', '2019-09-21', '2019-12-09')
     '''.format(
         pt=ds,
         table=table_name,
@@ -113,7 +101,7 @@ def execution_data_task_id(ds, **kargs):
     第二个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
 
     """
-    TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "false", "true")
+    TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "true", "true")
 
 dim_opay_service_scenario_mapping_df_task = PythonOperator(
     task_id='dim_opay_service_scenario_mapping_df_task',
@@ -122,4 +110,4 @@ dim_opay_service_scenario_mapping_df_task = PythonOperator(
     dag=dag
 )
 
-ods_opay_service_scenario_mapping_df_prev_day_task >> dim_opay_service_scenario_mapping_df_task
+dim_opay_service_scenario_mapping_df_task
