@@ -348,7 +348,7 @@ nobd as (
 
 )
 
-insert overwrite table opos_dw.dim_opos_bd_relation_tmp_df partition(country_code,dt)
+insert overwrite table opos_dw.dim_opos_bd_relation_mid partition(country_code,dt)
 select 
 b.id
 ,b.opay_id
@@ -463,7 +463,7 @@ from
   ,nvl(b.first_order_date,'-') as first_order_date
   ,a.created_bd_id
   from
-    (select * from opos_dw.dim_opos_bd_relation_tmp_df where country_code='nal' and dt='{pt}') as a
+    (select * from opos_dw.dim_opos_bd_relation_mid where country_code='nal' and dt='{pt}') as a
   left join
     (select id,first_order_date from opos_dw.dim_opos_bd_relation_df where country_code='nal' and dt='{before_1_day}') as b
   on a.id=b.id

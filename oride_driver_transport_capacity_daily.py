@@ -21,7 +21,7 @@ args = {
 
 dag = airflow.DAG(
     'oride_driver_transport_capacity_daily',
-    schedule_interval="45 02 * * *",
+    schedule_interval="30 03 * * *",
     default_args=args)
 
 table_names = ['oride_dw_ods.ods_sqoop_base_data_order_df',
