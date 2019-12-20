@@ -86,8 +86,14 @@ task_timeout_monitor = PythonOperator(
 def opos_metrcis_report_sql_task(ds):
     HQL = '''
 
+MSCK REPAIR TABLE opos_dw.dim_opos_bd_info_df;
+MSCK REPAIR TABLE opos_dw.dim_opos_bd_relation_df;
+MSCK REPAIR TABLE opos_dw.dwd_pre_opos_payment_order_di;
+
 set hive.exec.parallel=true;
 set hive.exec.dynamic.partition.mode=nonstrict;
+
+
 
 --01.清洗订单明细表,用order_id,即收款方id关联opay_id,将每笔交易关联上bd_id后
 --根据bdid与城市编码分组,统计各个指标值
