@@ -13,13 +13,15 @@ from airflow.sensors.hive_partition_sensor import HivePartitionSensor
 from utils.connection_helper import get_hive_cursor
 from plugins.comwx import ComwxApi
 from datetime import datetime, timedelta
+from plugins.DingdingAlert import DingdingAlert
 import re
 import logging
 
-comwx = ComwxApi('wwd26d45f97ea74ad2', 'BLE_v25zCmnZaFUgum93j3zVBDK-DjtRkLisI_Wns4g', '1000011')
+#comwx = ComwxApi('wwd26d45f97ea74ad2', 'BLE_v25zCmnZaFUgum93j3zVBDK-DjtRkLisI_Wns4g', '1000011')
+dingding_alert = DingdingAlert('https://oapi.dingtalk.com/robot/send?access_token=928e66bef8d88edc89fe0f0ddd52bfa4dd28bd4b1d24ab4626c804df8878bb48')
 
 args = {
-    'owner': 'wuduo',
+    'owner': 'yangmingze',
     'start_date': datetime(2019, 8, 25),
     'depends_on_past': False,
     'retries': 3,
@@ -30,7 +32,7 @@ args = {
 }
 
 dag = airflow.DAG(
-    'app_oride_order_tags_d',
+    'impala_syc_app_oride_order_tags_d',
     schedule_interval="30 03 * * *",
     default_args=args
 )
@@ -70,15 +72,6 @@ dependence_ods_oride_data_order = HivePartitionSensor(
     dag=dag
 )
 
-# dependence_oride_global_daily_report = HivePartitionSensor(
-#     task_id="dependence_oride_global_daily_report",
-#     table="oride_global_daily_report",
-#     partition="dt='{{ ds }}'",
-#     schema="oride_bi",
-#     poke_interval=60,
-#     dag=dag
-# )
-
 dependence_data_city_conf = HivePartitionSensor(
     task_id="dependence_data_city_conf",
     table="ods_sqoop_base_data_city_conf_df",
@@ -88,14 +81,6 @@ dependence_data_city_conf = HivePartitionSensor(
     dag=dag
 )
 
-# dependence_oride_global_city_serv_daily_report = HivePartitionSensor(
-#     task_id="dependence_oride_global_city_serv_daily_report",
-#     table="oride_global_city_serv_daily_report",
-#     partition="dt='{{ ds }}'",
-#     schema="oride_bi",
-#     poke_interval=60,
-#     dag=dag
-# )
 """
 ##-----end-------##
 """
@@ -302,9 +287,7 @@ refresh_impala_table_self = ImpalaOperator(
 )
 
 
-#dependence_oride_global_daily_report >> sleep_time2
 dependence_data_city_conf >> sleep_time2
-#dependence_oride_global_city_serv_daily_report >> sleep_time2
 dependence_ods_log_oride_order_skyeye_di >> sleep_time
 dependence_ods_oride_data_order >> sleep_time
 sleep_time2 >> refresh_impala_table_other
