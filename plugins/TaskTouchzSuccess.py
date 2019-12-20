@@ -38,7 +38,7 @@ class TaskTouchzSuccess(object):
         self.hdfs_data_dir_str=""
         self.db_name=""
         self.ds=""
-
+ 
 
     def set_touchz_success(self,tables):
 
