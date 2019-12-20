@@ -28,7 +28,7 @@ dag = airflow.DAG(
     'test_oride_source_binlog',
     schedule_interval="5 * * * *",
     default_args=args)
-
+ 
 ODS_DB='oride_dw_ods'
 BUCKET_NAME='opay-bi'
 
