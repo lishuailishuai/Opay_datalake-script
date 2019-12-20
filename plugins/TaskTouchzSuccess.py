@@ -31,7 +31,6 @@ tb = [
 class TaskTouchzSuccess(object):
 
 
-
     def __init__(self):
         self.dingding_alet = DingdingAlert('https://oapi.dingtalk.com/robot/send?access_token=928e66bef8d88edc89fe0f0ddd52bfa4dd28bd4b1d24ab4626c804df8878bb48')
         self.table_name=""
