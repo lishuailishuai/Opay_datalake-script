@@ -881,7 +881,6 @@ on o.city_id=c.id
 
 
 
-
 '''.format(
         pt=ds,
         table=table_name,
