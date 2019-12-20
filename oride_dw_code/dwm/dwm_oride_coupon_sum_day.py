@@ -55,6 +55,7 @@ dependence_dwd_oride_coupon_base_df_prev_day_task = UFileSensor(
 )
 
 ##----------------------------------------- 变量 ---------------------------------------##
+
 db_name="oride_dw"
 table_name = "dwm_oride_coupon_sum_day"
 hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
