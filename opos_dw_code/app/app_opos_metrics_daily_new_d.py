@@ -103,7 +103,7 @@ set hive.exec.parallel=true;
 set hive.exec.dynamic.partition.mode=nonstrict;
 
 --01.向report临时表中插入当日销售和订单的数据
-insert overwrite table opos_dw.app_opos_metrcis_report_mid partition (country_code,dt)
+insert overwrite table opos_dw.app_opos_report_mid partition (country_code,dt)
 select
 nvl(a.hcm_id,b.hcm_id) as hcm_id
 ,nvl(a.cm_id,b.cm_id) as cm_id
