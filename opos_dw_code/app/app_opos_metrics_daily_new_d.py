@@ -524,7 +524,7 @@ month_data as (
   ,substr('{pt}',0,7) as month
   ,count(distinct(if(u.order_type = 'pos',u.sender_id,null))) as pos_user_active_cnt
   ,count(distinct(if(u.order_type = 'qrcode',u.sender_id,null))) as qr_user_active_cnt
-  ,count(distinct(if(u.created_at>=concat(substr('{pt}',0,7),'-01') and u.created_at<='{pt}',u.receipt_id,null))) as month_order_newshop_cnt
+  ,count(distinct(if(u.created_at>=concat(substr('{pt}',0,7),'-01') and u.created_at<='{pt}' and first_order='1',u.receipt_id,null))) as month_order_newshop_cnt
   from 
   opos_dw.dwd_pre_opos_payment_order_di as u
   where 
