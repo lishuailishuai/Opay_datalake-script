@@ -36,17 +36,17 @@ args = {
     'email_on_retry': False,
 }
 
-dag = airflow.DAG('dwd_opay_channel_transaction_base_di',
+dag = airflow.DAG('dwm_opay_channel_transaction_sum_di',
                   schedule_interval="00 03 * * *",
                   default_args=args,
                   catchup=False)
 
 ##----------------------------------------- 依赖 ---------------------------------------##
 
-ods_sqoop_base_channel_transaction_di_prev_day_task = OssSensor(
-    task_id='ods_sqoop_base_channel_transaction_di_prev_day_task',
+dwd_opay_channel_transaction_base_di_prev_day_task = OssSensor(
+    task_id='dwd_opay_channel_transaction_base_di_prev_day_task',
     bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opay_dw_sqoop_di/opay_channel/channel_transaction",
+        hdfs_path_str="opay/opay_dw/dwd_opay_channel_transaction_base_di",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -58,46 +58,30 @@ ods_sqoop_base_channel_transaction_di_prev_day_task = OssSensor(
 ##----------------------------------------- 变量 ---------------------------------------##
 db_name = "opay_dw"
 
-table_name = "dwd_opay_channel_transaction_base_di"
+table_name = "dwm_opay_channel_transaction_sum_di"
 hdfs_path = "oss://opay-datalake/opay/opay_dw/" + table_name
 
 
-def dwd_opay_channel_transaction_base_di_sql_task(ds):
+def dwm_opay_channel_transaction_sum_di_sql_task(ds):
     HQL = '''
     set hive.exec.dynamic.partition.mode=nonstrict;
     set hive.exec.parallel=true;
     insert overwrite table {db}.{table} partition (dt)
-    SELECT id,
-       request_id,
-       order_no,
-       business_no,
-       out_order_no,
-       pay_channel,
-       out_channel_id,
-       user_type,
-       user_id,
-       transaction_status,
-       step,
-       step_status,
-       notice_url,
-       amount,
-       currency,
-       supply_item,
-       memo,
-       bank_card_no,
-       card_expiry,
-       security_code,
-       bank_code,
-       bank_response_code,
-       bank_response_message,
-       response_code,
-       response_message,
-       retry_flag,
-       create_time,
-       update_time,
-       dt
-    FROM opay_dw_ods.ods_sqoop_base_channel_transaction_di
-    where dt='{pt}'
+     SELECT pay_channel,
+            out_channel_id,
+            supply_item,
+            response_code,
+            transaction_status,
+            sum(amount) AS tran_amt,
+            count(1) AS tran_c,
+            dt
+     FROM opay_dw.dwd_opay_channel_transaction_base_di
+     WHERE dt='{pt}'
+GROUP BY pay_channel,
+         out_channel_id,
+         supply_item,
+         response_code,
+         transaction_status
 
     '''.format(
         pt=ds,
@@ -111,7 +95,7 @@ def execution_data_task_id(ds, **kargs):
     hive_hook = HiveCliHook()
 
     # 读取sql
-    _sql = dwd_opay_channel_transaction_base_di_sql_task(ds)
+    _sql = dwm_opay_channel_transaction_sum_di_sql_task(ds)
 
     logging.info('Executing: %s', _sql)
 
@@ -127,12 +111,12 @@ def execution_data_task_id(ds, **kargs):
     TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "false", "true")
 
 
-dwd_opay_channel_transaction_base_di_task = PythonOperator(
-    task_id='dwd_opay_channel_transaction_base_di_task',
+dwm_opay_channel_transaction_sum_di_task = PythonOperator(
+    task_id='dwm_opay_channel_transaction_sum_di_task',
     python_callable=execution_data_task_id,
     provide_context=True,
     dag=dag
 )
 
-ods_sqoop_base_channel_transaction_di_prev_day_task >> dwd_opay_channel_transaction_base_di_task
+dwd_opay_channel_transaction_base_di_prev_day_task >> dwm_opay_channel_transaction_sum_di_task
 
