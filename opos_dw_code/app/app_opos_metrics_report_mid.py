@@ -100,6 +100,7 @@ def app_opos_metrics_report_mid_sql_task(ds):
 
 set hive.exec.parallel=true;
 set hive.exec.dynamic.partition.mode=nonstrict;
+set hive.strict.checks.cartesian.product=false;
 
 --01.向report临时表中插入当日销售和订单的数据
 insert overwrite table opos_dw.app_opos_metrics_report_mid partition (country_code,dt)
