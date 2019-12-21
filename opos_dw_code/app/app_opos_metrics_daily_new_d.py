@@ -652,7 +652,7 @@ active_merchant as (
 )
 
 --最后将各个视图的数据插入到最终表中,其中,用本月二维码活跃用户作为最左表
-insert overwrite table opos_dw.app_opos_active_user_daily_mid partition(country_code,dt)
+insert overwrite table opos_dw.app_opos_metrics_daily_mid partition(country_code,dt)
 select 
 cu.hcm_id
 ,cu.cm_id
@@ -919,7 +919,7 @@ from
   from 
   (select * from opos_dw.app_opos_report_mid where country_code = 'nal' and  dt = '{pt}') a
   full join 
-  (select * from opos_dw.app_opos_active_user_daily_mid where country_code = 'nal' and  dt = '{pt}') b 
+  (select * from opos_dw.app_opos_metrics_daily_mid where country_code = 'nal' and  dt = '{pt}') b 
   on  
   a.hcm_id=b.hcm_id
   AND a.cm_id=b.cm_id
