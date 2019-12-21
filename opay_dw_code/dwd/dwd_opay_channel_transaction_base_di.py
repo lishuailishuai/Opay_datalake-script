@@ -94,7 +94,8 @@ def dwd_opay_channel_transaction_base_di_sql_task(ds):
        response_message,
        retry_flag,
        create_time,
-       update_time
+       update_time,
+       dt
     FROM opay_dw_ods.ods_sqoop_base_channel_transaction_di
     where dt='{pt}'
 
