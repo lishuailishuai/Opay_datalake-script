@@ -35,8 +35,8 @@ args = {
     'email_on_retry': False,
 }
 
-dag = airflow.DAG('app_user_shop_remain_week_w',
-                  schedule_interval="00 04 * * 1",
+dag = airflow.DAG('app_opos_user_shop_remain_week_w',
+                  schedule_interval="00 03 * * 1",
                   default_args=args,
                   catchup=False)
 
@@ -56,7 +56,7 @@ dwd_active_user_week_di_task = OssSensor(
 ##----------------------------------------- 变量 ---------------------------------------##
 
 db_name = "opos_dw"
-table_name = "app_user_shop_remain_week_w"
+table_name = "app_opos_user_shop_remain_week_w"
 hdfs_path = "oss://opay-datalake/opos/opos_dw/" + table_name
 
 
@@ -83,7 +83,7 @@ task_timeout_monitor = PythonOperator(
 
 ##----------------------------------------- 脚本 ---------------------------------------##
 
-def app_user_shop_remain_week_w_sql_task(ds):
+def app_opos_user_shop_remain_week_w_sql_task(ds):
     HQL = '''
 
 
@@ -206,7 +206,7 @@ shop_remain_cnt as (
 )
 
 --05.最终将结果合并后插入到结果表中
-insert overwrite table opos_dw.app_user_shop_remain_week_w partition(country_code,dt)
+insert overwrite table opos_dw.app_opos_user_shop_remain_week_w partition(country_code,dt)
 select
 0 as id
 ,substr(v1.create_year_week,0,4) as create_year
@@ -298,7 +298,7 @@ def execution_data_task_id(ds, **kargs):
     hive_hook = HiveCliHook()
 
     # 读取sql
-    _sql = app_user_shop_remain_week_w_sql_task(ds)
+    _sql = app_opos_user_shop_remain_week_w_sql_task(ds)
 
     logging.info('Executing: %s', _sql)
 
@@ -318,14 +318,14 @@ def execution_data_task_id(ds, **kargs):
     TaskTouchzSuccess().countries_touchz_success(after_6_day, db_name, table_name, hdfs_path, "true", "true")
 
 
-app_user_shop_remain_week_w_task = PythonOperator(
-    task_id='app_user_shop_remain_week_w_task',
+app_opos_user_shop_remain_week_w_task = PythonOperator(
+    task_id='app_opos_user_shop_remain_week_w_task',
     python_callable=execution_data_task_id,
     provide_context=True,
     dag=dag
 )
 
-dwd_active_user_week_di_task >> app_user_shop_remain_week_w_task
+dwd_active_user_week_di_task >> app_opos_user_shop_remain_week_w_task
 
 
 

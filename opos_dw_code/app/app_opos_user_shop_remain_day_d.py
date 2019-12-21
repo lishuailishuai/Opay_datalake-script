@@ -35,7 +35,7 @@ args = {
     'email_on_retry': False,
 }
 
-dag = airflow.DAG('app_user_shop_remain_day_d',
+dag = airflow.DAG('app_opos_user_shop_remain_day_d',
                   schedule_interval="30 03 * * *",
                   default_args=args,
                   catchup=False)
@@ -56,7 +56,7 @@ dwd_pre_opos_payment_order_di_task = OssSensor(
 ##----------------------------------------- 变量 ---------------------------------------##
 
 db_name = "opos_dw"
-table_name = "app_user_shop_remain_day_d"
+table_name = "app_opos_user_shop_remain_day_d"
 hdfs_path = "oss://opay-datalake/opos/opos_dw/" + table_name
 
 
@@ -83,7 +83,7 @@ task_timeout_monitor = PythonOperator(
 
 ##----------------------------------------- 脚本 ---------------------------------------##
 
-def app_user_shop_remain_day_d_sql_task(ds):
+def app_opos_user_shop_remain_day_d_sql_task(ds):
     HQL = '''
 
 
@@ -91,8 +91,43 @@ set hive.exec.parallel=true;
 set hive.exec.dynamic.partition.mode=nonstrict;
 
 
---01.新用户留存
+--00.计算日期排序
 with
+date_order as (
+  select
+  adt
+  ,bdt
+  ,rn
+  ,max(rn) over (partition by adt) as max
+  from
+  (
+  select
+  a.dt as adt
+  ,b.dt as bdt
+  ,row_number() over (order by b.dt) as rn
+  from
+  (SELECT * FROM public_dw_dim.dim_date where dt='{pt}') as a
+  left join
+  (SELECT * FROM public_dw_dim.dim_date where dt>='{before_29_day}' and dt<='{pt}') as b
+  where 1=1
+  ) as m
+),
+
+--02.将日期与地市做全关联,求出所有日期和地市
+date_city as (
+select
+a.adt as create_date
+,a.bdt as remain_date
+,(a.max - a.rn) as date_interval
+,b.city_id
+from
+date_order as a
+left join
+(select city_id from opos_dw.dwd_pre_opos_payment_order_di where country_code='nal' and dt='{pt}' group by city_id) as b
+on 1=1
+),
+
+--03.新用户留存
 new_user_remain_cnt as (
   select
   create_date
@@ -120,7 +155,7 @@ new_user_remain_cnt as (
   ,city_id
 ),
 
---02.用户留存
+--04.用户留存
 user_remain_cnt as (
   select
   create_date
@@ -148,7 +183,7 @@ user_remain_cnt as (
   ,city_id
 ),
 
---03.新创建商户留存
+--05.新创建商户留存
 new_shop_remain_cnt as (
   select
   create_date
@@ -176,7 +211,7 @@ new_shop_remain_cnt as (
   ,city_id
 ),
 
---04.所有商户留存
+--06.所有商户留存
 shop_remain_cnt as (
   select
   create_date
@@ -204,11 +239,13 @@ shop_remain_cnt as (
   ,city_id
 )
 
---05.插入日留存数据
-insert overwrite table opos_dw.app_user_shop_remain_day_d partition(country_code,dt)
+--07.插入日留存数据
+insert overwrite table opos_dw.app_opos_user_shop_remain_day_d partition(country_code,dt)
 select
 0 as id
 ,v1.create_date
+
+,v1.date_interval
 
 ,v1.remain_date
 
@@ -216,66 +253,38 @@ select
 ,nvl(v2.name,'-') as city_name
 ,nvl(v2.country,'-') as country
 
-,v1.new_user_remain_cnt
-,v1.user_remain_cnt
-,v1.new_shop_remain_cnt
-,v1.shop_remain_cnt
+,nvl(v3.new_user_remain_cnt,0) as new_user_remain_cnt
+,nvl(v4.user_remain_cnt,0) as user_remain_cnt
+,nvl(v5.new_shop_remain_cnt,0) as new_shop_remain_cnt
+,nvl(v6.shop_remain_cnt,0) as shop_remain_cnt
 
 ,'nal' as country_code
 ,'{pt}' as dt
 from
-  (
-  select
-  nvl(m.create_date,n.create_date) as create_date
-  ,nvl(m.remain_date,n.remain_date) as remain_date
-
-  ,nvl(m.city_id,n.city_id) as city_id
-
-  ,nvl(m.new_user_remain_cnt,0) as new_user_remain_cnt
-  ,nvl(m.user_remain_cnt,0) as user_remain_cnt
-  ,nvl(n.new_shop_remain_cnt,0) as new_shop_remain_cnt
-  ,nvl(n.shop_remain_cnt,0) as shop_remain_cnt
-  from
-    (
-    select
-    a.create_date
-    ,a.remain_date
-    ,a.city_id
-    ,a.user_remain_cnt
-    ,nvl(b.new_user_remain_cnt,0) as new_user_remain_cnt
-    from
-    (select * from user_remain_cnt) as a
-    left join
-    (select * from new_user_remain_cnt) as b
-    on  a.create_date=b.create_date
-    and a.remain_date=b.remain_date
-    and a.city_id=b.city_id
-    ) as m
-  full join
-    (
-    select
-    c.create_date
-    ,c.remain_date
-    ,c.city_id
-    ,c.shop_remain_cnt
-    ,nvl(d.new_shop_remain_cnt,0) as new_shop_remain_cnt
-    from
-    (select * from shop_remain_cnt) as c
-    left join
-    (select * from new_shop_remain_cnt) as d
-    on  c.create_date=d.create_date
-    and c.remain_date=d.remain_date
-    and c.city_id=d.city_id
-    ) as n
-  on
-    m.create_date=n.create_date
-    and m.remain_date=n.remain_date
-    and m.city_id=n.city_id
-  ) as v1
+  date_city as v1
 left join
   (select id,name,country from opos_dw_ods.ods_sqoop_base_bd_city_df where dt = '{pt}') as v2
-on
-v1.city_id=v2.id;
+on v1.city_id=v2.id
+left join
+  new_user_remain_cnt as v3
+on v1.create_date=v3.create_date
+  and v1.remain_date=v3.remain_date
+  and v1.city_id=v3.city_id
+left join
+  user_remain_cnt as v4
+on v1.create_date=v4.create_date
+  and v1.remain_date=v4.remain_date
+  and v1.city_id=v4.city_id
+left join
+  new_shop_remain_cnt as v5
+on v1.create_date=v5.create_date
+  and v1.remain_date=v5.remain_date
+  and v1.city_id=v5.city_id
+left join
+  shop_remain_cnt as v6
+on v1.create_date=v6.create_date
+  and v1.remain_date=v6.remain_date
+  and v1.city_id=v6.city_id;
 
 
 
@@ -297,7 +306,7 @@ def execution_data_task_id(ds, **kargs):
     hive_hook = HiveCliHook()
 
     # 读取sql
-    _sql = app_user_shop_remain_day_d_sql_task(ds)
+    _sql = app_opos_user_shop_remain_day_d_sql_task(ds)
 
     logging.info('Executing: %s', _sql)
 
@@ -316,17 +325,14 @@ def execution_data_task_id(ds, **kargs):
     TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "true", "true")
 
 
-app_user_shop_remain_day_d_task = PythonOperator(
-    task_id='app_user_shop_remain_day_d_task',
+app_opos_user_shop_remain_day_d_task = PythonOperator(
+    task_id='app_opos_user_shop_remain_day_d_task',
     python_callable=execution_data_task_id,
     provide_context=True,
     dag=dag
 )
 
-dwd_pre_opos_payment_order_di_task >> app_user_shop_remain_day_d_task
+dwd_pre_opos_payment_order_di_task >> app_opos_user_shop_remain_day_d_task
 
-# 查看任务命令
-# airflow list_tasks app_user_shop_remain_day_d -sd /home/feng.yuan/app_user_shop_remain_day_d.py
-# 测试任务命令
-# airflow test app_user_shop_remain_day_d app_user_shop_remain_day_d_task 2019-11-24 -sd /home/feng.yuan/app_user_shop_remain_day_d.py
+
 
