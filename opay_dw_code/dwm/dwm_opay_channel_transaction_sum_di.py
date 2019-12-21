@@ -81,7 +81,8 @@ GROUP BY pay_channel,
          out_channel_id,
          supply_item,
          response_code,
-         transaction_status
+         transaction_status,
+         dt
 
     '''.format(
         pt=ds,
