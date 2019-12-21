@@ -89,6 +89,7 @@ def app_opos_user_shop_remain_day_d_sql_task(ds):
 
 set hive.exec.parallel=true;
 set hive.exec.dynamic.partition.mode=nonstrict;
+set hive.strict.checks.cartesian.product=false;
 
 
 --00.计算日期排序

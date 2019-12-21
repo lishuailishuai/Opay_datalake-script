@@ -90,10 +90,41 @@ def app_opos_user_shop_remain_week_w_sql_task(ds):
 --插入数据
 set hive.exec.parallel=true;
 set hive.exec.dynamic.partition.mode=nonstrict;
+set hive.strict.checks.cartesian.product=false;
 
 
---01.新用户留存
+--00.求星期排序
 with
+week_order as (
+  select
+  aweek,bweek,rn,max(rn) over (partition by aweek) as max
+  from
+  (
+    select
+    a.aweek,b.bweek,row_number() over (order by b.bweek desc) as rn
+    from
+      (SELECT concat(substr(dt,0,4),substr(concat('0',cast(weekofyear(dt) as string)),-2)) as aweek FROM public_dw_dim.dim_date where dt='{after_6_day}' group by concat(substr(dt,0,4),substr(concat('0',cast(weekofyear(dt) as string)),-2))) as a
+    left join
+      (SELECT concat(substr(dt,0,4),substr(concat('0',cast(weekofyear(dt) as string)),-2)) as bweek FROM public_dw_dim.dim_date where dt>='{before_75_day}' and dt<='{after_6_day}' group by concat(substr(dt,0,4),substr(concat('0',cast(weekofyear(dt) as string)),-2))) as b
+    where 1=1
+  ) as m
+),
+
+--02.将星期与地市做全关联,求出所有星期和地市
+date_city as (
+select
+a.aweek as create_year_week
+,a.bweek as remain_year_week
+,(a.max - a.rn) as week_interval
+,b.city_id
+from
+week_order as a
+left join
+(select city_id from opos_dw.dwd_active_user_week_di where country_code='nal' and dt='{after_6_day}' group by city_id) as b
+on 1=1
+),
+
+--03.新用户的留存数量
 new_user_remain_cnt as (
   select
   create_year_week
@@ -121,7 +152,7 @@ new_user_remain_cnt as (
   ,city_id
 ),
 
---02.用户留存
+--04.用户留存
 user_remain_cnt as (
   select
   create_year_week
@@ -149,7 +180,7 @@ user_remain_cnt as (
   ,city_id
 ),
 
---03.新创建商户留存
+--05.新创建商户留存
 new_shop_remain_cnt as (
   select
   create_year_week
@@ -177,7 +208,7 @@ new_shop_remain_cnt as (
   ,city_id
 ),
 
---04.所有商户留存
+--06.所有商户留存
 shop_remain_cnt as (
   select
   create_year_week
@@ -205,80 +236,56 @@ shop_remain_cnt as (
   ,city_id
 )
 
---05.最终将结果合并后插入到结果表中
+--07.最终将结果合并后插入到结果表中
 insert overwrite table opos_dw.app_opos_user_shop_remain_week_w partition(country_code,dt)
 select
 0 as id
 ,substr(v1.create_year_week,0,4) as create_year
-,cast(substr(v1.create_year_week,5,2) as int) as create_week
+,substr(v1.create_year_week,5,2) as create_week
 ,v1.create_year_week
 
+,v1.week_interval
+
 ,substr(v1.remain_year_week,0,4) as remain_year
-,cast(substr(v1.remain_year_week,5,2) as int) as remain_week
+,substr(v1.remain_year_week,5,2) as remain_week
 ,v1.remain_year_week
 
 ,v1.city_id
 ,nvl(v2.name,'-') as city_name
 ,nvl(v2.country,'-') as country
 
-,v1.new_user_remain_cnt
-,v1.user_remain_cnt
-,v1.new_shop_remain_cnt
-,v1.shop_remain_cnt
+,nvl(v3.new_user_remain_cnt,0) as new_user_remain_cnt
+,nvl(v4.user_remain_cnt,0) as user_remain_cnt
+,nvl(v5.new_shop_remain_cnt,0) as new_shop_remain_cnt
+,nvl(v6.shop_remain_cnt,0) as shop_remain_cnt
 
 ,'nal' as country_code
-,'{after_6_day}' as dt
+,'{pt}' as dt
 from
-  (
-  select
-  nvl(m.create_year_week,n.create_year_week) as create_year_week
-  ,nvl(m.remain_year_week,n.remain_year_week) as remain_year_week
-  ,nvl(m.city_id,n.city_id) as city_id
-  ,nvl(m.new_user_remain_cnt,0) as new_user_remain_cnt
-  ,nvl(m.user_remain_cnt,0) as user_remain_cnt
-  ,nvl(n.new_shop_remain_cnt,0) as new_shop_remain_cnt
-  ,nvl(n.shop_remain_cnt,0) as shop_remain_cnt
-  from
-    (
-    select
-    a.create_year_week
-    ,a.remain_year_week
-    ,a.city_id
-    ,a.user_remain_cnt
-    ,nvl(b.new_user_remain_cnt,0) as new_user_remain_cnt
-    from
-    (select * from user_remain_cnt) as a
-    left join
-    (select * from new_user_remain_cnt) as b
-    on  a.create_year_week=b.create_year_week
-    and a.remain_year_week=b.remain_year_week
-    and a.city_id=b.city_id
-    ) as m
-  full join
-    (
-    select
-    c.create_year_week
-    ,c.remain_year_week
-    ,c.city_id
-    ,c.shop_remain_cnt
-    ,nvl(d.new_shop_remain_cnt,0) as new_shop_remain_cnt
-    from
-    (select * from shop_remain_cnt) as c
-    left join
-    (select * from new_shop_remain_cnt) as d
-    on  c.create_year_week=d.create_year_week
-    and c.remain_year_week=d.remain_year_week
-    and c.city_id=d.city_id
-    ) as n
-  on
-    m.create_year_week=n.create_year_week
-    and m.remain_year_week=n.remain_year_week
-    and m.city_id=n.city_id
-  ) as v1
+  date_city as v1
 left join
-  (select id,name,country from opos_dw_ods.ods_sqoop_base_bd_city_df where dt = '{after_6_day}') as v2
-on
-v1.city_id=v2.id;
+  (select id,name,country from opos_dw_ods.ods_sqoop_base_bd_city_df where dt = '{pt}') as v2
+on v1.city_id=v2.id
+left join
+  new_user_remain_cnt as v3
+on v1.create_year_week=v3.create_year_week
+  and v1.remain_year_week=v3.remain_year_week
+  and v1.city_id=v3.city_id
+left join
+  user_remain_cnt as v4
+on v1.create_year_week=v4.create_year_week
+  and v1.remain_year_week=v4.remain_year_week
+  and v1.city_id=v4.city_id
+left join
+  new_shop_remain_cnt as v5
+on v1.create_year_week=v5.create_year_week
+  and v1.remain_year_week=v5.remain_year_week
+  and v1.city_id=v5.city_id
+left join
+  shop_remain_cnt as v6
+on v1.create_year_week=v6.create_year_week
+  and v1.remain_year_week=v6.remain_year_week
+  and v1.city_id=v6.city_id;
 
 
 
