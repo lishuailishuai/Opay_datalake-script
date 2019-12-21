@@ -53,7 +53,6 @@ dependence_dwd_oride_coupon_base_df_prev_day_task = UFileSensor(
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
-
 ##----------------------------------------- 变量 ---------------------------------------##
 
 db_name="oride_dw"

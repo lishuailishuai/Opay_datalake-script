@@ -127,6 +127,8 @@ def dwd_oride_driver_records_day_df_sql_task(ds):
             updated_at,--'更新时间'
             amount_tip,--'当日-小费收入'
             amount_tip_offline,--'当日-小费收入(线下支付)
+            amount_additional, -- 附加费-线上
+            amount_additional_offline,  --附加费-线下
             'nal' as country_code,
             '{pt}' as dt
         FROM
