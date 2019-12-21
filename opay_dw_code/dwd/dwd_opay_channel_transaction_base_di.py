@@ -27,7 +27,7 @@ import os
 
 args = {
     'owner': 'liushuzhen',
-    'start_date': datetime(2019, 12, 18),
+    'start_date': datetime(2019, 12, 20),
     'depends_on_past': False,
     'retries': 3,
     'retry_delay': timedelta(minutes=2),
@@ -94,7 +94,8 @@ def dwd_opay_channel_transaction_base_di_sql_task(ds):
        response_message,
        retry_flag,
        create_time,
-       update_time
+       update_time,
+       dt
     FROM opay_dw_ods.ods_sqoop_base_channel_transaction_di
     where dt='{pt}'
 

@@ -101,6 +101,7 @@ def app_opos_metrics_daily_mid_sql_task(ds):
 
 set hive.exec.parallel=true;
 set hive.exec.dynamic.partition.mode=nonstrict;
+set hive.strict.checks.cartesian.product=false;
 
 
 --02.00.计算订单漏斗

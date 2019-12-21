@@ -16,9 +16,9 @@ from airflow.sensors.named_hive_partition_sensor import NamedHivePartitionSensor
 from airflow.sensors.hive_partition_sensor import HivePartitionSensor
 from airflow.sensors import UFileSensor
 from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
-from plugins.TaskTouchzSuccess import TaskTouchzSuccess
 from airflow.sensors import OssSensor
 
+from plugins.TaskTouchzSuccess import TaskTouchzSuccess
 import json
 import logging
 from airflow.models import Variable
@@ -36,16 +36,17 @@ args = {
     'email_on_retry': False,
 }
 
-dag = airflow.DAG('dwm_opay_account_df',
+dag = airflow.DAG('dwm_opay_channel_transaction_sum_di',
                   schedule_interval="00 03 * * *",
                   default_args=args,
                   catchup=False)
 
 ##----------------------------------------- 依赖 ---------------------------------------##
-dwd_opay_account_balance_df_prev_day_task = OssSensor(
-    task_id='dwd_opay_account_balance_df_prev_day_task',
+
+dwd_opay_channel_transaction_base_di_prev_day_task = OssSensor(
+    task_id='dwd_opay_channel_transaction_base_di_prev_day_task',
     bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opay/opay_dw/dwd_opay_account_balance_df/country_code=NG",
+        hdfs_path_str="opay/opay_dw/dwd_opay_channel_transaction_base_di",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -54,40 +55,34 @@ dwd_opay_account_balance_df_prev_day_task = OssSensor(
 )
 
 
-
 ##----------------------------------------- 变量 ---------------------------------------##
 db_name = "opay_dw"
 
-table_name = "dwm_opay_account_df"
+table_name = "dwm_opay_channel_transaction_sum_di"
 hdfs_path = "oss://opay-datalake/opay/opay_dw/" + table_name
 
 
-def dwm_opay_account_df_sql_task(ds):
+def dwm_opay_channel_transaction_sum_di_sql_task(ds):
     HQL = '''
     set hive.exec.dynamic.partition.mode=nonstrict;
     set hive.exec.parallel=true;
-    insert overwrite table {db}.{table} partition (country_code,dt)
-    SELECT 
-       user_type,
-       user_role,
-       user_level,
-       account_type,
-       account_status,
-       sum(balance) s_balance,
-       currency,
-       country_code,
-       dt
-    FROM opay_dw.dwd_opay_account_balance_df
-    WHERE dt='{pt}'
-    GROUP BY 
-       user_type,
-       user_role,
-       user_level,
-       account_type,
-       account_status,
-       currency,
-       country_code,
-       dt
+    insert overwrite table {db}.{table} partition (dt)
+     SELECT pay_channel,
+            out_channel_id,
+            supply_item,
+            response_code,
+            transaction_status,
+            sum(amount) AS tran_amt,
+            count(1) AS tran_c,
+            dt
+     FROM opay_dw.dwd_opay_channel_transaction_base_di
+     WHERE dt='{pt}'
+GROUP BY pay_channel,
+         out_channel_id,
+         supply_item,
+         response_code,
+         transaction_status,
+         dt
 
     '''.format(
         pt=ds,
@@ -101,7 +96,7 @@ def execution_data_task_id(ds, **kargs):
     hive_hook = HiveCliHook()
 
     # 读取sql
-    _sql = dwm_opay_account_df_sql_task(ds)
+    _sql = dwm_opay_channel_transaction_sum_di_sql_task(ds)
 
     logging.info('Executing: %s', _sql)
 
@@ -114,15 +109,15 @@ def execution_data_task_id(ds, **kargs):
     第二个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
 
     """
-    TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "true", "true")
+    TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "false", "true")
 
 
-dwm_opay_account_df_task = PythonOperator(
-    task_id='dwm_opay_account_df_task',
+dwm_opay_channel_transaction_sum_di_task = PythonOperator(
+    task_id='dwm_opay_channel_transaction_sum_di_task',
     python_callable=execution_data_task_id,
     provide_context=True,
     dag=dag
 )
 
-dwd_opay_account_balance_df_prev_day_task >> dwm_opay_account_df_task
+dwd_opay_channel_transaction_base_di_prev_day_task >> dwm_opay_channel_transaction_sum_di_task
 
