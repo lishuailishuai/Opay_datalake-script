@@ -72,7 +72,7 @@ def dwm_opay_channel_transaction_sum_di_sql_task(ds):
             supply_item,
             response_code,
             transaction_status,
-            amount AS tran_amt,
+            sum(amount) AS tran_amt,
             count(1) AS tran_c,
             dt
      FROM opay_dw.dwd_opay_channel_transaction_base_di
