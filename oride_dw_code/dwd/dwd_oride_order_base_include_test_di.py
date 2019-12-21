@@ -844,7 +844,7 @@ def execution_data_task_id(ds, **kwargs):
     hcm.HourSuccessCountMonitor()
 
     # 删除分区
-    # cf.delete_partition()
+    cf.delete_partition()
 
     # 读取sql
     _sql = "\n" + cf.alter_partition() + "\n" + dwd_oride_order_base_include_test_di_sql_task(ds)
