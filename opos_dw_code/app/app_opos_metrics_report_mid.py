@@ -35,7 +35,7 @@ args = {
     'email_on_retry': False,
 }
 
-dag = airflow.DAG('app_opos_report_mid',
+dag = airflow.DAG('app_opos_metrics_report_mid',
                   schedule_interval="00 03 * * *",
                   default_args=args,
                   catchup=False)
@@ -67,7 +67,7 @@ ods_sqoop_base_bd_admin_users_df_task = OssSensor(
 ##----------------------------------------- 变量 ---------------------------------------##
 
 db_name = "opos_dw"
-table_name = "app_opos_report_mid"
+table_name = "app_opos_metrics_report_mid"
 hdfs_path = "oss://opay-datalake/opos/opos_dw/" + table_name
 
 
@@ -94,7 +94,7 @@ task_timeout_monitor = PythonOperator(
 
 ##----------------------------------------- 脚本 ---------------------------------------##
 
-def app_opos_report_mid_sql_task(ds):
+def app_opos_metrics_report_mid_sql_task(ds):
     HQL = '''
 
 
@@ -102,7 +102,7 @@ set hive.exec.parallel=true;
 set hive.exec.dynamic.partition.mode=nonstrict;
 
 --01.向report临时表中插入当日销售和订单的数据
-insert overwrite table opos_dw.app_opos_report_mid partition (country_code,dt)
+insert overwrite table opos_dw.app_opos_metrics_report_mid partition (country_code,dt)
 select
 nvl(a.hcm_id,b.hcm_id) as hcm_id
 ,nvl(a.cm_id,b.cm_id) as cm_id
@@ -271,7 +271,7 @@ def execution_data_task_id(ds, **kargs):
     hive_hook = HiveCliHook()
 
     # 读取sql
-    _sql = app_opos_report_mid_sql_task(ds)
+    _sql = app_opos_metrics_report_mid_sql_task(ds)
 
     logging.info('Executing: %s', _sql)
 
@@ -290,13 +290,13 @@ def execution_data_task_id(ds, **kargs):
     TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "true", "true")
 
 
-app_opos_report_mid_task = PythonOperator(
-    task_id='app_opos_report_mid_task',
+app_opos_metrics_report_mid_task = PythonOperator(
+    task_id='app_opos_metrics_report_mid_task',
     python_callable=execution_data_task_id,
     provide_context=True,
     dag=dag
 )
 
-dwd_pre_opos_payment_order_di_task >> app_opos_report_mid_task
-ods_sqoop_base_bd_admin_users_df_task >> app_opos_report_mid_task
+dwd_pre_opos_payment_order_di_task >> app_opos_metrics_report_mid_task
+ods_sqoop_base_bd_admin_users_df_task >> app_opos_metrics_report_mid_task
 

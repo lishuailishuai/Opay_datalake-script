@@ -42,10 +42,10 @@ dag = airflow.DAG('app_opos_metrics_daily_new_d',
 
 ##----------------------------------------- 依赖 ---------------------------------------##
 
-app_opos_report_mid_task = OssSensor(
-    task_id='app_opos_report_mid_task',
+app_opos_metrics_report_mid_task = OssSensor(
+    task_id='app_opos_metrics_report_mid_task',
     bucket_key='{hdfs_path_str}/country_code=nal/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opos/opos_dw/app_opos_report_mid",
+        hdfs_path_str="opos/opos_dw/app_opos_metrics_report_mid",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -263,7 +263,7 @@ from
   ,nvl(b.order_pending_cnt,0) as order_pending_cnt
 
   from 
-  (select * from opos_dw.app_opos_report_mid where country_code = 'nal' and  dt = '{pt}') a
+  (select * from opos_dw.app_opos_metrics_report_mid where country_code = 'nal' and  dt = '{pt}') a
   full join 
   (select * from opos_dw.app_opos_metrics_daily_mid where country_code = 'nal' and  dt = '{pt}') b 
   on  
@@ -345,6 +345,6 @@ app_opos_metrics_daily_new_d_task = PythonOperator(
     dag=dag
 )
 
-app_opos_report_mid_task >> app_opos_metrics_daily_new_d_task
+app_opos_metrics_report_mid_task >> app_opos_metrics_daily_new_d_task
 app_opos_metrics_daily_mid_task >> app_opos_metrics_daily_new_d_task
 
