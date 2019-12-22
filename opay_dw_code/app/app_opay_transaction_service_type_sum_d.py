@@ -25,7 +25,7 @@ import os
 
 args = {
     'owner': 'xiedong',
-    'start_date': datetime(2019, 12, 20),
+    'start_date': datetime(2019, 11, 01),
     'depends_on_past': False,
     'retries': 3,
     'retry_delay': timedelta(minutes=2),
@@ -34,10 +34,24 @@ args = {
     'email_on_retry': False,
 }
 
-dag = airflow.DAG('dim_opay_service_scenario_mapping_df',
-                  schedule_interval="00 01 * * *",
+dag = airflow.DAG('app_opay_transaction_service_type_sum_d',
+                  schedule_interval="00 03 * * *",
                   default_args=args
                   )
+
+##----------------------------------------- 依赖 ---------------------------------------##
+
+dwd_opay_transaction_record_di_prev_day_task = OssSensor(
+    task_id='dwd_opay_transaction_record_di_prev_day_task',
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="opay/opay_dw/dwd_opay_transaction_record_di/country_code=NG",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
 
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
 def fun_task_timeout_monitor(ds,dag,**op_kwargs):
@@ -59,20 +73,31 @@ task_timeout_monitor= PythonOperator(
 
 ##----------------------------------------- 变量 ---------------------------------------##
 db_name="opay_dw"
-table_name="dim_opay_service_scenario_mapping_df"
+table_name="app_opay_transaction_service_type_sum_d"
 hdfs_path="oss://opay-datalake/opay/opay_dw/"+table_name
 
 ##---- hive operator ---##
-def dim_opay_service_scenario_mapping_df_sql_task(ds):
+def app_opay_transaction_service_type_sum_d_sql_task(ds):
     HQL='''
     set hive.exec.dynamic.partition.mode=nonstrict;
     set hive.exec.parallel=true; --default false
-    
-    insert overwrite table {db}.{table} partition(country_code='NG', dt='{pt}')
+
+    insert overwrite table {db}.{table} partition(country_code, dt)
     select 
-        sub_service_type,top_consume_scenario,sub_consume_scenario,affiliate_id
-    from opay_dw_ods.ods_opay_service_scenario_mapping_df
-    where dt = if('{pt}' < '2019-12-09', '2019-09-21', '2019-12-09')
+        top_service_type, 
+        sub_service_type, 
+        originator_type, 
+        originator_role, 
+        order_status,
+        client_source, 
+        sum(amount) as order_amt, 
+        count(*) as order_cnt,
+        country_code,
+        '{pt}' as dt
+    from {db}.dwd_opay_transaction_record_di 
+    where dt = '{pt}' 
+    group by country_code, top_service_type, sub_service_type, originator_type, originator_role, client_source, order_status
+    
     '''.format(
         pt=ds,
         table=table_name,
@@ -86,7 +111,7 @@ def execution_data_task_id(ds, **kargs):
     hive_hook = HiveCliHook()
 
     # 读取sql
-    _sql = dim_opay_service_scenario_mapping_df_sql_task(ds)
+    _sql = app_opay_transaction_service_type_sum_d_sql_task(ds)
 
     logging.info('Executing: %s', _sql)
 
@@ -103,11 +128,11 @@ def execution_data_task_id(ds, **kargs):
     """
     TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "true", "true")
 
-dim_opay_service_scenario_mapping_df_task = PythonOperator(
-    task_id='dim_opay_service_scenario_mapping_df_task',
+app_opay_transaction_service_type_sum_d_task = PythonOperator(
+    task_id='app_opay_transaction_service_type_sum_d_task',
     python_callable=execution_data_task_id,
     provide_context=True,
     dag=dag
 )
 
-dim_opay_service_scenario_mapping_df_task
+dwd_opay_transaction_record_di_prev_day_task >> app_opay_transaction_service_type_sum_d_task
