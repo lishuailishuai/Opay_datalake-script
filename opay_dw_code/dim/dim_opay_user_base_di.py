@@ -36,17 +36,17 @@ args = {
     'email_on_retry': False,
 }
 
-dag = airflow.DAG('dwd_opay_channel_transaction_base_di',
-                  schedule_interval="00 02 * * *",
+dag = airflow.DAG('dim_opay_user_base_di',
+                  schedule_interval="00 03 * * *",
                   default_args=args,
                   catchup=False)
 
 ##----------------------------------------- 依赖 ---------------------------------------##
 
-ods_sqoop_base_channel_transaction_di_prev_day_task = OssSensor(
-    task_id='ods_sqoop_base_channel_transaction_di_prev_day_task',
+ods_sqoop_base_user_di_prev_day_task = OssSensor(
+    task_id='ods_sqoop_base_user_di_prev_day_task',
     bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opay_dw_sqoop_di/opay_channel/channel_transaction",
+        hdfs_path_str="opay_dw_sqoop_di/opay_user/user",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -58,45 +58,60 @@ ods_sqoop_base_channel_transaction_di_prev_day_task = OssSensor(
 ##----------------------------------------- 变量 ---------------------------------------##
 db_name = "opay_dw"
 
-table_name = "dwd_opay_channel_transaction_base_di"
+table_name = "dim_opay_user_base_di"
 hdfs_path = "oss://opay-datalake/opay/opay_dw/" + table_name
 
 
-def dwd_opay_channel_transaction_base_di_sql_task(ds):
+def dim_opay_user_base_di_sql_task(ds):
     HQL = '''
     set hive.exec.dynamic.partition.mode=nonstrict;
     set hive.exec.parallel=true;
-    insert overwrite table {db}.{table} partition (dt)
+    insert overwrite table {db}.{table} partition (country_code,dt)
     SELECT id,
-       request_id,
-       order_no,
-       business_no,
-       out_order_no,
-       pay_channel,
-       out_channel_id,
-       user_type,
        user_id,
-       transaction_status,
-       step,
-       step_status,
-       notice_url,
-       amount,
-       currency,
-       supply_item,
-       memo,
-       bank_card_no,
-       card_expiry,
-       security_code,
-       bank_code,
-       bank_response_code,
-       bank_response_message,
-       response_code,
-       response_message,
-       retry_flag,
+       mobile,
+       business_name,
+       first_name,
+       middle_name,
+       surname,
+       kyc_level,
+       kyc_update_time,
+       bvn,
+       dob,
+       gender,
+       country,
+       STATE,
+       city,
+       address,
+       lga,
+       ROLE,
+       referral_code,
+       referrer_code,
+       notification,
        create_time,
        update_time,
+       register_client,
+       CASE country
+           WHEN 'Nigeria' THEN 'NG'
+           WHEN 'Norway' THEN 'NO'
+           WHEN 'Ghana' THEN 'GH'
+           WHEN 'Botswana' THEN 'BW'
+           WHEN 'Ghana' THEN 'GH'
+           WHEN 'Kenya' THEN 'KE'
+           WHEN 'Malawi' THEN 'MW'
+           WHEN 'Mozambique' THEN 'MZ'
+           WHEN 'Poland' THEN 'PL'
+           WHEN 'South Africa' THEN 'ZA'
+           WHEN 'Sweden' THEN 'SE'
+           WHEN 'Tanzania' THEN 'TZ'
+           WHEN 'Uganda' THEN 'UG'
+           WHEN 'USA' THEN 'US'
+           WHEN 'Zambia' THEN 'ZM'
+           WHEN 'Zimbabwe' THEN 'ZW'
+           ELSE 'NG'
+       END AS country_code,
        dt
-    FROM opay_dw_ods.ods_sqoop_base_channel_transaction_di
+    from opay_dw_ods.ods_sqoop_base_user_di 
     where dt='{pt}'
 
     '''.format(
@@ -111,7 +126,7 @@ def execution_data_task_id(ds, **kargs):
     hive_hook = HiveCliHook()
 
     # 读取sql
-    _sql = dwd_opay_channel_transaction_base_di_sql_task(ds)
+    _sql = dim_opay_user_base_di_sql_task(ds)
 
     logging.info('Executing: %s', _sql)
 
@@ -124,15 +139,15 @@ def execution_data_task_id(ds, **kargs):
     第二个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
 
     """
-    TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "false", "true")
+    TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "true", "true")
 
 
-dwd_opay_channel_transaction_base_di_task = PythonOperator(
-    task_id='dwd_opay_channel_transaction_base_di_task',
+dim_opay_user_base_di_task = PythonOperator(
+    task_id='dim_opay_user_base_di_task',
     python_callable=execution_data_task_id,
     provide_context=True,
     dag=dag
 )
 
-ods_sqoop_base_channel_transaction_di_prev_day_task >> dwd_opay_channel_transaction_base_di_task
+ods_sqoop_base_user_di_prev_day_task >> dim_opay_user_base_di_task
 

@@ -260,11 +260,11 @@ select
 ,nvl(v6.shop_remain_cnt,0) as shop_remain_cnt
 
 ,'nal' as country_code
-,'{pt}' as dt
+,'{after_6_day}' as dt
 from
   date_city as v1
 left join
-  (select id,name,country from opos_dw_ods.ods_sqoop_base_bd_city_df where dt = '{pt}') as v2
+  (select id,name,country from opos_dw_ods.ods_sqoop_base_bd_city_df where dt = '{after_6_day}' group by id,name,country) as v2
 on v1.city_id=v2.id
 left join
   new_user_remain_cnt as v3
@@ -286,6 +286,9 @@ left join
 on v1.create_year_week=v6.create_year_week
   and v1.remain_year_week=v6.remain_year_week
   and v1.city_id=v6.city_id;
+
+
+
 
 
 
