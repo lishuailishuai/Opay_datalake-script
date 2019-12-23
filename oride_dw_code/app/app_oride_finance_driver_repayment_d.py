@@ -180,10 +180,9 @@ def get_data_from_hive(ds,**op_kwargs):
             register_time,
             NVL(regexp_replace(driver_address,'\\\\\\\\',''), ''),
             last_week_daily_due,
-            already_amount,
-            already_repaid_numbers,
-            conversion_overdue_days,
-            all_amount
+            t1.already_amount,
+            t1.all_amount,
+            t1.amount
     '''.format(
         hive_db=hive_db,
         hive_table=hive_table,
