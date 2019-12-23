@@ -112,6 +112,8 @@ def dwd_pre_opos_payment_order_di_sql_task(ds):
 --插入数据
 set hive.exec.parallel=true;
 set hive.exec.dynamic.partition.mode=nonstrict;
+set hive.strict.checks.cartesian.product=false;
+
 
 insert overwrite table opos_dw.dwd_pre_opos_payment_order_di partition(country_code,dt)
 select

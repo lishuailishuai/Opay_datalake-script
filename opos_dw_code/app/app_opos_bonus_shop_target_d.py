@@ -100,6 +100,8 @@ def app_opos_bonus_shop_target_d_sql_task(ds):
 
 set hive.exec.parallel=true;
 set hive.exec.dynamic.partition.mode=nonstrict;
+set hive.strict.checks.cartesian.product=false;
+
 
 --02.用shop表计算出每个bd下有
 --得出最新维度下每个dbid的详细数据信息

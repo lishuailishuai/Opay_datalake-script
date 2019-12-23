@@ -112,6 +112,8 @@ def dim_opos_bd_relation_df_sql_task(ds):
 
 set hive.exec.parallel=true;
 set hive.exec.dynamic.partition.mode=nonstrict;
+set hive.strict.checks.cartesian.product=false;
+
 
 --01.首先清空组织机构层级临时表,然后插入最新的组织机构层级数据
 --插入最新的数据

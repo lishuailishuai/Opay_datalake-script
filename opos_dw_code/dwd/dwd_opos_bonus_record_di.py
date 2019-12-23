@@ -112,6 +112,8 @@ def dwd_opos_bonus_record_di_sql_task(ds):
 --插入数据
 set hive.exec.parallel=true;
 set hive.exec.dynamic.partition.mode=nonstrict;
+set hive.strict.checks.cartesian.product=false;
+
 
 --07.将所有临时表汇总
 insert overwrite table opos_dw.dwd_opos_bonus_record_di partition(country_code,dt)
