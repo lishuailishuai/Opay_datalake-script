@@ -36,7 +36,7 @@ args = {
 }
 
 dag = airflow.DAG('dwd_opos_bonus_record_di',
-                  schedule_interval="20 02 * * *",
+                  schedule_interval="30 01 * * *",
                   default_args=args,
                   catchup=False)
 
@@ -89,7 +89,7 @@ def fun_task_timeout_monitor(ds, dag, **op_kwargs):
 
     tb = [
         {"db": "opos_dw", "table": "{dag_name}".format(dag_name=dag_ids),
-         "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "6000"}
+         "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "1200"}
     ]
 
     TaskTimeoutMonitor().set_task_monitor(tb)
