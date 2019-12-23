@@ -404,22 +404,36 @@ SELECT 'total' as country_code,
 finance_data as
 (
 select nvl(country_code,'total') as country_code,
-       city_id,
-       product_id,
+       nvl(city_id,-10000) as city_id,
+       nvl(product_id,-10000) as product_id,
        {order_data_null},
        {passenger_data_null},
        {passenger_order_data_null},
        {driver_data_null},
        null as map_request_num,  --地图调用次数
-       sum(amount_recharge) AS recharge_amount, --资金调整金额,用于统计实际b补
-       sum(amount_reward) AS reward_amount, --奖励金额,用于统计实际b补
+       amount_recharge AS recharge_amount, --资金调整金额,用于统计实际b补
+       amount_reward AS reward_amount, --奖励金额,用于统计实际b补
        {union_product_data_null}   
-from (select * from oride_dw.dwm_oride_driver_finance_di 
-where dt='{pt}' and city_id<>999001 and driver_id<>1) t1 
-group by nvl(country_code,'total'),
-         city_id,
-         product_id
-with cube),
+from (select fin.country_code,
+             fin.city_id,
+             fin.product_id,
+             sum(fin.amount_recharge) AS amount_recharge, --资金调整金额,用于统计实际b补
+             sum(fin.amount_reward) AS amount_reward --奖励金额,用于统计实际b补 
+        from (select * 
+              from oride_dw.dwm_oride_driver_finance_di 
+              where dt='{pt}' and city_id<>999001 and driver_id<>1) fin
+        inner join
+        (SELECT product_id1,
+                       city_id
+        FROM oride_dw.dim_oride_city 
+        LATERAL VIEW explode(split(regexp_replace(product_id,'\\\\[|\\\\]',''),',')) s AS product_id1
+        WHERE dt='{pt}' and city_id<>999001) cit
+        on fin.product_id=cit.product_id1 and fin.city_id=cit.city_id
+        group by fin.country_code,
+               fin.city_id,
+               fin.product_id
+        with cube) t1
+),
 
 --混合业务线新增指标
 union_product_data as
