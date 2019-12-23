@@ -56,7 +56,7 @@ log_anti_oride_fraud_task=HivePartitionSensor(
 
 db_name="oride_dw"
 table_name="dwd_oride_anti_fraud_log_di"
-hdfs_path="ufile://opay-datalake/oride/oride_dw/"+table_name
+hdfs_path="ufile://opay-datalake/oride/oride_dw/"+"dwd_oride_anti_fraud_log_new_di"
 
 
 ##----------------------------------------- 任务超时监控 ---------------------------------------## 
@@ -143,5 +143,5 @@ dwd_oride_anti_fraud_log_di_task= PythonOperator(
     provide_context=True,
     dag=dag
 )
- 
+
 log_anti_oride_fraud_task>>dwd_oride_anti_fraud_log_di_task
