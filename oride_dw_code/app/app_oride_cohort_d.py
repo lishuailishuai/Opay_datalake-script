@@ -496,28 +496,28 @@ def execution_act_driver_task(ds, **kargs):
 
 
 app_oride_new_user_cohort_d_task = PythonOperator(
-    task_id='app_oride_new_user_cohort_m_task',
+    task_id='app_oride_new_user_cohort_d_task',
     python_callable=execution_new_user_task,
     provide_context=True,
     dag=dag
 )
 
 app_oride_new_driver_cohort_d_task = PythonOperator(
-    task_id='app_oride_new_driver_cohort_m_task',
+    task_id='app_oride_new_driver_cohort_d_task',
     python_callable=execution_new_driver_task,
     provide_context=True,
     dag=dag
 )
 
 app_oride_act_user_cohort_d_task = PythonOperator(
-    task_id='app_oride_act_user_cohort_m_task',
+    task_id='app_oride_act_user_cohort_d_task',
     python_callable=execution_act_user_task,
     provide_context=True,
     dag=dag
 )
 
 app_oride_act_driver_cohort_d_task = PythonOperator(
-    task_id='app_oride_act_driver_cohort_m_task',
+    task_id='app_oride_act_driver_cohort_d_task',
     python_callable=execution_act_driver_task,
     provide_context=True,
     dag=dag
