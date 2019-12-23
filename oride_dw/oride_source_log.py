@@ -43,6 +43,7 @@ add_algo_partitions = HiveOperator(
 add_partitions = HiveOperator(
     task_id='add_partitions',
     hql="""
+            ALTER TABLE moto_locations ADD IF NOT EXISTS PARTITION (dt = '{{ ds }}', hour = '{{ execution_date.strftime("%H") }}');
             ALTER TABLE client_event ADD IF NOT EXISTS PARTITION (dt = '{{ ds }}', hour = '{{ execution_date.strftime("%H") }}');
             ALTER TABLE server_event ADD IF NOT EXISTS PARTITION (dt = '{{ ds }}', hour = '{{ execution_date.strftime("%H") }}');
             ALTER TABLE server_magic ADD IF NOT EXISTS PARTITION (dt = '{{ ds }}', hour = '{{ execution_date.strftime("%H") }}');
@@ -66,14 +67,6 @@ add_partitions = HiveOperator(
             ALTER TABLE order_driver_feature_new ADD IF NOT EXISTS PARTITION (dt = '{{ ds }}', hour = '{{ execution_date.strftime("%H") }}');
             ALTER TABLE hex_supply_demand_feature ADD IF NOT EXISTS PARTITION (dt = '{{ ds }}', hour = '{{ execution_date.strftime("%H") }}');
 
-        """,
-    schema='oride_source',
-    dag=dag)
-
-moto_locaions_add_partitions = HiveOperator(
-    task_id='moto_locaions_add_partitions',
-    hql="""
-            ALTER TABLE moto_locations ADD IF NOT EXISTS PARTITION (dt = '{{ ds }}', hour = '{{ execution_date.strftime("%H") }}');
         """,
     schema='oride_source',
     dag=dag)
