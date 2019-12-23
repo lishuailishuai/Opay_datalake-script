@@ -105,7 +105,7 @@ create_oride_client_event_detail = HiveOperator(
             `dt` string,
             `hour` string)
         STORED AS ORC
-        LOCATION 'oss://opay-bi/oride_dw_ods/oride_client_event_detail'
+        LOCATION 'oss://opay-datalake/oride/client_event_detail'
         TBLPROPERTIES ("orc.compress"="SNAPPY")
         """,
     schema='oride_bi',
@@ -186,7 +186,7 @@ create_oride_server_event_detail = HiveOperator(
             `dt` string,
             `hour` string)
         STORED AS ORC
-        LOCATION 'oss://opay-bi/oride_dw_ods/oride_server_event_detail'
+        LOCATION 'oss://opay-datalake/oride/server_event_detail'
         TBLPROPERTIES ("orc.compress"="SNAPPY")
         """,
     schema='oride_bi',
