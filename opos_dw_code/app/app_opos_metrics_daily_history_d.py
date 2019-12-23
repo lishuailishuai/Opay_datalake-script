@@ -98,9 +98,10 @@ def app_opos_metrics_daily_history_d_sql_task(ds):
     HQL = '''
     
 
---插入数据
 set hive.exec.parallel=true;
 set hive.exec.dynamic.partition.mode=nonstrict;
+set hive.strict.checks.cartesian.product=false;
+
 
 --01.先将bd信息放入内存中
 with

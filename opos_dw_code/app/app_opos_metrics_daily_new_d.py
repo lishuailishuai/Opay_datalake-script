@@ -101,6 +101,8 @@ def app_opos_metrics_daily_new_d_sql_task(ds):
 
 set hive.exec.parallel=true;
 set hive.exec.dynamic.partition.mode=nonstrict;
+set hive.strict.checks.cartesian.product=false;
+
 
 --03.将两个表的数据汇总到结果表
 insert overwrite table opos_dw.app_opos_metrics_daily_new_d partition(country_code,dt)

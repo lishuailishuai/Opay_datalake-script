@@ -89,6 +89,8 @@ def app_opos_shop_target_d_sql_task(ds):
 
 set hive.exec.parallel=true;
 set hive.exec.dynamic.partition.mode=nonstrict;
+set hive.strict.checks.cartesian.product=false;
+
 
 --01.取出交易成功的商铺信息数据
 with

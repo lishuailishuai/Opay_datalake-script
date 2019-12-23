@@ -90,6 +90,8 @@ def dwd_active_user_month_di_sql_task(ds):
 --插入数据
 set hive.exec.parallel=true;
 set hive.exec.dynamic.partition.mode=nonstrict;
+set hive.strict.checks.cartesian.product=false;
+
 
 --01.先求出本周有多少用户
 with

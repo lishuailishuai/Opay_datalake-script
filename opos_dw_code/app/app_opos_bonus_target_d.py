@@ -97,9 +97,10 @@ task_timeout_monitor = PythonOperator(
 
 def app_opos_bonus_target_d_sql_task(ds):
     HQL = '''
-    
+  
 set hive.exec.parallel=true;
 set hive.exec.dynamic.partition.mode=nonstrict;
+set hive.strict.checks.cartesian.product=false;
 
 --02.先取红包record表
 with
