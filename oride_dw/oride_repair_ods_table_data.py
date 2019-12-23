@@ -75,7 +75,7 @@ def run_insert_ods(**kwargs):
             oride_source.binlog_{table}
         WHERE
             dt BETWEEN '{b_st}' AND '{b_et}'
-            AND from_unixtime(cast(get_json_object(AFTER, '$.create_time') as int)+3600, 'yyyy-MM-dd') between '{o_st}' and '{o_et}'
+            AND from_unixtime(cast(get_json_object(AFTER, '$.create_time') as int)+3600, 'yyyy-MM-dd HH') between '{o_st}' and '{o_et}'
 
         union all
 
@@ -87,7 +87,7 @@ def run_insert_ods(**kwargs):
             oride_source.binlog_{table}
         WHERE
             dt BETWEEN '{b_st}' AND '{b_et}'
-            AND from_unixtime(cast(get_json_object(AFTER, '$.updated_at') as int)+3600, 'yyyy-MM-dd') between '{o_st}' and '{o_et}'
+            AND from_unixtime(cast(get_json_object(AFTER, '$.updated_at') as int)+3600, 'yyyy-MM-dd HH') between '{o_st}' and '{o_et}'
     '''
     hive_hook = HiveCliHook()
     run_sql=sql.format(
