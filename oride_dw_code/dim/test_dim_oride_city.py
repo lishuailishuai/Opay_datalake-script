@@ -304,7 +304,7 @@ def execution_data_task_id(ds,**kwargs):
     hive_hook = HiveCliHook()
 
     v_info = [
-        {"table":"oride_data.oride_data.data_order","start_timeThour": "{v_day}T00".format(v_day=v_day), "end_dateThour": "{v_day}T23".format(v_day=v_day), "depend_dir": "oss://opay-datalake/oride_binlog/"}
+        {"table":"oride_data.oride_data.data_order","start_timeThour": "{v_day}T00".format(v_day=v_day), "end_dateThour": "{v_day}T23".format(v_day=v_day), "depend_dir": "oss://opay-datalake/oride_binlog"}
     ]
 
     #print(dag.)
