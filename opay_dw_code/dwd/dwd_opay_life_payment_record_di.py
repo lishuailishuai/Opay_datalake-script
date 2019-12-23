@@ -29,7 +29,7 @@ import os
 #
 args = {
     'owner': 'xiedong',
-    'start_date': datetime(2019, 12, 20),
+    'start_date': datetime(2019, 11, 11),
     'depends_on_past': False,
     'retries': 3,
     'retry_delay': timedelta(minutes=2),
@@ -37,7 +37,6 @@ args = {
     'email_on_failure': True,
     'email_on_retry': False,
 }
-
 
 dag = airflow.DAG('dwd_opay_life_payment_record_di',
                   schedule_interval="00 02 * * *",
@@ -122,18 +121,20 @@ ods_sqoop_base_mobiledata_topup_record_di_prev_day_task = OssSensor(
     dag=dag
 )
 
-##----------------------------------------- 任务超时监控 ---------------------------------------##
-def fun_task_timeout_monitor(ds,dag,**op_kwargs):
 
-    dag_ids=dag.dag_id
+##----------------------------------------- 任务超时监控 ---------------------------------------##
+def fun_task_timeout_monitor(ds, dag, **op_kwargs):
+    dag_ids = dag.dag_id
 
     msg = [
-        {"db": "opay_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=NG/dt={pt}".format(pt=ds), "timeout": "3000"}
+        {"db": "opay_dw", "table": "{dag_name}".format(dag_name=dag_ids),
+         "partition": "country_code=NG/dt={pt}".format(pt=ds), "timeout": "3000"}
     ]
 
     TaskTimeoutMonitor().set_task_monitor(msg)
 
-task_timeout_monitor= PythonOperator(
+
+task_timeout_monitor = PythonOperator(
     task_id='task_timeout_monitor',
     python_callable=fun_task_timeout_monitor,
     provide_context=True,
@@ -143,11 +144,11 @@ task_timeout_monitor= PythonOperator(
 ##----------------------------------------- 变量 ---------------------------------------##
 db_name = "opay_dw"
 table_name = "dwd_opay_life_payment_record_di"
-hdfs_path="oss://opay-datalake/opay/opay_dw/" + table_name
+hdfs_path = "oss://opay-datalake/opay/opay_dw/" + table_name
 
 
 def dwd_opay_life_payment_record_di_sql_task(ds):
-    HQL='''
+    HQL = '''
     set hive.exec.dynamic.partition.mode=nonstrict;
     set hive.exec.parallel=true;
     with dim_user_data as (
@@ -169,14 +170,14 @@ def dwd_opay_life_payment_record_di_sql_task(ds):
         )
     insert overwrite table {db}.{table} 
     partition(country_code, dt)
-    
+
     select 
         t1.order_no, t1.amount, t1.currency, 
         'USER' as originator_type, t2.role as originator_role, t2.kyc_level as originator_kyc_level, t1.originator_id, concat(t2.first_name, ' ', t2.middle_name, ' ', t2.surname) as originator_name,
         'MERCHANT' as affiliate_type, t3.merchant_type as affiliate_role, t3.merchant_id as affiliate_id, t3.merchant_name as affiliate_name,
         t1.recharge_service_provider, replace(t1.recharge_account, '+234', '') as recharge_account, t1.recharge_account_name, t1.recharge_set_meal,
         t1.create_time, t1.update_time, t1.country, 'Life Payment' as top_service_type, t1.sub_service_type,
-        t1.order_status, t1.error_code, t1.error_msg, t1.client_source, t1.pay_way,
+        t1.order_status, t1.error_code, t1.error_msg, nvl(t1.client_source, '-'), t1.pay_way, t1.pay_status, t1.top_consume_scenario, t1.sub_consume_scenario, t1.pay_amount,
         case t1.country
             when 'NG' then 'NG'
             when 'NO' then 'NO'
@@ -197,14 +198,14 @@ def dwd_opay_life_payment_record_di_sql_task(ds):
             else 'NG'
             end as country_code,
         '{pt}' dt
-        
+
     from (
         select 
             order_no, amount, currency, user_id as originator_id, 
             merchant_id as affiliate_id, 
             tv_provider as recharge_service_provider, recipient_tv_account_no as recharge_account, recipient_tv_account_name as recharge_account_name, tv_plan as recharge_set_meal,
             create_time, update_time, country, 'TV' sub_service_type, 
-            order_status, error_code, error_msg, client_source, pay_channel as pay_way
+            order_status, error_code, error_msg, client_source, pay_channel as pay_way, pay_status, 'TV' as top_consume_scenario, 'TV' as sub_consume_scenario, amount as pay_amount 
         from opay_dw_ods.ods_sqoop_base_tv_topup_record_di
         where dt = '{pt}'
         union all
@@ -213,7 +214,8 @@ def dwd_opay_life_payment_record_di_sql_task(ds):
             merchant_id as affiliate_id, 
             betting_provider as recharge_service_provider, recipient_betting_account as recharge_account, recipient_betting_name as recharge_account_name, '-' as recharge_set_meal,
             create_time, update_time, country, 'Betting' sub_service_type,
-            order_status, error_code, error_msg, client_source, pay_channel as pay_way
+            order_status, error_code, error_msg, client_source, pay_channel as pay_way, pay_status, 'Betting' as top_consume_scenario, 'Betting' as sub_consume_scenario, 
+            actual_pay_amount as pay_amount
         from opay_dw_ods.ods_sqoop_base_betting_topup_record_di
         where dt = '{pt}' and betting_provider != '' and betting_provider != 'supabet' and betting_provider is not null
         union all
@@ -222,7 +224,8 @@ def dwd_opay_life_payment_record_di_sql_task(ds):
             merchant_id as affiliate_id, 
             telecom_perator as recharge_service_provider, recipient_mobile as recharge_account, '-' as recharge_account_name, '-' as recharge_set_meal,
             create_time, update_time, country, 'Mobiledata' sub_service_type,
-            order_status, error_code, error_msg, client_source, pay_channel as pay_way
+            order_status, error_code, error_msg, client_source, pay_channel as pay_way, pay_status, 'Mobiledata' as top_consume_scenario, 'Mobiledata' as sub_consume_scenario,
+            amount as pay_amount
         from opay_dw_ods.ods_sqoop_base_mobiledata_topup_record_di
         where dt = '{pt}'   
         union all
@@ -231,7 +234,8 @@ def dwd_opay_life_payment_record_di_sql_task(ds):
             merchant_id as affiliate_id,
             telecom_perator as recharge_service_provider, recipient_mobile as recharge_account, '-' as recharge_account_name, '-' as recharge_set_meal,
             create_time, update_time, country, 'Airtime' sub_service_type,
-            order_status, error_code, error_msg, client_source, pay_channel as pay_way
+            order_status, error_code, error_msg, client_source, pay_channel as pay_way, pay_status, 'Airtime' as top_consume_scenario, 'Airtime' as sub_consume_scenario,
+            actual_pay_amount as pay_amount
         from opay_dw_ods.ods_sqoop_base_airtime_topup_record_di
         where dt = '{pt}' 
         union all
@@ -240,7 +244,8 @@ def dwd_opay_life_payment_record_di_sql_task(ds):
             merchant_id as affiliate_id,
             recipient_elec_perator as recharge_service_provider, recipient_elec_account as recharge_account, '-' as recharge_account_name, electricity_payment_plan as recharge_set_meal,
             create_time, update_time, country, 'Electricity' sub_service_type,
-            order_status, error_code, error_msg, client_source, pay_channel as pay_way
+            order_status, error_code, error_msg, client_source, pay_channel as pay_way, pay_status, 'Electricity' as top_consume_scenario, 'Electricity' as sub_consume_scenario,
+            amount as pay_amount
         from opay_dw_ods.ods_sqoop_base_electricity_topup_record_di
         where dt = '{pt}'
     ) t1 
@@ -254,7 +259,6 @@ def dwd_opay_life_payment_record_di_sql_task(ds):
     return HQL
 
 
-
 # 主流程
 def execution_data_task_id(ds, **kargs):
     hive_hook = HiveCliHook()
@@ -266,7 +270,6 @@ def execution_data_task_id(ds, **kargs):
 
     # 执行Hive
     hive_hook.run_cli(_sql)
-
 
     # 生成_SUCCESS
     """
