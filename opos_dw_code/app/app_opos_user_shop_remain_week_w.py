@@ -67,7 +67,7 @@ def fun_task_timeout_monitor(ds, dag, **op_kwargs):
 
     tb = [
         {"db": "opos_dw", "table": "{dag_name}".format(dag_name=dag_ids),
-         "partition": "country_code=nal/dt={pt}".format(pt=airflow.macros.ds_add(ds, +6)), "timeout": "6000"}
+         "partition": "country_code=nal/dt={pt}".format(pt=airflow.macros.ds_add(ds, +6)), "timeout": "1200"}
     ]
 
     TaskTimeoutMonitor().set_task_monitor(tb)

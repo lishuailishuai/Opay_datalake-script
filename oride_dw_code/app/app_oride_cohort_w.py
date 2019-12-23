@@ -37,7 +37,7 @@ args = {
 }
 
 dag = airflow.DAG('app_oride_cohort_w',
-                  schedule_interval="30 02 * * 1",
+                  schedule_interval="30 04 * * 1",
                   default_args=args,
                   catchup=False)
 
