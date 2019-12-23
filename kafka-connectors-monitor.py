@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 from airflow.operators.python_operator import PythonOperator
 from plugins.DingdingAlert import DingdingAlert
 import requests
+from airflow.models import Variable
 
 args = {
     'owner': 'zhenqian.zhang',
@@ -20,14 +21,26 @@ dag = airflow.DAG(
     schedule_interval="*/10 * * * *",
     default_args=args)
 
-SERVER_LIST = [
+UCLOUD_SERVER_LIST = [
     '10.52.48.92',
     '10.52.60.235'
 ]
+
+ALI_SERVER_LIST = [
+    '10.52.5.218',
+]
+
 CONNECTORS_URL = 'http://%s:8083/connectors'
 STATUS_URL = 'http://%s:8083/connectors/%s/status'
 
 def connectors_status_check():
+    SERVER_LIST = None
+    flag = Variable.get("kafka_monitor_mode")
+    if flag == 'UCLOUD':
+        SERVER_LIST = UCLOUD_SERVER_LIST
+    elif flag == 'ALI':
+        SERVER_LIST = ALI_SERVER_LIST
+
     for server_ip in SERVER_LIST:
         url = CONNECTORS_URL % server_ip
         r = requests.get(url)

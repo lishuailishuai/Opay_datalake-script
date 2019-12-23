@@ -235,7 +235,21 @@ SELECT dri.city_id,
 
        nvl(avg1.last_week_daily_due,0) as last_week_daily_due,
        --上周日均应还款金额
-
+       
+       if(
+            if(bal.balance<0,repayment.repaid_amount +bal.balance,repaid_amount)>0,
+            if(bal.balance<0,repayment.repaid_amount+bal.balance,repaid_amount),
+            0
+          ) as already_amount, 
+        --已还款金额
+       
+       repayment.amount,
+        --每期还贷金额
+        
+        repayment.all_amount,
+         --总贷款金额
+        
+       
        dri.country_code,
        --国家码字段
 
@@ -331,6 +345,18 @@ group by age.driver_id
 ) avg1
 on dri.driver_id=avg1.driver_id 
 
+left join
+(
+    select
+        driver_id,
+        amount,--每期还贷金额
+        repaid_numbers, --已还期数
+        amount *  repaid_numbers as repaid_amount, --理论已还金额
+        numbers, --总贷款期数
+        amount*numbers as all_amount--总贷款金额
+    from oride_dw_ods.ods_sqoop_base_data_driver_repayment_df
+    where dt = '{pt}' and repayment_type = 0 
+)repayment on repayment.driver_id = dri.driver_id  
 '''.format(
         pt=ds,
         now_day=airflow.macros.ds_add(ds, +1),
