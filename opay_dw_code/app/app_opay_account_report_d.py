@@ -346,5 +346,5 @@ send_account_balance_report = PythonOperator(
     provide_context=True,
     dag=dag
 )
-
+dwm_opay_account_df_prev_day_task >> app_opay_account_report_d_task
 app_opay_account_report_d_task >> send_account_balance_report

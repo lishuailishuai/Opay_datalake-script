@@ -36,7 +36,7 @@ args = {
 }
 
 dag = airflow.DAG('app_opos_bonus_target_d',
-                  schedule_interval="10 03 * * *",
+                  schedule_interval="00 03 * * *",
                   default_args=args,
                   catchup=False)
 
@@ -79,7 +79,7 @@ def fun_task_timeout_monitor(ds, dag, **op_kwargs):
 
     tb = [
         {"db": "opos_dw", "table": "{dag_name}".format(dag_name=dag_ids),
-         "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "6000"}
+         "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "1200"}
     ]
 
     TaskTimeoutMonitor().set_task_monitor(tb)
@@ -97,9 +97,10 @@ task_timeout_monitor = PythonOperator(
 
 def app_opos_bonus_target_d_sql_task(ds):
     HQL = '''
-    
+  
 set hive.exec.parallel=true;
 set hive.exec.dynamic.partition.mode=nonstrict;
+set hive.strict.checks.cartesian.product=false;
 
 --02.先取红包record表
 with

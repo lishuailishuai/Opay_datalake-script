@@ -36,7 +36,7 @@ args = {
     'email_on_retry': False,
 }
 
-dag = airflow.DAG('dwm_opay_channel_transaction_sum_di',
+dag = airflow.DAG('app_opay_channel_transaction_sum_d',
                   schedule_interval="00 03 * * *",
                   default_args=args,
                   catchup=False)
@@ -58,11 +58,11 @@ dwd_opay_channel_transaction_base_di_prev_day_task = OssSensor(
 ##----------------------------------------- 变量 ---------------------------------------##
 db_name = "opay_dw"
 
-table_name = "dwm_opay_channel_transaction_sum_di"
+table_name = "app_opay_channel_transaction_sum_d"
 hdfs_path = "oss://opay-datalake/opay/opay_dw/" + table_name
 
 
-def dwm_opay_channel_transaction_sum_di_sql_task(ds):
+def app_opay_channel_transaction_sum_d_sql_task(ds):
     HQL = '''
     set hive.exec.dynamic.partition.mode=nonstrict;
     set hive.exec.parallel=true;
@@ -96,7 +96,7 @@ def execution_data_task_id(ds, **kargs):
     hive_hook = HiveCliHook()
 
     # 读取sql
-    _sql = dwm_opay_channel_transaction_sum_di_sql_task(ds)
+    _sql = app_opay_channel_transaction_sum_d_sql_task(ds)
 
     logging.info('Executing: %s', _sql)
 
@@ -112,12 +112,12 @@ def execution_data_task_id(ds, **kargs):
     TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "false", "true")
 
 
-dwm_opay_channel_transaction_sum_di_task = PythonOperator(
-    task_id='dwm_opay_channel_transaction_sum_di_task',
+app_opay_channel_transaction_sum_d_task = PythonOperator(
+    task_id='app_opay_channel_transaction_sum_d_task',
     python_callable=execution_data_task_id,
     provide_context=True,
     dag=dag
 )
 
-dwd_opay_channel_transaction_base_di_prev_day_task >> dwm_opay_channel_transaction_sum_di_task
+dwd_opay_channel_transaction_base_di_prev_day_task >> app_opay_channel_transaction_sum_d_task
 

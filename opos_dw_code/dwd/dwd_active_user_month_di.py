@@ -36,7 +36,7 @@ args = {
 }
 
 dag = airflow.DAG('dwd_active_user_month_di',
-                  schedule_interval="30 03 1 * *",
+                  schedule_interval="00 02 1 * *",
                   default_args=args,
                   catchup=False)
 
@@ -67,7 +67,7 @@ def fun_task_timeout_monitor(ds, dag, **op_kwargs):
 
     tb = [
         {"db": "opos_dw", "table": "{dag_name}".format(dag_name=dag_ids),
-         "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "6000"}
+         "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "1200"}
     ]
 
     TaskTimeoutMonitor().set_task_monitor(tb)
@@ -90,6 +90,8 @@ def dwd_active_user_month_di_sql_task(ds):
 --插入数据
 set hive.exec.parallel=true;
 set hive.exec.dynamic.partition.mode=nonstrict;
+set hive.strict.checks.cartesian.product=false;
+
 
 --01.先求出本周有多少用户
 with
