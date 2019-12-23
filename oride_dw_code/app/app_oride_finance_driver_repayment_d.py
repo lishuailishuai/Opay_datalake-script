@@ -112,7 +112,14 @@ def get_data_from_hive(ds,**op_kwargs):
             plate_number, --车牌号
             register_time, -- 司机注册时间
             NVL(regexp_replace(driver_address,'\\\\\\\\',''), '') as driver_address, --司机地址（-1 未知）
-            last_week_daily_due --上周日均应还款金额
+            last_week_daily_due, --上周日均应还款金额
+            
+            --新增新逻辑
+            nvl(t1.already_amount, 0 ) already_amount, --已还款金额
+            nvl(t1.already_amount / t1.amount ,0) as already_repaid_numbers , --已还款期数
+            nvl(if(t1.balance < 0,(t1.all_amount-t1.already_amount) / t1.amount,0),0) as conversion_overdue_days, --换算逾期天数
+            nvl(t1.all_amount,0) as all_amount --总贷款金额
+            
         FROM (SELECT 
                 a.*, b.phone_number as bphone_number 
             FROM (select * FROM {hive_db}.{hive_table} WHERE dt = '{pt}') a 
@@ -172,7 +179,11 @@ def get_data_from_hive(ds,**op_kwargs):
             plate_number,
             register_time,
             NVL(regexp_replace(driver_address,'\\\\\\\\',''), ''),
-            last_week_daily_due
+            last_week_daily_due,
+            already_amount,
+            already_repaid_numbers,
+            conversion_overdue_days,
+            all_amount
     '''.format(
         hive_db=hive_db,
         hive_table=hive_table,
@@ -201,7 +212,7 @@ def get_data_from_hive(ds,**op_kwargs):
         [
             'day', 'city_id', 'city_name', 'driver_id', 'driver_name', 'driver_mobile', 'driver_type',
             'balance', 'repayment_total_amount', 'start_date', 'repayment_amount', 'total_numbers',
-            'effective_days', 'lose_numbers', 'last_back_time', 'today_repayment', 'status','order_numbers','order_agv','fault','plate_number','register_time','driver_address','last_week_daily_due'
+            'effective_days', 'lose_numbers', 'last_back_time', 'today_repayment', 'status','order_numbers','order_agv','fault','plate_number','register_time','driver_address','last_week_daily_due','already_amount','already_repaid_numbers','conversion_overdue_days','all_amount'
         ],
         'day=VALUES(day)'
     )
@@ -237,12 +248,12 @@ def __data_to_mysql(conn, data, column, update=''):
     try:
         for (day, city_id, city_name, driver_id, driver_name, driver_mobile, driver_type,
                 balance, repayment_total_amount, start_date, repayment_amount, total_numbers,
-                effective_days, lose_numbers, last_back_time, today_repayment, status,order_numbers,order_agv,fault,plate_number,register_time,driver_address,last_week_daily_due) in data:
+                effective_days, lose_numbers, last_back_time, today_repayment, status,order_numbers,order_agv,fault,plate_number,register_time,driver_address,last_week_daily_due,already_amount,already_repaid_numbers,conversion_overdue_days,all_amount) in data:
 
             row = [
                 day, city_id, city_name, driver_id, driver_name.replace("'", "\\'"), driver_mobile, driver_type,
                 balance, repayment_total_amount, start_date, repayment_amount, total_numbers,
-                effective_days, lose_numbers, last_back_time, today_repayment, status,order_numbers,order_agv,fault,plate_number,register_time,driver_address.replace("'", " "),last_week_daily_due
+                effective_days, lose_numbers, last_back_time, today_repayment, status,order_numbers,order_agv,fault,plate_number,register_time,driver_address.replace("'", " "),last_week_daily_due,already_amount,already_repaid_numbers,conversion_overdue_days,all_amount
             ]
             if sval == '':
                 sval = '(\'{}\')'.format('\',\''.join([str(x) for x in row]))
