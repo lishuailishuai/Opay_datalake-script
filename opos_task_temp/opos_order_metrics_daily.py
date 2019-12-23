@@ -90,6 +90,7 @@ def opos_active_user_daily_sql_task(ds):
 MSCK REPAIR TABLE opos_dw.dim_opos_bd_info_df;
 MSCK REPAIR TABLE opos_dw.dim_opos_bd_relation_df;
 MSCK REPAIR TABLE opos_dw.dwd_pre_opos_payment_order_di;
+MSCK REPAIR TABLE opos_dw_ods.ods_sqoop_base_bd_city_df;
 
 set hive.exec.parallel=true;
 set hive.exec.dynamic.partition.mode=nonstrict;
