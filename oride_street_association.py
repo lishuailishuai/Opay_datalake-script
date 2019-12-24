@@ -117,41 +117,6 @@ oride_driver_timerange_validate_task = HivePartitionSensor(
 )
 
 
-create_oride_street_association_di = HiveOperator(
-    task_id='create_oride_street_association_di',
-    hql="""
-        CREATE TABLE IF NOT EXISTS oride_street_association_di (
-          association_id int,  -- 协会id
-          total_registered_drivers int, -- 总注册司机数
-          have_license_drivers int, -- 有驾照司机数
-          visit_drivers int, -- 到访数
-          approved_drivers int, -- 通过审核司机数
-          test_drivers int, -- 通过培训司机数
-          registered_drivers int,  -- 注册司机数
-          completed_num int, -- 完单量
-          total_price decimal(10,2), -- 总计应付
-          total_amount decimal(10,2), -- 总计实付
-          registered_completed_drivers int, -- 注册并完单司机数
-          take_drivers int, -- 今日接单司机数
-          completed_drivers int, -- 今日完单司机数
-          canceled_drivers int, -- 今日取消订单司机数
-          online_drivers int, -- 在线司机数
-          offline_drivers_2 int, -- 连续2日未上线司机数
-          offline_drivers_3 int, -- 连续3日未上线司机数
-          no_take_drivers_2 int, -- 连续2日未接单司机数
-          no_take_drivers_3 int, -- 连续3日未接单司机数
-          no_completed_drivers_2_5 int, -- 连续2天未完成5单司机数
-          bad_score_drivers int --今日得差评司机数
-        )
-        PARTITIONED BY (
-            dt STRING
-        )
-        STORED AS PARQUET
-
-    """,
-    schema='oride_bi',
-    dag=dag)
-
 insert_oride_street_association_di = HiveOperator(
     task_id='insert_oride_street_association_di',
     hql="""
@@ -555,13 +520,11 @@ oride_association_email = PythonOperator(
     dag=dag
 )
 
-validate_partition_data >> data_order_validate_task >> create_oride_street_association_di
-validate_partition_data >> data_order_payment_validate_task >> create_oride_street_association_di
-validate_partition_data >> data_driver_extend_validate_task >> create_oride_street_association_di
-validate_partition_data >> data_driver_comment_validate_task >> create_oride_street_association_di
-validate_partition_data >> driver_group_validate_task >> create_oride_street_association_di
-validate_partition_data >> rider_signups_validate_task >> create_oride_street_association_di
-validate_partition_data >> oride_driver_timerange_validate_task >> create_oride_street_association_di
-
-
-create_oride_street_association_di >> insert_oride_street_association_di >> oride_association_email
+validate_partition_data >> data_order_validate_task >> insert_oride_street_association_di
+validate_partition_data >> data_order_payment_validate_task >> insert_oride_street_association_di
+validate_partition_data >> data_driver_extend_validate_task >> insert_oride_street_association_di
+validate_partition_data >> data_driver_comment_validate_task >> insert_oride_street_association_di
+validate_partition_data >> driver_group_validate_task >> insert_oride_street_association_di
+validate_partition_data >> rider_signups_validate_task >> insert_oride_street_association_di
+validate_partition_data >> oride_driver_timerange_validate_task >> insert_oride_street_association_di
+insert_oride_street_association_di >> oride_association_email
