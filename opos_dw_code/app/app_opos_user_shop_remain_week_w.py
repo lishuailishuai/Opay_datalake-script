@@ -67,7 +67,7 @@ def fun_task_timeout_monitor(ds, dag, **op_kwargs):
 
     tb = [
         {"db": "opos_dw", "table": "{dag_name}".format(dag_name=dag_ids),
-         "partition": "country_code=nal/dt={pt}".format(pt=airflow.macros.ds_add(ds, +6)), "timeout": "6000"}
+         "partition": "country_code=nal/dt={pt}".format(pt=airflow.macros.ds_add(ds, +6)), "timeout": "1200"}
     ]
 
     TaskTimeoutMonitor().set_task_monitor(tb)
@@ -106,7 +106,7 @@ week_order as (
       (SELECT concat(substr(dt,0,4),substr(concat('0',cast(weekofyear(dt) as string)),-2)) as aweek FROM public_dw_dim.dim_date where dt='{after_6_day}' group by concat(substr(dt,0,4),substr(concat('0',cast(weekofyear(dt) as string)),-2))) as a
     left join
       (SELECT concat(substr(dt,0,4),substr(concat('0',cast(weekofyear(dt) as string)),-2)) as bweek FROM public_dw_dim.dim_date where dt>='{before_75_day}' and dt<='{after_6_day}' group by concat(substr(dt,0,4),substr(concat('0',cast(weekofyear(dt) as string)),-2))) as b
-    where 1=1
+    on 1=1
   ) as m
 ),
 

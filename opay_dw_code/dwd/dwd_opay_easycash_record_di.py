@@ -111,7 +111,8 @@ def dwd_opay_easycash_record_di_sql_task(ds):
     select 
         order_no, amount, currency, 'USER' as originator_type, t2.trader_role as originator_role, t2.trader_kyc_level as originator_kyc_level, t1.originator_id, t2.trader_name as originator_name,
         t1.affiliate_mobile, 
-        t1.create_time, t1.update_time, t1.country, t1.order_status, t1.error_code, t1.error_msg, t1.next_step,
+        t1.create_time, t1.update_time, t1.country, t1.order_status, t1.error_code, t1.error_msg, t1.next_step, t1.accounting_status, 
+        'easycash' as top_consume_scenario, 'easycash' as sub_consume_scenario,
         case t1.country
             when 'NG' then 'NG'
             when 'NO' then 'NO'
@@ -137,7 +138,7 @@ def dwd_opay_easycash_record_di_sql_task(ds):
         select 
             order_no, amount, currency, user_id as originator_id, 
             mobile as affiliate_mobile,
-            create_time, update_time, country, order_status, error_code, error_msg, next_step    
+            create_time, update_time, country, order_status, error_code, error_msg, next_step, accounting_status
         from
         opay_dw_ods.ods_sqoop_base_user_easycash_record_di 
         where dt='{pt}'

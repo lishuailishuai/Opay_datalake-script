@@ -139,7 +139,8 @@ def dwd_opay_pos_transaction_record_di_sql_task(ds):
         t1.order_no, t1.amount, t1.stamp_duty, t1.currency, t1.originator_type, t2.trader_role as originator_role, t2.trader_kyc_level as originator_kyc_level, t1.originator_id, t2.trader_name as originator_name,
         t1.affiliate_terminal_id, t1.affiliate_terminal_provider_id, t1.affiliate_bank_code, 
         t1.pos_trade_req_id, t1.transaction_reference, t1.retrieval_reference_number,
-        t1.create_time, t1.update_time, t1.country, t1.order_status, t1.error_code, t1.error_msg, t1.transaction_type,
+        t1.create_time, t1.update_time, t1.country, t1.order_status, t1.error_code, t1.error_msg, t1.transaction_type, t1.accounting_status, 
+        'pos' as top_consume_scenario, 'pos' as sub_consume_scenario,
         case t1.country
             when 'NG' then 'NG'
             when 'NO' then 'NO'
@@ -166,7 +167,7 @@ def dwd_opay_pos_transaction_record_di_sql_task(ds):
             order_no, amount, stamp_duty, currency, 'USER' as originator_type, user_id as originator_id, 
             terminal_id as affiliate_terminal_id, terminal_provider_id as affiliate_terminal_provider_id, bank_code as affiliate_bank_code,
             pos_trade_req_id, transaction_reference, retrieval_reference_number,
-            create_time, update_time, country, order_status, channel_code as error_code, channel_msg as error_msg, transaction_type
+            create_time, update_time, country, order_status, channel_code as error_code, channel_msg as error_msg, transaction_type, accounting_status
         from opay_dw_ods.ods_sqoop_base_user_pos_transaction_record_di
         where dt = '{pt}'
         union all
@@ -175,7 +176,7 @@ def dwd_opay_pos_transaction_record_di_sql_task(ds):
             
             terminal_id as affiliate_terminal_id, terminal_provider_id as affiliate_terminal_provider_id, bank_code as affiliate_bank_code,
             pos_trade_req_id, transaction_reference, retrieval_reference_number,
-            create_time, update_time, country, order_status, channel_code as error_code, channel_msg as error_msg, transaction_type 
+            create_time, update_time, country, order_status, channel_code as error_code, channel_msg as error_msg, transaction_type, accounting_status
         from opay_dw_ods.ods_sqoop_base_merchant_pos_transaction_record_di
         where dt = '{pt}'
     ) t1 

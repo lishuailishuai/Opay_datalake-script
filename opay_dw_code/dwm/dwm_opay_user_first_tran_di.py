@@ -27,7 +27,7 @@ import os
 
 args = {
     'owner': 'liushuzhen',
-    'start_date': datetime(2019, 12, 20),
+    'start_date': datetime(2019, 12, 22),
     'depends_on_past': False,
     'retries': 3,
     'retry_delay': timedelta(minutes=2),
@@ -80,8 +80,8 @@ def dwm_opay_user_first_tran_di_sql_task(ds):
        top_consume_scenario,
        sub_consume_scenario,
        client_source,
-       country_code,
-       dt
+       a.country_code,
+       a.dt
     FROM
       (SELECT *
        FROM opay_dw.dwd_opay_transaction_record_di a

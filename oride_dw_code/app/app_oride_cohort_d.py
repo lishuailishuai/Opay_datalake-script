@@ -36,7 +36,7 @@ args = {
 }
 
 dag = airflow.DAG('app_oride_cohort_d',
-                  schedule_interval="00 03 * * *",
+                  schedule_interval="00 04 * * *",
                   default_args=args)
 
 
@@ -495,41 +495,41 @@ def execution_act_driver_task(ds, **kargs):
     TaskTouchzSuccess().countries_touchz_success(ds, "oride_dw", get_table_info(3)[0], hdfs_path, "true", "true")
 
 
-app_oride_new_user_cohort_m_task = PythonOperator(
-    task_id='app_oride_new_user_cohort_m_task',
+app_oride_new_user_cohort_d_task = PythonOperator(
+    task_id='app_oride_new_user_cohort_d_task',
     python_callable=execution_new_user_task,
     provide_context=True,
     dag=dag
 )
 
-app_oride_new_driver_cohort_m_task = PythonOperator(
-    task_id='app_oride_new_driver_cohort_m_task',
+app_oride_new_driver_cohort_d_task = PythonOperator(
+    task_id='app_oride_new_driver_cohort_d_task',
     python_callable=execution_new_driver_task,
     provide_context=True,
     dag=dag
 )
 
-app_oride_act_user_cohort_m_task = PythonOperator(
-    task_id='app_oride_act_user_cohort_m_task',
+app_oride_act_user_cohort_d_task = PythonOperator(
+    task_id='app_oride_act_user_cohort_d_task',
     python_callable=execution_act_user_task,
     provide_context=True,
     dag=dag
 )
 
-app_oride_act_driver_cohort_m_task = PythonOperator(
-    task_id='app_oride_act_driver_cohort_m_task',
+app_oride_act_driver_cohort_d_task = PythonOperator(
+    task_id='app_oride_act_driver_cohort_d_task',
     python_callable=execution_act_driver_task,
     provide_context=True,
     dag=dag
 )
 
 
-dwm_oride_order_base_di_task>>app_oride_new_user_cohort_m_task
-dwm_oride_passenger_base_df_task>>app_oride_new_user_cohort_m_task
+dwm_oride_order_base_di_task>>app_oride_new_user_cohort_d_task
+dwm_oride_passenger_base_df_task>>app_oride_new_user_cohort_d_task
 
-dwm_oride_order_base_di_task>>app_oride_new_driver_cohort_m_task
-dwm_oride_driver_base_df_task>>app_oride_new_driver_cohort_m_task
+dwm_oride_order_base_di_task>>app_oride_new_driver_cohort_d_task
+dwm_oride_driver_base_df_task>>app_oride_new_driver_cohort_d_task
 
-dwm_oride_order_base_di_task>>app_oride_act_user_cohort_m_task
+dwm_oride_order_base_di_task>>app_oride_act_user_cohort_d_task
 
-dwm_oride_order_base_di_task>>app_oride_act_driver_cohort_m_task
+dwm_oride_order_base_di_task>>app_oride_act_driver_cohort_d_task

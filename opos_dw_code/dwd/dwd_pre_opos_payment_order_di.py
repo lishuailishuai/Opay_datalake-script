@@ -36,7 +36,7 @@ args = {
 }
 
 dag = airflow.DAG('dwd_pre_opos_payment_order_di',
-                  schedule_interval="10 02 * * *",
+                  schedule_interval="30 01 * * *",
                   default_args=args,
                   catchup=False)
 
@@ -89,7 +89,7 @@ def fun_task_timeout_monitor(ds, dag, **op_kwargs):
 
     tb = [
         {"db": "opos_dw", "table": "{dag_name}".format(dag_name=dag_ids),
-         "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "6000"}
+         "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "1200"}
     ]
 
     TaskTimeoutMonitor().set_task_monitor(tb)
@@ -112,6 +112,8 @@ def dwd_pre_opos_payment_order_di_sql_task(ds):
 --插入数据
 set hive.exec.parallel=true;
 set hive.exec.dynamic.partition.mode=nonstrict;
+set hive.strict.checks.cartesian.product=false;
+
 
 insert overwrite table opos_dw.dwd_pre_opos_payment_order_di partition(country_code,dt)
 select

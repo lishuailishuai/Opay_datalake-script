@@ -46,7 +46,7 @@ def run_insert_ods(**kwargs):
             column_rows.append("get_json_object(after, '$.{}')".format(data[0]))
 
     print(column_rows)
-    sql='''
+    sql_old='''
         msck REPAIR TABLE oride_source.binlog_{table};
         SET hive.exec.dynamic.partition=true;
         SET hive.exec.dynamic.partition.mode=nonstrict;
@@ -60,6 +60,34 @@ def run_insert_ods(**kwargs):
         WHERE
             dt BETWEEN '{b_st}' AND '{b_et}'
             AND from_unixtime(unix_timestamp(regexp_replace(get_json_object(after, '$.updated_at'), 'T', ' '))+3600, 'yyyy-MM-dd') between '{o_st}' and '{o_et}'
+    '''
+
+    sql='''
+        msck REPAIR TABLE oride_source.binlog_{table};
+        SET hive.exec.dynamic.partition=true;
+        SET hive.exec.dynamic.partition.mode=nonstrict;
+        INSERT OVERWRITE TABLE {db}.`ods_binlog_{table}_hi` partition(dt, hour)
+        SELECT
+            {columns},
+            from_unixtime(cast(get_json_object(AFTER, '$.create_time') as int)+3600, 'yyyy-MM-dd') as dt,
+            from_unixtime(cast(get_json_object(AFTER, '$.create_time') as int)+3600, 'HH') as hour
+        FROM
+            oride_source.binlog_{table}
+        WHERE
+            dt BETWEEN '{b_st}' AND '{b_et}'
+            AND from_unixtime(cast(get_json_object(AFTER, '$.create_time') as int)+3600, 'yyyy-MM-dd HH') between '{o_st}' and '{o_et}'
+
+        union all
+
+        SELECT
+            {columns},
+            from_unixtime(unix_timestamp(regexp_replace(get_json_object(AFTER, '$.updated_at'), 'T', ' '))+3600, 'yyyy-MM-dd') as dt,
+            from_unixtime(unix_timestamp(regexp_replace(get_json_object(AFTER, '$.updated_at'), 'T', ' '))+3600, 'HH') as hour
+        FROM
+            oride_source.binlog_{table}
+        WHERE
+            dt BETWEEN '{b_st}' AND '{b_et}'
+            AND from_unixtime(unix_timestamp(regexp_replace(get_json_object(AFTER, '$.updated_at'), 'T', ' '))+3600, 'yyyy-MM-dd HH') between '{o_st}' and '{o_et}'
     '''
     hive_hook = HiveCliHook()
     run_sql=sql.format(

@@ -112,9 +112,9 @@ def app_oride_driver_transport_capacity_d_sql_task(ds):
     
  
  insert overwrite table oride_dw.{table}  partition(country_code,dt)
- select
+  select
     driver_base.city_id,
-    city.city_name,
+    nvl(city.city_name,'all') as city_name,
     driver_base.product_id,
     nvl(driver_base.succ_push_times / driver_base.succ_broadcast_driver_num,0)  as push_driver_times_avg ,----人均推单次数
     nvl(driver_base.succ_push_order_cnt / driver_base.succ_broadcast_driver_num,0) as push_driver_order_avg,--人均推送订单数
@@ -133,12 +133,12 @@ def app_oride_driver_transport_capacity_d_sql_task(ds):
     nvl(round(price_sum /order_pay_num,2),0) order_price_avg, --单均应付 应付金额/支付订单数
     nvl(round(pay_amount_sum / order_pay_num,2),0) order_amount_avg, --实付金额 实付金额/支付订单数
     if(finish_driver_cnt >0, round(amount_all / finish_driver_cnt,2), 0)as avg_driver_amount, --司机人均收入
-    driver_base.country_code as country_code,
-    driver_base.dt as dt 
+    nvl(driver_base.country_code,'all') as country_code,
+    '{pt}' as dt 
 from 
 (
     select 
-        city_id,
+        nvl(city_id,-10000) as city_id,
         product_id,
         sum(succ_push_times) as succ_push_times,--成功被播单总次数(订单不去重)
         sum(succ_push_order_cnt)  as succ_push_order_cnt ,--成功被播单量(订单去重)
@@ -158,34 +158,33 @@ from
         dt
     from oride_dw.dwm_oride_driver_base_df
     where dt = '{pt}' and city_id <> '999001'
-    group by 
-        city_id,
-        product_id,
-        country_code,
-        dt
+    group by city_id,product_id,country_code,dt
+    grouping sets(product_id,(city_id,product_id,country_code,dt))
 )driver_base
 left join
 (
     select 
-        city_id,
+        nvl(city_id,-10000) as city_id,
         product_id,
         count(distinct if(is_td_finish = 1 ,driver_id,null)) as seven_day_finish_driver_cnt  --近7日完单司机数   
     from oride_dw.dwm_oride_driver_base_df
     where dt >= date_sub('{pt}',7) and dt <= '{pt}' and city_id <> '999001'
     group by city_id,product_id
+    grouping sets(product_id,(city_id,product_id))
 )driver_base_seven on driver_base.city_id = driver_base_seven.city_id and  driver_base.product_id = driver_base_seven.product_id
 left join
 (
     select 
-        city_id,
+        nvl(city_id,-10000) as city_id,
         product_id,
         count(order_id) as order_pay_num, --支付订单数
         sum(price) as price_sum,--应付总金额
         sum(pay_amount) as pay_amount_sum --实付总金额
     from  oride_dw.dwd_oride_order_pay_detail_di
-    where dt = '{pt}'
-    group by
-        city_id,product_id
+    where dt = '{pt}' and city_id is not null
+    group by city_id,product_id
+    grouping sets(product_id,(city_id,product_id))
+
 )ord_pay on driver_base.city_id = ord_pay.city_id and  driver_base.product_id = ord_pay.product_id
 left join 
 (
@@ -195,7 +194,7 @@ left join
         dt
     from oride_dw.dim_oride_city
     where dt = '{pt}'
-)city on driver_base.city_id = city.city_id;
+)city on driver_base.city_id = city.city_id
     
     '''.format(
         pt=ds,

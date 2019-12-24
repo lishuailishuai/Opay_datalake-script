@@ -36,7 +36,7 @@ args = {
 }
 
 dag = airflow.DAG('app_opos_user_shop_remain_day_d',
-                  schedule_interval="30 03 * * *",
+                  schedule_interval="00 03 * * *",
                   default_args=args,
                   catchup=False)
 
@@ -67,7 +67,7 @@ def fun_task_timeout_monitor(ds, dag, **op_kwargs):
 
     tb = [
         {"db": "opos_dw", "table": "{dag_name}".format(dag_name=dag_ids),
-         "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "6000"}
+         "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "1200"}
     ]
 
     TaskTimeoutMonitor().set_task_monitor(tb)
@@ -110,7 +110,7 @@ date_order as (
   (SELECT * FROM public_dw_dim.dim_date where dt='{pt}') as a
   left join
   (SELECT * FROM public_dw_dim.dim_date where dt>='{before_29_day}' and dt<='{pt}') as b
-  where 1=1
+  on 1=1
   ) as m
 ),
 

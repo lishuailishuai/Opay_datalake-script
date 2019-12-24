@@ -132,6 +132,7 @@ table_list = [
     ("oride_data", "data_driver_balance_extend", "sqoop_db", "base",1),
     #("oride_data", "data_driver_assign_info", "sqoop_db", "base",1),
     ("oride_data", "data_operation_driver_log", "sqoop_db", "base",2),
+    ("oride_data", "data_driver_reward_history", "sqoop_db", "base",2),
 
     #2019.10.20上线
     ("oride_data", "data_coupon_history", "sqoop_db", "base",1),
