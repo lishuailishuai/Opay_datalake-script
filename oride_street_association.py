@@ -31,7 +31,6 @@ dag = airflow.DAG(
 table_names = ['oride_dw_ods.ods_sqoop_mass_driver_group_df',
                'oride_dw_ods.ods_sqoop_mass_rider_signups_df',
                'oride_dw_ods.ods_sqoop_base_data_driver_extend_df',
-               'oride_dw_ods.ods_sqoop_base_data_order_payment_df',
                'oride_dw_ods.ods_sqoop_base_data_driver_comment_df',
                'oride_dw.dwd_oride_order_base_include_test_di'
                ]
@@ -74,24 +73,6 @@ rider_signups_validate_task = HivePartitionSensor(
 data_driver_extend_validate_task = HivePartitionSensor(
     task_id="data_driver_extend_validate_task",
     table="ods_sqoop_base_data_driver_extend_df",
-    partition="dt='{{ds}}'",
-    schema="oride_dw_ods",
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
-
-data_order_validate_task = HivePartitionSensor(
-    task_id="data_order_validate_task",
-    table="ods_sqoop_base_data_order_df",
-    partition="dt='{{ds}}'",
-    schema="oride_dw_ods",
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
-
-data_order_payment_validate_task = HivePartitionSensor(
-    task_id="data_order_payment_validate_task",
-    table="ods_sqoop_base_data_order_payment_df",
     partition="dt='{{ds}}'",
     schema="oride_dw_ods",
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
@@ -520,8 +501,6 @@ oride_association_email = PythonOperator(
     dag=dag
 )
 
-validate_partition_data >> data_order_validate_task >> insert_oride_street_association_di
-validate_partition_data >> data_order_payment_validate_task >> insert_oride_street_association_di
 validate_partition_data >> data_driver_extend_validate_task >> insert_oride_street_association_di
 validate_partition_data >> data_driver_comment_validate_task >> insert_oride_street_association_di
 validate_partition_data >> driver_group_validate_task >> insert_oride_street_association_di
