@@ -139,7 +139,8 @@ def dwd_opay_receive_money_record_di_sql_task(ds):
         t1.order_no, t1.amount, t1.currency, t1.originator_type, t2.trader_role as originator_role, t2.trader_kyc_level as originator_kyc_level, t1.originator_id, t2.trader_name as originator_name,
         replace(t1.affiliate_bank_account_code, '+234', '') as affiliate_bank_account_code, t1.affiliate_bank_account_name, t1.affiliate_bank_scheme, 
         t1.create_time, t1.update_time, t1.country, t1.order_status, t1.error_code, t1.error_msg, 
-        if(order_type = '0', 'PURCHASE', 'REFUND') as order_type,
+        if(order_type = '0', 'PURCHASE', 'REFUND') as order_type, t1.accounting_status, 
+        'receivemoney' as top_consume_scenario, 'receivemoney' as sub_consume_scenario,
         case t1.country
             when 'NG' then 'NG'
             when 'NO' then 'NO'
@@ -166,7 +167,7 @@ def dwd_opay_receive_money_record_di_sql_task(ds):
             order_no, amount, currency, 'USER' as originator_type, user_id as originator_id, 
             bank_account_code as affiliate_bank_account_code, bank_account_name as affiliate_bank_account_name, 
             scheme as affiliate_bank_scheme, 
-            create_time, update_time, country, order_status, '-' as error_code, fail_msg as error_msg, order_type
+            create_time, update_time, country, order_status, '-' as error_code, fail_msg as error_msg, order_type, accounting_status
         from opay_dw_ods.ods_sqoop_base_user_receive_money_record_di
         where dt = '{pt}'
         union all
@@ -174,7 +175,7 @@ def dwd_opay_receive_money_record_di_sql_task(ds):
             order_no, amount, currency, 'MERCHANT' as originator_type, merchant_id as originator_id, 
             bank_account_code as affiliate_bank_account_code, bank_account_name as affiliate_bank_account_name, 
             scheme as affiliate_bank_scheme, 
-            create_time, update_time, country, order_status, '-' as error_code, fail_msg as error_msg, order_type 
+            create_time, update_time, country, order_status, '-' as error_code, fail_msg as error_msg, order_type, accounting_status
         from opay_dw_ods.ods_sqoop_base_merchant_receive_money_record_di
         where dt = '{pt}'
     ) t1 
