@@ -162,7 +162,7 @@ insert_oride_street_association_di = HiveOperator(
         order_data_today as (
             SELECT
                 association_id,
-                count(if(status=4 or status=5, id, null)) as completed_num, -- 完单量
+                count(if(status=4 or status=5, order_id, null)) as completed_num, -- 完单量
                 SUM(if(status=4 or status=5, payment_price, 0)) as total_price, -- 总计应付
                 SUM(if(status=4 or status=5, payment_amount, 0)) as total_amount, -- 总计实付
                 COUNT(distinct if((status=4 or status=5) and from_unixtime(create_time, 'yyyy-MM-dd')='{{ ds }}', driver_id, null)) as registered_completed_drivers, -- 注册并完单司机数
