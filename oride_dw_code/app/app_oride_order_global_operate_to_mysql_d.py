@@ -330,13 +330,13 @@ def app_oride_order_global_operate_to_mysql_d_sql_task(ds):
             c.c_gmv_m  --c端补贴、月
 
         from
-        ( --B端补贴  amount_recharge + amount_reward
+        ( --B端补贴  recharge_amount + reward_amount
                select 
                 city_id,
 
-                sum(if(dt ='{pt}',amount_recharge,0))+sum(if(dt ='{pt}',amount_reward,0)) as b_subsidy_d,--B端补贴、天(实际b补)
+                sum(if(dt ='{pt}',recharge_amount,0))+sum(if(dt ='{pt}',reward_amount,0)) as b_subsidy_d,--B端补贴、天(实际b补)
 
-                sum(amount_recharge) + sum(amount_reward) as b_subsidy_m--B端补贴 月
+                sum(recharge_amount) + sum(reward_amount) as b_subsidy_m--B端补贴 月
 
             from oride_dw.dwm_oride_driver_finance_di 
             where  month(dt) = month('{pt}') and city_id != 999001
