@@ -82,6 +82,7 @@ table_list = [
     # oride data
     ("oride_data", "data_country_conf", "sqoop_db", "base",3),
     ("oride_data", "data_order_payment", "sqoop_db", "base",3),
+    ("oride_data", "data_driver", "sqoop_db", "base",3),
     ("oride_data", "data_user", "sqoop_db", "base",3),
     ("oride_data", "data_coupon", "sqoop_db", "base",1),
     ("oride_data", "data_driver_group", "sqoop_db", "base",1),
