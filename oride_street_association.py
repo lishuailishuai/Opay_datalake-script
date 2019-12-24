@@ -31,9 +31,9 @@ dag = airflow.DAG(
 table_names = ['oride_dw_ods.ods_sqoop_mass_driver_group_df',
                'oride_dw_ods.ods_sqoop_mass_rider_signups_df',
                'oride_dw_ods.ods_sqoop_base_data_driver_extend_df',
-               'oride_dw_ods.ods_sqoop_base_data_order_df',
                'oride_dw_ods.ods_sqoop_base_data_order_payment_df',
                'oride_dw_ods.ods_sqoop_base_data_driver_comment_df',
+               'oride_dw.dwd_oride_order_base_include_test_di'
                ]
 
 '''
@@ -205,17 +205,13 @@ insert_oride_street_association_di = HiveOperator(
             SELECT
                 t.*,
                 t1.association_id as association_id,
-                nvl(t2.price, 0) as payment_price,
-                nvl(t2.amount, 0) as payment_amount
+                nvl(t.price, 0) as payment_price,
+                nvl(t.pay_amount, 0) as payment_amount
             FROM
                 (
-                    SELECT * FROM oride_dw_ods.ods_sqoop_base_data_order_df WHERE dt='{{ ds }}' AND from_unixtime(create_time, 'yyyy-MM-dd') between '{{ macros.ds_add(ds, -2) }}' AND '{{ ds }}'
+                    SELECT * FROM oride_dw.dwd_oride_order_base_include_test_di WHERE dt BETWEEN '{{ macros.ds_add(ds, -2) }}' AND '{{ ds }}'
                 ) t
                 INNER JOIN driver_data t1 ON t1.driver_id=t.driver_id
-                LEFT JOIN
-                (
-                    SELECT * FROM oride_dw_ods.ods_sqoop_base_data_order_payment_df WHERE dt='{{ ds }}' AND from_unixtime(create_time, 'yyyy-MM-dd') between '{{ macros.ds_add(ds, -2) }}' AND '{{ ds }}'
-                ) t2 ON t2.id=t.id
         ),
         order_data_today as (
             SELECT
@@ -230,7 +226,7 @@ insert_oride_street_association_di = HiveOperator(
             FROM
                 order_detail
             WHERE
-                from_unixtime(create_time, 'yyyy-MM-dd')='{{ ds }}'
+                dt='{{ ds }}'
             GROUP BY association_id
         ),
         online_drivers_data as (
@@ -277,11 +273,11 @@ insert_oride_street_association_di = HiveOperator(
                 (
                     SELECT
                         driver_id,
-                        MAX(from_unixtime(create_time, 'yyyy-MM-dd')) as l_dt
+                        MAX(dt) as l_dt
                     FROM
                         order_detail
                     WHERE
-                        from_unixtime(create_time, 'yyyy-MM-dd') between '{{ macros.ds_add(ds, -2) }}' AND '{{ ds }}' and driver_id>0
+                        driver_id>0
                     GROUP BY
                         driver_id
                 ) t2 ON t2.driver_id=t1.driver_id
@@ -301,12 +297,12 @@ insert_oride_street_association_di = HiveOperator(
                         (
                         SELECT
                             driver_id,
-                            count(if(from_unixtime(create_time, 'yyyy-MM-dd')='{{ ds }}', 1, null)) as counts_1,
-                            count(if(from_unixtime(create_time, 'yyyy-MM-dd')='{{ macros.ds_add(ds, -1) }}', 1, null)) as counts_2
+                            count(if(dt='{{ ds }}', 1, null)) as counts_1,
+                            count(if(dt='{{ macros.ds_add(ds, -1) }}', 1, null)) as counts_2
                         FROM
                             order_detail
                         WHERE
-                            from_unixtime(create_time, 'yyyy-MM-dd') between '{{ macros.ds_add(ds, -1) }}' AND '{{ ds }}' and status in(4,5)
+                            status in(4,5)
                         GROUP BY
                             driver_id
                         ) t
