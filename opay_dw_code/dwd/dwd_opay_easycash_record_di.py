@@ -94,10 +94,7 @@ hdfs_path="oss://opay-datalake/opay/opay_dw/" + table_name
 def dwd_opay_easycash_record_di_sql_task(ds):
     HQL='''
     SET mapreduce.job.queuename= opay_collects;
-    set mapreduce.map.memory.mb=8192;
-    set mapreduce.reduce.memory.mb=8192;
-    set mapreduce.map.java.opts=-Xmx8192M;
-    set mapreduce.reduce.java.opts=-Xmx8192M;
+    set mapred.job.priority= VERY_HIGH;
     set hive.exec.dynamic.partition.mode=nonstrict;
     set hive.exec.parallel=true;
     with user_data as(
