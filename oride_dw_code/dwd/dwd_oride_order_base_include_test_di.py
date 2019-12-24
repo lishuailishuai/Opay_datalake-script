@@ -431,6 +431,18 @@ SELECT base.order_id,
         premium_adjust_price, --溢价金额
         local_gov, --围栏ID
         estimate_id,  --预估价记录表id   
+        gender, --性别:0.未设置 1.男 2.女
+        surcharge, --服务费
+        user_agree_surcharge, --用户是否同意服务费(1同意 2 不同意)
+        take_lng, --司机接单位置经度
+        take_lat, --司机接单位置纬度
+        minimum_fare, --最低消费
+        discount, --动态折扣(如:70，7折)
+        discount_price_max, --可享受折扣金额上限.)
+        driver_depart, --接单取消时骑手是否出发 0 已出发（默认） 1 未出发
+        change_target, --否修改终点(0 no 1 yes) 
+        user_version, --乘客端版本（发单）
+        driver_version, --司机端版本（接单）
        nvl(country.country_code,'nal') as country_code,
 
        '{pt}' AS dt
@@ -581,7 +593,19 @@ FROM
              premium_price_limit, --溢价金额上限
              premium_adjust_price, --溢价金额
              local_gov, --围栏ID
-             estimate_id  --预估价记录表id
+             estimate_id,  --预估价记录表id
+             gender, --性别:0.未设置 1.男 2.女
+             surcharge, --服务费
+             user_agree_surcharge, --用户是否同意服务费(1同意 2 不同意)
+             take_lng, --司机接单位置经度
+             take_lat, --司机接单位置纬度
+             minimum_fare, --最低消费
+             discount, --动态折扣(如:70，7折)
+             discount_price_max, --可享受折扣金额上限.)
+             driver_depart, --接单取消时骑手是否出发 0 已出发（默认） 1 未出发
+             change_target, --否修改终点(0 no 1 yes) 
+             user_version, --乘客端版本（发单）
+             driver_version --司机端版本（接单）
              from 
      (SELECT 
 
@@ -731,6 +755,18 @@ FROM
              premium_adjust_price, --溢价金额
              local_gov, --围栏ID
              estimate_id,  --预估价记录表id
+             gender, --性别:0.未设置 1.男 2.女
+             surcharge, --服务费
+             user_agree_surcharge, --用户是否同意服务费(1同意 2 不同意)
+             take_lng, --司机接单位置经度
+             take_lat, --司机接单位置纬度
+             minimum_fare, --最低消费
+             discount, --动态折扣(如:70，7折)
+             discount_price_max, --可享受折扣金额上限.)
+             driver_depart, --接单取消时骑手是否出发 0 已出发（默认） 1 未出发
+             change_target, --否修改终点(0 no 1 yes) 
+             user_version, --乘客端版本（发单）
+             driver_version, --司机端版本（接单）
 
              row_number() OVER(partition BY id ORDER BY updated_at desc,pos DESC) AS rn1
 
