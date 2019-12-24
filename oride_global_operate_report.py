@@ -138,7 +138,7 @@ def get_all_data_row(ds):
                 nvl(td_finish_order_driver_num_inSimulRing,0) as td_finish_order_driver_num_inSimulRing, --当日完单司机数
                 cast(price as bigint) as gmv,  --订单应付总额,状态4，5
                 cast(new_user_gmv as bigint) as new_user_gmv, -- 当日新注册乘客完单gmv，状态4，5
-                concat(cast(nvl(round((recharge_amount+reward_amount)*100/price,1),0) as string),'%') as b_subsidy_rate,  --b端补贴率
+                concat(cast(nvl(round((nvl(recharge_amount,0)+nvl(reward_amount,0))*100/price,1),0) as string),'%') as b_subsidy_rate,  --b端补贴率
                 if(dt<='2019-12-17',concat(cast(nvl(round((price-pay_amount)*100/price,1),0) as string),'%'),concat(cast(nvl(round((opay_pay_price-opay_pay_amount)*100/opay_pay_price,1),0) as string),'%')) as c_subsidy_rate, --c端补贴率【gmv状态4，5；实付金额状态5】
                 --cast(user_recharge_succ_balance as bigint) as user_recharge_succ_balance, --每日用户充值真实金额
                 --recharge_users, --每日充值客户数
@@ -312,7 +312,7 @@ def get_product_rows(ds, all_completed_num_nobeckon, product_id):
                  nvl(cast(round(t1.finish_order_onride_dis/t1.finish_order_cnt,0) as bigint),0) AS avg_order_onride_dis,--平均送驾距离
                  nvl(cast(t1.price as bigint),0) AS gmv,
                  nvl(cast(t1.new_user_gmv as bigint),0) as new_user_gmv, --当日注册乘客完单gmv
-                concat(cast(nvl(round((t1.recharge_amount+t1.reward_amount)*100/t1.price,1),0) AS string),'%') AS b_subsidy_rate, --b端补贴率
+                concat(cast(nvl(round((nvl(t1.recharge_amount,0)+nvl(t1.reward_amount,0))*100/t1.price,1),0) AS string),'%') AS b_subsidy_rate, --b端补贴率
                 if(dt<='2019-12-17',concat(cast(nvl(round((t1.price-t1.pay_amount)*100/t1.price,1),0) AS string),'%'),concat(cast(nvl(round((t1.opay_pay_price-t1.opay_pay_amount)*100/t1.opay_pay_price,1),0) AS string),'%')) AS c_subsidy_rate, --c端补贴率【gmv状态4，5；实付金额状态5】
                 --concat(cast(nvl(round((t1.opay_pay_price-t1.opay_pay_amount)*100/t1.price,1),0) AS string),'%') AS c_subsidy_rate, --c端补贴率【gmv状态4，5；实付金额状态5】
                 nvl(round(t1.pay_price/t1.finish_pay,1),0) AS avg_pay_price, --单均应付
