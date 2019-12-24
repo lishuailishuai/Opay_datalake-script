@@ -133,7 +133,7 @@ def app_oride_driver_transport_capacity_d_sql_task(ds):
     nvl(round(price_sum /order_pay_num,2),0) order_price_avg, --单均应付 应付金额/支付订单数
     nvl(round(pay_amount_sum / order_pay_num,2),0) order_amount_avg, --实付金额 实付金额/支付订单数
     if(finish_driver_cnt >0, round(amount_all / finish_driver_cnt,2), 0)as avg_driver_amount, --司机人均收入
-    nvl(driver_base.country_code,'all') as country_code,
+    'NG' as country_code,
     '{pt}' as dt 
 from 
 (
