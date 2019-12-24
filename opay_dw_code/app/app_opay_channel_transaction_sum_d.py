@@ -76,7 +76,7 @@ def app_opay_channel_transaction_sum_d_sql_task(ds):
             count(1) AS tran_c,
             dt
      FROM opay_dw.dwd_opay_channel_transaction_base_di
-     WHERE dt='{pt}'
+     WHERE dt='{pt}' and create_time BETWEEN date_format(date_sub('{pt}', 1), 'yyyy-MM-dd 23') AND date_format('{pt}', 'yyyy-MM-dd 23')
 GROUP BY pay_channel,
          out_channel_id,
          supply_item,

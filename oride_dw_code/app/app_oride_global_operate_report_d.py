@@ -411,14 +411,14 @@ select nvl(country_code,'total') as country_code,
        {passenger_order_data_null},
        {driver_data_null},
        null as map_request_num,  --地图调用次数
-       amount_recharge AS recharge_amount, --资金调整金额,用于统计实际b补
-       amount_reward AS reward_amount, --奖励金额,用于统计实际b补
+       recharge_amount AS recharge_amount, --资金调整金额,用于统计实际b补
+       reward_amount AS reward_amount, --奖励金额,用于统计实际b补
        {union_product_data_null}   
 from (select fin.country_code,
              fin.city_id,
              fin.product_id,
-             sum(fin.amount_recharge) AS amount_recharge, --资金调整金额,用于统计实际b补
-             sum(fin.amount_reward) AS amount_reward --奖励金额,用于统计实际b补 
+             sum(fin.recharge_amount) AS recharge_amount, --资金调整金额,用于统计实际b补
+             sum(fin.reward_amount) AS reward_amount --奖励金额,用于统计实际b补 
         from (select * 
               from oride_dw.dwm_oride_driver_finance_di 
               where dt='{pt}' and city_id<>999001 and driver_id<>1) fin

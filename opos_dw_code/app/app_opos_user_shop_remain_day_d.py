@@ -110,7 +110,7 @@ date_order as (
   (SELECT * FROM public_dw_dim.dim_date where dt='{pt}') as a
   left join
   (SELECT * FROM public_dw_dim.dim_date where dt>='{before_29_day}' and dt<='{pt}') as b
-  where 1=1
+  on 1=1
   ) as m
 ),
 
