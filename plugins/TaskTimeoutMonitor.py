@@ -128,7 +128,7 @@ class TaskTimeoutMonitor(object):
 
             #owner_name=dag.default_args.get("owner")
 
-            if dag is None or db is None or partition is None or timeout is None:
+            if table is None or db is None or partition is None or timeout is None:
                 return None
 
             location = None
