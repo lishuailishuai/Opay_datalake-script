@@ -101,7 +101,7 @@ week_order as (
   from
   (
     select
-    a.aweek,b.bweek,row_number() over (order by b.bweek desc) as rn
+    a.aweek,b.bweek,row_number() over (order by b.bweek asc) as rn
     from
       (SELECT concat(substr(dt,0,4),substr(concat('0',cast(weekofyear(dt) as string)),-2)) as aweek FROM public_dw_dim.dim_date where dt='{after_6_day}' group by concat(substr(dt,0,4),substr(concat('0',cast(weekofyear(dt) as string)),-2))) as a
     left join
