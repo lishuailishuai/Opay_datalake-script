@@ -165,7 +165,7 @@ def app_oride_order_global_operate_overview_d_sql_task(ds):
             select  --补贴金额 天 业务线
                 city_id,
                 product_id,
-                sum(amount_recharge+amount_reward) as allowance,
+                sum(recharge_amount+reward_amount) as allowance,
                 dt
             from oride_dw.dwm_oride_driver_finance_di
             where dt = '{pt}'
