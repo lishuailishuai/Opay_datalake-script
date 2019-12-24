@@ -92,37 +92,6 @@ set hive.exec.parallel=true;
 set hive.exec.dynamic.partition.mode=nonstrict;
 set hive.strict.checks.cartesian.product=false;
 
---01.用户商户周留存表
-drop TABLE opos_dw.app_opos_user_shop_remain_month_m;
-CREATE EXTERNAL TABLE opos_dw.app_opos_user_shop_remain_month_m(
-  id bigint COMMENT '自增主键,mysql创表时,需手动添加自增'
-
-  ,create_month string COMMENT '最新一期订单,用于向前推算最新一期的留存情况'
-
-  ,month_interval int COMMENT '最新一期订单距离历史完单周的时间间隔'
-
-  ,remain_month string COMMENT '历史完单日期,向后看即留存的周期'
-
-  ,city_id string COMMENT '城市编码'
-  ,city_name string COMMENT '城市名称'
-  ,country string COMMENT '城市名称'
-
-  ,new_user_remain_cnt int COMMENT '首单用户留存数'
-
-  ,user_remain_cnt int COMMENT '用户留存数'
-
-  ,new_shop_remain_cnt int COMMENT '首次创建商户留存数'
-
-  ,shop_remain_cnt int COMMENT '商户留存数'
-
-)
-PARTITIONED BY ( 
-  country_code string COMMENT '国家码',dt string COMMENT '分区时间')
-STORED AS orc 
-LOCATION
-  'oss://opay-datalake/opos/opos_dw/app_opos_user_shop_remain_month_m'
-TBLPROPERTIES ('orc.compress'='SNAPPY');
-
 --00.求星期排序
 with
 month_order as (
