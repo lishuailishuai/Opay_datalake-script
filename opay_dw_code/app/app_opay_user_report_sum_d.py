@@ -93,7 +93,7 @@ def app_opay_user_report_sum_d_sql_task(ds):
           '-' sub_consume_scenario,
           count(1) reg_user_cnt,
           count(CASE
-                        WHEN dt='2019-12-23' THEN user_id
+                        WHEN create_t='{pt}' THEN user_id
                     END) new_reg_user_cnt,
           NULL AS zero_bal_acct_cnt,
           NULL AS first_pay_user_cnt,
@@ -106,9 +106,9 @@ def app_opay_user_report_sum_d_sql_task(ds):
              kyc_level,
              dt,
              row_number() over(partition BY user_id
-                               ORDER BY update_time DESC) rn
+                               ORDER BY update_time DESC) rn,substr(create_time,1,10) create_t
       FROM opay_dw.dim_opay_user_base_di
-      WHERE dt<='2019-12-23' ) t1
+      WHERE dt<='{pt}' ) t1
    WHERE rn = 1
    GROUP BY register_client,
             ROLE,
@@ -125,7 +125,7 @@ def app_opay_user_report_sum_d_sql_task(ds):
                   NULL AS first_pay_user_cnt,
                   NULL AS login_times
    FROM opay_dw.dwd_opay_account_balance_df
-   WHERE dt='2019-12-23'
+   WHERE dt='{pt}'
      AND user_type='USER'
      AND balance='0'
    GROUP BY user_role,
@@ -142,19 +142,15 @@ def app_opay_user_report_sum_d_sql_task(ds):
                       count(1) first_pay_user_cnt,
                       NULL AS login_times
    FROM opay_dw.dwm_opay_user_first_tran_di
-   WHERE dt='2019-12-23'
+   WHERE dt='{pt}'
      AND originator_type='USER'
-   GROUP BY sub_consume_scenario),
-      login AS
-  (
-  )
+   GROUP BY sub_consume_scenario)
+INSERT overwrite TABLE opay_dw.app_opay_user_report_sum_d partition (dt='{pt}')
 SELECT * FROM user_reg
 UNION ALL
 SELECT * FROM balance
 UNION ALL
 SELECT * FROM first_tran
-union all 
-select * from login 
 
     '''.format(
         pt=ds,
