@@ -31,7 +31,7 @@ table_names = [
     'oride_dw_ods.ods_sqoop_mass_driver_group_df',
     'oride_dw_ods.ods_sqoop_mass_rider_signups_df',
     'oride_dw_ods.ods_sqoop_base_data_driver_extend_df',
-    'oride_dw_ods.ods_sqoop_base_data_order_df',
+    'oride_dw.dwd_oride_order_base_include_test_di',
     'oride_dw_ods.ods_sqoop_base_data_order_payment_df',
     'oride_dw_ods.ods_sqoop_base_data_driver_comment_df',
     'oride_dw_ods.ods_log_oride_driver_timerange'
@@ -125,32 +125,18 @@ insert_oride_otrike_association_di = HiveOperator(
             SELECT
                 t.*,
                 t1.association_id as association_id,
-                nvl(t2.price, 0) as payment_price,
-                nvl(t2.amount, 0) as payment_amount
+                nvl(t.price, 0) as payment_price,
+                nvl(t.pay_amount, 0) as payment_amount
             FROM
                 (
-                    SELECT
-                        *
-                    FROM
-                        oride_dw_ods.ods_sqoop_base_data_order_df
-                    WHERE
-                        dt='{{ ds }}' AND from_unixtime(create_time, 'yyyy-MM-dd') between '{{ macros.ds_add(ds, -2) }}' AND '{{ ds }}'
+                    SELECT * FROM oride_dw.dwd_oride_order_base_include_test_di WHERE dt BETWEEN '{{ macros.ds_add(ds, -2) }}' AND '{{ ds }}'
                 ) t
                 INNER JOIN driver_data t1 ON t1.driver_id=t.driver_id
-                LEFT JOIN
-                (
-                    SELECT
-                        *
-                    FROM
-                        oride_dw_ods.ods_sqoop_base_data_order_payment_df
-                    WHERE
-                        dt='{{ ds }}' AND from_unixtime(create_time, 'yyyy-MM-dd') between '{{ macros.ds_add(ds, -2) }}' AND '{{ ds }}'
-                ) t2 ON t2.id=t.id
         ),
         order_data_today as (
             SELECT
                 association_id,
-                count(if(status=4 or status=5, id, null)) as completed_num, -- 完单量
+                count(if(status=4 or status=5, order_id, null)) as completed_num, -- 完单量
                 SUM(if(status=4 or status=5, payment_price, 0)) as total_price, -- 总计应付
                 SUM(if(status=4 or status=5, payment_amount, 0)) as total_amount, -- 总计实付
                 COUNT(distinct if((status=4 or status=5) and from_unixtime(create_time, 'yyyy-MM-dd')='{{ ds }}', driver_id, null)) as registered_completed_drivers, -- 注册并完单司机数
