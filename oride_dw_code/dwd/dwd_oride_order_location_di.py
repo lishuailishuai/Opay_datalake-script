@@ -122,207 +122,218 @@ def dwd_oride_order_location_di_sql_task(ds):
         SET hive.exec.dynamic.partition.mode=nonstrict; 
         
         WITH order_data AS (
-        
-        SELECT  ord.order_id               AS order_id
-               ,ord.user_id                AS user_id
-               ,ord.driver_id              AS driver_id
-               ,ord.create_time            AS create_time
-               ,ord.status                 AS status
-               ,ord.start_loc              AS start_loc
-               ,ord.end_loc                AS end_loc
+
+        SELECT  ord.order_id               AS order_id 
+               ,ord.user_id                AS user_id 
+               ,ord.driver_id              AS driver_id 
+               ,ord.create_time            AS create_time 
+               ,ord.status                 AS status 
+               ,ord.start_loc              AS start_loc 
+               ,ord.end_loc                AS end_loc 
                ,NVL(ct.country_code,'nal') AS country_code
         FROM 
         (
-            SELECT  order_id                        AS order_id
-                   ,passenger_id                    AS user_id
-                   ,driver_id                       AS driver_id
-                   ,create_time                     AS create_time
-                   ,status                          AS status
-                   ,city_id                         AS city_id
-                   ,concat(start_lat,'_',start_lng) AS start_loc
-                   ,concat(end_lat,'_',end_lng)     AS end_loc
-            FROM oride_dw.dwd_oride_order_base_include_test_di
-            WHERE dt = '{pt}' 
-            AND (status = 4 or status = 5)  
+        SELECT  order_id                        AS order_id 
+               ,passenger_id                    AS user_id 
+               ,driver_id                       AS driver_id 
+               ,create_time                     AS create_time 
+               ,status                          AS status 
+               ,city_id                         AS city_id 
+               ,concat(start_lat,'_',start_lng) AS start_loc 
+               ,concat(end_lat,'_',end_lng)     AS end_loc
+        FROM oride_dw.dwd_oride_order_base_include_test_di
+        WHERE dt = '{pt}' 
+        AND (status = 4 or status = 5)  
         ) ord
         LEFT JOIN 
         (
-            SELECT  cit.id           AS city_id
-                   ,cty.country_code AS country_code
-            FROM 
-            (
-                SELECT  id
-                       ,country
-                FROM oride_dw_ods.ods_sqoop_base_data_city_conf_df
-                WHERE dt = '{pt}'  
-            ) cit
-            LEFT JOIN 
-            (
-                SELECT  country_name_en
-                       ,country_code
-                FROM oride_dw.dim_oride_country_base 
-            ) cty
-            ON cit.country = cty.country_name_en 
+        SELECT  cit.id           AS city_id 
+               ,cty.country_code AS country_code
+        FROM 
+        (
+            SELECT  id 
+                   ,country
+            FROM oride_dw_ods.ods_sqoop_base_data_city_conf_df
+            WHERE dt = '{pt}'  
+        ) cit
+        LEFT JOIN 
+        (
+            SELECT  country_name_en 
+                   ,country_code
+            FROM oride_dw.dim_oride_country_base 
+        ) cty
+        ON cit.country = cty.country_name_en 
         ) ct
         ON ord.city_id = ct.city_id ), 
         
         event_loc_data AS (
-        SELECT  t.event_name                                                             AS event_name
-               ,t.order_id                                                               AS order_id
+        SELECT  t.event_name                                                             AS event_name 
+               ,t.order_id                                                               AS order_id 
                ,concat(substring(CAST(t.event_time AS string),0,10),'_',t.lat,'_',t.lng) AS loc
         FROM 
         (
-            SELECT  s.event_name AS event_name
-                   ,s.event_time AS event_time
-                   ,s.order_id   AS order_id
-                   ,s.lat        AS lat
-                   ,s.lng        AS lng
-            FROM 
-            (
-                SELECT  event_name
-                       ,event_time 
-                       ,get_json_object(event_value,'$.order_id')                                                                AS order_id
-                       ,get_json_object(event_value,'$.lat')                                                                     AS lat
-                       ,get_json_object(event_value,'$.lng')                                                                     AS lng
-                       ,ROW_NUMBER() OVER(PARTITION BY event_name,get_json_object(event_value,'$.order_id') ORDER BY event_time) AS order_by
-                FROM oride_dw.dwd_oride_client_event_detail_hi
-                WHERE dt = '{pt}' 
-                AND event_name IN ( 'looking_for_a_driver_show', 'successful_order_show', 'accept_order_click', 'rider_arrive_show', 'confirm_arrive_click_arrived', 'pick_up_passengers_sliding_arrived', 'start_ride_show', 'start_ride_sliding', 'complete_the_order_show', 'start_ride_sliding_arrived' ) 
-                AND get_json_object(event_value,'$.order_id') IS NOT NULL  
-            ) s
-            WHERE s.order_by = 1  
+        SELECT  s.event_name AS event_name 
+               ,s.event_time AS event_time 
+               ,s.order_id   AS order_id 
+               ,s.lat        AS lat 
+               ,s.lng        AS lng
+        FROM 
+        (
+            SELECT  event_name 
+                   ,event_time 
+                   ,get_json_object(event_value,'$.order_id')                                                                AS order_id 
+                   ,get_json_object(event_value,'$.lat')                                                                     AS lat 
+                   ,get_json_object(event_value,'$.lng')                                                                     AS lng 
+                   ,ROW_NUMBER() OVER(PARTITION BY event_name,get_json_object(event_value,'$.order_id') ORDER BY event_time) AS order_by
+            FROM oride_dw.dwd_oride_client_event_detail_hi
+            WHERE dt = '{pt}' 
+            AND event_name IN ( 'looking_for_a_driver_show', 'successful_order_show', 'accept_order_click', 'rider_arrive_show', 'confirm_arrive_click_arrived', 'pick_up_passengers_sliding_arrived', 'start_ride_show', 'start_ride_sliding', 'complete_the_order_show', 'start_ride_sliding_arrived' ) 
+            AND get_json_object(event_value,'$.order_id') IS NOT NULL  
+        ) s
+        WHERE s.order_by = 1  
         ) t ), 
         
         middle_data_1 AS (
-        SELECT  od.*
-               ,nvl(IF(l.event_name = 'looking_for_a_driver_show',l.loc,''),'')          AS looking_for_a_driver_show
-               ,nvl(IF(l.event_name = 'successful_order_show',l.loc,''),'')              AS successful_order_show
-               ,nvl(IF(l.event_name = 'accept_order_click',l.loc,''),'')                 AS accept_order_click
-               ,nvl(IF(l.event_name = 'rider_arrive_show',l.loc,''),'')                  AS rider_arrive_show
-               ,nvl(IF(l.event_name = 'confirm_arrive_click_arrived',l.loc,''),'')       AS confirm_arrive_click_arrived
-               ,nvl(IF(l.event_name = 'pick_up_passengers_sliding_arrived',l.loc,''),'') AS pick_up_passengers_sliding_arrived
-               ,nvl(IF(l.event_name = 'start_ride_show',l.loc,''),'')                    AS start_ride_show
-               ,nvl(IF(l.event_name = 'start_ride_sliding',l.loc,''),'')                 AS start_ride_sliding
-               ,nvl(IF(l.event_name = 'complete_the_order_show',l.loc,''),'')            AS complete_the_order_show
+        SELECT  od.* 
+               ,nvl(IF(l.event_name = 'looking_for_a_driver_show',l.loc,''),'')          AS looking_for_a_driver_show 
+               ,nvl(IF(l.event_name = 'successful_order_show',l.loc,''),'')              AS successful_order_show 
+               ,nvl(IF(l.event_name = 'accept_order_click',l.loc,''),'')                 AS accept_order_click 
+               ,nvl(IF(l.event_name = 'rider_arrive_show',l.loc,''),'')                  AS rider_arrive_show 
+               ,nvl(IF(l.event_name = 'confirm_arrive_click_arrived',l.loc,''),'')       AS confirm_arrive_click_arrived 
+               ,nvl(IF(l.event_name = 'pick_up_passengers_sliding_arrived',l.loc,''),'') AS pick_up_passengers_sliding_arrived 
+               ,nvl(IF(l.event_name = 'start_ride_show',l.loc,''),'')                    AS start_ride_show 
+               ,nvl(IF(l.event_name = 'start_ride_sliding',l.loc,''),'')                 AS start_ride_sliding 
+               ,nvl(IF(l.event_name = 'complete_the_order_show',l.loc,''),'')            AS complete_the_order_show 
                ,nvl(IF(l.event_name = 'start_ride_sliding_arrived',l.loc,''),'')         AS start_ride_sliding_arrived
         FROM order_data od
         LEFT JOIN 
         (
-            SELECT  order_id
-                   ,event_name
-                   ,loc
-            FROM event_loc_data 
+        SELECT  order_id 
+               ,event_name 
+               ,loc
+        FROM event_loc_data 
         ) l
         ON od.order_id = l.order_id ), 
         
         middle_data_2 AS (
-        SELECT  m.order_id                                                     AS order_id
-               ,m.user_id                                                      AS user_id
-               ,m.driver_id                                                    AS driver_id
-               ,m.create_time                                                  AS create_time
-               ,m.status                                                       AS status
-               ,m.start_loc                                                    AS start_loc
-               ,m.end_loc                                                      AS end_loc
-               ,m.country_code                                                 AS country_code
-               ,CONCAT_WS('',collect_list(looking_for_a_driver_show))          AS looking_for_a_driver_show
-               ,CONCAT_WS('',collect_list(successful_order_show))              AS successful_order_show
-               ,CONCAT_WS('',collect_list(accept_order_click))                 AS accept_order_click
-               ,CONCAT_WS('',collect_list(rider_arrive_show))                  AS rider_arrive_show
-               ,CONCAT_WS('',collect_list(confirm_arrive_click_arrived))       AS confirm_arrive_click_arrived
-               ,CONCAT_WS('',collect_list(pick_up_passengers_sliding_arrived)) AS pick_up_passengers_sliding_arrived
-               ,CONCAT_WS('',collect_list(start_ride_show))                    AS start_ride_show
-               ,CONCAT_WS('',collect_list(start_ride_sliding))                 AS start_ride_sliding
-               ,CONCAT_WS('',collect_list(complete_the_order_show))            AS complete_the_order_show
+        SELECT  m.order_id                                                     AS order_id 
+               ,m.user_id                                                      AS user_id 
+               ,m.driver_id                                                    AS driver_id 
+               ,m.create_time                                                  AS create_time 
+               ,m.status                                                       AS status 
+               ,m.start_loc                                                    AS start_loc 
+               ,m.end_loc                                                      AS end_loc 
+               ,m.country_code                                                 AS country_code 
+               ,CONCAT_WS('',collect_list(looking_for_a_driver_show))          AS looking_for_a_driver_show 
+               ,CONCAT_WS('',collect_list(successful_order_show))              AS successful_order_show 
+               ,CONCAT_WS('',collect_list(accept_order_click))                 AS accept_order_click 
+               ,CONCAT_WS('',collect_list(rider_arrive_show))                  AS rider_arrive_show 
+               ,CONCAT_WS('',collect_list(confirm_arrive_click_arrived))       AS confirm_arrive_click_arrived 
+               ,CONCAT_WS('',collect_list(pick_up_passengers_sliding_arrived)) AS pick_up_passengers_sliding_arrived 
+               ,CONCAT_WS('',collect_list(start_ride_show))                    AS start_ride_show 
+               ,CONCAT_WS('',collect_list(start_ride_sliding))                 AS start_ride_sliding 
+               ,CONCAT_WS('',collect_list(complete_the_order_show))            AS complete_the_order_show 
                ,CONCAT_WS('',collect_list(start_ride_sliding_arrived))         AS start_ride_sliding_arrived
         FROM middle_data_1 m
-        GROUP BY  m.order_id
-                 ,m.user_id
-                 ,m.driver_id
-                 ,m.create_time
-                 ,m.status
-                 ,m.start_loc
-                 ,m.end_loc
-                 ,m.country_code )
-                 ,driver_location AS (
-        SELECT  order_id                                                         AS order_id
-               ,concat_ws(',',collect_list(concat(`timestamp`,'_',lat,'_',lng))) AS loc_list
-        FROM oride_dw_ods.ods_log_driver_track_data_hi
-        WHERE dt = '{pt}' 
-        AND order_id <> 0 
-        GROUP BY  order_id )
-        
-        INSERT OVERWRITE TABLE {db}.{table} PARTITION(country_code,dt)
-        SELECT  m.order_id                           AS order_id --订单id
-               ,m.user_id                            AS user_id --乘客id
-               ,m.driver_id                          AS driver_id --司机id
-               ,m.create_time                        AS create_time --订单创建时间
-               ,m.status                             AS status --订单状态
-               ,m.start_loc                          AS start_loc --起始经纬度
-               ,m.end_loc                            AS end_loc --终点经纬度
-               ,m.looking_for_a_driver_show          AS looking_for_a_driver_show -- looking_for_a_driver_show event经纬度
-               ,m.successful_order_show              AS successful_order_show -- successful_order_show event经纬度
-               ,m.accept_order_click                 AS accept_order_click -- accept_order_click event经纬度
-               ,m.rider_arrive_show                  AS rider_arrive_show  -- rider_arrive_show event经纬度
-               ,m.confirm_arrive_click_arrived       AS confirm_arrive_click_arrived  -- confirm_arrive_click_arrived event经纬度
-               ,m.pick_up_passengers_sliding_arrived AS pick_up_passengers_sliding_arrived  -- pick_up_passengers_sliding_arrived event经纬度
-               ,m.start_ride_show                    AS start_ride_show  -- start_ride_show event经纬度
-               ,m.start_ride_sliding                 AS start_ride_sliding  -- start_ride_sliding event经纬度
-               ,m.complete_the_order_show            AS complete_the_order_show  -- complete_the_order_show event经纬度
-               ,m.start_ride_sliding_arrived         AS start_ride_sliding_arrived  -- start_ride_sliding_arrived event经纬度
-               ,m.loc_list                           AS loc_list  -- 司机轨迹数据
-               ,m.country_code                       AS country_code  -- 国家码
-               ,m.dt                                 AS dt  -- 时间分区
+        GROUP BY  m.order_id 
+                 ,m.user_id 
+                 ,m.driver_id 
+                 ,m.create_time 
+                 ,m.status 
+                 ,m.start_loc 
+                 ,m.end_loc 
+                 ,m.country_code ) 
+                 ,
+                 
+        driver_location AS (
+        SELECT  t.order_id                                                             AS order_id 
+               ,concat_ws(',',collect_list(concat(t.`timestamp`,'_',t.lat,'_',t.lng))) AS loc_list
         FROM 
         (
-            SELECT  row_number() over(partition by m.order_id ORDER BY m.create_time DESC) id 
-                   ,m.order_id 
-                   ,m.user_id
-                   ,m.driver_id
-                   ,m.create_time
-                   ,m.status
-                   ,m.start_loc
-                   ,m.end_loc
-                   ,m.looking_for_a_driver_show
-                   ,m.successful_order_show
-                   ,m.accept_order_click
-                   ,m.rider_arrive_show
-                   ,m.confirm_arrive_click_arrived
-                   ,m.pick_up_passengers_sliding_arrived
-                   ,m.start_ride_show
-                   ,m.start_ride_sliding
-                   ,m.complete_the_order_show
-                   ,m.start_ride_sliding_arrived
-                   ,m.loc_list
-                   ,m.country_code
-                   ,m.dt
-            FROM 
-            (
-                SELECT  m.order_id
-                       ,m.user_id
-                       ,m.driver_id
-                       ,m.create_time
-                       ,m.status
-                       ,m.start_loc
-                       ,m.end_loc
-                       ,m.looking_for_a_driver_show
-                       ,m.successful_order_show
-                       ,m.accept_order_click
-                       ,m.rider_arrive_show
-                       ,m.confirm_arrive_click_arrived
-                       ,m.pick_up_passengers_sliding_arrived
-                       ,m.start_ride_show
-                       ,m.start_ride_sliding
-                       ,m.complete_the_order_show
-                       ,m.start_ride_sliding_arrived
-                       ,nvl(d.loc_list,'') AS loc_list
-                       ,m.country_code     AS country_code
-                       ,'{pt}'             AS dt
-                FROM middle_data_2 m
-                LEFT JOIN driver_location d
-                ON m.order_id = d.order_id 
-            ) m 
+        SELECT  order_id
+               ,`timestamp`
+               ,lat
+               ,lng
+        FROM FROM oride_dw_ods.ods_log_driver_track_data_hi
+        WHERE dt = '{pt}' 
+        AND order_id <> 0  
+        ) t
+        JOIN order_data o
+        ON t.order_id = o.order_id
+        GROUP BY  t.order_id )
+        
+        INSERT OVERWRITE TABLE {db}.{table} PARTITION(country_code,dt)
+        SELECT  m.order_id                           AS order_id --订单id 
+               ,m.user_id                            AS user_id --乘客id 
+               ,m.driver_id                          AS driver_id --司机id 
+               ,m.create_time                        AS create_time --订单创建时间 
+               ,m.status                             AS status --订单状态 
+               ,m.start_loc                          AS start_loc --起始经纬度 
+               ,m.end_loc                            AS end_loc --终点经纬度 
+               ,m.looking_for_a_driver_show          AS looking_for_a_driver_show -- looking_for_a_driver_show event经纬度 
+               ,m.successful_order_show              AS successful_order_show -- successful_order_show event经纬度 
+               ,m.accept_order_click                 AS accept_order_click -- accept_order_click event经纬度 
+               ,m.rider_arrive_show                  AS rider_arrive_show -- rider_arrive_show event经纬度 
+               ,m.confirm_arrive_click_arrived       AS confirm_arrive_click_arrived -- confirm_arrive_click_arrived event经纬度 
+               ,m.pick_up_passengers_sliding_arrived AS pick_up_passengers_sliding_arrived -- pick_up_passengers_sliding_arrived event经纬度 
+               ,m.start_ride_show                    AS start_ride_show -- start_ride_show event经纬度 
+               ,m.start_ride_sliding                 AS start_ride_sliding -- start_ride_sliding event经纬度 
+               ,m.complete_the_order_show            AS complete_the_order_show -- complete_the_order_show event经纬度 
+               ,m.start_ride_sliding_arrived         AS start_ride_sliding_arrived -- start_ride_sliding_arrived event经纬度 
+               ,m.loc_list                           AS loc_list -- 司机轨迹数据 
+               ,m.country_code                       AS country_code -- 国家码 
+               ,m.dt                                 AS dt -- 时间分区
+        FROM 
+        (
+        SELECT  row_number() over(partition by m.order_id ORDER BY m.create_time DESC) id 
+               ,m.order_id 
+               ,m.user_id 
+               ,m.driver_id 
+               ,m.create_time 
+               ,m.status 
+               ,m.start_loc 
+               ,m.end_loc 
+               ,m.looking_for_a_driver_show 
+               ,m.successful_order_show 
+               ,m.accept_order_click 
+               ,m.rider_arrive_show 
+               ,m.confirm_arrive_click_arrived 
+               ,m.pick_up_passengers_sliding_arrived 
+               ,m.start_ride_show 
+               ,m.start_ride_sliding 
+               ,m.complete_the_order_show 
+               ,m.start_ride_sliding_arrived 
+               ,m.loc_list 
+               ,m.country_code 
+               ,m.dt
+        FROM 
+        (
+            SELECT  m.order_id 
+                   ,m.user_id 
+                   ,m.driver_id 
+                   ,m.create_time 
+                   ,m.status 
+                   ,m.start_loc 
+                   ,m.end_loc 
+                   ,m.looking_for_a_driver_show 
+                   ,m.successful_order_show 
+                   ,m.accept_order_click 
+                   ,m.rider_arrive_show 
+                   ,m.confirm_arrive_click_arrived 
+                   ,m.pick_up_passengers_sliding_arrived 
+                   ,m.start_ride_show 
+                   ,m.start_ride_sliding 
+                   ,m.complete_the_order_show 
+                   ,m.start_ride_sliding_arrived 
+                   ,nvl(d.loc_list,'') AS loc_list 
+                   ,m.country_code     AS country_code 
+                   ,'{pt}'             AS dt
+            FROM middle_data_2 m
+            LEFT JOIN driver_location d
+            ON m.order_id = d.order_id 
+        ) m 
         ) m
-        WHERE m.id = 1 ; 
+        WHERE m.id = 1 ;  
 
 '''.format(
         pt=ds,
