@@ -58,8 +58,18 @@ dag = airflow.DAG('app_oride_finance_driver_repayment_test_d',
 
 ##----------------------------------依赖数据源------------------------------##
 
-
 # 依赖前一天数据是否存在
+dim_oride_driver_base_prev_day_task = UFileSensor(
+    task_id='dim_oride_driver_base_prev_day_task',
+    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="oride/oride_dw/dim_oride_driver_base/country_code=NG",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
 dwd_oride_finance_driver_repayment_extend_df_tesk = UFileSensor(
     task_id='dwd_oride_finance_driver_repayment_extend_df_tesk',
     filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
@@ -161,7 +171,7 @@ def app_oride_finance_driver_repayment_test_d_sql_task(ds):
         
         FROM (SELECT 
                 a.*, b.phone_number as bphone_number 
-            FROM (select * FROM oridedw.dwd_oride_finance_driver_repayment_extend_df WHERE dt = '{pt}') a 
+            FROM (select * FROM oride_dw.dwd_oride_finance_driver_repayment_extend_df WHERE dt = '{pt}') a 
             JOIN (select * from oride_dw.dim_oride_driver_base where dt='{pt}') b ON a.driver_id = b.driver_id
             ) t1
 
@@ -261,6 +271,6 @@ app_oride_finance_driver_repayment_test_d_task = PythonOperator(
     dag=dag
 )
 
-
+dim_oride_driver_base_prev_day_task>>app_oride_finance_driver_repayment_test_d_task
 dwd_oride_finance_driver_repayment_extend_df_tesk >> app_oride_finance_driver_repayment_test_d_task
 dwm_oride_driver_base_df_tesk >> app_oride_finance_driver_repayment_test_d_task
