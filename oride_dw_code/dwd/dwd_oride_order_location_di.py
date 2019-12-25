@@ -254,7 +254,7 @@ def dwd_oride_order_location_di_sql_task(ds):
                ,`timestamp`
                ,lat
                ,lng
-        FROM FROM oride_dw_ods.ods_log_driver_track_data_hi
+        FROM oride_dw_ods.ods_log_driver_track_data_hi
         WHERE dt = '{pt}' 
         AND order_id <> 0  
         ) t

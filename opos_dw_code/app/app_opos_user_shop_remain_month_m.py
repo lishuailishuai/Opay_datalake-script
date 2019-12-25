@@ -26,7 +26,7 @@ import os
 
 args = {
     'owner': 'yuanfeng',
-    'start_date': datetime(2019, 11, 24),
+    'start_date': datetime(2019, 10, 24),
     'depends_on_past': False,
     'retries': 3,
     'retry_delay': timedelta(minutes=2),
@@ -35,18 +35,18 @@ args = {
     'email_on_retry': False,
 }
 
-dag = airflow.DAG('app_opos_user_shop_remain_week_w',
-                  schedule_interval="00 03 * * 1",
+dag = airflow.DAG('app_opos_user_shop_remain_month_m',
+                  schedule_interval="00 02 1 * *",
                   default_args=args,
                   catchup=False)
 
 ##----------------------------------------- 依赖 ---------------------------------------##
 
-dwd_active_user_week_di_task = OssSensor(
-    task_id='dwd_active_user_week_di_task',
+dwd_active_user_month_di_task = OssSensor(
+    task_id='dwd_active_user_month_di_task',
     bucket_key='{hdfs_path_str}/country_code=nal/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opos/opos_dw/dwd_active_user_week_di",
-        pt='{{macros.ds_add(ds, +6)}}'
+        hdfs_path_str="opos/opos_dw/dwd_active_user_month_di",
+        pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
@@ -56,7 +56,7 @@ dwd_active_user_week_di_task = OssSensor(
 ##----------------------------------------- 变量 ---------------------------------------##
 
 db_name = "opos_dw"
-table_name = "app_opos_user_shop_remain_week_w"
+table_name = "app_opos_user_shop_remain_month_m"
 hdfs_path = "oss://opay-datalake/opos/opos_dw/" + table_name
 
 
@@ -67,7 +67,7 @@ def fun_task_timeout_monitor(ds, dag, **op_kwargs):
 
     tb = [
         {"db": "opos_dw", "table": "{dag_name}".format(dag_name=dag_ids),
-         "partition": "country_code=nal/dt={pt}".format(pt=airflow.macros.ds_add(ds, +6)), "timeout": "1200"}
+         "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "1200"}
     ]
 
     TaskTimeoutMonitor().set_task_monitor(tb)
@@ -83,7 +83,7 @@ task_timeout_monitor = PythonOperator(
 
 ##----------------------------------------- 脚本 ---------------------------------------##
 
-def app_opos_user_shop_remain_week_w_sql_task(ds):
+def app_opos_user_shop_remain_month_m_sql_task(ds):
     HQL = '''
 
 
@@ -92,163 +92,159 @@ set hive.exec.parallel=true;
 set hive.exec.dynamic.partition.mode=nonstrict;
 set hive.strict.checks.cartesian.product=false;
 
-
 --00.求星期排序
 with
-week_order as (
+month_order as (
   select
-  aweek,bweek,rn,max(rn) over (partition by aweek) as max
+  amonth,bmonth,rn,max(rn) over (partition by amonth) as max
   from
   (
     select
-    a.aweek,b.bweek,row_number() over (order by b.bweek asc) as rn
+    a.amonth,b.bmonth,row_number() over (order by b.bmonth asc) as rn
     from
-      (SELECT concat(substr(dt,0,4),substr(concat('0',cast(weekofyear(dt) as string)),-2)) as aweek FROM public_dw_dim.dim_date where dt='{after_6_day}' group by concat(substr(dt,0,4),substr(concat('0',cast(weekofyear(dt) as string)),-2))) as a
+      (SELECT substr(dt,0,7) as amonth FROM public_dw_dim.dim_date where dt='{pt}' group by substr(dt,0,7)) as a
     left join
-      (SELECT concat(substr(dt,0,4),substr(concat('0',cast(weekofyear(dt) as string)),-2)) as bweek FROM public_dw_dim.dim_date where dt>='{before_75_day}' and dt<='{after_6_day}' group by concat(substr(dt,0,4),substr(concat('0',cast(weekofyear(dt) as string)),-2))) as b
+      (SELECT substr(dt,0,7) as bmonth FROM public_dw_dim.dim_date where dt>='{before_320_day}' and dt<='{pt}' group by substr(dt,0,7)) as b
     on 1=1
   ) as m
 ),
 
 --02.将星期与地市做全关联,求出所有星期和地市
 date_city as (
-select
-a.aweek as create_year_week
-,a.bweek as remain_year_week
-,(a.max - a.rn) as week_interval
-,b.city_id
-from
-week_order as a
-left join
-(select city_id from opos_dw.dwd_active_user_week_di where country_code='nal' and dt='{after_6_day}' group by city_id) as b
-on 1=1
+  select
+  a.amonth as create_month
+  ,a.bmonth as remain_month
+  ,(a.max - a.rn) as month_interval
+  ,b.city_id
+  from
+    month_order as a
+  left join
+    (select city_id from opos_dw.dwd_active_shop_month_di where country_code='nal' and dt='{pt}' group by city_id) as b
+  on 1=1
 ),
 
 --03.新用户的留存数量
 new_user_remain_cnt as (
   select
-  create_year_week
-  ,remain_year_week
+  create_month
+  ,remain_month
   ,city_id
   ,count(1) as new_user_remain_cnt
   from
     (
     select 
-    b.combine_year_week as create_year_week
-    ,a.combine_year_week as remain_year_week
+    b.create_month as create_month
+    ,a.create_month as remain_month
     ,a.city_id
     ,a.sender_id as ids
     from
-    (select * from opos_dw.dwd_active_user_week_di where country_code='nal' and dt>='{before_75_day}' and dt<='{after_6_day}' and first_order='1') as a
+    (select * from opos_dw.dwd_active_user_month_di where country_code='nal' and dt>='{before_320_day}' and dt<='{pt}' and first_order='1') as a
     inner join
-    (select * from opos_dw.dwd_active_user_week_di where country_code='nal' and dt='{after_6_day}') as b
+    (select * from opos_dw.dwd_active_user_month_di where country_code='nal' and dt='{pt}') as b
     on
     a.city_id=b.city_id
     and a.sender_id=b.sender_id
     ) as a
   group by
-  create_year_week
-  ,remain_year_week
+  create_month
+  ,remain_month
   ,city_id
 ),
 
 --04.用户留存
 user_remain_cnt as (
   select
-  create_year_week
-  ,remain_year_week
+  create_month
+  ,remain_month
   ,city_id
   ,count(1) as user_remain_cnt
   from
     (
     select 
-    b.combine_year_week as create_year_week
-    ,a.combine_year_week as remain_year_week
+    b.create_month as create_month
+    ,a.create_month as remain_month
     ,a.city_id
     ,a.sender_id as ids
     from
-    (select * from opos_dw.dwd_active_user_week_di where country_code='nal' and dt>='{before_75_day}' and dt<='{after_6_day}') as a
+    (select * from opos_dw.dwd_active_user_month_di where country_code='nal' and dt>='{before_320_day}' and dt<='{pt}') as a
     inner join
-    (select * from opos_dw.dwd_active_user_week_di where country_code='nal' and dt='{after_6_day}') as b
+    (select * from opos_dw.dwd_active_user_month_di where country_code='nal' and dt='{pt}') as b
     on
     a.city_id=b.city_id
     and a.sender_id=b.sender_id
     ) as a
   group by
-  create_year_week
-  ,remain_year_week
+  create_month
+  ,remain_month
   ,city_id
 ),
 
 --05.新创建商户留存
 new_shop_remain_cnt as (
   select
-  create_year_week
-  ,remain_year_week
+  create_month
+  ,remain_month
   ,city_id
   ,count(1) as new_shop_remain_cnt
   from
     (
     select 
-    b.combine_year_week as create_year_week
-    ,a.combine_year_week as remain_year_week
+    b.create_month as create_month
+    ,a.create_month as remain_month
     ,a.city_id
     ,a.receipt_id as ids
     from
-    (select * from opos_dw.dwd_active_shop_week_di where country_code='nal' and dt>='{before_75_day}' and dt<='{after_6_day}' and first_order='1') as a
+    (select * from opos_dw.dwd_active_shop_month_di where country_code='nal' and dt>='{before_320_day}' and dt<='{pt}' and first_order='1') as a
     inner join
-    (select * from opos_dw.dwd_active_shop_week_di where country_code='nal' and dt='{after_6_day}') as b
+    (select * from opos_dw.dwd_active_shop_month_di where country_code='nal' and dt='{pt}') as b
     on
     a.city_id=b.city_id
     and a.receipt_id=b.receipt_id
     ) as a
   group by
-  create_year_week
-  ,remain_year_week
+  create_month
+  ,remain_month
   ,city_id
 ),
 
 --06.所有商户留存
 shop_remain_cnt as (
   select
-  create_year_week
-  ,remain_year_week
+  create_month
+  ,remain_month
   ,city_id
   ,count(1) as shop_remain_cnt
   from
     (
     select 
-    b.combine_year_week as create_year_week
-    ,a.combine_year_week as remain_year_week
+    b.create_month as create_month
+    ,a.create_month as remain_month
     ,a.city_id
     ,a.receipt_id as ids
     from
-    (select * from opos_dw.dwd_active_shop_week_di where country_code='nal' and dt>='{before_75_day}' and dt<='{after_6_day}') as a
+    (select * from opos_dw.dwd_active_shop_month_di where country_code='nal' and dt>='{before_320_day}' and dt<='{pt}') as a
     inner join
-    (select * from opos_dw.dwd_active_shop_week_di where country_code='nal' and dt='{after_6_day}') as b
+    (select * from opos_dw.dwd_active_shop_month_di where country_code='nal' and dt='{pt}') as b
     on
     a.city_id=b.city_id
     and a.receipt_id=b.receipt_id
     ) as a
   group by
-  create_year_week
-  ,remain_year_week
+  create_month
+  ,remain_month
   ,city_id
 )
 
 --07.最终将结果合并后插入到结果表中
-insert overwrite table opos_dw.app_opos_user_shop_remain_week_w partition(country_code,dt)
+insert overwrite table opos_dw.app_opos_user_shop_remain_month_m partition(country_code,dt)
 select
 0 as id
-,substr(v1.create_year_week,0,4) as create_year
-,substr(v1.create_year_week,5,2) as create_week
-,v1.create_year_week
 
-,v1.week_interval
+,v1.create_month
 
-,substr(v1.remain_year_week,0,4) as remain_year
-,substr(v1.remain_year_week,5,2) as remain_week
-,v1.remain_year_week
+,v1.month_interval
+
+,v1.remain_month
 
 ,v1.city_id
 ,nvl(v2.name,'-') as city_name
@@ -260,33 +256,32 @@ select
 ,nvl(v6.shop_remain_cnt,0) as shop_remain_cnt
 
 ,'nal' as country_code
-,'{after_6_day}' as dt
+,'{pt}' as dt
 from
   date_city as v1
 left join
-  (select id,name,country from opos_dw_ods.ods_sqoop_base_bd_city_df where dt = '{after_6_day}' group by id,name,country) as v2
+  (select id,name,country from opos_dw_ods.ods_sqoop_base_bd_city_df where dt = '{pt}') as v2
 on v1.city_id=v2.id
 left join
   new_user_remain_cnt as v3
-on v1.create_year_week=v3.create_year_week
-  and v1.remain_year_week=v3.remain_year_week
+on v1.create_month=v3.create_month
+  and v1.remain_month=v3.remain_month
   and v1.city_id=v3.city_id
 left join
   user_remain_cnt as v4
-on v1.create_year_week=v4.create_year_week
-  and v1.remain_year_week=v4.remain_year_week
+on v1.create_month=v4.create_month
+  and v1.remain_month=v4.remain_month
   and v1.city_id=v4.city_id
 left join
   new_shop_remain_cnt as v5
-on v1.create_year_week=v5.create_year_week
-  and v1.remain_year_week=v5.remain_year_week
+on v1.create_month=v5.create_month
+  and v1.remain_month=v5.remain_month
   and v1.city_id=v5.city_id
 left join
   shop_remain_cnt as v6
-on v1.create_year_week=v6.create_year_week
-  and v1.remain_year_week=v6.remain_year_week
+on v1.create_month=v6.create_month
+  and v1.remain_month=v6.remain_month
   and v1.city_id=v6.city_id;
-
 
 
 
@@ -294,8 +289,7 @@ on v1.create_year_week=v6.create_year_week
 
 '''.format(
         pt=ds,
-        after_6_day=airflow.macros.ds_add(ds, +6),
-        before_75_day=airflow.macros.ds_add(ds, -75),
+        before_320_day=airflow.macros.ds_add(ds, -320),
         table=table_name,
         now_day='{{macros.ds_add(ds, +1)}}',
         db=db_name
@@ -308,7 +302,7 @@ def execution_data_task_id(ds, **kargs):
     hive_hook = HiveCliHook()
 
     # 读取sql
-    _sql = app_opos_user_shop_remain_week_w_sql_task(ds)
+    _sql = app_opos_user_shop_remain_month_m_sql_task(ds)
 
     logging.info('Executing: %s', _sql)
 
@@ -324,18 +318,21 @@ def execution_data_task_id(ds, **kargs):
     第二个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
 
     """
-    after_6_day = airflow.macros.ds_add(ds, +6)
-    TaskTouchzSuccess().countries_touchz_success(after_6_day, db_name, table_name, hdfs_path, "true", "true")
+    TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "true", "true")
 
 
-app_opos_user_shop_remain_week_w_task = PythonOperator(
-    task_id='app_opos_user_shop_remain_week_w_task',
+app_opos_user_shop_remain_month_m_task = PythonOperator(
+    task_id='app_opos_user_shop_remain_month_m_task',
     python_callable=execution_data_task_id,
     provide_context=True,
     dag=dag
 )
 
-dwd_active_user_week_di_task >> app_opos_user_shop_remain_week_w_task
+dwd_active_user_month_di_task >> app_opos_user_shop_remain_month_m_task
 
+# 查看任务命令
+# airflow list_tasks app_opos_user_shop_remain_month_m -sd /root/feng.yuan/app_opos_user_shop_remain_month_m.py
+# 测试任务命令
+# airflow test app_opos_user_shop_remain_month_m app_opos_user_shop_remain_month_m_task 2019-11-28 -sd /root/feng.yuan/app_opos_user_shop_remain_month_m.py
 
 
