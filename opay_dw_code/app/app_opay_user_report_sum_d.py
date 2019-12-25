@@ -98,11 +98,6 @@ def app_opay_user_report_sum_d_sql_task(ds):
     HQL = '''
     SET mapreduce.job.queuename= opay_collects;
     set mapred.max.split.size=1000000;
-<<<<<<< HEAD
-   --用户注册
-=======
-    --用户注册
->>>>>>> 08cfa6e44dac4bbfd054c6d78a8166c3cd97baee
     WITH user_reg AS
   (SELECT register_client,
           ROLE,
