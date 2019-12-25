@@ -59,9 +59,9 @@ dag = airflow.DAG( 'test_dim_oride_city',
 
 print(eval(Variable.get("country_code_dim")))
 
-print(eval(Variable.get("sys_flag")))
+code_map=eval(Variable.get("sys_flag"))
 
-print(sys_flag["id"].lower())
+print(code_map["id"].lower())
 #if sys_flag:
 
 test_oss_tesk = OssSensor(
