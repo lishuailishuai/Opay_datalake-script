@@ -61,7 +61,8 @@ print(eval(Variable.get("country_code_dim")))
 
 print(eval(Variable.get("sys_flag")))
 
-# if sys_flag:
+print(sys_flag["id"].lower())
+#if sys_flag:
 
 test_oss_tesk = OssSensor(
     task_id='test_oss_tesk',
