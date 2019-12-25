@@ -46,77 +46,77 @@ dag = airflow.DAG( 'test_dim_oride_city',
 ##----------------------------------------- 依赖 ---------------------------------------## 
 
 
-# test_snappy_dev_01_tesk = S3KeySensor(
-#     task_id='test_snappy_dev_01_tesk',
-#     bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-#         hdfs_path_str="oride/oride_dw/test_snappy_dev_01",
-#         pt='{{ds}}'
-#     ),
-#     bucket_name='opay-bi',
-#     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-#     dag=dag
-# )
 
-print(eval(Variable.get("country_code_dim")))
 
-print(eval(Variable.get("sys_flag")))
+code_map=eval(Variable.get("sys_flag"))
 
-# if sys_flag:
+if code_map["id"].lower()=="ufile":
 
-test_oss_tesk = OssSensor(
-    task_id='test_oss_tesk',
-    bucket_key='{hdfs_path_str}/_SUCCESS'.format(
-        hdfs_path_str="test",
+    test_snappy_dev_01_tesk = S3KeySensor(
+    task_id='test_snappy_dev_01_tesk',
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="oride/oride_dw/test_snappy_dev_01",
         pt='{{ds}}'
     ),
-    bucket_name='opay-datalake',
+    bucket_name='opay-bi',
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
-)
+    )
+    
+    ods_sqoop_base_data_city_conf_df_tesk = UFileSensor(
+        task_id='ods_sqoop_base_data_city_conf_df_tesk',
+        filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+            hdfs_path_str="oride_dw_sqoop/oride_data/data_city_conf",
+            pt='{{ds}}'
+        ),
+        bucket_name='opay-datalake',
+        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+        dag=dag
+    )
+    
+    ods_sqoop_base_data_country_conf_df_tesk = UFileSensor(
+        task_id='ods_sqoop_base_data_country_conf_df_tesk',
+        filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+            hdfs_path_str="oride_dw_sqoop/oride_data/data_country_conf",
+            pt='{{ds}}'
+        ),
+        bucket_name='opay-datalake',
+        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+        dag=dag
+    )
+    
+    # 依赖前一天分区
+    ods_sqoop_base_weather_per_10min_df_task = UFileSensor(
+        task_id='ods_sqoop_base_weather_per_10min_df_task',
+        filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+            hdfs_path_str="oride_dw_sqoop/bi/weather_per_10min",
+            pt='{{ds}}'
+        ),
+        bucket_name='opay-datalake',
+        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+        dag=dag
+    )
+    
+    ##----------------------------------------- 变量 ---------------------------------------## 
+    
+    db_name="test_db"
+    table_name="test_dim_oride_city"
+    hdfs_path="s3a://opay-bi/oride/oride_dw/"+table_name
 
-ods_sqoop_base_data_city_conf_df_tesk = UFileSensor(
-    task_id='ods_sqoop_base_data_city_conf_df_tesk',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride_dw_sqoop/oride_data/data_city_conf",
-        pt='{{ds}}'
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
+else:
 
-ods_sqoop_base_data_country_conf_df_tesk = UFileSensor(
-    task_id='ods_sqoop_base_data_country_conf_df_tesk',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride_dw_sqoop/oride_data/data_country_conf",
-        pt='{{ds}}'
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
+    print("成功")
 
-# 依赖前一天分区
-ods_sqoop_base_weather_per_10min_df_task = UFileSensor(
-    task_id='ods_sqoop_base_weather_per_10min_df_task',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride_dw_sqoop/bi/weather_per_10min",
-        pt='{{ds}}'
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
-
-##----------------------------------------- 变量 ---------------------------------------## 
-
-db_name="test_db"
-table_name="test_dim_oride_city"
-hdfs_path="s3a://opay-bi/oride/oride_dw/"+table_name
-
-# else:
-
-#     print("成功")
+    test_snappy_dev_01_tesk = OssSensor(
+        task_id='test_snappy_dev_01_tesk',
+        bucket_key='{hdfs_path_str}/_SUCCESS'.format(
+            hdfs_path_str="test",
+            pt='{{ds}}'
+        ),
+        bucket_name='opay-datalake',
+        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+        dag=dag
+    )
 
 
 ##----------------------------------------- 脚本 ---------------------------------------## 
@@ -382,7 +382,7 @@ test_dim_oride_city_task= PythonOperator(
     dag=dag
 )
 
-test_oss_tesk>>test_dim_oride_city_task
+test_snappy_dev_01_tesk>>test_dim_oride_city_task
 ods_sqoop_base_data_city_conf_df_tesk>>test_dim_oride_city_task
 ods_sqoop_base_data_country_conf_df_tesk>>test_dim_oride_city_task
 ods_sqoop_base_weather_per_10min_df_task>>test_dim_oride_city_task
