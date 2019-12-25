@@ -61,62 +61,62 @@ sys_flag=str(eval(Variable.get("sys_flag")).lower())
 
 print(sys_flag)
 
-if sys_flag:
+# if sys_flag:
 
-    test_oss_tesk = OssSensor(
-        task_id='test_oss_tesk',
-        bucket_key='{hdfs_path_str}/_SUCCESS'.format(
-            hdfs_path_str="test",
-            pt='{{ds}}'
-        ),
-        bucket_name='opay-datalake',
-        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-        dag=dag
-    )
-    
-    ods_sqoop_base_data_city_conf_df_tesk = UFileSensor(
-        task_id='ods_sqoop_base_data_city_conf_df_tesk',
-        filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-            hdfs_path_str="oride_dw_sqoop/oride_data/data_city_conf",
-            pt='{{ds}}'
-        ),
-        bucket_name='opay-datalake',
-        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-        dag=dag
-    )
-    
-    ods_sqoop_base_data_country_conf_df_tesk = UFileSensor(
-        task_id='ods_sqoop_base_data_country_conf_df_tesk',
-        filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-            hdfs_path_str="oride_dw_sqoop/oride_data/data_country_conf",
-            pt='{{ds}}'
-        ),
-        bucket_name='opay-datalake',
-        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-        dag=dag
-    )
-    
-    # 依赖前一天分区
-    ods_sqoop_base_weather_per_10min_df_task = UFileSensor(
-        task_id='ods_sqoop_base_weather_per_10min_df_task',
-        filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-            hdfs_path_str="oride_dw_sqoop/bi/weather_per_10min",
-            pt='{{ds}}'
-        ),
-        bucket_name='opay-datalake',
-        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-        dag=dag
-    )
+test_oss_tesk = OssSensor(
+    task_id='test_oss_tesk',
+    bucket_key='{hdfs_path_str}/_SUCCESS'.format(
+        hdfs_path_str="test",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
+ods_sqoop_base_data_city_conf_df_tesk = UFileSensor(
+    task_id='ods_sqoop_base_data_city_conf_df_tesk',
+    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="oride_dw_sqoop/oride_data/data_city_conf",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
+ods_sqoop_base_data_country_conf_df_tesk = UFileSensor(
+    task_id='ods_sqoop_base_data_country_conf_df_tesk',
+    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="oride_dw_sqoop/oride_data/data_country_conf",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
+# 依赖前一天分区
+ods_sqoop_base_weather_per_10min_df_task = UFileSensor(
+    task_id='ods_sqoop_base_weather_per_10min_df_task',
+    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="oride_dw_sqoop/bi/weather_per_10min",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
 
 ##----------------------------------------- 变量 ---------------------------------------## 
 
-    db_name="test_db"
-    table_name="test_dim_oride_city"
-    hdfs_path="s3a://opay-bi/oride/oride_dw/"+table_name
+db_name="test_db"
+table_name="test_dim_oride_city"
+hdfs_path="s3a://opay-bi/oride/oride_dw/"+table_name
 
-else:
+# else:
 
-    print("成功")
+#     print("成功")
 
 
 ##----------------------------------------- 脚本 ---------------------------------------## 
