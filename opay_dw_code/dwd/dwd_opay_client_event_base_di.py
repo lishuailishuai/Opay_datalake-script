@@ -23,6 +23,9 @@ from airflow.models import Variable
 import requests
 import os
 
+##
+# 央行月报汇报指标
+#
 args = {
     'owner': 'xiedong',
     'start_date': datetime(2019, 12, 20),
@@ -34,24 +37,22 @@ args = {
     'email_on_retry': False,
 }
 
-dag = airflow.DAG('dm_opay_transaction_originator_base_cube_d',
-                  schedule_interval="00 03 * * *",
-                  default_args=args
-                  )
+
+dag = airflow.DAG('dwd_opay_client_event_base_di',
+                 schedule_interval="00 02 * * *",
+                  default_args=args,
+                  catchup=False)
 
 ##----------------------------------------- 依赖 ---------------------------------------##
-
-dwd_opay_transaction_record_di_prev_day_task = OssSensor(
-    task_id='dwd_opay_transaction_record_di_prev_day_task',
-    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opay/opay_dw/dwd_opay_transaction_record_di/country_code=NG",
-        pt='{{ds}}'
-    ),
-    bucket_name='opay-datalake',
+# 依赖前一天分区
+dwd_opay_client_event_base_di_prev_day_task = HivePartitionSensor(
+    task_id="dwd_opay_client_event_base_di_prev_day_task",
+    table="client_event",
+    partition="dt='{{ ds }}' and hour='22'",
+    schema="opay_source",
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
-
 
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
 def fun_task_timeout_monitor(ds,dag,**op_kwargs):
@@ -73,63 +74,51 @@ task_timeout_monitor= PythonOperator(
 
 ##----------------------------------------- 变量 ---------------------------------------##
 db_name="opay_dw"
-table_name="dm_opay_transaction_originator_base_cube_d"
-hdfs_path="oss://opay-datalake/opay/opay_dw/"+table_name
+table_name = "dwd_opay_client_event_base_di"
+hdfs_path="oss://opay-datalake/opay/opay_dw/" + table_name
 
-##---- hive operator ---##
-def dm_opay_transaction_originator_base_cube_d_sql_task(ds):
+
+
+def dwd_opay_client_event_base_di_sql_task(ds):
     HQL='''
     SET mapreduce.job.queuename= opay_collects;
     set mapred.max.split.size=1000000;
     set hive.exec.dynamic.partition.mode=nonstrict;
-    set hive.exec.parallel=true; --default false
-
-    insert overwrite table {db}.{table} partition(country_code, dt)
+    set hive.exec.parallel=true;
+    insert overwrite table {db}.{table} 
+    partition(country_code, dt)
     select 
-        nvl(top_service_type, 'ALL') as top_service_type,
-        nvl(sub_service_type, 'ALL') as sub_service_type,
-        nvl(originator_type, 'ALL') as originator_type,
-        nvl(originator_role, 'ALL') as originator_role,
-        nvl(order_status, 'ALL') as order_status, 
-        sum(amount) order_amt, count(*) order_cnt, count(distinct originator_id) originator_cnt,
-        nvl(client_source, 'ALL') as client_source,
-        nvl(country_code, 'ALL') as country_code,
-        '{pt}'
+        ip as client_ip, server_ip, 
+        from_unixtime(`timestamp`, 'yyyy-MM-dd HH:mm:ss') as server_time, `timestamp` as server_timestamp,
+        common.user_id, common.user_number as mobile, common.city_id, 
+        from_unixtime(cast(common.client_timestamp as BIGINT), 'yyyy-MM-dd HH:mm:ss') as client_report_time, cast(common.client_timestamp as BIGINT) as client_report_timestamp,
+        common.platform, common.os_version, common.app_name, common.app_version, common.locale, common.device_id, 
+        common.device_screen, common.device_model, common.device_manufacturer, common.is_root, common.channel, common.subchannel, 
+        common.gaid, common.appsflyer_id, 
+        from_unixtime(cast(cast(event.event_time as bigint) / 1000 as bigint), 'yyyy-MM-dd HH:mm:ss') as event_time, 
+        cast(cast(event.event_time as bigint) / 1000 as bigint) as event_timestamp,
+        event.event_name, event.page, event.source, event.event_value,
+        '' as country_code, '{pt}' as dt
     from (
-        select 
-            country_code, top_service_type, sub_service_type, originator_type, originator_role, originator_kyc_level, originator_money_flow, order_status, client_source, 
-            amount, originator_id
-        from {db}.dwd_opay_transaction_record_di
-        where dt = '{pt}' and create_time BETWEEN date_format(date_sub('{pt}', 1), 'yyyy-MM-dd 23') AND date_format('{pt}', 'yyyy-MM-dd 23')
-    ) t1
-    group by country_code, top_service_type, sub_service_type, originator_type, originator_role, order_status, client_source
-    GROUPING SETS ( 
-        (country_code, top_service_type, sub_service_type, originator_type, originator_role, order_status),
-        (country_code, top_service_type, sub_service_type, originator_type, originator_role),
-        (country_code, top_service_type, sub_service_type, originator_type),
-        (country_code, top_service_type, sub_service_type),
-        (country_code, top_service_type, sub_service_type, client_source, order_status),
-        (country_code, top_service_type, sub_service_type, client_source),
-        (country_code, top_service_type),
-        (country_code, client_source),
-        (country_code),
-        ()
-    )
-
+      select 
+      *
+      from opay_source.client_event 
+      where (dt = '{pt}' and hour < 23) or (dt=date_sub('{pt}', 1) and hour = 23)
+    ) t1 lateral view explode(t1.events) event_value as event;
+    
     '''.format(
         pt=ds,
-        table=table_name,
-        db=db_name
+        db=db_name,
+        table=table_name
     )
     return HQL
 
-##---- hive operator end ---##
 
 def execution_data_task_id(ds, **kargs):
     hive_hook = HiveCliHook()
 
     # 读取sql
-    _sql = dm_opay_transaction_originator_base_cube_d_sql_task(ds)
+    _sql = dwd_opay_client_event_base_di_sql_task(ds)
 
     logging.info('Executing: %s', _sql)
 
@@ -146,11 +135,12 @@ def execution_data_task_id(ds, **kargs):
     """
     TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "true", "true")
 
-dm_opay_transaction_originator_base_cube_d_task = PythonOperator(
-    task_id='dm_opay_transaction_originator_base_cube_d_task',
+
+dwd_opay_client_event_base_di_task = PythonOperator(
+    task_id='dwd_opay_client_event_base_di_task',
     python_callable=execution_data_task_id,
     provide_context=True,
     dag=dag
 )
 
-dwd_opay_transaction_record_di_prev_day_task >> dm_opay_transaction_originator_base_cube_d_task
+dwd_opay_client_event_base_di_prev_day_task >> dwd_opay_client_event_base_di_task

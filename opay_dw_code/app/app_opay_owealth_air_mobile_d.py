@@ -72,6 +72,8 @@ hdfs_path = "oss://opay-datalake/opay/opay_dw/" + table_name
 
 def app_opay_owealth_air_mobile_d_sql_task(ds):
     HQL = '''
+    SET mapreduce.job.queuename= opay_collects;
+    set mapred.max.split.size=1000000;
         INSERT overwrite TABLE opay_dw.app_opay_owealth_air_mobile_d partition (dt='{pt}')
         SELECT 
                airtime_amt,
