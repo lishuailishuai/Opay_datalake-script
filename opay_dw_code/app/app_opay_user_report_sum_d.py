@@ -57,7 +57,7 @@ dim_opay_user_base_di_prev_day_task = OssSensor(
 dwd_opay_account_balance_df_prev_day_task = OssSensor(
     task_id='dwd_opay_account_balance_df_prev_day_task',
     bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opay/opay_dw/dwd_opay_account_balance_df",
+        hdfs_path_str="opay/opay_dw/dwd_opay_account_balance_df/country_code=NG",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -76,6 +76,17 @@ dwm_opay_user_first_tran_di_prev_day_task = OssSensor(
     dag=dag
 )
 
+dwd_opay_client_event_base_di_prev_day_task = OssSensor(
+    task_id='dwd_opay_client_event_base_di_prev_day_task',
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="opay/opay_dw/dwd_opay_client_event_base_di/country_code=NG",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
 ##----------------------------------------- 变量 ---------------------------------------##
 db_name = "opay_dw"
 
@@ -87,7 +98,11 @@ def app_opay_user_report_sum_d_sql_task(ds):
     HQL = '''
     SET mapreduce.job.queuename= opay_collects;
     set mapred.max.split.size=1000000;
+<<<<<<< HEAD
+   --用户注册
+=======
     --用户注册
+>>>>>>> 08cfa6e44dac4bbfd054c6d78a8166c3cd97baee
     WITH user_reg AS
   (SELECT register_client,
           ROLE,
@@ -129,6 +144,7 @@ def app_opay_user_report_sum_d_sql_task(ds):
    FROM opay_dw.dwd_opay_account_balance_df
    WHERE dt='{pt}'
      AND user_type='USER'
+     AND account_type='CASHACCOUNT'
      AND balance='0'
    GROUP BY user_role,
             user_level),
@@ -146,13 +162,28 @@ def app_opay_user_report_sum_d_sql_task(ds):
    FROM opay_dw.dwm_opay_user_first_tran_di
    WHERE dt='{pt}'
      AND originator_type='USER'
-   GROUP BY sub_consume_scenario)
+   GROUP BY sub_consume_scenario),
+--登陆频率
+    login AS
+  (SELECT '-' register_client,
+       '-' ROLE,
+       '-' kyc_level,
+       '-' sub_consume_scenario,
+       NULL AS reg_user_cnt,
+       NULL AS new_reg_user_cnt,
+       NULL AS zero_bal_acct_cnt,
+       NULL first_pay_user_cnt,
+       count(1) AS login_times
+   FROM opay_dw.dwd_opay_client_event_base_di where dt='{pt}' and event_name='opay_show'
+ )
 INSERT overwrite TABLE opay_dw.app_opay_user_report_sum_d partition (dt='{pt}')
 SELECT * FROM user_reg
 UNION ALL
 SELECT * FROM balance
 UNION ALL
 SELECT * FROM first_tran
+UNION ALL
+SELECT * FROM login
 
     '''.format(
         pt=ds,
@@ -192,6 +223,7 @@ app_opay_user_report_sum_d_task = PythonOperator(
 dim_opay_user_base_di_prev_day_task >> app_opay_user_report_sum_d_task
 dwd_opay_account_balance_df_prev_day_task >> app_opay_user_report_sum_d_task
 dwm_opay_user_first_tran_di_prev_day_task >> app_opay_user_report_sum_d_task
+dwd_opay_client_event_base_di_prev_day_task >> app_opay_user_report_sum_d_task
 
 
 

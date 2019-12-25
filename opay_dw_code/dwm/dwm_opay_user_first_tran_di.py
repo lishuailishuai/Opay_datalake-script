@@ -68,32 +68,37 @@ def dwm_opay_user_first_tran_di_sql_task(ds):
     set mapred.max.split.size=1000000;
     set hive.exec.dynamic.partition.mode=nonstrict;
     set hive.exec.parallel=true;
-    insert overwrite table {db}.{table} partition (country_code,dt)
-    SELECT order_no,
-       create_time,
-       amount,
-       top_service_type,
-       sub_service_type,
-       originator_id,
-       originator_type,
-       originator_role,
-       originator_kyc_level,
-       originator_name,
-       top_consume_scenario,
-       sub_consume_scenario,
-       client_source,
+    INSERT overwrite TABLE opay_dw.dwm_opay_user_first_tran_di (country_code,dt)
+SELECT a.order_no,
+       a.create_time,
+       a.amount,
+       a.top_service_type,
+       a.sub_service_type,
+       a.originator_id,
+       a.originator_type,
+       a.originator_role,
+       a.originator_kyc_level,
+       a.originator_name,
+       a.top_consume_scenario,
+       a.sub_consume_scenario,
+       a.client_source,
        a.country_code,
        a.dt
-    FROM
-      (SELECT *
-       FROM opay_dw.dwd_opay_transaction_record_di a
-       WHERE order_status='SUCCESS'
-         AND dt='{pt}') a
-    LEFT JOIN
-      (SELECT *
-       FROM opay_dw.dwm_opay_user_first_tran_di
-       WHERE dt<'{pt}') b ON a.originator_id=b.originator_id
-    WHERE b.originator_id IS NULL
+FROM
+  (SELECT m1.*
+   FROM
+     (SELECT m.*,
+             row_number()over(partition BY originator_id
+                              ORDER BY create_time) rn
+      FROM opay_dw.dwd_opay_transaction_record_di m
+      WHERE order_status='SUCCESS'
+        AND dt='{pt}') m1
+   WHERE rn=1) a
+LEFT JOIN
+  (SELECT *
+   FROM opay_dw.dwm_opay_user_first_tran_di
+   WHERE dt<'{pt}') b ON a.originator_id=b.originator_id
+WHERE b.originator_id IS NULL
 
 
     '''.format(
