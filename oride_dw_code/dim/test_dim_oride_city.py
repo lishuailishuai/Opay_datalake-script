@@ -61,8 +61,10 @@ print(eval(Variable.get("country_code_dim")))
 
 code_map=eval(Variable.get("sys_flag"))
 
-print(code_map["id"].lower())
-#if sys_flag:
+#print(code_map["id"].lower())
+if code_map["id"].lower()=="ufile":
+    print("成功")
+    
 
 test_oss_tesk = OssSensor(
     task_id='test_oss_tesk',
