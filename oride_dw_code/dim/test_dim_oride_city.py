@@ -59,7 +59,7 @@ dag = airflow.DAG( 'test_dim_oride_city',
 
 print(eval(Variable.get("country_code_dim")))
 
-
+print(eval(Variable.get("sys_flag")))
 
 # if sys_flag:
 
