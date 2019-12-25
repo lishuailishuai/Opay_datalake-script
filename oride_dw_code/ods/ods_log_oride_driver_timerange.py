@@ -119,9 +119,9 @@ create_ods_log_oride_driver_timerange = HiveOperator(
         )
         STORED AS PARQUET
         LOCATION
-        'ufile://opay-datalake/oride/oride_dw_ods/{tab_name}'
+        '{hdfs_path}'
 
-    """.format(tab_name=table_name),
+    """.format(tab_name=table_name, hdfs_path=hdfs_path),
     schema='oride_dw_ods',
     dag=dag)
 
