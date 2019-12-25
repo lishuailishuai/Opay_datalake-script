@@ -64,6 +64,7 @@ hdfs_path = "oss://opay-datalake/opay/opay_dw/" + table_name
 
 def dwd_opay_channel_transaction_base_di_sql_task(ds):
     HQL = '''
+    SET mapreduce.job.queuename= opay_collects;
     set hive.exec.dynamic.partition.mode=nonstrict;
     set hive.exec.parallel=true;
     insert overwrite table {db}.{table} partition (dt)

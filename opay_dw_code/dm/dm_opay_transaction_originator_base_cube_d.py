@@ -79,6 +79,7 @@ hdfs_path="oss://opay-datalake/opay/opay_dw/"+table_name
 ##---- hive operator ---##
 def dm_opay_transaction_originator_base_cube_d_sql_task(ds):
     HQL='''
+    SET mapreduce.job.queuename= opay_collects;
     set hive.exec.dynamic.partition.mode=nonstrict;
     set hive.exec.parallel=true; --default false
 

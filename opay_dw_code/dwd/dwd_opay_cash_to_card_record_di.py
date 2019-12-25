@@ -116,6 +116,7 @@ hdfs_path="oss://opay-datalake/opay/opay_dw/" + table_name
 
 def dwd_opay_cash_to_card_record_di_sql_task(ds):
     HQL='''
+    SET mapreduce.job.queuename= opay_collects;
     set hive.exec.dynamic.partition.mode=nonstrict;
     set hive.exec.parallel=true;
     with dim_user_merchant_data as (
