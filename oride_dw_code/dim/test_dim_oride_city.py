@@ -43,13 +43,19 @@ dag = airflow.DAG( 'test_dim_oride_city',
     catchup=False) 
 
 
+##----------------------------------------- 变量 ---------------------------------------## 
+    
+    db_name="test_db"
+    table_name="test_dim_oride_city"
+    
+
 ##----------------------------------------- 依赖 ---------------------------------------## 
 
 
-
-
+#获取变量
 code_map=eval(Variable.get("sys_flag"))
 
+#判断ufile(cdh环境)
 if code_map["id"].lower()=="ufile":
 
     test_snappy_dev_01_tesk = S3KeySensor(
@@ -96,12 +102,10 @@ if code_map["id"].lower()=="ufile":
         poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
         dag=dag
     )
-    
-    ##----------------------------------------- 变量 ---------------------------------------## 
-    
-    db_name="test_db"
-    table_name="test_dim_oride_city"
+
+    #路径
     hdfs_path="s3a://opay-bi/oride/oride_dw/"+table_name
+    
 
 else:
 
@@ -152,6 +156,8 @@ else:
         dag=dag
     )
 
+
+    hdfs_path="oss://opay-datalake/oride/oride_dw/"+table_name
 
 ##----------------------------------------- 脚本 ---------------------------------------## 
 
