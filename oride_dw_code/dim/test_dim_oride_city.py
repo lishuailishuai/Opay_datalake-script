@@ -57,9 +57,9 @@ dag = airflow.DAG( 'test_dim_oride_city',
 #     dag=dag
 # )
 
-sys_flag=str(eval(Variable.get("sys_flag")).lower())
+# sys_flag=str(eval(Variable.get("sys_flag")).lower())
 
-print(sys_flag)
+# print(sys_flag)
 
 # if sys_flag:
 
