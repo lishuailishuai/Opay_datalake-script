@@ -64,6 +64,7 @@ hdfs_path = "oss://opay-datalake/opay/opay_dw/" + table_name
 def app_opay_account_report_d_sql_task(ds):
     HQL = '''
     SET mapreduce.job.queuename= opay_collects;
+    set mapred.max.split.size=1000000;
     insert overwrite table {db}.{table} partition (dt='{pt}')
     SELECT customer_bonus+customer_frozen+customer_cash+agent_bonus+agent_frozen+agent_cash+merchant_bonus+merchant_frozen+merchant_cash AS total,
        customer_bonus+agent_bonus+merchant_bonus AS bonus,

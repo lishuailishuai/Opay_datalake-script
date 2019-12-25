@@ -67,6 +67,7 @@ def app_opay_activity_stat_di_sql_task(ds):
 
     HQL='''
     SET mapreduce.job.queuename= opay_collects;
+    set mapred.max.split.size=1000000;
     set hive.exec.dynamic.partition.mode=nonstrict;
     set hive.exec.parallel=true;
     INSERT overwrite TABLE {db}.{table} partition(country_code='NG', dt='{pt}')
