@@ -57,6 +57,8 @@ dag = airflow.DAG( 'test_dim_oride_city',
 #     dag=dag
 # )
 
+print(eval(Variable.get("country_code_dim")))
+
 test_oss_tesk = OssSensor(
     task_id='test_oss_tesk',
     bucket_key='{hdfs_path_str}/_SUCCESS'.format(
