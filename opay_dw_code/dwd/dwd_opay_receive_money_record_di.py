@@ -116,7 +116,6 @@ def dwd_opay_receive_money_record_di_sql_task(ds):
     HQL='''
     SET mapreduce.job.queuename= opay_collects;
     set mapred.job.priority= VERY_HIGH;
-    set mapred.max.split.size=1000000;
     set hive.exec.dynamic.partition.mode=nonstrict;
     set hive.exec.parallel=true;
     with dim_user_merchant_data as (
