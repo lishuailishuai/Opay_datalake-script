@@ -44,7 +44,7 @@ dag = airflow.DAG(
 ##----------------------------------------- 依赖 ---------------------------------------##
 ods_sqoop_base_airtime_topup_record_hf_prev_day_task = OssSensor(
     task_id='ods_sqoop_base_airtime_topup_record_hf_prev_day_task',
-    bucket_key='{hdfs_path_str}/dt={pt}/hour=19/_SUCCESS'.format(
+    bucket_key='{hdfs_path_str}/dt={pt}/hour=18/_SUCCESS'.format(
         hdfs_path_str="opay_dw_sqoop_hf/opay_transaction/airtime_topup_record",
         pt='{{macros.ds_add(ds, +1)}}'
     ),
@@ -55,7 +55,7 @@ ods_sqoop_base_airtime_topup_record_hf_prev_day_task = OssSensor(
 
 ods_sqoop_base_mobiledata_topup_record_hf_prev_day_task = OssSensor(
     task_id='ods_sqoop_base_mobiledata_topup_record_hf_prev_day_task',
-    bucket_key='{hdfs_path_str}/dt={pt}/hour=19/_SUCCESS'.format(
+    bucket_key='{hdfs_path_str}/dt={pt}/hour=18/_SUCCESS'.format(
         hdfs_path_str="opay_dw_sqoop_hf/opay_transaction/mobiledata_topup_record",
         pt='{{macros.ds_add(ds, +1)}}'
     ),
@@ -84,7 +84,7 @@ def app_opay_owealth_air_mobile_d_sql_task(ds):
                   sum(amount) airtime_amt
            FROM opay_dw_ods.ods_sqoop_base_airtime_topup_record_hf
            WHERE dt='{pt}'
-             AND hour='19'
+             AND hour='18'
              AND from_unixtime(unix_timestamp(create_time, 'yyyy-MM-dd HH:mm:ss')+3600)>='{yesterday} 19:00:00'
              AND from_unixtime(unix_timestamp(create_time, 'yyyy-MM-dd HH:mm:ss')+3600)<'{pt} 19:00:00'
              AND order_status='SUCCESS'
@@ -95,7 +95,7 @@ def app_opay_owealth_air_mobile_d_sql_task(ds):
                   sum(amount) mobiledata_amt
            FROM opay_dw_ods.ods_sqoop_base_mobiledata_topup_record_hf
            WHERE dt='{pt}'
-             AND hour='19'
+             AND hour='18'
              AND from_unixtime(unix_timestamp(create_time, 'yyyy-MM-dd HH:mm:ss')+3600)>='{yesterday} 19:00:00'
              AND from_unixtime(unix_timestamp(create_time, 'yyyy-MM-dd HH:mm:ss')+3600)<'{pt} 19:00:00'
              AND order_status='SUCCESS'
