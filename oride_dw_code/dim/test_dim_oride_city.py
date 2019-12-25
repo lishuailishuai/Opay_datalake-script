@@ -46,30 +46,21 @@ dag = airflow.DAG( 'test_dim_oride_city',
 ##----------------------------------------- 依赖 ---------------------------------------## 
 
 
-# test_snappy_dev_01_tesk = S3KeySensor(
-#     task_id='test_snappy_dev_01_tesk',
-#     bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-#         hdfs_path_str="oride/oride_dw/test_snappy_dev_01",
-#         pt='{{ds}}'
-#     ),
-#     bucket_name='opay-bi',
-#     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-#     dag=dag
-# )
+
 
 code_map=eval(Variable.get("sys_flag"))
 
 if code_map["id"].lower()=="ufile":
 
-    test_oss_tesk = OssSensor(
-        task_id='test_oss_tesk',
-        bucket_key='{hdfs_path_str}/_SUCCESS'.format(
-            hdfs_path_str="test",
-            pt='{{ds}}'
-        ),
-        bucket_name='opay-datalake',
-        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-        dag=dag
+    test_snappy_dev_01_tesk = S3KeySensor(
+    task_id='test_snappy_dev_01_tesk',
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="oride/oride_dw/test_snappy_dev_01",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-bi',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
     )
     
     ods_sqoop_base_data_city_conf_df_tesk = UFileSensor(
@@ -115,6 +106,17 @@ if code_map["id"].lower()=="ufile":
 else:
 
     print("成功")
+
+    test_snappy_dev_01_tesk = OssSensor(
+        task_id='test_snappy_dev_01_tesk',
+        bucket_key='{hdfs_path_str}/_SUCCESS'.format(
+            hdfs_path_str="test",
+            pt='{{ds}}'
+        ),
+        bucket_name='opay-datalake',
+        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+        dag=dag
+    )
 
 
 ##----------------------------------------- 脚本 ---------------------------------------## 
@@ -380,7 +382,7 @@ test_dim_oride_city_task= PythonOperator(
     dag=dag
 )
 
-test_oss_tesk>>test_dim_oride_city_task
+test_snappy_dev_01_tesk>>test_dim_oride_city_task
 ods_sqoop_base_data_city_conf_df_tesk>>test_dim_oride_city_task
 ods_sqoop_base_data_country_conf_df_tesk>>test_dim_oride_city_task
 ods_sqoop_base_weather_per_10min_df_task>>test_dim_oride_city_task
