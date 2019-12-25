@@ -39,7 +39,7 @@ dag = airflow.DAG( 'ods_oride_log_driver_timerange',
 
 db_name="oride_dw_ods"
 table_name = "ods_log_oride_driver_timerange"
-hdfs_path = "ufile://opay-datalake/oride/oride_dw_ods/" + table_name
+hdfs_path = Variable.get("OBJECT_STORAGE_PROTOCOL") + "opay-datalake/oride/oride_dw_ods/" + table_name
 
 
 ##----------------------------------------- 脚本 ---------------------------------------##
