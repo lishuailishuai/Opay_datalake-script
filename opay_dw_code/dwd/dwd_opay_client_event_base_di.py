@@ -28,7 +28,7 @@ import os
 #
 args = {
     'owner': 'xiedong',
-    'start_date': datetime(2019, 12, 20),
+    'start_date': datetime(2019, 9, 21),
     'depends_on_past': False,
     'retries': 3,
     'retry_delay': timedelta(minutes=2),
@@ -98,7 +98,7 @@ def dwd_opay_client_event_base_di_sql_task(ds):
         from_unixtime(cast(cast(event.event_time as bigint) / 1000 as bigint), 'yyyy-MM-dd HH:mm:ss') as event_time, 
         cast(cast(event.event_time as bigint) / 1000 as bigint) as event_timestamp,
         event.event_name, event.page, event.source, event.event_value,
-        '' as country_code, '{pt}' as dt
+        'nal' as country_code, '{pt}' as dt
     from (
       select 
       *
