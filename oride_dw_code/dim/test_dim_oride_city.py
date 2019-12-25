@@ -57,7 +57,9 @@ dag = airflow.DAG( 'test_dim_oride_city',
 #     dag=dag
 # )
 
-if eval(Variable.get("sys_flag")).lower()=="ufile":
+sys_flag=str(eval(Variable.get("sys_flag")).lower())
+
+if sys_flag=="ufile":
 
     test_oss_tesk = OssSensor(
         task_id='test_oss_tesk',
