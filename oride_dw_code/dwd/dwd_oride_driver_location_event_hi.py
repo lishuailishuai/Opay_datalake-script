@@ -231,6 +231,4 @@ dwd_oride_driver_location_event_hi_task = PythonOperator(
     dag=dag
 )
 
-dwd_oride_client_event_detail_hi_hour_task >> \
-sleep_time >> \
-dwd_oride_driver_location_event_hi_task
+dwd_oride_client_event_detail_hi_hour_task >> dwd_oride_driver_location_event_hi_task

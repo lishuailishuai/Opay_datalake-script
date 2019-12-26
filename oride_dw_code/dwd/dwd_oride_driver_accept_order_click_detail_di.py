@@ -235,6 +235,4 @@ dwd_oride_driver_accept_order_click_detail_di_task = PythonOperator(
     dag=dag
 )
 
-dwd_oride_driver_accept_order_click_detail_di_prev_day_task >> \
-sleep_time >> \
-dwd_oride_driver_accept_order_click_detail_di_task
+dwd_oride_driver_accept_order_click_detail_di_prev_day_task >>dwd_oride_driver_accept_order_click_detail_di_task
