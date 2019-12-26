@@ -24,6 +24,8 @@ import logging
 from airflow.models import Variable
 import requests
 import os
+from airflow.sensors import OssSensor
+
 
 args = {
         'owner': 'yangmingze',
@@ -41,27 +43,46 @@ dag = airflow.DAG( 'dwd_oride_abnormal_order_df',
     default_args=args,
     catchup=False) 
 
-
-##----------------------------------------- 依赖 ---------------------------------------## 
-
-
-ods_sqoop_base_data_abnormal_order_df_tesk = UFileSensor(
-    task_id='ods_sqoop_base_data_abnormal_order_df_tesk',
-    filepath="{hdfs_path_str}/dt={pt}/_SUCCESS".format(
-        hdfs_path_str="oride_dw_sqoop/oride_data/data_abnormal_order",
-        pt="{{ds}}"
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
-
-
-##----------------------------------------- 变量 ---------------------------------------## 
+##----------------------------------------- 变量 ---------------------------------------##
 
 db_name="oride_dw"
 table_name="dwd_oride_abnormal_order_df"
-hdfs_path="ufile://opay-datalake/oride/oride_dw/dwd_oride_abnormal_order_df"
+##----------------------------------------- 依赖 ---------------------------------------## 
+
+#获取变量
+code_map=eval(Variable.get("sys_flag"))
+
+#判断ufile(cdh环境)
+if code_map["id"].lower()=="ufile":
+
+    ods_sqoop_base_data_abnormal_order_df_tesk = UFileSensor(
+        task_id='ods_sqoop_base_data_abnormal_order_df_tesk',
+        filepath="{hdfs_path_str}/dt={pt}/_SUCCESS".format(
+            hdfs_path_str="oride_dw_sqoop/oride_data/data_abnormal_order",
+            pt="{{ds}}"
+        ),
+        bucket_name='opay-datalake',
+        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+        dag=dag
+    )
+    # 路径
+    hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
+else:
+    print("成功")
+
+    ods_sqoop_base_data_abnormal_order_df_tesk = OssSensor(
+        task_id='ods_sqoop_base_data_abnormal_order_df_tesk',
+        bucket_key="{hdfs_path_str}/dt={pt}/_SUCCESS".format(
+            hdfs_path_str="oride_dw_sqoop/oride_data/data_abnormal_order",
+            pt="{{ds}}"
+        ),
+        bucket_name='opay-datalake',
+        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+        dag=dag
+    )
+    # 路径
+    hdfs_path = "oss://opay-datalake/oride/oride_dw/" + table_name
+
 
 
 ##----------------------------------------- 任务超时监控 ---------------------------------------## 
@@ -109,7 +130,7 @@ create_time,--创建时间
 update_time,--更新时间
 score,--每单扣除分数
 amount,--扣款金额
-'nal' as country_code,
+'NG' as country_code,
 '{pt}' as dt
         
     from oride_dw_ods.ods_sqoop_base_data_abnormal_order_df
@@ -186,7 +207,7 @@ def execution_data_task_id(ds,**kwargs):
 
     """
 
-    cf=CountriesPublicFrame("true",ds,db_name,table_name,hdfs_path,"true","false")
+    cf=CountriesPublicFrame("true",ds,db_name,table_name,hdfs_path,"true","true")
 
     #删除分区
     cf.delete_partition()

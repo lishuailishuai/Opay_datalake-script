@@ -148,6 +148,8 @@ def dm_oride_order_base_d_sql_task(ds):
        sum(if(is_request=1 and is_carpool=1,1,0)) as carpool_accept_num, -- 拼车应答订单数
        sum(if(is_finish=1 and is_carpool_success=1,1,0)) as carpool_success_and_finish_num, --拼车成功且完单数
        sum(if(is_opay_pay=1 and is_succ_pay=1 and product_id<>99,price,0)) as opay_pay_price,  --当日用opay的订单金额12.18号开始
+       sum(falsify) as falsify, --用户罚款
+       sum(falsify_driver_cancel) as falsify_driver_cancel, --司机罚款
        country_code,
        dt as dt
 from oride_dw.dwm_oride_order_base_di
