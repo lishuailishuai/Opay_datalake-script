@@ -130,7 +130,7 @@ create_time,--创建时间
 update_time,--更新时间
 score,--每单扣除分数
 amount,--扣款金额
-'nal' as country_code,
+'NG' as country_code,
 '{pt}' as dt
         
     from oride_dw_ods.ods_sqoop_base_data_abnormal_order_df
