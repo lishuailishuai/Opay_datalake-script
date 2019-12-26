@@ -46,7 +46,7 @@ dag = airflow.DAG('app_opay_user_report_sum_d',
 dim_opay_user_base_di_prev_day_task = OssSensor(
     task_id='dim_opay_user_base_di_prev_day_task',
     bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opay/opay_dw/dim_opay_user_base_di",
+        hdfs_path_str="opay/opay_dw/dim_opay_user_base_di/country_code=NG",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -68,7 +68,7 @@ dwd_opay_account_balance_df_prev_day_task = OssSensor(
 dwm_opay_user_first_tran_di_prev_day_task = OssSensor(
     task_id='dwm_opay_user_first_tran_di_prev_day_task',
     bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opay/opay_dw/dwm_opay_user_first_tran_di",
+        hdfs_path_str="opay/opay_dw/dwm_opay_user_first_tran_di/country_code=NG",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -98,6 +98,8 @@ def app_opay_user_report_sum_d_sql_task(ds):
     HQL = '''
     SET mapreduce.job.queuename= opay_collects;
     set mapred.max.split.size=1000000;
+    set hive.exec.dynamic.partition.mode=nonstrict;
+    set hive.exec.parallel=true;
     WITH user_reg AS
   (SELECT register_client,
           ROLE,
