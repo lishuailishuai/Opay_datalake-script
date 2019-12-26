@@ -68,7 +68,7 @@ def dwm_opay_user_first_tran_di_sql_task(ds):
     set mapred.max.split.size=1000000;
     set hive.exec.dynamic.partition.mode=nonstrict;
     set hive.exec.parallel=true;
-    INSERT overwrite TABLE opay_dw.dwm_opay_user_first_tran_di (country_code,dt)
+    INSERT overwrite TABLE opay_dw.dwm_opay_user_first_tran_di partition (country_code,dt)
 SELECT a.order_no,
        a.create_time,
        a.amount,

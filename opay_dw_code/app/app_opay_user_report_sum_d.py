@@ -108,8 +108,8 @@ def app_opay_user_report_sum_d_sql_task(ds):
                         WHEN create_t='{pt}' THEN user_id
                     END) new_reg_user_cnt,
           NULL AS zero_bal_acct_cnt,
-          NULL AS first_pay_user_cnt,
-          NULL AS login_times
+          NULL AS first_pay_user_cnt
+        
    FROM
      (SELECT user_id,
              ROLE,
@@ -134,8 +134,7 @@ def app_opay_user_report_sum_d_sql_task(ds):
                   NULL AS reg_user_cnt,
                   NULL AS new_reg_user_cnt,
                   count(1) zero_bal_acct_cnt,
-                  NULL AS first_pay_user_cnt,
-                  NULL AS login_times
+                  NULL AS first_pay_user_cnt
    FROM opay_dw.dwd_opay_account_balance_df
    WHERE dt='{pt}'
      AND user_type='USER'
@@ -152,33 +151,18 @@ def app_opay_user_report_sum_d_sql_task(ds):
                       NULL AS reg_user_cnt,
                       NULL AS new_reg_user_cnt,
                       NULL AS zero_bal_acct_cnt,
-                      count(1) first_pay_user_cnt,
-                      NULL AS login_times
+                      count(1) first_pay_user_cnt
    FROM opay_dw.dwm_opay_user_first_tran_di
    WHERE dt='{pt}'
      AND originator_type='USER'
-   GROUP BY sub_consume_scenario),
---登陆频率
-    login AS
-  (SELECT '-' register_client,
-       '-' ROLE,
-       '-' kyc_level,
-       '-' sub_consume_scenario,
-       NULL AS reg_user_cnt,
-       NULL AS new_reg_user_cnt,
-       NULL AS zero_bal_acct_cnt,
-       NULL first_pay_user_cnt,
-       count(1) AS login_times
-   FROM opay_dw.dwd_opay_client_event_base_di where dt='{pt}' and event_name='opay_show'
- )
+   GROUP BY sub_consume_scenario)
+
 INSERT overwrite TABLE opay_dw.app_opay_user_report_sum_d partition (dt='{pt}')
 SELECT * FROM user_reg
 UNION ALL
 SELECT * FROM balance
 UNION ALL
 SELECT * FROM first_tran
-UNION ALL
-SELECT * FROM login
 
     '''.format(
         pt=ds,
