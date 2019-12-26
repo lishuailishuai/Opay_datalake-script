@@ -92,7 +92,7 @@ else:
     )
 
     # 依赖前天分区
-    dwd_oride_passenger_extend_df_prev_day_tesk = UFileSensor(
+    dwd_oride_passenger_extend_df_prev_day_tesk = OssSensor(
         task_id='dwd_oride_passenger_extend_df_prev_day_tesk',
         bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
             hdfs_path_str="oride/oride_dw/dwd_oride_passenger_extend_df/country_code=nal",
