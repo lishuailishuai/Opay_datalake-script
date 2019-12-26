@@ -318,6 +318,15 @@ def dwm_oride_order_base_di_sql_task(ds):
            
            if(ord.wait_time>0,1,0) as is_arrive_receive_point,
            --司机是否到达接客点
+           
+           ord.pay_mode,
+           --订单支付方式
+           
+           ord.falsify, 
+           --用户罚款
+           
+           ord.falsify_driver_cancel, 
+           --司机罚款
 
  		   ord.country_code as country_code,
 
