@@ -46,7 +46,7 @@ dag = airflow.DAG('dwm_opay_user_first_tran_di',
 dwd_opay_transaction_record_di_prev_day_task = OssSensor(
     task_id='dwd_opay_transaction_record_di_prev_day_task',
     bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opay/opay_dw/dwd_opay_transaction_record_di",
+        hdfs_path_str="opay/opay_dw/dwd_opay_transaction_record_di/country_code=NG",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
