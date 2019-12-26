@@ -1,4 +1,3 @@
-
 # -*- coding: utf-8 -*-
 import airflow
 from datetime import datetime, timedelta
@@ -16,8 +15,9 @@ from airflow.operators.bash_operator import BashOperator
 from airflow.sensors.named_hive_partition_sensor import NamedHivePartitionSensor
 from airflow.sensors.hive_partition_sensor import HivePartitionSensor
 from airflow.sensors import UFileSensor
+from airflow.sensors import OssSensor
 from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
-from plugins.CountriesPublicFrame import CountriesPublicFrame
+from plugins.TaskTouchzSuccess import TaskTouchzSuccess
 import json
 import logging
 from airflow.models import Variable
@@ -41,27 +41,47 @@ dag = airflow.DAG( 'dwd_oride_driver_fault_records_df',
     catchup=False) 
 
 
-##----------------------------------------- 依赖 ---------------------------------------## 
-
-
-ods_sqoop_base_data_driver_fault_records_df_tesk = UFileSensor(
-    task_id='ods_sqoop_base_data_driver_fault_records_df_tesk',
-    filepath="{hdfs_path_str}/dt={pt}/_SUCCESS".format(
-        hdfs_path_str="oride_dw_sqoop/oride_data/data_driver_fault_records",
-        pt="{{ds}}"
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
-
-
-##----------------------------------------- 变量 ---------------------------------------## 
+##----------------------------------------- 变量 ---------------------------------------##
 
 db_name="oride_dw"
 table_name="dwd_oride_driver_fault_records_df"
-hdfs_path="ufile://opay-datalake/oride/oride_dw/dwd_oride_driver_fault_records_df"
 
+##----------------------------------------- 依赖 ---------------------------------------##
+
+#获取变量
+code_map=eval(Variable.get("sys_flag"))
+
+#判断ufile(cdh环境)
+if code_map["id"].lower()=="ufile":
+
+    ods_sqoop_base_data_driver_fault_records_df_tesk = UFileSensor(
+        task_id='ods_sqoop_base_data_driver_fault_records_df_tesk',
+        filepath="{hdfs_path_str}/dt={pt}/_SUCCESS".format(
+            hdfs_path_str="oride_dw_sqoop/oride_data/data_driver_fault_records",
+            pt="{{ds}}"
+        ),
+        bucket_name='opay-datalake',
+        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+        dag=dag
+    )
+
+    # 路径
+    hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
+else:
+    print("成功")
+
+    ods_sqoop_base_data_driver_fault_records_df_tesk = OssSensor(
+        task_id='ods_sqoop_base_data_driver_fault_records_df_tesk',
+        bucket_key="{hdfs_path_str}/dt={pt}/_SUCCESS".format(
+            hdfs_path_str="oride_dw_sqoop/oride_data/data_driver_fault_records",
+            pt="{{ds}}"
+        ),
+        bucket_name='opay-datalake',
+        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+        dag=dag
+    )
+   # 路径
+    hdfs_path = "oss://opay-datalake/oride/oride_dw/" + table_name
 
 ##----------------------------------------- 任务超时监控 ---------------------------------------## 
 

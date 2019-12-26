@@ -22,6 +22,8 @@ import logging
 from airflow.models import Variable
 import requests
 import os
+from airflow.sensors import OssSensor
+
 args = {
     'owner': 'lijialong',
     'start_date': datetime(2019, 10, 1),
@@ -40,26 +42,49 @@ dag = airflow.DAG('dwd_oride_coupon_use_detail_df',
 
 
 
-##----------------------------------------- 依赖 ---------------------------------------##
-
-
-# 依赖前一天分区
-ods_sqoop_base_data_coupon_df_task = UFileSensor(
-    task_id='ods_sqoop_base_data_coupon_df_task',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride_dw_sqoop/oride_data/data_coupon",
-        pt='{{ds}}'
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
-
 ##----------------------------------------- 变量 ---------------------------------------##
 
-db_name = "oride_dw"
-table_name = "dwd_oride_coupon_use_detail_df"
-hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
+db_name="oride_dw"
+table_name="dwd_oride_coupon_use_detail_df"
+
+##----------------------------------------- 依赖 ---------------------------------------##
+
+#获取变量
+code_map=eval(Variable.get("sys_flag"))
+
+#判断ufile(cdh环境)
+if code_map["id"].lower()=="ufile":
+
+    # 依赖前一天分区
+    ods_sqoop_base_data_coupon_df_task = UFileSensor(
+        task_id='ods_sqoop_base_data_coupon_df_task',
+        filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+            hdfs_path_str="oride_dw_sqoop/oride_data/data_coupon",
+            pt='{{ds}}'
+        ),
+        bucket_name='opay-datalake',
+        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+        dag=dag
+    )
+    # 路径
+    hdfs_path="ufile://opay-datalake/oride/oride_dw/"+table_name
+else:
+    print("成功")
+
+    # 依赖前一天分区
+    ods_sqoop_base_data_coupon_df_task = OssSensor(
+        task_id='ods_sqoop_base_data_coupon_df_task',
+        bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+            hdfs_path_str="oride_dw_sqoop/oride_data/data_coupon",
+            pt='{{ds}}'
+        ),
+        bucket_name='opay-datalake',
+        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+        dag=dag
+    )
+    # 路径
+    hdfs_path = "oss://opay-datalake/oride/oride_dw/" + table_name
+
 
 ##----------------------------------------- 任务超时监控 ---------------------------------------## 
 def fun_task_timeout_monitor(ds,dag,**op_kwargs):
