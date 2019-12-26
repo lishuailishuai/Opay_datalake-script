@@ -1,23 +1,16 @@
 # coding=utf-8
 import airflow
+import logging
 from datetime import datetime, timedelta
 from airflow.operators.python_operator import PythonOperator
-from airflow.utils.email import send_email
+from airflow.operators.bash_operator  import BashOperator
 from airflow.operators.hive_operator import HiveOperator
-from utils.connection_helper import get_hive_cursor, get_db_conn, get_pika_connection, get_redis_connection
+from utils.connection_helper import get_db_conn, get_redis_connection
 from airflow.hooks.hive_hooks import HiveCliHook
-from airflow import macros
-import logging
 from airflow.models import Variable
-import pandas as pd
-import io
-import requests
-import os
-from airflow.sensors.hive_partition_sensor import HivePartitionSensor
-from utils.validate_metrics_utils import *
-from airflow.operators.bash_operator import BashOperator
-from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
 from plugins.TaskTouchzSuccess import TaskTouchzSuccess
+from multiprocessing import Process, Queue, Manager
+from os import getpid
 
 args = {
         'owner': 'yangmingze',
@@ -28,12 +21,12 @@ args = {
         'email': ['bigdata_dw@opay-inc.com'],
         'email_on_failure': True,
         'email_on_retry': False,
-} 
+}
 
-dag = airflow.DAG( 'ods_oride_log_driver_timerange', 
-    schedule_interval="00 01 * * *", 
+dag = airflow.DAG( 'ods_oride_log_driver_timerange',
+    schedule_interval="00 01 * * *",
     default_args=args,
-    catchup=False) 
+    catchup=False)
 
 ##----------------------------------------- 变量 ---------------------------------------##
 
@@ -47,9 +40,6 @@ hdfs_path = Variable.get("OBJECT_STORAGE_PROTOCOL") + "opay-datalake/oride/oride
 
 KeyDriverOrderTime = "driver:ort:%d:%s"
 
-#键 algo:driver:online:%d:%s 司机id 时间yyyymmdd
-KeyDriverOnlineTime = "algo:driver:online:%d:%s"
-
 get_driver_id = '''
 select max(id) from oride_data.data_driver
 '''
@@ -57,10 +47,30 @@ insert_timerange = '''
 replace into bi.driver_timerange (`Daily`,`driver_id`,`driver_onlinerange`,`driver_freerange`) values (%s,%s,%s,%s)
 '''
 
+def get_driver_timerange(curr_list, dt, rows):
+    #键 algo:driver:online:%d:%s 司机id 时间yyyymmdd
+    KeyDriverOnlineTime = "algo:driver:online:%d:%s"
+    redis = get_redis_connection('pika_85')
+    num = 0
+    for id in curr_list:
+        online_time_dict = redis.hgetall(KeyDriverOnlineTime % (id, dt))
+        if online_time_dict:
+            #print('dirver id %d, pika result %s' % (id, online_time_dict))
+            online_time=0
+            order_time=0
+            for value in  online_time_dict.values():
+                tmp_list = str(value, 'utf-8').split('|')
+                online_time += int(tmp_list[0])*60
+                order_time += int(tmp_list[1])*60
+            free_time = online_time - order_time
+            #print('driver_id:%d, online_time_total:%d' % (id, online_time))
+            row = '(' + str(id) + ',' + str(online_time) + ',' + str(free_time) + ')'
+            num += 1
+            rows.append(row)
+    logging.info('driver id %d - %d, Pid[%d], rows num %d', curr_list[0] , curr_list[-1], getpid(), num)
 
 def get_driver_online_time(ds, **op_kwargs):
     dt = op_kwargs["ds_nodash"]
-    redis = get_redis_connection('pika_85')
     conn = get_db_conn('sqoop_db')
     mcursor = conn.cursor()
     mcursor.execute(get_driver_id)
@@ -68,21 +78,22 @@ def get_driver_online_time(ds, **op_kwargs):
     conn.commit()
     mcursor.close()
     conn.close()
-    rows = []
-    res = []
-    for i in range(1, result[0] + 1):
-        online_time_dict = redis.hgetall(KeyDriverOnlineTime % (i, dt))
-        if online_time_dict:
-            online_time=0
-            order_time=0
-            for value in  online_time_dict.values():
-                tmp_list = str(value, 'utf-8').split('|')
-                online_time += int(tmp_list[0])*60
-                order_time += int(tmp_list[1])*60
-
-            #print('driver_id:%d, online_time_total:%d' % (i, online_time))
-            free_time = online_time - order_time
-            rows.append('(' + str(i) + ',' + str(online_time) + ',' + str(free_time) + ')')
+    processes = []
+    max_driver_id = result[0]
+    logging.info('max driver id %d', max_driver_id)
+    id_list = [x for x in range(1, max_driver_id+1)]
+    part_size = 1000
+    index = 0
+    manager = Manager()
+    rows = manager.list([])
+    while index < max_driver_id:
+        p = Process(target=get_driver_timerange,
+                    args=(id_list[index:index + part_size], dt, rows))
+        index += part_size
+        processes.append(p)
+        p.start()
+    for p in processes:
+        p.join()
     if rows:
         query = """
             INSERT OVERWRITE TABLE oride_dw_ods.{tab_name} PARTITION (dt='{dt}')
@@ -91,13 +102,6 @@ def get_driver_online_time(ds, **op_kwargs):
         logging.info('import_driver_online_time run sql:%s' % query)
         hive_hook = HiveCliHook()
         hive_hook.run_cli(query)
-        # insert bi mysql
-        # conn = get_db_conn('mysql_bi')
-        # mcursor = conn.cursor()
-        # mcursor.executemany(insert_timerange, res)
-        # conn.commit()
-        #mcursor.close()
-        #conn.close()
 
 import_ods_log_oride_driver_timerange = PythonOperator(
     task_id='import_ods_log_oride_driver_timerange',
@@ -132,18 +136,16 @@ def execution_data_task_id(ds,**kargs):
     #生成_SUCCESS
     """
     第一个参数true: 数据目录是有country_code分区。false 没有
-    第二个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
+    第二个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS
 
     """
     TaskTouchzSuccess().countries_touchz_success(ds,db_name,table_name,hdfs_path,"false","true")
-    
+
 TaskTouchzSuccess_task= PythonOperator(
     task_id='TaskTouchzSuccess_task',
     python_callable=execution_data_task_id,
     provide_context=True,
     dag=dag
 )
-
-
 
 create_ods_log_oride_driver_timerange >> import_ods_log_oride_driver_timerange>>TaskTouchzSuccess_task
