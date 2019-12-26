@@ -72,7 +72,7 @@ else:
     print("成功")
     ods_sqoop_base_data_driver_extend_df_task = OssSensor(
         task_id='ods_sqoop_base_data_driver_extend_df_task',
-        filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
             hdfs_path_str="oride_dw_sqoop/oride_data/data_driver_extend",
             pt='{{ds}}'
         ),
