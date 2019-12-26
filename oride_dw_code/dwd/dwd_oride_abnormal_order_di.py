@@ -22,6 +22,8 @@ import logging
 from airflow.models import Variable
 import requests
 import os
+from airflow.sensors import OssSensor
+
 
 args = {
     'owner': 'yangmingze',
@@ -51,7 +53,7 @@ code_map=eval(Variable.get("sys_flag"))
 #判断ufile(cdh环境)
 if code_map["id"].lower()=="ufile":
 
-    ods_sqoop_base_data_abnormal_order_df_tesk = UFileSensor(
+    ods_sqoop_base_data_abnormal_order_df_task = UFileSensor(
         task_id='ods_sqoop_base_data_abnormal_order_df_tesk',
         filepath="{hdfs_path_str}/dt={pt}/_SUCCESS".format(
             hdfs_path_str="oride_dw_sqoop/oride_data/data_abnormal_order",
@@ -66,7 +68,7 @@ if code_map["id"].lower()=="ufile":
 else:
     print("成功")
 
-    ods_sqoop_base_data_abnormal_order_df_tesk = OssSensor(
+    ods_sqoop_base_data_abnormal_order_df_task = OssSensor(
         task_id='ods_sqoop_base_data_abnormal_order_df_tesk',
         bucket_key="{hdfs_path_str}/dt={pt}/_SUCCESS".format(
             hdfs_path_str="oride_dw_sqoop/oride_data/data_abnormal_order",
