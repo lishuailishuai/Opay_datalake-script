@@ -974,9 +974,4 @@ dwd_pre_opos_payment_order_di_task >> opos_active_user_daily_task
 opos_active_user_daily_task >> delete_crm_data >> insert_crm_metrics >> delete_bi_data >> insert_bi_metrics >> delete_bi_bd_data >> insert_bi_bd_metrics
 opos_metrcis_report_task >> delete_crm_data >> insert_crm_metrics >> delete_bi_data >> insert_bi_metrics >> delete_bi_bd_data >> insert_bi_bd_metrics
 
-# 查看任务命令
-# airflow list_tasks opos_order_metrics_daily -sd /home/feng.yuan/opos_order_metrics_daily.py
-# 测试任务命令
-# airflow test opos_order_metrics_daily opos_active_user_daily_task 2019-11-26 -sd /home/feng.yuan/opos_order_metrics_daily.py
-
 

@@ -274,9 +274,3 @@ opos_metrcis_report_task = PythonOperator(
 
 dwd_pre_opos_payment_order_di_task >> opos_metrcis_report_task
 
-# 查看任务命令
-# airflow list_tasks opos_metrcis_report -sd /home/feng.yuan/opos_metrcis_report.py
-# 测试任务命令
-# airflow test opos_metrcis_report opos_metrcis_report_task 2019-11-24 -sd /home/feng.yuan/opos_metrcis_report.py
-
-
