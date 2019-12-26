@@ -69,7 +69,7 @@ if code_map["id"].lower()=="ufile":
 else:
     ods_sqoop_mass_rider_signups_df_tesk = OssSensor(
         task_id='ods_sqoop_mass_rider_signups_df_tesk',
-        filepath="{hdfs_path_str}/dt={pt}/_SUCCESS".format(
+        bucket_key="{hdfs_path_str}/dt={pt}/_SUCCESS".format(
             hdfs_path_str="oride_dw_sqoop/opay_spread/rider_signups",
             pt="{{ds}}"
         ),
