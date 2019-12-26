@@ -44,7 +44,7 @@ dag = airflow.DAG('dwd_oride_abnormal_order_di',
 ##----------------------------------------- 变量 ---------------------------------------##
 
 db_name="oride_dw"
-table_name="dwd_oride_abnormal_order_df"
+table_name="dwd_oride_abnormal_order_di"
 ##----------------------------------------- 依赖 ---------------------------------------##
 
 #获取变量
