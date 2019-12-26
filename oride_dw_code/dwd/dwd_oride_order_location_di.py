@@ -122,7 +122,7 @@ def dwd_oride_order_location_di_sql_task(ds):
         SET hive.exec.dynamic.partition.mode=nonstrict; 
         
         WITH order_data AS (
-
+        
         SELECT  ord.order_id               AS order_id 
                ,ord.user_id                AS user_id 
                ,ord.driver_id              AS driver_id 
@@ -143,7 +143,7 @@ def dwd_oride_order_location_di_sql_task(ds):
                ,concat(end_lat,'_',end_lng)     AS end_loc
         FROM oride_dw.dwd_oride_order_base_include_test_di
         WHERE dt = '{pt}' 
-        AND (status = 4 or status = 5)  
+        AND status = 5  
         ) ord
         LEFT JOIN 
         (
@@ -246,21 +246,26 @@ def dwd_oride_order_location_di_sql_task(ds):
                  ,
                  
         driver_location AS (
-        SELECT  t.order_id                                                             AS order_id 
-               ,concat_ws(',',collect_list(concat(t.`timestamp`,'_',t.lat,'_',t.lng))) AS loc_list
+        SELECT  tt.order_id                             AS order_id 
+               ,concat_ws(',',collect_list(tt.loc_str)) AS loc_list
         FROM 
         (
-        SELECT  order_id
-               ,`timestamp`
-               ,lat
-               ,lng
-        FROM oride_dw_ods.ods_log_driver_track_data_hi
-        WHERE dt = '{pt}' 
-        AND order_id <> 0  
+        SELECT  t.order_id 
+               ,t.loc_str
+        FROM 
+        (
+            SELECT  order_id 
+                   ,concat(`timestamp`,'_',lat,'_',lng) AS loc_str
+                   ,row_number() over(partition by order_id ORDER BY `timestamp`) order_by
+            FROM oride_dw_ods.ods_log_driver_track_data_hi
+            WHERE dt = '{pt}' 
+            AND order_id <> 0  
         ) t
+        WHERE t.order_by < 10000  
+        ) tt
         JOIN order_data o
-        ON t.order_id = o.order_id
-        GROUP BY  t.order_id )
+        ON tt.order_id = o.order_id
+        GROUP BY  tt.order_id )
         
         INSERT OVERWRITE TABLE {db}.{table} PARTITION(country_code,dt)
         SELECT  m.order_id                           AS order_id --订单id 
