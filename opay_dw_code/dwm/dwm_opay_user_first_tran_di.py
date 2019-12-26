@@ -27,7 +27,7 @@ import os
 
 args = {
     'owner': 'liushuzhen',
-    'start_date': datetime(2019, 12, 22),
+    'start_date': datetime(2019, 12, 25),
     'depends_on_past': False,
     'retries': 3,
     'retry_delay': timedelta(minutes=2),
@@ -46,7 +46,7 @@ dag = airflow.DAG('dwm_opay_user_first_tran_di',
 dwd_opay_transaction_record_di_prev_day_task = OssSensor(
     task_id='dwd_opay_transaction_record_di_prev_day_task',
     bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opay/opay_dw/dwd_opay_transaction_record_di",
+        hdfs_path_str="opay/opay_dw/dwd_opay_transaction_record_di/country_code=NG",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -68,7 +68,7 @@ def dwm_opay_user_first_tran_di_sql_task(ds):
     set mapred.max.split.size=1000000;
     set hive.exec.dynamic.partition.mode=nonstrict;
     set hive.exec.parallel=true;
-    INSERT overwrite TABLE opay_dw.dwm_opay_user_first_tran_di (country_code,dt)
+    INSERT overwrite TABLE opay_dw.dwm_opay_user_first_tran_di partition (country_code,dt)
 SELECT a.order_no,
        a.create_time,
        a.amount,

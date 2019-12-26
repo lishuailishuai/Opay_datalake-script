@@ -61,7 +61,7 @@ replace into bi.driver_timerange (`Daily`,`driver_id`,`driver_onlinerange`,`driv
 def get_driver_online_time(ds, **op_kwargs):
     dt = op_kwargs["ds_nodash"]
     redis = get_redis_connection('pika_85')
-    conn = get_db_conn('mysql_oride_data_readonly')
+    conn = get_db_conn('sqoop_db')
     mcursor = conn.cursor()
     mcursor.execute(get_driver_id)
     result = mcursor.fetchone()
@@ -119,9 +119,9 @@ create_ods_log_oride_driver_timerange = HiveOperator(
         )
         STORED AS PARQUET
         LOCATION
-        'ufile://opay-datalake/oride/oride_dw_ods/{tab_name}'
+        '{hdfs_path}'
 
-    """.format(tab_name=table_name),
+    """.format(tab_name=table_name, hdfs_path=hdfs_path),
     schema='oride_dw_ods',
     dag=dag)
 
