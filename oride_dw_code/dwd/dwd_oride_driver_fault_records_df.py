@@ -23,7 +23,7 @@ import logging
 from airflow.models import Variable
 import requests
 import os
-
+from plugins.CountriesPublicFrame import CountriesPublicFrame
 args = {
         'owner': 'yangmingze',
         'start_date': datetime(2019, 11, 9),
