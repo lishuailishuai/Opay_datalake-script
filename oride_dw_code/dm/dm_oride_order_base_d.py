@@ -15,6 +15,7 @@ from airflow.operators.bash_operator import BashOperator
 from airflow.sensors.named_hive_partition_sensor import NamedHivePartitionSensor
 from airflow.sensors.hive_partition_sensor import HivePartitionSensor
 from airflow.sensors import UFileSensor
+from airflow.sensors import OssSensor
 from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
 from plugins.TaskTouchzSuccess import TaskTouchzSuccess
 from plugins.CountriesPublicFrame import CountriesPublicFrame
@@ -39,26 +40,44 @@ dag = airflow.DAG('dm_oride_order_base_d',
                   schedule_interval="00 02 * * *",
                   default_args=args,
                   catchup=False)
-
-##----------------------------------------- 依赖 ---------------------------------------## 
-
-# 依赖前一天分区
-dwm_oride_order_base_di_prev_day_task = UFileSensor(
-    task_id='dwm_oride_order_base_di_prev_day_task',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw/dwm_oride_order_base_di/country_code=NG",
-        pt='{{ds}}'
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
-
 ##----------------------------------------- 变量 ---------------------------------------##
 
 db_name="oride_dw"
 table_name = "dm_oride_order_base_d"
-hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
+
+##----------------------------------------- 依赖 ---------------------------------------## 
+#获取变量
+code_map=eval(Variable.get("sys_flag"))
+
+#判断ufile(cdh环境)
+if code_map["id"].lower()=="ufile":
+    # 依赖前一天分区
+    dwm_oride_order_base_di_prev_day_task = UFileSensor(
+        task_id='dwm_oride_order_base_di_prev_day_task',
+        filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+            hdfs_path_str="oride/oride_dw/dwm_oride_order_base_di/country_code=NG",
+            pt='{{ds}}'
+        ),
+        bucket_name='opay-datalake',
+        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+        dag=dag
+    )
+    #路径
+    hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
+else:
+    print("成功")
+    dwm_oride_order_base_di_prev_day_task = OssSensor(
+        task_id='dwm_oride_order_base_di_prev_day_task',
+        bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+            hdfs_path_str="oride/oride_dw/dwm_oride_order_base_di/country_code=NG",
+            pt='{{ds}}'
+        ),
+        bucket_name='opay-datalake',
+        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+        dag=dag
+    )
+    # 路径
+    hdfs_path = "oss://opay-datalake/oride/oride_dw/" + table_name
 
 ##----------------------------------------- 任务超时监控 ---------------------------------------## 
 
@@ -148,6 +167,8 @@ def dm_oride_order_base_d_sql_task(ds):
        sum(if(is_request=1 and is_carpool=1,1,0)) as carpool_accept_num, -- 拼车应答订单数
        sum(if(is_finish=1 and is_carpool_success=1,1,0)) as carpool_success_and_finish_num, --拼车成功且完单数
        sum(if(is_opay_pay=1 and is_succ_pay=1 and product_id<>99,price,0)) as opay_pay_price,  --当日用opay的订单金额12.18号开始
+       sum(falsify) as falsify, --用户罚款
+       sum(falsify_driver_cancel) as falsify_driver_cancel, --司机罚款
        country_code,
        dt as dt
 from oride_dw.dwm_oride_order_base_di

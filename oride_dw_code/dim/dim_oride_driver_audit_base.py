@@ -15,6 +15,7 @@ from airflow.operators.bash_operator import BashOperator
 from airflow.sensors.named_hive_partition_sensor import NamedHivePartitionSensor
 from airflow.sensors.hive_partition_sensor import HivePartitionSensor
 from airflow.sensors import UFileSensor
+from airflow.sensors import OssSensor
 from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
 from plugins.TaskTouchzSuccess import TaskTouchzSuccess
 import json
@@ -39,39 +40,88 @@ dag = airflow.DAG( 'dim_oride_driver_audit_base',
     default_args=args,
     catchup=False)
 
+##----------------------------------------- 变量 ---------------------------------------##
+
+db_name = "oride_dw"
+table_name="dim_oride_driver_audit_base"
+
 ##----------------------------------------- 依赖 ---------------------------------------## 
+#获取变量
+code_map=eval(Variable.get("sys_flag"))
+
+#判断ufile(cdh环境)
+if code_map["id"].lower()=="ufile":
+    #依赖前一天分区
+    ods_sqoop_mass_rider_signups_df_prev_day_tesk=HivePartitionSensor(
+          task_id="ods_sqoop_mass_rider_signups_df_prev_day_tesk",
+          table="ods_sqoop_mass_rider_signups_df",
+          partition="dt='{{ds}}'",
+          schema="oride_dw_ods",
+          poke_interval=60, #依赖不满足时，一分钟检查一次依赖状态
+          dag=dag
+        )
 
 
-#依赖前一天分区
-ods_sqoop_mass_rider_signups_df_prev_day_tesk=HivePartitionSensor(
-      task_id="ods_sqoop_mass_rider_signups_df_prev_day_tesk",
-      table="ods_sqoop_mass_rider_signups_df",
-      partition="dt='{{ds}}'",
-      schema="oride_dw_ods",
-      poke_interval=60, #依赖不满足时，一分钟检查一次依赖状态
-      dag=dag
+    #依赖前一天分区
+    ods_sqoop_mass_driver_group_df_prev_day_tesk=HivePartitionSensor(
+          task_id="ods_sqoop_mass_driver_group_df_prev_day_tesk",
+          table="ods_sqoop_mass_driver_group_df",
+          partition="dt='{{ds}}'",
+          schema="oride_dw_ods",
+          poke_interval=60, #依赖不满足时，一分钟检查一次依赖状态
+          dag=dag
+        )
+
+    #依赖前一天分区
+    ods_sqoop_mass_driver_team_df_prev_day_tesk=HivePartitionSensor(
+          task_id="ods_sqoop_mass_driver_team_df_prev_day_tesk",
+          table="ods_sqoop_mass_driver_team_df",
+          partition="dt='{{ds}}'",
+          schema="oride_dw_ods",
+          poke_interval=60, #依赖不满足时，一分钟检查一次依赖状态
+          dag=dag
+        )
+    #路径
+    hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
+else:
+    print("成功")
+    # 依赖前一天分区
+    ods_sqoop_mass_rider_signups_df_prev_day_tesk = OssSensor(
+        task_id='ods_sqoop_mass_rider_signups_df_prev_day_tesk',
+        bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+            hdfs_path_str="oride_dw_sqoop/opay_spread/rider_signups",
+            pt='{{ds}}'
+        ),
+        bucket_name='opay-datalake',
+        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+        dag=dag
     )
 
-
-#依赖前一天分区
-ods_sqoop_mass_driver_group_df_prev_day_tesk=HivePartitionSensor(
-      task_id="ods_sqoop_mass_driver_group_df_prev_day_tesk",
-      table="ods_sqoop_mass_driver_group_df",
-      partition="dt='{{ds}}'",
-      schema="oride_dw_ods",
-      poke_interval=60, #依赖不满足时，一分钟检查一次依赖状态 
-      dag=dag
+    # 依赖前一天分区
+    ods_sqoop_mass_driver_group_df_prev_day_tesk = OssSensor(
+        task_id='ods_sqoop_mass_driver_group_df_prev_day_tesk',
+        bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+            hdfs_path_str="oride_dw_sqoop/opay_spread/driver_group",
+            pt='{{ds}}'
+        ),
+        bucket_name='opay-datalake',
+        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+        dag=dag
     )
 
-#依赖前一天分区
-ods_sqoop_mass_driver_team_df_prev_day_tesk=HivePartitionSensor(
-      task_id="ods_sqoop_mass_driver_team_df_prev_day_tesk",
-      table="ods_sqoop_mass_driver_team_df",
-      partition="dt='{{ds}}'",
-      schema="oride_dw_ods",
-      poke_interval=60, #依赖不满足时，一分钟检查一次依赖状态
-      dag=dag
+    # 依赖前一天分区
+    ods_sqoop_mass_driver_team_df_prev_day_tesk = OssSensor(
+        task_id='ods_sqoop_mass_driver_team_df_prev_day_tesk',
+        bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+            hdfs_path_str="oride_dw_sqoop/opay_spread/driver_team",
+            pt='{{ds}}'
+        ),
+        bucket_name='opay-datalake',
+        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+        dag=dag
     )
+    # 路径
+    hdfs_path = "oss://opay-datalake/oride/oride_dw/" + table_name
 
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
 
@@ -91,13 +141,6 @@ task_timeout_monitor= PythonOperator(
     provide_context=True,
     dag=dag
 )
-
-
-##----------------------------------------- 变量 ---------------------------------------## 
-
-db_name = "oride_dw"
-table_name="dim_oride_driver_audit_base"
-hdfs_path="ufile://opay-datalake/oride/oride_dw/"+table_name
 
 ##----------------------------------------- 脚本 ---------------------------------------## 
 
