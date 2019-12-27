@@ -43,6 +43,17 @@ dag = airflow.DAG('dim_opos_bd_relation_df',
 ##----------------------------------------- 依赖 ---------------------------------------##
 
 
+dim_opos_bd_info_df_task = OssSensor(
+    task_id='dim_opos_bd_info_df_task',
+    bucket_key='{hdfs_path_str}/country_code=nal/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="opos/opos_dw/dim_opos_bd_info_df",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
 ods_sqoop_base_bd_admin_users_df_task = OssSensor(
     task_id='ods_sqoop_base_bd_admin_users_df_task',
     bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
@@ -113,42 +124,6 @@ def dim_opos_bd_relation_df_sql_task(ds):
 set hive.exec.parallel=true;
 set hive.exec.dynamic.partition.mode=nonstrict;
 set hive.strict.checks.cartesian.product=false;
-
-
---01.首先清空组织机构层级临时表,然后插入最新的组织机构层级数据
---插入最新的数据
-insert overwrite table opos_dw.dim_opos_bd_info_df partition(country_code,dt)
-select 
-nvl(hcm.id,0) as hcm_id
-,nvl(hcm.name,'-') as hcm_name
-,nvl(level2.cm_id,0) as cm_id
-,nvl(level2.cm_name,'-') as cm_name
-,nvl(level2.rm_id,0) as rm_id
-,nvl(level2.rm_name,'-') as rm_name
-,nvl(level2.bdm_id,0) as bdm_id
-,nvl(level2.bdm_name,'-') as bdm_name
-,nvl(level2.bd_id,0) as bd_id
-,nvl(level2.bd_name,'-') as bd_name 
-
-,'nal' as country_code
-,'{pt}' as dt
-from
-  (select id,name,leader_id from  opos_dw_ods.ods_sqoop_base_bd_admin_users_df where dt = '{pt}' and job_id = 2) hcm
-full join
-  (select nvl(cm.leader_id,0) as leader_id,nvl(cm.id,0) as cm_id,nvl(cm.name,'-') as cm_name,nvl(level3.rm_id,0) as rm_id,nvl(level3.rm_name,'-') as rm_name,nvl(level3.bdm_id,0) as bdm_id,nvl(level3.bdm_name,'-') as bdm_name,nvl(level3.bd_id,0) as bd_id,nvl(level3.bd_name,'-') as bd_name from
-    (select id,name,leader_id from  opos_dw_ods.ods_sqoop_base_bd_admin_users_df where dt = '{pt}' and job_id = 3) cm
-  full join
-    (select nvl(rm.leader_id,0) as leader_id,nvl(rm.id,0) as rm_id,nvl(rm.name,'-') as rm_name,nvl(level4.bdm_id,0) as bdm_id,nvl(level4.bdm_name,'-') as bdm_name,nvl(level4.bd_id,0) as bd_id,nvl(level4.bd_name,'-') as bd_name from
-      (select id,name,leader_id from  opos_dw_ods.ods_sqoop_base_bd_admin_users_df where dt = '{pt}' and job_id = 4) rm
-    full join
-      (select nvl(bdm.leader_id,0) as leader_id,nvl(bdm.id,0) as bdm_id,nvl(bdm.name,'-') as bdm_name,nvl(bd.id,0) as bd_id,nvl(bd.name,'-') as bd_name from
-        (select id,name,leader_id from  opos_dw_ods.ods_sqoop_base_bd_admin_users_df where dt = '{pt}' and job_id = 6) bd
-      full join
-        (select id,name,leader_id from  opos_dw_ods.ods_sqoop_base_bd_admin_users_df where dt = '{pt}' and job_id = 5) bdm
-      on bdm.id=bd.leader_id) as level4
-    on rm.id=level4.leader_id) as level3
-  on cm.id=level3.leader_id) as level2
-on hcm.id=level2.leader_id;
 
 
 --02.取出所有商户信息，关联bd
@@ -555,6 +530,7 @@ dim_opos_bd_relation_df_task = PythonOperator(
     dag=dag
 )
 
+dim_opos_bd_info_df_task >> dim_opos_bd_relation_df_task
 ods_sqoop_base_bd_admin_users_df_task >> dim_opos_bd_relation_df_task
 ods_sqoop_base_bd_shop_df_task >> dim_opos_bd_relation_df_task
 ods_sqoop_base_bd_city_df_task >> dim_opos_bd_relation_df_task
