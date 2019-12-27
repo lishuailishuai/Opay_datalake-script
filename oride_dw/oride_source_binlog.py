@@ -199,7 +199,9 @@ if table_list!='':
             task_id='touchz_data_success_{}'.format(table),
             bash_command="""
 
-                if [ "{is_exists}" == "false" ];then
+                is_exists={is_exists}
+
+                if [ "$is_exists" == "false" ];then
 
                     echo "11"
 
