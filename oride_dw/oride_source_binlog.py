@@ -207,8 +207,8 @@ if table_list!='':
                 if [ "$is_exists" == "false" ]
                 then
 
-                    #$HADOOP_HOME/bin/hadoop fs -mkdir {hdfs_data_dir}
-                    #$HADOOP_HOME/bin/hadoop fs -touchz {hdfs_data_dir}/_SUCCESS
+                    $HADOOP_HOME/bin/hadoop fs -mkdir {hdfs_data_dir}
+                    $HADOOP_HOME/bin/hadoop fs -touchz {hdfs_data_dir}/_SUCCESS
 
                 else
                     line_num=`$HADOOP_HOME/bin/hadoop fs -du -s {hdfs_data_dir} | tail -1 | awk '{{print $1}}'`
