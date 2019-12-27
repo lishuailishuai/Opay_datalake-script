@@ -39,12 +39,12 @@ table_name,是否验证数据存在
 
 table_list = [
 
-    ("data_order","false"),
-    ("data_driver_comment","false"),
+    ("data_order","true"),
+    ("data_driver_comment","true"),
     ("data_driver","false"),
-    ("data_driver_extend","false"),
-    ("data_user_extend","false"),
-    ("data_order_payment","false")
+    ("data_driver_extend","true"),
+    ("data_user_extend","true"),
+    ("data_order_payment","true")
 ]
 
 def run_insert_ods(ds, execution_date, **kwargs):
@@ -205,8 +205,6 @@ if table_list!='':
                 is_exists={is_exists}
 
                 if [ "$is_exists" == "false" ];then
-
-                    echo "11"
 
                     #$HADOOP_HOME/bin/hadoop fs -mkdir {hdfs_data_dir}
                     #$HADOOP_HOME/bin/hadoop fs -touchz {hdfs_data_dir}/_SUCCESS
