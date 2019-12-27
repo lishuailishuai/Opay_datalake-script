@@ -22,6 +22,7 @@ import logging
 from airflow.models import Variable
 import requests
 import os
+from airflow.sensors import OssSensor
 
 args = {
     'owner': 'lijialong',
@@ -39,28 +40,46 @@ dag = airflow.DAG('dwd_oride_driver_virtual_device_login_df',
                   default_args=args,
                   catchup=False)
 
-
-##----------------------------------------- 依赖 ---------------------------------------##
-
-#ufile://opay-datalake/oride_dw_sqoop/anti_fraud_oride/driver_virtual_device_login
-
-# 依赖前一天分区
-ods_sqoop_base_driver_virtual_device_login_df_task = UFileSensor(
-    task_id='ods_sqoop_base_driver_virtual_device_login_df_task',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride_dw_sqoop/anti_fraud_oride/driver_virtual_device_login",
-        pt='{{ds}}'
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
-
 ##----------------------------------------- 变量 ---------------------------------------##
 
 db_name = "oride_dw"
 table_name = "dwd_oride_driver_virtual_device_login_df"
-hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
+
+##----------------------------------------- 依赖 ---------------------------------------##
+
+#ufile://opay-datalake/oride_dw_sqoop/anti_fraud_oride/driver_virtual_device_login
+#获取变量
+code_map=eval(Variable.get("sys_flag"))
+
+#判断ufile(cdh环境)
+if code_map["id"].lower()=="ufile":
+
+    # 依赖前一天分区
+    ods_sqoop_base_driver_virtual_device_login_df_task = UFileSensor(
+        task_id='ods_sqoop_base_driver_virtual_device_login_df_task',
+        filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+            hdfs_path_str="oride_dw_sqoop/anti_fraud_oride/driver_virtual_device_login",
+            pt='{{ds}}'
+        ),
+        bucket_name='opay-datalake',
+        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+        dag=dag
+    )
+    hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
+
+else:
+    print("成功")
+    ods_sqoop_base_driver_virtual_device_login_df_task = OssSensor(
+        task_id='ods_sqoop_base_driver_virtual_device_login_df_task',
+        bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+            hdfs_path_str="oride_dw_sqoop/anti_fraud_oride/driver_virtual_device_login",
+            pt='{{ds}}'
+        ),
+        bucket_name='opay-datalake',
+        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+        dag=dag
+    )
+    hdfs_path = "oss://opay-datalake/oride/oride_dw/" + table_name
 
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
 

@@ -22,6 +22,7 @@ import requests
 import os
 from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
 from plugins.TaskTouchzSuccess import TaskTouchzSuccess
+from airflow.sensors import OssSensor
 
 args = {
     'owner': 'linan',
@@ -44,39 +45,67 @@ sleep_time = BashOperator(
     depends_on_past=False,
     bash_command='sleep 30',
     dag=dag)
-
-##----------------------------------------- 依赖 ---------------------------------------##
-
-# 依赖前一天分区
-dependence_dwd_oride_driver_location_event_hi_prev_day_task = UFileSensor(
-    task_id='dependence_dwd_oride_driver_location_event_hi_prev_day_task',
-    filepath='{hdfs_path_str}/country_code=nal/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw/dwd_oride_driver_location_event_di",
-        pt='{{ds}}'
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
-
-# 依赖前一天分区
-dependence_dwd_oride_passanger_location_event_hi_prev_day_task = UFileSensor(
-    task_id='dependence_dwd_oride_passanger_location_event_hi_prev_day_task',
-    filepath='{hdfs_path_str}/country_code=nal/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw/dwd_oride_passanger_location_event_di",
-        pt='{{ds}}'
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
-
 ##----------------------------------------- 变量 ---------------------------------------##
 
 db_name = "oride_dw"
 table_name = "dwd_oride_order_location_event_di"
-hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
 
+##----------------------------------------- 依赖 ---------------------------------------##
+#获取变量
+code_map=eval(Variable.get("sys_flag"))
+
+#判断ufile(cdh环境)
+if code_map["id"].lower()=="ufile":
+    # 依赖前一天分区
+    dependence_dwd_oride_driver_location_event_hi_prev_day_task = UFileSensor(
+        task_id='dependence_dwd_oride_driver_location_event_hi_prev_day_task',
+        filepath='{hdfs_path_str}/country_code=nal/dt={pt}/_SUCCESS'.format(
+            hdfs_path_str="oride/oride_dw/dwd_oride_driver_location_event_di",
+            pt='{{ds}}'
+        ),
+        bucket_name='opay-datalake',
+        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+        dag=dag
+    )
+
+    # 依赖前一天分区
+    dependence_dwd_oride_passanger_location_event_hi_prev_day_task = UFileSensor(
+        task_id='dependence_dwd_oride_passanger_location_event_hi_prev_day_task',
+        filepath='{hdfs_path_str}/country_code=nal/dt={pt}/_SUCCESS'.format(
+            hdfs_path_str="oride/oride_dw/dwd_oride_passanger_location_event_di",
+            pt='{{ds}}'
+        ),
+        bucket_name='opay-datalake',
+        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+        dag=dag
+    )
+    hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
+
+else:
+    print("成功")
+    dependence_dwd_oride_driver_location_event_hi_prev_day_task = OssSensor(
+        task_id='dependence_dwd_oride_driver_location_event_hi_prev_day_task',
+        bucket_key='{hdfs_path_str}/country_code=nal/dt={pt}/_SUCCESS'.format(
+            hdfs_path_str="oride/oride_dw/dwd_oride_driver_location_event_di",
+            pt='{{ds}}'
+        ),
+        bucket_name='opay-datalake',
+        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+        dag=dag
+    )
+
+    # 依赖前一天分区
+    dependence_dwd_oride_passanger_location_event_hi_prev_day_task = OssSensor(
+        task_id='dependence_dwd_oride_passanger_location_event_hi_prev_day_task',
+        bucket_key='{hdfs_path_str}/country_code=nal/dt={pt}/_SUCCESS'.format(
+            hdfs_path_str="oride/oride_dw/dwd_oride_passanger_location_event_di",
+            pt='{{ds}}'
+        ),
+        bucket_name='opay-datalake',
+        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+        dag=dag
+    )
+    hdfs_path = "oss://opay-datalake/oride/oride_dw/" + table_name
 
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
 
