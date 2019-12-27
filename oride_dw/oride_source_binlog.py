@@ -10,7 +10,7 @@ from airflow.hooks.S3_hook import S3Hook
 from airflow.exceptions import AirflowException
 from airflow.operators.bash_operator import BashOperator
 from plugins.DingdingAlert import DingdingAlert
-import time
+import time,os
 import logging
  
 args = {
