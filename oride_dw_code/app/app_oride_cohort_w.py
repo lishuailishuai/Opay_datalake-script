@@ -24,6 +24,7 @@ import os
 from airflow.hooks.hive_hooks import HiveCliHook
 from plugins.TaskTouchzSuccess import TaskTouchzSuccess
 from airflow.operators.python_operator import PythonOperator
+from airflow.sensors import OssSensor
 
 args = {
     'owner': 'lili.chen',
@@ -43,69 +44,140 @@ dag = airflow.DAG('app_oride_cohort_w',
 
 ##----------------------------------------- 依赖 ---------------------------------------##
 
-dwm_oride_order_base_di_task = UFileSensor(
-    task_id='dwm_oride_order_base_di_task',
-    filepath='{hdfs_path_str}/country_code=nal/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw/dwm_oride_order_base_di",
-        pt='{{ds}}'
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60,
-    dag=dag
-)
+#获取变量
+code_map=eval(Variable.get("sys_flag"))
 
-dwm_oride_passenger_base_df_task = UFileSensor(
-    task_id='dwm_oride_passenger_base_df_task',
-    filepath='{hdfs_path_str}/country_code=nal/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw/dwm_oride_passenger_base_df",
-        pt='{{macros.ds_add(ds, +6)}}'
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60,
-    dag=dag
-)
+#判断ufile(cdh环境)
+if code_map["id"].lower()=="ufile":
+    dwm_oride_order_base_di_task = UFileSensor(
+        task_id='dwm_oride_order_base_di_task',
+        filepath='{hdfs_path_str}/country_code=nal/dt={pt}/_SUCCESS'.format(
+            hdfs_path_str="oride/oride_dw/dwm_oride_order_base_di",
+            pt='{{ds}}'
+        ),
+        bucket_name='opay-datalake',
+        poke_interval=60,
+        dag=dag
+    )
 
-dwm_oride_driver_base_df_task = UFileSensor(
-    task_id='dwm_oride_driver_base_df_task',
-    filepath='{hdfs_path_str}/country_code=nal/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw/dwm_oride_driver_base_df",
-        pt='{{macros.ds_add(ds, +6)}}'
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60,
-    dag=dag
-)
+    dwm_oride_passenger_base_df_task = UFileSensor(
+        task_id='dwm_oride_passenger_base_df_task',
+        filepath='{hdfs_path_str}/country_code=nal/dt={pt}/_SUCCESS'.format(
+            hdfs_path_str="oride/oride_dw/dwm_oride_passenger_base_df",
+            pt='{{macros.ds_add(ds, +6)}}'
+        ),
+        bucket_name='opay-datalake',
+        poke_interval=60,
+        dag=dag
+    )
 
-dwm_oride_passenger_act_w_task = UFileSensor(
-    task_id='dwm_oride_passenger_act_w_task',
-    filepath='{hdfs_path_str}/country_code=NG/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw/dwm_oride_passenger_act_w",
-        pt='{{macros.ds_add(ds, +6)}}'
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60,
-    dag=dag
-)
+    dwm_oride_driver_base_df_task = UFileSensor(
+        task_id='dwm_oride_driver_base_df_task',
+        filepath='{hdfs_path_str}/country_code=nal/dt={pt}/_SUCCESS'.format(
+            hdfs_path_str="oride/oride_dw/dwm_oride_driver_base_df",
+            pt='{{macros.ds_add(ds, +6)}}'
+        ),
+        bucket_name='opay-datalake',
+        poke_interval=60,
+        dag=dag
+    )
 
-dwm_oride_driver_act_w_task = UFileSensor(
-    task_id='dwm_oride_driver_act_w_task',
-    filepath='{hdfs_path_str}/country_code=NG/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw/dwm_oride_driver_act_w",
-        pt='{{macros.ds_add(ds, +6)}}'
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60,
-    dag=dag
-)
-##----------------------------------------- 变量 ---------------------------------------##
-def get_table_info(i):
-    table_names = ['app_oride_new_user_cohort_w',
-                   'app_oride_new_driver_cohort_w',
-                   'app_oride_act_user_cohort_w',
-                   'app_oride_act_driver_cohort_w']
-    hdfs_paths = "ufile://opay-datalake/oride/oride_dw/"
-    return table_names[i], hdfs_paths + table_names[i]
+    dwm_oride_passenger_act_w_task = UFileSensor(
+        task_id='dwm_oride_passenger_act_w_task',
+        filepath='{hdfs_path_str}/country_code=NG/dt={pt}/_SUCCESS'.format(
+            hdfs_path_str="oride/oride_dw/dwm_oride_passenger_act_w",
+            pt='{{macros.ds_add(ds, +6)}}'
+        ),
+        bucket_name='opay-datalake',
+        poke_interval=60,
+        dag=dag
+    )
 
+    dwm_oride_driver_act_w_task = UFileSensor(
+        task_id='dwm_oride_driver_act_w_task',
+        filepath='{hdfs_path_str}/country_code=NG/dt={pt}/_SUCCESS'.format(
+            hdfs_path_str="oride/oride_dw/dwm_oride_driver_act_w",
+            pt='{{macros.ds_add(ds, +6)}}'
+        ),
+        bucket_name='opay-datalake',
+        poke_interval=60,
+        dag=dag
+    )
+    ##----------------------------------------- 变量 ---------------------------------------##
+    def get_table_info(i):
+        table_names = ['app_oride_new_user_cohort_w',
+                       'app_oride_new_driver_cohort_w',
+                       'app_oride_act_user_cohort_w',
+                       'app_oride_act_driver_cohort_w']
+        hdfs_paths = "ufile://opay-datalake/oride/oride_dw/"
+        return table_names[i], hdfs_paths + table_names[i]
+else:
+    print("成功")
+
+    dwm_oride_order_base_di_task = OssSensor(
+        task_id='dwm_oride_order_base_di_task',
+        bucket_key='{hdfs_path_str}/country_code=nal/dt={pt}/_SUCCESS'.format(
+            hdfs_path_str="oride/oride_dw/dwm_oride_order_base_di",
+            pt='{{ds}}'
+        ),
+        bucket_name='opay-datalake',
+        poke_interval=60,
+        dag=dag
+    )
+
+    dwm_oride_passenger_base_df_task = OssSensor(
+        task_id='dwm_oride_passenger_base_df_task',
+        bucket_key='{hdfs_path_str}/country_code=nal/dt={pt}/_SUCCESS'.format(
+            hdfs_path_str="oride/oride_dw/dwm_oride_passenger_base_df",
+            pt='{{macros.ds_add(ds, +6)}}'
+        ),
+        bucket_name='opay-datalake',
+        poke_interval=60,
+        dag=dag
+    )
+
+    dwm_oride_driver_base_df_task = OssSensor(
+        task_id='dwm_oride_driver_base_df_task',
+        bucket_key='{hdfs_path_str}/country_code=nal/dt={pt}/_SUCCESS'.format(
+            hdfs_path_str="oride/oride_dw/dwm_oride_driver_base_df",
+            pt='{{macros.ds_add(ds, +6)}}'
+        ),
+        bucket_name='opay-datalake',
+        poke_interval=60,
+        dag=dag
+    )
+
+    dwm_oride_passenger_act_w_task = OssSensor(
+        task_id='dwm_oride_passenger_act_w_task',
+        bucket_key='{hdfs_path_str}/country_code=NG/dt={pt}/_SUCCESS'.format(
+            hdfs_path_str="oride/oride_dw/dwm_oride_passenger_act_w",
+            pt='{{macros.ds_add(ds, +6)}}'
+        ),
+        bucket_name='opay-datalake',
+        poke_interval=60,
+        dag=dag
+    )
+
+    dwm_oride_driver_act_w_task = OssSensor(
+        task_id='dwm_oride_driver_act_w_task',
+        bucket_key='{hdfs_path_str}/country_code=NG/dt={pt}/_SUCCESS'.format(
+            hdfs_path_str="oride/oride_dw/dwm_oride_driver_act_w",
+            pt='{{macros.ds_add(ds, +6)}}'
+        ),
+        bucket_name='opay-datalake',
+        poke_interval=60,
+        dag=dag
+    )
+
+
+    ##----------------------------------------- 变量 ---------------------------------------##
+    def get_table_info(i):
+        table_names = ['app_oride_new_user_cohort_w',
+                       'app_oride_new_driver_cohort_w',
+                       'app_oride_act_user_cohort_w',
+                       'app_oride_act_driver_cohort_w']
+        hdfs_paths = "oss://opay-datalake/oride/oride_dw/"
+        return table_names[i], hdfs_paths + table_names[i]
 
 def get_max_week(ds):
     sql = '''
