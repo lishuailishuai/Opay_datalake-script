@@ -77,6 +77,7 @@ if code_map["id"].lower()=="ufile":
     hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
 
 else:
+    print("成功")
     dwm_oride_order_base_di_prev_day_task = OssSensor(
         task_id='dwm_oride_order_base_di_prev_day_task',
         bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
