@@ -23,6 +23,7 @@ import requests
 import os
 from plugins.TaskTouchzSuccess import TaskTouchzSuccess
 from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
+from airflow.sensors import OssSensor
 
 args = {
     'owner': 'chenghui',
@@ -40,38 +41,81 @@ dag = airflow.DAG('app_oride_passenger_funnel_d',
                   default_args=args,
                   catchup=False)
 
+##----------------------------------------- 变量 ---------------------------------------##
+db_name= "oride_dw"
+table_name = "app_oride_passenger_funnel_d"
 
 ##----------------------------------------- 依赖 ---------------------------------------##
+#获取变量
+code_map=eval(Variable.get("sys_flag"))
 
-dwd_oride_order_base_include_test_di_task = S3KeySensor(
-    task_id='dwd_oride_order_base_include_test_di_task',
-    bucket_key='{hdfs_path_str}/country_code=NG/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw/dwd_oride_order_base_include_test_di",
-        pt='{{ds}}'
-    ),
-    bucket_name='opay-bi',
-    poke_interval=60,
-    dag=dag
-)
-dependence_dwm_oride_order_base_di_task = UFileSensor(
-    task_id='dwm_oride_order_base_di_task',
-    filepath='{hdfs_path_str}/country_code=nal/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw/dwm_oride_order_base_di",
-        pt='{{ds}}'
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60,
-    dag=dag
-)
+#判断ufile(cdh环境)
+if code_map["id"].lower()=="ufile":
+    dwd_oride_order_base_include_test_di_task = S3KeySensor(
+        task_id='dwd_oride_order_base_include_test_di_task',
+        bucket_key='{hdfs_path_str}/country_code=NG/dt={pt}/_SUCCESS'.format(
+            hdfs_path_str="oride/oride_dw/dwd_oride_order_base_include_test_di",
+            pt='{{ds}}'
+        ),
+        bucket_name='opay-bi',
+        poke_interval=60,
+        dag=dag
+    )
+    dependence_dwm_oride_order_base_di_task = UFileSensor(
+        task_id='dwm_oride_order_base_di_task',
+        filepath='{hdfs_path_str}/country_code=nal/dt={pt}/_SUCCESS'.format(
+            hdfs_path_str="oride/oride_dw/dwm_oride_order_base_di",
+            pt='{{ds}}'
+        ),
+        bucket_name='opay-datalake',
+        poke_interval=60,
+        dag=dag
+    )
 
-dim_oride_city_task = HivePartitionSensor(
-    task_id="dim_oride_city_task",
-    table="dim_oride_city",
-    partition="dt='{{ds}}'",
-    schema="oride_dw",
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
+    dim_oride_city_task = HivePartitionSensor(
+        task_id="dim_oride_city_task",
+        table="dim_oride_city",
+        partition="dt='{{ds}}'",
+        schema="oride_dw",
+        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+        dag=dag
+    )
+    hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
+
+else:
+    print("成功")
+    dwd_oride_order_base_include_test_di_task = OssSensor(
+        task_id='dwd_oride_order_base_include_test_di_task',
+        bucket_key='{hdfs_path_str}/country_code=NG/dt={pt}/_SUCCESS'.format(
+            hdfs_path_str="oride/oride_dw/dwd_oride_order_base_include_test_di",
+            pt='{{ds}}'
+        ),
+        bucket_name='opay-datalake',
+        poke_interval=60,
+        dag=dag
+    )
+    dependence_dwm_oride_order_base_di_task = OssSensor(
+        task_id='dwm_oride_order_base_di_task',
+        bucket_key='{hdfs_path_str}/country_code=nal/dt={pt}/_SUCCESS'.format(
+            hdfs_path_str="oride/oride_dw/dwm_oride_order_base_di",
+            pt='{{ds}}'
+        ),
+        bucket_name='opay-datalake',
+        poke_interval=60,
+        dag=dag
+    )
+    dim_oride_city_task = OssSensor(
+        task_id="dim_oride_city_task",
+        bucket_key='{hdfs_path_str}/country_code=NG/dt={pt}/_SUCCESS'.format(
+            hdfs_path_str="oride/oride_dw/dim_oride_city",
+            pt='{{ds}}'
+        ),
+        bucket_name='opay-datalake',
+        poke_interval=60,
+        dag=dag
+    )
+    hdfs_path = "oss://opay-datalake/oride/oride_dw/" + table_name
+
 
 #----------------------------------------- 任务超时监控 ---------------------------------------##
 
@@ -94,10 +138,6 @@ task_timeout_monitor =  PythonOperator(
     dag=dag
 )
 
-##----------------------------------------- 变量 ---------------------------------------##
-db_name= "oride_dw"
-table_name = "app_oride_passenger_funnel_d"
-hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
 
 ##----------------------------------------- 脚本 ---------------------------------------##
 

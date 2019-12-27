@@ -506,7 +506,7 @@ class CountriesPublicFrame(object):
         # 没有国家分区 && 小时参数为None
         if self.country_partition.lower()=="false" and self.hour is None:
 
-            v_par_str="dt='{ds}'".format(self.ds)
+            v_par_str="dt='{ds}'".format(ds=self.ds)
 
             alter_str="alter table {db}.{table_name} drop partition({v_par});\n alter table {db}.{table_name} add partition({v_par});".format(v_par=v_par_str,table_name=self.table_name,db=self.db_name)
 
