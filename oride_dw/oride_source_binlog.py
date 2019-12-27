@@ -146,7 +146,7 @@ def check_s3_prefix(ds, execution_date, **kwargs):
 
         if is_exists == "false":
 
-            check_command="hadoop fs -ls s3a://opay-bi/{hdfs_data_dir}".format(hdfs_data_dir=prefix)
+            check_command="hadoop fs -mkdir s3a://opay-bi/{hdfs_data_dir}".format(hdfs_data_dir=prefix)
 
             logging.info(check_command)
 
@@ -181,7 +181,6 @@ if table_list!='':
     #for table in binlog_table_list.split():
     for table,is_exists in table_list:
 
-        print(is_exists)
         binlog_add_partitions = HiveOperator(
             task_id='binlog_add_partitions_{}'.format(table),
             hql="""
