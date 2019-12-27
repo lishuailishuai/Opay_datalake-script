@@ -97,8 +97,8 @@ if code_map["id"].lower()=="ufile":
 else:
     print("成功")
 
-    dwd_oride_order_base_include_test_di_prev_day_task = OssSensor(
-        task_id='dwd_oride_order_base_include_test_di_prev_day_task',
+    dwd_oride_order_base_include_test_di_task = OssSensor(
+        task_id='dwd_oride_order_base_include_test_di_task',
         bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
             hdfs_path_str="oride/oride_dw/dwd_oride_order_base_include_test_di/country_code=NG",
             pt='{{ds}}'
