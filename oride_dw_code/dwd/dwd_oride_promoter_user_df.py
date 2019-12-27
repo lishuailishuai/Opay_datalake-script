@@ -24,6 +24,7 @@ import logging
 from airflow.models import Variable
 import requests
 import os
+from airflow.sensors import OssSensor
 
 args = {
         'owner': 'yangmingze',
@@ -41,30 +42,44 @@ dag = airflow.DAG( 'dwd_oride_promoter_user_df',
     default_args=args,
     catchup=False) 
 
-
-##----------------------------------------- 依赖 ---------------------------------------## 
-
-
-ods_sqoop_promoter_promoter_user_df_tesk = UFileSensor(
-    task_id='ods_sqoop_promoter_promoter_user_df_tesk',
-    filepath="{hdfs_path_str}/dt={pt}/_SUCCESS".format(
-        hdfs_path_str="oride_dw_sqoop/opay_spread/promoter_user",
-        pt="{{ds}}"
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
-
-
-##----------------------------------------- 变量 ---------------------------------------## 
+##----------------------------------------- 变量 ---------------------------------------##
 
 db_name="oride_dw"
 table_name="dwd_oride_promoter_user_df"
-hdfs_path="ufile://opay-datalake/oride/oride_dw/dwd_oride_promoter_user_df"
 
+##----------------------------------------- 依赖 ---------------------------------------## 
+#获取变量
+code_map=eval(Variable.get("sys_flag"))
 
-##----------------------------------------- 任务超时监控 ---------------------------------------## 
+#判断ufile(cdh环境)
+if code_map["id"].lower()=="ufile":
+
+    ods_sqoop_promoter_promoter_user_df_tesk = UFileSensor(
+        task_id='ods_sqoop_promoter_promoter_user_df_tesk',
+        filepath="{hdfs_path_str}/dt={pt}/_SUCCESS".format(
+            hdfs_path_str="oride_dw_sqoop/opay_spread/promoter_user",
+            pt="{{ds}}"
+        ),
+        bucket_name='opay-datalake',
+        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+        dag=dag
+    )
+    hdfs_path = "ufile://opay-datalake/oride/oride_dw/dwd_oride_promoter_user_df"
+else:
+    print("成功")
+    ods_sqoop_promoter_promoter_user_df_tesk = OssSensor(
+        task_id='ods_sqoop_promoter_promoter_user_df_tesk',
+        bucket_key="{hdfs_path_str}/dt={pt}/_SUCCESS".format(
+            hdfs_path_str="oride_dw_sqoop/opay_spread/promoter_user",
+            pt="{{ds}}"
+        ),
+        bucket_name='opay-datalake',
+        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+        dag=dag
+    )
+    hdfs_path = "oss://opay-datalake/oride/oride_dw/dwd_oride_promoter_user_df"
+
+##----------------------------------------- 任务超时监控 ---------------------------------------##
 
 def fun_task_timeout_monitor(ds,dag,**op_kwargs):
 

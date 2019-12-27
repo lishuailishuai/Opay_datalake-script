@@ -22,6 +22,8 @@ import logging
 from airflow.models import Variable
 import requests
 import os
+from airflow.sensors import OssSensor
+
 
 args = {
     'owner': 'liushuzhen',
@@ -39,64 +41,117 @@ dag = airflow.DAG('dwd_oride_coupon_base_df',
                   default_args=args,
                   catchup=False)
 
-#sleep_time = BashOperator(
-#   task_id='sleep_id',
-#   depends_on_past=False,
-#    bash_command='sleep 30',
-#    dag=dag)
+##----------------------------------------- 变量 ---------------------------------------##
+
+db_name="oride_dw"
+table_name="dwd_oride_coupon_base_df"
 
 ##----------------------------------------- 依赖 ---------------------------------------##
 
-# 依赖前一天分区
-dependence_ods_sqoop_base_data_coupon_df_prev_day_task = UFileSensor(
-    task_id='dependence_ods_sqoop_base_data_coupon_df_prev_day_task',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride_dw_sqoop/oride_data/data_coupon",
-        pt='{{ds}}'
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
+#获取变量
+code_map=eval(Variable.get("sys_flag"))
 
-# 依赖前一天分区
-dependence_ods_sqoop_base_data_order_payment_df_prev_day_task = UFileSensor(
-    task_id='dependence_ods_sqoop_base_data_order_payment_df_prev_day_task',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride_dw_sqoop/oride_data/data_order_payment",
-        pt='{{ds}}'
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
+#判断ufile(cdh环境)
+if code_map["id"].lower()=="ufile":
+    # 依赖前一天分区
+    dependence_ods_sqoop_base_data_coupon_df_prev_day_task = UFileSensor(
+        task_id='dependence_ods_sqoop_base_data_coupon_df_prev_day_task',
+        filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+            hdfs_path_str="oride_dw_sqoop/oride_data/data_coupon",
+            pt='{{ds}}'
+        ),
+        bucket_name='opay-datalake',
+        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+        dag=dag
+    )
 
-# 依赖前一天分区
-dwd_oride_passenger_extend_df_prev_day_task = UFileSensor(
-    task_id='dwd_oride_passenger_extend_df_prev_day_task',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw/dwd_oride_passenger_extend_df/country_code=nal",
-        pt='{{ds}}'
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
+    # 依赖前一天分区
+    dependence_ods_sqoop_base_data_order_payment_df_prev_day_task = UFileSensor(
+        task_id='dependence_ods_sqoop_base_data_order_payment_df_prev_day_task',
+        filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+            hdfs_path_str="oride_dw_sqoop/oride_data/data_order_payment",
+            pt='{{ds}}'
+        ),
+        bucket_name='opay-datalake',
+        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+        dag=dag
+    )
 
-dependence_ods_sqoop_base_data_order_df_prev_day_task = UFileSensor(
-    task_id='dependence_ods_sqoop_base_data_order_df_prev_day_task',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride_dw_sqoop/oride_data/data_order",
-        pt='{{ds}}'
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
-##----------------------------------------- 变量 ---------------------------------------##
-db_name="oride_dw"
-table_name = "dwd_oride_coupon_base_df"
-hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
+    # 依赖前一天分区
+    dwd_oride_passenger_extend_df_prev_day_task = UFileSensor(
+        task_id='dwd_oride_passenger_extend_df_prev_day_task',
+        filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+            hdfs_path_str="oride/oride_dw/dwd_oride_passenger_extend_df/country_code=nal",
+            pt='{{ds}}'
+        ),
+        bucket_name='opay-datalake',
+        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+        dag=dag
+    )
+
+    dependence_ods_sqoop_base_data_order_df_prev_day_task = UFileSensor(
+        task_id='dependence_ods_sqoop_base_data_order_df_prev_day_task',
+        filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+            hdfs_path_str="oride_dw_sqoop/oride_data/data_order",
+            pt='{{ds}}'
+        ),
+        bucket_name='opay-datalake',
+        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+        dag=dag
+    )
+   # 路径
+    hdfs_path="ufile://opay-datalake/oride/oride_dw/"+table_name
+else:
+    print("成功")
+
+    dependence_ods_sqoop_base_data_coupon_df_prev_day_task = OssSensor(
+        task_id='dependence_ods_sqoop_base_data_coupon_df_prev_day_task',
+        bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+            hdfs_path_str="oride_dw_sqoop/oride_data/data_coupon",
+            pt='{{ds}}'
+        ),
+        bucket_name='opay-datalake',
+        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+        dag=dag
+    )
+
+    # 依赖前一天分区
+    dependence_ods_sqoop_base_data_order_payment_df_prev_day_task = OssSensor(
+        task_id='dependence_ods_sqoop_base_data_order_payment_df_prev_day_task',
+        bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+            hdfs_path_str="oride_dw_sqoop/oride_data/data_order_payment",
+            pt='{{ds}}'
+        ),
+        bucket_name='opay-datalake',
+        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+        dag=dag
+    )
+
+    # 依赖前一天分区
+    dwd_oride_passenger_extend_df_prev_day_task = OssSensor(
+        task_id='dwd_oride_passenger_extend_df_prev_day_task',
+        bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+            hdfs_path_str="oride/oride_dw/dwd_oride_passenger_extend_df/country_code=nal",
+            pt='{{ds}}'
+        ),
+        bucket_name='opay-datalake',
+        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+        dag=dag
+    )
+
+    dependence_ods_sqoop_base_data_order_df_prev_day_task = OssSensor(
+        task_id='dependence_ods_sqoop_base_data_order_df_prev_day_task',
+        bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+            hdfs_path_str="oride_dw_sqoop/oride_data/data_order",
+            pt='{{ds}}'
+        ),
+        bucket_name='opay-datalake',
+        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+        dag=dag
+    )
+    # 路径
+    hdfs_path = "oss://opay-datalake/oride/oride_dw/" + table_name
+
 
 ##----------------------------------------- 脚本 ---------------------------------------##
 
