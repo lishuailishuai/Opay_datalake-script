@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 中台promoter_data_day
+需求 王德慧
 """
 import airflow
 from datetime import datetime, timedelta
@@ -8,6 +9,7 @@ from utils.connection_helper import get_hive_cursor, get_db_conn
 from airflow.operators.python_operator import PythonOperator
 from airflow.operators.bash_operator import BashOperator
 from airflow.sensors.hive_partition_sensor import HivePartitionSensor
+from airflow.sensors.s3_key_sensor import S3KeySensor
 import logging
 
 args = {
@@ -27,6 +29,17 @@ dag = airflow.DAG(
     default_args=args
 )
 
+dependence_dwd_oride_order_base_include_test_di_task = S3KeySensor(
+    task_id='dependence_dwd_oride_order_base_include_test_di_task',
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="oride/oride_dw/dwd_oride_order_base_include_test_di/country_code=NG",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-bi',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+    )
+
 # 依赖hive表分区
 dwd_oride_driver_cheating_detection_hi_task = HivePartitionSensor(
     task_id="dwd_oride_driver_cheating_detection_hi_task",
@@ -37,23 +50,23 @@ dwd_oride_driver_cheating_detection_hi_task = HivePartitionSensor(
     dag=dag
 )
 
-ods_binlog_data_order_hi_task = HivePartitionSensor(
-    task_id="ods_binlog_data_order_hi_task",
-    table="ods_binlog_data_order_hi",
-    partition="dt='{{ds}}'",
-    schema="oride_dw_ods",
-    poke_interval=60,
-    dag=dag
-)
+# ods_binlog_data_order_hi_task = HivePartitionSensor(
+#     task_id="ods_binlog_data_order_hi_task",
+#     table="ods_binlog_data_order_hi",
+#     partition="dt='{{ds}}'",
+#     schema="oride_dw_ods",
+#     poke_interval=60,
+#     dag=dag
+# )
 
-ods_sqoop_base_data_order_df_task = HivePartitionSensor(
-    task_id="ods_sqoop_base_data_order_df_task",
-    table="ods_sqoop_base_data_order_df",
-    partition="dt='{{ds}}'",
-    schema="oride_dw_ods",
-    poke_interval=60,
-    dag=dag
-)
+# ods_sqoop_base_data_order_df_task = HivePartitionSensor(
+#     task_id="ods_sqoop_base_data_order_df_task",
+#     table="ods_sqoop_base_data_order_df",
+#     partition="dt='{{ds}}'",
+#     schema="oride_dw_ods",
+#     poke_interval=60,
+#     dag=dag
+# )
 
 ods_sqoop_promoter_promoter_user_df_task = HivePartitionSensor(
     task_id="ods_sqoop_promoter_promoter_user_df_task",
@@ -160,9 +173,9 @@ def finish_data(**op_kwargs):
             ) AS c 
         JOIN (SELECT 
                 dt,
-                user_id,
-                id as orders_f 
-            FROM oride_dw_ods.ods_binlog_data_order_hi 
+                passenger_id as user_id,
+                order_id as orders_f 
+            FROM oride_dw.dwd_oride_order_base_include_test_di  
             WHERE dt = '{ds}' AND 
                 status IN (4,5) AND 
                 from_unixtime(arrive_time, 'yyyy-MM-dd') = '{ds}' 
@@ -227,10 +240,10 @@ def first_user_data(**op_kwargs):
             ) AS uc 
         JOIN (SELECT 
                 dt,
-                user_id,
+                passenger_id as user_id,
                 arrive_time,
-                row_number() over(partition by user_id order by arrive_time) orders
-            FROM oride_dw_ods.ods_sqoop_base_data_order_df 
+                row_number() over(partition by passenger_id order by arrive_time) orders
+            FROM oride_dw.dwd_oride_order_base_include_test_di 
             WHERE status IN (4,5) AND 
                 dt = '{ds}' 
             ) AS uo 
@@ -312,7 +325,7 @@ def first_driver_data(**op_kwargs):
                 driver_id,
                 arrive_time,
                 row_number() over(partition by driver_id order by arrive_time) orders
-            FROM oride_dw_ods.ods_sqoop_base_data_order_df 
+            FROM oride_dw.dwd_oride_order_base_include_test_di 
             WHERE status IN (4,5) AND 
                 dt = '{ds}' 
             ) as ro 
@@ -359,10 +372,10 @@ first_driver_data_task = PythonOperator(
     dag=dag
 )
 
-
+dependence_dwd_oride_order_base_include_test_di_task >> sleep_time
 dwd_oride_driver_cheating_detection_hi_task >> sleep_time
-ods_binlog_data_order_hi_task >> sleep_time
-ods_sqoop_base_data_order_df_task >> sleep_time
+# ods_binlog_data_order_hi_task >> sleep_time
+# ods_sqoop_base_data_order_df_task >> sleep_time
 ods_sqoop_promoter_promoter_user_df_task >> sleep_time
 ods_sqoop_mass_rider_signups_df_task >> sleep_time
 
