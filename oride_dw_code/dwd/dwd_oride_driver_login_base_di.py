@@ -22,6 +22,7 @@ import logging
 from airflow.models import Variable
 import requests
 import os
+from airflow.sensors import OssSensor
 
 args = {
         'owner': 'lijialong',
@@ -39,26 +40,42 @@ dag = airflow.DAG( 'dwd_oride_driver_login_base_di',
     default_args=args,
     catchup=False) 
 
-
-
-##----------------------------------------- 依赖 ---------------------------------------## 
-
-
-#依赖前一天分区
-oride_client_event_detail_prev_day_task=HivePartitionSensor(
-      task_id="oride_client_event_detail_prev_day_task",
-      table="dwd_oride_client_event_detail_hi",
-      partition="""dt='{{ ds }}' and hour='23'""",
-      schema="oride_dw",
-      poke_interval=60, #依赖不满足时，一分钟检查一次依赖状态
-      dag=dag
-    )
-
-##----------------------------------------- 变量 ---------------------------------------## 
+##----------------------------------------- 变量 ---------------------------------------##
 
 db_name = "oride_dw"
 table_name="dwd_oride_driver_login_base_di"
-hdfs_path="ufile://opay-datalake/oride/oride_dw/"+table_name
+
+##----------------------------------------- 依赖 ---------------------------------------## 
+#获取变量
+code_map=eval(Variable.get("sys_flag"))
+
+#判断ufile(cdh环境)
+if code_map["id"].lower()=="ufile":
+
+    #依赖前一天分区
+    oride_client_event_detail_prev_day_task=HivePartitionSensor(
+          task_id="oride_client_event_detail_prev_day_task",
+          table="dwd_oride_client_event_detail_hi",
+          partition="""dt='{{ ds }}' and hour='23'""",
+          schema="oride_dw",
+          poke_interval=60, #依赖不满足时，一分钟检查一次依赖状态
+          dag=dag
+        )
+    hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
+
+else:
+    print("成功")
+    oride_client_event_detail_prev_day_task = OssSensor(
+        task_id="oride_client_event_detail_prev_day_task",
+        bucket_key='{hdfs_path_str}/dt={pt}/hour=23/_SUCCESS'.format(
+            hdfs_path_str="oride/oride_dw/dwd_oride_client_event_detail_hi",
+            pt='{{ds}}'
+        ),
+        bucket_name='opay-datalake',
+        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+        dag=dag
+    )
+    hdfs_path = "oss://opay-datalake/oride/oride_dw/" + table_name
 
 
 ##----------------------------------------- 任务超时监控 ---------------------------------------##

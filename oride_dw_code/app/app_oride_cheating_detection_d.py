@@ -11,6 +11,12 @@ from airflow.operators.bash_operator import BashOperator
 from airflow.sensors.hive_partition_sensor import HivePartitionSensor
 from airflow.sensors.s3_key_sensor import S3KeySensor
 import logging
+from airflow.sensors import OssSensor
+from airflow.models import Variable
+from airflow.sensors import UFileSensor
+
+
+
 
 args = {
     'owner': 'wuduo',
@@ -28,63 +34,113 @@ dag = airflow.DAG(
     schedule_interval="30 3 * * *",
     default_args=args
 )
+##----------------------------------------- 变量 ---------------------------------------##
 
-dependence_dwd_oride_order_base_include_test_di_task = S3KeySensor(
-    task_id='dependence_dwd_oride_order_base_include_test_di_task',
-    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw/dwd_oride_order_base_include_test_di/country_code=NG",
-        pt='{{ds}}'
-    ),
-    bucket_name='opay-bi',
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
+db_name = "oride_dw"
+table_name = "app_oride_cheating_detection_d"
+
+##----------------------------------------- 依赖 ---------------------------------------##
+#获取变量
+code_map=eval(Variable.get("sys_flag"))
+
+#判断ufile(cdh环境)
+if code_map["id"].lower()=="ufile":
+
+    dwd_oride_order_base_include_test_di_task = S3KeySensor(
+        task_id='dependence_dwd_oride_order_base_include_test_di_task',
+        bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+            hdfs_path_str="oride/oride_dw/dwd_oride_order_base_include_test_di/country_code=NG",
+            pt='{{ds}}'
+        ),
+        bucket_name='opay-bi',
+        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+        dag=dag
+        )
+
+    # 依赖hive表分区
+
+    dwd_oride_driver_cheating_detection_hi_task = UFileSensor(
+        task_id="dwd_oride_driver_cheating_detection_hi_task",
+        filepath='{hdfs_path_str}/dt={pt}/hour=23'.format(
+            hdfs_path_str="oride/oride_dw/dwd_oride_driver_cheating_detection_hi/country_code=nal",
+            pt='{{ ds }}'
+        ),
+        bucket_name='opay-datalake',
+        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+        dag=dag
     )
 
-# 依赖hive表分区
-dwd_oride_driver_cheating_detection_hi_task = HivePartitionSensor(
-    task_id="dwd_oride_driver_cheating_detection_hi_task",
-    table="dwd_oride_driver_cheating_detection_hi",
-    partition="dt='{{ds}}'",
-    schema="oride_dw",
-    poke_interval=60,   # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
 
-# ods_binlog_data_order_hi_task = HivePartitionSensor(
-#     task_id="ods_binlog_data_order_hi_task",
-#     table="ods_binlog_data_order_hi",
-#     partition="dt='{{ds}}'",
-#     schema="oride_dw_ods",
-#     poke_interval=60,
-#     dag=dag
-# )
 
-# ods_sqoop_base_data_order_df_task = HivePartitionSensor(
-#     task_id="ods_sqoop_base_data_order_df_task",
-#     table="ods_sqoop_base_data_order_df",
-#     partition="dt='{{ds}}'",
-#     schema="oride_dw_ods",
-#     poke_interval=60,
-#     dag=dag
-# )
+    ods_sqoop_promoter_promoter_user_df_task = UFileSensor(
+        task_id='ods_sqoop_promoter_promoter_user_df_tesk',
+        filepath="{hdfs_path_str}/dt={pt}/_SUCCESS".format(
+            hdfs_path_str="oride_dw_sqoop/opay_spread/promoter_user",
+            pt="{{ds}}"
+        ),
+        bucket_name='opay-datalake',
+        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+        dag=dag
+    )
 
-ods_sqoop_promoter_promoter_user_df_task = HivePartitionSensor(
-    task_id="ods_sqoop_promoter_promoter_user_df_task",
-    table="ods_sqoop_promoter_promoter_user_df",
-    partition="dt='{{ds}}'",
-    schema="oride_dw_ods",
-    poke_interval=60,
-    dag=dag
-)
 
-ods_sqoop_mass_rider_signups_df_task = HivePartitionSensor(
-    task_id="ods_sqoop_mass_rider_signups_df_task",
-    table="ods_sqoop_mass_rider_signups_df",
-    partition="dt='{{ds}}'",
-    schema="oride_dw_ods",
-    poke_interval=60,
-    dag=dag
-)
+    ods_sqoop_mass_rider_signups_df_task = UFileSensor(
+        task_id='ods_sqoop_mass_rider_signups_df_task',
+        filepath="{hdfs_path_str}/dt={pt}/_SUCCESS".format(
+            hdfs_path_str="oride_dw_sqoop/opay_spread/rider_signups",
+            pt="{{ds}}"
+        ),
+        bucket_name='opay-datalake',
+        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+        dag=dag
+    )
+else:
+    print("成功")
+
+    dwd_oride_order_base_include_test_di_task = OssSensor(
+        task_id='dwd_oride_order_base_include_test_di_task',
+        bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+            hdfs_path_str="oride/oride_dw/dwd_oride_order_base_include_test_di/country_code=NG",
+            pt='{{ds}}'
+        ),
+        bucket_name='opay-datalake',
+        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+        dag=dag
+    )
+
+    dwd_oride_driver_cheating_detection_hi_task = OssSensor(
+        task_id="dwd_oride_driver_cheating_detection_hi_task",
+        bucket_key='{hdfs_path_str}/dt={pt}/hour=23'.format(
+            hdfs_path_str="oride/oride_dw/dwd_oride_driver_cheating_detection_hi/country_code=nal",
+            pt='{{ ds }}'
+        ),
+        bucket_name='opay-datalake',
+        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+        dag=dag
+    )
+
+    ods_sqoop_promoter_promoter_user_df_task = OssSensor(
+        task_id='ods_sqoop_promoter_promoter_user_df_tesk',
+        bucket_key="{hdfs_path_str}/dt={pt}/_SUCCESS".format(
+            hdfs_path_str="oride_dw_sqoop/opay_spread/promoter_user",
+            pt="{{ds}}"
+        ),
+        bucket_name='opay-datalake',
+        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+        dag=dag
+    )
+
+    ods_sqoop_mass_rider_signups_df_task = OssSensor(
+        task_id='ods_sqoop_mass_rider_signups_df_task',
+        bucket_key="{hdfs_path_str}/dt={pt}/_SUCCESS".format(
+            hdfs_path_str="oride_dw_sqoop/opay_spread/rider_signups",
+            pt="{{ds}}"
+        ),
+        bucket_name='opay-datalake',
+        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+        dag=dag
+    )
+
 
 sleep_time = BashOperator(
     task_id='sleep_id',
@@ -372,10 +428,9 @@ first_driver_data_task = PythonOperator(
     dag=dag
 )
 
-dependence_dwd_oride_order_base_include_test_di_task >> sleep_time
+dwd_oride_order_base_include_test_di_task >> sleep_time
 dwd_oride_driver_cheating_detection_hi_task >> sleep_time
-# ods_binlog_data_order_hi_task >> sleep_time
-# ods_sqoop_base_data_order_df_task >> sleep_time
+
 ods_sqoop_promoter_promoter_user_df_task >> sleep_time
 ods_sqoop_mass_rider_signups_df_task >> sleep_time
 

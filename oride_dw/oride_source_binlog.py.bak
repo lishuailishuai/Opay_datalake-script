@@ -10,9 +10,9 @@ from airflow.hooks.S3_hook import S3Hook
 from airflow.exceptions import AirflowException
 from airflow.operators.bash_operator import BashOperator
 from plugins.DingdingAlert import DingdingAlert
-import time,os
+import time
 import logging
- 
+
 args = {
     'owner': 'zhenqian.zhang',
     'start_date': datetime(2019, 7, 25),
@@ -31,21 +31,6 @@ dag = airflow.DAG(
 
 ODS_DB='oride_dw_ods'
 BUCKET_NAME='opay-bi'
-
-'''
-导入数据的列表
-table_name,是否验证数据存在
-'''
-
-table_list = [
-
-    ("data_order","true"),
-    ("data_driver_comment","true"),
-    ("data_driver","false"),
-    ("data_driver_extend","true"),
-    ("data_user_extend","true"),
-    ("data_order_payment","true")
-]
 
 def run_insert_ods(ds, execution_date, **kwargs):
     col_sql='''
@@ -125,13 +110,11 @@ def run_insert_ods(ds, execution_date, **kwargs):
     hive_hook.run_cli(run_sql)
 
 
-#BINLOG_TABLE_LIST_VAR_NAME='oride_binlog_table_list'
-#binlog_table_list=Variable.get(BINLOG_TABLE_LIST_VAR_NAME) if Variable.get(BINLOG_TABLE_LIST_VAR_NAME) is not None else ''
-
+BINLOG_TABLE_LIST_VAR_NAME='oride_binlog_table_list'
+binlog_table_list=Variable.get(BINLOG_TABLE_LIST_VAR_NAME) if Variable.get(BINLOG_TABLE_LIST_VAR_NAME) is not None else ''
 
 def check_s3_prefix(ds, execution_date, **kwargs):
     table=kwargs["params"]["table"]
-    is_exists=kwargs["params"]["is_exists"]
     hour=execution_date.strftime("%H")
     hook = S3Hook(aws_conn_id='aws_default', verify=None)
     prefix='oride_binlog/oride_binlog.oride_data.{table}/dt={ds}/hour={hour}'.format(
@@ -143,18 +126,6 @@ def check_s3_prefix(ds, execution_date, **kwargs):
     num=1
     while not hook.check_for_prefix(prefix=prefix, delimiter='/', bucket_name=BUCKET_NAME):
         logging.info('Check s3 prefix : %s in bucket s3://%s', prefix, BUCKET_NAME)
-
-        if is_exists == "false":
-
-            check_command="hadoop fs -mkdir s3a://opay-bi/{hdfs_data_dir}".format(hdfs_data_dir=prefix)
-
-            logging.info(check_command)
-
-            out = os.popen(check_command, 'r')
-
-            out.close()
-
-            break
 
         if num >= try_max_num:
 
@@ -177,11 +148,8 @@ HDFS_PATH = "/user/hive/warehouse/oride_dw_ods.db/ods_binlog_{table}_hi/dt={dt}/
 IGNORE_TABLE_LIST = [
     #'data_driver'
 ]
-#if binlog_table_list!='':
-if table_list!='':
-    #for table in binlog_table_list.split():
-    for table,is_exists in table_list:
-
+if binlog_table_list!='':
+    for table in binlog_table_list.split():
         binlog_add_partitions = HiveOperator(
             task_id='binlog_add_partitions_{}'.format(table),
             hql="""
@@ -199,31 +167,19 @@ if table_list!='':
         )
         touchz_data_success = BashOperator(
             task_id='touchz_data_success_{}'.format(table),
-            
             bash_command="""
+                line_num=`$HADOOP_HOME/bin/hadoop fs -du -s {hdfs_data_dir} | tail -1 | awk '{{print $1}}'`
 
-                is_exists="{is_exists}"
-
-                if [ "$is_exists" == "false" ]
+                if [ $line_num -eq 0 ]
                 then
-
-                    $HADOOP_HOME/bin/hadoop fs -mkdir {hdfs_data_dir}
-                    $HADOOP_HOME/bin/hadoop fs -touchz {hdfs_data_dir}/_SUCCESS
-
+                    echo "FATAL {hdfs_data_dir} is empty"
+                    exit 1
                 else
-                    line_num=`$HADOOP_HOME/bin/hadoop fs -du -s {hdfs_data_dir} | tail -1 | awk '{{print $1}}'`
-    
-                    if [ $line_num -eq 0 ]
-                    then
-                        echo "FATAL {hdfs_data_dir} is empty"
-                        exit 1
-                    else
-                        echo "DATA EXPORT Successed ......"
-                        $HADOOP_HOME/bin/hadoop fs -touchz {hdfs_data_dir}/_SUCCESS
-                    fi
+                    echo "DATA EXPORT Successed ......"
+                    $HADOOP_HOME/bin/hadoop fs -touchz {hdfs_data_dir}/_SUCCESS
                 fi
             """.format(
-                hdfs_data_dir=HDFS_PATH.format(table=table, dt='{{ds}}', hour='{{execution_date.strftime("%H")}}'),is_exists=is_exists
+                hdfs_data_dir=HDFS_PATH.format(table=table, dt='{{ds}}', hour='{{execution_date.strftime("%H")}}')
             ),
             dag=dag)
         if table not in IGNORE_TABLE_LIST:
@@ -231,7 +187,7 @@ if table_list!='':
                 task_id='check_file_{}'.format(table),
                 provide_context=True,
                 python_callable=check_s3_prefix,
-                params={'table':table,'is_exists':is_exists},
+                params={'table':table},
                 dag=dag,
             )
             check_file >> binlog_add_partitions

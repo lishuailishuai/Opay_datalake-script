@@ -91,7 +91,6 @@ set hive.exec.parallel=true;
 set hive.exec.dynamic.partition.mode=nonstrict;
 set hive.strict.checks.cartesian.product=false;
 
-
 --01.取出交易成功的商铺信息数据
 with
 payment_order as (
@@ -446,6 +445,8 @@ select
 ,a.order_fail_cnt
 ,a.order_pending_cnt
 
+,nvl(b.status,-1) as status
+
 ,'nal' as country_code
 ,'{pt}' as dt
 
@@ -473,8 +474,6 @@ left join
   (select id,name,country from opos_dw_ods.ods_sqoop_base_bd_city_df where dt = '{pt}') as c
 on a.city_code=c.id
 ;
-
-
 
 
 

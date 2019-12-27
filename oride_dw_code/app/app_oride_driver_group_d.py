@@ -14,6 +14,10 @@ from airflow.hooks.hive_hooks import HiveCliHook, HiveServer2Hook
 from utils.connection_helper import get_hive_cursor
 from airflow.sensors.s3_key_sensor import S3KeySensor
 import logging
+from airflow.models import Variable
+from airflow.sensors import OssSensor
+
+
 
 args = {
     'owner': 'chenghui',
@@ -31,46 +35,87 @@ dag = airflow.DAG('app_oride_driver_group_d',
                   default_args=args,
                   catchup=False)
 
-##----------------------------------------- 依赖 ---------------------------------------##
-
-dim_oride_driver_base_task = UFileSensor(
-    task_id='dim_oride_driver_base_task',
-    filepath='{hdfs_path_str}/country_code=nal/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str='oride/oride_dw/dim_oride_driver_base',
-        pt='{{ds}}'
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60,
-    dag=dag
-)
-
-dwd_oride_order_base_include_test_di_task = S3KeySensor(
-    task_id='dwd_oride_order_base_include_test_di_task',
-    bucket_key='{hdfs_path_str}/country_code=NG/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw/dwd_oride_order_base_include_test_di",
-        pt='{{ds}}'
-    ),
-    bucket_name='opay-bi',
-    poke_interval=60,
-    dag=dag
-)
-
-dwd_oride_driver_data_group_df_task = UFileSensor(
-    task_id='dwd_oride_driver_data_group_df_task',
-    filepath='{hdfs_path_str}/country_code=nal/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw/dwd_oride_driver_data_group_df",
-        pt='{{ds}}'
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60,
-    dag=dag
-)
-
 ##----------------------------------------- 变量 ---------------------------------------##
 
-db_name= "oride_dw"
+db_name = "oride_dw"
 table_name = "app_oride_driver_group_d"
-hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
+
+##----------------------------------------- 依赖 ---------------------------------------##
+#获取变量
+code_map=eval(Variable.get("sys_flag"))
+
+#判断ufile(cdh环境)
+if code_map["id"].lower()=="ufile":
+    dim_oride_driver_base_task = UFileSensor(
+        task_id='dim_oride_driver_base_task',
+        filepath='{hdfs_path_str}/country_code=nal/dt={pt}/_SUCCESS'.format(
+            hdfs_path_str='oride/oride_dw/dim_oride_driver_base',
+            pt='{{ds}}'
+        ),
+        bucket_name='opay-datalake',
+        poke_interval=60,
+        dag=dag
+    )
+
+    dwd_oride_order_base_include_test_di_task = S3KeySensor(
+        task_id='dwd_oride_order_base_include_test_di_task',
+        bucket_key='{hdfs_path_str}/country_code=NG/dt={pt}/_SUCCESS'.format(
+            hdfs_path_str="oride/oride_dw/dwd_oride_order_base_include_test_di",
+            pt='{{ds}}'
+        ),
+        bucket_name='opay-bi',
+        poke_interval=60,
+        dag=dag
+    )
+
+    dwd_oride_driver_data_group_df_task = UFileSensor(
+        task_id='dwd_oride_driver_data_group_df_task',
+        filepath='{hdfs_path_str}/country_code=nal/dt={pt}/_SUCCESS'.format(
+            hdfs_path_str="oride/oride_dw/dwd_oride_driver_data_group_df",
+            pt='{{ds}}'
+        ),
+        bucket_name='opay-datalake',
+        poke_interval=60,
+        dag=dag
+    )
+#路径
+    hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
+else:
+    print("成功")
+    dim_oride_driver_base_task = OssSensor(
+        task_id='dim_oride_driver_base_task',
+        bucket_key='{hdfs_path_str}/country_code=nal/dt={pt}/_SUCCESS'.format(
+            hdfs_path_str='oride/oride_dw/dim_oride_driver_base',
+            pt='{{ds}}'
+        ),
+        bucket_name='opay-datalake',
+        poke_interval=60,
+        dag=dag
+    )
+
+    dwd_oride_order_base_include_test_di_task = OssSensor(
+        task_id='dwd_oride_order_base_include_test_di_task',
+        bucket_key='{hdfs_path_str}/country_code=NG/dt={pt}/_SUCCESS'.format(
+            hdfs_path_str="oride/oride_dw/dwd_oride_order_base_include_test_di",
+            pt='{{ds}}'
+        ),
+        bucket_name='opay-bi',
+        poke_interval=60,
+        dag=dag
+    )
+
+    dwd_oride_driver_data_group_df_task = OssSensor(
+        task_id='dwd_oride_driver_data_group_df_task',
+        bucket_key='{hdfs_path_str}/country_code=nal/dt={pt}/_SUCCESS'.format(
+            hdfs_path_str="oride/oride_dw/dwd_oride_driver_data_group_df",
+            pt='{{ds}}'
+        ),
+        bucket_name='opay-datalake',
+        poke_interval=60,
+        dag=dag
+    )
+    # 路径
+    hdfs_path = "oss://opay-datalake/oride/oride_dw/" + table_name
 
 #----------------------------------------- 任务超时监控 ---------------------------------------##
 
