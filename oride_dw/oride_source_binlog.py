@@ -202,7 +202,7 @@ if table_list!='':
             
             bash_command="""
 
-                is_exists={is_exists}
+                is_exists="{is_exists}"
 
                 if [ "$is_exists" == "false" ]
                 then
