@@ -124,7 +124,7 @@ a.adt as create_date
 from
 date_order as a
 left join
-(select city_id from opos_dw.dwd_pre_opos_payment_order_di where country_code='nal' and dt='{pt}' group by city_id) as b
+(select city_id from opos_dw.dwd_pre_opos_payment_order_di where country_code='nal' and dt='{pt}' and trade_status='SUCCESS' group by city_id) as b
 on 1=1
 ),
 
@@ -143,9 +143,9 @@ new_user_remain_cnt as (
     ,a.city_id
     ,a.sender_id as ids
     from
-    (select dt,city_id,sender_id from opos_dw.dwd_pre_opos_payment_order_di where country_code='nal' and dt>='{before_29_day}' and dt<='{pt}' and first_order='1' group by dt,city_id,sender_id) as a
+    (select dt,city_id,sender_id from opos_dw.dwd_pre_opos_payment_order_di where country_code='nal' and dt>='{before_29_day}' and dt<='{pt}' and trade_status='SUCCESS' and first_order='1' group by dt,city_id,sender_id) as a
     inner join
-    (select dt,city_id,sender_id from opos_dw.dwd_pre_opos_payment_order_di where country_code='nal' and dt='{pt}' group by dt,city_id,sender_id) as b
+    (select dt,city_id,sender_id from opos_dw.dwd_pre_opos_payment_order_di where country_code='nal' and dt='{pt}' and trade_status='SUCCESS' group by dt,city_id,sender_id) as b
     on
     a.city_id=b.city_id
     and a.sender_id=b.sender_id
@@ -171,9 +171,9 @@ user_remain_cnt as (
     ,a.city_id
     ,a.sender_id as ids
     from
-    (select dt,city_id,sender_id from opos_dw.dwd_pre_opos_payment_order_di where country_code='nal' and dt>='{before_29_day}' and dt<='{pt}' group by dt,city_id,sender_id) as a
+    (select dt,city_id,sender_id from opos_dw.dwd_pre_opos_payment_order_di where country_code='nal' and dt>='{before_29_day}' and dt<='{pt}' and trade_status='SUCCESS' group by dt,city_id,sender_id) as a
     inner join
-    (select dt,city_id,sender_id from opos_dw.dwd_pre_opos_payment_order_di where country_code='nal' and dt='{pt}' group by dt,city_id,sender_id) as b
+    (select dt,city_id,sender_id from opos_dw.dwd_pre_opos_payment_order_di where country_code='nal' and dt='{pt}' and trade_status='SUCCESS' group by dt,city_id,sender_id) as b
     on
     a.city_id=b.city_id
     and a.sender_id=b.sender_id
@@ -199,9 +199,9 @@ new_shop_remain_cnt as (
     ,a.city_id
     ,a.receipt_id as ids
     from
-    (select dt,city_id,receipt_id from opos_dw.dwd_pre_opos_payment_order_di where country_code='nal' and dt>='{before_29_day}' and dt<='{pt}' and dt=created_at group by dt,city_id,receipt_id) as a
+    (select dt,city_id,receipt_id from opos_dw.dwd_pre_opos_payment_order_di where country_code='nal' and dt>='{before_29_day}' and dt<='{pt}' and trade_status='SUCCESS' and dt=created_at group by dt,city_id,receipt_id) as a
     inner join
-    (select dt,city_id,receipt_id from opos_dw.dwd_pre_opos_payment_order_di where country_code='nal' and dt='{pt}' group by dt,city_id,receipt_id) as b
+    (select dt,city_id,receipt_id from opos_dw.dwd_pre_opos_payment_order_di where country_code='nal' and dt='{pt}' and trade_status='SUCCESS' group by dt,city_id,receipt_id) as b
     on
     a.city_id=b.city_id
     and a.receipt_id=b.receipt_id
@@ -227,9 +227,9 @@ shop_remain_cnt as (
     ,a.city_id
     ,a.receipt_id as ids
     from
-    (select dt,city_id,receipt_id from opos_dw.dwd_pre_opos_payment_order_di where country_code='nal' and dt>='{before_29_day}' and dt<='{pt}' group by dt,city_id,receipt_id) as a
+    (select dt,city_id,receipt_id from opos_dw.dwd_pre_opos_payment_order_di where country_code='nal' and dt>='{before_29_day}' and dt<='{pt}' and trade_status='SUCCESS' group by dt,city_id,receipt_id) as a
     inner join
-    (select dt,city_id,receipt_id from opos_dw.dwd_pre_opos_payment_order_di where country_code='nal' and dt='{pt}' group by dt,city_id,receipt_id) as b
+    (select dt,city_id,receipt_id from opos_dw.dwd_pre_opos_payment_order_di where country_code='nal' and dt='{pt}' and trade_status='SUCCESS' group by dt,city_id,receipt_id) as b
     on
     a.city_id=b.city_id
     and a.receipt_id=b.receipt_id
@@ -286,6 +286,8 @@ left join
 on v1.create_date=v6.create_date
   and v1.remain_date=v6.remain_date
   and v1.city_id=v6.city_id;
+
+
 
 
 
