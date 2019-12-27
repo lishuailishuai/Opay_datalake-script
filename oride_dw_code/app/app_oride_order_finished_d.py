@@ -17,6 +17,10 @@ from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
 from plugins.TaskTouchzSuccess import TaskTouchzSuccess
 from airflow.sensors.hive_partition_sensor import HivePartitionSensor
 from airflow.hooks.hive_hooks import HiveCliHook, HiveServer2Hook
+from airflow.models import Variable
+import requests
+import os
+from airflow.sensors import OssSensor
 
 args = {
     'owner': 'chenghui',
@@ -33,36 +37,61 @@ dag = airflow.DAG('app_oride_order_finished_d',
                   schedule_interval="30 4 * * *",
                   default_args=args,
                   catchup=False)
-
-##----------------------------------------- 依赖 ---------------------------------------##
-
-dwm_oride_driver_base_df_task = UFileSensor(
-    task_id='dwm_oride_driver_base_df_task',
-    filepath='{hdfs_path_str}/country_code=nal/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw/dwm_oride_driver_base_df",
-        pt='{{ds}}'
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60,
-    dag=dag
-)
-
-dim_oride_city_task = HivePartitionSensor(
-    task_id="dim_oride_city_task",
-    table="dim_oride_city",
-    partition="dt='{{ds}}'",
-    schema="oride_dw",
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
-
-
-
 ##----------------------------------------- 变量 ---------------------------------------##
 
 db_name = "oride_dw"
 table_name = "app_oride_order_finished_d"
-hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
+
+##----------------------------------------- 依赖 ---------------------------------------##
+#获取变量
+code_map=eval(Variable.get("sys_flag"))
+
+#判断ufile(cdh环境)
+if code_map["id"].lower()=="ufile":
+    dwm_oride_driver_base_df_task = UFileSensor(
+        task_id='dwm_oride_driver_base_df_task',
+        filepath='{hdfs_path_str}/country_code=nal/dt={pt}/_SUCCESS'.format(
+            hdfs_path_str="oride/oride_dw/dwm_oride_driver_base_df",
+            pt='{{ds}}'
+        ),
+        bucket_name='opay-datalake',
+        poke_interval=60,
+        dag=dag
+    )
+
+    dim_oride_city_task = HivePartitionSensor(
+        task_id="dim_oride_city_task",
+        table="dim_oride_city",
+        partition="dt='{{ds}}'",
+        schema="oride_dw",
+        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+        dag=dag
+    )
+    hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
+
+else:
+    print("成功")
+    dwm_oride_driver_base_df_task = OssSensor(
+        task_id='dwm_oride_driver_base_df_task',
+        bucket_key='{hdfs_path_str}/country_code=nal/dt={pt}/_SUCCESS'.format(
+            hdfs_path_str="oride/oride_dw/dwm_oride_driver_base_df",
+            pt='{{ds}}'
+        ),
+        bucket_name='opay-datalake',
+        poke_interval=60,
+        dag=dag
+    )
+    dim_oride_city_task = OssSensor(
+        task_id="dim_oride_city_task",
+        bucket_key='{hdfs_path_str}/country_code=NG/dt={pt}/_SUCCESS'.format(
+            hdfs_path_str="oride/oride_dw/dim_oride_city",
+            pt='{{ds}}'
+        ),
+        bucket_name='opay-datalake',
+        poke_interval=60,
+        dag=dag
+    )
+    hdfs_path = "oss://opay-datalake/oride/oride_dw/" + table_name
 
 
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
