@@ -150,7 +150,7 @@ def dwd_opay_transaction_record_di_sql_task(ds):
     set hive.exec.dynamic.partition.mode=nonstrict;
     set hive.exec.parallel=true;
     set mapred.max.split.size=1000000;
-    SET mapreduce.job.queuename= opay_collects;
+    SET mapreduce.job.queuename=opay_collects;
     with 
         dwd_opay_account_recharge_di as (
             select 
