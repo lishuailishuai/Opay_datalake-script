@@ -204,7 +204,8 @@ if table_list!='':
 
                 is_exists={is_exists}
 
-                if [ "$is_exists" == "false" ];then
+                if [ "$is_exists" == "false" ]
+                then
 
                     #$HADOOP_HOME/bin/hadoop fs -mkdir {hdfs_data_dir}
                     #$HADOOP_HOME/bin/hadoop fs -touchz {hdfs_data_dir}/_SUCCESS
