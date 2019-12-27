@@ -76,16 +76,6 @@ dwm_opay_user_first_tran_di_prev_day_task = OssSensor(
     dag=dag
 )
 
-dwd_opay_client_event_base_di_prev_day_task = OssSensor(
-    task_id='dwd_opay_client_event_base_di_prev_day_task',
-    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opay/opay_dw/dwd_opay_client_event_base_di/country_code=NG",
-        pt='{{ds}}'
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
 
 ##----------------------------------------- 变量 ---------------------------------------##
 db_name = "opay_dw"
@@ -124,7 +114,7 @@ def app_opay_user_report_sum_d_sql_task(ds):
       FROM opay_dw.dim_opay_user_base_di
       WHERE dt<='{pt}' ) t1
    WHERE rn = 1
-   GROUP BY nvl(register_client,'App') register_client,
+   GROUP BY register_client,
             ROLE,
             kyc_level),
 --用户余额信息
@@ -204,7 +194,5 @@ app_opay_user_report_sum_d_task = PythonOperator(
 dim_opay_user_base_di_prev_day_task >> app_opay_user_report_sum_d_task
 dwd_opay_account_balance_df_prev_day_task >> app_opay_user_report_sum_d_task
 dwm_opay_user_first_tran_di_prev_day_task >> app_opay_user_report_sum_d_task
-dwd_opay_client_event_base_di_prev_day_task >> app_opay_user_report_sum_d_task
-
 
 
