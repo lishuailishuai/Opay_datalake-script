@@ -154,6 +154,7 @@ def check_s3_prefix(ds, execution_date, **kwargs):
 
             out.close()
 
+            break
 
         if num >= try_max_num:
 
