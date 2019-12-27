@@ -110,7 +110,7 @@ def app_opay_user_report_sum_d_sql_task(ds):
              kyc_level,
              dt,
              row_number() over(partition BY user_id
-                               ORDER BY update_time DESC) rn,substr(create_time,1,10) create_t
+                               ORDER BY update_time DESC) rn,substr(from_unixtime(unix_timestamp(create_time, 'yyyy-MM-dd HH:mm:ss')+3600),1,10) create_t
       FROM opay_dw.dim_opay_user_base_di
       WHERE dt<='{pt}' ) t1
    WHERE rn = 1
