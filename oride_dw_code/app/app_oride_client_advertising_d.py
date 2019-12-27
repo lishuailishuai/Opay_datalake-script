@@ -141,7 +141,7 @@ def app_oride_client_advertising_d_sql_task(ds):
             count(1) AS pv, 
             count(distinct ip) AS uv, 
             dt 
-        FROM dwd_oride_client_event_detail_hi 
+        FROM oride_dw.dwd_oride_client_event_detail_hi 
         WHERE dt = '{pt}' AND 
             event_name IN (
                 'homepage_window_show',
