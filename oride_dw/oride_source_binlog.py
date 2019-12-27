@@ -148,7 +148,7 @@ def check_s3_prefix(ds, execution_date, **kwargs):
 
             check_command="hadoop fs -ls s3a://opay-bi/{hdfs_data_dir}".format(hdfs_data_dir=prefix)
 
-            logging.info(del_command)
+            logging.info(check_command)
 
             out = os.popen(check_command, 'r')
 
