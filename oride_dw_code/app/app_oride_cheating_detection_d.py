@@ -37,7 +37,7 @@ dag = airflow.DAG(
 ##----------------------------------------- 变量 ---------------------------------------##
 
 db_name = "oride_dw"
-table_name = "app_oride_client_advertising_d"
+table_name = "app_oride_cheating_detection_d"
 
 ##----------------------------------------- 依赖 ---------------------------------------##
 #获取变量
