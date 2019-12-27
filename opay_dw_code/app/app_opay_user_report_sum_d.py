@@ -94,7 +94,7 @@ def app_opay_user_report_sum_d_sql_task(ds):
   (SELECT register_client,
           ROLE,
           kyc_level,
-          '-' sub_consume_scenario,
+          '-' top_consume_scenario,
           count(1) reg_user_cnt,
           count(CASE
                         WHEN create_t='{pt}' THEN user_id
@@ -122,7 +122,7 @@ def app_opay_user_report_sum_d_sql_task(ds):
   (SELECT '-' register_client,
               user_role,
               user_level,
-              '-' sub_consume_scenario,
+              '-' top_consume_scenario,
                   NULL AS reg_user_cnt,
                   NULL AS new_reg_user_cnt,
                   count(1) zero_bal_acct_cnt,
@@ -139,7 +139,7 @@ def app_opay_user_report_sum_d_sql_task(ds):
   (SELECT '-' register_client,
               '-' ROLE,
                   '-' kyc_level,
-                      sub_consume_scenario,
+                      top_consume_scenario,
                       NULL AS reg_user_cnt,
                       NULL AS new_reg_user_cnt,
                       NULL AS zero_bal_acct_cnt,
@@ -147,7 +147,7 @@ def app_opay_user_report_sum_d_sql_task(ds):
    FROM opay_dw.dwm_opay_user_first_tran_di
    WHERE dt='{pt}'
      AND originator_type='USER'
-   GROUP BY sub_consume_scenario)
+   GROUP BY top_consume_scenario)
 
 INSERT overwrite TABLE opay_dw.app_opay_user_report_sum_d partition (dt='{pt}')
 SELECT * FROM user_reg
