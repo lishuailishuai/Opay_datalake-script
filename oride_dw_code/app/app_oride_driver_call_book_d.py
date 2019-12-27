@@ -3,15 +3,23 @@
 司机通讯录和通话次数（15天的通话记录）
 """
 import airflow
-from airflow.operators.hive_operator import HiveOperator
-from airflow.operators.python_operator import PythonOperator
-from airflow.operators.bash_operator import BashOperator
 from datetime import datetime, timedelta
-from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
-from plugins.TaskTouchzSuccess import TaskTouchzSuccess
+from utils.validate_metrics_utils import *
 from airflow.sensors.hive_partition_sensor import HivePartitionSensor
-from airflow.hooks.hive_hooks import HiveCliHook, HiveServer2Hook
+from airflow.sensors import UFileSensor
+from airflow.sensors import OssSensor
+from airflow.operators.bash_operator import BashOperator
+from airflow.operators.hive_operator import HiveOperator
+import time
 import logging
+from airflow.models import Variable
+from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
+from airflow.sensors.hive_partition_sensor import HivePartitionSensor
+from airflow.operators.python_operator import PythonOperator
+from airflow.hooks.hive_hooks import HiveCliHook, HiveServer2Hook
+from plugins.CountriesPublicFrame import CountriesPublicFrame
+from plugins.TaskTouchzSuccess import TaskTouchzSuccess
+
 
 args = {
     'owner': 'chenghui',
@@ -30,23 +38,44 @@ dag = airflow.DAG('app_oride_driver_call_book_d',
                   catchup=False)
 
 
-##----------------------------------------- 依赖 ---------------------------------------##
-
-dwd_oride_client_event_detail_hi_task = HivePartitionSensor(
-    task_id="dwd_oride_client_event_detail_hi_task",
-    table="dwd_oride_client_event_detail_hi",
-    partition="dt='{{ds}}'",
-    schema="oride_dw",
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
-
 ##----------------------------------------- 变量 ---------------------------------------##
 
 db_name = "oride_dw"
 table_name = "app_oride_driver_call_book_d"
-hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
 
+##----------------------------------------- 依赖 ---------------------------------------##
+#获取变量
+code_map=eval(Variable.get("sys_flag"))
+
+#判断ufile(cdh环境)
+if code_map["id"].lower()=="ufile":
+    # 依赖 ufile://opay-datalake/oride/oride_dw/dwd_oride_client_event_detail_hi/country_code=nal/dt=2019-08-09/hour=06'
+    dependence_dwd_oride_client_event_detail_hi = UFileSensor(
+        task_id="dependence_dwd_oride_client_event_detail_hi",
+        filepath='{hdfs_path_str}/dt={pt}/hour=23'.format(
+            hdfs_path_str="oride/oride_dw/dwd_oride_client_event_detail_hi/country_code=nal",
+            pt='{{ ds }}'
+        ),
+        bucket_name='opay-datalake',
+        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+        dag=dag
+    )
+    #路径
+    hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
+else:
+    print("成功")
+    dependence_dwd_oride_client_event_detail_hi = OssSensor(
+        task_id="dependence_dwd_oride_client_event_detail_hi",
+        bucket_key='{hdfs_path_str}/dt={pt}/hour=23'.format(
+            hdfs_path_str="oride/oride_dw/dwd_oride_client_event_detail_hi/country_code=nal",
+            pt='{{ ds }}'
+        ),
+        bucket_name='opay-datalake',
+        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+        dag=dag
+    )
+    # 路径
+    hdfs_path = "oss://opay-datalake/oride/oride_dw/" + table_name
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
 
 def fun_task_timeout_monitor(ds, dag, **op_kwargs):
@@ -211,4 +240,4 @@ app_oride_driver_call_book_d_task= PythonOperator(
     dag=dag
 )
 
-dwd_oride_client_event_detail_hi_task>>dwd_oride_driver_call_record_mid_task>>app_oride_driver_call_book_d_task
+dependence_dwd_oride_client_event_detail_hi>>dwd_oride_driver_call_record_mid_task>>app_oride_driver_call_book_d_task
