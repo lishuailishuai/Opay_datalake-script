@@ -9,6 +9,7 @@ from utils.connection_helper import get_hive_cursor, get_db_conn
 from airflow.operators.python_operator import PythonOperator
 from airflow.operators.bash_operator import BashOperator
 from airflow.sensors.hive_partition_sensor import HivePartitionSensor
+from airflow.sensors.s3_key_sensor import S3KeySensor
 import logging
 
 args = {
