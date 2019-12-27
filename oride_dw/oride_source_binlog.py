@@ -180,6 +180,8 @@ IGNORE_TABLE_LIST = [
 if table_list!='':
     #for table in binlog_table_list.split():
     for table,is_exists in table_list:
+
+        print(is_exists)
         binlog_add_partitions = HiveOperator(
             task_id='binlog_add_partitions_{}'.format(table),
             hql="""
@@ -197,6 +199,7 @@ if table_list!='':
         )
         touchz_data_success = BashOperator(
             task_id='touchz_data_success_{}'.format(table),
+            
             bash_command="""
 
                 is_exists={is_exists}
@@ -221,7 +224,7 @@ if table_list!='':
                     fi
                 fi
             """.format(
-                hdfs_data_dir=HDFS_PATH.format(table=table, dt='{{ds}}', hour='{{execution_date.strftime("%H")}}',is_exists=is_exists)
+                hdfs_data_dir=HDFS_PATH.format(table=table, dt='{{ds}}', hour='{{execution_date.strftime("%H")}}'),is_exists=is_exists
             ),
             dag=dag)
         if table not in IGNORE_TABLE_LIST:
