@@ -135,7 +135,7 @@ count(distinct(opay_account)) as sweep_people,
 sum(nvl(amount,0)) as sweep_amt,
 
 --红包使用率
-sum(nvl(use_amount,0))/sum(nvl(bonus_amount,0)) as bonus_use_percent,
+sum(nvl(use_amount,0))/sum(nvl(amount,0)) as bonus_use_percent,
 --红包使用金额
 sum(nvl(use_amount,0)) as bonus_order_amt,
 
