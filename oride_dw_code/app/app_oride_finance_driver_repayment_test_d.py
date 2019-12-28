@@ -60,7 +60,7 @@ dag = airflow.DAG('app_oride_finance_driver_repayment_test_d',
 ##----------------------------------------- 变量 ---------------------------------------##
 
 db_name = "oride_dw"
-table_name = "app_oride_client_advertising_d"
+table_name = "app_oride_finance_driver_repayment_test_d"
 
 ##----------------------------------------- 依赖 ---------------------------------------##
 #获取变量
