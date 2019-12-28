@@ -75,10 +75,10 @@ def app_opay_channel_transaction_sum_d_sql_task(ds):
                supply_item,
                response_code,
                transaction_status,
-               sum(amount) AS tran_amt,
-               count(1) AS tran_c,
                nvl(b.flag,0) flag,
                user_type,
+               sum(amount) AS tran_amt,
+               count(1) AS tran_c,
                a.dt
         FROM
           (SELECT *
