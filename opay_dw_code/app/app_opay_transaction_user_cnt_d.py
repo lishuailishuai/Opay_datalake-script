@@ -185,5 +185,5 @@ app_opay_transaction_user_cnt_d_task = PythonOperator(
     provide_context=True,
     dag=dag
 )
-
+ods_sqoop_base_user_di_prev_day_task >> app_opay_transaction_user_cnt_d_task
 dwd_opay_transaction_record_di_prev_day_task >> app_opay_transaction_user_cnt_d_task
