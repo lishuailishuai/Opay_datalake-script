@@ -79,11 +79,14 @@ if code_map["id"].lower()=="ufile":
     )
 
     # 依赖前一天分区
-    oride_client_event_detail_prev_day_task = HivePartitionSensor(
+    # 依赖前一天分区
+    oride_client_event_detail_prev_day_task = UFileSensor(
         task_id="oride_client_event_detail_prev_day_task",
-        table="dwd_oride_client_event_detail_hi",
-        partition="""dt='{{ ds }}' and hour='23'""",
-        schema="oride_dw",
+        filepath='{hdfs_path_str}/country_code=nal/dt={pt}/hour=23/_SUCCESS'.format(
+            hdfs_path_str="oride/oride_dw/dwd_oride_client_event_detail_hi",
+            pt='{{ds}}'
+        ),
+        bucket_name='opay-datalake',
         poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
         dag=dag
     )
@@ -132,7 +135,7 @@ else:
     oride_client_event_detail_prev_day_task = OssSensor(
         task_id="oride_client_event_detail_prev_day_task",
         bucket_key='{hdfs_path_str}/dt={pt}/hour=23/_SUCCESS'.format(
-            hdfs_path_str="oride/oride_dw/dwd_oride_client_event_detail_hi",
+            hdfs_path_str="oride/oride_dw/dwd_oride_client_event_detail_hi/country_code=nal",
             pt='{{ds}}'
         ),
         bucket_name='opay-datalake',

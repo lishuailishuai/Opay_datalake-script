@@ -53,7 +53,6 @@ code_map=eval(Variable.get("sys_flag"))
 #判断ufile(cdh环境)
 if code_map["id"].lower()=="ufile":
 
-    #依赖前一天分区
     oride_client_event_detail_prev_day_task = UFileSensor(
         task_id="oride_client_event_detail_prev_day_task",
         filepath='{hdfs_path_str}/country_code=nal/dt={pt}/hour=23/_SUCCESS'.format(
