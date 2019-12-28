@@ -28,6 +28,7 @@ UCLOUD_SERVER_LIST = [
 
 ALI_SERVER_LIST = [
     '10.52.5.218',
+    '10.52.5.219',
 ]
 
 CONNECTORS_URL = 'http://%s:8083/connectors'
