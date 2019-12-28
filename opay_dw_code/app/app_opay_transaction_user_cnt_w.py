@@ -52,17 +52,6 @@ dwd_opay_transaction_record_di_prev_day_task = OssSensor(
     dag=dag
 )
 
-ods_sqoop_base_user_di_prev_day_task = OssSensor(
-    task_id='ods_sqoop_base_user_di_prev_day_task',
-    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opay_dw_sqoop_di/opay_user/user",
-        pt='{{ds}}'
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
-
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
 def fun_task_timeout_monitor(ds,dag,**op_kwargs):
 
@@ -101,93 +90,27 @@ def app_opay_transaction_user_cnt_w_sql_task(ds):
             where dt between date_sub(next_day('{pt}', 'mo'), 7)  and date_sub(next_day('{pt}', 'mo'), 1) 
                 and create_time BETWEEN date_format(date_sub(next_day('{pt}', 'mo'), 8), 'yyyy-MM-dd 23') AND date_format(date_sub(next_day('{pt}', 'mo'), 1), 'yyyy-MM-dd 23') 
                 and originator_type = 'USER' and originator_id is not null and originator_id != ''
-        ),
-        consume_scenario_dau as (
-            select 
-                top_consume_scenario,
-                'ALL' as client_source,
-                'ALL' as originator_role,
-                'ALL' as originator_kyc_level, 
-                count(distinct originator_id) originator_cnt,
-                country_code,
-                date_sub(next_day('{pt}', 'mo'), 1)
-            from transaction_data
-            group by country_code, top_consume_scenario
-        ),
-        client_source_dau as (
-            select 
-                'ALL' as top_consume_scenario,
-                client_source,
-                'ALL' as originator_role,
-                'ALL' as originator_kyc_level, 
-                count(distinct originator_id) originator_cnt,
-                country_code,
-                date_sub(next_day('{pt}', 'mo'), 1) 
-            from transaction_data
-            group by country_code, client_source
-        ),
-        originator_role_dau as (
-            select 
-                'ALL' as top_consume_scenario,
-                'ALL' as client_source,
-                originator_role,
-                'ALL' as originator_kyc_level, 
-                count(distinct originator_id) originator_cnt,
-                country_code,
-                date_sub(next_day('{pt}', 'mo'), 1) 
-            from transaction_data
-            group by country_code, originator_role
-        ),
-        originator_kyc_level_dau as (
-            select
-                'ALL' as top_consume_scenario,
-                'ALL' as client_source,
-                'ALL' as originator_role,
-                originator_kyc_level, 
-                count(distinct originator_id) originator_cnt,
-                country_code,
-                date_sub(next_day('{pt}', 'mo'), 1) 
-            from transaction_data
-            group by country_code, originator_kyc_level
-        ),
-        scenario_source_dau as (
-            select 
-                top_consume_scenario,
-                client_source,
-                'ALL' as originator_role,
-                'ALL' as originator_kyc_level, 
-                count(distinct originator_id) originator_cnt,
-                country_code,
-                date_sub(next_day('{pt}', 'mo'), 1) 
-            from transaction_data
-            group by country_code, top_consume_scenario, client_source
-        ),
-        scenario_role_dau as (
-            select 
-                top_consume_scenario,
-                'ALL' as client_source,
-                originator_role,
-                'ALL' as originator_kyc_level, 
-                count(distinct originator_id) originator_cnt,
-                country_code,
-                date_sub(next_day('{pt}', 'mo'), 1) 
-            from transaction_data
-            group by country_code, top_consume_scenario, originator_role
         )
     insert overwrite table {db}.{table} partition(country_code, dt)
-    select
-    *
-    from consume_scenario_dau
-    union all
-    select * from client_source_dau
-    union all
-    select * from originator_role_dau
-    union all
-    select * from originator_kyc_level_dau
-    union all
-    select * from scenario_role_dau
-    union all
-    select * from scenario_source_dau
+    select 
+                nvl(top_consume_scenario, 'ALL') as top_consume_scenario,
+                nvl(client_source, 'ALL') as client_source,
+                nvl(originator_role, 'ALL') as originator_role,
+                nvl(originator_kyc_level, 'ALL') as originator_kyc_level, 
+                count(distinct originator_id) originator_cnt,
+                nvl(country_code, 'ALL') as country_code,
+                date_sub(next_day('{pt}', 'mo'), 7) as dt
+            from transaction_data
+            group by top_consume_scenario, client_source, originator_role, originator_kyc_level,country_code
+            GROUPING SETS ( 
+                (top_consume_scenario, country_code), 
+                (client_source,  country_code), 
+                (top_consume_scenario, client_source, country_code), 
+                (top_consume_scenario, originator_role, country_code),
+                (originator_role, country_code),
+                (originator_kyc_level, country_code),
+                country_code
+            )
 
     '''.format(
         pt=ds,
