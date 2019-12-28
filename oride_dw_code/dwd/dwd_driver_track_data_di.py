@@ -22,6 +22,8 @@ import logging
 from airflow.models import Variable
 import requests
 import os
+from airflow.sensors.s3_key_sensor import S3KeySensor
+
 
 args = {
     'owner': 'lili.chen',
@@ -56,8 +58,6 @@ dependence_ods_log_driver_track_data_hi_task = HivePartitionSensor(
 db_name = "oride_dw"
 table_name = "dwd_driver_track_data_di"
 hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
-
-
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
 
 def fun_task_timeout_monitor(ds,dag,**op_kwargs):
