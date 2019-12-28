@@ -22,6 +22,7 @@ import requests
 import os
 from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
 from plugins.TaskTouchzSuccess import TaskTouchzSuccess
+from airflow.sensors.s3_key_sensor import S3KeySensor
 
 args = {
     'owner': 'linan',
@@ -44,26 +45,46 @@ sleep_time = BashOperator(
     depends_on_past=False,
     bash_command='sleep 30',
     dag=dag)
-
-##----------------------------------------- 依赖 ---------------------------------------##
-
-
-# 依赖前一小时分区
-dependence_server_event_prev_hour_task = HivePartitionSensor(
-    task_id="dependence_server_event_prev_hour_task",
-    table="server_event",
-    partition="""dt='{{ ds }}' and hour='{{ execution_date.strftime("%H") }}'""",
-    schema="oride_source",
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
-
 ##----------------------------------------- 变量 ---------------------------------------##
 
 db_name = "oride_dw"
 table_name = "dwd_oride_server_event_detail_hi"
-hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
 
+##----------------------------------------- 依赖 ---------------------------------------##
+#获取变量
+code_map=eval(Variable.get("sys_flag"))
+
+#判断ufile(cdh环境)
+if code_map["id"].lower()=="ufile":
+
+    # 依赖前一小时分区
+    dependence_server_event_prev_hour_task = S3KeySensor(
+        task_id="dependence_server_event_prev_hour_task",
+        filepath='{hdfs_path_str}/dt={pt}/hour={hour}/_SUCCESS'.format(
+            hdfs_path_str="oride_buried/ordm.server_event",
+            pt='{{ds}}',
+            hour='{{ execution_date.strftime("%H") }}'
+        ),
+        bucket_name='opay-bi',
+        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+        dag=dag
+    )
+    hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
+
+else:
+    print("成功")
+    dependence_server_event_prev_hour_task = S3KeySensor(
+        task_id="dependence_server_event_prev_hour_task",
+        filepath='{hdfs_path_str}/dt={pt}/hour={hour}/_SUCCESS'.format(
+            hdfs_path_str="oride_buried/ordm.server_event",
+            pt='{{ds}}',
+            hour='{{ execution_date.strftime("%H") }}'
+        ),
+        bucket_name='opay-bi',
+        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+        dag=dag
+    )
+    hdfs_path = "oss://opay-datalake/oride/oride_dw/" + table_name
 
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
 
