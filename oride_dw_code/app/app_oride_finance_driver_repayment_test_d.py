@@ -15,6 +15,7 @@ import re, sys
 import logging
 from utils.validate_metrics_utils import *
 import time
+from airflow.sensors import OssSensor
 
 import airflow
 from datetime import datetime, timedelta
@@ -56,50 +57,91 @@ dag = airflow.DAG('app_oride_finance_driver_repayment_test_d',
                   schedule_interval="40 2 * * *",
                   default_args=args)
 
-##----------------------------------依赖数据源------------------------------##
-
-# 依赖前一天数据是否存在
-dim_oride_driver_base_prev_day_task = UFileSensor(
-    task_id='dim_oride_driver_base_prev_day_task',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw/dim_oride_driver_base/country_code=NG",
-        pt='{{ds}}'
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
-
-dwd_oride_finance_driver_repayment_extend_df_tesk = UFileSensor(
-    task_id='dwd_oride_finance_driver_repayment_extend_df_tesk',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw/dwd_oride_finance_driver_repayment_extend_df/country_code=nal",
-        pt='{{ds}}'
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
-
-# 依赖前一天数据是否存在
-dwm_oride_driver_base_df_tesk = UFileSensor(
-    task_id='dwm_oride_driver_base_df_tesk',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw/dwm_oride_driver_base_df/country_code=nal",
-        pt='{{ds}}'
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
-
 ##----------------------------------------- 变量 ---------------------------------------##
 
 db_name = "oride_dw"
 table_name = "app_oride_finance_driver_repayment_test_d"
-hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
 
+##----------------------------------------- 依赖 ---------------------------------------##
+#获取变量
+code_map=eval(Variable.get("sys_flag"))
 
+#判断ufile(cdh环境)
+if code_map["id"].lower()=="ufile":
+    # 依赖前一天数据是否存在
+    dim_oride_driver_base_prev_day_task = UFileSensor(
+        task_id='dim_oride_driver_base_prev_day_task',
+        filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+            hdfs_path_str="oride/oride_dw/dim_oride_driver_base/country_code=NG",
+            pt='{{ds}}'
+        ),
+        bucket_name='opay-datalake',
+        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+        dag=dag
+    )
+
+    dwd_oride_finance_driver_repayment_extend_df_tesk = UFileSensor(
+        task_id='dwd_oride_finance_driver_repayment_extend_df_tesk',
+        filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+            hdfs_path_str="oride/oride_dw/dwd_oride_finance_driver_repayment_extend_df/country_code=nal",
+            pt='{{ds}}'
+        ),
+        bucket_name='opay-datalake',
+        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+        dag=dag
+    )
+
+    # 依赖前一天数据是否存在
+    dwm_oride_driver_base_df_tesk = UFileSensor(
+        task_id='dwm_oride_driver_base_df_tesk',
+        filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+            hdfs_path_str="oride/oride_dw/dwm_oride_driver_base_df/country_code=nal",
+            pt='{{ds}}'
+        ),
+        bucket_name='opay-datalake',
+        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+        dag=dag
+    )
+ #路径
+    hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
+else:
+    print("成功")
+    # 依赖前一天数据是否存在
+    dim_oride_driver_base_prev_day_task = OssSensor(
+        task_id='dim_oride_driver_base_prev_day_task',
+        bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+            hdfs_path_str="oride/oride_dw/dim_oride_driver_base/country_code=NG",
+            pt='{{ds}}'
+        ),
+        bucket_name='opay-datalake',
+        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+        dag=dag
+    )
+
+    dwd_oride_finance_driver_repayment_extend_df_tesk = OssSensor(
+        task_id='dwd_oride_finance_driver_repayment_extend_df_tesk',
+        bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+            hdfs_path_str="oride/oride_dw/dwd_oride_finance_driver_repayment_extend_df/country_code=nal",
+            pt='{{ds}}'
+        ),
+        bucket_name='opay-datalake',
+        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+        dag=dag
+    )
+
+    # 依赖前一天数据是否存在
+    dwm_oride_driver_base_df_tesk = OssSensor(
+        task_id='dwm_oride_driver_base_df_tesk',
+        bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+            hdfs_path_str="oride/oride_dw/dwm_oride_driver_base_df/country_code=nal",
+            pt='{{ds}}'
+        ),
+        bucket_name='opay-datalake',
+        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+        dag=dag
+    )
+    # 路径
+    hdfs_path = "oss://opay-datalake/oride/oride_dw/" + table_name
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
 def fun_task_timeout_monitor(ds, dag, **op_kwargs):
     dag_ids = dag.dag_id
