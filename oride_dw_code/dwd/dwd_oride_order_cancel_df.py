@@ -19,6 +19,7 @@ from airflow.sensors import UFileSensor
 from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
 from plugins.TaskTouchzSuccess import TaskTouchzSuccess
 from plugins.CountriesPublicFrame import CountriesPublicFrame
+from airflow.sensors.web_hdfs_sensor import WebHdfsSensor
 import json
 import logging
 from airflow.models import Variable
