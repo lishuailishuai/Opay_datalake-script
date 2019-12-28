@@ -762,99 +762,118 @@ create_order_metrics_data = BashOperator(
     task_id='create_order_metrics_data',
     bash_command="""
         mysql -udml_insert -p6VaEyu -h10.52.149.112 opos_dw  -e "
-
-            INSERT INTO opos_dw.opos_metrcis_realtime ( dt, city_id, bd_id, pos_complete_order_cnt, qr_complete_order_cnt, gmv, have_order_merchant_cnt, active_user_cnt, pos_active_user_cnt, qr_active_user_cnt, new_user_cnt, pos_new_user_cnt, qr_new_user_cnt, bonus_complete_order_cnt, bonus_gmv, bonus_new_user_cnt, bonus_active_user_cnt, bonus_actual_amount_sum, not_bonus_complete_order_cnt, not_bonus_gmv, not_bonus_actual_amount_sum, not_bonus_active_user_cnt )
-            SELECT  t.dt
-                   ,t.city_id
-                   ,t.bd_id
-                   ,t.pos_complete_order_cnt
-                   ,t.qr_complete_order_cnt
-                   ,t.gmv
-                   ,t.have_order_merchant_cnt
-                   ,t.active_user_cnt
-                   ,t.pos_active_user_cnt
-                   ,t.qr_active_user_cnt
-                   ,t.new_user_cnt
-                   ,t.pos_new_user_cnt
-                   ,t.qr_new_user_cnt
-                   ,t.bonus_complete_order_cnt
-                   ,t.bonus_gmv
-                   ,t.bonus_new_user_cnt
-                   ,t.bonus_active_user_cnt
-                   ,t.bonus_actual_amount_sum
-                   ,t.not_bonus_complete_order_cnt
-                   ,t.not_bonus_gmv
-                   ,t.not_bonus_actual_amount_sum
+            
+            INSERT INTO opos_dw.opos_metrcis_realtime ( dt, city_id, bd_id,bdm_id,rm_id,cm_id,hcm_id, pos_complete_order_cnt, qr_complete_order_cnt, gmv, have_order_merchant_cnt, active_user_cnt, pos_active_user_cnt, qr_active_user_cnt, new_user_cnt, pos_new_user_cnt, qr_new_user_cnt, bonus_complete_order_cnt, bonus_gmv, bonus_new_user_cnt, bonus_active_user_cnt, bonus_actual_amount_sum, not_bonus_complete_order_cnt, not_bonus_gmv, not_bonus_actual_amount_sum, not_bonus_active_user_cnt )
+            SELECT  t.dt 
+                   ,t.city_id 
+                   ,t.bd_id 
+                   ,t.bdm_id 
+                   ,t.rm_id 
+                   ,t.cm_id 
+                   ,t.hcm_id 
+                   ,t.pos_complete_order_cnt 
+                   ,t.qr_complete_order_cnt 
+                   ,t.gmv 
+                   ,t.have_order_merchant_cnt 
+                   ,t.active_user_cnt 
+                   ,t.pos_active_user_cnt 
+                   ,t.qr_active_user_cnt 
+                   ,t.new_user_cnt 
+                   ,t.pos_new_user_cnt 
+                   ,t.qr_new_user_cnt 
+                   ,t.bonus_complete_order_cnt 
+                   ,t.bonus_gmv 
+                   ,t.bonus_new_user_cnt 
+                   ,t.bonus_active_user_cnt 
+                   ,t.bonus_actual_amount_sum 
+                   ,t.not_bonus_complete_order_cnt 
+                   ,t.not_bonus_gmv 
+                   ,t.not_bonus_actual_amount_sum 
                    ,t.not_bonus_active_user_cnt
-            FROM
+            FROM 
             (
-                SELECT  t.dt                                                                                                                             AS dt
-                       ,t.city_id                                                                                                                        AS city_id
-                       ,t.bd_id                                                                                                                          AS bd_id
-                       ,ifnull(COUNT(if(t.order_type = 'pos' AND t.trade_status = 'SUCCESS',t.order_id,null)),0)                                         AS pos_complete_order_cnt
-                       ,ifnull(COUNT(if(t.order_type = 'qrcode' AND t.trade_status = 'SUCCESS',t.order_id,null)),0)                                      AS qr_complete_order_cnt
-                       ,ifnull(SUM(if(t.trade_status = 'SUCCESS',t.org_payment_amount,null)),0)                                                          AS gmv
-                       ,ifnull(COUNT(distinct if(t.trade_status = 'SUCCESS',t.receipt_id,null)),0)                                                       AS have_order_merchant_cnt
-                       ,ifnull(COUNT(distinct if(t.trade_status = 'SUCCESS',t.sender_id,null)),0)                                                        AS active_user_cnt
-                       ,ifnull(COUNT(distinct if(t.order_type = 'pos' AND t.trade_status = 'SUCCESS',t.sender_id,null)),0)                               AS pos_active_user_cnt
-                       ,ifnull(COUNT(distinct if(t.order_type = 'qrcode' AND t.trade_status = 'SUCCESS',t.sender_id,null)),0)                            AS qr_active_user_cnt
-                       ,ifnull(COUNT(distinct if(t.trade_status = 'SUCCESS' AND t.first_order = '1',t.sender_id,null)),0)                                AS new_user_cnt
-                       ,ifnull(COUNT(distinct if(t.order_type = 'pos' AND t.trade_status = 'SUCCESS' AND t.first_order = '1',t.sender_id,null)),0)       AS pos_new_user_cnt
-                       ,ifnull(COUNT(distinct if(t.order_type = 'qrcode' AND t.trade_status = 'SUCCESS' AND t.first_order = '1',t.sender_id,null)),0)    AS qr_new_user_cnt
-                       ,ifnull(COUNT(if(t.trade_status = 'SUCCESS' AND length(t.discount_ids) > 0,t.order_id,null)),0)                                   AS bonus_complete_order_cnt
-                       ,ifnull(SUM(if(t.trade_status = 'SUCCESS' AND length(t.discount_ids) > 0,t.org_payment_amount,null)),0)                           AS bonus_gmv
-                       ,ifnull(COUNT(distinct if(t.trade_status = 'SUCCESS' AND t.first_order = '1' AND length(t.discount_ids) > 0,t.sender_id,null)),0) AS bonus_new_user_cnt
-                       ,ifnull(COUNT(distinct if(t.trade_status = 'SUCCESS' AND length(t.discount_ids) > 0,t.sender_id,null)),0)                         AS bonus_active_user_cnt
-                       ,ifnull(SUM(if(t.trade_status = 'SUCCESS' AND length(t.discount_ids) > 0,t.payment_amount,null)),0)                               AS bonus_actual_amount_sum
-                       ,ifnull(COUNT(if(t.trade_status = 'SUCCESS' AND length(t.discount_ids) = 0,t.order_id,null)),0)                                   AS not_bonus_complete_order_cnt
-                       ,ifnull(SUM(if(t.trade_status = 'SUCCESS' AND length(t.discount_ids) = 0,t.org_payment_amount,null)),0)                           AS not_bonus_gmv
-                       ,ifnull(SUM(if(t.trade_status = 'SUCCESS' AND length(t.discount_ids) = 0,t.payment_amount,null)),0)                               AS not_bonus_actual_amount_sum
-                       ,ifnull(COUNT(distinct if(t.trade_status = 'SUCCESS' AND length(t.discount_ids) = 0,t.sender_id,null)),0)                         AS not_bonus_active_user_cnt
-                FROM
+            SELECT  t.dt                                                                                                                             AS dt 
+                   ,t.city_id                                                                                                                        AS city_id 
+                   ,t.bdm_id                                                                                                                         AS bdm_id 
+                   ,t.rm_id                                                                                                                          AS rm_id 
+                   ,t.cm_id                                                                                                                          AS cm_id 
+                   ,t.hcm_id                                                                                                                         AS hcm_id 
+                   ,t.bd_id                                                                                                                          AS bd_id 
+                   ,ifnull(COUNT(if(t.order_type = 'pos' AND t.trade_status = 'SUCCESS',t.order_id,null)),0)                                         AS pos_complete_order_cnt 
+                   ,ifnull(COUNT(if(t.order_type = 'qrcode' AND t.trade_status = 'SUCCESS',t.order_id,null)),0)                                      AS qr_complete_order_cnt 
+                   ,ifnull(SUM(if(t.trade_status = 'SUCCESS',t.org_payment_amount,null)),0)                                                          AS gmv 
+                   ,ifnull(COUNT(distinct if(t.trade_status = 'SUCCESS',t.receipt_id,null)),0)                                                       AS have_order_merchant_cnt 
+                   ,ifnull(COUNT(distinct if(t.trade_status = 'SUCCESS',t.sender_id,null)),0)                                                        AS active_user_cnt 
+                   ,ifnull(COUNT(distinct if(t.order_type = 'pos' AND t.trade_status = 'SUCCESS',t.sender_id,null)),0)                               AS pos_active_user_cnt 
+                   ,ifnull(COUNT(distinct if(t.order_type = 'qrcode' AND t.trade_status = 'SUCCESS',t.sender_id,null)),0)                            AS qr_active_user_cnt 
+                   ,ifnull(COUNT(distinct if(t.trade_status = 'SUCCESS' AND t.first_order = '1',t.sender_id,null)),0)                                AS new_user_cnt 
+                   ,ifnull(COUNT(distinct if(t.order_type = 'pos' AND t.trade_status = 'SUCCESS' AND t.first_order = '1',t.sender_id,null)),0)       AS pos_new_user_cnt 
+                   ,ifnull(COUNT(distinct if(t.order_type = 'qrcode' AND t.trade_status = 'SUCCESS' AND t.first_order = '1',t.sender_id,null)),0)    AS qr_new_user_cnt 
+                   ,ifnull(COUNT(if(t.trade_status = 'SUCCESS' AND length(t.discount_ids) > 0,t.order_id,null)),0)                                   AS bonus_complete_order_cnt 
+                   ,ifnull(SUM(if(t.trade_status = 'SUCCESS' AND length(t.discount_ids) > 0,t.org_payment_amount,null)),0)                           AS bonus_gmv 
+                   ,ifnull(COUNT(distinct if(t.trade_status = 'SUCCESS' AND t.first_order = '1' AND length(t.discount_ids) > 0,t.sender_id,null)),0) AS bonus_new_user_cnt 
+                   ,ifnull(COUNT(distinct if(t.trade_status = 'SUCCESS' AND length(t.discount_ids) > 0,t.sender_id,null)),0)                         AS bonus_active_user_cnt 
+                   ,ifnull(SUM(if(t.trade_status = 'SUCCESS' AND length(t.discount_ids) > 0,t.payment_amount,null)),0)                               AS bonus_actual_amount_sum 
+                   ,ifnull(COUNT(if(t.trade_status = 'SUCCESS' AND length(t.discount_ids) = 0,t.order_id,null)),0)                                   AS not_bonus_complete_order_cnt 
+                   ,ifnull(SUM(if(t.trade_status = 'SUCCESS' AND length(t.discount_ids) = 0,t.org_payment_amount,null)),0)                           AS not_bonus_gmv 
+                   ,ifnull(SUM(if(t.trade_status = 'SUCCESS' AND length(t.discount_ids) = 0,t.payment_amount,null)),0)                               AS not_bonus_actual_amount_sum 
+                   ,ifnull(COUNT(distinct if(t.trade_status = 'SUCCESS' AND length(t.discount_ids) = 0,t.sender_id,null)),0)                         AS not_bonus_active_user_cnt
+            FROM 
+            (
+                SELECT  o.dt 
+                       ,o.order_id 
+                       ,o.receipt_id 
+                       ,o.sender_id 
+                       ,o.order_type 
+                       ,o.trade_status 
+                       ,o.org_payment_amount 
+                       ,o.payment_amount 
+                       ,s.bd_id 
+                       ,s.city_id 
+                       ,s.bdm_id 
+                       ,s.rm_id 
+                       ,s.cm_id 
+                       ,s.hcm_id 
+                       ,o.first_order 
+                       ,o.discount_ids
+                FROM 
                 (
-                    SELECT  o.dt
-                           ,o.order_id
-                           ,o.receipt_id
-                           ,o.sender_id
-                           ,o.order_type
-                           ,o.trade_status
-                           ,o.org_payment_amount
-                           ,o.payment_amount
-                           ,s.bd_id
-                           ,s.city_id
-                           ,o.first_order
-                           ,o.discount_ids
-                    FROM
-                    (
-                        SELECT  order_id
-                               ,opay_id
-                               ,bd_id
-                               ,city_id
-                        FROM opos_order_extend
-                    ) s
-                    JOIN
-                    (
-                        SELECT  DATE_FORMAT(create_time,'%Y-%m-%d') AS dt
-                               ,order_id
-                               ,receipt_id
-                               ,sender_id
-                               ,order_type
-                               ,trade_status
-                               ,ifnull(org_payment_amount,0)        AS org_payment_amount
-                               ,ifnull(pay_amount,0)                AS payment_amount
-                               ,first_order
-                               ,discount_ids
-                        FROM opos_order
-                        WHERE (DATE_FORMAT(create_time,'%Y-%m-%d') = '{{ ds }}' )
-                    ) o
-                    ON o.order_id = s.order_id
-                ) t
-                GROUP BY  t.dt
-                         ,t.bd_id
-                         ,t.city_id
+                    SELECT  order_id 
+                           ,opay_id 
+                           ,bd_id 
+                           ,city_id 
+                           ,bdm_id 
+                           ,rm_id 
+                           ,cm_id 
+                           ,hcm_id
+                    FROM opos_order_extend 
+                ) s
+                JOIN 
+                (
+                    SELECT  DATE_FORMAT(create_time,'%Y-%m-%d') AS dt 
+                           ,order_id 
+                           ,receipt_id 
+                           ,sender_id 
+                           ,order_type 
+                           ,trade_status 
+                           ,ifnull(org_payment_amount,0)        AS org_payment_amount 
+                           ,ifnull(pay_amount,0)                AS payment_amount 
+                           ,first_order 
+                           ,discount_ids
+                    FROM opos_order
+                    WHERE (DATE_FORMAT(create_time,'%Y-%m-%d') = '{{ ds }}' )  
+                ) o
+                ON o.order_id = s.order_id 
             ) t
-            ON DUPLICATE KEY UPDATE dt=VALUES(dt), city_id=VALUES(city_id), bd_id=VALUES(bd_id), pos_complete_order_cnt=VALUES(pos_complete_order_cnt), qr_complete_order_cnt=VALUES(qr_complete_order_cnt), gmv=VALUES(gmv), have_order_merchant_cnt=VALUES(have_order_merchant_cnt), active_user_cnt=VALUES(active_user_cnt), pos_active_user_cnt=VALUES(pos_active_user_cnt), qr_active_user_cnt=VALUES(qr_active_user_cnt), new_user_cnt=VALUES(new_user_cnt), pos_new_user_cnt=VALUES(pos_new_user_cnt), qr_new_user_cnt=VALUES(qr_new_user_cnt), bonus_complete_order_cnt=VALUES(bonus_complete_order_cnt), bonus_gmv=VALUES(bonus_gmv), bonus_new_user_cnt=VALUES(bonus_new_user_cnt), bonus_active_user_cnt=VALUES(bonus_active_user_cnt), bonus_actual_amount_sum=VALUES(bonus_actual_amount_sum), not_bonus_complete_order_cnt=VALUES(not_bonus_complete_order_cnt), not_bonus_gmv=VALUES(not_bonus_gmv), not_bonus_actual_amount_sum=VALUES(not_bonus_actual_amount_sum), not_bonus_active_user_cnt=VALUES(not_bonus_active_user_cnt) ;
-
+            GROUP BY  t.dt 
+                     ,t.bd_id 
+                     ,t.city_id 
+                     ,t.bdm_id 
+                     ,t.rm_id 
+                     ,t.cm_id 
+                     ,t.hcm_id 
+            ) t
+            ON DUPLICATE KEY UPDATE dt=VALUES(dt), city_id=VALUES(city_id), bd_id=VALUES(bd_id), bdm_id=VALUES(bdm_id), rm_id=VALUES(rm_id), cm_id=VALUES(cm_id), hcm_id=VALUES(hcm_id), pos_complete_order_cnt=VALUES(pos_complete_order_cnt), qr_complete_order_cnt=VALUES(qr_complete_order_cnt), gmv=VALUES(gmv), have_order_merchant_cnt=VALUES(have_order_merchant_cnt), active_user_cnt=VALUES(active_user_cnt), pos_active_user_cnt=VALUES(pos_active_user_cnt), qr_active_user_cnt=VALUES(qr_active_user_cnt), new_user_cnt=VALUES(new_user_cnt), pos_new_user_cnt=VALUES(pos_new_user_cnt), qr_new_user_cnt=VALUES(qr_new_user_cnt), bonus_complete_order_cnt=VALUES(bonus_complete_order_cnt), bonus_gmv=VALUES(bonus_gmv), bonus_new_user_cnt=VALUES(bonus_new_user_cnt), bonus_active_user_cnt=VALUES(bonus_active_user_cnt), bonus_actual_amount_sum=VALUES(bonus_actual_amount_sum), not_bonus_complete_order_cnt=VALUES(not_bonus_complete_order_cnt), not_bonus_gmv=VALUES(not_bonus_gmv), not_bonus_actual_amount_sum=VALUES(not_bonus_actual_amount_sum), not_bonus_active_user_cnt=VALUES(not_bonus_active_user_cnt) ; 
 
         "
     """,
