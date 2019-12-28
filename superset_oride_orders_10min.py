@@ -18,7 +18,7 @@ from collections import OrderedDict
 import math
 
 args = {
-    'owner': 'wuduo',
+    'owner': 'yangmingze',
     'start_date': datetime(2019, 5, 11),
     'depends_on_past': False,
     'retries': 1,
@@ -29,7 +29,7 @@ args = {
 }
 
 dag = airflow.DAG(
-    'oride_orders_10min',
+    'superset_oride_orders_10min',
     schedule_interval="*/10 * * * *",
     default_args=args
 )

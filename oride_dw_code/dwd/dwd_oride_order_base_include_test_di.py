@@ -69,14 +69,14 @@ ods_sqoop_base_data_order_payment_df_prev_day_task = UFileSensor(
 )
 
 # 依赖前一天分区
-oride_client_event_detail_prev_day_task = HivePartitionSensor(
-    task_id="oride_client_event_detail_prev_day_task",
-    table="dwd_oride_client_event_detail_hi",
-    partition="""dt='{{ ds }}' and hour='23'""",
-    schema="oride_dw",
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
+# oride_client_event_detail_prev_day_task = HivePartitionSensor(
+#     task_id="oride_client_event_detail_prev_day_task",
+#     table="dwd_oride_client_event_detail_hi",
+#     partition="""dt='{{ ds }}' and hour='23'""",
+#     schema="oride_dw",
+#     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+#     dag=dag
+# )
 
 # 依赖前一天分区
 ods_sqoop_base_data_country_conf_df_prev_day_task = UFileSensor(
@@ -914,5 +914,5 @@ dwd_oride_order_base_include_test_di_task = PythonOperator(
 
 ods_binlog_data_order_hi_prev_day_task >> dwd_oride_order_base_include_test_di_task
 ods_sqoop_base_data_order_payment_df_prev_day_task >> dwd_oride_order_base_include_test_di_task
-oride_client_event_detail_prev_day_task >> dwd_oride_order_base_include_test_di_task
+#oride_client_event_detail_prev_day_task >> dwd_oride_order_base_include_test_di_task
 ods_sqoop_base_data_country_conf_df_prev_day_task >> dwd_oride_order_base_include_test_di_task
