@@ -141,6 +141,10 @@ def dwd_oride_order_cancel_df_sql_task(ds):
     where dt='{pt}'
     ) cancel
     left outer join
+    (select 
+        order_id,
+        country_id
+    from 
     (SELECT 
              id AS order_id ,
              --订单 ID
