@@ -276,5 +276,6 @@ dwd_oride_order_cancel_df_task= PythonOperator(
 )
 
 
-
+ods_binlog_data_order_hi_prev_day_task>>dwd_oride_order_cancel_df_task
+ods_sqoop_base_data_country_conf_df_prev_day_task>>dwd_oride_order_cancel_df_task
 ods_sqoop_base_data_order_cancel_df_tesk>>dwd_oride_order_cancel_df_task
