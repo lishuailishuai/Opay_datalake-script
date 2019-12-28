@@ -22,6 +22,8 @@ import logging
 from airflow.models import Variable
 import requests
 import os
+from airflow.sensors import OssSensor
+
 
 args = {
         'owner': 'yangmingze',
@@ -40,45 +42,67 @@ dag = airflow.DAG( 'dwd_oride_order_pay_detail_di',
     catchup=False) 
 
 
-sleep_time = BashOperator(
-    task_id='sleep_id',
-    depends_on_past=False,
-    bash_command='sleep 30',
-    dag=dag)
+##----------------------------------------- 变量 ---------------------------------------##
 
-
-##----------------------------------------- 依赖 ---------------------------------------## 
-
-
-ods_sqoop_base_data_order_payment_df_tesk = UFileSensor(
-    task_id='ods_sqoop_base_data_order_payment_df_tesk',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride_dw_sqoop/oride_data/data_order_payment",
-        pt='{{ds}}'
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
-
-dwd_oride_order_base_include_test_di_tesk = S3KeySensor(
-    task_id='dwd_oride_order_base_include_test_di_tesk',
-    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw/dwd_oride_order_base_include_test_di/country_code=NG",
-        pt='{{ds}}'
-    ),
-    bucket_name='opay-bi',
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
-
-##----------------------------------------- 变量 ---------------------------------------## 
-
-db_name="oride_dw"
+db_name = "oride_dw"
 table_name="dwd_oride_order_pay_detail_di"
-hdfs_path="ufile://opay-datalake/oride/oride_dw/"+table_name
 
+##----------------------------------------- 依赖 ---------------------------------------##
+#获取变量
+code_map=eval(Variable.get("sys_flag"))
 
+#判断ufile(cdh环境)
+if code_map["id"].lower()=="ufile":
+    # 依赖前一天分区
+
+    ods_sqoop_base_data_order_payment_df_tesk = UFileSensor(
+        task_id='ods_sqoop_base_data_order_payment_df_tesk',
+        filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+            hdfs_path_str="oride_dw_sqoop/oride_data/data_order_payment",
+            pt='{{ds}}'
+        ),
+        bucket_name='opay-datalake',
+        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+        dag=dag
+    )
+
+    dwd_oride_order_base_include_test_di_tesk = S3KeySensor(
+        task_id='dwd_oride_order_base_include_test_di_tesk',
+        bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+            hdfs_path_str="oride/oride_dw/dwd_oride_order_base_include_test_di/country_code=NG",
+            pt='{{ds}}'
+        ),
+        bucket_name='opay-bi',
+        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+        dag=dag
+    )
+#路径
+    hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
+else:
+    print("成功")
+    ods_sqoop_base_data_order_payment_df_tesk = OssSensor(
+        task_id='ods_sqoop_base_data_order_payment_df_tesk',
+        bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+            hdfs_path_str="oride_dw_sqoop/oride_data/data_order_payment",
+            pt='{{ds}}'
+        ),
+        bucket_name='opay-datalake',
+        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+        dag=dag
+    )
+
+    dwd_oride_order_base_include_test_di_tesk = OssSensor(
+        task_id='dwd_oride_order_base_include_test_di_tesk',
+        bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+            hdfs_path_str="oride/oride_dw/dwd_oride_order_base_include_test_di/country_code=NG",
+            pt='{{ds}}'
+        ),
+        bucket_name='opay-bi',
+        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+        dag=dag
+    )
+#路径
+    hdfs_path = "oss://opay-datalake/oride/oride_dw/" + table_name
 ##----------------------------------------- 脚本 ---------------------------------------## 
 
 def dwd_oride_order_pay_detail_di_sql_task(ds):

@@ -46,6 +46,89 @@ opos_cashback_mysql_hook = MySqlHook("opos_cashback")
 opos_cashback_mysql_conn = opos_cashback_mysql_hook.get_conn()
 opos_cashback_mysql_cursor = opos_cashback_mysql_conn.cursor()
 
+insert_order_bonus_extend_sql_template = """
+    insert into opos_dw.opos_order_bonus_extend (
+        id,
+        qr_code,
+        lng,
+        lat,
+        bd_id,
+        bdm_id,
+        rm_id,
+        cm_id,
+        hcm_id,
+        bonus_id,
+        scan_user,
+        amount,
+        risk_code,
+        code,
+        message,
+        time 
+    )
+    values(
+        {id},
+        '{qr_code}',
+        {lng},
+        {lat},
+        {bd_id},
+        {bdm_id},
+        {rm_id},
+        {cm_id},
+        {hcm_id},
+        {bonus_id},
+        '{scan_user}',
+        {amount},
+        '{risk_code}',
+        {code},
+        '{message}',
+        '{time}'
+    )
+    ON DUPLICATE KEY
+    UPDATE
+    id=VALUES(id), 
+    qr_code=VALUES(qr_code), 
+    lng=VALUES(lng), 
+    lat=VALUES(lat), 
+    bd_id=VALUES(bd_id), 
+    bdm_id=VALUES(bdm_id), 
+    rm_id=VALUES(rm_id), 
+    cm_id=VALUES(cm_id), 
+    hcm_id=VALUES(hcm_id), 
+    bonus_id=VALUES(bonus_id), 
+    scan_user=VALUES(scan_user), 
+    amount=VALUES(amount), 
+    risk_code=VALUES(risk_code), 
+    code=VALUES(code), 
+    message=VALUES(message), 
+    time=VALUES(time)
+
+"""
+
+query_order_bonus_extend_sql_template = """
+    select 
+        id,
+        qr_code,
+        lng,
+        lat,
+        bd_id,
+        bdm_id,
+        rm_id,
+        cm_id,
+        hcm_id,
+        bonus_id,
+        scan_user,
+        amount,
+        risk_code,
+        code,
+        message,
+        time
+    from 
+        opos_scan_history
+        where 
+        (DATE_FORMAT(time,"%Y-%m-%d") = '{ds}')
+
+"""
+
 insert_order_bonus_sql_template = """
     insert into opos_dw.opos_order_bonus (
         id ,
@@ -460,6 +543,68 @@ def insert_order_data(ds, **kwargs):
     insert_order(ds, airflow.macros.ds_add(ds, -1), week, year)
     insert_order_extend(ds, airflow.macros.ds_add(ds, -1), week, year)
     insert_order_bonus(ds, airflow.macros.ds_add(ds, -1), week, year)
+    insert_order_bonus_extend(ds, airflow.macros.ds_add(ds, -1), week, year)
+
+
+def insert_order_bonus_extend(ds, yesterday, week, year):
+    query_sql = query_order_bonus_extend_sql_template.format(year=year, week=(int(week) + 1), ds=ds,
+                                                             yesterday=yesterday)
+
+    logging.info(query_sql)
+    opos_cashback_mysql_cursor.execute(query_sql)
+    results = opos_cashback_mysql_cursor.fetchall()
+    logging.info(" record num : {num}".format(num=len(results)))
+    for data in results:
+
+        original_columns = list(data)
+        columns = list()
+
+        for i in original_columns:
+            if i is None:
+                i = 'null'
+            columns.append(i)
+
+        [
+            id,
+            qr_code,
+            lng,
+            lat,
+            bd_id,
+            bdm_id,
+            rm_id,
+            cm_id,
+            hcm_id,
+            bonus_id,
+            scan_user,
+            amount,
+            risk_code,
+            code,
+            message,
+            time
+        ] = columns
+
+        insert_sql = insert_order_bonus_extend_sql_template.format(
+            id=id,
+            qr_code=qr_code,
+            lng=lng,
+            lat=lat,
+            bd_id=bd_id,
+            bdm_id=bdm_id,
+            rm_id=rm_id,
+            cm_id=cm_id,
+            hcm_id=hcm_id,
+            bonus_id=bonus_id,
+            scan_user=scan_user,
+            amount=amount,
+            risk_code=risk_code,
+            code=code,
+            message='',
+            time=time
+        )
+
+        insert_sql = insert_sql.replace("'null'", 'null')
+        opos_mysql_cursor.execute(insert_sql)
+        opos_mysql_conn.commit()
 
 
 def insert_order_bonus(ds, yesterday, week, year):
@@ -885,42 +1030,77 @@ create_bonus_metrics_data = BashOperator(
     bash_command="""
         mysql -udml_insert -p6VaEyu -h10.52.149.112 opos_dw  -e "
 
-            INSERT INTO opos_dw.opos_bonus_metrics_realtime ( dt, city_id, bd_id, in_credit_amount_sum, not_in_credit_amount_sum, in_settlement_amount_sum, not_in_settlement_amount_sum, provider_cnt, bonus_order_cnt, bonus_user_cnt, main_scan_amount, bonus_used_amount_sum )
-            SELECT  t.dt
-                   ,t.city_id
-                   ,t.bd_id
-                   ,t.in_credit_amount_sum
-                   ,t.not_in_credit_amount_sum
-                   ,t.in_settlement_amount_sum
-                   ,t.not_in_settlement_amount_sum
-                   ,t.provider_cnt
-                   ,t.bonus_order_cnt
-                   ,t.bonus_user_cnt
-                   ,t.main_scan_amount
+            INSERT INTO opos_dw.opos_bonus_metrics_realtime ( dt, city_id, bd_id,bdm_id,rm_id,cm_id,hcm_id, in_credit_amount_sum, not_in_credit_amount_sum, in_settlement_amount_sum, not_in_settlement_amount_sum, provider_cnt, bonus_order_cnt, bonus_user_cnt, main_scan_amount, bonus_used_amount_sum )
+            SELECT  t.dt 
+                   ,t.city_id 
+                   ,t.bd_id 
+                   ,t.bdm_id 
+                   ,t.rm_id 
+                   ,t.cm_id 
+                   ,t.hcm_id 
+                   ,t.in_credit_amount_sum 
+                   ,t.not_in_credit_amount_sum 
+                   ,t.in_settlement_amount_sum 
+                   ,t.not_in_settlement_amount_sum 
+                   ,t.provider_cnt 
+                   ,t.bonus_order_cnt 
+                   ,t.bonus_user_cnt 
+                   ,t.main_scan_amount 
                    ,t.bonus_used_amount_sum
-            FROM
+            FROM 
             (
-                SELECT  '{{ ds }}'                                               AS dt
-                       ,ifnull(city_id,-10000)                                   AS city_id
-                       ,ifnull(bd_id,-10000)                                     AS bd_id
-                       ,SUM(if(status = 1,bonus_amount,0))                       AS in_credit_amount_sum
-                       ,SUM(if(status = 0,bonus_amount,0))                       AS not_in_credit_amount_sum
-                       ,SUM(if(status = 1 AND settle_status = 1,bonus_amount,0)) AS in_settlement_amount_sum
-                       ,SUM(if(status = 1 AND settle_status = 0,bonus_amount,0)) AS not_in_settlement_amount_sum
-                       ,COUNT(distinct(provider_account))                        AS provider_cnt
-                       ,COUNT(1)                                                 AS bonus_order_cnt
-                       ,COUNT(distinct(opay_account))                            AS bonus_user_cnt
-                       ,SUM(amount)                                              AS main_scan_amount
-                       ,SUM(use_amount)                                          AS bonus_used_amount_sum
-
+            SELECT  '{{ ds }}'                                                     AS dt 
+                   ,ifnull(t.city_id,-10000)                                       AS city_id 
+                   ,ifnull(t.bd_id,-10000)                                         AS bd_id 
+                   ,ifnull(e.bdm_id,-10000)                                        AS bdm_id 
+                   ,ifnull(e.rm_id,-10000)                                         AS rm_id 
+                   ,ifnull(e.cm_id,-10000)                                         AS cm_id 
+                   ,ifnull(e.hcm_id,-10000)                                        AS hcm_id 
+                   ,SUM(if(t.status = 1,t.bonus_amount,0))                         AS in_credit_amount_sum 
+                   ,SUM(if(t.status = 0,t.bonus_amount,0))                         AS not_in_credit_amount_sum 
+                   ,SUM(if(t.status = 1 AND t.settle_status = 1,t.bonus_amount,0)) AS in_settlement_amount_sum 
+                   ,SUM(if(t.status = 1 AND t.settle_status = 0,t.bonus_amount,0)) AS not_in_settlement_amount_sum 
+                   ,COUNT(distinct(t.provider_account))                            AS provider_cnt 
+                   ,COUNT(1)                                                       AS bonus_order_cnt 
+                   ,COUNT(distinct(t.opay_account))                                AS bonus_user_cnt 
+                   ,SUM(t.amount)                                                  AS main_scan_amount 
+                   ,SUM(t.use_amount)                                              AS bonus_used_amount_sum
+            FROM 
+            (
+                SELECT  id 
+                       ,city_id 
+                       ,bd_id 
+                       ,bonus_amount 
+                       ,status 
+                       ,settle_status 
+                       ,provider_account 
+                       ,opay_account 
+                       ,amount 
+                       ,use_amount
                 FROM opos_dw.opos_order_bonus
-                WHERE DATE_FORMAT(create_time,'%Y-%m-%d') = '{{ ds }}'
-                GROUP BY  city_id
-                         ,bd_id with rollup
+                WHERE DATE_FORMAT(create_time,'%Y-%m-%d') = '{{ ds }}'  
             ) t
-            ON DUPLICATE KEY
-            UPDATE dt=VALUES(dt), city_id=VALUES(city_id), bd_id=VALUES(bd_id), in_credit_amount_sum=VALUES(in_credit_amount_sum), not_in_credit_amount_sum=VALUES(not_in_credit_amount_sum), in_settlement_amount_sum=VALUES(in_settlement_amount_sum), not_in_settlement_amount_sum=VALUES(not_in_settlement_amount_sum), provider_cnt=VALUES(provider_cnt), bonus_order_cnt=VALUES(bonus_order_cnt), bonus_user_cnt=VALUES(bonus_user_cnt), main_scan_amount=VALUES(main_scan_amount), bonus_used_amount_sum=VALUES(bonus_used_amount_sum)
-            ;
+            LEFT JOIN 
+            (
+                SELECT  bonus_id 
+                       ,bd_id 
+                       ,bdm_id 
+                       ,rm_id 
+                       ,cm_id 
+                       ,hcm_id
+                FROM opos_dw.opos_order_bonus_extend
+                WHERE DATE_FORMAT(time,'%Y-%m-%d') = '{{ ds }}'  
+            ) e
+            ON t.id = e.bonus_id
+            GROUP BY  t.city_id 
+                     ,t.bd_id 
+                     ,e.bdm_id 
+                     ,e.rm_id 
+                     ,e.cm_id 
+                     ,e.hcm_id with rollup 
+            ) t
+            ON DUPLICATE KEY UPDATE dt=VALUES(dt), city_id=VALUES(city_id), bd_id=VALUES(bd_id), bdm_id=VALUES(bdm_id), rm_id=VALUES(rm_id), cm_id=VALUES(cm_id), hcm_id=VALUES(hcm_id), in_credit_amount_sum=VALUES(in_credit_amount_sum), not_in_credit_amount_sum=VALUES(not_in_credit_amount_sum), in_settlement_amount_sum=VALUES(in_settlement_amount_sum), not_in_settlement_amount_sum=VALUES(not_in_settlement_amount_sum), provider_cnt=VALUES(provider_cnt), bonus_order_cnt=VALUES(bonus_order_cnt), bonus_user_cnt=VALUES(bonus_user_cnt), main_scan_amount=VALUES(main_scan_amount), bonus_used_amount_sum=VALUES(bonus_used_amount_sum) ;
+
         "
     """,
     dag=dag,
@@ -1063,5 +1243,15 @@ delete_old_order_bonus = BashOperator(
     dag=dag,
 )
 
+delete_old_order_bonus_extend = BashOperator(
+    task_id='delete_old_order_bonus_extend',
+    bash_command="""
+        mysql -uroot -p78c5f1142124334 -h10.52.149.112 opos_dw  -e "
+            delete from opos_dw.opos_order_bonus_extend where DATE_FORMAT(time,'%Y-%m-%d') < '{{ macros.ds_add(ds, -1) }}';
+        "
+    """,
+    dag=dag,
+)
+
 insert_order_data >> create_order_metrics_data >> create_shop_metrics_data >> delete_old_order >> delete_old_order_extend >> delete_shop_metrics
-insert_order_data >> create_bonus_metrics_data >> delete_old_order_bonus
+insert_order_data >> create_bonus_metrics_data >> delete_old_order_bonus >> delete_old_order_bonus_extend

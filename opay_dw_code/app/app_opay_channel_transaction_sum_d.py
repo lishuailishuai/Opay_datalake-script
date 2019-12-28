@@ -69,22 +69,31 @@ def app_opay_channel_transaction_sum_d_sql_task(ds):
     set hive.exec.dynamic.partition.mode=nonstrict;
     set hive.exec.parallel=true;
     insert overwrite table {db}.{table} partition (dt)
-     SELECT pay_channel,
-            out_channel_id,
-            supply_item,
-            response_code,
-            transaction_status,
-            sum(amount) AS tran_amt,
-            count(1) AS tran_c,
-            dt
-     FROM opay_dw.dwd_opay_channel_transaction_base_di
-     WHERE dt='{pt}' and create_time BETWEEN date_format(date_sub('{pt}', 1), 'yyyy-MM-dd 23') AND date_format('{pt}', 'yyyy-MM-dd 23')
-GROUP BY pay_channel,
-         out_channel_id,
-         supply_item,
-         response_code,
-         transaction_status,
-         dt
+     
+        SELECT pay_channel,
+               out_channel_id,
+               supply_item,
+               response_code,
+               transaction_status,
+               nvl(b.flag,0) flag,
+               user_type,
+               sum(amount) AS tran_amt,
+               count(1) AS tran_c,
+               a.dt
+        FROM
+          (SELECT *
+           FROM opay_dw.dwd_opay_channel_transaction_base_di
+           WHERE dt='{pt}'
+             AND create_time BETWEEN date_format(date_sub('{pt}', 1), 'yyyy-MM-dd 23') AND date_format('{pt}', 'yyyy-MM-dd 23') ) a
+        LEFT JOIN opay_dw.dim_opay_bank_response_message_df b ON a.bank_response_message=b.bank_response_message
+        GROUP BY pay_channel,
+                 out_channel_id,
+                 supply_item,
+                 response_code,
+                 transaction_status,
+                 nvl(b.flag,0),
+                 user_type,
+                 a.dt
 
     '''.format(
         pt=ds,
