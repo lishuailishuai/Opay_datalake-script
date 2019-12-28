@@ -1,4 +1,3 @@
-
 # -*- coding: utf-8 -*-
 import airflow
 from datetime import datetime, timedelta
@@ -7,7 +6,7 @@ from airflow.operators.impala_plugin import ImpalaOperator
 from utils.connection_helper import get_hive_cursor
 from airflow.operators.python_operator import PythonOperator
 from airflow.contrib.hooks.redis_hook import RedisHook
-from airflow.hooks.hive_hooks import HiveCliHook, HiveServer2Hook
+from airflow.hooks.hive_hooks import HiveCliHook
 from airflow.operators.hive_to_mysql import HiveToMySqlTransfer
 from airflow.operators.mysql_operator import MySqlOperator
 from airflow.operators.dagrun_operator import TriggerDagRunOperator
@@ -15,11 +14,12 @@ from airflow.sensors.external_task_sensor import ExternalTaskSensor
 from airflow.operators.bash_operator import BashOperator
 from airflow.sensors.named_hive_partition_sensor import NamedHivePartitionSensor
 from airflow.sensors.hive_partition_sensor import HivePartitionSensor
+from airflow.sensors.web_hdfs_sensor import WebHdfsSensor
 from airflow.sensors import UFileSensor
 from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
 from plugins.TaskTouchzSuccess import TaskTouchzSuccess
 from plugins.CountriesPublicFrame import CountriesPublicFrame
-from airflow.sensors.web_hdfs_sensor import WebHdfsSensor
+from plugins.TaskHourSuccessCountMonitor import TaskHourSuccessCountMonitor
 import json
 import logging
 from airflow.models import Variable
@@ -38,7 +38,7 @@ args = {
 } 
 
 dag = airflow.DAG( 'dwd_oride_order_cancel_df', 
-    schedule_interval="00 01 * * *", 
+    schedule_interval="00 02 * * *", 
     default_args=args,
     catchup=False) 
 
