@@ -540,9 +540,9 @@ def insert_order_data(ds, **kwargs):
     year = datetime.strptime(ds, '%Y-%m-%d').strftime('%Y')
     week = datetime.strptime(ds, '%Y-%m-%d').strftime('%W')
 
-    # insert_order(ds, airflow.macros.ds_add(ds, -1), week, year)
-    # insert_order_extend(ds, airflow.macros.ds_add(ds, -1), week, year)
-    # insert_order_bonus(ds, airflow.macros.ds_add(ds, -1), week, year)
+    insert_order(ds, airflow.macros.ds_add(ds, -1), week, year)
+    insert_order_extend(ds, airflow.macros.ds_add(ds, -1), week, year)
+    insert_order_bonus(ds, airflow.macros.ds_add(ds, -1), week, year)
     insert_order_bonus_extend(ds, airflow.macros.ds_add(ds, -1), week, year)
 
 
