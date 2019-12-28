@@ -64,13 +64,11 @@ dependence_ods_log_oride_order_skyeye_di = HivePartitionSensor(
     dag=dag
 )
 
-dwd_oride_order_base_include_test_di_task = S3KeySensor(
+dwd_oride_order_base_include_test_di_task = HivePartitionSensor(
     task_id='dwd_oride_order_base_include_test_di_task',
-    bucket_key='{hdfs_path_str}/country_code=NG/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw/dwd_oride_order_base_include_test_di",
-        pt='{{ds}}'
-    ),
-    bucket_name='opay-bi',
+    table="dwd_oride_order_base_include_test_di",
+    partition="dt='{{ds}}'",
+    schema="oride_dw",
     poke_interval=60,
     dag=dag
 )
