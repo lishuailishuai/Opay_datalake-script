@@ -96,88 +96,31 @@ def app_opay_transaction_user_cnt_d_sql_task(ds):
     with
         transaction_data as (
             select 
-                country_code, top_consume_scenario, nvl(client_source, '-') as client_source, originator_role, originator_kyc_level, originator_id
-            from {db}.dwd_opay_transaction_record_di
-            where dt = '{pt}' and create_time BETWEEN date_format(date_sub('{pt}', 1), 'yyyy-MM-dd 23') AND date_format('{pt}', 'yyyy-MM-dd 23') 
-                and originator_type = 'USER' and originator_id is not null and originator_id != ''
+                    country_code, top_consume_scenario, nvl(client_source, '-') as client_source, originator_role, originator_kyc_level, originator_id
+                from {db}.dwd_opay_transaction_record_di
+                where dt = '{pt}' and create_time BETWEEN date_format(date_sub('{pt}', 1), 'yyyy-MM-dd 23') AND date_format('{pt}', 'yyyy-MM-dd 23') 
+                    and originator_type = 'USER' and originator_id is not null and originator_id != ''
         ),
-        consume_scenario_dau as (
+        trans_dau_data as (
             select 
-                top_consume_scenario,
-                'ALL' as client_source,
-                'ALL' as originator_role,
-                'ALL' as originator_kyc_level, 
+                nvl(top_consume_scenario, 'ALL') as top_consume_scenario,
+                nvl(client_source, 'ALL') as client_source,
+                nvl(originator_role, 'ALL') as originator_role,
+                nvl(originator_kyc_level, 'ALL') as originator_kyc_level, 
                 'ALL' as new_user_7d,
                 count(distinct originator_id) originator_cnt,
-                country_code,
-                '{pt}'
+                nvl(country_code, 'ALL') as country_code
             from transaction_data
-            group by country_code, top_consume_scenario
-        ),
-        client_source_dau as (
-            select 
-                'ALL' as top_consume_scenario,
-                client_source,
-                'ALL' as originator_role,
-                'ALL' as originator_kyc_level, 
-                'ALL' as new_user_7d,
-                count(distinct originator_id) originator_cnt,
-                country_code,
-                '{pt}'
-            from transaction_data
-            group by country_code, client_source
-        ),
-        originator_role_dau as (
-            select 
-                'ALL' as top_consume_scenario,
-                'ALL' as client_source,
-                originator_role,
-                'ALL' as originator_kyc_level, 
-                'ALL' as new_user_7d,
-                count(distinct originator_id) originator_cnt,
-                country_code,
-                '{pt}'
-            from transaction_data
-            group by country_code, originator_role
-        ),
-        originator_kyc_level_dau as (
-            select
-                'ALL' as top_consume_scenario,
-                'ALL' as client_source,
-                'ALL' as originator_role,
-                originator_kyc_level, 
-                'ALL' as new_user_7d,
-                count(distinct originator_id) originator_cnt,
-                country_code,
-                '{pt}'
-            from transaction_data
-            group by country_code, originator_kyc_level
-        ),
-        scenario_source_dau as (
-            select 
-                top_consume_scenario,
-                client_source,
-                'ALL' as originator_role,
-                'ALL' as originator_kyc_level, 
-                'ALL' as new_user_7d,
-                count(distinct originator_id) originator_cnt,
-                country_code,
-                '{pt}'
-            from transaction_data
-            group by country_code, top_consume_scenario, client_source
-        ),
-        scenario_role_dau as (
-            select 
-                top_consume_scenario,
-                'ALL' as client_source,
-                originator_role,
-                'ALL' as originator_kyc_level, 
-                'ALL' as new_user_7d,
-                count(distinct originator_id) originator_cnt,
-                country_code,
-                '{pt}'
-            from transaction_data
-            group by country_code, top_consume_scenario, originator_role
+            group by top_consume_scenario, client_source, originator_role, originator_kyc_level,country_code
+            GROUPING SETS ( 
+                (top_consume_scenario, country_code), 
+                (client_source,  country_code), 
+                (top_consume_scenario, client_source, country_code), 
+                (top_consume_scenario, originator_role, country_code),
+                (originator_role, country_code),
+                (originator_kyc_level, country_code),
+                country_code
+            )
         ),
         new_user_7d_dau as (
             select 
@@ -187,8 +130,7 @@ def app_opay_transaction_user_cnt_d_sql_task(ds):
                 'ALL' as originator_kyc_level, 
                 'new_user_7d' as new_user_7d,
                 count(distinct user_7d.user_id) originator_cnt,
-                trans_data.country_code,
-                '{pt}'
+                trans_data.country_code
             from (
                 select user_id from (
                     select 
@@ -202,21 +144,10 @@ def app_opay_transaction_user_cnt_d_sql_task(ds):
             
         )
     insert overwrite table {db}.{table} partition(country_code, dt)
-    select
-    *
-    from consume_scenario_dau
+    select *, '{pt}' from trans_dau_data
+    
     union all
-    select * from client_source_dau
-    union all
-    select * from originator_role_dau
-    union all
-    select * from originator_kyc_level_dau
-    union all
-    select * from scenario_role_dau
-    union all
-    select * from scenario_source_dau
-    union all
-    select * from new_user_7d_dau
+    select *, '{pt}' from new_user_7d_dau
 
     '''.format(
         pt=ds,
