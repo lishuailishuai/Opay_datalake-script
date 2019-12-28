@@ -57,6 +57,31 @@ ods_sqoop_base_data_order_cancel_df_tesk = UFileSensor(
 )
 
 
+# 依赖前一天分区
+ods_binlog_data_order_hi_prev_day_task = WebHdfsSensor(
+    task_id='ods_binlog_data_order_hi_prev_day_task',
+    filepath='{hdfs_path_str}/dt={now_day}/hour=00/_SUCCESS'.format(
+        hdfs_path_str="/user/hive/warehouse/oride_dw_ods.db/ods_binlog_data_order_hi",
+        pt='{{ds}}',
+        now_day='{{macros.ds_add(ds, +1)}}'
+    ),
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
+# 依赖前一天分区
+ods_sqoop_base_data_country_conf_df_prev_day_task = UFileSensor(
+    task_id='ods_sqoop_base_data_country_conf_df_prev_day_task',
+    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="oride_dw_sqoop/oride_data/data_country_conf",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
+
 ##----------------------------------------- 变量 ---------------------------------------## 
 
 db_name="oride_dw"
@@ -97,17 +122,48 @@ def dwd_oride_order_cancel_df_sql_task(ds):
 
     select
 
-        
-id,--订单 ID
-cancel_role,--取消人角色(1: 用户, 2: 司机, 3:系统 4:Admin)
-cancel_time,--取消时间
-cancel_type,--取消原因类型
-cancel_reason,--取消原因
-'nal' as country_code,
-'{pt}' as dt
-        
+        cancel.order_id,--订单 ID
+        cancel_role,--取消人角色(1: 用户, 2: 司机, 3:系统 4:Admin)
+        cancel_time,--取消时间
+        cancel_type,--取消原因类型
+        cancel_reason,--取消原因
+        nvl(country.country_code,'nal') as country_code,
+        '{pt}' as dt
+    from 
+    (select   
+        id as order_id,--订单 ID
+        cancel_role,--取消人角色(1: 用户, 2: 司机, 3:系统 4:Admin)
+        cancel_time,--取消时间
+        cancel_type,--取消原因类型
+        cancel_reason --取消原因
     from oride_dw_ods.ods_sqoop_base_data_order_cancel_df
     where dt='{pt}'
+    ) cancel
+    left outer join
+    (SELECT 
+             id AS order_id ,
+             --订单 ID
+
+             country_id,  --国家ID
+
+             row_number() OVER(partition BY id ORDER BY updated_at desc,pos DESC) AS rn1
+
+        FROM oride_dw_ods.ods_binlog_data_order_hi
+
+        WHERE concat_ws(' ',dt,hour) BETWEEN '{pt} 00' AND '{now_day} 00' --取昨天1天数据与今天早上00数据
+
+        AND from_unixtime(create_time,'yyyy-MM-dd') = '{pt}'
+
+        AND op IN ('c','u')
+
+         ) t2
+where rn1=1) ord
+on cancel.order_id=ord.order_id
+left outer join
+(SELECT *
+   FROM oride_dw_ods.ods_sqoop_base_data_country_conf_df 
+   WHERE dt='{pt}') country
+on ord.country_id=country.id;
 
     
     
