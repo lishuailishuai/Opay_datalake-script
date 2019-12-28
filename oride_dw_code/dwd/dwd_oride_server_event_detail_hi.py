@@ -60,7 +60,7 @@ if code_map["id"].lower()=="ufile":
     # 依赖前一小时分区
     dependence_server_event_prev_hour_task = S3KeySensor(
         task_id="dependence_server_event_prev_hour_task",
-        filepath='{hdfs_path_str}/dt={pt}/hour={hour}/_SUCCESS'.format(
+        bucket_key='{hdfs_path_str}/dt={pt}/hour={hour}/_SUCCESS'.format(
             hdfs_path_str="oride_buried/ordm.server_event",
             pt='{{ds}}',
             hour='{{ execution_date.strftime("%H") }}'
@@ -75,7 +75,7 @@ else:
     print("成功")
     dependence_server_event_prev_hour_task = S3KeySensor(
         task_id="dependence_server_event_prev_hour_task",
-        filepath='{hdfs_path_str}/dt={pt}/hour={hour}/_SUCCESS'.format(
+        bucket_key='{hdfs_path_str}/dt={pt}/hour={hour}/_SUCCESS'.format(
             hdfs_path_str="oride_buried/ordm.server_event",
             pt='{{ds}}',
             hour='{{ execution_date.strftime("%H") }}'
