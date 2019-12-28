@@ -41,48 +41,23 @@ dag = airflow.DAG('dwd_driver_track_data_di',
                   default_args=args,
                   catchup=False)
 
-##----------------------------------------- 变量 ---------------------------------------##
-
-db_name="oride_dw"
-table_name="dwd_driver_track_data_di"
 ##----------------------------------------- 依赖 ---------------------------------------##
 
-#获取变量
-code_map=eval(Variable.get("sys_flag"))
-
-#判断ufile(cdh环境)
-if code_map["id"].lower()=="ufile":
-
-    dependence_ods_log_driver_track_data_hi_task = S3KeySensor(
-        task_id='dependence_ods_log_driver_track_data_hi_task',
-        filepath="{hdfs_path_str}/dt={pt}/hour=23/_SUCCESS".format(
-            hdfs_path_str="oride_buried/ordm.driver_data",
-            pt="{{ds}}"
-        ),
-        bucket_name='opay-bi',
-        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-        dag=dag
-    )
-
-    # 路径
-    hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
-else:
-    print("成功")
 # 依赖前一天分区
-    dependence_ods_log_driver_track_data_hi_task = S3KeySensor(
-        task_id='dependence_ods_log_driver_track_data_hi_task',
-        bucket_key="{hdfs_path_str}/dt={pt}/hour=23/_SUCCESS".format(
-            hdfs_path_str="oride_buried/ordm.driver_data",
-            pt="{{ds}}"
-        ),
-        bucket_name='opay-bi',
-        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-        dag=dag
-    )
-    hdfs_path = "oss://opay-datalake/oride/oride_dw/" + table_name
+dependence_ods_log_driver_track_data_hi_task = HivePartitionSensor(
+    task_id="dependence_ods_log_driver_track_data_hi_task",
+    table="ods_log_driver_track_data_hi",
+    partition="dt='{{ ds }}'",
+    schema="oride_dw_ods",
+    poke_interval=60,
+    dag=dag
+)
 
+##----------------------------------------- 变量 ---------------------------------------##
 
-
+db_name = "oride_dw"
+table_name = "dwd_driver_track_data_di"
+hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
 
 def fun_task_timeout_monitor(ds,dag,**op_kwargs):
