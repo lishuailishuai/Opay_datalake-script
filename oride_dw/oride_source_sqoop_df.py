@@ -50,7 +50,7 @@ check_data_driver_records_finish = SqlSensor(
         from
             oride_data.data_driver_records_finish
         where
-            from_unixtime(day, "%Y-%m-%d") = '{{ ds }}'
+            from_unixtime(day, "%Y-%m-%d") = '{{ macros.ds_add(ds, -2) }}'
     ''',
     dag=dag
 )
