@@ -29,7 +29,7 @@ import os
 
 args = {
     'owner': 'lili.chen',
-    'start_date': datetime(2019, 12, 28),
+    'start_date': datetime(2019, 12, 25),
     'depends_on_past': False,
     'retries': 3,
     'retry_delay': timedelta(minutes=2),
