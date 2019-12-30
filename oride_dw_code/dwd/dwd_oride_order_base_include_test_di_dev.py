@@ -59,7 +59,7 @@ ods_binlog_base_data_order_hi_prev_day_task = OssSensor(
 )
 
 # 依赖前一天分区
-ods_sqoop_base_data_order_payment_df_prev_day_task = UFileSensor(
+ods_sqoop_base_data_order_payment_df_prev_day_task = OssSensor(
     task_id='ods_sqoop_base_data_order_payment_df_prev_day_task',
     filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
         hdfs_path_str="oride_dw_sqoop/oride_data/data_order_payment",
@@ -72,7 +72,7 @@ ods_sqoop_base_data_order_payment_df_prev_day_task = UFileSensor(
 
 
 # 依赖前一天分区
-ods_sqoop_base_data_country_conf_df_prev_day_task = UFileSensor(
+ods_sqoop_base_data_country_conf_df_prev_day_task = OssSensor(
     task_id='ods_sqoop_base_data_country_conf_df_prev_day_task',
     filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
         hdfs_path_str="oride_dw_sqoop/oride_data/data_country_conf",
