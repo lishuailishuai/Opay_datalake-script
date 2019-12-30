@@ -36,7 +36,7 @@ args = {
 }
 
 dag = airflow.DAG('dim_opos_bd_relation_df',
-                  schedule_interval="10 01 * * *",
+                  schedule_interval="20 01 * * *",
                   default_args=args,
                   catchup=False)
 
@@ -86,6 +86,18 @@ ods_sqoop_base_bd_city_df_task = OssSensor(
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
+
+ods_sqoop_base_pre_opos_payment_order_di_task = OssSensor(
+    task_id='ods_sqoop_base_pre_opos_payment_order_di_task',
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="opos_dw_sqoop_di/pre_ptsp_db/pre_opos_payment_order",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
 
 ##----------------------------------------- 变量 ---------------------------------------##
 
@@ -534,5 +546,5 @@ dim_opos_bd_info_df_task >> dim_opos_bd_relation_df_task
 ods_sqoop_base_bd_admin_users_df_task >> dim_opos_bd_relation_df_task
 ods_sqoop_base_bd_shop_df_task >> dim_opos_bd_relation_df_task
 ods_sqoop_base_bd_city_df_task >> dim_opos_bd_relation_df_task
-
+ods_sqoop_base_pre_opos_payment_order_di_task >> dim_opos_bd_relation_df_task
 
