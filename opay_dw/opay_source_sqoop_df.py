@@ -87,6 +87,7 @@ table_list = [
     ("opay_account","accounting_record", "opay_db_3318", "base", 1),
 
     ("opay_overlord","overlord_user", "opay_db_3322", "base", 1),
+    ("opay_overlord","terminal", "opay_db_3322", "base", 1),
 
     ("opay_merchant","merchant", "opay_db_3322", "base", 1),
 
