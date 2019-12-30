@@ -616,8 +616,6 @@ def dirver_daily_summary_insert(ds, **kwargs):
         p.start()
     for p in processes:
         p.join()
-    # close
-    cursor.close()
 
 def dirver_daily_summary_process(rows, index):
     logging.info('insert rows num %d, Pid[%d]', index, os.getpid())
