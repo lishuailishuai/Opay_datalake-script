@@ -64,12 +64,12 @@ db_name,table_name,conn_id,prefix_name,priority_weight,server_name (采集配置
 
 table_list = [
 
-    ("oride_data", "data_driver", "sqoop_db", "base", 3, "oride_data", "false"),
-    ("oride_data", "data_driver_comment", "sqoop_db", "base", 3, "oride_data", "false"),
-    ("oride_data", "data_driver_extend", "sqoop_db", "base", 3, "oride_data", "false"),
-    ("oride_data", "data_order", "sqoop_db", "base", 3, "oride_data", "false"),
-    ("oride_data", "data_order_payment", "sqoop_db", "base", 3, "oride_data", "false"),
-    ("oride_data", "data_user_extend", "sqoop_db", "base", 3, "oride_data", "false"),
+    ("oride_data", "data_driver", "sqoop_db", "base", 3, "oride_data", "true"),
+    ("oride_data", "data_driver_comment", "sqoop_db", "base", 3, "oride_data", "true"),
+    ("oride_data", "data_driver_extend", "sqoop_db", "base", 3, "oride_data", "true"),
+    ("oride_data", "data_order", "sqoop_db", "base", 3, "oride_data", "true"),
+    ("oride_data", "data_order_payment", "sqoop_db", "base", 3, "oride_data", "true"),
+    ("oride_data", "data_user_extend", "sqoop_db", "base", 3, "oride_data", "true"),
     ("oride_data", "data_user_comment", "sqoop_db", "base", 3, "oride_data", "false"),
     ("oride_data", "data_user", "sqoop_db", "base", 3, "oride_data", "false"),
     ("oride_data", "data_user_recharge", "sqoop_db", "base", 3, "oride_data", "false"),
