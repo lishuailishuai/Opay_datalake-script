@@ -70,15 +70,6 @@ ods_sqoop_base_data_order_payment_df_prev_day_task = UFileSensor(
     dag=dag
 )
 
-# 依赖前一天分区
-oride_client_event_detail_prev_day_task = HivePartitionSensor(
-    task_id="oride_client_event_detail_prev_day_task",
-    table="dwd_oride_client_event_detail_hi",
-    partition="""dt='{{ ds }}' and hour='23'""",
-    schema="oride_dw",
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
 
 # 依赖前一天分区
 ods_sqoop_base_data_country_conf_df_prev_day_task = UFileSensor(
@@ -104,7 +95,7 @@ def fun_task_timeout_monitor(ds, dag, **op_kwargs):
     dag_ids = dag.dag_id
 
     tb = [
-        {"db": "oride_dw", "table": "{dag_name}".format(dag_name=dag_ids),
+        {"db": "oride_dw", "table": "{dag_name}".format(dag_name=table_name),
          "partition": "country_code=NG/dt={pt}".format(pt=ds), "timeout": "3600"}
     ]
 
