@@ -2,19 +2,18 @@ import airflow
 from datetime import datetime, timedelta
 from airflow.operators.hive_operator import HiveOperator
 from airflow.operators.impala_plugin import ImpalaOperator
-from utils.connection_helper import get_hive_cursor
+from utils.connection_helper import get_hive_cursor, get_db_conn
 from airflow.operators.python_operator import PythonOperator
 from airflow.contrib.hooks.redis_hook import RedisHook
-from airflow.hooks.hive_hooks import HiveCliHook
 from airflow.operators.hive_to_mysql import HiveToMySqlTransfer
 from airflow.operators.mysql_operator import MySqlOperator
 from airflow.sensors.hive_partition_sensor import HivePartitionSensor
+from multiprocessing import Process
 import json
 import logging
 from airflow.models import Variable
 import requests
 import os
-
 
 args = {
     'owner': 'root',
@@ -576,10 +575,9 @@ clear_driver_daily_summary = MySqlOperator(
     """,
     dag=dag)
 
-driver_daily_summary_to_msyql = HiveToMySqlTransfer(
-    task_id='driver_daily_summary_to_msyql',
-    sql="""
-            SELECT
+def dirver_daily_summary_insert(ds, **kwargs):
+    sql = """
+        SELECT
                 null as id,
                 dt,
                 driver_id,
@@ -601,10 +599,54 @@ driver_daily_summary_to_msyql = HiveToMySqlTransfer(
             FROM
                 dashboard.oride_driver_daily_summary
             WHERE
-                dt='{{ ds }}'
-        """,
-    mysql_table='data_driver_report',
-    dag=dag)
+                dt='{ds}'
+    """.format(ds=ds)
+    cursor = get_hive_cursor()
+    logging.info("run sql, %s", sql)
+    cursor.execute(sql)
+    results = cursor.fetchall()
+    part_size = 1000
+    index = 0
+    processes = []
+    while index < len(results):
+        p = Process(target=dirver_daily_summary_process,
+                    args=(results[index:index + part_size], index))
+        index += part_size
+        processes.append(p)
+        p.start()
+    for p in processes:
+        p.join()
+    # close
+    cursor.close()
+
+def dirver_daily_summary_process(rows, index):
+    logging.info('insert rows num %d, Pid[%d]', index, os.getpid())
+    db_conn = get_db_conn()
+    db_conn.autocommit(False)
+    db_conn.commit()
+    table = 'data_driver_report'
+    cur = db_conn.cursor()
+    for row in rows:
+        lst = []
+        for cell in row:
+            lst.append(cell)
+        values = tuple(lst)
+        placeholders = ["%s", ] * len(values)
+        sql = "INSERT INTO "
+        sql += "{0} VALUES ({1})".format(
+            table,
+            ",".join(placeholders))
+        cur.execute(sql, values)
+
+    db_conn.commit()
+    db_conn.close()
+
+driver_daily_summary_to_msyql = PythonOperator(
+    task_id='driver_daily_summary_to_msyql',
+    python_callable=dirver_daily_summary_insert,
+    provide_context=True,
+    dag=dag
+)
 
 refresh_impala = ImpalaOperator(
     task_id = 'refresh_impala',
