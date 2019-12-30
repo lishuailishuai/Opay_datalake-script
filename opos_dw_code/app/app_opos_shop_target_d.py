@@ -182,8 +182,8 @@ bonus_order as (
   ,bd_id
   
   ,sum(use_amount) as bonus_order_amt
-  ,sum(bonus_amount) as sweep_amt
-  ,nvl(sum(use_amount)/sum(bonus_amount),0) as bonus_use_percent
+  ,sum(amount) as sweep_amt
+  ,nvl(sum(use_amount)/sum(amount),0) as bonus_use_percent
   from
   opos_dw.dwd_opos_bonus_record_di 
   where 

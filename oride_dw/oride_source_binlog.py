@@ -218,8 +218,14 @@ if table_list!='':
                         echo "FATAL {hdfs_data_dir} is empty"
                         exit 1
                     else
-                        echo "DATA EXPORT Successed ......"
+
+                        sleep 5
+                        
                         $HADOOP_HOME/bin/hadoop fs -touchz {hdfs_data_dir}/_SUCCESS
+
+                        sleep 5
+
+                        echo "DATA EXPORT Successed ......"
                     fi
                 fi
             """.format(

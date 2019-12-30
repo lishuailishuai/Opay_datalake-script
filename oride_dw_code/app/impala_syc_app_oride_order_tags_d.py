@@ -16,6 +16,7 @@ from datetime import datetime, timedelta
 from plugins.DingdingAlert import DingdingAlert
 import re
 import logging
+from airflow.sensors.s3_key_sensor import S3KeySensor
 
 #comwx = ComwxApi('wwd26d45f97ea74ad2', 'BLE_v25zCmnZaFUgum93j3zVBDK-DjtRkLisI_Wns4g', '1000011')
 dingding_alert = DingdingAlert('https://oapi.dingtalk.com/robot/send?access_token=928e66bef8d88edc89fe0f0ddd52bfa4dd28bd4b1d24ab4626c804df8878bb48')
@@ -63,11 +64,11 @@ dependence_ods_log_oride_order_skyeye_di = HivePartitionSensor(
     dag=dag
 )
 
-dependence_ods_oride_data_order = HivePartitionSensor(
-    task_id="dependence_ods_oride_data_order",
-    table="ods_sqoop_base_data_order_df",
-    partition="dt='{{ ds }}'",
-    schema="oride_dw_ods",
+dwd_oride_order_base_include_test_di_task = HivePartitionSensor(
+    task_id='dwd_oride_order_base_include_test_di_task',
+    table="dwd_oride_order_base_include_test_di",
+    partition="dt='{{ds}}'",
+    schema="oride_dw",
     poke_interval=60,
     dag=dag
 )
@@ -157,22 +158,22 @@ insert_result_to_impala = HiveOperator(
             select 
                 do.city_id as city_id,
                 'null' as city_name,
-                do.serv_type as serv_type,
+                do.driver_serv_type as serv_type,
                 t.tag,
                 count(distinct t.order_id) as orders 
             from 
                 (select 
                     tags.tag as tag,
                     order_id
-                from ods_log_oride_order_skyeye_di 
+                from oride_dw_ods.ods_log_oride_order_skyeye_di 
                 lateral view posexplode(tag_ids) tags as pos, tag 
                 where dt='{pt}' 
                 ) as t
-            inner join (select * from oride_dw_ods.ods_sqoop_base_data_order_df where dt='{pt}') as do  
-            where t.order_id = do.id and 
+            inner join (select * from oride_dw.dwd_oride_order_base_include_test_di where dt='{pt}') as do  
+            where t.order_id = do.order_id and 
                 from_unixtime(do.create_time, 'yyyy-MM-dd') = '{pt}'
             group by 
-                do.city_id, do.serv_type, t.tag
+                do.city_id, do.driver_serv_type, t.tag
         ),
         --城市全部类型
         tag_city_data as (
@@ -186,12 +187,12 @@ insert_result_to_impala = HiveOperator(
                 (select 
                     tags.tag as tag,
                     order_id
-                from ods_log_oride_order_skyeye_di 
+                from oride_dw_ods.ods_log_oride_order_skyeye_di 
                 lateral view posexplode(tag_ids) tags as pos, tag 
                 where dt='{pt}' 
                 ) as t
-            inner join (select * from oride_dw_ods.ods_sqoop_base_data_order_df where dt='{pt}') as do  
-            where t.order_id = do.id and 
+            inner join (select * from oride_dw.dwd_oride_order_base_include_test_di where dt='{pt}') as do  
+            where t.order_id = do.order_id and 
                 from_unixtime(do.create_time, 'yyyy-MM-dd') = '{pt}'
             group by 
                 do.city_id, t.tag
@@ -201,22 +202,22 @@ insert_result_to_impala = HiveOperator(
             select 
                 0 as city_id,
                 'null' as city_name,
-                do.serv_type as serv_type,
+                do.driver_serv_type as serv_type,
                 t.tag,
                 count(distinct t.order_id) as orders 
             from 
                 (select 
                     tags.tag as tag,
                     order_id
-                from ods_log_oride_order_skyeye_di 
-                lateral view posexplode(tag_ids) tags as pos, tag 
+                from oride_dw_ods.ods_log_oride_order_skyeye_di 
+                lateral view posexplode(tag_ids) tags as pos,tag 
                 where dt='{pt}' 
                 ) as t
-            inner join (select * from oride_dw_ods.ods_sqoop_base_data_order_df where dt='{pt}') as do  
-            where t.order_id = do.id and 
+            inner join (select * from oride_dw.dwd_oride_order_base_include_test_di where dt='{pt}') as do  
+            where t.order_id = do.order_id and 
                 from_unixtime(do.create_time, 'yyyy-MM-dd') = '{pt}'
             group by 
-                do.serv_type, t.tag
+                do.driver_serv_type, t.tag
         ),
         --全部城市，全部类型
         tag_all_data as (
@@ -226,7 +227,7 @@ insert_result_to_impala = HiveOperator(
                 -1 as serv_type,
                 tags.tag as tag,
                 count(distinct order_id) as orders
-            from ods_log_oride_order_skyeye_di 
+            from oride_dw_ods.ods_log_oride_order_skyeye_di 
             lateral view posexplode(tag_ids) tags as pos, tag 
             where dt='{pt}' 
             group by tags.tag  
@@ -289,6 +290,6 @@ refresh_impala_table_self = ImpalaOperator(
 
 dependence_data_city_conf >> sleep_time2
 dependence_ods_log_oride_order_skyeye_di >> sleep_time
-dependence_ods_oride_data_order >> sleep_time
+dwd_oride_order_base_include_test_di_task >> sleep_time
 sleep_time2 >> refresh_impala_table_other
 sleep_time2 >> sleep_time >> create_result_impala_table >> drop_partitons_from_table >> insert_result_to_impala >> refresh_impala_table_self

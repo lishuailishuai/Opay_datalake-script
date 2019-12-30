@@ -5,6 +5,7 @@ from airflow.operators.hive_to_mysql import HiveToMySqlTransfer
 from airflow.operators.mysql_operator import MySqlOperator
 from airflow.sensors.hive_partition_sensor import HivePartitionSensor
 from airflow.operators.bash_operator import BashOperator
+from airflow.models import Variable
 
 args = {
     'owner': 'linan',
@@ -21,19 +22,43 @@ dag = airflow.DAG(
     'dwd_oride_driver_cheating_detection_hi',
     schedule_interval="30 * * * *",
     default_args=args)
+##----------------------------------------- 变量 ---------------------------------------##
 
-dependence_dwd_oride_driver_cheating_detection_hi_prev_hour_task = HivePartitionSensor(
-    task_id="dwd_oride_driver_cheating_detection_hi_prev_hour_task",
-    table="server_event",
-    partition="""dt='{{ ds }}' and hour='{{ execution_date.strftime("%H") }}'""",
-    schema="oride_source",
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
+db_name="oride_dw"
+table_name="dwd_oride_driver_cheating_detection_hi"
 
-table_name = "dwd_oride_driver_cheating_detection_hi"
-hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
+##----------------------------------------- 依赖 ---------------------------------------##
 
+#获取变量
+code_map=eval(Variable.get("sys_flag"))
+
+#判断ufile(cdh环境)
+if code_map["id"].lower()=="ufile":
+
+    dependence_dwd_oride_driver_cheating_detection_hi_prev_hour_task = HivePartitionSensor(
+        task_id="dwd_oride_driver_cheating_detection_hi_prev_hour_task",
+        table="server_event",
+        partition="""dt='{{ ds }}' and hour='{{ execution_date.strftime("%H") }}'""",
+        schema="oride_source",
+        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+        dag=dag
+    )
+    # 路径
+    hdfs_path="ufile://opay-datalake/oride/oride_dw/"+table_name
+else:
+    print("成功")
+
+    dependence_dwd_oride_driver_cheating_detection_hi_prev_hour_task = HivePartitionSensor(
+        task_id="dwd_oride_driver_cheating_detection_hi_prev_hour_task",
+        table="server_event",
+        partition="""dt='{{ ds }}' and hour='{{ execution_date.strftime("%H") }}'""",
+        schema="oride_source",
+        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+        dag=dag
+    )
+
+    # 路径
+    hdfs_path = "oss://opay-datalake/oride/oride_dw/" + table_name
 ##----------------------------------------- 脚本 ---------------------------------------##
 
 dwd_oride_driver_cheating_detection_hi_task = HiveOperator(

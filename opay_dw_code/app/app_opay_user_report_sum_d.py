@@ -105,7 +105,7 @@ def app_opay_user_report_sum_d_sql_task(ds):
      (SELECT user_id,
              ROLE,
              mobile,
-             nvl(register_client,'App') register_client,
+             register_client,
              kyc_level,
              dt,
              row_number() over(partition BY user_id

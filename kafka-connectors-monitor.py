@@ -5,6 +5,8 @@ from airflow.operators.python_operator import PythonOperator
 from plugins.DingdingAlert import DingdingAlert
 import requests
 from airflow.models import Variable
+import logging
+
 
 args = {
     'owner': 'zhenqian.zhang',
@@ -33,6 +35,7 @@ ALI_SERVER_LIST = [
 
 CONNECTORS_URL = 'http://%s:8083/connectors'
 STATUS_URL = 'http://%s:8083/connectors/%s/status'
+TASK_RESTART_URL = 'http://%s:8083/connectors/%s/tasks/%s/restart'
 
 def connectors_status_check():
     SERVER_LIST = None
@@ -65,6 +68,11 @@ def connectors_status_check():
                         error_msg=task['trace']
                     )
                     dingding_alet.send(msg)
+                    # 重启任务
+                    restart_url = TASK_RESTART_URL % (server_ip, connector, task['id'])
+                    requests.post(restart_url)
+                    logging.info('ip %s, connector %s, task id %d restart. url %s', server_ip, connector, task['id'], restart_url)
+
 
 connectors_status = PythonOperator(
     task_id='connectors_status',

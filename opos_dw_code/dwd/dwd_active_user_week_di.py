@@ -97,9 +97,14 @@ set hive.strict.checks.cartesian.product=false;
 with
 sender_id as (
   select
-  create_year
-  ,create_week
-  ,concat(create_year,substr(concat('0',cast(create_week as string)),-2)) as combine_year_week 
+  concat(
+  case 
+  when create_week=1 and cast(substr(dt,-2) as int)>8 then cast(cast(substr(dt,0,4) as int)+1 as string)
+  when create_week=53 and cast(substr(dt,-2) as int)<8 then cast(cast(substr(dt,0,4) as int)-1 as string)
+  else substr(dt,0,4)
+  end
+  ,lpad(create_week,2,'0') 
+  ) as combine_year_week 
   ,city_id
   ,sender_id
   from
@@ -110,8 +115,14 @@ sender_id as (
   and dt<='{after_6_day}'
   and trade_status='SUCCESS'
   group by
-  create_year
-  ,create_week
+  concat(
+  case 
+  when create_week=1 and cast(substr(dt,-2) as int)>8 then cast(cast(substr(dt,0,4) as int)+1 as string)
+  when create_week=53 and cast(substr(dt,-2) as int)<8 then cast(cast(substr(dt,0,4) as int)-1 as string)
+  else substr(dt,0,4)
+  end
+  ,lpad(create_week,2,'0') 
+  )
   ,city_id
   ,sender_id
 ),
@@ -119,9 +130,14 @@ sender_id as (
 --02.再求首单用户
 first_order_sender_id as (
   select
-  create_year
-  ,create_week
-  ,concat(create_year,substr(concat('0',cast(create_week as string)),-2)) as combine_year_week 
+  concat(
+  case 
+  when create_week=1 and cast(substr(dt,-2) as int)>8 then cast(cast(substr(dt,0,4) as int)+1 as string)
+  when create_week=53 and cast(substr(dt,-2) as int)<8 then cast(cast(substr(dt,0,4) as int)-1 as string)
+  else substr(dt,0,4)
+  end
+  ,lpad(create_week,2,'0') 
+  ) as combine_year_week 
   ,city_id
   ,sender_id
   from
@@ -133,17 +149,21 @@ first_order_sender_id as (
   and trade_status='SUCCESS'
   and first_order='1'
   group by
-  create_year
-  ,create_week
+  concat(
+  case 
+  when create_week=1 and cast(substr(dt,-2) as int)>8 then cast(cast(substr(dt,0,4) as int)+1 as string)
+  when create_week=53 and cast(substr(dt,-2) as int)<8 then cast(cast(substr(dt,0,4) as int)-1 as string)
+  else substr(dt,0,4)
+  end
+  ,lpad(create_week,2,'0') 
+  )
   ,city_id
   ,sender_id
 )
 
 insert overwrite table opos_dw.dwd_active_user_week_di partition(country_code,dt)
 select
-a.create_year
-,a.create_week
-,a.combine_year_week
+a.combine_year_week
 ,a.city_id
 ,a.sender_id
 ,if(b.sender_id is null,'0','1') as first_order
@@ -162,9 +182,14 @@ and a.sender_id=b.sender_id;
 with
 receipt_id as (
   select
-  create_year
-  ,create_week
-  ,concat(create_year,substr(concat('0',cast(create_week as string)),-2)) as combine_year_week 
+  concat(
+  case 
+  when create_week=1 and cast(substr(dt,-2) as int)>8 then cast(cast(substr(dt,0,4) as int)+1 as string)
+  when create_week=53 and cast(substr(dt,-2) as int)<8 then cast(cast(substr(dt,0,4) as int)-1 as string)
+  else substr(dt,0,4)
+  end
+  ,lpad(create_week,2,'0') 
+  ) as combine_year_week 
   ,city_id
   ,receipt_id
   from
@@ -175,8 +200,14 @@ receipt_id as (
   and dt<='{after_6_day}'
   and trade_status='SUCCESS'
   group by
-  create_year
-  ,create_week
+  concat(
+  case 
+  when create_week=1 and cast(substr(dt,-2) as int)>8 then cast(cast(substr(dt,0,4) as int)+1 as string)
+  when create_week=53 and cast(substr(dt,-2) as int)<8 then cast(cast(substr(dt,0,4) as int)-1 as string)
+  else substr(dt,0,4)
+  end
+  ,lpad(create_week,2,'0') 
+  )
   ,city_id
   ,receipt_id
 ),
@@ -184,9 +215,14 @@ receipt_id as (
 --04.求有多少新增商铺
 first_order_receipt_id as (
   select
-  create_year
-  ,create_week
-  ,concat(create_year,substr(concat('0',cast(create_week as string)),-2)) as combine_year_week 
+  concat(
+  case 
+  when create_week=1 and cast(substr(dt,-2) as int)>8 then cast(cast(substr(dt,0,4) as int)+1 as string)
+  when create_week=53 and cast(substr(dt,-2) as int)<8 then cast(cast(substr(dt,0,4) as int)-1 as string)
+  else substr(dt,0,4)
+  end
+  ,lpad(create_week,2,'0') 
+  ) as combine_year_week 
   ,city_id
   ,receipt_id
   from
@@ -199,17 +235,21 @@ first_order_receipt_id as (
   and created_at>='{pt}'
   and created_at<='{after_6_day}'
   group by
-  create_year
-  ,create_week
+  concat(
+  case 
+  when create_week=1 and cast(substr(dt,-2) as int)>8 then cast(cast(substr(dt,0,4) as int)+1 as string)
+  when create_week=53 and cast(substr(dt,-2) as int)<8 then cast(cast(substr(dt,0,4) as int)-1 as string)
+  else substr(dt,0,4)
+  end
+  ,lpad(create_week,2,'0') 
+  )
   ,city_id
   ,receipt_id
 )
 
 insert overwrite table opos_dw.dwd_active_shop_week_di partition(country_code,dt)
 select
-a.create_year
-,a.create_week
-,a.combine_year_week
+a.combine_year_week
 ,a.city_id
 ,a.receipt_id
 ,if(b.receipt_id is null,'0','1') as first_order
@@ -223,6 +263,7 @@ first_order_receipt_id as b
 on a.combine_year_week=b.combine_year_week
 and a.city_id=b.city_id
 and a.receipt_id=b.receipt_id;
+
 
 
 
