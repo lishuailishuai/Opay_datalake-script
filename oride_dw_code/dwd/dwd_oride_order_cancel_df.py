@@ -122,7 +122,7 @@ else:
     ods_sqoop_base_data_country_conf_df_prev_day_task = OssSensor(
         task_id='ods_sqoop_base_data_country_conf_df_prev_day_task',
         bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-            hdfs_path_str="oride_dw_sqoop/oride_data/data_country_conf	",
+            hdfs_path_str="oride_dw_sqoop/oride_data/data_country_conf",
             pt='{{ds}}'
         ),
         bucket_name='opay-datalake',
