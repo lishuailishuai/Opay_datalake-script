@@ -98,7 +98,7 @@ else:
     print("成功")
     dependence_dwd_oride_client_event_detail_hi_prev_day_task = OssSensor(
         task_id='dependence_dwd_oride_client_event_detail_hi_prev_day_task',
-        filepath='{hdfs_path_str}/country_code=nal/dt={pt}/hour={hour}/_SUCCESS'.format(
+        bucket_key='{hdfs_path_str}/country_code=nal/dt={pt}/hour={hour}/_SUCCESS'.format(
             hdfs_path_str="oride/oride_dw/dwd_oride_client_event_detail_hi",
             pt='{{ds}}',
             hour='23'
