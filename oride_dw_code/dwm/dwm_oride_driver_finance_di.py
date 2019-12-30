@@ -270,8 +270,12 @@ def dwm_oride_driver_finance_di_sql_task(ds):
            repay.numbers, --总期数,总贷款金额=amount*numbers，理论应还金额=amount*repaid_numbers
            repay.repaid_numbers,  --已还款期数,剩余还款期数=numbers-repaid_numbers
            repay.balance,  --司机账户余额
-           repay.amount*repay.repaid_numbers as theory_repay_amount,  --理论应还金额
-           if(repay.balance>=0,repay.amount*repay.repaid_numbers,(repay.balance - pay.phone_amount)) as act_repay_amount,  --实际还款金额
+           repay.theory_repay_amount,  --理论应还金额
+           nvl(repay.act_repay_amount, 0 ) act_repay_amount, --实际已还款金额
+           nvl(repay.act_repay_amount / repay.amount ,0) as act_repaid_numbers , --实际已还款期数
+           nvl(if(repay.balance < 0,(repay.all_repay_amount-repay.act_repay_amount) / repay.amount,0),0) as conversion_overdue_days, --换算逾期天数
+           --nvl(repay.all_repay_amount,0) as all_repay_amount, --总贷款金额=amount*numbers         
+           
            dri.country_code,
            '{pt}' as dt
 
@@ -374,32 +378,53 @@ def dwm_oride_driver_finance_di_sql_task(ds):
         -- 司机手机还款相关
         
         (
-        select repay.driver_id,
-               repay.dt,  --日期
-               recharge.start_date, --司机实际开始还款日期
-               repay.start_date as theory_start_date, --司机理论开始还款日期
-               repay.amount,  --司机每期还款金额
-               repay.numbers, --总期数,总贷款金额=amount*numbers，理论应还金额=amount*repaid_numbers
-               repay.repaid_numbers,  --已还款期数,剩余还款期数=numbers-repaid_numbers
-               balance.balance  --司机账户余额
-        from (select * 
-        from oride_dw.dwd_oride_finance_driver_repayment_df
-        where dt='{pt}' and repayment_type=0) repay
-        left join
-        (select driver_id,
-                from_unixtime(min(created_at),'yyyy-MM-dd') as start_date
-        from oride_dw.dwd_oride_driver_recharge_records_df 
-        where dt='{pt}'
-        and amount_reason=6 
-        and amount<0 
-        group by driver_id
-        ) recharge
-        on repay.driver_id=recharge.driver_id
-        left join
-        (select * 
-        from oride_dw.dwd_oride_driver_balance_extend_df
-        where dt='{pt}') balance
-        on repay.driver_id=balance.driver_id
+            select repay.driver_id,
+                   repay.dt,  --日期
+                   recharge.start_date, --司机实际开始还款日期
+                   repay.start_date as theory_start_date, --司机理论开始还款日期
+                   repay.amount,  --司机每期还款金额
+                   repay.numbers, --总期数,总贷款金额=amount*numbers，理论应还金额=amount*repaid_numbers
+                   repay.repaid_numbers,  --已还款期数,剩余还款期数=numbers-repaid_numbers
+                   repay.theory_repay_amount, --理论应该还款金额
+                   all_repay_amount,--总贷款金额
+                   balance.balance,  --司机账户余额
+                   if(
+                        if(balance.balance<0,repay.theory_repay_amount +balance.balance,theory_repay_amount)>0,
+                        if(balance.balance<0,repay.theory_repay_amount+balance.balance,theory_repay_amount),
+                        0
+                    ) as act_repay_amount  --实际已还款金额
+                   
+            from 
+            (   select 
+                     driver_id,
+                     dt,
+                     start_date,--司机理论开始还款日期
+                     amount,--司机每期还款金额
+                     numbers,--还款总期数
+                     repaid_numbers,--已还款期数
+                     amount * repaid_numbers as theory_repay_amount, --理论应该已还款金额
+                     amount * numbers as all_repay_amount--总贷款金额
+                from oride_dw.dwd_oride_finance_driver_repayment_df
+                where dt='{pt}' and repayment_type=0
+            ) repay
+            left join
+            (
+                select driver_id,
+                    from_unixtime(min(created_at),'yyyy-MM-dd') as start_date
+                from oride_dw.dwd_oride_driver_recharge_records_df 
+                where dt='{pt}'
+                and amount_reason=6 
+                and amount<0 
+                group by driver_id
+            ) recharge on repay.driver_id=recharge.driver_id
+            left join
+            (
+                select
+                    driver_id,
+                    balance 
+                from oride_dw.dwd_oride_driver_balance_extend_df
+                where dt='{pt}'
+            ) balance on repay.driver_id=balance.driver_id
         ) repay
         on dri.driver_id=repay.driver_id;
     '''.format(

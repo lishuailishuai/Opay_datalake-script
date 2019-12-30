@@ -39,23 +39,43 @@ dag = airflow.DAG('dwd_driver_track_data_hi',
                   default_args=args,
                   catchup=False)
 
-##----------------------------------------- 依赖 ---------------------------------------##
-
-# 依赖前一天分区
-dependence_ods_log_driver_track_data_hi_task = HivePartitionSensor(
-    task_id="dependence_ods_log_driver_track_data_hi_task",
-    table="ods_log_driver_track_data_hi",
-    partition=""" dt='{{ ds }}' and hour='{{ execution_date.strftime("%H") }}' """,
-    schema="oride_dw_ods",
-    poke_interval=60,
-    dag=dag
-)
-
 ##----------------------------------------- 变量 ---------------------------------------##
 
-db_name = "oride_dw"
-table_name = "dwd_driver_track_data_hi"
-hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
+db_name="oride_dw"
+table_name="dwd_driver_track_data_hi"
+
+##----------------------------------------- 依赖 ---------------------------------------##
+
+#获取变量
+code_map=eval(Variable.get("sys_flag"))
+
+#判断ufile(cdh环境)
+if code_map["id"].lower()=="ufile":
+    # 依赖前一天分区
+    dependence_ods_log_driver_track_data_hi_task = HivePartitionSensor(
+        task_id="dependence_ods_log_driver_track_data_hi_task",
+        table="ods_log_driver_track_data_hi",
+        partition=""" dt='{{ ds }}' and hour='{{ execution_date.strftime("%H") }}' """,
+        schema="oride_dw_ods",
+        poke_interval=60,
+        dag=dag
+    )
+
+    # 路径
+    hdfs_path="ufile://opay-datalake/oride/oride_dw/"+table_name
+else:
+    print("成功")
+    # 依赖前一天分区
+    dependence_ods_log_driver_track_data_hi_task = HivePartitionSensor(
+        task_id="dependence_ods_log_driver_track_data_hi_task",
+        table="ods_log_driver_track_data_hi",
+        partition=""" dt='{{ ds }}' and hour='{{ execution_date.strftime("%H") }}' """,
+        schema="oride_dw_ods",
+        poke_interval=60,
+        dag=dag
+    )
+# 路径
+    hdfs_path = "oss://opay-datalake/oride/oride_dw/" + table_name
 
 
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
