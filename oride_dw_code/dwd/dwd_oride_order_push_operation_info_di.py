@@ -55,7 +55,7 @@ if code_map["id"].lower()=="ufile":
     ods_sqoop_algorithm_order_operation_info_di_task = UFileSensor(
         task_id='ods_sqoop_algorithm_order_operation_info_di_task',
         filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-            hdfs_path_str="oride_dw_sqoop/algorithm/order_operation_info",
+            hdfs_path_str="oride_dw_sqoop_di/algorithm/order_operation_info",
             pt='{{ds}}'
         ),
         bucket_name='opay-datalake',
@@ -68,7 +68,7 @@ else:
     ods_sqoop_algorithm_order_operation_info_di_task = OssSensor(
         task_id='ods_sqoop_algorithm_order_operation_info_di_task',
         bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-            hdfs_path_str="oride_dw_sqoop/algorithm/order_operation_info",
+            hdfs_path_str="oride_dw_sqoop_di/algorithm/order_operation_info",
             pt='{{ds}}'
         ),
         bucket_name='opay-datalake',
