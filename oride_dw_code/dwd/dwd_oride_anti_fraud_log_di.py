@@ -39,25 +39,44 @@ dag = airflow.DAG( 'dwd_oride_anti_fraud_log_di',
     default_args=args,
     catchup=False) 
 
-##----------------------------------------- 依赖 ---------------------------------------## 
-
-
-#依赖前一天分区
-log_anti_oride_fraud_task=HivePartitionSensor(
-      task_id="log_anti_oride_fraud_task",
-      table="log_anti_oride_fraud",
-      partition="dt='{{macros.ds_add(ds, +1)}}' and hour='00'",
-      schema="oride_source",
-      poke_interval=60, #依赖不满足时，一分钟检查一次依赖状态
-      dag=dag
-    )
-
-##----------------------------------------- 变量 ---------------------------------------## 
+##----------------------------------------- 变量 ---------------------------------------##
 
 db_name="oride_dw"
 table_name="dwd_oride_anti_fraud_log_di"
-hdfs_path="ufile://opay-datalake/oride/oride_dw/"+"dwd_oride_anti_fraud_log_new_di"
 
+##----------------------------------------- 依赖 ---------------------------------------##
+
+#获取变量
+code_map=eval(Variable.get("sys_flag"))
+
+#判断ufile(cdh环境)
+if code_map["id"].lower()=="ufile":
+
+    #依赖前一天分区
+    log_anti_oride_fraud_task=HivePartitionSensor(
+          task_id="log_anti_oride_fraud_task",
+          table="log_anti_oride_fraud",
+          partition="dt='{{macros.ds_add(ds, +1)}}' and hour='00'",
+          schema="oride_source",
+          poke_interval=60, #依赖不满足时，一分钟检查一次依赖状态
+          dag=dag
+        )
+    # 路径
+    hdfs_path="ufile://opay-datalake/oride/oride_dw/"+table_name
+else:
+    print("成功")
+
+    # 依赖前一天分区
+    log_anti_oride_fraud_task = HivePartitionSensor(
+        task_id="log_anti_oride_fraud_task",
+        table="log_anti_oride_fraud",
+        partition="dt='{{macros.ds_add(ds, +1)}}' and hour='00'",
+        schema="oride_source",
+        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+        dag=dag
+    )
+    # 路径
+    hdfs_path = "oss://opay-datalake/oride/oride_dw/" + table_name
 
 ##----------------------------------------- 任务超时监控 ---------------------------------------## 
 
