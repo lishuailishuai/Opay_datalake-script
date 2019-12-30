@@ -375,4 +375,3 @@ app_opos_user_shop_remain_week_w_task = PythonOperator(
 dwd_active_user_week_di_task >> app_opos_user_shop_remain_week_w_task
 
 
-
