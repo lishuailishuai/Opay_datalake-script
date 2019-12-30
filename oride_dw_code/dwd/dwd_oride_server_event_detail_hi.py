@@ -58,14 +58,11 @@ code_map=eval(Variable.get("sys_flag"))
 if code_map["id"].lower()=="ufile":
 
     # 依赖前一小时分区
-    dependence_server_event_prev_hour_task = S3KeySensor(
+    dependence_server_event_prev_hour_task = HivePartitionSensor(
         task_id="dependence_server_event_prev_hour_task",
-        bucket_key='{hdfs_path_str}/dt={pt}/hour={hour}/_SUCCESS'.format(
-            hdfs_path_str="oride_buried/ordm.server_event",
-            pt='{{ds}}',
-            hour='{{ execution_date.strftime("%H") }}'
-        ),
-        bucket_name='opay-bi',
+        table="server_event",
+        partition="""dt='{{ ds }}' and hour='{{ execution_date.strftime("%H") }}'""",
+        schema="oride_source",
         poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
         dag=dag
     )
@@ -73,14 +70,11 @@ if code_map["id"].lower()=="ufile":
 
 else:
     print("成功")
-    dependence_server_event_prev_hour_task = S3KeySensor(
+    dependence_server_event_prev_hour_task = HivePartitionSensor(
         task_id="dependence_server_event_prev_hour_task",
-        bucket_key='{hdfs_path_str}/dt={pt}/hour={hour}/_SUCCESS'.format(
-            hdfs_path_str="oride_buried/ordm.server_event",
-            pt='{{ds}}',
-            hour='{{ execution_date.strftime("%H") }}'
-        ),
-        bucket_name='opay-bi',
+        table="server_event",
+        partition="""dt='{{ ds }}' and hour='{{ execution_date.strftime("%H") }}'""",
+        schema="oride_source",
         poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
         dag=dag
     )
