@@ -32,7 +32,7 @@ schedule_interval="00 01 * * *"
 dag = airflow.DAG(
     'oride_source_sqoop_df',
     schedule_interval=schedule_interval,
-    concurrency=5,
+    concurrency=20,
     max_active_runs=1,
     default_args=args)
 
@@ -382,8 +382,6 @@ for db_name, table_name, conn_id, prefix_name,priority_weight_nm in table_list:
         },
         dag=dag
     )
-
-
 
 
     if table_name in IGNORED_TABLE_LIST:
