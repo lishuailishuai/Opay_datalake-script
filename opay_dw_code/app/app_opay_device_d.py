@@ -43,10 +43,10 @@ dag = airflow.DAG('app_opay_device_d',
 ##----------------------------------------- 依赖 ---------------------------------------##
 
 # 依赖前一天分区
-client_event_task = OssSensor(
-    task_id='client_event_task',
-    bucket_key='{hdfs_path_str}/dt={pt}/hour=23/_SUCCESS'.format(
-        hdfs_path_str="opay-bi/opay_buried/opay.client_event",
+dwd_opay_client_event_base_di_task = OssSensor(
+    task_id='dwd_opay_client_event_base_di_task',
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="opay-datalake/opay/opay_dw/dwd_opay_client_event_base_di/country_code=nal",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -80,7 +80,7 @@ from (
         common.device_id as device_id,
         `timestamp` as time,
         row_number() over(partition by common.device_id order by `timestamp` desc) as num
-    from opay_source.client_event
+    from opay_dw.dwd_opay_client_event_base_di
     where dt='${dt}'
     ) temp 
 where temp.num=1;
@@ -111,7 +111,7 @@ def execution_data_task_id(ds, **kargs):
     第二个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
 
     """
-    TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "false", "true")
+    TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "true", "true")
 
 
 app_opay_device_d_task = PythonOperator(
@@ -121,4 +121,4 @@ app_opay_device_d_task = PythonOperator(
     dag=dag
 )
 
-client_event_task >> app_opay_device_d_task
+dwd_opay_client_event_base_di_task >> app_opay_device_d_task
