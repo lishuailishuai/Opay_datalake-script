@@ -71,12 +71,13 @@ def app_opay_user_device_d_sql_task(ds):
     set mapred.max.split.size=1000000;
     set hive.exec.dynamic.partition.mode=nonstrict;
     set hive.exec.parallel=true;
-    insert overwrite table {db}.{table} partition(dt)
+    insert overwrite table {db}.{table} partition(country_code,dt)
     select 
     user_id,
     device_id,
     mobile,
     server_timestamp,
+    'nal' as country_code,
     '{pt}' as dt 
 from
     (select
