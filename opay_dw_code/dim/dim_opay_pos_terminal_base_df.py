@@ -110,8 +110,7 @@ def dim_opay_pos_terminal_base_df_sql_task(ds):
 FROM
   (SELECT *
    FROM opay_dw_ods.ods_sqoop_base_terminal_df
-   WHERE dt='{pt}'
-     AND create_time<'{pt} 23:00:00') a
+   WHERE dt='{pt}') a
 LEFT JOIN
   (SELECT user_id,
           ROLE,
@@ -126,7 +125,7 @@ LEFT JOIN
                               ORDER BY update_time DESC) rn,
                          country
       FROM opay_dw.dim_opay_user_base_di
-      WHERE create_time<'{pt} 23:00:00') m
+      WHERE dt<='{pt}') m
    WHERE rn=1
    UNION ALL SELECT merchant_id AS user_id,
                     'merchant'AS ROLE,
@@ -152,8 +151,7 @@ LEFT JOIN
                            ELSE 'NG'
                        END AS country_code
    FROM opay_dw_ods.ods_sqoop_base_merchant_df
-   WHERE dt='{pt}'
-     AND create_time<'{pt} 23:00:00' )b
+   WHERE dt='{pt}')b
  on a.user_id=b.user_id
 
     '''.format(
