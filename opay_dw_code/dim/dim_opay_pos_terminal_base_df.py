@@ -27,7 +27,7 @@ import os
 
 args = {
     'owner': 'liushuzhen',
-    'start_date': datetime(2019, 12, 20),
+    'start_date': datetime(2019, 12, 30),
     'depends_on_past': False,
     'retries': 3,
     'retry_delay': timedelta(minutes=2),
@@ -66,7 +66,7 @@ def dim_opay_pos_terminal_base_df_sql_task(ds):
     set mapred.max.split.size=1000000;
     set hive.exec.dynamic.partition.mode=nonstrict;
     set hive.exec.parallel=true;
-    insert overwrite table {db}.{table} partition (country_code,dt)
+    insert overwrite table {db}.{table} partition (dt)
     SELECT id,
        terminal_provider_id,
        pos_id,
@@ -74,7 +74,7 @@ def dim_opay_pos_terminal_base_df_sql_task(ds):
        bank,
        bind_status,
        user_type,
-       a.user_id,
+       user_id,
        owner_name,
        create_time,
        update_time,
@@ -110,7 +110,7 @@ def execution_data_task_id(ds, **kargs):
     第二个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
 
     """
-    TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "true", "true")
+    TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "false", "true")
 
 
 dim_opay_pos_terminal_base_df_task = PythonOperator(
