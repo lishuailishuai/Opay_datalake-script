@@ -71,15 +71,16 @@ def app_opay_device_d_sql_task(ds):
     set mapred.max.split.size=1000000;
     set hive.exec.dynamic.partition.mode=nonstrict;
     set hive.exec.parallel=true;
+    insert overwrite table {db}.{table} partition(dt)
     select 
     device_id,
-    time,
+    server_timestamp,
     '{pt}' as dt
 from (
     select
-        common.device_id as device_id,
-        `timestamp` as time,
-        row_number() over(partition by common.device_id order by `timestamp` desc) as num
+        device_id,
+        server_timestamp,
+        row_number() over(partition by device_id order by server_timestamp desc) as num
     from opay_dw.dwd_opay_client_event_base_di
     where dt='{pt}'
     ) temp 
