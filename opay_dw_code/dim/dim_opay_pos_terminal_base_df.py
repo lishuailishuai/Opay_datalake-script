@@ -83,7 +83,6 @@ def dim_opay_pos_terminal_base_df_sql_task(ds):
 FROM
    opay_dw_ods.ods_sqoop_base_terminal_df
    WHERE dt='{pt}'
-     AND create_time<'{pt} 23:00:00'
 
     '''.format(
         pt=ds,
