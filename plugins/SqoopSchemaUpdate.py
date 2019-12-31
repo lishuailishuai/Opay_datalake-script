@@ -211,8 +211,8 @@ class SqoopSchemaUpdate(object):
                 columns=",\n".join(columns)
             )
 
-            self.hive_cursor.execute(hql)
             logging.info(hql)
+            self.hive_cursor.execute(hql)
             return True
         except BaseException as e:
             logging.info("Exception Info::")
