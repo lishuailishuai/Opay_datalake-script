@@ -208,10 +208,11 @@ dim_opay_pos_terminal_base_df_task = PythonOperator(
     dag=dag
 )
 
-ods_sqoop_base_user_di_prev_day_task >> dim_opay_pos_terminal_base_df_sql_task
-ods_sqoop_base_merchant_df_prev_day_task >> dim_opay_pos_terminal_base_df_sql_task
-ods_sqoop_base_terminal_df_prev_day_task >> dim_opay_pos_terminal_base_df_sql_task
-dim_opay_pos_terminal_base_df_sql_task >> dim_opay_pos_terminal_base_df_task
+ods_sqoop_base_user_di_prev_day_task >> dim_opay_pos_terminal_base_df_task
+ods_sqoop_base_merchant_df_prev_day_task >> dim_opay_pos_terminal_base_df_task
+ods_sqoop_base_terminal_df_prev_day_task >> dim_opay_pos_terminal_base_df_task
+
+
 
 
 
