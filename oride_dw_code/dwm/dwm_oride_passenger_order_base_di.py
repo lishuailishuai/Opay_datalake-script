@@ -169,6 +169,7 @@ group by ord.passenger_id,  --乘客ID
        ord.driver_serv_type, --司机绑定的业务类型，两个业务类型区别在于同时呼叫下线前统计业务线完单量
        if(multi_cit.city_id is not null,1,0), --是否多城市业务线
        if(user_df.first_finish_create_date='{pt}',1,0), 
+       if(user_df.first_finish_create_date='{pt}'and ord.is_td_finish=1,1,0),
        ord.country_code;  
     '''.format(
         pt=ds,
