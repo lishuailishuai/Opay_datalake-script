@@ -85,7 +85,7 @@ from
         `timestamp` as time,
         row_number()
         over(partition by common.user_id,common.device_id order by `timestamp` desc) as num
-    from opay_source.client_event
+    from opay_dw.dwd_opay_client_event_base_di
     where dt='${dt}'
     ) aa 
 where aa.num=1;
