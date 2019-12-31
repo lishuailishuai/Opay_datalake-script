@@ -7,6 +7,7 @@ from airflow.operators.python_operator import PythonOperator
 from datetime import datetime, timedelta
 from utils.connection_helper import get_hive_cursor, get_db_conn
 import logging
+from airflow.exceptions import AirflowException
 
 
 class SqoopSchemaUpdate(object):
@@ -217,7 +218,7 @@ class SqoopSchemaUpdate(object):
         except BaseException as e:
             logging.info("Exception Info::")
             logging.info(e)
-            return None
+            raise AirflowException('sqoop update hive schema error')
 
     def append_hive_schema(self, **info):
         try:
@@ -261,6 +262,6 @@ class SqoopSchemaUpdate(object):
         except BaseException as e:
             logging.info("Exception Info::")
             logging.info(e)
-            return None
+            raise AirflowException('sqoop append hive schema error')
 
         pass
