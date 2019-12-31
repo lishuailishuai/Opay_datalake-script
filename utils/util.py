@@ -2,6 +2,7 @@
 from utils.connection_helper import get_hive_cursor
 from datetime import datetime, timedelta
 from plugins.comwx import ComwxApi
+from plugins.DingdingAlert import DingdingAlert
 import pendulum
 
 repair_table_query = '''
@@ -81,12 +82,14 @@ def on_success_callback(context):
     time_diff = now_ts - next_execution_ts
 
     if time_diff >= max_delayed_time:
-        # 微信报警
-        comwx = ComwxApi('wwd26d45f97ea74ad2', 'BLE_v25zCmnZaFUgum93j3zVBDK-DjtRkLisI_Wns4g', '1000011')
+        # 钉钉报警
+        dingding_alert = DingdingAlert('https://oapi.dingtalk.com/robot/send?access_token=928e66bef8d88edc89fe0f0ddd52bfa4dd28bd4b1d24ab4626c804df8878bb48')
         task = "{dag}.{task}".format(dag=context['task_instance'].dag_id, task=context['task_instance'].task_id)
         msg="任务回溯操作{task},计划执行时间：{ne},当前执行时间：{nt}".format(
             task=task,
             ne=next_execution_dt,
             nt=now_dt
         )
-        comwx.postAppMessage(msg,'271')
+        dingding_alert.send('DW {msg} 产出超时'.format(
+            msg=msg
+        ))
