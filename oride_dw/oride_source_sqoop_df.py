@@ -32,7 +32,7 @@ schedule_interval="00 01 * * *"
 dag = airflow.DAG(
     'oride_source_sqoop_df',
     schedule_interval=schedule_interval,
-    concurrency=15,
+    concurrency=20,
     max_active_runs=1,
     default_args=args)
 
@@ -50,7 +50,7 @@ check_data_driver_records_finish = SqlSensor(
         from
             oride_data.data_driver_records_finish
         where
-            from_unixtime(day, "%Y-%m-%d") = '{{ ds }}'
+            from_unixtime(day, "%Y-%m-%d") = '{{ macros.ds_add(ds, -1) }}'
     ''',
     dag=dag
 )
@@ -384,10 +384,8 @@ for db_name, table_name, conn_id, prefix_name,priority_weight_nm in table_list:
     )
 
 
-
-
     if table_name in IGNORED_TABLE_LIST:
-        add_partitions >> validate_all_data
+        import_table >> validate_all_data
     else:
         # 数据量监控
         volume_monitoring = PythonOperator(
@@ -401,7 +399,7 @@ for db_name, table_name, conn_id, prefix_name,priority_weight_nm in table_list:
             },
             dag=dag
         )
-        add_partitions >> volume_monitoring >> validate_all_data
+        import_table >> volume_monitoring >> validate_all_data
 
     # 超时监控
     task_timeout_monitor= PythonOperator(
@@ -416,6 +414,6 @@ for db_name, table_name, conn_id, prefix_name,priority_weight_nm in table_list:
     )
 
     if table_name in ['data_driver_records_day', 'data_driver_balance_extend','data_driver_repayment','data_driver_recharge_records','data_driver_reward','data_driver_pay_records']:
-        check_data_driver_records_finish >> import_table
+        check_data_driver_records_finish >> add_partitions
 
-    import_table >> check_table >> add_partitions
+    add_partitions >> check_table >> import_table

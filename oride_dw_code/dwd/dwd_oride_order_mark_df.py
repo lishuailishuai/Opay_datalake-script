@@ -23,6 +23,8 @@ import logging
 from airflow.models import Variable
 import requests
 import os
+from airflow.sensors import OssSensor
+
 
 args = {
     'owner': 'lili.chen',
@@ -40,53 +42,118 @@ dag = airflow.DAG('dwd_oride_order_mark_df',
                   default_args=args,
                   catchup=False)
 
+##----------------------------------------- 变量 ---------------------------------------##
+
+db_name = "oride_dw"
+table_name="dwd_oride_order_mark_df"
+
 ##----------------------------------------- 依赖 ---------------------------------------##
+#获取变量
+code_map=eval(Variable.get("sys_flag"))
 
-# 依赖前一天分区
-dwd_oride_order_base_include_test_di_prev_day_task = S3KeySensor(
-    task_id='dwd_oride_order_base_include_test_di_prev_day_task',
-    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw/dwd_oride_order_base_include_test_di/country_code=NG",
-        pt='{{ds}}'
-    ),
-    bucket_name='opay-bi',
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
+#判断ufile(cdh环境)
+if code_map["id"].lower()=="ufile":
+    # 依赖前一天分区
+    dwd_oride_order_base_include_test_di_prev_day_task = S3KeySensor(
+        task_id='dwd_oride_order_base_include_test_di_prev_day_task',
+        bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+            hdfs_path_str="oride/oride_dw/dwd_oride_order_base_include_test_di/country_code=NG",
+            pt='{{ds}}'
+        ),
+        bucket_name='opay-bi',
+        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+        dag=dag
+    )
 
-# 依赖前一天分区
-dim_oride_city_prev_day_task = HivePartitionSensor(
-    task_id="dim_oride_city_prev_day_task",
-    table="dim_oride_city",
-    partition="dt='{{ds}}'",
-    schema="oride_dw",
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
 
-# 依赖前一天分区
-ods_sqoop_base_weather_per_10min_df_prev_day_task = UFileSensor(
-    task_id='ods_sqoop_base_weather_per_10min_df_prev_day_task',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride_dw_sqoop/bi/weather_per_10min",
-        pt='{{ds}}'
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
+    dim_oride_city_prev_day_task = UFileSensor(
+            task_id='dim_oride_city_prev_day_task',
+            filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+                hdfs_path_str="oride/oride_dw/dim_oride_city/country_code=NG",
+                pt='{{ds}}'
+            ),
+            bucket_name='opay-datalake',
+            poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+            dag=dag
+        )
 
-# 依赖前一天分区
-ods_sqoop_base_data_user_comment_df_prev_day_task = UFileSensor(
-    task_id='ods_sqoop_base_data_user_comment_df_prev_day_task',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride_dw_sqoop/oride_data/data_user_comment",
-        pt='{{ds}}'
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
+    # 依赖前一天分区
+    ods_sqoop_base_weather_per_10min_df_prev_day_task = UFileSensor(
+        task_id='ods_sqoop_base_weather_per_10min_df_prev_day_task',
+        filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+            hdfs_path_str="oride_dw_sqoop/bi/weather_per_10min",
+            pt='{{ds}}'
+        ),
+        bucket_name='opay-datalake',
+        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+        dag=dag
+    )
+
+    # 依赖前一天分区
+    ods_sqoop_base_data_user_comment_df_prev_day_task = UFileSensor(
+        task_id='ods_sqoop_base_data_user_comment_df_prev_day_task',
+        filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+            hdfs_path_str="oride_dw_sqoop/oride_data/data_user_comment",
+            pt='{{ds}}'
+        ),
+        bucket_name='opay-datalake',
+        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+        dag=dag
+    )
+#路径
+    hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
+else:
+    print("成功")
+
+    # 依赖前一天分区
+    dwd_oride_order_base_include_test_di_prev_day_task = OssSensor(
+        task_id='dwd_oride_order_base_include_test_di_prev_day_task',
+        bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+            hdfs_path_str="oride/oride_dw/dwd_oride_order_base_include_test_di/country_code=NG",
+            pt='{{ds}}'
+        ),
+        bucket_name='opay-datalake',
+        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+        dag=dag
+    )
+
+    dim_oride_city_prev_day_task = OssSensor(
+        task_id='dim_oride_city_prev_day_task',
+        bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+            hdfs_path_str="oride/oride_dw/dim_oride_city/country_code=NG",
+            pt='{{ds}}'
+        ),
+        bucket_name='opay-datalake',
+        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+        dag=dag
+    )
+
+    # 依赖前一天分区
+    ods_sqoop_base_weather_per_10min_df_prev_day_task = OssSensor(
+        task_id='ods_sqoop_base_weather_per_10min_df_prev_day_task',
+        bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+            hdfs_path_str="oride_dw_sqoop/bi/weather_per_10min",
+            pt='{{ds}}'
+        ),
+        bucket_name='opay-datalake',
+        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+        dag=dag
+    )
+
+    # 依赖前一天分区
+    ods_sqoop_base_data_user_comment_df_prev_day_task = OssSensor(
+        task_id='ods_sqoop_base_data_user_comment_df_prev_day_task',
+        bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+            hdfs_path_str="oride_dw_sqoop/oride_data/data_user_comment",
+            pt='{{ds}}'
+        ),
+        bucket_name='opay-datalake',
+        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+        dag=dag
+    )
+
+    # 路径
+    hdfs_path = "oss://opay-datalake/oride/oride_dw/" + table_name
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
 
 def fun_task_timeout_monitor(ds,dag,**op_kwargs):
@@ -106,11 +173,6 @@ task_timeout_monitor= PythonOperator(
     dag=dag
 )
 
-##----------------------------------------- 变量 ---------------------------------------##
-
-db_name = "oride_dw"
-table_name = "dwd_oride_order_mark_df"
-hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
 
 ##----------------------------------------- 脚本 ---------------------------------------##
 def dwd_oride_order_mark_df_sql_task(ds):

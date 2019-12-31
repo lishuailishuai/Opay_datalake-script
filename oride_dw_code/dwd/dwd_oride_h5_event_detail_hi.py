@@ -39,25 +39,44 @@ dag = airflow.DAG('dwd_oride_h5_event_detail_hi',
                   default_args=args,
                   catchup=False)
 
-##----------------------------------------- 依赖 ---------------------------------------##
-
-
-# 依赖前一小时分区
-h5_event_prev_hour_task = HivePartitionSensor(
-    task_id="h5_event_prev_hour_task",
-    table="h5_event",
-    partition="""dt='{{ ds }}' and hour='{{ execution_date.strftime("%H") }}'""",
-    schema="oride_source",
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
-
 ##----------------------------------------- 变量 ---------------------------------------##
 
-db_name = "oride_dw"
-table_name = "dwd_oride_h5_event_detail_hi"
-hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
+db_name="oride_dw"
+table_name="dwd_oride_h5_event_detail_hi"
 
+##----------------------------------------- 依赖 ---------------------------------------##
+
+#获取变量
+code_map=eval(Variable.get("sys_flag"))
+
+#判断ufile(cdh环境)
+if code_map["id"].lower()=="ufile":
+
+    # 依赖前一小时分区
+    h5_event_prev_hour_task = HivePartitionSensor(
+        task_id="h5_event_prev_hour_task",
+        table="h5_event",
+        partition="""dt='{{ ds }}' and hour='{{ execution_date.strftime("%H") }}'""",
+        schema="oride_source",
+        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+        dag=dag
+    )
+# 路径
+    hdfs_path="ufile://opay-datalake/oride/oride_dw/"+table_name
+else:
+    print("成功")
+    # 依赖前一小时分区
+
+    h5_event_prev_hour_task = HivePartitionSensor(
+        task_id="h5_event_prev_hour_task",
+        table="h5_event",
+        partition="""dt='{{ ds }}' and hour='{{ execution_date.strftime("%H") }}'""",
+        schema="oride_source",
+        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+        dag=dag
+    )
+    # 路径
+    hdfs_path = "oss://opay-datalake/oride/oride_dw/" + table_name
 
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
 

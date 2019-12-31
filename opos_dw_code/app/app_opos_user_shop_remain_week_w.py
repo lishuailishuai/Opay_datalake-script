@@ -103,9 +103,49 @@ week_order as (
     select
     a.aweek,b.bweek,row_number() over (order by b.bweek asc) as rn
     from
-      (SELECT concat(substr(dt,0,4),substr(concat('0',cast(weekofyear(dt) as string)),-2)) as aweek FROM public_dw_dim.dim_date where dt='{after_6_day}' group by concat(substr(dt,0,4),substr(concat('0',cast(weekofyear(dt) as string)),-2))) as a
+      (SELECT 
+        concat(
+        case 
+        when weekofyear(dt)=1 and cast(substr(dt,-2) as int)>8 then cast(cast(substr(dt,0,4) as int)+1 as string)
+        when weekofyear(dt)=53 and cast(substr(dt,-2) as int)<8 then cast(cast(substr(dt,0,4) as int)-1 as string)
+        else substr(dt,0,4)
+        end
+        ,lpad(weekofyear(dt),2,'0') 
+        ) as aweek
+      FROM 
+        public_dw_dim.dim_date where dt='{after_6_day}' 
+      group by 
+        concat(
+        case 
+        when weekofyear(dt)=1 and cast(substr(dt,-2) as int)>8 then cast(cast(substr(dt,0,4) as int)+1 as string)
+        when weekofyear(dt)=53 and cast(substr(dt,-2) as int)<8 then cast(cast(substr(dt,0,4) as int)-1 as string)
+        else substr(dt,0,4)
+        end
+        ,lpad(weekofyear(dt),2,'0') 
+        )
+      ) as a
     left join
-      (SELECT concat(substr(dt,0,4),substr(concat('0',cast(weekofyear(dt) as string)),-2)) as bweek FROM public_dw_dim.dim_date where dt>='{before_75_day}' and dt<='{after_6_day}' group by concat(substr(dt,0,4),substr(concat('0',cast(weekofyear(dt) as string)),-2))) as b
+      (SELECT 
+        concat(
+        case 
+        when weekofyear(dt)=1 and cast(substr(dt,-2) as int)>8 then cast(cast(substr(dt,0,4) as int)+1 as string)
+        when weekofyear(dt)=53 and cast(substr(dt,-2) as int)<8 then cast(cast(substr(dt,0,4) as int)-1 as string)
+        else substr(dt,0,4)
+        end
+        ,lpad(weekofyear(dt),2,'0') 
+        ) as bweek
+      FROM 
+        public_dw_dim.dim_date where dt>='{before_75_day}' and dt<='{after_6_day}'
+      group by 
+        concat(
+        case 
+        when weekofyear(dt)=1 and cast(substr(dt,-2) as int)>8 then cast(cast(substr(dt,0,4) as int)+1 as string)
+        when weekofyear(dt)=53 and cast(substr(dt,-2) as int)<8 then cast(cast(substr(dt,0,4) as int)-1 as string)
+        else substr(dt,0,4)
+        end
+        ,lpad(weekofyear(dt),2,'0') 
+        )
+      ) as b
     on 1=1
   ) as m
 ),
@@ -143,8 +183,7 @@ new_user_remain_cnt as (
     inner join
     (select * from opos_dw.dwd_active_user_week_di where country_code='nal' and dt='{after_6_day}') as b
     on
-    a.city_id=b.city_id
-    and a.sender_id=b.sender_id
+    a.sender_id=b.sender_id
     ) as a
   group by
   create_year_week
@@ -171,8 +210,7 @@ user_remain_cnt as (
     inner join
     (select * from opos_dw.dwd_active_user_week_di where country_code='nal' and dt='{after_6_day}') as b
     on
-    a.city_id=b.city_id
-    and a.sender_id=b.sender_id
+    a.sender_id=b.sender_id
     ) as a
   group by
   create_year_week
@@ -199,8 +237,7 @@ new_shop_remain_cnt as (
     inner join
     (select * from opos_dw.dwd_active_shop_week_di where country_code='nal' and dt='{after_6_day}') as b
     on
-    a.city_id=b.city_id
-    and a.receipt_id=b.receipt_id
+    a.receipt_id=b.receipt_id
     ) as a
   group by
   create_year_week
@@ -227,8 +264,7 @@ shop_remain_cnt as (
     inner join
     (select * from opos_dw.dwd_active_shop_week_di where country_code='nal' and dt='{after_6_day}') as b
     on
-    a.city_id=b.city_id
-    and a.receipt_id=b.receipt_id
+    a.receipt_id=b.receipt_id
     ) as a
   group by
   create_year_week
@@ -240,14 +276,11 @@ shop_remain_cnt as (
 insert overwrite table opos_dw.app_opos_user_shop_remain_week_w partition(country_code,dt)
 select
 0 as id
-,substr(v1.create_year_week,0,4) as create_year
-,substr(v1.create_year_week,5,2) as create_week
+
 ,v1.create_year_week
 
 ,v1.week_interval
 
-,substr(v1.remain_year_week,0,4) as remain_year
-,substr(v1.remain_year_week,5,2) as remain_week
 ,v1.remain_year_week
 
 ,v1.city_id
@@ -286,6 +319,7 @@ left join
 on v1.create_year_week=v6.create_year_week
   and v1.remain_year_week=v6.remain_year_week
   and v1.city_id=v6.city_id;
+
 
 
 
@@ -336,6 +370,5 @@ app_opos_user_shop_remain_week_w_task = PythonOperator(
 )
 
 dwd_active_user_week_di_task >> app_opos_user_shop_remain_week_w_task
-
 
 
