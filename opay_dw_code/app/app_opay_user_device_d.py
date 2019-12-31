@@ -76,7 +76,7 @@ def app_opay_user_device_d_sql_task(ds):
     device_id,
     mobile,
     time,
-    '{dt}' as dt 
+    '{pt}' as dt 
 from
     (select
         common.user_id as user_id,
@@ -86,7 +86,7 @@ from
         row_number()
         over(partition by common.user_id,common.device_id order by `timestamp` desc) as num
     from opay_dw.dwd_opay_client_event_base_di
-    where dt='{dt}'
+    where dt='{pt}'
     ) aa 
 where aa.num=1;
 
