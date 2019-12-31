@@ -183,8 +183,7 @@ new_user_remain_cnt as (
     inner join
     (select * from opos_dw.dwd_active_user_week_di where country_code='nal' and dt='{after_6_day}') as b
     on
-    a.city_id=b.city_id
-    and a.sender_id=b.sender_id
+    a.sender_id=b.sender_id
     ) as a
   group by
   create_year_week
@@ -211,8 +210,7 @@ user_remain_cnt as (
     inner join
     (select * from opos_dw.dwd_active_user_week_di where country_code='nal' and dt='{after_6_day}') as b
     on
-    a.city_id=b.city_id
-    and a.sender_id=b.sender_id
+    a.sender_id=b.sender_id
     ) as a
   group by
   create_year_week
@@ -239,8 +237,7 @@ new_shop_remain_cnt as (
     inner join
     (select * from opos_dw.dwd_active_shop_week_di where country_code='nal' and dt='{after_6_day}') as b
     on
-    a.city_id=b.city_id
-    and a.receipt_id=b.receipt_id
+    a.receipt_id=b.receipt_id
     ) as a
   group by
   create_year_week
@@ -267,8 +264,7 @@ shop_remain_cnt as (
     inner join
     (select * from opos_dw.dwd_active_shop_week_di where country_code='nal' and dt='{after_6_day}') as b
     on
-    a.city_id=b.city_id
-    and a.receipt_id=b.receipt_id
+    a.receipt_id=b.receipt_id
     ) as a
   group by
   create_year_week
@@ -323,6 +319,7 @@ left join
 on v1.create_year_week=v6.create_year_week
   and v1.remain_year_week=v6.remain_year_week
   and v1.city_id=v6.city_id;
+
 
 
 
