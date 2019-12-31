@@ -181,7 +181,7 @@ new_user_remain_cnt as (
     from
     (select * from opos_dw.dwd_active_user_week_di where country_code='nal' and dt>='{before_75_day}' and dt<='{after_6_day}' and first_order='1') as a
     inner join
-    (select sender_id from opos_dw.dwd_active_user_week_di where country_code='nal' and dt='{after_6_day}' group by sender_id) as b
+    (select sender_id,combine_year_week from opos_dw.dwd_active_user_week_di where country_code='nal' and dt='{after_6_day}' group by sender_id,combine_year_week) as b
     on
     a.sender_id=b.sender_id
     ) as a
@@ -208,7 +208,7 @@ user_remain_cnt as (
     from
     (select * from opos_dw.dwd_active_user_week_di where country_code='nal' and dt>='{before_75_day}' and dt<='{after_6_day}') as a
     inner join
-    (select sender_id from opos_dw.dwd_active_user_week_di where country_code='nal' and dt='{after_6_day}' group by sender_id) as b
+    (select sender_id,combine_year_week from opos_dw.dwd_active_user_week_di where country_code='nal' and dt='{after_6_day}' group by sender_id,combine_year_week) as b
     on
     a.sender_id=b.sender_id
     ) as a
@@ -235,7 +235,7 @@ new_shop_remain_cnt as (
     from
     (select * from opos_dw.dwd_active_shop_week_di where country_code='nal' and dt>='{before_75_day}' and dt<='{after_6_day}' and first_order='1') as a
     inner join
-    (select receipt_id from opos_dw.dwd_active_user_week_di where country_code='nal' and dt='{after_6_day}' group by receipt_id) as b
+    (select receipt_id,combine_year_week from opos_dw.dwd_active_user_week_di where country_code='nal' and dt='{after_6_day}' group by receipt_id,combine_year_week) as b
     on
     a.receipt_id=b.receipt_id
     ) as a
@@ -262,7 +262,7 @@ shop_remain_cnt as (
     from
     (select * from opos_dw.dwd_active_shop_week_di where country_code='nal' and dt>='{before_75_day}' and dt<='{after_6_day}') as a
     inner join
-    (select receipt_id from opos_dw.dwd_active_user_week_di where country_code='nal' and dt='{after_6_day}' group by receipt_id) as b
+    (select receipt_id,combine_year_week from opos_dw.dwd_active_user_week_di where country_code='nal' and dt='{after_6_day}' group by receipt_id,combine_year_week) as b
     on
     a.receipt_id=b.receipt_id
     ) as a
