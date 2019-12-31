@@ -537,8 +537,12 @@ query_order_extend_sql_template = """
 
 
 def insert_order_data(ds, **kwargs):
-    year = datetime.strptime(ds, '%Y-%m-%d').strftime('%Y')
-    week = datetime.strptime(ds, '%Y-%m-%d').strftime('%W')
+    # year = datetime.strptime(ds, '%Y-%m-%d').strftime('%Y')
+    # week = datetime.strptime(ds, '%Y-%m-%d').strftime('%W')
+
+    t = datetime.strptime(ds, '%Y-%m-%d').isocalendar()
+    year = t[0]
+    week = t[1]
 
     insert_order(ds, airflow.macros.ds_add(ds, -1), week, year)
     insert_order_extend(ds, airflow.macros.ds_add(ds, -1), week, year)
@@ -547,7 +551,7 @@ def insert_order_data(ds, **kwargs):
 
 
 def insert_order_bonus_extend(ds, yesterday, week, year):
-    query_sql = query_order_bonus_extend_sql_template.format(year=year, week=(int(week) + 1), ds=ds,
+    query_sql = query_order_bonus_extend_sql_template.format(year=year, week=(int(week)), ds=ds,
                                                              yesterday=yesterday)
 
     logging.info(query_sql)
@@ -608,7 +612,7 @@ def insert_order_bonus_extend(ds, yesterday, week, year):
 
 
 def insert_order_bonus(ds, yesterday, week, year):
-    query_sql = query_order_bonus_sql_template.format(year=year, week=(int(week) + 1), ds=ds,
+    query_sql = query_order_bonus_sql_template.format(year=year, week=(int(week)), ds=ds,
                                                       yesterday=yesterday)
 
     logging.info(query_sql)
@@ -701,7 +705,7 @@ def insert_order_bonus(ds, yesterday, week, year):
 
 
 def insert_order_extend(ds, yesterday, week, year):
-    query_sql = query_order_extend_sql_template.format(year=year, week=(int(week) + 1), ds=ds,
+    query_sql = query_order_extend_sql_template.format(year=year, week=(int(week)), ds=ds,
                                                        yesterday=yesterday)
 
     logging.info(query_sql)
@@ -744,7 +748,7 @@ def insert_order_extend(ds, yesterday, week, year):
 
 
 def insert_order(ds, yesterday, week, year):
-    query_sql = query_sql_template.format(year=year, week=(int(week) + 1), ds=ds,
+    query_sql = query_sql_template.format(year=year, week=(int(week)), ds=ds,
                                           yesterday=yesterday)
     logging.info(query_sql)
     ptsp_mysql_cursor.execute(query_sql)
