@@ -384,8 +384,6 @@ for db_name, table_name, conn_id, prefix_name,priority_weight_nm in table_list:
     )
 
 
-
-
     if table_name in IGNORED_TABLE_LIST:
         import_table >> validate_all_data
     else:
