@@ -113,7 +113,7 @@ if code_map["id"].lower()=="ufile":
     # 依赖前一天分区
     dependence_dwd_oride_order_mark_df_prev_day_task = S3KeySensor(
         task_id='dwd_oride_order_mark_df_prev_day_task',
-        filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
             hdfs_path_str="oride/oride_dw/dwd_oride_order_mark_df/country_code=NG",
             pt='{{ds}}'
         ),
