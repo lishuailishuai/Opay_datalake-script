@@ -162,8 +162,8 @@ class SqoopSchemaUpdate(object):
         for (column_name, data_type, column_comment, column_type) in res:
             mysql_schema.append({
                 'column': column_name,
-                'column_info': "`%s` %s comment '%s'" % (
-                    column_name, self.mysql_type_to_hive.get(data_type.upper(), 'string'), column_comment)
+                'column_info': "`%s` %s " % (
+                    column_name, self.mysql_type_to_hive.get(data_type.upper(), 'string'))
             })
             mysql_column.append(column_name)
 
