@@ -235,15 +235,16 @@ class SqoopSchemaUpdate(object):
             mysql_info = self.__get_mysql_table_schema_and_column_name(mysql_db, mysql_table, mysql_conn)
             mysql_schema = mysql_info[0]
             mysql_column = mysql_info[1]
-            add_column = set(mysql_column).difference(set(hive_schema))
+            add_columns = set(mysql_column).difference(set(hive_schema))
+            add_columns = list(add_columns)
 
-            if len(add_column) == 0:
+            if len(add_columns) == 0:
                 return True
 
             columns = []
-            for i in add_column:
+            for add_column in add_columns:
                 for column in mysql_schema:
-                    if column.get('column', None) == add_column[i]:
+                    if column.get('column', None) == add_column:
                         column_info = column.get('column_info', None)
                         if column_info:
                             columns.append(column_info)
