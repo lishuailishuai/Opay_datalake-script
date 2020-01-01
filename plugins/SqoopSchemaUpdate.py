@@ -243,7 +243,7 @@ class SqoopSchemaUpdate(object):
             columns = []
             for i in add_column:
                 for j in mysql_schema:
-                    if mysql_column[j].get('column', None) == add_column[i]:
+                    if mysql_schema[j].get('column', None) == add_column[i]:
                         column_info = mysql_schema[j].get('column_info', None)
                         if column_info:
                             columns.append(column_info)
