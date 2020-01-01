@@ -414,6 +414,6 @@ for db_name, table_name, conn_id, prefix_name,priority_weight_nm in table_list:
     )
 
     if table_name in ['data_driver_records_day', 'data_driver_balance_extend','data_driver_repayment','data_driver_recharge_records','data_driver_reward','data_driver_pay_records']:
-        check_data_driver_records_finish >> import_table
+        check_data_driver_records_finish >> add_partitions
 
-    add_partitions >> import_table >> check_table
+    add_partitions >> check_table >> import_table

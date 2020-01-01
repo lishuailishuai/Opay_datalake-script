@@ -101,7 +101,7 @@ if code_map["id"].lower()=="ufile":
         dag=dag
     )
 #路径
-    hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
+    hdfs_path = "s3a://opay-bi/oride/oride_dw/" + table_name
 else:
     print("成功")
 

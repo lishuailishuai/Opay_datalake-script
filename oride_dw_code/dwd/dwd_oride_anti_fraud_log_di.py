@@ -62,7 +62,7 @@ if code_map["id"].lower()=="ufile":
           dag=dag
         )
     # 路径
-    hdfs_path="ufile://opay-datalake/oride/oride_dw/"+table_name
+    hdfs_path="ufile://opay-datalake/oride/oride_dw/dwd_oride_anti_fraud_log_new_di"
 else:
     print("成功")
 
