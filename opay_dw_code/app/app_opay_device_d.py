@@ -46,7 +46,7 @@ dag = airflow.DAG('app_opay_device_d',
 dwd_opay_client_event_base_di_task = OssSensor(
     task_id='dwd_opay_client_event_base_di_task',
     bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opay-datalake/opay/opay_dw/dwd_opay_client_event_base_di/country_code=nal",
+        hdfs_path_str="opay/opay_dw/dwd_opay_client_event_base_di/country_code=nal",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -71,17 +71,19 @@ def app_opay_device_d_sql_task(ds):
     set mapred.max.split.size=1000000;
     set hive.exec.dynamic.partition.mode=nonstrict;
     set hive.exec.parallel=true;
+    insert overwrite table {db}.{table} partition(country_code,dt)
     select 
     device_id,
-    time,
-    '${dt}' as dt
+    server_timestamp,
+    'nal' as country_code,
+    '{pt}' as dt
 from (
     select
-        common.device_id as device_id,
-        `timestamp` as time,
-        row_number() over(partition by common.device_id order by `timestamp` desc) as num
+        device_id,
+        server_timestamp,
+        row_number() over(partition by device_id order by server_timestamp desc) as num
     from opay_dw.dwd_opay_client_event_base_di
-    where dt='${dt}'
+    where dt='{pt}'
     ) temp 
 where temp.num=1;
 

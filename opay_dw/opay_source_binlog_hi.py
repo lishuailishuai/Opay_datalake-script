@@ -285,7 +285,12 @@ def run_check_table(db_name, table_name, conn_id, hive_table_name, server_name, 
             hive_table=hive_table_name,
             mysql_db=db_name,
             mysql_table=table_name,
-            mysql_conn=conn_id
+            mysql_conn=conn_id,
+            oss_path=OSS_PATH % ("{server_name}.{db_name}.{table_name}".format(
+                server_name=server_name,
+                db_name=db_name,
+                table_name=table_name
+            ))
         )
         if response:
             return True
