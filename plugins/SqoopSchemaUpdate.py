@@ -232,6 +232,8 @@ class SqoopSchemaUpdate(object):
                 return None
 
             hive_schema = self.__get_hive_table_schema(hive_db, hive_table)
+            if not hive_schema:
+                return False
             mysql_schema = self.__get_mysql_table_schema(mysql_db, mysql_table, mysql_conn)
             if len(hive_schema) >= len(mysql_schema):
                 return True
