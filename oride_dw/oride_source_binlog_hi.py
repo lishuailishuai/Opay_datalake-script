@@ -64,7 +64,7 @@ db_name,table_name,conn_id,prefix_name,priority_weight,server_name (采集配置
 
 table_list = [
 
-    ("oride_data", "data_driver", "sqoop_db", "base", 3, "oride_db", "true"),
+    ("oride_data", "data_driver", "sqoop_db", "base", 3, "oride_db", "false"),
     ("oride_data", "data_driver_comment", "sqoop_db", "base", 3, "oride_db", "true"),
     ("oride_data", "data_driver_extend", "sqoop_db", "base", 3, "oride_db", "true"),
     ("oride_data", "data_order", "sqoop_db", "base", 3, "oride_db", "true"),
