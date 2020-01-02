@@ -108,9 +108,9 @@ else:
     print("成功")
     # 依赖前一天分区
     ods_binlog_data_order_hi_prev_day_task = OssSensor(
-        task_id='ods_binlog_data_order_hi_prev_day_task',
+        task_id='ods_binlog_base_data_order_hi_prev_day_task',
         bucket_key='{hdfs_path_str}/dt={now_day}/hour=00/_SUCCESS'.format(
-            hdfs_path_str="oride_binlog/oride_data.oride_data.data_order",
+            hdfs_path_str="oride_binlog/oride_db.oride_data.data_order",
             pt='{{ds}}',
             now_day='{{macros.ds_add(ds, +1)}}'
         ),
@@ -492,6 +492,13 @@ SELECT base.id as order_id,
        change_target, --否修改终点(0 no 1 yes) 
        user_version, --乘客端版本（发单）
        driver_version, --司机端版本（接单）
+       pax_ratio, --乘客系数
+       driver_ratio, --司机系数
+       driver_fee_rate, --司机佣金费率
+       driver_price, --司机价格
+       driver_original_price, --司机原始价格
+       original_distance, --实际距离
+       driver_distance, --司机计价距离(乘以系数后)
        nvl(country.country_code,'nal') as country_code,
 
        '{pt}' AS dt

@@ -37,21 +37,21 @@ args = {
     'email_on_retry': False,
 }
 
-dag = airflow.DAG('dm_oride_passenger_base_cube',
+dag = airflow.DAG('dm_oride_passenger_replied_base_cube',
                   schedule_interval="40 01 * * *",
                   default_args=args)
 
 ##----------------------------------------- 变量 ---------------------------------------##
 
 db_name = "oride_dw"
-table_name = "dm_oride_passenger_base_cube"
+table_name = "dm_oride_passenger_replied_base_cube"
 
 ##----------------------------------------- 依赖 ---------------------------------------##
-#获取变量
-code_map=eval(Variable.get("sys_flag"))
+# 获取变量
+code_map = eval(Variable.get("sys_flag"))
 
-#判断ufile(cdh环境)
-if code_map["id"].lower()=="ufile":
+# 判断ufile(cdh环境)
+if code_map["id"].lower() == "ufile":
     # 依赖前一天分区
     dwm_oride_passenger_order_base_di_prev_day_task = UFileSensor(
         task_id='dwm_oride_passenger_order_base_di_prev_day_task',
@@ -63,7 +63,7 @@ if code_map["id"].lower()=="ufile":
         poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
         dag=dag
     )
-    #路径
+    # 路径
     hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
 else:
     print("成功")
@@ -80,6 +80,7 @@ else:
     )
     # 路径
     hdfs_path = "oss://opay-datalake/oride/oride_dw/" + table_name
+
 
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
 
@@ -101,9 +102,10 @@ task_timeout_monitor = PythonOperator(
     dag=dag
 )
 
+
 ##----------------------------------------- 脚本 ---------------------------------------##
 
-def dm_oride_passenger_base_cube_sql_task(ds):
+def dm_oride_passenger_replied_base_cube_sql_task(ds):
     HQL = '''
     set hive.exec.parallel=true;
     set hive.exec.dynamic.partition.mode=nonstrict;
@@ -113,12 +115,12 @@ def dm_oride_passenger_base_cube_sql_task(ds):
     --设置reduce端输出进行合并，默认为false  
     set hive.merge.mapredfiles = true ;
     set hive.input.format=org.apache.hadoop.hive.ql.io.CombineHiveInputFormat;
-    
+
     with passenger_data as
     (
     select city_id,
-       product_id,
-      -- driver_serv_type,  --如果要看下单情况必须用product_id来看，如果看完单情况需要看招手停就通过product_id看，否则用driver_serv_type看
+       --product_id,
+       driver_serv_type,  --如果要看下单情况必须用product_id来看，如果看完单情况需要看招手停就通过product_id看，否则用driver_serv_type看
        count(distinct (if(order_cnt>0,passenger_id,null))) as ord_users, --当日下单乘客数
        count(distinct (if(finish_order_cnt>0,passenger_id,null))) as finished_users, --当日完单乘客数
        count(distinct (if(is_first_finish_user=1,passenger_id,null))) as first_finished_users, --当日订单中首次完单乘客数
@@ -140,17 +142,16 @@ def dm_oride_passenger_base_cube_sql_task(ds):
 from oride_dw.dwm_oride_passenger_order_base_di
         where dt='{pt}'
         group by city_id,
-               product_id,
-              -- driver_serv_type,
+               --product_id,
+                 driver_serv_type,
                --if(dt<'2019-12-01' and country_code='nal','NG',country_code)
                country_code
         with cube
     )
-    
+
     INSERT overwrite TABLE oride_dw.{table} partition(country_code,dt)
     select nvl(city_id,-10000) as city_id,
-           nvl(product_id,-10000) as product_id,
-           -10000 as driver_serv_type,
+           nvl(driver_serv_type,-10000) as driver_serv_type,
            ord_users, --当日下单乘客数
            finished_users, --当日完单乘客数
            first_finished_users, --当日订单中首次完单乘客数
@@ -176,6 +177,7 @@ from oride_dw.dwm_oride_passenger_order_base_di
         db=db_name
     )
     return HQL
+
 
 # 熔断数据，如果数据为0，报错
 def check_key_data_cnt_task(ds):
@@ -209,6 +211,7 @@ def check_key_data_cnt_task(ds):
 
     return flag
 
+
 # 主流程
 def execution_data_task_id(ds, **kwargs):
     v_date = kwargs.get('v_execution_date')
@@ -237,10 +240,10 @@ def execution_data_task_id(ds, **kwargs):
     cf = CountriesPublicFrame("true", ds, db_name, table_name, hdfs_path, "true", "true")
 
     # 删除分区
-    #cf.delete_partition()
+    cf.delete_partition()
 
     # 读取sql
-    _sql = "\n" + cf.alter_partition() + "\n" + dm_oride_passenger_base_cube_sql_task(ds)
+    _sql = "\n" + cf.alter_partition() + "\n" + dm_oride_passenger_replied_base_cube_sql_task(ds)
 
     logging.info('Executing: %s', _sql)
 
@@ -256,18 +259,19 @@ def execution_data_task_id(ds, **kwargs):
     # 生产success
     cf.touchz_success()
 
-dm_oride_passenger_base_cube_task = PythonOperator(
-    task_id='dm_oride_passenger_base_cube_task',
+
+dm_oride_passenger_replied_base_cube_task = PythonOperator(
+    task_id='dm_oride_passenger_replied_base_cube_task',
     python_callable=execution_data_task_id,
     provide_context=True,
     op_kwargs={
-        'v_execution_date':'{{execution_date.strftime("%Y-%m-%d %H:%M:%S")}}',
-        'v_execution_day':'{{execution_date.strftime("%Y-%m-%d")}}',
-        'v_execution_hour':'{{execution_date.strftime("%H")}}'
+        'v_execution_date': '{{execution_date.strftime("%Y-%m-%d %H:%M:%S")}}',
+        'v_execution_day': '{{execution_date.strftime("%Y-%m-%d")}}',
+        'v_execution_hour': '{{execution_date.strftime("%H")}}'
     },
     dag=dag
 )
 
-dwm_oride_passenger_order_base_di_prev_day_task >> dm_oride_passenger_base_cube_task
+dwm_oride_passenger_order_base_di_prev_day_task >> dm_oride_passenger_replied_base_cube_task
 
 

@@ -109,7 +109,7 @@ if code_map["id"].lower()=="ufile":
 
 else:
 
-    print("成功")
+    #print("成功")
 
     test_snappy_dev_01_tesk = OssSensor(
         task_id='test_snappy_dev_01_tesk',

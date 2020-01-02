@@ -123,7 +123,7 @@ def dm_oride_order_base_d_sql_task(ds):
        sum(is_sys_cancel) as sys_cancel_order_cnt, --当天系统取消订单数
        sum(is_passanger_before_cancel) as passanger_before_cancel_order_cnt, --当天乘客应答前取消订单数
        sum(is_passanger_after_cancel) as passanger_after_cancel_order_cnt, --当天乘客应答后取消订单数
-       sum(is_finished_pay) as finish_pay, --当天完成支付
+       sum(if(is_finished_pay=1 and is_succ_pay=1,1,0)) as finish_pay, --当天完成支付,自1226号升级为多限定支付成功  
        sum(succ_broadcast_distance) as succ_broadcast_dis, --当天成功播单距离(米)
        sum(is_driver_after_cancel) as driver_after_cancel_order_cnt, --当天司机应答后取消订单数
        sum(if(is_finish=1,billing_order_dur,0)) as finish_billing_dur, --当天完单计费时长,该字段和当天计费订单时长不一样
@@ -143,8 +143,8 @@ def dm_oride_order_base_d_sql_task(ds):
        sum(if(is_finish=1,order_onride_distance,0)) as finish_order_onride_dis, --完单送驾距离(米)
        sum(if(is_finish=1,order_assigned_cnt,0)) as finish_order_pick_up_assigned_cnt, --完单订单被分配次数（计算平均接驾距离使用）
        sum(if(is_finish=1,price,0)) as price, --当日完单gmv
-       sum(if(is_finished_pay=1,price,0)) as pay_price, --当日应付金额
-       sum(if(is_finished_pay=1,pay_amount,0)) as pay_amount, -- 当日实付金额
+       sum(if(is_finished_pay=1 and is_succ_pay=1,price,0)) as pay_price, --当日应付金额,自1226号升级为多限定支付成功,用于统计单均应付 
+       sum(if(is_finished_pay=1 and is_succ_pay=1,pay_amount,0)) as pay_amount, -- 当日实付金额,自1226号升级为多限定支付成功，用于统计单均实付 
        sum(is_valid) as valid_ord_cnt, --当日有效订单数
        sum(if(is_finish=1,pick_up_order_dur,0)) as finish_pick_up_dur, --当日完单接驾时长 
        sum(if(is_finish=1,pax_num,0)) as pax_num, --乘客数
@@ -159,16 +159,16 @@ def dm_oride_order_base_d_sql_task(ds):
        sum(if(is_request=1,pick_up_distance,0)) as accept_order_pick_up_dis, --应答单接驾距离(米)（计算平均接驾距离（应答单使用））先使用接单标志？？？？
        sum(if(is_request=1,order_assigned_cnt,0)) as accept_order_pick_up_assigned_cnt, 
        -- 应答单分配次数（应答单接驾距离(米)（计算平均接驾距离（应答单使用））先使用接单标志？？？？之前逻辑有问题
-       sum(if(is_opay_pay=1 and is_succ_pay=1 and product_id<>99,pay_amount,0)) as opay_pay_amount,  --当日用opay实付金额12.18号开始
+       sum(if(is_finished_pay=1 and is_succ_pay=1 and pay_mode not in(0,1),pay_amount,0)) as online_pay_amount,  --当日线上实付金额12.18号开始,自12.26号再次变更，要所有线上支付单，统计c补
        driver_serv_type, --订单表与司机绑定的业务类型
        sum(is_carpool) as carpool_num, --拼车订单数
        sum(is_chartered_bus) as chartered_bus_num, --包车订单数
        sum(is_carpool_success) as carpool_success_num, --拼成订单数
        sum(if(is_request=1 and is_carpool=1,1,0)) as carpool_accept_num, -- 拼车应答订单数
        sum(if(is_finish=1 and is_carpool_success=1,1,0)) as carpool_success_and_finish_num, --拼车成功且完单数
-       sum(if(is_opay_pay=1 and is_succ_pay=1 and product_id<>99,price,0)) as opay_pay_price,  --当日用opay的订单金额12.18号开始
-       sum(falsify) as falsify, --用户罚款
-       sum(falsify_driver_cancel) as falsify_driver_cancel, --司机罚款
+       sum(if(is_finished_pay=1 and is_succ_pay=1 and pay_mode not in(0,1),price,0)) as online_pay_price,  --当日线上应付订单金额12.18号开始,自12.26号再次变更，要所有线上支付单，统计gmv和c补
+       sum(falsify) as falsify, --用户罚款，自12.25号开始该表接入
+       sum(falsify_driver_cancel) as falsify_driver_cancel, --司机罚款，自12.25号开始该表接入
        country_code,
        dt as dt
 from oride_dw.dwm_oride_order_base_di

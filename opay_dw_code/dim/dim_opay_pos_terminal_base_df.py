@@ -123,7 +123,7 @@ LEFT JOIN
              kyc_level,
              row_number()over(partition BY user_id
                               ORDER BY update_time DESC) rn,
-                         country
+                         country_code
       FROM opay_dw.dim_opay_user_base_di
       WHERE dt<='{pt}') m
    WHERE rn=1
