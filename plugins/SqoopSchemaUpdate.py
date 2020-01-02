@@ -70,20 +70,25 @@ class SqoopSchemaUpdate(object):
             table=hive_table
         )
         logging.info(hql)
-        self.hive_cursor.execute(hql)
-        res = self.hive_cursor.fetchall()
-        logging.info(res)
-        hive_schema = []
-        for (column_name, column_type, column_comment) in res:
-            col_name = column_name.lower().strip()
-            if col_name == '# col_name' or col_name == '':
-                continue
-            if col_name == '# partition information':
-                break
-            hive_schema.append(column_name)
+        try:
+            self.hive_cursor.execute(hql)
+            res = self.hive_cursor.fetchall()
+            logging.info(res)
+            hive_schema = []
+            for (column_name, column_type, column_comment) in res:
+                col_name = column_name.lower().strip()
+                if col_name == '# col_name' or col_name == '':
+                    continue
+                if col_name == '# partition information':
+                    break
+                hive_schema.append(column_name)
 
-        logging.info(hive_schema)
-        return hive_schema
+            logging.info(hive_schema)
+            return hive_schema
+        except BaseException as e:
+            logging.info("Exception Info::")
+            logging.info(e)
+            return None
 
     """
     获取hive指定表的结构与数据类型
@@ -227,6 +232,8 @@ class SqoopSchemaUpdate(object):
                 return None
 
             hive_schema = self.__get_hive_table_schema(hive_db, hive_table)
+            if not hive_schema:
+                return False
             mysql_schema = self.__get_mysql_table_schema(mysql_db, mysql_table, mysql_conn)
             if len(hive_schema) >= len(mysql_schema):
                 return True

@@ -115,30 +115,39 @@ def dm_oride_passenger_base_multi_cube_sql_task(ds):
     with passenger_data as
     (
     select city_id,
-       product_id,
+       --product_id,
        driver_serv_type,  --如果要看下单情况必须用product_id来看，如果看完单情况需要看招手停就通过product_id看，否则用driver_serv_type看
        count(distinct (if(order_cnt>0,passenger_id,null))) as ord_users, --当日下单乘客数
        count(distinct (if(finish_order_cnt>0,passenger_id,null))) as finished_users, --当日完单乘客数
        count(distinct (if(is_first_finish_user=1,passenger_id,null))) as first_finished_users, --当日订单中首次完单乘客数
        sum(new_user_ord_cnt) as new_user_ord_cnt, --当日新注册乘客下单量
        sum(new_user_finished_cnt) as new_user_finished_cnt, --当日新注册乘客完单量
-       sum(new_user_gmv) as new_user_gmv, --当日注册乘客完单gmv
+       sum(new_user_gmv) as new_user_gmv, --当日注册乘客完单gmv，包含状态4，5
        count(distinct (if(pay_succ_ord_cnt>0,passenger_id,null))) as paid_users, --当日所有支付成功乘客数
-       count(distinct (if(online_pay_succ_ord_cnt>0,passenger_id,null))) as online_paid_users, --当日线上支付成功乘客数
-      -- if(dt<'2019-12-01' and country_code='nal','NG',country_code) as country_code
-       country_code
+       count(distinct (if(opay_pay_succ_ord_cnt>0,passenger_id,null))) as opay_paid_users, --当日opay支付成功乘客数，自1226号开始改变名称，逻辑不变
+       count(distinct (if(online_pay_succ_ord_cnt>0,passenger_id,null))) as online_paid_users, --当日线上支付成功乘客数，自12.26号开始该表接入
+       count(distinct (if(nobeckon_pay_succ_ord_cnt>0,passenger_id,null))) as nobeckon_paid_users, --当日所有支付成功乘客数，自12.26号开始该表接入
+       count(distinct (if(nobeckon_opay_pay_succ_ord_cnt>0,passenger_id,null))) as nobeckon_opay_paid_users, --当日opay支付成功乘客数，自1226号开始改变名称，逻辑不变
+       count(distinct (if(nobeckon_online_pay_succ_ord_cnt>0,passenger_id,null))) as nobeckon_online_paid_users, --当日线上支付成功乘客数，自12.26号开始该表接入     
+       sum(new_user_online_pay_price) as new_user_online_pay_price, --当日注册乘客线上支付成功gmv，自12.26号开始该表接入
+       sum(falsify) as falsify, --用户罚款，自12.26号开始该表接入
+       sum(falsify_driver_cancel) as falsify_driver_cancel, --司机罚款，自12.26号开始该表接入
+       --if(dt<'2019-12-01' and country_code='nalNG',country_code) as country_code    
+       country_code   
 
-        from oride_dw.dwm_oride_passenger_order_base_di
+from oride_dw.dwm_oride_passenger_order_base_di
         where dt='{pt}' and is_multi_city=1
         group by city_id,
-               product_id,
-               driver_serv_type,
+               --product_id,
+                 driver_serv_type,
+               --if(dt<'2019-12-01' and country_code='nal','NG',country_code)
                country_code
         with cube
     )
+    
     INSERT overwrite TABLE oride_dw.{table} partition(country_code,dt)
     select nvl(city_id,-10000) as city_id,
-           nvl(product_id,-10000) as product_id,
+           -10000 as product_id,
            nvl(driver_serv_type,-10000) as driver_serv_type,
            ord_users, --当日下单乘客数
            finished_users, --当日完单乘客数
@@ -147,7 +156,14 @@ def dm_oride_passenger_base_multi_cube_sql_task(ds):
            new_user_finished_cnt, --当日新注册乘客完单量
            new_user_gmv, --当日注册乘客完单gmv
            paid_users, --当日所有支付成功乘客数
-           online_paid_users, --当日线上支付成功乘客数
+           opay_paid_users, --当日opay支付成功乘客数，改名称，自1226号开始改变名称，逻辑不变
+           online_paid_users, --当日线上支付成功乘客数，自12.26号开始该表接入
+           nobeckon_paid_users, --当日所有支付成功乘客数，自12.26号开始该表接入
+           nobeckon_opay_paid_users, --当日opay支付成功乘客数，自1226号开始改变名称，逻辑不变
+           nobeckon_online_paid_users, --当日线上支付成功乘客数，自12.26号开始该表接入 
+           new_user_online_pay_price, --当日注册乘客线上支付成功gmv，自12.26号开始该表接入
+           falsify, --用户罚款，自12.26号开始该表接入
+           falsify_driver_cancel, --司机罚款，自12.26号开始该表接入
            nvl(country_code,'total') as country_code,
            '{pt}' as dt
     from passenger_data t;
