@@ -106,13 +106,13 @@ def dwm_opay_first_trans_user_of_last30d_repurchase_d_sql_task(ds):
 	from (
 	    select 
 	        sub_consume_scenario, originator_id, sum(amount) as order_amt, count(*) order_cnt, country_code, dt
-	    from dwd_opay_transaction_record_di
+	    from opay_dw.dwd_opay_transaction_record_di
 	    where dt = '{pt}' and order_status = 'SUCCESS'
 	    group by sub_consume_scenario, originator_id
 	) t1 join (
 	    select 
 	        sub_consume_scenario as first_sub_consume_scenario, originator_id, amount as first_trans_amount, dt as first_trans_date
-	    from dwm_opay_user_first_tran_di
+	    from opay_dw.dwm_opay_user_first_tran_di
 	    where dt between date_sub('{pt}', 30) and '{pt}'
 	) t2 on t1.originator_id = t2.originator_id
     '''.format(
