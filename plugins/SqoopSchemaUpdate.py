@@ -8,6 +8,7 @@ from datetime import datetime, timedelta
 from utils.connection_helper import get_hive_cursor, get_db_conn
 import logging
 from airflow.exceptions import AirflowException
+from airflow.hooks.hive_hooks import HiveCliHook, HiveServer2Hook
 
 
 class SqoopSchemaUpdate(object):
@@ -71,7 +72,7 @@ class SqoopSchemaUpdate(object):
         logging.info(hql)
         self.hive_cursor.execute(hql)
         res = self.hive_cursor.fetchall()
-        # logging.info(res)
+        logging.info(res)
         hive_schema = []
         for (column_name, column_type, column_comment) in res:
             col_name = column_name.lower().strip()
@@ -83,6 +84,38 @@ class SqoopSchemaUpdate(object):
 
         logging.info(hive_schema)
         return hive_schema
+
+    """
+    获取hive指定表的结构与数据类型
+    @:param hive_db     hive表数据库
+    @:param hive_table  hive数据表
+    """
+
+    def __get_hive_table_and_type_schema(self, hive_db, hive_table):
+        hql = '''
+            DESCRIBE FORMATTED {db}.{table} 
+        '''.format(
+            db=hive_db,
+            table=hive_table
+        )
+        logging.info(hql)
+        self.hive_cursor.execute(hql)
+        res = self.hive_cursor.fetchall()
+        logging.info(res)
+        hive_column = []
+        hive_schema = []
+
+        for (column_name, column_type, column_comment) in res:
+            col_name = column_name.lower().strip()
+            if col_name == '# col_name' or col_name == '':
+                continue
+            if col_name == '# partition information':
+                break
+            hive_column.append(column_name)
+            hive_schema.append('`%s` %s' % (column_name, column_type))
+
+        logging.info(hive_schema)
+        return (hive_column, hive_schema)
 
     """
     获取mysql指定表的结构
@@ -162,8 +195,8 @@ class SqoopSchemaUpdate(object):
         for (column_name, data_type, column_comment, column_type) in res:
             mysql_schema.append({
                 'column': column_name,
-                'column_info': "`%s` %s comment '%s'" % (
-                    column_name, self.mysql_type_to_hive.get(data_type.upper(), 'string'), column_comment)
+                'column_info': "`%s` %s " % (
+                    column_name, self.mysql_type_to_hive.get(data_type.upper(), 'string'))
             })
             mysql_column.append(column_name)
 
@@ -227,37 +260,65 @@ class SqoopSchemaUpdate(object):
             mysql_db = info.get('mysql_db', None)
             mysql_table = info.get('mysql_table', None)
             mysql_conn = info.get('mysql_conn', None)
+            oss_path = info.get('oss_path', None)
 
             if hive_db is None or hive_table is None or mysql_db is None or mysql_table is None or mysql_conn is None:
                 return None
 
-            hive_schema = self.__get_hive_table_schema(hive_db, hive_table)
+            hive_info = self.__get_hive_table_and_type_schema(hive_db, hive_table)
+            hive_columns = list(hive_info[0])
+            hive_schema = list(hive_info[1])
+
             mysql_info = self.__get_mysql_table_schema_and_column_name(mysql_db, mysql_table, mysql_conn)
             mysql_schema = mysql_info[0]
             mysql_column = mysql_info[1]
-            add_column = set(mysql_column).difference(set(hive_schema))
+            add_columns = set(mysql_column).difference(set(hive_columns))
+            add_columns = list(add_columns)
 
-            if len(add_column) == 0:
+            if len(add_columns) == 0:
                 return True
 
             columns = []
-            for i in add_column:
-                for j in mysql_schema:
-                    if mysql_column[j].get('column', None) == add_column[i]:
-                        column_info = mysql_schema[j].get('column_info', None)
+            for add_column in add_columns:
+                for column in mysql_schema:
+                    if column.get('column', None) == add_column:
+                        column_info = column.get('column_info', None)
                         if column_info:
                             columns.append(column_info)
 
+            hive_schema.extend(columns)
+
             hql = '''
-                ALTER TABLE {db}.{table} ADD COLUMNS ({columns})
+                DROP TABLE IF EXISTS {db}.`{table}`;
+                CREATE EXTERNAL TABLE IF NOT EXISTS {db}.`{table}`(
+                    {columns}
+                )
+                PARTITIONED BY (
+                  `dt` string,
+                  `hour` string
+                )
+                ROW FORMAT SERDE 
+                    'org.openx.data.jsonserde.JsonSerDe' 
+                WITH SERDEPROPERTIES ( 
+                    'ignore.malformed.json'='true') 
+                STORED AS INPUTFORMAT 
+                    'org.apache.hadoop.mapred.TextInputFormat' 
+                OUTPUTFORMAT 
+                    'org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat'
+                LOCATION
+                  '{oss_path}';
+                MSCK REPAIR TABLE {db}.`{table}`;
+                
             '''.format(
                 db=hive_db,
                 table=hive_table,
-                columns=",\n".join(columns)
+                columns=",\n".join(hive_schema),
+                oss_path=oss_path
             )
 
-            self.hive_cursor.execute(hql)
             logging.info(hql)
+            hive_hook = HiveCliHook()
+            hive_hook.run_cli(hql)
             return True
         except BaseException as e:
             logging.info("Exception Info::")
