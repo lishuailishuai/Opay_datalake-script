@@ -43,10 +43,10 @@ dag = airflow.DAG('app_opay_user_device_d',
 ##----------------------------------------- 依赖 ---------------------------------------##
 
 # 依赖前一天分区
-client_event_task = OssSensor(
-    task_id='client_event_task',
-    bucket_key='{hdfs_path_str}/dt={pt}/hour=23/_SUCCESS'.format(
-        hdfs_path_str="opay-bi/opay_buried/opay.client_event",
+dwd_opay_client_event_base_di_task = OssSensor(
+    task_id='dwd_opay_client_event_base_di_task',
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="opay/opay_dw/dwd_opay_client_event_base_di/country_code=nal",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -71,22 +71,24 @@ def app_opay_user_device_d_sql_task(ds):
     set mapred.max.split.size=1000000;
     set hive.exec.dynamic.partition.mode=nonstrict;
     set hive.exec.parallel=true;
+    insert overwrite table {db}.{table} partition(country_code,dt)
     select 
     user_id,
     device_id,
     mobile,
-    time,
-    '${dt}' as dt 
+    server_timestamp,
+    'nal' as country_code,
+    '{pt}' as dt 
 from
     (select
-        common.user_id as user_id,
-        common.user_number as mobile,
-        common.device_id as device_id,
-        `timestamp` as time,
+        user_id,
+        mobile,
+        device_id,
+        server_timestamp,
         row_number()
-        over(partition by common.user_id,common.device_id order by `timestamp` desc) as num
-    from opay_source.client_event
-    where dt='${dt}'
+        over(partition by user_id,device_id order by server_timestamp desc) as num
+    from opay_dw.dwd_opay_client_event_base_di
+    where dt='{pt}'
     ) aa 
 where aa.num=1;
 
@@ -116,7 +118,7 @@ def execution_data_task_id(ds, **kargs):
     第二个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
 
     """
-    TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "false", "true")
+    TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "true", "true")
 
 
 app_opay_user_device_d_task = PythonOperator(
@@ -126,4 +128,4 @@ app_opay_user_device_d_task = PythonOperator(
     dag=dag
 )
 
-client_event_task >> app_opay_user_device_d_task
+dwd_opay_client_event_base_di_task >> app_opay_user_device_d_task

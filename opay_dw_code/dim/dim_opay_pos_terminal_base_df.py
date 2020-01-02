@@ -27,7 +27,7 @@ import os
 
 args = {
     'owner': 'liushuzhen',
-    'start_date': datetime(2019, 12, 20),
+    'start_date': datetime(2019, 12, 30),
     'depends_on_past': False,
     'retries': 3,
     'retry_delay': timedelta(minutes=2),
@@ -43,10 +43,10 @@ dag = airflow.DAG('dim_opay_pos_terminal_base_df',
 
 ##----------------------------------------- 依赖 ---------------------------------------##
 
-ods_sqoop_base_user_di_prev_day_task = OssSensor(
-    task_id='ods_sqoop_base_user_di_prev_day_task',
+dim_opay_user_base_di_prev_day_task = OssSensor(
+    task_id='dim_opay_user_base_di_prev_day_task',
     bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opay_dw_sqoop_di/opay_user/user",
+        hdfs_path_str="opay/opay_dw/dim_opay_user_base_di/country_code=NG",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -89,7 +89,8 @@ def dim_opay_pos_terminal_base_df_sql_task(ds):
     set hive.exec.dynamic.partition.mode=nonstrict;
     set hive.exec.parallel=true;
     insert overwrite table {db}.{table} partition (country_code,dt)
-    SELECT id,
+    SELECT 
+       id,
        terminal_provider_id,
        pos_id,
        terminal_id,
@@ -104,46 +105,27 @@ def dim_opay_pos_terminal_base_df_sql_task(ds):
        b.kyc_level,
        b.role,
        b.merchant_type,
-       b.country_code,
+       nvl(b.country_code,'nal') country_code,
        '{pt}'
 FROM
   (SELECT *
    FROM opay_dw_ods.ods_sqoop_base_terminal_df
-   WHERE dt='{pt}'
-     AND create_time<'{pt} 23:00:00') a
+   WHERE dt='{pt}') a
 LEFT JOIN
   (SELECT user_id,
           ROLE,
           kyc_level,
           '' merchant_type,
-             CASE country
-                 WHEN 'Nigeria' THEN 'NG'
-                 WHEN 'Norway' THEN 'NO'
-                 WHEN 'Ghana' THEN 'GH'
-                 WHEN 'Botswana' THEN 'BW'
-                 WHEN 'Ghana' THEN 'GH'
-                 WHEN 'Kenya' THEN 'KE'
-                 WHEN 'Malawi' THEN 'MW'
-                 WHEN 'Mozambique' THEN 'MZ'
-                 WHEN 'Poland' THEN 'PL'
-                 WHEN 'South Africa' THEN 'ZA'
-                 WHEN 'Sweden' THEN 'SE'
-                 WHEN 'Tanzania' THEN 'TZ'
-                 WHEN 'Uganda' THEN 'UG'
-                 WHEN 'USA' THEN 'US'
-                 WHEN 'Zambia' THEN 'ZM'
-                 WHEN 'Zimbabwe' THEN 'ZW'
-                 ELSE 'NG'
-             END AS country_code
+              country_code
    FROM
      (SELECT user_id,
              ROLE,
              kyc_level,
              row_number()over(partition BY user_id
                               ORDER BY update_time DESC) rn,
-                         country
-      FROM opay_dw_ods.ods_sqoop_base_user_di
-      WHERE create_time<'{pt} 23:00:00') m
+                         country_code
+      FROM opay_dw.dim_opay_user_base_di
+      WHERE dt<='{pt}') m
    WHERE rn=1
    UNION ALL SELECT merchant_id AS user_id,
                     'merchant'AS ROLE,
@@ -169,8 +151,7 @@ LEFT JOIN
                            ELSE 'NG'
                        END AS country_code
    FROM opay_dw_ods.ods_sqoop_base_merchant_df
-   WHERE dt='{pt}'
-     AND create_time<'{pt} 23:00:00' )b
+   WHERE dt='{pt}')b
  on a.user_id=b.user_id
 
     '''.format(
@@ -208,7 +189,7 @@ dim_opay_pos_terminal_base_df_task = PythonOperator(
     dag=dag
 )
 
-ods_sqoop_base_user_di_prev_day_task >> dim_opay_pos_terminal_base_df_task
+dim_opay_user_base_di_prev_day_task >> dim_opay_pos_terminal_base_df_task
 ods_sqoop_base_merchant_df_prev_day_task >> dim_opay_pos_terminal_base_df_task
 ods_sqoop_base_terminal_df_prev_day_task >> dim_opay_pos_terminal_base_df_task
 
