@@ -705,7 +705,7 @@ def execution_data_task_id(ds, **kwargs):
     cf = CountriesPublicFrame("true", ds, db_name, table_name, hdfs_path, "true", "true")
 
     v_info = [
-        {"table":"oride_data.oride_data.data_order","start_timeThour": "{v_day}T00".format(v_day=v_day), "end_dateThour": "{v_day}T23".format(v_day=v_day), "depend_dir": "oss://opay-datalake/oride_binlog"}
+        {"table":"oride_db.oride_data.data_order","start_timeThour": "{v_day}T00".format(v_day=v_day), "end_dateThour": "{v_day}T23".format(v_day=v_day), "depend_dir": "oss://opay-datalake/oride_binlog"}
     ]
 
     hcm=TaskHourSuccessCountMonitor(ds,v_info)
