@@ -91,7 +91,7 @@ def app_opay_pos_report_d_sql_task(ds):
          AND create_time BETWEEN date_format(date_sub('{pt}', 1), 'yyyy-MM-dd 23') AND date_format('{pt}', 'yyyy-MM-dd 23')
          AND sub_service_type='pos'
          AND order_status='SUCCESS' )
-    INSERT overwrite TABLE {db}.{TABLE} partition (dt='{pt}')
+    INSERT overwrite TABLE {db}.{table} partition (dt='{pt}')
     SELECT active_terms,
            bind_terms,
            bind_agents
