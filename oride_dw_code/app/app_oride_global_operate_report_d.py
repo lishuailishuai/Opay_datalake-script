@@ -152,7 +152,7 @@ hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
 order_data_null = """
            null as ride_order_cnt, --当日下单量
            null as finish_order_cnt, --当日完单量
-           null as finish_pay, --当日完成支付量
+           null as finish_pay, --当日成功完成支付量，自12.18开始多限定支付成功
            null as valid_ord_cnt,  --当日有效订单量
            null as wet_ord_cnt, --当日湿单订单量
            null as bad_feedback_finish_ord_cnt, --当日差评完单量
@@ -169,8 +169,10 @@ order_data_null = """
            null as opay_pay_failed_cnt, --opay支付失败订单数,pay_mode=2 and pay_status in(0,2)
            null as order_cnt_lfw, --近四周同期下单数据
            null as finish_order_cnt_lfw,  --近四周同期完单数据
-           null as opay_pay_price,  --当日用opay的订单金额12.18号开始
-           null as opay_pay_amount  --当日用opay实付金额12.18号开始
+           null as online_pay_price,  --当日用opay的订单金额12.18号开始，自1226号升级为当日线上支付成功、订单状态为5且不包含招手停
+           null as online_pay_amount,  --当日用opay实付金额12.18号开始，自1226号升级为当日线上支付成功、订单状态为5且不包含招手停
+           null as falsify, --用户罚款，自12.25号开始该表接入
+           null as falsify_driver_cancel --司机罚款，自12.25号开始该表接入
            """
 
 passenger_data_null = """
@@ -185,9 +187,10 @@ passenger_order_data_null = """
            null as old_finished_users,  --当日完单老客数
            null as new_user_ord_cnt,  --当日新注册乘客下单量
            null as new_user_finished_cnt,  --当日新注册乘客完单量
-           null as paid_users,  --当日总支付乘客数
-           null as online_paid_users,  --当日线上支付乘客数
-           null as new_user_gmv  --当日新注册乘客完单gmv
+           null as nobeckon_paid_users,  --当日总支付乘客数，自12.18号升级逻辑去掉招手停，发邮件需要改字段名称
+           null as nobeckon_opay_paid_users,  --当日opay支付成功乘客数，自12.18号升级逻辑去掉招手停，发邮件需要改字段名称
+           null as nobeckon_online_paid_users,  --当日线上支付乘客数，自12.18号开始新增
+           null as new_user_gmv  --当日新注册乘客完单gmv 
     """
 
 driver_data_null = """
@@ -229,7 +232,7 @@ select nvl(t.country_code,'total') as country_code,
        t.product_id,
        sum(ride_order_cnt) as ride_order_cnt, --当日下单量
        sum(finish_order_cnt) as finish_order_cnt, --当日完单量
-       sum(finish_pay) as finish_pay, --当日完成支付量
+       sum(finish_pay) as finish_pay, --当日成功支付完单量
        sum(valid_ord_cnt) as valid_ord_cnt,  --当日有效订单量
        sum(wet_ord_cnt) as wet_ord_cnt, --当日湿单订单量
        sum(bad_feedback_finish_ord_cnt) as bad_feedback_finish_ord_cnt,  --当日差评完单量
@@ -240,14 +243,16 @@ select nvl(t.country_code,'total') as country_code,
        sum(finish_order_onride_dis) as finish_order_onride_dis,  --当日完单送驾距离
        sum(pax_num) as pax_num,  --乘客数
        sum(price) as price, --当日完单gmv,订单状态4，5
-       sum(pay_price) as pay_price,  --当日应付金额，订单状态5
-       sum(pay_amount) as pay_amount,  --当日实付金额，订单状态5
+       sum(pay_price) as pay_price,  --当日应付金额，订单状态5且支付成功，用于统计单均应付
+       sum(pay_amount) as pay_amount,  --当日实付金额，订单状态5且支付成功，用于统计单均实付
        sum(opay_pay_cnt) as opay_pay_cnt, --opay支付订单数,pay_mode=2
        sum(opay_pay_failed_cnt) as opay_pay_failed_cnt, --opay支付失败订单数,pay_mode=2 and pay_status in(0,2)
        sum(order_cnt_lfw) as order_cnt_lfw,  --近四周同期下单数据 
        sum(finish_order_cnt_lfw) as finish_order_cnt_lfw,  --近四周同期完单数据
-       sum(opay_pay_price) as opay_pay_price,  --当日用opay的订单金额12.18号开始
-       sum(opay_pay_amount) as opay_pay_amount, --当日用opay实付金额12.18号开始
+       sum(online_pay_price) as online_pay_price,  --当日线上支付成功订单金额12.18号开始,用于统计c补和gmv
+       sum(online_pay_amount) as online_pay_amount, --当日线上支付成功金额12.18号开始,用于统计c补
+       sum(falsify) as falsify, --用户罚款，自12.25号开始该表接入
+       sum(falsify_driver_cancel) as falsify_driver_cancel, --司机罚款，自12.25号开始该表接入
        {passenger_data_null},
        {passenger_order_data_null},
        {driver_data_null},
@@ -259,7 +264,7 @@ from (SELECT dt,country_code,
        product_id,
        sum(ride_order_cnt) as ride_order_cnt, --当日下单量
        sum(finish_order_cnt) as finish_order_cnt, --当日完单量（不包含同时呼叫）
-       sum(finish_pay) as finish_pay, --当日完成支付量
+       sum(if(product_id<>99,finish_pay,0)) as finish_pay, --当日成功完成支付量，不含招手停
        sum(valid_ord_cnt) as valid_ord_cnt,  --当日有效订单量
        sum(wet_ord_cnt) as wet_ord_cnt, --当日湿单订单量
        sum(bad_feedback_finish_ord_cnt) as bad_feedback_finish_ord_cnt,--当日差评完单量
@@ -270,14 +275,16 @@ from (SELECT dt,country_code,
        sum(finish_order_onride_dis) as finish_order_onride_dis,  --当日完单送驾距离
        sum(pax_num) as pax_num,  --乘客数
        sum(price) as price, --当日完单gmv,订单状态4，5
-       sum(pay_price) as pay_price,  --当日应付金额，订单状态5
-       sum(pay_amount) as pay_amount,  --当日实付金额，订单状态5
+       sum(if(product_id<>99,pay_price,0)) as pay_price,  --当日应付金额，订单状态5且支付成功，12.18号开始升级，用于统计单均应付
+       sum(if(product_id<>99,pay_amount,0)) as pay_amount,  --当日实付金额，订单状态5且支付成功，12.18号开始升级，用于统计单均实付
        sum(opay_pay_cnt) as opay_pay_cnt, --opay支付订单数,pay_mode=2
        sum(opay_pay_failed_cnt) as opay_pay_failed_cnt, --opay支付失败订单数,pay_mode=2 and pay_status in(0,2)
        order_cnt_lfw, --近四周同期下单数据均值
        finish_order_cnt_lfw,  --近四周同期完单数据
-       sum(opay_pay_price) as opay_pay_price,  --当日用opay的订单金额12.18号开始
-       sum(opay_pay_amount) as opay_pay_amount  --当日用opay实付金额12.18号开始
+       sum(if(product_id<>99,online_pay_price,0)) as online_pay_price,  --当日线上支付成功订单金额12.18号开始,用于统计c补和gmv
+       sum(if(product_id<>99,online_pay_amount,0)) as online_pay_amount,  --当日线上支付成功金额12.18号开始,用于统计c补
+       sum(falsify) as falsify, --用户罚款，自12.25号开始该表接入
+       sum(falsify_driver_cancel) as falsify_driver_cancel --司机罚款，自12.25号开始该表接入
        
 FROM (SELECT sum(if(dt>=date_add('{pt}',-28)
               AND dt<'{pt}'
@@ -333,9 +340,11 @@ select country_code,
        (nvl(finished_users,0)-nvl(first_finished_users,0)) as old_finished_users,  --当日完单老客数
        new_user_ord_cnt,  --当日新注册乘客下单量
        new_user_finished_cnt,  --当日新注册乘客完单量
-       paid_users,  --当日总支付乘客数
-       online_paid_users,  --当日线上支付乘客数
-       new_user_gmv,  --当日新注册乘客完单gmv  
+       nobeckon_paid_users,  --当日总支付乘客数，自12.18号升级逻辑去掉招手停，发邮件需要改字段名称
+       nobeckon_opay_paid_users,  --当日opay支付成功乘客数，自12.18号升级逻辑去掉招手停，发邮件需要改字段名称
+       nobeckon_online_paid_users,  --当日线上支付乘客数，自12.18号开始新增
+      -- new_user_gmv,  --当日新注册乘客完单gmv  
+       if(product_id<>99,nvl(new_user_online_pay_price,0),0)+nvl(falsify,0)+nvl(falsify_driver_cancel,0) as new_user_gmv, --当日注册乘客线上支付成功gmv，自12.18号开始逻辑升级
        {driver_data_null},
        null as map_request_num,
        {finance_data_null},
@@ -509,8 +518,8 @@ SELECT nvl(city_id,-10000) as city_id,
        sum(old_finished_users) as old_finished_users,  --当日完单老客数
        sum(new_user_ord_cnt) as new_user_ord_cnt,  --当日新注册乘客下单量
        sum(new_user_finished_cnt) as new_user_finished_cnt,  --当日新注册乘客完单量
-       sum(paid_users) as paid_users,  --当日总支付乘客数
-       sum(online_paid_users) as online_paid_users,  --当日线上支付乘客数
+       sum(nobeckon_paid_users) as nobeckon_paid_users,  --当日总支付乘客数，自12.18号升级逻辑去掉招手停，发邮件需要改字段名称
+       sum(nobeckon_opay_paid_users) as nobeckon_opay_paid_users,  --当日opay支付乘客数，自12.18号升级逻辑去掉招手停，发邮件需要改字段名称
        sum(new_user_gmv) as new_user_gmv,  --当日新注册乘客完单gmv 
        sum(td_audit_finish_driver_num) as td_audit_finish_driver_num,  --当日审核通过司机数（包含同时呼叫）
        sum(td_online_driver_num) as td_online_driver_num,  --当日在线司机数（包含同时呼叫）
@@ -523,16 +532,19 @@ SELECT nvl(city_id,-10000) as city_id,
        sum(map_request_num) as map_request_num,  --地图调用次数
        sum(recharge_amount) as recharge_amount, --充值金额
        sum(reward_amount) AS reward_amount, --奖励金额
-       sum(opay_pay_price) as opay_pay_price,  --当日用opay的订单金额12.18号开始,历史数据不可看
-       sum(opay_pay_amount) as opay_pay_amount, --当日用opay实付金额12.18号开始，历史数据不可看
-       null as recharge_users, --每天充值用户数
-       null as user_recharge_succ_balance,  --每天用户充值真实金额
+       sum(online_pay_price) as online_pay_price,  --当日线上支付成功订单金额12.18号开始,用于统计c补和gmv
+       sum(online_pay_amount) as online_pay_amount, --当日线上支付成功订单金额12.18号开始,用于统计c补  
+       sum(falsify) as falsify, --用户罚款，自12.25号开始该表接入
+       sum(falsify_driver_cancel) as falsify_driver_cancel, --司机罚款，自12.25号开始该表接入         
+      -- null as recharge_users, --每天充值用户数
+      -- null as user_recharge_succ_balance,  --每天用户充值真实金额
        sum(wet_ord_cnt) as wet_ord_cnt, --当日湿单订单量
        sum(bad_feedback_finish_ord_cnt) as bad_feedback_finish_ord_cnt, --当日差评完单量
        sum(finish_order_cnt_inSimulRing) as finish_order_cnt_inSimulRing, --当日完单量(包含同时呼叫)
        sum(td_request_driver_num) as td_request_driver_num, --当日接单司机数（不包含同时呼叫）
        sum(td_finish_order_driver_num) as td_finish_order_driver_num,  --当日完单司机数（不包含同时呼叫）
-       null as iph_fenzi_inSimulRing, --iph分子（包含同时呼叫）       
+       --null as iph_fenzi_inSimulRing, --iph分子（包含同时呼叫）
+       sum(nobeckon_online_paid_users) as nobeckon_online_paid_users,  --当日线上支付乘客数，自12.18号升级逻辑去掉招手停，发邮件需要改字段名称
        --nvl(country_code,'total') as country_code,
        if(nvl(country_code,'total')='total','nal','nal') as country_code,
        '{pt}' as dt

@@ -98,6 +98,7 @@ def get_all_data_row(ds):
                             <td>{}</td>
                             <td>{}</td>
                             <td>{}</td>
+                            <td>{}</td>
                             <!--司机指标-->
                             <td>{}</td>
                             <td>{}</td>
@@ -118,7 +119,7 @@ def get_all_data_row(ds):
                 nvl(ride_order_cnt,0) as ride_order_cnt, --当日下单数
                 nvl(order_cnt_lfw,0) as order_cnt_lfw, --下单数（近四周同期均值）dt>'2019-10-10'有近四周数据
                 nvl(valid_ord_cnt,0) as valid_ord_cnt,  --当日有效下单量
-                nvl(finish_pay,0) as finish_pay, --当日支付完单数
+                nvl(finish_pay,0) as finish_pay, --当日支付成功完单数，不含招手停
                 nvl(finish_order_cnt,0) as finish_order_cnt, --当日完单量
                 nvl(finish_order_cnt_lfw,0) as finish_order_cnt_lfw, --完单数（近四周同期均值）
                 concat(cast(nvl(round(finish_order_cnt*100/ride_order_cnt,1),0) as string),'%') as finish_order_rate, --完单率
@@ -131,15 +132,16 @@ def get_all_data_row(ds):
                 nvl(old_finished_users,0) as old_finished_users,  --当日完单老客数
                 nvl(new_user_ord_cnt,0) as new_user_ord_cnt, --当日注册乘客下单量
                 nvl(new_user_finished_cnt,0) as new_user_finished_cnt, --当日注册乘客完单量
-                concat(cast(nvl(round(online_paid_users*100/paid_users,1),0) as string),'%') as online_paid_users_rate,  --当日线上支付乘客占比
+                concat(cast(nvl(round(nobeckon_opay_paid_users*100/nobeckon_paid_users,1),0) AS string),'%') AS opay_paid_user_rate, --当日opay支付乘客占比,1218号开始逻辑升级
+                concat(cast(nvl(round(nobeckon_online_paid_users*100/nobeckon_paid_users,1),0) AS string),'%') AS online_paid_user_rate, --当日线上支付乘客占比，1218号新增
                 nvl(td_audit_finish_driver_num,0) as td_audit_finish_driver_num, --当日审核通过司机数
                 nvl(td_online_driver_num,0) as td_online_driver_num, --当日在线司机数
                 nvl(td_request_driver_num_inSimulRing,0) as td_online_driver_num, --当日接单司机数
                 nvl(td_finish_order_driver_num_inSimulRing,0) as td_finish_order_driver_num_inSimulRing, --当日完单司机数
-                cast(price as bigint) as gmv,  --订单应付总额,状态4，5
-                cast(new_user_gmv as bigint) as new_user_gmv, -- 当日新注册乘客完单gmv，状态4，5
-                concat(cast(nvl(round((nvl(recharge_amount,0)+nvl(reward_amount,0))*100/price,1),0) as string),'%') as b_subsidy_rate,  --b端补贴率
-                if(dt<='2019-12-17',concat(cast(nvl(round((price-pay_amount)*100/price,1),0) as string),'%'),concat(cast(nvl(round((opay_pay_price-opay_pay_amount)*100/opay_pay_price,1),0) as string),'%')) as c_subsidy_rate, --c端补贴率【gmv状态4，5；实付金额状态5】
+                cast((online_pay_price+nvl(falsify,0)+nvl(falsify_driver_cancel,0)) as bigint) as gmv,  --订单应付总额,状态4，5,自1226升级为状态5线上支付成功不含招手停且包含罚款
+                cast(new_user_gmv as bigint) as new_user_gmv, -- 当日新注册乘客完单gmv，状态4，5,自1226升级为状态5线上支付成功不含招手停且包含罚款
+                concat(cast(nvl(round((nvl(recharge_amount,0)+nvl(reward_amount,0))*100/(online_pay_price+nvl(falsify,0)+nvl(falsify_driver_cancel,0)),1),0) as string),'%') as b_subsidy_rate,  --b端补贴率
+                if(dt<='2019-12-17',concat(cast(nvl(round((price-pay_amount)*100/price,1),0) as string),'%'),concat(cast(nvl(round((online_pay_price-online_pay_amount)*100/(online_pay_price+nvl(falsify,0)+nvl(falsify_driver_cancel,0)),1),0) as string),'%')) as c_subsidy_rate, --c端补贴率【gmv状态4，5；实付金额状态5】
                 --cast(user_recharge_succ_balance as bigint) as user_recharge_succ_balance, --每日用户充值真实金额
                 --recharge_users, --每日充值客户数
                 nvl(map_request_num,0) as map_request_num,  --地图调用次数
@@ -198,6 +200,7 @@ def get_product_rows(ds, all_completed_num_nobeckon, product_id):
                         <td>{}</td>
                         <td>{}</td>
                         <td>{}</td>
+                        <td>{}</td>
                         <!--司机指标-->
                         <td>{}</td>
                         <td>{}</td>
@@ -244,6 +247,7 @@ def get_product_rows(ds, all_completed_num_nobeckon, product_id):
                             <td>{}</td>
                             <!--{}-->
                             <td>{}</td>
+                            <td>{}</td>
                             <!--司机指标-->
                             <td>{}</td>
                             <td>{}</td>
@@ -282,7 +286,7 @@ def get_product_rows(ds, all_completed_num_nobeckon, product_id):
                  nvl(t1.ride_order_cnt,0) as ride_order_cnt, --当日下单数
                  nvl(if(dt>'2019-11-21' and t1.product_id<>4,order_cnt_lfw,if(dt>'2019-12-17',order_cnt_lfw,'-')),0) AS order_cnt_lfw, --近四周同期下单数据 dt>'2019-11-21'专快otrike有近四周数据
                  nvl(t1.valid_ord_cnt,0) as valid_ord_cnt, --有效下单量
-                 nvl(t1.finish_pay,0) as finish_pay, --当日支付完单数
+                 nvl(t1.finish_pay,0) as finish_pay, --当日支付成功完单数，不含招手停,自1218号开始逻辑升级
                  nvl(t1.finish_order_cnt,0) as finish_order_cnt, --当日完单量
                  nvl(if(dt>'2019-11-21' and t1.product_id<>4,finish_order_cnt_lfw,if(dt>'2019-12-17',finish_order_cnt_lfw,'-')),0) AS finish_order_cnt_lfw, --完单数（近四周同期均值）
                  concat(cast(nvl(round(t1.finish_order_cnt*100/t1.ride_order_cnt,1),0) AS string),'%') AS finish_order_rate, --完单率
@@ -293,7 +297,8 @@ def get_product_rows(ds, all_completed_num_nobeckon, product_id):
                  nvl(if(product_id=3,t1.new_user_ord_cnt,t1.first_finished_users),0) as passenger_indictor_2, --1,2当日首次完单乘客数;3当日注册乘客下单数
                  nvl(t1.new_user_finished_cnt,0) as new_user_finished_cnt, --当日新注册乘客完单数
                  if(product_id=3,nvl(round(t1.pax_num/t1.finish_order_cnt,1),0),0) as passenger_indictor_4,
-                 concat(cast(nvl(round(t1.online_paid_users*100/t1.paid_users,1),0) AS string),'%') AS online_paid_user_rate, --当日线上支付乘客占比
+                 concat(cast(nvl(round(t1.nobeckon_opay_paid_users*100/t1.nobeckon_paid_users,1),0) AS string),'%') AS opay_paid_user_rate, --当日opay支付乘客占比,1218号开始逻辑升级
+                 concat(cast(nvl(round(t1.nobeckon_online_paid_users*100/t1.nobeckon_paid_users,1),0) AS string),'%') AS online_paid_user_rate, --当日线上支付乘客占比，1218号新增
                  nvl(t1.td_audit_finish_driver_num,0) as td_audit_finish_driver_num, --当日审核通过司机数
                  nvl(t1.td_online_driver_num,0) as td_online_driver_num, --当日在线司机数
                  nvl(t1.td_request_driver_num,0) as td_request_driver_num, --当日接单司机数(不包含同时呼叫)
@@ -310,12 +315,12 @@ def get_product_rows(ds, all_completed_num_nobeckon, product_id):
                  nvl(cast(round(t1.finish_pick_up_dur/t1.finish_order_cnt,0) as bigint),0) AS avg_pick_up_dur, --平均接驾时长
                  nvl(cast(round(t1.billing_order_dur/t1.finish_order_cnt,0) as bigint),0) AS avg_billing_order_dur,--平均计费时长
                  nvl(cast(round(t1.finish_order_onride_dis/t1.finish_order_cnt,0) as bigint),0) AS avg_order_onride_dis,--平均送驾距离
-                 nvl(cast(t1.price as bigint),0) AS gmv,
+                 cast((nvl(t1.online_pay_price,0)+nvl(t1.falsify,0)+nvl(t1.falsify_driver_cancel,0)) as bigint) as gmv, --自1218号开始逻辑升级
                  nvl(cast(t1.new_user_gmv as bigint),0) as new_user_gmv, --当日注册乘客完单gmv
-                concat(cast(nvl(round((nvl(t1.recharge_amount,0)+nvl(t1.reward_amount,0))*100/t1.price,1),0) AS string),'%') AS b_subsidy_rate, --b端补贴率
-                if(dt<='2019-12-17',concat(cast(nvl(round((t1.price-t1.pay_amount)*100/t1.price,1),0) AS string),'%'),concat(cast(nvl(round((t1.opay_pay_price-t1.opay_pay_amount)*100/t1.opay_pay_price,1),0) AS string),'%')) AS c_subsidy_rate, --c端补贴率【gmv状态4，5；实付金额状态5】
+                concat(cast(nvl(round((nvl(t1.recharge_amount,0)+nvl(t1.reward_amount,0))*100/(nvl(t1.online_pay_price,0)+nvl(t1.falsify,0)+nvl(t1.falsify_driver_cancel,0)),1),0) AS string),'%') AS b_subsidy_rate, --b端补贴率
+                if(dt<='2019-12-17',concat(cast(nvl(round((t1.price-t1.pay_amount)*100/t1.price,1),0) AS string),'%'),concat(cast(nvl(round((t1.online_pay_price-t1.online_pay_amount)*100/(nvl(t1.online_pay_price,0)+nvl(t1.falsify,0)+nvl(t1.falsify_driver_cancel,0)),1),0) AS string),'%')) AS c_subsidy_rate, --c端补贴率【gmv状态4，5；实付金额状态5】
                 --concat(cast(nvl(round((t1.opay_pay_price-t1.opay_pay_amount)*100/t1.price,1),0) AS string),'%') AS c_subsidy_rate, --c端补贴率【gmv状态4，5；实付金额状态5】
-                nvl(round(t1.pay_price/t1.finish_pay,1),0) AS avg_pay_price, --单均应付
+                nvl(round(t1.pay_price/t1.finish_pay,1),0) AS avg_pay_price, --单均应付,自1218号开始逻辑升级
                 nvl(round(t1.pay_amount/t1.finish_pay,1),0) AS avg_pay_amount --单均实付
                 from (SELECT sum(finish_order_cnt) over(partition BY city_id) AS city_total,
                              sum(finish_order_cnt) over(partition BY dt) AS total,
@@ -372,6 +377,7 @@ def get_all_product_rows(ds, all_completed_num):
                             <td>{}</td>
                             <td>{}</td>
                             <td>{}</td>
+                            <td>{}</td>
                             <!--各业务完单占比-->
                             <td>{}</td>
                             <td>{}</td>
@@ -394,7 +400,8 @@ def get_all_product_rows(ds, all_completed_num):
                      concat(cast(nvl(round(nvl(t1.finish_order_cnt,0)*100/t6.finish_order_cnt,1),0) AS string),'%') AS city_fininsh_ord_rate, --城市完单占比
                      nvl(t1.ord_users,0) AS ord_users, --当日下单乘客数
                      nvl(t1.finished_users,0) AS finished_users,--当日完单乘客数
-                     concat(cast(nvl(round(t1.online_paid_users*100/t1.paid_users,1),0) AS string),'%') AS online_paid_user_rate, --当日线上支付乘客占比
+                     concat(cast(nvl(round(t1.nobeckon_opay_paid_users*100/t1.nobeckon_paid_users,1),0) AS string),'%') AS opay_paid_user_rate, --当日opay支付乘客占比
+                     concat(cast(nvl(round(t1.nobeckon_online_paid_users*100/t1.nobeckon_paid_users,1),0) AS string),'%') AS online_paid_user_rate, --当日线上支付乘客占比
                     concat(cast(nvl(round(nvl(t2.finish_order_cnt,0)*100/nvl(t1.finish_order_cnt,0),1),0) AS string),'%') AS direct_finish_rate, --专车完单占比
                     concat(cast(nvl(round(nvl(t3.finish_order_cnt,0)*100/nvl(t1.finish_order_cnt,0),1),0) AS string),'%') AS street_finish_rate, --快车完单占比
                     concat(cast(nvl(round(nvl(t4.finish_order_cnt,0)*100/nvl(t1.finish_order_cnt,0),1),0) AS string),'%') AS otrike_finish_rate, --otrike完单占比  
@@ -464,7 +471,7 @@ def send_report_email(ds, **kwargs):
                                 <th></th>
                                 <th colspan="2" style="text-align: center;">天气指标</th>
                                 <th colspan="9" style="text-align: center;">关键指标</th>
-                                <th colspan="3" style="text-align: center;">乘客指标</th>
+                                <th colspan="4" style="text-align: center;">乘客指标</th>
                                 <th colspan="4" style="text-align: center;">各业务完单占比</th>
                             </tr>
                             <tr>
@@ -477,7 +484,7 @@ def send_report_email(ds, **kwargs):
                                 <th>下单数</th>
                                 <th>下单数（近四周均值）</th>
                                 <th>有效下单数</th>
-                                <th>支付完单数</th>
+                                <th>支付成功完单数</th>
                                 <th>完单数</th>
                                 <th>完单数（近四周均值）</th>
                                 <th>完单率</th>
@@ -486,6 +493,7 @@ def send_report_email(ds, **kwargs):
                                 <!--乘客指标-->
                                 <th>下单乘客数</th>
                                 <th>完单乘客数</th>
+                                <th>opay支付乘客占比</th>
                                 <th>线上支付乘客占比</th>
                                 <!--各业务完单占比-->
                                 <th>专车</th>
@@ -499,7 +507,7 @@ def send_report_email(ds, **kwargs):
                                 <th></th>
                                 <th></th>
                                 <th colspan="10" style="text-align: center;">关键指标</th>
-                                <th colspan="4" style="text-align: center;">乘客指标</th>
+                                <th colspan="5" style="text-align: center;">乘客指标</th>
                                 <th colspan="11" style="text-align: center;">司机指标</th>
                                 <th colspan="4" style="text-align: center;">体验指标</th>
                                 <th colspan="6" style="text-align: center;">财务指标</th>
@@ -511,7 +519,7 @@ def send_report_email(ds, **kwargs):
                                 <th>下单数</th>
                                 <th>下单数（近四周均值）</th>
                                 <th>有效下单数</th>
-                                <th>支付完单数</th>
+                                <th>支付成功完单数</th>
                                 <th>完单数</th>
                                 <th>完单数（近四周均值）</th>
                                 <th>完单率</th>
@@ -522,6 +530,7 @@ def send_report_email(ds, **kwargs):
                                 <th>完单乘客数</th>
                                 <th>首次完单乘客数</th>
                                 <th>当日注册乘客完单数</th>
+                                <th>opay支付乘客占比</th>
                                 <th>线上支付乘客占比</th>
                                 <!--司机指标-->
                                 <th>审核通过司机数</th>
@@ -555,7 +564,7 @@ def send_report_email(ds, **kwargs):
                                     <th></th>
                                     <th></th>
                                     <th colspan="10" style="text-align: center;">关键指标</th>
-                                    <th colspan="5" style="text-align: center;">乘客指标</th>
+                                    <th colspan="6" style="text-align: center;">乘客指标</th>
                                     <th colspan="11" style="text-align: center;">司机指标</th>
                                     <th colspan="4" style="text-align: center;">体验指标</th>
                                     <th colspan="6" style="text-align: center;">财务指标</th>
@@ -567,7 +576,7 @@ def send_report_email(ds, **kwargs):
                                     <th>下单数</th>
                                     <th>下单数（近四周均值）</th>
                                     <th>有效下单数</th>
-                                    <th>支付完单数</th>
+                                    <th>支付成功完单数</th>
                                     <th>完单数</th>
                                     <th>完单数（近四周均值）</th>
                                     <th>完单率</th>
@@ -579,6 +588,7 @@ def send_report_email(ds, **kwargs):
                                     <th>当日注册乘客下单数</th>
                                     <th>当日注册乘客完单数</th>
                                     <th>单均乘客数</th>
+                                    <th>opay支付乘客占比</th>
                                     <th>线上支付乘客占比</th>
                                     <!--司机指标-->
                                     <th>审核通过司机数</th>
@@ -647,7 +657,7 @@ def send_report_email(ds, **kwargs):
                         <tr>
                             <th></th>
                             <th colspan="9" style="text-align: center;">关键指标</th>
-                            <th colspan="8" style="text-align: center;">乘客指标</th>
+                            <th colspan="9" style="text-align: center;">乘客指标</th>
                             <th colspan="4" style="text-align: center;">司机指标</th>
                             <th colspan="5" style="text-align: center;">财务</th>
                             <th colspan="1" style="text-align: center;">系统</th>
@@ -659,7 +669,7 @@ def send_report_email(ds, **kwargs):
                             <th>下单数</th>
                             <th>下单数（近四周均值）</th>
                             <th>有效下单数</th>
-                            <th>支付完单数</th>
+                            <th>支付成功完单数</th>
                             <th>完单数</th>
                             <th>完单数（近四周均值）</th>
                             <th>完单率</th>
@@ -673,6 +683,7 @@ def send_report_email(ds, **kwargs):
                             <th>完单老客数</th>
                             <th>当日注册乘客下单数</th>
                             <th>当日注册乘客完单数</th>
+                            <th>opay支付乘客占比</th>
                             <th>线上支付乘客占比</th>
                             <!--司机指标-->
                             <th>审核通过司机数</th>

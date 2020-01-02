@@ -105,7 +105,7 @@ def app_oride_global_operate_report_multi_d_sql_task(ds):
        sum(ride_order_cnt) as ride_order_cnt, --当日下单量
        sum(valid_ord_cnt) as valid_ord_cnt,  --当日有效订单量
        sum(finish_order_cnt) as finish_order_cnt, --当日完单量
-       sum(finish_pay) as finish_pay, --当日完成支付量      
+       sum(finish_pay) as finish_pay, --当日成功完成支付量，1218号逻辑升级      
        sum(wet_ord_cnt) as wet_ord_cnt, --当日湿单订单量
        order_cnt_lfw, --近四周同期下单数据均值
        finish_order_cnt_lfw  --近四周同期完单数据
@@ -140,8 +140,9 @@ select nvl(city_id,-10000) as city_id,
        sum(finish_order_cnt_lfw) as finish_order_cnt_lfw,  --近四周同期完单数据
        sum(ord_users) as ord_users,  --当日下单乘客数
        sum(finished_users) as finished_users,  --当日完单乘客数
-       sum(paid_users) as paid_users,  --当日总支付乘客数
-       sum(online_paid_users) as online_paid_users,  --当日线上支付乘客数
+       sum(nobeckon_paid_users) as nobeckon_paid_users,  --当日总支付乘客数，自12.18号升级逻辑去掉招手停，发邮件需要改字段名称
+       sum(nobeckon_opay_paid_users) as nobeckon_opay_paid_users,  --当日opay支付乘客数，自12.18号升级逻辑去掉招手停，发邮件需要改字段名称
+       sum(nobeckon_online_paid_users) as nobeckon_online_paid_users,  --当日线上支付乘客数，自12.18号新增
        --nvl(country_code,'total') as country_code,
        if(nvl(country_code,'total')='total','nal','nal') as country_code,
        '{pt}' as dt
@@ -152,14 +153,15 @@ from (select nvl(ord.country_code,'total') as country_code,
        sum(ride_order_cnt) as ride_order_cnt, --当日下单量
        sum(valid_ord_cnt) as valid_ord_cnt,  --当日有效订单量
        sum(finish_order_cnt) as finish_order_cnt, --当日完单量
-       sum(finish_pay) as finish_pay, --当日完成支付量       
+       sum(finish_pay) as finish_pay, --当日成功完成支付量，自1218号开始逻辑升级       
        sum(wet_ord_cnt) as wet_ord_cnt, --当日湿单订单量
        sum(order_cnt_lfw) as order_cnt_lfw,  --近四周同期下单数据 
        sum(finish_order_cnt_lfw) as finish_order_cnt_lfw,  --近四周同期完单数据
        null as ord_users,  --当日下单乘客数
        null as finished_users,  --当日完单乘客数
-       null as paid_users,  --当日总支付乘客数
-       null as online_paid_users  --当日线上支付乘客数
+       null as nobeckon_paid_users,  --当日总支付乘客数
+       null as nobeckon_opay_paid_users,  --当日opay支付乘客数
+       null as nobeckon_online_paid_users  --当日线上支付乘客数
 from order_data ord
 inner join
 (select city_id
@@ -185,8 +187,9 @@ select country_code,
        null as finish_order_cnt_lfw,  --近四周同期完单数据
        ord_users,  --当日下单乘客数，有同时呼叫时，该指标在driver_serv_type维度下的下单乘客数是不准确的，由于多业务线报表只看城市维度  
        finished_users,  --当日完单乘客数
-       paid_users,  --当日总支付乘客数
-       online_paid_users  --当日线上支付乘客数
+       nobeckon_paid_users,  --当日总支付乘客数
+       nobeckon_opay_paid_users,  --当日opay支付乘客数
+       nobeckon_online_paid_users  --当日线上支付乘客数
 from oride_dw.dm_oride_passenger_base_multi_cube
 where dt='{pt}' and product_id=-10000) m
 where nvl(m.country_code,'total')='total'
