@@ -425,17 +425,24 @@ SELECT base.order_id,
         local_gov, --围栏ID
         estimate_id,  --预估价记录表id   
         gender, --性别:0.未设置 1.男 2.女
-              surcharge, --服务费
-              user_agree_surcharge, --用户是否同意服务费(1同意 2 不同意)
-              take_lng, --司机接单位置经度
-              take_lat, --司机接单位置纬度
-              minimum_fare, --最低消费
-              discount, --动态折扣(如:70，7折)
-              discount_price_max, --可享受折扣金额上限.)
-              driver_depart, --接单取消时骑手是否出发 0 已出发（默认） 1 未出发
-              change_target, --否修改终点(0 no 1 yes) 
-              user_version, --乘客端版本（发单）
-              driver_version, --司机端版本（接单）
+        surcharge, --服务费
+        user_agree_surcharge, --用户是否同意服务费(1同意 2 不同意)
+        take_lng, --司机接单位置经度
+        take_lat, --司机接单位置纬度
+        minimum_fare, --最低消费
+        discount, --动态折扣(如:70，7折)
+        discount_price_max, --可享受折扣金额上限.)
+        driver_depart, --接单取消时骑手是否出发 0 已出发（默认） 1 未出发
+        change_target, --否修改终点(0 no 1 yes) 
+        user_version, --乘客端版本（发单）
+        driver_version, --司机端版本（接单）
+        pax_ratio, --乘客系数
+        driver_ratio, --司机系数
+        driver_fee_rate, --司机佣金费率
+        driver_price, --司机价格
+        driver_original_price, --司机原始价格
+        original_distance, --实际距离
+        driver_distance, --司机计价距离(乘以系数后)
        nvl(country.country_code,'nal') as country_code,
 
        '{pt}' AS dt
@@ -588,20 +595,27 @@ FROM
              local_gov, --围栏ID
              estimate_id,  --预估价记录表id
              gender, --性别:0.未设置 1.男 2.女
-                   surcharge, --服务费
-                   user_agree_surcharge, --用户是否同意服务费(1同意 2 不同意)
-                   take_lng, --司机接单位置经度
-                   take_lat, --司机接单位置纬度
-                   minimum_fare, --最低消费
-                   discount, --动态折扣(如:70，7折)
-                   discount_price_max, --可享受折扣金额上限.)
-                   driver_depart, --接单取消时骑手是否出发 0 已出发（默认） 1 未出发
-                   change_target, --否修改终点(0 no 1 yes) 
-                   user_version, --乘客端版本（发单）
-                   driver_version --司机端版本（接单）
-             from 
+             surcharge, --服务费
+             user_agree_surcharge, --用户是否同意服务费(1同意 2 不同意)
+             take_lng, --司机接单位置经度
+             take_lat, --司机接单位置纬度
+             minimum_fare, --最低消费
+             discount, --动态折扣(如:70，7折)
+             discount_price_max, --可享受折扣金额上限.)
+             driver_depart, --接单取消时骑手是否出发 0 已出发（默认） 1 未出发
+             change_target, --否修改终点(0 no 1 yes) 
+             user_version, --乘客端版本（发单）
+             driver_version, --司机端版本（接单）
+             pax_ratio, --乘客系数
+             driver_ratio, --司机系数
+             driver_fee_rate, --司机佣金费率
+             driver_price, --司机价格
+             driver_original_price, --司机原始价格
+             original_distance, --实际距离
+             driver_distance --司机计价距离(乘以系数后)
+        from 
      (SELECT *,
-             (t.create_time - 8 * 60 * 60 * 1) as local_create_time,
+             (t.create_time + 1 * 60 * 60 * 1) as local_create_time,
 
              row_number() over(partition by t.id order by t.`__ts_ms` desc) as order_by
 
@@ -609,7 +623,7 @@ FROM
 
         WHERE concat_ws(' ',dt,hour) BETWEEN '{bef_yes_day} 23' AND '{pt} 23' --取昨天1天数据与今天早上00数据
 
-        AND from_unixtime((t.create_time - 8 * 60 * 60 * 1),'yyyy-MM-dd') = '{pt}'
+        AND from_unixtime((t.create_time + 1 * 60 * 60 * 1),'yyyy-MM-dd') = '{pt}'
          ) t1
 where t1.`__deleted` = 'false' and t1.order_by = 1) base
 LEFT OUTER JOIN
