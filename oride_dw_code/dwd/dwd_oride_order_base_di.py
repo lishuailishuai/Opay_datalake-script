@@ -108,9 +108,9 @@ else:
     print("成功")
     # 依赖前一天分区
     ods_binlog_data_order_hi_prev_day_task = OssSensor(
-        task_id='ods_binlog_data_order_hi_prev_day_task',
+        task_id='ods_binlog_base_data_order_hi_prev_day_task',
         bucket_key='{hdfs_path_str}/dt={now_day}/hour=00/_SUCCESS'.format(
-            hdfs_path_str="oride_binlog/oride_data.oride_data.data_order",
+            hdfs_path_str="oride_binlog/oride_db.oride_data.data_order",
             pt='{{ds}}',
             now_day='{{macros.ds_add(ds, +1)}}'
         ),
