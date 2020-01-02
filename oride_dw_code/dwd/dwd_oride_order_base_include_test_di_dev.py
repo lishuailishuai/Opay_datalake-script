@@ -506,25 +506,25 @@ FROM
              plate_num ,
              --车牌号
 
-             take_time ,
+             local_take_time as take_time ,
              --接单时间
 
-             wait_time ,
+             local_wait_time as wait_time ,
              --到达接送点时间
 
-             pickup_time ,
+             local_pickup_time as pickup_time ,
              --接到乘客时间
 
-             arrive_time ,
+             local_arrive_time as arrive_time ,
              --到达终点时间
 
-             finish_time ,
+             local_finish_time  as finish_time  ,
              --订单完成时间
 
              cancel_role ,
              --取消人角色(1:用户,2:司机,3:系统4:Admin)
 
-             cancel_time ,
+             local_cancel_time as cancel_time  ,
              --取消时间
 
              cancel_type ,
@@ -582,7 +582,7 @@ FROM
              wait_lat, --等待乘客上车位置纬度
              wait_in_radius, --是否在接驾范围内
              wait_distance, --等待乘客上车距离
-             cancel_wait_payment_time,  --乘客取消待支付时间
+             local_cancel_wait_payment_time as cancel_wait_payment_time,  --乘客取消待支付时间
              country_id,  --国家ID
              is_carpool , -- '是否是拼车' 
              estimate_duration,  -- 预估时间
@@ -616,6 +616,13 @@ FROM
         from 
      (SELECT *,
              (t.create_time + 1 * 60 * 60 * 1) as local_create_time,
+             (t.cancel_wait_payment_time + 1 * 60 * 60 * 1) as local_cancel_wait_payment_time ,
+             (t.cancel_time + 1 * 60 * 60 * 1) as local_cancel_time ,
+             (t.finish_time + 1 * 60 * 60 * 1) as local_finish_time ,
+             (t.arrive_time + 1 * 60 * 60 * 1) as local_arrive_time ,
+             (t.pickup_time + 1 * 60 * 60 * 1) as local_pickup_time ,
+             (t.wait_time + 1 * 60 * 60 * 1) as local_wait_time ,
+             (t.take_time + 1 * 60 * 60 * 1) as local_take_time ,
 
              row_number() over(partition by t.id order by t.`__ts_ms` desc) as order_by
 
