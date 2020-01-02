@@ -37,7 +37,7 @@ args = {
     'email_on_retry': False,
 }
 
-dag = airflow.DAG('dwd_oride_order_base_di',
+dag = airflow.DAG('dwd_oride_order_base_di_dev',
                   schedule_interval="00 01 * * *",
                   default_args=args,
                   catchup=False)
@@ -46,25 +46,26 @@ dag = airflow.DAG('dwd_oride_order_base_di',
 
 db_name = "oride_dw"
 table_name = "dwd_oride_order_base_di"
-hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
+hdfs_path = "oss://opay-datalake/oride/oride_dw/" + table_name
 
 ##----------------------------------------- 依赖 ---------------------------------------##
 # 依赖前一天分区
-ods_binlog_data_order_hi_prev_day_task = WebHdfsSensor(
-        task_id='ods_binlog_data_order_hi_prev_day_task',
-        filepath='{hdfs_path_str}/dt={now_day}/hour=00/_SUCCESS'.format(
-            hdfs_path_str="/user/hive/warehouse/oride_dw_ods.db/ods_binlog_data_order_hi",
+ods_binlog_data_order_hi_prev_day_task = OssSensor(
+        task_id='ods_binlog_base_data_order_hi_prev_day_task',
+        bucket_key='{hdfs_path_str}/dt={now_day}/hour=00/_SUCCESS'.format(
+            hdfs_path_str="oride_binlog/oride_db.oride_data.data_order",
             pt='{{ds}}',
             now_day='{{macros.ds_add(ds, +1)}}'
         ),
+        bucket_name='opay-datalake',
         poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
         dag=dag
     )
 
 # 依赖前一天分区
-ods_sqoop_base_data_order_payment_df_prev_day_task = UFileSensor(
+ods_sqoop_base_data_order_payment_df_prev_day_task = OssSensor(
         task_id='ods_sqoop_base_data_order_payment_df_prev_day_task',
-        filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
             hdfs_path_str="oride_dw_sqoop/oride_data/data_order_payment",
             pt='{{ds}}'
         ),
@@ -74,10 +75,10 @@ ods_sqoop_base_data_order_payment_df_prev_day_task = UFileSensor(
     )
 
 # 依赖前一天分区
-oride_client_event_detail_prev_day_task = UFileSensor(
+oride_client_event_detail_prev_day_task = OssSensor(
         task_id="oride_client_event_detail_prev_day_task",
-        filepath='{hdfs_path_str}/country_code=nal/dt={pt}/hour=23/_SUCCESS'.format(
-            hdfs_path_str="oride/oride_dw/dwd_oride_client_event_detail_hi",
+        bucket_key='{hdfs_path_str}/dt={pt}/hour=23/_SUCCESS'.format(
+            hdfs_path_str="oride/oride_dw/dwd_oride_client_event_detail_hi/country_code=nal",
             pt='{{ds}}'
         ),
         bucket_name='opay-datalake',
@@ -86,9 +87,9 @@ oride_client_event_detail_prev_day_task = UFileSensor(
     )
 
 # 依赖前一天分区
-ods_sqoop_base_data_country_conf_df_prev_day_task = UFileSensor(
+ods_sqoop_base_data_country_conf_df_prev_day_task = OssSensor(
         task_id='ods_sqoop_base_data_country_conf_df_prev_day_task',
-        filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
             hdfs_path_str="oride_dw_sqoop/oride_data/data_country_conf",
             pt='{{ds}}'
         ),
@@ -96,7 +97,6 @@ ods_sqoop_base_data_country_conf_df_prev_day_task = UFileSensor(
         poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
         dag=dag
     )
-
 
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
 
@@ -191,25 +191,25 @@ SELECT base.id as order_id,
        plate_num,
        --车牌号
 
-       take_time,
+       local_take_time as take_time,
        --接单(应答)时间
 
-       wait_time,
+       local_wait_time as wait_time,
        --到达接送点时间
 
-       pickup_time,
+       local_pickup_time as pickup_time,
        --接到乘客时间
 
-       arrive_time,
+       local_arrive_time as arrive_time,
        --到达终点时间
 
-       finish_time,
+       local_finish_time as finish_time,
        --订单(支付)完成时间
 
        cancel_role,
        --取消人角色(1: 用户, 2: 司机, 3:系统 4:Admin)
 
-       cancel_time,
+       local_cancel_time as cancel_time,
        --取消时间
 
        cancel_type,
@@ -221,7 +221,7 @@ SELECT base.id as order_id,
        status,
        --订单状态 (0: wait assign, 1: pick up passenger, 2: wait passenger, 3: send passenger, 4: arrive destination, 5: finished, 6: cancel)
 
-       create_time,
+       local_create_time as create_time,
        -- 创建时间
 
        fraud,
@@ -248,8 +248,8 @@ SELECT base.id as order_id,
        updated_at as updated_time,
        --最后更新时间
 
-       from_unixtime(create_time,'yyyy-MM-dd') AS create_date,
-       --创建日期(转换自create_time,yyyy-MM-dd)
+       from_unixtime(local_create_time,'yyyy-MM-dd') AS create_date,
+       --创建日期(local_create_time,yyyy-MM-dd)
 
        (CASE
             WHEN base.driver_id <> 0 THEN 1
@@ -350,7 +350,7 @@ SELECT base.id as order_id,
 
        pay.pay_mode as pay_mode,
        --支付方式（0: 未知, 1: 线下支付, 2: opay, 3: 余额）,
-       
+
        pay_status, --支付类型（0: 支付中, 1: 成功, 2: 失败） 
 
        '' as part_hour, --小时分区时间(yyyy-mm-dd HH)
@@ -415,7 +415,7 @@ SELECT base.id as order_id,
        wait_lat, --等待乘客上车位置纬度
        wait_in_radius, --是否在接驾范围内
        wait_distance, --等待乘客上车距离
-       cancel_wait_payment_time,  --乘客取消待支付时间  
+       local_cancel_wait_payment_time as cancel_wait_payment_time,  --乘客取消待支付时间  
        premium_rate,  --溢价倍数
        original_price, --溢价前费用 
        premium_price_limit, --溢价金额上限
@@ -446,12 +446,24 @@ SELECT base.id as order_id,
        '{pt}' AS dt
 FROM (select *
      from (SELECT *,
-             row_number() OVER(partition BY id ORDER BY updated_at desc,pos DESC) AS rn1
-FROM oride_dw_ods.ods_binlog_data_order_hi           
-WHERE concat_ws(' ',dt,hour) BETWEEN '{pt} 00' AND '{now_day} 00' --取昨天1天数据与今天早上00数据        
-      AND from_unixtime(create_time,'yyyy-MM-dd') = '{pt}'          
-      AND op IN ('c','u')) t1
-where rn1=1) base
+             (t.create_time + 1 * 60 * 60 * 1) as local_create_time,
+             (t.take_time + 1 * 60 * 60 * 1) as local_take_time,
+             (t.wait_time + 1 * 60 * 60 * 1) as local_wait_time,
+             (t.pickup_time + 1 * 60 * 60 * 1) as local_pickup_time,
+             (t.arrive_time + 1 * 60 * 60 * 1) as local_arrive_time,
+             (t.finish_time + 1 * 60 * 60 * 1) as local_finish_time,
+             (t.cancel_time + 1 * 60 * 60 * 1) as local_cancel_time,
+             (t.cancel_wait_payment_time + 1 * 60 * 60 * 1) as local_cancel_wait_payment_time,
+
+             row_number() over(partition by t.id order by t.`__ts_ms` desc) as order_by
+
+        FROM oride_dw_ods.ods_binlog_base_data_order_hi t
+
+        WHERE concat_ws(' ',dt,hour) BETWEEN '{bef_yes_day} 23' AND '{pt} 23' --取昨天1天数据与今天早上00数据
+
+        AND from_unixtime((t.create_time + 1 * 60 * 60 * 1),'yyyy-MM-dd') = '{pt}'
+         ) t1
+where t1.`__deleted` = 'false' and t1.order_by = 1) base
 LEFT OUTER JOIN
 (SELECT id AS order_id,
        status AS pay_status,
@@ -465,7 +477,7 @@ LEFT OUTER JOIN
 
        `mode` AS pay_mode
        --支付方式（0: 未知, 1: 线下支付, 2: opay, 3: 余额）
-       
+
 FROM oride_dw_ods.ods_sqoop_base_data_order_payment_df
 WHERE dt = '{pt}') pay ON base.id=pay.order_id
 
@@ -513,12 +525,11 @@ def check_key_data_task(ds):
         print("-----> Notice Data Export Success ......")
 
 
-#主流程
-def execution_data_task_id(ds,**kwargs):
-
-    v_date=kwargs.get('v_execution_date')
-    v_day=kwargs.get('v_execution_day')
-    v_hour=kwargs.get('v_execution_hour')
+# 主流程
+def execution_data_task_id(ds, **kwargs):
+    v_date = kwargs.get('v_execution_date')
+    v_day = kwargs.get('v_execution_day')
+    v_hour = kwargs.get('v_execution_hour')
 
     hive_hook = HiveCliHook()
 
@@ -541,37 +552,37 @@ def execution_data_task_id(ds,**kwargs):
 
     """
 
-    cf=CountriesPublicFrame("true",ds,db_name,table_name,hdfs_path,"true","true")
+    cf = CountriesPublicFrame("true", ds, db_name, table_name, hdfs_path, "true", "true")
 
-    #删除分区
+    # 删除分区
     cf.delete_partition()
 
-    #读取sql
-    _sql="\n"+cf.alter_partition()+"\n"+dwd_oride_order_base_di_sql_task(ds)
+    # 读取sql
+    _sql = "\n" + cf.alter_partition() + "\n" + dwd_oride_order_base_di_sql_task(ds)
 
-    logging.info('Executing: %s',_sql)
+    logging.info('Executing: %s', _sql)
 
-    #执行Hive
+    # 执行Hive
     hive_hook.run_cli(_sql)
 
-    #熔断数据，如果数据不能为0
-    #check_key_data_cnt_task(ds)
+    # 熔断数据，如果数据不能为0
+    # check_key_data_cnt_task(ds)
 
-    #熔断数据
+    # 熔断数据
     check_key_data_task(ds)
 
-    #生产success
+    # 生产success
     cf.touchz_success()
 
-    
-dwd_oride_order_base_di_task= PythonOperator(
+
+dwd_oride_order_base_di_task = PythonOperator(
     task_id='dwd_oride_order_base_di_task',
     python_callable=execution_data_task_id,
     provide_context=True,
     op_kwargs={
-        'v_execution_date':'{{execution_date.strftime("%Y-%m-%d %H:%M:%S")}}',
-        'v_execution_day':'{{execution_date.strftime("%Y-%m-%d")}}',
-        'v_execution_hour':'{{execution_date.strftime("%H")}}'
+        'v_execution_date': '{{execution_date.strftime("%Y-%m-%d %H:%M:%S")}}',
+        'v_execution_day': '{{execution_date.strftime("%Y-%m-%d")}}',
+        'v_execution_hour': '{{execution_date.strftime("%H")}}'
     },
     dag=dag
 )
