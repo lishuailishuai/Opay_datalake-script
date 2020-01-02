@@ -2,7 +2,7 @@ import airflow
 from datetime import datetime, timedelta
 from airflow.operators.hive_operator import HiveOperator
 from airflow.operators.impala_plugin import ImpalaOperator
-
+from airflow.models import Variable
 args = {
     'owner': 'yangmingze',
     'start_date': datetime(2019, 10, 10),
