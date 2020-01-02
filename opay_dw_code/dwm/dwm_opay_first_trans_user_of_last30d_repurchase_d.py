@@ -100,15 +100,15 @@ def dwm_opay_first_trans_user_of_last30d_repurchase_d_sql_task(ds):
 
     insert overwrite table {db}.{table} partition(country_code, dt)
     select 
-	    t1.sub_consume_scenario, t1.originator_id, order_cnt, order_amt, 
+	    t1.sub_consume_scenario, t1.originator_id, originator_type, order_cnt, order_amt, 
 	    if(t2.first_trans_amount >= 10000, 'y', 'n') if_first_trans_over_10000, first_trans_date, first_sub_consume_scenario, datediff('{pt}', t2.first_trans_date) gap_day,
 	    t1.country_code, t1.dt
 	from (
 	    select 
-	        sub_consume_scenario, originator_id, sum(amount) as order_amt, count(*) order_cnt, country_code, '{pt}' as dt
+	        sub_consume_scenario, originator_id, originator_type, sum(amount) as order_amt, count(*) order_cnt, country_code, '{pt}' as dt
 	    from opay_dw.dwd_opay_transaction_record_di
 	    where dt = '{pt}' and order_status = 'SUCCESS'
-	    group by sub_consume_scenario, originator_id, country_code
+	    group by sub_consume_scenario, originator_id, originator_type, country_code
 	) t1 join (
 	    select 
 	        sub_consume_scenario as first_sub_consume_scenario, originator_id, amount as first_trans_amount, dt as first_trans_date
