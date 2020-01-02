@@ -20,6 +20,18 @@ dag = airflow.DAG(
     concurrency=15,
     default_args=args)
 
+#获取变量
+code_map=eval(Variable.get("sys_flag"))
+
+#判断ufile(cdh环境)
+if code_map["id"].lower()=="ufile":
+
+    path='ufile://opay-datalake/ofood/client'
+
+else:
+
+    path='oss://opay-datalake/ofood/client'
+
 create_ods_log_client_event_hi = HiveOperator(
     task_id='create_ods_log_client_event_hi',
     hql='''
@@ -43,8 +55,8 @@ create_ods_log_client_event_hi = HiveOperator(
         )
         PARTITIONED BY (`dt` string, `hour` string) 
         ROW FORMAT SERDE 'org.openx.data.jsonserde.JsonSerDe' with SERDEPROPERTIES("ignore.malformed.json"="true")
-        LOCATION 'ufile://opay-datalake/ofood/client'
-    ''',
+        LOCATION '{location_path}'
+    '''.FORMAT(location_path=path),
     schema='ofood_dw_ods',
     dag=dag)
 
