@@ -56,7 +56,7 @@ create_ods_log_client_event_hi = HiveOperator(
         PARTITIONED BY (`dt` string, `hour` string) 
         ROW FORMAT SERDE 'org.openx.data.jsonserde.JsonSerDe' with SERDEPROPERTIES("ignore.malformed.json"="true")
         LOCATION '{location_path}'
-    '''.FORMAT(location_path=path),
+    '''.format(location_path=path),
     schema='ofood_dw_ods',
     dag=dag)
 
