@@ -215,7 +215,7 @@ SELECT base.id as order_id,
        cancel_type,
        --取消原因类型
 
-       cancel_reason,
+       null as cancel_reason,
        --取消原因
 
        status,
@@ -230,16 +230,16 @@ SELECT base.id as order_id,
        driver_serv_type,
        --司机服务类型(1: Direct 2:Street 3:Otrike)
 
-       refund_before_pay,
+       null as refund_before_pay,
        --支付前资金调整
 
-       refund_after_pay,
+       null as refund_after_pay,
        --支付后资金调整
 
        abnormal,
        --异常状态(0 否 1 逃单)
 
-       flag_down_phone,
+       null as flag_down_phone,
        --招手停上报手机号
 
        zone_hash,
@@ -461,7 +461,7 @@ FROM (select *
 
         WHERE concat_ws(' ',dt,hour) BETWEEN '{bef_yes_day} 23' AND '{pt} 23' --取昨天1天数据与今天早上00数据
 
-        AND from_unixtime((t.create_time + 1 * 60 * 60 * 1),'yyyy-MM-dd') = '{pt}'
+        AND (from_unixtime((t.create_time + 1 * 60 * 60 * 1),'yyyy-MM-dd') = '{pt}' or substr(updated_at,1,10)='{pt}')
          ) t1
 where t1.`__deleted` = 'false' and t1.order_by = 1) base
 LEFT OUTER JOIN
@@ -489,6 +489,7 @@ on base.country_id=country.id;
 '''.format(
         pt=ds,
         now_day=airflow.macros.ds_add(ds, +1),
+        bef_yes_day=airflow.macros.ds_add(ds, -1),
         now_hour='{{ execution_date.strftime("%H") }}',
         table=table_name,
         db=db_name

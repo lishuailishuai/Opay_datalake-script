@@ -1,10 +1,10 @@
 import airflow
 from airflow.operators.hive_operator import HiveOperator
 from datetime import datetime, timedelta
-from airflow.sensors import UFileSensor
 from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
 from airflow.operators.bash_operator import BashOperator
 from airflow.operators.python_operator import PythonOperator
+from airflow.sensors import OssSensor
 
 
 
@@ -44,11 +44,11 @@ table_list = [
     "order",
     "passenge"
 ]
-HDFS_PATH = "ufile://opay-datalake/oride-research/tags/{table}_tags/dt={dt}"
+HDFS_PATH = "oss://opay-datalake/oride-research/tags/{table}_tags/dt={dt}"
 for table in table_list:
-    check_ufile=UFileSensor(
-        task_id='check_ufile_{}'.format(table),
-        filepath='oride-research/tags/{table}_tags/dt={{{{ ds }}}}/upload_success.txt'.format(table=table),
+    check_file=OssSensor(
+        task_id='check_file_{}'.format(table),
+        bucket_key='oride-research/tags/{table}_tags/dt={{{{ ds }}}}/upload_success.txt'.format(table=table),
         bucket_name='opay-datalake',
         timeout=86400,
         dag=dag)
@@ -91,4 +91,4 @@ for table in table_list:
         dag=dag
     )
 
-    check_ufile >> add_partitions >> touchz_data_success
+    check_file >> add_partitions >> touchz_data_success

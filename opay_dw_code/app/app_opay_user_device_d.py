@@ -26,7 +26,7 @@ from airflow.sensors import OssSensor
 
 args = {
     'owner': 'lishuai',
-    'start_date': datetime(2019, 12, 30),
+    'start_date': datetime(2019, 1, 2),
     'depends_on_past': False,
     'retries': 3,
     'retry_delay': timedelta(minutes=2),
@@ -54,8 +54,16 @@ dwd_opay_client_event_base_di_task = OssSensor(
     dag=dag
 )
 
-
-
+app_opay_user_device_d_prev_day_task = OssSensor(
+    task_id='app_opay_user_device_d_prev_day_task',
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="opay/opay_dw/app_opay_user_device_d/country_code=nal",
+        pt='{{macros.ds_add(ds, -1)}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
 
 ##----------------------------------------- 变量 ---------------------------------------##
 db_name = "opay_dw"
@@ -73,24 +81,29 @@ def app_opay_user_device_d_sql_task(ds):
     set hive.exec.parallel=true;
     insert overwrite table {db}.{table} partition(country_code,dt)
     select 
-    user_id,
-    device_id,
-    mobile,
-    server_timestamp,
+    if(a.user_id is null,b.user_id,a.user_id),
+    if(a.device_id is null,b.device_id,a.device_id),
+    if(a.mobile is null,b.mobile,a.mobile),
+    if(b.device_id is not null,b.bb,a.`timestamp`),
     'nal' as country_code,
-    '{pt}' as dt 
-from
+    '{pt}' as dt
+    from 
+    (select * from 
+    opay_dw.app_opay_user_device_d 
+    where dt=date_sub('{pt}',1)
+    ) a
+    full join
     (select
         user_id,
-        mobile,
         device_id,
-        server_timestamp,
-        row_number()
-        over(partition by user_id,device_id order by server_timestamp desc) as num
+        mobile,
+        max(server_timestamp) bb
     from opay_dw.dwd_opay_client_event_base_di
-    where dt='{pt}'
-    ) aa 
-where aa.num=1;
+    where dt='{pt}' and device_id!=''
+    group by user_id,device_id,mobile
+    ) b
+    on a.device_id=b.device_id;
+
 
 '''.format(
         pt=ds,
@@ -129,3 +142,4 @@ app_opay_user_device_d_task = PythonOperator(
 )
 
 dwd_opay_client_event_base_di_task >> app_opay_user_device_d_task
+app_opay_user_device_d_prev_day_task >> app_opay_user_device_d_task

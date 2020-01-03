@@ -34,7 +34,7 @@ args = {
     'email_on_retry': False,
 }
 
-dag = airflow.DAG('dwm_opay_first_trans_user_of_last30d_repurchase_d',
+dag = airflow.DAG('dwm_opay_first_trans_originator_of_last30d_repurchase_d',
                   schedule_interval="00 03 * * *",
                   default_args=args
                   )
@@ -86,12 +86,12 @@ task_timeout_monitor = PythonOperator(
 
 ##----------------------------------------- 变量 ---------------------------------------##
 db_name = "opay_dw"
-table_name = "dwm_opay_first_trans_user_of_last30d_repurchase_d"
+table_name = "dwm_opay_first_trans_originator_of_last30d_repurchase_d"
 hdfs_path = "oss://opay-datalake/opay/opay_dw/" + table_name
 
 
 ##---- hive operator ---##
-def dwm_opay_first_trans_user_of_last30d_repurchase_d_sql_task(ds):
+def dwm_opay_first_trans_originator_of_last30d_repurchase_d_sql_task(ds):
     HQL = '''
     
     set mapred.max.split.size=1000000;
@@ -100,15 +100,15 @@ def dwm_opay_first_trans_user_of_last30d_repurchase_d_sql_task(ds):
 
     insert overwrite table {db}.{table} partition(country_code, dt)
     select 
-	    t1.sub_consume_scenario, t1.originator_id, order_cnt, order_amt, 
-	    if(t2.first_trans_amount >= 10000, 'y', 'n') if_first_trans_over_10000, first_trans_date, first_sub_consume_scenario, datediff('{pt}', t2.dt) gap_day,
+	    t1.sub_consume_scenario, t1.originator_id, originator_type, order_cnt, order_amt, 
+	    if(t2.first_trans_amount >= 10000, 'y', 'n') if_first_trans_over_10000, first_trans_date, first_sub_consume_scenario, datediff('{pt}', t2.first_trans_date) gap_day,
 	    t1.country_code, t1.dt
 	from (
 	    select 
-	        sub_consume_scenario, originator_id, sum(amount) as order_amt, count(*) order_cnt, country_code, '{pt}' as dt
+	        sub_consume_scenario, originator_id, originator_type, sum(amount) as order_amt, count(*) order_cnt, country_code, '{pt}' as dt
 	    from opay_dw.dwd_opay_transaction_record_di
 	    where dt = '{pt}' and order_status = 'SUCCESS'
-	    group by sub_consume_scenario, originator_id, country_code
+	    group by sub_consume_scenario, originator_id, originator_type, country_code
 	) t1 join (
 	    select 
 	        sub_consume_scenario as first_sub_consume_scenario, originator_id, amount as first_trans_amount, dt as first_trans_date
@@ -129,7 +129,7 @@ def execution_data_task_id(ds, **kargs):
     hive_hook = HiveCliHook()
 
     # 读取sql
-    _sql = dwm_opay_first_trans_user_of_last30d_repurchase_d_sql_task(ds)
+    _sql = dwm_opay_first_trans_originator_of_last30d_repurchase_d_sql_task(ds)
 
     logging.info('Executing: %s', _sql)
 
@@ -145,12 +145,12 @@ def execution_data_task_id(ds, **kargs):
     TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "true", "true")
 
 
-dwm_opay_first_trans_user_of_last30d_repurchase_d_task = PythonOperator(
-    task_id='dwm_opay_first_trans_user_of_last30d_repurchase_d_task',
+dwm_opay_first_trans_originator_of_last30d_repurchase_d_task = PythonOperator(
+    task_id='dwm_opay_first_trans_originator_of_last30d_repurchase_d_task',
     python_callable=execution_data_task_id,
     provide_context=True,
     dag=dag
 )
 
-dwm_opay_user_first_tran_di_prev_day_task >> dwm_opay_first_trans_user_of_last30d_repurchase_d_task
-dwd_opay_transaction_record_di_prev_day_task >> dwm_opay_first_trans_user_of_last30d_repurchase_d_task
+dwm_opay_user_first_tran_di_prev_day_task >> dwm_opay_first_trans_originator_of_last30d_repurchase_d_task
+dwd_opay_transaction_record_di_prev_day_task >> dwm_opay_first_trans_originator_of_last30d_repurchase_d_task

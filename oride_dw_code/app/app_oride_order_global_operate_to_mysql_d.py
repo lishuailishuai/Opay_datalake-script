@@ -279,7 +279,6 @@ task_timeout_monitor = PythonOperator(
 
 
 ##----------------------------------------- 脚本 ---------------------------------------##
-##----------------------------------------- 脚本 ---------------------------------------##
 
 def app_oride_order_global_operate_to_mysql_d_sql_task(ds):
     HQL ='''
@@ -288,7 +287,7 @@ def app_oride_order_global_operate_to_mysql_d_sql_task(ds):
       set hive.exec.dynamic.partition.mode=nonstrict;    
          --将数据加载到内存，临时表
 
-             with 
+                     with 
         dwd_order_di as
         ( 
             select
@@ -304,7 +303,7 @@ def app_oride_order_global_operate_to_mysql_d_sql_task(ds):
             where city_id != 999001 and is_td_finish=1
         )
 
-  insert overwrite table oride_dw.{table} partition(country_code,dt)
+insert overwrite table oride_dw.{table} partition(country_code,dt)
 
     select 
         nvl(od.city_id,-10000) as city_id,
@@ -351,14 +350,14 @@ def app_oride_order_global_operate_to_mysql_d_sql_task(ds):
         nvl(sub.c_gmv_m,0) as c_gmv_m, --计算c端补贴率的gmv/月
 
         'nal' as country_code,
-        '{pt}' as  dt
+        '${pt}' as  dt
     from 
     (   select
             tmp01.city_id,
             tmp01.order_cnt, --下单量
             tmp01.finish_order_cnt, --完单量
             tmp01.valid_ord_cnt,--有效订单量
-            tmp01.gmv, --gmv
+            tmp01.online_pay_price + tmp01.falsify + tmp01.falsify_driver_cancel  as gmv,  --gmv
             tmp01.finish_order_driver_num,--完单司机数
             tmp01.wet_order_cnt, --湿单量
             tmp01.order_distance, --送驾距离
@@ -373,12 +372,19 @@ def app_oride_order_global_operate_to_mysql_d_sql_task(ds):
                     count(1) as order_cnt, --下单量
                     sum(is_finish) as finish_order_cnt, --完单量
                     sum(is_valid) as valid_ord_cnt,--有效订单量
-                    sum(if(is_finish =1,price,0)) as gmv, --gmv
+                    --sum(if(is_finish =1,price,0)) as gmv, --gmv
                     count(distinct if(is_finish =1 ,driver_id, null)) as finish_order_driver_num,--完单司机数
                     count(if(is_wet_order =1,1,null)) as wet_order_cnt, --湿单量
-                    sum(if(is_finish = 1, order_onride_distance , 0)) as order_distance --送驾距离
+                    sum(if(is_finish = 1, order_onride_distance , 0)) as order_distance, --送驾距离
+                    
+                    --新gmv
+                    sum(if(is_finished_pay=1 and is_succ_pay=1 and product_id<>99 and pay_mode not in(0,1),price,0)) as online_pay_price,  --当日线上应付订单金额12.18号开始,自12.26号再次变更，要所有线上支付单，统计gmv和c补
+                    sum(falsify) as falsify, --用户罚款，自12.25号开始该表接入
+                    sum(falsify_driver_cancel) as falsify_driver_cancel --司机罚款，自12.25号开始该表接入
+                    
+                   
                 from  oride_dw.dwm_oride_order_base_di 
-                    where dt = '{pt}'
+                    where dt = '${pt}'
                 group by city_id with cube
 
         )tmp01
@@ -387,12 +393,12 @@ def app_oride_order_global_operate_to_mysql_d_sql_task(ds):
         (   
             select 
                 city_id,
-                sum(if(dt =date_sub('{pt}',1), is_finish,0)) as finish_order_cnt_1, -- 前一天完单量
-                sum(if(dt =date_sub('{pt}',7), is_finish,0)) as finish_order_cnt_7, -- 第前七天完单量
-                sum(if(dt =date_sub('{pt}',1) and is_finish =1,price,0)) as gmv_1,--前一天gmv
-                sum(if(dt =date_sub('{pt}',7) and is_finish =1,price,0)) as gmv_7--第7天前gmv
-            from  oride_dw.dwm_oride_order_base_di 
-            where  dt = date_sub('{pt}',1)  or  dt =date_sub('{pt}',7)
+                sum(if(dt =date_sub('${pt}',1), finish_order_cnt,0)) as finish_order_cnt_1, -- 前一天完单量
+                sum(if(dt =date_sub('${pt}',7), finish_order_cnt,0)) as finish_order_cnt_7, -- 第前七天完单量
+                sum(if(dt =date_sub('${pt}',1), gmv,0)) as gmv_1,--前一天gmv
+                sum(if(dt =date_sub('${pt}',7), gmv,0)) as gmv_7--第7天前gmv
+            from  oride_dw.app_oride_order_global_operate_to_mysql_d 
+            where  dt = date_sub('${pt}',1)  or  dt =date_sub('${pt}',7)
             group by city_id
         )tmp02 on tmp01.city_id = tmp02.city_id
     )od
@@ -403,7 +409,7 @@ def app_oride_order_global_operate_to_mysql_d_sql_task(ds):
             city_name,
             dt
         from oride_dw.dim_oride_city
-        where dt = '{pt}'
+        where dt = '${pt}'
     )city on nvl(od.city_id,-10000) = city.city_id
     left join
     (
@@ -431,25 +437,25 @@ def app_oride_order_global_operate_to_mysql_d_sql_task(ds):
                select 
                 city_id,
 
-                sum(if(dt ='{pt}',recharge_amount,0))+sum(if(dt ='{pt}',reward_amount,0)) as b_subsidy_d,--B端补贴、天(实际b补)
+                sum(if(dt ='${pt}',recharge_amount,0))+sum(if(dt ='${pt}',reward_amount,0)) as b_subsidy_d,--B端补贴、天(实际b补)
 
                 sum(recharge_amount) + sum(reward_amount) as b_subsidy_m--B端补贴 月
 
             from oride_dw.dwm_oride_driver_finance_di 
-            where  month(dt) = month('{pt}') and city_id != 999001
+            where  month(dt) = month('${pt}') and city_id != 999001 and driver_id <> 1
             group by city_id
         )b
         left join
         (    --C端补贴(实际C补贴)  pay的订单金额 - opay实付金额   12.18号开始
            select 
                 city_id,
-                sum(if(dt ='{pt}',price,0)) as c_gmv_d,
+                sum(if(dt ='${pt}',price,0)) as c_gmv_d,
                 sum(price) as c_gmv_m,
-                sum(if(dt ='{pt}',price,0)) - sum(if(dt ='{pt}',pay_amount,0)) as c_subsidy_d, --C端补贴、天
+                sum(if(dt ='${pt}',price,0)) - sum(if(dt ='${pt}',pay_amount,0)) as c_subsidy_d, --C端补贴、天
                 sum(price) - sum(pay_amount) as c_subsidy_m
             from oride_dw.dwm_oride_order_base_di
-            where month(dt) = month('{pt}') and city_id != 999001
-                and is_opay_pay=1 and is_succ_pay=1 and product_id<>99
+            where month(dt) = month('${pt}') and city_id != 999001
+               and is_finished_pay=1 and is_succ_pay=1 and pay_mode not in(0,1) and product_id<>99
             group by city_id
         )c on  b.city_id =  c.city_id  
         group by b.city_id,b.b_subsidy_d,c.c_subsidy_d,c.c_gmv_d, c.c_gmv_m  
@@ -460,7 +466,7 @@ def app_oride_order_global_operate_to_mysql_d_sql_task(ds):
             city_id, 
             sum(td_audit_finish_driver_num) as td_audit_finish_driver_num --审核司机数
         from oride_dw.dm_oride_driver_base
-        where dt ='{pt}' 
+        where dt ='${pt}' 
         group by city_id with cube
     )audit on nvl(od.city_id, -10000) = nvl( audit.city_id, -10000)
     left join
@@ -471,7 +477,7 @@ def app_oride_order_global_operate_to_mysql_d_sql_task(ds):
             first_finished_users,--当日新增完单用户
             dt
         from  oride_dw.dm_oride_passenger_base_cube
-        where dt ='{pt}' 
+        where dt ='${pt}' 
         and product_id = -10000 and driver_serv_type = -10000 and country_code  = 'NG'
     )users on nvl(od.city_id,-10000) = nvl(users.city_id ,-10000)
 
@@ -487,7 +493,7 @@ def app_oride_order_global_operate_to_mysql_d_sql_task(ds):
                 city_id,
                 driver_id
             from dwd_order_di
-            where dt = '{pt}'
+            where dt = '${pt}'
             group by   city_id,driver_id,dt 
         )new
         left join
@@ -496,7 +502,7 @@ def app_oride_order_global_operate_to_mysql_d_sql_task(ds):
                 driver_id
 
             from dwd_order_di
-            where dt  < '{pt}' and city_id != 999001 and is_td_finish =1 
+            where dt  < '${pt}' and city_id != 999001 and is_td_finish =1 
             group by   driver_id
         )old on new.driver_id = old.driver_id
         group by new.city_id with cube
@@ -533,7 +539,7 @@ def app_oride_order_global_operate_to_mysql_d_sql_task(ds):
                      city_id,
                      dt
                     from  oride_dw.dwm_oride_order_base_di 
-                   where dt = '{pt}' and is_finish = 1
+                   where dt = '${pt}' and is_finish = 1
                     group by driver_id,city_id,dt
                 )od
                 left join
@@ -544,7 +550,7 @@ def app_oride_order_global_operate_to_mysql_d_sql_task(ds):
                         product_id,
                         dt
                     from oride_dw.dim_oride_driver_base 
-                    where dt = '{pt}'
+                    where dt = '${pt}'
                 )driver on od.city_id = driver.city_id and driver.driver_id = od.driver_id
                 left join 
                 (--司机总收入 amount_all
@@ -554,7 +560,7 @@ def app_oride_order_global_operate_to_mysql_d_sql_task(ds):
                         nvl(amount_agenter,0) as amount_agenter,
                         from_unixtime(day,'yyyy-MM-dd') as day_date
                     from oride_dw.dwd_oride_driver_records_day_df
-                    where dt = '{pt}' and  from_unixtime(day,'yyyy-MM-dd') = '{pt}'
+                    where dt = '${pt}' and  from_unixtime(day,'yyyy-MM-dd') = '${pt}'
                 )drd on od.driver_id = drd.driver_id
                 left join 
                 (--司机amount
@@ -564,7 +570,7 @@ def app_oride_order_global_operate_to_mysql_d_sql_task(ds):
                         abs(nvl(amount,0)) as amount, 
                         from_unixtime(created_at, "yyyy-MM-dd")  as created_at 
                     FROM oride_dw.dwd_oride_driver_recharge_records_df  
-                    WHERE dt = '{pt}' and from_unixtime(created_at,'yyyy-MM-dd') = '{pt}' 
+                    WHERE dt = '${pt}' and from_unixtime(created_at,'yyyy-MM-dd') = '${pt}' 
                     and amount_reason=6 
                 )drr on od.driver_id = drr.driver_id
                 group by od.city_id,driver.product_id,od.dt
@@ -576,10 +582,10 @@ def app_oride_order_global_operate_to_mysql_d_sql_task(ds):
     (
         select 
             city_id,
-            SUM(if(dt =date_sub('{pt}',1), sum_subsidy_d , 0)) as sum_subsidy_d_1,--前一天的总补贴
-            SUM(if(dt =date_sub('{pt}',7), sum_subsidy_d , 0)) as sum_subsidy_d_7 --第前7天的总补贴
+            SUM(if(dt =date_sub('${pt}',1), sum_subsidy_d , 0)) as sum_subsidy_d_1,--前一天的总补贴
+            SUM(if(dt =date_sub('${pt}',7), sum_subsidy_d , 0)) as sum_subsidy_d_7 --第前7天的总补贴
         from oride_dw.app_oride_order_global_operate_to_mysql_d 
-        where (dt =date_sub('{pt}',1) or  dt =date_sub('{pt}',7)) and city_id <> -10000
+        where (dt =date_sub('${pt}',1) or  dt =date_sub('${pt}',7)) and city_id <> -10000
         group by city_id
     )global on od.city_id = global.city_id;
 ''' .format(

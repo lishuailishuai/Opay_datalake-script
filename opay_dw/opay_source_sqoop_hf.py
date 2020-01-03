@@ -62,10 +62,10 @@ db_name,table_name,conn_id,prefix_name,priority_weight
 #
 
 table_list = [
-    ("opay_user","user", "opay_db_3321", "base",3),
-    ("opay_transaction","mobiledata_topup_record", "opay_db_3316", "base",3),
-    ("opay_transaction","airtime_topup_record", "opay_db_3316", "base",3),
-    ("opay_owealth", "owealth_user_subscribed", "opay_db_3320", "base", 3),
+    ("opay_user","user", "opay_user", "base",3),
+    ("opay_transaction","mobiledata_topup_record", "opay_transaction", "base",3),
+    ("opay_transaction","airtime_topup_record", "opay_transaction", "base",3),
+    ("opay_owealth", "owealth_user_subscribed", "opay_owealth_db", "base", 3),
 
 ]
 
