@@ -368,6 +368,9 @@ shop_payment_bonus as (
     and s.bd_id=m.bd_id
 )
 
+--先删除分区
+ALTER TABLE opos_dw.app_opos_shop_target_d DROP IF EXISTS PARTITION(country_code='nal',dt='{pt}');
+
 --得出最新维度下每个dbid的详细数据信息
 insert overwrite table opos_dw.app_opos_shop_target_d partition (country_code,dt)
 select
