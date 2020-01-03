@@ -420,6 +420,13 @@ m.id
 ,o.name as created_bd_name
 ,o.job_id as created_bd_job_id
 
+,case
+when created_at<'{before_45_day}' and s.receipt_id is null then 1
+when created_at<'{before_45_day}' and s.receipt_id is not null then 0
+when created_at>='{before_45_day}' and dt<='{pt}' then 0
+else 1
+end as shop_silent_flag
+
 ,'nal' as country_code
 ,'{pt}' as dt 
 from
@@ -463,6 +470,9 @@ on if(m.first_order_date='-',m.opay_id,'having')=n.receipt_id
 left join
   (select id,name,job_id,phone from  opos_dw_ods.ods_sqoop_base_bd_admin_users_df where dt = '{pt}') as o
 on m.created_bd_id=o.id
+left join
+  (select receipt_id from opos_dw_ods.ods_sqoop_base_pre_opos_payment_order_di where dt>='{before_45_day}' and dt<='{pt}' group by receipt_id) as s
+on m.opay_id=s.receipt_id
 ;
 
 
@@ -471,6 +481,7 @@ on m.created_bd_id=o.id
 '''.format(
         pt=ds,
         before_1_day=airflow.macros.ds_add(ds, -1),
+        before_45_day=airflow.macros.ds_add(ds, -45),
         table=table_name,
         now_day='{{macros.ds_add(ds, +1)}}',
         db=db_name
