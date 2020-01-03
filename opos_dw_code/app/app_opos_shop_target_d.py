@@ -91,6 +91,9 @@ set hive.exec.parallel=true;
 set hive.exec.dynamic.partition.mode=nonstrict;
 set hive.strict.checks.cartesian.product=false;
 
+--先删除分区
+ALTER TABLE opos_dw.app_opos_shop_target_d DROP IF EXISTS PARTITION(country_code='nal',dt='{pt}');
+
 --01.取出交易成功的商铺信息数据
 with
 payment_order as (
@@ -367,9 +370,6 @@ shop_payment_bonus as (
     and s.bdm_id=m.bdm_id
     and s.bd_id=m.bd_id
 )
-
---先删除分区
-ALTER TABLE opos_dw.app_opos_shop_target_d DROP IF EXISTS PARTITION(country_code='nal',dt='{pt}');
 
 --得出最新维度下每个dbid的详细数据信息
 insert overwrite table opos_dw.app_opos_shop_target_d partition (country_code,dt)
