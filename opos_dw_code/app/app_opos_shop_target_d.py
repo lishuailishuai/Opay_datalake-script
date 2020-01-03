@@ -447,6 +447,8 @@ select
 
 ,nvl(b.status,-1) as status
 
+,nvl(b.shop_silent_flag,'-') as shop_silent_flag
+
 ,'nal' as country_code
 ,'{pt}' as dt
 
@@ -474,7 +476,6 @@ left join
   (select id,name,country from opos_dw_ods.ods_sqoop_base_bd_city_df where dt = '{pt}') as c
 on a.city_code=c.id
 ;
-
 
 
 
