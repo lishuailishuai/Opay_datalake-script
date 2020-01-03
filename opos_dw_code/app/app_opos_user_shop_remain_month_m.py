@@ -119,7 +119,7 @@ date_city as (
   from
     month_order as a
   left join
-    (select city_id from opos_dw.dwd_active_shop_month_di where country_code='nal' and dt='{pt}' group by city_id) as b
+    (select id as city_id from opos_dw_ods.ods_sqoop_base_bd_city_df where dt = '{pt}') as b
   on 1=1
 ),
 
@@ -140,10 +140,9 @@ new_user_remain_cnt as (
     from
     (select * from opos_dw.dwd_active_user_month_di where country_code='nal' and dt>='{before_320_day}' and dt<='{pt}' and first_order='1') as a
     inner join
-    (select * from opos_dw.dwd_active_user_month_di where country_code='nal' and dt='{pt}') as b
+    (select create_month,sender_id from opos_dw.dwd_active_user_month_di where country_code='nal' and dt='{pt}' group by create_month,sender_id) as b
     on
-    a.city_id=b.city_id
-    and a.sender_id=b.sender_id
+    a.sender_id=b.sender_id
     ) as a
   group by
   create_month
@@ -168,10 +167,9 @@ user_remain_cnt as (
     from
     (select * from opos_dw.dwd_active_user_month_di where country_code='nal' and dt>='{before_320_day}' and dt<='{pt}') as a
     inner join
-    (select * from opos_dw.dwd_active_user_month_di where country_code='nal' and dt='{pt}') as b
+    (select create_month,sender_id from opos_dw.dwd_active_user_month_di where country_code='nal' and dt='{pt}' group by create_month,sender_id) as b
     on
-    a.city_id=b.city_id
-    and a.sender_id=b.sender_id
+    a.sender_id=b.sender_id
     ) as a
   group by
   create_month
@@ -196,10 +194,9 @@ new_shop_remain_cnt as (
     from
     (select * from opos_dw.dwd_active_shop_month_di where country_code='nal' and dt>='{before_320_day}' and dt<='{pt}' and first_order='1') as a
     inner join
-    (select * from opos_dw.dwd_active_shop_month_di where country_code='nal' and dt='{pt}') as b
+    (select create_month,receipt_id from opos_dw.dwd_active_user_month_di where country_code='nal' and dt='{pt}' group by create_month,receipt_id) as b
     on
-    a.city_id=b.city_id
-    and a.receipt_id=b.receipt_id
+    a.receipt_id=b.receipt_id
     ) as a
   group by
   create_month
@@ -224,10 +221,9 @@ shop_remain_cnt as (
     from
     (select * from opos_dw.dwd_active_shop_month_di where country_code='nal' and dt>='{before_320_day}' and dt<='{pt}') as a
     inner join
-    (select * from opos_dw.dwd_active_shop_month_di where country_code='nal' and dt='{pt}') as b
+    (select create_month,receipt_id from opos_dw.dwd_active_user_month_di where country_code='nal' and dt='{pt}' group by create_month,receipt_id) as b
     on
-    a.city_id=b.city_id
-    and a.receipt_id=b.receipt_id
+    a.receipt_id=b.receipt_id
     ) as a
   group by
   create_month
