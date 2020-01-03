@@ -84,11 +84,14 @@ def app_opay_user_device_d_sql_task(ds):
     if(a.user_id is null,b.user_id,a.user_id),
     if(a.device_id is null,b.device_id,a.device_id),
     if(a.mobile is null,b.mobile,a.mobile),
-    if(b.device_id is not null,b.bb,a.aa),
+    if(b.device_id is not null,b.bb,a.`timestamp`),
     'nal' as country_code,
     '{pt}' as dt
-    from opay_dw.app_opay_user_device_d a
+    from 
+    (select * from 
+    opay_dw.app_opay_user_device_d 
     where dt=date_sub('{pt}',1)
+    ) a
     full join
     (select
         user_id,

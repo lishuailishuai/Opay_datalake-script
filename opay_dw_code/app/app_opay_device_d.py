@@ -81,11 +81,15 @@ def app_opay_device_d_sql_task(ds):
     set hive.exec.parallel=true;
     insert overwrite table {db}.{table} partition(country_code,dt)
     select if(a.device_id is null,b.device_id,a.device_id),
-    if(b.device_id is not null,b.bb,a.aa),
+    if(b.device_id is not null,b.bb,a.`timestamp`),
     'nal' as country_code,
     '{pt}' as dt
-    from opay_dw.app_opay_device_d a
+    from 
+    (select *
+     from
+    opay_dw.app_opay_device_d 
     where dt=date_sub('{pt}',1)
+    ) a
     full join
     (select
         device_id,
@@ -93,7 +97,7 @@ def app_opay_device_d_sql_task(ds):
     from opay_dw.dwd_opay_client_event_base_di
     where dt='{pt}' and device_id!=''
     group by device_id
-) b
+    ) b
 on a.device_id=b.device_id;
 
 
