@@ -54,8 +54,16 @@ dwd_opay_client_event_base_di_task = OssSensor(
     dag=dag
 )
 
-
-
+app_opay_user_device_d_prev_day_task = OssSensor(
+    task_id='app_opay_user_device_d_prev_day_task',
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="opay/opay_dw/app_opay_user_device_d/country_code=nal",
+        pt='{{macros.ds_add(ds, -1)}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
 
 ##----------------------------------------- 变量 ---------------------------------------##
 db_name = "opay_dw"
@@ -79,7 +87,7 @@ def app_opay_user_device_d_sql_task(ds):
     if(b.device_id is not null,b.bb,a.aa),
     'nal' as country_code,
     '${pt}' as dt
-    from opay_dw.app_opay_device_d a
+    from opay_dw.app_opay_user_device_d a
     where dt=date_sub('{pt}',1)
     full join
     (select
@@ -131,3 +139,4 @@ app_opay_user_device_d_task = PythonOperator(
 )
 
 dwd_opay_client_event_base_di_task >> app_opay_user_device_d_task
+app_opay_user_device_d_prev_day_task >> app_opay_user_device_d_task
