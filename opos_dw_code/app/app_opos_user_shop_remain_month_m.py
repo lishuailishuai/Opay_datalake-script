@@ -194,7 +194,7 @@ new_shop_remain_cnt as (
     from
     (select * from opos_dw.dwd_active_shop_month_di where country_code='nal' and dt>='{before_320_day}' and dt<='{pt}' and first_order='1') as a
     inner join
-    (select create_month,receipt_id from opos_dw.dwd_active_user_month_di where country_code='nal' and dt='{pt}' group by create_month,receipt_id) as b
+    (select create_month,receipt_id from opos_dw.dwd_active_shop_month_di where country_code='nal' and dt='{pt}' group by create_month,receipt_id) as b
     on
     a.receipt_id=b.receipt_id
     ) as a
@@ -221,7 +221,7 @@ shop_remain_cnt as (
     from
     (select * from opos_dw.dwd_active_shop_month_di where country_code='nal' and dt>='{before_320_day}' and dt<='{pt}') as a
     inner join
-    (select create_month,receipt_id from opos_dw.dwd_active_user_month_di where country_code='nal' and dt='{pt}' group by create_month,receipt_id) as b
+    (select create_month,receipt_id from opos_dw.dwd_active_shop_month_di where country_code='nal' and dt='{pt}' group by create_month,receipt_id) as b
     on
     a.receipt_id=b.receipt_id
     ) as a
@@ -278,7 +278,6 @@ left join
 on v1.create_month=v6.create_month
   and v1.remain_month=v6.remain_month
   and v1.city_id=v6.city_id;
-
 
 
 
