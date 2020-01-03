@@ -85,7 +85,7 @@ def app_opay_device_d_sql_task(ds):
     'nal' as country_code,
     '{pt}' as dt
     from opay_dw.app_opay_device_d a
-    where dt=date_sub('${pt}',1)
+    where dt=date_sub('{pt}',1)
     full join
     (select
         device_id,
