@@ -81,7 +81,7 @@ def app_opay_pos_report_d_sql_task(ds):
     WITH pos AS
       (SELECT *
        FROM opay_dw.dim_opay_pos_terminal_base_df
-       WHERE dt='{pt}'
+       WHERE dt='2020-01-02'
          AND bind_status='Y'
          AND create_time<'{pt} 23:00:00'),
          tran AS
