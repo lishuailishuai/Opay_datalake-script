@@ -34,7 +34,7 @@ args = {
     'email_on_retry': False,
 }
 
-dag = airflow.DAG('app_opay_first_trans_user_of_last30d_repurchase_d',
+dag = airflow.DAG('app_opay_user_first_trans_repurchase_30_d',
                   schedule_interval="00 03 * * *",
                   default_args=args
                   )
@@ -86,12 +86,12 @@ task_timeout_monitor = PythonOperator(
 
 ##----------------------------------------- 变量 ---------------------------------------##
 db_name = "opay_dw"
-table_name = "app_opay_first_trans_user_of_last30d_repurchase_d"
+table_name = "app_opay_user_first_trans_repurchase_30_d"
 hdfs_path = "oss://opay-datalake/opay/opay_dw/" + table_name
 
 
 ##---- hive operator ---##
-def app_opay_first_trans_user_of_last30d_repurchase_d_sql_task(ds):
+def app_opay_user_first_trans_repurchase_30_d_sql_task(ds):
     HQL = '''
     
     set mapred.max.split.size=1000000;
@@ -102,28 +102,16 @@ def app_opay_first_trans_user_of_last30d_repurchase_d_sql_task(ds):
         
     select 
       first_trans_date, first_sub_consume_scenario, if_first_trans_over_1w, sub_consume_scenario, 
-      case
-            when gap_day = 0 then 0
-            when gap_day = 1 then 1
-            when gap_day between 2 and 8 then 7
-            when gap_day between 8 and 16 then 15
-            when gap_day between 16 and 30 then 30
-            end as gap_day,
-        sum(order_cnt), 
-        sum(order_amt), 
-        count(distinct originator_id),
-        country_code,
-        '{pt}'
-    from opay_dw.dwm_opay_first_trans_originator_of_last30d_repurchase_d
-    where dt between date_sub('{pt}', 30) and '{pt}' and originator_type = 'USER' and first_trans_date between date_sub('{pt}', 30) and '{pt}'
-    group by first_trans_date, first_sub_consume_scenario, sub_consume_scenario, if_first_trans_over_1w, country_code, 
-        case
-            when gap_day = 0 then 0
-            when gap_day = 1 then 1
-            when gap_day between 2 and 8 then 7
-            when gap_day between 8 and 16 then 15
-            when gap_day between 16 and 30 then 30
-            end
+      count(distinct if(gap_day = 0, user_id, null)) user_cnt0,
+      count(distinct if(gap_day = 1, user_id, null)) user_cnt1,
+      count(distinct if(gap_day >= 1 and gap_day <= 7, user_id, null)) user_cnt7,
+      count(distinct if(gap_day >= 1 and gap_day <= 15, user_id, null)) user_cnt15,
+      count(distinct if(gap_day >= 1 and gap_day <= 30, user_id, null)) user_cnt30,
+      country_code,
+      '{pt}'
+    from opay_dw.dwm_opay_user_first_trans_repurchase_di
+    where dt between date_sub('{pt}', 30) and '{pt}' and first_trans_date between date_sub('{pt}', 30) and '{pt}'
+    group by first_trans_date, first_sub_consume_scenario, sub_consume_scenario, if_first_trans_over_1w, country_code
     '''.format(
         pt=ds,
         table=table_name,
@@ -138,7 +126,7 @@ def execution_data_task_id(ds, **kargs):
     hive_hook = HiveCliHook()
 
     # 读取sql
-    _sql = app_opay_first_trans_user_of_last30d_repurchase_d_sql_task(ds)
+    _sql = app_opay_user_first_trans_repurchase_30_d_sql_task(ds)
 
     logging.info('Executing: %s', _sql)
 
@@ -154,12 +142,12 @@ def execution_data_task_id(ds, **kargs):
     TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "true", "true")
 
 
-app_opay_first_trans_user_of_last30d_repurchase_d_task = PythonOperator(
-    task_id='app_opay_first_trans_user_of_last30d_repurchase_d_task',
+app_opay_user_first_trans_repurchase_30_d_task = PythonOperator(
+    task_id='app_opay_user_first_trans_repurchase_30_d_task',
     python_callable=execution_data_task_id,
     provide_context=True,
     dag=dag
 )
 
-dwm_opay_user_first_tran_di_prev_day_task >> app_opay_first_trans_user_of_last30d_repurchase_d_task
-dwd_opay_transaction_record_di_prev_day_task >> app_opay_first_trans_user_of_last30d_repurchase_d_task
+dwm_opay_user_first_tran_di_prev_day_task >> app_opay_user_first_trans_repurchase_30_d_task
+dwd_opay_transaction_record_di_prev_day_task >> app_opay_user_first_trans_repurchase_30_d_task
