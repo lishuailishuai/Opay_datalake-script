@@ -215,7 +215,7 @@ SELECT base.id as order_id,
        cancel_type,
        --取消原因类型
 
-       cancel_reason,
+       null as cancel_reason,
        --取消原因
 
        status,
@@ -230,16 +230,16 @@ SELECT base.id as order_id,
        driver_serv_type,
        --司机服务类型(1: Direct 2:Street 3:Otrike)
 
-       refund_before_pay,
+       null as refund_before_pay,
        --支付前资金调整
 
-       refund_after_pay,
+       null as refund_after_pay,
        --支付后资金调整
 
        abnormal,
        --异常状态(0 否 1 逃单)
 
-       flag_down_phone,
+       null as flag_down_phone,
        --招手停上报手机号
 
        zone_hash,
