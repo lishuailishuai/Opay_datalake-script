@@ -96,7 +96,9 @@ def app_oride_gps_d_sql_task(ds):
     HQL = '''
         SET hive.exec.parallel=TRUE;
         SET hive.exec.dynamic.partition.mode=nonstrict;
-
+        set hive.strict.checks.cartesian.product=false;
+        set hive.mapred.mode=nonstrict;
+        
         insert into table {db}.{table} partition(country_code,dt)
             
         select a.gps_type,a.gps_id,a.latitude,a.longitude,a.times,a.hour,0 as lost,
