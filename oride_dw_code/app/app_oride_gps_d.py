@@ -58,14 +58,11 @@ if code_map["id"].lower()=="ufile":
 
 else:
     print("成功")
-
-    moto_locations_task = OssSensor(
+    moto_locations_task = HivePartitionSensor(
         task_id="moto_locations_task",
-        bucket_key='{hdfs_path_str}/dt={pt}/hour=23/_SUCCESS'.format(
-            hdfs_path_str="oride/moto_locations",
-            pt='{{ds}}'
-        ),
-        bucket_name='opay-datalake',
+        table="moto_locations",
+        partition="dt='{{ds}}'",
+        schema="oride_source",
         poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
         dag=dag
     )
