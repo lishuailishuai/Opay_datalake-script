@@ -449,7 +449,7 @@ FROM (select *
              row_number() OVER(partition BY id ORDER BY updated_at desc,pos DESC) AS rn1
 FROM oride_dw_ods.ods_binlog_data_order_hi           
 WHERE concat_ws(' ',dt,hour) BETWEEN '{pt} 00' AND '{now_day} 00' --取昨天1天数据与今天早上00数据        
-      AND from_unixtime(create_time,'yyyy-MM-dd') = '{pt}'          
+      AND (from_unixtime(create_time,'yyyy-MM-dd') = '{pt}' or substr(updated_at,1,10)='{pt}')         
       AND op IN ('c','u')) t1
 where rn1=1) base
 LEFT OUTER JOIN

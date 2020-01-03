@@ -16,18 +16,21 @@ from airflow.sensors.named_hive_partition_sensor import NamedHivePartitionSensor
 from airflow.sensors.hive_partition_sensor import HivePartitionSensor
 from airflow.sensors import UFileSensor
 from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
+from airflow.sensors import OssSensor
+
 from plugins.TaskTouchzSuccess import TaskTouchzSuccess
 import json
 import logging
 from airflow.models import Variable
 import requests
 import os
-from airflow.sensors import OssSensor
 
 args = {
-    'owner': 'lishuai',
-    'start_date': datetime(2019, 1, 2),
+    'owner': 'liushuzhen',
+    'start_date': datetime(2020, 1, 1),
     'depends_on_past': False,
+
+
     'retries': 3,
     'retry_delay': timedelta(minutes=2),
     'email': ['bigdata_dw@opay-inc.com'],
@@ -35,30 +38,18 @@ args = {
     'email_on_retry': False,
 }
 
-dag = airflow.DAG('app_opay_user_device_d',
+dag = airflow.DAG('app_opay_betting_airtime_report_d',
                   schedule_interval="00 03 * * *",
                   default_args=args,
                   catchup=False)
 
 ##----------------------------------------- 依赖 ---------------------------------------##
 
-# 依赖前一天分区
-dwd_opay_client_event_base_di_task = OssSensor(
-    task_id='dwd_opay_client_event_base_di_task',
+dwd_opay_life_payment_record_di_prev_day_task = OssSensor(
+    task_id='dwd_opay_life_payment_record_di_prev_day_task',
     bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opay/opay_dw/dwd_opay_client_event_base_di/country_code=nal",
+        hdfs_path_str="opay/opay_dw/dwd_opay_life_payment_record_di/country_code=NG",
         pt='{{ds}}'
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
-
-app_opay_user_device_d_prev_day_task = OssSensor(
-    task_id='app_opay_user_device_d_prev_day_task',
-    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opay/opay_dw/app_opay_user_device_d/country_code=nal",
-        pt='{{macros.ds_add(ds, -1)}}'
     ),
     bucket_name='opay-datalake',
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
@@ -67,58 +58,44 @@ app_opay_user_device_d_prev_day_task = OssSensor(
 
 ##----------------------------------------- 变量 ---------------------------------------##
 db_name = "opay_dw"
-table_name = "app_opay_user_device_d"
+
+table_name = "app_opay_betting_airtime_report_d"
 hdfs_path = "oss://opay-datalake/opay/opay_dw/" + table_name
 
 
-##----------------------------------------- 脚本 ---------------------------------------##
-
-def app_opay_user_device_d_sql_task(ds):
+def app_opay_betting_airtime_report_d_sql_task(ds):
     HQL = '''
 
     set mapred.max.split.size=1000000;
     set hive.exec.dynamic.partition.mode=nonstrict;
     set hive.exec.parallel=true;
-    insert overwrite table {db}.{table} partition(country_code,dt)
-    select 
-    if(a.user_id is null,b.user_id,a.user_id),
-    if(a.device_id is null,b.device_id,a.device_id),
-    if(a.mobile is null,b.mobile,a.mobile),
-    if(b.device_id is not null,b.bb,a.`timestamp`),
-    'nal' as country_code,
-    '{pt}' as dt
-    from 
-    (select * from 
-    opay_dw.app_opay_user_device_d 
-    where dt=date_sub('{pt}',1)
-    ) a
-    full join
-    (select
-        user_id,
-        device_id,
-        mobile,
-        max(server_timestamp) bb
-    from opay_dw.dwd_opay_client_event_base_di
-    where dt='{pt}' and device_id!=''
-    group by user_id,device_id,mobile
-    ) b
-    on a.device_id=b.device_id;
+    INSERT overwrite TABLE opay_dw.app_opay_betting_airtime_report_d partition (dt='{pt}')
+    SELECT sub_service_type,
+           sum(pay_amount) pay_amount,
+           sum(amount-pay_amount) activity_amount
+    FROM opay_dw.dwd_opay_life_payment_record_di
+    WHERE dt='{pt}'
+      AND order_status='SUCCESS'
+      AND top_service_type='Life Payment'
+      AND sub_service_type IN('Betting',
+                              'Airtime')
+      AND create_time BETWEEN date_format(date_sub('{pt}', 1), 'yyyy-MM-dd 23') AND date_format('{pt}', 'yyyy-MM-dd 23')
+    GROUP BY dt,
+             sub_service_type
 
-
-'''.format(
+    '''.format(
         pt=ds,
-        db=db_name,
-        table=table_name
+        table=table_name,
+        db=db_name
     )
     return HQL
 
 
-# 主流程
 def execution_data_task_id(ds, **kargs):
     hive_hook = HiveCliHook()
 
     # 读取sql
-    _sql = app_opay_user_device_d_sql_task(ds)
+    _sql = app_opay_betting_airtime_report_d_sql_task(ds)
 
     logging.info('Executing: %s', _sql)
 
@@ -131,15 +108,16 @@ def execution_data_task_id(ds, **kargs):
     第二个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
 
     """
-    TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "true", "true")
+    TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "false", "true")
 
 
-app_opay_user_device_d_task = PythonOperator(
-    task_id='app_opay_user_device_d_task',
+app_opay_betting_airtime_report_d_task = PythonOperator(
+    task_id='app_opay_betting_airtime_report_d_task',
     python_callable=execution_data_task_id,
     provide_context=True,
     dag=dag
 )
 
-dwd_opay_client_event_base_di_task >> app_opay_user_device_d_task
-app_opay_user_device_d_prev_day_task >> app_opay_user_device_d_task
+dwd_opay_life_payment_record_di_prev_day_task >> app_opay_betting_airtime_report_d_task
+
+

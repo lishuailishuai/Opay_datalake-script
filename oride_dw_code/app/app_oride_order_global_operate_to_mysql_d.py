@@ -279,7 +279,6 @@ task_timeout_monitor = PythonOperator(
 
 
 ##----------------------------------------- 脚本 ---------------------------------------##
-##----------------------------------------- 脚本 ---------------------------------------##
 
 def app_oride_order_global_operate_to_mysql_d_sql_task(ds):
     HQL ='''
@@ -288,7 +287,7 @@ def app_oride_order_global_operate_to_mysql_d_sql_task(ds):
       set hive.exec.dynamic.partition.mode=nonstrict;    
          --将数据加载到内存，临时表
 
-             with 
+                     with 
         dwd_order_di as
         ( 
             select
@@ -304,7 +303,7 @@ def app_oride_order_global_operate_to_mysql_d_sql_task(ds):
             where city_id != 999001 and is_td_finish=1
         )
 
-  insert overwrite table oride_dw.{table} partition(country_code,dt)
+insert overwrite table oride_dw.{table} partition(country_code,dt)
 
     select 
         nvl(od.city_id,-10000) as city_id,
@@ -358,7 +357,7 @@ def app_oride_order_global_operate_to_mysql_d_sql_task(ds):
             tmp01.order_cnt, --下单量
             tmp01.finish_order_cnt, --完单量
             tmp01.valid_ord_cnt,--有效订单量
-            tmp01.gmv, --gmv
+            tmp01.online_pay_price + tmp01.falsify + tmp01.falsify_driver_cancel  as gmv,  --gmv
             tmp01.finish_order_driver_num,--完单司机数
             tmp01.wet_order_cnt, --湿单量
             tmp01.order_distance, --送驾距离
@@ -373,10 +372,17 @@ def app_oride_order_global_operate_to_mysql_d_sql_task(ds):
                     count(1) as order_cnt, --下单量
                     sum(is_finish) as finish_order_cnt, --完单量
                     sum(is_valid) as valid_ord_cnt,--有效订单量
-                    sum(if(is_finish =1,price,0)) as gmv, --gmv
+                    --sum(if(is_finish =1,price,0)) as gmv, --gmv
                     count(distinct if(is_finish =1 ,driver_id, null)) as finish_order_driver_num,--完单司机数
                     count(if(is_wet_order =1,1,null)) as wet_order_cnt, --湿单量
-                    sum(if(is_finish = 1, order_onride_distance , 0)) as order_distance --送驾距离
+                    sum(if(is_finish = 1, order_onride_distance , 0)) as order_distance, --送驾距离
+                    
+                    --新gmv
+                    sum(if(is_finished_pay=1 and is_succ_pay=1 and product_id<>99 and pay_mode not in(0,1),price,0)) as online_pay_price,  --当日线上应付订单金额12.18号开始,自12.26号再次变更，要所有线上支付单，统计gmv和c补
+                    sum(falsify) as falsify, --用户罚款，自12.25号开始该表接入
+                    sum(falsify_driver_cancel) as falsify_driver_cancel --司机罚款，自12.25号开始该表接入
+                    
+                   
                 from  oride_dw.dwm_oride_order_base_di 
                     where dt = '{pt}'
                 group by city_id with cube
@@ -387,11 +393,11 @@ def app_oride_order_global_operate_to_mysql_d_sql_task(ds):
         (   
             select 
                 city_id,
-                sum(if(dt =date_sub('{pt}',1), is_finish,0)) as finish_order_cnt_1, -- 前一天完单量
-                sum(if(dt =date_sub('{pt}',7), is_finish,0)) as finish_order_cnt_7, -- 第前七天完单量
-                sum(if(dt =date_sub('{pt}',1) and is_finish =1,price,0)) as gmv_1,--前一天gmv
-                sum(if(dt =date_sub('{pt}',7) and is_finish =1,price,0)) as gmv_7--第7天前gmv
-            from  oride_dw.dwm_oride_order_base_di 
+                sum(if(dt =date_sub('{pt}',1), finish_order_cnt,0)) as finish_order_cnt_1, -- 前一天完单量
+                sum(if(dt =date_sub('{pt}',7), finish_order_cnt,0)) as finish_order_cnt_7, -- 第前七天完单量
+                sum(if(dt =date_sub('{pt}',1), gmv,0)) as gmv_1,--前一天gmv
+                sum(if(dt =date_sub('{pt}',7), gmv,0)) as gmv_7--第7天前gmv
+            from  oride_dw.app_oride_order_global_operate_to_mysql_d 
             where  dt = date_sub('{pt}',1)  or  dt =date_sub('{pt}',7)
             group by city_id
         )tmp02 on tmp01.city_id = tmp02.city_id
@@ -436,7 +442,7 @@ def app_oride_order_global_operate_to_mysql_d_sql_task(ds):
                 sum(recharge_amount) + sum(reward_amount) as b_subsidy_m--B端补贴 月
 
             from oride_dw.dwm_oride_driver_finance_di 
-            where  month(dt) = month('{pt}') and city_id != 999001
+            where  month(dt) = month('{pt}') and city_id != 999001 and driver_id <> 1
             group by city_id
         )b
         left join
@@ -449,7 +455,7 @@ def app_oride_order_global_operate_to_mysql_d_sql_task(ds):
                 sum(price) - sum(pay_amount) as c_subsidy_m
             from oride_dw.dwm_oride_order_base_di
             where month(dt) = month('{pt}') and city_id != 999001
-                and is_opay_pay=1 and is_succ_pay=1 and product_id<>99
+               and is_finished_pay=1 and is_succ_pay=1 and pay_mode not in(0,1) and product_id<>99
             group by city_id
         )c on  b.city_id =  c.city_id  
         group by b.city_id,b.b_subsidy_d,c.c_subsidy_d,c.c_gmv_d, c.c_gmv_m  
