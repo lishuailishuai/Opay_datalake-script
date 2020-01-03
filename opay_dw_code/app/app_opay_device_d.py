@@ -26,7 +26,7 @@ from airflow.sensors import OssSensor
 
 args = {
     'owner': 'lishuai',
-    'start_date': datetime(2019, 12, 30),
+    'start_date': datetime(2019, 1, 2),
     'depends_on_past': False,
     'retries': 3,
     'retry_delay': timedelta(minutes=2),
@@ -72,20 +72,22 @@ def app_opay_device_d_sql_task(ds):
     set hive.exec.dynamic.partition.mode=nonstrict;
     set hive.exec.parallel=true;
     insert overwrite table {db}.{table} partition(country_code,dt)
-    select 
-    device_id,
-    server_timestamp,
+    select if(a.device_id is null,b.device_id,a.device_id),
+    if(b.device_id is not null,b.bb,a.aa),
     'nal' as country_code,
     '{pt}' as dt
-from (
-    select
+    from opay_dw.app_opay_device_d a
+    where dt=date_sub('${pt}',1)
+    full join
+    (select
         device_id,
-        server_timestamp,
-        row_number() over(partition by device_id order by server_timestamp desc) as num
+        max(server_timestamp) bb
     from opay_dw.dwd_opay_client_event_base_di
-    where dt='{pt}'
-    ) temp 
-where temp.num=1;
+    where dt='{pt}' and device_id!=''
+    group by device_id
+) b
+on a.device_id=b.device_id;
+
 
 '''.format(
         pt=ds,
