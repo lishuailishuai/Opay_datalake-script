@@ -124,7 +124,7 @@ a.adt as create_date
 from
 date_order as a
 left join
-(select city_id from opos_dw.dwd_pre_opos_payment_order_di where country_code='nal' and dt='{pt}' and trade_status='SUCCESS' group by city_id) as b
+(select id as city_id from opos_dw_ods.ods_sqoop_base_bd_city_df where dt = '{pt}') as b
 on 1=1
 ),
 
@@ -145,10 +145,9 @@ new_user_remain_cnt as (
     from
     (select dt,city_id,sender_id from opos_dw.dwd_pre_opos_payment_order_di where country_code='nal' and dt>='{before_29_day}' and dt<='{pt}' and trade_status='SUCCESS' and first_order='1' group by dt,city_id,sender_id) as a
     inner join
-    (select dt,city_id,sender_id from opos_dw.dwd_pre_opos_payment_order_di where country_code='nal' and dt='{pt}' and trade_status='SUCCESS' group by dt,city_id,sender_id) as b
+    (select dt,sender_id from opos_dw.dwd_pre_opos_payment_order_di where country_code='nal' and dt='{pt}' and trade_status='SUCCESS' group by dt,sender_id) as b
     on
-    a.city_id=b.city_id
-    and a.sender_id=b.sender_id
+    a.sender_id=b.sender_id
     ) as a
   group by
   create_date
@@ -173,10 +172,9 @@ user_remain_cnt as (
     from
     (select dt,city_id,sender_id from opos_dw.dwd_pre_opos_payment_order_di where country_code='nal' and dt>='{before_29_day}' and dt<='{pt}' and trade_status='SUCCESS' group by dt,city_id,sender_id) as a
     inner join
-    (select dt,city_id,sender_id from opos_dw.dwd_pre_opos_payment_order_di where country_code='nal' and dt='{pt}' and trade_status='SUCCESS' group by dt,city_id,sender_id) as b
+    (select dt,sender_id from opos_dw.dwd_pre_opos_payment_order_di where country_code='nal' and dt='{pt}' and trade_status='SUCCESS' group by dt,sender_id) as b
     on
-    a.city_id=b.city_id
-    and a.sender_id=b.sender_id
+    a.sender_id=b.sender_id
     ) as a
   group by
   create_date
@@ -201,10 +199,9 @@ new_shop_remain_cnt as (
     from
     (select dt,city_id,receipt_id from opos_dw.dwd_pre_opos_payment_order_di where country_code='nal' and dt>='{before_29_day}' and dt<='{pt}' and trade_status='SUCCESS' and dt=created_at group by dt,city_id,receipt_id) as a
     inner join
-    (select dt,city_id,receipt_id from opos_dw.dwd_pre_opos_payment_order_di where country_code='nal' and dt='{pt}' and trade_status='SUCCESS' group by dt,city_id,receipt_id) as b
+    (select dt,receipt_id from opos_dw.dwd_pre_opos_payment_order_di where country_code='nal' and dt='{pt}' and trade_status='SUCCESS' group by dt,receipt_id) as b
     on
-    a.city_id=b.city_id
-    and a.receipt_id=b.receipt_id
+    a.receipt_id=b.receipt_id
     ) as a
   group by
   create_date
@@ -229,10 +226,9 @@ shop_remain_cnt as (
     from
     (select dt,city_id,receipt_id from opos_dw.dwd_pre_opos_payment_order_di where country_code='nal' and dt>='{before_29_day}' and dt<='{pt}' and trade_status='SUCCESS' group by dt,city_id,receipt_id) as a
     inner join
-    (select dt,city_id,receipt_id from opos_dw.dwd_pre_opos_payment_order_di where country_code='nal' and dt='{pt}' and trade_status='SUCCESS' group by dt,city_id,receipt_id) as b
+    (select dt,receipt_id from opos_dw.dwd_pre_opos_payment_order_di where country_code='nal' and dt='{pt}' and trade_status='SUCCESS' group by dt,receipt_id) as b
     on
-    a.city_id=b.city_id
-    and a.receipt_id=b.receipt_id
+    a.receipt_id=b.receipt_id
     ) as a
   group by
   create_date
@@ -286,6 +282,7 @@ left join
 on v1.create_date=v6.create_date
   and v1.remain_date=v6.remain_date
   and v1.city_id=v6.city_id;
+
 
 
 

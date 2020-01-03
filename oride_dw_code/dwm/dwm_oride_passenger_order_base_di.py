@@ -133,7 +133,7 @@ select ord.passenger_id,  --乘客ID
        ord.product_id,  --下单业务类型
        ord.driver_serv_type,  --司机绑定的业务类型，两个业务类型区别在于同时呼叫下线前统计业务线完单量
        if(multi_cit.city_id is not null,1,0) as is_multi_city,  --是否多城市业务线
-       if(user_df.first_finish_create_date='{pt}'and ord.is_td_finish=1,1,0) as is_first_finish_user, --是否首次完单乘客
+       if(user_df.first_finish_create_date='{pt}' and ord.is_td_finish=1,1,0) as is_first_finish_user, --是否首次完单乘客
        sum(if(user_df.is_td_register=1,1,0)) as new_user_ord_cnt, --当日新注册乘客下单量
        sum(if(user_df.is_td_register=1 and ord.is_td_finish=1,1,0)) as new_user_finished_cnt, --当日新注册乘客完单量
        sum(if(user_df.is_td_register=1 and ord.is_td_finish=1,ord.price,0)) as new_user_gmv, --当日注册乘客完单gmv       
@@ -141,11 +141,19 @@ select ord.passenger_id,  --乘客ID
        sum(ord.is_td_finish) as finish_order_cnt,  --完单量
        sum(ord.is_td_finish_pay) as finished_pay_order_cnt, --支付完单量，订单表中status=5
        sum(if(ord.pay_status=1 and ord.status not in(6,13),1,0)) as pay_succ_ord_cnt, --支付表支付成功且正常订单量
-       sum(if(ord.pay_status=1 and ord.pay_mode=2 and ord.status not in(6,13),1,0)) as online_pay_succ_ord_cnt, --线上支付成功且正常订单量
+       sum(if(ord.pay_status=1 and ord.pay_mode=2 and ord.status not in(6,13),1,0)) as opay_pay_succ_ord_cnt, --opay支付成功且正常订单量
        sum(if(ord.is_td_finish=1,ord.price,0)) as finish_order_price,  --完单gmv
        sum(if(ord.is_td_finish_pay=1,ord.price,0)) as finished_pay_order_price,  --完单支付gmv，订单表中status=5
-       sum(if(ord.pay_status=1 and ord.pay_mode=2 and ord.status not in(6,13),ord.price,0)) as online_pay_ord_price,  --线上支付成功且正常订单gmv
+       sum(if(ord.pay_status=1 and ord.pay_mode=2 and ord.status not in(6,13),ord.price,0)) as opay_pay_ord_price,  --opay支付成功且正常订单gmv
        sum(ord.pay_amount) as pay_amount,  --实际支付金额
+       sum(if(ord.pay_status=1 and ord.pay_mode not in(0,1) and ord.status not in(6,13),1,0)) as online_pay_succ_ord_cnt, --线上支付成功且正常订单量,自12.26号接入
+       sum(if(ord.pay_status=1 and ord.pay_mode not in(0,1) and ord.status not in(6,13),ord.price,0)) as online_pay_ord_price,  --线上支付成功且正常订单gmv,自12.26号接入
+       sum(if(user_df.is_td_register=1 and ord.pay_status=1 and ord.pay_mode not in(0,1) and ord.is_td_finish_pay=1,ord.price,0)) as new_user_online_pay_price, --当日注册乘客线上支付成功gmv，自12.26号开始该表接入
+       sum(if(user_df.is_td_register=1,ord.falsify,0)) as falsify, --新注册用户罚款，自12.26号开始该表接入
+       sum(if(user_df.is_td_register=1,ord.falsify_driver_cancel,0)) as falsify_driver_cancel, --新注册用户订单对应的司机罚款，自12.26号开始该表接入
+       sum(if(ord.pay_status=1 and ord.status not in(6,13) and ord.product_id<>99,1,0)) as nobeckon_pay_succ_ord_cnt,
+       sum(if(ord.pay_status=1 and ord.pay_mode=2 and ord.status not in(6,13) and ord.product_id<>99,1,0)) as nobeckon_opay_pay_succ_ord_cnt,
+       sum(if(ord.pay_status=1 and ord.pay_mode not in(0,1) and ord.status not in(6,13) and ord.product_id<>99,1,0)) as nobeckon_online_pay_succ_ord_cnt,
        ord.country_code,
        '{pt}' as dt
 from(select *
@@ -168,7 +176,7 @@ group by ord.passenger_id,  --乘客ID
        ord.product_id,  --下单业务类型
        ord.driver_serv_type, --司机绑定的业务类型，两个业务类型区别在于同时呼叫下线前统计业务线完单量
        if(multi_cit.city_id is not null,1,0), --是否多城市业务线
-       if(user_df.first_finish_create_date='{pt}'and ord.is_td_finish=1,1,0),
+       if(user_df.first_finish_create_date='{pt}' and ord.is_td_finish=1,1,0), 
        ord.country_code;  
     '''.format(
         pt=ds,

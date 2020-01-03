@@ -443,6 +443,13 @@ SELECT base.order_id,
         change_target, --否修改终点(0 no 1 yes) 
         user_version, --乘客端版本（发单）
         driver_version, --司机端版本（接单）
+        pax_ratio, --乘客系数
+        driver_ratio, --司机系数
+        driver_fee_rate, --司机佣金费率
+        driver_price, --司机价格
+        driver_original_price, --司机原始价格
+        original_distance, --实际距离
+        driver_distance, --司机计价距离(乘以系数后)
        nvl(country.country_code,'nal') as country_code,
 
        '{pt}' AS dt
@@ -605,7 +612,14 @@ FROM
              driver_depart, --接单取消时骑手是否出发 0 已出发（默认） 1 未出发
              change_target, --否修改终点(0 no 1 yes) 
              user_version, --乘客端版本（发单）
-             driver_version --司机端版本（接单）
+             driver_version, --司机端版本（接单）
+             pax_ratio, --乘客系数
+	         driver_ratio, --司机系数
+	         driver_fee_rate, --司机佣金费率
+	         driver_price, --司机价格
+	         driver_original_price, --司机原始价格
+	         original_distance, --实际距离
+	         driver_distance --司机计价距离(乘以系数后)
              from 
      (SELECT 
 
@@ -767,6 +781,13 @@ FROM
              change_target, --否修改终点(0 no 1 yes) 
              user_version, --乘客端版本（发单）
              driver_version, --司机端版本（接单）
+             pax_ratio, --乘客系数
+	         driver_ratio, --司机系数
+	         driver_fee_rate, --司机佣金费率
+	         driver_price, --司机价格
+	         driver_original_price, --司机原始价格
+	         original_distance, --实际距离
+	         driver_distance, --司机计价距离(乘以系数后)
 
              row_number() OVER(partition BY id ORDER BY updated_at desc,pos DESC) AS rn1
 
