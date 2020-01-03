@@ -526,8 +526,6 @@ app_opos_shop_target_d_task = PythonOperator(
 
 dwd_pre_opos_payment_order_di_task >> app_opos_shop_target_d_task
 
-# 查看任务命令
-# airflow list_tasks app_opos_shop_target_d -sd /home/feng.yuan/app_opos_shop_target_d.py
-# 测试任务命令
-# airflow test app_opos_shop_target_d app_opos_shop_target_d_task 2019-11-24 -sd /home/feng.yuan/app_opos_shop_target_d.py
+
+
 
