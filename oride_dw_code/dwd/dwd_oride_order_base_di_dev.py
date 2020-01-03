@@ -461,7 +461,7 @@ FROM (select *
 
         WHERE concat_ws(' ',dt,hour) BETWEEN '{bef_yes_day} 23' AND '{pt} 23' --取昨天1天数据与今天早上00数据
 
-        AND from_unixtime((t.create_time + 1 * 60 * 60 * 1),'yyyy-MM-dd') = '{pt}'
+        AND (from_unixtime((t.create_time + 1 * 60 * 60 * 1),'yyyy-MM-dd') = '{pt}' or substr(updated_at,1,10)='{pt}')
          ) t1
 where t1.`__deleted` = 'false' and t1.order_by = 1) base
 LEFT OUTER JOIN
