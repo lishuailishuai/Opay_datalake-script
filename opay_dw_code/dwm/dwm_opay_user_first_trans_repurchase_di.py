@@ -25,7 +25,7 @@ import os
 
 args = {
     'owner': 'xiedong',
-    'start_date': datetime(2019, 12, 01),
+    'start_date': datetime(2019, 12, 1),
     'depends_on_past': False,
     'retries': 3,
     'retry_delay': timedelta(minutes=2),
@@ -34,7 +34,7 @@ args = {
     'email_on_retry': False,
 }
 
-dag = airflow.DAG('dwm_opay_user_first_trans_repurchase_d',
+dag = airflow.DAG('dwm_opay_user_first_trans_repurchase_di',
                   schedule_interval="00 03 * * *",
                   default_args=args
                   )
@@ -86,12 +86,12 @@ task_timeout_monitor = PythonOperator(
 
 ##----------------------------------------- 变量 ---------------------------------------##
 db_name = "opay_dw"
-table_name = "dwm_opay_user_first_trans_repurchase_d"
+table_name = "dwm_opay_user_first_trans_repurchase_di"
 hdfs_path = "oss://opay-datalake/opay/opay_dw/" + table_name
 
 
 ##---- hive operator ---##
-def dwm_opay_user_first_trans_repurchase_d_sql_task(ds):
+def dwm_opay_user_first_trans_repurchase_di_sql_task(ds):
     HQL = '''
     
     set mapred.max.split.size=1000000;
@@ -130,7 +130,7 @@ def execution_data_task_id(ds, **kargs):
     hive_hook = HiveCliHook()
 
     # 读取sql
-    _sql = dwm_opay_user_first_trans_repurchase_d_sql_task(ds)
+    _sql = dwm_opay_user_first_trans_repurchase_di_sql_task(ds)
 
     logging.info('Executing: %s', _sql)
 
@@ -146,12 +146,12 @@ def execution_data_task_id(ds, **kargs):
     TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "true", "true")
 
 
-dwm_opay_user_first_trans_repurchase_d_task = PythonOperator(
-    task_id='dwm_opay_user_first_trans_repurchase_d_task',
+dwm_opay_user_first_trans_repurchase_di_task = PythonOperator(
+    task_id='dwm_opay_user_first_trans_repurchase_di_task',
     python_callable=execution_data_task_id,
     provide_context=True,
     dag=dag
 )
 
-dwm_opay_user_first_tran_di_prev_day_task >> dwm_opay_user_first_trans_repurchase_d_task
-dwd_opay_transaction_record_di_prev_day_task >> dwm_opay_user_first_trans_repurchase_d_task
+dwm_opay_user_first_tran_di_prev_day_task >> dwm_opay_user_first_trans_repurchase_di_task
+dwd_opay_transaction_record_di_prev_day_task >> dwm_opay_user_first_trans_repurchase_di_task
