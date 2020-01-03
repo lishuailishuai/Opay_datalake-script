@@ -83,7 +83,7 @@ def app_opay_pos_report_d_sql_task(ds):
        FROM opay_dw.dim_opay_pos_terminal_base_df
        WHERE dt='{pt}'
          AND bind_status='Y'
-         AND create_time BETWEEN date_format(date_sub('{pt}', 1), 'yyyy-MM-dd 23') AND date_format('{pt}', 'yyyy-MM-dd 23')),
+         AND create_time<'{pt} 23:00:00'),
          tran AS
       (SELECT *
        FROM opay_dw.dwd_opay_transaction_record_di
