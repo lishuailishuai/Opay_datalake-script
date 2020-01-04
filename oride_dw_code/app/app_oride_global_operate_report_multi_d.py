@@ -135,6 +135,7 @@ def app_oride_global_operate_report_multi_d_sql_task(ds):
     SET hive.exec.parallel=true;
     SET hive.exec.dynamic.partition=true;
     SET hive.exec.dynamic.partition.mode=nonstrict;
+    set hive.auto.convert.join = false;
 
     with order_data as 
  (SELECT dt,
