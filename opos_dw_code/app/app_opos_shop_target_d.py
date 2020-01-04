@@ -91,6 +91,9 @@ set hive.exec.parallel=true;
 set hive.exec.dynamic.partition.mode=nonstrict;
 set hive.strict.checks.cartesian.product=false;
 
+--先删除分区
+ALTER TABLE opos_dw.app_opos_shop_target_d DROP IF EXISTS PARTITION(country_code='nal',dt='{pt}');
+
 --01.取出交易成功的商铺信息数据
 with
 payment_order as (
@@ -523,8 +526,6 @@ app_opos_shop_target_d_task = PythonOperator(
 
 dwd_pre_opos_payment_order_di_task >> app_opos_shop_target_d_task
 
-# 查看任务命令
-# airflow list_tasks app_opos_shop_target_d -sd /home/feng.yuan/app_opos_shop_target_d.py
-# 测试任务命令
-# airflow test app_opos_shop_target_d app_opos_shop_target_d_task 2019-11-24 -sd /home/feng.yuan/app_opos_shop_target_d.py
+
+
 

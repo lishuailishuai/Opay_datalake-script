@@ -26,7 +26,7 @@ from airflow.sensors import OssSensor
 
 args = {
     'owner': 'lishuai',
-    'start_date': datetime(2019, 1, 2),
+    'start_date': datetime(2020, 1, 2),
     'depends_on_past': False,
     'retries': 3,
     'retry_delay': timedelta(minutes=2),
@@ -43,13 +43,11 @@ dag = airflow.DAG('app_opay_device_d',
 ##----------------------------------------- 依赖 ---------------------------------------##
 
 # 依赖前一天分区
-dwd_opay_client_event_base_di_task = OssSensor(
-    task_id='dwd_opay_client_event_base_di_task',
-    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opay/opay_dw/dwd_opay_client_event_base_di/country_code=nal",
-        pt='{{ds}}'
-    ),
-    bucket_name='opay-datalake',
+dwd_opay_client_event_base_di_prev_day_task = HivePartitionSensor(
+    task_id="dwd_opay_client_event_base_di_prev_day_task",
+    table="client_event",
+    partition="dt='{{ ds }}' and hour='22'",
+    schema="opay_source",
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
@@ -62,6 +60,24 @@ app_opay_device_d_prev_day_task = OssSensor(
     ),
     bucket_name='opay-datalake',
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
+##----------------------------------------- 任务超时监控 ---------------------------------------##
+def fun_task_timeout_monitor(ds,dag,**op_kwargs):
+
+    dag_ids=dag.dag_id
+
+    msg = [
+        {"db": "opay_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "3000"}
+    ]
+
+    TaskTimeoutMonitor().set_task_monitor(msg)
+
+task_timeout_monitor= PythonOperator(
+    task_id='task_timeout_monitor',
+    python_callable=fun_task_timeout_monitor,
+    provide_context=True,
     dag=dag
 )
 
@@ -92,14 +108,13 @@ def app_opay_device_d_sql_task(ds):
     ) a
     full join
     (select
-        device_id,
-        max(server_timestamp) bb
-    from opay_dw.dwd_opay_client_event_base_di
-    where dt='{pt}' and device_id!=''
-    group by device_id
+        common.device_id device_id,
+        max(`timestamp`) bb
+    from opay_source.client_event
+    where (dt = '{pt}' and hour < 23) or (dt=date_sub('{pt}', 1) and hour = 23) and common.device_id!=''
+    group by common.device_id
     ) b
 on a.device_id=b.device_id;
-
 
 '''.format(
         pt=ds,
@@ -137,5 +152,5 @@ app_opay_device_d_task = PythonOperator(
     dag=dag
 )
 
-dwd_opay_client_event_base_di_task >> app_opay_device_d_task
+dwd_opay_client_event_base_di_prev_day_task >> app_opay_device_d_task
 app_opay_device_d_prev_day_task >> app_opay_device_d_task
