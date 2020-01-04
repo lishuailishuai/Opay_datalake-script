@@ -110,7 +110,7 @@ else:
 
     dwd_oride_driver_cheating_detection_hi_task = OssSensor(
         task_id="dwd_oride_driver_cheating_detection_hi_task",
-        bucket_key='{hdfs_path_str}/dt={pt}/hour=23'.format(
+        bucket_key='{hdfs_path_str}/dt={pt}/hour=23/_SUCCESS'.format(
             hdfs_path_str="oride/oride_dw/dwd_oride_driver_cheating_detection_hi/country_code=nal",
             pt='{{ ds }}'
         ),

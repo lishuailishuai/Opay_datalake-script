@@ -58,14 +58,11 @@ if code_map["id"].lower()=="ufile":
 
 else:
     print("成功")
-
-    moto_locations_task = OssSensor(
+    moto_locations_task = HivePartitionSensor(
         task_id="moto_locations_task",
-        bucket_key='{hdfs_path_str}/dt={pt}/hour=23/_SUCCESS'.format(
-            hdfs_path_str="oride/moto_locations",
-            pt='{{ds}}'
-        ),
-        bucket_name='opay-datalake',
+        table="moto_locations",
+        partition="dt='{{ds}}'",
+        schema="oride_source",
         poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
         dag=dag
     )
@@ -99,7 +96,9 @@ def app_oride_gps_d_sql_task(ds):
     HQL = '''
         SET hive.exec.parallel=TRUE;
         SET hive.exec.dynamic.partition.mode=nonstrict;
-
+        set hive.strict.checks.cartesian.product=false;
+        set hive.mapred.mode=nonstrict;
+        
         insert into table {db}.{table} partition(country_code,dt)
             
         select a.gps_type,a.gps_id,a.latitude,a.longitude,a.times,a.hour,0 as lost,
