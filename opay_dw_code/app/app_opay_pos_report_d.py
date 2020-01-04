@@ -44,8 +44,8 @@ dag = airflow.DAG('app_opay_pos_report_d',
 ##----------------------------------------- 依赖 ---------------------------------------##
 
 dim_opay_pos_terminal_base_df_prev_day_task = OssSensor(
-    task_id='dim_opay_pos_terminal_base_df_prev_day_task',
-    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+   task_id='dim_opay_pos_terminal_base_df_prev_day_task',
+   bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
         hdfs_path_str="opay/opay_dw/dim_opay_pos_terminal_base_df/country_code=NG",
         pt='{{ds}}'
     ),
@@ -83,14 +83,14 @@ def app_opay_pos_report_d_sql_task(ds):
        FROM opay_dw.dim_opay_pos_terminal_base_df
        WHERE dt='{pt}'
          AND bind_status='Y'
-         AND create_time BETWEEN date_format(date_sub('{pt}', 1), 'yyyy-MM-dd 23') AND date_format('{pt}', 'yyyy-MM-dd 23')),
+         AND create_time<'{pt} 23:00:00'),
          tran AS
       (SELECT *
        FROM opay_dw.dwd_opay_transaction_record_di
        WHERE dt='{pt}'
          AND create_time BETWEEN date_format(date_sub('{pt}', 1), 'yyyy-MM-dd 23') AND date_format('{pt}', 'yyyy-MM-dd 23')
          AND sub_service_type='pos'
-         AND order_status='SUCCESS' )
+         )
     INSERT overwrite TABLE {db}.{table} partition (dt='{pt}')
     SELECT active_terms,
            bind_terms,

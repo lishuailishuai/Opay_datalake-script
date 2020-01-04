@@ -41,7 +41,7 @@ hdfs_path = Variable.get("OBJECT_STORAGE_PROTOCOL") + "opay-datalake/oride/oride
 KeyDriverOrderTime = "driver:ort:%d:%s"
 
 get_driver_id = '''
-select max(id) from oride_data.data_driver
+select id from oride_data.data_driver order by id desc limit 1
 '''
 insert_timerange = '''
 replace into bi.driver_timerange (`Daily`,`driver_id`,`driver_onlinerange`,`driver_freerange`) values (%s,%s,%s,%s)

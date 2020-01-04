@@ -186,7 +186,7 @@ def dim_oride_driver_base_sql_task(ds):
             SELECT *,
                 row_number() over(partition by t.id order by t.`__ts_ms` DESC) AS rn1
             FROM oride_dw_ods.ods_binlog_base_data_driver_hi as t
-            WHERE concat_ws(' ',dt,hour) BETWEEN '{bef_yes_day} 23' AND '{pt} 23'
+            WHERE concat_ws(' ',dt,hour) BETWEEN '{bef_yes_day} 23' AND '{pt} 22'
             
         ) m
         WHERE m.`__deleted`='false' and m.rn1=1

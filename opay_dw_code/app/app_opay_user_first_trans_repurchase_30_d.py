@@ -34,7 +34,7 @@ args = {
     'email_on_retry': False,
 }
 
-dag = airflow.DAG('dwm_opay_first_trans_originator_of_last30d_repurchase_d',
+dag = airflow.DAG('app_opay_user_first_trans_repurchase_30_d',
                   schedule_interval="00 03 * * *",
                   default_args=args
                   )
@@ -86,12 +86,12 @@ task_timeout_monitor = PythonOperator(
 
 ##----------------------------------------- 变量 ---------------------------------------##
 db_name = "opay_dw"
-table_name = "dwm_opay_first_trans_originator_of_last30d_repurchase_d"
+table_name = "app_opay_user_first_trans_repurchase_30_d"
 hdfs_path = "oss://opay-datalake/opay/opay_dw/" + table_name
 
 
 ##---- hive operator ---##
-def dwm_opay_first_trans_originator_of_last30d_repurchase_d_sql_task(ds):
+def app_opay_user_first_trans_repurchase_30_d_sql_task(ds):
     HQL = '''
     
     set mapred.max.split.size=1000000;
@@ -99,22 +99,19 @@ def dwm_opay_first_trans_originator_of_last30d_repurchase_d_sql_task(ds):
     set hive.exec.parallel=true; --default false
 
     insert overwrite table {db}.{table} partition(country_code, dt)
+        
     select 
-	    t1.sub_consume_scenario, t1.originator_id, originator_type, order_cnt, order_amt, 
-	    if(t2.first_trans_amount >= 10000, 'y', 'n') if_first_trans_over_10000, first_trans_date, first_sub_consume_scenario, datediff('{pt}', t2.first_trans_date) gap_day,
-	    t1.country_code, t1.dt
-	from (
-	    select 
-	        sub_consume_scenario, originator_id, originator_type, sum(amount) as order_amt, count(*) order_cnt, country_code, '{pt}' as dt
-	    from opay_dw.dwd_opay_transaction_record_di
-	    where dt = '{pt}' and order_status = 'SUCCESS'
-	    group by sub_consume_scenario, originator_id, originator_type, country_code
-	) t1 join (
-	    select 
-	        sub_consume_scenario as first_sub_consume_scenario, originator_id, amount as first_trans_amount, dt as first_trans_date
-	    from opay_dw.dwm_opay_user_first_tran_di
-	    where dt between date_sub('{pt}', 30) and '{pt}'
-	) t2 on t1.originator_id = t2.originator_id
+      first_trans_date, first_sub_consume_scenario, if_first_trans_over_1w, sub_consume_scenario, 
+      count(distinct if(gap_day = 0, user_id, null)) user_cnt0,
+      count(distinct if(gap_day = 1, user_id, null)) user_cnt1,
+      count(distinct if(gap_day >= 1 and gap_day <= 7, user_id, null)) user_cnt7,
+      count(distinct if(gap_day >= 1 and gap_day <= 15, user_id, null)) user_cnt15,
+      count(distinct if(gap_day >= 1 and gap_day <= 30, user_id, null)) user_cnt30,
+      country_code,
+      '{pt}'
+    from opay_dw.dwm_opay_user_first_trans_repurchase_di
+    where dt between date_sub('{pt}', 30) and '{pt}' and first_trans_date between date_sub('{pt}', 30) and '{pt}'
+    group by first_trans_date, first_sub_consume_scenario, sub_consume_scenario, if_first_trans_over_1w, country_code
     '''.format(
         pt=ds,
         table=table_name,
@@ -129,7 +126,7 @@ def execution_data_task_id(ds, **kargs):
     hive_hook = HiveCliHook()
 
     # 读取sql
-    _sql = dwm_opay_first_trans_originator_of_last30d_repurchase_d_sql_task(ds)
+    _sql = app_opay_user_first_trans_repurchase_30_d_sql_task(ds)
 
     logging.info('Executing: %s', _sql)
 
@@ -145,12 +142,12 @@ def execution_data_task_id(ds, **kargs):
     TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "true", "true")
 
 
-dwm_opay_first_trans_originator_of_last30d_repurchase_d_task = PythonOperator(
-    task_id='dwm_opay_first_trans_originator_of_last30d_repurchase_d_task',
+app_opay_user_first_trans_repurchase_30_d_task = PythonOperator(
+    task_id='app_opay_user_first_trans_repurchase_30_d_task',
     python_callable=execution_data_task_id,
     provide_context=True,
     dag=dag
 )
 
-dwm_opay_user_first_tran_di_prev_day_task >> dwm_opay_first_trans_originator_of_last30d_repurchase_d_task
-dwd_opay_transaction_record_di_prev_day_task >> dwm_opay_first_trans_originator_of_last30d_repurchase_d_task
+dwm_opay_user_first_tran_di_prev_day_task >> app_opay_user_first_trans_repurchase_30_d_task
+dwd_opay_transaction_record_di_prev_day_task >> app_opay_user_first_trans_repurchase_30_d_task

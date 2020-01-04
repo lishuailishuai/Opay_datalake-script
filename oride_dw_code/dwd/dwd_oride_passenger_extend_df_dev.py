@@ -139,7 +139,7 @@ def dwd_oride_passenger_extend_df_sql_task(ds):
                     *,
                      row_number() over(partition by t.id order by t.`__ts_ms` desc) as order_by
                 FROM oride_dw_ods.ods_binlog_base_data_user_extend_hi t
-                WHERE concat_ws(' ',dt,hour) BETWEEN '{bef_yes_day} 23' AND '{pt} 23'--取昨天1天数据与今天早上00数据
+                WHERE concat_ws(' ',dt,hour) BETWEEN '{bef_yes_day} 23' AND '{pt} 22'--取昨天1天数据与今天早上00数据
              ) t1
             where t1.`__deleted` = 'false' and t1.order_by = 1
         ) data_user_ext
