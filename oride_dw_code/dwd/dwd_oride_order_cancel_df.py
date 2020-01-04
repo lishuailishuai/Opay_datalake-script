@@ -82,7 +82,7 @@ if code_map["id"].lower()=="ufile":
     hdfs_path = "ufile://opay-datalake/oride/oride_dw/dwd_oride_order_cancel_df"
 
 else:
-    print("成功")
+
     ods_sqoop_base_data_order_cancel_df_tesk = OssSensor(
         task_id='ods_sqoop_base_data_order_cancel_df_tesk',
         bucket_key="{hdfs_path_str}/dt={pt}/_SUCCESS".format(
