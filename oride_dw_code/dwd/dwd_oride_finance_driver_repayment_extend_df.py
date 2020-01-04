@@ -225,7 +225,7 @@ def dwd_oride_finance_driver_repayment_extend_df_sql_task(ds):
     hql = '''
     set hive.exec.parallel=true;
     set hive.exec.dynamic.partition.mode=nonstrict;
-
+    set hive.auto.convert.join = false;
 INSERT overwrite TABLE oride_dw.{table} partition(country_code,dt)
 
 SELECT dri.city_id,
