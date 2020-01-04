@@ -271,7 +271,7 @@ def execution_data_task_id(ds, **kwargs):
     cf = CountriesPublicFrame("false", ds, db_name, table_name, hdfs_path, "true", "true")
 
     # 删除分区
-    cf.delete_partition()
+    #cf.delete_partition()
 
     # 读取sql
     _sql = "\n" + cf.alter_partition() + "\n" + app_oride_global_operate_report_multi_d_sql_task(ds)
