@@ -160,6 +160,7 @@ def dwd_oride_order_cancel_df_sql_task(ds):
     
     set hive.exec.parallel=true;
     set hive.exec.dynamic.partition.mode=nonstrict;
+    set hive.auto.convert.join = false;
 
     INSERT overwrite TABLE oride_dw.dwd_oride_order_cancel_df partition(country_code,dt)
 
