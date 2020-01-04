@@ -68,8 +68,8 @@ if code_map["id"].lower()=="ufile":
 
 
     # 依赖前一天分区
-    dwd_oride_order_base_include_test_di_prev_day_task = S3KeySensor(
-        task_id='dwd_oride_order_base_include_test_di_prev_day_task',
+    dwd_oride_order_base_include_test_di_task = S3KeySensor(
+        task_id='dwd_oride_order_base_include_test_di_task',
         bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
             hdfs_path_str="oride/oride_dw/dwd_oride_order_base_include_test_di/country_code=NG",
             pt='{{ds}}'
@@ -95,8 +95,8 @@ else:
     )
 
     # 依赖前一天分区
-    dwd_oride_order_base_include_test_di_prev_day_task = OssSensor(
-        task_id='dwd_oride_order_base_include_test_di_prev_day_task',
+    dwd_oride_order_base_include_test_di_task = OssSensor(
+        task_id='dwd_oride_order_base_include_test_di_task',
         bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
             hdfs_path_str="oride/oride_dw/dwd_oride_order_base_include_test_di/country_code=NG",
             pt='{{ds}}'
@@ -105,7 +105,7 @@ else:
         poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
         dag=dag
     )
-    
+
     hdfs_path = "oss://opay-datalake/oride/oride_dw/dwd_oride_order_cancel_df"
 
 
@@ -165,7 +165,7 @@ def dwd_oride_order_cancel_df_sql_task(ds):
              order_id ,
              --订单 ID
 
-             country_code,  --国家码
+             country_code  --国家码
 
              from oride_dw.dwd_oride_order_base_include_test_di
              where dt='{pt}'
@@ -281,5 +281,5 @@ dwd_oride_order_cancel_df_task= PythonOperator(
     dag=dag
 )
 
-dwd_oride_order_base_include_test_di_prev_day_task>>dwd_oride_order_cancel_df_task
+dwd_oride_order_base_include_test_di_task>>dwd_oride_order_cancel_df_task
 ods_sqoop_base_data_order_cancel_df_tesk>>dwd_oride_order_cancel_df_task
