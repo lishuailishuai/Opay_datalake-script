@@ -26,6 +26,7 @@ from airflow.models import Variable
 import requests
 import os
 from airflow.sensors import OssSensor
+from airflow.sensors.s3_key_sensor import S3KeySensor
 
 args = {
         'owner': 'yangmingze',
