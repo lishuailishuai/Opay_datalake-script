@@ -1206,56 +1206,58 @@ create_shop_metrics_data = BashOperator(
     """,
     dag=dag,
 )
+#
+# delete_old_order = BashOperator(
+#     task_id='delete_old_order',
+#     bash_command="""
+#         mysql -uroot -p78c5f1142124334 -h10.52.149.112 opos_dw  -e "
+#             delete from opos_order where DATE_FORMAT(create_time,'%Y-%m-%d') < '{{ macros.ds_add(ds, -1) }}';
+#         "
+#     """,
+#     dag=dag,
+# )
+#
+# delete_old_order_extend = BashOperator(
+#     task_id='delete_old_order_extend',
+#     bash_command="""
+#         mysql -uroot -p78c5f1142124334 -h10.52.149.112 opos_dw  -e "
+#             delete from opos_order_extend where DATE_FORMAT(create_time,'%Y-%m-%d') < '{{ macros.ds_add(ds, -1) }}';
+#         "
+#     """,
+#     dag=dag,
+# )
+#
+# delete_shop_metrics = BashOperator(
+#     task_id='delete_shop_metrics',
+#     bash_command="""
+#         mysql -uroot -p78c5f1142124334 -h10.52.149.112 opos_dw  -e "
+#             delete from opos_shop_metrics_realtime where dt < '{{ macros.ds_add(ds, -1) }}';
+#         "
+#     """,
+#     dag=dag,
+# )
+#
+# delete_old_order_bonus = BashOperator(
+#     task_id='delete_old_order_bonus',
+#     bash_command="""
+#         mysql -uroot -p78c5f1142124334 -h10.52.149.112 opos_dw  -e "
+#             delete from opos_dw.opos_order_bonus where DATE_FORMAT(create_time,'%Y-%m-%d') < '{{ macros.ds_add(ds, -1) }}';
+#         "
+#     """,
+#     dag=dag,
+# )
+#
+# delete_old_order_bonus_extend = BashOperator(
+#     task_id='delete_old_order_bonus_extend',
+#     bash_command="""
+#         mysql -uroot -p78c5f1142124334 -h10.52.149.112 opos_dw  -e "
+#             delete from opos_dw.opos_order_bonus_extend where DATE_FORMAT(time,'%Y-%m-%d') < '{{ macros.ds_add(ds, -1) }}';
+#         "
+#     """,
+#     dag=dag,
+# )
 
-delete_old_order = BashOperator(
-    task_id='delete_old_order',
-    bash_command="""
-        mysql -uroot -p78c5f1142124334 -h10.52.149.112 opos_dw  -e "
-            delete from opos_order where DATE_FORMAT(create_time,'%Y-%m-%d') < '{{ macros.ds_add(ds, -1) }}';
-        "
-    """,
-    dag=dag,
-)
-
-delete_old_order_extend = BashOperator(
-    task_id='delete_old_order_extend',
-    bash_command="""
-        mysql -uroot -p78c5f1142124334 -h10.52.149.112 opos_dw  -e "
-            delete from opos_order_extend where DATE_FORMAT(create_time,'%Y-%m-%d') < '{{ macros.ds_add(ds, -1) }}';
-        "
-    """,
-    dag=dag,
-)
-
-delete_shop_metrics = BashOperator(
-    task_id='delete_shop_metrics',
-    bash_command="""
-        mysql -uroot -p78c5f1142124334 -h10.52.149.112 opos_dw  -e "
-            delete from opos_shop_metrics_realtime where dt < '{{ macros.ds_add(ds, -1) }}';
-        "
-    """,
-    dag=dag,
-)
-
-delete_old_order_bonus = BashOperator(
-    task_id='delete_old_order_bonus',
-    bash_command="""
-        mysql -uroot -p78c5f1142124334 -h10.52.149.112 opos_dw  -e "
-            delete from opos_dw.opos_order_bonus where DATE_FORMAT(create_time,'%Y-%m-%d') < '{{ macros.ds_add(ds, -1) }}';
-        "
-    """,
-    dag=dag,
-)
-
-delete_old_order_bonus_extend = BashOperator(
-    task_id='delete_old_order_bonus_extend',
-    bash_command="""
-        mysql -uroot -p78c5f1142124334 -h10.52.149.112 opos_dw  -e "
-            delete from opos_dw.opos_order_bonus_extend where DATE_FORMAT(time,'%Y-%m-%d') < '{{ macros.ds_add(ds, -1) }}';
-        "
-    """,
-    dag=dag,
-)
-
-insert_order_data >> create_order_metrics_data >> create_shop_metrics_data >> delete_old_order >> delete_old_order_extend >> delete_shop_metrics
-insert_order_data >> create_bonus_metrics_data >> delete_old_order_bonus >> delete_old_order_bonus_extend
+insert_order_data >> create_order_metrics_data >> create_shop_metrics_data
+# >> delete_old_order >> delete_old_order_extend >> delete_shop_metrics
+insert_order_data >> create_bonus_metrics_data
+# >> delete_old_order_bonus >> delete_old_order_bonus_extend
