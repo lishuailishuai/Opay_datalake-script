@@ -398,7 +398,11 @@ create_crm_data = BashOperator(
         crm_sql="
 
             create temporary function isInArea as 'com.oride.udf.IsInArea' 
-            USING JAR 'hdfs://warehourse:8020/tmp/udf-1.0-SNAPSHOT-jar-with-dependencies.jar';
+            USING JAR 'oss://opay-datalake/udf-1.0-SNAPSHOT-jar-with-dependencies.jar';
+            
+            set hive.strict.checks.cartesian.product=false;
+            set hive.mapred.mode=nonstrict;
+            set hive.auto.convert.join = false;
             
             insert overwrite table ofood_bi.ofood_area_shop_metrics_info partition(dt = '${dt}')
             select 
@@ -512,7 +516,7 @@ create_crm_data = BashOperator(
             ;
 "
         echo ${crm_sql}
-        beeline -u "jdbc:hive2://10.52.17.84:10000" -n airflow -e  "${crm_sql}" 
+        beeline -u "jdbc:hive2://10.52.5.190:10000/default" -n airflow -e "${crm_sql}" 
     """,
     dag=dag,
 )

@@ -193,8 +193,11 @@ create_bdm_dim_data = BashOperator(
         set hive.exec.dynamic.partition.mode=nonstrict;
             
         create temporary function isInArea as 'com.oride.udf.IsInArea' 
-                    USING JAR 'hdfs://warehourse:8020/tmp/udf-1.0-SNAPSHOT-jar-with-dependencies.jar';
+        USING JAR 'oss://opay-datalake/udf-1.0-SNAPSHOT-jar-with-dependencies.jar';
         
+        set hive.strict.checks.cartesian.product=false;
+        set hive.mapred.mode=nonstrict;
+        set hive.auto.convert.join = false;
         
         with 
         
@@ -365,7 +368,7 @@ create_bdm_dim_data = BashOperator(
         ;
 "
         echo ${bdm_dim_sql}
-        beeline -u "jdbc:hive2://10.52.17.84:10000" -n airflow -e  "${bdm_dim_sql}" 
+        beeline -u "jdbc:hive2://10.52.5.190:10000/default" -n airflow -e "${bdm_dim_sql}" 
     """,
     dag=dag,
 )
@@ -382,8 +385,11 @@ create_shop_list_data = BashOperator(
         set hive.exec.dynamic.partition.mode=nonstrict;
         
         create temporary function isInArea as 'com.oride.udf.IsInArea' 
-                    USING JAR 'hdfs://warehourse:8020/tmp/udf-1.0-SNAPSHOT-jar-with-dependencies.jar';
+        USING JAR 'oss://opay-datalake/udf-1.0-SNAPSHOT-jar-with-dependencies.jar';
         
+        set hive.strict.checks.cartesian.product=false;
+        set hive.mapred.mode=nonstrict;
+        set hive.auto.convert.join = false;
         
         
         with shop_info as (
@@ -666,7 +672,7 @@ create_shop_list_data = BashOperator(
         
 "
         echo ${shop_list_sql}
-        beeline -u "jdbc:hive2://10.52.17.84:10000" -n airflow -e  "${shop_list_sql}" 
+        beeline -u "jdbc:hive2://10.52.5.190:10000/default" -n airflow -e  "${shop_list_sql}" 
     """,
     dag=dag,
 )
