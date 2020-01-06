@@ -100,8 +100,8 @@ def app_opay_transaction_consume_scenario_sum_w_sql_task(ds):
         date_sub(next_day('{pt}', 'mo'), 1) as dt
     from (
         select 
-            top_service_type, 
-            sub_service_type, 
+            top_consume_scenario, 
+            sub_consume_scenario, 
             originator_type, 
             originator_role, 
             client_source, 
