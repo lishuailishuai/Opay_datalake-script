@@ -13,6 +13,7 @@ from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
 from plugins.TaskTouchzSuccess import TaskTouchzSuccess
 from utils.util import on_success_callback
 from airflow.models import Variable
+import os
 
 args = {
     'owner': 'linan',
@@ -113,6 +114,14 @@ ODS_CREATE_TABLE_SQL = '''
     -- delete opay_dw table
     -- DROP TABLE IF EXISTS {db_name}.`{table_name}`;
 '''
+
+# hadoop 合并文件命令模版
+HADOOP_MERGE_COMMAND_TEMPLATE = '''
+    hadoop fs -cat oss://opay-datalake/oride_binlog/{binlog_dir}/dt={pt}/hour={hour}/* | hadoop fs -put - {merge_target_file}
+'''
+
+# merge后文件位置模版
+merge_target_file_template = 'oss://opay-datalake/oride_binlog/{table_name}/dt={pt}/hour={hour}/00000.json'
 
 # 需要验证的核心业务表
 table_core_list = [
@@ -320,4 +329,60 @@ for db_name, table_name, conn_id, prefix_name, priority_weight_nm, server_name, 
         dag=dag_monitor
     )
 
-    check_table >> add_partitions
+
+    def merge_data(ds, server_name, db_name, table_name, mysql_table_name, v_execution_date, v_execution_day,
+                   v_execution_hour,
+                   **op_kwargs):
+
+        merge_target_file = merge_target_file_template.format(pt=v_execution_day,
+                                                              hour=v_execution_hour,
+                                                              table_name=mysql_table_name)
+
+        validate = '''
+            hadoop fs -test -e {merge_target_file}
+            if [ $? -eq 0 ] ;then 
+                echo 'exist' 
+                hadoop fs -rm {merge_target_file}
+            else 
+                echo 'path is not exist' 
+            fi 
+        '''.format(merge_target_file=merge_target_file)
+
+        logging.info(os.popen(validate).read())
+
+        command = HADOOP_MERGE_COMMAND_TEMPLATE.format(
+            binlog_dir=("{server_name}.{db_name}.{table_name}".format(
+                server_name=server_name,
+                db_name=db_name,
+                table_name=mysql_table_name
+            )),
+            pt=v_execution_day,
+            hour=v_execution_hour,
+            table_name=mysql_table_name,
+            merge_target_file=merge_target_file
+        )
+
+        logging.info(command)
+
+        logging.info(os.popen(command).read())
+
+        logging.info("DATA MERGE SUCCESS ........")
+
+
+    merge_data = PythonOperator(
+        task_id='merge_data_{}'.format(hive_table_name),
+        python_callable=merge_data,
+        provide_context=True,
+        op_kwargs={
+            'server_name': server_name,
+            'db_name': db_name,
+            'table_name': hive_table_name,
+            'mysql_table_name': table_name,
+            'v_execution_date': '{{execution_date.strftime("%Y-%m-%d %H:%M:%S")}}',
+            'v_execution_day': '{{execution_date.strftime("%Y-%m-%d")}}',
+            'v_execution_hour': '{{execution_date.strftime("%H")}}'
+        },
+        dag=dag
+    )
+
+    check_table >> merge_data >> add_partitions

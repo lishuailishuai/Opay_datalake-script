@@ -95,7 +95,7 @@ def app_opay_user_device_d_sql_task(ds):
     set mapred.max.split.size=1000000;
     set hive.exec.dynamic.partition.mode=nonstrict;
     set hive.exec.parallel=true;
-    insert overwrite table {db}.{table} partition(country_code,dt)
+    insert overwrite table app_opay_user_device_d partition(country_code,dt)
     select 
     if(a.user_id is null,b.user_id,a.user_id),
     if(a.device_id is null,b.device_id,a.device_id),
@@ -103,23 +103,32 @@ def app_opay_user_device_d_sql_task(ds):
     if(b.device_id is not null,b.bb,a.`timestamp`),
     'nal' as country_code,
     '{pt}' as dt
-    from 
-    (select * from 
+    from(
+    select * from 
     opay_dw.app_opay_user_device_d 
     where dt=date_sub('{pt}',1)
-    ) a
+    )a
     full join
-    (select
-        common.user_id user_id,
-        common.device_id device_id,
-        common.user_number mobile,
-        max(`timestamp`) bb
-    from opay_source.client_event
-    where (dt = '{pt}' and hour < 23) or (dt=date_sub('{pt}', 1) and hour = 23) and common.device_id!=''
-    group by common.user_id,common.device_id,common.user_number
-    ) b
-    on a.device_id=b.device_id;
+    (
+    select user_id,
+        device_id,
+         mobile,
+             bb 
+    from(
+        select
+            common.user_id user_id,
+            common.device_id device_id,
+            common.user_number mobile,
+            `timestamp` bb,
+            row_number() over(partition by common.user_id,common.device_id order by `timestamp` desc) ff
+        from opay_source.client_event
+        where (dt = '{pt}' and hour < 23) or (dt=date_sub('{pt}', 1) and hour = 23) and common.device_id!=''
+       -- group by common.user_id,common.device_id
+    ) c
+    where c.ff=1
 
+    )b
+    on a.device_id=b.device_id and a.user_id=b.user_id;
 
 '''.format(
         pt=ds,
