@@ -144,7 +144,7 @@ def get_all_data_row(ds):
                             <!--系统-->
                             <td>{}</td>
                     '''
-    sql = '''
+    sql = '''set hive.mapred.mode=nonstrict;
                 select dt,
                 from_unixtime(unix_timestamp(dt, 'yyyy-MM-dd'),'u') as week,
                 nvl(ride_order_cnt,0) as ride_order_cnt, --当日下单数
@@ -313,6 +313,7 @@ def get_product_rows(ds, all_completed_num_nobeckon, product_id):
         row_fmt = row_fmt2
 
     sql = '''
+            set hive.mapred.mode=nonstrict;
             SELECT t1.dt,
                  t1.city_id,
                  if(t1.city_id=-10000,'All',t2.name) AS city_name,
@@ -417,7 +418,9 @@ def get_all_product_rows(ds, all_completed_num):
                             <td>{}</td> 
                             <td>{}</td> 
                     '''
-    sql = '''SELECT t1.dt,
+    sql = '''
+        set hive.mapred.mode=nonstrict;
+        SELECT t1.dt,
                      t1.city_id,
                      if(t1.city_id=-10000,'All',cit.city_name) AS city_name,
                      if(t1.city_id=-10000,'-',nvl(cit.weather,'-')) AS weather, --当日该城市天气
