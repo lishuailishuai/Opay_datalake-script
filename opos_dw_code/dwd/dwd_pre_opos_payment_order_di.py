@@ -205,6 +205,19 @@ p.order_id
 ,p.merchant_risk_code
 ,p.merchant_risk_remark
 
+,p.delay_settle
+,p.settle_time
+,p.settled
+,p.user_phone
+,p.shop_phone
+,p.merchant_gain
+,p.promote_type
+,p.merchant_cost
+,p.platform_cost
+,p.bill_settle_time
+,p.merchant_qr_id
+,p.discount_type
+
 ,'nal' as country_code
 ,'{pt}' as dt
 from
