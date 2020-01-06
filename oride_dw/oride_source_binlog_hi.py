@@ -117,6 +117,7 @@ ODS_CREATE_TABLE_SQL = '''
 
 # hadoop 合并文件命令模版
 HADOOP_MERGE_COMMAND_TEMPLATE = '''
+    sudo su - hdfs
     hadoop fs -cat oss://opay-datalake/oride_binlog/{binlog_dir}/dt={pt}/hour={hour}/* | hadoop fs -put - {merge_target_file}
 '''
 
@@ -339,6 +340,7 @@ for db_name, table_name, conn_id, prefix_name, priority_weight_nm, server_name, 
                                                               table_name=mysql_table_name)
 
         validate = '''
+            sudo su - hdfs
             hadoop fs -test -e {merge_target_file}
             if [ $? -eq 0 ] ;then 
                 echo 'exist' 
