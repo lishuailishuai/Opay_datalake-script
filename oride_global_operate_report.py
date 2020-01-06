@@ -191,6 +191,8 @@ def get_all_data_row(ds):
     data_list = cursor.fetchall()
     cursor.close()
     row_html = ''
+    all_completed_num_nobeckon=0
+    all_completed_num=0
     if len(data_list) > 0:
         for data in data_list:
             row = row_fmt.format(*list(data))
