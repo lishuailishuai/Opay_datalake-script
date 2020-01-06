@@ -3,6 +3,8 @@ from datetime import datetime, timedelta
 from airflow.operators.hive_to_mysql import HiveToMySqlTransfer
 from airflow.operators.mysql_operator import MySqlOperator
 from airflow.sensors import UFileSensor
+from airflow.models import Variable
+from airflow.sensors import OssSensor
 
 args = {
     'owner': 'zhenqian.zhang',
@@ -22,20 +24,37 @@ dag = airflow.DAG(
 
 
 
+#获取变量
+code_map=eval(Variable.get("sys_flag"))
 
-# 依赖前一天分区
-dwd_oride_driver_cheating_detection_hi_prev_hour_task = UFileSensor(
-    task_id='dwd_oride_driver_cheating_detection_hi_prev_hour_task',
-    filepath='{hdfs_path_str}/dt={pt}/hour={hour}/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw/dwd_oride_driver_cheating_detection_hi/country_code=nal",
-        pt='{{ds}}',
-        hour='{{ execution_date.strftime("%H") }}'
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
+#判断ufile(cdh环境)
+if code_map["id"].lower()=="ufile":
 
+    # 依赖前一天分区
+    dwd_oride_driver_cheating_detection_hi_prev_hour_task = UFileSensor(
+        task_id='dwd_oride_driver_cheating_detection_hi_prev_hour_task',
+        filepath='{hdfs_path_str}/dt={pt}/hour={hour}/_SUCCESS'.format(
+            hdfs_path_str="oride/oride_dw/dwd_oride_driver_cheating_detection_hi/country_code=nal",
+            pt='{{ds}}',
+            hour='{{ execution_date.strftime("%H") }}'
+        ),
+        bucket_name='opay-datalake',
+        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+        dag=dag
+    )
+
+else:
+    dwd_oride_driver_cheating_detection_hi_prev_hour_task = OssSensor(
+        task_id='dwd_oride_driver_cheating_detection_hi_prev_hour_task',
+        bucket_key='{hdfs_path_str}/dt={pt}/hour={hour}/_SUCCESS'.format(
+            hdfs_path_str="oride/oride_dw/dwd_oride_driver_cheating_detection_hi/country_code=nal",
+            pt='{{ds}}',
+            hour='{{ execution_date.strftime("%H") }}'
+        ),
+        bucket_name='opay-datalake',
+        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+        dag=dag
+    )
 
 
 clear_promoter_mysql_data = MySqlOperator(
