@@ -107,6 +107,7 @@ def app_opay_transaction_consume_scenario_sum_m_sql_task(ds):
             client_source, 
             order_status,
             amount,
+            country_code,
             row_number() over(partition by order_no order by update_time desc) rn
         from {db}.dwd_opay_transaction_record_di 
         where dt between date_format('{pt}', 'yyyy-MM-01')  and  last_day('{pt}')
