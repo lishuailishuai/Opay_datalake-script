@@ -1257,5 +1257,7 @@ delete_old_order_bonus_extend = BashOperator(
     dag=dag,
 )
 
-insert_order_data >> create_order_metrics_data >> create_shop_metrics_data >> delete_old_order >> delete_old_order_extend >> delete_shop_metrics
-insert_order_data >> create_bonus_metrics_data >> delete_old_order_bonus >> delete_old_order_bonus_extend
+insert_order_data >> create_order_metrics_data >> create_shop_metrics_data
+# >> delete_old_order >> delete_old_order_extend >> delete_shop_metrics
+insert_order_data >> create_bonus_metrics_data >> delete_old_order_bonus
+# >> delete_old_order_bonus_extend
