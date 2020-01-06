@@ -99,7 +99,7 @@ else:
             hdfs_path_str="oride/oride_dw/dwd_oride_order_base_include_test_di",
             pt='{{ds}}'
         ),
-        bucket_name='opay-bi',
+        bucket_name='opay-datalake',
         poke_interval=60,
         dag=dag
     )

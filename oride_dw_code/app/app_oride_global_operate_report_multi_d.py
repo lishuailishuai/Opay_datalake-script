@@ -21,6 +21,7 @@ from plugins.CountriesPublicFrame import CountriesPublicFrame
 import json
 import logging
 from airflow.models import Variable
+from airflow.sensors import OssSensor
 import requests
 import os
 
@@ -39,30 +40,73 @@ dag = airflow.DAG('app_oride_global_operate_report_multi_d',
                   schedule_interval="50 01 * * *",
                   default_args=args)
 
+
+##----------------------------------------- 变量 ---------------------------------------##
+
+db_name = "oride_dw"
+table_name = "app_oride_global_operate_report_multi_d"
+
 ##----------------------------------------- 依赖 ---------------------------------------##
 
-# 依赖前一天分区
-dependence_dm_oride_passenger_base_multi_cube_prev_day_task = UFileSensor(
-    task_id='dm_oride_passenger_base_multi_cube_prev_day_task',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw/dm_oride_passenger_base_multi_cube/country_code=NG",
-        pt='{{ds}}'
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
+#获取变量
+code_map=eval(Variable.get("sys_flag"))
 
-dependence_dm_oride_order_base_d_prev_day_task = UFileSensor(
-    task_id='dm_oride_order_base_d_prev_day_task',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw/dm_oride_order_base_d/country_code=NG",
-        pt='{{ds}}'
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
+#判断ufile(cdh环境)
+if code_map["id"].lower()=="ufile":
+
+    # 依赖前一天分区
+    dependence_dm_oride_passenger_base_multi_cube_prev_day_task = UFileSensor(
+        task_id='dm_oride_passenger_base_multi_cube_prev_day_task',
+        filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+            hdfs_path_str="oride/oride_dw/dm_oride_passenger_base_multi_cube/country_code=NG",
+            pt='{{ds}}'
+        ),
+        bucket_name='opay-datalake',
+        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+        dag=dag
+    )
+    
+    dependence_dm_oride_order_base_d_prev_day_task = UFileSensor(
+        task_id='dm_oride_order_base_d_prev_day_task',
+        filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+            hdfs_path_str="oride/oride_dw/dm_oride_order_base_d/country_code=NG",
+            pt='{{ds}}'
+        ),
+        bucket_name='opay-datalake',
+        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+        dag=dag
+    )
+
+    hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
+
+else:
+
+    # 依赖前一天分区
+    dependence_dm_oride_passenger_base_multi_cube_prev_day_task = OssSensor(
+        task_id='dm_oride_passenger_base_multi_cube_prev_day_task',
+        bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+            hdfs_path_str="oride/oride_dw/dm_oride_passenger_base_multi_cube/country_code=NG",
+            pt='{{ds}}'
+        ),
+        bucket_name='opay-datalake',
+        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+        dag=dag
+    )
+    
+    dependence_dm_oride_order_base_d_prev_day_task = OssSensor(
+        task_id='dm_oride_order_base_d_prev_day_task',
+        bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+            hdfs_path_str="oride/oride_dw/dm_oride_order_base_d/country_code=NG",
+            pt='{{ds}}'
+        ),
+        bucket_name='opay-datalake',
+        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+        dag=dag
+    )
+
+    hdfs_path = "oss://opay-datalake/oride/oride_dw/" + table_name
+
+
 
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
 
@@ -83,11 +127,6 @@ task_timeout_monitor= PythonOperator(
     dag=dag
 )
 
-##----------------------------------------- 变量 ---------------------------------------##
-
-db_name = "oride_dw"
-table_name = "app_oride_global_operate_report_multi_d"
-hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
 
 ##----------------------------------------- 脚本 ---------------------------------------##
 
@@ -96,6 +135,7 @@ def app_oride_global_operate_report_multi_d_sql_task(ds):
     SET hive.exec.parallel=true;
     SET hive.exec.dynamic.partition=true;
     SET hive.exec.dynamic.partition.mode=nonstrict;
+    set hive.auto.convert.join = false;
 
     with order_data as 
  (SELECT dt,
@@ -232,7 +272,7 @@ def execution_data_task_id(ds, **kwargs):
     cf = CountriesPublicFrame("false", ds, db_name, table_name, hdfs_path, "true", "true")
 
     # 删除分区
-    cf.delete_partition()
+    #cf.delete_partition()
 
     # 读取sql
     _sql = "\n" + cf.alter_partition() + "\n" + app_oride_global_operate_report_multi_d_sql_task(ds)

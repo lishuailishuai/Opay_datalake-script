@@ -386,6 +386,9 @@ on
   b.city_code=c.id
 ;
 
+--先删除分区
+ALTER TABLE opos_dw.dim_opos_bd_relation_df DROP IF EXISTS PARTITION(country_code='nal',dt='{pt}');
+
 --03.将最新的首单交易日期数据插入到最终表中
 insert overwrite table opos_dw.dim_opos_bd_relation_df partition(country_code,dt)
 select 

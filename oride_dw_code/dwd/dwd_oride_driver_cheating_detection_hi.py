@@ -35,8 +35,8 @@ code_map=eval(Variable.get("sys_flag"))
 #判断ufile(cdh环境)
 if code_map["id"].lower()=="ufile":
 
-    dependence_dwd_oride_driver_cheating_detection_hi_prev_hour_task = HivePartitionSensor(
-        task_id="dwd_oride_driver_cheating_detection_hi_prev_hour_task",
+    server_event_task = HivePartitionSensor(
+        task_id="server_event_task",
         table="server_event",
         partition="""dt='{{ ds }}' and hour='{{ execution_date.strftime("%H") }}'""",
         schema="oride_source",
@@ -48,8 +48,8 @@ if code_map["id"].lower()=="ufile":
 else:
     print("成功")
 
-    dependence_dwd_oride_driver_cheating_detection_hi_prev_hour_task = HivePartitionSensor(
-        task_id="dwd_oride_driver_cheating_detection_hi_prev_hour_task",
+    server_event_task = HivePartitionSensor(
+        task_id="server_event_task",
         table="server_event",
         partition="""dt='{{ ds }}' and hour='{{ execution_date.strftime("%H") }}'""",
         schema="oride_source",
@@ -145,5 +145,5 @@ touchz_data_success = BashOperator(
     ),
     dag=dag)
 
-dependence_dwd_oride_driver_cheating_detection_hi_prev_hour_task >> dwd_oride_driver_cheating_detection_hi_task >> touchz_data_success
+server_event_task >> dwd_oride_driver_cheating_detection_hi_task >> touchz_data_success
 
