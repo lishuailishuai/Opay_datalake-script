@@ -144,7 +144,8 @@ def get_all_data_row(ds):
                             <!--系统-->
                             <td>{}</td>
                     '''
-    sql = '''set hive.mapred.mode=nonstrict;
+    sql = '''
+                set hive.mapred.mode=nonstrict;
                 select dt,
                 from_unixtime(unix_timestamp(dt, 'yyyy-MM-dd'),'u') as week,
                 nvl(ride_order_cnt,0) as ride_order_cnt, --当日下单数
