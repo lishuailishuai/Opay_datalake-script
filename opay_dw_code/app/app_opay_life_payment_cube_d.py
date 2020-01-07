@@ -27,7 +27,7 @@ import os
 
 args = {
     'owner': 'liushuzhen',
-    'start_date': datetime(2020, 1, 1),
+    'start_date': datetime(2020, 1, 6),
     'depends_on_past': False,
 
 
@@ -38,7 +38,7 @@ args = {
     'email_on_retry': False,
 }
 
-dag = airflow.DAG('app_opay_life_payment_report_d',
+dag = airflow.DAG('app_opay_life_payment_cube_d',
                   schedule_interval="00 03 * * *",
                   default_args=args,
                   catchup=False)
@@ -59,32 +59,35 @@ dwd_opay_life_payment_record_di_prev_day_task = OssSensor(
 ##----------------------------------------- 变量 ---------------------------------------##
 db_name = "opay_dw"
 
-table_name = "app_opay_life_payment_report_d"
+table_name = "app_opay_life_payment_cube_d"
 hdfs_path = "oss://opay-datalake/opay/opay_dw/" + table_name
 
 
-def app_opay_life_payment_report_d_sql_task(ds):
+def app_opay_life_payment_cube_d_sql_task(ds):
     HQL = '''
 
     set mapred.max.split.size=1000000;
     set hive.exec.dynamic.partition.mode=nonstrict;
     set hive.exec.parallel=true;
-    INSERT overwrite TABLE opay_dw.app_opay_life_payment_report_d partition (dt='{pt}')
-    SELECT sub_consume_scenario,
-           recharge_service_provider,
+    INSERT overwrite TABLE opay_dw.app_opay_life_payment_cube_d partition (dt='{pt}')
+    SELECT nvl(sub_consume_scenario,'-') sub_consume_scenario,
+           nvl(recharge_service_provider,'-') recharge_service_provider,
+           nvl(originator_type,'-') originator_type,
+           nvl(order_status,'-') order_status,
            count(1) trans_cnt,
-           count(distinct recharge_account) trans_recharge_account_cnt,
            sum(amount) trans_amount,
            sum(pay_amount) trans_pay_amount,
            sum(amount-pay_amount) trans_activity_amount,
-           
+           count(DISTINCT originator_id) trans_user_cnt,
+           count(DISTINCT recharge_account) trans_recharge_account_cnt,
     FROM opay_dw.dwd_opay_life_payment_record_di
     WHERE dt='{pt}'
-      AND order_status='SUCCESS'
       AND top_service_type='Life Payment'
       AND create_time BETWEEN date_format(date_sub('{pt}', 1), 'yyyy-MM-dd 23') AND date_format('{pt}', 'yyyy-MM-dd 23')
-    GROUP BY dt,
-             sub_service_type
+    GROUP BY sub_consume_scenario,
+             recharge_service_provider,
+             originator_type,
+             order_status WITH CUBE
 
     '''.format(
         pt=ds,
@@ -98,7 +101,7 @@ def execution_data_task_id(ds, **kargs):
     hive_hook = HiveCliHook()
 
     # 读取sql
-    _sql = app_opay_life_payment_report_d_sql_task(ds)
+    _sql = app_opay_life_payment_cube_d_sql_task(ds)
 
     logging.info('Executing: %s', _sql)
 
@@ -114,13 +117,13 @@ def execution_data_task_id(ds, **kargs):
     TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "false", "true")
 
 
-app_opay_life_payment_report_d_task = PythonOperator(
-    task_id='app_opay_life_payment_report_d_task',
+app_opay_life_payment_cube_d_task = PythonOperator(
+    task_id='app_opay_life_payment_cube_d_task',
     python_callable=execution_data_task_id,
     provide_context=True,
     dag=dag
 )
 
-dwd_opay_life_payment_record_di_prev_day_task >> app_opay_life_payment_report_d_task
+dwd_opay_life_payment_record_di_prev_day_task >> app_opay_life_payment_cube_d_task
 
 
