@@ -110,7 +110,13 @@ def preInsertRowPoint(**op_kwargs):
             \'{0}\' as driver_type 
         from data_city_conf
     '''.format(driver_type)
+
+    print("-----")
+    print(msql)
     citys = pd.read_sql_query(msql, oridedb_conn)
+    print("-----")
+    print(citys)
+
     citys.loc['n'] = ['0', 'all', driver_type]
     citys = citys.join(citys['driver_type'].str.split(',', expand=True).stack().reset_index(level=1, drop=True).rename('driver_type2'))
     citys = citys.drop('driver_type', axis=1)
