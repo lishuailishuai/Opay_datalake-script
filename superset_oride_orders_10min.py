@@ -103,21 +103,21 @@ def preInsertRowPoint(**op_kwargs):
         prev_day_start = math.floor(int(time.time()) / 600) * 600 - 600
         prev_day_end = prev_day_start + 600
 
-    # msql = '''
-    #     select 
-    #         id, 
-    #         name, 
-    #         \'{0}\' as driver_type 
-    #     from data_city_conf
-    # '''.format(driver_type)
-
     msql = '''
         select 
             id, 
             name, 
-            '0' as driver_type 
+            '{0}' as driver_type 
         from data_city_conf
     '''.format(driver_type)
+
+    # msql = '''
+    #     select 
+    #         id, 
+    #         name, 
+    #         '0' as driver_type 
+    #     from data_city_conf
+    # '''.format(driver_type)
 
     print("-----")
     print(msql)
