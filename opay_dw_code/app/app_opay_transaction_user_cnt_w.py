@@ -58,7 +58,7 @@ def fun_task_timeout_monitor(ds,dag,**op_kwargs):
     dag_ids=dag.dag_id
 
     msg = [
-        {"db": "opay_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=NG/dt={pt}".format(pt=ds), "timeout": "3000"}
+        {"db": "opay_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=NG/dt={pt}".format(pt=airflow.macros.ds_add(ds, +6)), "timeout": "800"}
     ]
 
     TaskTimeoutMonitor().set_task_monitor(msg)
@@ -99,7 +99,7 @@ def app_opay_transaction_user_cnt_w_sql_task(ds):
                 nvl(originator_kyc_level, 'ALL') as originator_kyc_level, 
                 count(distinct originator_id) originator_cnt,
                 nvl(country_code, 'ALL') as country_code,
-                date_sub(next_day('{pt}', 'mo'), 7) as dt
+                date_sub(next_day('{pt}', 'mo'), 1) as dt
             from transaction_data
             group by top_consume_scenario, client_source, originator_role, originator_kyc_level,country_code
             GROUPING SETS ( 
@@ -140,7 +140,7 @@ def execution_data_task_id(ds, **kargs):
     第二个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
 
     """
-    TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "true", "true")
+    TaskTouchzSuccess().countries_touchz_success('{pt}'.format(pt=airflow.macros.ds_add(ds, +6)), db_name, table_name, hdfs_path, "true", "true")
 
 app_opay_transaction_user_cnt_w_task = PythonOperator(
     task_id='app_opay_transaction_user_cnt_w_task',
