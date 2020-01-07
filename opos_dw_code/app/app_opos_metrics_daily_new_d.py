@@ -104,6 +104,11 @@ set hive.exec.dynamic.partition.mode=nonstrict;
 set hive.strict.checks.cartesian.product=false;
 
 
+with
+admin_users as (
+  select id,name from opos_dw_ods.ods_sqoop_base_bd_admin_users_df where dt = '{pt}'
+)
+
 --03.将两个表的数据汇总到结果表
 insert overwrite table opos_dw.app_opos_metrics_daily_new_d partition(country_code,dt)
 select
@@ -186,6 +191,17 @@ o.id
 ,o.order_fail_cnt
 ,o.order_pending_cnt
 
+,o.coupon_order_cnt
+,o.coupon_order_people
+,o.coupon_first_order_people
+,o.coupon_pay_amount
+,o.coupon_order_gmv
+,o.coupon_discount_amount
+,o.coupon_useless_order_cnt
+,o.coupon_useless_order_people
+,o.coupon_useless_pay_amount
+,o.coupon_useless_order_gmv
+
 ,'nal' as country_code
 ,'{pt}' as dt
 from
@@ -264,6 +280,17 @@ from
   ,nvl(b.order_fail_cnt,0) as order_fail_cnt
   ,nvl(b.order_pending_cnt,0) as order_pending_cnt
 
+  ,nvl(a.coupon_order_cnt,0) as coupon_order_cnt
+  ,nvl(a.coupon_order_people,0) as coupon_order_people
+  ,nvl(a.coupon_first_order_people,0) as coupon_first_order_people
+  ,nvl(a.coupon_pay_amount,0) as coupon_pay_amount
+  ,nvl(a.coupon_order_gmv,0) as coupon_order_gmv
+  ,nvl(a.coupon_discount_amount,0) as coupon_discount_amount
+  ,nvl(a.coupon_useless_order_cnt,0) as coupon_useless_order_cnt
+  ,nvl(a.coupon_useless_order_people,0) as coupon_useless_order_people
+  ,nvl(a.coupon_useless_pay_amount,0) as coupon_useless_pay_amount
+  ,nvl(a.coupon_useless_order_gmv,0) as coupon_useless_order_gmv
+
   from 
   (select * from opos_dw.app_opos_metrics_report_mid where country_code = 'nal' and  dt = '{pt}') a
   full join 
@@ -277,26 +304,24 @@ from
   and a.city_id=b.city_id
   ) as o
 left join
-  (select id,name from opos_dw_ods.ods_sqoop_base_bd_admin_users_df where dt = '{pt}') as bd
+  admin_users as bd
   on o.bd_id=bd.id
 left join
-  (select id,name from opos_dw_ods.ods_sqoop_base_bd_admin_users_df where dt = '{pt}') as bdm
+  admin_users as bdm
 on o.bdm_id=bdm.id
 left join
-  (select id,name from opos_dw_ods.ods_sqoop_base_bd_admin_users_df where dt = '{pt}') as rm
+  admin_users as rm
 on o.rm_id=rm.id
 left join
-  (select id,name from opos_dw_ods.ods_sqoop_base_bd_admin_users_df where dt = '{pt}') as cm
+  admin_users as cm
 on o.cm_id=cm.id
 left join
-  (select id,name from opos_dw_ods.ods_sqoop_base_bd_admin_users_df where dt = '{pt}') as hcm
+  admin_users as hcm
   on o.hcm_id=hcm.id
 left join
   (select id,name,country from opos_dw_ods.ods_sqoop_base_bd_city_df where dt = '{pt}') as c
 on o.city_id=c.id
 ;
-
-
 
 
 
