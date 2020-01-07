@@ -26,7 +26,7 @@ dag = airflow.DAG(
 
 dwd_oride_order_location_di_prev_day_task = OssSensor(
     task_id='dwd_oride_order_location_di_prev_day_task',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
         hdfs_path_str="oride/oride_dw/dwd_oride_order_location_di/country_code=nal",
         pt='{{ds}}'
     ),
