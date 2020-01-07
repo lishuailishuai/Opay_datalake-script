@@ -101,7 +101,7 @@ table_list = [
     ("opay_user", "user_email", "opay_user", "base", 3, "opay_user", "false"),
     ("opay_user", "user", "opay_user", "base", 3, "opay_user", "false"),
 
-    ("opay_bigorder", "big_order", "opay_bigorder", "base", 3, "opay_bigorder", "false"),
+    ("opay_bigorder", "user_order", "opay_bigorder", "base", 3, "opay_bigorder_user_order", "false"),
 
     ("opay_transaction", "adjustment_decrease_record", "opay_transaction", "base", 3, "opay_transaction", "false"),
     ("opay_transaction", "adjustment_increase_record", "opay_transaction", "base", 3, "opay_transaction", "false"),
@@ -134,7 +134,7 @@ table_list = [
     ("opay_fee", "merchant_fee_record", "opay_fee", "base", 3, "opay_merchant_overlord_recon", "false"),
 
     ("opay_account", "account_user_record", "opay_account", "base", 2, "opay_account_user_record", "false"),
-    ("opay_account", "accounting_request_record", "opay_account", "base", 2, "opay_account", "false"),
+    ("opay_account", "accounting_request_record", "opay_account", "base", 2, "opay_account_requset_record", "false"),
 
     ("opay_activity", "preferential_record", "opay_activity", "base", 3, "opay_merchant_overlord_recon", "false"),
 
