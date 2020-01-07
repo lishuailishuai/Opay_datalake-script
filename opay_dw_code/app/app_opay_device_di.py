@@ -35,7 +35,7 @@ args = {
     'email_on_retry': False,
 }
 
-dag = airflow.DAG('app_opay_device_d',
+dag = airflow.DAG('app_opay_device_di',
                   schedule_interval="00 03 * * *",
                   default_args=args,
                   catchup=False)
@@ -63,13 +63,14 @@ app_opay_device_d_prev_day_task = OssSensor(
     dag=dag
 )
 
-##----------------------------------------- 任务超时监控 ---------------------------------------##
+##----------------------------------------- 任务超时监控(下面的table名不能改成变量，因为之前手动回溯，日期范围给填错
+##太大了，所以删掉之前的dag,重新改了一下dag名) ---------------------------------------##
 def fun_task_timeout_monitor(ds,dag,**op_kwargs):
 
     dag_ids=dag.dag_id
 
     msg = [
-        {"db": "opay_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "3000"}
+        {"db": "opay_dw", "table":"app_opay_device_d", "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "3000"}
     ]
 
     TaskTimeoutMonitor().set_task_monitor(msg)

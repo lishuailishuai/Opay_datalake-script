@@ -114,9 +114,9 @@ task_timeout_monitor = PythonOperator(
 
 def dwd_oride_order_base_include_test_di_sql_task(ds):
     hql = '''
-SET hive.exec.parallel=TRUE;
-SET hive.exec.dynamic.partition.mode=nonstrict;
-
+    SET hive.exec.parallel=TRUE;
+    SET hive.exec.dynamic.partition.mode=nonstrict;
+    set hive.auto.convert.join = false;
 
 INSERT overwrite TABLE oride_dw.{table} partition(country_code,dt)
 SELECT base.order_id,

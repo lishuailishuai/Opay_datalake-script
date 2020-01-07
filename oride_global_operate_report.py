@@ -14,6 +14,7 @@ from utils.validate_metrics_utils import *
 from constant.metrics_constant import *
 from airflow.sensors.hive_partition_sensor import HivePartitionSensor
 from airflow.sensors import UFileSensor
+from airflow.sensors import OssSensor
 
 comwx = ComwxApi('wwd26d45f97ea74ad2', 'BLE_v25zCmnZaFUgum93j3zVBDK-DjtRkLisI_Wns4g', '1000011')
 
@@ -35,29 +36,59 @@ global_table_names = [
     'oride_dw_ods.ods_sqoop_base_data_city_conf_df',
 ]
 
-# 依赖前一天分区
-app_oride_global_operate_report_d_task = UFileSensor(
-    task_id='app_oride_global_operate_report_d_task',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw/app_oride_global_operate_report_d/country_code=nal",
-        pt='{{ds}}'
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
+#获取变量
+code_map=eval(Variable.get("sys_flag"))
 
-# 依赖前一天分区
-app_oride_global_operate_report_multi_d_task = UFileSensor(
-    task_id='app_oride_global_operate_report_multi_d_task',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw/app_oride_global_operate_report_multi_d/country_code=nal",
-        pt='{{ds}}'
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
+#判断ufile(cdh环境)
+if code_map["id"].lower()=="ufile":
+    # 依赖前一天分区
+    app_oride_global_operate_report_d_task = UFileSensor(
+        task_id='app_oride_global_operate_report_d_task',
+        filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+            hdfs_path_str="oride/oride_dw/app_oride_global_operate_report_d/country_code=nal",
+            pt='{{ds}}'
+        ),
+        bucket_name='opay-datalake',
+        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+        dag=dag
+    )
+
+    # 依赖前一天分区
+    app_oride_global_operate_report_multi_d_task = UFileSensor(
+        task_id='app_oride_global_operate_report_multi_d_task',
+        filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+            hdfs_path_str="oride/oride_dw/app_oride_global_operate_report_multi_d/country_code=nal",
+            pt='{{ds}}'
+        ),
+        bucket_name='opay-datalake',
+        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+        dag=dag
+    )
+else:
+    print("成功")
+    # 依赖前一天分区
+    app_oride_global_operate_report_d_task = OssSensor(
+        task_id='app_oride_global_operate_report_d_task',
+        bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+            hdfs_path_str="oride/oride_dw/app_oride_global_operate_report_d/country_code=nal",
+            pt='{{ds}}'
+        ),
+        bucket_name='opay-datalake',
+        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+        dag=dag
+    )
+
+    # 依赖前一天分区
+    app_oride_global_operate_report_multi_d_task = OssSensor(
+        task_id='app_oride_global_operate_report_multi_d_task',
+        bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+            hdfs_path_str="oride/oride_dw/app_oride_global_operate_report_multi_d/country_code=nal",
+            pt='{{ds}}'
+        ),
+        bucket_name='opay-datalake',
+        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+        dag=dag
+    )
 
 
 def get_all_data_row(ds):
@@ -114,6 +145,8 @@ def get_all_data_row(ds):
                             <td>{}</td>
                     '''
     sql = '''
+                set hive.strict.checks.cartesian.product=false;
+                set hive.mapred.mode=nonstrict;
                 select dt,
                 from_unixtime(unix_timestamp(dt, 'yyyy-MM-dd'),'u') as week,
                 nvl(ride_order_cnt,0) as ride_order_cnt, --当日下单数
@@ -160,6 +193,8 @@ def get_all_data_row(ds):
     data_list = cursor.fetchall()
     cursor.close()
     row_html = ''
+    all_completed_num_nobeckon=0
+    all_completed_num=0
     if len(data_list) > 0:
         for data in data_list:
             row = row_fmt.format(*list(data))
@@ -280,6 +315,8 @@ def get_product_rows(ds, all_completed_num_nobeckon, product_id):
         row_fmt = row_fmt2
 
     sql = '''
+            set hive.strict.checks.cartesian.product=false;
+            set hive.mapred.mode=nonstrict;
             SELECT t1.dt,
                  t1.city_id,
                  if(t1.city_id=-10000,'All',t2.name) AS city_name,
@@ -384,7 +421,10 @@ def get_all_product_rows(ds, all_completed_num):
                             <td>{}</td> 
                             <td>{}</td> 
                     '''
-    sql = '''SELECT t1.dt,
+    sql = '''
+        set hive.strict.checks.cartesian.product=false;
+        set hive.mapred.mode=nonstrict;
+        SELECT t1.dt,
                      t1.city_id,
                      if(t1.city_id=-10000,'All',cit.city_name) AS city_name,
                      if(t1.city_id=-10000,'-',nvl(cit.weather,'-')) AS weather, --当日该城市天气

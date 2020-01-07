@@ -8,6 +8,7 @@ from airflow.operators.python_operator import PythonOperator
 from airflow.sensors.hive_partition_sensor import HivePartitionSensor
 from utils.validate_metrics_utils import *
 from airflow.sensors import UFileSensor
+from airflow.sensors import OssSensor
 
 args = {
     'owner': 'linan',
@@ -23,9 +24,9 @@ dag = airflow.DAG(
     default_args=args)
 
 
-dwd_oride_order_location_di_prev_day_task = UFileSensor(
+dwd_oride_order_location_di_prev_day_task = OssSensor(
     task_id='dwd_oride_order_location_di_prev_day_task',
-    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
         hdfs_path_str="oride/oride_dw/dwd_oride_order_location_di/country_code=nal",
         pt='{{ds}}'
     ),

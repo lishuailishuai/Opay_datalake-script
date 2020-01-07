@@ -99,8 +99,11 @@ create_bd_data = BashOperator(
         bd_sql="
         
             create temporary function isInArea as 'com.oride.udf.IsInArea' 
-            USING JAR 'hdfs://warehourse:8020/tmp/udf-1.0-SNAPSHOT-jar-with-dependencies.jar';
+            USING JAR 'oss://opay-datalake/udf-1.0-SNAPSHOT-jar-with-dependencies.jar';
             
+            set hive.strict.checks.cartesian.product=false;
+            set hive.mapred.mode=nonstrict;
+            set hive.auto.convert.join = false;
         
             with 
             bd_area as (
@@ -211,7 +214,7 @@ create_bd_data = BashOperator(
         "
         
         echo ${bd_sql}
-        beeline -u "jdbc:hive2://10.52.17.84:10000" -n airflow -e   "${bd_sql}" 
+        beeline -u "jdbc:hive2://10.52.5.190:10000/default" -n airflow -e   "${bd_sql}" 
         
         """,
     dag=dag)

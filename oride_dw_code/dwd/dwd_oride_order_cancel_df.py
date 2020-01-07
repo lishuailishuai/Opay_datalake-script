@@ -26,6 +26,7 @@ from airflow.models import Variable
 import requests
 import os
 from airflow.sensors import OssSensor
+from airflow.sensors.s3_key_sensor import S3KeySensor
 
 args = {
         'owner': 'yangmingze',
@@ -68,32 +69,21 @@ if code_map["id"].lower()=="ufile":
 
 
     # 依赖前一天分区
-    ods_binlog_data_order_hi_prev_day_task = WebHdfsSensor(
-        task_id='ods_binlog_data_order_hi_prev_day_task',
-        filepath='{hdfs_path_str}/dt={now_day}/hour=00/_SUCCESS'.format(
-            hdfs_path_str="/user/hive/warehouse/oride_dw_ods.db/ods_binlog_data_order_hi",
-            pt='{{ds}}',
-            now_day='{{macros.ds_add(ds, +1)}}'
+    dwd_oride_order_base_include_test_di_task = S3KeySensor(
+        task_id='dwd_oride_order_base_include_test_di_task',
+        bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+            hdfs_path_str="oride/oride_dw/dwd_oride_order_base_include_test_di/country_code=NG",
+            pt='{{ds}}'
         ),
+        bucket_name='opay-bi',
         poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
         dag=dag
     )
 
-    # 依赖前一天分区
-    ods_sqoop_base_data_country_conf_df_prev_day_task = UFileSensor(
-        task_id='ods_sqoop_base_data_country_conf_df_prev_day_task',
-        filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-            hdfs_path_str="oride_dw_sqoop/oride_data/data_country_conf",
-            pt='{{ds}}'
-        ),
-        bucket_name='opay-datalake',
-        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-        dag=dag
-    )
     hdfs_path = "ufile://opay-datalake/oride/oride_dw/dwd_oride_order_cancel_df"
 
 else:
-    print("成功")
+
     ods_sqoop_base_data_order_cancel_df_tesk = OssSensor(
         task_id='ods_sqoop_base_data_order_cancel_df_tesk',
         bucket_key="{hdfs_path_str}/dt={pt}/_SUCCESS".format(
@@ -106,29 +96,17 @@ else:
     )
 
     # 依赖前一天分区
-    ods_binlog_data_order_hi_prev_day_task = OssSensor(
-        task_id='ods_binlog_base_data_order_hi_prev_day_task',
-        bucket_key='{hdfs_path_str}/dt={now_day}/hour=00/_SUCCESS'.format(
-            hdfs_path_str="oride_binlog/oride_db.oride_data.data_order",
-            pt='{{ds}}',
-            now_day='{{macros.ds_add(ds, +1)}}'
-        ),
-        bucket_name='opay-datalake',
-        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-        dag=dag
-    )
-
-    # 依赖前一天分区
-    ods_sqoop_base_data_country_conf_df_prev_day_task = OssSensor(
-        task_id='ods_sqoop_base_data_country_conf_df_prev_day_task',
+    dwd_oride_order_base_include_test_di_task = OssSensor(
+        task_id='dwd_oride_order_base_include_test_di_task',
         bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-            hdfs_path_str="oride_dw_sqoop/oride_data/data_country_conf",
+            hdfs_path_str="oride/oride_dw/dwd_oride_order_base_include_test_di/country_code=NG",
             pt='{{ds}}'
         ),
         bucket_name='opay-datalake',
         poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
         dag=dag
     )
+
     hdfs_path = "oss://opay-datalake/oride/oride_dw/dwd_oride_order_cancel_df"
 
 
@@ -160,6 +138,7 @@ def dwd_oride_order_cancel_df_sql_task(ds):
     
     set hive.exec.parallel=true;
     set hive.exec.dynamic.partition.mode=nonstrict;
+    set hive.auto.convert.join = false;
 
     INSERT overwrite TABLE oride_dw.dwd_oride_order_cancel_df partition(country_code,dt)
 
@@ -170,7 +149,7 @@ def dwd_oride_order_cancel_df_sql_task(ds):
         cancel_time,--取消时间
         cancel_type,--取消原因类型
         cancel_reason,--取消原因
-        nvl(country.country_code,'nal') as country_code,
+        nvl(ord.country_code,'nal') as country_code,
         '{pt}' as dt
     from 
     (select   
@@ -183,34 +162,16 @@ def dwd_oride_order_cancel_df_sql_task(ds):
     where dt='{pt}'
     ) cancel
     left outer join
-    (select 
-        order_id,
-        country_id
-    from 
     (SELECT 
-             id AS order_id ,
+             order_id ,
              --订单 ID
 
-             country_id,  --国家ID
+             country_code  --国家码
 
-             row_number() OVER(partition BY id ORDER BY updated_at desc,pos DESC) AS rn1
-
-        FROM oride_dw_ods.ods_binlog_data_order_hi
-
-        WHERE concat_ws(' ',dt,hour) BETWEEN '{pt} 00' AND '{now_day} 00' --取昨天1天数据与今天早上00数据
-
-        AND from_unixtime(create_time,'yyyy-MM-dd') = '{pt}'
-
-        AND op IN ('c','u')
-
-         ) t2
-where rn1=1) ord
-on cancel.order_id=ord.order_id
-left outer join
-(SELECT *
-   FROM oride_dw_ods.ods_sqoop_base_data_country_conf_df 
-   WHERE dt='{pt}') country
-on ord.country_id=country.id;
+             from oride_dw.dwd_oride_order_base_include_test_di
+             where dt='{pt}'
+         ) ord
+    on cancel.order_id=ord.order_id
 
     '''.format(
         pt=ds,
@@ -321,7 +282,5 @@ dwd_oride_order_cancel_df_task= PythonOperator(
     dag=dag
 )
 
-
-ods_binlog_data_order_hi_prev_day_task>>dwd_oride_order_cancel_df_task
-ods_sqoop_base_data_country_conf_df_prev_day_task>>dwd_oride_order_cancel_df_task
+dwd_oride_order_base_include_test_di_task>>dwd_oride_order_cancel_df_task
 ods_sqoop_base_data_order_cancel_df_tesk>>dwd_oride_order_cancel_df_task
