@@ -213,9 +213,6 @@ for obus_table in obus_table_list:
 
     host, port, schema, login, password = conn_conf_dict[conn_id]
 
-    print("----")
-    print(port)
-
     '''
     使用sqoop导入mysql数据到hive
     '''
@@ -238,7 +235,7 @@ for obus_table in obus_table_list:
             --compression-codec=snappy
         '''.format(
             host=host,
-            port=3306,
+            port=port,
             schema=schema,
             username=login,
             password=password,
