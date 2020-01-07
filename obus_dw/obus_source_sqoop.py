@@ -206,6 +206,8 @@ conn_conf_dict = {}
 for obus_table in obus_table_list:
     # logging.info(obus_table)
     conn_id = obus_table.get('conn')
+
+    print(conn_id)
     if conn_id not in conn_conf_dict:
         conn_conf_dict[conn_id] = get_db_conf(conn_id)
 
@@ -237,7 +239,7 @@ for obus_table in obus_table_list:
             username=login,
             password=password,
             table=obus_table.get('table'),
-            table_path=s3path.format(bs=obus_table.get('table'))
+            table_path=s3path.format(bs=obus_table.get('table')) 
         ),
         dag=dag
     )
