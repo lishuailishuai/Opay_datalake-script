@@ -113,6 +113,7 @@ def preInsertRowPoint(**op_kwargs):
 
     print("-----")
     print(msql)
+    print(pd)
     citys = pd.read_sql_query(msql, oridedb_conn)
     print("-----")
     print(citys)
