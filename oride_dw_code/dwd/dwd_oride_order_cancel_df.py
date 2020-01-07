@@ -143,35 +143,38 @@ def dwd_oride_order_cancel_df_sql_task(ds):
     INSERT overwrite TABLE oride_dw.dwd_oride_order_cancel_df partition(country_code,dt)
 
     select
-
         cancel.order_id,--订单 ID
         cancel_role,--取消人角色(1: 用户, 2: 司机, 3:系统 4:Admin)
         cancel_time,--取消时间
         cancel_type,--取消原因类型
         cancel_reason,--取消原因
+        ord.city_id,
+        ord.product_id,
         nvl(ord.country_code,'nal') as country_code,
         '{pt}' as dt
     from 
-    (select   
-        id as order_id,--订单 ID
-        cancel_role,--取消人角色(1: 用户, 2: 司机, 3:系统 4:Admin)
-        cancel_time,--取消时间
-        cancel_type,--取消原因类型
-        cancel_reason --取消原因
-    from oride_dw_ods.ods_sqoop_base_data_order_cancel_df
-    where dt='{pt}'
+    (
+        select   
+            id as order_id,--订单 ID
+            cancel_role,--取消人角色(1: 用户, 2: 司机, 3:系统 4:Admin)
+            cancel_time,--取消时间
+            cancel_type,--取消原因类型
+            cancel_reason --取消原因
+        from oride_dw_ods.ods_sqoop_base_data_order_cancel_df
+        where dt='{pt}'
     ) cancel
     left outer join
-    (SELECT 
-             order_id ,
-             --订单 ID
-
-             country_code  --国家码
-
-             from oride_dw.dwd_oride_order_base_include_test_di
-             where dt='{pt}'
-         ) ord
-    on cancel.order_id=ord.order_id
+    (
+        SELECT 
+            order_id ,--订单ID
+            city_id,
+            product_id,
+            country_code  --国家码
+            
+        from oride_dw.dwd_oride_order_base_include_test_di
+        where dt='{pt}'
+    ) ord
+    on cancel.order_id=ord.order_id;
 
     '''.format(
         pt=ds,
