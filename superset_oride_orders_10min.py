@@ -19,7 +19,7 @@ import math
 
 args = {
     'owner': 'yangmingze',
-    'start_date': datetime(2019, 12, 28),
+    'start_date': datetime(2020, 1, 7),
     'depends_on_past': False,
     'retries': 1,
     'retry_delay': timedelta(minutes=5),

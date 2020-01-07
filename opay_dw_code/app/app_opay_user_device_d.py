@@ -95,7 +95,7 @@ def app_opay_user_device_d_sql_task(ds):
     set mapred.max.split.size=1000000;
     set hive.exec.dynamic.partition.mode=nonstrict;
     set hive.exec.parallel=true;
-    insert overwrite table app_opay_user_device_d partition(country_code,dt)
+    insert overwrite table opay_dw.app_opay_user_device_d partition(country_code,dt)
     select 
     if(a.user_id is null,b.user_id,a.user_id),
     if(a.device_id is null,b.device_id,a.device_id),
