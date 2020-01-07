@@ -153,29 +153,34 @@ def dwd_opay_life_payment_record_di_sql_task(ds):
     set mapred.max.split.size=1000000;
     set hive.exec.dynamic.partition.mode=nonstrict;
     set hive.exec.parallel=true;
-    with dim_user_data as (
-            select 
-                user_id, `role`, kyc_level, first_name, middle_name, surname
-            from (
-                select 
-                    user_id, `role`, kyc_level, first_name, middle_name, surname,
-                    row_number() over(partition by user_id order by update_time desc) rn
-                from opay_dw_ods.ods_sqoop_base_user_di
-                where dt <= '{pt}'
-            ) uf where rn = 1
-        ),
+    with 
         dim_merchant_data as (
             select 
                 merchant_id, merchant_name, merchant_type
             from opay_dw_ods.ods_sqoop_base_merchant_df
             where dt = if('{pt}' <= '2019-12-11', '2019-12-11', '{pt}')
+        ),
+        dim_user_merchant_data as (
+            select 
+                trader_id, trader_name, trader_role, trader_kyc_level, trader_type
+            from (
+                select 
+                    user_id as trader_id, concat(first_name, ' ', middle_name, ' ', surname) as trader_name, `role` as trader_role, kyc_level as trader_kyc_level, 'USER' as trader_type
+                    row_number() over(partition by user_id order by update_time desc) rn
+                from opay_dw_ods.ods_sqoop_base_user_di
+                where dt <= '{pt}'
+            ) uf where rn = 1
+            union all
+            select 
+                merchant_id as trader_id, merchant_name as trader_name, merchant_type as trader_role, '-' as trader_kyc_level, 'MERCHANT' as trader_type
+            from dim_merchant_data
         )
     insert overwrite table {db}.{table} 
     partition(country_code, dt)
 
     select 
         t1.order_no, t1.amount, t1.currency, 
-        'USER' as originator_type, t2.role as originator_role, t2.kyc_level as originator_kyc_level, t1.originator_id, concat(t2.first_name, ' ', t2.middle_name, ' ', t2.surname) as originator_name,
+        t2.trader_type as originator_type, t2.trader_role as originator_role, t2.trader_kyc_level as originator_kyc_level, t1.originator_id, t2.trader_name as originator_name,
         'MERCHANT' as affiliate_type, t3.merchant_type as affiliate_role, t3.merchant_id as affiliate_id, t3.merchant_name as affiliate_name,
         t1.recharge_service_provider, replace(t1.recharge_account, '+234', '') as recharge_account, t1.recharge_account_name, t1.recharge_set_meal,
         t1.create_time, t1.update_time, t1.country, 'Life Payment' as top_service_type, t1.sub_service_type,
@@ -251,7 +256,7 @@ def dwd_opay_life_payment_record_di_sql_task(ds):
         from opay_dw_ods.ods_sqoop_base_electricity_topup_record_di
         where dt = '{pt}'
     ) t1 
-    left join dim_user_data t2 on t1.originator_id = t2.user_id
+    left join dim_user_merchant_data t2 on t1.originator_id = t2.trader_id
     left join dim_merchant_data t3 on t1.affiliate_id = t3.merchant_id
     '''.format(
         pt=ds,
