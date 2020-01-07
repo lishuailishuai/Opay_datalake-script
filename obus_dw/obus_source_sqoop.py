@@ -212,6 +212,10 @@ for obus_table in obus_table_list:
         conn_conf_dict[conn_id] = get_db_conf(conn_id)
 
     host, port, schema, login, password = conn_conf_dict[conn_id]
+
+    print("----")
+    print(port)
+
     '''
     使用sqoop导入mysql数据到hive
     '''
