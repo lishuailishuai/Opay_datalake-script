@@ -79,7 +79,7 @@ def app_opay_life_payment_cube_d_sql_task(ds):
            sum(pay_amount) trans_pay_amount,
            sum(amount-pay_amount) trans_activity_amount,
            count(DISTINCT originator_id) trans_user_cnt,
-           count(DISTINCT recharge_account) trans_recharge_account_cnt,
+           count(DISTINCT recharge_account) trans_recharge_account_cnt
     FROM opay_dw.dwd_opay_life_payment_record_di
     WHERE dt='{pt}'
       AND top_service_type='Life Payment'
