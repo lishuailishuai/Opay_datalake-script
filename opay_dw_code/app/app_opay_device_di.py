@@ -35,7 +35,7 @@ args = {
     'email_on_retry': False,
 }
 
-dag = airflow.DAG('app_opay_device_d',
+dag = airflow.DAG('app_opay_device_di',
                   schedule_interval="00 03 * * *",
                   default_args=args,
                   catchup=False)
