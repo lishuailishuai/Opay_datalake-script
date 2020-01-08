@@ -109,7 +109,7 @@ def preInsertRowPoint(**op_kwargs):
             name, 
             \"{driver_type}\" as driver_type 
         from data_city_conf
-    '''.format(driver_type)
+    '''.format(driver_type=driver_type)
 
     citys = pd.read_sql_query(msql, oridedb_conn)
 
