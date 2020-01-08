@@ -13,6 +13,7 @@ import sys
 from importlib import reload
 reload(sys)
 import MySQLdb
+from airflow.sensors import OssSensor
 
 args = {
     'owner': 'wuduo',
@@ -31,6 +32,76 @@ dag = airflow.DAG(
     concurrency=5,
     max_active_runs=1,
     default_args=args)
+
+##----------------------------------------- 依赖 ---------------------------------------##
+
+
+dwd_oride_order_base_include_test_di_task = OssSensor(
+    task_id='dwd_oride_order_base_include_test_di_task',
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="oride/oride_dw/dwd_oride_order_base_include_test_di/country_code=NG",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
+ods_sqoop_promoter_promoter_user_df_task = OssSensor(
+        task_id='ods_sqoop_promoter_promoter_user_df_task',
+        bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+            hdfs_path_str="oride_dw_sqoop/opay_spread/promoter_user",
+            pt='{{ds}}'
+        ),
+        bucket_name='opay-datalake',
+        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+        dag=dag
+    )
+
+ods_sqoop_mass_rider_signups_df_task = OssSensor(
+        task_id='ods_sqoop_mass_rider_signups_df_task',
+        bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+            hdfs_path_str="oride_dw_sqoop/opay_spread/rider_signups",
+            pt='{{ds}}'
+        ),
+        bucket_name='opay-datalake',
+        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+        dag=dag
+    )
+
+ods_sqoop_base_data_driver_extend_df_task = OssSensor(
+        task_id='ods_sqoop_base_data_driver_extend_df_task',
+        bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+            hdfs_path_str="oride_dw_sqoop/oride_data/data_driver_extend",
+            pt='{{ds}}'
+        ),
+        bucket_name='opay-datalake',
+        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+        dag=dag
+    )
+
+ods_sqoop_base_data_driver_bind_logs_df_task = OssSensor(
+        task_id='ods_sqoop_base_data_driver_bind_logs_df_task',
+        bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+            hdfs_path_str="oride_dw_sqoop/oride_data/data_driver_bind_logs",
+            pt='{{ds}}'
+        ),
+        bucket_name='opay-datalake',
+        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+        dag=dag
+    )
+
+ods_sqoop_mass_rider_signups_guarantors_df_task = OssSensor(
+        task_id='ods_sqoop_mass_rider_signups_guarantors_df_task',
+        bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+            hdfs_path_str="oride_dw_sqoop/opay_spread/rider_signups_guarantors",
+            pt='{{ds}}'
+        ),
+        bucket_name='opay-datalake',
+        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+        dag=dag
+    )
+
 
 '''
 预注册司机数hql know_orider = 4 --20190724 
@@ -77,44 +148,45 @@ GROUP BY from_unixtime(create_time, 'yyyy-MM-dd'), know_orider, driver_type
 填写资料司机数 know_orider = 4 --20190724
 '''
 promoter_regist_sql = '''
-SELECT
-    r.daily as daily,
-    r.driver_type as driver_type, 
-    r.know_orider as channel, 
-    MAX(p.user_name) as name,
-    MAX(p.name) as mobile,
-    p.code as code,
-    count(distinct r.id) as drivers 
-FROM (select * from oride_dw_ods.ods_sqoop_promoter_promoter_user_df where dt = '{ds}' ) as p JOIN 
-    (SELECT 
-        from_unixtime(create_time, 'yyyy-MM-dd') as daily, 
-        if(length(know_orider_extend)=10, concat('0', know_orider_extend), know_orider_extend) as know_orider_extend, 
-        id, 
-        know_orider, 
-        driver_type 
-    from oride_dw_ods.ods_sqoop_mass_rider_signups_df
-    WHERE length(know_orider_extend)>0 and 
-        record_by<>'' and 
-        from_unixtime(create_time, 'yyyy-MM-dd') = '{ds}' and  
-        dt = '{ds}' 
-    ) as r 
-ON p.name = r.know_orider_extend 
-WHERE  
-    p.dt = '{ds}' 
-GROUP BY r.daily, r.know_orider, p.code, r.driver_type
-'''
-promoter_regist_channel_sql = '''
-SELECT 
-    from_unixtime(create_time, 'yyyy-MM-dd') as daily, 
-    know_orider,
-    driver_type,   
-    count(distinct id) as drivers 
-from oride_dw_ods.ods_sqoop_mass_rider_signups_df
-WHERE length(know_orider_extend)>0 and 
-    record_by<>'' and 
-    from_unixtime(create_time, 'yyyy-MM-dd') = '{ds}' and  
-    dt = '{ds}' 
-GROUP BY from_unixtime(create_time, 'yyyy-MM-dd'), know_orider, driver_type
+SELECT r.daily AS daily,
+       r.driver_type AS driver_type,
+       r.know_orider AS channel,
+       MAX(p.user_name) AS name,
+       MAX(p.name) AS mobile,
+       p.code AS code,
+       count(DISTINCT r.id) AS drivers
+FROM
+  (SELECT *
+   FROM oride_dw_ods.ods_sqoop_promoter_promoter_user_df
+   WHERE dt = '{ds}') AS p
+JOIN
+  (SELECT from_unixtime(create_time, 'yyyy-MM-dd') AS daily,
+          if(length(know_orider_extend)=10, concat('0', know_orider_extend), know_orider_extend) AS know_orider_extend,
+          id,
+          know_orider,
+          driver_type
+   FROM oride_dw_ods.ods_sqoop_mass_rider_signups_df
+   WHERE length(know_orider_extend)>0
+     AND record_by<>''
+     AND from_unixtime(create_time, 'yyyy-MM-dd') = '{ds}'
+     AND dt = '{ds}') AS r ON p.name = r.know_orider_extend
+WHERE p.dt = '{ds}'
+GROUP BY r.daily,
+         r.know_orider,
+         p.code,
+         r.driver_type ''' promoter_regist_channel_sql = '''
+SELECT from_unixtime(create_time, 'yyyy-MM-dd') AS daily,
+       know_orider,
+       driver_type,
+       count(DISTINCT id) AS drivers
+FROM oride_dw_ods.ods_sqoop_mass_rider_signups_df
+WHERE length(know_orider_extend)>0
+  AND record_by<>''
+  AND from_unixtime(create_time, 'yyyy-MM-dd') = '{ds}'
+  AND dt = '{ds}'
+GROUP BY from_unixtime(create_time, 'yyyy-MM-dd'),
+         know_orider,
+         driver_type
 '''
 
 
@@ -430,7 +502,7 @@ JOIN
           r.driver_type,
           MAX(r.know_orider) AS channel,
           if(length(r.know_orider_extend)=10, concat('0', r.know_orider_extend), r.know_orider_extend) AS know_orider_extend,
-          count(DISTINCT o.id) AS orders
+          count(DISTINCT o.order_id) AS orders
    FROM
      (SELECT *
       FROM oride_dw.dwd_oride_order_base_include_test_di
@@ -451,7 +523,7 @@ promoter_ordertake_channel_hql = '''
 SELECT from_unixtime(o.take_time, 'yyyy-MM-dd') AS daily,
        r.know_orider AS channel,
        r.driver_type,
-       count(DISTINCT o.id) AS orders
+       count(DISTINCT o.order_id) AS orders
 FROM
   (SELECT *
    FROM oride_dw.dwd_oride_order_base_include_test_di
@@ -723,7 +795,12 @@ for my_task in hive_tasks:
         dag=dag
     )
 
-    hive_result_to_mysql
+    dwd_oride_order_base_include_test_di_task<<hive_result_to_mysql
+    ods_sqoop_promoter_promoter_user_df_task<<hive_result_to_mysql
+    ods_sqoop_mass_rider_signups_df_task<<hive_result_to_mysql
+    ods_sqoop_base_data_driver_extend_df_task<<hive_result_to_mysql
+    ods_sqoop_base_data_driver_bind_logs_df_task<<hive_result_to_mysql
+    ods_sqoop_mass_rider_signups_guarantors_df_task<<hive_result_to_mysql
 
 
 hive_channel_tasks = [
@@ -788,7 +865,13 @@ for my_task in hive_channel_tasks:
         op_kwargs={'sql_insert': my_task['sql_insert'], 'sql_ext': my_task['sql_ext'], 'sql': my_task['sql']},
         dag=dag
     )
-    hive_result_channel_to_mysql
+
+    dwd_oride_order_base_include_test_di_task<<hive_result_channel_to_mysql
+    ods_sqoop_promoter_promoter_user_df_task<<hive_result_channel_to_mysql
+    ods_sqoop_mass_rider_signups_df_task<<hive_result_channel_to_mysql
+    ods_sqoop_base_data_driver_extend_df_task<<hive_result_channel_to_mysql
+    ods_sqoop_base_data_driver_bind_logs_df_task<<hive_result_channel_to_mysql
+    ods_sqoop_mass_rider_signups_guarantors_df_task<<hive_result_channel_to_mysql
 
 
 '''
@@ -969,7 +1052,12 @@ order_result_channel_to_mysql = PythonOperator(
     dag=dag
 )
 
-order_result_channel_to_mysql
+dwd_oride_order_base_include_test_di_task<<order_result_channel_to_mysql
+ods_sqoop_promoter_promoter_user_df_task<<order_result_channel_to_mysql
+ods_sqoop_mass_rider_signups_df_task<<order_result_channel_to_mysql
+ods_sqoop_base_data_driver_extend_df_task<<order_result_channel_to_mysql
+ods_sqoop_base_data_driver_bind_logs_df_task<<order_result_channel_to_mysql
+ods_sqoop_mass_rider_signups_guarantors_df_task<<order_result_channel_to_mysql
 
 
 # 中台数据查询
@@ -1103,4 +1191,10 @@ cs_result_channel_to_mysql = PythonOperator(
     dag=dag
 )
 
-cs_result_channel_to_mysql
+
+dwd_oride_order_base_include_test_di_task<<cs_result_channel_to_mysql
+ods_sqoop_promoter_promoter_user_df_task<<cs_result_channel_to_mysql
+ods_sqoop_mass_rider_signups_df_task<<cs_result_channel_to_mysql
+ods_sqoop_base_data_driver_extend_df_task<<cs_result_channel_to_mysql
+ods_sqoop_base_data_driver_bind_logs_df_task<<cs_result_channel_to_mysql
+ods_sqoop_mass_rider_signups_guarantors_df_task<<cs_result_channel_to_mysql
