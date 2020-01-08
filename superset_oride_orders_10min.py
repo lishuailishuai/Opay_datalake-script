@@ -107,7 +107,7 @@ def preInsertRowPoint(**op_kwargs):
         select 
             id, 
             name, 
-            \"-1,0,1,2,99\" as driver_type 
+            \"{driver_type}\" as driver_type 
         from data_city_conf
     '''.format(driver_type)
 
