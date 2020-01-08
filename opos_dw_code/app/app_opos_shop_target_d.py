@@ -91,6 +91,10 @@ set hive.exec.parallel=true;
 set hive.exec.dynamic.partition.mode=nonstrict;
 set hive.strict.checks.cartesian.product=false;
 
+set hive.exec.parallel=true;
+set hive.exec.dynamic.partition.mode=nonstrict;
+set hive.strict.checks.cartesian.product=false;
+
 --先删除分区
 ALTER TABLE opos_dw.app_opos_shop_target_d DROP IF EXISTS PARTITION(country_code='nal',dt='{pt}');
 
@@ -157,6 +161,19 @@ payment_order as (
   ,count(if(trade_status = 'FAIL',1,null)) as order_fail_cnt
   ,count(if(trade_status = 'PENDING',1,null)) as order_pending_cnt
   
+  --优惠券分析
+  ,count(if(trade_status='SUCCESS' and discount_type is not null,1,null)) as coupon_order_cnt
+  ,count(distinct(if(trade_status='SUCCESS' and discount_type is not null,sender_id,null))) as coupon_order_people
+  ,count(distinct(if(trade_status='SUCCESS' and discount_type is not null and first_order='1',sender_id,null))) as coupon_first_order_people
+  ,sum(if(trade_status='SUCCESS' and discount_type is not null,pay_amount,0)) as coupon_pay_amount
+  ,sum(if(trade_status='SUCCESS' and discount_type is not null,org_payment_amount,0)) as coupon_order_gmv
+  ,sum(if(trade_status='SUCCESS' and discount_type is not null,discount_amount,0)) as coupon_discount_amount
+
+  ,count(if(trade_status='SUCCESS' and discount_type is null,1,null)) as coupon_useless_order_cnt
+  ,count(distinct(if(trade_status='SUCCESS' and discount_type is null,sender_id,null))) as coupon_useless_order_people
+  ,sum(if(trade_status='SUCCESS' and discount_type is null,pay_amount,0)) as coupon_useless_pay_amount
+  ,sum(if(trade_status='SUCCESS' and discount_type is null,org_payment_amount,0)) as coupon_useless_order_gmv
+
   from
   opos_dw.dwd_pre_opos_payment_order_di 
   where country_code='nal' 
@@ -260,6 +277,17 @@ payment_bonus_order as (
   ,nvl(p.order_fail_cnt,0) as order_fail_cnt
   ,nvl(p.order_pending_cnt,0) as order_pending_cnt
 
+  ,nvl(p.coupon_order_cnt,0) as coupon_order_cnt
+  ,nvl(p.coupon_order_people,0) as coupon_order_people
+  ,nvl(p.coupon_first_order_people,0) as coupon_first_order_people
+  ,nvl(p.coupon_pay_amount,0) as coupon_pay_amount
+  ,nvl(p.coupon_order_gmv,0) as coupon_order_gmv
+  ,nvl(p.coupon_discount_amount,0) as coupon_discount_amount
+  ,nvl(p.coupon_useless_order_cnt,0) as coupon_useless_order_cnt
+  ,nvl(p.coupon_useless_order_people,0) as coupon_useless_order_people
+  ,nvl(p.coupon_useless_pay_amount,0) as coupon_useless_pay_amount
+  ,nvl(p.coupon_useless_order_gmv,0) as coupon_useless_order_gmv
+
   from
   payment_order as p
   full join
@@ -356,6 +384,17 @@ shop_payment_bonus as (
   ,nvl(m.order_fail_cnt,0) as order_fail_cnt
   ,nvl(m.order_pending_cnt,0) as order_pending_cnt
 
+  ,nvl(m.coupon_order_cnt,0) as coupon_order_cnt
+  ,nvl(m.coupon_order_people,0) as coupon_order_people
+  ,nvl(m.coupon_first_order_people,0) as coupon_first_order_people
+  ,nvl(m.coupon_pay_amount,0) as coupon_pay_amount
+  ,nvl(m.coupon_order_gmv,0) as coupon_order_gmv
+  ,nvl(m.coupon_discount_amount,0) as coupon_discount_amount
+  ,nvl(m.coupon_useless_order_cnt,0) as coupon_useless_order_cnt
+  ,nvl(m.coupon_useless_order_people,0) as coupon_useless_order_people
+  ,nvl(m.coupon_useless_pay_amount,0) as coupon_useless_pay_amount
+  ,nvl(m.coupon_useless_order_gmv,0) as coupon_useless_order_gmv
+
   from
     --商铺全量数据
     all_shop as s
@@ -451,6 +490,17 @@ select
 ,nvl(b.status,-1) as status
 
 ,nvl(b.shop_silent_flag,'-') as shop_silent_flag
+
+,a.coupon_order_cnt
+,a.coupon_order_people
+,a.coupon_first_order_people
+,a.coupon_pay_amount
+,a.coupon_order_gmv
+,a.coupon_discount_amount
+,a.coupon_useless_order_cnt
+,a.coupon_useless_order_people
+,a.coupon_useless_pay_amount
+,a.coupon_useless_order_gmv
 
 ,'nal' as country_code
 ,'{pt}' as dt
