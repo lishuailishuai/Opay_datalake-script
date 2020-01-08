@@ -44,14 +44,14 @@ SELECT
     MAX(p.name) as mobile,
     p.code as code,
     count(distinct r.id) as drivers 
-FROM (select * from opay_spread.ods_sqoop_promoter_promoter_user_df where dt = '{ds}' ) as p JOIN 
+FROM (select * from oride_dw_ods.ods_sqoop_promoter_promoter_user_df where dt = '{ds}' ) as p JOIN 
     (SELECT 
         from_unixtime(create_time, 'yyyy-MM-dd') as daily, 
         if(length(know_orider_extend)=10, concat('0',know_orider_extend), know_orider_extend) as know_orider_extend, 
         id, 
         know_orider, 
         driver_type 
-    from opay_spread.ods_sqoop_mass_rider_signups_df
+    from oride_dw_ods.ods_sqoop_mass_rider_signups_df
     WHERE from_unixtime(create_time, 'yyyy-MM-dd') = '{ds}' and 
         dt = '{ds}' 
     ) as r 
@@ -66,7 +66,7 @@ SELECT
     know_orider,
     driver_type,  
     count(distinct id) as drivers  
-from opay_spread.ods_sqoop_mass_rider_signups_df
+from oride_dw_ods.ods_sqoop_mass_rider_signups_df
 WHERE from_unixtime(create_time, 'yyyy-MM-dd') = '{ds}' and 
     dt = '{ds}'  
 GROUP BY from_unixtime(create_time, 'yyyy-MM-dd'), know_orider, driver_type
@@ -85,14 +85,14 @@ SELECT
     MAX(p.name) as mobile,
     p.code as code,
     count(distinct r.id) as drivers 
-FROM (select * from opay_spread.ods_sqoop_promoter_promoter_user_df where dt = '{ds}' ) as p JOIN 
+FROM (select * from oride_dw_ods.ods_sqoop_promoter_promoter_user_df where dt = '{ds}' ) as p JOIN 
     (SELECT 
         from_unixtime(create_time, 'yyyy-MM-dd') as daily, 
         if(length(know_orider_extend)=10, concat('0', know_orider_extend), know_orider_extend) as know_orider_extend, 
         id, 
         know_orider, 
         driver_type 
-    from opay_spread.ods_sqoop_mass_rider_signups_df
+    from oride_dw_ods.ods_sqoop_mass_rider_signups_df
     WHERE length(know_orider_extend)>0 and 
         record_by<>'' and 
         from_unixtime(create_time, 'yyyy-MM-dd') = '{ds}' and  
@@ -109,7 +109,7 @@ SELECT
     know_orider,
     driver_type,   
     count(distinct id) as drivers 
-from opay_spread.ods_sqoop_mass_rider_signups_df
+from oride_dw_ods.ods_sqoop_mass_rider_signups_df
 WHERE length(know_orider_extend)>0 and 
     record_by<>'' and 
     from_unixtime(create_time, 'yyyy-MM-dd') = '{ds}' and  
@@ -131,7 +131,7 @@ SELECT r.daily AS daily,
        count(DISTINCT r.id) AS drivers
 FROM
   (SELECT *
-   FROM opay_spread.ods_sqoop_promoter_promoter_user_df
+   FROM oride_dw_ods.ods_sqoop_promoter_promoter_user_df
    WHERE dt = '{ds}') AS p
 JOIN
   (SELECT from_unixtime(online_test_time, 'yyyy-MM-dd') AS daily,
@@ -139,7 +139,7 @@ JOIN
           id,
           know_orider,
           driver_type
-   FROM opay_spread.ods_sqoop_mass_rider_signups_df
+   FROM oride_dw_ods.ods_sqoop_mass_rider_signups_df
    WHERE online_test = 1
      AND from_unixtime(online_test_time, 'yyyy-MM-dd') = '{ds}'
      AND dt = '{ds}') AS r ON p.name = r.know_orider_extend
@@ -154,7 +154,7 @@ SELECT from_unixtime(online_test_time, 'yyyy-MM-dd') AS daily,
        know_orider,
        driver_type,
        count(DISTINCT id) AS drivers
-FROM opay_spread.ods_sqoop_mass_rider_signups_df
+FROM oride_dw_ods.ods_sqoop_mass_rider_signups_df
 WHERE online_test = 1
   AND from_unixtime(online_test_time, 'yyyy-MM-dd') = '{ds}'
   AND dt = '{ds}'
@@ -177,7 +177,7 @@ SELECT r.daily AS daily,
        count(DISTINCT r.id) AS drivers
 FROM
   (SELECT *
-   FROM opay_spread.ods_sqoop_promoter_promoter_user_df
+   FROM oride_dw_ods.ods_sqoop_promoter_promoter_user_df
    WHERE dt = '{ds}') AS p
 JOIN
   (SELECT from_unixtime(drivers_test_time, 'yyyy-MM-dd') AS daily,
@@ -185,7 +185,7 @@ JOIN
           id,
           know_orider,
           driver_type
-   FROM opay_spread.ods_sqoop_mass_rider_signups_df
+   FROM oride_dw_ods.ods_sqoop_mass_rider_signups_df
    WHERE drivers_test = 1
      AND from_unixtime(drivers_test_time, 'yyyy-MM-dd') = '{ds}'
      AND dt = '{ds}') AS r ON p.name = r.know_orider_extend
@@ -201,7 +201,7 @@ SELECT
     know_orider, 
     driver_type,   
     count(distinct id) as drivers
-from opay_spread.ods_sqoop_mass_rider_signups_df
+from oride_dw_ods.ods_sqoop_mass_rider_signups_df
 WHERE drivers_test = 1 and 
     from_unixtime(drivers_test_time, 'yyyy-MM-dd') = '{ds}' and  
     dt = '{ds}' 
@@ -222,7 +222,7 @@ SELECT r.daily AS daily,
        count(DISTINCT r.id) AS drivers
 FROM
   (SELECT *
-   FROM opay_spread.ods_sqoop_promoter_promoter_user_df
+   FROM oride_dw_ods.ods_sqoop_promoter_promoter_user_df
    WHERE dt = '{ds}') AS p
 JOIN
   (SELECT from_unixtime(vehicle_status_time, 'yyyy-MM-dd') AS daily,
@@ -230,7 +230,7 @@ JOIN
           id,
           know_orider,
           driver_type
-   FROM opay_spread.ods_sqoop_mass_rider_signups_df
+   FROM oride_dw_ods.ods_sqoop_mass_rider_signups_df
    WHERE driver_type = 2
      AND vehicle_status = 1
      AND from_unixtime(vehicle_status_time, 'yyyy-MM-dd') = '{ds}'
@@ -246,7 +246,7 @@ SELECT from_unixtime(vehicle_status_time, 'yyyy-MM-dd') AS daily,
        know_orider,
        driver_type,
        count(DISTINCT id) AS drivers
-FROM opay_spread.ods_sqoop_mass_rider_signups_df
+FROM oride_dw_ods.ods_sqoop_mass_rider_signups_df
 WHERE driver_type = 2
   AND vehicle_status = 1
   AND from_unixtime(vehicle_status_time, 'yyyy-MM-dd') = '{ds}'
@@ -270,7 +270,7 @@ SELECT r.daily AS daily,
        count(DISTINCT r.id) AS drivers
 FROM
   (SELECT *
-   FROM opay_spread.ods_sqoop_promoter_promoter_user_df
+   FROM oride_dw_ods.ods_sqoop_promoter_promoter_user_df
    WHERE dt = '{ds}') AS p
 JOIN
   (SELECT from_unixtime(adress_status_time, 'yyyy-MM-dd') AS daily,
@@ -278,7 +278,7 @@ JOIN
           id,
           know_orider,
           driver_type
-   FROM opay_spread.ods_sqoop_mass_rider_signups_df
+   FROM oride_dw_ods.ods_sqoop_mass_rider_signups_df
    WHERE address_status = 1
      AND from_unixtime(adress_status_time, 'yyyy-MM-dd') = '{ds}'
      AND dt = '{ds}') AS r ON p.name = r.know_orider_extend
@@ -293,7 +293,7 @@ SELECT from_unixtime(adress_status_time, 'yyyy-MM-dd') AS daily,
        know_orider,
        driver_type,
        count(DISTINCT id) AS drivers
-FROM opay_spread.ods_sqoop_mass_rider_signups_df
+FROM oride_dw_ods.ods_sqoop_mass_rider_signups_df
 WHERE address_status = 1
   AND from_unixtime(adress_status_time, 'yyyy-MM-dd') = '{ds}'
   AND dt = '{ds}'
@@ -316,7 +316,7 @@ SELECT r.daily AS daily,
        count(DISTINCT r.id) AS drivers
 FROM
   (SELECT *
-   FROM opay_spread.ods_sqoop_promoter_promoter_user_df
+   FROM oride_dw_ods.ods_sqoop_promoter_promoter_user_df
    WHERE dt = '{ds}') AS p
 JOIN
   (SELECT from_unixtime(veri_time, 'yyyy-MM-dd') AS daily,
@@ -324,7 +324,7 @@ JOIN
           id,
           know_orider,
           driver_type
-   FROM opay_spread.ods_sqoop_mass_rider_signups_df
+   FROM oride_dw_ods.ods_sqoop_mass_rider_signups_df
    WHERE status = 2
      AND from_unixtime(veri_time, 'yyyy-MM-dd') = '{ds}'
      AND dt = '{ds}') AS r ON p.name = r.know_orider_extend
@@ -340,7 +340,7 @@ SELECT
     know_orider, 
     driver_type,   
     count(distinct id) as drivers 
-from opay_spread.ods_sqoop_mass_rider_signups_df
+from oride_dw_ods.ods_sqoop_mass_rider_signups_df
 WHERE status = 2 and  
     from_unixtime(veri_time, 'yyyy-MM-dd') = '{ds}' and  
     dt = '{ds}' 
@@ -361,7 +361,7 @@ SELECT r.daily AS daily,
        count(DISTINCT r.id) AS drivers
 FROM
   (SELECT *
-   FROM opay_spread.ods_sqoop_promoter_promoter_user_df
+   FROM oride_dw_ods.ods_sqoop_promoter_promoter_user_df
    WHERE dt = '{ds}') AS p
 JOIN
   (SELECT from_unixtime(g.create_time, 'yyyy-MM-dd') AS daily,
@@ -371,11 +371,11 @@ JOIN
           r.driver_type
    FROM
      (SELECT *
-      FROM opay_spread.ods_sqoop_mass_rider_signups_df
+      FROM oride_dw_ods.ods_sqoop_mass_rider_signups_df
       WHERE dt = '{ds}') AS r
    JOIN
      (SELECT *
-      FROM opay_spread.ods_sqoop_mass_rider_signups_guarantors_df
+      FROM oride_dw_ods.ods_sqoop_mass_rider_signups_guarantors_df
       WHERE dt = '{ds}') AS g ON r.id = g.rider_id
    WHERE g.rider_id <> NULL
      AND from_unixtime(g.create_time, 'yyyy-MM-dd') = '{ds}'
@@ -394,11 +394,11 @@ SELECT from_unixtime(g.create_time, 'yyyy-MM-dd') AS daily,
        count(DISTINCT r.id) AS drivers
 FROM
   (SELECT *
-   FROM opay_spread.ods_sqoop_mass_rider_signups_df
+   FROM oride_dw_ods.ods_sqoop_mass_rider_signups_df
    WHERE dt = '{ds}') AS r
 JOIN
   (SELECT *
-   FROM opay_spread.ods_sqoop_mass_rider_signups_guarantors_df
+   FROM oride_dw_ods.ods_sqoop_mass_rider_signups_guarantors_df
    WHERE dt = '{ds}') AS g ON r.id = g.rider_id
 WHERE g.rider_id <> NULL
   AND from_unixtime(g.create_time, 'yyyy-MM-dd') = '{ds}'
@@ -423,7 +423,7 @@ SELECT tm.daily AS DAY,
        tm.orders
 FROM
   (SELECT *
-   FROM opay_spread.ods_sqoop_promoter_promoter_user_df
+   FROM oride_dw_ods.ods_sqoop_promoter_promoter_user_df
    WHERE dt = '{ds}') AS p
 JOIN
   (SELECT from_unixtime(o.take_time, 'yyyy-MM-dd') AS daily,
@@ -437,7 +437,7 @@ JOIN
       WHERE dt = '{ds}') AS o
    JOIN
      (SELECT *
-      FROM opay_spread.ods_sqoop_mass_rider_signups_df
+      FROM oride_dw_ods.ods_sqoop_mass_rider_signups_df
       WHERE dt = '{ds}') AS r ON o.driver_id = r.driver_id
    WHERE from_unixtime(o.take_time, 'yyyy-MM-dd') = '{ds}'
      AND r.dt = '{ds}'
@@ -458,7 +458,7 @@ FROM
    WHERE dt = '{ds}') AS o
 JOIN
   (SELECT *
-   FROM opay_spread.ods_sqoop_mass_rider_signups_df
+   FROM oride_dw_ods.ods_sqoop_mass_rider_signups_df
    WHERE dt = '{ds}') AS r ON o.driver_id = r.driver_id
 WHERE from_unixtime(o.take_time, 'yyyy-MM-dd') = '{ds}'
   AND r.dt = '{ds}'
@@ -482,7 +482,7 @@ SELECT tm.daily AS DAY,
        tm.online AS online
 FROM
   (SELECT *
-   FROM opay_spread.ods_sqoop_promoter_promoter_user_df
+   FROM oride_dw_ods.ods_sqoop_promoter_promoter_user_df
    WHERE dt = '{ds}') AS p
 JOIN
   (SELECT '{ds}' AS daily,
@@ -492,7 +492,7 @@ JOIN
           count(DISTINCT r.id) AS online
    FROM
      (SELECT *
-      FROM opay_spread.ods_sqoop_mass_rider_signups_df
+      FROM oride_dw_ods.ods_sqoop_mass_rider_signups_df
       WHERE dt = '{ds}') AS r
    JOIN
      (SELECT *
@@ -512,7 +512,7 @@ SELECT from_unixtime(d.login_time, 'yyyy-MM-dd') AS daily,
        count(DISTINCT r.id) AS online
 FROM
   (SELECT *
-   FROM opay_spread.ods_sqoop_mass_rider_signups_df
+   FROM oride_dw_ods.ods_sqoop_mass_rider_signups_df
    WHERE dt = '{ds}') AS r
 JOIN
   (SELECT *
@@ -540,7 +540,7 @@ SELECT tm.daily AS DAY,
        tm.bind AS bind
 FROM
   (SELECT *
-   FROM opay_spread.ods_sqoop_promoter_promoter_user_df
+   FROM oride_dw_ods.ods_sqoop_promoter_promoter_user_df
    WHERE dt = '{ds}') AS p
 JOIN
   (SELECT '{ds}' AS daily,
@@ -550,7 +550,7 @@ JOIN
           count(DISTINCT r.id) AS bind
    FROM
      (SELECT *
-      FROM opay_spread.ods_sqoop_mass_rider_signups_df
+      FROM oride_dw_ods.ods_sqoop_mass_rider_signups_df
       WHERE dt = '{ds}') AS r
    JOIN
      (SELECT *
@@ -570,7 +570,7 @@ SELECT from_unixtime(d.first_bind_time, 'yyyy-MM-dd') AS daily,
        count(DISTINCT r.id) AS bind
 FROM
   (SELECT *
-   FROM opay_spread.ods_sqoop_mass_rider_signups_df
+   FROM oride_dw_ods.ods_sqoop_mass_rider_signups_df
    WHERE dt = '{ds}') AS r
 JOIN
   (SELECT *
@@ -597,7 +597,7 @@ SELECT tm.daily AS DAY,
        tm.vehicles
 FROM
   (SELECT *
-   FROM opay_spread.ods_sqoop_promoter_promoter_user_df
+   FROM oride_dw_ods.ods_sqoop_promoter_promoter_user_df
    WHERE dt = '{ds}') AS p
 JOIN
   (SELECT '{ds}' AS daily,
@@ -611,7 +611,7 @@ JOIN
       WHERE dt = '{ds}') AS o
    JOIN
      (SELECT *
-      FROM opay_spread.ods_sqoop_mass_rider_signups_df
+      FROM oride_dw_ods.ods_sqoop_mass_rider_signups_df
       WHERE dt = '{ds}') AS r ON o.driver_id = r.driver_id
    WHERE o.operate_time >= '{ds} 00:00:00'
      AND o.operate_time <= '{ds} 23:59:59'
@@ -634,7 +634,7 @@ SELECT r.daily AS daily,
        count(DISTINCT r.driver_id) AS presignup
 FROM
   (SELECT *
-   FROM opay_spread.ods_sqoop_promoter_promoter_user_df
+   FROM oride_dw_ods.ods_sqoop_promoter_promoter_user_df
    WHERE dt = '{ds}') AS p
 JOIN
   (SELECT from_unixtime(create_time, 'yyyy-MM-dd') AS daily,
@@ -642,7 +642,7 @@ JOIN
           driver_id,
           know_orider,
           driver_type
-   FROM opay_spread.ods_sqoop_mass_rider_signups_df
+   FROM oride_dw_ods.ods_sqoop_mass_rider_signups_df
    WHERE way_know = 10
      AND address <> ''
      AND from_unixtime(create_time, 'yyyy-MM-dd') = '{ds}'
@@ -805,7 +805,7 @@ SELECT tm.daily AS DAY,
        tm.tenorders
 FROM
   (SELECT *
-   FROM opay_spread.ods_sqoop_promoter_promoter_user_df
+   FROM oride_dw_ods.ods_sqoop_promoter_promoter_user_df
    WHERE dt = '{ds}') AS p
 JOIN
   (SELECT t.daily,
@@ -820,16 +820,13 @@ JOIN
              from_unixtime(arrive_time, 'yyyy-MM-dd') AS daily,
              row_number() over(partition BY driver_id
                                ORDER BY arrive_time) orders
-      FROM
-        (SELECT *
          FROM oride_dw.dwd_oride_order_base_include_test_di
-         WHERE dt = '{ds}')
       WHERE status IN (4,
                        5)
         AND dt='{ds}' ) t
    JOIN
      (SELECT *
-      FROM opay_spread.ods_sqoop_mass_rider_signups_df
+      FROM oride_dw_ods.ods_sqoop_mass_rider_signups_df
       WHERE dt = '{ds}') AS r ON r.driver_id = t.driver_id
    WHERE (t.orders=1
           OR t.orders = 10)
@@ -852,15 +849,13 @@ SELECT driver_id,
        from_unixtime(arrive_time, 'yyyy-MM-dd') AS daily,
        row_number() over(partition BY driver_id
                          ORDER BY arrive_time) orders
-FROM
-  (SELECT *
-   FROM oride_dw.dwd_oride_order_base_include_test_di
+FROM oride_dw.dwd_oride_order_base_include_test_di
    WHERE status IN (4,
                     5)
      AND dt='{ds}') t
 JOIN
   (SELECT *
-   FROM opay_spread.ods_sqoop_mass_rider_signups_df
+   FROM oride_dw_ods.ods_sqoop_mass_rider_signups_df
    WHERE dt = '{ds}') AS r ON r.driver_id = t.driver_id
 WHERE (t.orders=1
        OR t.orders = 10)
@@ -1009,8 +1004,6 @@ SELECT max(a.dt) AS dt,
               AND (b.score<=3), 1, 0)) AS badcomments_num,
        sum(if(b.score IS NOT NULL, b.score, 0)) AS score_sum
 FROM
-  (SELECT *
-   FROM
      (SELECT *
       FROM oride_dw.dwd_oride_order_base_include_test_di
       WHERE dt = '{ds}'
@@ -1018,20 +1011,18 @@ FROM
    LEFT OUTER JOIN
      (SELECT *
       FROM oride_dw_ods.ods_sqoop_base_data_driver_comment_df
-      WHERE dt = '{ds}') b ON a.id = b.order_id
+      WHERE dt = '{ds}') b ON a.order_id = b.order_id
    LEFT OUTER JOIN
      (SELECT *
       FROM oride_dw_ods.ods_sqoop_base_data_order_payment_df
       WHERE dt = '{ds}'
-        AND MODE>=0) c ON a.id = c.id
+        AND MODE>=0) c ON a.order_id = c.id
    GROUP BY a.driver_id) TA
 LEFT JOIN
   (SELECT *
    FROM oride_dw_ods.ods_sqoop_base_data_driver_df
    WHERE dt = '{ds}') TB ON TA.driver_id = TB.id
-LEFT JOIN (
-SELECT *
-FROM
+LEFT JOIN 
   (SELECT *
    FROM oride_dw_ods.ods_sqoop_base_data_driver_extend_df
    WHERE dt = '{ds}') TC ON TA.driver_id = TC.id
