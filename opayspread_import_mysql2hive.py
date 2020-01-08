@@ -311,7 +311,7 @@ for opayspreadtable in table_list:
             --compression-codec=snappy
         '''.format(
             host=host,
-            port=3306,
+            port=port,
             schema=schema,
             username=login,
             password=password,
