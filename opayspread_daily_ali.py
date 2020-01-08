@@ -676,7 +676,7 @@ def hiveresult_to_mysql(ds, **kwargs):
     logging.info(kwargs['sql'].format(ds=ds))
     cursor.execute(kwargs['sql'].format(ds=ds))
     results = cursor.fetchall()
-    mysql_conn = get_db_conn('oride_dw_ods_mysql')
+    mysql_conn = get_db_conn('opay_spread_mysql')
     mcursor = mysql_conn.cursor()
     sql_insert = kwargs['sql_insert']
     sql_val = ''
@@ -745,7 +745,7 @@ def hiveresult_to_channel_mysql(ds, **kwargs):
     logging.info(kwargs['sql'].format(ds=ds))
     cursor.execute(kwargs['sql'].format(ds=ds))
     results = cursor.fetchall()
-    mysql_conn = get_db_conn('oride_dw_ods_mysql')
+    mysql_conn = get_db_conn('opay_spread_mysql')
     mcursor = mysql_conn.cursor()
     sql_insert = kwargs['sql_insert']
     sql_val = ''
@@ -820,10 +820,7 @@ JOIN
              from_unixtime(arrive_time, 'yyyy-MM-dd') AS daily,
              row_number() over(partition BY driver_id
                                ORDER BY arrive_time) orders
-      FROM
-        (SELECT *
          FROM oride_dw.dwd_oride_order_base_include_test_di
-         WHERE dt = '{ds}')
       WHERE status IN (4,
                        5)
         AND dt='{ds}' ) t
@@ -852,9 +849,7 @@ SELECT driver_id,
        from_unixtime(arrive_time, 'yyyy-MM-dd') AS daily,
        row_number() over(partition BY driver_id
                          ORDER BY arrive_time) orders
-FROM
-  (SELECT *
-   FROM oride_dw.dwd_oride_order_base_include_test_di
+FROM oride_dw.dwd_oride_order_base_include_test_di
    WHERE status IN (4,
                     5)
      AND dt='{ds}') t
@@ -877,7 +872,7 @@ def order_result_to_mysql(ds, **kwargs):
     logging.info(promoter_orderoverview_hql.format(ds=ds))
     cursor.execute(promoter_orderoverview_hql.format(ds=ds))
     results = cursor.fetchall()
-    mysql_conn = get_db_conn('oride_dw_ods_mysql')
+    mysql_conn = get_db_conn('opay_spread_mysql')
     mcursor = mysql_conn.cursor()
 
     sql_insert = 'INSERT INTO promoter_driver_day (day, name, mobile, code, channel, driver_type, firstbill) VALUES'
@@ -931,7 +926,7 @@ def orderresult_channel_to_mysql(ds, **kwargs):
     logging.info(promoter_orderoverview_channel_hql.format(ds=ds))
     cursor.execute(promoter_orderoverview_channel_hql.format(ds=ds))
     results = cursor.fetchall()
-    mysql_conn = get_db_conn('oride_dw_ods_mysql')
+    mysql_conn = get_db_conn('opay_spread_mysql')
     mcursor = mysql_conn.cursor()
 
     sql_insert = 'INSERT INTO promoter_channel_day (day, channel, driver_type, firstbill) VALUES'
@@ -1009,8 +1004,6 @@ SELECT max(a.dt) AS dt,
               AND (b.score<=3), 1, 0)) AS badcomments_num,
        sum(if(b.score IS NOT NULL, b.score, 0)) AS score_sum
 FROM
-  (SELECT *
-   FROM
      (SELECT *
       FROM oride_dw.dwd_oride_order_base_include_test_di
       WHERE dt = '{ds}'
@@ -1018,20 +1011,18 @@ FROM
    LEFT OUTER JOIN
      (SELECT *
       FROM oride_dw_ods.ods_sqoop_base_data_driver_comment_df
-      WHERE dt = '{ds}') b ON a.id = b.order_id
+      WHERE dt = '{ds}') b ON a.order_id = b.order_id
    LEFT OUTER JOIN
      (SELECT *
       FROM oride_dw_ods.ods_sqoop_base_data_order_payment_df
       WHERE dt = '{ds}'
-        AND MODE>=0) c ON a.id = c.id
+        AND MODE>=0) c ON a.order_id = c.id
    GROUP BY a.driver_id) TA
 LEFT JOIN
   (SELECT *
    FROM oride_dw_ods.ods_sqoop_base_data_driver_df
    WHERE dt = '{ds}') TB ON TA.driver_id = TB.id
-LEFT JOIN (
-SELECT *
-FROM
+LEFT JOIN 
   (SELECT *
    FROM oride_dw_ods.ods_sqoop_base_data_driver_extend_df
    WHERE dt = '{ds}') TC ON TA.driver_id = TC.id
@@ -1048,7 +1039,7 @@ def csresult_channel_to_mysql(ds, **kwargs):
     logging.info(cssql.format(ds=ds))
     cursor.execute(cssql.format(ds=ds))
     results = cursor.fetchall()
-    mysql_conn = get_db_conn('oride_dw_ods_mysql')
+    mysql_conn = get_db_conn('opay_spread_mysql')
     mcursor = mysql_conn.cursor()
 
     sql_insert = '''
