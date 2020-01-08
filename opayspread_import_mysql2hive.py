@@ -246,7 +246,7 @@ def getOpaySpreadTableSource(tablename):
 
 
 args = {
-    'owner': 'root',
+    'owner': 'zhenqian.zhang',
     'start_date': datetime(2019, 6, 22),
     'depends_on_past': True,
     'retries': 1,
