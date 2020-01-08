@@ -63,6 +63,16 @@ if code_map["id"].lower()=="ufile":
         poke_interval=60,
         dag=dag
     )
+    dwd_oride_order_cancel_df_task = UFileSensor(
+        task_id="dwd_oride_order_cancel_df_task",
+        filepath='{hdfs_path_str}/country_code=NG/dt={pt}/_SUCCESS'.format(
+            hdfs_path_str="oride/oride_dw/dwd_oride_order_cancel_df",
+            pt='{{ds}}'
+        ),
+        bucket_name='opay-datalake',
+        poke_interval=60,
+        dag=dag
+    )
     hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
 
 else:
@@ -81,6 +91,16 @@ else:
         task_id="dim_oride_city_task",
         bucket_key='{hdfs_path_str}/country_code=NG/dt={pt}/_SUCCESS'.format(
             hdfs_path_str="oride/oride_dw/dim_oride_city",
+            pt='{{ds}}'
+        ),
+        bucket_name='opay-datalake',
+        poke_interval=60,
+        dag=dag
+    )
+    dwd_oride_order_cancel_df_task = OssSensor(
+        task_id="dwd_oride_order_cancel_df_task",
+        bucket_key='{hdfs_path_str}/country_code=NG/dt={pt}/_SUCCESS'.format(
+            hdfs_path_str="oride/oride_dw/dwd_oride_order_cancel_df",
             pt='{{ds}}'
         ),
         bucket_name='opay-datalake',
@@ -168,7 +188,7 @@ def app_oride_passenger_funnel_second_edition_d_sql_task(ds):
             from  oride_dw.dwd_oride_order_cancel_df
             where dt='{pt}' 
                 and cancel_role=1
-                and from_unixtime(cancel_time,'yyyy-mm-dd')='{pt}'
+                and from_unixtime(cancel_time,'yyyy-MM-dd')='{pt}'
                 group by city_id,product_id
         )cancel
         on every_in.city_id=cancel.city_id and every_in.product_id_every=cancel.product_id
