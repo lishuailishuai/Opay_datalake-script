@@ -44,7 +44,7 @@ if code_map["id"].lower()=="ufile":
 
     dwm_oride_order_base_di_task = UFileSensor(
         task_id='dwm_oride_order_base_di_task',
-        filepath='{hdfs_path_str}/country_code=nal/dt={pt}/_SUCCESS'.format(
+        filepath='{hdfs_path_str}/country_code=NG/dt={pt}/_SUCCESS'.format(
             hdfs_path_str="oride/oride_dw/dwm_oride_order_base_di",
             pt='{{ds}}'
         ),
@@ -79,7 +79,7 @@ else:
     print("成功")
     dwm_oride_order_base_di_task = OssSensor(
         task_id='dwm_oride_order_base_di_task',
-        bucket_key='{hdfs_path_str}/country_code=nal/dt={pt}/_SUCCESS'.format(
+        bucket_key='{hdfs_path_str}/country_code=NG/dt={pt}/_SUCCESS'.format(
             hdfs_path_str="oride/oride_dw/dwm_oride_order_base_di",
             pt='{{ds}}'
         ),
