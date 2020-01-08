@@ -169,43 +169,43 @@ bdm_id,
 bd_id,
 
 --红包订单数量
-count(if(length(discount_ids)>0,1,null)) as bonus_order_cnt,
+count(if(discount_type is null and length(discount_ids)>0,1,null)) as bonus_order_cnt,
 --红包订单GMV
-sum(if(length(discount_ids)>0,nvl(org_payment_amount,0),0)) as bonus_order_gmv,
+sum(if(discount_type is null and length(discount_ids)>0,nvl(org_payment_amount,0),0)) as bonus_order_gmv,
 --首单用户占比（红包）,判断是否是首单需要确认,暂定0和1
-count(distinct(if(length(discount_ids)>0 and first_order='1',sender_id,null)))/count(distinct(if(length(discount_ids)>0,sender_id,null))) as first_order_percent,
+count(distinct(if(discount_type is null and length(discount_ids)>0 and first_order='1',sender_id,null)))/count(distinct(if(length(discount_ids)>0,sender_id,null))) as first_order_percent,
 --红包支付用户数
-count(distinct(if(length(discount_ids)>0,sender_id,null))) as bonus_order_people,
+count(distinct(if(discount_type is null and length(discount_ids)>0,sender_id,null))) as bonus_order_people,
 --红包支付次数
-count(if(length(discount_ids)>0,1,null)) as bonus_order_times,
+count(if(length(discount_type is null and discount_ids)>0,1,null)) as bonus_order_times,
 
 --人均消费金额增幅（红包用户）,用红包支付的人均应付金额-没用红包支付的人均应付金额
-sum(if(length(discount_ids)>0,nvl(org_payment_amount,0),0))/count(distinct(if(length(discount_ids)>0,sender_id,null))) 
-  - sum(if(length(discount_ids)=0,nvl(org_payment_amount,0),0))/count(distinct(if(length(discount_ids)=0,sender_id,null))) as people_avg_amt_increase,
+sum(if(length(discount_type is null and discount_ids)>0,nvl(org_payment_amount,0),0))/count(distinct(if(length(discount_type is null and discount_ids)>0,sender_id,null))) 
+  - sum(if(length(discount_type is null and discount_ids)=0,nvl(org_payment_amount,0),0))/count(distinct(if(length(discount_type is null and discount_ids)=0,sender_id,null))) as people_avg_amt_increase,
 --订单均消费金额增幅（红包用户）,用红包支付的单均应付金额-没用红包支付的单均应付金额,这个分母不需要加distinct,
-sum(if(length(discount_ids)>0,nvl(org_payment_amount,0),0))/count(if(length(discount_ids)>0,sender_id,null)) 
-  - sum(if(length(discount_ids)=0,nvl(org_payment_amount,0),0))/count(if(length(discount_ids)=0,sender_id,null)) as order_avg_amt_increase,
+sum(if(length(discount_type is null and discount_ids)>0,nvl(org_payment_amount,0),0))/count(if(length(discount_type is null and discount_ids)>0,sender_id,null)) 
+  - sum(if(length(discount_type is null and discount_ids)=0,nvl(org_payment_amount,0),0))/count(if(length(discount_type is null and discount_ids)=0,sender_id,null)) as order_avg_amt_increase,
 --单均实付增幅（红包用户）,用实付
-sum(if(length(discount_ids)>0,nvl(pay_amount,0),0))/count(if(length(discount_ids)>0,sender_id,null)) 
-  - sum(if(length(discount_ids)=0,nvl(pay_amount,0),0))/count(if(length(discount_ids)=0,sender_id,null)) as order_avg_realamt_increase,
+sum(if(length(discount_type is null and discount_ids)>0,nvl(pay_amount,0),0))/count(if(discount_type is null and length(discount_ids)>0,sender_id,null)) 
+  - sum(if(discount_type is null and length(discount_ids)=0,nvl(pay_amount,0),0))/count(if(discount_type is null and length(discount_ids)=0,sender_id,null)) as order_avg_realamt_increase,
 --交易频次增幅（红包用户）,【使用红包支付订单的】交易频次-【不使用红包支付订单的】交易频次
-count(if(length(discount_ids)>0,1,null)) 
-  - count(if(length(discount_ids)=0,1,null)) as order_times_increase,
+count(if(discount_type is null and length(discount_ids)>0,1,null)) 
+  - count(if(discount_type is null and length(discount_ids)=0,1,null)) as order_times_increase,
 --首单用户数（红包用户）
-count(distinct(if(length(discount_ids)>0 and first_order='1',sender_id,null))) as first_order_people,
+count(distinct(if(discount_type is null and length(discount_ids)>0 and first_order='1',sender_id,null))) as first_order_people,
 
 --新增字段
 --没用红包支付的应付金额
-sum(if(length(discount_ids)=0,nvl(org_payment_amount,0),0)) as useless_org_payment_amt,
+sum(if(discount_type is null and length(discount_ids)=0,nvl(org_payment_amount,0),0)) as useless_org_payment_amt,
 --没用红包支付的用户数
-count(distinct(if(length(discount_ids)=0,sender_id,null))) as useless_people,
+count(distinct(if(discount_type is null and length(discount_ids)=0,sender_id,null))) as useless_people,
 --没用红包支付的订单数
-count(if(length(discount_ids)=0,sender_id,null)) as useless_order_cnt,
+count(if(discount_type is null and length(discount_ids)=0,sender_id,null)) as useless_order_cnt,
 
 --用红包支付的实付总金额
-sum(if(length(discount_ids)>0,nvl(pay_amount,0),0)) as bonus_real_amt,
+sum(if(discount_type is null and length(discount_ids)>0,nvl(pay_amount,0),0)) as bonus_real_amt,
 --没用红包支付的实付总金额
-sum(if(length(discount_ids)=0,nvl(pay_amount,0),0)) as useless_bonus_real_amt,
+sum(if(discount_type is null and length(discount_ids)=0,nvl(pay_amount,0),0)) as useless_bonus_real_amt,
 
 'nal' as country_code,
 '{pt}' as dt
@@ -234,7 +234,7 @@ substr('{pt}',0,10) as create_date
 ,weekofyear('{pt}') as create_week
 ,substr('{pt}',0,7) as create_month
 ,substr('{pt}',0,4) as create_year
-
+  
 ,o.city_code
 ,nvl(c.name,'-') as city_name
 ,nvl(c.country,'-') as country
