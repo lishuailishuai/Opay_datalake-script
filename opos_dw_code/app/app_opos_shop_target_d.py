@@ -91,10 +91,6 @@ set hive.exec.parallel=true;
 set hive.exec.dynamic.partition.mode=nonstrict;
 set hive.strict.checks.cartesian.product=false;
 
-set hive.exec.parallel=true;
-set hive.exec.dynamic.partition.mode=nonstrict;
-set hive.strict.checks.cartesian.product=false;
-
 --先删除分区
 ALTER TABLE opos_dw.app_opos_shop_target_d DROP IF EXISTS PARTITION(country_code='nal',dt='{pt}');
 
@@ -135,21 +131,21 @@ payment_order as (
   ,count(distinct(if(trade_status='SUCCESS' and activity_type in ('RFR','FR') and first_order='1',sender_id,null))) as reduce_first_people_cnt
   
   --使用红包起情况
-  ,count(if(trade_status='SUCCESS' and length(discount_ids)>0,1,null)) as bonus_order_cnt
+  ,count(if(trade_status='SUCCESS' and discount_type is null and length(discount_ids)>0,1,null)) as bonus_order_cnt
   
   --用户数量板块
   ,count(distinct(if(trade_status='SUCCESS',sender_id,null))) as order_people
   ,count(distinct(if(trade_status='SUCCESS' and first_order='0',sender_id,null))) as not_first_order_people
   ,count(distinct(if(trade_status='SUCCESS' and first_order='1',sender_id,null))) as first_order_people
-  ,count(distinct(if(trade_status='SUCCESS' and length(discount_ids)>0 and first_order='1',sender_id,null))) as first_bonus_order_people
+  ,count(distinct(if(trade_status='SUCCESS' and discount_type is null and length(discount_ids)>0 and first_order='1',sender_id,null))) as first_bonus_order_people
   
   --gmv板块
   ,sum(if(trade_status='SUCCESS',nvl(org_payment_amount,0),null)) as order_gmv
-  ,sum(if(trade_status='SUCCESS' and length(discount_ids)>0,nvl(org_payment_amount,0),0)) as bonus_order_gmv
+  ,sum(if(trade_status='SUCCESS' and discount_type is null and length(discount_ids)>0,nvl(org_payment_amount,0),0)) as bonus_order_gmv
   
   --用户角度
-  ,count(distinct(if(trade_status='SUCCESS' and length(discount_ids)>0,sender_id,null))) as bonus_order_people
-  ,count(if(trade_status='SUCCESS' and length(discount_ids)>0,1,null)) as bonus_order_times
+  ,count(distinct(if(trade_status='SUCCESS' and discount_type is null and length(discount_ids)>0,sender_id,null))) as bonus_order_people
+  ,count(if(trade_status='SUCCESS' and discount_type is null and length(discount_ids)>0,1,null)) as bonus_order_times
   
   --与红包无关的指标
   ,nvl(sum(if(trade_status='SUCCESS',nvl(org_payment_amount,0),null))/count(if(trade_status='SUCCESS',1,null)),0) as order_avg_amt
@@ -529,6 +525,7 @@ left join
   (select id,name,country from opos_dw_ods.ods_sqoop_base_bd_city_df where dt = '{pt}') as c
 on a.city_code=c.id
 ;
+
 
 
 
