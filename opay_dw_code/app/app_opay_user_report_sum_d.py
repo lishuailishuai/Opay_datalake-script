@@ -216,7 +216,7 @@ app_opay_user_report_sum_d_task = PythonOperator(
 )
 
 dim_opay_user_base_di_prev_day_task >> app_opay_user_report_sum_d_task
-dwd_opay_account_balance_df_prev_day_task >> app_opay_user_report_sum_d_task
+#dwd_opay_account_balance_df_prev_day_task >> app_opay_user_report_sum_d_task
 dwm_opay_user_first_tran_di_prev_day_task >> app_opay_user_report_sum_d_task
 
 
