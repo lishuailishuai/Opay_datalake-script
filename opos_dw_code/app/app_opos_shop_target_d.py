@@ -131,21 +131,21 @@ payment_order as (
   ,count(distinct(if(trade_status='SUCCESS' and activity_type in ('RFR','FR') and first_order='1',sender_id,null))) as reduce_first_people_cnt
   
   --使用红包起情况
-  ,count(if(trade_status='SUCCESS' and length(discount_ids)>0,1,null)) as bonus_order_cnt
+  ,count(if(trade_status='SUCCESS' and discount_type is null and length(discount_ids)>0,1,null)) as bonus_order_cnt
   
   --用户数量板块
   ,count(distinct(if(trade_status='SUCCESS',sender_id,null))) as order_people
   ,count(distinct(if(trade_status='SUCCESS' and first_order='0',sender_id,null))) as not_first_order_people
   ,count(distinct(if(trade_status='SUCCESS' and first_order='1',sender_id,null))) as first_order_people
-  ,count(distinct(if(trade_status='SUCCESS' and length(discount_ids)>0 and first_order='1',sender_id,null))) as first_bonus_order_people
+  ,count(distinct(if(trade_status='SUCCESS' and discount_type is null and length(discount_ids)>0 and first_order='1',sender_id,null))) as first_bonus_order_people
   
   --gmv板块
   ,sum(if(trade_status='SUCCESS',nvl(org_payment_amount,0),null)) as order_gmv
-  ,sum(if(trade_status='SUCCESS' and length(discount_ids)>0,nvl(org_payment_amount,0),0)) as bonus_order_gmv
+  ,sum(if(trade_status='SUCCESS' and discount_type is null and length(discount_ids)>0,nvl(org_payment_amount,0),0)) as bonus_order_gmv
   
   --用户角度
-  ,count(distinct(if(trade_status='SUCCESS' and length(discount_ids)>0,sender_id,null))) as bonus_order_people
-  ,count(if(trade_status='SUCCESS' and length(discount_ids)>0,1,null)) as bonus_order_times
+  ,count(distinct(if(trade_status='SUCCESS' and discount_type is null and length(discount_ids)>0,sender_id,null))) as bonus_order_people
+  ,count(if(trade_status='SUCCESS' and discount_type is null and length(discount_ids)>0,1,null)) as bonus_order_times
   
   --与红包无关的指标
   ,nvl(sum(if(trade_status='SUCCESS',nvl(org_payment_amount,0),null))/count(if(trade_status='SUCCESS',1,null)),0) as order_avg_amt
@@ -157,6 +157,19 @@ payment_order as (
   ,count(if(trade_status = 'FAIL',1,null)) as order_fail_cnt
   ,count(if(trade_status = 'PENDING',1,null)) as order_pending_cnt
   
+  --优惠券分析
+  ,count(if(trade_status='SUCCESS' and discount_type is not null,1,null)) as coupon_order_cnt
+  ,count(distinct(if(trade_status='SUCCESS' and discount_type is not null,sender_id,null))) as coupon_order_people
+  ,count(distinct(if(trade_status='SUCCESS' and discount_type is not null and first_order='1',sender_id,null))) as coupon_first_order_people
+  ,sum(if(trade_status='SUCCESS' and discount_type is not null,pay_amount,0)) as coupon_pay_amount
+  ,sum(if(trade_status='SUCCESS' and discount_type is not null,org_payment_amount,0)) as coupon_order_gmv
+  ,sum(if(trade_status='SUCCESS' and discount_type is not null,discount_amount,0)) as coupon_discount_amount
+
+  ,count(if(trade_status='SUCCESS' and discount_type is null,1,null)) as coupon_useless_order_cnt
+  ,count(distinct(if(trade_status='SUCCESS' and discount_type is null,sender_id,null))) as coupon_useless_order_people
+  ,sum(if(trade_status='SUCCESS' and discount_type is null,pay_amount,0)) as coupon_useless_pay_amount
+  ,sum(if(trade_status='SUCCESS' and discount_type is null,org_payment_amount,0)) as coupon_useless_order_gmv
+
   from
   opos_dw.dwd_pre_opos_payment_order_di 
   where country_code='nal' 
@@ -260,6 +273,17 @@ payment_bonus_order as (
   ,nvl(p.order_fail_cnt,0) as order_fail_cnt
   ,nvl(p.order_pending_cnt,0) as order_pending_cnt
 
+  ,nvl(p.coupon_order_cnt,0) as coupon_order_cnt
+  ,nvl(p.coupon_order_people,0) as coupon_order_people
+  ,nvl(p.coupon_first_order_people,0) as coupon_first_order_people
+  ,nvl(p.coupon_pay_amount,0) as coupon_pay_amount
+  ,nvl(p.coupon_order_gmv,0) as coupon_order_gmv
+  ,nvl(p.coupon_discount_amount,0) as coupon_discount_amount
+  ,nvl(p.coupon_useless_order_cnt,0) as coupon_useless_order_cnt
+  ,nvl(p.coupon_useless_order_people,0) as coupon_useless_order_people
+  ,nvl(p.coupon_useless_pay_amount,0) as coupon_useless_pay_amount
+  ,nvl(p.coupon_useless_order_gmv,0) as coupon_useless_order_gmv
+
   from
   payment_order as p
   full join
@@ -355,6 +379,17 @@ shop_payment_bonus as (
   ,nvl(m.order_pay_cnt,0) as order_pay_cnt
   ,nvl(m.order_fail_cnt,0) as order_fail_cnt
   ,nvl(m.order_pending_cnt,0) as order_pending_cnt
+
+  ,nvl(m.coupon_order_cnt,0) as coupon_order_cnt
+  ,nvl(m.coupon_order_people,0) as coupon_order_people
+  ,nvl(m.coupon_first_order_people,0) as coupon_first_order_people
+  ,nvl(m.coupon_pay_amount,0) as coupon_pay_amount
+  ,nvl(m.coupon_order_gmv,0) as coupon_order_gmv
+  ,nvl(m.coupon_discount_amount,0) as coupon_discount_amount
+  ,nvl(m.coupon_useless_order_cnt,0) as coupon_useless_order_cnt
+  ,nvl(m.coupon_useless_order_people,0) as coupon_useless_order_people
+  ,nvl(m.coupon_useless_pay_amount,0) as coupon_useless_pay_amount
+  ,nvl(m.coupon_useless_order_gmv,0) as coupon_useless_order_gmv
 
   from
     --商铺全量数据
@@ -452,6 +487,17 @@ select
 
 ,nvl(b.shop_silent_flag,'-') as shop_silent_flag
 
+,a.coupon_order_cnt
+,a.coupon_order_people
+,a.coupon_first_order_people
+,a.coupon_pay_amount
+,a.coupon_order_gmv
+,a.coupon_discount_amount
+,a.coupon_useless_order_cnt
+,a.coupon_useless_order_people
+,a.coupon_useless_pay_amount
+,a.coupon_useless_order_gmv
+
 ,'nal' as country_code
 ,'{pt}' as dt
 
@@ -479,6 +525,7 @@ left join
   (select id,name,country from opos_dw_ods.ods_sqoop_base_bd_city_df where dt = '{pt}') as c
 on a.city_code=c.id
 ;
+
 
 
 
