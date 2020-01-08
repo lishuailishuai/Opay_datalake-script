@@ -143,14 +143,14 @@ drop_partitons_from_table = PythonOperator(
 insert_result_to_impala = HiveOperator(
     task_id='insert_result_to_impala',
     hql="""
-        set mapred.job.queue.name=root.users.airflow;
-        set hive.execution.engine=tez;
-        set hive.mapjoin.hybridgrace.hashtable=false;
-        set hive.vectorized.execution.enabled=false;
-        --set hive.vectorized.execution.enabled = true;
-        --set hive.vectorized.execution.reduce.enabled = true;
-        set hive.prewarm.enabled=true;
-        set hive.prewarm.numcontainers=16;
+        --set mapred.job.queue.name=root.users.airflow;
+        --set hive.execution.engine=tez;
+        --set hive.mapjoin.hybridgrace.hashtable=false;
+        --set hive.vectorized.execution.enabled=false;
+        ----set hive.vectorized.execution.enabled = true;
+        ----set hive.vectorized.execution.reduce.enabled = true;
+        --set hive.prewarm.enabled=true;
+        --set hive.prewarm.numcontainers=16;
         --set hive.exec.parallel=true;
         with
         --分城市、分类型 
