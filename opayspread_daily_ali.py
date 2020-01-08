@@ -798,12 +798,12 @@ for my_task in hive_tasks:
         dag=dag
     )
 
-    dwd_oride_order_base_include_test_di_task<<hive_result_to_mysql
-    ods_sqoop_promoter_promoter_user_df_task<<hive_result_to_mysql
-    ods_sqoop_mass_rider_signups_df_task<<hive_result_to_mysql
-    ods_sqoop_base_data_driver_extend_df_task<<hive_result_to_mysql
-    ods_sqoop_base_data_driver_bind_logs_df_task<<hive_result_to_mysql
-    ods_sqoop_mass_rider_signups_guarantors_df_task<<hive_result_to_mysql
+    dwd_oride_order_base_include_test_di_task>>hive_result_to_mysql
+    ods_sqoop_promoter_promoter_user_df_task>>hive_result_to_mysql
+    ods_sqoop_mass_rider_signups_df_task>>hive_result_to_mysql
+    ods_sqoop_base_data_driver_extend_df_task>>hive_result_to_mysql
+    ods_sqoop_base_data_driver_bind_logs_df_task>>hive_result_to_mysql
+    ods_sqoop_mass_rider_signups_guarantors_df_task>>hive_result_to_mysql
 
 
 hive_channel_tasks = [
@@ -869,12 +869,12 @@ for my_task in hive_channel_tasks:
         dag=dag
     )
 
-    dwd_oride_order_base_include_test_di_task<<hive_result_channel_to_mysql
-    ods_sqoop_promoter_promoter_user_df_task<<hive_result_channel_to_mysql
-    ods_sqoop_mass_rider_signups_df_task<<hive_result_channel_to_mysql
-    ods_sqoop_base_data_driver_extend_df_task<<hive_result_channel_to_mysql
-    ods_sqoop_base_data_driver_bind_logs_df_task<<hive_result_channel_to_mysql
-    ods_sqoop_mass_rider_signups_guarantors_df_task<<hive_result_channel_to_mysql
+    dwd_oride_order_base_include_test_di_task>>hive_result_channel_to_mysql
+    ods_sqoop_promoter_promoter_user_df_task>>hive_result_channel_to_mysql
+    ods_sqoop_mass_rider_signups_df_task>>hive_result_channel_to_mysql
+    ods_sqoop_base_data_driver_extend_df_task>>hive_result_channel_to_mysql
+    ods_sqoop_base_data_driver_bind_logs_df_task>>hive_result_channel_to_mysql
+    ods_sqoop_mass_rider_signups_guarantors_df_task>>hive_result_channel_to_mysql
 
 
 '''
@@ -1055,12 +1055,12 @@ order_result_channel_to_mysql = PythonOperator(
     dag=dag
 )
 
-dwd_oride_order_base_include_test_di_task<<order_result_channel_to_mysql
-ods_sqoop_promoter_promoter_user_df_task<<order_result_channel_to_mysql
-ods_sqoop_mass_rider_signups_df_task<<order_result_channel_to_mysql
-ods_sqoop_base_data_driver_extend_df_task<<order_result_channel_to_mysql
-ods_sqoop_base_data_driver_bind_logs_df_task<<order_result_channel_to_mysql
-ods_sqoop_mass_rider_signups_guarantors_df_task<<order_result_channel_to_mysql
+dwd_oride_order_base_include_test_di_task>>order_result_channel_to_mysql
+ods_sqoop_promoter_promoter_user_df_task>>order_result_channel_to_mysql
+ods_sqoop_mass_rider_signups_df_task>>order_result_channel_to_mysql
+ods_sqoop_base_data_driver_extend_df_task>>order_result_channel_to_mysql
+ods_sqoop_base_data_driver_bind_logs_df_task>>order_result_channel_to_mysql
+ods_sqoop_mass_rider_signups_guarantors_df_task>>order_result_channel_to_mysql
 
 
 # 中台数据查询
@@ -1195,9 +1195,9 @@ cs_result_channel_to_mysql = PythonOperator(
 )
 
 
-dwd_oride_order_base_include_test_di_task<<cs_result_channel_to_mysql
-ods_sqoop_promoter_promoter_user_df_task<<cs_result_channel_to_mysql
-ods_sqoop_mass_rider_signups_df_task<<cs_result_channel_to_mysql
-ods_sqoop_base_data_driver_extend_df_task<<cs_result_channel_to_mysql
-ods_sqoop_base_data_driver_bind_logs_df_task<<cs_result_channel_to_mysql
-ods_sqoop_mass_rider_signups_guarantors_df_task<<cs_result_channel_to_mysql
+dwd_oride_order_base_include_test_di_task>>cs_result_channel_to_mysql
+ods_sqoop_promoter_promoter_user_df_task>>cs_result_channel_to_mysql
+ods_sqoop_mass_rider_signups_df_task>>cs_result_channel_to_mysql
+ods_sqoop_base_data_driver_extend_df_task>>cs_result_channel_to_mysql
+ods_sqoop_base_data_driver_bind_logs_df_task>>cs_result_channel_to_mysql
+ods_sqoop_mass_rider_signups_guarantors_df_task>>cs_result_channel_to_mysql
