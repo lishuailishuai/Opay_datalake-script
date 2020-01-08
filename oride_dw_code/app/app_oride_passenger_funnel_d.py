@@ -147,6 +147,7 @@ def app_oride_passenger_funnel_d_sql_task(ds):
     SET hive.exec.dynamic.partition.mode=nonstrict;
     
     insert overwrite table {db}.{table} partition(country_code,dt)
+    
     select  if(city.city_name is not null,city.city_name,ord.region_name) region_name,
         ord.product_id,
         ord.submit_order_cnt,--下单量
@@ -161,7 +162,7 @@ def app_oride_passenger_funnel_d_sql_task(ds):
         ord.reply_after_driver_cancel_dur,--应答后司机取消时长
         ord.reply_after_user_cancle_order_cnt,--应答后乘客取消的订单数
         ord.reply_after_driver_cancel_order_cnt,--应答后司机取消的订单数
-        ord.driver_arrive_car_point_dur,--司机平均到达上车点时长
+        ord.driver_arrive_car_point_dur,--司机到达上车点时长
         ord.finish_order_user_num,--完单乘客数
         ord.finish_order_cnt,--完单量
         ord.pay_user_num,--支付乘客数
@@ -172,6 +173,8 @@ def app_oride_passenger_funnel_d_sql_task(ds):
         bro.order_onride_dis,--完单计费距离
         bro.pick_up_dis, --接驾距离
         bro.user_evaluation_order_cnt,--乘客评价订单量
+        ord.driver_user_find_each_other_cnt,--司乘互找次数
+        ord.driver_user_find_each_other_dur,--司乘互找时长
         'nal' as country_code,
         '{pt}' as dt
     from
@@ -191,14 +194,17 @@ def app_oride_passenger_funnel_d_sql_task(ds):
             sum(td_driver_after_cancel_time_dur)as reply_after_driver_cancel_dur,--应答后司机取消时长
             count(if(is_td_passanger_after_cancel=1,order_id,null))as reply_after_user_cancle_order_cnt,--应答后乘客取消的订单数
             count(distinct if(is_td_driver_after_cancel=1,order_id,null)) reply_after_driver_cancel_order_cnt,--应答后司机取消的订单数
-            sum(td_pick_up_dur) as driver_arrive_car_point_dur,--司机平均到达上车点时长
+            sum(if(is_td_finish=1 and wait_time>0,wait_time-take_time,0)) as driver_arrive_car_point_dur,--司机到达上车点时长
             count(distinct if(is_td_finish=1,passenger_id,null)) as finish_order_user_num, --完单乘客数
             count(distinct if(is_td_finish=1,order_id,null)) as finish_order_cnt, --完单量
             count(distinct if(is_td_finish_pay=1,passenger_id,null)) pay_user_num, --支付乘客数
-            sum(if(is_td_finish=1,price,0)) as price,--应付金额
-            sum(if(is_td_finish=1,pay_amount,0)) as amount, --实付金额
-            sum(if(is_td_finish=1,arrive_time-create_time,0)) as order_delivery_dur --下单送达时长
-        from oride_dw.dwd_oride_order_base_include_test_di where dt='{pt}'
+            sum(if(is_td_finish_pay=1,price,0)) as price,--应付金额
+            sum(if(is_td_finish_pay=1,pay_amount,0)) as amount, --实付金额
+            sum(if(is_td_finish=1,arrive_time-create_time,0)) as order_delivery_dur, --下单送达时长
+            count(if(pickup_time>0,pickup_time,null))as driver_user_find_each_other_cnt,--司乘互找次数
+            sum(if(pickup_time>0,pickup_time-wait_time,0))as driver_user_find_each_other_dur --司乘互找总时长
+        from oride_dw.dwd_oride_order_base_include_test_di 
+        where dt='{pt}'
         group by country_code,city_id,product_id
         grouping sets((country_code,product_id),
             (city_id,product_id)
