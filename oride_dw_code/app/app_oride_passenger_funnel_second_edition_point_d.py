@@ -124,7 +124,9 @@ def app_oride_passenger_funnel_second_edition_point_d_sql_task(ds):
             and from_unixtime(cast(event_time as int),'yyyy-MM-dd')='{pt}'
             and user_id>0
         )
+        
         insert overwrite table {db}.{table} partition(country_code,dt)
+        
         select client_count.choose_end_cnt,--选择终点次数
             client_count.valuation_cnt, --估价订单数
             client_count.choose_end_num,--选择终点人数
@@ -137,19 +139,21 @@ def app_oride_passenger_funnel_second_edition_point_d_sql_task(ds):
             client_count_lfw.valuation_lfw_cnt,--估价次数(四周均值)
             client_count_lfw.choose_end_lfw_num,--选择终点人数(四周均值)
             client_count_lfw.valuation_lfw_num,--估价人数(四周均值)
+            client_count.order_point_cnt,--下单数(埋点)
             'nal' as country_code,
             '{pt}' as dt
         from(
             select 
                 count(if(event_name='choose_end_point_click',1,null)) as choose_end_cnt,--选择终点次数
                 count(if(event_name='request_a_ride_show',1,null)) as valuation_cnt,--估价次数
+                count(if(event_name='request_a_ride_click',1,null)) as order_point_cnt,--下单次数(埋点)
                 count(distinct if(event_name='choose_end_point_click',user_id,null)) as choose_end_num,--选择终点人数
                 count(distinct if(event_name='request_a_ride_show',user_id,null)) as valuation_num,--估价人数
                 '{pt}' as dt
             from (
                 select user_id,event_name,event_time
                 from base
-                where event_name in('choose_end_point_click','request_a_ride_show') 
+                where event_name in('choose_end_point_click','request_a_ride_show','request_a_ride_click') 
                 group by user_id,event_name,event_time
             )as client_event
         ) as client_count
@@ -163,11 +167,10 @@ def app_oride_passenger_funnel_second_edition_point_d_sql_task(ds):
         on client_count.dt=order_count.dt
         left join
         (
-            select --user_id,
+            select 
                 avg(choose_end_time-login_time) as login_choose_end_dur,--登陆-选择终点地址时长
                 avg(click_order_time-valuation_time) as valuation_order_dur, --估价-下单时长
                 '{pt}' as dt
-                -- count(1)  --39343
             from(
                 select a.user_id,
                     min(case when b.event_name='oride_show' then b.event_time end) as login_time,--登陆时间
