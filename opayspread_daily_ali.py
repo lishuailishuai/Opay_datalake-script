@@ -174,7 +174,10 @@ WHERE p.dt = '{ds}'
 GROUP BY r.daily,
          r.know_orider,
          p.code,
-         r.driver_type ''' promoter_regist_channel_sql = '''
+         r.driver_type ''' 
+
+
+promoter_regist_channel_sql = '''
 SELECT from_unixtime(create_time, 'yyyy-MM-dd') AS daily,
        know_orider,
        driver_type,
