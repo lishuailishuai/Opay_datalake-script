@@ -71,7 +71,7 @@ def get_driver_timerange(curr_list, dt, rows):
 
 def get_driver_online_time(ds, **op_kwargs):
     dt = op_kwargs["ds_nodash"]
-    conn = get_db_conn('sqoop_db')
+    conn = get_db_conn('timerange_conn_db')
     mcursor = conn.cursor()
     mcursor.execute(get_driver_id)
     result = mcursor.fetchone()

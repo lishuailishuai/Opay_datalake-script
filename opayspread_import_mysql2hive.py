@@ -26,7 +26,7 @@ opaySpreadTable = {
         ROW FORMAT SERDE 'org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe'
         STORED AS INPUTFORMAT 'org.apache.hadoop.mapred.TextInputFormat'
         OUTPUTFORMAT 'org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat'
-        LOCATION 'ufile://opay-datalake/opay-spread/promoter_user'
+        LOCATION 'oss://opay-datalake/opay-spread/promoter_user'
     ''',
 
     'rider_signups': '''
@@ -119,7 +119,7 @@ opaySpreadTable = {
         STORED AS INPUTFORMAT 'org.apache.hadoop.mapred.TextInputFormat'
         OUTPUTFORMAT 'org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat'
         LOCATION
-            'ufile://opay-datalake/opay-spread/rider_signups';
+            'oss://opay-datalake/opay-spread/rider_signups';
     ''',
 
     'rider_signups_guarantors': '''
@@ -153,7 +153,7 @@ opaySpreadTable = {
         STORED AS INPUTFORMAT 'org.apache.hadoop.mapred.TextInputFormat'
         OUTPUTFORMAT 'org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat'
         LOCATION
-            'ufile://opay-datalake/opay-spread/rider_signups_guarantors';
+            'oss://opay-datalake/opay-spread/rider_signups_guarantors';
     ''',
 
     'driver_data': '''
@@ -173,7 +173,7 @@ opaySpreadTable = {
         STORED AS INPUTFORMAT 'org.apache.hadoop.mapred.TextInputFormat'
         OUTPUTFORMAT 'org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat'
         LOCATION
-            'ufile://opay-datalake/opay-spread/driver_data';
+            'oss://opay-datalake/opay-spread/driver_data';
     ''',
 
     'driver_group': '''
@@ -193,7 +193,7 @@ opaySpreadTable = {
         STORED AS INPUTFORMAT 'org.apache.hadoop.mapred.TextInputFormat'
         OUTPUTFORMAT 'org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat'
         LOCATION
-            'ufile://opay-datalake/opay-spread/driver_group';
+            'oss://opay-datalake/opay-spread/driver_group';
     ''',
 
     'admin_users': '''
@@ -212,7 +212,7 @@ opaySpreadTable = {
         STORED AS INPUTFORMAT 'org.apache.hadoop.mapred.TextInputFormat'
         OUTPUTFORMAT 'org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat'
         LOCATION
-            'ufile://opay-datalake/opay-spread/admin_users';
+            'oss://opay-datalake/opay-spread/admin_users';
     ''',
 
     'driver_team': '''
@@ -234,7 +234,7 @@ opaySpreadTable = {
         STORED AS INPUTFORMAT 'org.apache.hadoop.mapred.TextInputFormat'
         OUTPUTFORMAT 'org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat'
         LOCATION
-            'ufile://opay-datalake/opay-spread/driver_team';
+            'oss://opay-datalake/opay-spread/driver_team';
         
     '''
 
@@ -246,7 +246,7 @@ def getOpaySpreadTableSource(tablename):
 
 
 args = {
-    'owner': 'root',
+    'owner': 'zhenqian.zhang',
     'start_date': datetime(2019, 6, 22),
     'depends_on_past': True,
     'retries': 1,
@@ -303,7 +303,7 @@ for opayspreadtable in table_list:
             --username {username} \
             --password \'{password}\' \
             --table {table} \
-            --target-dir ufile://opay-datalake/opay-spread/{table}/dt={{{{ ds }}}}/ \
+            --target-dir oss://opay-datalake/opay-spread/{table}/dt={{{{ ds }}}}/ \
             --fields-terminated-by "\\001" \
             --lines-terminated-by "\\n" \
             --hive-delims-replacement " " \
@@ -311,7 +311,7 @@ for opayspreadtable in table_list:
             --compression-codec=snappy
         '''.format(
             host=host,
-            port=3306,
+            port=port,
             schema=schema,
             username=login,
             password=password,

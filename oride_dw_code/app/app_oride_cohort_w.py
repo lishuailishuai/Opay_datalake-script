@@ -411,7 +411,7 @@ def app_oride_act_user_cohort_w_sql_task(ds):
             on a.city_id=act_user.city_id
             and a.product_id=act_user.product_id
             and a.passenger_id=act_user.passenger_id
-            where a.week_create_date>=act_user.week_create_date
+            --where a.week_create_date>=act_user.week_create_date
             group by nvl(a.week_create_date,-10000),
             nvl(
                 if(a.week_create_date<act_user.week_create_date,
@@ -488,7 +488,7 @@ def app_oride_act_driver_cohort_w_sql_task(ds):
             on a.city_id=act_driver.city_id
             and a.product_id=act_driver.product_id
             and a.driver_id=act_driver.driver_id
-            where a.week_create_date>=act_driver.week_create_date
+            --where a.week_create_date>=act_driver.week_create_date
             group by nvl(a.week_create_date,-10000),
             nvl(
                 if(a.week_create_date<act_driver.week_create_date,
