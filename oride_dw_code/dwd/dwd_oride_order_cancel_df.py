@@ -40,7 +40,7 @@ args = {
 } 
 
 dag = airflow.DAG( 'dwd_oride_order_cancel_df', 
-    schedule_interval="00 02 * * *", 
+    schedule_interval="00 01 * * *",
     default_args=args,
     catchup=False) 
 
@@ -157,7 +157,7 @@ def dwd_oride_order_cancel_df_sql_task(ds):
         select   
             id as order_id,--订单 ID
             cancel_role,--取消人角色(1: 用户, 2: 司机, 3:系统 4:Admin)
-            cancel_time,--取消时间
+            (cancel_time + 1*60*60*1) as cancel_time,--取消时间
             cancel_type,--取消原因类型
             cancel_reason --取消原因
         from oride_dw_ods.ods_sqoop_base_data_order_cancel_df

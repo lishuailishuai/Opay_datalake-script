@@ -365,12 +365,12 @@ def __getDriversOnline(st, ed):
         select 
             City as city_id,
             type as serv_type,
-            online_time,
-            date_format(online_time, '%Y-%m-%d 00:00:00') as daily,
+            from_unixtime(unix_timestamp(online_time)+3600) as online_time,
+            from_unixtime(unix_timestamp(online_time)+3600, '%Y-%m-%d 00:00:00') as daily,
             drivers_online,
             driver_orderable 
         from driver_online 
-        where online_time >= from_unixtime({st}) and online_time < from_unixtime({ed}) 
+        where from_unixtime(unix_timestamp(online_time)+3600) >= from_unixtime({st}) and from_unixtime(unix_timestamp(online_time)+3600) < from_unixtime({ed})
     '''.format(st=st, ed=ed)
     logging.info(msql)
     drivers = pd.read_sql_query(msql, bidb_conn)

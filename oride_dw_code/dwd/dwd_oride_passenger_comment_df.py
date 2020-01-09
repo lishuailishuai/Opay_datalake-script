@@ -36,7 +36,7 @@ args = {
 }
 
 dag = airflow.DAG('dwd_oride_passenger_comment_df',
-                  schedule_interval="00 04 * * *",
+                  schedule_interval="00 03 * * *",
                   default_args=args,
                   catchup=False)
 
@@ -114,7 +114,7 @@ def dwd_oride_passenger_comment_df_sql_task(ds):
             driver_id,--司机ID 
             score,--评价分数 
             content,--评价内容 
-            create_time,-- 
+            (create_time + 1*60*60*1) as create_time,-- 
             is_grade,--是否计入评分(0是1否) 
             is_show,--是否展示(0是1否) 
             updated_at,--最后更新时间

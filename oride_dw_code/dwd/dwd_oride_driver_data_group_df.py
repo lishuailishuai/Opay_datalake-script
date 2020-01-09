@@ -41,7 +41,7 @@ args = {
 }
 
 dag = airflow.DAG('dwd_oride_driver_data_group_df',
-                  schedule_interval="00 03 * * *",
+                  schedule_interval="00 02 * * *",
                   default_args=args,
                   catchup=False)
 

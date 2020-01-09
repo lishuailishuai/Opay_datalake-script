@@ -62,6 +62,8 @@ table_list = [
     ("oride_data", "data_order_payment", "sqoop_db", "base",3),
     # algorithm_db
     ("algorithm", "order_operation_info", "algorithm_db", "algorithm",1),
+    ("algorithm", "driver_score_record", "algorithm_db", "algo",1),
+    ("algorithm", "driver_score_init_info", "algorithm_db", "algo",1),
 ]
 
 HIVE_DB = 'oride_dw_ods'

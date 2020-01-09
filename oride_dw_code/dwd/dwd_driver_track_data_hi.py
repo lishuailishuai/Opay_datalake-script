@@ -85,7 +85,7 @@ def fun_task_timeout_monitor(ds, execution_date,dag, **op_kwargs):
 
     tb = [
         {"db": "oride_dw", "table": "{dag_name}".format(dag_name=dag_ids),
-         "partition": "country_code=nal/dt={pt}/hour={hour}".format(pt=ds, hour=execution_date.strftime("%H")), "timeout": "600"}
+         "partition": "country_code=nal/dt={pt}/hour={hour}".format(pt=ds, hour=execution_date.strftime("%H")), "timeout": "3600"}
     ]
 
     TaskTimeoutMonitor().set_task_monitor(tb)

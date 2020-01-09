@@ -36,7 +36,7 @@ args = {
 }
 
 dag = airflow.DAG('dwd_oride_passenger_complaint_df',
-                  schedule_interval="00 04 * * *",
+                  schedule_interval="00 03 * * *",
                   default_args=args,
                   catchup=False)
 
@@ -119,9 +119,9 @@ def dwd_oride_passenger_complaint_df_sql_task(ds):
             description,--用户投诉问题描述 
             processing_result,--对司机处理结果 
             status,--status (0: wait 1: processing 2: complete) 
-            create_time,--创建时间 
-            processing_time,--受理时间 
-            complete_time,--完成时间 
+            (create_time + 1*60*60*1) as create_time,--创建时间 
+            (processing_time + 1*60*60*1 ) as processing_time,--受理时间 
+            (complete_time + 1*60*60*1) as complete_time ,--完成时间 
             updated_at,--最后更新时间
             'nal' as country_code,
             '{pt}' as dt

@@ -36,7 +36,7 @@ args = {
 }
 
 dag = airflow.DAG('dwd_oride_driver_reward_di',
-                  schedule_interval="50 01 * * *",
+                  schedule_interval="30 00 * * *",
                   default_args=args,
                   catchup=False)
 ##----------------------------------------- 变量 ---------------------------------------##
@@ -116,7 +116,7 @@ def dwd_oride_driver_reward_di_sql_task(ds):
             reward_name,--奖励名称, 
             order_num,--订单数量, 
             amount,--奖励金额, 
-            create_time,--奖励时间
+            (create_time+1*60*60) as create_time,--奖励时间
             'nal' as country_code,
             '{pt}' as dt
         FROM

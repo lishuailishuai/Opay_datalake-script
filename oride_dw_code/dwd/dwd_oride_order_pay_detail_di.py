@@ -37,7 +37,7 @@ args = {
 } 
 
 dag = airflow.DAG( 'dwd_oride_order_pay_detail_di', 
-    schedule_interval="30 01 * * *", 
+    schedule_interval="30 00 * * *",
     default_args=args,
     catchup=False) 
 
@@ -160,8 +160,8 @@ from
             currency,--货币类型
             country as country_code,--国家
             status,--支付模式（0: 支付中, 1: 成功, 2: 失败）
-            modify_time,--最后修改时间
-            create_time,--创建时间
+            (modify_time + 1*60*60*1) as modify_time,--最后修改时间
+            (create_time + 1*60*60*1) as modify_time,--创建时间
             serv_type as product_id,--订单业务类型(0: all 1:driect 2: street)
             updated_at as updated_time,--最后更新时间
             pay_type, --支付类型(0:手动支付 1:自动支付)

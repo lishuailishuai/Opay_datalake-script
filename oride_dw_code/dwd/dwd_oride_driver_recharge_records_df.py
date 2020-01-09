@@ -36,7 +36,7 @@ args = {
 }
 
 dag = airflow.DAG('dwd_oride_driver_recharge_records_df',
-                  schedule_interval="20 01 * * *",
+                  schedule_interval="20 00 * * *",
                   default_args=args,
                   catchup=False)
 
@@ -115,8 +115,8 @@ def dwd_oride_driver_recharge_records_df_sql_task(ds):
             driver_id,--司机ID 
             amount,--充值金额 
             amount_str,--充值金额-详细说明信息 
-            created_at,--申请时间 
-            updated_at,--修改时间 
+            (created_at+1*60*60) as created_at,--申请时间 
+            (updated_at+1*60*60) as updated_at,--修改时间 
             amount_reason,--调整原因:0 
             order_id,--涉及order_id
             'nal' as country_code,

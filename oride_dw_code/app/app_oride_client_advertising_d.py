@@ -32,7 +32,7 @@ args = {
 
 dag = airflow.DAG(
     'app_oride_client_advertising_d',
-    schedule_interval="00 03 * * *",
+    schedule_interval="00 02 * * *",
     concurrency=5,
     max_active_runs=1,
     default_args=args
