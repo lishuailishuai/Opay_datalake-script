@@ -36,7 +36,7 @@ args = {
 } 
 
 dag = airflow.DAG( 'dwd_oride_driver_fault_records_df', 
-    schedule_interval="00 03 * * *", 
+    schedule_interval="00 02 * * *",
     default_args=args,
     catchup=False) 
 
@@ -121,7 +121,7 @@ id,--ID
 driver_id,--司机ID
 fault,--未知
 operation_admin_id,--未知
-create_time,--创建时间
+(create_time + 1*60*60*1 ) as create_time,--创建时间
 'nal' as country_code,
 '{pt}' as dt
         

@@ -128,10 +128,10 @@ def dwd_oride_coupon_use_detail_df_sql_task(ds):
             type,--1: 满减 2: 折扣 
             status,--状态(0: Receive 1:used) 
             source,--来源(0: 预热 1: 推广码) 
-            start_time,--开始时间 
-            expire_time,--过期时间 
-            used_time,--用户使用时间 
-            receive_time,--领取时间 
+            (start_time + 1*60*60*1) as start_time,--开始时间 
+            (expire_time + 1*60*60*1) as expire_time ,--过期时间 
+            (used_time + 1*60*60*1) as used_time,--用户使用时间 
+            (receive_time + 1*60*60*1) as receive_time,--领取时间 
             template_id,--模版ID 
             city_id,--城市ID(0: all) 
             serv_type as product_id,--可用服务类型 

@@ -36,7 +36,7 @@ args = {
 }
 
 dag = airflow.DAG('dwd_oride_driver_records_day_df',
-                  schedule_interval="40 01 * * *",
+                  schedule_interval="40 00 * * *",
                   default_args=args,
                   catchup=False)
 
@@ -114,7 +114,7 @@ def dwd_oride_driver_records_day_df_sql_task(ds):
             id,--'ID'
             agenter_id,--'小老板ID'
             driver_id,--'司机ID'
-            day,--'天'
+            (day+1*60*60) as day,--'天'
             count_orders_assign,--'当日派单数'
             count_orders_all,--'当日接单数'
             count_orders_finish,--'当日完成单数'
@@ -139,8 +139,8 @@ def dwd_oride_driver_records_day_df_sql_task(ds):
             work_hours,--'当日工作时长,按小时计算'
             payment_status,--'状态：0未打款 1已打款'
             balance_status,--'结算状态：0未结算 1已结算'
-            created_at,--'申请时间'
-            updated_at,--'更新时间'
+            (created_at+1*60*60) as created_at,--'申请时间'
+            (updated_at+1*60*60) as updated_at,--'更新时间'
             amount_tip,--'当日-小费收入'
             amount_tip_offline,--'当日-小费收入(线下支付)
             amount_additional, -- 附加费-线上
