@@ -23,8 +23,8 @@ from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
 def test_t11(**op_kwargs):
     sub = TaskTimeoutMonitor()
     tb = [
-        {"db": "oride_dw", "table": "app_oride_driver_base_d", "partition": "aaaaa", "timeout": "60"},
-        {"db": "oride_dw", "table": "app_oride_order_base_d", "partition": "type=all/country_code=nal/dt=2019-09-20", "timeout": "120"}
+        {"dag":dag,"db": "oride_dw", "table": "app_oride_driver_base_d", "partition": "aaaaa", "timeout": "60"},
+        {"dag":dag,"db": "oride_dw", "table": "app_oride_order_base_d", "partition": "type=all/country_code=nal/dt=2019-09-20", "timeout": "120"}
     ]
 
     sub.set_task_monitor(tb)
@@ -100,9 +100,7 @@ class TaskTimeoutMonitor_dev(object):
 
                         format_date=int(int(timeout)/60)
 
-                        print(format_date)
-
-                        self.dingding_alert.send('DW 【及时性预警】调度任务:{dag_id} 产出超时【负责人】{owner_name}【预警路径】{hdfs_dir_name}【预留时间】{timeout} 分钟'.format(
+                        self.dingding_alert.send('DW 【及时性预警】调度任务: {dag_id} 产出超时【负责人】{owner_name}【等待路径】{hdfs_dir_name}【预留时间】{timeout} 分钟'.format(
                                 dag_id=dag_id_name,
                                 timeout=str(format_date),
                                 owner_name=self.owner_name,
@@ -130,15 +128,26 @@ class TaskTimeoutMonitor_dev(object):
     def set_task_monitor(self, tables):
         commands = []
         for item in tables:
-            #table = item.get('table', None)
+            #
             db = item.get('db', None)
             partition = item.get('partition', None)
             timeout = item.get('timeout', None)
             dag=item.get('dag', None)
 
-            table=dag.dag_id
+            if dag:
+                print("111")
 
-            self.owner_name=dag.default_args.get("owner")
+                table=dag.dag_id
+
+                self.owner_name=dag.default_args.get("owner")
+
+            else:
+                print("222")
+
+                self.owner_name="Null"
+
+                table = item.get('table', None)
+
 
             if table is None or db is None or partition is None or timeout is None:
                 return None
