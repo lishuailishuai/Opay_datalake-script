@@ -36,7 +36,7 @@ args = {
 }
 
 dag = airflow.DAG('dwd_oride_driver_extend_df',
-                  schedule_interval="50 01 * * *",
+                  schedule_interval="50 00 * * *",
                   default_args=args,
                   catchup=False)
 
@@ -124,10 +124,10 @@ def dwd_oride_driver_extend_df_sql_task(ds):
             total_score,--总评分, 
             score_times,--评分次数, 
             last_order_id,--最近一个订单的ID, 
-            register_time,--注册时间, 
-            login_time,--最后登陆时间, 
+            (register_time + 1*60*60*1) as register_time,--注册时间, 
+            (login_time + 1*60*60*1) as login_time ,--最后登陆时间, 
             is_bind,--状态 0 未绑定 1 已绑定, 
-            first_bind_time,--初次绑定时间, 
+            (first_bind_time + 1*60*60*1) as first_bind_time,--初次绑定时间, 
             total_pay,--总计-已打款收入, 
             inviter_role,--, 
             inviter_id,--, 
@@ -139,9 +139,9 @@ def dwd_oride_driver_extend_df_sql_task(ds):
             fault,--正常0(停运)修理1(停运)无资料2(停运)事故3(停运)扣除4(欠缴)5, 
             city_id,--所属城市ID, 
             language,--客户端语言, 
-            end_service_time,--专车司机结束收份子钱时间, 
-            last_online_time,--最后上线时间, 
-            last_offline_time,--最后下线时间, 
+            (end_service_time + 1*60*60*1) as end_service_time ,--专车司机结束收份子钱时间, 
+            (last_online_time + 1*60*60*1) as last_online_time,--最后上线时间, 
+            (last_offline_time + 1*60*60*1) as last_offline_time,--最后下线时间, 
             avoid_highway,--避开高速 (0: 禁用 1: 启用), 
             rongcloud_token,--融云token, 
             support_carpool,--是否支持拼车, 

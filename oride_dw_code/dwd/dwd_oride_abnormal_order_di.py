@@ -37,7 +37,7 @@ args = {
 }
 
 dag = airflow.DAG('dwd_oride_abnormal_order_di',
-                  schedule_interval="00 01 * * *",
+                  schedule_interval="20 00 * * *",
                   default_args=args,
                   catchup=False)
 
@@ -132,10 +132,10 @@ def dwd_oride_abnormal_order_di_sql_task(ds):
        is_revoked,
        --是否撤销，1是，0否
 
-       create_time,
+       (create_time + 1*60*60*1) as create_time,
        --创建时间
 
-       update_time,
+       (update_time + 1*60*60*1) as update_time,
        --更新时间
 
        score,
@@ -144,10 +144,10 @@ def dwd_oride_abnormal_order_di_sql_task(ds):
        amount,
        --扣款金额
 
-       from_unixtime(create_time,'yyyy-MM-dd HH:mm:ss') AS f_create_time,
+       from_unixtime(create_time+1*60*60*1,'yyyy-MM-dd HH:mm:ss') AS f_create_time,
        --格式化创建时间(yyyy-MM-dd HH:mm:ss)
 
-       from_unixtime(update_time,'yyyy-MM-dd HH:mm:ss') AS f_update_time,
+       from_unixtime(update_time + 1*60*60*1,'yyyy-MM-dd HH:mm:ss') AS f_update_time,
        --格式化更新时间(yyyy-MM-dd HH:mm:ss)
 
        'nal' AS country_code,
@@ -157,8 +157,8 @@ def dwd_oride_abnormal_order_di_sql_task(ds):
 
         FROM oride_dw_ods.ods_sqoop_base_data_abnormal_order_df
         WHERE dt='{pt}'
-        AND (from_unixtime(create_time,'yyyy-MM-dd')=dt
-             OR from_unixtime(update_time,'yyyy-MM-dd')=dt) ;
+        AND (from_unixtime((create_time + 1*60*60*1),'yyyy-MM-dd')=dt
+             OR from_unixtime((update_time + 1*60*60*1),'yyyy-MM-dd')=dt) ;
 
 '''.format(
         pt=ds,

@@ -39,7 +39,7 @@ args = {
 } 
 
 dag = airflow.DAG( 'dwd_oride_abnormal_order_df', 
-    schedule_interval="00 01 * * *", 
+    schedule_interval="20 00 * * *",
     default_args=args,
     catchup=False) 
 
@@ -126,8 +126,8 @@ user_id,--用户id
 behavior_ids,--命中规则id
 rule_names,--命中规则名称
 is_revoked,--是否撤销，1是，0否
-create_time,--创建时间
-update_time,--更新时间
+(create_time + 1 * 60 * 60 * 1) as create_time,--创建时间
+(update_time + 1 * 60 * 60 * 1 ) as update_time,--更新时间
 score,--每单扣除分数
 amount,--扣款金额
 'NG' as country_code,
