@@ -259,7 +259,7 @@ def dwm_oride_driver_finance_di_sql_task(ds):
         FROM
           (SELECT (record_day+1*60*60) as record_day,
                   driver_id,
-                  created_at
+                  (created_at+1*60*60) as created_at
            FROM oride_dw_ods.ods_sqoop_base_data_driver_pay_records_df LATERAL VIEW explode(split(record_days,',')) record_days AS record_day
            WHERE dt='{pt}'
              and FROM_UNIXTIME((created_at+1*60*60),'yyyy-MM-dd')='{pt}'  --统计增量数据【即当日快照数据】
