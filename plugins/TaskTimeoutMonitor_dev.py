@@ -128,7 +128,7 @@ class TaskTimeoutMonitor_dev(object):
     def set_task_monitor(self, tables):
         commands = []
         for item in tables:
-            #table = item.get('table', None)
+            #
             db = item.get('db', None)
             partition = item.get('partition', None)
             timeout = item.get('timeout', None)
@@ -137,12 +137,17 @@ class TaskTimeoutMonitor_dev(object):
             if dag:
                 print("111")
 
+                table=dag.dag_id
+
+                self.owner_name=dag.default_args.get("owner")
+
             else:
                 print("222")
 
-            table=dag.dag_id
+                self.owner_name="Null"
 
-            self.owner_name=dag.default_args.get("owner")
+                table = item.get('table', None)
+
 
             if table is None or db is None or partition is None or timeout is None:
                 return None
