@@ -173,11 +173,11 @@ count(if(discount_type is null and length(discount_ids)>0,1,null)) as bonus_orde
 --红包订单GMV
 sum(if(discount_type is null and length(discount_ids)>0,nvl(org_payment_amount,0),0)) as bonus_order_gmv,
 --首单用户占比（红包）,判断是否是首单需要确认,暂定0和1
-count(distinct(if(discount_type is null and length(discount_ids)>0 and first_order='1',sender_id,null)))/count(distinct(if(length(discount_ids)>0,sender_id,null))) as first_order_percent,
+count(distinct(if(discount_type is null and length(discount_ids)>0 and first_order='1',sender_id,null)))/count(distinct(if(discount_type is null and length(discount_ids)>0,sender_id,null))) as first_order_percent,
 --红包支付用户数
 count(distinct(if(discount_type is null and length(discount_ids)>0,sender_id,null))) as bonus_order_people,
 --红包支付次数
-count(if(length(discount_type is null and discount_ids)>0,1,null)) as bonus_order_times,
+count(if(discount_type is null and length(discount_ids)>0,1,null)) as bonus_order_times,
 
 --人均消费金额增幅（红包用户）,用红包支付的人均应付金额-没用红包支付的人均应付金额
 sum(if(length(discount_type is null and discount_ids)>0,nvl(org_payment_amount,0),0))/count(distinct(if(length(discount_type is null and discount_ids)>0,sender_id,null))) 
