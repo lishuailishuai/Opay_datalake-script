@@ -26,8 +26,8 @@ import os
 from airflow.sensors import OssSensor
 
 args = {
-    'owner': 'jialong.li',
-    'start_date': datetime(2019, 12, 29),
+    'owner': 'chenghui',
+    'start_date': datetime(2019, 10, 1),
     'depends_on_past': False,
     'retries': 3,
     'retry_delay': timedelta(minutes=2),
@@ -36,30 +36,30 @@ args = {
     'email_on_retry': False,
 }
 
-dag = airflow.DAG('dwd_oride_passenger_extend_df_dev',
-                  schedule_interval="10 00 * * *",
+dag = airflow.DAG('dwd_oride_passenger_extend_df',
+                  schedule_interval="00 01 * * *",
                   default_args=args,
-                  catchup=False
-)
-##----------------------------------------- 变量 ---------------------------------------##
+                  catchup=False)
 
 
+##----------------------------------------- 依赖 ---------------------------------------##
 
-ods_binlog_data_user_extend_hi_prev_day_task = OssSensor(
+# 依赖前一天分区
+ods_binlog_data_user_extend_hi_prev_day_task = WebHdfsSensor(
     task_id='ods_binlog_data_user_extend_hi_prev_day_task',
-    bucket_key='{hdfs_path_str}/dt={pt}/hour=23/_SUCCESS'.format(
-        hdfs_path_str="oride_binlog/oride_db.oride_data.data_user_extend",
-        pt='{{ds}}'
+    filepath='{hdfs_path_str}/dt={pt}/hour=23/_SUCCESS'.format(
+        hdfs_path_str="/user/hive/warehouse/oride_dw_ods.db/ods_binlog_data_user_extend_hi",
+        pt='{{ds}}',
+        now_day='{{macros.ds_add(ds, +1)}}'
     ),
-    bucket_name='opay-datalake',
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
 
-# 依赖前天分区
-dwd_oride_passenger_extend_df_prev_day_tesk = OssSensor(
+#依赖前天分区
+dwd_oride_passenger_extend_df_prev_day_tesk = UFileSensor(
     task_id='dwd_oride_passenger_extend_df_prev_day_tesk',
-    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
         hdfs_path_str="oride/oride_dw/dwd_oride_passenger_extend_df/country_code=nal",
         pt='{{macros.ds_add(ds, -1)}}'
     ),
@@ -67,19 +67,20 @@ dwd_oride_passenger_extend_df_prev_day_tesk = OssSensor(
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
-
 ##----------------------------------------- 变量 ---------------------------------------##
+
 db_name="oride_dw"
 table_name = "dwd_oride_passenger_extend_df"
-hdfs_path = "oss://opay-datalake/oride/oride_dw/" + table_name
-##----------------------------------------- 任务超时监控 ---------------------------------------##
+hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
+
+##----------------------------------------- 任务超时监控 ---------------------------------------## 
 
 def fun_task_timeout_monitor(ds,dag,**op_kwargs):
 
     dag_ids=dag.dag_id
 
     tb = [
-        {"db": "oride_dw", "table":"{dag_name}".format(dag_name=table_name), "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "600"}
+        {"db": "oride_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "600"}
     ]
 
     TaskTimeoutMonitor().set_task_monitor(tb)
@@ -110,8 +111,8 @@ def dwd_oride_passenger_extend_df_sql_task(ds):
             nvl(data_user_ext.bonus,data_user_ext_bef.bonus) as bonus,--'奖励金', 
             nvl(data_user_ext.balance,data_user_ext_bef.balance) as balance,--'余额', 
             nvl(data_user_ext.last_order_id,data_user_ext_bef.last_order_id) as last_order_id,--'最近一个订单的ID', 
-            nvl((data_user_ext.register_time+1*60*60),data_user_ext_bef.register_time) as register_time,--'注册时间', 
-            nvl((data_user_ext.login_time+1*60*60),data_user_ext_bef.login_time) as login_time,--'最后登陆时间', 
+            nvl(data_user_ext.register_time,data_user_ext_bef.register_time) as register_time,--'注册时间', 
+            nvl(data_user_ext.login_time,data_user_ext_bef.login_time) as login_time,--'最后登陆时间', 
             nvl(data_user_ext.inviter_role,data_user_ext_bef.inviter_role) as inviter_role,--'', 
             nvl(data_user_ext.inviter_id,data_user_ext_bef.inviter_id) as inviter_id,--'', 
             nvl(data_user_ext.invite_num,data_user_ext_bef.invite_num) as invite_num,--'', 
@@ -130,19 +131,16 @@ def dwd_oride_passenger_extend_df_sql_task(ds):
         from oride_dw.dwd_oride_passenger_extend_df 
         where dt='{bef_yes_day}') data_user_ext_bef
         full outer join 
-        (
-            SELECT 
-                * 
-            FROM
-             (
-                SELECT 
-                    *,
-                     row_number() over(partition by t.id order by t.`__ts_ms` desc) as order_by
-                FROM oride_dw_ods.ods_binlog_base_data_user_extend_hi t
-                WHERE concat_ws(' ',dt,hour) BETWEEN '{bef_yes_day} 23' AND '{pt} 22'--取昨天1天数据与今天早上00数据
-             ) t1
-            where t1.`__deleted` = 'false' and t1.order_by = 1
-        ) data_user_ext
+        (SELECT *
+           FROM
+             (SELECT *,
+                     row_number() OVER(partition BY id
+                                       ORDER BY updated_at DESC,pos DESC) AS rn1
+              FROM oride_dw_ods.ods_binlog_data_user_extend_hi
+              WHERE dt = '{pt}'
+                AND op IN ('c',
+                           'u')) m
+           WHERE rn1=1) data_user_ext
         on data_user_ext_bef.passenger_id=data_user_ext.id;
 '''.format(
         pt=ds,

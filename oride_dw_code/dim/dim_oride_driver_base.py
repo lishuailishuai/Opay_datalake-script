@@ -27,74 +27,68 @@ import os
 
 args = {
         'owner': 'lili.chen',
-        'start_date': datetime(2019, 5, 20),
+        'start_date': datetime(2020, 1, 1),
         'depends_on_past': False,
         'retries': 3,
         'retry_delay': timedelta(minutes=2),
         'email': ['bigdata_dw@opay-inc.com'],
         'email_on_failure': True,
         'email_on_retry': False,
-} 
+}
 
-dag = airflow.DAG( 'dim_oride_driver_base', 
-    schedule_interval="00 01 * * *", 
-    default_args=args,
-    catchup=False) 
+dag=airflow.DAG('dim_oride_driver_base',
+                schedule_interval="10 00 * * *",
+                default_args=args,
+                catchup=False
+)
 
-##----------------------------------------- 变量 ---------------------------------------##
-
-db_name = "oride_dw"
-table_name="dim_oride_driver_base"
-hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
-
-##----------------------------------------- 依赖 ---------------------------------------## 
-# 依赖前一天分区
-ods_binlog_data_driver_hi_prev_day_task = WebHdfsSensor(
-        task_id='ods_binlog_data_driver_hi_prev_day_task',
-        filepath='{hdfs_path_str}/dt={pt}/hour=23/_SUCCESS'.format(
-            hdfs_path_str="/user/hive/warehouse/oride_dw_ods.db/ods_binlog_data_driver_hi",
+##----------------------------------------- 依赖 ---------------------------------------##
+# 依赖前天分区
+dim_oride_driver_base_prev_day_tesk = OssSensor(
+    task_id='dim_oride_driver_base_prev_day_tesk',
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="oride/oride_dw/dim_oride_driver_base/country_code=NG",
+        pt='{{macros.ds_add(ds, -1)}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+ods_binlog_base_data_driver_hi_prev_day_task = OssSensor(
+        task_id='ods_binlog_base_data_driver_hi_prev_day_task',
+        bucket_key='{hdfs_path_str}/dt={pt}/hour=23/_SUCCESS'.format(
+            hdfs_path_str="oride_binlog/oride_db.oride_data.data_driver",
             pt='{{ds}}',
             now_day='{{macros.ds_add(ds, +1)}}'
         ),
-        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-        dag=dag
-    )
-
-#依赖前天分区
-dim_oride_driver_base_prev_day_tesk = UFileSensor(
-        task_id='dim_oride_driver_base_prev_day_tesk',
-        filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-            hdfs_path_str="oride/oride_dw/dim_oride_driver_base/country_code=NG",
-            pt='{{macros.ds_add(ds, -1)}}'
-        ),
         bucket_name='opay-datalake',
         poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
         dag=dag
-    )
-
-
-#依赖前一天分区
-ods_sqoop_base_data_driver_extend_df_prev_day_tesk = UFileSensor(
-        task_id='ods_sqoop_base_data_driver_extend_df_prev_day_tesk',
-        filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-            hdfs_path_str="oride_dw_sqoop/oride_data/data_driver_extend",
-            pt='{{ds}}'
-        ),
-        bucket_name='opay-datalake',
-        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-        dag=dag
-    )
-
-dim_oride_city_prev_day_tesk = UFileSensor(
-        task_id='dim_oride_city_prev_day_tesk',
-        filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-            hdfs_path_str="oride/oride_dw/dim_oride_city/country_code=NG",
-            pt='{{ds}}'
-        ),
-        bucket_name='opay-datalake',
-        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-        dag=dag
-    )
+)
+ods_sqoop_base_data_driver_extend_df_prev_day_tesk = OssSensor(
+    task_id='ods_sqoop_base_data_driver_extend_df_prev_day_tesk',
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="oride_dw_sqoop/oride_data/data_driver_extend",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+dim_oride_city_prev_day_tesk = OssSensor(
+    task_id='dim_oride_city_prev_day_tesk',
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="oride/oride_dw/dim_oride_city/country_code=NG",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+##----------------------------------------- 变量 ---------------------------------------##
+db_name = "oride_dw"
+table_name="dim_oride_driver_base"
+hdfs_path = "oss://opay-datalake/oride/oride_dw/" + table_name
 
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
 
@@ -103,7 +97,7 @@ def fun_task_timeout_monitor(ds,dag,**op_kwargs):
     dag_ids=dag.dag_id
 
     msg = [
-        {"db": "oride_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=NG/dt={pt}".format(pt=ds), "timeout": "3000"}
+        {"db": "oride_dw", "table":"{dag_name}".format(dag_name=table_name), "partition": "country_code=NG/dt={pt}".format(pt=ds), "timeout": "3000"}
     ]
 
     TaskTimeoutMonitor().set_task_monitor(msg)
@@ -115,7 +109,8 @@ task_timeout_monitor= PythonOperator(
     dag=dag
 )
 
-##----------------------------------------- 脚本 ---------------------------------------## 
+
+##----------------------------------------- 脚本 ---------------------------------------##
 def dim_oride_driver_base_sql_task(ds):
     HQL = '''
     set hive.exec.parallel=true;
@@ -124,155 +119,122 @@ def dim_oride_driver_base_sql_task(ds):
     INSERT overwrite TABLE oride_dw.{table} partition(country_code,dt)
     
     SELECT nvl(dri.id,dri_bef.driver_id) as driver_id,
-           ext.city_id,
-           --所属城市ID
-    
-           nvl(dri.phone_number,dri_bef.phone_number) as phone_number,
-           --手机号
-    
-           nvl(dri.password,dri_bef.password) as password,
-           --密码
-    
-           nvl(dri.opay_account,dri_bef.opay_account) as opay_account,
-           --opay 账号
-    
-           nvl(dri.plate_number,dri_bef.plate_number) as plate_number,
-           --车牌号
-    
-           nvl(dri.real_name,dri_bef.driver_name) as driver_name,
-           --真实姓名
-    
-           nvl(dri.birthday,dri_bef.birthday) as birthday,
-           --生日
-    
-           nvl(dri.gender,dri_bef.gender) as gender,
-           --性别
-    
-           nvl(dri.government,dri_bef.government) as government,
-           --Local Government
-    
-           nvl(dri.country,dri_bef.country) as country,
-           --国家
-    
-           cit.city_name,
-           --城市名称
-    
-           nvl(dri.black,dri_bef.black) as black,
-           --黑名单0正常1删除
-    
-           nvl(dri.group_id,dri_bef.group_id) as group_id,
-           --所属组id
-    
-           ext.serv_mode,
-           --服务模式 (0: no service, 1: in service)
-    
-           ext.serv_status,
-           --服务状态 (0: wait assign, 1: pick up, 2: send)
-    
-           from_unixtime(ext.register_time,'yyyy-MM-dd HH:mm:ss') as register_time,
-           --注册时间
-    
-           from_unixtime(ext.login_time,'yyyy-MM-dd HH:mm:ss') as login_time,
-           --最后登陆时间
-    
-           ext.is_bind,
-           --状态 0 未绑定 1 已绑定
-    
-           from_unixtime(ext.first_bind_time,'yyyy-MM-dd HH:mm:ss') as first_bind_time,
-           --初次绑定时间
-    
-           ext.block,
-           --后台管理司机接单状态(0: 允许 1:不允许)
-    
-           ext.product_id,
-           --1 专车 2 快车 3 Otrike
-    
-           ext.local_gov_ids,
-           --行会ID,json
-    
-           nvl(dri.updated_at,dri_bef.updated_at) as updated_at,
-           --最后更新时间
-    
-           ext.fault,
-           --正常0(停运)修理1(停运)无资料2(停运)事故3(停运)扣除4(欠缴)5
-    
-           ext.LANGUAGE, --客户端语言
-    
-           nvl(cit.country_code,'nal') AS country_code,
-           --国家码字段
-    
-            '{pt}' as dt
+        ext.city_id,--所属城市ID
+        
+        nvl(dri.phone_number,dri_bef.phone_number) as phone_number,--手机号
+        
+        nvl(dri.password,dri_bef.password) as password,--密码
+        
+        nvl(dri.opay_account,dri_bef.opay_account) as opay_account,--opay 账号
+        
+        nvl(dri.plate_number,dri_bef.plate_number) as plate_number,--车牌号
+        
+        nvl(dri.real_name,dri_bef.driver_name) as driver_name,--真实姓名
+        
+        nvl(dri.birthday,dri_bef.birthday) as birthday,--生日
+        
+        nvl(dri.gender,dri_bef.gender) as gender,--性别
+        
+        nvl(dri.government,dri_bef.government) as government,--Local Government
+        
+        nvl(dri.country,dri_bef.country) as country,--国家
+        
+        cit.city_name,--城市名称
+        
+        nvl(dri.black,dri_bef.black) as black,--黑名单0正常1删除
+        
+        nvl(dri.group_id,dri_bef.group_id) as group_id,--所属组id
+        
+        ext.serv_mode,--服务模式 (0: no service, 1: in service)
+        
+        ext.serv_status,--服务状态 (0: wait assign, 1: pick up, 2: send)
+        
+        from_unixtime(ext.local_register_time,'yyyy-MM-dd HH:mm:ss') as register_time,--注册时间
+        
+        from_unixtime(ext.local_login_time,'yyyy-MM-dd HH:mm:ss') as login_time,--最后登陆时间
+        
+        ext.is_bind,--状态 0 未绑定 1 已绑定
+        
+        from_unixtime(ext.local_first_bind_time,'yyyy-MM-dd HH:mm:ss') as first_bind_time,--初次绑定时间
+        
+        ext.block,--后台管理司机接单状态(0: 允许 1:不允许)
+        
+        ext.product_id,--1 专车 2 快车 3 Otrike
+        
+        ext.local_gov_ids,--行会ID,json
+        
+        nvl(dri.updated_at,dri_bef.updated_at) as updated_at,--最后更新时间
+        
+        ext.fault,--正常0(停运)修理1(停运)无资料2(停运)事故3(停运)扣除4(欠缴)5
+        
+        ext.LANGUAGE, --客户端语言
+        
+        nvl(cit.country_code,'nal') AS country_code,--国家码字段
+        
+        '{pt}' as dt
     FROM
-  (SELECT *
-   FROM oride_dw.dim_oride_driver_base
-   WHERE dt='{bef_yes_day}') dri_bef
-FULL OUTER JOIN
-  (SELECT *
-   FROM
-     (SELECT *,
-             row_number() OVER(partition BY id
-                               ORDER BY updated_at DESC,pos DESC) AS rn1
-      FROM oride_dw_ods.ods_binlog_data_driver_hi
-      WHERE dt = '{pt}'
-        AND op IN ('c',
-                   'u')) m
-   WHERE rn1=1) dri ON dri_bef.driver_id=dri.id
+    (
+        SELECT *
+        FROM oride_dw.dim_oride_driver_base
+        WHERE dt='{bef_yes_day}'
+    ) dri_bef
+    FULL OUTER JOIN
+    (
+        SELECT *
+        FROM
+        (
+            SELECT *,
+                row_number() over(partition by t.id order by t.`__ts_ms` DESC) AS rn1
+            FROM oride_dw_ods.ods_binlog_base_data_driver_hi as t
+            WHERE concat_ws(' ',dt,hour) BETWEEN '{bef_yes_day} 23' AND '{pt} 22'
+            
+        ) m
+        WHERE m.`__deleted`='false' and m.rn1=1
+    ) dri 
+    ON dri_bef.driver_id=dri.id
     LEFT OUTER JOIN
-      (SELECT id AS driver_id,
-              --司机 ID
-    
-              serv_mode,
-              --服务模式 (0: no service, 1: in service)
-    
-              serv_status,
-              --服务状态 (0: wait assign, 1: pick up, 2: send)
-    
-              register_time,
-              --注册时间
-    
-              login_time,
-              --最后登陆时间
-    
-              is_bind,
-              --状态 0 未绑定 1 已绑定
-    
-              first_bind_time,
-              --初次绑定时间
-    
-              block,
-              --后台管理司机接单状态(0: 允许 1:不允许)
-    
-              serv_type AS product_id,
-              --1 专车 2 快车
-    
-              local_gov_ids,
-              --行会ID,json
-    
-              fault,
-              --正常0(停运)修理1(停运)无资料2(停运)事故3(停运)扣除4(欠缴)5
-    
-              city_id,
-              --所属城市ID
-    
-              LANGUAGE, --客户端语言
-              
-              country_id  --所属国家
-    FROM oride_dw_ods.ods_sqoop_base_data_driver_extend_df
-       WHERE dt = '{pt}') ext ON nvl(dri.id,dri_bef.driver_id)=ext.driver_id
+    (
+        SELECT id AS driver_id,--司机 ID
+        
+        serv_mode,--服务模式 (0: no service, 1: in service)
+        
+        serv_status,--服务状态 (0: wait assign, 1: pick up, 2: send)
+        
+        register_time,--注册时间
+        
+        login_time,--最后登陆时间
+        
+        is_bind,--状态 0 未绑定 1 已绑定
+        
+        first_bind_time,--初次绑定时间
+        
+        block,--后台管理司机接单状态(0: 允许 1:不允许)
+        
+        serv_type AS product_id,--1 专车 2 快车
+        
+        local_gov_ids,--行会ID,json
+        
+        fault,--正常0(停运)修理1(停运)无资料2(停运)事故3(停运)扣除4(欠缴)5
+        
+        city_id,--所属城市ID
+        
+        LANGUAGE, --客户端语言
+        
+        country_id,  --所属国家
+        (register_time+1*60*60) as local_register_time,
+        (login_time+1*60*60) as local_login_time,
+        (first_bind_time+1*60*60) as local_first_bind_time
+        FROM oride_dw_ods.ods_sqoop_base_data_driver_extend_df
+        WHERE dt = '{pt}'
+    ) ext 
+    ON nvl(dri.id,dri_bef.driver_id)=ext.driver_id
     LEFT OUTER JOIN
-    (select * from oride_dw.dim_oride_city where dt = '{pt}' and country_code='NG') cit
-    ON cit.city_id=ext.city_id
-    -- where ext.city_id<>'999001' --去除测试数据
-    -- and dri.driver_id not in(3835,
-    -- 3963,
-    -- 3970,
-    -- 4702,
-    -- 5559,
-    -- 5902,
-    -- 7669,
-    -- 29105, --以上都是录错城市的司机
-    -- 10722, --测试数据
-    -- 1)    --北京城市测试数据
+    (
+        select * 
+        from oride_dw.dim_oride_city 
+        where dt = '{pt}' and country_code='NG'
+    ) cit
+    ON cit.city_id=ext.city_id;
     '''.format(
         pt=ds,
         bef_yes_day=airflow.macros.ds_add(ds, -1),
@@ -281,6 +243,7 @@ FULL OUTER JOIN
         db=db_name
     )
     return HQL
+
 
 # 熔断数据，如果数据重复，报错
 def check_key_data_task(ds):
@@ -346,9 +309,7 @@ dim_oride_driver_base_task = PythonOperator(
     dag=dag
 )
 
-ods_binlog_data_driver_hi_prev_day_task >> dim_oride_driver_base_task
+ods_binlog_base_data_driver_hi_prev_day_task >> dim_oride_driver_base_task
 dim_oride_driver_base_prev_day_tesk >> dim_oride_driver_base_task
 ods_sqoop_base_data_driver_extend_df_prev_day_tesk >> dim_oride_driver_base_task
 dim_oride_city_prev_day_tesk >> dim_oride_driver_base_task
-
-
