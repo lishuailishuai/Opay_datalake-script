@@ -49,6 +49,8 @@ class TaskTimeoutMonitor_dev(object):
         self.hive_cursor = get_hive_cursor()
         self.dingding_alert = DingdingAlert('https://oapi.dingtalk.com/robot/send?access_token=928e66bef8d88edc89fe0f0ddd52bfa4dd28bd4b1d24ab4626c804df8878bb48')
 
+        self.owner_name=None
+
     def __del__(self):
         self.hive_cursor.close()
         self.hive_cursor = None
@@ -93,9 +95,10 @@ class TaskTimeoutMonitor_dev(object):
                 #判断数据文件是否生成
                 if res == '' or res == 'None' or res == '0':
                     if sum_timeout >= int(timeout):
-                        self.dingding_alert.send('DW调度任务 {dag_id} 产出超时'.format(
+                        self.dingding_alert.send('DW 【及时性预警】调度任务:{dag_id} 产出超时。负责人:{owner_name}。预留时间: {timeout} 秒'.format(
                                 dag_id=dag_id_name,
-                                timeout=timeout
+                                timeout=timeout,
+                                owner_name=self.owner_name
                         ))
 
                         logging.info("任务超时。。。。。")
@@ -126,11 +129,7 @@ class TaskTimeoutMonitor_dev(object):
 
             table=dag.dag_id
 
-            owner_name=dag.default_args.get("owner")
-
-            print(owner_name)
-
-            print(table)
+            self.owner_name=dag.default_args.get("owner")
 
             if table is None or db is None or partition is None or timeout is None:
                 return None
