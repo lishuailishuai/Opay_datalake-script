@@ -370,7 +370,7 @@ def __getDriversOnline(st, ed):
             drivers_online,
             driver_orderable 
         from driver_online 
-        where from_unixtime(unix_timestamp(online_time)+3600) >= from_unixtime({st}) and online_time < from_unixtime({ed})
+        where from_unixtime(unix_timestamp(online_time)+3600) >= from_unixtime({st}) and from_unixtime(unix_timestamp(online_time)+3600) < from_unixtime({ed})
     '''.format(st=st, ed=ed)
     logging.info(msql)
     drivers = pd.read_sql_query(msql, bidb_conn)
