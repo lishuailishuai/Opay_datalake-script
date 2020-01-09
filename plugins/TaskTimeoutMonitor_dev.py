@@ -98,7 +98,7 @@ class TaskTimeoutMonitor_dev(object):
 
                     if sum_timeout >= int(timeout):
 
-                        format_date=int(timeout)/60
+                        format_date=int(int(timeout)/60)
 
                         print(format_date)
 
