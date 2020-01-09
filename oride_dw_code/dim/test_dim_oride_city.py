@@ -17,7 +17,7 @@ from airflow.sensors.hive_partition_sensor import HivePartitionSensor
 from airflow.sensors import UFileSensor
 from airflow.sensors import OssSensor
 from airflow.sensors.s3_key_sensor import S3KeySensor
-from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
+from plugins.TaskTimeoutMonitor_dev import TaskTimeoutMonitor
 from plugins.CountriesPublicFrame import CountriesPublicFrame
 from plugins.TaskHourSuccessCountMonitor import TaskHourSuccessCountMonitor
 import json
@@ -160,6 +160,26 @@ else:
     hdfs_path="oss://opay-datalake/oride/oride_dw/"+table_name
 
 ##----------------------------------------- 脚本 ---------------------------------------## 
+
+
+def fun_task_timeout_monitor(ds,dag,**op_kwargs):
+
+    dag_ids=dag.dag_id
+
+    tb = [
+        {"dag":dag,"db": "oride_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "600"}
+    ]
+
+    TaskTimeoutMonitor_dev().set_task_monitor(tb)
+
+task_timeout_monitor= PythonOperator(
+    task_id='task_timeout_monitor',
+    python_callable=fun_task_timeout_monitor,
+    provide_context=True,
+    dag=dag
+)
+
+
 
 def test_dim_oride_city_sql_task(ds):
 
@@ -422,7 +442,7 @@ test_dim_oride_city_task= PythonOperator(
     dag=dag
 )
 
-test_snappy_dev_01_tesk>>test_dim_oride_city_task
-ods_sqoop_base_data_city_conf_df_tesk>>test_dim_oride_city_task
-ods_sqoop_base_data_country_conf_df_tesk>>test_dim_oride_city_task
-ods_sqoop_base_weather_per_10min_df_task>>test_dim_oride_city_task
+# test_snappy_dev_01_tesk>>test_dim_oride_city_task
+# ods_sqoop_base_data_city_conf_df_tesk>>test_dim_oride_city_task
+# ods_sqoop_base_data_country_conf_df_tesk>>test_dim_oride_city_task
+# ods_sqoop_base_weather_per_10min_df_task>>test_dim_oride_city_task
