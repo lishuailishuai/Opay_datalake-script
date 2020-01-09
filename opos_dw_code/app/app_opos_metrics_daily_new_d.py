@@ -103,7 +103,6 @@ set hive.exec.parallel=true;
 set hive.exec.dynamic.partition.mode=nonstrict;
 set hive.strict.checks.cartesian.product=false;
 
-
 with
 admin_users as (
   select id,name from opos_dw_ods.ods_sqoop_base_bd_admin_users_df where dt = '{pt}'
@@ -202,6 +201,11 @@ o.id
 ,o.coupon_useless_pay_amount
 ,o.coupon_useless_order_gmv
 
+,o.coupon_amount
+,o.coupon_used_amount
+,o.coupon_expired_amount
+,o.coupon_invalid_amount
+
 ,'nal' as country_code
 ,'{pt}' as dt
 from
@@ -290,6 +294,11 @@ from
   ,nvl(a.coupon_useless_order_people,0) as coupon_useless_order_people
   ,nvl(a.coupon_useless_pay_amount,0) as coupon_useless_pay_amount
   ,nvl(a.coupon_useless_order_gmv,0) as coupon_useless_order_gmv
+
+  ,nvl(a.coupon_amount,0) as coupon_amount
+  ,nvl(a.coupon_used_amount,0) as coupon_used_amount
+  ,nvl(a.coupon_expired_amount,0) as coupon_expired_amount
+  ,nvl(a.coupon_invalid_amount,0) as coupon_invalid_amount
 
   from 
   (select * from opos_dw.app_opos_metrics_report_mid where country_code = 'nal' and  dt = '{pt}') a
