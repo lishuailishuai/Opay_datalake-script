@@ -43,7 +43,7 @@ clear_order_location_mysql_data = MySqlOperator(
         ds='{{ds}}',
         before_15_day ='{{ macros.ds_add(ds, -15) }}'
     ),
-    mysql_conn_id='mysql_bi',
+    mysql_conn_id='mysql_oride_location',
     dag=dag)
 
 order_location_info_to_msyql = HiveToMySqlTransfer(
@@ -74,7 +74,7 @@ order_location_info_to_msyql = HiveToMySqlTransfer(
             where country_code = 'nal' and dt='{{ ds }}'
 
         """,
-    mysql_conn_id='mysql_bi',
+    mysql_conn_id='mysql_oride_location',
     mysql_table='oride_order_location_info',
     dag=dag)
 
