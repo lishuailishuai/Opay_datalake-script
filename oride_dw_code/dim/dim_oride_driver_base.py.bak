@@ -26,8 +26,8 @@ import requests
 import os
 
 args = {
-        'owner': 'chenghui',
-        'start_date': datetime(2020, 1, 1),
+        'owner': 'lili.chen',
+        'start_date': datetime(2020, 1, 8),
         'depends_on_past': False,
         'retries': 3,
         'retry_delay': timedelta(minutes=2),
@@ -36,8 +36,8 @@ args = {
         'email_on_retry': False,
 }
 
-dag=airflow.DAG('dim_oride_driver_base_dev',
-                schedule_interval="00 01 * * *",
+dag=airflow.DAG('dim_oride_driver_base',
+                schedule_interval="10 00 * * *",
                 default_args=args,
                 catchup=False
 )

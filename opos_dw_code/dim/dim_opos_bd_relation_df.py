@@ -426,7 +426,7 @@ m.id
 ,case
 when created_at<'{before_45_day}' and s.receipt_id is null then '1'
 when created_at<'{before_45_day}' and s.receipt_id is not null then '0'
-when created_at>='{before_45_day}' and dt<='{pt}' then '0'
+when created_at>='{before_45_day}' and created_at<='{pt}' then '0'
 else '1'
 end as shop_silent_flag
 

@@ -37,7 +37,7 @@ args = {
 }
 
 dag = airflow.DAG('dm_oride_driver_base_cube_d',
-                  schedule_interval="30 01 * * *",
+                  schedule_interval="30 00 * * *",
                   default_args=args)
 ##----------------------------------------- 变量 ---------------------------------------##
 

@@ -50,6 +50,7 @@ class TaskTimeoutMonitor_dev(object):
         self.dingding_alert = DingdingAlert('https://oapi.dingtalk.com/robot/send?access_token=928e66bef8d88edc89fe0f0ddd52bfa4dd28bd4b1d24ab4626c804df8878bb48')
 
         self.owner_name=None
+        self.hdfs_dir_name=None
 
     def __del__(self):
         self.hive_cursor.close()
@@ -91,19 +92,23 @@ class TaskTimeoutMonitor_dev(object):
                 out.close()
     
                 logging.info("数据标识的返回值："+str(res))
-
-                print("----",self.owner_name)
-
-                print(res)
     
                 #判断数据文件是否生成
                 if res == '' or res == 'None' or res == '0':
+
                     if sum_timeout >= int(timeout):
-                        self.dingding_alert.send('DW 【及时性预警】调度任务:{dag_id} 产出超时。负责人:{owner_name}。预留时间: {timeout} 秒'.format(
+
+                        format_date=int(int(timeout)/60)
+
+                        print(format_date)
+
+                        self.dingding_alert.send('DW 【及时性预警】调度任务:{dag_id} 产出超时【负责人】{owner_name}【预警路径】{hdfs_dir_name}【预留时间】{timeout} 分钟'.format(
                                 dag_id=dag_id_name,
-                                timeout=timeout,
-                                owner_name=self.owner_name
-                        ))
+                                timeout=str(format_date),
+                                owner_name=self.owner_name,
+                                hdfs_dir_name=self.hdfs_dir_name
+                        )
+                        )
 
                         logging.info("任务超时。。。。。")
                         sum_timeout=0
@@ -153,6 +158,8 @@ class TaskTimeoutMonitor_dev(object):
 
             if location is None:
                 return None
+
+            self.hdfs_dir_name=location+"/"+partition+"/_SUCCESS"
 
             commands.append({
                 'cmd': '''

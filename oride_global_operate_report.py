@@ -28,7 +28,7 @@ args = {
 
 dag = airflow.DAG(
     'oride_global_operate_report',
-    schedule_interval="00 02 * * *",
+    schedule_interval="10 01 * * *",
     default_args=args)
 
 global_table_names = [

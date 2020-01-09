@@ -37,7 +37,7 @@ args = {
 }
 
 dag = airflow.DAG('app_oride_global_operate_report_d',
-                  schedule_interval="50 01 * * *",
+                  schedule_interval="00 01 * * *",
                   default_args=args)
 ##----------------------------------------- 变量 ---------------------------------------##
 
