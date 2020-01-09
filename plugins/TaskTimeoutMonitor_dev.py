@@ -92,7 +92,7 @@ class TaskTimeoutMonitor_dev(object):
     
                 logging.info("数据标识的返回值："+str(res))
 
-                print(self.owner_name)
+                print("----",self.owner_name)
     
                 #判断数据文件是否生成
                 if res == '' or res == 'None' or res == '0':
