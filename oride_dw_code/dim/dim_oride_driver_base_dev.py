@@ -149,13 +149,13 @@ def dim_oride_driver_base_sql_task(ds):
         
         ext.serv_status,--服务状态 (0: wait assign, 1: pick up, 2: send)
         
-        from_unixtime(ext.register_time,'yyyy-MM-dd HH:mm:ss') as register_time,--注册时间
+        from_unixtime(ext.local_register_time,'yyyy-MM-dd HH:mm:ss') as register_time,--注册时间
         
-        from_unixtime(ext.login_time,'yyyy-MM-dd HH:mm:ss') as login_time,--最后登陆时间
+        from_unixtime(ext.local_login_time,'yyyy-MM-dd HH:mm:ss') as login_time,--最后登陆时间
         
         ext.is_bind,--状态 0 未绑定 1 已绑定
         
-        from_unixtime(ext.first_bind_time,'yyyy-MM-dd HH:mm:ss') as first_bind_time,--初次绑定时间
+        from_unixtime(ext.local_first_bind_time,'yyyy-MM-dd HH:mm:ss') as first_bind_time,--初次绑定时间
         
         ext.block,--后台管理司机接单状态(0: 允许 1:不允许)
         
@@ -220,7 +220,10 @@ def dim_oride_driver_base_sql_task(ds):
         
         LANGUAGE, --客户端语言
         
-        country_id  --所属国家
+        country_id,  --所属国家
+        (register_time+1*60*60) as local_register_time,
+        (login_time+1*60*60) as local_login_time,
+        (first_bind_time+1*60*60) as local_first_bind_time
         FROM oride_dw_ods.ods_sqoop_base_data_driver_extend_df
         WHERE dt = '{pt}'
     ) ext 
