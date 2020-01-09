@@ -27,7 +27,7 @@ args = {
 
 dag = airflow.DAG(
     'app_oride_import_bi_mysql',
-    schedule_interval="00 05 * * *",
+    schedule_interval="00 04 * * *",
     max_active_runs=1,
     default_args=args,
     concurrency=20

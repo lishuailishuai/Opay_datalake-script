@@ -40,7 +40,7 @@ args = {
 }
 
 dag = airflow.DAG('app_oride_driver_transport_capacity_d',
-                  schedule_interval="30 2 * * *",
+                  schedule_interval="30 1 * * *",
                   default_args=args)
 
 ##----------------------------------------- 变量 ---------------------------------------##

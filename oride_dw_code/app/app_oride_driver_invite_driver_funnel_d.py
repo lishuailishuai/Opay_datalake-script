@@ -33,7 +33,7 @@ args = {
 }
 
 dag = airflow.DAG('app_oride_driver_invite_driver_funnel_d',
-                  schedule_interval="00 4 * * *",
+                  schedule_interval="00 03 * * *",
                   default_args=args,
                   catchup=False)
 
