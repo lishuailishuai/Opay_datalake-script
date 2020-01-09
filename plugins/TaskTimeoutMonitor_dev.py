@@ -99,7 +99,9 @@ class TaskTimeoutMonitor_dev(object):
 
                         format_date=int(timeout)/60
 
-                        self.dingding_alert.send('DW 【及时性预警】调度任务:{dag_id} 产出超时【负责人】{owner_name}【预留时间】{timeout} 分钟'.format(
+                        print(format_date)
+
+                        #self.dingding_alert.send('DW 【及时性预警】调度任务:{dag_id} 产出超时【负责人】{owner_name}【预留时间】{timeout} 分钟'.format(
                                 dag_id=dag_id_name,
                                 timeout=str(format_date),
                                 owner_name=self.owner_name
