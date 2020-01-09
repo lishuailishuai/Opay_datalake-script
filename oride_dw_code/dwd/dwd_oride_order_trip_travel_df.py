@@ -40,7 +40,7 @@ args = {
 
 dag = airflow.DAG(
     'dwd_oride_order_trip_travel_df',
-    schedule_interval="30 02 * * *",
+    schedule_interval="30 01 * * *",
     default_args=args
 )
 ##----------------------------------------- 变量 ---------------------------------------##
@@ -123,10 +123,10 @@ def dwd_oride_order_trip_travel_df_sql_task(ds):
             (CASE WHEN reward IS NULL THEN 0 ELSE reward END) as  reward,
             (CASE WHEN tip IS NULL THEN 0 ELSE tip END) as  tip,
             NVL(CAST(order_id AS bigint), 0) as order_id,
-            from_unixtime(create_time,'yyyy-MM-dd HH:mm:ss') as create_time,
-            NVL(start_time, 0) as start_time,
-            NVL(finish_time, 0) as finish_time,
-            NVL(cancel_time, 0) as cancel_time,
+            from_unixtime(create_time + 1*60*60*1,'yyyy-MM-dd HH:mm:ss') as create_time,
+            NVL(start_time + 1*60*60*1, 0) as start_time,
+            NVL(finish_time + 1*60*60*1, 0) as finish_time,
+            NVL(cancel_time + 1*60*60*1, 0) as cancel_time,
             NVL(status, 0) as status,
             NVL(pickup_order_id, 0) as pickup_order_id,
             NVL(count_down, 0) as count_down, 

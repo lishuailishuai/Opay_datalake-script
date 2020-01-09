@@ -36,7 +36,7 @@ args = {
 }
 
 dag = airflow.DAG('dwd_oride_rider_signups_guarantors_df',
-                  schedule_interval="20 03 * * *",
+                  schedule_interval="20 02 * * *",
                   default_args=args,
                   catchup=False)
 ##----------------------------------------- 变量 ---------------------------------------##
