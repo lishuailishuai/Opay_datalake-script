@@ -17,7 +17,7 @@ from airflow.sensors.hive_partition_sensor import HivePartitionSensor
 from airflow.sensors import UFileSensor
 from airflow.sensors import OssSensor
 from airflow.sensors.s3_key_sensor import S3KeySensor
-from plugins.TaskTimeoutMonitor_dev import TaskTimeoutMonitor_dev
+from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
 from plugins.CountriesPublicFrame import CountriesPublicFrame
 from plugins.TaskHourSuccessCountMonitor import TaskHourSuccessCountMonitor
 import json
