@@ -98,7 +98,12 @@ class TaskTimeoutMonitor_dev(object):
     
                 #判断数据文件是否生成
                 if res == '' or res == 'None' or res == '0':
+
+                    print(res)
+
                     if sum_timeout >= int(timeout):
+
+                        print(sum_timeout)
                         self.dingding_alert.send('DW 【及时性预警】调度任务:{dag_id} 产出超时。负责人:{owner_name}。预留时间: {timeout} 秒'.format(
                                 dag_id=dag_id_name,
                                 timeout=timeout,
