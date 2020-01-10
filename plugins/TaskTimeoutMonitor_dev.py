@@ -13,6 +13,7 @@ from airflow.utils.state import State
 from airflow import AirflowException
 from airflow.models import DAG, TaskInstance, BaseOperator
 from plugins.DingdingAlert import DingdingAlert
+import requests
 
 
 """
@@ -98,7 +99,7 @@ class TaskTimeoutMonitor(object):
                 #判断数据文件是否生成
                 if res == '' or res == 'None' or res == '0':
 
-                    ht="""
+                    url="""
                         http://8.208.14.165:8080/admin/airflow/tree?dag_id={dag_id}
                     """.format(dag_id= dag_id_name)
 
