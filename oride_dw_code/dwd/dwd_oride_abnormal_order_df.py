@@ -92,7 +92,7 @@ def fun_task_timeout_monitor(ds,dag,**op_kwargs):
     dag_ids=dag.dag_id
 
     msg = [
-        {"db": "oride_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=NG/dt={pt}".format(pt=ds), "timeout": "800"}
+        {"dag":dag,"db": "oride_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=NG/dt={pt}".format(pt=ds), "timeout": "800"}
     ]
 
     TaskTimeoutMonitor().set_task_monitor(msg)
@@ -126,8 +126,8 @@ user_id,--用户id
 behavior_ids,--命中规则id
 rule_names,--命中规则名称
 is_revoked,--是否撤销，1是，0否
-(create_time + 1 * 60 * 60 * 1) as create_time,--创建时间
-(update_time + 1 * 60 * 60 * 1 ) as update_time,--更新时间
+if(create_time=0,0,(create_time + 1 * 60 * 60 * 1)) as create_time,--创建时间
+if((update_time=0,0,update_time + 1 * 60 * 60 * 1 )) as update_time,--更新时间
 score,--每单扣除分数
 amount,--扣款金额
 'NG' as country_code,

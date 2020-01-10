@@ -86,7 +86,7 @@ def fun_task_timeout_monitor(ds,dag,**op_kwargs):
     dag_ids=dag.dag_id
 
     msg = [
-        {"db": "oride_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "600"}
+        {"dag":dag,"db": "oride_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "600"}
     ]
 
     TaskTimeoutMonitor().set_task_monitor(msg)
@@ -114,7 +114,7 @@ def dwd_oride_driver_records_day_df_sql_task(ds):
             id,--'ID'
             agenter_id,--'小老板ID'
             driver_id,--'司机ID'
-            (day+1*60*60) as day,--'天'
+            if(day=0,0,(day+1*60*60)) as day,--'天'
             count_orders_assign,--'当日派单数'
             count_orders_all,--'当日接单数'
             count_orders_finish,--'当日完成单数'
@@ -139,8 +139,8 @@ def dwd_oride_driver_records_day_df_sql_task(ds):
             work_hours,--'当日工作时长,按小时计算'
             payment_status,--'状态：0未打款 1已打款'
             balance_status,--'结算状态：0未结算 1已结算'
-            (created_at+1*60*60) as created_at,--'申请时间'
-            (updated_at+1*60*60) as updated_at,--'更新时间'
+            if(created_at=0,0,(created_at+1*60*60)) as created_at,--'申请时间'
+            if(updated_at=0,0,(updated_at+1*60*60)) as updated_at,--'更新时间'
             amount_tip,--'当日-小费收入'
             amount_tip_offline,--'当日-小费收入(线下支付)
             amount_additional, -- 附加费-线上

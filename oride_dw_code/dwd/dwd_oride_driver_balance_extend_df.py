@@ -88,7 +88,7 @@ def fun_task_timeout_monitor(ds, dag, **op_kwargs):
     dag_ids = dag.dag_id
 
     tb = [
-        {"db": "oride_dw", "table": "{dag_name}".format(dag_name=dag_ids),
+        {"dag":dag,"db": "oride_dw", "table": "{dag_name}".format(dag_name=dag_ids),
          "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "600"}
     ]
 
@@ -121,10 +121,10 @@ def dwd_oride_driver_balance_extend_df_sql_task(ds):
             total_service,--累计欠份子钱              
             check_status,--账户状态: 0审核成功待打款;1审核失败异常数据
             pay_status,--打款状态: 0待打款状态;1正在打款状态
-            (payed_at+1*60*60) as payed_at,--上一次结算时间,结算操作完后记录    
-            (checked_at+1*60*60) as checked_at,--上一次帐户状态审核时间,正常/异常操作 
-            (success_checked_at+1*60*60) as success_checked_at,--上一次成功到帐的时间，成功到帐后记录  
-            (created_at+1*60*60) as created_at,--创建时间                 
+            if(payed_at=0,0,(payed_at+1*60*60) ) as payed_at,--上一次结算时间,结算操作完后记录    
+            if(checked_at=0,0,(checked_at+1*60*60)) as checked_at,--上一次帐户状态审核时间,正常/异常操作 
+            if(success_checked_at=0,0,(success_checked_at+1*60*60)) as success_checked_at,--上一次成功到帐的时间，成功到帐后记录  
+            if(created_at=0,0,(created_at+1*60*60)) as created_at,--创建时间                 
             'nal' as country_code,
             '{pt}' as dt
         FROM

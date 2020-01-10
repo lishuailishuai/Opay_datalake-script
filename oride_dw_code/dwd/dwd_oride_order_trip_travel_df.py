@@ -88,7 +88,7 @@ def fun_task_timeout_monitor(ds,dag,**op_kwargs):
     dag_ids=dag.dag_id
 
     msg = [
-        {"db": "oride_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "600"}
+        {"dag":dag,"db": "oride_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "600"}
     ]
 
     TaskTimeoutMonitor().set_task_monitor(msg)
@@ -123,10 +123,10 @@ def dwd_oride_order_trip_travel_df_sql_task(ds):
             (CASE WHEN reward IS NULL THEN 0 ELSE reward END) as  reward,
             (CASE WHEN tip IS NULL THEN 0 ELSE tip END) as  tip,
             NVL(CAST(order_id AS bigint), 0) as order_id,
-            from_unixtime(create_time + 1*60*60*1,'yyyy-MM-dd HH:mm:ss') as create_time,
-            NVL(start_time + 1*60*60*1, 0) as start_time,
-            NVL(finish_time + 1*60*60*1, 0) as finish_time,
-            NVL(cancel_time + 1*60*60*1, 0) as cancel_time,
+            from_unixtime(if(create_time=0,0,(create_time + 1*60*60*1)),'yyyy-MM-dd HH:mm:ss') as create_time,
+            NVL(if(start_time=0,0,(start_time + 1*60*60*1)), 0) as start_time,
+            NVL(if(finish_time=0,0,(finish_time + 1*60*60*1)), 0) as finish_time,
+            NVL(if(cancel_time=0,0,(cancel_time + 1*60*60*1)), 0) as cancel_time,
             NVL(status, 0) as status,
             NVL(pickup_order_id, 0) as pickup_order_id,
             NVL(count_down, 0) as count_down, 
