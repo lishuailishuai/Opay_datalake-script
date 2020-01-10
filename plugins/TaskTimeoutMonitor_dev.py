@@ -99,7 +99,7 @@ class TaskTimeoutMonitor(object):
                 if res == '' or res == 'None' or res == '0':
 
                     ht="""
-                        <html><a href="http://8.208.14.165:8080/admin/airflow/tree?dag_id={dag_id}">{dag_id}</a></html>
+                        http://8.208.14.165:8080/admin/airflow/tree?dag_id={dag_id}
                     """.format(dag_id= dag_id_name)
 
                     if sum_timeout >= int(timeout):
