@@ -71,15 +71,16 @@ def get_driver_timerange(curr_list, dt, rows):
 
 def get_driver_online_time(ds, **op_kwargs):
     dt = op_kwargs["ds_nodash"]
-    conn = get_db_conn('timerange_conn_db')
-    mcursor = conn.cursor()
-    mcursor.execute(get_driver_id)
-    result = mcursor.fetchone()
-    conn.commit()
-    mcursor.close()
-    conn.close()
+    # conn = get_db_conn('timerange_conn_db')
+    # mcursor = conn.cursor()
+    # mcursor.execute(get_driver_id)
+    # result = mcursor.fetchone()
+    # conn.commit()
+    # mcursor.close()
+    # conn.close()
     processes = []
-    max_driver_id = result[0]
+    #max_driver_id = result[0]
+    max_driver_id=115343
     logging.info('max driver id %d', max_driver_id)
     id_list = [x for x in range(1, max_driver_id+1)]
     part_size = 1000

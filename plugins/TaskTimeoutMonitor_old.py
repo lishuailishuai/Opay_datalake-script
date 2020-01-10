@@ -40,7 +40,7 @@ t1
 """
 
 
-class TaskTimeoutMonitor_dev(object):
+class TaskTimeoutMonitor(object):
 
     hive_cursor = None
     dingding_alert = None
@@ -48,9 +48,6 @@ class TaskTimeoutMonitor_dev(object):
     def __init__(self):
         self.hive_cursor = get_hive_cursor()
         self.dingding_alert = DingdingAlert('https://oapi.dingtalk.com/robot/send?access_token=928e66bef8d88edc89fe0f0ddd52bfa4dd28bd4b1d24ab4626c804df8878bb48')
-
-        self.owner_name=None
-        self.hdfs_dir_name=None
 
     def __del__(self):
         self.hive_cursor.close()
@@ -95,20 +92,11 @@ class TaskTimeoutMonitor_dev(object):
     
                 #判断数据文件是否生成
                 if res == '' or res == 'None' or res == '0':
-
                     if sum_timeout >= int(timeout):
-
-                        format_date=int(int(timeout)/60)
-
-                        print(format_date)
-
-                        self.dingding_alert.send('DW 【及时性预警】调度任务:{dag_id} 产出超时【负责人】{owner_name}【预警路径】{hdfs_dir_name}【预留时间】{timeout} 分钟'.format(
+                        self.dingding_alert.send('DW调度任务 {dag_id} 产出超时'.format(
                                 dag_id=dag_id_name,
-                                timeout=str(format_date),
-                                owner_name=self.owner_name,
-                                hdfs_dir_name=self.hdfs_dir_name
-                        )
-                        )
+                                timeout=timeout
+                        ))
 
                         logging.info("任务超时。。。。。")
                         sum_timeout=0
@@ -130,15 +118,15 @@ class TaskTimeoutMonitor_dev(object):
     def set_task_monitor(self, tables):
         commands = []
         for item in tables:
-            #table = item.get('table', None)
+            table = item.get('table', None)
             db = item.get('db', None)
             partition = item.get('partition', None)
             timeout = item.get('timeout', None)
-            dag=item.get('dag', None)
+            #dag=item.get('dag', None)
 
-            table=dag.dag_id
+            #table=dag.dag_id
 
-            self.owner_name=dag.default_args.get("owner")
+            #owner_name=dag.default_args.get("owner")
 
             if table is None or db is None or partition is None or timeout is None:
                 return None
@@ -158,8 +146,6 @@ class TaskTimeoutMonitor_dev(object):
 
             if location is None:
                 return None
-
-            self.hdfs_dir_name=location+"/"+partition+"/_SUCCESS"
 
             commands.append({
                 'cmd': '''
