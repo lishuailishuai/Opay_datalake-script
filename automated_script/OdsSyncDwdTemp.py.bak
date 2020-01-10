@@ -32,6 +32,7 @@ from airflow.sensors import UFileSensor
 from plugins.ModelPublicFrame import ModelPublicFrame
 from utils.util import on_success_callback
 from plugins.CountriesPublicFrame import CountriesPublicFrame
+from airflow.sensors import OssSensor
 
 args = {
     'owner': 'yangmingze',
@@ -313,7 +314,7 @@ def create_table_info(hive_db, hive_table,dwd_db_name,dwd_table_name):
     partitioned by (country_code string comment '二位国家码',dt string comment '分区时间')
         STORED AS orc
         LOCATION
-        "ufile://opay-datalake/oride/{dwd_hive_db}/{dwd_hive_table}";
+        "oss://opay-datalake/oride/{dwd_hive_db}/{dwd_hive_table}";
     """.format(
         dwd_hive_db=dwd_db_name,
         dwd_hive_table=dwd_table_name,
@@ -332,7 +333,7 @@ def fun_create_template(**kwargs):
     in_dwd_table_name=kwargs.get('v_dwd_table_name')
 
     #获取ods 元数据location
-    in_ods_data_path=get_location(in_ods_db_name,in_ods_table_name).replace("ufile://opay-datalake/","")
+    in_ods_data_path=get_location(in_ods_db_name,in_ods_table_name).replace("oss://opay-datalake/","")
 
     #获取dwd 元数据location
     in_dwd_data_path=get_location(in_dwd_db_name,in_dwd_table_name)
@@ -412,7 +413,7 @@ def fun_task_timeout_monitor(ds,dag,**op_kwargs):
     dag_ids=dag.dag_id
 
     msg = [
-        {"db": "oride_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=NG/dt={pt}".format(pt=ds), "timeout": "800"}
+        {"dag":dag,"db": "oride_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=NG/dt={pt}".format(pt=ds), "timeout": "800"}
     ]
 
     TaskTimeoutMonitor().set_task_monitor(msg)

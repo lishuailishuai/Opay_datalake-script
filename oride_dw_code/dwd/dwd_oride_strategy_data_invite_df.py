@@ -1,3 +1,4 @@
+
 # -*- coding: utf-8 -*-
 import airflow
 from datetime import datetime, timedelta
@@ -6,7 +7,7 @@ from airflow.operators.impala_plugin import ImpalaOperator
 from utils.connection_helper import get_hive_cursor
 from airflow.operators.python_operator import PythonOperator
 from airflow.contrib.hooks.redis_hook import RedisHook
-from airflow.hooks.hive_hooks import HiveCliHook
+from airflow.hooks.hive_hooks import HiveCliHook, HiveServer2Hook
 from airflow.operators.hive_to_mysql import HiveToMySqlTransfer
 from airflow.operators.mysql_operator import MySqlOperator
 from airflow.operators.dagrun_operator import TriggerDagRunOperator
@@ -14,23 +15,18 @@ from airflow.sensors.external_task_sensor import ExternalTaskSensor
 from airflow.operators.bash_operator import BashOperator
 from airflow.sensors.named_hive_partition_sensor import NamedHivePartitionSensor
 from airflow.sensors.hive_partition_sensor import HivePartitionSensor
-from airflow.sensors.web_hdfs_sensor import WebHdfsSensor
 from airflow.sensors import UFileSensor
 from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
 from plugins.TaskTouchzSuccess import TaskTouchzSuccess
-from plugins.CountriesPublicFrame import CountriesPublicFrame
-from plugins.TaskHourSuccessCountMonitor import TaskHourSuccessCountMonitor
 import json
 import logging
 from airflow.models import Variable
 import requests
 import os
-from airflow.sensors import OssSensor
-from airflow.sensors.s3_key_sensor import S3KeySensor
 
 args = {
         'owner': 'yangmingze',
-        'start_date': datetime(2019, 12, 27),
+        'start_date': datetime(2019, 11, 9),
         'depends_on_past': False,
         'retries': 3,
         'retry_delay': timedelta(minutes=2),
@@ -39,75 +35,32 @@ args = {
         'email_on_retry': False,
 } 
 
-dag = airflow.DAG( 'dwd_oride_order_cancel_df', 
-    schedule_interval="00 01 * * *",
+dag = airflow.DAG( 'dwd_oride_strategy_data_invite_df', 
+    schedule_interval="10 01 * * *", 
     default_args=args,
     catchup=False) 
 
-##----------------------------------------- 变量 ---------------------------------------##
-
-db_name="oride_dw"
-table_name="dwd_oride_order_cancel_df"
 
 ##----------------------------------------- 依赖 ---------------------------------------## 
-#获取变量
-code_map=eval(Variable.get("sys_flag"))
-
-#判断ufile(cdh环境)
-if code_map["id"].lower()=="ufile":
-
-    ods_sqoop_base_data_order_cancel_df_tesk = UFileSensor(
-        task_id='ods_sqoop_base_data_order_cancel_df_tesk',
-        filepath="{hdfs_path_str}/dt={pt}/_SUCCESS".format(
-            hdfs_path_str="oride_dw_sqoop/oride_data/data_order_cancel",
-            pt="{{ds}}"
-        ),
-        bucket_name='opay-datalake',
-        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-        dag=dag
-    )
 
 
-    # 依赖前一天分区
-    dwd_oride_order_base_include_test_di_task = S3KeySensor(
-        task_id='dwd_oride_order_base_include_test_di_task',
-        bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-            hdfs_path_str="oride/oride_dw/dwd_oride_order_base_include_test_di/country_code=NG",
-            pt='{{ds}}'
-        ),
-        bucket_name='opay-bi',
-        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-        dag=dag
-    )
+ods_sqoop_base_data_invite_df_tesk = UFileSensor(
+    task_id='ods_sqoop_base_data_invite_df_tesk',
+    filepath="{hdfs_path_str}/dt={pt}/_SUCCESS".format(
+        hdfs_path_str="oride_dw_sqoop/oride_data/data_invite",
+        pt="{{ds}}"
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
 
-    hdfs_path = "ufile://opay-datalake/oride/oride_dw/dwd_oride_order_cancel_df"
 
-else:
+##----------------------------------------- 变量 ---------------------------------------## 
 
-    ods_sqoop_base_data_order_cancel_df_tesk = OssSensor(
-        task_id='ods_sqoop_base_data_order_cancel_df_tesk',
-        bucket_key="{hdfs_path_str}/dt={pt}/_SUCCESS".format(
-            hdfs_path_str="oride_dw_sqoop/oride_data/data_order_cancel",
-            pt="{{ds}}"
-        ),
-        bucket_name='opay-datalake',
-        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-        dag=dag
-    )
-
-    # 依赖前一天分区
-    dwd_oride_order_base_include_test_di_task = OssSensor(
-        task_id='dwd_oride_order_base_include_test_di_task',
-        bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-            hdfs_path_str="oride/oride_dw/dwd_oride_order_base_include_test_di/country_code=NG",
-            pt='{{ds}}'
-        ),
-        bucket_name='opay-datalake',
-        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-        dag=dag
-    )
-
-    hdfs_path = "oss://opay-datalake/oride/oride_dw/dwd_oride_order_cancel_df"
+db_name="oride_dw"
+table_name="dwd_oride_strategy_data_invite_df"
+hdfs_path="oss://opay-datalake/oride/oride_dw/dwd_oride_strategy_data_invite_df"
 
 
 ##----------------------------------------- 任务超时监控 ---------------------------------------## 
@@ -131,51 +84,43 @@ task_timeout_monitor= PythonOperator(
 
 ##----------------------------------------- 脚本 ---------------------------------------## 
 
-def dwd_oride_order_cancel_df_sql_task(ds):
+def dwd_oride_strategy_data_invite_df_sql_task(ds):
 
     HQL='''
 
     
     set hive.exec.parallel=true;
     set hive.exec.dynamic.partition.mode=nonstrict;
-    set hive.auto.convert.join = false;
 
-    INSERT overwrite TABLE oride_dw.dwd_oride_order_cancel_df partition(country_code,dt)
+    INSERT overwrite TABLE oride_dw.dwd_oride_strategy_data_invite_df partition(country_code,dt)
 
     select
-        cancel.order_id,--订单 ID
-        cancel_role,--取消人角色(1: 用户, 2: 司机, 3:系统 4:Admin)
-        cancel_time,--取消时间
-        cancel_type,--取消原因类型
-        cancel_reason,--取消原因
-        ord.city_id,
-        ord.product_id,
-        nvl(ord.country_code,'nal') as country_code,
-        '{pt}' as dt
-    from 
-    (
-        select   
-            id as order_id,--订单 ID
-            cancel_role,--取消人角色(1: 用户, 2: 司机, 3:系统 4:Admin)
-            if(cancel_time=0,0,(cancel_time + 1*60*60*1)) as cancel_time,--取消时间
-            cancel_type,--取消原因类型
-            cancel_reason --取消原因
-        from oride_dw_ods.ods_sqoop_base_data_order_cancel_df
-        where dt='{pt}'
-    ) cancel
-    left outer join
-    (
-        SELECT 
-            order_id ,--订单ID
-            city_id,
-            product_id,
-            country_code  --国家码
-            
-        from oride_dw.dwd_oride_order_base_include_test_di
-        where dt='{pt}'
-    ) ord
-    on cancel.order_id=ord.order_id;
 
+        
+id,--未知
+role,--未知
+uid,--未知
+invitee_role,--未知
+invitee_id,--未知
+invitee_phone,--未知
+invitee_order,--未知
+timestamp,--未知
+award,--???????
+valid,--?? 0 ?? 1 ??
+invalid_code,--????
+invitee_serv_type,--??????
+status,--???? did
+conf_id,--??ID
+source,--?? 13 ?? 14 ??
+invitee_name,--??????
+'nal' as country_code,
+'{pt}' as dt
+        
+    from oride_dw_ods.ods_sqoop_base_data_invite_df
+    where dt='{pt}'
+
+    
+    
     '''.format(
         pt=ds,
         now_day=airflow.macros.ds_add(ds, +1),
@@ -256,7 +201,7 @@ def execution_data_task_id(ds,**kwargs):
 
     #拼接SQL
 
-    _sql="\n"+cf.alter_partition()+"\n"+dwd_oride_order_cancel_df_sql_task(ds)
+    _sql="\n"+cf.alter_partition()+"\n"+dwd_oride_strategy_data_invite_df_sql_task(ds)
 
     logging.info('Executing: %s',_sql)
 
@@ -273,8 +218,8 @@ def execution_data_task_id(ds,**kwargs):
     cf.touchz_success()
 
     
-dwd_oride_order_cancel_df_task= PythonOperator(
-    task_id='dwd_oride_order_cancel_df_task',
+dwd_oride_strategy_data_invite_df_task= PythonOperator(
+    task_id='dwd_oride_strategy_data_invite_df_task',
     python_callable=execution_data_task_id,
     provide_context=True,
     op_kwargs={
@@ -285,5 +230,6 @@ dwd_oride_order_cancel_df_task= PythonOperator(
     dag=dag
 )
 
-dwd_oride_order_base_include_test_di_task>>dwd_oride_order_cancel_df_task
-ods_sqoop_base_data_order_cancel_df_tesk>>dwd_oride_order_cancel_df_task
+
+
+ods_sqoop_base_data_invite_df_tesk>>dwd_oride_strategy_data_invite_df_task

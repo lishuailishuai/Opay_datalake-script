@@ -88,7 +88,7 @@ def fun_task_timeout_monitor(ds,dag,**op_kwargs):
     dag_ids=dag.dag_id
 
     tb = [
-        {"db": "oride_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "600"}
+        {"dag":dag,"db": "oride_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "600"}
     ]
 
     TaskTimeoutMonitor().set_task_monitor(tb)
@@ -119,9 +119,9 @@ def dwd_oride_passenger_complaint_df_sql_task(ds):
             description,--用户投诉问题描述 
             processing_result,--对司机处理结果 
             status,--status (0: wait 1: processing 2: complete) 
-            (create_time + 1*60*60*1) as create_time,--创建时间 
-            (processing_time + 1*60*60*1 ) as processing_time,--受理时间 
-            (complete_time + 1*60*60*1) as complete_time ,--完成时间 
+            if(create_time=0,0,(create_time + 1*60*60*1)) as create_time,--创建时间 
+            if(processing_time=0,0,(processing_time + 1*60*60*1 )) as processing_time,--受理时间 
+            if(complete_time=0,0,(complete_time + 1*60*60*1)) as complete_time ,--完成时间 
             updated_at,--最后更新时间
             'nal' as country_code,
             '{pt}' as dt

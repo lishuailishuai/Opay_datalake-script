@@ -87,7 +87,7 @@ def fun_task_timeout_monitor(ds,dag,**op_kwargs):
     dag_ids=dag.dag_id
 
     msg = [
-        {"db": "oride_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "600"}
+        {"dag":dag,"db": "oride_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "600"}
     ]
 
     TaskTimeoutMonitor().set_task_monitor(msg)
@@ -115,8 +115,8 @@ def dwd_oride_driver_recharge_records_df_sql_task(ds):
             driver_id,--司机ID 
             amount,--充值金额 
             amount_str,--充值金额-详细说明信息 
-            (created_at+1*60*60) as created_at,--申请时间 
-            (updated_at+1*60*60) as updated_at,--修改时间 
+            if(created_at=0,0,(created_at+1*60*60)) as created_at,--申请时间 
+            if(updated_at=0,0,(updated_at+1*60*60)) as updated_at,--修改时间 
             amount_reason,--调整原因:0 
             order_id,--涉及order_id
             'nal' as country_code,

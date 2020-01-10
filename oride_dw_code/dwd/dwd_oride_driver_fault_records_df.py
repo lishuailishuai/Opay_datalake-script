@@ -90,7 +90,7 @@ def fun_task_timeout_monitor(ds,dag,**op_kwargs):
     dag_ids=dag.dag_id
 
     msg = [
-        {"db": "oride_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "800"}
+        {"dag":dag,"db": "oride_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "800"}
     ]
 
     TaskTimeoutMonitor().set_task_monitor(msg)
@@ -121,7 +121,7 @@ id,--ID
 driver_id,--司机ID
 fault,--未知
 operation_admin_id,--未知
-(create_time + 1*60*60*1 ) as create_time,--创建时间
+if(create_time=0,0,(create_time + 1*60*60*1 )) as create_time,--创建时间
 'nal' as country_code,
 '{pt}' as dt
         
