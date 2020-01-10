@@ -17,7 +17,7 @@ from airflow.sensors.hive_partition_sensor import HivePartitionSensor
 from airflow.sensors import UFileSensor
 from airflow.sensors import OssSensor
 from airflow.sensors.s3_key_sensor import S3KeySensor
-from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
+from plugins.TaskTimeoutMonitor_dev import TaskTimeoutMonitor
 from plugins.CountriesPublicFrame import CountriesPublicFrame
 from plugins.TaskHourSuccessCountMonitor import TaskHourSuccessCountMonitor
 import json
@@ -167,14 +167,14 @@ def fun_task_timeout_monitor(ds,dag,**op_kwargs):
     dag_ids=dag.dag_id
 
     tb = [
-        {"dag":dag,"db": "test_db", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "600"}
+        {"dag":dag,"db": "test_db", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "10"}
     ]
 
     # tb = [
     #     {"db": "test_db", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "600"}
     # ]
 
-    TaskTimeoutMonitor_dev().set_task_monitor(tb)
+    TaskTimeoutMonitor().set_task_monitor(tb)
 
 task_timeout_monitor= PythonOperator(
     task_id='task_timeout_monitor',
