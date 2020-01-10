@@ -120,7 +120,9 @@ task_timeout_monitor = PythonOperator(
 
 
 ##----------------------------------------- 脚本 ---------------------------------------##
-
+##----------------------------------------订单表使用说明-------------------------------##
+#！！！！由于数据迁移，oride订单表只支持从20200108号数据回溯
+##------------------------------------------------------------------------------------##
 def dwd_oride_order_base_di_sql_task(ds):
     hql = '''
 SET hive.exec.parallel=TRUE;
@@ -446,14 +448,14 @@ SELECT base.id as order_id,
        '{pt}' AS dt
 FROM (select *
      from (SELECT *,
-             (t.create_time + 1 * 60 * 60 * 1) as local_create_time,
-             (t.take_time + 1 * 60 * 60 * 1) as local_take_time,
-             (t.wait_time + 1 * 60 * 60 * 1) as local_wait_time,
-             (t.pickup_time + 1 * 60 * 60 * 1) as local_pickup_time,
-             (t.arrive_time + 1 * 60 * 60 * 1) as local_arrive_time,
-             (t.finish_time + 1 * 60 * 60 * 1) as local_finish_time,
-             (t.cancel_time + 1 * 60 * 60 * 1) as local_cancel_time,
-             (t.cancel_wait_payment_time + 1 * 60 * 60 * 1) as local_cancel_wait_payment_time,
+             if(t.create_time=0,0,(t.create_time + 1 * 60 * 60)) as local_create_time,
+             if(t.take_time=0,0,(t.take_time + 1 * 60 * 60)) as local_take_time ,
+             if(t.wait_time=0,0,(t.wait_time + 1 * 60 * 60)) as local_wait_time ,
+             if(t.pickup_time=0,0,(t.pickup_time + 1 * 60 * 60)) as local_pickup_time ,
+             if(t.arrive_time=0,0,(t.arrive_time + 1 * 60 * 60)) as local_arrive_time ,
+             if(t.finish_time=0,0,(t.finish_time + 1 * 60 * 60)) as local_finish_time ,
+             if(t.cancel_time=0,0,(t.cancel_time + 1 * 60 * 60)) as local_cancel_time ,
+             if(t.cancel_wait_payment_time=0,0,(t.cancel_wait_payment_time + 1 * 60 * 60 * 1)) as local_cancel_wait_payment_time ,
 
              row_number() over(partition by t.id order by t.`__ts_ms` desc) as order_by
 

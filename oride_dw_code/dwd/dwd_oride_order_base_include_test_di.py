@@ -111,7 +111,9 @@ task_timeout_monitor = PythonOperator(
 
 
 ##----------------------------------------- 脚本 ---------------------------------------##
-
+##----------------------------------------订单表使用说明-------------------------------##
+#！！！！由于数据迁移，oride订单表只支持从20200108号数据回溯
+##------------------------------------------------------------------------------------##
 def dwd_oride_order_base_include_test_di_sql_task(ds):
     hql = '''
     SET hive.exec.parallel=TRUE;
@@ -119,16 +121,16 @@ def dwd_oride_order_base_include_test_di_sql_task(ds):
     set hive.auto.convert.join = false;
 
 INSERT overwrite TABLE oride_dw.{table} partition(country_code,dt)
-SELECT base.order_id,
+SELECT base.id as order_id,
        --订单 ID
 
-       city_id,
+       nvl(base.city_id,-999) as city_id,
        --所属城市(-999 无效数据)
 
-       product_id,
+       base.serv_type as product_id,
        --订单车辆类型(0: 专快混合 1:driect[专车] 2: street[快车] 3:Otrike 99:招手停)
 
-       passenger_id,
+       base.user_id as passenger_id,
        --乘客 ID
 
        start_name,
@@ -182,25 +184,25 @@ SELECT base.order_id,
        plate_num,
        --车牌号
 
-       take_time,
+       local_take_time as take_time,
        --接单(应答)时间
 
-       wait_time,
+       local_wait_time as wait_time,
        --到达接送点时间
 
-       pickup_time,
+       local_pickup_time as pickup_time,
        --接到乘客时间
 
-       arrive_time,
+       local_arrive_time as arrive_time,
        --到达终点时间
 
-       finish_time,
+       local_finish_time as finish_time,
        --订单(支付)完成时间
 
        cancel_role,
        --取消人角色(1: 用户, 2: 司机, 3:系统 4:Admin)
 
-       cancel_time,
+       local_cancel_time as cancel_time,
        --取消时间
 
        cancel_type,
@@ -212,7 +214,7 @@ SELECT base.order_id,
        status,
        --订单状态 (0: wait assign, 1: pick up passenger, 2: wait passenger, 3: send passenger, 4: arrive destination, 5: finished, 6: cancel)
 
-       create_time,
+       local_create_time as create_time,
        -- 创建时间
 
        fraud,
@@ -236,10 +238,10 @@ SELECT base.order_id,
        zone_hash,
        --所属区域 hash
 
-       updated_time,
+       base.updated_at as updated_time,
        --最后更新时间
 
-       from_unixtime(create_time,'yyyy-MM-dd') AS create_date,
+       from_unixtime(local_create_time,'yyyy-MM-dd') AS create_date,
        --创建日期(转换自create_time,yyyy-MM-dd)
 
        (CASE
@@ -339,7 +341,7 @@ SELECT base.order_id,
        nvl(pay_amount,0) as pay_amount,
        --实付金额
 
-       nvl(pay_mode,0) as pay_mode,
+       nvl(pay.pay_mode,0) as pay_mode,
        --支付方式（0: 未知, 1: 线下支付, 2: opay, 3: 余额）,
 
        '' as part_hour, --小时分区时间(yyyy-mm-dd HH)
@@ -395,7 +397,7 @@ SELECT base.order_id,
             ELSE 0
         END) AS td_driver_after_cancel_time_dur,
        --当天司机应答后取消平均时长（秒） 
-       serv_union_type,  --业务类型，下单类型+司机类型(serv_type+driver_serv_type)
+       concat(base.serv_type,'_',base.driver_serv_type) as serv_union_type,  --业务类型，下单类型+司机类型(serv_type+driver_serv_type)
 
        is_carpool, --'是否拼车'
 
@@ -414,7 +416,7 @@ SELECT base.order_id,
         wait_lat, --等待乘客上车位置纬度
         wait_in_radius, --是否在接驾范围内
         wait_distance, --等待乘客上车距离
-        cancel_wait_payment_time,  --乘客取消待支付时间          
+        local_cancel_wait_payment_time as cancel_wait_payment_time,  --乘客取消待支付时间          
         estimate_duration,  -- 预估时间
         estimate_distance,-- '预估距离'
         estimate_price,  --预估价格  
@@ -448,181 +450,18 @@ SELECT base.order_id,
        '{pt}' AS dt
 FROM
 (
-        select
-            id as order_id ,
-             --订单ID
-
-             user_id as passenger_id,
-             --乘客ID
-
-             start_name,
-             --起点名称
-
-             start_lng ,
-             --起点经度
-
-             start_lat,
-             --起点纬度
-
-             end_name,
-             --终点名称
-
-             end_lng ,
-             --终点经度
-
-             end_lat ,
-             --终点纬度
-
-             duration ,
-             --订单持续时间
-
-             distance ,
-             --订单距离
-
-             basic_fare ,
-             --起步价
-
-             dst_fare ,
-             --里程费
-
-             dut_fare ,
-             --时长费
-
-             dut_price ,
-             --时长价格
-
-             dst_price ,
-             --距离价格
-
-             price ,
-             --订单价格
-
-             reward ,
-             --司机奖励
-
-             driver_id ,
-             --司机ID
-
-             plate_num ,
-             --车牌号
-
-             local_take_time as take_time ,
-             --接单时间
-
-             local_wait_time as wait_time ,
-             --到达接送点时间
-
-             local_pickup_time as pickup_time ,
-             --接到乘客时间
-
-             local_arrive_time as arrive_time ,
-             --到达终点时间
-
-             local_finish_time  as finish_time  ,
-             --订单完成时间
-
-             cancel_role ,
-             --取消人角色(1:用户,2:司机,3:系统4:Admin)
-
-             local_cancel_time as cancel_time  ,
-             --取消时间
-
-             cancel_type ,
-             --取消原因类型
-
-             --cancel_reason ,
-             --取消原因
-
-             status ,
-             --订单状态(0:waitassign,1:pickuppassenger,2:waitpassenger,3:sendpassenger,4:arrivedestination,5:finished,6:cancel)
-
-             local_create_time as create_time ,
-             --创建时间
-
-             fraud ,
-             --是否欺诈(0否1是)
-
-             driver_serv_type ,
-             --司机服务类型(1:Direct2:Street)
-
-             serv_type as product_id,
-             --订单车辆类型(0: 专快混合 1:driect[专车] 2: street[快车] 99:招手停)
-
-             --refund_before_pay ,
-             --支付前资金调整
-
-             --refund_after_pay ,
-             --支付后资金调整
-
-             abnormal ,
-             --异常状态(0否1逃单)
-
-             --flag_down_phone ,
-             --招手停上报手机号
-
-             zone_hash ,
-             --所属区域hash
-
-             updated_at as updated_time ,
-             --最后更新时间
-
-             nvl(city_id,-999) as city_id,
-             --所属城市(-999 无效数据)
-
-             trip_id, --'行程 ID'
-             wait_carpool,--'是否在等在拼车',
-             pax_num, -- 乘客数量 
-             tip,  --小费
-             concat(serv_type,'_',driver_serv_type) as serv_union_type,  --业务类型，下单类型+司机类型(serv_type+driver_serv_type)
-             falsify, --取消罚款
-             falsify_get, --取消罚款实际获得
-             falsify_driver_cancel, --司机取消罚款
-             falsify_get_driver_cancel, --司机取消罚款用户实际获得
-             wait_lng, --等待乘客上车位置经度
-             wait_lat, --等待乘客上车位置纬度
-             wait_in_radius, --是否在接驾范围内
-             wait_distance, --等待乘客上车距离
-             local_cancel_wait_payment_time as cancel_wait_payment_time,  --乘客取消待支付时间
-             country_id,  --国家ID
-             is_carpool , -- '是否是拼车' 
-             estimate_duration,  -- 预估时间
-             estimate_distance,-- '预估距离'
-             estimate_price,  --预估价格
-             premium_rate,  --溢价倍数
-             original_price, --溢价前费用 
-             premium_price_limit, --溢价金额上限
-             premium_adjust_price, --溢价金额
-             local_gov, --围栏ID
-             estimate_id,  --预估价记录表id
-             gender, --性别:0.未设置 1.男 2.女
-             surcharge, --服务费
-             user_agree_surcharge, --用户是否同意服务费(1同意 2 不同意)
-             take_lng, --司机接单位置经度
-             take_lat, --司机接单位置纬度
-             minimum_fare, --最低消费
-             discount, --动态折扣(如:70，7折)
-             discount_price_max, --可享受折扣金额上限.)
-             driver_depart, --接单取消时骑手是否出发 0 已出发（默认） 1 未出发
-             change_target, --否修改终点(0 no 1 yes) 
-             user_version, --乘客端版本（发单）
-             driver_version, --司机端版本（接单）
-             pax_ratio, --乘客系数
-             driver_ratio, --司机系数
-             driver_fee_rate, --司机佣金费率
-             driver_price, --司机价格
-             driver_original_price, --司机原始价格
-             original_distance, --实际距离
-             driver_distance --司机计价距离(乘以系数后)
+     select
+            *
         from 
      (SELECT *,
-             (t.create_time + 1 * 60 * 60 * 1) as local_create_time,
-             (t.cancel_wait_payment_time + 1 * 60 * 60 * 1) as local_cancel_wait_payment_time ,
-             (t.cancel_time + 1 * 60 * 60 * 1) as local_cancel_time ,
-             (t.finish_time + 1 * 60 * 60 * 1) as local_finish_time ,
-             (t.arrive_time + 1 * 60 * 60 * 1) as local_arrive_time ,
-             (t.pickup_time + 1 * 60 * 60 * 1) as local_pickup_time ,
-             (t.wait_time + 1 * 60 * 60 * 1) as local_wait_time ,
-             (t.take_time + 1 * 60 * 60 * 1) as local_take_time ,
+             if(t.create_time=0,0,(t.create_time + 1 * 60 * 60)) as local_create_time,
+             if(t.take_time=0,0,(t.take_time + 1 * 60 * 60)) as local_take_time ,
+             if(t.wait_time=0,0,(t.wait_time + 1 * 60 * 60)) as local_wait_time ,
+             if(t.pickup_time=0,0,(t.pickup_time + 1 * 60 * 60)) as local_pickup_time ,
+             if(t.arrive_time=0,0,(t.arrive_time + 1 * 60 * 60)) as local_arrive_time ,
+             if(t.finish_time=0,0,(t.finish_time + 1 * 60 * 60)) as local_finish_time ,
+             if(t.cancel_time=0,0,(t.cancel_time + 1 * 60 * 60)) as local_cancel_time ,
+             if(t.cancel_wait_payment_time=0,0,(t.cancel_wait_payment_time + 1 * 60 * 60 * 1)) as local_cancel_wait_payment_time ,
 
              row_number() over(partition by t.id order by t.`__ts_ms` desc) as order_by
 
@@ -649,7 +488,7 @@ LEFT OUTER JOIN
 
 
 FROM oride_dw_ods.ods_sqoop_base_data_order_payment_df
-WHERE dt = '{pt}') pay ON base.order_id=pay.order_id 
+WHERE dt = '{pt}') pay ON base.id=pay.order_id 
 
 left join
 (SELECT *
