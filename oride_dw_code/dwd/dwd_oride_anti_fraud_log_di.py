@@ -114,7 +114,7 @@ def dwd_oride_anti_fraud_log_di_sql_task(ds):
         driver_id,--司机id
         order_id,--订单id
         extend,--扩展信息json
-        `timestamp`,--时间戳
+        (`timestamp`+1*60*60) as `timestamp`,--时间戳
         'nal' as country_code,
         dt
     from  oride_source.log_anti_oride_fraud 
