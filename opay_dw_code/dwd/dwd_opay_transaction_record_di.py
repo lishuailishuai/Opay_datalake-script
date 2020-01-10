@@ -264,4 +264,3 @@ dwd_opay_cash_to_card_record_di_task >> dwd_opay_transaction_record_di_task
 dwd_opay_topup_with_card_record_di_task >> dwd_opay_transaction_record_di_task
 dwd_opay_receive_money_record_di_task >> dwd_opay_transaction_record_di_task
 dwd_opay_pos_transaction_record_di_task >> dwd_opay_transaction_record_di_task
-dwd_opay_easycash_record_di_task >> dwd_opay_transaction_record_di_task
