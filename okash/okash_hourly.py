@@ -22,7 +22,7 @@ dag = airflow.DAG(
 
 check_client_file=OssSensor(
     task_id='check_client_file',
-    bucket_key='okash/okash/{table}/dt={{{{ ds }}}}/hour={{{{ execution_date.strftime("%H") }}}}'.format(table='client'),
+    bucket_key='okash/okash/{table}/dt={{{{ ds }}}}/hour={{{{ execution_date.strftime("%H") }}}}/'.format(table='client'),
     bucket_name='okash',
     timeout=3600,
     dag=dag)
