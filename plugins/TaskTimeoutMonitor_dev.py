@@ -102,7 +102,7 @@ class TaskTimeoutMonitor(object):
 
                         format_date=int(int(timeout)/60)
 
-                        self.dingding_alert.send('DW 测试【及时性预警】调度任务: <a href="http://8.208.14.165:8080/admin/airflow/tree?dag_id={dag_id}">{dag_id}</a> 产出超时【负责人】{owner_name}【等待路径】{hdfs_dir_name}【预留时间】{timeout} 分钟'.format(
+                        self.dingding_alert.send('Test 测试【及时性预警】调度任务: <a href="http://8.208.14.165:8080/admin/airflow/tree?dag_id={dag_id}">{dag_id}</a> 产出超时【负责人】{owner_name}【等待路径】{hdfs_dir_name}【预留时间】{timeout} 分钟'.format(
                                 dag_id= dag_id_name,
                                 timeout=str(format_date),
                                 owner_name=self.owner_name,
