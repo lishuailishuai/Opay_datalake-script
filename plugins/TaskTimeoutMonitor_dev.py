@@ -72,7 +72,7 @@ class TaskTimeoutMonitor(object):
         try:
 
             sum_timeout = 0 
-            timeout_step = 120 #任务监控间隔时间(秒)
+            timeout_step = 10 #任务监控间隔时间(秒)
             command = command.strip()
 
             while sum_timeout <= int(timeout):
@@ -137,14 +137,12 @@ class TaskTimeoutMonitor(object):
             dag=item.get('dag', None)
 
             if dag:
-                print("111")
 
                 table=dag.dag_id
 
                 self.owner_name=dag.default_args.get("owner")
 
             else:
-                print("222")
 
                 self.owner_name="Null"
 
