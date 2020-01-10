@@ -88,7 +88,7 @@ if code_map["id"].lower()=="ufile":
     #路径
     hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
 else:
-    print("成功")
+    
     dim_oride_passenger_base_prev_day_task = OssSensor(
         task_id='dim_oride_passenger_base_prev_day_task',
         bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
@@ -130,7 +130,7 @@ def fun_task_timeout_monitor(ds, dag, **op_kwargs):
     dag_ids = dag.dag_id
 
     msg = [
-        {"db": "oride_dw", "table": "{dag_name}".format(dag_name=dag_ids),
+        {"dag":dag,"db": "oride_dw", "table": "{dag_name}".format(dag_name=dag_ids),
          "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "800"}
     ]
 
