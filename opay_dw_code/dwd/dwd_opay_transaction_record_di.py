@@ -111,16 +111,16 @@ dwd_opay_pos_transaction_record_di_task = OssSensor(
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
-dwd_opay_easycash_record_di_task = OssSensor(
-    task_id='dwd_opay_easycash_record_di_task',
-    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opay/opay_dw/dwd_opay_easycash_record_di/country_code=NG",
-        pt='{{ds}}'
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
+# dwd_opay_easycash_record_di_task = OssSensor(
+#     task_id='dwd_opay_easycash_record_di_task',
+#     bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+#         hdfs_path_str="opay/opay_dw/dwd_opay_easycash_record_di/country_code=NG",
+#         pt='{{ds}}'
+#     ),
+#     bucket_name='opay-datalake',
+#     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+#     dag=dag
+# )
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
 def fun_task_timeout_monitor(ds,dag,**op_kwargs):
 
