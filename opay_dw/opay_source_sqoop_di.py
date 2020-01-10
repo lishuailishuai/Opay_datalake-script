@@ -45,7 +45,7 @@ dag_monitor = airflow.DAG(
 
 def fun_task_timeout_monitor(ds, db_name, table_name, **op_kwargs):
     tb = [
-        {"db": db_name, "table":table_name, "partition": "dt={pt}".format(pt=ds), "timeout": "7200"}
+        {"dag":dag, "db": db_name, "table":table_name, "partition": "dt={pt}".format(pt=ds), "timeout": "7200"}
     ]
 
     TaskTimeoutMonitor().set_task_monitor(tb)
@@ -88,7 +88,6 @@ table_list = [
     ("opay_transaction","receive_money_request_record", "opay_transaction", "base",3,"true"),
     ("opay_transaction","transfer_not_register_record", "opay_transaction", "base",3,"true"),
     ("opay_transaction","tv_topup_record", "opay_transaction", "base",3,"true"),
-    ("opay_transaction","user_easycash_record", "opay_transaction", "base",3,"true"),
     ("opay_transaction","user_pos_transaction_record", "opay_transaction", "base",3,"false"),
     ("opay_transaction","user_receive_money_record", "opay_transaction", "base",3,"true"),
     ("opay_transaction","user_topup_record", "opay_transaction", "base",3,"true"),
