@@ -98,12 +98,16 @@ class TaskTimeoutMonitor(object):
                 #判断数据文件是否生成
                 if res == '' or res == 'None' or res == '0':
 
+                    ht="""
+                    <html><a href="http://8.208.14.165:8080/admin/airflow/tree?dag_id={dag_id}">{dag_id}</a></html>
+                    """format(dag_id= dag_id_name)
+
                     if sum_timeout >= int(timeout):
 
                         format_date=int(int(timeout)/60)
 
-                        self.dingding_alert.send('Test 测试【及时性预警】调度任务: <a href="http://8.208.14.165:8080/admin/airflow/tree?dag_id={dag_id}">{dag_id}</a> 产出超时【负责人】{owner_name}【等待路径】{hdfs_dir_name}【预留时间】{timeout} 分钟'.format(
-                                dag_id= dag_id_name,
+                        self.dingding_alert.send('Test 测试【及时性预警】调度任务: {html_str} 产出超时【负责人】{owner_name}【等待路径】{hdfs_dir_name}【预留时间】{timeout} 分钟'.format(
+                                html_str=ht
                                 timeout=str(format_date),
                                 owner_name=self.owner_name,
                                 hdfs_dir_name=self.hdfs_dir_name
