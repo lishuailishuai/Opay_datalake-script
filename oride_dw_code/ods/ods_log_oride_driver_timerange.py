@@ -24,7 +24,7 @@ args = {
 }
 
 dag = airflow.DAG( 'ods_oride_log_driver_timerange',
-    schedule_interval="30 00 * * *",
+    schedule_interval="10 00 * * *",
     default_args=args,
     catchup=False)
 
