@@ -255,7 +255,7 @@ for db_name, table_name, conn_id, prefix_name,priority_weight_nm in table_list:
         },
         dag=dag
     )
-    add_partitions >> check_table >> import_table >> volume_monitoring >> validate_all_data
+    check_table >> add_partitions >> import_table >> volume_monitoring >> validate_all_data
 
     # 超时监控
     task_timeout_monitor= PythonOperator(
