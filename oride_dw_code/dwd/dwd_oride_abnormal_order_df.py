@@ -127,7 +127,7 @@ behavior_ids,--命中规则id
 rule_names,--命中规则名称
 is_revoked,--是否撤销，1是，0否
 if(create_time=0,0,(create_time + 1 * 60 * 60 * 1)) as create_time,--创建时间
-if((update_time=0,0,update_time + 1 * 60 * 60 * 1 )) as update_time,--更新时间
+if(update_time=0,0,(update_time + 1 * 60 * 60 * 1)) as update_time,--更新时间
 score,--每单扣除分数
 amount,--扣款金额
 'NG' as country_code,
