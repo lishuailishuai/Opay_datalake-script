@@ -42,7 +42,7 @@ dag_monitor = airflow.DAG(
 
 def fun_task_timeout_monitor(ds, db_name, table_name, **op_kwargs):
     tb = [
-        {"dag":dag, "db": db_name, "table":table_name, "partition": "dt={pt}".format(pt=ds), "timeout": "7200"}
+        {"db": db_name, "table":table_name, "partition": "dt={pt}".format(pt=ds), "timeout": "7200"}
     ]
 
     TaskTimeoutMonitor().set_task_monitor(tb)
