@@ -51,16 +51,16 @@ hdfs_path = "oss://opay-datalake/oride/oride_dw/" + table_name
 ##----------------------------------------- 依赖 ---------------------------------------##
 # 依赖前一天分区
 ods_binlog_data_order_hi_prev_day_task = OssSensor(
-        task_id='ods_binlog_base_data_order_hi_prev_day_task',
-        bucket_key='{hdfs_path_str}/dt={now_day}/hour=00/_SUCCESS'.format(
-            hdfs_path_str="oride_binlog/oride_db.oride_data.data_order",
-            pt='{{ds}}',
-            now_day='{{macros.ds_add(ds, +1)}}'
-        ),
-        bucket_name='opay-datalake',
-        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-        dag=dag
-    )
+    task_id='ods_binlog_base_data_order_hi_prev_day_task',
+    bucket_key='{hdfs_path_str}/dt={pt}/hour=23/_SUCCESS'.format(
+        hdfs_path_str="oride_binlog/oride_db.oride_data.data_order",
+        pt='{{ds}}',
+        now_day='{{macros.ds_add(ds, +1)}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
 
 # 依赖前一天分区
 ods_sqoop_base_data_order_payment_df_prev_day_task = OssSensor(
