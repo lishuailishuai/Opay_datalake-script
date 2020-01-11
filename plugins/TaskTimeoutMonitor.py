@@ -135,14 +135,12 @@ class TaskTimeoutMonitor(object):
             dag=item.get('dag', None)
 
             if dag:
-                print("111")
 
                 table=dag.dag_id
 
                 self.owner_name=dag.default_args.get("owner")
 
             else:
-                print("222")
 
                 self.owner_name="Null"
 
