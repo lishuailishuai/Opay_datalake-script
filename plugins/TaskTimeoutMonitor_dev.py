@@ -103,28 +103,33 @@ class TaskTimeoutMonitor(object):
                         http://8.208.14.165:8080/admin/airflow/tree?dag_id={dag_id}
                     """.format(dag_id= dag_id_name)
 
-                    send_data = {
-                        "msgtype": "markdown",
-                        "markdown": {
-                            "title": "prometheus_alert",
-                            "text": "{dag_id}".format(dag_id=dag_id_name)
-                            }
-                        }
+                    # send_data = {
+                    #     "msgtype": "markdown",
+                    #     "markdown": {
+                    #         "title": "prometheus_alert",
+                    #         "text": "{dag_id}".format(dag_id=dag_id_name)
+                    #         }
+                    #     }
 
                     if sum_timeout >= int(timeout):
 
                         format_date=int(int(timeout)/60)
 
-                        req = requests.post(url, json=send_data)
-
-                        result = req.json()
-
-                        if result['errcode'] != 0:
-                            print('notify dingtalk error: %s' % result['errcode'])
+                        html = """/
+                        <html>
+                          <head></head>
+                          <body>
+                            <p>Hi!<br>
+                               How are you?<br>
+                               Here is the <a href="http://www.python.org" mce_href="http://www.python.org">link</a> you wanted.
+                            </p>
+                          </body>
+                        </html>
+                        """
 
 
                         self.dingding_alert.send('Test 测试【及时性预警】调度任务: {html_str} 产出超时【负责人】{owner_name}【等待路径】{hdfs_dir_name}【预留时间】{timeout} 分钟'.format(
-                                html_str=result,
+                                html_str=html,
                                 timeout=str(format_date),
                                 owner_name=self.owner_name,
                                 hdfs_dir_name=self.hdfs_dir_name
