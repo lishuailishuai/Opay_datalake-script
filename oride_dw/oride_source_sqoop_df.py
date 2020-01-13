@@ -32,7 +32,7 @@ schedule_interval="01 00 * * *"
 dag = airflow.DAG(
     'oride_source_sqoop_df',
     schedule_interval=schedule_interval,
-    concurrency=30,
+    concurrency=40,
     max_active_runs=1,
     default_args=args)
 
