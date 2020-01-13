@@ -115,7 +115,9 @@ def app_oride_user_invite_user_d_sql_task(ds):
            sum(if(inved.invitee_id is not null and all_user.first_finish_ord_id is not null and all_user.first_finish_create_date=all_user.dt,1,0)) as fir_finish_invited_user_cnt, --完成首单被邀请人数
            sum(if(uid.uid is not null,coupon_user.coupon_cnt,0)) as invite_user_coupon_cnt, --邀请人优惠券发放数量
            sum(if(inved.invitee_id is not null,all_user.acc_ord_cnt,0)) as invited_acc_ord_cnt, --被邀请人累计下单量
-           sum(if(inved.invitee_id is not null,all_user.acc_finish_ord_cnt,0)) as invited_acc_finish_ord_cnt --被邀请人累计完单量
+           sum(if(inved.invitee_id is not null,all_user.acc_finish_ord_cnt,0)) as invited_acc_finish_ord_cnt, --被邀请人累计完单量
+           'nal' as country_code,
+           '{pt}' as dt
     from (select * 
     from oride_dw.dwm_oride_passenger_base_df
     where dt='{pt}') all_user   --乘客全量信息表
