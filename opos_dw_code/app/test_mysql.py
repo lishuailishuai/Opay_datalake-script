@@ -68,7 +68,7 @@ dt='{ds}'
         before_1_day ='{{ macros.ds_add(ds, -1) }}'
     ),
     mysql_conn_id='mysql_dw',
-    mysql_table='app_opos_shop_target_week_w',
+    mysql_table='app_test',
     dag=dag)
 
 
