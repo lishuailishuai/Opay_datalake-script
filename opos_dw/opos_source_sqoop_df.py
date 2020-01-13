@@ -222,7 +222,7 @@ for db_name, table_name, conn_id, prefix_name in table_list:
         },
         dag=dag
     )
-    add_partitions >> volume_monitoring
+    import_table >> volume_monitoring
 
     # 超时监控
     task_timeout_monitor= PythonOperator(
@@ -237,4 +237,4 @@ for db_name, table_name, conn_id, prefix_name in table_list:
     )
 
 
-    import_table >> check_table >> add_partitions
+    check_table >> add_partitions >> import_table
