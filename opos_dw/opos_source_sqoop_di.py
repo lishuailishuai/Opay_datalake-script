@@ -15,7 +15,7 @@ from airflow.sensors.sql_sensor import SqlSensor
 from airflow.models import Variable
 
 args = {
-    'owner': 'linan',
+    'owner': 'zhenqian.zhang',
     'start_date': datetime(2019, 10, 29),
     'depends_on_past': False,
     'retries': 1,
@@ -281,7 +281,7 @@ for db_name, table_name, conn_id, prefix_name, priority_weight_nm, table_id, tab
         },
         dag=dag
     )
-    add_partitions >> volume_monitoring >> validate_all_data
+    import_table >> volume_monitoring >> validate_all_data
 
     # 超时监控
     task_timeout_monitor = PythonOperator(
@@ -296,4 +296,4 @@ for db_name, table_name, conn_id, prefix_name, priority_weight_nm, table_id, tab
         dag=dag_monitor
     )
 
-    import_data_validate >> import_order_bd_validate >> import_table >> check_table >> add_partitions
+    import_data_validate >> import_order_bd_validate >> check_table >> add_partitions >> import_table
