@@ -104,7 +104,7 @@ class TaskTimeoutMonitor(object):
                     # """.format(dag_id= dag_id_name)
 
                     url="""
-                        {dag_id}
+                        http://8.208.14.165:8080/{dag_id}
                     """.format(dag_id= dag_id_name)
 
                     # send_data = {
