@@ -15,7 +15,7 @@ from utils.validate_metrics_utils import *
 from airflow.models import Variable
 
 args = {
-    'owner': 'linan',
+    'owner': 'zhenqian.zhang',
     'start_date': datetime(2019, 10, 30),
     'depends_on_past': False,
     'retries': 1,

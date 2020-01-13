@@ -15,7 +15,7 @@ from airflow.sensors.sql_sensor import SqlSensor
 from airflow.models import Variable
 
 args = {
-    'owner': 'linan',
+    'owner': 'zhenqian.zhang',
     'start_date': datetime(2019, 10, 29),
     'depends_on_past': False,
     'retries': 1,
