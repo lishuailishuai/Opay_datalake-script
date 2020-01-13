@@ -40,15 +40,10 @@ dag = airflow.DAG('test_mysql',
                   default_args=args,
                   catchup=False)
 
-db_name = "opos_dw"
-table_name = "app_opos_shop_target_week_w"
-hdfs_path = "oss://opay-datalake/opos/opos_dw/" + table_name
-
-
 drop_mysql_yesterday_data = MySqlOperator(
     task_id='drop_mysql_yesterday_data',
     sql="""
-        DELETE FROM opos_dw.app_opos_shop_target_week_w WHERE dt='{ds}';
+        DELETE FROM opos_dw.app_test WHERE dt='{ds}';
     """.format(
         ds='{{ds}}',
         before_1_day ='{{ macros.ds_add(ds, -1) }}'
@@ -60,136 +55,13 @@ insert_mysql_today_data = HiveToMySqlTransfer(
     task_id='insert_mysql_today_data',
     sql="""
 select
-0 as id
-,shop_id
-,opay_id
-,shop_name
-,opay_account
-
-,concat(
-case 
-when create_week=1 and cast(substr(dt,-2) as int)>8 then cast(cast(substr(dt,0,4) as int)+1 as string)
-when create_week=53 and cast(substr(dt,-2) as int)<8 then cast(cast(substr(dt,0,4) as int)-1 as string)
-else substr(dt,0,4)
-end
-,lpad(create_week,2,'0')
-) as create_week
-
-,city_code
-,city_name
-,country
-
-,hcm_id
-,hcm_name
-,cm_id
-,cm_name
-,rm_id
-,rm_name
-,bdm_id
-,bdm_name
-,bd_id
-,bd_name
-
-,sum(nvl(order_cnt,0)) as order_cnt
-,sum(nvl(cashback_order_cnt,0)) as cashback_order_cnt
-,sum(nvl(cashback_fail_order_cnt,0)) as cashback_fail_order_cnt
-,sum(nvl(cashback_order_gmv,0)) as cashback_order_gmv
-,sum(nvl(cashback_per_order_amt,0)) as cashback_per_order_amt
-,sum(nvl(cashback_per_people_amt,0)) as cashback_per_people_amt
-,sum(nvl(cashback_people_cnt,0)) as cashback_people_cnt
-,sum(nvl(cashback_first_people_cnt,0)) as cashback_first_people_cnt
-,sum(nvl(cashback_zero_order_cnt,0)) as cashback_zero_order_cnt
-,sum(nvl(cashback_amt,0)) as cashback_amt
-,sum(nvl(reduce_order_cnt,0)) as reduce_order_cnt
-,sum(nvl(reduce_zero_order_cnt,0)) as reduce_zero_order_cnt
-,sum(nvl(reduce_amt,0)) as reduce_amt
-,sum(nvl(reduce_order_gmv,0)) as reduce_order_gmv
-,sum(nvl(reduce_people_cnt,0)) as reduce_people_cnt
-,sum(nvl(reduce_first_people_cnt,0)) as reduce_first_people_cnt
-,sum(nvl(bonus_order_cnt,0)) as bonus_order_cnt
-,sum(nvl(order_people,0)) as order_people
-,sum(nvl(not_first_order_people,0)) as not_first_order_people
-,sum(nvl(first_order_people,0)) as first_order_people
-,sum(nvl(first_bonus_order_people,0)) as first_bonus_order_people
-,sum(nvl(order_gmv,0)) as order_gmv
-,sum(nvl(bonus_order_gmv,0)) as bonus_order_gmv
-,sum(nvl(bonus_order_amt,0)) as bonus_order_amt
-,sum(nvl(sweep_amt,0)) as sweep_amt
-,sum(nvl(bonus_order_people,0)) as bonus_order_people
-,sum(nvl(bonus_order_times,0)) as bonus_order_times
-,sum(nvl(order_create_cnt,0)) as order_create_cnt
-,sum(nvl(order_pay_cnt,0)) as order_pay_cnt
-,sum(nvl(order_fail_cnt,0)) as order_fail_cnt
-,sum(nvl(order_pending_cnt,0)) as order_pending_cnt
-,sum(nvl(coupon_order_cnt,0)) as coupon_order_cnt
-,sum(nvl(coupon_order_people,0)) as coupon_order_people
-,sum(nvl(coupon_first_order_people,0)) as coupon_first_order_people
-,sum(nvl(coupon_pay_amount,0)) as coupon_pay_amount
-,sum(nvl(coupon_order_gmv,0)) as coupon_order_gmv
-,sum(nvl(coupon_discount_amount,0)) as coupon_discount_amount
-,sum(nvl(coupon_useless_order_cnt,0)) as coupon_useless_order_cnt
-,sum(nvl(coupon_useless_order_people,0)) as coupon_useless_order_people
-,sum(nvl(coupon_useless_pay_amount,0)) as coupon_useless_pay_amount
-,sum(nvl(coupon_useless_order_gmv,0)) as coupon_useless_order_gmv
-
-,0 as bak1
-,0 as bak2
-,0 as bak3
-,0 as bak4
-,0 as bak5
-,0 as bak6
-,0 as bak7
-,0 as bak8
-,0 as bak9
-,0 as bak10
-,0 as bak11
-,0 as bak12
-,0 as bak13
-,0 as bak14
-,0 as bak15
-
-,'-' as bak16
-,'-' as bak17
-,'-' as bak18
-,'-' as bak19
-,'-' as bak20
-
-,'nal' as country_code
+'1' as id
+,'yuanfeng' as name
 ,'{ds}' as dt
 from
-opos_dw.app_opos_shop_target_d
+opos_dw_ods.ods_sqoop_base_bd_city_df
 where
-country_code = 'nal'
-and dt='{ds}'
-group BY
-shop_id
-,opay_id
-,shop_name
-,opay_account
-
-,concat(
-case 
-when create_week=1 and cast(substr(dt,-2) as int)>8 then cast(cast(substr(dt,0,4) as int)+1 as string)
-when create_week=53 and cast(substr(dt,-2) as int)<8 then cast(cast(substr(dt,0,4) as int)-1 as string)
-else substr(dt,0,4)
-end
-,lpad(create_week,2,'0')
-)
-
-,city_code
-,city_name
-,country
-
-,hcm_id
-,hcm_name
-,cm_id
-,cm_name
-,rm_id
-,rm_name
-,bdm_id
-,bdm_name
-,bd_id
-,bd_name
+dt='{ds}'
 
     """.format(
         ds='{{ds}}',
