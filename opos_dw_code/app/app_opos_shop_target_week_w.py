@@ -189,7 +189,7 @@ end
 ,'-' as bak20
 
 ,'nal' as country_code
-,'{pt}' as dt
+,'{after_6_day}' as dt
 from
 opos_dw.app_opos_shop_target_d
 where
