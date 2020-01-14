@@ -40,16 +40,33 @@ dag = airflow.DAG('test_mysql',
                   default_args=args,
                   catchup=False)
 
+print '{{ds}}'
+print '{{ds}}'[-2]
+
+if '{{ds}}'[-2] == '01':
+    delete_sql = """
+            DELETE FROM opos_dw.app_test WHERE dt='{ds}';
+            --DELETE FROM opos_dw.app_test WHERE dt='{before_1_day}';
+        """.format(
+        ds='{{ds}}',
+        before_1_day='{{ macros.ds_add(ds, -1) }}'
+    ),
+else:
+    delete_sql = """
+            DELETE FROM opos_dw.app_test WHERE dt='{ds}';
+            DELETE FROM opos_dw.app_test WHERE dt='{before_1_day}';
+        """.format(
+        ds='{{ds}}',
+        before_1_day='{{ macros.ds_add(ds, -1) }}'
+    )
+print delete_sql
+
 drop_mysql_yesterday_data = MySqlOperator(
     task_id='drop_mysql_yesterday_data',
-    sql="""
-        DELETE FROM opos_dw.app_test WHERE dt='{ds}';
-    """.format(
-        ds='{{ds}}',
-        before_1_day ='{{ macros.ds_add(ds, -1) }}'
-    ),
+    sql=delete_sql,
     mysql_conn_id='mysql_dw',
     dag=dag)
+
 
 insert_mysql_today_data = HiveToMySqlTransfer(
     task_id='insert_mysql_today_data',
