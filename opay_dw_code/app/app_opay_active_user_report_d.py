@@ -68,7 +68,7 @@ dwd_opay_account_balance_df_prev_day_task = OssSensor(
 ods_sqoop_owealth_share_acct_df_prev_day_task = OssSensor(
     task_id='ods_sqoop_owealth_share_acct_df_prev_day_task',
     bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opay_owealth_ods.ods_sqoop_owealth_share_acct_df",
+        hdfs_path_str="opay_owealth_ods/opay_owealth/share_acct",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
