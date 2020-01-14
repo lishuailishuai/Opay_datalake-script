@@ -269,13 +269,11 @@ def app_opay_active_user_report_d_sql_task(ds):
            'opay_bal_not_zero_user_cnt_7d' target_type,
            count(DISTINCT user_id) c
     FROM opay_account_7d
-    GROUP BY dt
     UNION ALL
     SELECT '{pt}' dt,'-' role,'-' top_consume_scenario,
            'opay_bal_not_zero_user_cnt_30d' target_type,
            count(DISTINCT user_id) c
     FROM opay_account_30d
-    GROUP BY dt
     union all
     select dt,'-' role,'-' top_consume_scenario,'opay_active_user_cnt' target_type,count(distinct user_id) c from opay_active 
     group by dt
