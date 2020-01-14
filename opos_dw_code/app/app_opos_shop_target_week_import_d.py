@@ -59,7 +59,7 @@ app_opos_shop_target_week_w_task = OssSensor(
 delete_sql=''
 
 def judge_monday(ds, **kargs):
-    pt = '{{ds}}'
+    pt = ds
     week = time.strptime(pt, "%Y-%m-%d")[6]
 
     # 判断是否是周一并生成对应sql
