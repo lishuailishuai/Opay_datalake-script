@@ -134,14 +134,16 @@ def app_oride_user_invite_user_d_sql_task(ds):
     from oride_dw_ods.ods_sqoop_base_data_invite_df 
     where dt='{pt}'
     and invitee_role=1 
-    and role=1) uid   --邀请人
+    and role=1
+    and from_unixtime((`timestamp`+1*60*60),'yyyy-MM-dd')='{pt}') uid   --邀请人
     on all_user.passenger_id=uid.uid
     left join
     (select distinct invitee_id
     from oride_dw_ods.ods_sqoop_base_data_invite_df 
     where dt='{pt}'
     and invitee_role=1 
-    and role=1) inved   --被邀请人
+    and role=1
+    and from_unixtime((`timestamp`+1*60*60),'yyyy-MM-dd')='{pt}') inved   --被邀请人
     on all_user.passenger_id=inved.invitee_id
     group by all_user.city_id;
     '''.format(
