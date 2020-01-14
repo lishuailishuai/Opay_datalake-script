@@ -40,7 +40,7 @@ dag = airflow.DAG('test_mysql',
                   default_args=args,
                   catchup=False)
 
-if '{{ds}}'[-2] == '01':
+if '{{ds}}'[-2:] == '01':
     delete_sql = """
             DELETE FROM opos_dw.app_test WHERE dt='{ds}';
             --DELETE FROM opos_dw.app_test WHERE dt='{before_1_day}';
