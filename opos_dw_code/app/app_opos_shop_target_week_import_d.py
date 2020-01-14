@@ -93,19 +93,6 @@ judge_monday_task = PythonOperator(
 
 ##----------------------------------------- 删除mysql昨日数据,当当日数据是周一时,不删除 ---------------------------------------##
 
-#执行删除操作
-
-#drop_mysql_yesterday_data = MySqlOperator(
-#    task_id='drop_mysql_yesterday_data',
-#    sql=delete_sql,
-#    mysql_conn_id='mysql_dw',
-#   dag=dag)
-
-
-##----------------------------------------- 将最新数据插入到mysql ---------------------------------------##
-
-##----------------------------------------- 最后执行流程 ---------------------------------------##
-
 app_opos_shop_target_week_w_task >> judge_monday_task
 
 
