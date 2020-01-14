@@ -38,7 +38,7 @@ args = {
 }
 
 dag = airflow.DAG('dwm_oride_passenger_base_df',
-                  schedule_interval="30 00 * * *",
+                  schedule_interval="40 00 * * *",
                   default_args=args)
 
 ##----------------------------------------- 变量 ---------------------------------------##
@@ -88,7 +88,7 @@ if code_map["id"].lower()=="ufile":
     #路径
     hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
 else:
-    print("成功")
+    
     dim_oride_passenger_base_prev_day_task = OssSensor(
         task_id='dim_oride_passenger_base_prev_day_task',
         bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
@@ -130,8 +130,8 @@ def fun_task_timeout_monitor(ds, dag, **op_kwargs):
     dag_ids = dag.dag_id
 
     msg = [
-        {"db": "oride_dw", "table": "{dag_name}".format(dag_name=dag_ids),
-         "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "800"}
+        {"dag":dag,"db": "oride_dw", "table": "{dag_name}".format(dag_name=dag_ids),
+         "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "600"}
     ]
 
     TaskTimeoutMonitor().set_task_monitor(msg)
@@ -209,6 +209,9 @@ SELECT dim_user.passenger_id,
        if(yes_dwm_user.recent_finish_ord_id is not null,yes_dwm_user.recent_finish_country_code,recent_finish_order.country_code) as recent_finish_country_code,  --乘客最近一次完单对应的国家码 
        if(yes_dwm_user.recent_finish_ord_id is not null,yes_dwm_user.recent_finish_ord_price,recent_finish_order.price) as recent_finish_ord_price,  --最近一次完单订单对应的gmv
        if(yes_dwm_user.recent_finish_ord_id is not null,yes_dwm_user.recent_finish_ord_distance,recent_finish_order.distance) as recent_finish_ord_distance,
+       
+       if(yes_dwm_user.acc_ord_cnt is not null,(yes_dwm_user.acc_ord_cnt+nvl(acc_ord.ord_cnt,0)),acc_ord.ord_cnt) as acc_ord_cnt, --乘客累计下单量
+       if(yes_dwm_user.acc_finish_ord_cnt is not null,(yes_dwm_user.acc_finish_ord_cnt+nvl(acc_ord.finish_ord_cnt,0)),acc_ord.finish_ord_cnt) as acc_finish_ord_cnt, --乘客累计完单量
        'nal' as country_code,
        '{pt}' as dt
 
@@ -231,7 +234,14 @@ left join
 on dim_user.passenger_id=recent_order.passenger_id
 left join
 (select * from data_order where recent_finish_ord_mark=1) recent_finish_order
-on dim_user.passenger_id=recent_finish_order.passenger_id;
+on dim_user.passenger_id=recent_finish_order.passenger_id
+left join
+(select passenger_id,
+        count(1) as ord_cnt, --用于统计累计下单量
+        sum(if(status in(4,5),1,0)) as finish_ord_cnt  --用于统计累计完单量
+from data_order
+group by passenger_id) acc_ord
+on dim_user.passenger_id=acc_ord.passenger_id;
     '''.format(
         pt=ds,
         bef_yes_day=airflow.macros.ds_add(ds, -1),

@@ -26,7 +26,7 @@ from airflow.sensors import OssSensor
 
 args = {
     'owner': 'lishuai',
-    'start_date': datetime(2020, 1, 2),
+    'start_date': datetime(2020, 1, 10),
     'depends_on_past': False,
     'retries': 3,
     'retry_delay': timedelta(minutes=2),
@@ -35,7 +35,7 @@ args = {
     'email_on_retry': False,
 }
 
-dag = airflow.DAG('app_opay_device_di',
+dag = airflow.DAG('app_opay_device_d',
                   schedule_interval="00 03 * * *",
                   default_args=args,
                   catchup=False)
@@ -70,7 +70,7 @@ def fun_task_timeout_monitor(ds,dag,**op_kwargs):
     dag_ids=dag.dag_id
 
     msg = [
-        {"db": "opay_dw", "table":"app_opay_device_d", "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "3000"}
+        {"dag":dag, "db": "opay_dw", "table":"app_opay_device_d", "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "3000"}
     ]
 
     TaskTimeoutMonitor().set_task_monitor(msg)

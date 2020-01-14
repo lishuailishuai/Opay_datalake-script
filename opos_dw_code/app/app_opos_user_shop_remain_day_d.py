@@ -66,7 +66,7 @@ def fun_task_timeout_monitor(ds, dag, **op_kwargs):
     dag_ids = dag.dag_id
 
     tb = [
-        {"db": "opos_dw", "table": "{dag_name}".format(dag_name=dag_ids),
+        {"dag": dag, "db": "opos_dw", "table": "{dag_name}".format(dag_name=dag_ids),
          "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "1200"}
     ]
 
@@ -333,6 +333,7 @@ app_opos_user_shop_remain_day_d_task = PythonOperator(
 )
 
 dwd_pre_opos_payment_order_di_task >> app_opos_user_shop_remain_day_d_task
+
 
 
 

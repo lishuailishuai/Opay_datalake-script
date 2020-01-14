@@ -51,16 +51,16 @@ hdfs_path = "oss://opay-datalake/oride/oride_dw/" + table_name
 ##----------------------------------------- 依赖 ---------------------------------------##
 # 依赖前一天分区
 ods_binlog_data_order_hi_prev_day_task = OssSensor(
-        task_id='ods_binlog_base_data_order_hi_prev_day_task',
-        bucket_key='{hdfs_path_str}/dt={now_day}/hour=00/_SUCCESS'.format(
-            hdfs_path_str="oride_binlog/oride_db.oride_data.data_order",
-            pt='{{ds}}',
-            now_day='{{macros.ds_add(ds, +1)}}'
-        ),
-        bucket_name='opay-datalake',
-        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-        dag=dag
-    )
+    task_id='ods_binlog_base_data_order_hi_prev_day_task',
+    bucket_key='{hdfs_path_str}/dt={pt}/hour=23/_SUCCESS'.format(
+        hdfs_path_str="oride_binlog/oride_db.oride_data.data_order",
+        pt='{{ds}}',
+        now_day='{{macros.ds_add(ds, +1)}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
 
 # 依赖前一天分区
 ods_sqoop_base_data_order_payment_df_prev_day_task = OssSensor(
@@ -104,7 +104,7 @@ def fun_task_timeout_monitor(ds, dag, **op_kwargs):
     dag_ids = dag.dag_id
 
     tb = [
-        {"db": "oride_dw", "table": "{dag_name}".format(dag_name=table_name),
+        {"dag":dag,"db": "oride_dw", "table": "{dag_name}".format(dag_name=table_name),
          "partition": "country_code=NG/dt={pt}".format(pt=ds), "timeout": "3600"}
     ]
 
@@ -120,7 +120,9 @@ task_timeout_monitor = PythonOperator(
 
 
 ##----------------------------------------- 脚本 ---------------------------------------##
-
+##----------------------------------------订单表使用说明-------------------------------##
+#！！！！由于数据迁移，oride订单表只支持从20200108号数据回溯
+##------------------------------------------------------------------------------------##
 def dwd_oride_order_base_di_sql_task(ds):
     hql = '''
 SET hive.exec.parallel=TRUE;
@@ -446,14 +448,14 @@ SELECT base.id as order_id,
        '{pt}' AS dt
 FROM (select *
      from (SELECT *,
-             (t.create_time + 1 * 60 * 60 * 1) as local_create_time,
-             (t.take_time + 1 * 60 * 60 * 1) as local_take_time,
-             (t.wait_time + 1 * 60 * 60 * 1) as local_wait_time,
-             (t.pickup_time + 1 * 60 * 60 * 1) as local_pickup_time,
-             (t.arrive_time + 1 * 60 * 60 * 1) as local_arrive_time,
-             (t.finish_time + 1 * 60 * 60 * 1) as local_finish_time,
-             (t.cancel_time + 1 * 60 * 60 * 1) as local_cancel_time,
-             (t.cancel_wait_payment_time + 1 * 60 * 60 * 1) as local_cancel_wait_payment_time,
+             if(t.create_time=0,0,(t.create_time + 1 * 60 * 60)) as local_create_time,
+             if(t.take_time=0,0,(t.take_time + 1 * 60 * 60)) as local_take_time ,
+             if(t.wait_time=0,0,(t.wait_time + 1 * 60 * 60)) as local_wait_time ,
+             if(t.pickup_time=0,0,(t.pickup_time + 1 * 60 * 60)) as local_pickup_time ,
+             if(t.arrive_time=0,0,(t.arrive_time + 1 * 60 * 60)) as local_arrive_time ,
+             if(t.finish_time=0,0,(t.finish_time + 1 * 60 * 60)) as local_finish_time ,
+             if(t.cancel_time=0,0,(t.cancel_time + 1 * 60 * 60)) as local_cancel_time ,
+             if(t.cancel_wait_payment_time=0,0,(t.cancel_wait_payment_time + 1 * 60 * 60 * 1)) as local_cancel_wait_payment_time ,
 
              row_number() over(partition by t.id order by t.`__ts_ms` desc) as order_by
 

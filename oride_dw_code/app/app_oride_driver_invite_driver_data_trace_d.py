@@ -100,17 +100,16 @@ else:
         dag=dag
     )
 
-    dwd_oride_order_base_include_test_di_task = S3KeySensor(
-        task_id='dwd_oride_order_base_include_test_di_task',
-        bucket_key='{hdfs_path_str}/country_code=NG/dt={pt}/_SUCCESS'.format(
-            hdfs_path_str="oride/oride_dw/dwd_oride_order_base_include_test_di",
+    dwd_oride_order_base_include_test_di_task = OssSensor(
+        task_id='dwd_oride_order_base_include_test_di_prev_day_task',
+        bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+            hdfs_path_str="oride/oride_dw/dwd_oride_order_base_include_test_di/country_code=NG",
             pt='{{ds}}'
         ),
-        bucket_name='opay-bi',
-        poke_interval=60,
+        bucket_name='opay-datalake',
+        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
         dag=dag
     )
-
     dim_oride_city_task = OssSensor(
         task_id='dim_oride_city_task',
         bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
@@ -129,7 +128,7 @@ def fun_task_timeout_monitor(ds, dag, **op_kwargs):
     dag_ids = dag.dag_id
 
     tb = [
-        {"db": "oride_dw", "table": "{dag_name}".format(dag_name=dag_ids),
+        {"dag":dag,"db": "oride_dw", "table": "{dag_name}".format(dag_name=dag_ids),
          "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "1200"}
     ]
 

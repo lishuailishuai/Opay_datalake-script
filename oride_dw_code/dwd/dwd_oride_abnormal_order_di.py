@@ -89,7 +89,7 @@ def fun_task_timeout_monitor(ds,dag,**op_kwargs):
     dag_ids=dag.dag_id
 
     tb = [
-        {"db": "oride_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "600"}
+        {"dag":dag,"db": "oride_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "600"}
     ]
 
     TaskTimeoutMonitor().set_task_monitor(tb)
@@ -132,10 +132,10 @@ def dwd_oride_abnormal_order_di_sql_task(ds):
        is_revoked,
        --是否撤销，1是，0否
 
-       (create_time + 1*60*60*1) as create_time,
+       if(create_time=0,0,(create_time + 1*60*60*1)) as create_time,
        --创建时间
 
-       (update_time + 1*60*60*1) as update_time,
+       if(update_time=0,0,(update_time + 1*60*60*1)) as update_time,
        --更新时间
 
        score,
@@ -144,10 +144,10 @@ def dwd_oride_abnormal_order_di_sql_task(ds):
        amount,
        --扣款金额
 
-       from_unixtime(create_time+1*60*60*1,'yyyy-MM-dd HH:mm:ss') AS f_create_time,
+       from_unixtime(if(create_time=0,0,(create_time+1*60*60*1)),'yyyy-MM-dd HH:mm:ss') AS f_create_time,
        --格式化创建时间(yyyy-MM-dd HH:mm:ss)
 
-       from_unixtime(update_time + 1*60*60*1,'yyyy-MM-dd HH:mm:ss') AS f_update_time,
+       from_unixtime(if(update_time=0,0,(update_time + 1*60*60*1)) ,'yyyy-MM-dd HH:mm:ss') AS f_update_time,
        --格式化更新时间(yyyy-MM-dd HH:mm:ss)
 
        'nal' AS country_code,
@@ -157,8 +157,8 @@ def dwd_oride_abnormal_order_di_sql_task(ds):
 
         FROM oride_dw_ods.ods_sqoop_base_data_abnormal_order_df
         WHERE dt='{pt}'
-        AND (from_unixtime((create_time + 1*60*60*1),'yyyy-MM-dd')=dt
-             OR from_unixtime((update_time + 1*60*60*1),'yyyy-MM-dd')=dt) ;
+        AND (from_unixtime(if(create_time=0,0,(create_time+1*60*60*1)),'yyyy-MM-dd')=dt
+             OR from_unixtime(if(update_time=0,0,(update_time + 1*60*60*1)),'yyyy-MM-dd')=dt) ;
 
 '''.format(
         pt=ds,

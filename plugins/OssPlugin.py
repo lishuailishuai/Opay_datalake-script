@@ -46,7 +46,8 @@ class OssSensor(BaseSensorOperator):
         bucket = oss2.Bucket(auth, endpoint, self.bucket_name)
 
         try:
-            return bucket.object_exists(self.bucket_key)
+            objects = bucket.list_objects(self.bucket_key)
+            return bool(len(objects.object_list))
         except Exception:
             e = sys.exc_info()
             self.log.debug("Caught an exception !: %s", str(e))

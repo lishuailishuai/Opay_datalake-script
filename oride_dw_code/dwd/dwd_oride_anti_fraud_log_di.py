@@ -35,7 +35,7 @@ args = {
 } 
 
 dag = airflow.DAG( 'dwd_oride_anti_fraud_log_di', 
-    schedule_interval="20 00 * * *",
+    schedule_interval="10 01 * * *",
     default_args=args,
     catchup=False) 
 
@@ -85,7 +85,7 @@ def fun_task_timeout_monitor(ds,dag,**op_kwargs):
     dag_ids=dag.dag_id
 
     tb = [
-        {"db": "oride_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "1800"}
+        {"dag":dag,"db": "oride_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "1800"}
     ]
 
     TaskTimeoutMonitor().set_task_monitor(tb)
@@ -114,7 +114,7 @@ def dwd_oride_anti_fraud_log_di_sql_task(ds):
         driver_id,--司机id
         order_id,--订单id
         extend,--扩展信息json
-        `timestamp`,--时间戳
+        (`timestamp`+1*60*60) as `timestamp`,--时间戳
         'nal' as country_code,
         dt
     from  oride_source.log_anti_oride_fraud 

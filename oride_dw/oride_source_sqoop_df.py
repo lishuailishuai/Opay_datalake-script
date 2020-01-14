@@ -17,7 +17,7 @@ from airflow.models import Variable
 
 args = {
     'owner': 'zhenqian.zhang',
-    'start_date': datetime(2019, 10, 29),
+    'start_date': datetime(2020, 1, 11),
     'depends_on_past': False,
     'retries': 1,
     'retry_delay': timedelta(minutes=5),
@@ -27,12 +27,12 @@ args = {
     'on_success_callback':on_success_callback,
 }
 
-schedule_interval="00 01 * * *"
+schedule_interval="01 00 * * *"
 
 dag = airflow.DAG(
     'oride_source_sqoop_df',
     schedule_interval=schedule_interval,
-    concurrency=20,
+    concurrency=40,
     max_active_runs=1,
     default_args=args)
 
@@ -205,6 +205,8 @@ table_list = [
     ("opay_assets", "oride_properties", "opay_assets_mysql", "base", 1),
     ("opay_assets", "oride_assets_sku", "opay_assets_mysql", "base", 1),
     ("opay_assets", "admin_business", "opay_assets_mysql", "base", 1),
+    ("opay_assets", "admin_users", "opay_assets_mysql", "base", 1)
+    ("opay_assets", "oride_assets_dc_retrieve", "opay_assets_mysql", "base", 1)
 ]
 
 HIVE_DB = 'oride_dw_ods'

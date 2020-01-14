@@ -306,7 +306,7 @@ def import_opay_install(ds, **kwargs):
     with open(tmp_file, 'wb') as f:
         f.write(response.content)
     # upload to ufile
-    upload_cmd = '/root/filemgr/filemgr  --action mput --bucket opay-datalake --key oride/appsflyer/opay_install_log/dt={dt}/{file_name}  --file {tmp_file}'.format(dt=ds, file_name=file_name,tmp_file=tmp_file)
+    upload_cmd = 'ossutil cp {tmp_file} oss://opay-datalake/oride/appsflyer/opay_install_log/dt={dt}/{file_name} -u '.format(dt=ds, file_name=file_name,tmp_file=tmp_file)
 
     os.system(upload_cmd)
     # clear tmp file
