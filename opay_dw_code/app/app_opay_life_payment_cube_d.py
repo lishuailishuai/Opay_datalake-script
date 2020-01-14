@@ -87,15 +87,28 @@ def app_opay_life_payment_cube_d_sql_task(ds):
     set mapred.max.split.size=1000000;
     set hive.exec.dynamic.partition.mode=nonstrict;
     set hive.exec.parallel=true;
+    with lp_data as (
+        select 
+            nvl(sub_consume_scenario,'-') sub_consume_scenario,
+            nvl(recharge_service_provider,'-') recharge_service_provider,
+            nvl(originator_role,'-') originator_role,
+            nvl(order_status,'-') order_status,
+            recharge_account, originator_id, amount, pay_amount, (amount - nvl(pay_amount, amount)) as trans_activity_amount
+        FROM opay_dw.dwd_opay_life_payment_record_di
+        WHERE dt='{pt}'
+          AND top_service_type='Life Payment'
+          AND create_time BETWEEN date_format(date_sub('{pt}', 1), 'yyyy-MM-dd 23') AND date_format('{pt}', 'yyyy-MM-dd 23')
+    )
+    
     INSERT overwrite TABLE opay_dw.app_opay_life_payment_cube_d partition (dt='{pt}')
-    SELECT nvl(sub_consume_scenario,'-') sub_consume_scenario,
-           nvl(recharge_service_provider,'-') recharge_service_provider,
-           nvl(originator_role,'-') originator_role,
-           nvl(order_status,'-') order_status,
-           count(1) trans_cnt,
+    SELECT nvl(sub_consume_scenario,'ALL') sub_consume_scenario,
+           nvl(recharge_service_provider,'ALL') recharge_service_provider,
+           nvl(originator_role,'ALL') originator_role,
+           nvl(order_status,'ALL') order_status,
+           count(*) trans_cnt,
            sum(amount) trans_amount,
            sum(pay_amount) trans_pay_amount,
-           sum(amount-pay_amount) trans_activity_amount,
+           sum(trans_activity_amount) trans_activity_amount,
            count(DISTINCT originator_id) trans_user_cnt,
            count(DISTINCT recharge_account) trans_recharge_account_cnt
     FROM opay_dw.dwd_opay_life_payment_record_di
@@ -105,8 +118,14 @@ def app_opay_life_payment_cube_d_sql_task(ds):
     GROUP BY sub_consume_scenario,
              recharge_service_provider,
              originator_role,
-             order_status with cube
-
+             order_status
+    GROUPING SETS ( 
+                (sub_consume_scenario, recharge_service_provider, order_status), 
+                (sub_consume_scenario,  recharge_service_provider), 
+                (sub_consume_scenario, originator_role, order_status), 
+                (sub_consume_scenario, order_status)
+            )
+            
     '''.format(
         pt=ds,
         table=table_name,
