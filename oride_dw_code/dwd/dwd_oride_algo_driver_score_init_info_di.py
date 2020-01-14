@@ -18,6 +18,7 @@ from airflow.sensors.hive_partition_sensor import HivePartitionSensor
 from airflow.sensors import UFileSensor
 from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
 from plugins.TaskTouchzSuccess import TaskTouchzSuccess
+from plugins.CountriesPublicFrame import CountriesPublicFrame
 from airflow.sensors import OssSensor
 import json
 import logging
@@ -71,7 +72,7 @@ def fun_task_timeout_monitor(ds,dag,**op_kwargs):
     dag_ids=dag.dag_id
 
     msg = [
-        {"dag":dag,"db": "oride_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=NG/dt={pt}".format(pt=ds), "timeout": "800"}
+        {"dag":dag,"db": "oride_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "800"}
     ]
 
     TaskTimeoutMonitor().set_task_monitor(msg)
@@ -191,7 +192,7 @@ def execution_data_task_id(ds,**kwargs):
 
     """
 
-    cf=CountriesPublicFrame("true",ds,db_name,table_name,hdfs_path,"true","true")
+    cf=CountriesPublicFrame("false",ds,db_name,table_name,hdfs_path,"true","true")
 
     #删除分区
     #cf.delete_partition()
