@@ -59,8 +59,7 @@ app_opos_shop_target_week_w_task = OssSensor(
 delete_sql=''
 
 def judge_monday(ds, **kargs):
-    pt = ds
-    week = time.strptime(pt, "%Y-%m-%d")[6]
+    week = time.strptime(ds, "%Y-%m-%d")[6]
 
     # 判断是否是周一并生成对应sql
     if week == 0:
@@ -80,8 +79,8 @@ def judge_monday(ds, **kargs):
             before_1_day='{{ macros.ds_add(ds, -1) }}'
         )
 
-drop_mysql_yesterday_data_task = PythonOperator(
-    task_id='drop_mysql_yesterday_data_task',
+judge_monday_task = PythonOperator(
+    task_id='judge_monday_task',
     python_callable=judge_monday,
     provide_context=True,
     dag=dag
@@ -200,7 +199,7 @@ and dt='{ds}'
 
 ##----------------------------------------- 最后执行流程 ---------------------------------------##
 
-app_opos_shop_target_week_w_task >> drop_mysql_yesterday_data >> insert_mysql_today_data
+app_opos_shop_target_week_w_task >> judge_monday_task >> drop_mysql_yesterday_data >> insert_mysql_today_data
 
 
 
