@@ -18,6 +18,7 @@ from airflow.sensors.hive_partition_sensor import HivePartitionSensor
 from airflow.sensors import UFileSensor
 from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
 from plugins.TaskTouchzSuccess import TaskTouchzSuccess
+from plugins.CountriesPublicFrame import CountriesPublicFrame
 from airflow.sensors import OssSensor
 import json
 import logging
