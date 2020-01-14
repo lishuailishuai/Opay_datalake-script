@@ -55,8 +55,8 @@ app_opos_shop_target_week_w_task = OssSensor(
 )
 
 ##----------------------------------------- 删除mysql昨日数据,当当日数据是周一时,不删除 ---------------------------------------##
-
-week = time.strptime('{{ds}}',"%Y-%m-%d")[6]
+pt = '{{ds}}'
+week = time.strptime(pt,"%Y-%m-%d")[6]
 
 #判断是否是周一并生成对应sql
 if week == 0 :
