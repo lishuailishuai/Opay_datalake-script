@@ -110,9 +110,9 @@ def app_oride_user_invite_user_d_sql_task(ds):
     SET hive.exec.dynamic.partition.mode=nonstrict;
     insert overwrite table {db}.{table} partition(country_code,dt)
     select all_user.city_id,  --城市id
-           sum(if(uid.uid is not null,1,0)) as invite_user_cnt, --邀请人数
-           sum(if(inved.invitee_id is not null,1,0)) as invited_user_cnt,  --被邀请人数
-           sum(if(inved.invitee_id is not null and all_user.first_finish_ord_id is not null and all_user.first_finish_create_date=all_user.dt,1,0)) as fir_finish_invited_user_cnt, --完成首单被邀请人数
+           sum(if(uid.uid is not null,1,0)) as invite_user_cnt, --当天邀请人数
+           sum(if(inved.invitee_id is not null,1,0)) as invited_user_cnt,  --当天被邀请人数
+           sum(if(inved_his.invitee_id is not null and all_user.first_finish_ord_id is not null and all_user.first_finish_create_date=all_user.dt,1,0)) as fir_finish_invited_user_cnt, --完成首单历史被邀请人数
            sum(if(uid.uid is not null,coupon_user.coupon_cnt,0)) as invite_user_coupon_cnt, --邀请人优惠券发放数量
            sum(if(inved.invitee_id is not null,all_user.acc_ord_cnt,0)) as invited_acc_ord_cnt, --被邀请人累计下单量
            sum(if(inved.invitee_id is not null,all_user.acc_finish_ord_cnt,0)) as invited_acc_finish_ord_cnt, --被邀请人累计完单量
@@ -134,15 +134,25 @@ def app_oride_user_invite_user_d_sql_task(ds):
     from oride_dw_ods.ods_sqoop_base_data_invite_df 
     where dt='{pt}'
     and invitee_role=1 
-    and role=1) uid   --邀请人
+    and role=1
+    and from_unixtime((`timestamp`+1*60*60),'yyyy-MM-dd')='{pt}') uid   --邀请人
     on all_user.passenger_id=uid.uid
     left join
     (select distinct invitee_id
     from oride_dw_ods.ods_sqoop_base_data_invite_df 
     where dt='{pt}'
     and invitee_role=1 
-    and role=1) inved   --被邀请人
+    and role=1
+    and from_unixtime((`timestamp`+1*60*60),'yyyy-MM-dd')='{pt}') inved   --被邀请人
     on all_user.passenger_id=inved.invitee_id
+    left join
+    (select distinct invitee_id
+    from oride_dw_ods.ods_sqoop_base_data_invite_df 
+    where dt='{pt}'
+    and invitee_role=1 
+    and role=1
+    and from_unixtime((`timestamp`+1*60*60),'yyyy-MM-dd')<'{pt}') inved_his   --被邀请人
+    on all_user.passenger_id=inved_his.invitee_id
     group by all_user.city_id;
     '''.format(
         pt=ds,

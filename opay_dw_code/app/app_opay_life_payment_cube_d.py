@@ -91,6 +91,8 @@ def app_opay_life_payment_cube_d_sql_task(ds):
     SELECT nvl(sub_consume_scenario,'-') sub_consume_scenario,
            nvl(recharge_service_provider,'-') recharge_service_provider,
            nvl(originator_type,'-') originator_type,
+           nvl(originator_role,'-') originator_role,
+           nvl(originator_kyc_level,'-') originator_kyc_level,
            nvl(order_status,'-') order_status,
            count(1) trans_cnt,
            sum(amount) trans_amount,
@@ -104,7 +106,7 @@ def app_opay_life_payment_cube_d_sql_task(ds):
       AND create_time BETWEEN date_format(date_sub('{pt}', 1), 'yyyy-MM-dd 23') AND date_format('{pt}', 'yyyy-MM-dd 23')
     GROUP BY sub_consume_scenario,
              recharge_service_provider,
-             originator_type,
+             originator_type,originator_role,originator_kyc_level,
              order_status WITH CUBE
 
     '''.format(
