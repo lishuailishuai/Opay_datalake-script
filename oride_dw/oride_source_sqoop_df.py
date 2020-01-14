@@ -206,6 +206,7 @@ table_list = [
     ("opay_assets", "oride_assets_sku", "opay_assets_mysql", "base", 1),
     ("opay_assets", "admin_business", "opay_assets_mysql", "base", 1),
     ("opay_assets", "admin_users", "opay_assets_mysql", "base", 1)
+    ("opay_assets", "oride_assets_dc_retrieve", "opay_assets_mysql", "base", 1)
 ]
 
 HIVE_DB = 'oride_dw_ods'
