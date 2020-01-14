@@ -238,7 +238,7 @@ end
 '''.format(
         pt=ds,
         table=table_name,
-        before_6_day='{{macros.ds_add(ds, -6)}}',
+        before_6_day=airflow.macros.ds_add(ds, -6),
         now_day='{{macros.ds_add(ds, +1)}}',
         db=db_name
     )
