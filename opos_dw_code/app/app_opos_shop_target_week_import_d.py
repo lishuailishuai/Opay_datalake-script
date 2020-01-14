@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import airflow
-from datetime import datetime, timedelta, time
+import time
+from datetime import datetime, timedelta
 from airflow.operators.hive_operator import HiveOperator
 from airflow.operators.impala_plugin import ImpalaOperator
 from utils.connection_helper import get_hive_cursor
