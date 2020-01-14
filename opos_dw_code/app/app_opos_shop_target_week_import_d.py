@@ -67,8 +67,9 @@ def judge_monday(ds, **kargs):
     # 判断是否是周一并生成对应sql
     if week == 0:
         delete_sql = """
-    --DELETE FROM opos_dw.app_opos_shop_target_week_w WHERE dt='{before_1_day}';
+    DELETE FROM opos_dw.app_opos_shop_target_week_w WHERE dt='{pt}';
                 """.format(
+            pt=ds,
             before_1_day=airflow.macros.ds_add(ds, -1)
         )
 
@@ -76,6 +77,7 @@ def judge_monday(ds, **kargs):
         delete_sql = """
     DELETE FROM opos_dw.app_opos_shop_target_week_w WHERE dt='{before_1_day}';
                 """.format(
+            pt=ds,
             before_1_day=airflow.macros.ds_add(ds, -1)
         )
 
