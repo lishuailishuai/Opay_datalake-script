@@ -78,7 +78,6 @@ def judge_monday(ds, **kargs):
             ds='{{ds}}',
             before_1_day='{{ macros.ds_add(ds, -1) }}'
         )
-    print delete_sql
 
 judge_monday_task = PythonOperator(
     task_id='judge_monday_task',
