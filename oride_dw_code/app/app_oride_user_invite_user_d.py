@@ -128,6 +128,7 @@ def app_oride_user_invite_user_d_sql_task(ds):
     where dt='{pt}' 
     and receive_time>0
     and template_id=795
+    and from_unixtime(receive_time,'yyyy-MM-dd')='{pt}'
     group by passenger_id) coupon_user   --乘邀乘券表
     on all_user.passenger_id=coupon_user.passenger_id
     left join
