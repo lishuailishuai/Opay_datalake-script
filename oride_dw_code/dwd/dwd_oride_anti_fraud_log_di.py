@@ -35,7 +35,7 @@ args = {
 } 
 
 dag = airflow.DAG( 'dwd_oride_anti_fraud_log_di', 
-    schedule_interval="20 00 * * *",
+    schedule_interval="10 01 * * *",
     default_args=args,
     catchup=False) 
 

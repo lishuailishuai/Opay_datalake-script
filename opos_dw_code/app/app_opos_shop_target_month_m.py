@@ -26,7 +26,7 @@ import os
 
 args = {
     'owner': 'yuanfeng',
-    'start_date': datetime(2019, 10, 24),
+    'start_date': datetime(2019, 11, 24),
     'depends_on_past': False,
     'retries': 3,
     'retry_delay': timedelta(minutes=2),
@@ -36,7 +36,7 @@ args = {
 }
 
 dag = airflow.DAG('app_opos_shop_target_month_m',
-                  schedule_interval="00 02 1 * *",
+                  schedule_interval="30 02 * * *",
                   default_args=args,
                   catchup=False)
 
@@ -86,12 +86,12 @@ task_timeout_monitor = PythonOperator(
 def app_opos_shop_target_month_m_sql_task(ds):
     HQL = '''
 
-
---插入数据
 set hive.exec.parallel=true;
 set hive.exec.dynamic.partition.mode=nonstrict;
 set hive.strict.checks.cartesian.product=false;
 
+--先删除分区
+ALTER TABLE opos_dw.app_opos_shop_target_month_m DROP IF EXISTS PARTITION(country_code='nal',dt='{pt}');
 
 insert overwrite table opos_dw.app_opos_shop_target_month_m partition (country_code,dt)
 select
@@ -188,8 +188,8 @@ from
 opos_dw.app_opos_shop_target_d
 where
 country_code = 'nal'
-and dt>='{pt}'
-and dt<=concat(substr('{pt}',0,7),'-31')
+and dt>=concat(substr('{pt}',0,7),'-01')
+and dt<='{pt}'
 group BY
 shop_id
 ,opay_id
@@ -217,9 +217,9 @@ shop_id
 
 
 
+
 '''.format(
         pt=ds,
-        before_7_day=airflow.macros.ds_add(ds, -7),
         table=table_name,
         now_day='{{macros.ds_add(ds, +1)}}',
         db=db_name
@@ -260,9 +260,6 @@ app_opos_shop_target_month_m_task = PythonOperator(
 
 dwd_pre_opos_payment_order_di_task >> app_opos_shop_target_month_m_task
 
-# 查看任务命令
-# airflow list_tasks app_opos_shop_target_month_m -sd /root/feng.yuan/app_opos_shop_target_month_m.py
-# 测试任务命令
-# airflow test app_opos_shop_target_month_m app_opos_shop_target_month_m_task 2019-11-28 -sd /root/feng.yuan/app_opos_shop_target_month_m.py
+
 
 

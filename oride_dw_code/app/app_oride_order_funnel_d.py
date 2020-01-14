@@ -37,7 +37,7 @@ args = {
 }
 
 dag = airflow.DAG('app_oride_order_funnel_d',
-                  schedule_interval="20 01 * * *",
+                  schedule_interval="00 02 * * *",
                   default_args=args)
 
 ##----------------------------------------- 变量 ---------------------------------------##

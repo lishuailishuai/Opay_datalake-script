@@ -36,7 +36,7 @@ args = {
 }
 
 dag = airflow.DAG('app_opos_shop_target_week_w',
-                  schedule_interval="00 03 * * 1",
+                  schedule_interval="10 03 * * *",
                   default_args=args,
                   catchup=False)
 
@@ -46,7 +46,7 @@ app_opos_shop_target_d_task = OssSensor(
     task_id='app_opos_shop_target_d_task',
     bucket_key='{hdfs_path_str}/country_code=nal/dt={pt}/_SUCCESS'.format(
         hdfs_path_str="opos/opos_dw/app_opos_shop_target_d",
-        pt='{{macros.ds_add(ds, +6)}}'
+        pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
@@ -67,7 +67,7 @@ def fun_task_timeout_monitor(ds, dag, **op_kwargs):
 
     tb = [
         {"dag": dag, "db": "opos_dw", "table": "{dag_name}".format(dag_name=dag_ids),
-         "partition": "country_code=nal/dt={pt}".format(pt=airflow.macros.ds_add(ds, +6)), "timeout": "1200"}
+         "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "1200"}
     ]
 
     TaskTimeoutMonitor().set_task_monitor(tb)
@@ -87,10 +87,12 @@ def app_opos_shop_target_week_w_sql_task(ds):
     HQL = '''
 
 
---插入数据
 set hive.exec.parallel=true;
 set hive.exec.dynamic.partition.mode=nonstrict;
 set hive.strict.checks.cartesian.product=false;
+
+--先删除分区
+ALTER TABLE opos_dw.app_opos_shop_target_week_w DROP IF EXISTS PARTITION(country_code='nal',dt='{pt}');
 
 insert overwrite table opos_dw.app_opos_shop_target_week_w partition (country_code,dt)
 select
@@ -189,13 +191,14 @@ end
 ,'-' as bak20
 
 ,'nal' as country_code
-,'{after_6_day}' as dt
+,'{pt}' as dt
 from
 opos_dw.app_opos_shop_target_d
 where
 country_code = 'nal'
-and dt>='{pt}'
-and dt<='{after_6_day}'
+and dt>='{before_6_day}'
+and dt<='{pt}'
+and create_week=weekofyear('{pt}')
 group BY
 shop_id
 ,opay_id
@@ -234,9 +237,8 @@ end
 
 '''.format(
         pt=ds,
-        after_6_day=airflow.macros.ds_add(ds, +6),
-        before_75_day=airflow.macros.ds_add(ds, -75),
         table=table_name,
+        before_6_day=airflow.macros.ds_add(ds, -6),
         now_day='{{macros.ds_add(ds, +1)}}',
         db=db_name
     )
@@ -264,8 +266,7 @@ def execution_data_task_id(ds, **kargs):
     第二个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
 
     """
-    after_6_day = airflow.macros.ds_add(ds, +6)
-    TaskTouchzSuccess().countries_touchz_success(after_6_day, db_name, table_name, hdfs_path, "true", "true")
+    TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "true", "true")
 
 
 app_opos_shop_target_week_w_task = PythonOperator(
@@ -276,5 +277,7 @@ app_opos_shop_target_week_w_task = PythonOperator(
 )
 
 app_opos_shop_target_d_task >> app_opos_shop_target_week_w_task
+
+
 
 
