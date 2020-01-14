@@ -175,7 +175,7 @@ for db_name, table_name, conn_id, prefix_name,priority_weight_nm in table_list:
 
     if table_name in ['driver_score_init_info','driver_score_record']:
 
-        query = 'select * from {table} where (dt="replace({{{{ ds }}}},\'-\',\'\') ") AND $CONDITIONS'.format(table=table_name)
+        query = 'select * from {table} where (dt=replace("{{{{ ds }}}}",\'-\',\'\')) AND $CONDITIONS'.format(table=table_name)
 
 
     import_table = BashOperator(
