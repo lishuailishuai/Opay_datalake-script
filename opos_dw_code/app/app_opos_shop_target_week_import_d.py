@@ -31,7 +31,7 @@ args = {
     'depends_on_past': False,
     'retries': 3,
     'retry_delay': timedelta(minutes=2),
-    'email': ['bigdata_dw@opay-inc.com'],
+    #'email': ['bigdata_dw@opay-inc.com'],
     'email_on_failure': True,
     'email_on_retry': False,
 }
@@ -78,6 +78,7 @@ def judge_monday(ds, **kargs):
             ds='{{ds}}',
             before_1_day='{{ macros.ds_add(ds, -1) }}'
         )
+    print delete_sql
 
 judge_monday_task = PythonOperator(
     task_id='judge_monday_task',
