@@ -19,11 +19,16 @@ from airflow.sensors import UFileSensor
 from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
 from plugins.TaskTouchzSuccess import TaskTouchzSuccess
 from airflow.sensors import OssSensor
+from airflow.hooks.mysql_hook import MySqlHook
 import json
 import logging
 from airflow.models import Variable
 import requests
 import os
+
+opos_mysql_hook = MySqlHook("mysql_dw")
+opos_mysql_conn = opos_mysql_hook.get_conn()
+opos_mysql_cursor = opos_mysql_conn.cursor()
 
 args = {
     'owner': 'yuanfeng',
@@ -55,12 +60,10 @@ app_opos_shop_target_week_w_task = OssSensor(
 )
 
 ##----------------------------------------- 判断是否是周一 ---------------------------------------##
-#定义一个sql变量
-delete_sql=''
 
 def judge_monday(ds, **kargs):
     week = time.strptime(ds, "%Y-%m-%d")[6]
-
+    delete_sql = ''
     # 判断是否是周一并生成对应sql
     if week == 0:
         delete_sql = """
@@ -79,6 +82,8 @@ def judge_monday(ds, **kargs):
             before_1_day='{{ macros.ds_add(ds, -1) }}'
         )
 
+    opos_mysql_cursor.execute(delete_sql)
+
 judge_monday_task = PythonOperator(
     task_id='judge_monday_task',
     python_callable=judge_monday,
@@ -89,11 +94,13 @@ judge_monday_task = PythonOperator(
 ##----------------------------------------- 删除mysql昨日数据,当当日数据是周一时,不删除 ---------------------------------------##
 
 #执行删除操作
-drop_mysql_yesterday_data = MySqlOperator(
-    task_id='drop_mysql_yesterday_data',
-    sql=delete_sql,
-    mysql_conn_id='mysql_dw',
-    dag=dag)
+
+#drop_mysql_yesterday_data = MySqlOperator(
+#    task_id='drop_mysql_yesterday_data',
+#    sql=delete_sql,
+#    mysql_conn_id='mysql_dw',
+#   dag=dag)
+
 
 ##----------------------------------------- 将最新数据插入到mysql ---------------------------------------##
 
@@ -199,7 +206,7 @@ and dt='{ds}'
 
 ##----------------------------------------- 最后执行流程 ---------------------------------------##
 
-app_opos_shop_target_week_w_task >> judge_monday_task >> drop_mysql_yesterday_data >> insert_mysql_today_data
+app_opos_shop_target_week_w_task >> judge_monday_task >> insert_mysql_today_data
 
 
 
