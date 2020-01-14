@@ -37,7 +37,7 @@ args = {
 }
 
 dag = airflow.DAG('app_oride_user_invite_user_d',
-                  schedule_interval="20 01 * * *",
+                  schedule_interval="30 02 * * *",
                   default_args=args)
 
 ##----------------------------------------- 变量 ---------------------------------------##
