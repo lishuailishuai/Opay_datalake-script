@@ -159,7 +159,7 @@ def app_oride_user_invite_user_d_sql_task(ds):
     where dt='{pt}'
     and invitee_role=1 
     and role=1) inved_all   --被邀请人
-    on all_user.passenger_id=inved_his.invitee_id
+    on all_user.passenger_id=inved_all.invitee_id
     group by all_user.city_id,
     concat_ws('-',substr(all_user.dt),weekofyear(all_user.dt));
     '''.format(
