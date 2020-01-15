@@ -68,7 +68,7 @@ dwd_opay_account_balance_df_prev_day_task = OssSensor(
 ods_sqoop_owealth_share_acct_df_prev_day_task = OssSensor(
     task_id='ods_sqoop_owealth_share_acct_df_prev_day_task',
     bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opay_owealth_ods.ods_sqoop_owealth_share_acct_df",
+        hdfs_path_str="opay_owealth_ods/opay_owealth/share_acct",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -169,7 +169,7 @@ def app_opay_active_user_report_d_sql_task(ds):
        FROM (select user_id,dt from opay_owealth_ods.ods_sqoop_owealth_share_acct_df
        WHERE dt>date_sub('{pt}',7)
          AND dt<='{pt}'
-         AND create_time < 'dt 23:00:00'
+         AND create_time < '{pt} 23:00:00'
          AND balance>0) a inner join user_base b on a.user_id=b.mobile
          ),
      opay_account_30d AS
@@ -186,7 +186,7 @@ def app_opay_active_user_report_d_sql_task(ds):
        FROM (select user_id,dt from opay_owealth_ods.ods_sqoop_owealth_share_acct_df
        WHERE dt>date_sub('{pt}',30)
          AND dt<='{pt}'
-         AND create_time <'dt 23:00:00'
+         AND create_time <'{pt} 23:00:00'
          AND balance>0) a inner join user_base b on a.user_id=b.mobile
          ),
     opay_active as 
