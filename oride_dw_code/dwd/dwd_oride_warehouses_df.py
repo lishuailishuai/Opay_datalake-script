@@ -43,8 +43,8 @@ dag = airflow.DAG('dwd_oride_warehouses_df',
 
 ##----------------------------------------- 依赖 ---------------------------------------##
 
-ods_sqoop_mass_oride_warehouses_df_task = OssSensor(
-    task_id='ods_sqoop_mass_oride_warehouses_df_task',
+ods_sqoop_base_oride_warehouses_df_task = OssSensor(
+    task_id='ods_sqoop_base_oride_warehouses_df_task',
     bucket_key="{hdfs_path_str}/dt={pt}/_SUCCESS".format(
         hdfs_path_str="oride_dw_sqoop/opay_assets/oride_warehouses",
         pt="{{ds}}"
@@ -181,4 +181,4 @@ dwd_oride_warehouses_df_task = PythonOperator(
     dag=dag
 )
 
-ods_sqoop_mass_oride_warehouses_df_task >> dwd_oride_warehouses_df_task
+ods_sqoop_base_oride_warehouses_df_task >> dwd_oride_warehouses_df_task
