@@ -13,7 +13,6 @@ from airflow.utils.state import State
 from airflow import AirflowException
 from airflow.models import DAG, TaskInstance, BaseOperator
 from plugins.DingdingAlert import DingdingAlert
-import requests
 
 
 """
@@ -48,9 +47,7 @@ class TaskTimeoutMonitor(object):
 
     def __init__(self):
         self.hive_cursor = get_hive_cursor()
-        #self.dingding_alert = DingdingAlert('https://oapi.dingtalk.com/robot/send?access_token=928e66bef8d88edc89fe0f0ddd52bfa4dd28bd4b1d24ab4626c804df8878bb48')
-
-        self.dingding_alert = DingdingAlert('https://oapi.dingtalk.com/robot/send?access_token=c08440c8e569bb38ec358833f9d577b7638af5aaefbd55e3fd748b798fecc4d4')
+        self.dingding_alert = DingdingAlert('https://oapi.dingtalk.com/robot/send?access_token=928e66bef8d88edc89fe0f0ddd52bfa4dd28bd4b1d24ab4626c804df8878bb48')
 
         self.owner_name=None
         self.hdfs_dir_name=None
@@ -73,7 +70,7 @@ class TaskTimeoutMonitor(object):
         try:
 
             sum_timeout = 0 
-            timeout_step = 10 #任务监控间隔时间(秒)
+            timeout_step = 120 #任务监控间隔时间(秒)
             command = command.strip()
 
             while sum_timeout <= int(timeout):
@@ -99,29 +96,12 @@ class TaskTimeoutMonitor(object):
                 #判断数据文件是否生成
                 if res == '' or res == 'None' or res == '0':
 
-                    # url="""
-                    #     http://8.208.14.165:8080/admin/airflow/tree?dag_id={dag_id}
-                    # """.format(dag_id= dag_id_name)
-
-                    url="""
-                        http://8.208.14.165:8080/{dag_id}
-                    """.format(dag_id= dag_id_name)
-
-                    # send_data = {
-                    #     "msgtype": "markdown",
-                    #     "markdown": {
-                    #         "title": "prometheus_alert",
-                    #         "text": "{dag_id}".format(dag_id=dag_id_name)
-                    #         }
-                    #     }
-
                     if sum_timeout >= int(timeout):
 
                         format_date=int(int(timeout)/60)
 
-                    	
-                        self.dingding_alert.send('Test 测试【及时性预警】调度任务: {html_str} 产出超时【负责人】{owner_name}【等待路径】{hdfs_dir_name}【预留时间】{timeout} 分钟'.format(
-                                html_str=url,
+                        self.dingding_alert.send('DW 【及时性预警】调度任务: {dag_id} 产出超时【负责人】{owner_name}【等待路径】{hdfs_dir_name}【预留时间】{timeout} 分钟'.format(
+                                dag_id=dag_id_name,
                                 timeout=str(format_date),
                                 owner_name=self.owner_name,
                                 hdfs_dir_name=self.hdfs_dir_name
