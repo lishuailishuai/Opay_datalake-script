@@ -46,8 +46,7 @@ dag = airflow.DAG('dwd_oride_warehouses_df',
 ods_sqoop_mass_oride_warehouses_df_task = OssSensor(
     task_id='ods_sqoop_mass_oride_warehouses_df_task',
     bucket_key="{hdfs_path_str}/dt={pt}/_SUCCESS".format(
-        hdfs_path_str="oride_dw_sqoop/oride_assets/oride_warehouses",
-
+        hdfs_path_str="oride_dw_sqoop/opay_assets/oride_warehouses",
         pt="{{ds}}"
     ),
     bucket_name='opay-datalake',
@@ -96,17 +95,20 @@ def dwd_oride_warehouses_df_sql_task(ds):
 
     select
 
-        ware_id,    --'仓库ID'
-        ware_name,  --'仓库名称'
-        ware_address,   --'仓库地址'
-        user_id,    --'操作人ID'
-        created_at, --'创建时间'
-        updated_at, --'更新时间'
-        ware_code,  --'仓库编号'
+        ware_id  , -- '仓库ID',   
+       ware_name  ,-- '仓库名称',  
+       ware_address  ,-- '仓库地址',   
+       user_id  big, -- '操作人ID',   
+       created_at  ,-- '', 
+       updated_at  ,-- '', 
+       ware_code  ,-- '仓库编号',  
+       country_id  , -- '仓库所属国家',  
+       city_id  , -- '仓库所属city',   
+       is_inbound  , -- '是否允许该仓库进行inbound操作？0-不允许，1-允许',   
+       staff_city_ids  ,-- '仓库对应资产发放覆盖城市：多个城市ID之间使用英文逗号分
         'NG' as country_code,
         dt
-
-    from oride_dw_ods.ods_sqoop_mass_oride_warehouses_df
+    from oride_dw_ods.ods_sqoop_base_oride_warehouses_df
     where dt='{pt}'
 
     '''.format(
