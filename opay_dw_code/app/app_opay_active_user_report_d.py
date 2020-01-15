@@ -68,7 +68,7 @@ dwd_opay_account_balance_df_prev_day_task = OssSensor(
 ods_sqoop_owealth_share_acct_df_prev_day_task = OssSensor(
     task_id='ods_sqoop_owealth_share_acct_df_prev_day_task',
     bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opay_owealth_ods.ods_sqoop_owealth_share_acct_df",
+        hdfs_path_str="opay_owealth_ods/opay_owealth/share_acct",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -140,60 +140,36 @@ def app_opay_active_user_report_d_sql_task(ds):
          (SELECT dt,user_id,
                  substr(from_unixtime(unix_timestamp(last_visit, 'yyyy-MM-dd HH:mm:ss')+3600),1,10) last_visit
           FROM opay_dw_ods.ods_sqoop_base_user_operator_df
-          WHERE dt='{pt}') a
+          WHERE dt='{pt}' and substr(from_unixtime(unix_timestamp(last_visit, 'yyyy-MM-dd HH:mm:ss')+3600),1,10)>date_sub('{pt}',30)) a
        INNER JOIN
          user_base b ON a.user_id=b.user_id),
+          opay_account_30d AS
+      (SELECT user_id,
+              dt
+       FROM opay_dw.dwd_opay_account_balance_df
+       WHERE dt>date_sub('{pt}',30)
+         AND dt<='{pt}'
+         AND balance>0
+         AND account_type='CASHACCOUNT'
+         AND user_type='USER'
+       UNION ALL SELECT b.user_id,
+                        dt
+       FROM (select user_id,dt from opay_owealth_ods.ods_sqoop_owealth_share_acct_df
+       WHERE dt>date_sub('{pt}',30)
+         AND dt<='{pt}'
+         AND create_time <'{pt} 23:00:00'
+         AND balance>0) a inner join user_base b on a.user_id=b.mobile
+         ),
      opay_account AS
-      (SELECT dt,user_id
-       FROM opay_dw.dwd_opay_account_balance_df
-       WHERE dt='{pt}'
-         AND account_type='CASHACCOUNT'
-         AND user_type='USER'
-         AND balance>0
-       UNION ALL SELECT dt,b.user_id
-       FROM (select user_id,dt from opay_owealth_ods.ods_sqoop_owealth_share_acct_df
-       WHERE dt='{pt}' and create_time < '{pt} 23:00:00'
-         AND balance>0) a inner join user_base b on a.user_id=b.mobile
-         ),
+      (select * from opay_account_30d where dt='{pt}'),
      opay_account_7d AS
-      (SELECT user_id,
-              dt
-       FROM opay_dw.dwd_opay_account_balance_df
-       WHERE dt>date_sub('{pt}',7)
-         AND dt<='{pt}'
-         AND balance>0
-         AND account_type='CASHACCOUNT'
-         AND user_type='USER'
-       UNION ALL SELECT b.user_id,
-                        dt
-       FROM (select user_id,dt from opay_owealth_ods.ods_sqoop_owealth_share_acct_df
-       WHERE dt>date_sub('{pt}',7)
-         AND dt<='{pt}'
-         AND create_time < 'dt 23:00:00'
-         AND balance>0) a inner join user_base b on a.user_id=b.mobile
-         ),
-     opay_account_30d AS
-      (SELECT user_id,
-              dt
-       FROM opay_dw.dwd_opay_account_balance_df
-       WHERE dt>date_sub('{pt}',30)
-         AND dt<='{pt}'
-         AND balance>0
-         AND account_type='CASHACCOUNT'
-         AND user_type='USER'
-       UNION ALL SELECT b.user_id,
-                        dt
-       FROM (select user_id,dt from opay_owealth_ods.ods_sqoop_owealth_share_acct_df
-       WHERE dt>date_sub('{pt}',30)
-         AND dt<='{pt}'
-         AND create_time <'dt 23:00:00'
-         AND balance>0) a inner join user_base b on a.user_id=b.mobile
-         ),
+      (select * from opay_account_30d where dt>=date_sub('{pt}',7) and dt<='{pt}'),
+    
     opay_active as 
        (select a.user_id,a.dt from 
          (select dt,user_id from opay_account union all select dt,user_id from bind_card) a
        inner join 
-         (select user_id from login where last_visit>date_sub('{pt}',30) AND last_visit<='{pt}') b 
+         (select user_id from login where last_visit<='{pt}') b 
        on a.user_id=b.user_id)
          
     INSERT overwrite TABLE opay_dw.app_opay_active_user_report_d partition (dt,target_type)
@@ -216,7 +192,7 @@ def app_opay_active_user_report_d_sql_task(ds):
     SELECT dt,
            role,'-' top_consume_scenario,
            'login_user_cnt_d' target_type,
-                              count(CASE
+                              count(distinct CASE
                                         WHEN last_visit='{pt}' THEN user_id
                                     END) c
     FROM login
@@ -226,7 +202,7 @@ def app_opay_active_user_report_d_sql_task(ds):
     SELECT dt,
            role,'-' top_consume_scenario,
            'login_user_cnt_7d' target_type,
-                               count(CASE WHEN last_visit>date_sub('{pt}',7)
+                               count(distinct CASE WHEN last_visit>date_sub('{pt}',7)
                                      AND last_visit<='{pt}' then user_id end) c
     FROM login
     GROUP BY dt,
@@ -235,7 +211,7 @@ def app_opay_active_user_report_d_sql_task(ds):
     SELECT dt,
            role,'-' top_consume_scenario,
            'login_user_cnt_30d' target_type,
-                                count(CASE WHEN last_visit>date_sub('{pt}',30)
+                                count(distinct CASE WHEN last_visit>date_sub('{pt}',30)
                                       AND last_visit<='{pt}' then user_id end) c
     FROM login
     GROUP BY dt,
@@ -279,6 +255,7 @@ def app_opay_active_user_report_d_sql_task(ds):
     group by dt
     ) m 
 
+    
 
 
 

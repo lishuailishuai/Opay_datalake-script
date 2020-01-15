@@ -498,6 +498,28 @@ select
 ,a.coupon_useless_pay_amount
 ,a.coupon_useless_order_gmv
 
+,0 as bak1
+,0 as bak2
+,0 as bak3
+,0 as bak4
+,0 as bak5
+,0 as bak6
+,0 as bak7
+,0 as bak8
+,0 as bak9
+,0 as bak10
+,0 as bak11
+,0 as bak12
+,0 as bak13
+,0 as bak14
+,0 as bak15
+
+,'-' as bak16
+,'-' as bak17
+,'-' as bak18
+,'-' as bak19
+,'-' as bak20
+
 ,'nal' as country_code
 ,'{pt}' as dt
 
