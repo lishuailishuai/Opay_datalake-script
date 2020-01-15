@@ -119,7 +119,7 @@ class TaskTimeoutMonitor(object):
 
                         self.dingding_alert.markdown_send("【及时性预警】",
 
-                            "Test<font color=#000000 size=3 face=\"微软雅黑\">【监控】</font><font color=#FF0000 size=3 face=\"微软雅黑\">及时性预警 </font>\n\n"+
+                            "DW <font color=#000000 size=3 face=\"微软雅黑\">【监控】</font><font color=#FF0000 size=3 face=\"微软雅黑\">及时性预警 </font>\n\n"+
 
                             "**超时任务:** \n\n &nbsp;&nbsp;[{dag_id}]({url}) \n\n".format(
                                 dag_id="dwd_oride_algo_driver_score_init_info_dischedule",
