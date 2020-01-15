@@ -116,7 +116,7 @@ def dwd_opay_account_balance_df_sql_task(ds):
     set mapred.max.split.size=1000000;
     set hive.exec.dynamic.partition.mode=nonstrict;
     set hive.exec.parallel=true;
-    insert overwrite table {db}.{table} partition (country_code,dt)
+    
     with user_base as 
 (SELECT user_id,
               business_name,
@@ -183,7 +183,7 @@ def dwd_opay_account_balance_df_sql_task(ds):
        FROM opay_dw_ods.ods_sqoop_base_merchant_df
        WHERE dt='{pt}' AND create_time<'{pt} 23:00:00' )
   
-
+insert overwrite table {db}.{table} partition (country_code,dt)
 SELECT     a.user_id,
            user_type,
            business_name,
