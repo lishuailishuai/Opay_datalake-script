@@ -152,7 +152,7 @@ def dwd_opay_account_balance_df_sql_task(ds):
                     row_number()over(partition BY user_id
                                      ORDER BY update_time DESC) rn,
                                 country
-          FROM opay_dw_ods.ods_sqoop_base_user_di where create_time<'{pt} 23:00:00') m
+          FROM opay_dw_ods.ods_sqoop_base_user_di where dt<='{pt}') m
        WHERE rn=1),
  merchant_base as 
   (SELECT merchant_id AS user_id,
