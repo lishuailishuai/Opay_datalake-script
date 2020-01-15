@@ -38,7 +38,7 @@ args = {
 } 
 
 dag = airflow.DAG( 'dwd_oride_driver_pay_records_df', 
-    schedule_interval="00 01 * * *", 
+    schedule_interval="30 02 * * *", 
     default_args=args,
     catchup=False) 
 
@@ -100,18 +100,18 @@ def dwd_oride_driver_pay_records_df_sql_task(ds):
 
         
 id,--ID
-driver_id,--??ID
-amount,--????
-amount_str,--????-??????
-status,--??: 0???;1????;2????
-record_days,--??????????????????
-opay_result,--opay????????????
-created_at,--????
-updated_at,--????
-reference,--opay???????
-reference_is_callback,--opay??????
-source_from,--??????
-opay_account,--opay ??
+driver_id,--司机ID 
+amount,--打款金额
+amount_str,--打款金额-详细说明信息
+status,--状态: 0待打款;1打款成功;2打款失败
+record_days,--打款金额对应的骑手账单日期，逗号分隔
+opay_result,--opay接口返回的数据，用于对账
+created_at,--申请时间
+updated_at,--修改时间
+reference,--opay流水号用于对账
+reference_is_callback,--opay是否回调处理
+source_from,--处理数据来源
+opay_account,--opay 账号
 'nal' as country_code,
 '{pt}' as dt
         
