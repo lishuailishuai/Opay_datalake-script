@@ -210,8 +210,17 @@ def run_check_table(db_name, table_name, conn_id, hive_table_name, **kwargs):
 
 conn_conf_dict = {}
 for db_name, table_name, conn_id, prefix_name,priority_weight_nm,is_valid_success in table_list:
+
+
+    query='select * from {table} where ((FROM_UNIXTIME(UNIX_TIMESTAMP(create_time), "%Y-%m-%d %H:%i:%S") between "{{{{ macros.ds_add(ds, -1) }}}} 23:00:00" and "{{{{ ds }}}} 22:59:59") OR (FROM_UNIXTIME(UNIX_TIMESTAMP(update_time), "%Y-%m-%d %H:%i:%S") between "{{{{ macros.ds_add(ds, -1) }}}} 23:00:00" and "{{{{ ds }}}} 22:59:59")) AND $CONDITIONS'.format(table=table_name)
+
+    if table_name in ['bd_agent_status_change_log']:
+
+        query='select * from {table} where ((FROM_UNIXTIME(UNIX_TIMESTAMP(created_at), "%Y-%m-%d %H:%i:%S") between "{{{{ macros.ds_add(ds, -1) }}}} 23:00:00" and "{{{{ ds }}}} 22:59:59")) AND $CONDITIONS' 
+
     if conn_id not in conn_conf_dict:
         conn_conf_dict[conn_id] = BaseHook.get_connection(conn_id)
+
 
     hive_table_name = HIVE_TABLE % (prefix_name, table_name)
     # sqoop import
@@ -225,7 +234,7 @@ for db_name, table_name, conn_id, prefix_name,priority_weight_nm,is_valid_succes
             --connect "jdbc:mysql://{host}:{port}/{schema}?tinyInt1isBit=false&useUnicode=true&characterEncoding=utf8" \
             --username {username} \
             --password {password} \
-            --query 'select * from {table} where ((FROM_UNIXTIME(UNIX_TIMESTAMP(create_time), "%Y-%m-%d %H:%i:%S") between "{{{{ macros.ds_add(ds, -1) }}}} 23:00:00" and "{{{{ ds }}}} 22:59:59") OR (FROM_UNIXTIME(UNIX_TIMESTAMP(update_time), "%Y-%m-%d %H:%i:%S") between "{{{{ macros.ds_add(ds, -1) }}}} 23:00:00" and "{{{{ ds }}}} 22:59:59")) AND $CONDITIONS' \
+            --query '{query}' \
             --split-by id \
             --target-dir {ufile_path}/dt={{{{ ds }}}}/ \
             --fields-terminated-by "\\001" \
@@ -241,7 +250,8 @@ for db_name, table_name, conn_id, prefix_name,priority_weight_nm,is_valid_succes
             username=conn_conf_dict[conn_id].login,
             password=conn_conf_dict[conn_id].password,
             table=table_name,
-            ufile_path=UFILE_PATH % (db_name, table_name)
+            ufile_path=UFILE_PATH % (db_name, table_name),
+            query=query
         ),
         dag=dag,
     )
