@@ -216,7 +216,9 @@ for db_name, table_name, conn_id, prefix_name,priority_weight_nm,is_valid_succes
 
     if table_name in ['bd_agent_status_change_log']:
 
-        query='select * from {table} where ((FROM_UNIXTIME(UNIX_TIMESTAMP(created_at), "%Y-%m-%d %H:%i:%S") between "{{{{ macros.ds_add(ds, -1) }}}} 23:00:00" and "{{{{ ds }}}} 22:59:59")) AND $CONDITIONS' 
+        query='select * from {table} where ((FROM_UNIXTIME(UNIX_TIMESTAMP(created_at), "%Y-%m-%d %H:%i:%S") between "{{{{ macros.ds_add(ds, -1) }}}} 23:00:00" and "{{{{ ds }}}} 22:59:59")) AND $CONDITIONS'
+
+        print(query) 
 
     if conn_id not in conn_conf_dict:
         conn_conf_dict[conn_id] = BaseHook.get_connection(conn_id)
