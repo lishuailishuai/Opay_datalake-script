@@ -150,20 +150,26 @@ def app_opay_active_user_report_d_sql_task(ds):
        WHERE dt>date_sub('{pt}',30)
          AND dt<='{pt}'
          AND balance>0
-         AND account_type='CASHACCOUNT'
+         AND account_type in('CASHACCOUNT','OWEALTH')
          AND user_type='USER'
-       UNION ALL SELECT b.user_id,
-                        dt
-       FROM (select user_id,dt from opay_owealth_ods.ods_sqoop_owealth_share_acct_df
-       WHERE dt>date_sub('{pt}',30)
-         AND dt<='{pt}'
-         AND create_time <'{pt} 23:00:00'
-         AND balance>0) a inner join user_base b on a.user_id=b.mobile
-         ),
+       ),
      opay_account AS
-      (select * from opay_account_30d where dt='{pt}'),
+      (SELECT user_id,
+              dt
+       FROM opay_dw.dwd_opay_account_balance_df
+       WHERE dt='{pt}'
+         AND balance>0
+         AND account_type in('CASHACCOUNT','OWEALTH')
+         AND user_type='USER'),
      opay_account_7d AS
-      (select * from opay_account_30d where dt>=date_sub('{pt}',7) and dt<='{pt}'),
+      (SELECT user_id,
+              dt
+       FROM opay_dw.dwd_opay_account_balance_df
+       WHERE dt>date_sub('{pt}',7)
+         AND dt<='{pt}'
+         AND balance>0
+         AND account_type in('CASHACCOUNT','OWEALTH')
+         AND user_type='USER'),
     
     opay_active as 
        (select a.user_id,a.dt from 
