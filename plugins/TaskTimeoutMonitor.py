@@ -1,3 +1,4 @@
+
 # -*- coding: utf-8 -*-
 """
 监控任务执行是否超时
@@ -13,8 +14,6 @@ from airflow.utils.state import State
 from airflow import AirflowException
 from airflow.models import DAG, TaskInstance, BaseOperator
 from plugins.DingdingAlert import DingdingAlert
-
-from html.parser import HTMLParser
 
 
 """
@@ -49,15 +48,9 @@ class TaskTimeoutMonitor(object):
 
     def __init__(self):
         self.hive_cursor = get_hive_cursor()
-
         self.dingding_alert = DingdingAlert('https://oapi.dingtalk.com/robot/send?access_token=928e66bef8d88edc89fe0f0ddd52bfa4dd28bd4b1d24ab4626c804df8878bb48')
 
-        #self.dingding_alert = DingdingAlert_dev('https://oapi.dingtalk.com/robot/send?access_token=c08440c8e569bb38ec358833f9d577b7638af5aaefbd55e3fd748b798fecc4d4')
-
-        self.alert_url="http://8.208.14.165:8080/admin/airflow/tree?dag_id="
-
         self.owner_name=None
-
         self.hdfs_dir_name=None
 
     def __del__(self):
@@ -80,9 +73,6 @@ class TaskTimeoutMonitor(object):
             sum_timeout = 0 
             timeout_step = 120 #任务监控间隔时间(秒)
             command = command.strip()
-
-            #次数
-            num=0
 
             while sum_timeout <= int(timeout):
     
@@ -107,41 +97,21 @@ class TaskTimeoutMonitor(object):
                 #判断数据文件是否生成
                 if res == '' or res == 'None' or res == '0':
 
-                    url="""
-                        {alter_url}{dag_id}
-                    """.format(alter_url=self.alert_url,dag_id=dag_id_name)
-
                     if sum_timeout >= int(timeout):
 
-                        #换算分钟
                         format_date=int(int(timeout)/60)
-                    	
-                        num=num+1
 
-                        self.dingding_alert.markdown_send("【及时性预警】",
-
-                            "DW <font color=#000000 size=3 face=\"微软雅黑\">【监控】</font><font color=#FF0000 size=3 face=\"微软雅黑\">及时性预警 </font>\n\n"+
-
-                            "**超时任务:** \n\n &nbsp;&nbsp;[{dag_id}]({url}) \n\n".format(
+                        self.dingding_alert.send('DW 【及时性预警】调度任务: {dag_id} 产出超时【负责人】{owner_name}【等待路径】{hdfs_dir_name}【预留时间】{timeout} 分钟'.format(
                                 dag_id=dag_id_name,
-                                url=url)+
-
-                            "**负 责 人 :** &nbsp;&nbsp;{owner_name} \n\n".format(
-                                owner_name=self.owner_name)+
-
-                            "**等待路径:** &nbsp;&nbsp;{hdfs_dir_name} \n\n".format(
-                                hdfs_dir_name=self.hdfs_dir_name)+
-
-                            "**预留时间:** &nbsp;&nbsp;{timeout} 分钟 \n\n".format(timeout=str(format_date))+
-
-                            "**预警次数:** &nbsp;&nbsp;{num}".format(num=num)
+                                timeout=str(format_date),
+                                owner_name=self.owner_name,
+                                hdfs_dir_name=self.hdfs_dir_name
                         )
-                        
-                        logging.info("任务超时... ...")
+                        )
 
+                        logging.info("任务超时。。。。。")
                         sum_timeout=0
                 else:
-                    num=0
                     break
 
         except Exception as e:
@@ -212,6 +182,11 @@ class TaskTimeoutMonitor(object):
                 'table': table
                 }
             )
+
+        # loop = asyncio.get_event_loop()
+        # tasks = [self.task_trigger(items['cmd'], items['table'], items['timeout']) for items in commands]
+        # loop.run_until_complete(asyncio.wait(tasks))
+        # loop.close()
 
         for items in commands:
 
