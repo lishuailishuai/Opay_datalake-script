@@ -112,8 +112,7 @@ def app_opay_life_payment_cube_d_sql_task(ds):
            count(DISTINCT originator_id) trans_user_cnt,
            count(DISTINCT recharge_account) trans_recharge_account_cnt
     FROM lp_data
-    WHERE dt='{pt}'
-      AND top_service_type='Life Payment'
+    WHERE top_service_type='Life Payment'
       AND create_time BETWEEN date_format(date_sub('{pt}', 1), 'yyyy-MM-dd 23') AND date_format('{pt}', 'yyyy-MM-dd 23')
     GROUP BY sub_consume_scenario,
              recharge_service_provider,
