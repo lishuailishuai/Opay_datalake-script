@@ -48,6 +48,7 @@ class TaskTimeoutMonitor(object):
     dingding_alert = None
 
     def __init__(self):
+        
         self.hive_cursor = get_hive_cursor()
 
         self.dingding_alert = DingdingAlert('https://oapi.dingtalk.com/robot/send?access_token=928e66bef8d88edc89fe0f0ddd52bfa4dd28bd4b1d24ab4626c804df8878bb48')
