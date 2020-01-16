@@ -65,7 +65,7 @@ if code_map["id"].lower()=="ufile":
         dag=dag
     )
 else:
-    print("成功")
+    # print("成功")
     # 依赖前一天分区
     app_oride_global_operate_report_d_task = OssSensor(
         task_id='app_oride_global_operate_report_d_task',
