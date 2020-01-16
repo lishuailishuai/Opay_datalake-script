@@ -65,10 +65,10 @@ dwd_opay_account_balance_df_prev_day_task = OssSensor(
     dag=dag
 )
 
-ods_sqoop_owealth_share_acct_df_prev_day_task = OssSensor(
-    task_id='ods_sqoop_owealth_share_acct_df_prev_day_task',
+dwd_opay_account_balance_df_prev_day_task = OssSensor(
+    task_id='dwd_opay_account_balance_df_prev_day_task',
     bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opay_owealth_ods/opay_owealth/share_acct",
+        hdfs_path_str="opay/opay_dw/dwd_opay_account_balance_df/country_code=NG",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -236,8 +236,10 @@ def app_opay_active_user_report_d_sql_task(ds):
     SELECT dt,'-' role,'-' top_consume_scenario,
            'owealth_bal_not_zero_user_cnt' target_type,
            count(DISTINCT user_id) c
-    FROM opay_owealth_ods.ods_sqoop_owealth_share_acct_df
-    WHERE dt='{pt}' and create_time <'{pt} 23:00:00'
+    FROM opay_dw.dwd_opay_account_balance_df
+    WHERE dt='{pt}'
+      AND account_type='OWEALTH'
+      AND user_type='USER'
       AND balance>0
     GROUP BY dt
     union all
@@ -302,7 +304,7 @@ app_opay_active_user_report_d_task = PythonOperator(
 
 dim_opay_user_base_di_prev_day_task >> app_opay_active_user_report_d_task
 dwd_opay_account_balance_df_prev_day_task >> app_opay_active_user_report_d_task
-ods_sqoop_owealth_share_acct_df_prev_day_task >> app_opay_active_user_report_d_task
+dwd_opay_account_balance_df_prev_day_task >> app_opay_active_user_report_d_task
 ods_sqoop_base_user_payment_instrument_df_prev_day_task >> app_opay_active_user_report_d_task
 ods_sqoop_base_user_operator_df_prev_day_task >> app_opay_active_user_report_d_task
 
