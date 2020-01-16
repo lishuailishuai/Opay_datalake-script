@@ -111,7 +111,7 @@ def app_opay_active_user_report_d_sql_task(ds):
     set hive.exec.parallel=true;
     --绑卡
     WITH bind_card AS
-      (SELECT dt,user_id
+      (SELECT dt,user_id,pay_status
        FROM opay_dw_ods.ods_sqoop_base_user_payment_instrument_df
        WHERE dt='{pt}'
          AND create_time<'{pt} 23:00:00'
@@ -239,7 +239,7 @@ def app_opay_active_user_report_d_sql_task(ds):
     GROUP BY dt,
              ROLE
     union all
-    selcet dt,'ALL' role,'-' top_consume_scenario,'login_user_cnt_30d' target_type,
+    select dt,'ALL' role,'-' top_consume_scenario,'login_user_cnt_30d' target_type,
             count(distinct CASE WHEN last_visit>date_sub('{pt}',30)
                                       AND last_visit<='{pt}' then user_id end) c
     from login
