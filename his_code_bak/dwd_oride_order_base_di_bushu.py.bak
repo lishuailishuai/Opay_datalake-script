@@ -457,7 +457,7 @@ FROM (select *,
              if(cancel_wait_payment_time=0,0,(cancel_wait_payment_time + 1 * 60 * 60)) as local_cancel_wait_payment_time 
      from oride_dw_ods.ods_sqoop_base_data_order_df     
 WHERE dt>='2019-12-01' and dt<='2019-12-11'
-AND (from_unixtime(create_time,'yyyy-MM-dd') = dt or substr(updated_at,1,10) = dt)
+AND (from_unixtime((create_time+3600),'yyyy-MM-dd') = dt or substr(updated_at,1,10) = dt)
 ) base
 LEFT OUTER JOIN
 (SELECT id AS order_id,
