@@ -60,15 +60,16 @@ moto_locations_prev_day_task = HivePartitionSensor(
 )
 
 ods_sqoop_base_oride_assets_sku_df_prev_day_task = OssSensor(
-        task_id='ods_sqoop_base_oride_assets_sku_df_prev_day_task',
-        bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-            hdfs_path_str="oride_dw_sqoop/opay_assets/oride_assets_sku",
-            pt='{{ds}}'
-        ),
-        bucket_name='opay-datalake',
-        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-        dag=dag
-    )
+    task_id='ods_sqoop_base_oride_assets_sku_df_prev_day_task',
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="oride_dw_sqoop/opay_assets/oride_assets_sku",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
 
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
 
@@ -93,12 +94,12 @@ task_timeout_monitor = PythonOperator(
 
 ##----------------------------------------- 脚本 ---------------------------------------##
 
-def app_oride_driver_gps_info_sql_0_task(ds):
+def app_oride_driver_gps_info_sql_task(ds):
     HQL = '''
     SET hive.exec.parallel=true;
     SET hive.exec.dynamic.partition=true;
     SET hive.exec.dynamic.partition.mode=nonstrict;
-    insert into table {db}.{table} partition(dt='{pt}')
+    insert overwrite table {db}.{table} partition(dt='{pt}')
     -- 每天凌晨2点读取所有车辆的停靠点，只取top 3 --请做成计划任务
     SELECT driver_id,plate_number,chassis,gps_id,loc,times,type FROM 
     (
@@ -138,20 +139,10 @@ def app_oride_driver_gps_info_sql_0_task(ds):
     ORDER BY ml.gps_id,
              ml.times DESC
     ) gpslist
-    WHERE row_num<=3 
-    '''.format(
-        pt=ds,
-        now_day=airflow.macros.ds_add(ds, +1),
-        table=table_name,
-        db=db_name
-    )
-    return HQL
-def app_oride_driver_gps_info_sql_1_task(ds):
-    HQL = '''
-    SET hive.exec.parallel=true;
-    SET hive.exec.dynamic.partition=true;
-    SET hive.exec.dynamic.partition.mode=nonstrict;
-    insert into table {db}.{table} partition(dt='{pt}')
+    WHERE row_num<=3
+
+    union all
+
     -- 每天凌晨8-20点读取所有车辆的停靠点，只取 top 3 --请做成计划任务
     SELECT driver_id,plate_number,chassis,gps_id,loc,times,type FROM 
     (
@@ -192,21 +183,9 @@ def app_oride_driver_gps_info_sql_1_task(ds):
              ml.times DESC
     ) gpslist
     WHERE row_num<=3
-    '''.format(
-        pt=ds,
-        now_day=airflow.macros.ds_add(ds, +1),
-        table=table_name,
-        db=db_name
-    )
-    return HQL
 
+    union all
 
-def app_oride_driver_gps_info_sql_2_task(ds):
-    HQL = '''
-    SET hive.exec.parallel=true;
-    SET hive.exec.dynamic.partition=true;
-    SET hive.exec.dynamic.partition.mode=nonstrict;
-    insert into table {db}.{table} partition(dt='{pt}')
     -- 取每个 GPS_IMEI 失联前60分钟 TOP 1 的点 --请做成计划任务
     SELECT driver_id,plate_number,chassis,gps_id,loc,times,type 
     FROM
@@ -257,7 +236,6 @@ def app_oride_driver_gps_info_sql_2_task(ds):
                 gpsdev.times DESC
       ) gpslist
     WHERE row_num=1;
-
     '''.format(
         pt=ds,
         now_day=airflow.macros.ds_add(ds, +1),
@@ -266,8 +244,9 @@ def app_oride_driver_gps_info_sql_2_task(ds):
     )
     return HQL
 
+
 # 主流程
-def execution_data_task_id_0(ds, **kwargs):
+def execution_data_task_id(ds, **kwargs):
     v_date = kwargs.get('v_execution_date')
     v_day = kwargs.get('v_execution_day')
     v_hour = kwargs.get('v_execution_hour')
@@ -297,7 +276,7 @@ def execution_data_task_id_0(ds, **kwargs):
     cf.delete_partition()
 
     # 读取sql
-    _sql = "\n" + cf.alter_partition() + "\n" + app_oride_driver_gps_info_sql_0_task(ds)
+    _sql = "\n" + cf.alter_partition() + "\n" + app_oride_driver_gps_info_sql_task(ds)
 
     logging.info('Executing: %s', _sql)
 
@@ -310,36 +289,10 @@ def execution_data_task_id_0(ds, **kwargs):
     # 生产success
     cf.touchz_success()
 
-# 主流程
-def execution_data_task_id_1(ds, **kwargs):
-    v_date = kwargs.get('v_execution_date')
-    v_day = kwargs.get('v_execution_day')
-    v_hour = kwargs.get('v_execution_hour')
 
-    hive_hook = HiveCliHook()
-
-    # 读取sql
-    logging.info('Executing: %s', app_oride_driver_gps_info_sql_1_task(ds))
-
-    # 执行Hive
-    hive_hook.run_cli(app_oride_driver_gps_info_sql_1_task(ds))
-
-def execution_data_task_id_2(ds, **kwargs):
-    v_date = kwargs.get('v_execution_date')
-    v_day = kwargs.get('v_execution_day')
-    v_hour = kwargs.get('v_execution_hour')
-
-    hive_hook = HiveCliHook()
-
-    # 读取sql
-    logging.info('Executing: %s', app_oride_driver_gps_info_sql_2_task(ds))
-
-    # 执行Hive
-    hive_hook.run_cli(app_oride_driver_gps_info_sql_2_task(ds))
-
-app_oride_driver_gps_info_0_task = PythonOperator(
+app_oride_driver_gps_info_task = PythonOperator(
     task_id='app_oride_driver_gps_info_task',
-    python_callable=execution_data_task_id_0,
+    python_callable=execution_data_task_id,
     provide_context=True,
     op_kwargs={
         'v_execution_date': '{{execution_date.strftime("%Y-%m-%d %H:%M:%S")}}',
@@ -349,38 +302,5 @@ app_oride_driver_gps_info_0_task = PythonOperator(
     dag=dag
 )
 
-app_oride_driver_gps_info_1_task = PythonOperator(
-    task_id='app_oride_driver_gps_info_task',
-    python_callable=execution_data_task_id_1,
-    provide_context=True,
-    op_kwargs={
-        'v_execution_date': '{{execution_date.strftime("%Y-%m-%d %H:%M:%S")}}',
-        'v_execution_day': '{{execution_date.strftime("%Y-%m-%d")}}',
-        'v_execution_hour': '{{execution_date.strftime("%H")}}'
-    },
-    dag=dag
-)
-
-app_oride_driver_gps_info_2_task = PythonOperator(
-    task_id='app_oride_driver_gps_info_task',
-    python_callable=execution_data_task_id_2,
-    provide_context=True,
-    op_kwargs={
-        'v_execution_date': '{{execution_date.strftime("%Y-%m-%d %H:%M:%S")}}',
-        'v_execution_day': '{{execution_date.strftime("%Y-%m-%d")}}',
-        'v_execution_hour': '{{execution_date.strftime("%H")}}'
-    },
-    dag=dag
-)
-
-moto_locations_prev_day_task >> app_oride_driver_gps_info_0_task
-ods_sqoop_base_oride_assets_sku_df_prev_day_task >> app_oride_driver_gps_info_0_task
-
-app_oride_driver_gps_info_0_task >> app_oride_driver_gps_info_1_task
-moto_locations_prev_day_task >> app_oride_driver_gps_info_1_task
-ods_sqoop_base_oride_assets_sku_df_prev_day_task >> app_oride_driver_gps_info_1_task
-
-app_oride_driver_gps_info_0_task >> app_oride_driver_gps_info_2_task
-moto_locations_prev_day_task >> app_oride_driver_gps_info_2_task
-ods_sqoop_base_oride_assets_sku_df_prev_day_task >> app_oride_driver_gps_info_2_task
-
+moto_locations_prev_day_task >> app_oride_driver_gps_info_task
+ods_sqoop_base_oride_assets_sku_df_prev_day_task >> app_oride_driver_gps_info_task
