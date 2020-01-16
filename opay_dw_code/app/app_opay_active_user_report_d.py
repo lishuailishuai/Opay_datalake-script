@@ -203,6 +203,15 @@ def app_opay_active_user_report_d_sql_task(ds):
     FROM login
     GROUP BY dt,
              ROLE
+    union all
+        SELECT dt,
+           'ALL' role,'-' top_consume_scenario,
+           'login_user_cnt_d' target_type,
+                              count(distinct CASE
+                                        WHEN last_visit='{pt}' THEN user_id
+                                    END) c
+    FROM login
+    GROUP BY dt
     UNION ALL
     SELECT dt,
            role,'-' top_consume_scenario,
@@ -212,6 +221,14 @@ def app_opay_active_user_report_d_sql_task(ds):
     FROM login
     GROUP BY dt,
              ROLE
+    union all
+        SELECT dt,
+           'ALL' role,'-' top_consume_scenario,
+           'login_user_cnt_7d' target_type,
+                               count(distinct CASE WHEN last_visit>date_sub('{pt}',7)
+                                     AND last_visit<='{pt}' then user_id end) c
+    FROM login
+    GROUP BY dt
     UNION ALL
     SELECT dt,
            role,'-' top_consume_scenario,
@@ -221,6 +238,12 @@ def app_opay_active_user_report_d_sql_task(ds):
     FROM login
     GROUP BY dt,
              ROLE
+    union all
+    selcet dt,'ALL' role,'-' top_consume_scenario,'login_user_cnt_30d' target_type,
+            count(distinct CASE WHEN last_visit>date_sub('{pt}',30)
+                                      AND last_visit<='{pt}' then user_id end) c
+    from login
+           group by dt
     UNION ALL
     SELECT dt,'-' role,'-' top_consume_scenario,
            'owallet_bal_not_zero_user_cnt' target_type,
