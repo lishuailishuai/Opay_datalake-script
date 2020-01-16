@@ -98,7 +98,7 @@ def app_oride_driver_gps_info_sql_task(ds):
     SET hive.exec.parallel=true;
     SET hive.exec.dynamic.partition=true;
     SET hive.exec.dynamic.partition.mode=nonstrict;
-    insert overwrite table {db}.{table} partition(country_code,dt)
+    insert overwrite table {db}.{table} partition(dt='{pt}')
     -- 每天凌晨2点读取所有车辆的停靠点，只取top 3 --请做成计划任务
     SELECT driver_id,plate_number,chassis,gps_id,loc,times,type FROM 
     (
