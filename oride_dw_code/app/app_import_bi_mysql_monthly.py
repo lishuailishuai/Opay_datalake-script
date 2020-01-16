@@ -17,7 +17,7 @@ import MySQLdb
 args = {
     'owner': 'wuduo',
     'start_date': datetime(2019, 9, 1),
-    'depends_on_past': False,
+    'depends_on_past': True,
     'retries': 1,
     'retry_delay': timedelta(minutes=5),
     'email': ['bigdata_dw@opay-inc.com'],
