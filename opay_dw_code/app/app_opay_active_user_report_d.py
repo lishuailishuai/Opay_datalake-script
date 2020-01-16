@@ -37,7 +37,7 @@ args = {
 }
 
 dag = airflow.DAG('app_opay_active_user_report_d',
-                  schedule_interval="00 03 * * *",
+                  schedule_interval="40 02 * * *",
                   default_args=args,
                   catchup=False)
 
@@ -64,7 +64,16 @@ dwd_opay_account_balance_df_prev_day_task = OssSensor(
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
-
+ods_sqoop_owealth_share_acct_df_prev_day_task = OssSensor(
+    task_id='ods_sqoop_owealth_share_acct_df_prev_day_task',
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="opay_owealth_ods/opay_owealth/share_acct",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
 
 ods_sqoop_base_user_payment_instrument_df_prev_day_task = OssSensor(
     task_id='ods_sqoop_base_user_payment_instrument_df_prev_day_task',
@@ -102,7 +111,7 @@ def app_opay_active_user_report_d_sql_task(ds):
     set hive.exec.parallel=true;
     --绑卡
     WITH bind_card AS
-      (SELECT *
+      (SELECT dt,user_id
        FROM opay_dw_ods.ods_sqoop_base_user_payment_instrument_df
        WHERE dt='{pt}'
          AND create_time<'{pt} 23:00:00'
@@ -226,10 +235,8 @@ def app_opay_active_user_report_d_sql_task(ds):
     SELECT dt,'-' role,'-' top_consume_scenario,
            'owealth_bal_not_zero_user_cnt' target_type,
            count(DISTINCT user_id) c
-    FROM opay_dw.dwd_opay_account_balance_df
+    FROM opay_owealth_ods.ods_sqoop_owealth_share_acct_df
     WHERE dt='{pt}'
-      AND account_type='OWEALTH'
-      AND user_type='USER'
       AND balance>0
     GROUP BY dt
     union all
