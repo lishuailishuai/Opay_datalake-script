@@ -848,7 +848,9 @@ def get_driver_num(**op_kwargs):
     results = tuple()
     driver_dic = {}
     while True:
-        mcursor.execute(query_driver_city_serv.format(id=driver_id))
+        sql = query_driver_city_serv.format(id=driver_id)
+        logging.info(sql)
+        mcursor.execute(sql)
         conn.commit()
         tmp = mcursor.fetchall()
         if not tmp:
@@ -891,6 +893,7 @@ def get_driver_num(**op_kwargs):
     conn = get_db_conn('mysql_bi')
     mcursor = conn.cursor()
     mcursor.executemany(insert_driver_num, res)
+    logging.info('insert num %s', len(res))
     conn.commit()
     mcursor.close()
     conn.close()
