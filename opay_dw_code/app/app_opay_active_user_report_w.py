@@ -122,7 +122,17 @@ FROM login
 WHERE last_visit>=date_sub(next_day('{pt}', 'mo'), 7)
   AND last_visit<='{pt}'
 GROUP BY dt,
-         ROLE)m
+         ROLE
+union all
+SELECT dt,
+      'ALL' ROLE,
+       'login_user_cnt_w' target_type,
+                           count(DISTINCT user_id) c
+FROM login
+WHERE last_visit>=date_sub(next_day('{pt}', 'mo'), 7)
+  AND last_visit<='{pt}'
+GROUP BY dt
+)m
 
 
 

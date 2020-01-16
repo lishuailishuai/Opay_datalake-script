@@ -121,7 +121,17 @@ FROM login
 WHERE last_visit>=date_format('{pt}', 'yyyy-MM-01')
   AND last_visit<='{pt}'
 GROUP BY dt,
-         ROLE)m
+         ROLE
+UNION ALL
+SELECT dt,
+       'ALL' ROLE,
+       'login_user_cnt_m' target_type,
+                           count(DISTINCT user_id) c
+FROM login
+WHERE last_visit>=date_format('{pt}', 'yyyy-MM-01')
+  AND last_visit<='{pt}'
+GROUP BY dt
+)m
 
 
 
