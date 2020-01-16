@@ -93,12 +93,12 @@ task_timeout_monitor = PythonOperator(
 
 ##----------------------------------------- 脚本 ---------------------------------------##
 
-def app_oride_driver_gps_info_sql_task(ds):
+def app_oride_driver_gps_info_sql_0_task(ds):
     HQL = '''
     SET hive.exec.parallel=true;
     SET hive.exec.dynamic.partition=true;
     SET hive.exec.dynamic.partition.mode=nonstrict;
-    insert overwrite table {db}.{table} partition(dt='{pt}')
+    insert into table {db}.{table} partition(dt='{pt}')
     -- 每天凌晨2点读取所有车辆的停靠点，只取top 3 --请做成计划任务
     SELECT driver_id,plate_number,chassis,gps_id,loc,times,type FROM 
     (
@@ -138,10 +138,20 @@ def app_oride_driver_gps_info_sql_task(ds):
     ORDER BY ml.gps_id,
              ml.times DESC
     ) gpslist
-    WHERE row_num<=3
-    
-    union all
-    
+    WHERE row_num<=3 
+    '''.format(
+        pt=ds,
+        now_day=airflow.macros.ds_add(ds, +1),
+        table=table_name,
+        db=db_name
+    )
+    return HQL
+def app_oride_driver_gps_info_sql_1_task(ds):
+    HQL = '''
+    SET hive.exec.parallel=true;
+    SET hive.exec.dynamic.partition=true;
+    SET hive.exec.dynamic.partition.mode=nonstrict;
+    insert into table {db}.{table} partition(dt='{pt}')
     -- 每天凌晨8-20点读取所有车辆的停靠点，只取 top 3 --请做成计划任务
     SELECT driver_id,plate_number,chassis,gps_id,loc,times,type FROM 
     (
@@ -182,9 +192,21 @@ def app_oride_driver_gps_info_sql_task(ds):
              ml.times DESC
     ) gpslist
     WHERE row_num<=3
-    
-    union all
-    
+    '''.format(
+        pt=ds,
+        now_day=airflow.macros.ds_add(ds, +1),
+        table=table_name,
+        db=db_name
+    )
+    return HQL
+
+
+def app_oride_driver_gps_info_sql_2_task(ds):
+    HQL = '''
+    SET hive.exec.parallel=true;
+    SET hive.exec.dynamic.partition=true;
+    SET hive.exec.dynamic.partition.mode=nonstrict;
+    insert into table {db}.{table} partition(dt='{pt}')
     -- 取每个 GPS_IMEI 失联前60分钟 TOP 1 的点 --请做成计划任务
     SELECT driver_id,plate_number,chassis,gps_id,loc,times,type 
     FROM
@@ -235,6 +257,7 @@ def app_oride_driver_gps_info_sql_task(ds):
                 gpsdev.times DESC
       ) gpslist
     WHERE row_num=1;
+
     '''.format(
         pt=ds,
         now_day=airflow.macros.ds_add(ds, +1),
@@ -243,9 +266,8 @@ def app_oride_driver_gps_info_sql_task(ds):
     )
     return HQL
 
-
 # 主流程
-def execution_data_task_id(ds, **kwargs):
+def execution_data_task_id_0(ds, **kwargs):
     v_date = kwargs.get('v_execution_date')
     v_day = kwargs.get('v_execution_day')
     v_hour = kwargs.get('v_execution_hour')
@@ -275,7 +297,7 @@ def execution_data_task_id(ds, **kwargs):
     cf.delete_partition()
 
     # 读取sql
-    _sql = "\n" + cf.alter_partition() + "\n" + app_oride_driver_gps_info_sql_task(ds)
+    _sql = "\n" + cf.alter_partition() + "\n" + app_oride_driver_gps_info_sql_0_task(ds)
 
     logging.info('Executing: %s', _sql)
 
@@ -288,10 +310,36 @@ def execution_data_task_id(ds, **kwargs):
     # 生产success
     cf.touchz_success()
 
+# 主流程
+def execution_data_task_id_1(ds, **kwargs):
+    v_date = kwargs.get('v_execution_date')
+    v_day = kwargs.get('v_execution_day')
+    v_hour = kwargs.get('v_execution_hour')
 
-app_oride_driver_gps_info_task = PythonOperator(
+    hive_hook = HiveCliHook()
+
+    # 读取sql
+    logging.info('Executing: %s', app_oride_driver_gps_info_sql_1_task(ds))
+
+    # 执行Hive
+    hive_hook.run_cli(app_oride_driver_gps_info_sql_1_task(ds))
+
+def execution_data_task_id_2(ds, **kwargs):
+    v_date = kwargs.get('v_execution_date')
+    v_day = kwargs.get('v_execution_day')
+    v_hour = kwargs.get('v_execution_hour')
+
+    hive_hook = HiveCliHook()
+
+    # 读取sql
+    logging.info('Executing: %s', app_oride_driver_gps_info_sql_2_task(ds))
+
+    # 执行Hive
+    hive_hook.run_cli(app_oride_driver_gps_info_sql_2_task(ds))
+
+app_oride_driver_gps_info_0_task = PythonOperator(
     task_id='app_oride_driver_gps_info_task',
-    python_callable=execution_data_task_id,
+    python_callable=execution_data_task_id_0,
     provide_context=True,
     op_kwargs={
         'v_execution_date': '{{execution_date.strftime("%Y-%m-%d %H:%M:%S")}}',
@@ -301,6 +349,38 @@ app_oride_driver_gps_info_task = PythonOperator(
     dag=dag
 )
 
-moto_locations_prev_day_task >> app_oride_driver_gps_info_task
-ods_sqoop_base_oride_assets_sku_df_prev_day_task >> app_oride_driver_gps_info_task
+app_oride_driver_gps_info_1_task = PythonOperator(
+    task_id='app_oride_driver_gps_info_task',
+    python_callable=execution_data_task_id_1,
+    provide_context=True,
+    op_kwargs={
+        'v_execution_date': '{{execution_date.strftime("%Y-%m-%d %H:%M:%S")}}',
+        'v_execution_day': '{{execution_date.strftime("%Y-%m-%d")}}',
+        'v_execution_hour': '{{execution_date.strftime("%H")}}'
+    },
+    dag=dag
+)
+
+app_oride_driver_gps_info_2_task = PythonOperator(
+    task_id='app_oride_driver_gps_info_task',
+    python_callable=execution_data_task_id_2,
+    provide_context=True,
+    op_kwargs={
+        'v_execution_date': '{{execution_date.strftime("%Y-%m-%d %H:%M:%S")}}',
+        'v_execution_day': '{{execution_date.strftime("%Y-%m-%d")}}',
+        'v_execution_hour': '{{execution_date.strftime("%H")}}'
+    },
+    dag=dag
+)
+
+moto_locations_prev_day_task >> app_oride_driver_gps_info_0_task
+ods_sqoop_base_oride_assets_sku_df_prev_day_task >> app_oride_driver_gps_info_0_task
+
+app_oride_driver_gps_info_0_task >> app_oride_driver_gps_info_1_task
+moto_locations_prev_day_task >> app_oride_driver_gps_info_1_task
+ods_sqoop_base_oride_assets_sku_df_prev_day_task >> app_oride_driver_gps_info_1_task
+
+app_oride_driver_gps_info_0_task >> app_oride_driver_gps_info_2_task
+moto_locations_prev_day_task >> app_oride_driver_gps_info_2_task
+ods_sqoop_base_oride_assets_sku_df_prev_day_task >> app_oride_driver_gps_info_2_task
 
