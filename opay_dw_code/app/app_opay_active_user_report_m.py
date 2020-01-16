@@ -77,7 +77,7 @@ def app_opay_active_user_report_m_sql_task(ds):
     set mapred.max.split.size=1000000;
     set hive.exec.dynamic.partition.mode=nonstrict;
     set hive.exec.parallel=true;
-    user_base AS
+    with user_base AS
   (SELECT user_id,
           ROLE,
           mobile
@@ -101,13 +101,13 @@ login AS
              substr(from_unixtime(unix_timestamp(last_visit, 'yyyy-MM-dd HH:mm:ss')+3600),1,10) last_visit
       FROM opay_dw_ods.ods_sqoop_base_user_operator_df
       WHERE dt='{pt}') a
-   INNER JOIN user_base b ON a.user_id=b.user_id),
-INSERT overwrite TABLE opay_dw.app_opay_active_user_report_d partition (dt,target_type)
+   INNER JOIN user_base b ON a.user_id=b.user_id)
+INSERT overwrite TABLE opay_dw.app_opay_active_user_report_m partition (dt,target_type)
 SELECT '-' country_code,
            '-' city,
                ROLE,
                '-' kyc_level,
-                   top_consume_scenario,
+                   '-' top_consume_scenario,
                    '-' register_client,
                        c,
                        dt,
