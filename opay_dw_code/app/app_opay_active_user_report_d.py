@@ -303,5 +303,6 @@ dim_opay_user_base_di_prev_day_task >> app_opay_active_user_report_d_task
 dwd_opay_account_balance_df_prev_day_task >> app_opay_active_user_report_d_task
 ods_sqoop_base_user_payment_instrument_df_prev_day_task >> app_opay_active_user_report_d_task
 ods_sqoop_base_user_operator_df_prev_day_task >> app_opay_active_user_report_d_task
+ods_sqoop_owealth_share_acct_df_prev_day_task >> app_opay_active_user_report_d_task
 
 
