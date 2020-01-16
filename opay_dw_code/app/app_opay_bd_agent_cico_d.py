@@ -92,10 +92,10 @@ def app_opay_bd_agent_cico_d_sql_task(ds):
 		select 
 			bd_id, 
 			sum(if(agent_status = 1, 1, 0)) as audited_agent_cnt_his,
-			sum(if(date_format(create_at, 'yyyy-MM') = date_format('{pt}', yyyy-MM) and agent_status = 1, 1, 0)) as audited_agent_cnt_m, 
-			sum(if(date_format(create_at, 'yyyy-MM') = date_format('{pt}', yyyy-MM) and agent_status = 2, 1, 0)) as rejected_agent_cnt_m, 
-			sum(if(date_format(create_at, 'yyyy-MM-dd') = '{pt}' and agent_status = 1, 1, 0)) as audited_agent_cnt, 
-			sum(if(date_format(create_at, 'yyyy-MM-dd') = '{pt}' and agent_status = 2, 1, 0)) as rejected_agent_cnt
+			sum(if(updated_at BETWEEN date_format(date_sub(date_format('{pt}', 'yyyy-MM-01'), 1), 'yyyy-MM-dd 23') AND date_format(last_day('{pt}'), 'yyyy-MM-dd 23') and agent_status = 1, 1, 0)) as audited_agent_cnt_m, 
+			sum(if(updated_at BETWEEN date_format(date_sub(date_format('{pt}', 'yyyy-MM-01'), 1), 'yyyy-MM-dd 23') AND date_format(last_day('{pt}'), 'yyyy-MM-dd 23') and agent_status = 2, 1, 0)) as rejected_agent_cnt_m, 
+			sum(if(updated_at BETWEEN date_format(date_sub('{pt}', 1), 'yyyy-MM-dd 23') AND date_format('{pt}', 'yyyy-MM-dd 23') and agent_status = 1, 1, 0)) as audited_agent_cnt, 
+			sum(if(updated_at BETWEEN date_format(date_sub('{pt}', 1), 'yyyy-MM-dd 23') AND date_format('{pt}', 'yyyy-MM-dd 23') and agent_status = 2, 1, 0)) as rejected_agent_cnt
 		from agent_data 
 		where agent_status = 1 or agent_status = 2
 		group by bd_id

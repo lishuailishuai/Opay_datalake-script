@@ -116,51 +116,9 @@ def dwd_opay_account_balance_df_sql_task(ds):
     set mapred.max.split.size=1000000;
     set hive.exec.dynamic.partition.mode=nonstrict;
     set hive.exec.parallel=true;
-    insert overwrite table {db}.{table} partition (country_code,dt)
-    SELECT a.user_id,
-           user_type,
-           business_name,
-           ROLE,
-           kyc_level,
-           account_type,
-           category,
-           account_no,
-           balance,
-           currency,
-           account_state,
-           auth,
-           create_time,
-           update_time,
-           merchant_type,
-           country_code,
-           '{pt}'           
-    FROM
-      (SELECT user_id,
-              'USER' user_type,
-                     account_type,
-                     account_no,
-                     balance,
-                     currency,
-                     account_state,
-                     auth,
-                     create_time,
-                     update_time
-       FROM opay_dw_ods.ods_sqoop_base_account_user_df where dt='{pt}'
-            AND create_time<'{pt} 23:00:00'
-       UNION ALL SELECT merchant_id AS user_id,
-                        'MERCHANT' user_type,
-                                   account_type,
-                                   account_no,
-                                   balance,
-                                   currency,
-                                   account_state,
-                                   auth,
-                                   create_time,
-                                   update_time
-       FROM opay_dw_ods.ods_sqoop_base_account_merchant_df where dt='{pt}'
-            AND create_time<'{pt} 23:00:00') a
-    INNER JOIN
-      (SELECT user_id,
+    
+    with user_base as 
+(SELECT user_id,
               business_name,
               ROLE,
               kyc_level,
@@ -184,19 +142,20 @@ def dwd_opay_account_balance_df_sql_task(ds):
                        WHEN 'Zambia' THEN 'ZM'
                        WHEN 'Zimbabwe' THEN 'ZW'
                        ELSE 'NG'
-                 END AS country_code
+                 END AS country_code,mobile
        FROM
          (SELECT user_id,
                  business_name,
                  ROLE,
                  kyc_level,
-                 '' category,
+                 '' category,mobile,
                     row_number()over(partition BY user_id
                                      ORDER BY update_time DESC) rn,
                                 country
-          FROM opay_dw_ods.ods_sqoop_base_user_di where create_time<'{pt} 23:00:00') m
-       WHERE rn=1
-       UNION ALL SELECT merchant_id AS user_id,
+          FROM opay_dw_ods.ods_sqoop_base_user_di where dt<='{pt}') m
+       WHERE rn=1),
+ merchant_base as 
+  (SELECT merchant_id AS user_id,
                         '' business_name,
                           'merchant'AS ROLE,
                           '' kyc_level,
@@ -222,7 +181,92 @@ def dwd_opay_account_balance_df_sql_task(ds):
                                  ELSE 'NG'
                              END AS country_code
        FROM opay_dw_ods.ods_sqoop_base_merchant_df
-       WHERE dt='{pt}' AND create_time<'{pt} 23:00:00' )b ON a.user_id=b.user_id
+       WHERE dt='{pt}' AND create_time<'{pt} 23:00:00' )
+  
+insert overwrite table {db}.{table} partition (country_code,dt)
+SELECT     a.user_id,
+           user_type,
+           business_name,
+           ROLE,
+           kyc_level,
+           account_type,
+           category,
+           account_no,
+           balance,
+           currency,
+           account_state,
+           auth,
+           create_time,
+           update_time,
+           merchant_type,
+           country_code,
+           '{pt}' dt
+from 
+      (SELECT merchant_id AS user_id,
+                        'MERCHANT' user_type,
+                                   account_type,
+                                   account_no,
+                                   balance,
+                                   currency,
+                                   account_state,
+                                   auth,
+                                   create_time,
+                                   update_time
+       FROM opay_dw_ods.ods_sqoop_base_account_merchant_df where dt='{pt}'
+            AND create_time<'{pt} 23:00:00') a inner join merchant_base b on a.user_id=b.user_id
+ union all
+ SELECT    a.user_id,
+           user_type,
+           business_name,
+           ROLE,
+           kyc_level,
+           account_type,
+           category,
+           account_no,
+           balance,
+           currency,
+           account_state,
+           auth,
+           create_time,
+           update_time,
+           merchant_type,
+           country_code,
+           '{pt}'  dt from 
+      (SELECT user_id,
+              'USER' user_type,
+                     account_type,
+                     account_no,
+                     balance,
+                     currency,
+                     account_state,
+                     auth,
+                     create_time,
+                     update_time
+       FROM opay_dw_ods.ods_sqoop_base_account_user_df where dt='{pt}'
+            AND create_time<'{pt} 23:00:00') a inner join user_base b on a.user_id=b.user_id
+union all
+SELECT b.user_id,
+           user_type,
+           business_name,
+           ROLE,
+           kyc_level,
+           account_type,
+           category,
+           account_no,
+           balance,
+           currency,
+           account_state,
+           auth,
+           create_time,
+           update_time,
+           merchant_type,
+           country_code,
+           '{pt}'  dt from 
+      (SELECT user_id,'USER' user_type,'OWEALTH' account_type,share_acct_id account_no,balance,currency,acct_status account_state,memo auth,
+                        create_time,update_time
+                 FROM opay_owealth_ods.ods_sqoop_owealth_share_acct_df where dt='{pt}' and create_time<'{pt} 23:00:00') a 
+    inner join user_base b on a.user_id=b.mobile
+   
    
     '''.format(
         pt=ds,
