@@ -103,7 +103,6 @@ def app_opay_bd_agent_report_d_sql_task(ds):
     set mapred.max.split.size=1000000;
     set hive.exec.dynamic.partition.mode=nonstrict;
     set hive.exec.parallel=true; --default false
-    set hive.exec.parallel=true; --default false
     with 
         bd_data as (
             select 
