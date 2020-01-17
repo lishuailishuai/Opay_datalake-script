@@ -56,26 +56,6 @@ def get_dir_size(path, dt):
     logging.info("path:%s, total size:%s", path, getSizeInNiceString(total_size))
     return total_size
 
-def get_s3_dir_size(path, dt):
-    total_size = 0
-    get_dir_cmd = """
-        hdfs dfs -ls {path} | grep drwx | grep -v flink | awk '{{print $8}}'
-    """.format(path=path, dt=dt)
-    for dir_path in os.popen(get_dir_cmd).readlines():
-        dir_path = dir_path.strip()
-        get_size_cmd = """
-            hdfs dfs -du -s {dir_path}/dt={dt} | awk '{{print $1}}'
-        """.format(dir_path=dir_path,dt=dt)
-        try:
-            dir_size = os.popen(get_size_cmd).readline()
-            dir_size = int(dir_size.strip())
-        except:
-            dir_size = 0
-        total_size += dir_size
-        logging.info("dir_path:%s/dt=%s, size:%s", dir_path, dt, getSizeInNiceString(dir_size))
-    logging.info("path:%s, total size:%s", path, getSizeInNiceString(total_size))
-    return total_size
-
 ORIDE_MODEL_PATH = "oss://opay-datalake/oride/oride_dw"
 ORIDE_BURIED_PATH = "s3a://opay-bi/oride_buried"
 ORIDE_BINLOG_PATH = "oss://opay-datalake/oride_binlog"
@@ -126,7 +106,7 @@ def send_report_email(ds, **kwargs):
         dt=ds,
         oride_model_size=getSizeInNiceString(get_dir_size(ORIDE_MODEL_PATH, ds)),
         oride_collect_size=getSizeInNiceString(get_dir_size(ORIDE_BINLOG_PATH, ds)+get_dir_size(ORIDE_SQOOP_PATH, ds)),
-        oride_buried_size=getSizeInNiceString(get_s3_dir_size(ORIDE_BURIED_PATH, ds)),
+        oride_buried_size=getSizeInNiceString(get_dir_size(ORIDE_BURIED_PATH, ds)),
         ofood_model_size=getSizeInNiceString(get_dir_size(OFOOD_MODEL_PATH, ds)),
         ofood_collect_size=getSizeInNiceString(get_dir_size(OFOOD_SQOOP_PATH, ds)),
         ofood_buried_size=getSizeInNiceString(get_dir_size(OFOOD_BURIED_PATH, ds)),
