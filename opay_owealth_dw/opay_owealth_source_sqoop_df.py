@@ -25,7 +25,7 @@ args = {
     'email_on_retry': False,
     'on_success_callback':on_success_callback,
 }
-schedule_interval="20 03 * * *"
+schedule_interval="20 02 * * *"
 
 dag = airflow.DAG(
     'opay_owealth_source_sqoop_df',
