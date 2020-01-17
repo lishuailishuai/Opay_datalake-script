@@ -219,7 +219,6 @@ shop_id
 
 
 
-
 '''.format(
         pt=ds,
         table=table_name,
