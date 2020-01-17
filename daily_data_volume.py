@@ -57,7 +57,7 @@ def get_dir_size(path, dt):
     return total_size
 
 ORIDE_MODEL_PATH = "oss://opay-datalake/oride/oride_dw"
-ORIDE_BURIED_PATH = "s3a://opay-bi/oride_buried"
+ORIDE_BURIED_PATH = "oss://opay-datalake/oride_buried"
 ORIDE_BINLOG_PATH = "oss://opay-datalake/oride_binlog"
 ORIDE_SQOOP_PATH = "oss://opay-datalake/oride_dw_sqoop"
 
