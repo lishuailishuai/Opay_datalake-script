@@ -122,7 +122,6 @@ hive_db = 'obus_dw_ods'
 hive_table = 'ods_sqoop_{bs}_df'
 hdfs_path = 'oss://opay-datalake/obus_dw_sqoop/ods_sqoop_{bs}_df'
 ods_create_table_hql = '''
-    drop table {db_name}.{table_name};
     create EXTERNAL table if not exists {db_name}.{table_name} (
         {columns}
     )
