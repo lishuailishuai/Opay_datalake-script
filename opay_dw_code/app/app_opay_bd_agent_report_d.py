@@ -213,7 +213,7 @@ def app_opay_bd_agent_report_d_sql_task(ds):
             from cube_data 
             where job_pic_user_id != 'ALL' and job_pic_user_id != '-'
         ) report 
-        left join bd_data bd on report.bd_admin_user_id = bd.id 
+        left join bd_data bd on report.bd_admin_user_id = bd.bd_admin_user_id 
         
        
     '''.format(
