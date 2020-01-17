@@ -37,7 +37,7 @@ args = {
 }
 
 dag = airflow.DAG('app_opay_active_user_report_d',
-                  schedule_interval="00 03 * * *",
+                  schedule_interval="40 02 * * *",
                   default_args=args,
                   catchup=False)
 
@@ -64,7 +64,6 @@ dwd_opay_account_balance_df_prev_day_task = OssSensor(
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
-
 ods_sqoop_owealth_share_acct_df_prev_day_task = OssSensor(
     task_id='ods_sqoop_owealth_share_acct_df_prev_day_task',
     bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
@@ -112,7 +111,7 @@ def app_opay_active_user_report_d_sql_task(ds):
     set hive.exec.parallel=true;
     --绑卡
     WITH bind_card AS
-      (SELECT *
+      (SELECT dt,user_id,pay_status
        FROM opay_dw_ods.ods_sqoop_base_user_payment_instrument_df
        WHERE dt='{pt}'
          AND create_time<'{pt} 23:00:00'
@@ -204,6 +203,15 @@ def app_opay_active_user_report_d_sql_task(ds):
     FROM login
     GROUP BY dt,
              ROLE
+    union all
+        SELECT dt,
+           'ALL' role,'-' top_consume_scenario,
+           'login_user_cnt_d' target_type,
+                              count(distinct CASE
+                                        WHEN last_visit='{pt}' THEN user_id
+                                    END) c
+    FROM login
+    GROUP BY dt
     UNION ALL
     SELECT dt,
            role,'-' top_consume_scenario,
@@ -213,6 +221,14 @@ def app_opay_active_user_report_d_sql_task(ds):
     FROM login
     GROUP BY dt,
              ROLE
+    union all
+        SELECT dt,
+           'ALL' role,'-' top_consume_scenario,
+           'login_user_cnt_7d' target_type,
+                               count(distinct CASE WHEN last_visit>date_sub('{pt}',7)
+                                     AND last_visit<='{pt}' then user_id end) c
+    FROM login
+    GROUP BY dt
     UNION ALL
     SELECT dt,
            role,'-' top_consume_scenario,
@@ -222,6 +238,12 @@ def app_opay_active_user_report_d_sql_task(ds):
     FROM login
     GROUP BY dt,
              ROLE
+    union all
+    select dt,'ALL' role,'-' top_consume_scenario,'login_user_cnt_30d' target_type,
+            count(distinct CASE WHEN last_visit>date_sub('{pt}',30)
+                                      AND last_visit<='{pt}' then user_id end) c
+    from login
+           group by dt
     UNION ALL
     SELECT dt,'-' role,'-' top_consume_scenario,
            'owallet_bal_not_zero_user_cnt' target_type,
@@ -237,7 +259,7 @@ def app_opay_active_user_report_d_sql_task(ds):
            'owealth_bal_not_zero_user_cnt' target_type,
            count(DISTINCT user_id) c
     FROM opay_owealth_ods.ods_sqoop_owealth_share_acct_df
-    WHERE dt='{pt}' and create_time <'{pt} 23:00:00'
+    WHERE dt='{pt}'
       AND balance>0
     GROUP BY dt
     union all
@@ -302,8 +324,8 @@ app_opay_active_user_report_d_task = PythonOperator(
 
 dim_opay_user_base_di_prev_day_task >> app_opay_active_user_report_d_task
 dwd_opay_account_balance_df_prev_day_task >> app_opay_active_user_report_d_task
-ods_sqoop_owealth_share_acct_df_prev_day_task >> app_opay_active_user_report_d_task
 ods_sqoop_base_user_payment_instrument_df_prev_day_task >> app_opay_active_user_report_d_task
 ods_sqoop_base_user_operator_df_prev_day_task >> app_opay_active_user_report_d_task
+ods_sqoop_owealth_share_acct_df_prev_day_task >> app_opay_active_user_report_d_task
 
 

@@ -85,6 +85,16 @@ ods_sqoop_base_merchant_df_prev_day_task = OssSensor(
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
+ods_sqoop_owealth_share_acct_df_prev_day_task = OssSensor(
+    task_id='ods_sqoop_owealth_share_acct_df_prev_day_task',
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="opay_owealth_ods/opay_owealth/share_acct",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
 
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
 def fun_task_timeout_monitor(ds,dag,**op_kwargs):
@@ -308,3 +318,4 @@ ods_sqoop_base_account_user_df_prev_day_task >> dwd_opay_account_balance_df_task
 ods_sqoop_base_account_merchant_df_prev_day_task >> dwd_opay_account_balance_df_task
 ods_sqoop_base_user_di_prev_day_task >> dwd_opay_account_balance_df_task
 ods_sqoop_base_merchant_df_prev_day_task >> dwd_opay_account_balance_df_task
+ods_sqoop_owealth_share_acct_df_prev_day_task >> dwd_opay_account_balance_df_task
