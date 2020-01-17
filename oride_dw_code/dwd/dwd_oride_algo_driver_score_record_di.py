@@ -104,7 +104,7 @@ driver_id,--未知
 order_id,--未知
 action_type,--未知
 score,--未知
-_dt,--未知
+`_dt` as s_dt,--未知
 timestamp,--未知
 create_time,--未知
 'nal' as country_code,
