@@ -44,6 +44,7 @@ def get_dir_size(path, dt):
     get_dir_cmd = """
         hdfs dfs -ls -R {path} | grep drwx | grep dt={dt}$ | awk '{{print $NF}}'
     """.format(path=path, dt=dt)
+    logging.info("get dir list cmd %s", get_dir_cmd)
     for dir_path in os.popen(get_dir_cmd).readlines():
         dir_path = dir_path.strip()
         get_size_cmd = """
