@@ -106,7 +106,7 @@ def app_opay_bd_agent_report_d_sql_task(ds):
     with 
         bd_data as (
             select 
-                id as bd_admin_user_id, username as bd_admin_user_name, user_mobile as bd_admin_user_mobile,
+                id as bd_admin_user_id, username as bd_admin_user_name, mobile as bd_admin_user_mobile,
                 department_id as bd_admin_dept_id, job_id as bd_admin_job_id, leader_id as bd_admin_leader_id
             from opay_dw_ods.ods_sqoop_base_bd_admin_users_df 
             where dt = '{pt}' and job_id > 0
