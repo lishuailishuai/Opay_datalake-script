@@ -40,10 +40,10 @@ dag = airflow.DAG('app_opay_bd_agent_report_d',
                   )
 
 ##----------------------------------------- 依赖 ---------------------------------------##
-app_opay_bd_agent_cico_d_task = OssSensor(
-    task_id='app_opay_bd_agent_cico_d_task',
+dwm_opay_bd_agent_cico_d_task = OssSensor(
+    task_id='dwm_opay_bd_agent_cico_d_task',
     bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opay/opay_dw/app_opay_bd_agent_cico_d/country_code=NG",
+        hdfs_path_str="opay/opay_dw/dwm_opay_bd_agent_cico_d/country_code=NG",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -125,4 +125,4 @@ app_opay_bd_agent_report_d_task = PythonOperator(
     dag=dag
 )
 
-app_opay_bd_agent_cico_d_task >> app_opay_bd_agent_report_d_task
+dwm_opay_bd_agent_cico_d_task >> app_opay_bd_agent_report_d_task

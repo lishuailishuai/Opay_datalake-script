@@ -149,7 +149,7 @@ def dwm_opay_bd_agent_cico_d_sql_task(ds):
 				from opay_dw.dwd_opay_transfer_of_account_record_di
 				where date_format(dt, 'yyyy-MM') = date_format('${pt}', 'yyyy-MM') and order_status = 'SUCCESS' and sub_service_type = 'Cash Out'
 			) t0 where rn = 1
-		) co on 1.opay_id = co.originator_id
+		) co on t1.opay_id = co.originator_id
 		group by t1.bd_id
 	)
 	insert overwrite {db}.{table}  partition(country_code='NG', dt='{pt}')
