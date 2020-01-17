@@ -328,4 +328,5 @@ for db_name, table_name, conn_id, prefix_name,priority_weight_nm,is_valid_succes
         dag=dag_monitor
     )
 
-     check_table >> add_partitions >> import_table
+    check_table >> add_partitions >> import_table
+
