@@ -152,7 +152,7 @@ def dwm_opay_bd_agent_cico_d_sql_task(ds):
 		) co on t1.opay_id = co.originator_id
 		group by t1.bd_id
 	)
-	insert overwrite {db}.{table}  partition(country_code='NG', dt='{pt}')
+	insert overwrite table {db}.{table} partition(country_code='NG', dt='{pt}')
 	select 
 	    t10.bd_id as bd_admin_user_id,
 	    nvl(t10.audited_agent_cnt_his, 0) as audited_agent_cnt_his, nvl(t10.audited_agent_cnt_m, 0) as audited_agent_cnt_m, 
