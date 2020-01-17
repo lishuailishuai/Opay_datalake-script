@@ -140,8 +140,8 @@ def dim_opay_bd_relation_df_sql_task(ds):
             when t6.job_id = 1 then t6.id
             else null
             end as job_pic_user_id,
-            created_at as create_time,
-            updated_at as update_time
+            t6.created_at as create_time,
+            t6.updated_at as update_time
       from bd_data t6
       left join bd_data t5 on t6.leader_id = t5.id
       left join bd_data t4 on t5.leader_id = t4.id
