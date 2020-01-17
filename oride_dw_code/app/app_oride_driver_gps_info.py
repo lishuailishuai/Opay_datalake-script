@@ -60,15 +60,16 @@ moto_locations_prev_day_task = HivePartitionSensor(
 )
 
 ods_sqoop_base_oride_assets_sku_df_prev_day_task = OssSensor(
-        task_id='ods_sqoop_base_oride_assets_sku_df_prev_day_task',
-        bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-            hdfs_path_str="oride_dw_sqoop/opay_assets/oride_assets_sku",
-            pt='{{ds}}'
-        ),
-        bucket_name='opay-datalake',
-        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-        dag=dag
-    )
+    task_id='ods_sqoop_base_oride_assets_sku_df_prev_day_task',
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="oride_dw_sqoop/opay_assets/oride_assets_sku",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
 
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
 
@@ -139,9 +140,9 @@ def app_oride_driver_gps_info_sql_task(ds):
              ml.times DESC
     ) gpslist
     WHERE row_num<=3
-    
+
     union all
-    
+
     -- 每天凌晨8-20点读取所有车辆的停靠点，只取 top 3 --请做成计划任务
     SELECT driver_id,plate_number,chassis,gps_id,loc,times,type FROM 
     (
@@ -182,9 +183,9 @@ def app_oride_driver_gps_info_sql_task(ds):
              ml.times DESC
     ) gpslist
     WHERE row_num<=3
-    
+
     union all
-    
+
     -- 取每个 GPS_IMEI 失联前60分钟 TOP 1 的点 --请做成计划任务
     SELECT driver_id,plate_number,chassis,gps_id,loc,times,type 
     FROM
@@ -303,4 +304,3 @@ app_oride_driver_gps_info_task = PythonOperator(
 
 moto_locations_prev_day_task >> app_oride_driver_gps_info_task
 ods_sqoop_base_oride_assets_sku_df_prev_day_task >> app_oride_driver_gps_info_task
-
