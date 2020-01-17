@@ -25,7 +25,7 @@ import os
 
 args = {
     'owner': 'xiedong',
-    'start_date': datetime(2019, 9, 22),
+    'start_date': datetime(2020, 1, 16),
     'depends_on_past': False,
     'retries': 3,
     'retry_delay': timedelta(minutes=2),
@@ -41,9 +41,31 @@ dag = airflow.DAG('app_opay_bd_agent_report_d',
 
 ##----------------------------------------- 依赖 ---------------------------------------##
 dwm_opay_bd_agent_cico_d_task = OssSensor(
-    task_id='dwm_opay_bd_agent_cico_d_task',
+    task_id='app_opay_bd_agent_cico_d_task',
     bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
         hdfs_path_str="opay/opay_dw/dwm_opay_bd_agent_cico_d/country_code=NG",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
+dim_opay_bd_relation_df_task = OssSensor(
+    task_id='dim_opay_bd_relation_df_task',
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="opay/opay_dw/dim_opay_bd_relation_df/country_code=nal",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
+ods_bd_admin_users_df_prev_day_task = OssSensor(
+    task_id='ods_bd_admin_users_prev_day_task',
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="opay_dw_sqoop/opay_agent_crm/bd_admin_users",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -81,13 +103,120 @@ def app_opay_bd_agent_report_d_sql_task(ds):
     set mapred.max.split.size=1000000;
     set hive.exec.dynamic.partition.mode=nonstrict;
     set hive.exec.parallel=true; --default false
+    set hive.exec.parallel=true; --default false
     with 
-	base_date as (
-		select * from dwm_opay_bd_agent_cico_d where dt = '{pt}'
-	)
-	insert overwrite {db}.{table}  partition(country_code='NG', dt='{pt}')
-	
+        bd_data as (
+            select 
+                id as bd_admin_user_id, username as bd_admin_user_name, user_mobile as bd_admin_user_mobile,
+                department_id as bd_admin_dept_id, job_id as bd_admin_job_id, leader_id as bd_admin_leader_id
+            from opay_dw_ods.ods_sqoop_base_bd_admin_users_df 
+            where dt = '{pt}' and job_id > 0
+        ),
+        bd_relation_data as (
+            select 
+                bd_admin_user_id, 
+                nvl(job_bd_user_id, '-') as job_bd_user_id,
+                nvl(job_bdm_user_id, '-') as job_bdm_user_id,
+                nvl(job_rm_user_id, '-') as job_rm_user_id,
+                nvl(job_cm_user_id, '-') as job_cm_user_id,
+                nvl(job_hcm_user_id, '-') as job_hcm_user_id,
+                nvl(job_pic_user_id, '-') as job_pic_user_id
+            from opay_dw.dim_opay_bd_relation_df 
+            where dt = '${pt}'
+        ),
+        cube_data as (
+            select 
+                nvl(t0.job_bd_user_id, 'ALL') as job_bd_user_id, 
+                nvl(t0.job_bdm_user_id, 'ALL') as job_bdm_user_id, 
+                nvl(t0.job_rm_user_id, 'ALL') as job_rm_user_id,
+                nvl(t0.job_cm_user_id, 'ALL') as job_cm_user_id,
+                nvl(t0.job_hcm_user_id, 'ALL') as job_hcm_user_id, 
+                nvl(job_pic_user_id, 'ALL') as job_pic_user_id, 
+                sum(audited_agent_cnt_his) as audited_agent_cnt_his, 
+                sum(audited_agent_cnt_m) audited_agent_cnt_m, 
+                sum(audited_agent_cnt) audited_agent_cnt,
+                sum(rejected_agent_cnt_m) rejected_agent_cnt_m,
+                sum(rejected_agent_cnt) rejected_agent_cnt,
+                sum(ci_suc_order_cnt) ci_suc_order_cnt,
+                sum(ci_suc_order_amt) ci_suc_order_amt,
+                sum(ci_suc_order_cnt_m) ci_suc_order_cnt_m,
+                sum(ci_suc_order_amt_m) ci_suc_order_amt_m,
+                sum(co_suc_order_cnt) co_suc_order_cnt,
+                sum(co_suc_order_amt) co_suc_order_amt,
+                sum(co_suc_order_cnt_m) co_suc_order_cnt_m,
+                sum(co_suc_order_amt_m) co_suc_order_amt_m
+            from bd_relation_data t0 join (
+                select
+                    *
+                from opay_dw.dwm_opay_bd_agent_cico_d
+                where dt = '${pt}'
+            ) t1 on t0.bd_admin_user_id = t1.bd_admin_user_id
+            group by t0.job_bd_user_id, t0.job_bdm_user_id, t0.job_rm_user_id, t0.job_cm_user_id, t0.job_hcm_user_id, job_pic_user_id
+            grouping sets(
+                t0.job_bd_user_id, t0.job_bdm_user_id, t0.job_rm_user_id, 
+                t0.job_cm_user_id, t0.job_hcm_user_id, job_pic_user_id
+            )
+        )
+        insert overwrite table {db}.{table} partition(country_code='NG', dt='{pt}')
+        select 
+            bd.bd_admin_user_id, bd.bd_admin_user_name, bd.bd_admin_user_mobile, 
+            bd.bd_admin_dept_id, bd.bd_admin_job_id, bd.bd_admin_leader_id,
+            audited_agent_cnt_his, audited_agent_cnt_m, audited_agent_cnt,
+            rejected_agent_cnt_m, rejected_agent_cnt,
+            ci_suc_order_cnt, ci_suc_order_amt, ci_suc_order_cnt_m, ci_suc_order_amt_m,
+            co_suc_order_cnt, co_suc_order_amt, co_suc_order_cnt_m, co_suc_order_amt_m
+        from (
+            select 
+                job_bd_user_id as bd_admin_user_id, audited_agent_cnt_his, audited_agent_cnt_m, audited_agent_cnt,
+                rejected_agent_cnt_m, rejected_agent_cnt,
+                ci_suc_order_cnt, ci_suc_order_amt, ci_suc_order_cnt_m, ci_suc_order_amt_m,
+                co_suc_order_cnt, co_suc_order_amt, co_suc_order_cnt_m, co_suc_order_amt_m
+            from cube_data 
+            where job_bd_user_id != 'ALL' and job_bd_user_id != '-'
+            union all
+            select 
+                job_bdm_user_id as bd_admin_user_id, audited_agent_cnt_his, audited_agent_cnt_m, audited_agent_cnt,
+                rejected_agent_cnt_m, rejected_agent_cnt,
+                ci_suc_order_cnt, ci_suc_order_amt, ci_suc_order_cnt_m, ci_suc_order_amt_m,
+                co_suc_order_cnt, co_suc_order_amt, co_suc_order_cnt_m, co_suc_order_amt_m
+            from cube_data 
+            where job_bdm_user_id != 'ALL' and job_bdm_user_id != '-'
+            union all
+            select 
+                job_rm_user_id as bd_admin_user_id, audited_agent_cnt_his, audited_agent_cnt_m, audited_agent_cnt,
+                rejected_agent_cnt_m, rejected_agent_cnt,
+                ci_suc_order_cnt, ci_suc_order_amt, ci_suc_order_cnt_m, ci_suc_order_amt_m,
+                co_suc_order_cnt, co_suc_order_amt, co_suc_order_cnt_m, co_suc_order_amt_m
+            from cube_data 
+            where job_rm_user_id != 'ALL' and job_rm_user_id != '-'
+            union all
+             select 
+                job_cm_user_id as bd_admin_user_id, audited_agent_cnt_his, audited_agent_cnt_m, audited_agent_cnt,
+                rejected_agent_cnt_m, rejected_agent_cnt,
+                ci_suc_order_cnt, ci_suc_order_amt, ci_suc_order_cnt_m, ci_suc_order_amt_m,
+                co_suc_order_cnt, co_suc_order_amt, co_suc_order_cnt_m, co_suc_order_amt_m
+            from cube_data 
+            where job_cm_user_id != 'ALL' and job_cm_user_id != '-'
+            union all
+             select 
+                job_hcm_user_id as bd_admin_user_id, audited_agent_cnt_his, audited_agent_cnt_m, audited_agent_cnt,
+                rejected_agent_cnt_m, rejected_agent_cnt,
+                ci_suc_order_cnt, ci_suc_order_amt, ci_suc_order_cnt_m, ci_suc_order_amt_m,
+                co_suc_order_cnt, co_suc_order_amt, co_suc_order_cnt_m, co_suc_order_amt_m
+            from cube_data 
+            where job_hcm_user_id != 'ALL' and job_hcm_user_id != '-'
+            union all
+             select 
+                job_pic_user_id as bd_admin_user_id, audited_agent_cnt_his, audited_agent_cnt_m, audited_agent_cnt,
+                rejected_agent_cnt_m, rejected_agent_cnt,
+                ci_suc_order_cnt, ci_suc_order_amt, ci_suc_order_cnt_m, ci_suc_order_amt_m,
+                co_suc_order_cnt, co_suc_order_amt, co_suc_order_cnt_m, co_suc_order_amt_m
+            from cube_data 
+            where job_pic_user_id != 'ALL' and job_pic_user_id != '-'
+        ) report 
+        left join bd_data bd on report.bd_admin_user_id = bd.id 
         
+       
     '''.format(
         pt=ds,
         table=table_name,
@@ -126,3 +255,5 @@ app_opay_bd_agent_report_d_task = PythonOperator(
 )
 
 dwm_opay_bd_agent_cico_d_task >> app_opay_bd_agent_report_d_task
+ods_bd_admin_users_df_prev_day_task >> app_opay_bd_agent_report_d_task
+dim_opay_bd_relation_df_task >> app_opay_bd_agent_report_d_task
