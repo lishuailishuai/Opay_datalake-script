@@ -22,7 +22,7 @@ from utils.util import on_success_callback
 
 
 args = {
-    'owner': 'wuduo',
+    'owner': 'zhenqian.zhang',
     'start_date': datetime(2019, 11, 27),
     'depends_on_past': False,
     'retries': 3,
@@ -122,6 +122,7 @@ hive_db = 'obus_dw_ods'
 hive_table = 'ods_sqoop_{bs}_df'
 hdfs_path = 'oss://opay-datalake/obus_dw_sqoop/ods_sqoop_{bs}_df'
 ods_create_table_hql = '''
+    drop table {db_name}.{table_name};
     create EXTERNAL table if not exists {db_name}.{table_name} (
         {columns}
     )
@@ -162,8 +163,8 @@ def create_hive_external_table(db, table, conn, **op_kwargs):
         mysql_table=table,
         mysql_conn=conn
     )
-    if response:
-        return True
+    #if response:
+    #    return True
 
     mysql_conn = get_db_conn(conn)
     mcursor = mysql_conn.cursor()
@@ -188,6 +189,7 @@ def create_hive_external_table(db, table, conn, **op_kwargs):
             columns.append("`%s` %s comment '%s'" % (name, co_type.replace('unsigned', '').replace('signed', ''), comment))
         else:
             columns.append("`%s` %s comment '%s'" % (name, mysql_type_to_hive.get(type.upper(), 'string'), comment))
+    mysql_conn.close()
     # 创建hive数据表的sql
     hql = ods_create_table_hql.format(
         db_name=hive_db,
@@ -195,11 +197,10 @@ def create_hive_external_table(db, table, conn, **op_kwargs):
         columns=",\n".join(columns),
         hdfs_path=hdfs_path.format(bs=table)
     )
-    # logging.info(hql)
-    hive_cursor = get_hive_cursor()
-    hive_cursor.execute(hql)
-    mcursor.close()
-    hive_cursor.close()
+    logging.info(hql)
+    hive_hook = HiveCliHook()
+    logging.info('Executing: %s', hql)
+    hive_hook.run_cli(hql)
 
 
 success = DummyOperator(dag=dag, task_id='success')
