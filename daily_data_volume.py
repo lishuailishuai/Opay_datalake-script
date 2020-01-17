@@ -8,7 +8,7 @@ import os
 
 args = {
     'owner': 'zhenqian.zhang',
-    'start_date': datetime(2019, 10, 6),
+    'start_date': datetime(2020, 1, 16),
     'depends_on_past': False,
     'retries': 1,
     'retry_delay': timedelta(minutes=5),
@@ -56,43 +56,23 @@ def get_dir_size(path, dt):
     logging.info("path:%s, total size:%s", path, getSizeInNiceString(total_size))
     return total_size
 
-def get_s3_dir_size(path, dt):
-    total_size = 0
-    get_dir_cmd = """
-        hdfs dfs -ls {path} | grep drwx | grep -v flink | awk '{{print $8}}'
-    """.format(path=path, dt=dt)
-    for dir_path in os.popen(get_dir_cmd).readlines():
-        dir_path = dir_path.strip()
-        get_size_cmd = """
-            hdfs dfs -du -s {dir_path}/dt={dt} | awk '{{print $1}}'
-        """.format(dir_path=dir_path,dt=dt)
-        try:
-            dir_size = os.popen(get_size_cmd).readline()
-            dir_size = int(dir_size.strip())
-        except:
-            dir_size = 0
-        total_size += dir_size
-        logging.info("dir_path:%s/dt=%s, size:%s", dir_path, dt, getSizeInNiceString(dir_size))
-    logging.info("path:%s, total size:%s", path, getSizeInNiceString(total_size))
-    return total_size
-
-ORIDE_MODEL_PATH = "ufile://opay-datalake/oride/oride_dw"
+ORIDE_MODEL_PATH = "oss://opay-datalake/oride/oride_dw"
 ORIDE_BURIED_PATH = "s3a://opay-bi/oride_buried"
-ORIDE_BINLOG_PATH = "s3a://opay-bi/oride_binlog"
-ORIDE_SQOOP_PATH = "ufile://opay-datalake/oride_dw_sqoop"
+ORIDE_BINLOG_PATH = "oss://opay-datalake/oride_binlog"
+ORIDE_SQOOP_PATH = "oss://opay-datalake/oride_dw_sqoop"
 
-OFOOD_MODEL_PATH = "ufile://opay-datalake/oride/ofood_dw"
-OFOOD_BURIED_PATH = "ufile://opay-datalake/ofood/client"
-OFOOD_SQOOP_PATH = "ufile://opay-datalake/ofood_dw_sqoop"
+OFOOD_MODEL_PATH = "oss://opay-datalake/oride/ofood_dw"
+OFOOD_BURIED_PATH = "oss://opay-datalake/ofood/client"
+OFOOD_SQOOP_PATH = "oss://opay-datalake/ofood_dw_sqoop"
 
-OPAY_DW_SQOOP_DF_PATH = "ufile://opay-datalake/opay_dw_ods"
-OPAY_DW_SQOOP_DI_PATH = "ufile://opay-datalake/opay_dw_sqoop_di"
+OPAY_DW_SQOOP_DF_PATH = "oss://opay-datalake/opay_dw_ods"
+OPAY_DW_SQOOP_DI_PATH = "oss://opay-datalake/opay_dw_sqoop_di"
 
-OPAY_OWEALTH_SQOOP_DF_PATH="ufile://opay-datalake/opay_owealth_ods/"
+OPAY_OWEALTH_SQOOP_DF_PATH="oss://opay-datalake/opay_owealth_ods/"
 
-OPOY_DW_SQOOP_DF_PATH="ufile://opay-datalake/opos_dw_sqoop"
+OPOY_DW_SQOOP_DF_PATH="oss://opay-datalake/opos_dw_sqoop"
 
-OBUS_SQOOP_PATH = "s3a://opay-bi/obus_dw"
+OBUS_SQOOP_PATH = "oss://opay-datalake/obus_dw_sqoop"
 
 def send_report_email(ds, **kwargs):
     email_to=['bigdata_dw@opay-inc.com']
@@ -125,8 +105,8 @@ def send_report_email(ds, **kwargs):
     """.format(
         dt=ds,
         oride_model_size=getSizeInNiceString(get_dir_size(ORIDE_MODEL_PATH, ds)),
-        oride_collect_size=getSizeInNiceString(get_s3_dir_size(ORIDE_BINLOG_PATH, ds)+get_dir_size(ORIDE_SQOOP_PATH, ds)),
-        oride_buried_size=getSizeInNiceString(get_s3_dir_size(ORIDE_BURIED_PATH, ds)),
+        oride_collect_size=getSizeInNiceString(get_dir_size(ORIDE_BINLOG_PATH, ds)+get_dir_size(ORIDE_SQOOP_PATH, ds)),
+        oride_buried_size=getSizeInNiceString(get_dir_size(ORIDE_BURIED_PATH, ds)),
         ofood_model_size=getSizeInNiceString(get_dir_size(OFOOD_MODEL_PATH, ds)),
         ofood_collect_size=getSizeInNiceString(get_dir_size(OFOOD_SQOOP_PATH, ds)),
         ofood_buried_size=getSizeInNiceString(get_dir_size(OFOOD_BURIED_PATH, ds)),

@@ -109,7 +109,10 @@ table_list = [
     ("opay_channel","channel_transaction", "opay_channel", "base", 3, "false"),
     ("opay_overlord","terminal_record", "opay_overlord", "base", 3, "false"),
 
-    ("opay_agent_crm","bd_agent_status_change_log", "opay_agent_crm_db", "base", 3, "false")
+    ("opay_agent_crm","bd_agent_status_change_log", "opay_agent_crm_db", "base", 3, "false"),
+
+    ("opay_account","account_user", "opay_account", "base", 2, "true"),
+
 ]
 
 HIVE_DB = 'opay_dw_ods'
@@ -296,7 +299,7 @@ for db_name, table_name, conn_id, prefix_name,priority_weight_nm,is_valid_succes
     )
 
     if table_name in IGNORED_TABLE_LIST:
-        add_partitions >> validate_all_data
+        import_table >> validate_all_data
     else:
         # 数据量监控
         volume_monitoring = PythonOperator(
@@ -310,7 +313,7 @@ for db_name, table_name, conn_id, prefix_name,priority_weight_nm,is_valid_succes
             },
             dag=dag
         )
-        add_partitions >> volume_monitoring >> validate_all_data
+        import_table >> volume_monitoring >> validate_all_data
 
 
     # 超时监控
@@ -325,4 +328,5 @@ for db_name, table_name, conn_id, prefix_name,priority_weight_nm,is_valid_succes
         dag=dag_monitor
     )
 
-    import_table >> check_table >> add_partitions
+    check_table >> add_partitions >> import_table
+
