@@ -98,16 +98,16 @@ def dwm_opay_bd_agent_cico_d_sql_task(ds):
 		select 
 			id, cast(opay_id as string) as opay_id, bd_id, agent_status, updated_at
 		from opay_dw_ods.ods_sqoop_base_bd_agent_df
-		where dt = '${pt}'
+		where dt = '{pt}'
 	),
 	bd_agent_data as (
 		select 
 			bd_id, 
 			sum(if(agent_status = 1, 1, 0)) as audited_agent_cnt_his,
-			sum(if(updated_at BETWEEN date_format(date_sub(date_format('${pt}', 'yyyy-MM-01'), 1), 'yyyy-MM-dd 23') AND date_format(last_day('${pt}'), 'yyyy-MM-dd 23') and agent_status = 1, 1, 0)) as audited_agent_cnt_m, 
-			sum(if(updated_at BETWEEN date_format(date_sub(date_format('${pt}', 'yyyy-MM-01'), 1), 'yyyy-MM-dd 23') AND date_format(last_day('${pt}'), 'yyyy-MM-dd 23') and agent_status = 2, 1, 0)) as rejected_agent_cnt_m, 
-			sum(if(updated_at BETWEEN date_format(date_sub('${pt}', 1), 'yyyy-MM-dd 23') AND date_format('${pt}', 'yyyy-MM-dd 23') and agent_status = 1, 1, 0)) as audited_agent_cnt, 
-			sum(if(updated_at BETWEEN date_format(date_sub('${pt}', 1), 'yyyy-MM-dd 23') AND date_format('${pt}', 'yyyy-MM-dd 23') and agent_status = 2, 1, 0)) as rejected_agent_cnt
+			sum(if(updated_at BETWEEN date_format(date_sub(date_format('{pt}', 'yyyy-MM-01'), 1), 'yyyy-MM-dd 23') AND date_format(last_day('{pt}'), 'yyyy-MM-dd 23') and agent_status = 1, 1, 0)) as audited_agent_cnt_m, 
+			sum(if(updated_at BETWEEN date_format(date_sub(date_format('{pt}', 'yyyy-MM-01'), 1), 'yyyy-MM-dd 23') AND date_format(last_day('{pt}'), 'yyyy-MM-dd 23') and agent_status = 2, 1, 0)) as rejected_agent_cnt_m, 
+			sum(if(updated_at BETWEEN date_format(date_sub('{pt}', 1), 'yyyy-MM-dd 23') AND date_format('{pt}', 'yyyy-MM-dd 23') and agent_status = 1, 1, 0)) as audited_agent_cnt, 
+			sum(if(updated_at BETWEEN date_format(date_sub('{pt}', 1), 'yyyy-MM-dd 23') AND date_format('{pt}', 'yyyy-MM-dd 23') and agent_status = 2, 1, 0)) as rejected_agent_cnt
 		from agent_data 
 		where agent_status = 1 or agent_status = 2
 		group by bd_id
@@ -117,8 +117,8 @@ def dwm_opay_bd_agent_cico_d_sql_task(ds):
 			t1.bd_id, 
 			count(*) as ci_suc_order_cnt_m,
 			sum(amount) as ci_suc_order_amt_m,
-			sum(if(create_time BETWEEN date_format(date_sub('${pt}', 1), 'yyyy-MM-dd 23') AND date_format('${pt}', 'yyyy-MM-dd 23'), 1, 0)) as ci_suc_order_cnt,
-			sum(if(create_time BETWEEN date_format(date_sub('${pt}', 1), 'yyyy-MM-dd 23') AND date_format('${pt}', 'yyyy-MM-dd 23'), amount, 0)) as ci_suc_order_amt
+			sum(if(create_time BETWEEN date_format(date_sub('{pt}', 1), 'yyyy-MM-dd 23') AND date_format('{pt}', 'yyyy-MM-dd 23'), 1, 0)) as ci_suc_order_cnt,
+			sum(if(create_time BETWEEN date_format(date_sub('{pt}', 1), 'yyyy-MM-dd 23') AND date_format('{pt}', 'yyyy-MM-dd 23'), amount, 0)) as ci_suc_order_amt
 		from agent_data t1
 		join (
 			select 
@@ -127,7 +127,7 @@ def dwm_opay_bd_agent_cico_d_sql_task(ds):
 				select
 					affiliate_id, amount, create_time, country_code, row_number() over(partition by order_no order by update_time) rn
 				from opay_dw.dwd_opay_transfer_of_account_record_di
-				where date_format(dt, 'yyyy-MM') = date_format('${pt}', 'yyyy-MM') and order_status = 'SUCCESS' and sub_service_type = 'Cash In'
+				where date_format(dt, 'yyyy-MM') = date_format('{pt}', 'yyyy-MM') and order_status = 'SUCCESS' and sub_service_type = 'Cash In'
 			) t0 where rn = 1
 		) ci on t1.opay_id = ci.affiliate_id
 		group by t1.bd_id
@@ -137,8 +137,8 @@ def dwm_opay_bd_agent_cico_d_sql_task(ds):
 			t1.bd_id, 
 			count(*) as co_suc_order_cnt_m,
 			sum(amount) as co_suc_order_amt_m,
-			sum(if(create_time BETWEEN date_format(date_sub('${pt}', 1), 'yyyy-MM-dd 23') AND date_format('${pt}', 'yyyy-MM-dd 23'), 1, 0)) as co_suc_order_cnt,
-			sum(if(create_time BETWEEN date_format(date_sub('${pt}', 1), 'yyyy-MM-dd 23') AND date_format('${pt}', 'yyyy-MM-dd 23'), amount, 0)) as co_suc_order_amt
+			sum(if(create_time BETWEEN date_format(date_sub('{pt}', 1), 'yyyy-MM-dd 23') AND date_format('{pt}', 'yyyy-MM-dd 23'), 1, 0)) as co_suc_order_cnt,
+			sum(if(create_time BETWEEN date_format(date_sub('{pt}', 1), 'yyyy-MM-dd 23') AND date_format('{pt}', 'yyyy-MM-dd 23'), amount, 0)) as co_suc_order_amt
 		from agent_data t1
 		join (
 			select 
@@ -147,7 +147,7 @@ def dwm_opay_bd_agent_cico_d_sql_task(ds):
 				select
 					originator_id, amount, create_time, country_code, row_number() over(partition by order_no order by update_time) rn
 				from opay_dw.dwd_opay_transfer_of_account_record_di
-				where date_format(dt, 'yyyy-MM') = date_format('${pt}', 'yyyy-MM') and order_status = 'SUCCESS' and sub_service_type = 'Cash Out'
+				where date_format(dt, 'yyyy-MM') = date_format('{pt}', 'yyyy-MM') and order_status = 'SUCCESS' and sub_service_type = 'Cash Out'
 			) t0 where rn = 1
 		) co on t1.opay_id = co.originator_id
 		group by t1.bd_id
