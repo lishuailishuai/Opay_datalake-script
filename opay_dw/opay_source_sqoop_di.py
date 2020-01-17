@@ -110,6 +110,9 @@ table_list = [
     ("opay_overlord","terminal_record", "opay_overlord", "base", 3, "false"),
 
     ("opay_agent_crm","bd_agent_status_change_log", "opay_agent_crm_db", "base", 3, "false")
+
+    ("opay_account","account_user", "opay_account", "base", 2, true),
+
 ]
 
 HIVE_DB = 'opay_dw_ods'
