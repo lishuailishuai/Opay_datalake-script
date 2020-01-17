@@ -42,7 +42,7 @@ def getSizeInNiceString(sizeInBytes):
 def get_dir_size(path, dt):
     total_size = 0
     get_dir_cmd = """
-        hdfs dfs -ls -R {path} | grep drwx | grep dt={dt}$ | awk '{{print $8}}'
+        hdfs dfs -ls -R {path} | grep drwx | grep dt={dt}$ | awk '{{print $NF}}'
     """.format(path=path, dt=dt)
     for dir_path in os.popen(get_dir_cmd).readlines():
         dir_path = dir_path.strip()
