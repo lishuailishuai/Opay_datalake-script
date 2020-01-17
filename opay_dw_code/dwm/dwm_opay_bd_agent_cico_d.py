@@ -51,10 +51,10 @@ dwd_opay_transfer_of_account_record_di_task = OssSensor(
     dag=dag
 )
 
-ods_bd_admin_users_df_prev_day_task = OssSensor(
-    task_id='ods_bd_admin_users_prev_day_task',
+ods_bd_agent_df_prev_day_task = OssSensor(
+    task_id='ods_bd_agent_df_prev_day_task',
     bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opay_dw_sqoop/opay_agent_crm/bd_admin_users",
+        hdfs_path_str="opay_dw_sqoop/opay_agent_crm/bd_agent",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -203,3 +203,4 @@ dwm_opay_bd_agent_cico_d_task = PythonOperator(
 )
 
 dwd_opay_transfer_of_account_record_di_task >> dwm_opay_bd_agent_cico_d_task
+ods_bd_agent_df_prev_day_task >> dwm_opay_bd_agent_cico_d_task
