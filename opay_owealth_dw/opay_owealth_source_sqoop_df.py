@@ -16,7 +16,7 @@ from airflow.models import Variable
 
 args = {
     'owner': 'zhenqian.zhang',
-    'start_date': datetime(2020, 01, 16),
+    'start_date': datetime(2020, 1, 16),
     'depends_on_past': False,
     'retries': 1,
     'retry_delay': timedelta(minutes=5),
