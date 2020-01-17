@@ -35,7 +35,7 @@ args = {
 }
 
 dag = airflow.DAG('app_opay_bd_agent_report_d',
-                  schedule_interval="00 03 * * *",
+                  schedule_interval="30 02 * * *",
                   default_args=args
                   )
 
@@ -121,7 +121,7 @@ def app_opay_bd_agent_report_d_sql_task(ds):
                 nvl(job_hcm_user_id, '-') as job_hcm_user_id,
                 nvl(job_pic_user_id, '-') as job_pic_user_id
             from opay_dw.dim_opay_bd_relation_df 
-            where dt = '${pt}'
+            where dt = '{pt}'
         ),
         cube_data as (
             select 
@@ -148,7 +148,7 @@ def app_opay_bd_agent_report_d_sql_task(ds):
                 select
                     *
                 from opay_dw.dwm_opay_bd_agent_cico_d
-                where dt = '${pt}'
+                where dt = '{pt}'
             ) t1 on t0.bd_admin_user_id = t1.bd_admin_user_id
             group by t0.job_bd_user_id, t0.job_bdm_user_id, t0.job_rm_user_id, t0.job_cm_user_id, t0.job_hcm_user_id, job_pic_user_id
             grouping sets(
