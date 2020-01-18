@@ -109,6 +109,14 @@ def app_opay_active_user_report_d_sql_task(ds):
     set mapred.max.split.size=1000000;
     set hive.exec.dynamic.partition.mode=nonstrict;
     set hive.exec.parallel=true;
+    DROP TABLE IF EXISTS test_db.user_base_01;
+create table test_db.user_base_01 as 
+SELECT user_id, ROLE,mobile
+ FROM
+     (SELECT user_id, ROLE,mobile, row_number() over(partition BY user_id ORDER BY update_time DESC) rn
+      FROM opay_dw.dim_opay_user_base_di
+      WHERE dt<='2020-01-16' ) t1
+   WHERE rn = 1;
     WITH 
         bind_card AS (
             SELECT 
@@ -158,6 +166,7 @@ def app_opay_active_user_report_d_sql_task(ds):
                 user_id
             FROM opay_dw_ods.ods_sqoop_base_account_user_df
             WHERE balance>0 AND account_type='CASHACCOUNT' AND dt>date_sub('{pt}',30) AND dt<='{pt}' AND create_time<'{pt} 23:00:00'
+            group by user_id
             UNION 
             SELECT 
                 b.user_id
@@ -194,6 +203,7 @@ def app_opay_active_user_report_d_sql_task(ds):
                 user_id
             FROM opay_dw_ods.ods_sqoop_base_account_user_df
             WHERE balance>0 AND account_type='CASHACCOUNT' AND dt>date_sub('{pt}',7) AND dt<='{pt}' AND create_time<'{pt} 23:00:00'
+            group by user_id
             UNION 
             SELECT 
                 b.user_id
@@ -320,7 +330,7 @@ def app_opay_active_user_report_d_sql_task(ds):
                 'owallet_bal_not_zero_user_cnt' target_type,
                 count(DISTINCT user_id) c
             FROM opay_dw.dwd_opay_account_balance_df
-            WHERE dt='{pt}' AND account_type='CASHACCOUNT' AND user_type='USER' AND balance>0
+            WHERE dt='{pt}' AND account_type='CASHACCOUNT' AND user_type='USER' AND balance>0 and create_time<'{pt} 23:00:00'
             GROUP BY dt
             UNION ALL 
             SELECT 
@@ -330,7 +340,7 @@ def app_opay_active_user_report_d_sql_task(ds):
                 'owealth_bal_not_zero_user_cnt' target_type,
                 count(DISTINCT user_id) c
             FROM opay_owealth_ods.ods_sqoop_owealth_share_acct_df
-            WHERE dt='{pt}' AND balance>0 
+            WHERE dt='{pt}' AND balance>0 and create_time<'{pt} 23:00:00'
             GROUP BY dt
             UNION ALL 
             SELECT 
