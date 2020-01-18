@@ -116,61 +116,71 @@ def app_opay_active_user_report_d_sql_task(ds):
     create table test_db.user_base as 
     SELECT user_id, ROLE,mobile
      FROM
-         (SELECT user_id, ROLE,mobile, row_number() over(partition BY user_id ORDER BY update_time DESC) rn
+          (SELECT user_id, ROLE,mobile, row_number() over(partition BY user_id ORDER BY update_time DESC) rn
             FROM opay_dw.dim_opay_user_base_di
-          WHERE dt<='{pt}' ) t1
+           WHERE dt<='{pt}' ) t1
      WHERE rn = 1;
        
     create table test_db.opay_30d as 
-      select user_id,dt  from opay_dw_ods.ods_sqoop_base_account_user_df 
-      where balance>0 and account_type='CASHACCOUNT' and dt>date_sub('{pt}',30) and dt<='{pt}' 
-           and create_time<'{pt} 23:00:00'
+      select user_id,
+             dt  
+      from opay_dw_ods.ods_sqoop_base_account_user_df 
+      where balance>0 and account_type='CASHACCOUNT' and dt>date_sub('{pt}',30) and dt<='{pt}' and create_time<'{pt} 23:00:00'
       union 
-      select b.user_id,dt
+      select b.user_id,
+             dt
       from 
-               (select user_id,dt from opay_owealth_ods.ods_sqoop_owealth_share_acct_df where balance>0 and dt>date_sub('{pt}',30) 
-               and dt<='{pt}' and create_time<'{pt} 23:00:00'
-               )a 
-       inner join 
-               test_db.user_base b on a.user_id=b.mobile;
+        (select user_id,
+                dt 
+         from opay_owealth_ods.ods_sqoop_owealth_share_acct_df where balance>0 and dt>date_sub('{pt}',30) and dt<='{pt}' and create_time<'{pt} 23:00:00')a 
+      inner join 
+         test_db.user_base b on a.user_id=b.mobile;
                
     create table test_db.login as 
-    select dt,substr(from_unixtime(unix_timestamp(last_visit, 'yyyy-MM-dd HH:mm:ss')+3600),1,10) last_visit,a.user_id,role from 
-    (select dt,user_id ,last_visit
-    from opay_dw_ods.ods_sqoop_base_user_operator_df where dt='{pt}' and 
-    substr(from_unixtime(unix_timestamp(last_visit, 'yyyy-MM-dd HH:mm:ss')+3600),1,10) > date_sub('{pt}',30)
-    )a 
+    select dt,
+           substr(from_unixtime(unix_timestamp(last_visit, 'yyyy-MM-dd HH:mm:ss')+3600),1,10) last_visit,a.user_id,role 
+     from 
+          (select dt,user_id ,last_visit
+             from opay_dw_ods.ods_sqoop_base_user_operator_df 
+             where dt='{pt}' and substr(from_unixtime(unix_timestamp(last_visit, 'yyyy-MM-dd HH:mm:ss')+3600),1,10) > date_sub('{pt}',30))a 
     inner join 
-    test_db.user_base b 
+          test_db.user_base b 
     on a.user_id=b.user_id;
     
-    INSERT overwrite TABLE opay_dw.app_opay_active_user_report_d partition (dt,target_type)
     with bind_card as
-    (SELECt dt,user_id,pay_status
-    FROM opay_dw_ods.ods_sqoop_base_user_payment_instrument_df
-    WHERE dt='{pt}'
-      AND create_time<'{pt} 23:00:00'
-      AND payment_type = '1'
-    ),
-    opay_account as
-    (
-      select user_id,'owellet' flag,dt from opay_dw_ods.ods_sqoop_base_account_user_df 
-           where balance>0 and account_type='CASHACCOUNT' and dt='{pt}' and create_time<'{pt} 23:00:00'
-           union 
-           select b.user_id ,'owealth' flag,dt
-           from 
-               (select user_id,dt from opay_owealth_ods.ods_sqoop_owealth_share_acct_df where balance>0 and dt='{pt}' and create_time<'{pt} 23:00:00')a 
-           inner join 
-               test_db.user_base b on a.user_id=b.mobile
+       (SELECt dt,
+               user_id,
+               pay_status
+       FROM opay_dw_ods.ods_sqoop_base_user_payment_instrument_df
+       WHERE dt='{pt}'
+       AND create_time<'{pt} 23:00:00'
+       AND payment_type = '1'
+       ),
+      opay_account as
+       (select user_id,
+              'owellet' flag,
+               dt 
+       from opay_dw_ods.ods_sqoop_base_account_user_df 
+       where balance>0 and account_type='CASHACCOUNT' and dt='{pt}' and create_time<'{pt} 23:00:00'
+       union 
+       select b.user_id ,
+              'owealth' flag,
+              dt
+       from 
+            (select user_id,dt from opay_owealth_ods.ods_sqoop_owealth_share_acct_df where balance>0 and dt='{pt}' and create_time<'{pt} 23:00:00')a 
+       inner join 
+           test_db.user_base b on a.user_id=b.mobile
          
-    ),
+       ),
     
-    opay_active as 
-           (select a.user_id,a.dt from 
-             (select dt,user_id from opay_account union all select dt,user_id from bind_card) a
-           inner join 
-             (select user_id from test_db.login where last_visit<='{pt}') b 
-           on a.user_id=b.user_id)
+      opay_active as 
+           (select a.user_id,
+                   a.dt 
+            from 
+               (select dt,user_id from opay_account union all select dt,user_id from bind_card) a
+            inner join 
+               (select user_id from test_db.login where last_visit<='{pt}') b 
+            on a.user_id=b.user_id)
     
     INSERT overwrite TABLE opay_dw.app_opay_active_user_report_d partition (dt,target_type)
     
