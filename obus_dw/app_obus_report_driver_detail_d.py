@@ -36,31 +36,31 @@ dag = airflow.DAG(
 依赖采集完成
 """
 # 等待采集dag全部任务完成
-dependence_ods_sqoop_data_driver_df = S3KeySensor(
+dependence_ods_sqoop_data_driver_df = OssSensor(
     task_id='dependence_ods_sqoop_data_driver_df',
-    bucket_key='obus_dw/ods_sqoop_data_driver_df/country_code=nal/dt={pt}/_SUCCESS'.format(pt='{{ ds }}'),
-    bucket_name='opay-bi',
+    bucket_key='obus_dw_sqoop/ods_sqoop_data_driver_df/country_code=nal/dt={pt}/_SUCCESS'.format(pt='{{ ds }}'),
+    bucket_name='opay-datalake',
     dag=dag
 )
 
-dependence_ods_sqoop_conf_cycle_df = S3KeySensor(
+dependence_ods_sqoop_conf_cycle_df = OssSensor(
     task_id='dependence_ods_sqoop_conf_cycle_df',
-    bucket_key='obus_dw/ods_sqoop_conf_cycle_df/country_code=nal/dt={pt}/_SUCCESS'.format(pt='{{ ds }}'),
-    bucket_name='opay-bi',
+    bucket_key='obus_dw_sqoop/ods_sqoop_conf_cycle_df/country_code=nal/dt={pt}/_SUCCESS'.format(pt='{{ ds }}'),
+    bucket_name='opay-datalake',
     dag=dag
 )
 
-dependence_ods_sqoop_data_driver_work_log_df = S3KeySensor(
+dependence_ods_sqoop_data_driver_work_log_df = OssSensor(
     task_id='dependence_ods_sqoop_data_driver_work_log_df',
-    bucket_key='obus_dw/ods_sqoop_data_driver_work_log_df/country_code=nal/dt={pt}/_SUCCESS'.format(pt='{{ ds }}'),
-    bucket_name='opay-bi',
+    bucket_key='obus_dw_sqoop/ods_sqoop_data_driver_work_log_df/country_code=nal/dt={pt}/_SUCCESS'.format(pt='{{ ds }}'),
+    bucket_name='opay-datalake',
     dag=dag
 )
 
-dependence_ods_sqoop_data_order_df = S3KeySensor(
+dependence_ods_sqoop_data_order_df = OssSensor(
     task_id='dependence_ods_sqoop_data_order_df',
-    bucket_key='obus_dw/ods_sqoop_data_order_df/country_code=nal/dt={pt}/_SUCCESS'.format(pt='{{ ds }}'),
-    bucket_name='opay-bi',
+    bucket_key='obus_dw_sqoop/ods_sqoop_data_order_df/country_code=nal/dt={pt}/_SUCCESS'.format(pt='{{ ds }}'),
+    bucket_name='opay-datalake',
     dag=dag
 )
 
@@ -68,12 +68,12 @@ dependence_ods_sqoop_data_order_df = S3KeySensor(
 end
 """
 
-sleep_time = BashOperator(
-    task_id='sleep_id',
-    depends_on_past=False,
-    bash_command='sleep 120',
-    dag=dag
-)
+# sleep_time = BashOperator(
+#     task_id='sleep_id',
+#     depends_on_past=False,
+#     bash_command='sleep 120',
+#     dag=dag
+# )
 
 
 def get_data_from_impala(**op_kwargs):
@@ -240,9 +240,8 @@ get_data_from_impala_task = PythonOperator(
     dag=dag
 )
 
-dependence_ods_sqoop_data_driver_df >> sleep_time
-dependence_ods_sqoop_conf_cycle_df >> sleep_time
-dependence_ods_sqoop_data_driver_work_log_df >> sleep_time
-dependence_ods_sqoop_data_order_df >> sleep_time
+dependence_ods_sqoop_data_driver_df >> get_data_from_impala_task
+dependence_ods_sqoop_conf_cycle_df >> get_data_from_impala_task
+dependence_ods_sqoop_data_driver_work_log_df >> get_data_from_impala_task
+dependence_ods_sqoop_data_order_df >> get_data_from_impala_task
 
-sleep_time >> get_data_from_impala_task
