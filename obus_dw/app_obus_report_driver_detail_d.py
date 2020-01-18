@@ -10,6 +10,7 @@ from utils.connection_helper import get_hive_cursor, get_db_conn, get_db_conf
 from utils.validate_metrics_utils import *
 from airflow.sensors.s3_key_sensor import S3KeySensor
 from airflow.operators.bash_operator import BashOperator
+from airflow.sensors import OssSensor
 import time
 import logging
 
