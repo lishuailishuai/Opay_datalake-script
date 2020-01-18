@@ -25,7 +25,7 @@ import os
 
 args = {
     'owner': 'xiedong',
-    'start_date': datetime(2019, 9, 22),
+    'start_date': datetime(2020, 1, 16),
     'depends_on_past': False,
     'retries': 3,
     'retry_delay': timedelta(minutes=2),
@@ -35,15 +35,37 @@ args = {
 }
 
 dag = airflow.DAG('app_opay_bd_agent_report_d',
-                  schedule_interval="00 03 * * *",
+                  schedule_interval="30 02 * * *",
                   default_args=args
                   )
 
 ##----------------------------------------- 依赖 ---------------------------------------##
-app_opay_bd_agent_cico_d_task = OssSensor(
+dwm_opay_bd_agent_cico_d_task = OssSensor(
     task_id='app_opay_bd_agent_cico_d_task',
     bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opay/opay_dw/app_opay_bd_agent_cico_d/country_code=NG",
+        hdfs_path_str="opay/opay_dw/dwm_opay_bd_agent_cico_d/country_code=NG",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
+dim_opay_bd_relation_df_task = OssSensor(
+    task_id='dim_opay_bd_relation_df_task',
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="opay/opay_dw/dim_opay_bd_relation_df/country_code=nal",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
+ods_bd_admin_users_df_prev_day_task = OssSensor(
+    task_id='ods_bd_admin_users_prev_day_task',
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="opay_dw_sqoop/opay_agent_crm/bd_admin_users",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -82,227 +104,118 @@ def app_opay_bd_agent_report_d_sql_task(ds):
     set hive.exec.dynamic.partition.mode=nonstrict;
     set hive.exec.parallel=true; --default false
     with 
-	base_date as (
-		select * from app_opay_bd_agent_cico_d where dt = '{pt}'
-	),
-	bd_data as (
-		select * from base_data where bd_admin_job_id = 6
-	),
-	bdm_base_data as (
-		select * from base_data where bd_admin_job_id = 5
-	)
-	bdm_data as (
-		select 
-			t0.bd_admin_user_id, t0.bd_admin_user_name, t0.bd_admin_user_mobile, t0.bd_admin_dept_id, t0.bd_admin_job_id, t0.bd_admin_leader_id,
-			sum(t0.audited_agent_cnt_his + nvl(t1.sub_audited_agent_cnt_his, 0)) as audited_agent_cnt_his,
-			sum(t0.audited_agent_cnt_m + nvl(t1.sub_audited_agent_cnt_m, 0)) as audited_agent_cnt_m,
-			sum(t0.audited_agent_cnt + nvl(t1.sub_audited_agent_cnt, 0)) as audited_agent_cnt,
-			sum(t0.rejected_agent_cnt_m + nvl(t1.sub_rejected_agent_cnt_m, 0)) as rejected_agent_cnt_m,
-			sum(t0.rejected_agent_cnt + nvl(t1.sub_rejected_agent_cnt, 0)) as rejected_agent_cnt,
-			sum(t0.ci_suc_order_cnt + nvl(t1.sub_ci_suc_order_cnt, 0)) as ci_suc_order_cnt,
-			sum(t0.ci_suc_order_amt + nvl(t1.sub_ci_suc_order_amt, 0)) as ci_suc_order_amt,
-			sum(t0.ci_suc_order_cnt_m + nvl(t1.sub_ci_suc_order_cnt_m, 0)) as ci_suc_order_cnt_m,
-			sum(t0.ci_suc_order_amt_m + nvl(t1.sub_ci_suc_order_amt_m, 0)) as ci_suc_order_amt_m,
-			sum(t0.co_suc_order_cnt + nvl(t1.sub_co_suc_order_cnt, 0)) as co_suc_order_cnt,
-			sum(t0.co_suc_order_amt + nvl(t1.sub_co_suc_order_amt, 0)) as co_suc_order_amt,
-			sum(t0.co_suc_order_cnt_m + nvl(t1.sub_co_suc_order_cnt_m, 0)) as co_suc_order_cnt_m,
-			sum(t0.co_suc_order_amt_m + nvl(t1.sub_co_suc_order_amt_m, 0)) as co_suc_order_amt_m
-		from bdm_base_data t0
-		left join (
-			select 
-				bd_admin_leader_id, 
-				sum(audited_agent_cnt_his) as sub_audited_agent_cnt_his, 
-				sum(audited_agent_cnt_m) sub_audited_agent_cnt_m, 
-				sum(audited_agent_cnt) sub_audited_agent_cnt,
-				sum(rejected_agent_cnt_m) sub_rejected_agent_cnt_m,
-				sum(rejected_agent_cnt) sub_rejected_agent_cnt,
-				sum(ci_suc_order_cnt) sub_ci_suc_order_cnt,
-				sum(ci_suc_order_amt) sub_ci_suc_order_amt,
-				sum(ci_suc_order_cnt_m) sub_ci_suc_order_cnt_m,
-				sum(ci_suc_order_amt_m) sub_ci_suc_order_amt_m,
-				sum(co_suc_order_cnt) sub_co_suc_order_cnt,
-				sum(co_suc_order_amt) sub_co_suc_order_amt,
-				sum(co_suc_order_cnt_m) sub_co_suc_order_cnt_m,
-
-				sum(co_suc_order_amt_m) sub_co_suc_order_amt_m
-			from bd_data 
-			group by bd_admin_leader_id
-		) t1 on t1.bd_admin_leader_id = t0.bd_admin_user_id
-		
-	),
-	rm_base_data as (
-		select * from base_data where bd_admin_job_id = 4
-	),
-	rm_data as (
-		select 
-			t0.bd_admin_user_id, t0.bd_admin_user_name, t0.bd_admin_user_mobile, t0.bd_admin_dept_id, t0.bd_admin_job_id, t0.bd_admin_leader_id,
-			sum(t0.audited_agent_cnt_his + nvl(t1.sub_audited_agent_cnt_his, 0)) as audited_agent_cnt_his,
-			sum(t0.audited_agent_cnt_m + nvl(t1.sub_audited_agent_cnt_m, 0)) as audited_agent_cnt_m,
-			sum(t0.audited_agent_cnt + nvl(t1.sub_audited_agent_cnt, 0)) as audited_agent_cnt,
-			sum(t0.rejected_agent_cnt_m + nvl(t1.sub_rejected_agent_cnt_m, 0)) as rejected_agent_cnt_m,
-			sum(t0.rejected_agent_cnt + nvl(t1.sub_rejected_agent_cnt, 0)) as rejected_agent_cnt,
-			sum(t0.ci_suc_order_cnt + nvl(t1.sub_ci_suc_order_cnt, 0)) as ci_suc_order_cnt,
-			sum(t0.ci_suc_order_amt + nvl(t1.sub_ci_suc_order_amt, 0)) as ci_suc_order_amt,
-			sum(t0.ci_suc_order_cnt_m + nvl(t1.sub_ci_suc_order_cnt_m, 0)) as ci_suc_order_cnt_m,
-			sum(t0.ci_suc_order_amt_m + nvl(t1.sub_ci_suc_order_amt_m, 0)) as ci_suc_order_amt_m,
-			sum(t0.co_suc_order_cnt + nvl(t1.sub_co_suc_order_cnt, 0)) as co_suc_order_cnt,
-			sum(t0.co_suc_order_amt + nvl(t1.sub_co_suc_order_amt, 0)) as co_suc_order_amt,
-			sum(t0.co_suc_order_cnt_m + nvl(t1.sub_co_suc_order_cnt_m, 0)) as co_suc_order_cnt_m,
-			sum(t0.co_suc_order_amt_m + nvl(t1.sub_co_suc_order_amt_m, 0)) as co_suc_order_amt_m
-		from rm_base_data t0
-		left join (
-			select 
-				bd_admin_leader_id, 
-				sum(audited_agent_cnt_his) as sub_audited_agent_cnt_his, 
-				sum(audited_agent_cnt_m) sub_audited_agent_cnt_m, 
-				sum(audited_agent_cnt) sub_audited_agent_cnt,
-				sum(rejected_agent_cnt_m) sub_rejected_agent_cnt_m,
-				sum(rejected_agent_cnt) sub_rejected_agent_cnt,
-				sum(ci_suc_order_cnt) sub_ci_suc_order_cnt,
-				sum(ci_suc_order_amt) sub_ci_suc_order_amt,
-				sum(ci_suc_order_cnt_m) sub_ci_suc_order_cnt_m,
-				sum(ci_suc_order_amt_m) sub_ci_suc_order_amt_m,
-				sum(co_suc_order_cnt) sub_co_suc_order_cnt,
-				sum(co_suc_order_amt) sub_co_suc_order_amt,
-				sum(co_suc_order_cnt_m) sub_co_suc_order_cnt_m,
-				sum(co_suc_order_amt_m) sub_co_suc_order_amt_m
-			from bdm_data 
-			group by bd_admin_leader_id
-		) t1 on t1.bd_admin_leader_id = t0.bd_admin_user_id
-	),
-	cm_base_data as (
-		select * from base_data where bd_admin_job_id = 3
-	),
-	cm_data as (
-		select 
-			t0.bd_admin_user_id, t0.bd_admin_user_name, t0.bd_admin_user_mobile, t0.bd_admin_dept_id, t0.bd_admin_job_id, t0.bd_admin_leader_id,
-			sum(t0.audited_agent_cnt_his + nvl(t1.sub_audited_agent_cnt_his, 0)) as audited_agent_cnt_his,
-			sum(t0.audited_agent_cnt_m + nvl(t1.sub_audited_agent_cnt_m, 0)) as audited_agent_cnt_m,
-			sum(t0.audited_agent_cnt + nvl(t1.sub_audited_agent_cnt, 0)) as audited_agent_cnt,
-			sum(t0.rejected_agent_cnt_m + nvl(t1.sub_rejected_agent_cnt_m, 0)) as rejected_agent_cnt_m,
-			sum(t0.rejected_agent_cnt + nvl(t1.sub_rejected_agent_cnt, 0)) as rejected_agent_cnt,
-			sum(t0.ci_suc_order_cnt + nvl(t1.sub_ci_suc_order_cnt, 0)) as ci_suc_order_cnt,
-			sum(t0.ci_suc_order_amt + nvl(t1.sub_ci_suc_order_amt, 0)) as ci_suc_order_amt,
-			sum(t0.ci_suc_order_cnt_m + nvl(t1.sub_ci_suc_order_cnt_m, 0)) as ci_suc_order_cnt_m,
-			sum(t0.ci_suc_order_amt_m + nvl(t1.sub_ci_suc_order_amt_m, 0)) as ci_suc_order_amt_m,
-			sum(t0.co_suc_order_cnt + nvl(t1.sub_co_suc_order_cnt, 0)) as co_suc_order_cnt,
-			sum(t0.co_suc_order_amt + nvl(t1.sub_co_suc_order_amt, 0)) as co_suc_order_amt,
-			sum(t0.co_suc_order_cnt_m + nvl(t1.sub_co_suc_order_cnt_m, 0)) as co_suc_order_cnt_m,
-			sum(t0.co_suc_order_amt_m + nvl(t1.sub_co_suc_order_amt_m, 0)) as co_suc_order_amt_m
-		from cm_base_data t0
-		left join (
-			select 
-				bd_admin_leader_id, 
-				sum(audited_agent_cnt_his) as sub_audited_agent_cnt_his, 
-				sum(audited_agent_cnt_m) sub_audited_agent_cnt_m, 
-				sum(audited_agent_cnt) sub_audited_agent_cnt,
-				sum(rejected_agent_cnt_m) sub_rejected_agent_cnt_m,
-				sum(rejected_agent_cnt) sub_rejected_agent_cnt,
-				sum(ci_suc_order_cnt) sub_ci_suc_order_cnt,
-				sum(ci_suc_order_amt) sub_ci_suc_order_amt,
-				sum(ci_suc_order_cnt_m) sub_ci_suc_order_cnt_m,
-				sum(ci_suc_order_amt_m) sub_ci_suc_order_amt_m,
-				sum(co_suc_order_cnt) sub_co_suc_order_cnt,
-				sum(co_suc_order_amt) sub_co_suc_order_amt,
-				sum(co_suc_order_cnt_m) sub_co_suc_order_cnt_m,
-				sum(co_suc_order_amt_m) sub_co_suc_order_amt_m
-			from rm_data 
-			group by bd_admin_leader_id
-		) t1 on t1.bd_admin_leader_id = t0.bd_admin_user_id
-	),
-	hcm_base_data as (
-		select * from base_data where bd_admin_job_id = 2
-	),
-	hcm_data as (
-		select 
-			t0.bd_admin_user_id, t0.bd_admin_user_name, t0.bd_admin_user_mobile, t0.bd_admin_dept_id, t0.bd_admin_job_id, t0.bd_admin_leader_id,
-			sum(t0.audited_agent_cnt_his + nvl(t1.sub_audited_agent_cnt_his, 0)) as audited_agent_cnt_his,
-			sum(t0.audited_agent_cnt_m + nvl(t1.sub_audited_agent_cnt_m, 0)) as audited_agent_cnt_m,
-			sum(t0.audited_agent_cnt + nvl(t1.sub_audited_agent_cnt, 0)) as audited_agent_cnt,
-			sum(t0.rejected_agent_cnt_m + nvl(t1.sub_rejected_agent_cnt_m, 0)) as rejected_agent_cnt_m,
-			sum(t0.rejected_agent_cnt + nvl(t1.sub_rejected_agent_cnt, 0)) as rejected_agent_cnt,
-			sum(t0.ci_suc_order_cnt + nvl(t1.sub_ci_suc_order_cnt, 0)) as ci_suc_order_cnt,
-			sum(t0.ci_suc_order_amt + nvl(t1.sub_ci_suc_order_amt, 0)) as ci_suc_order_amt,
-			sum(t0.ci_suc_order_cnt_m + nvl(t1.sub_ci_suc_order_cnt_m, 0)) as ci_suc_order_cnt_m,
-			sum(t0.ci_suc_order_amt_m + nvl(t1.sub_ci_suc_order_amt_m, 0)) as ci_suc_order_amt_m,
-			sum(t0.co_suc_order_cnt + nvl(t1.sub_co_suc_order_cnt, 0)) as co_suc_order_cnt,
-			sum(t0.co_suc_order_amt + nvl(t1.sub_co_suc_order_amt, 0)) as co_suc_order_amt,
-			sum(t0.co_suc_order_cnt_m + nvl(t1.sub_co_suc_order_cnt_m, 0)) as co_suc_order_cnt_m,
-			sum(t0.co_suc_order_amt_m + nvl(t1.sub_co_suc_order_amt_m, 0)) as co_suc_order_amt_m
-		from hcm_base_data t0
-		left join (
-			select 
-				bd_admin_leader_id, 
-				sum(audited_agent_cnt_his) as sub_audited_agent_cnt_his, 
-				sum(audited_agent_cnt_m) sub_audited_agent_cnt_m, 
-				sum(audited_agent_cnt) sub_audited_agent_cnt,
-				sum(rejected_agent_cnt_m) sub_rejected_agent_cnt_m,
-				sum(rejected_agent_cnt) sub_rejected_agent_cnt,
-				sum(ci_suc_order_cnt) sub_ci_suc_order_cnt,
-				sum(ci_suc_order_amt) sub_ci_suc_order_amt,
-				sum(ci_suc_order_cnt_m) sub_ci_suc_order_cnt_m,
-				sum(ci_suc_order_amt_m) sub_ci_suc_order_amt_m,
-				sum(co_suc_order_cnt) sub_co_suc_order_cnt,
-				sum(co_suc_order_amt) sub_co_suc_order_amt,
-				sum(co_suc_order_cnt_m) sub_co_suc_order_cnt_m,
-				sum(co_suc_order_amt_m) sub_co_suc_order_amt_m
-			from cm_data 
-			group by bd_admin_leader_id
-		) t1 on t1.bd_admin_leader_id = t0.bd_admin_user_id
-	),
-	pic_base_data as (
-		select * from base_data where bd_admin_job_id = 1
-	),
-	pic_data as (
-		select 
-			t0.bd_admin_user_id, t0.bd_admin_user_name, t0.bd_admin_user_mobile, t0.bd_admin_dept_id, t0.bd_admin_job_id, t0.bd_admin_leader_id,
-			sum(t0.audited_agent_cnt_his + nvl(t1.sub_audited_agent_cnt_his, 0)) as audited_agent_cnt_his,
-			sum(t0.audited_agent_cnt_m + nvl(t1.sub_audited_agent_cnt_m, 0)) as audited_agent_cnt_m,
-			sum(t0.audited_agent_cnt + nvl(t1.sub_audited_agent_cnt, 0)) as audited_agent_cnt,
-			sum(t0.rejected_agent_cnt_m + nvl(t1.sub_rejected_agent_cnt_m, 0)) as rejected_agent_cnt_m,
-			sum(t0.rejected_agent_cnt + nvl(t1.sub_rejected_agent_cnt, 0)) as rejected_agent_cnt,
-			sum(t0.ci_suc_order_cnt + nvl(t1.sub_ci_suc_order_cnt, 0)) as ci_suc_order_cnt,
-			sum(t0.ci_suc_order_amt + nvl(t1.sub_ci_suc_order_amt, 0)) as ci_suc_order_amt,
-			sum(t0.ci_suc_order_cnt_m + nvl(t1.sub_ci_suc_order_cnt_m, 0)) as ci_suc_order_cnt_m,
-			sum(t0.ci_suc_order_amt_m + nvl(t1.sub_ci_suc_order_amt_m, 0)) as ci_suc_order_amt_m,
-			sum(t0.co_suc_order_cnt + nvl(t1.sub_co_suc_order_cnt, 0)) as co_suc_order_cnt,
-			sum(t0.co_suc_order_amt + nvl(t1.sub_co_suc_order_amt, 0)) as co_suc_order_amt,
-			sum(t0.co_suc_order_cnt_m + nvl(t1.sub_co_suc_order_cnt_m, 0)) as co_suc_order_cnt_m,
-			sum(t0.co_suc_order_amt_m + nvl(t1.sub_co_suc_order_amt_m, 0)) as co_suc_order_amt_m
-		from pic_base_data t0
-		left join (
-			select 
-				bd_admin_leader_id, 
-				sum(audited_agent_cnt_his) as sub_audited_agent_cnt_his, 
-				sum(audited_agent_cnt_m) sub_audited_agent_cnt_m, 
-				sum(audited_agent_cnt) sub_audited_agent_cnt,
-				sum(rejected_agent_cnt_m) sub_rejected_agent_cnt_m,
-				sum(rejected_agent_cnt) sub_rejected_agent_cnt,
-				sum(ci_suc_order_cnt) sub_ci_suc_order_cnt,
-				sum(ci_suc_order_amt) sub_ci_suc_order_amt,
-				sum(ci_suc_order_cnt_m) sub_ci_suc_order_cnt_m,
-				sum(ci_suc_order_amt_m) sub_ci_suc_order_amt_m,
-				sum(co_suc_order_cnt) sub_co_suc_order_cnt,
-				sum(co_suc_order_amt) sub_co_suc_order_amt,
-				sum(co_suc_order_cnt_m) sub_co_suc_order_cnt_m,
-				sum(co_suc_order_amt_m) sub_co_suc_order_amt_m
-			from hcm_data 
-			group by bd_admin_leader_id
-		) t1 on t1.bd_admin_leader_id = t0.bd_admin_user_id
-	)
-	insert overwrite {db}.{table}  partition(country_code='NG', dt='{pt}')
-	select * from bd_data
-	union all
-	select * from bdm_data
-	union all
-	select * from rm_data
-	union all
-	select * from cm_data
-	union all
-	select * from hcm_data
-	union all
-	select * from pic_data
+        bd_data as (
+            select 
+                id as bd_admin_user_id, username as bd_admin_user_name, mobile as bd_admin_user_mobile,
+                department_id as bd_admin_dept_id, job_id as bd_admin_job_id, leader_id as bd_admin_leader_id
+            from opay_dw_ods.ods_sqoop_base_bd_admin_users_df 
+            where dt = '{pt}' and job_id > 0
+        ),
+        bd_relation_data as (
+            select 
+                bd_admin_user_id, 
+                nvl(job_bd_user_id, '-') as job_bd_user_id,
+                nvl(job_bdm_user_id, '-') as job_bdm_user_id,
+                nvl(job_rm_user_id, '-') as job_rm_user_id,
+                nvl(job_cm_user_id, '-') as job_cm_user_id,
+                nvl(job_hcm_user_id, '-') as job_hcm_user_id,
+                nvl(job_pic_user_id, '-') as job_pic_user_id
+            from opay_dw.dim_opay_bd_relation_df 
+            where dt = '{pt}'
+        ),
+        cube_data as (
+            select 
+                nvl(t0.job_bd_user_id, 'ALL') as job_bd_user_id, 
+                nvl(t0.job_bdm_user_id, 'ALL') as job_bdm_user_id, 
+                nvl(t0.job_rm_user_id, 'ALL') as job_rm_user_id,
+                nvl(t0.job_cm_user_id, 'ALL') as job_cm_user_id,
+                nvl(t0.job_hcm_user_id, 'ALL') as job_hcm_user_id, 
+                nvl(job_pic_user_id, 'ALL') as job_pic_user_id, 
+                sum(audited_agent_cnt_his) as audited_agent_cnt_his, 
+                sum(audited_agent_cnt_m) audited_agent_cnt_m, 
+                sum(audited_agent_cnt) audited_agent_cnt,
+                sum(rejected_agent_cnt_m) rejected_agent_cnt_m,
+                sum(rejected_agent_cnt) rejected_agent_cnt,
+                sum(ci_suc_order_cnt) ci_suc_order_cnt,
+                sum(ci_suc_order_amt) ci_suc_order_amt,
+                sum(ci_suc_order_cnt_m) ci_suc_order_cnt_m,
+                sum(ci_suc_order_amt_m) ci_suc_order_amt_m,
+                sum(co_suc_order_cnt) co_suc_order_cnt,
+                sum(co_suc_order_amt) co_suc_order_amt,
+                sum(co_suc_order_cnt_m) co_suc_order_cnt_m,
+                sum(co_suc_order_amt_m) co_suc_order_amt_m
+            from bd_relation_data t0 join (
+                select
+                    *
+                from opay_dw.dwm_opay_bd_agent_cico_d
+                where dt = '{pt}'
+            ) t1 on t0.bd_admin_user_id = t1.bd_admin_user_id
+            group by t0.job_bd_user_id, t0.job_bdm_user_id, t0.job_rm_user_id, t0.job_cm_user_id, t0.job_hcm_user_id, job_pic_user_id
+            grouping sets(
+                t0.job_bd_user_id, t0.job_bdm_user_id, t0.job_rm_user_id, 
+                t0.job_cm_user_id, t0.job_hcm_user_id, job_pic_user_id
+            )
+        )
+        insert overwrite table {db}.{table} partition(country_code='NG', dt='{pt}')
+        select 
+            bd.bd_admin_user_id, bd.bd_admin_user_name, bd.bd_admin_user_mobile, 
+            bd.bd_admin_dept_id, bd.bd_admin_job_id, bd.bd_admin_leader_id,
+            audited_agent_cnt_his, audited_agent_cnt_m, audited_agent_cnt,
+            rejected_agent_cnt_m, rejected_agent_cnt,
+            ci_suc_order_cnt, ci_suc_order_amt, ci_suc_order_cnt_m, ci_suc_order_amt_m,
+            co_suc_order_cnt, co_suc_order_amt, co_suc_order_cnt_m, co_suc_order_amt_m
+        from (
+            select 
+                job_bd_user_id as bd_admin_user_id, audited_agent_cnt_his, audited_agent_cnt_m, audited_agent_cnt,
+                rejected_agent_cnt_m, rejected_agent_cnt,
+                ci_suc_order_cnt, ci_suc_order_amt, ci_suc_order_cnt_m, ci_suc_order_amt_m,
+                co_suc_order_cnt, co_suc_order_amt, co_suc_order_cnt_m, co_suc_order_amt_m
+            from cube_data 
+            where job_bd_user_id != 'ALL' and job_bd_user_id != '-'
+            union all
+            select 
+                job_bdm_user_id as bd_admin_user_id, audited_agent_cnt_his, audited_agent_cnt_m, audited_agent_cnt,
+                rejected_agent_cnt_m, rejected_agent_cnt,
+                ci_suc_order_cnt, ci_suc_order_amt, ci_suc_order_cnt_m, ci_suc_order_amt_m,
+                co_suc_order_cnt, co_suc_order_amt, co_suc_order_cnt_m, co_suc_order_amt_m
+            from cube_data 
+            where job_bdm_user_id != 'ALL' and job_bdm_user_id != '-'
+            union all
+            select 
+                job_rm_user_id as bd_admin_user_id, audited_agent_cnt_his, audited_agent_cnt_m, audited_agent_cnt,
+                rejected_agent_cnt_m, rejected_agent_cnt,
+                ci_suc_order_cnt, ci_suc_order_amt, ci_suc_order_cnt_m, ci_suc_order_amt_m,
+                co_suc_order_cnt, co_suc_order_amt, co_suc_order_cnt_m, co_suc_order_amt_m
+            from cube_data 
+            where job_rm_user_id != 'ALL' and job_rm_user_id != '-'
+            union all
+             select 
+                job_cm_user_id as bd_admin_user_id, audited_agent_cnt_his, audited_agent_cnt_m, audited_agent_cnt,
+                rejected_agent_cnt_m, rejected_agent_cnt,
+                ci_suc_order_cnt, ci_suc_order_amt, ci_suc_order_cnt_m, ci_suc_order_amt_m,
+                co_suc_order_cnt, co_suc_order_amt, co_suc_order_cnt_m, co_suc_order_amt_m
+            from cube_data 
+            where job_cm_user_id != 'ALL' and job_cm_user_id != '-'
+            union all
+             select 
+                job_hcm_user_id as bd_admin_user_id, audited_agent_cnt_his, audited_agent_cnt_m, audited_agent_cnt,
+                rejected_agent_cnt_m, rejected_agent_cnt,
+                ci_suc_order_cnt, ci_suc_order_amt, ci_suc_order_cnt_m, ci_suc_order_amt_m,
+                co_suc_order_cnt, co_suc_order_amt, co_suc_order_cnt_m, co_suc_order_amt_m
+            from cube_data 
+            where job_hcm_user_id != 'ALL' and job_hcm_user_id != '-'
+            union all
+             select 
+                job_pic_user_id as bd_admin_user_id, audited_agent_cnt_his, audited_agent_cnt_m, audited_agent_cnt,
+                rejected_agent_cnt_m, rejected_agent_cnt,
+                ci_suc_order_cnt, ci_suc_order_amt, ci_suc_order_cnt_m, ci_suc_order_amt_m,
+                co_suc_order_cnt, co_suc_order_amt, co_suc_order_cnt_m, co_suc_order_amt_m
+            from cube_data 
+            where job_pic_user_id != 'ALL' and job_pic_user_id != '-'
+        ) report 
+        left join bd_data bd on report.bd_admin_user_id = bd.bd_admin_user_id 
         
+       
     '''.format(
         pt=ds,
         table=table_name,
@@ -340,4 +253,6 @@ app_opay_bd_agent_report_d_task = PythonOperator(
     dag=dag
 )
 
-app_opay_bd_agent_cico_d_task >> app_opay_bd_agent_report_d_task
+dwm_opay_bd_agent_cico_d_task >> app_opay_bd_agent_report_d_task
+ods_bd_admin_users_df_prev_day_task >> app_opay_bd_agent_report_d_task
+dim_opay_bd_relation_df_task >> app_opay_bd_agent_report_d_task

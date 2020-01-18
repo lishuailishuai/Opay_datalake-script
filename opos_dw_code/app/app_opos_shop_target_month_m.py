@@ -101,6 +101,7 @@ select
 ,shop_name
 ,opay_account
 
+,create_year
 ,create_month
 
 ,city_code
@@ -196,6 +197,7 @@ shop_id
 ,shop_name
 ,opay_account
 
+,create_year
 ,create_month
 
 ,city_code
@@ -214,7 +216,6 @@ shop_id
 ,bd_name
 
 ;
-
 
 
 

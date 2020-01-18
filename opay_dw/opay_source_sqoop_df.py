@@ -333,7 +333,7 @@ for db_name, table_name, conn_id, prefix_name,priority_weight_nm in table_list:
     )
 
     if table_name in IGNORED_TABLE_LIST:
-        add_partitions >> validate_all_data
+        import_table >> validate_all_data
     else:
         # 数据量监控
         volume_monitoring = PythonOperator(
@@ -347,7 +347,7 @@ for db_name, table_name, conn_id, prefix_name,priority_weight_nm in table_list:
             },
             dag=dag
         )
-        add_partitions >> volume_monitoring >> validate_all_data
+        import_table >> volume_monitoring >> validate_all_data
     # 超时监控
     task_timeout_monitor= PythonOperator(
         task_id='task_timeout_monitor_{}'.format(hive_table_name),
@@ -360,4 +360,4 @@ for db_name, table_name, conn_id, prefix_name,priority_weight_nm in table_list:
         dag=dag_monitor
     )
 
-    import_table >> check_table >> add_partitions
+    check_table >> add_partitions >> import_table

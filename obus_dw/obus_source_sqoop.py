@@ -22,7 +22,7 @@ from utils.util import on_success_callback
 
 
 args = {
-    'owner': 'wuduo',
+    'owner': 'zhenqian.zhang',
     'start_date': datetime(2019, 11, 27),
     'depends_on_past': False,
     'retries': 3,
@@ -120,7 +120,7 @@ obus_table_list = [
 
 hive_db = 'obus_dw_ods'
 hive_table = 'ods_sqoop_{bs}_df'
-s3path = 's3a://opay-bi/obus_dw/ods_sqoop_{bs}_df'
+hdfs_path = 'oss://opay-datalake/obus_dw_sqoop/ods_sqoop_{bs}_df'
 ods_create_table_hql = '''
     create EXTERNAL table if not exists {db_name}.{table_name} (
         {columns}
@@ -136,7 +136,8 @@ ods_create_table_hql = '''
     OUTPUTFORMAT
       'org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat'
     LOCATION
-      '{s3path}'
+      '{hdfs_path}';
+    msck repair table {db_name}.{table_name}
 '''
 
 mysql_type_to_hive = {
@@ -161,8 +162,8 @@ def create_hive_external_table(db, table, conn, **op_kwargs):
         mysql_table=table,
         mysql_conn=conn
     )
-    if response:
-        return True
+    #if response:
+    #    return True
 
     mysql_conn = get_db_conn(conn)
     mcursor = mysql_conn.cursor()
@@ -187,18 +188,18 @@ def create_hive_external_table(db, table, conn, **op_kwargs):
             columns.append("`%s` %s comment '%s'" % (name, co_type.replace('unsigned', '').replace('signed', ''), comment))
         else:
             columns.append("`%s` %s comment '%s'" % (name, mysql_type_to_hive.get(type.upper(), 'string'), comment))
+    mysql_conn.close()
     # 创建hive数据表的sql
     hql = ods_create_table_hql.format(
         db_name=hive_db,
         table_name=hive_table.format(bs=table),
         columns=",\n".join(columns),
-        s3path=s3path.format(bs=table)
+        hdfs_path=hdfs_path.format(bs=table)
     )
-    # logging.info(hql)
-    hive_cursor = get_hive_cursor()
-    hive_cursor.execute(hql)
-    mcursor.close()
-    hive_cursor.close()
+    logging.info(hql)
+    hive_hook = HiveCliHook()
+    logging.info('Executing: %s', hql)
+    hive_hook.run_cli(hql)
 
 
 success = DummyOperator(dag=dag, task_id='success')
@@ -240,7 +241,7 @@ for obus_table in obus_table_list:
             username=login,
             password=password,
             table=obus_table.get('table'),
-            table_path=s3path.format(bs=obus_table.get('table')) 
+            table_path=hdfs_path.format(bs=obus_table.get('table'))
         ),
         dag=dag
     )
@@ -296,7 +297,7 @@ for obus_table in obus_table_list:
     )
 
     if obus_table.get('table') in IGNORED_TABLE_LIST:
-        add_partitions >> validate_all_data
+        import_from_mysql >> validate_all_data
     else:
         # 数据量监控
         volume_monitoring = PythonOperator(
@@ -311,11 +312,11 @@ for obus_table in obus_table_list:
             },
             dag=dag
         )
-        add_partitions >> volume_monitoring >> validate_all_data
+        import_from_mysql >> volume_monitoring >> validate_all_data
 
 
     # 超时监控
-    task_timeout_monitor= PythonOperator(
+    task_timeout_monitor = PythonOperator(
         task_id='task_timeout_monitor_{}'.format(hive_table.format(bs=obus_table.get('table'))),
         priority_weight=obus_table.get('priority_weight'),
         python_callable=fun_task_timeout_monitor,
@@ -328,6 +329,7 @@ for obus_table in obus_table_list:
     )
 
     # 加入调度队列
-    import_from_mysql >> create_table >> add_partitions
+    create_table >> add_partitions >> import_from_mysql
+
     validate_all_data >> success
 

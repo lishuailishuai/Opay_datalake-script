@@ -29,7 +29,7 @@ args = {
 }
 
 dag = airflow.DAG(
-    'superset_oride_orders_10min',
+    'superset_ali_oride_orders_10min',
     schedule_interval="*/10 * * * *",
     default_args=args
 )
@@ -79,11 +79,11 @@ create_oride_orders_status = MySqlOperator(
         ) engine=innodb DEFAULT CHARSET=utf8;
     """,
     database='bi',
-    mysql_conn_id='mysql_bi',
+    mysql_conn_id='ali_mysql_bi',
     dag=dag
 )
 
-bidb_conn = get_db_conn('mysql_bi')
+bidb_conn = get_db_conn('ali_mysql_bi')
 bidb = bidb_conn.cursor()
 oridedb_conn = get_db_conn('sqoop_db')
 
@@ -890,7 +890,7 @@ def get_driver_num(**op_kwargs):
         info = k.split(",")
         res.append([int(info[0]), int(info[1]), dt_start+'00', v["a_mem"], v["no_mem"]])
 
-    conn = get_db_conn('mysql_bi')
+    conn = get_db_conn('ali_mysql_bi')
     mcursor = conn.cursor()
     mcursor.executemany(insert_driver_num, res)
     logging.info('insert num %s', len(res))
