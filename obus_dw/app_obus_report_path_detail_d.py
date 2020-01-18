@@ -10,6 +10,7 @@ from utils.connection_helper import get_hive_cursor, get_db_conn, get_db_conf
 from utils.validate_metrics_utils import *
 from airflow.sensors.s3_key_sensor import S3KeySensor
 from airflow.operators.bash_operator import BashOperator
+from airflow.sensors import OssSensor
 import time
 import logging
 
@@ -36,45 +37,45 @@ dag = airflow.DAG(
 依赖采集完成
 """
 # 等待采集dag全部任务完成
-dependence_ods_sqoop_conf_line_df = S3KeySensor(
+dependence_ods_sqoop_conf_line_df = OssSensor(
     task_id='dependence_ods_sqoop_conf_line_df',
-    bucket_key='obus_dw/ods_sqoop_conf_line_df/country_code=nal/dt={pt}/_SUCCESS'.format(pt='{{ ds }}'),
-    bucket_name='opay-bi',
+    bucket_key='obus_dw_sqoop/ods_sqoop_conf_line_df/country_code=nal/dt={pt}/_SUCCESS'.format(pt='{{ ds }}'),
+    bucket_name='opay-datalake',
     dag=dag
 )
 
-dependence_ods_sqoop_conf_station_df = S3KeySensor(
+dependence_ods_sqoop_conf_station_df = OssSensor(
     task_id='dependence_ods_sqoop_conf_station_df',
-    bucket_key='obus_dw/ods_sqoop_conf_station_df/country_code=nal/dt={pt}/_SUCCESS'.format(pt='{{ ds }}'),
-    bucket_name='opay-bi',
+    bucket_key='obus_dw_sqoop/ods_sqoop_conf_station_df/country_code=nal/dt={pt}/_SUCCESS'.format(pt='{{ ds }}'),
+    bucket_name='opay-datalake',
     dag=dag
 )
 
-dependence_ods_sqoop_conf_line_stations_df = S3KeySensor(
+dependence_ods_sqoop_conf_line_stations_df = OssSensor(
     task_id='dependence_ods_sqoop_conf_line_stations_df',
-    bucket_key='obus_dw/ods_sqoop_conf_line_stations_df/country_code=nal/dt={pt}/_SUCCESS'.format(pt='{{ ds }}'),
-    bucket_name='opay-bi',
+    bucket_key='obus_dw_sqoop/ods_sqoop_conf_line_stations_df/country_code=nal/dt={pt}/_SUCCESS'.format(pt='{{ ds }}'),
+    bucket_name='opay-datalake',
     dag=dag
 )
 
-dependence_ods_sqoop_data_driver_df = S3KeySensor(
+dependence_ods_sqoop_data_driver_df = OssSensor(
     task_id='dependence_ods_sqoop_data_driver_df',
-    bucket_key='obus_dw/ods_sqoop_data_driver_df/country_code=nal/dt={pt}/_SUCCESS'.format(pt='{{ ds }}'),
-    bucket_name='opay-bi',
+    bucket_key='obus_dw_sqoop/ods_sqoop_data_driver_df/country_code=nal/dt={pt}/_SUCCESS'.format(pt='{{ ds }}'),
+    bucket_name='opay-datalake',
     dag=dag
 )
 
-dependence_ods_sqoop_data_order_df = S3KeySensor(
+dependence_ods_sqoop_data_order_df = OssSensor(
     task_id='dependence_ods_sqoop_data_order_df',
-    bucket_key='obus_dw/ods_sqoop_data_order_df/country_code=nal/dt={pt}/_SUCCESS'.format(pt='{{ ds }}'),
-    bucket_name='opay-bi',
+    bucket_key='obus_dw_sqoop/ods_sqoop_data_order_df/country_code=nal/dt={pt}/_SUCCESS'.format(pt='{{ ds }}'),
+    bucket_name='opay-datalake',
     dag=dag
 )
 
-dependence_ods_sqoop_conf_city_df = S3KeySensor(
+dependence_ods_sqoop_conf_city_df = OssSensor(
     task_id='dependence_ods_sqoop_conf_city_df',
-    bucket_key='obus_dw/ods_sqoop_conf_city_df/country_code=nal/dt={pt}/_SUCCESS'.format(pt='{{ ds }}'),
-    bucket_name='opay-bi',
+    bucket_key='obus_dw_sqoop/ods_sqoop_conf_city_df/country_code=nal/dt={pt}/_SUCCESS'.format(pt='{{ ds }}'),
+    bucket_name='opay-datalake',
     dag=dag
 )
 
@@ -82,12 +83,12 @@ dependence_ods_sqoop_conf_city_df = S3KeySensor(
 end
 """
 
-sleep_time = BashOperator(
-    task_id='sleep_id',
-    depends_on_past=False,
-    bash_command='sleep 120',
-    dag=dag
-)
+# sleep_time = BashOperator(
+#     task_id='sleep_id',
+#     depends_on_past=False,
+#     bash_command='sleep 120',
+#     dag=dag
+# )
 
 
 def get_data_from_impala(**op_kwargs):
@@ -349,11 +350,9 @@ get_data_from_impala_task = PythonOperator(
     dag=dag
 )
 
-dependence_ods_sqoop_conf_line_df >> sleep_time
-dependence_ods_sqoop_conf_station_df >> sleep_time
-dependence_ods_sqoop_conf_line_stations_df >> sleep_time
-dependence_ods_sqoop_data_driver_df >> sleep_time
-dependence_ods_sqoop_data_order_df >> sleep_time
-dependence_ods_sqoop_conf_city_df >> sleep_time
-
-sleep_time >> get_data_from_impala_task
+dependence_ods_sqoop_conf_line_df >> get_data_from_impala_task
+dependence_ods_sqoop_conf_station_df >> get_data_from_impala_task
+dependence_ods_sqoop_conf_line_stations_df >> get_data_from_impala_task
+dependence_ods_sqoop_data_driver_df >> get_data_from_impala_task
+dependence_ods_sqoop_data_order_df >> get_data_from_impala_task
+dependence_ods_sqoop_conf_city_df >> get_data_from_impala_task
