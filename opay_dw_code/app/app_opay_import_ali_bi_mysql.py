@@ -318,6 +318,7 @@ hive_cursor = get_hive_cursor("hiveserver2_default")
 hive_sync_db = Variable.get("app_opay_import_ali_bi_mysql").split("\n")
 
 
+
 for hive_db_info in hive_sync_db:
     table_info = json.loads(hive_db_info)
     table = table_info.get('hive_table', None)
