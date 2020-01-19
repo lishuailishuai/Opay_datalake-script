@@ -104,7 +104,7 @@ table_name = "app_opay_active_user_report_d"
 hdfs_path = "oss://opay-datalake/opay/opay_dw/" + table_name
 
 
-def app_opay_active_user_report_d_sql_task(ds):
+def app_opay_active_user_report_d_sql_task(ds,ds_nodash):
     HQL = '''
 
     set mapred.max.split.size=1000000;
@@ -113,7 +113,7 @@ def app_opay_active_user_report_d_sql_task(ds):
     DROP TABLE IF EXISTS test_db.user_base;
     DROP TABLE IF EXISTS test_db.opay_30d;
     DROP TABLE IF EXISTS test_db.login;
-    create table test_db.user_base_{pt} as 
+    create table test_db.user_base_{date} as 
     SELECT user_id, ROLE,mobile
      FROM
           (SELECT user_id, ROLE,mobile, row_number() over(partition BY user_id ORDER BY update_time DESC) rn
@@ -121,7 +121,7 @@ def app_opay_active_user_report_d_sql_task(ds):
            WHERE dt<='{pt}' ) t1
      WHERE rn = 1;
        
-    create table test_db.opay_30d_{pt} as 
+    create table test_db.opay_30d_{date} as 
       select user_id,
              dt  
       from opay_dw_ods.ods_sqoop_base_account_user_df 
@@ -134,9 +134,9 @@ def app_opay_active_user_report_d_sql_task(ds):
                 dt 
          from opay_owealth_ods.ods_sqoop_owealth_share_acct_df where balance>0 and dt>date_sub('{pt}',30) and dt<='{pt}' and create_time<'{pt} 23:00:00')a 
       inner join 
-         test_db.user_base_{pt} b on a.user_id=b.mobile;
+         test_db.user_base_{date} b on a.user_id=b.mobile;
                
-    create table test_db.login_{pt} as 
+    create table test_db.login_{date} as 
     select dt,
            substr(from_unixtime(unix_timestamp(last_visit, 'yyyy-MM-dd HH:mm:ss')+3600),1,10) last_visit,a.user_id,role 
      from 
@@ -144,7 +144,7 @@ def app_opay_active_user_report_d_sql_task(ds):
              from opay_dw_ods.ods_sqoop_base_user_operator_df 
              where dt='{pt}' and substr(from_unixtime(unix_timestamp(last_visit, 'yyyy-MM-dd HH:mm:ss')+3600),1,10) > date_sub('{pt}',30))a 
     inner join 
-          test_db.user_base_{pt} b 
+          test_db.user_base_{date} b 
     on a.user_id=b.user_id;
     
     with bind_card as
@@ -169,7 +169,7 @@ def app_opay_active_user_report_d_sql_task(ds):
        from 
             (select user_id,dt from opay_owealth_ods.ods_sqoop_owealth_share_acct_df where balance>0 and dt='{pt}' and create_time<'{pt} 23:00:00')a 
        inner join 
-           test_db.user_base_{pt} b on a.user_id=b.mobile
+           test_db.user_base_{date} b on a.user_id=b.mobile
          
        ),
     
@@ -219,7 +219,7 @@ def app_opay_active_user_report_d_sql_task(ds):
                     '-' top_consume_scenario,
                     'login_user_cnt_d' target_type,
                     count(DISTINCT CASE WHEN last_visit='{pt}' THEN user_id END) c
-                FROM test_db.login_{pt}
+                FROM test_db.login_{date}
                 GROUP BY dt, ROLE
                 UNION ALL 
                 SELECT 
@@ -228,7 +228,7 @@ def app_opay_active_user_report_d_sql_task(ds):
                     '-' top_consume_scenario,
                     'login_user_cnt_d' target_type,
                     count(DISTINCT CASE WHEN last_visit='{pt}' THEN user_id END) c
-                FROM test_db.login_{pt}
+                FROM test_db.login_{date}
                 GROUP BY dt
                 UNION 
                 ALL 
@@ -238,7 +238,7 @@ def app_opay_active_user_report_d_sql_task(ds):
                     '-' top_consume_scenario,
                     'login_user_cnt_7d' target_type,
                     count(DISTINCT CASE WHEN last_visit>date_sub('{pt}',7) AND last_visit<='{pt}' THEN user_id END) c
-                FROM test_db.login_{pt}
+                FROM test_db.login_{date}
                 GROUP BY dt, ROLE
                 UNION ALL 
                 SELECT 
@@ -247,7 +247,7 @@ def app_opay_active_user_report_d_sql_task(ds):
                     '-' top_consume_scenario,
                     'login_user_cnt_7d' target_type,
                     count(DISTINCT CASE WHEN last_visit>date_sub('{pt}',7) AND last_visit<='{pt}' THEN user_id END) c
-                FROM test_db.login_{pt}
+                FROM test_db.login_{date}
                 GROUP BY dt
                 UNION ALL 
                 SELECT 
@@ -256,7 +256,7 @@ def app_opay_active_user_report_d_sql_task(ds):
                     '-' top_consume_scenario,
                     'login_user_cnt_30d' target_type,
                     count(DISTINCT CASE WHEN last_visit>date_sub('{pt}',30) AND last_visit<='{pt}' THEN user_id END) c
-                FROM test_db.login_{pt}
+                FROM test_db.login_{date}
                 GROUP BY dt, ROLE
                 UNION ALL 
                 SELECT 
@@ -265,7 +265,7 @@ def app_opay_active_user_report_d_sql_task(ds):
                     '-' top_consume_scenario,
                     'login_user_cnt_30d' target_type,
                     count(DISTINCT CASE WHEN last_visit>date_sub('{pt}',30) AND last_visit<='{pt}' THEN user_id END) c
-                FROM test_db.login_{pt}
+                FROM test_db.login_{date}
                 GROUP BY dt
                 UNION ALL 
                 SELECT 
@@ -304,7 +304,7 @@ def app_opay_active_user_report_d_sql_task(ds):
                     'opay_bal_not_zero_user_cnt_7d' target_type,
                     count(1) c
                 from 
-                   (select user_id FROM test_db.opay_30d_{pt} where dt>=date_sub('{pt}',7) group by user_id) m
+                   (select user_id FROM test_db.opay_30d_{date} where dt>=date_sub('{pt}',7) group by user_id) m
                 UNION ALL 
                 SELECT 
                     '{pt}' dt,
@@ -313,7 +313,7 @@ def app_opay_active_user_report_d_sql_task(ds):
                     'opay_bal_not_zero_user_cnt_30d' target_type,
                     count(1) c
                 FROM 
-                   (select user_id from test_db.opay_30d_{pt} group by user_id)m 
+                   (select user_id from test_db.opay_30d_{date} group by user_id)m 
                 UNION ALL 
                 SELECT 
                     dt,
@@ -324,9 +324,9 @@ def app_opay_active_user_report_d_sql_task(ds):
                 FROM opay_active
                 GROUP BY dt
             ) m;
-    DROP TABLE IF EXISTS test_db.user_base_{pt};
-    DROP TABLE IF EXISTS test_db.opay_30d_{pt};
-    DROP TABLE IF EXISTS test_db.login_{pt};
+    DROP TABLE IF EXISTS test_db.user_base_{date};
+    DROP TABLE IF EXISTS test_db.opay_30d_{date};
+    DROP TABLE IF EXISTS test_db.login_{date};
         
 
 
@@ -334,16 +334,17 @@ def app_opay_active_user_report_d_sql_task(ds):
     '''.format(
         pt=ds,
         table=table_name,
-        db=db_name
+        db=db_name,
+        date=ds_nodash
     )
     return HQL
 
 
-def execution_data_task_id(ds, **kargs):
+def execution_data_task_id(ds, ds_nodash,  **kargs):
     hive_hook = HiveCliHook()
 
     # 读取sql
-    _sql = app_opay_active_user_report_d_sql_task(ds)
+    _sql = app_opay_active_user_report_d_sql_task(ds,ds_nodash)
 
     logging.info('Executing: %s', _sql)
 
