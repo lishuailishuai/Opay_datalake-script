@@ -315,7 +315,7 @@ def init_mysql_table(**op_kwargs):
 
 # 遍历同步的数据库
 hive_cursor = get_hive_cursor("hiveserver2_default")
-hive_sync_db = Variable.get("app_oride_import_bi_mysql").split("\n")
+hive_sync_db = Variable.get("app_opay_import_ali_bi_mysql").split("\n")
 
 
 for hive_db_info in hive_sync_db:
