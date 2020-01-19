@@ -179,7 +179,7 @@ def app_opay_active_user_report_d_sql_task(ds,ds_nodash):
             from 
                (select dt,user_id from opay_account union all select dt,user_id from bind_card) a
             inner join 
-               (select user_id from test_db.login where last_visit<='{pt}') b 
+               (select user_id from test_db.login_{date} where last_visit<='{pt}') b 
             on a.user_id=b.user_id)
     
     INSERT overwrite TABLE opay_dw.app_opay_active_user_report_d partition (dt,target_type)
