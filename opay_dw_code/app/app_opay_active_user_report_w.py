@@ -103,7 +103,7 @@ SELECT a.dt,
              user_id,
              substr(from_unixtime(unix_timestamp(last_visit, 'yyyy-MM-dd HH:mm:ss')+3600),1,10) last_visit
       FROM opay_dw_ods.ods_sqoop_base_user_operator_df
-      WHERE dt='{pt}'
+      WHERE dt='{pt}') a
 INNER JOIN test_db.login_w_{date} b ON a.user_id=b.user_id;
 
 INSERT overwrite TABLE opay_dw.app_opay_active_user_report_w partition (dt,target_type)
