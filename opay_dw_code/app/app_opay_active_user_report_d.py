@@ -110,10 +110,7 @@ def app_opay_active_user_report_d_sql_task(ds,ds_nodash):
     set mapred.max.split.size=1000000;
     set hive.exec.dynamic.partition.mode=nonstrict;
     set hive.exec.parallel=true;
-   DROP TABLE IF EXISTS test_db.user_base_{date};
-    DROP TABLE IF EXISTS test_db.opay_30d_{date};
-    DROP TABLE IF EXISTS test_db.login_{date};
-    create table test_db.user_base_{date} as 
+    create table if not exists test_db.user_base_{date} as 
     SELECT user_id, ROLE,mobile
      FROM
           (SELECT user_id, ROLE,mobile, row_number() over(partition BY user_id ORDER BY update_time DESC) rn
@@ -121,7 +118,7 @@ def app_opay_active_user_report_d_sql_task(ds,ds_nodash):
            WHERE dt<='{pt}' ) t1
      WHERE rn = 1;
        
-    create table test_db.opay_30d_{date} as 
+    create table if not exists test_db.opay_30d_{date} as 
       select user_id,
              dt  
       from opay_dw_ods.ods_sqoop_base_account_user_df 
@@ -136,7 +133,7 @@ def app_opay_active_user_report_d_sql_task(ds,ds_nodash):
       inner join 
          test_db.user_base_{date} b on a.user_id=b.mobile;
                
-    create table test_db.login_{date} as 
+    create table if not exists test_db.login_{date} as 
     select dt,
            substr(from_unixtime(unix_timestamp(last_visit, 'yyyy-MM-dd HH:mm:ss')+3600),1,10) last_visit,a.user_id,role 
      from 
