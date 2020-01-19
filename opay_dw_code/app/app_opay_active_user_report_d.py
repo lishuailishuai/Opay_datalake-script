@@ -110,9 +110,9 @@ def app_opay_active_user_report_d_sql_task(ds,ds_nodash):
     set mapred.max.split.size=1000000;
     set hive.exec.dynamic.partition.mode=nonstrict;
     set hive.exec.parallel=true;
-    DROP TABLE IF EXISTS test_db.user_base;
-    DROP TABLE IF EXISTS test_db.opay_30d;
-    DROP TABLE IF EXISTS test_db.login;
+   DROP TABLE IF EXISTS test_db.user_base_{date};
+    DROP TABLE IF EXISTS test_db.opay_30d_{date};
+    DROP TABLE IF EXISTS test_db.login_{date};
     create table test_db.user_base_{date} as 
     SELECT user_id, ROLE,mobile
      FROM
