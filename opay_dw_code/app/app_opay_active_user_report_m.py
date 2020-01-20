@@ -71,14 +71,16 @@ table_name = "app_opay_active_user_report_m"
 hdfs_path = "oss://opay-datalake/opay/opay_dw/" + table_name
 
 
-def app_opay_active_user_report_m_sql_task(ds):
+def app_opay_active_user_report_m_sql_task(ds,ds_nodash):
     HQL = '''
 
     set mapred.max.split.size=1000000;
     set hive.exec.dynamic.partition.mode=nonstrict;
     set hive.exec.parallel=true;
-    with user_base AS
-  (SELECT user_id,
+     DROP TABLE IF EXISTS test_db.user_base_m_{date};
+    DROP TABLE IF EXISTS test_db.login_m_{date};
+    create table test_db.user_base_m_{date} as 
+  SELECT user_id,
           ROLE,
           mobile
    FROM
@@ -89,9 +91,9 @@ def app_opay_active_user_report_m_sql_task(ds):
                                ORDER BY update_time DESC) rn
       FROM opay_dw.dim_opay_user_base_di
       WHERE dt<='{pt}' ) t1
-   WHERE rn = 1),
-login AS
-  (SELECT a.dt,
+   WHERE rn = 1;
+   create table test_db.login_m_{date} as 
+SELECT a.dt,
           a.user_id,
           ROLE,
           last_visit
@@ -101,7 +103,8 @@ login AS
              substr(from_unixtime(unix_timestamp(last_visit, 'yyyy-MM-dd HH:mm:ss')+3600),1,10) last_visit
       FROM opay_dw_ods.ods_sqoop_base_user_operator_df
       WHERE dt='{pt}') a
-   INNER JOIN user_base b ON a.user_id=b.user_id)
+   INNER JOIN test_db.user_base_m_{date} b ON a.user_id=b.user_id;
+   
 INSERT overwrite TABLE opay_dw.app_opay_active_user_report_m partition (dt,target_type)
 SELECT '-' country_code,
            '-' city,
@@ -117,7 +120,7 @@ SELECT dt,
        ROLE,
        'login_user_cnt_m' target_type,
                            count(DISTINCT user_id) c
-FROM login
+FROM test_db.login_m_{date}
 WHERE last_visit>=date_format('{pt}', 'yyyy-MM-01')
   AND last_visit<='{pt}'
 GROUP BY dt,
@@ -127,28 +130,31 @@ SELECT dt,
        'ALL' ROLE,
        'login_user_cnt_m' target_type,
                            count(DISTINCT user_id) c
-FROM login
+FROM test_db.login_m_{date}
 WHERE last_visit>=date_format('{pt}', 'yyyy-MM-01')
   AND last_visit<='{pt}'
 GROUP BY dt
-)m
+)m;
 
+DROP TABLE IF EXISTS test_db.user_base_m_{date};
+    DROP TABLE IF EXISTS test_db.login_m_{date};
 
 
 
     '''.format(
         pt=ds,
         table=table_name,
-        db=db_name
+        db=db_name,
+        date=ds_nodash
     )
     return HQL
 
 
-def execution_data_task_id(ds, **kargs):
+def execution_data_task_id(ds, ds_nodash,  **kargs):
     hive_hook = HiveCliHook()
 
     # 读取sql
-    _sql = app_opay_active_user_report_m_sql_task(ds)
+    _sql = app_opay_active_user_report_m_sql_task(ds,ds_nodash)
 
     logging.info('Executing: %s', _sql)
 
