@@ -801,6 +801,8 @@ def __finally():
 @:param update 更新列
 """
 def __data_to_mysql(conn, data, column, update=''):
+    # 指定UTC时区
+    conn.execute("SET time_zone = '+00:00'")
     isql = 'insert into oride_orders_status_10min ({})'.format(','.join(column))
     esql = '{0} values {1} on duplicate key update {2}'
     sval = ''
