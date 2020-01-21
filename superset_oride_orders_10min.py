@@ -895,7 +895,7 @@ def get_driver_num(**op_kwargs):
     conn = get_db_conn('mysql_bi')
     mcursor = conn.cursor()
     mcursor.executemany(insert_driver_num, res)
-    logging.info('insert num %s', len(res))
+    logging.info('insert num %s, data %s', len(res), str(res))
     conn.commit()
     mcursor.close()
     conn.close()
