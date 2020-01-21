@@ -38,7 +38,7 @@ args = {
 } 
 
 dag = airflow.DAG( 'dwd_oride_algo_driver_score_record_di', 
-    schedule_interval="00 01 * * *", 
+    schedule_interval="20 01 * * *", 
     default_args=args,
     catchup=False) 
 

@@ -25,7 +25,7 @@ import os
 
 args = {
     'owner': 'xiedong',
-    'start_date': datetime(2019, 9, 22),
+    'start_date': datetime(2020, 1, 16),
     'depends_on_past': False,
     'retries': 3,
     'retry_delay': timedelta(minutes=2),
@@ -34,8 +34,8 @@ args = {
     'email_on_retry': False,
 }
 
-dag = airflow.DAG('app_opay_bd_agent_cico_d',
-                  schedule_interval="00 03 * * *",
+dag = airflow.DAG('dwm_opay_bd_agent_cico_d',
+                  schedule_interval="00 02 * * *",
                   default_args=args
                   )
 
@@ -50,6 +50,18 @@ dwd_opay_transfer_of_account_record_di_task = OssSensor(
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
+
+ods_bd_agent_df_prev_day_task = OssSensor(
+    task_id='ods_bd_agent_df_prev_day_task',
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="opay_dw_sqoop/opay_agent_crm/bd_agent",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
 
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
 def fun_task_timeout_monitor(ds,dag,**op_kwargs):
@@ -71,11 +83,11 @@ task_timeout_monitor= PythonOperator(
 
 ##----------------------------------------- 变量 ---------------------------------------##
 db_name="opay_dw"
-table_name="app_opay_bd_agent_cico_d"
+table_name="dwm_opay_bd_agent_cico_d"
 hdfs_path="oss://opay-datalake/opay/opay_dw/"+table_name
 
 ##---- hive operator ---##
-def app_opay_bd_agent_cico_d_sql_task(ds):
+def dwm_opay_bd_agent_cico_d_sql_task(ds):
     HQL='''
     
     set mapred.max.split.size=1000000;
@@ -84,8 +96,8 @@ def app_opay_bd_agent_cico_d_sql_task(ds):
     with 
 	agent_data as (
 		select 
-			*
-		from bd_agent
+			id, cast(opay_id as string) as opay_id, bd_id, agent_status, updated_at
+		from opay_dw_ods.ods_sqoop_base_bd_agent_df
 		where dt = '{pt}'
 	),
 	bd_agent_data as (
@@ -107,17 +119,14 @@ def app_opay_bd_agent_cico_d_sql_task(ds):
 			sum(amount) as ci_suc_order_amt_m,
 			sum(if(create_time BETWEEN date_format(date_sub('{pt}', 1), 'yyyy-MM-dd 23') AND date_format('{pt}', 'yyyy-MM-dd 23'), 1, 0)) as ci_suc_order_cnt,
 			sum(if(create_time BETWEEN date_format(date_sub('{pt}', 1), 'yyyy-MM-dd 23') AND date_format('{pt}', 'yyyy-MM-dd 23'), amount, 0)) as ci_suc_order_amt
-		from (
-			select 
-				opay_id, bd_id
-			from agent_date
-		) t1 join (
+		from agent_data t1
+		join (
 			select 
 				affiliate_id, amount, create_time, country_code
 			from (
 				select
 					affiliate_id, amount, create_time, country_code, row_number() over(partition by order_no order by update_time) rn
-				from opay_dw_ods.dwd_opay_transfer_of_account_record_di
+				from opay_dw.dwd_opay_transfer_of_account_record_di
 				where date_format(dt, 'yyyy-MM') = date_format('{pt}', 'yyyy-MM') and order_status = 'SUCCESS' and sub_service_type = 'Cash In'
 			) t0 where rn = 1
 		) ci on t1.opay_id = ci.affiliate_id
@@ -126,15 +135,12 @@ def app_opay_bd_agent_cico_d_sql_task(ds):
 	bd_co_data as (
 		select
 			t1.bd_id, 
-			count(*) as ci_suc_order_cnt_m,
-			sum(amount) as ci_suc_order_amt_m,
-			sum(if(create_time BETWEEN date_format(date_sub('{pt}', 1), 'yyyy-MM-dd 23') AND date_format('{pt}', 'yyyy-MM-dd 23'), 1, 0)) as ci_suc_order_cnt,
-			sum(if(create_time BETWEEN date_format(date_sub('{pt}', 1), 'yyyy-MM-dd 23') AND date_format('{pt}', 'yyyy-MM-dd 23'), amount, 0)) as ci_suc_order_amt
-		from (
-			select 
-				opay_id, bd_id
-			from agent_date
-		) t1 join (
+			count(*) as co_suc_order_cnt_m,
+			sum(amount) as co_suc_order_amt_m,
+			sum(if(create_time BETWEEN date_format(date_sub('{pt}', 1), 'yyyy-MM-dd 23') AND date_format('{pt}', 'yyyy-MM-dd 23'), 1, 0)) as co_suc_order_cnt,
+			sum(if(create_time BETWEEN date_format(date_sub('{pt}', 1), 'yyyy-MM-dd 23') AND date_format('{pt}', 'yyyy-MM-dd 23'), amount, 0)) as co_suc_order_amt
+		from agent_data t1
+		join (
 			select 
 				originator_id, amount, create_time, country_code
 			from (
@@ -146,22 +152,19 @@ def app_opay_bd_agent_cico_d_sql_task(ds):
 		) co on t1.opay_id = co.originator_id
 		group by t1.bd_id
 	)
-	insert overwrite {db}.{table}  partition(country_code='NG', dt='{pt}')
+	insert overwrite table {db}.{table} partition(country_code='NG', dt='{pt}')
 	select 
-	    t13.id as bd_admin_user_id, t13.username as bd_admin_user_name, t13.mobile as bd_admin_user_mobile, t13.department_id as bd_admin_dept_id, 
-	    t13.job_id as bd_admin_job_id, t13.leader_id as bd_admin_leader_id,
-	    nvl(t10.audited_agent_cnt_his, 0), nvl(t10.audited_agent_cnt_m, 0), nvl(t10.audited_agent_cnt, 0), nvl(t10.rejected_agent_cnt_m, 0), nvl(t10.rejected_agent_cnt, 0),
-	    nvl(t11.ci_suc_order_cnt, 0), nvl(t11.ci_suc_order_amt, 0), nvl(t11.ci_suc_order_cnt_m, 0), nvl(t11.ci_suc_order_amt_m, 0),
-	    nvl(t12.co_suc_order_cnt, 0), nvl(t12.co_suc_order_amt, 0), nvl(t12.co_suc_order_cnt_m, 0), nvl(t12.co_suc_order_amt_m, 0)
+	    t10.bd_id as bd_admin_user_id,
+	    nvl(t10.audited_agent_cnt_his, 0) as audited_agent_cnt_his, nvl(t10.audited_agent_cnt_m, 0) as audited_agent_cnt_m, 
+	    nvl(t10.audited_agent_cnt, 0) as audited_agent_cnt, nvl(t10.rejected_agent_cnt_m, 0) as rejected_agent_cnt_m, 
+	    nvl(t10.rejected_agent_cnt, 0) as rejected_agent_cnt, 
+	    nvl(t11.ci_suc_order_cnt, 0) as ci_suc_order_cnt, nvl(t11.ci_suc_order_amt, 0) as ci_suc_order_amt, 
+	    nvl(t11.ci_suc_order_cnt_m, 0) as ci_suc_order_cnt_m, nvl(t11.ci_suc_order_amt_m, 0) as ci_suc_order_amt_m,
+	    nvl(t12.co_suc_order_cnt, 0) as co_suc_order_cnt, nvl(t12.co_suc_order_amt, 0) as co_suc_order_amt, 
+	    nvl(t12.co_suc_order_cnt_m, 0) as co_suc_order_cnt_m, nvl(t12.co_suc_order_amt_m, 0) as co_suc_order_amt_m
 	from bd_agent_data t10
 	left join bd_ci_data t11 on t10.bd_id = t11.bd_id
-	left join bd_co_data t12 on t10.bd_id = t12.bd_id 
-	left join (
-	    select 
-	        * 
-	    from bd_admin_users where dt = '{pt}'
-	) t13 on t10.bd_id = t13.id
-        
+	left join bd_co_data t12 on t10.bd_id = t12.bd_id
     '''.format(
         pt=ds,
         table=table_name,
@@ -175,7 +178,7 @@ def execution_data_task_id(ds, **kargs):
     hive_hook = HiveCliHook()
 
     # 读取sql
-    _sql = app_opay_bd_agent_cico_d_sql_task(ds)
+    _sql = dwm_opay_bd_agent_cico_d_sql_task(ds)
 
     logging.info('Executing: %s', _sql)
 
@@ -192,11 +195,12 @@ def execution_data_task_id(ds, **kargs):
     """
     TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "true", "true")
 
-app_opay_bd_agent_cico_d_task = PythonOperator(
-    task_id='app_opay_bd_agent_cico_d_task',
+dwm_opay_bd_agent_cico_d_task = PythonOperator(
+    task_id='dwm_opay_bd_agent_cico_d_task',
     python_callable=execution_data_task_id,
     provide_context=True,
     dag=dag
 )
 
-dwd_opay_transfer_of_account_record_di_task >> app_opay_bd_agent_cico_d_task
+dwd_opay_transfer_of_account_record_di_task >> dwm_opay_bd_agent_cico_d_task
+ods_bd_agent_df_prev_day_task >> dwm_opay_bd_agent_cico_d_task

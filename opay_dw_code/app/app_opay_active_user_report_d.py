@@ -54,16 +54,7 @@ dim_opay_user_base_di_prev_day_task = OssSensor(
     dag=dag
 )
 
-dwd_opay_account_balance_df_prev_day_task = OssSensor(
-    task_id='dwd_opay_account_balance_df_prev_day_task',
-    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opay/opay_dw/dwd_opay_account_balance_df/country_code=NG",
-        pt='{{ds}}'
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
+
 ods_sqoop_owealth_share_acct_df_prev_day_task = OssSensor(
     task_id='ods_sqoop_owealth_share_acct_df_prev_day_task',
     bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
@@ -96,6 +87,16 @@ ods_sqoop_base_user_operator_df_prev_day_task = OssSensor(
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
+ods_sqoop_base_account_user_df_prev_day_task = OssSensor(
+    task_id='ods_sqoop_base_account_user_df_prev_day_task',
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="opay_dw_sqoop/opay_account/account_user",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
 ##----------------------------------------- 变量 ---------------------------------------##
 db_name = "opay_dw"
 
@@ -103,203 +104,244 @@ table_name = "app_opay_active_user_report_d"
 hdfs_path = "oss://opay-datalake/opay/opay_dw/" + table_name
 
 
-def app_opay_active_user_report_d_sql_task(ds):
+def app_opay_active_user_report_d_sql_task(ds,ds_nodash):
     HQL = '''
 
     set mapred.max.split.size=1000000;
     set hive.exec.dynamic.partition.mode=nonstrict;
     set hive.exec.parallel=true;
-    --绑卡
-    WITH bind_card AS
-      (SELECT dt,user_id,pay_status
+    create table if not exists test_db.user_base_{date} as 
+    SELECT user_id, ROLE,mobile
+     FROM
+          (SELECT user_id, ROLE,mobile, row_number() over(partition BY user_id ORDER BY update_time DESC) rn
+            FROM opay_dw.dim_opay_user_base_di
+           WHERE dt<='{pt}' ) t1
+     WHERE rn = 1;
+       
+    create table if not exists test_db.opay_30d_{date} as 
+      select user_id,
+             dt  
+      from opay_dw_ods.ods_sqoop_base_account_user_df 
+      where balance>0 and account_type='CASHACCOUNT' and dt>date_sub('{pt}',30) and dt<='{pt}' and create_time<'{pt} 23:00:00'
+      union 
+      select b.user_id,
+             dt
+      from 
+        (select user_id,
+                dt 
+         from opay_owealth_ods.ods_sqoop_owealth_share_acct_df where balance>0 and dt>date_sub('{pt}',30) and dt<='{pt}' and create_time<'{pt} 23:00:00')a 
+      inner join 
+         test_db.user_base_{date} b on a.user_id=b.mobile;
+               
+    create table if not exists test_db.login_{date} as 
+    select dt,
+           substr(from_unixtime(unix_timestamp(last_visit, 'yyyy-MM-dd HH:mm:ss')+3600),1,10) last_visit,a.user_id,role 
+     from 
+          (select dt,user_id ,last_visit
+             from opay_dw_ods.ods_sqoop_base_user_operator_df 
+             where dt='{pt}' and substr(from_unixtime(unix_timestamp(last_visit, 'yyyy-MM-dd HH:mm:ss')+3600),1,10) > date_sub('{pt}',30))a 
+    inner join 
+          test_db.user_base_{date} b 
+    on a.user_id=b.user_id;
+    
+    with bind_card as
+       (SELECt dt,
+               user_id,
+               pay_status
        FROM opay_dw_ods.ods_sqoop_base_user_payment_instrument_df
        WHERE dt='{pt}'
-         AND create_time<'{pt} 23:00:00'
-         AND payment_type = '1'), 
-    user_base as 
-      (SELECT user_id,
-                 ROLE,
-                 mobile
-          FROM
-            (SELECT user_id,
-                    ROLE,
-                    mobile,
-                    row_number() over(partition BY user_id
-                                      ORDER BY update_time DESC) rn
-             FROM opay_dw.dim_opay_user_base_di
-             WHERE dt<='{pt}' ) t1
-          WHERE rn = 1),
-    --登录
-     login AS
-      (SELECT a.dt,
-              a.user_id,
-              ROLE,
-              last_visit
-       FROM
-         (SELECT dt,user_id,
-                 substr(from_unixtime(unix_timestamp(last_visit, 'yyyy-MM-dd HH:mm:ss')+3600),1,10) last_visit
-          FROM opay_dw_ods.ods_sqoop_base_user_operator_df
-          WHERE dt='{pt}' and substr(from_unixtime(unix_timestamp(last_visit, 'yyyy-MM-dd HH:mm:ss')+3600),1,10)>date_sub('{pt}',30)) a
-       INNER JOIN
-         user_base b ON a.user_id=b.user_id),
-          opay_account_30d AS
-      (SELECT user_id,
-              dt
-       FROM opay_dw.dwd_opay_account_balance_df
-       WHERE dt>date_sub('{pt}',30)
-         AND dt<='{pt}'
-         AND balance>0
-         AND account_type in('CASHACCOUNT','OWEALTH')
-         AND user_type='USER'
+       AND create_time<'{pt} 23:00:00'
+       AND payment_type = '1'
        ),
-     opay_account AS
-      (SELECT user_id,
+      opay_account as
+       (select user_id,
+              'owellet' flag,
+               dt 
+       from opay_dw_ods.ods_sqoop_base_account_user_df 
+       where balance>0 and account_type='CASHACCOUNT' and dt='{pt}' and create_time<'{pt} 23:00:00'
+       union 
+       select b.user_id ,
+              'owealth' flag,
               dt
-       FROM opay_dw.dwd_opay_account_balance_df
-       WHERE dt='{pt}'
-         AND balance>0
-         AND account_type in('CASHACCOUNT','OWEALTH')
-         AND user_type='USER'),
-     opay_account_7d AS
-      (SELECT user_id,
-              dt
-       FROM opay_dw.dwd_opay_account_balance_df
-       WHERE dt>date_sub('{pt}',7)
-         AND dt<='{pt}'
-         AND balance>0
-         AND account_type in('CASHACCOUNT','OWEALTH')
-         AND user_type='USER'),
-    
-    opay_active as 
-       (select a.user_id,a.dt from 
-         (select dt,user_id from opay_account union all select dt,user_id from bind_card) a
+       from 
+            (select user_id,dt from opay_owealth_ods.ods_sqoop_owealth_share_acct_df where balance>0 and dt='{pt}' and create_time<'{pt} 23:00:00')a 
        inner join 
-         (select user_id from login where last_visit<='{pt}') b 
-       on a.user_id=b.user_id)
+           test_db.user_base_{date} b on a.user_id=b.mobile
          
-    INSERT overwrite TABLE opay_dw.app_opay_active_user_report_d partition (dt,target_type)
-    select '-' country_code,'-' city,role,'-' kyc_level,top_consume_scenario,'-' register_client,c,dt,target_type
-    from (
-    SELECT dt,'-' role,'-' top_consume_scenario,
-           'bind_card_user_cnt' target_type,
-                                count(DISTINCT user_id) c
-    FROM bind_card
-    GROUP BY dt
-    UNION ALL
-    SELECT dt,'-' role,'-' top_consume_scenario,
-           'bind_card_pay_user_cnt' target_type,
-                                    count(DISTINCT CASE
-                                                       WHEN pay_status='1' THEN user_id
-                                                   END) c
-    FROM bind_card
-    GROUP BY dt
-    UNION ALL
-    SELECT dt,
-           role,'-' top_consume_scenario,
-           'login_user_cnt_d' target_type,
-                              count(distinct CASE
-                                        WHEN last_visit='{pt}' THEN user_id
-                                    END) c
-    FROM login
-    GROUP BY dt,
-             ROLE
-    union all
-        SELECT dt,
-           'ALL' role,'-' top_consume_scenario,
-           'login_user_cnt_d' target_type,
-                              count(distinct CASE
-                                        WHEN last_visit='{pt}' THEN user_id
-                                    END) c
-    FROM login
-    GROUP BY dt
-    UNION ALL
-    SELECT dt,
-           role,'-' top_consume_scenario,
-           'login_user_cnt_7d' target_type,
-                               count(distinct CASE WHEN last_visit>date_sub('{pt}',7)
-                                     AND last_visit<='{pt}' then user_id end) c
-    FROM login
-    GROUP BY dt,
-             ROLE
-    union all
-        SELECT dt,
-           'ALL' role,'-' top_consume_scenario,
-           'login_user_cnt_7d' target_type,
-                               count(distinct CASE WHEN last_visit>date_sub('{pt}',7)
-                                     AND last_visit<='{pt}' then user_id end) c
-    FROM login
-    GROUP BY dt
-    UNION ALL
-    SELECT dt,
-           role,'-' top_consume_scenario,
-           'login_user_cnt_30d' target_type,
-                                count(distinct CASE WHEN last_visit>date_sub('{pt}',30)
-                                      AND last_visit<='{pt}' then user_id end) c
-    FROM login
-    GROUP BY dt,
-             ROLE
-    union all
-    select dt,'ALL' role,'-' top_consume_scenario,'login_user_cnt_30d' target_type,
-            count(distinct CASE WHEN last_visit>date_sub('{pt}',30)
-                                      AND last_visit<='{pt}' then user_id end) c
-    from login
-           group by dt
-    UNION ALL
-    SELECT dt,'-' role,'-' top_consume_scenario,
-           'owallet_bal_not_zero_user_cnt' target_type,
-                                           count(DISTINCT user_id) c
-    FROM opay_dw.dwd_opay_account_balance_df
-    WHERE dt='{pt}'
-      AND account_type='CASHACCOUNT'
-      AND user_type='USER'
-      AND balance>0
-    GROUP BY dt
-    UNION ALL
-    SELECT dt,'-' role,'-' top_consume_scenario,
-           'owealth_bal_not_zero_user_cnt' target_type,
-           count(DISTINCT user_id) c
-    FROM opay_owealth_ods.ods_sqoop_owealth_share_acct_df
-    WHERE dt='{pt}'
-      AND balance>0
-    GROUP BY dt
-    union all
-    SELECT dt,'-' role,'-' top_consume_scenario,
-           'opay_bal_not_zero_user_cnt' target_type,
-           count(DISTINCT user_id) c
-    FROM opay_account
-    GROUP BY dt
-    UNION ALL
-    SELECT '{pt}' dt,'-' role,'-' top_consume_scenario,
-           'opay_bal_not_zero_user_cnt_7d' target_type,
-           count(DISTINCT user_id) c
-    FROM opay_account_7d
-    UNION ALL
-    SELECT '{pt}' dt,'-' role,'-' top_consume_scenario,
-           'opay_bal_not_zero_user_cnt_30d' target_type,
-           count(DISTINCT user_id) c
-    FROM opay_account_30d
-    union all
-    select dt,'-' role,'-' top_consume_scenario,'opay_active_user_cnt' target_type,count(distinct user_id) c from opay_active 
-    group by dt
-    ) m 
-
+       ),
     
+      opay_active as 
+           (select a.user_id,
+                   a.dt 
+            from 
+               (select dt,user_id from opay_account union all select dt,user_id from bind_card) a
+            inner join 
+               (select user_id from test_db.login_{date} where last_visit<='{pt}') b 
+            on a.user_id=b.user_id)
+    
+    INSERT overwrite TABLE opay_dw.app_opay_active_user_report_d partition (dt,target_type)
+    
+    SELECT 
+                '-' country_code,
+                '-' city,
+                ROLE,
+                '-' kyc_level,
+                top_consume_scenario,
+                '-' register_client,
+                c,
+                dt,
+                target_type
+            FROM (
+                SELECT 
+                    dt,
+                    '-' ROLE,
+                    '-' top_consume_scenario,
+                    'bind_card_user_cnt' target_type,
+                    count(DISTINCT user_id ) c
+                FROM bind_card
+                GROUP BY dt
+                UNION ALL 
+                SELECT 
+                    dt,
+                    '-' ROLE,
+                    '-' top_consume_scenario,
+                    'bind_card_pay_user_cnt' target_type,
+                    count(DISTINCT CASE WHEN pay_status='1' THEN user_id END) c
+                FROM bind_card
+                GROUP BY dt
+                UNION ALL 
+                SELECT 
+                    dt,
+                    ROLE,
+                    '-' top_consume_scenario,
+                    'login_user_cnt_d' target_type,
+                    count(DISTINCT CASE WHEN last_visit='{pt}' THEN user_id END) c
+                FROM test_db.login_{date}
+                GROUP BY dt, ROLE
+                UNION ALL 
+                SELECT 
+                    dt,
+                    'ALL' ROLE,
+                    '-' top_consume_scenario,
+                    'login_user_cnt_d' target_type,
+                    count(DISTINCT CASE WHEN last_visit='{pt}' THEN user_id END) c
+                FROM test_db.login_{date}
+                GROUP BY dt
+                UNION 
+                ALL 
+                SELECT 
+                    dt,
+                    ROLE,
+                    '-' top_consume_scenario,
+                    'login_user_cnt_7d' target_type,
+                    count(DISTINCT CASE WHEN last_visit>date_sub('{pt}',7) AND last_visit<='{pt}' THEN user_id END) c
+                FROM test_db.login_{date}
+                GROUP BY dt, ROLE
+                UNION ALL 
+                SELECT 
+                    dt,
+                    'ALL' ROLE,
+                    '-' top_consume_scenario,
+                    'login_user_cnt_7d' target_type,
+                    count(DISTINCT CASE WHEN last_visit>date_sub('{pt}',7) AND last_visit<='{pt}' THEN user_id END) c
+                FROM test_db.login_{date}
+                GROUP BY dt
+                UNION ALL 
+                SELECT 
+                    dt,
+                    ROLE,
+                    '-' top_consume_scenario,
+                    'login_user_cnt_30d' target_type,
+                    count(DISTINCT CASE WHEN last_visit>date_sub('{pt}',30) AND last_visit<='{pt}' THEN user_id END) c
+                FROM test_db.login_{date}
+                GROUP BY dt, ROLE
+                UNION ALL 
+                SELECT 
+                    dt,
+                    'ALL' ROLE,
+                    '-' top_consume_scenario,
+                    'login_user_cnt_30d' target_type,
+                    count(DISTINCT CASE WHEN last_visit>date_sub('{pt}',30) AND last_visit<='{pt}' THEN user_id END) c
+                FROM test_db.login_{date}
+                GROUP BY dt
+                UNION ALL 
+                SELECT 
+                    dt,
+                    '-' ROLE,
+                    '-' top_consume_scenario,
+                    'owallet_bal_not_zero_user_cnt' target_type,
+                    count(DISTINCT user_id) c
+                FROM opay_dw_ods.ods_sqoop_base_account_user_df
+                WHERE dt='{pt}' AND account_type='CASHACCOUNT' AND balance>0 and create_time<'{pt} 23:00:00'
+                GROUP BY dt
+                UNION ALL 
+                SELECT 
+                    dt,
+                    '-' ROLE,
+                    '-' top_consume_scenario,
+                    'owealth_bal_not_zero_user_cnt' target_type,
+                    count(DISTINCT user_id) c
+                FROM opay_owealth_ods.ods_sqoop_owealth_share_acct_df
+                WHERE dt='{pt}' AND balance>0 and create_time<'{pt} 23:00:00'
+                GROUP BY dt
+                UNION ALL 
+                SELECT 
+                    dt,
+                    '-' ROLE,
+                    '-' top_consume_scenario,
+                    'opay_bal_not_zero_user_cnt' target_type,
+                    count(DISTINCT user_id) c
+                FROM opay_account
+                GROUP BY dt
+                UNION ALL 
+                SELECT 
+                    '{pt}' dt,
+                    '-' ROLE,
+                    '-' top_consume_scenario,
+                    'opay_bal_not_zero_user_cnt_7d' target_type,
+                    count(1) c
+                from 
+                   (select user_id FROM test_db.opay_30d_{date} where dt>=date_sub('{pt}',7) group by user_id) m
+                UNION ALL 
+                SELECT 
+                    '{pt}' dt,
+                    '-' ROLE,
+                    '-' top_consume_scenario,
+                    'opay_bal_not_zero_user_cnt_30d' target_type,
+                    count(1) c
+                FROM 
+                   (select user_id from test_db.opay_30d_{date} group by user_id)m 
+                UNION ALL 
+                SELECT 
+                    dt,
+                    '-' ROLE,
+                    '-' top_consume_scenario,
+                    'opay_active_user_cnt' target_type,
+                    count(DISTINCT user_id) c
+                FROM opay_active
+                GROUP BY dt
+            ) m;
+    DROP TABLE IF EXISTS test_db.user_base_{date};
+    DROP TABLE IF EXISTS test_db.opay_30d_{date};
+    DROP TABLE IF EXISTS test_db.login_{date};
+        
 
 
 
     '''.format(
         pt=ds,
         table=table_name,
-        db=db_name
+        db=db_name,
+        date=ds_nodash
     )
     return HQL
 
 
-def execution_data_task_id(ds, **kargs):
+def execution_data_task_id(ds, ds_nodash,  **kargs):
     hive_hook = HiveCliHook()
 
     # 读取sql
-    _sql = app_opay_active_user_report_d_sql_task(ds)
+    _sql = app_opay_active_user_report_d_sql_task(ds,ds_nodash)
 
     logging.info('Executing: %s', _sql)
 
@@ -323,9 +365,9 @@ app_opay_active_user_report_d_task = PythonOperator(
 )
 
 dim_opay_user_base_di_prev_day_task >> app_opay_active_user_report_d_task
-dwd_opay_account_balance_df_prev_day_task >> app_opay_active_user_report_d_task
 ods_sqoop_base_user_payment_instrument_df_prev_day_task >> app_opay_active_user_report_d_task
 ods_sqoop_base_user_operator_df_prev_day_task >> app_opay_active_user_report_d_task
 ods_sqoop_owealth_share_acct_df_prev_day_task >> app_opay_active_user_report_d_task
+ods_sqoop_base_account_user_df_prev_day_task >> app_opay_active_user_report_d_task
 
 

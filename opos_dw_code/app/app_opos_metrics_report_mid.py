@@ -242,17 +242,17 @@ payment_info as (
   ,count(distinct(if(activity_type in ('RFR','FR') and first_order='1',sender_id,null))) as reduce_first_people_cnt
   
   --优惠券分析
-  ,count(if(discount_type is not null,1,null)) as coupon_order_cnt
-  ,count(distinct(if(discount_type is not null,sender_id,null))) as coupon_order_people
-  ,count(distinct(if(discount_type is not null and first_order='1',sender_id,null))) as coupon_first_order_people
-  ,sum(if(discount_type is not null,pay_amount,0)) as coupon_pay_amount
-  ,sum(if(discount_type is not null,org_payment_amount,0)) as coupon_order_gmv
-  ,sum(if(discount_type is not null,discount_amount,0)) as coupon_discount_amount
+  ,count(if(nvl(discount_type,'')!='',1,null)) as coupon_order_cnt
+  ,count(distinct(if(nvl(discount_type,'')!='',sender_id,null))) as coupon_order_people
+  ,count(distinct(if(nvl(discount_type,'')!='' and first_order='1',sender_id,null))) as coupon_first_order_people
+  ,sum(if(nvl(discount_type,'')!='',pay_amount,0)) as coupon_pay_amount
+  ,sum(if(nvl(discount_type,'')!='',org_payment_amount,0)) as coupon_order_gmv
+  ,sum(if(nvl(discount_type,'')!='',discount_amount,0)) as coupon_discount_amount
 
-  ,count(if(discount_type is null,1,null)) as coupon_useless_order_cnt
-  ,count(distinct(if(discount_type is null,sender_id,null))) as coupon_useless_order_people
-  ,sum(if(discount_type is null,pay_amount,0)) as coupon_useless_pay_amount
-  ,sum(if(discount_type is null,org_payment_amount,0)) as coupon_useless_order_gmv
+  ,count(if(nvl(discount_type,'')='',1,null)) as coupon_useless_order_cnt
+  ,count(distinct(if(nvl(discount_type,'')='',sender_id,null))) as coupon_useless_order_people
+  ,sum(if(nvl(discount_type,'')='',pay_amount,0)) as coupon_useless_pay_amount
+  ,sum(if(nvl(discount_type,'')='',org_payment_amount,0)) as coupon_useless_order_gmv
 
   from 
   opos_dw.dwd_pre_opos_payment_order_di as p
