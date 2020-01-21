@@ -113,6 +113,8 @@ table_list = [
 
     ("opay_account","account_user", "opay_account", "base", 2, "true"),
 
+    ("opay_scene","openapi_scene_order", "opay_channel", "base", 2, "false"),
+
 ]
 
 HIVE_DB = 'opay_dw_ods'
