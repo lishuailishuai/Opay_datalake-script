@@ -247,7 +247,7 @@ SELECT base.id as order_id,
        zone_hash,
        --所属区域 hash
 
-       updated_at as updated_time,
+       base.updated_time as updated_time,
        --最后更新时间
 
        from_unixtime(local_create_time,'yyyy-MM-dd') AS create_date,
@@ -456,14 +456,19 @@ FROM (select *
              if(t.finish_time=0,0,(t.finish_time + 1 * 60 * 60)) as local_finish_time ,
              if(t.cancel_time=0,0,(t.cancel_time + 1 * 60 * 60)) as local_cancel_time ,
              if(t.cancel_wait_payment_time=0,0,(t.cancel_wait_payment_time + 1 * 60 * 60 * 1)) as local_cancel_wait_payment_time ,
-
+             
+             from_unixtime((unix_timestamp(regexp_replace(regexp_replace(t.updated_at,'T',' '),'Z',''))+3600),'yyyy-MM-dd HH:mm:ss') as updated_time,
+             
              row_number() over(partition by t.id order by t.`__ts_ms` desc) as order_by
 
         FROM oride_dw_ods.ods_binlog_base_data_order_hi t
 
         WHERE concat_ws(' ',dt,hour) BETWEEN '{bef_yes_day} 23' AND '{pt} 23' --取昨天1天数据与今天早上00数据
 
-        AND (from_unixtime((t.create_time + 1 * 60 * 60 * 1),'yyyy-MM-dd') = '{pt}' or substr(updated_at,1,10)='{pt}')
+        AND (from_unixtime((t.create_time + 1 * 60 * 60 * 1),'yyyy-MM-dd') = '{pt}' 
+              or 
+              from_unixtime((unix_timestamp(regexp_replace(regexp_replace(t.updated_at,'T',' '),'Z',''))+3600),'yyyy-MM-dd')='{pt}'
+             )
          ) t1
 where t1.`__deleted` = 'false' and t1.order_by = 1) base
 LEFT OUTER JOIN

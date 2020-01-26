@@ -801,6 +801,8 @@ def __finally():
 @:param update 更新列
 """
 def __data_to_mysql(conn, data, column, update=''):
+    # 指定UTC时区
+    conn.execute("SET time_zone = '+00:00'")
     isql = 'insert into oride_orders_status_10min ({})'.format(','.join(column))
     esql = '{0} values {1} on duplicate key update {2}'
     sval = ''
@@ -813,11 +815,13 @@ def __data_to_mysql(conn, data, column, update=''):
                 sval += ',(\'{}\')'.format('\',\''.join([str(x) for x in row]))
             cnt += 1
             if cnt >= 1000:
+                logging.info('data_to_mysql %s', esql.format(isql, sval, update))
                 conn.execute(esql.format(isql, sval, update))
                 cnt = 0
                 sval = ''
 
         if cnt > 0 and sval != '':
+            logging.info('data_to_mysql %s', esql.format(isql, sval, update))
             conn.execute(esql.format(isql, sval, update))
     except BaseException as e:
         logging.info(e)
@@ -893,7 +897,7 @@ def get_driver_num(**op_kwargs):
     conn = get_db_conn('mysql_bi')
     mcursor = conn.cursor()
     mcursor.executemany(insert_driver_num, res)
-    logging.info('insert num %s', len(res))
+    logging.info('insert num %s, data %s', len(res), str(res))
     conn.commit()
     mcursor.close()
     conn.close()

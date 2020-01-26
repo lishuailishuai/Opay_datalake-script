@@ -28,7 +28,7 @@ import os
 
 args = {
         'owner': 'yangmingze',
-        'start_date': datetime(2020, 12, 12),
+        'start_date': datetime(2020, 1, 16),
         'depends_on_past': False,
         'retries': 3,
         'retry_delay': timedelta(minutes=2),
@@ -39,8 +39,7 @@ args = {
 
 dag = airflow.DAG( 'dwd_oride_algo_driver_score_init_info_di', 
     schedule_interval="10 02 * * *", 
-    default_args=args,
-    catchup=False) 
+    default_args=args) 
 
 
 ##----------------------------------------- 依赖 ---------------------------------------## 
