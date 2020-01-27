@@ -37,7 +37,7 @@ args = {
 }
 
 dag = airflow.DAG('app_oride_order_skyeye_tableau_d',
-                  schedule_interval="30 07 * * *",
+                  schedule_interval="00 08 * * *",
                   default_args=args,
                   catchup=False)
 
@@ -109,7 +109,7 @@ def fun_task_timeout_monitor(ds,dag,**op_kwargs):
     dag_ids=dag.dag_id
 
     msg = [
-        {"dag":dag,"db": "oride_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=NG/dt={pt}".format(pt=ds), "timeout": "2000"}
+        {"dag":dag,"db": "oride_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=NG/dt={pt}".format(pt=ds), "timeout": "180"}
     ]
 
     TaskTimeoutMonitor().set_task_monitor(msg)
