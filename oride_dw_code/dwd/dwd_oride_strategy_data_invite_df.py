@@ -26,7 +26,7 @@ import os
 
 args = {
         'owner': 'yangmingze',
-        'start_date': datetime(2019, 11, 9),
+        'start_date': datetime(2020, 1, 9),
         'depends_on_past': False,
         'retries': 3,
         'retry_delay': timedelta(minutes=2),
@@ -36,7 +36,7 @@ args = {
 } 
 
 dag = airflow.DAG( 'dwd_oride_strategy_data_invite_df', 
-    schedule_interval="10 01 * * *", 
+    schedule_interval="10 02 * * *", 
     default_args=args,
     catchup=False) 
 
@@ -105,17 +105,17 @@ invitee_id,--未知
 invitee_phone,--未知
 invitee_order,--未知
 timestamp,--未知
-award,--???????
-valid,--?? 0 ?? 1 ??
-invalid_code,--????
-invitee_serv_type,--??????
-status,--???? did
-conf_id,--??ID
-source,--?? 13 ?? 14 ??
-invitee_name,--??????
+award,--给邀请人的奖励
+valid,--状态 0 有效 1 无效
+invalid_code,--无效原因
+invitee_serv_type,--被邀请人类型
+status,--邀请状态 did
+conf_id,--配置ID
+source,--来源 13 线上 14 线下
+invitee_name,--被邀请人名字
 'nal' as country_code,
 '{pt}' as dt
-        
+
     from oride_dw_ods.ods_sqoop_base_data_invite_df
     where dt='{pt}'
 
