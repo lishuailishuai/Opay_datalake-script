@@ -106,7 +106,7 @@ invitee_role,--未知
 invitee_id,--未知
 invitee_phone,--未知
 invitee_order,--未知
-timestamp,--未知
+`timestamp`,--未知
 award,--给邀请人的奖励
 valid,--状态 0 有效 1 无效
 invalid_code,--无效原因
