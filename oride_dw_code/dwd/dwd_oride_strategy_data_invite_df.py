@@ -21,6 +21,7 @@ from plugins.TaskTouchzSuccess import TaskTouchzSuccess
 import json
 import logging
 from airflow.models import Variable
+from airflow.sensors import OssSensor
 import requests
 import os
 
@@ -44,9 +45,9 @@ dag = airflow.DAG( 'dwd_oride_strategy_data_invite_df',
 ##----------------------------------------- 依赖 ---------------------------------------## 
 
 
-ods_sqoop_base_data_invite_df_tesk = UFileSensor(
+ods_sqoop_base_data_invite_df_tesk = OssSensor(
     task_id='ods_sqoop_base_data_invite_df_tesk',
-    filepath="{hdfs_path_str}/dt={pt}/_SUCCESS".format(
+    bucket_key="{hdfs_path_str}/dt={pt}/_SUCCESS".format(
         hdfs_path_str="oride_dw_sqoop/oride_data/data_invite",
         pt="{{ds}}"
     ),
