@@ -229,7 +229,7 @@ def app_oride_new_user_cohort_m_sql_task(ds):
                     passenger_id,
                     month(first_finish_create_date) as month_create_date
                 from oride_dw.dwm_oride_passenger_base_df
-                where dt=add_months('{pt}',1) 
+                where dt=date_sub(add_months('{pt}',1),1)
                 and first_finish_ord_id is not null
                 and months_between(date_sub(add_months('{pt}',1),1),first_finish_create_date)<=6
                 and months_between(date_sub(add_months('{pt}',1),1),first_finish_create_date)>=0
@@ -305,7 +305,7 @@ def app_oride_new_driver_cohort_m_sql_task(ds):
                 select city_id,product_id,driver_id,
                     month(from_unixtime(first_finish_order_create_time,'yyyy-MM-dd')) as month_create_date
                 from oride_dw.dwm_oride_driver_base_df
-                where dt=add_months('{pt}',1) 
+                where dt=date_sub(add_months('{pt}',1),1)
                 and first_finish_order_id is not null
                 and months_between(date_sub(add_months('{pt}',1),1),from_unixtime(first_finish_order_create_time,'yyyy-MM-dd'))<=6
                 and months_between(date_sub(add_months('{pt}',1),1),from_unixtime(first_finish_order_create_time,'yyyy-MM-dd'))>=0
