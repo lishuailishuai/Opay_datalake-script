@@ -94,6 +94,11 @@ table_list = [
 
 ]
 
+# 忽略数据量检查的table
+IGNORED_TABLE_LIST = [
+    'opos_bonus_record',
+]
+
 HIVE_DB = 'opos_dw_ods'
 HIVE_TABLE = 'ods_sqoop_%s_%s_di'
 UFILE_PATH = 'oss://opay-datalake/opos_dw_sqoop_di/%s/%s'
@@ -269,19 +274,22 @@ for db_name, table_name, conn_id, prefix_name, priority_weight_nm, table_id, tab
         dag=dag
     )
 
-    # 数据量监控
-    volume_monitoring = PythonOperator(
-        task_id='volume_monitorin_{}'.format(hive_table_name),
-        python_callable=data_volume_monitoring,
-        provide_context=True,
-        op_kwargs={
-            'db_name': HIVE_DB,
-            'table_name': hive_table_name,
-            'is_valid_success':"true"
-        },
-        dag=dag
-    )
-    import_table >> volume_monitoring >> validate_all_data
+    if table_name in IGNORED_TABLE_LIST:
+        import_table >> validate_all_data
+    else:
+        # 数据量监控
+        volume_monitoring = PythonOperator(
+            task_id='volume_monitorin_{}'.format(hive_table_name),
+            python_callable=data_volume_monitoring,
+            provide_context=True,
+            op_kwargs={
+                'db_name': HIVE_DB,
+                'table_name': hive_table_name,
+                'is_valid_success':"true"
+            },
+            dag=dag
+        )
+        import_table >> volume_monitoring >> validate_all_data
 
     # 超时监控
     task_timeout_monitor = PythonOperator(
