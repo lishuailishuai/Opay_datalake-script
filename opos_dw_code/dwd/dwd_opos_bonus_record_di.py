@@ -291,3 +291,4 @@ ods_sqoop_base_opos_scan_history_di_task >> dwd_opos_bonus_record_di_task
 # 测试任务命令
 # airflow test dwd_opos_bonus_record_di dwd_opos_bonus_record_di_task 2019-11-28 -sd /root/feng.yuan/dwd_opos_bonus_record_di.py
 
+
