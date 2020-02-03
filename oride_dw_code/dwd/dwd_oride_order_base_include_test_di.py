@@ -445,6 +445,14 @@ SELECT base.id as order_id,
         driver_original_price, --司机原始价格
         original_distance, --实际距离
         driver_distance, --司机计价距离(乘以系数后)
+        insurance_id,--保险活动id
+        pax_insurance_price, --乘客保险费
+        driver_insurance_price, --司机保险费
+        insurance_deduct_type, --保险扣减库存状态(0.未扣减 1.乘客已扣减 2.司机已扣减 3.乘客司机均扣减)
+        enter_code, --乘车码
+        malice_brush_driver_deduct, --恶意刷单司机扣款
+        malice_brush_user_reward,  --恶意刷单乘客奖励
+        order_type, --订单类型 (0: 普通订单, 1: 顺路单)
        nvl(country.country_code,'nal') as country_code,
 
        '{pt}' AS dt

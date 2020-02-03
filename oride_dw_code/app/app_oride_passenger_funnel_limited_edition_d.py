@@ -43,29 +43,10 @@ dag = airflow.DAG('app_oride_passenger_funnel_limited_edition_d',
 ##----------------------------------------- 变量 ---------------------------------------##
 db_name = "oride_dw"
 table_name = "app_oride_passenger_funnel_limited_edition_d"
+hdfs_path = "oss://opay-datalake/oride/oride_dw/" + table_name
 
 ##----------------------------------------- 依赖 ---------------------------------------##
-#获取变量
-code_map=eval(Variable.get("sys_flag"))
-
-#判断ufile(cdh环境)
-if code_map["id"].lower()=="ufile":
-
-    dwd_oride_client_event_detail_hi_task = UFileSensor(
-        task_id="dwd_oride_client_event_detail_hi_task",
-        filepath='{hdfs_path_str}/country_code=nal/dt={pt}/hour=23/_SUCCESS'.format(
-            hdfs_path_str="oride/oride_dw/dwd_oride_client_event_detail_hi",
-            pt='{{ds}}'
-        ),
-        bucket_name='opay-datalake',
-        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-        dag=dag
-    )
-    hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
-
-else:
-    print("成功")
-    dwd_oride_client_event_detail_hi_task = OssSensor(
+dwd_oride_client_event_detail_hi_task = OssSensor(
         task_id="dwd_oride_client_event_detail_hi_task",
         bucket_key='{hdfs_path_str}/country_code=nal/dt={pt}/hour=23/_SUCCESS'.format(
             hdfs_path_str="oride/oride_dw/dwd_oride_client_event_detail_hi",
@@ -75,8 +56,6 @@ else:
         poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
         dag=dag
     )
-    hdfs_path = "oss://opay-datalake/oride/oride_dw/" + table_name
-
 
 # ----------------------------------------- 任务超时监控 ---------------------------------------##
 
@@ -145,8 +124,8 @@ def app_oride_passenger_funnel_limited_edition_d_sql_task(ds):
         left join
         (
             select country_code as region_name,
-                avg(case when gj_time-ac_time < 15*60 then gj_time-ac_time end) as login_valuation_dur,--登陆到估价时长
-                avg(case when gj_time-zd_time <15*60 then gj_time-zd_time end) as check_end_to_valuation_dur --选择终点到估价时长
+                avg(case when (gj_time-ac_time>0 and gj_time-ac_time < 15*60) then gj_time-ac_time end) as login_valuation_dur,--登陆到估价时长
+                avg(case when (gj_time-zd_time>0 and gj_time-zd_time <15*60) then gj_time-zd_time end) as check_end_to_valuation_dur --选择终点到估价时长
             from 
             (
                 select 

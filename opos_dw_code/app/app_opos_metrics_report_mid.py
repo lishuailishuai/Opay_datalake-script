@@ -215,8 +215,8 @@ payment_info as (
   ,nvl(sum(nvl(org_payment_amount,0)),0) as gmv
   ,nvl(sum(nvl(pay_amount,0)),0) as actual_amount
   ,nvl(sum(nvl(return_amount,0)),0) as return_amount
-  ,nvl(sum(if(first_order = '1',nvl(org_payment_amount,0) - nvl(pay_amount,0) + nvl(user_subsidy,0),0)),0) as new_user_cost
-  ,nvl(sum(if(first_order <> '1',nvl(org_payment_amount,0) - nvl(pay_amount,0) + nvl(user_subsidy,0),0)),0) as old_user_cost
+  ,nvl(sum(if(first_order = '1',nvl(org_payment_amount,0) - nvl(pay_amount,0) + nvl(user_subsidy,0) + nvl(discount_amount,0),0)),0) as new_user_cost
+  ,nvl(sum(if(first_order <> '1',nvl(org_payment_amount,0) - nvl(pay_amount,0) + nvl(user_subsidy,0) + nvl(discount_amount,0),0)),0) as old_user_cost
   ,nvl(count(if(return_amount > 0,order_id,null)),0) as return_amount_order_cnt
   
   --返现活动情况分析
