@@ -144,6 +144,7 @@ def dwd_opay_topup_with_card_record_di_sql_task(ds):
         t1.affiliate_bank_scheme, t1.payment_order_no, t1.create_time, t1.update_time, t1.country, t1.order_status, t1.error_code, t1.error_msg, t1.client_source,
         t1.pay_way, t1.next_step, t1.out_channel_id, t1.business_type, t1.accounting_status, 
         'TopupWithCard' as top_consume_scenario, 'TopupWithCard' as sub_consume_scenario, 
+        t1.fee_amount, t1.fee_pattern, t1.outward_id, t1.outward_type,
         case t1.country
             when 'NG' then 'NG'
             when 'NO' then 'NO'
@@ -171,7 +172,8 @@ def dwd_opay_topup_with_card_record_di_sql_task(ds):
             bind_card_id as affiliate_bind_card_id, bank_code as affiliate_bank_code, bank_name as affiliate_bank_name, 
             bank_account_no_encrypted as affiliate_bank_account_no_encrypted, bank_card_no_encrypted as affiliate_bank_card_no_encrypted,
              '-' as affiliate_bank_mobile, '-' as affiliate_bank_email, scheme as affiliate_bank_scheme, '-' as payment_order_no,
-            create_time, update_time, country, order_status, error_code, error_msg, client_source, pay_channel as pay_way, next_step, out_channel_id, business_type, accounting_status
+            create_time, update_time, country, order_status, error_code, error_msg, client_source, pay_channel as pay_way, next_step, out_channel_id, business_type, accounting_status,
+            nvl(fee, 0) as fee_amount, nvl(fee_pattern, '-') as fee_pattern, nvl(outward_id, '-') as outward_id, nvl(outward_type, '-') as outward_type
         from opay_dw_ods.ods_sqoop_base_user_topup_record_di
         where dt = '{pt}'
         union all
@@ -180,7 +182,8 @@ def dwd_opay_topup_with_card_record_di_sql_task(ds):
             '-' as affiliate_bind_card_id, bank_code as affiliate_bank_code, bank_name as affiliate_bank_name, 
             bank_account_no_encrypted as affiliate_bank_account_no_encrypted, bank_card_no_encrypted as affiliate_bank_card_no_encrypted,
             customer_phone as affiliate_bank_mobile, customer_email as affiliate_bank_email, scheme as affiliate_bank_scheme, merchant_order_no as payment_order_no,
-            create_time, update_time, country, order_status, error_code, error_msg, '-' as client_source, pay_channel as pay_way, next_step, out_channel_id, '-' as business_type, accounting_status
+            create_time, update_time, country, order_status, error_code, error_msg, '-' as client_source, pay_channel as pay_way, next_step, out_channel_id, '-' as business_type, accounting_status,
+            nvl(fee, 0) as fee_amount, nvl(fee_pattern, '-') as fee_pattern, nvl(outward_id, '-') as outward_id, nvl(outward_type, '-') as outward_type
         from opay_dw_ods.ods_sqoop_base_merchant_topup_record_di
         where dt = '{pt}'
     ) t1 
