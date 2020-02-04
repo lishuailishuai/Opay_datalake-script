@@ -93,7 +93,8 @@ def dwm_opay_user_balance_df_sql_task(ds):
                    sum(balance) opay,
                    sum(case when account_type='CASHACCOUNT' then balance end) owallet,
                    sum(case when account_type='OWEALTH' then balance end) owealth
-            from opay_dw.dwd_opay_account_balance_df where dt='{pt}' and account_type in('CASHACCOUNT','OWEALTH')
+            from opay_dw.dwd_opay_account_balance_df 
+            where dt='{pt}' and account_type in('CASHACCOUNT','OWEALTH') and user_type='USER'
             group by user_id,user_role,user_level,country_code) a 
     left join 
           (select user_id,
@@ -104,6 +105,7 @@ def dwm_opay_user_balance_df_sql_task(ds):
            from
               (select user_id,dt,sum(balance) s_balance
               from opay_dw.dwd_opay_account_balance_df where dt>date_sub('{pt}',32) and dt<='{pt}' and account_type in('CASHACCOUNT','OWEALTH')
+                   and user_type='USER'
               group by user_id,dt) m 
            group by user_id
            ) b 
