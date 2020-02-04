@@ -98,7 +98,7 @@ def dwd_oride_warehouses_df_sql_task(ds):
         ware_id  , -- '仓库ID',   
        ware_name  ,-- '仓库名称',  
        ware_address  ,-- '仓库地址',   
-       user_id  big, -- '操作人ID',   
+       user_id , -- '操作人ID',   
        created_at  ,-- '', 
        updated_at  ,-- '', 
        ware_code  ,-- '仓库编号',  

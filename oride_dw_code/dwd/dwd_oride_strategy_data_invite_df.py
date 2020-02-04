@@ -18,15 +18,17 @@ from airflow.sensors.hive_partition_sensor import HivePartitionSensor
 from airflow.sensors import UFileSensor
 from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
 from plugins.TaskTouchzSuccess import TaskTouchzSuccess
+from plugins.CountriesPublicFrame import CountriesPublicFrame
 import json
 import logging
 from airflow.models import Variable
+from airflow.sensors import OssSensor
 import requests
 import os
 
 args = {
         'owner': 'yangmingze',
-        'start_date': datetime(2019, 11, 9),
+        'start_date': datetime(2020, 1, 9),
         'depends_on_past': False,
         'retries': 3,
         'retry_delay': timedelta(minutes=2),
@@ -36,7 +38,7 @@ args = {
 } 
 
 dag = airflow.DAG( 'dwd_oride_strategy_data_invite_df', 
-    schedule_interval="10 01 * * *", 
+    schedule_interval="10 02 * * *", 
     default_args=args,
     catchup=False) 
 
@@ -44,9 +46,9 @@ dag = airflow.DAG( 'dwd_oride_strategy_data_invite_df',
 ##----------------------------------------- 依赖 ---------------------------------------## 
 
 
-ods_sqoop_base_data_invite_df_tesk = UFileSensor(
+ods_sqoop_base_data_invite_df_tesk = OssSensor(
     task_id='ods_sqoop_base_data_invite_df_tesk',
-    filepath="{hdfs_path_str}/dt={pt}/_SUCCESS".format(
+    bucket_key="{hdfs_path_str}/dt={pt}/_SUCCESS".format(
         hdfs_path_str="oride_dw_sqoop/oride_data/data_invite",
         pt="{{ds}}"
     ),
@@ -70,7 +72,7 @@ def fun_task_timeout_monitor(ds,dag,**op_kwargs):
     dag_ids=dag.dag_id
 
     msg = [
-        {"dag":dag,"db": "oride_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=NG/dt={pt}".format(pt=ds), "timeout": "800"}
+        {"dag":dag,"db": "oride_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "800"}
     ]
 
     TaskTimeoutMonitor().set_task_monitor(msg)
@@ -104,18 +106,18 @@ invitee_role,--未知
 invitee_id,--未知
 invitee_phone,--未知
 invitee_order,--未知
-timestamp,--未知
-award,--???????
-valid,--?? 0 ?? 1 ??
-invalid_code,--????
-invitee_serv_type,--??????
-status,--???? did
-conf_id,--??ID
-source,--?? 13 ?? 14 ??
-invitee_name,--??????
+`timestamp`,--未知
+award,--给邀请人的奖励
+valid,--状态 0 有效 1 无效
+invalid_code,--无效原因
+invitee_serv_type,--被邀请人类型
+status,--邀请状态 did
+conf_id,--配置ID
+source,--来源 13 线上 14 线下
+invitee_name,--被邀请人名字
 'nal' as country_code,
 '{pt}' as dt
-        
+
     from oride_dw_ods.ods_sqoop_base_data_invite_df
     where dt='{pt}'
 
@@ -194,7 +196,7 @@ def execution_data_task_id(ds,**kwargs):
 
     """
 
-    cf=CountriesPublicFrame("true",ds,db_name,table_name,hdfs_path,"true","true")
+    cf=CountriesPublicFrame("false",ds,db_name,table_name,hdfs_path,"true","true")
 
     #删除分区
     #cf.delete_partition()
