@@ -143,7 +143,7 @@ def dm_oride_order_base_d_sql_task(ds):
        sum(if(is_finish=1,order_onride_distance,0)) as finish_order_onride_dis, --完单送驾距离(米)
        sum(if(is_finish=1,order_assigned_cnt,0)) as finish_order_pick_up_assigned_cnt, --完单订单被分配次数（计算平均接驾距离使用）
        sum(if(is_finish=1,price,0)) as price, --当日完单gmv
-       sum(if(is_finished_pay=1 and is_succ_pay=1,price,0)) as pay_price, --当日应付金额,自1226号升级为多限定支付成功,用于统计单均应付 
+       sum(if(is_finished_pay=1 and is_succ_pay=1,nvl(price,0)+nvl(tip,0)+nvl(surcharge,0)+nvl(pax_insurance_price,0),0)) as pay_price, --当日应付金额,自1226号升级为多限定支付成功,用于统计单均应付 
        sum(if(is_finished_pay=1 and is_succ_pay=1,pay_amount,0)) as pay_amount, -- 当日实付金额,自1226号升级为多限定支付成功，用于统计单均实付 
        sum(is_valid) as valid_ord_cnt, --当日有效订单数
        sum(if(is_finish=1,pick_up_order_dur,0)) as finish_pick_up_dur, --当日完单接驾时长 

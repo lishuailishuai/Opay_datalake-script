@@ -230,7 +230,7 @@ def app_oride_passenger_funnel_second_edition_point_d_sql_task(ds):
                 and from_unixtime(cast(event_time as int),'yyyy-MM-dd')=dt
                 and user_id>0 
                 and event_name in('choose_end_point_click','request_a_ride_show')
-                and concat_ws(":",dt,`hour`) != '2019-12-18:15' --垃圾文件 
+               -- and concat_ws(":",dt,`hour`) != '2019-12-18:15' --垃圾文件 
                 group by user_id,event_name,event_time
             )as client_event_lfw
         )as client_count_lfw

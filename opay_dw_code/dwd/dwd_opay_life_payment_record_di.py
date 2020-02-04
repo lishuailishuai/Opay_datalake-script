@@ -214,7 +214,7 @@ def dwd_opay_life_payment_record_di_sql_task(ds):
             tv_provider as recharge_service_provider, recipient_tv_account_no as recharge_account, recipient_tv_account_name as recharge_account_name, tv_plan as recharge_set_meal,
             create_time, update_time, country, 'TV' sub_service_type, 
             order_status, error_code, error_msg, client_source, pay_channel as pay_way, pay_status, 'TV' as top_consume_scenario, 'TV' as sub_consume_scenario, amount as pay_amount,
-            nvl(fee, 0) as fee_amount, fee_pattern, outward_id, outward_type
+            nvl(fee, 0) as fee_amount, nvl(fee_pattern, '-') as fee_pattern, nvl(outward_id, '-') as outward_id, nvl(outward_type, '-') as outward_type
         from opay_dw_ods.ods_sqoop_base_tv_topup_record_di
         where dt = '{pt}'
         union all
@@ -225,7 +225,7 @@ def dwd_opay_life_payment_record_di_sql_task(ds):
             create_time, update_time, country, 'Betting' sub_service_type,
             order_status, error_code, error_msg, client_source, pay_channel as pay_way, pay_status, 'Betting' as top_consume_scenario, 'Betting' as sub_consume_scenario, 
             if(actual_pay_amount is null or actual_pay_amount = 0, amount, actual_pay_amount) as pay_amount, 
-            nvl(fee_amount, 0) as fee_amount, fee_pattern, outward_id, outward_type
+            nvl(fee_amount, 0) as fee_amount, nvl(fee_pattern, '-') as fee_pattern, nvl(outward_id, '-') as outward_id, nvl(outward_type, '-') as outward_type
         from opay_dw_ods.ods_sqoop_base_betting_topup_record_di
         where dt = '{pt}' and betting_provider != '' and betting_provider != 'supabet' and betting_provider is not null
         union all
@@ -235,7 +235,8 @@ def dwd_opay_life_payment_record_di_sql_task(ds):
             telecom_perator as recharge_service_provider, recipient_mobile as recharge_account, '-' as recharge_account_name, '-' as recharge_set_meal,
             create_time, update_time, country, 'Mobiledata' sub_service_type,
             order_status, error_code, error_msg, client_source, pay_channel as pay_way, pay_status, 'Mobiledata' as top_consume_scenario, 'Mobiledata' as sub_consume_scenario,
-            amount as pay_amount, nvl(fee_amount, 0) as fee_amount, fee_pattern, out_ward_id as outward_id, out_ward_type as outward_type
+            amount as pay_amount,
+            nvl(fee_amount, 0) as fee_amount, nvl(fee_pattern, '-') as fee_pattern, nvl(out_ward_id, '-') as outward_id, nvl(out_ward_type, '-') as outward_type
         from opay_dw_ods.ods_sqoop_base_mobiledata_topup_record_di
         where dt = '{pt}'   
         union all
@@ -245,8 +246,8 @@ def dwd_opay_life_payment_record_di_sql_task(ds):
             telecom_perator as recharge_service_provider, recipient_mobile as recharge_account, '-' as recharge_account_name, '-' as recharge_set_meal,
             create_time, update_time, country, 'Airtime' sub_service_type,
             order_status, error_code, error_msg, client_source, pay_channel as pay_way, pay_status, 'Airtime' as top_consume_scenario, 'Airtime' as sub_consume_scenario,
-            if(actual_pay_amount is null or actual_pay_amount = 0, amount, actual_pay_amount) as pay_amount, 
-            nvl(fee_amount, 0) as fee_amount, fee_pattern, out_ward_id as outward_id, out_ward_type as outward_type
+            if(actual_pay_amount is null or actual_pay_amount = 0, amount, actual_pay_amount) as pay_amount,
+            nvl(fee_amount, 0) as fee_amount, nvl(fee_pattern, '-') as fee_pattern, nvl(out_ward_id, '-') as outward_id, nvl(out_ward_type, '-') as outward_type
         from opay_dw_ods.ods_sqoop_base_airtime_topup_record_di
         where dt = '{pt}' 
         union all
@@ -256,7 +257,8 @@ def dwd_opay_life_payment_record_di_sql_task(ds):
             recipient_elec_perator as recharge_service_provider, recipient_elec_account as recharge_account, '-' as recharge_account_name, electricity_payment_plan as recharge_set_meal,
             create_time, update_time, country, 'Electricity' sub_service_type,
             order_status, error_code, error_msg, client_source, pay_channel as pay_way, pay_status, 'Electricity' as top_consume_scenario, 'Electricity' as sub_consume_scenario,
-            amount as pay_amount, nvl(fee_amount, 0) as fee_amount, fee_pattern, out_ward_id as outward_id, out_ward_type as outward_type
+            amount as pay_amount,
+            nvl(fee_amount, 0) as fee_amount, nvl(fee_pattern, '-') as fee_pattern, nvl(out_ward_id, '-') as outward_id, nvl(out_ward_type, '-') as outward_type
         from opay_dw_ods.ods_sqoop_base_electricity_topup_record_di
         where dt = '{pt}'
     ) t1 

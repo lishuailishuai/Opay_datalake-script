@@ -198,7 +198,7 @@ def app_oride_passenger_funnel_d_sql_task(ds):
             count(distinct if(is_td_finish=1,passenger_id,null)) as finish_order_user_num, --完单乘客数
             count(distinct if(is_td_finish=1,order_id,null)) as finish_order_cnt, --完单量
             count(distinct if(is_td_finish_pay=1,passenger_id,null)) pay_user_num, --支付乘客数
-            sum(if(is_td_finish_pay=1,price,0)) as price,--应付金额
+            sum(if(is_td_finish_pay=1 and pay_status=1,nvl(price,0)+nvl(tip,0)+nvl(surcharge,0)+nvl(pax_insurance_price,0),0)) as price,--应付金额
             sum(if(is_td_finish_pay=1,pay_amount,0)) as amount, --实付金额
             sum(if(is_td_finish=1,arrive_time-create_time,0)) as order_delivery_dur, --下单送达时长
             count(if(pickup_time>0,pickup_time,null))as driver_user_find_each_other_cnt,--司乘互找次数

@@ -330,7 +330,16 @@ def dwm_oride_order_base_di_sql_task(ds):
            
            ord.driver_price, 
            --司机价格
-
+           
+           ord.tip,
+           --小费
+           
+           ord.surcharge,
+           --高速费
+           
+           ord.pax_insurance_price, 
+           --乘客保险费
+           
  		   ord.country_code as country_code,
 
            ord.dt as dt
