@@ -164,7 +164,7 @@ def dwm_oride_assets_sku_df_sql_task(ds):
       staff_city_ids, -- '仓库对应资产发放覆盖城市：多个城市ID之间使用英文逗号分
       if(retrieved_num >0,1,0) as is_retrieved, --'资产新旧,是否由回收员操作过回收。操作过为"1 二手"，未操作过为" 0 一手"'
       'NG' as country_code,
-      dt
+      sku.dt as dt
     from
     (
     
@@ -184,9 +184,10 @@ def dwm_oride_assets_sku_df_sql_task(ds):
           retrieved_num      ,--回收次数：默认0，表示没有被回收过，每次回收时+1，该数字即表示总共回收过多少次
           retrieved_time      ,--最后一次回收时间，每次回收时进行更新
           run_status     ,--运营中资产状态
-          run_update_time  --运营中资产状态最后一次更改时间     
+          run_update_time,  --运营中资产状态最后一次更改时间 
+          dt    
         from  oride_dw.dwd_oride_assets_sku_df
-        where dt ='2020-01-14' and status  != '99' 
+        where dt ='{pt}'and status  != '99' 
     )sku
     left join
     (
@@ -205,7 +206,7 @@ def dwm_oride_assets_sku_df_sql_task(ds):
             business_id,--'业务线Id',
             tag_id--'资产所属标签',
         from oride_dw.dwd_oride_properties_df
-        where dt ='2020-01-14'
+        where dt ='{pt}'
     )prop  on sku.property_id = prop.property_id   --and sku.business_id = prop.business_id   property_id和 business_id 一一对应
     left join
     (
@@ -214,7 +215,7 @@ def dwm_oride_assets_sku_df_sql_task(ds):
             name ,--'业务线名称',
             status --'是否启用 1-启用 2-禁用',
         from oride_dw.dwd_oride_admin_business_df  
-        WHERE dt ='2020-01-14'
+        WHERE dt ='{pt}'
     )business on  prop.business_id = business.id
     left join
     (
@@ -229,7 +230,7 @@ def dwm_oride_assets_sku_df_sql_task(ds):
             is_inbound, -- '是否允许该仓库进行inbound操作？0-不允许，1-允许',   
             staff_city_ids -- '仓库对应资产发放覆盖城市：多个城市ID之间使用英文逗号分
         from oride_dw.dwd_oride_warehouses_df 
-        where dt = '2020-01-14'
+        where dt = '{pt}'
 )ware on sku.ware_id = ware.ware_id;
 
     '''.format(
