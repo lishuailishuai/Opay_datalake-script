@@ -206,6 +206,8 @@ o.id
 ,o.coupon_expired_amount
 ,o.coupon_invalid_amount
 
+,o.activate_shop_cnt
+
 ,'nal' as country_code
 ,'{pt}' as dt
 from
@@ -299,6 +301,8 @@ from
   ,nvl(a.coupon_used_amount,0) as coupon_used_amount
   ,nvl(a.coupon_expired_amount,0) as coupon_expired_amount
   ,nvl(a.coupon_invalid_amount,0) as coupon_invalid_amount
+
+  ,nvl(a.activate_shop_cnt,0) as activate_shop_cnt
 
   from 
   (select * from opos_dw.app_opos_metrics_report_mid where country_code = 'nal' and  dt = '{pt}') a
