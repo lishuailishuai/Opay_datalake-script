@@ -95,6 +95,8 @@ def app_opay_transaction_consume_scenario_sum_d_sql_task(ds):
         order_status,
         sum(amount) as order_amt, 
         count(*) as order_cnt,
+        0 as provider_share_amt,
+        sum(fee_amount) as fee_amt,
         country_code,
         '{pt}' as dt
     from {db}.dwd_opay_transaction_record_di 
