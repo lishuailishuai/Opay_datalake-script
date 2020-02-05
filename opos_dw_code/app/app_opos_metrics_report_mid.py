@@ -119,6 +119,7 @@ shop_cnt as (
   ,count(if(created_at = '{pt}',id,null)) as new_merchant_cnt
   ,0 as new_pos_merchant_cnt
   ,count(distinct(if(created_at>=concat(substr('{pt}',0,7),'-01') and created_at<='{pt}',id,null))) as month_newshop_cnt
+  ,count(if(activate_month='9999-12',null,id)) as activate_shop_cnt
   from
   opos_dw.dim_opos_bd_relation_df
   where 
@@ -180,6 +181,8 @@ nvl(a.hcm_id,b.hcm_id) as hcm_id
 ,nvl(a.new_merchant_cnt,0) as new_merchant_cnt
 ,nvl(a.new_pos_merchant_cnt,0) as new_pos_merchant_cnt
 ,nvl(a.month_newshop_cnt,0) as month_newshop_cnt
+
+,nvl(a.activate_shop_cnt,0) as activate_shop_cnt
 
 ,nvl(b.coupon_amount,0) as coupon_amount
 ,nvl(b.coupon_used_amount,0) as coupon_used_amount
@@ -334,6 +337,8 @@ nvl(a.hcm_id,b.hcm_id) as hcm_id
 ,nvl(a.coupon_used_amount,0) as coupon_used_amount
 ,nvl(a.coupon_expired_amount,0) as coupon_expired_amount
 ,nvl(a.coupon_invalid_amount,0) as coupon_invalid_amount
+
+,nvl(a.activate_shop_cnt,0) as activate_shop_cnt
 
 ,'nal' as country_code
 ,'{pt}' as dt
