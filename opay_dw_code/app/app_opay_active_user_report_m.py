@@ -188,7 +188,7 @@ FROM (
             user_role role,
             'owealth_bal_avg_m' target_type,
             sum(owealth_m) c 
-        from (select user_role,owealth_m from opay_dw.dwm_opay_user_balance_df where dt='{pt}' and owealth_m>0) m2
+        from (select user_role,owealth_m from opay_dw.dwm_opay_user_balance_df where dt='{pt}' and owealth_m>0) m4
         group by user_role
         union all
           select 
@@ -196,7 +196,7 @@ FROM (
             'ALL' role,
             'owealth_bal_avg_m' target_type,
             sum(owealth_m) c 
-        from (select owealth_m from opay_dw.dwm_opay_user_balance_df where dt='{pt}' and owealth_m>0) m3
+        from (select owealth_m from opay_dw.dwm_opay_user_balance_df where dt='{pt}' and owealth_m>0) m5
         
 )m;
 
