@@ -87,7 +87,10 @@ def dwm_opay_user_balance_df_sql_task(ds):
     set hive.exec.dynamic.partition.mode=nonstrict;
     set hive.exec.parallel=true;
     INSERT overwrite TABLE opay_dw.dwm_opay_user_balance_df partition (country_code,dt)
-    select a.user_id,user_role,user_level,owealth,owallet,opay,opay_7,opay_30,opay_m,opay_w,country_code,'{pt}' from 
+    select a.user_id,user_role,user_level,owealth,owallet,opay,opay_7,opay_30,opay_m,opay_w,
+           owealth_7,owealth_30,owealth_m,owealth_w,
+           owallet_7,owallet_30,owallet_m,owallet_w,country_code,'{pt}' 
+    from 
            (select user_id,user_role,user_level,country_code,
                    sum(balance) opay,
                    sum(case when account_type='CASHACCOUNT' then balance end) owallet,
@@ -100,9 +103,21 @@ def dwm_opay_user_balance_df_sql_task(ds):
                   avg(case when dt>date_sub('{pt}',30) then s_balance end) opay_30,
                   avg(case when dt>date_sub('{pt}',7) then s_balance end) opay_7,
                   avg(case when dt>=date_format('{pt}', 'yyyy-MM-01') then s_balance end) opay_m,
-                  avg(case when dt>=date_sub(next_day('{pt}', 'mo'), 7) then s_balance end) opay_w
+                  avg(case when dt>=date_sub(next_day('{pt}', 'mo'), 7) then s_balance end) opay_w,
+                  
+                  avg(case when dt>date_sub('{pt}',30) then owallet_bal end) owallet_30,
+                  avg(case when dt>date_sub('{pt}',7) then owallet_bal end) owallet_7,
+                  avg(case when dt>=date_format('{pt}', 'yyyy-MM-01') then owallet_bal end) owallet_m,
+                  avg(case when dt>=date_sub(next_day('{pt}', 'mo'), 7) then owallet_bal end) owallet_w,
+                  
+                  avg(case when dt>date_sub('{pt}',30) then owealth_bal end) owealth_30,
+                  avg(case when dt>date_sub('{pt}',7) then owealth_bal end) owealth_7,
+                  avg(case when dt>=date_format('{pt}', 'yyyy-MM-01') then owealth_bal end) owealth_m,
+                  avg(case when dt>=date_sub(next_day('{pt}', 'mo'), 7) then owealth_bal end) owealth_w
+                  
            from
-              (select user_id,dt,sum(balance) s_balance
+              (select user_id,dt,sum(balance) s_balance,sum(case when account_type='CASHACCOUNT' then balance end) owallet_bal,
+                      sum(case when account_type='OWEALTH' then balance end) owealth_bal
               from opay_dw.dwd_opay_account_balance_df where dt>date_sub('{pt}',32) and dt<='{pt}' and account_type in('CASHACCOUNT','OWEALTH')
                    and user_type='USER'
               group by user_id,dt) m 
