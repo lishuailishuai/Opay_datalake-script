@@ -310,7 +310,7 @@ def app_opay_active_user_report_d_sql_task(ds,ds_nodash):
                     '{pt}' dt,
                     user_role role,
                     '-' top_consume_scenario,
-                    'opay_bal_all_user_cnt' target_type,
+                    'opay_bal_avg' target_type,
                     sum(opay) c
                 from (selcet user_role,opay from opay_dw.dwm_opay_user_balance_df where dt='{pt}' and opay>0) m5
                 group by user_role
@@ -319,7 +319,7 @@ def app_opay_active_user_report_d_sql_task(ds,ds_nodash):
                     '{pt}' dt,
                     'ALL' role,
                     '-' top_consume_scenario,
-                    'opay_bal_all_user_cnt' target_type,
+                    'opay_bal_avg' target_type,
                     sum(opay) c
                 from (selcet opay from opay_dw.dwm_opay_user_balance_df where dt='{pt}' and opay>0) m6
                 union all
@@ -327,17 +327,17 @@ def app_opay_active_user_report_d_sql_task(ds,ds_nodash):
                     '{pt}' dt,
                     user_role role,
                     '-' top_consume_scenario,
-                    'opay_bal_all_user_cnt_30d' target_type,
+                    'opay_bal_avg_30d' target_type,
                     sum(opay_30) c
-                from (selcet user_role,opay_30 from opay_dw.dwm_opay_user_balance_df where dt='{pt}' and opay_30>0) m5
+                from (selcet user_role,opay_30 from opay_dw.dwm_opay_user_balance_df where dt='{pt}' and opay_30>0) m7
                 group by user_role
                 select 
                     '{pt}' dt,
                     'ALL' role,
                     '-' top_consume_scenario,
-                    'opay_bal_all_user_cnt_30d' target_type,
+                    'opay_bal_avg_30d' target_type,
                     sum(opay_30) c
-                from (selcet opay_30 from opay_dw.dwm_opay_user_balance_df where dt='{pt}' and opay_30>0) m5
+                from (selcet opay_30 from opay_dw.dwm_opay_user_balance_df where dt='{pt}' and opay_30>0) m8
                 
                 
             ) m;
