@@ -126,7 +126,6 @@ hdfs_path = "oss://opay-datalake/opay/opay_dw/" + table_name
 def app_opay_active_user_report_d_sql_task(ds,ds_nodash):
     HQL = '''
 
-    set mapred.max.split.size=1000000;
     set hive.exec.dynamic.partition.mode=nonstrict;
     set hive.exec.parallel=true;
     create table if not exists test_db.user_base_{date} as 
