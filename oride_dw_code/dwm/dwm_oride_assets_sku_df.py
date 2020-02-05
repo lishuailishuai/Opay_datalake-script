@@ -86,7 +86,7 @@ dwd_oride_admin_business_df_prev_day_task = OssSensor(
 dwd_oride_warehouses_df_prev_day_task = OssSensor(
     task_id='dwd_oride_warehouses_df_prev_day_task',
     bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw/dwd_oride_order_push_driver_detail_di/country_code=NG",
+        hdfs_path_str="oride/oride_dw/dwd_oride_warehouses_df/country_code=NG",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
