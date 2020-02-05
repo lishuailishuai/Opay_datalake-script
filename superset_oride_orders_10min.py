@@ -107,9 +107,9 @@ def preInsertRowPoint(**op_kwargs):
         select 
             id, 
             name, 
-            \"-1,0,1,2,99\" as driver_type 
+            \"{driver_type}\" as driver_type 
         from data_city_conf
-    '''.format(driver_type)
+    '''.format(driver_type=driver_type)
 
     citys = pd.read_sql_query(msql, oridedb_conn)
 
@@ -365,12 +365,12 @@ def __getDriversOnline(st, ed):
         select 
             City as city_id,
             type as serv_type,
-            online_time,
-            date_format(online_time, '%Y-%m-%d 00:00:00') as daily,
+            from_unixtime(unix_timestamp(online_time)+3600) as online_time,
+            from_unixtime(unix_timestamp(online_time)+3600, '%Y-%m-%d 00:00:00') as daily,
             drivers_online,
             driver_orderable 
         from driver_online 
-        where online_time >= from_unixtime({st}) and online_time < from_unixtime({ed}) 
+        where from_unixtime(unix_timestamp(online_time)+3600) >= from_unixtime({st}) and from_unixtime(unix_timestamp(online_time)+3600) < from_unixtime({ed})
     '''.format(st=st, ed=ed)
     logging.info(msql)
     drivers = pd.read_sql_query(msql, bidb_conn)
@@ -801,6 +801,8 @@ def __finally():
 @:param update 更新列
 """
 def __data_to_mysql(conn, data, column, update=''):
+    # 指定UTC时区
+    conn.execute("SET time_zone = '+00:00'")
     isql = 'insert into oride_orders_status_10min ({})'.format(','.join(column))
     esql = '{0} values {1} on duplicate key update {2}'
     sval = ''
@@ -813,11 +815,13 @@ def __data_to_mysql(conn, data, column, update=''):
                 sval += ',(\'{}\')'.format('\',\''.join([str(x) for x in row]))
             cnt += 1
             if cnt >= 1000:
+                logging.info('data_to_mysql %s', esql.format(isql, sval, update))
                 conn.execute(esql.format(isql, sval, update))
                 cnt = 0
                 sval = ''
 
         if cnt > 0 and sval != '':
+            logging.info('data_to_mysql %s', esql.format(isql, sval, update))
             conn.execute(esql.format(isql, sval, update))
     except BaseException as e:
         logging.info(e)
@@ -848,7 +852,9 @@ def get_driver_num(**op_kwargs):
     results = tuple()
     driver_dic = {}
     while True:
-        mcursor.execute(query_driver_city_serv.format(id=driver_id))
+        sql = query_driver_city_serv.format(id=driver_id)
+        logging.info(sql)
+        mcursor.execute(sql)
         conn.commit()
         tmp = mcursor.fetchall()
         if not tmp:
@@ -891,6 +897,7 @@ def get_driver_num(**op_kwargs):
     conn = get_db_conn('mysql_bi')
     mcursor = conn.cursor()
     mcursor.executemany(insert_driver_num, res)
+    logging.info('insert num %s, data %s', len(res), str(res))
     conn.commit()
     mcursor.close()
     conn.close()

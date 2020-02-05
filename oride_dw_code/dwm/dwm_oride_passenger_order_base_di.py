@@ -38,7 +38,7 @@ args = {
 }
 
 dag = airflow.DAG('dwm_oride_passenger_order_base_di',
-                  schedule_interval="30 01 * * *",
+                  schedule_interval="50 00 * * *",
                   default_args=args)
 ##----------------------------------------- 变量 ---------------------------------------##
 
@@ -75,7 +75,7 @@ if code_map["id"].lower()=="ufile":
     #路径
     hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
 else:
-    print("成功")
+  
     dwd_oride_order_base_include_test_di_prev_day_task = OssSensor(
         task_id='dwd_oride_order_base_include_test_di_prev_day_task',
         bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
@@ -105,7 +105,7 @@ def fun_task_timeout_monitor(ds, dag, **op_kwargs):
     dag_ids = dag.dag_id
 
     msg = [
-        {"db": "oride_dw", "table": "{dag_name}".format(dag_name=dag_ids),
+        {"dag":dag,"db": "oride_dw", "table": "{dag_name}".format(dag_name=dag_ids),
          "partition": "country_code=NG/dt={pt}".format(pt=ds), "timeout": "800"}
     ]
 

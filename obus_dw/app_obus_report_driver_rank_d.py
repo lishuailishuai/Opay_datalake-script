@@ -10,6 +10,7 @@ from utils.connection_helper import get_hive_cursor, get_db_conn, get_db_conf
 from utils.validate_metrics_utils import *
 from airflow.sensors.s3_key_sensor import S3KeySensor
 from airflow.operators.bash_operator import BashOperator
+from airflow.sensors import OssSensor
 import time
 import logging
 
@@ -36,51 +37,45 @@ dag = airflow.DAG(
 依赖采集完成
 """
 #等待采集dag全部任务完成
-dependence_ods_sqoop_data_driver_df = S3KeySensor(
+dependence_ods_sqoop_data_driver_df = OssSensor(
     task_id='dependence_ods_sqoop_data_driver_df',
-    bucket_key='obus_dw/ods_sqoop_data_driver_df/country_code=nal/dt={pt}/_SUCCESS'.format(pt='{{ ds }}'),
-    bucket_name='opay-bi',
+    bucket_key='obus_dw_sqoop/ods_sqoop_data_driver_df/country_code=nal/dt={pt}/_SUCCESS'.format(pt='{{ ds }}'),
+    bucket_name='opay-datalake',
     dag=dag
 )
 
-dependence_ods_sqoop_data_driver_work_log_df = S3KeySensor(
+
+dependence_ods_sqoop_data_driver_work_log_df = OssSensor(
     task_id='dependence_ods_sqoop_data_driver_work_log_df',
-    bucket_key='obus_dw/ods_sqoop_data_driver_work_log_df/country_code=nal/dt={pt}/_SUCCESS'.format(pt='{{ ds }}'),
-    bucket_name='opay-bi',
+    bucket_key='obus_dw_sqoop/ods_sqoop_data_driver_work_log_df/country_code=nal/dt={pt}/_SUCCESS'.format(pt='{{ ds }}'),
+    bucket_name='opay-datalake',
     dag=dag
 )
 
-dependence_ods_sqoop_data_driver_trip_df = S3KeySensor(
+dependence_ods_sqoop_data_driver_trip_df = OssSensor(
     task_id='dependence_ods_sqoop_data_driver_trip_df',
-    bucket_key='obus_dw/ods_sqoop_data_driver_trip_df/country_code=nal/dt={pt}/_SUCCESS'.format(pt='{{ ds }}'),
-    bucket_name='opay-bi',
+    bucket_key='obus_dw_sqoop/ods_sqoop_data_driver_trip_df/country_code=nal/dt={pt}/_SUCCESS'.format(pt='{{ ds }}'),
+    bucket_name='opay-datalake',
     dag=dag
 )
 
-dependence_ods_sqoop_conf_line_stations_df = S3KeySensor(
+dependence_ods_sqoop_conf_line_stations_df = OssSensor(
     task_id='dependence_ods_sqoop_conf_line_stations_df',
-    bucket_key='obus_dw/ods_sqoop_conf_line_stations_df/country_code=nal/dt={pt}/_SUCCESS'.format(pt='{{ ds }}'),
-    bucket_name='opay-bi',
+    bucket_key='obus_dw_sqoop/ods_sqoop_conf_line_stations_df/country_code=nal/dt={pt}/_SUCCESS'.format(pt='{{ ds }}'),
+    bucket_name='opay-datalake',
     dag=dag
 )
 
-dependence_ods_sqoop_data_driver_records_day_df = S3KeySensor(
+dependence_ods_sqoop_data_driver_records_day_df = OssSensor(
     task_id='dependence_ods_sqoop_data_driver_records_day_df',
-    bucket_key='obus_dw/ods_sqoop_data_driver_records_day_df/country_code=nal/dt={pt}/_SUCCESS'.format(pt='{{ ds }}'),
-    bucket_name='opay-bi',
+    bucket_key='obus_dw_sqoop/ods_sqoop_data_driver_records_day_df/country_code=nal/dt={pt}/_SUCCESS'.format(pt='{{ ds }}'),
+    bucket_name='opay-datalake',
     dag=dag
 )
 
 """
 end
 """
-
-sleep_time = BashOperator(
-    task_id='sleep_id',
-    depends_on_past=False,
-    bash_command='sleep 120',
-    dag=dag
-)
 
 
 def get_data_from_impala(**op_kwargs):
@@ -278,10 +273,8 @@ get_data_from_impala_task = PythonOperator(
 )
 
 
-dependence_ods_sqoop_data_driver_df >> sleep_time
-dependence_ods_sqoop_data_driver_work_log_df >> sleep_time
-dependence_ods_sqoop_data_driver_trip_df >> sleep_time
-dependence_ods_sqoop_conf_line_stations_df >> sleep_time
-dependence_ods_sqoop_data_driver_records_day_df >> sleep_time
-
-sleep_time >> get_data_from_impala_task
+dependence_ods_sqoop_data_driver_df >> get_data_from_impala_task
+dependence_ods_sqoop_data_driver_work_log_df >> get_data_from_impala_task
+dependence_ods_sqoop_data_driver_trip_df >> get_data_from_impala_task
+dependence_ods_sqoop_conf_line_stations_df >> get_data_from_impala_task
+dependence_ods_sqoop_data_driver_records_day_df >> get_data_from_impala_task

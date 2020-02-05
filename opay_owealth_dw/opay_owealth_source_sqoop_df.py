@@ -16,7 +16,7 @@ from airflow.models import Variable
 
 args = {
     'owner': 'zhenqian.zhang',
-    'start_date': datetime(2019, 10, 30),
+    'start_date': datetime(2020, 1, 16),
     'depends_on_past': False,
     'retries': 1,
     'retry_delay': timedelta(minutes=5),
@@ -25,7 +25,7 @@ args = {
     'email_on_retry': False,
     'on_success_callback':on_success_callback,
 }
-schedule_interval="20 03 * * *"
+schedule_interval="20 02 * * *"
 
 dag = airflow.DAG(
     'opay_owealth_source_sqoop_df',

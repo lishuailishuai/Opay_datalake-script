@@ -16,17 +16,18 @@ from airflow.sensors.named_hive_partition_sensor import NamedHivePartitionSensor
 from airflow.sensors.hive_partition_sensor import HivePartitionSensor
 from airflow.sensors import UFileSensor
 from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
+from airflow.sensors import OssSensor
+
 from plugins.TaskTouchzSuccess import TaskTouchzSuccess
 import json
 import logging
 from airflow.models import Variable
 import requests
 import os
-from airflow.sensors import OssSensor
 
 args = {
-    'owner': 'lishuai',
-    'start_date': datetime(2020, 1, 2),
+    'owner': 'liushuzhen',
+    'start_date': datetime(2020, 2, 3),
     'depends_on_past': False,
     'retries': 3,
     'retry_delay': timedelta(minutes=2),
@@ -35,47 +36,38 @@ args = {
     'email_on_retry': False,
 }
 
-dag = airflow.DAG('app_opay_device_di',
-                  schedule_interval="00 03 * * *",
+dag = airflow.DAG('dwm_opay_user_balance_df',
+                  schedule_interval="50 02 * * *",
                   default_args=args,
                   catchup=False)
 
 ##----------------------------------------- 依赖 ---------------------------------------##
 
-# 依赖前一天分区
-dwd_opay_client_event_base_di_prev_day_task = HivePartitionSensor(
-    task_id="dwd_opay_client_event_base_di_prev_day_task",
-    table="client_event",
-    partition="dt='{{ ds }}' and hour='22'",
-    schema="opay_source",
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
-
-app_opay_device_d_prev_day_task = OssSensor(
-    task_id='app_opay_device_d_prev_day_task',
+dwd_opay_account_balance_df_prev_day_task = OssSensor(
+    task_id='dwd_opay_account_balance_df_prev_day_task',
     bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opay/opay_dw/app_opay_device_d/country_code=nal",
-        pt='{{macros.ds_add(ds, -1)}}'
+        hdfs_path_str="opay/opay_dw/dwd_opay_account_balance_df/country_code=NG",
+        pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
 
-##----------------------------------------- 任务超时监控(下面的table名不能改成变量，因为之前手动回溯，日期范围给填错
-##太大了，所以删掉之前的dag,重新改了一下dag名) ---------------------------------------##
-def fun_task_timeout_monitor(ds,dag,**op_kwargs):
 
-    dag_ids=dag.dag_id
+##----------------------------------------- 任务超时监控 ---------------------------------------##
+def fun_task_timeout_monitor(ds, dag, **op_kwargs):
+    dag_ids = dag.dag_id
 
     msg = [
-        {"db": "opay_dw", "table":"app_opay_device_d", "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "3000"}
+        {"dag": dag, "db": "opay_dw", "table": "{dag_name}".format(dag_name=dag_ids),
+         "partition": "country_code=NG/dt={pt}".format(pt=ds), "timeout": "3000"}
     ]
 
     TaskTimeoutMonitor().set_task_monitor(msg)
 
-task_timeout_monitor= PythonOperator(
+
+task_timeout_monitor = PythonOperator(
     task_id='task_timeout_monitor',
     python_callable=fun_task_timeout_monitor,
     provide_context=True,
@@ -84,53 +76,54 @@ task_timeout_monitor= PythonOperator(
 
 ##----------------------------------------- 变量 ---------------------------------------##
 db_name = "opay_dw"
-table_name = "app_opay_device_d"
+
+table_name = "dwm_opay_user_balance_df"
 hdfs_path = "oss://opay-datalake/opay/opay_dw/" + table_name
 
 
-##----------------------------------------- 脚本 ---------------------------------------##
-
-def app_opay_device_d_sql_task(ds):
+def dwm_opay_user_balance_df_sql_task(ds):
     HQL = '''
 
-    set mapred.max.split.size=1000000;
     set hive.exec.dynamic.partition.mode=nonstrict;
     set hive.exec.parallel=true;
-    insert overwrite table {db}.{table} partition(country_code,dt)
-    select if(a.device_id is null,b.device_id,a.device_id),
-    if(b.device_id is not null,b.bb,a.`timestamp`),
-    'nal' as country_code,
-    '{pt}' as dt
-    from 
-    (select *
-     from
-    opay_dw.app_opay_device_d 
-    where dt=date_sub('{pt}',1)
-    ) a
-    full join
-    (select
-        common.device_id device_id,
-        max(`timestamp`) bb
-    from opay_source.client_event
-    where (dt = '{pt}' and hour < 23) or (dt=date_sub('{pt}', 1) and hour = 23) and common.device_id!=''
-    group by common.device_id
-    ) b
-on a.device_id=b.device_id;
+    INSERT overwrite TABLE opay_dw.dwm_opay_user_balance_df partition (country_code,dt)
+    select a.user_id,user_role,user_level,owealth,owallet,opay,opay_7,opay_30,opay_m,opay_w,country_code,'{pt}' from 
+           (select user_id,user_role,user_level,country_code,
+                   sum(balance) opay,
+                   sum(case when account_type='CASHACCOUNT' then balance end) owallet,
+                   sum(case when account_type='OWEALTH' then balance end) owealth
+            from opay_dw.dwd_opay_account_balance_df 
+            where dt='{pt}' and account_type in('CASHACCOUNT','OWEALTH') and user_type='USER'
+            group by user_id,user_role,user_level,country_code) a 
+    left join 
+          (select user_id,
+                  avg(case when dt>date_sub('{pt}',30) then s_balance end) opay_30,
+                  avg(case when dt>date_sub('{pt}',7) then s_balance end) opay_7,
+                  avg(case when dt>=date_format('{pt}', 'yyyy-MM-01') then s_balance end) opay_m,
+                  avg(case when dt>=date_sub(next_day('{pt}', 'mo'), 7) then s_balance end) opay_w
+           from
+              (select user_id,dt,sum(balance) s_balance
+              from opay_dw.dwd_opay_account_balance_df where dt>date_sub('{pt}',32) and dt<='{pt}' and account_type in('CASHACCOUNT','OWEALTH')
+                   and user_type='USER'
+              group by user_id,dt) m 
+           group by user_id
+           ) b 
+    on a.user_id=b.user_id
 
-'''.format(
+
+    '''.format(
         pt=ds,
-        db=db_name,
-        table=table_name
+        table=table_name,
+        db=db_name
     )
     return HQL
 
 
-# 主流程
 def execution_data_task_id(ds, **kargs):
     hive_hook = HiveCliHook()
 
     # 读取sql
-    _sql = app_opay_device_d_sql_task(ds)
+    _sql = dwm_opay_user_balance_df_sql_task(ds)
 
     logging.info('Executing: %s', _sql)
 
@@ -146,12 +139,12 @@ def execution_data_task_id(ds, **kargs):
     TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "true", "true")
 
 
-app_opay_device_d_task = PythonOperator(
-    task_id='app_opay_device_d_task',
+dwm_opay_user_balance_df_task = PythonOperator(
+    task_id='dwm_opay_user_balance_df_task',
     python_callable=execution_data_task_id,
     provide_context=True,
     dag=dag
 )
 
-dwd_opay_client_event_base_di_prev_day_task >> app_opay_device_d_task
-app_opay_device_d_prev_day_task >> app_opay_device_d_task
+dwd_opay_account_balance_df_prev_day_task >> dwm_opay_user_balance_df_task
+

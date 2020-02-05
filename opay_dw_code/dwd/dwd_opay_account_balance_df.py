@@ -85,6 +85,34 @@ ods_sqoop_base_merchant_df_prev_day_task = OssSensor(
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
+ods_sqoop_owealth_share_acct_df_prev_day_task = OssSensor(
+    task_id='ods_sqoop_owealth_share_acct_df_prev_day_task',
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="opay_owealth_ods/opay_owealth/share_acct",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
+##----------------------------------------- 任务超时监控 ---------------------------------------##
+def fun_task_timeout_monitor(ds,dag,**op_kwargs):
+
+    dag_ids=dag.dag_id
+
+    msg = [
+        {"dag":dag, "db": "opay_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=NG/dt={pt}".format(pt=ds), "timeout": "3000"}
+    ]
+
+    TaskTimeoutMonitor().set_task_monitor(msg)
+
+task_timeout_monitor= PythonOperator(
+    task_id='task_timeout_monitor',
+    python_callable=fun_task_timeout_monitor,
+    provide_context=True,
+    dag=dag
+)
 
 ##----------------------------------------- 变量 ---------------------------------------##
 db_name="opay_dw"
@@ -98,113 +126,153 @@ def dwd_opay_account_balance_df_sql_task(ds):
     set mapred.max.split.size=1000000;
     set hive.exec.dynamic.partition.mode=nonstrict;
     set hive.exec.parallel=true;
+    
+    with 
+        um_data as (
+            SELECT 
+                user_id,
+                business_name,
+                ROLE,
+                kyc_level,
+                category,
+                '' merchant_type,
+                CASE country
+                    WHEN 'Nigeria' THEN 'NG'
+                    WHEN 'Norway' THEN 'NO'
+                    WHEN 'Ghana' THEN 'GH'
+                    WHEN 'Botswana' THEN 'BW'
+                    WHEN 'Ghana' THEN 'GH'
+                    WHEN 'Kenya' THEN 'KE'
+                    WHEN 'Malawi' THEN 'MW'
+                    WHEN 'Mozambique' THEN 'MZ'
+                    WHEN 'Poland' THEN 'PL'
+                    WHEN 'South Africa' THEN 'ZA'
+                    WHEN 'Sweden' THEN 'SE'
+                    WHEN 'Tanzania' THEN 'TZ'
+                    WHEN 'Uganda' THEN 'UG'
+                    WHEN 'USA' THEN 'US'
+                    WHEN 'Zambia' THEN 'ZM'
+                    WHEN 'Zimbabwe' THEN 'ZW'
+                    ELSE 'NG'
+                 END AS country_code,
+                 mobile
+            FROM (
+                SELECT 
+                    user_id,
+                    business_name,
+                    ROLE,
+                    kyc_level,
+                    '' category,mobile,
+                    row_number()over(partition BY user_id ORDER BY update_time DESC) rn,
+                    country
+                FROM opay_dw_ods.ods_sqoop_base_user_di where dt<='{pt}') m
+                WHERE rn=1
+            union all
+            SELECT 
+                    merchant_id AS user_id,
+                    '' business_name,
+                    'merchant'AS ROLE,
+                    '' kyc_level,
+                    category,
+                    merchant_type,
+                    CASE countries_code
+                        WHEN 'NG' THEN 'NG'
+                        WHEN 'NO' THEN 'NO'
+                        WHEN 'GH' THEN 'GH'
+                        WHEN 'BW' THEN 'BW'
+                        WHEN 'GH' THEN 'GH'
+                        WHEN 'KE' THEN 'KE'
+                        WHEN 'MW' THEN 'MW'
+                        WHEN 'MZ' THEN 'MZ'
+                        WHEN 'PL' THEN 'PL'
+                        WHEN 'ZA' THEN 'ZA'
+                        WHEN 'SE' THEN 'SE'
+                        WHEN 'TZ' THEN 'TZ'
+                        WHEN 'UG' THEN 'UG'
+                        WHEN 'US' THEN 'US'
+                        WHEN 'ZM' THEN 'ZM'
+                        WHEN 'ZW' THEN 'ZW'
+                        ELSE 'NG'
+                        END AS country_code,
+                        '-' as mobile
+                FROM opay_dw_ods.ods_sqoop_base_merchant_df
+                WHERE dt='{pt}' AND create_time<'{pt} 23:00:00'
+        )
+       
     insert overwrite table {db}.{table} partition (country_code,dt)
-    SELECT a.user_id,
-           user_type,
-           business_name,
-           ROLE,
-           kyc_level,
-           account_type,
-           category,
-           account_no,
-           balance,
-           currency,
-           account_state,
-           auth,
-           create_time,
-           update_time,
-           merchant_type,
-           country_code,
-           '{pt}'           
-    FROM
-      (SELECT user_id,
-              'USER' user_type,
-                     account_type,
-                     account_no,
-                     balance,
-                     currency,
-                     account_state,
-                     auth,
-                     create_time,
-                     update_time
-       FROM opay_dw_ods.ods_sqoop_base_account_user_df where dt='{pt}'
-            AND create_time<'{pt} 23:00:00'
-       UNION ALL SELECT merchant_id AS user_id,
-                        'MERCHANT' user_type,
-                                   account_type,
-                                   account_no,
-                                   balance,
-                                   currency,
-                                   account_state,
-                                   auth,
-                                   create_time,
-                                   update_time
-       FROM opay_dw_ods.ods_sqoop_base_account_merchant_df where dt='{pt}'
-            AND create_time<'{pt} 23:00:00') a
-    INNER JOIN
-      (SELECT user_id,
-              business_name,
-              ROLE,
-              kyc_level,
-              category,
-              '' merchant_type,
-                 CASE country
-                       WHEN 'Nigeria' THEN 'NG'
-                       WHEN 'Norway' THEN 'NO'
-                       WHEN 'Ghana' THEN 'GH'
-                       WHEN 'Botswana' THEN 'BW'
-                       WHEN 'Ghana' THEN 'GH'
-                       WHEN 'Kenya' THEN 'KE'
-                       WHEN 'Malawi' THEN 'MW'
-                       WHEN 'Mozambique' THEN 'MZ'
-                       WHEN 'Poland' THEN 'PL'
-                       WHEN 'South Africa' THEN 'ZA'
-                       WHEN 'Sweden' THEN 'SE'
-                       WHEN 'Tanzania' THEN 'TZ'
-                       WHEN 'Uganda' THEN 'UG'
-                       WHEN 'USA' THEN 'US'
-                       WHEN 'Zambia' THEN 'ZM'
-                       WHEN 'Zimbabwe' THEN 'ZW'
-                       ELSE 'NG'
-                 END AS country_code
-       FROM
-         (SELECT user_id,
-                 business_name,
-                 ROLE,
-                 kyc_level,
-                 '' category,
-                    row_number()over(partition BY user_id
-                                     ORDER BY update_time DESC) rn,
-                                country
-          FROM opay_dw_ods.ods_sqoop_base_user_di where create_time<'{pt} 23:00:00') m
-       WHERE rn=1
-       UNION ALL SELECT merchant_id AS user_id,
-                        '' business_name,
-                          'merchant'AS ROLE,
-                          '' kyc_level,
-                             category,
-                             merchant_type,
-                             CASE countries_code
-                                 WHEN 'NG' THEN 'NG'
-                                 WHEN 'NO' THEN 'NO'
-                                 WHEN 'GH' THEN 'GH'
-                                 WHEN 'BW' THEN 'BW'
-                                 WHEN 'GH' THEN 'GH'
-                                 WHEN 'KE' THEN 'KE'
-                                 WHEN 'MW' THEN 'MW'
-                                 WHEN 'MZ' THEN 'MZ'
-                                 WHEN 'PL' THEN 'PL'
-                                 WHEN 'ZA' THEN 'ZA'
-                                 WHEN 'SE' THEN 'SE'
-                                 WHEN 'TZ' THEN 'TZ'
-                                 WHEN 'UG' THEN 'UG'
-                                 WHEN 'US' THEN 'US'
-                                 WHEN 'ZM' THEN 'ZM'
-                                 WHEN 'ZW' THEN 'ZW'
-                                 ELSE 'NG'
-                             END AS country_code
-       FROM opay_dw_ods.ods_sqoop_base_merchant_df
-       WHERE dt='{pt}' AND create_time<'{pt} 23:00:00' )b ON a.user_id=b.user_id
+    select
+        t0.user_id,
+        user_type,
+        nvl(business_name, '-'),
+        nvl(ROLE, '-'),
+        nvl(kyc_level, '-'),
+        nvl(account_type, '-'),
+        nvl(category, '-'),
+        nvl(account_no, '-'),
+        nvl(balance, 0),
+        nvl(currency, '-'),
+        nvl(account_state, '-'),
+        nvl(auth, '-'),
+        nvl(create_time, '-'),
+        nvl(update_time, '-'),
+        nvl(merchant_type, '-'),
+        nvl(country_code, '-'),
+        '{pt}' dt
+    from (
+        SELECT 
+            merchant_id AS user_id,
+            'MERCHANT' user_type,
+            account_type,
+            account_no,
+            balance,
+            currency,
+            account_state,
+            auth,
+            create_time,
+            update_time
+        FROM opay_dw_ods.ods_sqoop_base_account_merchant_df
+        where dt='{pt}' and create_time<'{pt} 23:00:00'
+        union all
+        SELECT 
+            user_id,
+            'USER' user_type,
+            account_type,
+            account_no,
+            balance,
+            currency,
+            account_state,
+            auth,
+            create_time,
+            update_time
+        FROM opay_dw_ods.ods_sqoop_base_account_user_df where dt='{pt}' AND create_time<'{pt} 23:00:00'
+    ) t0 inner join um_data t1 on t0.user_id = t1.user_id
+    union all
+    SELECT 
+        t3.user_id,
+        user_type,
+        nvl(business_name, '-'),
+        nvl(ROLE, '-'),
+        nvl(kyc_level, '-'),
+        nvl(account_type, '-'),
+        nvl(category, '-'),
+        nvl(account_no, '-'),
+        nvl(balance, 0),
+        nvl(currency, '-'),
+        nvl(account_state, '-'),
+        nvl(auth, '-'),
+        nvl(create_time, '-'),
+        nvl(update_time, '-'),
+        nvl(merchant_type, '-'),
+        nvl(country_code, '-'),
+        '{pt}'  dt 
+    from (
+         SELECT 
+            user_id,'USER' user_type,'OWEALTH' account_type,share_acct_id account_no,balance,currency,acct_status account_state,memo auth,
+            create_time,update_time
+        FROM opay_owealth_ods.ods_sqoop_owealth_share_acct_df 
+        where dt='{pt}' and create_time<'{pt} 23:00:00'
+    ) t2 inner join um_data t3 on t2.user_id = t3.mobile
+   
    
     '''.format(
         pt=ds,
@@ -246,3 +314,4 @@ ods_sqoop_base_account_user_df_prev_day_task >> dwd_opay_account_balance_df_task
 ods_sqoop_base_account_merchant_df_prev_day_task >> dwd_opay_account_balance_df_task
 ods_sqoop_base_user_di_prev_day_task >> dwd_opay_account_balance_df_task
 ods_sqoop_base_merchant_df_prev_day_task >> dwd_opay_account_balance_df_task
+ods_sqoop_owealth_share_acct_df_prev_day_task >> dwd_opay_account_balance_df_task

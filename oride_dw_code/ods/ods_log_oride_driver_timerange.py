@@ -24,7 +24,7 @@ args = {
 }
 
 dag = airflow.DAG( 'ods_oride_log_driver_timerange',
-    schedule_interval="00 01 * * *",
+    schedule_interval="10 00 * * *",
     default_args=args,
     catchup=False)
 
@@ -80,6 +80,7 @@ def get_driver_online_time(ds, **op_kwargs):
     conn.close()
     processes = []
     max_driver_id = result[0]
+
     logging.info('max driver id %d', max_driver_id)
     id_list = [x for x in range(1, max_driver_id+1)]
     part_size = 1000

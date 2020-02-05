@@ -35,7 +35,7 @@ args = {
 }
 
 dag = airflow.DAG('dwd_oride_order_skyeye_di',
-                  schedule_interval="30 08 * * *",
+                  schedule_interval="30 07 * * *",
                   default_args=args,
                   catchup=False)
 
@@ -43,16 +43,10 @@ dag = airflow.DAG('dwd_oride_order_skyeye_di',
 
 db_name = "oride_dw"
 table_name = "dwd_oride_order_skyeye_di"
+hdfs_path = "oss://opay-datalake/oride/oride_dw/" + table_name
 
 ##----------------------------------------- 依赖 ---------------------------------------##
-#获取变量
-code_map=eval(Variable.get("sys_flag"))
-
-#判断ufile(cdh环境)
-if code_map["id"].lower()=="ufile":
-
-    # 依赖前一天分区
-    dwd_oride_order_skyeye_di_prev_day_task = HivePartitionSensor(
+ods_log_oride_order_skyeye_di_task = HivePartitionSensor(
         task_id="dwd_oride_order_skyeye_di_prev_day_task",
         table="ods_log_oride_order_skyeye_di",
         partition="dt='{{ds}}'",
@@ -60,19 +54,6 @@ if code_map["id"].lower()=="ufile":
         poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
         dag=dag
     )
-    hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
-
-else:
-    print("成功")
-    dwd_oride_order_skyeye_di_prev_day_task = HivePartitionSensor(
-        task_id="dwd_oride_order_skyeye_di_prev_day_task",
-        table="ods_log_oride_order_skyeye_di",
-        partition="dt='{{ds}}'",
-        schema="oride_dw_ods",
-        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-        dag=dag
-    )
-    hdfs_path = "oss://opay-datalake/oride/oride_dw/" + table_name
 
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
 
@@ -81,7 +62,7 @@ def fun_task_timeout_monitor(ds,dag,**op_kwargs):
     dag_ids=dag.dag_id
 
     msg = [
-        {"db": "oride_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "2400"}
+        {"dag":dag,"db": "oride_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "2400"}
     ]
 
     TaskTimeoutMonitor().set_task_monitor(msg)
@@ -153,4 +134,4 @@ dwd_oride_order_skyeye_di_task = PythonOperator(
     dag=dag
 )
 
-dwd_oride_order_skyeye_di_prev_day_task >> dwd_oride_order_skyeye_di_task
+ods_log_oride_order_skyeye_di_task >> dwd_oride_order_skyeye_di_task

@@ -72,7 +72,7 @@ def fun_task_timeout_monitor(ds,dag,**op_kwargs):
     dag_ids=dag.dag_id
 
     msg = [
-        {"db": "opay_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=NG/dt={pt}".format(pt=ds), "timeout": "3000"}
+        {"dag":dag, "db": "opay_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=NG/dt={pt}".format(pt=ds), "timeout": "3000"}
     ]
 
     TaskTimeoutMonitor().set_task_monitor(msg)
@@ -115,6 +115,7 @@ def dwd_opay_easycash_record_di_sql_task(ds):
         t1.affiliate_mobile, 
         t1.create_time, t1.update_time, t1.country, t1.order_status, t1.error_code, t1.error_msg, t1.next_step, t1.accounting_status, 
         'easycash' as top_consume_scenario, 'easycash' as sub_consume_scenario,
+         t1.fee_amount, t1.fee_pattern, t1.outward_id, t1.outward_type,
         case t1.country
             when 'NG' then 'NG'
             when 'NO' then 'NO'
@@ -140,7 +141,8 @@ def dwd_opay_easycash_record_di_sql_task(ds):
         select 
             order_no, amount, currency, user_id as originator_id, 
             mobile as affiliate_mobile,
-            create_time, update_time, country, order_status, error_code, error_msg, next_step, accounting_status
+            create_time, update_time, country, order_status, error_code, error_msg, next_step, accounting_status,
+            nvl(fee_amount, 0) as fee_amount, nvl(fee_pattern, '-') as fee_pattern, '-' as outward_id, '-' as outward_type
         from
         opay_dw_ods.ods_sqoop_base_user_easycash_record_di 
         where dt='{pt}'

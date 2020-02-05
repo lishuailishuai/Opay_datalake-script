@@ -15,7 +15,7 @@ from airflow.models import Variable
 
 args = {
     'owner': 'zhenqian.zhang',
-    'start_date': datetime(2019, 10, 30),
+    'start_date': datetime(2020, 1, 12),
     'depends_on_past': False,
     'retries': 1,
     'retry_delay': timedelta(minutes=5),
@@ -100,6 +100,9 @@ table_list = [
     ("opay_commission", "commission_account_balance", "opay_commission", "base", 1),
     ("opay_commission", "commission_order", "opay_commission", "base", 1),
     ("opay_commission", "commission_top_up_record", "opay_commission", "base", 1),
+
+    ("opay_agent_crm", "bd_agent", "opay_agent_crm_db", "base", 2),
+    ("opay_agent_crm", "bd_admin_users", "opay_agent_crm_db", "base", 2),
 ]
 
 """
@@ -330,7 +333,7 @@ for db_name, table_name, conn_id, prefix_name,priority_weight_nm in table_list:
     )
 
     if table_name in IGNORED_TABLE_LIST:
-        add_partitions >> validate_all_data
+        import_table >> validate_all_data
     else:
         # 数据量监控
         volume_monitoring = PythonOperator(
@@ -344,7 +347,7 @@ for db_name, table_name, conn_id, prefix_name,priority_weight_nm in table_list:
             },
             dag=dag
         )
-        add_partitions >> volume_monitoring >> validate_all_data
+        import_table >> volume_monitoring >> validate_all_data
     # 超时监控
     task_timeout_monitor= PythonOperator(
         task_id='task_timeout_monitor_{}'.format(hive_table_name),
@@ -357,4 +360,4 @@ for db_name, table_name, conn_id, prefix_name,priority_weight_nm in table_list:
         dag=dag_monitor
     )
 
-    import_table >> check_table >> add_partitions
+    check_table >> add_partitions >> import_table

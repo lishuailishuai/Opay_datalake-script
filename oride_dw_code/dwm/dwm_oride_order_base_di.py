@@ -38,7 +38,7 @@ args = {
 }
 
 dag = airflow.DAG('dwm_oride_order_base_di',
-                  schedule_interval="30 01 * * *",
+                  schedule_interval="40 00 * * *",
                   default_args=args,
                   catchup=False)
 
@@ -46,87 +46,10 @@ dag = airflow.DAG('dwm_oride_order_base_di',
 
 db_name = "oride_dw"
 table_name = "dwm_oride_order_base_di"
+hdfs_path = "oss://opay-datalake/oride/oride_dw/" + table_name
 
 ##----------------------------------------- 依赖 ---------------------------------------##
-
-#获取变量
-code_map=eval(Variable.get("sys_flag"))
-
-#判断ufile(cdh环境)
-if code_map["id"].lower()=="ufile":
-    # 依赖前一天分区
-    dependence_dwd_oride_order_base_include_test_di_prev_day_task = S3KeySensor(
-        task_id='dwd_oride_order_base_include_test_di_prev_day_task',
-        bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-            hdfs_path_str="oride/oride_dw/dwd_oride_order_base_include_test_di/country_code=NG",
-            pt='{{ds}}'
-        ),
-        bucket_name='opay-bi',
-        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-        dag=dag
-    )
-    
-    dependence_dwd_oride_order_assign_driver_detail_di_prev_day_tesk = UFileSensor(
-        task_id='dwd_oride_order_assign_driver_detail_di_prev_day_tesk',
-        filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-            hdfs_path_str="oride/oride_dw/dwd_oride_order_assign_driver_detail_di/country_code=nal",
-            pt='{{ds}}'
-        ),
-        bucket_name='opay-datalake',
-        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-        dag=dag
-    )
-    
-    dependence_dwd_oride_order_push_driver_detail_di_prev_day_tesk = UFileSensor(
-        task_id='dwd_oride_order_push_driver_detail_di_prev_day_tesk',
-        filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-            hdfs_path_str="oride/oride_dw/dwd_oride_order_push_driver_detail_di/country_code=nal",
-            pt='{{ds}}'
-        ),
-        bucket_name='opay-datalake',
-        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-        dag=dag
-    )
-    
-    dependence_dwd_oride_driver_accept_order_show_detail_di_prev_day_task = UFileSensor(
-        task_id='dwd_oride_driver_accept_order_show_detail_di_prev_day_task',
-        filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-            hdfs_path_str="oride/oride_dw/dwd_oride_driver_accept_order_show_detail_di/country_code=nal",
-            pt='{{ds}}'
-        ),
-        bucket_name='opay-datalake',
-        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-        dag=dag
-    )
-    
-    dependence_dwd_oride_driver_accept_order_click_detail_di_prev_day_task = UFileSensor(
-        task_id='dwd_oride_driver_accept_order_click_detail_di_prev_day_task',
-        filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-            hdfs_path_str="oride/oride_dw/dwd_oride_driver_accept_order_click_detail_di/country_code=nal",
-            pt='{{ds}}'
-        ),
-        bucket_name='opay-datalake',
-        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-        dag=dag
-    )
-    
-    # 依赖前一天分区
-    dependence_dwd_oride_order_mark_df_prev_day_task = S3KeySensor(
-        task_id='dwd_oride_order_mark_df_prev_day_task',
-        bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-            hdfs_path_str="oride/oride_dw/dwd_oride_order_mark_df/country_code=NG",
-            pt='{{ds}}'
-        ),
-        bucket_name='opay-bi',
-        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-        dag=dag
-    )
-
-    # 路径
-    hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
-else:
-    print("成功")
-    dependence_dwd_oride_order_base_include_test_di_prev_day_task = OssSensor(
+dependence_dwd_oride_order_base_include_test_di_prev_day_task = OssSensor(
         task_id='dwd_oride_order_base_include_test_di_prev_day_task',
         bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
             hdfs_path_str="oride/oride_dw/dwd_oride_order_base_include_test_di/country_code=NG",
@@ -137,7 +60,7 @@ else:
         dag=dag
     )
 
-    dependence_dwd_oride_order_assign_driver_detail_di_prev_day_tesk = OssSensor(
+dependence_dwd_oride_order_assign_driver_detail_di_prev_day_tesk = OssSensor(
         task_id='dwd_oride_order_assign_driver_detail_di_prev_day_tesk',
         bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
             hdfs_path_str="oride/oride_dw/dwd_oride_order_assign_driver_detail_di/country_code=nal",
@@ -148,7 +71,7 @@ else:
         dag=dag
     )
 
-    dependence_dwd_oride_order_push_driver_detail_di_prev_day_tesk = OssSensor(
+dependence_dwd_oride_order_push_driver_detail_di_prev_day_tesk = OssSensor(
         task_id='dwd_oride_order_push_driver_detail_di_prev_day_tesk',
         bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
             hdfs_path_str="oride/oride_dw/dwd_oride_order_push_driver_detail_di/country_code=nal",
@@ -159,7 +82,7 @@ else:
         dag=dag
     )
 
-    dependence_dwd_oride_driver_accept_order_show_detail_di_prev_day_task = OssSensor(
+dependence_dwd_oride_driver_accept_order_show_detail_di_prev_day_task = OssSensor(
         task_id='dwd_oride_driver_accept_order_show_detail_di_prev_day_task',
         bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
             hdfs_path_str="oride/oride_dw/dwd_oride_driver_accept_order_show_detail_di/country_code=nal",
@@ -170,7 +93,7 @@ else:
         dag=dag
     )
 
-    dependence_dwd_oride_driver_accept_order_click_detail_di_prev_day_task = OssSensor(
+dependence_dwd_oride_driver_accept_order_click_detail_di_prev_day_task = OssSensor(
         task_id='dwd_oride_driver_accept_order_click_detail_di_prev_day_task',
         bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
             hdfs_path_str="oride/oride_dw/dwd_oride_driver_accept_order_click_detail_di/country_code=nal",
@@ -181,8 +104,8 @@ else:
         dag=dag
     )
 
-    # 依赖前一天分区
-    dependence_dwd_oride_order_mark_df_prev_day_task = OssSensor(
+# 依赖前一天分区
+dependence_dwd_oride_order_mark_df_prev_day_task = OssSensor(
         task_id='dwd_oride_order_mark_df_prev_day_task',
         bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
             hdfs_path_str="oride/oride_dw/dwd_oride_order_mark_df/country_code=NG",
@@ -192,8 +115,6 @@ else:
         poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
         dag=dag
     )
-    #路径
-    hdfs_path = "oss://opay-datalake/oride/oride_dw/" + table_name
 
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
 
@@ -201,7 +122,7 @@ def fun_task_timeout_monitor(ds, dag, **op_kwargs):
     dag_ids = dag.dag_id
 
     msg = [
-        {"db": "oride_dw", "table": "{dag_name}".format(dag_name=dag_ids),
+        {"dag":dag,"db": "oride_dw", "table": "{dag_name}".format(dag_name=dag_ids),
          "partition": "country_code=NG/dt={pt}".format(pt=ds), "timeout": "800"}
     ]
 
@@ -406,7 +327,19 @@ def dwm_oride_order_base_di_sql_task(ds):
            
            ord.falsify_driver_cancel, 
            --司机罚款
-
+           
+           ord.driver_price, 
+           --司机价格
+           
+           ord.tip,
+           --小费
+           
+           ord.surcharge,
+           --高速费
+           
+           ord.pax_insurance_price, 
+           --乘客保险费
+           
  		   ord.country_code as country_code,
 
            ord.dt as dt

@@ -37,7 +37,7 @@ args = {
 }
 
 dag = airflow.DAG('dm_oride_order_base_d',
-                  schedule_interval="00 02 * * *",
+                  schedule_interval="50 00 * * *",
                   default_args=args,
                   catchup=False)
 ##----------------------------------------- 变量 ---------------------------------------##
@@ -86,7 +86,7 @@ def fun_task_timeout_monitor(ds,dag,**op_kwargs):
     dag_ids=dag.dag_id
 
     msg = [
-        {"db": "oride_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=NG/dt={pt}".format(pt=ds), "timeout": "800"}
+        {"dag":dag,"db": "oride_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=NG/dt={pt}".format(pt=ds), "timeout": "800"}
     ]
 
     TaskTimeoutMonitor().set_task_monitor(msg)
@@ -143,7 +143,7 @@ def dm_oride_order_base_d_sql_task(ds):
        sum(if(is_finish=1,order_onride_distance,0)) as finish_order_onride_dis, --完单送驾距离(米)
        sum(if(is_finish=1,order_assigned_cnt,0)) as finish_order_pick_up_assigned_cnt, --完单订单被分配次数（计算平均接驾距离使用）
        sum(if(is_finish=1,price,0)) as price, --当日完单gmv
-       sum(if(is_finished_pay=1 and is_succ_pay=1,price,0)) as pay_price, --当日应付金额,自1226号升级为多限定支付成功,用于统计单均应付 
+       sum(if(is_finished_pay=1 and is_succ_pay=1,nvl(price,0)+nvl(tip,0)+nvl(surcharge,0)+nvl(pax_insurance_price,0),0)) as pay_price, --当日应付金额,自1226号升级为多限定支付成功,用于统计单均应付 
        sum(if(is_finished_pay=1 and is_succ_pay=1,pay_amount,0)) as pay_amount, -- 当日实付金额,自1226号升级为多限定支付成功，用于统计单均实付 
        sum(is_valid) as valid_ord_cnt, --当日有效订单数
        sum(if(is_finish=1,pick_up_order_dur,0)) as finish_pick_up_dur, --当日完单接驾时长 
@@ -166,7 +166,7 @@ def dm_oride_order_base_d_sql_task(ds):
        sum(is_carpool_success) as carpool_success_num, --拼成订单数
        sum(if(is_request=1 and is_carpool=1,1,0)) as carpool_accept_num, -- 拼车应答订单数
        sum(if(is_finish=1 and is_carpool_success=1,1,0)) as carpool_success_and_finish_num, --拼车成功且完单数
-       sum(if(is_finished_pay=1 and is_succ_pay=1 and pay_mode not in(0,1),price,0)) as online_pay_price,  --当日线上应付订单金额12.18号开始,自12.26号再次变更，要所有线上支付单，统计gmv和c补
+       sum(if(is_finished_pay=1 and is_succ_pay=1 and pay_mode not in(0,1),nvl(price,0)+nvl(tip,0)+nvl(surcharge,0)+nvl(pax_insurance_price,0),0)) as online_pay_price,  --当日线上应付订单金额12.18号开始,自12.26号再次变更，要所有线上支付单，统计gmv和c补
        sum(falsify) as falsify, --用户罚款，自12.25号开始该表接入
        sum(falsify_driver_cancel) as falsify_driver_cancel, --司机罚款，自12.25号开始该表接入
        country_code,

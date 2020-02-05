@@ -112,7 +112,7 @@ def fun_task_timeout_monitor(ds, dag, **op_kwargs):
     dag_ids = dag.dag_id
 
     tb = [
-        {"db": "opos_dw", "table": "{dag_name}".format(dag_name=dag_ids), "partition": "country_code=nal/dt={pt}".format(pt=ds),
+        {"dag": dag, "db": "opos_dw", "table": "{dag_name}".format(dag_name=dag_ids), "partition": "country_code=nal/dt={pt}".format(pt=ds),
          "timeout": "1200"}
     ]
 
@@ -426,7 +426,7 @@ m.id
 ,case
 when created_at<'{before_45_day}' and s.receipt_id is null then '1'
 when created_at<'{before_45_day}' and s.receipt_id is not null then '0'
-when created_at>='{before_45_day}' and dt<='{pt}' then '0'
+when created_at>='{before_45_day}' and created_at<='{pt}' then '0'
 else '1'
 end as shop_silent_flag
 

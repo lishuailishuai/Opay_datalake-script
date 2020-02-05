@@ -54,18 +54,17 @@ dwd_opay_transaction_record_di_prev_day_task = OssSensor(
 
 
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
-def fun_task_timeout_monitor(ds, dag, **op_kwargs):
-    dag_ids = dag.dag_id
+def fun_task_timeout_monitor(ds,dag,**op_kwargs):
+
+    dag_ids=dag.dag_id
 
     msg = [
-        {"db": "opay_dw", "table": "{dag_name}".format(dag_name=dag_ids),
-         "partition": "country_code=NG/dt={pt}".format(pt=ds), "timeout": "3000"}
+        {"dag":dag, "db": "opay_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=NG/dt={pt}".format(pt=ds), "timeout": "3000"}
     ]
 
     TaskTimeoutMonitor().set_task_monitor(msg)
 
-
-task_timeout_monitor = PythonOperator(
+task_timeout_monitor= PythonOperator(
     task_id='task_timeout_monitor',
     python_callable=fun_task_timeout_monitor,
     provide_context=True,
@@ -96,6 +95,8 @@ def app_opay_transaction_consume_scenario_sum_d_sql_task(ds):
         order_status,
         sum(amount) as order_amt, 
         count(*) as order_cnt,
+        0 as provider_share_amt,
+        sum(fee_amount) as fee_amt,
         country_code,
         '{pt}' as dt
     from {db}.dwd_opay_transaction_record_di 

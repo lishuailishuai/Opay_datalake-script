@@ -12,6 +12,7 @@ from airflow.sensors.s3_prefix_sensor import S3PrefixSensor
 from airflow.operators.bash_operator import BashOperator
 from airflow.sensors import UFileSensor
 from plugins.comwx import ComwxApi
+from airflow.sensors import OssSensor
 import time
 import logging
 
@@ -37,9 +38,9 @@ dag = airflow.DAG(
 """
 依赖采集完成
 """
-dependence_ods_sqoop_base_jh_order_df = UFileSensor(
-    task_id='dependence_ods_sqoop_base_jh_order_df',
-    filepath='{hdfs_path_str}/dt={pt}'.format(
+dependence_ods_sqoop_base_jh_order_df = OssSensor(
+    task_id='dependence_ods_sqoop_base_jh_order_df', 
+    bucket_key='{hdfs_path_str}/dt={pt}'.format(
         hdfs_path_str="ofood_dw_sqoop/food_operapay_co/jh_order",
         pt='{{ ds }}'
     ),
@@ -49,9 +50,9 @@ dependence_ods_sqoop_base_jh_order_df = UFileSensor(
 )
 
 
-dependence_ods_sqoop_base_jh_order_log_df = UFileSensor(
+dependence_ods_sqoop_base_jh_order_log_df = OssSensor(
     task_id='dependence_ods_sqoop_base_jh_order_log_df',
-    filepath='{hdfs_path_str}/dt={pt}'.format(
+    bucket_key='{hdfs_path_str}/dt={pt}'.format(
         hdfs_path_str="ofood_dw_sqoop/food_operapay_co/jh_order_log",
         pt='{{ ds }}'
     ),
@@ -61,9 +62,9 @@ dependence_ods_sqoop_base_jh_order_log_df = UFileSensor(
 )
 
 
-dependence_ods_sqoop_base_jh_waimai_comment_df = UFileSensor(
+dependence_ods_sqoop_base_jh_waimai_comment_df = OssSensor(
     task_id='dependence_ods_sqoop_base_jh_waimai_comment_df',
-    filepath='{hdfs_path_str}/dt={pt}'.format(
+    bucket_key='{hdfs_path_str}/dt={pt}'.format(
         hdfs_path_str="ofood_dw_sqoop/food_operapay_co/jh_waimai_comment",
         pt='{{ ds }}'
     ),
@@ -72,9 +73,9 @@ dependence_ods_sqoop_base_jh_waimai_comment_df = UFileSensor(
     dag=dag
 )
 
-dependence_ods_sqoop_base_jh_order_time_df = UFileSensor(
+dependence_ods_sqoop_base_jh_order_time_df = OssSensor(
     task_id='dependence_ods_sqoop_base_jh_order_time_df',
-    filepath='{hdfs_path_str}/dt={pt}'.format(
+    bucket_key='{hdfs_path_str}/dt={pt}'.format(
         hdfs_path_str="ofood_dw_sqoop/food_operapay_co/jh_order_time",
         pt='{{ ds }}'
     ),

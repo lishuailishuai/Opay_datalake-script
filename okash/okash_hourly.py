@@ -1,8 +1,8 @@
 import airflow
 from datetime import datetime, timedelta
 from airflow.operators.hive_operator import HiveOperator
-from airflow.sensors import UFileSensor
 from airflow.operators.hive_to_mysql import HiveToMySqlTransfer
+from airflow.sensors import OssSensor
 
 args = {
     'owner': 'zhenqian.zhang',
@@ -20,12 +20,13 @@ dag = airflow.DAG(
     schedule_interval="10 * * * *",
     default_args=args)
 
-check_client_ufile=UFileSensor(
-    task_id='check_client_ufile',
-    filepath='okash/okash/{table}/dt={{{{ ds }}}}/hour={{{{ execution_date.strftime("%H") }}}}'.format(table='client'),
+check_client_file=OssSensor(
+    task_id='check_client_file',
+    bucket_key='okash/okash/{table}/dt={{{{ ds }}}}/hour={{{{ execution_date.strftime("%H") }}}}/'.format(table='client'),
     bucket_name='okash',
     timeout=3600,
     dag=dag)
+
 
 add_client_partitions = HiveOperator(
     task_id='add_client_partitions',
@@ -51,4 +52,4 @@ export_to_mysql = HiveToMySqlTransfer(
     mysql_table='okash_dw.ods_log_client_hi',
     dag=dag)
 
-check_client_ufile >> add_client_partitions >> export_to_mysql
+check_client_file >> add_client_partitions >> export_to_mysql

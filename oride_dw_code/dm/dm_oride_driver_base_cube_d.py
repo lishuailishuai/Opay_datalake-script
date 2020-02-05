@@ -37,7 +37,7 @@ args = {
 }
 
 dag = airflow.DAG('dm_oride_driver_base_cube_d',
-                  schedule_interval="30 01 * * *",
+                  schedule_interval="30 00 * * *",
                   default_args=args)
 ##----------------------------------------- 变量 ---------------------------------------##
 
@@ -219,7 +219,7 @@ def fun_task_timeout_monitor(ds,dag,**op_kwargs):
     dag_ids=dag.dag_id
 
     msg = [
-        {"db": "oride_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "2400"}
+        {"dag":dag,"db": "oride_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "2400"}
     ]
 
     TaskTimeoutMonitor().set_task_monitor(msg)

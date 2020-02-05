@@ -24,7 +24,6 @@ import requests
 import os
 from airflow.sensors import OssSensor
 
-
 args = {
     'owner': 'yangmingze',
     'start_date': datetime(2019, 10, 1),
@@ -37,23 +36,21 @@ args = {
 }
 
 dag = airflow.DAG('dwd_oride_driver_balance_extend_df',
-                  schedule_interval="10 01 * * *",
+                  schedule_interval="20 00 * * *",
                   default_args=args,
                   catchup=False)
 
-
 ##----------------------------------------- 变量 ---------------------------------------##
 
-db_name="oride_dw"
-table_name="dwd_oride_driver_balance_extend_df"
-
+db_name = "oride_dw"
+table_name = "dwd_oride_driver_balance_extend_df"
 
 ##----------------------------------------- 依赖 ---------------------------------------##
-#获取变量
-code_map=eval(Variable.get("sys_flag"))
+# 获取变量
+code_map = eval(Variable.get("sys_flag"))
 
-#判断ufile(cdh环境)
-if code_map["id"].lower()=="ufile":
+# 判断ufile(cdh环境)
+if code_map["id"].lower() == "ufile":
 
     # 依赖前一天分区
     ods_sqoop_base_data_driver_balance_extend_df_task = UFileSensor(
@@ -66,8 +63,8 @@ if code_map["id"].lower()=="ufile":
         poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
         dag=dag
     )
-# 路径
-    hdfs_path="ufile://opay-datalake/oride/oride_dw/"+table_name
+    # 路径
+    hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
 else:
     print("成功")
     # 依赖前一天分区
@@ -87,27 +84,29 @@ else:
 
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
 
-def fun_task_timeout_monitor(ds,dag,**op_kwargs):
-
-    dag_ids=dag.dag_id
+def fun_task_timeout_monitor(ds, dag, **op_kwargs):
+    dag_ids = dag.dag_id
 
     tb = [
-        {"db": "oride_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "600"}
+        {"dag":dag,"db": "oride_dw", "table": "{dag_name}".format(dag_name=dag_ids),
+         "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "600"}
     ]
 
     TaskTimeoutMonitor().set_task_monitor(tb)
 
-task_timeout_monitor= PythonOperator(
+
+task_timeout_monitor = PythonOperator(
     task_id='task_timeout_monitor',
     python_callable=fun_task_timeout_monitor,
     provide_context=True,
     dag=dag
 )
 
+
 ##----------------------------------------- 脚本 ---------------------------------------##
 
 def dwd_oride_driver_balance_extend_df_sql_task(ds):
-    HQL='''
+    HQL = '''
         SET hive.exec.parallel=TRUE;
         SET hive.exec.dynamic.partition.mode=nonstrict;
 
@@ -122,10 +121,10 @@ def dwd_oride_driver_balance_extend_df_sql_task(ds):
             total_service,--累计欠份子钱              
             check_status,--账户状态: 0审核成功待打款;1审核失败异常数据
             pay_status,--打款状态: 0待打款状态;1正在打款状态
-            payed_at,--上一次结算时间,结算操作完后记录    
-            checked_at,--上一次帐户状态审核时间,正常/异常操作 
-            success_checked_at,--上一次成功到帐的时间，成功到帐后记录  
-            created_at ,--创建时间                 
+            if(payed_at=0,0,(payed_at+1*60*60) ) as payed_at,--上一次结算时间,结算操作完后记录    
+            if(checked_at=0,0,(checked_at+1*60*60)) as checked_at,--上一次帐户状态审核时间,正常/异常操作 
+            if(success_checked_at=0,0,(success_checked_at+1*60*60)) as success_checked_at,--上一次成功到帐的时间，成功到帐后记录  
+            if(created_at=0,0,(created_at+1*60*60)) as created_at,--创建时间                 
             'nal' as country_code,
             '{pt}' as dt
         FROM
@@ -140,35 +139,35 @@ def dwd_oride_driver_balance_extend_df_sql_task(ds):
         now_hour='{{ execution_date.strftime("%H") }}',
         table=table_name,
         db=db_name
-        )
+    )
     return HQL
 
 
-#主流程
-def execution_data_task_id(ds,**kargs):
-
+# 主流程
+def execution_data_task_id(ds, **kargs):
     hive_hook = HiveCliHook()
 
-    #读取sql
-    _sql=dwd_oride_driver_balance_extend_df_sql_task(ds)
+    # 读取sql
+    _sql = dwd_oride_driver_balance_extend_df_sql_task(ds)
 
     logging.info('Executing: %s', _sql)
 
-    #执行Hive
+    # 执行Hive
     hive_hook.run_cli(_sql)
 
-    #熔断数据
-    #check_key_data_task(ds)
+    # 熔断数据
+    # check_key_data_task(ds)
 
-    #生成_SUCCESS
+    # 生成_SUCCESS
     """
     第一个参数true: 数据目录是有country_code分区。false 没有
     第二个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
 
     """
-    TaskTouchzSuccess().countries_touchz_success(ds,db_name,table_name,hdfs_path,"true","true")
-    
-dwd_oride_driver_balance_extend_df_task= PythonOperator(
+    TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "true", "true")
+
+
+dwd_oride_driver_balance_extend_df_task = PythonOperator(
     task_id='dwd_oride_driver_balance_extend_df_task',
     python_callable=execution_data_task_id,
     provide_context=True,

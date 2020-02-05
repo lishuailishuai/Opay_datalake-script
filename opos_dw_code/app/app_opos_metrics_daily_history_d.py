@@ -77,7 +77,7 @@ def fun_task_timeout_monitor(ds, dag, **op_kwargs):
     dag_ids = dag.dag_id
 
     tb = [
-        {"db": "opos_dw", "table": "{dag_name}".format(dag_name=dag_ids),
+        {"dag": dag, "db": "opos_dw", "table": "{dag_name}".format(dag_name=dag_ids),
          "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "1200"}
     ]
 
@@ -224,8 +224,8 @@ from
     ,nvl(sum(nvl(org_payment_amount,0)),0) as his_gmv
     ,nvl(sum(nvl(pay_amount,0)),0) as his_actual_amount
     ,nvl(sum(nvl(return_amount,0)),0) as his_return_amount
-    ,nvl(sum(if(first_order = '1',nvl(org_payment_amount,0) - nvl(pay_amount,0) + nvl(user_subsidy,0),0)),0) as his_new_user_cost
-    ,nvl(sum(if(first_order <> '1',nvl(org_payment_amount,0) - nvl(pay_amount,0) + nvl(user_subsidy,0),0)),0) as his_old_user_cost
+    ,nvl(sum(if(first_order = '1',nvl(org_payment_amount,0) - nvl(pay_amount,0) + nvl(user_subsidy,0) + nvl(discount_amount,0),0)),0) as his_new_user_cost
+    ,nvl(sum(if(first_order <> '1',nvl(org_payment_amount,0) - nvl(pay_amount,0) + nvl(user_subsidy,0) + nvl(discount_amount,0),0)),0) as his_old_user_cost
     ,nvl(count(if(return_amount > 0,order_id,null)),0) as his_return_amount_order_cnt
     
     ,count(distinct(receipt_id)) as his_order_merchant_cnt

@@ -28,7 +28,7 @@ import os
 
 args = {
     'owner': 'lili.chen',
-    'start_date': datetime(2019, 12, 13),
+    'start_date': datetime(2020, 1, 8),
     'depends_on_past': False,
     'retries': 3,
     'retry_delay': timedelta(minutes=2),
@@ -38,7 +38,7 @@ args = {
 }
 
 dag = airflow.DAG('dwm_oride_driver_finance_di',
-                  schedule_interval="30 01 * * *",
+                  schedule_interval="40 00 * * *",
                   default_args=args,
                   catchup=False)
 
@@ -219,7 +219,7 @@ def fun_task_timeout_monitor(ds, dag, **op_kwargs):
     dag_ids = dag.dag_id
 
     msg = [
-        {"db": "oride_dw", "table": "{dag_name}".format(dag_name=dag_ids),
+        {"dag":dag,"db": "oride_dw", "table": "{dag_name}".format(dag_name=dag_ids),
          "partition": "country_code=NG/dt={pt}".format(pt=ds), "timeout": "800"}
     ]
 
@@ -344,12 +344,12 @@ def dwm_oride_driver_finance_di_sql_task(ds):
                sum(recharge.amount_recharge) AS amount_recharge, --用于统计实际b端补贴资金调整金额
                sum(recharge.phone_amount) as phone_amount  --手机贷款实际还款（不全，只有司机余额大于0部分）
         FROM
-          (SELECT record_day,
+          (SELECT (record_day+1*60*60) as record_day,
                   driver_id,
-                  created_at
+                  (created_at+1*60*60) as created_at
            FROM oride_dw_ods.ods_sqoop_base_data_driver_pay_records_df LATERAL VIEW explode(split(record_days,',')) record_days AS record_day
            WHERE dt='{pt}'
-             and FROM_UNIXTIME(created_at,'yyyy-MM-dd')='{pt}'  --统计增量数据【即当日快照数据】
+             and FROM_UNIXTIME((created_at+1*60*60),'yyyy-MM-dd')='{pt}'  --统计增量数据【即当日快照数据】
              AND status=1   
              ) pay
         LEFT JOIN

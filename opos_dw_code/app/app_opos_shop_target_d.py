@@ -66,7 +66,7 @@ def fun_task_timeout_monitor(ds, dag, **op_kwargs):
     dag_ids = dag.dag_id
 
     tb = [
-        {"db": "opos_dw", "table": "{dag_name}".format(dag_name=dag_ids),
+        {"dag": dag, "db": "opos_dw", "table": "{dag_name}".format(dag_name=dag_ids),
          "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "1200"}
     ]
 
@@ -131,21 +131,21 @@ payment_order as (
   ,count(distinct(if(trade_status='SUCCESS' and activity_type in ('RFR','FR') and first_order='1',sender_id,null))) as reduce_first_people_cnt
   
   --使用红包起情况
-  ,count(if(trade_status='SUCCESS' and discount_type is null and length(discount_ids)>0,1,null)) as bonus_order_cnt
+  ,count(if(trade_status='SUCCESS' and  nvl(discount_type,'')='' and nvl(discount_ids,'')!='',1,null)) as bonus_order_cnt
   
   --用户数量板块
   ,count(distinct(if(trade_status='SUCCESS',sender_id,null))) as order_people
   ,count(distinct(if(trade_status='SUCCESS' and first_order='0',sender_id,null))) as not_first_order_people
   ,count(distinct(if(trade_status='SUCCESS' and first_order='1',sender_id,null))) as first_order_people
-  ,count(distinct(if(trade_status='SUCCESS' and discount_type is null and length(discount_ids)>0 and first_order='1',sender_id,null))) as first_bonus_order_people
+  ,count(distinct(if(trade_status='SUCCESS' and  nvl(discount_type,'')='' and nvl(discount_ids,'')!='' and first_order='1',sender_id,null))) as first_bonus_order_people
   
   --gmv板块
   ,sum(if(trade_status='SUCCESS',nvl(org_payment_amount,0),null)) as order_gmv
-  ,sum(if(trade_status='SUCCESS' and discount_type is null and length(discount_ids)>0,nvl(org_payment_amount,0),0)) as bonus_order_gmv
+  ,sum(if(trade_status='SUCCESS' and  nvl(discount_type,'')='' and nvl(discount_ids,'')!='',nvl(org_payment_amount,0),0)) as bonus_order_gmv
   
   --用户角度
-  ,count(distinct(if(trade_status='SUCCESS' and discount_type is null and length(discount_ids)>0,sender_id,null))) as bonus_order_people
-  ,count(if(trade_status='SUCCESS' and discount_type is null and length(discount_ids)>0,1,null)) as bonus_order_times
+  ,count(distinct(if(trade_status='SUCCESS' and  nvl(discount_type,'')='' and nvl(discount_ids,'')!='',sender_id,null))) as bonus_order_people
+  ,count(if(trade_status='SUCCESS' and  nvl(discount_type,'')='' and nvl(discount_ids,'')!='',1,null)) as bonus_order_times
   
   --与红包无关的指标
   ,nvl(sum(if(trade_status='SUCCESS',nvl(org_payment_amount,0),null))/count(if(trade_status='SUCCESS',1,null)),0) as order_avg_amt
@@ -158,17 +158,17 @@ payment_order as (
   ,count(if(trade_status = 'PENDING',1,null)) as order_pending_cnt
   
   --优惠券分析
-  ,count(if(trade_status='SUCCESS' and discount_type is not null,1,null)) as coupon_order_cnt
-  ,count(distinct(if(trade_status='SUCCESS' and discount_type is not null,sender_id,null))) as coupon_order_people
-  ,count(distinct(if(trade_status='SUCCESS' and discount_type is not null and first_order='1',sender_id,null))) as coupon_first_order_people
-  ,sum(if(trade_status='SUCCESS' and discount_type is not null,pay_amount,0)) as coupon_pay_amount
-  ,sum(if(trade_status='SUCCESS' and discount_type is not null,org_payment_amount,0)) as coupon_order_gmv
-  ,sum(if(trade_status='SUCCESS' and discount_type is not null,discount_amount,0)) as coupon_discount_amount
+  ,count(if(trade_status='SUCCESS' and nvl(discount_type,'')!='',1,null)) as coupon_order_cnt
+  ,count(distinct(if(trade_status='SUCCESS' and nvl(discount_type,'')!='',sender_id,null))) as coupon_order_people
+  ,count(distinct(if(trade_status='SUCCESS' and nvl(discount_type,'')!='' and first_order='1',sender_id,null))) as coupon_first_order_people
+  ,sum(if(trade_status='SUCCESS' and nvl(discount_type,'')!='',pay_amount,0)) as coupon_pay_amount
+  ,sum(if(trade_status='SUCCESS' and nvl(discount_type,'')!='',org_payment_amount,0)) as coupon_order_gmv
+  ,sum(if(trade_status='SUCCESS' and nvl(discount_type,'')!='',discount_amount,0)) as coupon_discount_amount
 
-  ,count(if(trade_status='SUCCESS' and discount_type is null,1,null)) as coupon_useless_order_cnt
-  ,count(distinct(if(trade_status='SUCCESS' and discount_type is null,sender_id,null))) as coupon_useless_order_people
-  ,sum(if(trade_status='SUCCESS' and discount_type is null,pay_amount,0)) as coupon_useless_pay_amount
-  ,sum(if(trade_status='SUCCESS' and discount_type is null,org_payment_amount,0)) as coupon_useless_order_gmv
+  ,count(if(trade_status='SUCCESS' and nvl(discount_type,'')='',1,null)) as coupon_useless_order_cnt
+  ,count(distinct(if(trade_status='SUCCESS' and nvl(discount_type,'')='',sender_id,null))) as coupon_useless_order_people
+  ,sum(if(trade_status='SUCCESS' and nvl(discount_type,'')='',pay_amount,0)) as coupon_useless_pay_amount
+  ,sum(if(trade_status='SUCCESS' and nvl(discount_type,'')='',org_payment_amount,0)) as coupon_useless_order_gmv
 
   from
   opos_dw.dwd_pre_opos_payment_order_di 
@@ -497,6 +497,28 @@ select
 ,a.coupon_useless_order_people
 ,a.coupon_useless_pay_amount
 ,a.coupon_useless_order_gmv
+
+,0 as bak1
+,0 as bak2
+,0 as bak3
+,0 as bak4
+,0 as bak5
+,0 as bak6
+,0 as bak7
+,0 as bak8
+,0 as bak9
+,0 as bak10
+,0 as bak11
+,0 as bak12
+,0 as bak13
+,0 as bak14
+,0 as bak15
+
+,'-' as bak16
+,'-' as bak17
+,'-' as bak18
+,'-' as bak19
+,'-' as bak20
 
 ,'nal' as country_code
 ,'{pt}' as dt

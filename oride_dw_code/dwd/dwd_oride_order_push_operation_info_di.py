@@ -36,46 +36,27 @@ args = {
 }
 
 dag = airflow.DAG('dwd_oride_order_push_operation_info_di',
-                  schedule_interval="50 01 * * *",
+                  schedule_interval="30 01 * * *",
                   default_args=args,
                   catchup=False)
 ##----------------------------------------- 变量 ---------------------------------------##
 
 db_name="oride_dw"
 table_name = "dwd_oride_order_push_operation_info_di"
+hdfs_path = "oss://opay-datalake/oride/oride_dw/" + table_name
 
 ##----------------------------------------- 依赖 ---------------------------------------##
-#获取变量
-code_map=eval(Variable.get("sys_flag"))
 
-#判断ufile(cdh环境)
-if code_map["id"].lower()=="ufile":
-
-    # 依赖前一天分区
-    ods_sqoop_algorithm_order_operation_info_di_task = UFileSensor(
-        task_id='ods_sqoop_algorithm_order_operation_info_di_task',
-        filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-            hdfs_path_str="oride_dw_sqoop/algorithm/order_operation_info",
-            pt='{{ds}}'
-        ),
-        bucket_name='opay-datalake',
-        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-        dag=dag
-    )
-    hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
-else:
-    print("成功")
-    ods_sqoop_algorithm_order_operation_info_di_task = OssSensor(
+ods_sqoop_algorithm_order_operation_info_di_task = OssSensor(
         task_id='ods_sqoop_algorithm_order_operation_info_di_task',
         bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-            hdfs_path_str="oride_dw_sqoop/algorithm/order_operation_info",
+            hdfs_path_str="oride_dw_sqoop_di/algorithm/order_operation_info",
             pt='{{ds}}'
         ),
         bucket_name='opay-datalake',
         poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
         dag=dag
     )
-    hdfs_path = "oss://opay-datalake/oride/oride_dw/" + table_name
 
 ##----------------------------------------- 任务超时监控 ---------------------------------------## 
 
@@ -84,7 +65,7 @@ def fun_task_timeout_monitor(ds,dag,**op_kwargs):
     dag_ids=dag.dag_id
 
     tb = [
-        {"db": "oride_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "600"}
+        {"dag":dag,"db": "oride_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "600"}
     ]
 
     TaskTimeoutMonitor().set_task_monitor(tb)

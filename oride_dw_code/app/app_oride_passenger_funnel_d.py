@@ -37,7 +37,7 @@ args = {
 }
 
 dag = airflow.DAG('app_oride_passenger_funnel_d',
-                  schedule_interval="40 02 * * *",
+                  schedule_interval="40 01 * * *",
                   default_args=args,
                   catchup=False)
 
@@ -63,7 +63,7 @@ if code_map["id"].lower()=="ufile":
     )
     dependence_dwm_oride_order_base_di_task = UFileSensor(
         task_id='dwm_oride_order_base_di_task',
-        filepath='{hdfs_path_str}/country_code=nal/dt={pt}/_SUCCESS'.format(
+        filepath='{hdfs_path_str}/country_code=NG/dt={pt}/_SUCCESS'.format(
             hdfs_path_str="oride/oride_dw/dwm_oride_order_base_di",
             pt='{{ds}}'
         ),
@@ -96,7 +96,7 @@ else:
     )
     dependence_dwm_oride_order_base_di_task = OssSensor(
         task_id='dwm_oride_order_base_di_task',
-        bucket_key='{hdfs_path_str}/country_code=nal/dt={pt}/_SUCCESS'.format(
+        bucket_key='{hdfs_path_str}/country_code=NG/dt={pt}/_SUCCESS'.format(
             hdfs_path_str="oride/oride_dw/dwm_oride_order_base_di",
             pt='{{ds}}'
         ),
@@ -124,7 +124,7 @@ def fun_task_timeout_monitor(ds, dag, **op_kwargs):
 
     tb = [
         {
-            "db": "oride_dw", "table": "{dag_name}".format(dag_name=dag_ids),
+            "dag":dag,"db": "oride_dw", "table": "{dag_name}".format(dag_name=dag_ids),
             "partition": "country_code=nal/dt={pt}".format(pt=ds),"timeout": "1200"
         }
     ]
@@ -198,13 +198,15 @@ def app_oride_passenger_funnel_d_sql_task(ds):
             count(distinct if(is_td_finish=1,passenger_id,null)) as finish_order_user_num, --完单乘客数
             count(distinct if(is_td_finish=1,order_id,null)) as finish_order_cnt, --完单量
             count(distinct if(is_td_finish_pay=1,passenger_id,null)) pay_user_num, --支付乘客数
-            sum(if(is_td_finish_pay=1,price,0)) as price,--应付金额
+            sum(if(is_td_finish_pay=1 and pay_status=1,nvl(price,0)+nvl(tip,0)+nvl(surcharge,0)+nvl(pax_insurance_price,0),0)) as price,--应付金额
             sum(if(is_td_finish_pay=1,pay_amount,0)) as amount, --实付金额
             sum(if(is_td_finish=1,arrive_time-create_time,0)) as order_delivery_dur, --下单送达时长
             count(if(pickup_time>0,pickup_time,null))as driver_user_find_each_other_cnt,--司乘互找次数
             sum(if(pickup_time>0,pickup_time-wait_time,0))as driver_user_find_each_other_dur --司乘互找总时长
         from oride_dw.dwd_oride_order_base_include_test_di 
         where dt='{pt}'
+              AND city_id<>'999001' --去除测试数据
+              and driver_id<>1
         group by country_code,city_id,product_id
         grouping sets((country_code,product_id),
             (city_id,product_id)

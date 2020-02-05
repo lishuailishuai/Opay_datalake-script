@@ -15,7 +15,7 @@ from airflow.sensors.sql_sensor import SqlSensor
 from airflow.models import Variable
 
 args = {
-    'owner': 'linan',
+    'owner': 'zhenqian.zhang',
     'start_date': datetime(2019, 10, 29),
     'depends_on_past': False,
     'retries': 1,
@@ -92,6 +92,11 @@ table_list = [
     ("opos_cashback", "opos_bonus_record", "opos_cashback", "base", 3, "id", "create_time"),
     ("opos_cashback", "opos_scan_history", "opos_cashback", "base", 3, "id", "time"),
 
+]
+
+# 忽略数据量检查的table
+IGNORED_TABLE_LIST = [
+    'opos_bonus_record',
 ]
 
 HIVE_DB = 'opos_dw_ods'
@@ -269,19 +274,22 @@ for db_name, table_name, conn_id, prefix_name, priority_weight_nm, table_id, tab
         dag=dag
     )
 
-    # 数据量监控
-    volume_monitoring = PythonOperator(
-        task_id='volume_monitorin_{}'.format(hive_table_name),
-        python_callable=data_volume_monitoring,
-        provide_context=True,
-        op_kwargs={
-            'db_name': HIVE_DB,
-            'table_name': hive_table_name,
-            'is_valid_success':"true"
-        },
-        dag=dag
-    )
-    add_partitions >> volume_monitoring >> validate_all_data
+    if table_name in IGNORED_TABLE_LIST:
+        import_table >> validate_all_data
+    else:
+        # 数据量监控
+        volume_monitoring = PythonOperator(
+            task_id='volume_monitorin_{}'.format(hive_table_name),
+            python_callable=data_volume_monitoring,
+            provide_context=True,
+            op_kwargs={
+                'db_name': HIVE_DB,
+                'table_name': hive_table_name,
+                'is_valid_success':"true"
+            },
+            dag=dag
+        )
+        import_table >> volume_monitoring >> validate_all_data
 
     # 超时监控
     task_timeout_monitor = PythonOperator(
@@ -296,4 +304,4 @@ for db_name, table_name, conn_id, prefix_name, priority_weight_nm, table_id, tab
         dag=dag_monitor
     )
 
-    import_data_validate >> import_order_bd_validate >> import_table >> check_table >> add_partitions
+    import_data_validate >> import_order_bd_validate >> check_table >> add_partitions >> import_table

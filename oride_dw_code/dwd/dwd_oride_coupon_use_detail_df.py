@@ -36,7 +36,7 @@ args = {
 }
 
 dag = airflow.DAG('dwd_oride_coupon_use_detail_df',
-                  schedule_interval="00 04 * * *",
+                  schedule_interval="00 02 * * *",
                   default_args=args,
                   catchup=False)
 
@@ -92,7 +92,7 @@ def fun_task_timeout_monitor(ds,dag,**op_kwargs):
     dag_ids=dag.dag_id
 
     msg = [
-        {"db": "oride_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "600"}
+        {"dag":dag,"db": "oride_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "600"}
     ]
 
     TaskTimeoutMonitor().set_task_monitor(msg)
@@ -128,10 +128,10 @@ def dwd_oride_coupon_use_detail_df_sql_task(ds):
             type,--1: 满减 2: 折扣 
             status,--状态(0: Receive 1:used) 
             source,--来源(0: 预热 1: 推广码) 
-            start_time,--开始时间 
-            expire_time,--过期时间 
-            used_time,--用户使用时间 
-            receive_time,--领取时间 
+            if(start_time=0,0,(start_time + 1*60*60*1))  as start_time,--开始时间 
+            if(expire_time=0,0,(expire_time + 1*60*60*1)) as expire_time ,--过期时间 
+            if(used_time=0,0,(used_time + 1*60*60*1)) as used_time,--用户使用时间 
+            if(receive_time = 0,0,(receive_time + 1*60*60*1)) as receive_time,--领取时间 
             template_id,--模版ID 
             city_id,--城市ID(0: all) 
             serv_type as product_id,--可用服务类型 

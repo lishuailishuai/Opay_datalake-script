@@ -17,7 +17,7 @@ from airflow.models import Variable
 
 args = {
     'owner': 'zhenqian.zhang',
-    'start_date': datetime(2019, 9, 21),
+    'start_date': datetime(2020, 1, 12),
     'depends_on_past': False,
     'retries': 1,
     'retry_delay': timedelta(minutes=5),
@@ -88,7 +88,6 @@ table_list = [
     ("opay_transaction","receive_money_request_record", "opay_transaction", "base",3,"true"),
     ("opay_transaction","transfer_not_register_record", "opay_transaction", "base",3,"true"),
     ("opay_transaction","tv_topup_record", "opay_transaction", "base",3,"true"),
-    ("opay_transaction","user_easycash_record", "opay_transaction", "base",3,"true"),
     ("opay_transaction","user_pos_transaction_record", "opay_transaction", "base",3,"false"),
     ("opay_transaction","user_receive_money_record", "opay_transaction", "base",3,"true"),
     ("opay_transaction","user_topup_record", "opay_transaction", "base",3,"true"),
@@ -108,7 +107,14 @@ table_list = [
     ("opay_activity","preferential_record", "opay_activity", "base",3,"false"),
 
     ("opay_channel","channel_transaction", "opay_channel", "base", 3, "false"),
-    ("opay_overlord","terminal_record", "opay_overlord", "base", 3, "false")
+    ("opay_overlord","terminal_record", "opay_overlord", "base", 3, "false"),
+
+    ("opay_agent_crm","bd_agent_status_change_log", "opay_agent_crm_db", "base", 3, "false"),
+
+    ("opay_account","account_user", "opay_account", "base", 2, "true"),
+
+    ("opay_scene","openapi_scene_order", "opay_channel", "base", 2, "false"),
+
 ]
 
 HIVE_DB = 'opay_dw_ods'
@@ -209,8 +215,20 @@ def run_check_table(db_name, table_name, conn_id, hive_table_name, **kwargs):
 
 conn_conf_dict = {}
 for db_name, table_name, conn_id, prefix_name,priority_weight_nm,is_valid_success in table_list:
+
+
+    query='select * from {table} where ((FROM_UNIXTIME(UNIX_TIMESTAMP(create_time), "%Y-%m-%d %H:%i:%S") between "{{{{ macros.ds_add(ds, -1) }}}} 23:00:00" and "{{{{ ds }}}} 22:59:59") OR (FROM_UNIXTIME(UNIX_TIMESTAMP(update_time), "%Y-%m-%d %H:%i:%S") between "{{{{ macros.ds_add(ds, -1) }}}} 23:00:00" and "{{{{ ds }}}} 22:59:59")) AND $CONDITIONS'.format(table=table_name)
+
+    if table_name in ['bd_agent_status_change_log']:
+
+        query='select * from {table} where ((FROM_UNIXTIME(UNIX_TIMESTAMP(created_at), "%Y-%m-%d %H:%i:%S") between "{{{{ macros.ds_add(ds, -1) }}}} 23:00:00" and "{{{{ ds }}}} 22:59:59")) AND $CONDITIONS'.format(table=table_name)
+
+    if table_name  in ['openapi_scene_order']:
+        query='select * from {table} where ((FROM_UNIXTIME(UNIX_TIMESTAMP(create_time), "%Y-%m-%d %H:%i:%S") between "{{{{ macros.ds_add(ds, -1) }}}} 23:00:00" and "{{{{ ds }}}} 22:59:59") OR (FROM_UNIXTIME(UNIX_TIMESTAMP(last_update_time), "%Y-%m-%d %H:%i:%S") between "{{{{ macros.ds_add(ds, -1) }}}} 23:00:00" and "{{{{ ds }}}} 22:59:59")) AND $CONDITIONS'.format(table=table_name)
+
     if conn_id not in conn_conf_dict:
         conn_conf_dict[conn_id] = BaseHook.get_connection(conn_id)
+
 
     hive_table_name = HIVE_TABLE % (prefix_name, table_name)
     # sqoop import
@@ -224,7 +242,7 @@ for db_name, table_name, conn_id, prefix_name,priority_weight_nm,is_valid_succes
             --connect "jdbc:mysql://{host}:{port}/{schema}?tinyInt1isBit=false&useUnicode=true&characterEncoding=utf8" \
             --username {username} \
             --password {password} \
-            --query 'select * from {table} where ((FROM_UNIXTIME(UNIX_TIMESTAMP(create_time), "%Y-%m-%d %H:%i:%S") between "{{{{ macros.ds_add(ds, -1) }}}} 23:00:00" and "{{{{ ds }}}} 22:59:59") OR (FROM_UNIXTIME(UNIX_TIMESTAMP(update_time), "%Y-%m-%d %H:%i:%S") between "{{{{ macros.ds_add(ds, -1) }}}} 23:00:00" and "{{{{ ds }}}} 22:59:59")) AND $CONDITIONS' \
+            --query '{query}' \
             --split-by id \
             --target-dir {ufile_path}/dt={{{{ ds }}}}/ \
             --fields-terminated-by "\\001" \
@@ -240,7 +258,8 @@ for db_name, table_name, conn_id, prefix_name,priority_weight_nm,is_valid_succes
             username=conn_conf_dict[conn_id].login,
             password=conn_conf_dict[conn_id].password,
             table=table_name,
-            ufile_path=UFILE_PATH % (db_name, table_name)
+            ufile_path=UFILE_PATH % (db_name, table_name),
+            query=query
         ),
         dag=dag,
     )
@@ -285,7 +304,7 @@ for db_name, table_name, conn_id, prefix_name,priority_weight_nm,is_valid_succes
     )
 
     if table_name in IGNORED_TABLE_LIST:
-        add_partitions >> validate_all_data
+        import_table >> validate_all_data
     else:
         # 数据量监控
         volume_monitoring = PythonOperator(
@@ -299,7 +318,7 @@ for db_name, table_name, conn_id, prefix_name,priority_weight_nm,is_valid_succes
             },
             dag=dag
         )
-        add_partitions >> volume_monitoring >> validate_all_data
+        import_table >> volume_monitoring >> validate_all_data
 
 
     # 超时监控
@@ -314,4 +333,5 @@ for db_name, table_name, conn_id, prefix_name,priority_weight_nm,is_valid_succes
         dag=dag_monitor
     )
 
-    import_table >> check_table >> add_partitions
+    check_table >> add_partitions >> import_table
+

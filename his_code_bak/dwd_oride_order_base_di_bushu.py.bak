@@ -28,7 +28,7 @@ from airflow.sensors import OssSensor
 
 args = {
     'owner': 'lili.chen',
-    'start_date': datetime(2019, 11, 20),
+    'start_date': datetime(2020, 1, 8),
     'depends_on_past': False,
     'retries': 3,
     'retry_delay': timedelta(minutes=2),
@@ -37,8 +37,8 @@ args = {
     'email_on_retry': False,
 }
 
-dag = airflow.DAG('dwd_oride_order_base_di_dev',
-                  schedule_interval="00 01 * * *",
+dag = airflow.DAG('dwd_oride_order_base_di',
+                  schedule_interval="20 00 * * *",
                   default_args=args,
                   catchup=False)
 
@@ -51,16 +51,16 @@ hdfs_path = "oss://opay-datalake/oride/oride_dw/" + table_name
 ##----------------------------------------- 依赖 ---------------------------------------##
 # 依赖前一天分区
 ods_binlog_data_order_hi_prev_day_task = OssSensor(
-        task_id='ods_binlog_base_data_order_hi_prev_day_task',
-        bucket_key='{hdfs_path_str}/dt={now_day}/hour=00/_SUCCESS'.format(
-            hdfs_path_str="oride_binlog/oride_db.oride_data.data_order",
-            pt='{{ds}}',
-            now_day='{{macros.ds_add(ds, +1)}}'
-        ),
-        bucket_name='opay-datalake',
-        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-        dag=dag
-    )
+    task_id='ods_binlog_base_data_order_hi_prev_day_task',
+    bucket_key='{hdfs_path_str}/dt={pt}/hour=23/_SUCCESS'.format(
+        hdfs_path_str="oride_binlog/oride_db.oride_data.data_order",
+        pt='{{ds}}',
+        now_day='{{macros.ds_add(ds, +1)}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
 
 # 依赖前一天分区
 ods_sqoop_base_data_order_payment_df_prev_day_task = OssSensor(
@@ -104,7 +104,7 @@ def fun_task_timeout_monitor(ds, dag, **op_kwargs):
     dag_ids = dag.dag_id
 
     tb = [
-        {"db": "oride_dw", "table": "{dag_name}".format(dag_name=table_name),
+        {"dag":dag,"db": "oride_dw", "table": "{dag_name}".format(dag_name=table_name),
          "partition": "country_code=NG/dt={pt}".format(pt=ds), "timeout": "3600"}
     ]
 
@@ -120,14 +120,16 @@ task_timeout_monitor = PythonOperator(
 
 
 ##----------------------------------------- 脚本 ---------------------------------------##
-
+##----------------------------------------订单表使用说明-------------------------------##
+#！！！！由于数据迁移，oride订单表只支持从20200108号数据回溯
+##------------------------------------------------------------------------------------##
 def dwd_oride_order_base_di_sql_task(ds):
     hql = '''
 SET hive.exec.parallel=TRUE;
 SET hive.exec.dynamic.partition.mode=nonstrict;
 
 
-INSERT overwrite TABLE oride_dw.{table} partition(country_code,dt)
+INSERT overwrite TABLE oride_dw.dwd_oride_order_base_di partition(country_code,dt)
 SELECT base.id as order_id,
        --订单 ID
 
@@ -191,37 +193,37 @@ SELECT base.id as order_id,
        plate_num,
        --车牌号
 
-       local_take_time as take_time,
+       local_take_time,
        --接单(应答)时间
 
-       local_wait_time as wait_time,
+       local_wait_time,
        --到达接送点时间
 
-       local_pickup_time as pickup_time,
+       local_pickup_time,
        --接到乘客时间
 
-       local_arrive_time as arrive_time,
+       local_arrive_time,
        --到达终点时间
 
-       local_finish_time as finish_time,
+       local_finish_time,
        --订单(支付)完成时间
 
        cancel_role,
        --取消人角色(1: 用户, 2: 司机, 3:系统 4:Admin)
 
-       local_cancel_time as cancel_time,
+       local_cancel_time,
        --取消时间
 
        cancel_type,
        --取消原因类型
 
-       null as cancel_reason,
+       cancel_reason,
        --取消原因
 
        status,
        --订单状态 (0: wait assign, 1: pick up passenger, 2: wait passenger, 3: send passenger, 4: arrive destination, 5: finished, 6: cancel)
 
-       local_create_time as create_time,
+       local_create_time,
        -- 创建时间
 
        fraud,
@@ -230,16 +232,16 @@ SELECT base.id as order_id,
        driver_serv_type,
        --司机服务类型(1: Direct 2:Street 3:Otrike)
 
-       null as refund_before_pay,
+       refund_before_pay,
        --支付前资金调整
 
-       null as refund_after_pay,
+       refund_after_pay,
        --支付后资金调整
 
        abnormal,
        --异常状态(0 否 1 逃单)
 
-       null as flag_down_phone,
+       flag_down_phone,
        --招手停上报手机号
 
        zone_hash,
@@ -249,7 +251,7 @@ SELECT base.id as order_id,
        --最后更新时间
 
        from_unixtime(local_create_time,'yyyy-MM-dd') AS create_date,
-       --创建日期(local_create_time,yyyy-MM-dd)
+       --创建日期(转换自create_time,yyyy-MM-dd)
 
        (CASE
             WHEN base.driver_id <> 0 THEN 1
@@ -350,7 +352,7 @@ SELECT base.id as order_id,
 
        pay.pay_mode as pay_mode,
        --支付方式（0: 未知, 1: 线下支付, 2: opay, 3: 余额）,
-
+       
        pay_status, --支付类型（0: 支付中, 1: 成功, 2: 失败） 
 
        '' as part_hour, --小时分区时间(yyyy-mm-dd HH)
@@ -375,7 +377,7 @@ SELECT base.id as order_id,
             and take_time > 0 and finish_time>0 THEN finish_time - take_time
             ELSE 0
         END) AS td_finish_order_dur,
-       --当天完成做单时长（分钟）  
+       --当天完成做单时长（分钟）    
        (CASE
             WHEN (status = 6 AND base.driver_id <> 0)
                 THEN 1
@@ -415,7 +417,7 @@ SELECT base.id as order_id,
        wait_lat, --等待乘客上车位置纬度
        wait_in_radius, --是否在接驾范围内
        wait_distance, --等待乘客上车距离
-       local_cancel_wait_payment_time as cancel_wait_payment_time,  --乘客取消待支付时间  
+       local_cancel_wait_payment_time,  --乘客取消待支付时间  
        premium_rate,  --溢价倍数
        original_price, --溢价前费用 
        premium_price_limit, --溢价金额上限
@@ -430,40 +432,33 @@ SELECT base.id as order_id,
        minimum_fare, --最低消费
        discount, --动态折扣(如:70，7折)
        discount_price_max, --可享受折扣金额上限.)
-       driver_depart, --接单取消时骑手是否出发 0 已出发（默认） 1 未出发
-       change_target, --否修改终点(0 no 1 yes) 
-       user_version, --乘客端版本（发单）
-       driver_version, --司机端版本（接单）
-       pax_ratio, --乘客系数
-       driver_ratio, --司机系数
-       driver_fee_rate, --司机佣金费率
-       driver_price, --司机价格
-       driver_original_price, --司机原始价格
-       original_distance, --实际距离
-       driver_distance, --司机计价距离(乘以系数后)
+       null as driver_depart, --接单取消时骑手是否出发 0 已出发（默认） 1 未出发
+       null as change_target, --否修改终点(0 no 1 yes) 
+       null as user_version, --乘客端版本（发单）
+       null as driver_version, --司机端版本（接单）
+       null as pax_ratio, --乘客系数
+       null as driver_ratio, --司机系数
+       null as driver_fee_rate, --司机佣金费率
+       null as driver_price, --司机价格
+       null as driver_original_price, --司机原始价格
+       null as original_distance, --实际距离
+       null as driver_distance, --司机计价距离(乘以系数后)
        nvl(country.country_code,'nal') as country_code,
 
-       '{pt}' AS dt
-FROM (select *
-     from (SELECT *,
-             (t.create_time + 1 * 60 * 60 * 1) as local_create_time,
-             (t.take_time + 1 * 60 * 60 * 1) as local_take_time,
-             (t.wait_time + 1 * 60 * 60 * 1) as local_wait_time,
-             (t.pickup_time + 1 * 60 * 60 * 1) as local_pickup_time,
-             (t.arrive_time + 1 * 60 * 60 * 1) as local_arrive_time,
-             (t.finish_time + 1 * 60 * 60 * 1) as local_finish_time,
-             (t.cancel_time + 1 * 60 * 60 * 1) as local_cancel_time,
-             (t.cancel_wait_payment_time + 1 * 60 * 60 * 1) as local_cancel_wait_payment_time,
-
-             row_number() over(partition by t.id order by t.`__ts_ms` desc) as order_by
-
-        FROM oride_dw_ods.ods_binlog_base_data_order_hi t
-
-        WHERE concat_ws(' ',dt,hour) BETWEEN '{bef_yes_day} 23' AND '{pt} 23' --取昨天1天数据与今天早上00数据
-
-        AND (from_unixtime((t.create_time + 1 * 60 * 60 * 1),'yyyy-MM-dd') = '{pt}' or substr(updated_at,1,10)='{pt}')
-         ) t1
-where t1.`__deleted` = 'false' and t1.order_by = 1) base
+       base.dt AS dt
+FROM (select *,
+             if(create_time=0,0,(create_time + 1 * 60 * 60)) as local_create_time,
+             if(take_time=0,0,(take_time + 1 * 60 * 60)) as local_take_time ,
+             if(wait_time=0,0,(wait_time + 1 * 60 * 60)) as local_wait_time ,
+             if(pickup_time=0,0,(pickup_time + 1 * 60 * 60)) as local_pickup_time ,
+             if(arrive_time=0,0,(arrive_time + 1 * 60 * 60)) as local_arrive_time ,
+             if(finish_time=0,0,(finish_time + 1 * 60 * 60)) as local_finish_time ,
+             if(cancel_time=0,0,(cancel_time + 1 * 60 * 60)) as local_cancel_time ,
+             if(cancel_wait_payment_time=0,0,(cancel_wait_payment_time + 1 * 60 * 60)) as local_cancel_wait_payment_time 
+     from oride_dw_ods.ods_sqoop_base_data_order_df     
+WHERE dt>='2019-12-01' and dt<='2019-12-11'
+AND (from_unixtime((create_time+3600),'yyyy-MM-dd') = dt or substr(updated_at,1,10) = dt)
+) base
 LEFT OUTER JOIN
 (SELECT id AS order_id,
        status AS pay_status,
@@ -475,17 +470,19 @@ LEFT OUTER JOIN
        amount AS pay_amount,
        --实付金额
 
-       `mode` AS pay_mode
+       `mode` AS pay_mode,
        --支付方式（0: 未知, 1: 线下支付, 2: opay, 3: 余额）
-
+       dt
 FROM oride_dw_ods.ods_sqoop_base_data_order_payment_df
-WHERE dt = '{pt}') pay ON base.id=pay.order_id
+WHERE dt>='2019-12-01' and dt<='2019-12-11') pay ON base.id=pay.order_id
+and base.dt=pay.dt
 
 left join
 (SELECT *
    FROM oride_dw_ods.ods_sqoop_base_data_country_conf_df 
-   WHERE dt='{pt}') country
-on base.country_id=country.id;
+   WHERE dt>='2019-12-01' and dt<='2019-12-11') country
+on base.country_id=country.id
+and base.dt=country.dt;
 '''.format(
         pt=ds,
         now_day=airflow.macros.ds_add(ds, +1),

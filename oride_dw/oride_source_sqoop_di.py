@@ -50,7 +50,6 @@ def fun_task_timeout_monitor(ds, db_name, table_name, **op_kwargs):
     TaskTimeoutMonitor().set_task_monitor(tb)
 
 
-
 '''
 导入数据的列表
 db_name,table_name,conn_id,prefix_name,priority_weight
@@ -62,6 +61,8 @@ table_list = [
     ("oride_data", "data_order_payment", "sqoop_db", "base",3),
     # algorithm_db
     ("algorithm", "order_operation_info", "algorithm_db", "algorithm",1),
+    ("algorithm", "driver_score_record", "algorithm_db", "algo",1),
+    ("algorithm", "driver_score_init_info", "algorithm_db", "algo",1),
 ]
 
 HIVE_DB = 'oride_dw_ods'
@@ -166,10 +167,16 @@ for db_name, table_name, conn_id, prefix_name,priority_weight_nm in table_list:
         conn_conf_dict[conn_id] = BaseHook.get_connection(conn_id)
 
     hive_table_name = HIVE_TABLE % (prefix_name, table_name)
-
+    
     # sqoop import
     query = 'select * from {table} where (FROM_UNIXTIME(create_time, "%Y-%m-%d")="{{{{ ds }}}}" OR FROM_UNIXTIME(UNIX_TIMESTAMP(updated_at), "%Y-%m-%d")="{{{{ ds }}}}") AND $CONDITIONS'.format(table=table_name)
+
     order_operation_query = 'select * from {table} where dt="{{{{ ds_nodash }}}}" AND $CONDITIONS'.format(table=table_name)
+
+    if table_name in ['driver_score_init_info','driver_score_record']:
+
+        query = 'select * from {table} where (dt=replace("{{{{ ds }}}}","-","")) AND $CONDITIONS'.format(table=table_name)
+
 
     import_table = BashOperator(
         task_id='import_table_{}'.format(hive_table_name),
@@ -253,7 +260,7 @@ for db_name, table_name, conn_id, prefix_name,priority_weight_nm in table_list:
         },
         dag=dag
     )
-    add_partitions >> check_table >> import_table >> volume_monitoring >> validate_all_data
+    check_table >> add_partitions >> import_table >> volume_monitoring >> validate_all_data
 
     # 超时监控
     task_timeout_monitor= PythonOperator(

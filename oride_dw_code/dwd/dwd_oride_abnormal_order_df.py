@@ -39,7 +39,7 @@ args = {
 } 
 
 dag = airflow.DAG( 'dwd_oride_abnormal_order_df', 
-    schedule_interval="00 01 * * *", 
+    schedule_interval="20 00 * * *",
     default_args=args,
     catchup=False) 
 
@@ -92,7 +92,7 @@ def fun_task_timeout_monitor(ds,dag,**op_kwargs):
     dag_ids=dag.dag_id
 
     msg = [
-        {"db": "oride_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=NG/dt={pt}".format(pt=ds), "timeout": "800"}
+        {"dag":dag,"db": "oride_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=NG/dt={pt}".format(pt=ds), "timeout": "800"}
     ]
 
     TaskTimeoutMonitor().set_task_monitor(msg)
@@ -126,8 +126,8 @@ user_id,--用户id
 behavior_ids,--命中规则id
 rule_names,--命中规则名称
 is_revoked,--是否撤销，1是，0否
-create_time,--创建时间
-update_time,--更新时间
+if(create_time=0,0,(create_time + 1 * 60 * 60 * 1)) as create_time,--创建时间
+if(update_time=0,0,(update_time + 1 * 60 * 60 * 1)) as update_time,--更新时间
 score,--每单扣除分数
 amount,--扣款金额
 'NG' as country_code,
@@ -210,7 +210,7 @@ def execution_data_task_id(ds,**kwargs):
     cf=CountriesPublicFrame("true",ds,db_name,table_name,hdfs_path,"true","true")
 
     #删除分区
-    cf.delete_partition()
+    #cf.delete_partition()
 
     #拼接SQL
 

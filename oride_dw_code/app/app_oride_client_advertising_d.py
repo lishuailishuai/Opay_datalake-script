@@ -32,7 +32,7 @@ args = {
 
 dag = airflow.DAG(
     'app_oride_client_advertising_d',
-    schedule_interval="00 03 * * *",
+    schedule_interval="00 02 * * *",
     concurrency=5,
     max_active_runs=1,
     default_args=args
@@ -81,7 +81,7 @@ def fun_task_timeout_monitor(ds, dag, **op_kwargs):
     dag_ids = dag.dag_id
 
     msg = [
-        {"db": "oride_dw", "table": "{dag_name}".format(dag_name=dag_ids),
+        {"dag":dag,"db": "oride_dw", "table": "{dag_name}".format(dag_name=dag_ids),
          "partition": "dt={pt}".format(pt=ds), "timeout": "300"}
     ]
 
