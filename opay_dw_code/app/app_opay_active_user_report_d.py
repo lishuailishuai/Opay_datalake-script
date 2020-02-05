@@ -136,21 +136,6 @@ def app_opay_active_user_report_d_sql_task(ds,ds_nodash):
             FROM opay_dw.dim_opay_user_base_di
            WHERE dt<='{pt}' ) t1
      WHERE rn = 1;
-       
-    create table if not exists test_db.opay_30d_{date} as 
-      select user_id,
-             dt  
-      from opay_dw_ods.ods_sqoop_base_account_user_df 
-      where balance>0 and account_type='CASHACCOUNT' and dt>date_sub('{pt}',30) and dt<='{pt}' and create_time<'{pt} 23:00:00'
-      union 
-      select b.user_id,
-             dt
-      from 
-        (select user_id,
-                dt 
-         from opay_owealth_ods.ods_sqoop_owealth_share_acct_df where balance>0 and dt>date_sub('{pt}',30) and dt<='{pt}' and create_time<'{pt} 23:00:00')a 
-      inner join 
-         test_db.user_base_{date} b on a.user_id=b.mobile;
                
     create table if not exists test_db.login_{date} as 
     select dt,
@@ -172,28 +157,14 @@ def app_opay_active_user_report_d_sql_task(ds,ds_nodash):
        AND create_time<'{pt} 23:00:00'
        AND payment_type = '1'
        ),
-      opay_account as
-       (select user_id,
-              'owellet' flag,
-               dt 
-       from opay_dw_ods.ods_sqoop_base_account_user_df 
-       where balance>0 and account_type='CASHACCOUNT' and dt='{pt}' and create_time<'{pt} 23:00:00'
-       union 
-       select b.user_id ,
-              'owealth' flag,
-              dt
-       from 
-            (select user_id,dt from opay_owealth_ods.ods_sqoop_owealth_share_acct_df where balance>0 and dt='{pt}' and create_time<'{pt} 23:00:00')a 
-       inner join 
-           test_db.user_base_{date} b on a.user_id=b.mobile
-         
-       ),
     
       opay_active as 
            (select a.user_id,
                    a.dt 
             from 
-               (select dt,user_id from opay_account union all select dt,user_id from bind_card) a
+               (select '{pt}'dt,user_id from (select user_id from opay_dw.dwm_opay_user_balance_df where dt='{pt}' and opay>0) m 
+                union all 
+                select dt,user_id from bind_card) a
             inner join 
                (select user_id from test_db.login_{date} where last_visit<='{pt}') b 
             on a.user_id=b.user_id)
@@ -285,51 +256,47 @@ def app_opay_active_user_report_d_sql_task(ds,ds_nodash):
                 GROUP BY dt
                 UNION ALL 
                 SELECT 
-                    dt,
+                    '{pt}' dt,
                     '-' ROLE,
                     '-' top_consume_scenario,
                     'owallet_bal_not_zero_user_cnt' target_type,
                     count(DISTINCT user_id) c
-                FROM opay_dw_ods.ods_sqoop_base_account_user_df
-                WHERE dt='{pt}' AND account_type='CASHACCOUNT' AND balance>0 and create_time<'{pt} 23:00:00'
-                GROUP BY dt
+                FROM (select user_id from opay_dw.dwm_opay_user_balance_df where dt='{pt}' and owallet>0) m
                 UNION ALL 
                 SELECT 
-                    dt,
+                    '{pt}' dt,
                     '-' ROLE,
                     '-' top_consume_scenario,
                     'owealth_bal_not_zero_user_cnt' target_type,
                     count(DISTINCT user_id) c
-                FROM opay_owealth_ods.ods_sqoop_owealth_share_acct_df
-                WHERE dt='{pt}' AND balance>0 and create_time<'{pt} 23:00:00'
-                GROUP BY dt
+                FROM (select user_id from opay_dw.dwm_opay_user_balance_df where dt='{pt}' and owealth>0) m1
                 UNION ALL 
                 SELECT 
-                    dt,
+                    '{pt}' dt,
                     '-' ROLE,
                     '-' top_consume_scenario,
                     'opay_bal_not_zero_user_cnt' target_type,
                     count(DISTINCT user_id) c
-                FROM opay_account
-                GROUP BY dt
+                FROM (select user_id from opay_dw.dwm_opay_user_balance_df where dt='{pt}' and opay>0) m2
+        
                 UNION ALL 
                 SELECT 
                     '{pt}' dt,
                     '-' ROLE,
                     '-' top_consume_scenario,
                     'opay_bal_not_zero_user_cnt_7d' target_type,
-                    count(1) c
+                     count(DISTINCT user_id) c
                 from 
-                   (select user_id FROM test_db.opay_30d_{date} where dt>=date_sub('{pt}',7) group by user_id) m
+                   (select user_id FROM opay_dw.dwm_opay_user_balance_df where dt='{pt}' and opay_7>0) m3
                 UNION ALL 
                 SELECT 
                     '{pt}' dt,
                     '-' ROLE,
                     '-' top_consume_scenario,
                     'opay_bal_not_zero_user_cnt_30d' target_type,
-                    count(1) c
+                     count(DISTINCT user_id) c
                 FROM 
-                   (select user_id from test_db.opay_30d_{date} group by user_id)m 
+                   (select user_id FROM opay_dw.dwm_opay_user_balance_df where dt='{pt}' and opay_30>0)m4
                 UNION ALL 
                 SELECT 
                     dt,
@@ -341,7 +308,6 @@ def app_opay_active_user_report_d_sql_task(ds,ds_nodash):
                 GROUP BY dt
             ) m;
     DROP TABLE IF EXISTS test_db.user_base_{date};
-    DROP TABLE IF EXISTS test_db.opay_30d_{date};
     DROP TABLE IF EXISTS test_db.login_{date};
         
 
