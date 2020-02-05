@@ -124,7 +124,7 @@ ods_sqoop_base_mobiledata_topup_record_di_prev_day_task = OssSensor(
 dim_opay_life_payment_commission_df_prev_day_task = OssSensor(
     task_id='dim_opay_life_payment_commission_df_prev_day_task',
     bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opay_dw/dim_opay_life_payment_commission_df/country_code=NG",
+        hdfs_path_str="opay/opay_dw/dim_opay_life_payment_commission_df/country_code=NG",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
