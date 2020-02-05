@@ -166,7 +166,7 @@ def dm_oride_order_base_d_sql_task(ds):
        sum(is_carpool_success) as carpool_success_num, --拼成订单数
        sum(if(is_request=1 and is_carpool=1,1,0)) as carpool_accept_num, -- 拼车应答订单数
        sum(if(is_finish=1 and is_carpool_success=1,1,0)) as carpool_success_and_finish_num, --拼车成功且完单数
-       sum(if(is_finished_pay=1 and is_succ_pay=1 and pay_mode not in(0,1),price,0)) as online_pay_price,  --当日线上应付订单金额12.18号开始,自12.26号再次变更，要所有线上支付单，统计gmv和c补
+       sum(if(is_finished_pay=1 and is_succ_pay=1 and pay_mode not in(0,1),nvl(price,0)+nvl(tip,0)+nvl(surcharge,0)+nvl(pax_insurance_price,0),0)) as online_pay_price,  --当日线上应付订单金额12.18号开始,自12.26号再次变更，要所有线上支付单，统计gmv和c补
        sum(falsify) as falsify, --用户罚款，自12.25号开始该表接入
        sum(falsify_driver_cancel) as falsify_driver_cancel, --司机罚款，自12.25号开始该表接入
        country_code,
