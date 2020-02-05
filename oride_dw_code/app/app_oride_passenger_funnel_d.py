@@ -205,6 +205,8 @@ def app_oride_passenger_funnel_d_sql_task(ds):
             sum(if(pickup_time>0,pickup_time-wait_time,0))as driver_user_find_each_other_dur --司乘互找总时长
         from oride_dw.dwd_oride_order_base_include_test_di 
         where dt='{pt}'
+              AND city_id<>'999001' --去除测试数据
+              and driver_id<>1
         group by country_code,city_id,product_id
         grouping sets((country_code,product_id),
             (city_id,product_id)
