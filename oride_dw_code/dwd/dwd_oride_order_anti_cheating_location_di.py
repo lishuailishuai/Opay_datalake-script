@@ -275,7 +275,7 @@ def dwd_oride_order_anti_cheating_location_di_sql_task(ds):
         GROUP BY  tt.order_id )
         
         INSERT OVERWRITE TABLE {db}.{table} PARTITION(country_code,dt)
-        SELECT  m.order_id 
+        SELECT rpad(reverse(m.order_id),13,'0')
                ,m.user_id 
                ,m.driver_id 
                ,m.create_time 
