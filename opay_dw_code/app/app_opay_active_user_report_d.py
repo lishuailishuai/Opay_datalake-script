@@ -312,7 +312,7 @@ def app_opay_active_user_report_d_sql_task(ds,ds_nodash):
                     '-' top_consume_scenario,
                     'opay_bal_avg' target_type,
                     sum(opay) c
-                from (selcet user_role,opay from opay_dw.dwm_opay_user_balance_df where dt='{pt}' and opay>0) m5
+                from (select user_role,opay from opay_dw.dwm_opay_user_balance_df where dt='{pt}' and opay>0) m5
                 group by user_role
                 union all
                 select 
@@ -321,7 +321,7 @@ def app_opay_active_user_report_d_sql_task(ds,ds_nodash):
                     '-' top_consume_scenario,
                     'opay_bal_avg' target_type,
                     sum(opay) c
-                from (selcet opay from opay_dw.dwm_opay_user_balance_df where dt='{pt}' and opay>0) m6
+                from (select opay from opay_dw.dwm_opay_user_balance_df where dt='{pt}' and opay>0) m6
                 union all
                 select 
                     '{pt}' dt,
@@ -329,15 +329,84 @@ def app_opay_active_user_report_d_sql_task(ds,ds_nodash):
                     '-' top_consume_scenario,
                     'opay_bal_avg_30d' target_type,
                     sum(opay_30) c
-                from (selcet user_role,opay_30 from opay_dw.dwm_opay_user_balance_df where dt='{pt}' and opay_30>0) m7
+                from (select user_role,opay_30 from opay_dw.dwm_opay_user_balance_df where dt='{pt}' and opay_30>0) m7
                 group by user_role
+                union all
                 select 
                     '{pt}' dt,
                     'ALL' role,
                     '-' top_consume_scenario,
                     'opay_bal_avg_30d' target_type,
                     sum(opay_30) c
-                from (selcet opay_30 from opay_dw.dwm_opay_user_balance_df where dt='{pt}' and opay_30>0) m8
+                from (select opay_30 from opay_dw.dwm_opay_user_balance_df where dt='{pt}' and opay_30>0) m8
+                union all
+                select 
+                    '{pt}' dt,
+                    user_role role,
+                    '-' top_consume_scenario,
+                    'owealth_bal_avg' target_type,
+                    sum(owealth) c
+                from (select user_role,owealth from opay_dw.dwm_opay_user_balance_df where dt='{pt}' and owealth>0) m9
+                group by user_role
+                union all
+                select 
+                    '{pt}' dt,
+                    'ALL' role,
+                    '-' top_consume_scenario,
+                    'owealth_bal_avg' target_type,
+                    sum(owealth) c
+                from (select owealth from opay_dw.dwm_opay_user_balance_df where dt='{pt}' and owealth>0) m10
+                union all
+                select 
+                    '{pt}' dt,
+                    user_role role,
+                    '-' top_consume_scenario,
+                    'owealth_bal_avg_30d' target_type,
+                    sum(owealth_30) c
+                from (select user_role,owealth_30 from opay_dw.dwm_opay_user_balance_df where dt='{pt}' and owealth_30>0) m11
+                group by user_role
+                union all
+                select 
+                    '{pt}' dt,
+                    'ALL' role,
+                    '-' top_consume_scenario,
+                    'owealth_bal_avg_30d' target_type,
+                    sum(owealth_30) c
+                from (select owealth_30 from opay_dw.dwm_opay_user_balance_df where dt='{pt}' and owealth_30>0) m12
+                union all
+                select 
+                    '{pt}' dt,
+                    user_role role,
+                    '-' top_consume_scenario,
+                    'owallet_bal_avg' target_type,
+                    sum(owallet) c
+                from (select user_role,owallet from opay_dw.dwm_opay_user_balance_df where dt='{pt}' and owallet>0) m13
+                group by user_role
+                union all
+                select 
+                    '{pt}' dt,
+                    'ALL' role,
+                    '-' top_consume_scenario,
+                    'owallet_bal_avg' target_type,
+                    sum(owallet) c
+                from (select owallet from opay_dw.dwm_opay_user_balance_df where dt='{pt}' and owallet>0) m14
+                union all
+                select 
+                    '{pt}' dt,
+                    user_role role,
+                    '-' top_consume_scenario,
+                    'owallet_bal_avg_30d' target_type,
+                    sum(owallet_30) c
+                from (select user_role,owallet_30 from opay_dw.dwm_opay_user_balance_df where dt='{pt}' and owallet_30>0) m15
+                group by user_role
+                union all
+                select 
+                    '{pt}' dt,
+                    'ALL' role,
+                    '-' top_consume_scenario,
+                    'owallet_bal_avg_30d' target_type,
+                    sum(owallet_30) c
+                from (select owallet_30 from opay_dw.dwm_opay_user_balance_df where dt='{pt}' and owallet_30>0) m16
                 
                 
             ) m;

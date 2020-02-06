@@ -93,7 +93,6 @@ hdfs_path = "oss://opay-datalake/opay/opay_dw/" + table_name
 def app_opay_active_user_report_m_sql_task(ds,ds_nodash):
     HQL = '''
 
-    set mapred.max.split.size=1000000;
     set hive.exec.dynamic.partition.mode=nonstrict;
     set hive.exec.parallel=true;
      DROP TABLE IF EXISTS test_db.user_base_m_{date};
@@ -135,24 +134,69 @@ SELECT '-' country_code,
                        dt,
                        target_type
 FROM (
-SELECT dt,
-       ROLE,
-       'login_user_cnt_m' target_type,
-                           count(DISTINCT user_id) c
-FROM test_db.login_m_{date}
-WHERE last_visit>=date_format('{pt}', 'yyyy-MM-01')
-  AND last_visit<='{pt}'
-GROUP BY dt,
-         ROLE
-UNION ALL
-SELECT dt,
-       'ALL' ROLE,
-       'login_user_cnt_m' target_type,
-                           count(DISTINCT user_id) c
-FROM test_db.login_m_{date}
-WHERE last_visit>=date_format('{pt}', 'yyyy-MM-01')
-  AND last_visit<='{pt}'
-GROUP BY dt
+        SELECT 
+            dt,
+            ROLE,
+            'login_user_cnt_m' target_type,
+            count(DISTINCT user_id) c
+        FROM test_db.login_m_{date}
+        WHERE last_visit>=date_format('{pt}', 'yyyy-MM-01') AND last_visit<='{pt}'
+        GROUP BY dt, ROLE
+        UNION ALL
+        SELECT 
+            dt,
+            'ALL' ROLE,
+            'login_user_cnt_m' target_type,
+            count(DISTINCT user_id) c
+        FROM test_db.login_m_{date}
+        WHERE last_visit>=date_format('{pt}', 'yyyy-MM-01') AND last_visit<='{pt}'
+        GROUP BY dt
+        union all
+        select 
+            '{pt}' dt,
+            user_role role,
+            'opay_bal_avg_m' target_type,
+            sum(opay_m) c 
+        from (select user_role,opay_m from opay_dw.dwm_opay_user_balance_df where dt='{pt}' and opay_m>0) m
+        group by user_role
+        union all
+          select 
+            '{pt}' dt,
+            'ALL' role,
+            'opay_bal_avg_m' target_type,
+            sum(opay_m) c 
+        from (select opay_m from opay_dw.dwm_opay_user_balance_df where dt='{pt}' and opay_m>0) m1
+        union all
+        select 
+            '{pt}' dt,
+            user_role role,
+            'owallet_bal_avg_m' target_type,
+            sum(owallet_m) c 
+        from (select user_role,owallet_m from opay_dw.dwm_opay_user_balance_df where dt='{pt}' and owallet_m>0) m2
+        group by user_role
+        union all
+          select 
+            '{pt}' dt,
+            'ALL' role,
+            'owallet_bal_avg_m' target_type,
+            sum(owallet_m) c 
+        from (select owallet_m from opay_dw.dwm_opay_user_balance_df where dt='{pt}' and owallet_m>0) m3
+        union all
+        select 
+            '{pt}' dt,
+            user_role role,
+            'owealth_bal_avg_m' target_type,
+            sum(owealth_m) c 
+        from (select user_role,owealth_m from opay_dw.dwm_opay_user_balance_df where dt='{pt}' and owealth_m>0) m4
+        group by user_role
+        union all
+          select 
+            '{pt}' dt,
+            'ALL' role,
+            'owealth_bal_avg_m' target_type,
+            sum(owealth_m) c 
+        from (select owealth_m from opay_dw.dwm_opay_user_balance_df where dt='{pt}' and owealth_m>0) m5
+        
 )m;
 
 DROP TABLE IF EXISTS test_db.user_base_m_{date};
