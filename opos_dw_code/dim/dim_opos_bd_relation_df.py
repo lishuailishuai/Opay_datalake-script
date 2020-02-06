@@ -415,8 +415,9 @@ m.id
 ,m.cate_id
 ,m.status
 ,m.created_at
---如果关联上当天交易的商户,说明商户当天是第一笔交易,那就去当天时间作为第一笔,反之还是取历史表中的日期作为第一笔
+
 ,if(n.dt is null,m.first_order_date,n.dt) as first_order_date
+
 ,m.shop_class
 ,m.created_bd_id
 ,o.phone as created_bd_phone
@@ -430,13 +431,10 @@ when created_at>='{before_45_day}' and created_at<='{pt}' then '0'
 else '1'
 end as shop_silent_flag
 
-,case
-when m.activate_month!='9999-12' then m.activate_month
-when m.activate_month='9999-12' and ac.order_month is null then '9999-12'
-when m.activate_month='9999-12' and ac.order_month is not null and substr(m.created_at,0,7)<ac.order_month then ac.order_month
-when m.activate_month='9999-12' and ac.order_month is not null and substr(m.created_at,0,7)>=ac.order_month then '9999-12'
-else '9999-12'
-end as activate_month
+,if(substr(m.created_at,0,7)<substr(if(n.dt is null,m.first_order_date,n.dt),0,7) and substr(if(n.dt is null,m.first_order_date,n.dt),0,7)=substr(if(n.dt is null,m.first_user_order_date,n.dt),0,7)
+  ,substr(if(n.dt is null,m.first_order_date,n.dt),0,7),'9999-12') as activate_month
+
+,if(n.dt is null,m.first_user_order_date,n.dt) as first_user_order_date
 
 ,'nal' as country_code
 ,'{pt}' as dt 
@@ -469,11 +467,11 @@ from
   ,a.shop_class
   ,nvl(b.first_order_date,'-') as first_order_date
   ,a.created_bd_id
-  ,nvl(b.activate_month,'9999-12') as activate_month
+  ,nvl(b.first_user_order_date,'-') as first_user_order_date
   from
     (select * from opos_dw.dim_opos_bd_relation_mid where country_code='nal' and dt='{pt}') as a
   left join
-    (select id,first_order_date,activate_month from opos_dw.dim_opos_bd_relation_df where country_code='nal' and dt='{before_1_day}') as b
+    (select id,first_order_date,first_user_order_date from opos_dw.dim_opos_bd_relation_df where country_code='nal' and dt='{before_1_day}') as b
   on a.id=b.id
   ) as m
 left join
@@ -486,9 +484,11 @@ left join
   (select receipt_id from opos_dw_ods.ods_sqoop_base_pre_opos_payment_order_di where dt>='{before_45_day}' and dt<='{pt}' group by receipt_id) as s
 on m.opay_id=s.receipt_id
 left join
-  (select receipt_id,substr(dt,0,7) as order_month from opos_dw_ods.ods_sqoop_base_pre_opos_payment_order_di a where dt>=concat(substr('{pt}',0,7),'-01') and dt<='{pt}' and first_order='1' group by receipt_id,substr(dt,0,7)) as ac
-on m.opay_id=ac.receipt_id
+  --(select receipt_id,substr(dt,0,7) as order_month from opos_dw_ods.ods_sqoop_base_pre_opos_payment_order_di a where dt>=concat(substr('{pt}',0,7),'-01') and dt<='{pt}' and first_order='1' group by receipt_id,substr(dt,0,7)) as ac
+  (select receipt_id,'{pt}' as dt from opos_dw_ods.ods_sqoop_base_pre_opos_payment_order_di where dt='{pt}' and first_order='1' group by receipt_id) as ac
+on if(m.first_user_order_date='-',m.opay_id,'having')=n.receipt_id
 ;
+
 
 
 
