@@ -119,7 +119,7 @@ shop_cnt as (
   ,count(if(created_at = '{pt}',id,null)) as new_merchant_cnt
   ,0 as new_pos_merchant_cnt
   ,count(distinct(if(created_at>=concat(substr('{pt}',0,7),'-01') and created_at<='{pt}',id,null))) as month_newshop_cnt
-  ,count(if(activate_month='9999-12',null,id)) as activate_shop_cnt
+  ,count(if(activate_month=substr('{pt}',0,7),id,null)) as activate_shop_cnt
   from
   opos_dw.dim_opos_bd_relation_df
   where 
