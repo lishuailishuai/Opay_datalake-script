@@ -60,11 +60,11 @@ db_name,table_name,conn_id,prefix_name,priority_weight,is_valid_success
 
 table_list = [
 
-    ("oloan_auto","t_clue", "oloan_auto", "base",1,"true"),
-    ("oloan_auto","t_order", "oloan_auto", "base",1,"true"),
-    ("oloan_auto","t_order_audit", "oloan_auto", "base",1,"true"),
-    ("oloan_auto","t_order_related_user", "oloan_auto", "base",1,"true"),
-    ("oloan_auto","t_order_vehicle_user", "oloan_auto", "base",1,"true"),
+    ("oloan_auto","t_clue", "ocredit_db", "base",1,"true"),
+    ("oloan_auto","t_order", "ocredit_db", "base",1,"true"),
+    ("oloan_auto","t_order_audit", "ocredit_db", "base",1,"true"),
+    ("oloan_auto","t_order_related_user", "ocredit_db", "base",1,"true"),
+    ("oloan_auto","t_order_vehicle_user", "ocredit_db", "base",1,"true"),
 ]
 
 
