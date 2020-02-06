@@ -96,38 +96,42 @@ def app_opay_pos_report_d_sql_task(ds):
     set mapred.max.split.size=1000000;
     set hive.exec.dynamic.partition.mode=nonstrict;
     set hive.exec.parallel=true;
-    WITH pos AS
-      (SELECT *
-       FROM opay_dw.dim_opay_pos_terminal_base_df
-       WHERE dt='{pt}'
-         AND bind_status='Y'
-         AND create_time<'{pt} 23:00:00'),
-         tran AS
-      (SELECT *
-       FROM opay_dw.dwd_opay_transaction_record_di
-       WHERE dt='{pt}'
-         AND create_time BETWEEN date_format(date_sub('{pt}', 1), 'yyyy-MM-dd 23') AND date_format('{pt}', 'yyyy-MM-dd 23')
-         AND sub_service_type='pos'
+    WITH 
+        pos AS (
+            SELECT 
+                *
+            FROM opay_dw.dim_opay_pos_terminal_base_df
+            WHERE dt='{pt}' AND bind_status='Y' AND create_time<'{pt} 23:00:00'),
+        tran AS (
+            SELECT 
+                *
+            FROM opay_dw.dwd_opay_transaction_record_di
+            WHERE dt='{pt}' AND create_time BETWEEN date_format(date_sub('{pt}', 1), 'yyyy-MM-dd 23') AND date_format('{pt}', 'yyyy-MM-dd 23')
+                AND sub_service_type='pos'
          )
     INSERT overwrite TABLE {db}.{table} partition (dt='{pt}')
-    SELECT active_terms,
-           bind_terms,
-           bind_agents
-    FROM
-      (SELECT '{pt}' dt,
-                     count(DISTINCT affiliate_id) active_terms
-       FROM tran) a
-    LEFT JOIN
-      (SELECT '{pt}' dt,
-                     count(CASE
-                               WHEN originator_role='agent' THEN terminal_id
-                           END) bind_terms
-       FROM pos) b ON a.dt=b.dt
-    LEFT JOIN
-      (SELECT '{pt}' dt,
-                     count(DISTINCT user_id) bind_agents
+    SELECT 
+        active_terms,
+        bind_terms,
+        bind_agents
+    FROM (
+        SELECT 
+            '{pt}' dt,
+            count(DISTINCT affiliate_id) active_terms
+       FROM tran
+    ) a
+    LEFT JOIN (
+        SELECT 
+            '{pt}' dt,
+            count(CASE WHEN originator_role='agent' THEN terminal_id END) bind_terms
        FROM pos
-       where originator_role='agent') c ON a.dt=c.dt
+    ) b ON a.dt=b.dt
+    LEFT JOIN (
+        SELECT 
+            '{pt}' dt, count(DISTINCT user_id) bind_agents
+        FROM pos
+        where originator_role='agent'
+    ) c ON a.dt=c.dt
 
     '''.format(
         pt=ds,
