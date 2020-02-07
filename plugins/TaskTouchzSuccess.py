@@ -88,7 +88,7 @@ class TaskTouchzSuccess(object):
     
         #获取二位国家码
         get_sql='''
-    
+
         select concat_ws(',',collect_set(country_code)) as country_code from {db}.{table} WHERE dt='{pt}'
     
         '''.format(

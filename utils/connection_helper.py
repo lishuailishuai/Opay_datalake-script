@@ -15,6 +15,7 @@ def get_hive_cursor(conf_name='hive_cli_default'):
                         user=conn.login,
                         password=conn.password)
     cursor = conn_hive.cursor()
+    cursor.execute('SET mapreduce.job.queuename=root.airflow')
     return cursor
 
 
