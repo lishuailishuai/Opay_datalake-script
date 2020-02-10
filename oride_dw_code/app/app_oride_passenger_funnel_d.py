@@ -44,47 +44,10 @@ dag = airflow.DAG('app_oride_passenger_funnel_d',
 ##----------------------------------------- 变量 ---------------------------------------##
 db_name= "oride_dw"
 table_name = "app_oride_passenger_funnel_d"
+hdfs_path = "oss://opay-datalake/oride/oride_dw/" + table_name
 
 ##----------------------------------------- 依赖 ---------------------------------------##
-#获取变量
-code_map=eval(Variable.get("sys_flag"))
-
-#判断ufile(cdh环境)
-if code_map["id"].lower()=="ufile":
-    dwd_oride_order_base_include_test_di_task = S3KeySensor(
-        task_id='dwd_oride_order_base_include_test_di_task',
-        bucket_key='{hdfs_path_str}/country_code=NG/dt={pt}/_SUCCESS'.format(
-            hdfs_path_str="oride/oride_dw/dwd_oride_order_base_include_test_di",
-            pt='{{ds}}'
-        ),
-        bucket_name='opay-bi',
-        poke_interval=60,
-        dag=dag
-    )
-    dependence_dwm_oride_order_base_di_task = UFileSensor(
-        task_id='dwm_oride_order_base_di_task',
-        filepath='{hdfs_path_str}/country_code=NG/dt={pt}/_SUCCESS'.format(
-            hdfs_path_str="oride/oride_dw/dwm_oride_order_base_di",
-            pt='{{ds}}'
-        ),
-        bucket_name='opay-datalake',
-        poke_interval=60,
-        dag=dag
-    )
-
-    dim_oride_city_task = HivePartitionSensor(
-        task_id="dim_oride_city_task",
-        table="dim_oride_city",
-        partition="dt='{{ds}}'",
-        schema="oride_dw",
-        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-        dag=dag
-    )
-    hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
-
-else:
-    print("成功")
-    dwd_oride_order_base_include_test_di_task = OssSensor(
+dwd_oride_order_base_include_test_di_task = OssSensor(
         task_id='dwd_oride_order_base_include_test_di_task',
         bucket_key='{hdfs_path_str}/country_code=NG/dt={pt}/_SUCCESS'.format(
             hdfs_path_str="oride/oride_dw/dwd_oride_order_base_include_test_di",
@@ -93,8 +56,8 @@ else:
         bucket_name='opay-datalake',
         poke_interval=60,
         dag=dag
-    )
-    dependence_dwm_oride_order_base_di_task = OssSensor(
+)
+dependence_dwm_oride_order_base_di_task = OssSensor(
         task_id='dwm_oride_order_base_di_task',
         bucket_key='{hdfs_path_str}/country_code=NG/dt={pt}/_SUCCESS'.format(
             hdfs_path_str="oride/oride_dw/dwm_oride_order_base_di",
@@ -103,8 +66,8 @@ else:
         bucket_name='opay-datalake',
         poke_interval=60,
         dag=dag
-    )
-    dim_oride_city_task = OssSensor(
+)
+dim_oride_city_task = OssSensor(
         task_id="dim_oride_city_task",
         bucket_key='{hdfs_path_str}/country_code=NG/dt={pt}/_SUCCESS'.format(
             hdfs_path_str="oride/oride_dw/dim_oride_city",
@@ -113,9 +76,7 @@ else:
         bucket_name='opay-datalake',
         poke_interval=60,
         dag=dag
-    )
-    hdfs_path = "oss://opay-datalake/oride/oride_dw/" + table_name
-
+)
 
 #----------------------------------------- 任务超时监控 ---------------------------------------##
 
@@ -175,6 +136,10 @@ def app_oride_passenger_funnel_d_sql_task(ds):
         bro.user_evaluation_order_cnt,--乘客评价订单量
         ord.driver_user_find_each_other_cnt,--司乘互找次数
         ord.driver_user_find_each_other_dur,--司乘互找时长
+        bro.driver_arri_bef_cancel_cnt,  --应答后-司机到达接客点前取消量
+        bro.driver_arri_aft_cancel_cnt,  --应答后-司机到达接客点后取消量
+        bro.user_aftreply_befarri_cancel_cnt,  --应答后-司机到达前乘客取消量
+        bro.user_aftreply_aftarri_cancel_cnt,  --应答后-司机到达后乘客取消量 
         'nal' as country_code,
         '{pt}' as dt
     from
@@ -184,7 +149,7 @@ def app_oride_passenger_funnel_d_sql_task(ds):
             product_id,
             count(distinct order_id) as submit_order_cnt,--下单量
             count(distinct passenger_id)as submit_order_user_num, --下单乘客量
-            count(distinct if(is_td_finish_pay=1,order_id,null)) as finish_pay_order_cnt,--完成支付订单量
+            count(distinct if(is_td_finish_pay=1 and pay_status=1,order_id,null)) as finish_pay_order_cnt,--成功完成支付订单量
             count(distinct if(is_td_passanger_before_cancel=1,order_id,null)) as driver_reply_before_user_cancel_cnt,  --司机应答前乘客取消订单量
             sum(if(status = 6 AND driver_id = 0 AND cancel_role = 1,cancel_time-create_time,0)) as driver_reply_before_user_cancel_dur,--司机应答前到乘客取消订单之间的时长
             sum(td_take_dur) as reply_dur, --应答时长
@@ -199,7 +164,7 @@ def app_oride_passenger_funnel_d_sql_task(ds):
             count(distinct if(is_td_finish=1,order_id,null)) as finish_order_cnt, --完单量
             count(distinct if(is_td_finish_pay=1,passenger_id,null)) pay_user_num, --支付乘客数
             sum(if(is_td_finish_pay=1 and pay_status=1,nvl(price,0)+nvl(tip,0)+nvl(surcharge,0)+nvl(pax_insurance_price,0),0)) as price,--应付金额
-            sum(if(is_td_finish_pay=1,pay_amount,0)) as amount, --实付金额
+            sum(if(is_td_finish_pay=1 and pay_status=1,pay_amount,0)) as amount, --实付金额
             sum(if(is_td_finish=1,arrive_time-create_time,0)) as order_delivery_dur, --下单送达时长
             count(if(pickup_time>0,pickup_time,null))as driver_user_find_each_other_cnt,--司乘互找次数
             sum(if(pickup_time>0,pickup_time-wait_time,0))as driver_user_find_each_other_dur --司乘互找总时长
@@ -219,7 +184,11 @@ def app_oride_passenger_funnel_d_sql_task(ds):
             nvl(avg(pick_up_distance/order_assigned_cnt),0) as pick_up_dis,--接驾总距离
             sum(if(is_finish=1,order_onride_distance,0)) as order_onride_dis,--完单计费距离(完成订单的司机开始行程到司机送达之间的距离)
             count(if(score is not null and is_finish=1,order_id,null)) as user_evaluation_order_cnt ,--乘客评价订单数量
-            count(if(is_succ_broadcast=0,order_id,null)) broadcast --未播单量
+            count(if(is_succ_broadcast=0,order_id,null)) broadcast, --未播单量
+            sum(if(is_driver_after_cancel=1 and is_arrive_receive_point=0,1,0)) as driver_arri_bef_cancel_cnt,  --应答后-司机到达接客点前取消量
+            sum(if(is_driver_after_cancel=1 and is_arrive_receive_point=1,1,0)) as driver_arri_aft_cancel_cnt,  --应答后-司机到达接客点后取消量
+            sum(if(is_passanger_after_cancel=1 and is_arrive_receive_point=0,1,0)) as user_aftreply_befarri_cancel_cnt,  --应答后-司机到达前乘客取消量
+            sum(if(is_passanger_after_cancel=1 and is_arrive_receive_point=1,1,0)) as user_aftreply_aftarri_cancel_cnt  --应答后-司机到达后乘客取消量   
         from  oride_dw.dwm_oride_order_base_di 
         where dt='{pt}'
         group by country_code,city_id,product_id
