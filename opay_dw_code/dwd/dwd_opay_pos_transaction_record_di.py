@@ -120,19 +120,22 @@ def dwd_opay_pos_transaction_record_di_sql_task(ds):
     set hive.exec.parallel=true;
     with dim_user_merchant_data as (
             select 
-                trader_id, trader_name, trader_role, trader_kyc_level
+                trader_id, trader_name, trader_role, trader_kyc_level, if(state is null or state = '', '-', state) as state
             from (
                 select 
-                    user_id as trader_id, concat(first_name, ' ', middle_name, ' ', surname) as trader_name, `role` as trader_role, kyc_level as trader_kyc_level, 
+                    user_id as trader_id, concat(first_name, ' ', middle_name, ' ', surname) as trader_name, `role` as trader_role, kyc_level as trader_kyc_level, state
                     row_number() over(partition by user_id order by update_time desc) rn
                 from opay_dw_ods.ods_sqoop_base_user_di
                 where dt <= '{pt}'
             ) uf where rn = 1
             union all
             select 
-                merchant_id as trader_id, merchant_name as trader_name, merchant_type as trader_role, '-' as trader_kyc_level
+                merchant_id as trader_id, merchant_name as trader_name, merchant_type as trader_role, '-' as trader_kyc_level, '-' as state
             from opay_dw_ods.ods_sqoop_base_merchant_df
             where dt = if('{pt}' <= '2019-12-11', '2019-12-11', '{pt}')
+        ),
+        terminal_data as (
+            select pos_id, terminal_id from dim_opay_pos_terminal_base_df where dt = if('{pt}' <= '2019-12-30', '2019-12-30', '{pt}')
         )
     insert overwrite table {db}.{table} 
     partition(country_code, dt)
@@ -143,7 +146,8 @@ def dwd_opay_pos_transaction_record_di_sql_task(ds):
         t1.pos_trade_req_id, t1.transaction_reference, t1.retrieval_reference_number,
         t1.create_time, t1.update_time, t1.country, t1.order_status, t1.error_code, t1.error_msg, t1.transaction_type, t1.accounting_status, 
         'pos' as top_consume_scenario, 'pos' as sub_consume_scenario,
-        t1.fee_amount, t1.fee_pattern, t1.outward_id, t1.outward_type,
+        t1.fee_amount, t1.fee_pattern, t1.outward_id, t1.outward_type, 
+        nvl(t3.pos_id, '-') as pos_id, t2.state, cast(t1.amount * 0.005  as decimal(10,2)) as provider_share_amount, cast(t1.amount * 0.003  as decimal(10,2)) as msc_cost_amount,
         case t1.country
             when 'NG' then 'NG'
             when 'NO' then 'NO'
@@ -186,6 +190,7 @@ def dwd_opay_pos_transaction_record_di_sql_task(ds):
         where dt = '{pt}'
     ) t1 
     left join dim_user_merchant_data t2 on t1.originator_id = t2.trader_id
+    left join terminal_data t3 on t1.affiliate_terminal_id = t3.terminal_id
     '''.format(
         pt=ds,
         table=table_name,

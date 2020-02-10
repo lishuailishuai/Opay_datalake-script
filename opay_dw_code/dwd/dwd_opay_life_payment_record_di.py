@@ -248,14 +248,8 @@ def dwd_opay_life_payment_record_di_sql_task(ds):
         union all
         select 
             order_no, amount, currency, user_id as originator_id,
-            merchant_id as affiliate_id, 
-            case
-                when telecom_perator = 'DataEti' then 'ETI'
-                when telecom_perator = 'DataGlo' then 'GLO'
-                when telecom_perator = 'DataMtn' then 'MTN'
-                when telecom_perator = 'DataAir' then 'AIR'
-                else telecom_perator
-            end as recharge_service_provider,
+            merchant_id as affiliate_id,
+            telecom_perator as recharge_service_provider,
             recipient_mobile as recharge_account, '-' as recharge_account_name, '-' as recharge_set_meal,
             create_time, update_time, country, 'Mobiledata' sub_service_type,
             order_status, error_code, error_msg, client_source, pay_channel as pay_way, pay_status, 'Mobiledata' as top_consume_scenario, 'Mobiledata' as sub_consume_scenario,
