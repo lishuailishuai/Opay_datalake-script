@@ -60,11 +60,11 @@ db_name,table_name,conn_id,prefix_name,priority_weight,is_valid_success
 
 table_list = [
 
-    ("oloan_auto","t_clue", "oloan_auto", "base",1,"true"),
-    ("oloan_auto","t_order", "oloan_auto", "base",1,"true"),
-    ("oloan_auto","t_order_audit", "oloan_auto", "base",1,"true"),
-    ("oloan_auto","t_order_related_user", "oloan_auto", "base",1,"true"),
-    ("oloan_auto","t_order_vehicle_user", "oloan_auto", "base",1,"true"),
+    ("oloan_auto","t_clue", "ocredit_db", "base",1,"true"),
+    ("oloan_auto","t_order", "ocredit_db", "base",1,"true"),
+    ("oloan_auto","t_order_audit", "ocredit_db", "base",1,"true"),
+    ("oloan_auto","t_order_related_user", "ocredit_db", "base",1,"true"),
+    ("oloan_auto","t_order_vehicle_user", "ocredit_db", "base",1,"true"),
 ]
 
 
@@ -146,7 +146,7 @@ def run_check_table(db_name, table_name, conn_id, hive_table_name, **kwargs):
             else:
                 col_name = result[0]
             if result[1] == 'timestamp' or result[1] == 'varchar' or result[1] == 'char' or result[1] == 'text' or result[1] == 'longtext' or \
-                    result[1] == 'datetime':
+                    result[1] == 'datetime' or result[1] == 'mediumtext':
                 data_type = 'string'
             elif result[1] == 'decimal':
                 data_type = result[1] + "(" + str(result[2]) + "," + str(result[3]) + ")"
