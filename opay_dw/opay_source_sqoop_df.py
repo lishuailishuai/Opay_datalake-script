@@ -103,6 +103,8 @@ table_list = [
 
     ("opay_agent_crm", "bd_agent", "opay_agent_crm_db", "base", 2),
     ("opay_agent_crm", "bd_admin_users", "opay_agent_crm_db", "base", 2),
+
+    ("opay_channel", "card_bin", "opay_channel", "base", 3),
 ]
 
 """
