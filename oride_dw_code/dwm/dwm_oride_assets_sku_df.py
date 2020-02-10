@@ -216,7 +216,7 @@ def dwm_oride_assets_sku_df_sql_task(ds):
             status --'是否启用 1-启用 2-禁用',
         from oride_dw.dwd_oride_admin_business_df  
         WHERE dt ='{pt}'
-    )business on  prop.business_id = business.id
+    )business on  sku.business_id = business.id
     left join
     (
         select       
