@@ -118,16 +118,6 @@ dependence_dwm_oride_driver_base_df_task = OssSensor(
 )
 
 
-dependence_dwm_oride_driver_finance_di_task = OssSensor(
-    task_id='dwm_oride_driver_finance_di_task',
-    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw/dwm_oride_driver_finance_di/country_code=NG",
-        pt='{{ds}}'
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
 
 
 
@@ -374,3 +364,5 @@ dependence_dwm_oride_driver_finance_di_task >> app_oride_assets_sku_info_d_task
 dependence_dwd_oride_driver_records_day_df_task >> app_oride_assets_sku_info_d_task
 dependence_dim_oride_driver_base_task >> app_oride_assets_sku_info_d_task
 dependence_dwd_oride_finance_driver_repayment_extend_df_task >> app_oride_assets_sku_info_d_task
+dependence_dwm_oride_assets_sku_df_task>> app_oride_assets_sku_info_d_task
+dependence_dwm_oride_driver_base_df_task>> app_oride_assets_sku_info_d_task
