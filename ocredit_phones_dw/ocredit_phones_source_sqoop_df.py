@@ -62,8 +62,8 @@ table_list = [
 
     ("oloan","t_app_version", "ocredit_db", "base",1,"true"),
     ("oloan","t_black_user", "ocredit_db", "base",1,"true"),
-    ("oloan","t_card", "ocredit_db", "base",1,"true"),
-    ("oloan","t_collect_record", "ocredit_db", "base",1,"true"),
+    ("oloan","t_card", "ocredit_db", "base",1,"false"),
+    ("oloan","t_collect_record", "ocredit_db", "base",1,"false"),
     ("oloan","t_contract", "ocredit_db", "base",1,"true"),
     ("oloan","t_contract_approval_log", "ocredit_db", "base",1,"true"),
     ("oloan","t_financial_product_car", "ocredit_db", "base",1,"true"),
@@ -78,8 +78,8 @@ table_list = [
     ("oloan","t_order_down_payment", "ocredit_db", "base",1,"true"),
     ("oloan","t_order_relate_user", "ocredit_db", "base",1,"true"),
     ("oloan","t_overdue_config", "ocredit_db", "base",1,"true"),
-    ("oloan","t_overdue_record", "ocredit_db", "base",1,"true"),
-    ("oloan","t_pay_bill", "ocredit_db", "base",1,"true"),
+    ("oloan","t_overdue_record", "ocredit_db", "base",1,"false"),
+    ("oloan","t_pay_bill", "ocredit_db", "base",1,"false"),
     ("oloan","t_pay_order", "ocredit_db", "base",1,"true"),
     ("oloan","t_pay_order_fail_log", "ocredit_db", "base",1,"true"),
     ("oloan","t_product", "ocredit_db", "base",1,"true"),
@@ -175,7 +175,7 @@ def run_check_table(db_name, table_name, conn_id, hive_table_name, **kwargs):
             else:
                 col_name = result[0]
             if result[1] == 'timestamp' or result[1] == 'varchar' or result[1] == 'char' or result[1] == 'text' or result[1] == 'longtext' or \
-                    result[1] == 'datetime':
+                    result[1] == 'datetime' or result[1] == 'mediumtext':
                 data_type = 'string'
             elif result[1] == 'decimal':
                 data_type = result[1] + "(" + str(result[2]) + "," + str(result[3]) + ")"

@@ -64,7 +64,16 @@ ods_sqoop_base_user_operator_df_prev_day_task = OssSensor(
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
-
+dwm_opay_user_balance_df_prev_day_task = OssSensor(
+    task_id='dwm_opay_user_balance_df_prev_day_task',
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="opay/opay_dw/dwm_opay_user_balance_df/country_code=NG",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
 def fun_task_timeout_monitor(ds,dag,**op_kwargs):
 
@@ -242,5 +251,6 @@ app_opay_active_user_report_m_task = PythonOperator(
 
 dim_opay_user_base_di_prev_day_task >> app_opay_active_user_report_m_task
 ods_sqoop_base_user_operator_df_prev_day_task >> app_opay_active_user_report_m_task
+dwm_opay_user_balance_df_prev_day_task >> app_opay_active_user_report_m_task
 
 

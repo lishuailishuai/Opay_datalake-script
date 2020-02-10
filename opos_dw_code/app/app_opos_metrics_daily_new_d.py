@@ -208,6 +208,9 @@ o.id
 
 ,o.activate_shop_cnt
 
+,o.prohibit_shop_cnt
+,o.pos_prohibit_shop_cnt
+
 ,'nal' as country_code
 ,'{pt}' as dt
 from
@@ -304,6 +307,9 @@ from
 
   ,nvl(a.activate_shop_cnt,0) as activate_shop_cnt
 
+  ,nvl(a.prohibit_shop_cnt,0) as prohibit_shop_cnt
+  ,nvl(a.pos_prohibit_shop_cnt,0) as pos_prohibit_shop_cnt
+
   from 
   (select * from opos_dw.app_opos_metrics_report_mid where country_code = 'nal' and  dt = '{pt}') a
   full join 
@@ -335,6 +341,8 @@ left join
   (select id,name,country from opos_dw_ods.ods_sqoop_base_bd_city_df where dt = '{pt}') as c
 on o.city_id=c.id
 ;
+
+
 
 
 

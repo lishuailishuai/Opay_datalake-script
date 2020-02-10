@@ -486,7 +486,7 @@ on m.opay_id=s.receipt_id
 left join
   --(select receipt_id,substr(dt,0,7) as order_month from opos_dw_ods.ods_sqoop_base_pre_opos_payment_order_di a where dt>=concat(substr('{pt}',0,7),'-01') and dt<='{pt}' and first_order='1' group by receipt_id,substr(dt,0,7)) as ac
   (select receipt_id,'{pt}' as dt from opos_dw_ods.ods_sqoop_base_pre_opos_payment_order_di where dt='{pt}' and first_order='1' group by receipt_id) as ac
-on if(m.first_user_order_date='-',m.opay_id,'having')=n.receipt_id
+on if(m.first_user_order_date='-',m.opay_id,'having')=ac.receipt_id
 ;
 
 

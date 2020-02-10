@@ -98,6 +98,16 @@ ods_sqoop_base_account_user_df_prev_day_task = OssSensor(
     dag=dag
 )
 
+dwm_opay_user_balance_df_prev_day_task = OssSensor(
+    task_id='dwm_opay_user_balance_df_prev_day_task',
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="opay/opay_dw/dwm_opay_user_balance_df/country_code=NG",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
 def fun_task_timeout_monitor(ds,dag,**op_kwargs):
 
@@ -145,6 +155,27 @@ def app_opay_active_user_report_d_sql_task(ds,ds_nodash):
              where dt='{pt}' and substr(from_unixtime(unix_timestamp(last_visit, 'yyyy-MM-dd HH:mm:ss')+3600),1,10) > date_sub('{pt}',30))a 
     inner join 
           test_db.user_base_{date} b 
+    on a.user_id=b.user_id;
+    
+       create table if not exists test_db.tran_{date} as
+    select top_consume_scenario,a.user_id,dt,role 
+    from 
+              ( select 
+                    top_consume_scenario, originator_id user_id,dt
+                from opay_dw.dwd_opay_transaction_record_di
+                where dt>date_sub('{pt}',30) and dt<='{pt}' and create_time BETWEEN date_format(date_sub(dt, 1), 'yyyy-MM-dd 23') AND date_format(dt, 'yyyy-MM-dd 23') 
+                    and originator_type = 'USER' and originator_id is not null and originator_id != ''
+                group by originator_id,dt,top_consume_scenario
+                union all
+                select 
+                    top_consume_scenario, affiliate_id user_id,dt
+                from opay_dw.dwd_opay_transaction_record_di
+                where dt>date_sub('{pt}',30) and dt<='{pt}' and create_time BETWEEN date_format(date_sub(dt, 1), 'yyyy-MM-dd 23') AND date_format(dt, 'yyyy-MM-dd 23') 
+                    and affiliate_type = 'USER' and affiliate_id is not null and affiliate_id != ''
+                group by top_consume_scenario,affiliate_id,dt
+              ) a 
+    inner join 
+              test_db.user_base_{date} b 
     on a.user_id=b.user_id;
     
     with bind_card as
@@ -407,11 +438,29 @@ def app_opay_active_user_report_d_sql_task(ds,ds_nodash):
                     'owallet_bal_avg_30d' target_type,
                     sum(owallet_30) c
                 from (select owallet_30 from opay_dw.dwm_opay_user_balance_df where dt='{pt}' and owallet_30>0) m16
-                
+                union all
+                select 
+                     '{pt}' dt,
+                     role,
+                     top_consume_scenario,
+                     'active_user_cnt_30d' target_type,
+                     count(distinct user_id) c 
+                from test_db.tran_{date}
+                group by role,top_consume_scenario
+                union all
+                select 
+                     '{pt}' dt,
+                     role,
+                     top_consume_scenario,
+                     'active_user_cnt_7d' target_type,
+                     count(distinct user_id) c 
+                from (select * from test_db.tran_{date} where dt>date_sub('{pt}',7)) mm
+                group by role,top_consume_scenario
                 
             ) m;
     DROP TABLE IF EXISTS test_db.user_base_{date};
     DROP TABLE IF EXISTS test_db.login_{date};
+    DROP TABLE IF EXISTS test_db.tran_{date}
         
 
 
@@ -457,5 +506,6 @@ ods_sqoop_base_user_payment_instrument_df_prev_day_task >> app_opay_active_user_
 ods_sqoop_base_user_operator_df_prev_day_task >> app_opay_active_user_report_d_task
 ods_sqoop_owealth_share_acct_df_prev_day_task >> app_opay_active_user_report_d_task
 ods_sqoop_base_account_user_df_prev_day_task >> app_opay_active_user_report_d_task
+dwm_opay_user_balance_df_prev_day_task >> app_opay_active_user_report_d_task
 
 
