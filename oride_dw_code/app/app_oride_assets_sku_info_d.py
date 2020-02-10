@@ -173,7 +173,7 @@ def app_oride_assets_sku_info_d_sql_task(ds):
       
         INSERT overwrite TABLE oride_dw.{table} partition(country_code,dt)
         select 
-          sku.name,--'业务线名称'
+          sku.business_name,--'业务线名称'
           case 
             when sku.status in (1,2,50) then sku.city_id
             when sku.status in (3,4,5) then admin.city_id
@@ -181,17 +181,17 @@ def app_oride_assets_sku_info_d_sql_task(ds):
             else null
           end as city_id,
         
-          case 
-            when sku.status in (1,2,50) then sku.city_name
-            when sku.status in (3,4,5) then admin.city_name
-            when sku.status = 6 then dri.city_name
-            else null
-          end as city_name,
+          --case 
+            --when sku.status in (1,2,50) then sku.city_name
+            --when sku.status in (3,4,5) then admin.city_name
+            --when sku.status = 6 then dri.city_name
+            --else null
+          --end as city_name,
         
           sku.ware_id,--'仓库ID'
           sku.ware_name,--'仓库名称'
           sku.cate_ids,--'资产分类,多个逗号分隔'
-          sku.sn,--'资产id(资产SN)'
+          sku.sn,--'资产SN'
           sku.property_name,--'资产名称'
           sku.status,--资产状态
           sku.is_retrieved, --'资产新旧,是否由回收员操作过回收。操作过为"1 二手"，未操作过为" 0 一手"'
@@ -207,8 +207,8 @@ def app_oride_assets_sku_info_d_sql_task(ds):
         
           case 
             when driver_base.first_finish_order_create_time is not null
-              then (unix_timestamp(current_date()) - driver_base.recent_finish_create_time)/3600  
-            else (unix_timestamp(current_date()) - sku.claimed_time)/3600 
+              then (unix_timestamp('{pt}','yyyy-MM-dd') - driver_base.recent_finish_create_time)/3600  
+            else (unix_timestamp('{pt}','yyyy-MM-dd') - sku.claimed_time)/3600 
           end as silence_duration, --沉默时长
         
           driver_base.driver_finish_order_cnt,--完单量
@@ -223,7 +223,7 @@ def app_oride_assets_sku_info_d_sql_task(ds):
         from
         ( 
             select 
-              s.name,--'业务线名称'
+              s.business_name,--'业务线名称'
               s.city_id,--'城市id'
               s.ware_id,--'仓库ID'
               s.ware_name,--'仓库名称'
@@ -239,7 +239,7 @@ def app_oride_assets_sku_info_d_sql_task(ds):
           from 
           (
             select
-              name,--'业务线名称'
+              business_name,--'业务线名称'
               city_id,--'城市id'
               ware_id,--'仓库ID'
               ware_name,--'仓库名称'
@@ -252,13 +252,13 @@ def app_oride_assets_sku_info_d_sql_task(ds):
               claim_user_id,--认领人ID，即运营ID
               claimed_time--'发放时间,资产发放给该司机的时间'
             from oride_dw.dwm_oride_assets_sku_df
-            where dt = '2020-02-04'
+            where dt = '{pt}'
           )s
           left join
           (
             SELECT city_id,city_name
             from oride_dw.dim_oride_city 
-            WHERE dt='2020-02-04'
+            WHERE dt='{pt}'
           )city on s.city_id = city.city_id
         )sku
         left join
@@ -272,7 +272,7 @@ def app_oride_assets_sku_info_d_sql_task(ds):
             city_id,
             city_name
           from oride_dw.dim_oride_driver_base
-          where dt = '2020-02-04'
+          where dt = '{pt}'
         )dri  on dri.driver_id = sku.claimed_driver_id
         left join
         ( 
@@ -285,13 +285,13 @@ def app_oride_assets_sku_info_d_sql_task(ds):
               id, --运营id
               city_id
             from oride_dw_ods.ods_sqoop_base_admin_users_df 
-            where dt = '2020-02-04'
+            where dt = '{pt}'
           )u
           left join
           (
             SELECT city_id,city_name
             from oride_dw.dim_oride_city 
-            WHERE dt='2020-02-04'
+            WHERE dt='{pt}'
           )city on u.city_id = city.city_id
         )admin on sku.claim_user_id = admin.id
         left join
@@ -303,7 +303,7 @@ def app_oride_assets_sku_info_d_sql_task(ds):
             driver_finish_order_cnt,--完单量
             driver_finish_price--完单gmv
           from oride_dw.dwm_oride_driver_base_df
-          where dt = '2020-02-04' 
+          where dt = '{pt}' 
         )driver_base on driver_base.driver_id = sku.claimed_driver_id
         left join
         (
@@ -311,10 +311,9 @@ def app_oride_assets_sku_info_d_sql_task(ds):
             driver_id,
             amount_true,--'当日骑手-实际到手收入'
             balance,--'骑手余额'
-            
             if(balance<0, round(abs(balance)/amount),0) as overdue_days --逾期天数
           from oride_dw.dwm_oride_driver_finance_di
-          where dt= '2020-02-04'
+          where dt= '{pt}'
         )finance on finance.driver_id = sku.claimed_driver_id
         left join
         (
@@ -322,7 +321,7 @@ def app_oride_assets_sku_info_d_sql_task(ds):
               driver_id,
               already_amount--累计实际还款金额
             from oride_dw.dwd_oride_finance_driver_repayment_extend_df
-            where dt = '2020-02-04'
+            where dt = '{pt}'
         )repay on repay.driver_id = sku.claimed_driver_id
 '''.format(
         pt=ds,
