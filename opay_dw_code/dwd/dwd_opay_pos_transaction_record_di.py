@@ -110,7 +110,8 @@ task_timeout_monitor= PythonOperator(
 db_name = "opay_dw"
 table_name = "dwd_opay_pos_transaction_record_di"
 hdfs_path="oss://opay-datalake/opay/opay_dw/" + table_name
-
+pos_provider_share_0922_fee=eval(Variable.get("pos_provider_share_0922_fee"))
+msc_cost_0922_fee=eval(Variable.get("msc_cost_0922_fee"))
 
 def dwd_opay_pos_transaction_record_di_sql_task(ds):
     HQL='''
@@ -147,7 +148,9 @@ def dwd_opay_pos_transaction_record_di_sql_task(ds):
         t1.create_time, t1.update_time, t1.country, t1.order_status, t1.error_code, t1.error_msg, t1.transaction_type, t1.accounting_status, 
         'pos' as top_consume_scenario, 'pos' as sub_consume_scenario,
         t1.fee_amount, t1.fee_pattern, t1.outward_id, t1.outward_type, 
-        nvl(t3.pos_id, '-') as pos_id, t2.state, cast(t1.amount * 0.005  as decimal(10,2)) as provider_share_amount, cast(t1.amount * 0.003  as decimal(10,2)) as msc_cost_amount,
+        nvl(t3.pos_id, '-') as pos_id, t2.state, 
+        if(cast(t1.amount * {pos_provider_share_0922_fee}  as decimal(10,2)) > 100000, 100000, cast(t1.amount * {pos_provider_share_0922_fee}  as decimal(10,2))) as provider_share_amount, 
+        if(cast(t1.amount * {msc_cost_0922_fee}  as decimal(10,2)) > 100000, 100000, cast(t1.amount * {msc_cost_0922_fee}  as decimal(10,2))) as msc_cost_amount,
         case t1.country
             when 'NG' then 'NG'
             when 'NO' then 'NO'
@@ -194,7 +197,9 @@ def dwd_opay_pos_transaction_record_di_sql_task(ds):
     '''.format(
         pt=ds,
         table=table_name,
-        db=db_name
+        db=db_name,
+        pos_provider_share_0922_fee=pos_provider_share_0922_fee,
+        msc_cost_0922_fee=msc_cost_0922_fee
     )
     return HQL
 
