@@ -283,32 +283,33 @@ def dwd_oride_order_anti_cheating_location_di_sql_task(ds):
         JOIN order_data o
         ON tt.order_id = o.order_id
         GROUP BY  tt.order_id ) 
-                 ,
         
-        user_location AS (
-        SELECT  tt.order_id                             AS order_id 
-               ,concat_ws(',',collect_list(tt.loc_str)) AS loc_list
-        FROM 
-        (
-            SELECT  t.order_id 
-                   ,t.loc_str
-            FROM 
-            (
-                SELECT  order_id 
-                       ,concat(`timestamp`,'_',lat,'_',lng) AS loc_str 
-                       ,row_number() over(partition by order_id ORDER BY `timestamp`) order_by
-                FROM oride_dw_ods.ods_log_user_track_data_hi
-                WHERE dt = '{pt}' 
-                AND order_id <> 0  
-            ) t
-            WHERE t.order_by < 10000  
-        ) tt
-        JOIN order_data o
-        ON tt.order_id = o.order_id
-        GROUP BY  tt.order_id )
+        
+        -- user_location AS (
+        -- SELECT  tt.order_id                             AS order_id 
+        --        ,concat_ws(',',collect_list(tt.loc_str)) AS loc_list
+        -- FROM 
+        -- (
+        -- 	SELECT  t.order_id 
+        -- 	       ,t.loc_str
+        -- 	FROM 
+        -- 	(
+        -- 		SELECT  order_id 
+        -- 		       ,concat(`timestamp`,'_',lat,'_',lng) AS loc_str 
+        -- 		       ,row_number() over(partition by order_id ORDER BY `timestamp`) order_by
+        -- 		FROM oride_dw_ods.ods_log_user_track_data_hi
+        -- 		WHERE dt = '{pt}' 
+        -- 		AND order_id <> 0  
+        -- 	) t
+        -- 	WHERE t.order_by < 10000  
+        -- ) tt
+        -- JOIN order_data o
+        -- ON tt.order_id = o.order_id
+        -- GROUP BY  tt.order_id )
         
         INSERT OVERWRITE TABLE {db}.{table} PARTITION(country_code,dt)
-        SELECT rpad(reverse(m.order_id),16,'0') 
+        SELECT  
+                rpad(reverse(m.order_id),16,'0') 
                ,m.order_id 
                ,m.user_id 
                ,m.driver_id 
@@ -329,12 +330,13 @@ def dwd_oride_order_anti_cheating_location_di_sql_task(ds):
                ,m.p_complete_the_order_show 
                ,m.p_successful_order_click_cancel 
                ,nvl(d.loc_list,'') AS d_loc_list 
-               ,nvl(u.loc_list,'') AS p_loc_list 
+            --    ,nvl(u.loc_list,'') AS p_loc_list 
+               ,'' 				   AS p_loc_list
                ,m.country_code     AS country_code 
                ,'{pt}'             AS dt
         FROM middle_data_2 m
         LEFT JOIN driver_location d ON m.order_id = d.order_id 
-        LEFT JOIN user_location u ON m.order_id = u.order_id 
+        -- LEFT JOIN user_location u
         
         ;
 
