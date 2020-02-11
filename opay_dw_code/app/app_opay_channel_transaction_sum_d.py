@@ -27,7 +27,7 @@ import os
 
 args = {
     'owner': 'liushuzhen',
-    'start_date': datetime(2019, 12, 20),
+    'start_date': datetime(2020, 2, 10),
     'depends_on_past': False,
     'retries': 3,
     'retry_delay': timedelta(minutes=2),
@@ -47,6 +47,16 @@ dwd_opay_channel_transaction_base_di_prev_day_task = OssSensor(
     task_id='dwd_opay_channel_transaction_base_di_prev_day_task',
     bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
         hdfs_path_str="opay/opay_dw/dwd_opay_channel_transaction_base_di",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+ods_sqoop_base_card_bin_df_prev_day_task = OssSensor(
+    task_id='ods_sqoop_base_card_bin_df_prev_day_task',
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="opay_dw_sqoop/opay_channel/card_bin",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -82,7 +92,7 @@ hdfs_path = "oss://opay-datalake/opay/opay_dw/" + table_name
 def app_opay_channel_transaction_sum_d_sql_task(ds):
     HQL = '''
     
-    set mapred.max.split.size=1000000;
+    
     set hive.exec.dynamic.partition.mode=nonstrict;
     set hive.exec.parallel=true;
     insert overwrite table {db}.{table} partition (dt)
@@ -96,13 +106,18 @@ def app_opay_channel_transaction_sum_d_sql_task(ds):
                user_type,
                sum(amount) AS tran_amt,
                count(1) AS tran_c,
+               c.brand,
+               c.bank_name,
                a.dt
         FROM
-          (SELECT *
+          (SELECT pay_channel,out_channel_id,supply_item,response_code,transaction_status,user_type,dt,bank_response_message,
+                  amount,
+                  cast(substr(AES_DECRYPT(UNHEX(bank_card_no), UNHEX('4132E08EA055A2B852DE8C214C885C2A')),1,6) as STRING) bank
            FROM opay_dw.dwd_opay_channel_transaction_base_di
            WHERE dt='{pt}'
              AND create_time BETWEEN date_format(date_sub('{pt}', 1), 'yyyy-MM-dd 23') AND date_format('{pt}', 'yyyy-MM-dd 23') ) a
         LEFT JOIN opay_dw.dim_opay_bank_response_message_df b ON a.bank_response_message=b.bank_response_message
+        LEFT JOIN (select * from opay_dw_ods.ods_sqoop_base_card_bin_df where dt='{pt}') c on a.bank=c.bin
         GROUP BY pay_channel,
                  out_channel_id,
                  supply_item,
@@ -110,6 +125,8 @@ def app_opay_channel_transaction_sum_d_sql_task(ds):
                  transaction_status,
                  nvl(b.flag,0),
                  user_type,
+                 c.brand,
+                 c.bank_name,
                  a.dt
 
     '''.format(
@@ -148,4 +165,5 @@ app_opay_channel_transaction_sum_d_task = PythonOperator(
 )
 
 dwd_opay_channel_transaction_base_di_prev_day_task >> app_opay_channel_transaction_sum_d_task
+ods_sqoop_base_card_bin_df_prev_day_task >> app_opay_channel_transaction_sum_d_task
 
