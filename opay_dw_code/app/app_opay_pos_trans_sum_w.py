@@ -120,7 +120,7 @@ def app_opay_pos_trans_sum_w_sql_task(ds):
         select
             state, region
         from opay_dw.dim_opay_region_state_mapping_df
-        where dt = if('{pt}' <= 2020-02-10, '2020-02-10', '{pt}')
+        where dt = if('{pt}' <= '2020-02-10', '2020-02-10', '{pt}')
     ) t2 on t1.state = t2.state
     group by  pos_id, if(region is null, '-', region), t1.state, affiliate_bank_code, originator_type, order_status, country_code
     
