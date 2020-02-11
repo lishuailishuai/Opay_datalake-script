@@ -123,9 +123,14 @@ shop_cnt as (
   ,count(distinct(if(created_at>=concat(substr('{pt}',0,7),'-01') and created_at<='{pt}',id,null))) as month_newshop_cnt
   --月激活商户数
   ,count(if(activate_month=substr('{pt}',0,7),id,null)) as activate_shop_cnt
+
   --封禁商户数
   ,count(if(status='3',id,null)) as prohibit_shop_cnt
   ,0 as pos_prohibit_shop_cnt
+
+  --有效商户数
+  ,count(if(status!='3',id,null)) as effective_shop_cnt
+  ,0 as pos_effective_shop_cnt
 
   from
   opos_dw.dim_opos_bd_relation_df
