@@ -54,10 +54,10 @@ dim_opay_pos_terminal_base_df_prev_day_task = OssSensor(
     dag=dag
 )
 
-dwd_opay_transaction_record_di_prev_day_task = OssSensor(
-    task_id='dwd_opay_transaction_record_di_prev_day_task',
+dwd_opay_pos_transaction_record_di_task = OssSensor(
+    task_id='dwd_opay_pos_transaction_record_di_task',
     bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opay/opay_dw/dwd_opay_transaction_record_di/country_code=NG",
+        hdfs_path_str="opay/opay_dw/dwd_opay_pos_transaction_record_di/country_code=NG",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -162,6 +162,6 @@ app_opay_pos_trans_sum_w_task = PythonOperator(
 )
 
 dim_opay_pos_terminal_base_df_prev_day_task >> app_opay_pos_trans_sum_w_task
-dwd_opay_transaction_record_di_prev_day_task >> app_opay_pos_trans_sum_w_task
+dwd_opay_pos_transaction_record_di_task >> app_opay_pos_trans_sum_w_task
 
 
