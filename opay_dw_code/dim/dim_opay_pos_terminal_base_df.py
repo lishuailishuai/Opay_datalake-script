@@ -153,7 +153,7 @@ LEFT JOIN
                     'merchant'AS ROLE,
                     '' kyc_level,
                        merchant_type,
-                       '-' as state
+                       '-' as state,
                        CASE countries_code
                            WHEN 'NG' THEN 'NG'
                            WHEN 'NO' THEN 'NO'
