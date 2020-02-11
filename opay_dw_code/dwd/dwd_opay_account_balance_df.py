@@ -123,7 +123,6 @@ hdfs_path="oss://opay-datalake/opay/opay_dw/" + table_name
 def dwd_opay_account_balance_df_sql_task(ds):
     HQL = '''
     
-    set mapred.max.split.size=1000000;
     set hive.exec.dynamic.partition.mode=nonstrict;
     set hive.exec.parallel=true;
     
