@@ -123,9 +123,14 @@ shop_cnt as (
   ,count(distinct(if(created_at>=concat(substr('{pt}',0,7),'-01') and created_at<='{pt}',id,null))) as month_newshop_cnt
   --月激活商户数
   ,count(if(activate_month=substr('{pt}',0,7),id,null)) as activate_shop_cnt
+
   --封禁商户数
   ,count(if(status='3',id,null)) as prohibit_shop_cnt
   ,0 as pos_prohibit_shop_cnt
+
+  --有效商户数
+  ,count(if(status!='3',id,null)) as effective_shop_cnt
+  ,0 as pos_effective_shop_cnt
 
   from
   opos_dw.dim_opos_bd_relation_df
@@ -193,6 +198,9 @@ nvl(a.hcm_id,b.hcm_id) as hcm_id
 
 ,nvl(a.prohibit_shop_cnt,0) as prohibit_shop_cnt
 ,nvl(a.pos_prohibit_shop_cnt,0) as pos_prohibit_shop_cnt
+
+,nvl(a.effective_shop_cnt,0) as effective_shop_cnt
+,nvl(a.pos_effective_shop_cnt,0) as pos_effective_shop_cnt
 
 ,nvl(b.coupon_amount,0) as coupon_amount
 ,nvl(b.coupon_used_amount,0) as coupon_used_amount
@@ -353,6 +361,9 @@ nvl(a.hcm_id,b.hcm_id) as hcm_id
 ,nvl(a.prohibit_shop_cnt,0) as prohibit_shop_cnt
 ,nvl(a.pos_prohibit_shop_cnt,0) as pos_prohibit_shop_cnt
 
+,nvl(a.effective_shop_cnt,0) as effective_shop_cnt
+,nvl(a.pos_effective_shop_cnt,0) as pos_effective_shop_cnt
+
 ,'nal' as country_code
 ,'{pt}' as dt
 from
@@ -367,7 +378,6 @@ AND a.bdm_id=b.bdm_id
 AND a.bd_id=b.bd_id
 and a.city_id=b.city_id
 ;
-
 
 
 

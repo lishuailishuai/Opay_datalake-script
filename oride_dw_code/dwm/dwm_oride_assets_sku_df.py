@@ -153,7 +153,7 @@ def dwm_oride_assets_sku_df_sql_task(ds):
       prop.user_id,--'操作人ID',
       prop.business_id,--'业务线Id',
       tag_id,--'资产所属标签',
-      name ,--'业务线名称',
+      name  as business_name,--'业务线名称',
       business.status as business_status, --'业务线状态 是否启用 1-启用 2-禁用',
       ware_name  ,-- '仓库名称',  
       ware_address  ,-- '仓库地址',   
@@ -216,7 +216,7 @@ def dwm_oride_assets_sku_df_sql_task(ds):
             status --'是否启用 1-启用 2-禁用',
         from oride_dw.dwd_oride_admin_business_df  
         WHERE dt ='{pt}'
-    )business on  prop.business_id = business.id
+    )business on  sku.business_id = business.id
     left join
     (
         select       

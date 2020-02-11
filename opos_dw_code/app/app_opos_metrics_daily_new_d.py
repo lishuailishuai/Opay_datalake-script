@@ -211,6 +211,9 @@ o.id
 ,o.prohibit_shop_cnt
 ,o.pos_prohibit_shop_cnt
 
+,o.effective_shop_cnt
+,o.pos_effective_shop_cnt
+
 ,'nal' as country_code
 ,'{pt}' as dt
 from
@@ -309,6 +312,9 @@ from
 
   ,nvl(a.prohibit_shop_cnt,0) as prohibit_shop_cnt
   ,nvl(a.pos_prohibit_shop_cnt,0) as pos_prohibit_shop_cnt
+
+  ,nvl(a.effective_shop_cnt,0) as effective_shop_cnt
+  ,nvl(a.pos_effective_shop_cnt,0) as pos_effective_shop_cnt
 
   from 
   (select * from opos_dw.app_opos_metrics_report_mid where country_code = 'nal' and  dt = '{pt}') a

@@ -26,8 +26,8 @@ import requests
 import os
 
 args = {
-    'owner': 'liushuzhen',
-    'start_date': datetime(2020, 1, 1),
+    'owner': 'xiedong',
+    'start_date': datetime(2020, 2, 10),
     'depends_on_past': False,
     'retries': 3,
     'retry_delay': timedelta(minutes=2),
@@ -36,7 +36,7 @@ args = {
     'email_on_retry': False,
 }
 
-dag = airflow.DAG('app_opay_pos_report_d',
+dag = airflow.DAG('app_opay_pos_trans_sum_d',
                   schedule_interval="00 03 * * *",
                   default_args=args,
                   catchup=False)
@@ -86,52 +86,44 @@ task_timeout_monitor= PythonOperator(
 ##----------------------------------------- 变量 ---------------------------------------##
 db_name = "opay_dw"
 
-table_name = "app_opay_pos_report_d"
+table_name = "app_opay_pos_trans_sum_d"
 hdfs_path = "oss://opay-datalake/opay/opay_dw/" + table_name
 
 
-def app_opay_pos_report_d_sql_task(ds):
+def app_opay_pos_trans_sum_d_sql_task(ds):
     HQL = '''
 
     set mapred.max.split.size=1000000;
     set hive.exec.dynamic.partition.mode=nonstrict;
     set hive.exec.parallel=true;
-    WITH 
-        pos AS (
-            SELECT 
-                *
-            FROM opay_dw.dim_opay_pos_terminal_base_df
-            WHERE dt='{pt}' AND bind_status='Y' AND create_time<'{pt} 23:00:00'),
-        tran AS (
-            SELECT 
-                *
-            FROM opay_dw.dwd_opay_transaction_record_di
-            WHERE dt='{pt}' AND create_time BETWEEN date_format(date_sub('{pt}', 1), 'yyyy-MM-dd 23') AND date_format('{pt}', 'yyyy-MM-dd 23')
-                AND sub_service_type='pos'
-         )
-    INSERT overwrite TABLE {db}.{table} partition (dt='{pt}')
-    SELECT 
-        active_terms,
-        bind_terms,
-        bind_agents
-    FROM (
-        SELECT 
-            '{pt}' dt,
-            count(DISTINCT affiliate_id) active_terms
-       FROM tran
-    ) a
-    LEFT JOIN (
-        SELECT 
-            '{pt}' dt,
-            count(CASE WHEN originator_role='agent' THEN terminal_id END) bind_terms
-       FROM pos
-    ) b ON a.dt=b.dt
-    LEFT JOIN (
-        SELECT 
-            '{pt}' dt, count(DISTINCT user_id) bind_agents
-        FROM pos
-        where originator_role='agent'
-    ) c ON a.dt=c.dt
+    
+    INSERT overwrite TABLE {db}.{table} partition (country_code, dt)
+    
+    select 
+        pos_id, if(region is null, '-', region), t1.state, affiliate_bank_code, originator_type, order_status,
+        count(*) as order_cnt,
+        sum(amount) as order_amt,
+        sum(provider_share_amount) as provider_share_amt,
+        sum(msc_cost_amount) as msc_cost_amt,
+        sum(fee_amount) as fee_amt,
+        country_code,
+        '{pt}' as dt
+    from (
+        select 
+            pos_id, state, affiliate_bank_code, originator_type, order_status, country_code,
+            amount, provider_share_amount, msc_cost_amount, fee_amount
+        from opay_dw.dwd_opay_pos_transaction_record_di
+        where dt = '{pt}' and create_time BETWEEN date_format(date_sub('{pt}', 1), 'yyyy-MM-dd 23') AND date_format('{pt}', 'yyyy-MM-dd 23')
+    ) t1 left join (
+        select
+            state, region
+        from opay_dw.dim_opay_region_state_mapping_df
+        where dt = if('{pt}' <= 2020-02-10, '2020-02-10', '{pt}')
+    ) t2 on t1.state = t2.state
+    group by  pos_id, if(region is null, '-', region), t1.state, affiliate_bank_code, originator_type, order_status, country_code
+    
+    
+    
 
     '''.format(
         pt=ds,
@@ -145,7 +137,7 @@ def execution_data_task_id(ds, **kargs):
     hive_hook = HiveCliHook()
 
     # 读取sql
-    _sql = app_opay_pos_report_d_sql_task(ds)
+    _sql = app_opay_pos_trans_sum_d_sql_task(ds)
 
     logging.info('Executing: %s', _sql)
 
@@ -161,14 +153,14 @@ def execution_data_task_id(ds, **kargs):
     TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "false", "true")
 
 
-app_opay_pos_report_d_task = PythonOperator(
-    task_id='app_opay_pos_report_d_task',
+app_opay_pos_trans_sum_d_task = PythonOperator(
+    task_id='app_opay_pos_trans_sum_d_task',
     python_callable=execution_data_task_id,
     provide_context=True,
     dag=dag
 )
 
-dim_opay_pos_terminal_base_df_prev_day_task >> app_opay_pos_report_d_task
-dwd_opay_transaction_record_di_prev_day_task >> app_opay_pos_report_d_task
+dim_opay_pos_terminal_base_df_prev_day_task >> app_opay_pos_trans_sum_d_task
+dwd_opay_transaction_record_di_prev_day_task >> app_opay_pos_trans_sum_d_task
 
 
