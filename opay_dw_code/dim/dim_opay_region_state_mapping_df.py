@@ -72,7 +72,7 @@ def dim_opay_region_state_mapping_df_sql_task(ds):
     
     insert overwrite table {db}.{table} partition(country_code='nal', dt='{pt}')
     select 
-        state, region
+        region, state
     from opay_dw_ods.ods_opay_region_state_mapping_df
     where dt = '2020-02-09'
     '''.format(
