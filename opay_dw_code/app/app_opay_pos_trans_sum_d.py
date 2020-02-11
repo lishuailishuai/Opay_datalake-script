@@ -111,14 +111,14 @@ def app_opay_pos_trans_sum_d_sql_task(ds):
     from (
         select 
             pos_id, state, affiliate_bank_code, originator_type, order_status, country_code,
-            amount, provider_share_amount, msc_cost_amount, fee_amount, 
+            amount, provider_share_amount, msc_cost_amount, fee_amount
         from opay_dw.dwd_opay_pos_transaction_record_di
         where dt = '{pt}' and create_time BETWEEN date_format(date_sub('{pt}', 1), 'yyyy-MM-dd 23') AND date_format('{pt}', 'yyyy-MM-dd 23')
     ) t1 left join (
         select
             state, region
         from opay_dw.dim_opay_region_state_mapping_df
-        where dt = '{pt}'
+        where dt = if('{pt}' <= 2020-02-10, '2020-02-10', '{pt}')
     ) t2 on t1.state = t2.state
     group by  pos_id, if(region is null, '-', region), t1.state, affiliate_bank_code, originator_type, order_status, country_code
     
