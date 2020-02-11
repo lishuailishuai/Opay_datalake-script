@@ -124,6 +124,7 @@ def dim_opay_pos_terminal_base_df_sql_task(ds):
        b.kyc_level,
        b.role,
        b.merchant_type,
+       b.state,
        nvl(b.country_code,'nal') country_code,
        '{pt}'
 FROM
@@ -135,11 +136,13 @@ LEFT JOIN
           ROLE,
           kyc_level,
           '' merchant_type,
+          state,
               country_code
    FROM
      (SELECT user_id,
              ROLE,
              kyc_level,
+             if(state is null or state = '', '-', state) as state,
              row_number()over(partition BY user_id
                               ORDER BY update_time DESC) rn,
                          country_code
@@ -150,6 +153,7 @@ LEFT JOIN
                     'merchant'AS ROLE,
                     '' kyc_level,
                        merchant_type,
+                       '-' as state
                        CASE countries_code
                            WHEN 'NG' THEN 'NG'
                            WHEN 'NO' THEN 'NO'

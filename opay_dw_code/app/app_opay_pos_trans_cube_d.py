@@ -136,6 +136,15 @@ def app_opay_pos_trans_sum_d_sql_task(ds):
         (order_status, country_code),
         (country_code)
     )
+    union all
+    select
+    
+    from (
+        SELECT 
+            *
+        FROM opay_dw.dim_opay_pos_terminal_base_df
+        WHERE dt='{pt}' AND bind_status='Y' AND create_time<'{pt} 23:00:00'),
+    )
     
     
 
