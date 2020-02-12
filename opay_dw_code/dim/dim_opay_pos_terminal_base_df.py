@@ -125,7 +125,7 @@ def dim_opay_pos_terminal_base_df_sql_task(ds):
        b.role,
        b.merchant_type,
        b.state,
-       nvl(b.country_code,'nal') country_code,
+       nvl(b.country_code,'NG') country_code,
        '{pt}'
 FROM
   (SELECT *
