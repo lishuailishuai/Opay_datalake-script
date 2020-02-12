@@ -108,7 +108,7 @@ def app_opay_pos_cube_m_sql_task(ds):
         count(distinct affiliate_terminal_id) active_terms,
         count(distinct originator_id) active_agents,
         country_code,
-        '{pt}'
+        date_format('{pt}', 'yyyy-MM-01') as dt
     from (
         select 
             pos_id, nvl(region, '-') as region, t1.state, order_status, affiliate_terminal_id, originator_id,
