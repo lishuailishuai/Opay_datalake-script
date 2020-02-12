@@ -90,7 +90,6 @@ def dwd_opay_message_record_base_di_sql_task(ds):
     select 
     id,
     template_name,
-    country_code,
     message_type,
     mobile,
     content,
