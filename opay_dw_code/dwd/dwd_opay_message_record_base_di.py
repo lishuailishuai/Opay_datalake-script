@@ -27,7 +27,7 @@ import os
 
 args = {
     'owner': 'liushuzhen',
-    'start_date': datetime(2020, 1, 1),
+    'start_date': datetime(2020, 2, 11),
     'depends_on_past': False,
     'retries': 3,
     'retry_delay': timedelta(minutes=2),
@@ -36,17 +36,17 @@ args = {
     'email_on_retry': False,
 }
 
-dag = airflow.DAG('app_opay_pos_report_d',
-                  schedule_interval="00 03 * * *",
+dag = airflow.DAG('dwd_opay_message_record_base_di',
+                  schedule_interval="00 02 * * *",
                   default_args=args,
                   catchup=False)
 
 ##----------------------------------------- 依赖 ---------------------------------------##
 
-dim_opay_pos_terminal_base_df_prev_day_task = OssSensor(
-   task_id='dim_opay_pos_terminal_base_df_prev_day_task',
-   bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opay/opay_dw/dim_opay_pos_terminal_base_df/country_code=NG",
+ods_sqoop_base_message_record_di_prev_day_task = OssSensor(
+    task_id='ods_sqoop_base_message_record_di_prev_day_task',
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="opay_dw_sqoop_di/opay_sms/message_record",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -54,29 +54,20 @@ dim_opay_pos_terminal_base_df_prev_day_task = OssSensor(
     dag=dag
 )
 
-dwd_opay_transaction_record_di_prev_day_task = OssSensor(
-    task_id='dwd_opay_transaction_record_di_prev_day_task',
-    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opay/opay_dw/dwd_opay_transaction_record_di/country_code=NG",
-        pt='{{ds}}'
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
 
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
-def fun_task_timeout_monitor(ds,dag,**op_kwargs):
-
-    dag_ids=dag.dag_id
+def fun_task_timeout_monitor(ds, dag, **op_kwargs):
+    dag_ids = dag.dag_id
 
     msg = [
-        {"dag":dag, "db": "opay_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "dt={pt}".format(pt=ds), "timeout": "3000"}
+        {"dag": dag, "db": "opay_dw", "table": "{dag_name}".format(dag_name=dag_ids),
+         "partition": "country_code=NG/dt={pt}".format(pt=ds), "timeout": "3000"}
     ]
 
     TaskTimeoutMonitor().set_task_monitor(msg)
 
-task_timeout_monitor= PythonOperator(
+
+task_timeout_monitor = PythonOperator(
     task_id='task_timeout_monitor',
     python_callable=fun_task_timeout_monitor,
     provide_context=True,
@@ -86,52 +77,54 @@ task_timeout_monitor= PythonOperator(
 ##----------------------------------------- 变量 ---------------------------------------##
 db_name = "opay_dw"
 
-table_name = "app_opay_pos_report_d"
+table_name = "dwd_opay_message_record_base_di"
 hdfs_path = "oss://opay-datalake/opay/opay_dw/" + table_name
 
 
-def app_opay_pos_report_d_sql_task(ds):
+def dwd_opay_message_record_base_di_sql_task(ds):
     HQL = '''
 
-    set mapred.max.split.size=1000000;
     set hive.exec.dynamic.partition.mode=nonstrict;
     set hive.exec.parallel=true;
-    WITH 
-        pos AS (
-            SELECT 
-                *
-            FROM opay_dw.dim_opay_pos_terminal_base_df
-            WHERE dt='{pt}' AND bind_status='Y' AND create_time<'{pt} 23:00:00'),
-        tran AS (
-            SELECT 
-                *
-            FROM opay_dw.dwd_opay_transaction_record_di
-            WHERE dt='{pt}' AND create_time BETWEEN date_format(date_sub('{pt}', 1), 'yyyy-MM-dd 23') AND date_format('{pt}', 'yyyy-MM-dd 23')
-                AND sub_service_type='pos'
-         )
-    INSERT overwrite TABLE {db}.{table} partition (dt='{pt}')
-    SELECT 
-        active_terms,
-        bind_terms,
-        bind_agents
-    FROM (
-        SELECT 
-            '{pt}' dt,
-            count(DISTINCT affiliate_id) active_terms
-       FROM tran
-    ) a
-    LEFT JOIN (
-        SELECT 
-            '{pt}' dt,
-            count(CASE WHEN originator_role='agent' THEN terminal_id END) bind_terms
-       FROM pos
-    ) b ON a.dt=b.dt
-    LEFT JOIN (
-        SELECT 
-            '{pt}' dt, count(DISTINCT user_id) bind_agents
-        FROM pos
-        where originator_role='agent'
-    ) c ON a.dt=c.dt
+    insert overwrite table {db}.{table} partition (country_code,dt)
+    select 
+    id,
+    template_name,
+    message_type,
+    mobile,
+    content,
+    params,
+    language,
+    message_channels,
+    retry_times,
+    delivered_channel,
+    status,
+    third_msg_id,
+    remark,
+    create_time,
+    update_time,
+     CASE country_code
+           WHEN 'Nigeria' THEN 'NG'
+           WHEN 'Norway' THEN 'NO'
+           WHEN 'Ghana' THEN 'GH'
+           WHEN 'Botswana' THEN 'BW'
+           WHEN 'Ghana' THEN 'GH'
+           WHEN 'Kenya' THEN 'KE'
+           WHEN 'Malawi' THEN 'MW'
+           WHEN 'Mozambique' THEN 'MZ'
+           WHEN 'Poland' THEN 'PL'
+           WHEN 'South Africa' THEN 'ZA'
+           WHEN 'Sweden' THEN 'SE'
+           WHEN 'Tanzania' THEN 'TZ'
+           WHEN 'Uganda' THEN 'UG'
+           WHEN 'USA' THEN 'US'
+           WHEN 'Zambia' THEN 'ZM'
+           WHEN 'Zimbabwe' THEN 'ZW'
+           ELSE 'NG'
+      END AS country_code,
+    dt
+from opay_dw_ods.ods_sqoop_base_message_record_di
+    where dt='{pt}'
 
     '''.format(
         pt=ds,
@@ -145,7 +138,7 @@ def execution_data_task_id(ds, **kargs):
     hive_hook = HiveCliHook()
 
     # 读取sql
-    _sql = app_opay_pos_report_d_sql_task(ds)
+    _sql = dwd_opay_message_record_base_di_sql_task(ds)
 
     logging.info('Executing: %s', _sql)
 
@@ -158,17 +151,15 @@ def execution_data_task_id(ds, **kargs):
     第二个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
 
     """
-    TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "false", "true")
+    TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "true", "true")
 
 
-app_opay_pos_report_d_task = PythonOperator(
-    task_id='app_opay_pos_report_d_task',
+dwd_opay_message_record_base_di_task = PythonOperator(
+    task_id='dwd_opay_message_record_base_di_task',
     python_callable=execution_data_task_id,
     provide_context=True,
     dag=dag
 )
 
-dim_opay_pos_terminal_base_df_prev_day_task >> app_opay_pos_report_d_task
-dwd_opay_transaction_record_di_prev_day_task >> app_opay_pos_report_d_task
-
+ods_sqoop_base_message_record_di_prev_day_task >> dwd_opay_message_record_base_di_task
 

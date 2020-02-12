@@ -26,8 +26,8 @@ import requests
 import os
 
 args = {
-    'owner': 'liushuzhen',
-    'start_date': datetime(2020, 2, 10),
+    'owner': 'xiedong',
+    'start_date': datetime(2020, 1, 1),
     'depends_on_past': False,
     'retries': 3,
     'retry_delay': timedelta(minutes=2),
@@ -36,33 +36,24 @@ args = {
     'email_on_retry': False,
 }
 
-dag = airflow.DAG('app_opay_channel_transaction_sum_d',
-                  schedule_interval="00 03 * * *",
+dag = airflow.DAG('app_opay_pos_trans_sum_m',
+                  schedule_interval="00 03 1 * *",
                   default_args=args,
                   catchup=False)
 
 ##----------------------------------------- 依赖 ---------------------------------------##
 
-dwd_opay_channel_transaction_base_di_prev_day_task = OssSensor(
-    task_id='dwd_opay_channel_transaction_base_di_prev_day_task',
+
+dwd_opay_pos_transaction_record_di_task = OssSensor(
+    task_id='dwd_opay_pos_transaction_record_di_task',
     bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opay/opay_dw/dwd_opay_channel_transaction_base_di",
+        hdfs_path_str="opay/opay_dw/dwd_opay_pos_transaction_record_di/country_code=NG",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
-#ods_sqoop_base_card_bin_df_prev_day_task = OssSensor(
-#   task_id='ods_sqoop_base_card_bin_df_prev_day_task',
-#    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-#        hdfs_path_str="opay_dw_sqoop/opay_channel/card_bin",
-#        pt='{{ds}}'
-#    ),
-#    bucket_name='opay-datalake',
-#    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-#    dag=dag
-# )
 
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
 def fun_task_timeout_monitor(ds,dag,**op_kwargs):
@@ -70,7 +61,7 @@ def fun_task_timeout_monitor(ds,dag,**op_kwargs):
     dag_ids=dag.dag_id
 
     msg = [
-        {"dag":dag, "db": "opay_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "dt={pt}".format(pt=ds), "timeout": "3000"}
+        {"dag":dag, "db": "opay_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=NG/dt={pt}".format(pt=ds), "timeout": "3000"}
     ]
 
     TaskTimeoutMonitor().set_task_monitor(msg)
@@ -85,49 +76,45 @@ task_timeout_monitor= PythonOperator(
 ##----------------------------------------- 变量 ---------------------------------------##
 db_name = "opay_dw"
 
-table_name = "app_opay_channel_transaction_sum_d"
+table_name = "app_opay_pos_trans_sum_m"
 hdfs_path = "oss://opay-datalake/opay/opay_dw/" + table_name
 
 
-def app_opay_channel_transaction_sum_d_sql_task(ds):
+def app_opay_pos_trans_sum_m_sql_task(ds):
     HQL = '''
-    
-    
+
+    set mapred.max.split.size=1000000;
     set hive.exec.dynamic.partition.mode=nonstrict;
     set hive.exec.parallel=true;
-    insert overwrite table {db}.{table} partition (dt)
-     
-        SELECT pay_channel,
-               out_channel_id,
-               supply_item,
-               response_code,
-               transaction_status,
-               nvl(b.flag,0) flag,
-               user_type,
-               sum(amount) AS tran_amt,
-               count(1) AS tran_c,
-               c.brand,
-               c.bank_name,
-               a.dt
-        FROM
-          (SELECT pay_channel,out_channel_id,supply_item,response_code,transaction_status,user_type,dt,bank_response_message,
-                  amount,
-                  cast(substr(AES_DECRYPT(UNHEX(bank_card_no), UNHEX('4132E08EA055A2B852DE8C214C885C2A')),1,6) as STRING) bank
-           FROM opay_dw.dwd_opay_channel_transaction_base_di
-           WHERE dt='{pt}'
-             AND create_time BETWEEN date_format(date_sub('{pt}', 1), 'yyyy-MM-dd 23') AND date_format('{pt}', 'yyyy-MM-dd 23') ) a
-        LEFT JOIN opay_dw.dim_opay_bank_response_message_df b ON a.bank_response_message=b.bank_response_message
-        LEFT JOIN (select * from opay_dw_ods.ods_sqoop_base_card_bin_df where dt='2020-02-11') c on a.bank=c.bin
-        GROUP BY pay_channel,
-                 out_channel_id,
-                 supply_item,
-                 response_code,
-                 transaction_status,
-                 nvl(b.flag,0),
-                 user_type,
-                 c.brand,
-                 c.bank_name,
-                 a.dt
+    
+    INSERT overwrite TABLE {db}.{table} partition (country_code, dt)
+    
+    select 
+        pos_id, if(region is null, '-', region), t1.state, affiliate_bank_code, originator_type, order_status,
+        count(*) as order_cnt,
+        sum(amount) as order_amt,
+        sum(provider_share_amount) as provider_share_amt,
+        sum(msc_cost_amount) as msc_cost_amt,
+        sum(fee_amount) as fee_amt,
+        country_code,
+         date_format('{pt}', 'yyyy-MM-01') as dt
+    from (
+        select 
+            pos_id, state, affiliate_bank_code, originator_type, order_status, country_code,
+            amount, provider_share_amount, msc_cost_amount, fee_amount
+        from opay_dw.dwd_opay_pos_transaction_record_di
+        where dt between date_format('{pt}', 'yyyy-MM-01')  and  last_day('{pt}')
+                and create_time BETWEEN date_format(date_sub(date_format('{pt}', 'yyyy-MM-01'), 1), 'yyyy-MM-dd 23') AND date_format(last_day('{pt}'), 'yyyy-MM-dd 23') 
+    ) t1 left join (
+        select
+            state, region
+        from opay_dw.dim_opay_region_state_mapping_df
+        where dt = if('{pt}' <= '2020-02-10', '2020-02-10', '{pt}')
+    ) t2 on t1.state = t2.state
+    group by  pos_id, if(region is null, '-', region), t1.state, affiliate_bank_code, originator_type, order_status, country_code
+    
+    
+    
 
     '''.format(
         pt=ds,
@@ -141,7 +128,7 @@ def execution_data_task_id(ds, **kargs):
     hive_hook = HiveCliHook()
 
     # 读取sql
-    _sql = app_opay_channel_transaction_sum_d_sql_task(ds)
+    _sql = app_opay_pos_trans_sum_m_sql_task(ds)
 
     logging.info('Executing: %s', _sql)
 
@@ -154,18 +141,16 @@ def execution_data_task_id(ds, **kargs):
     第二个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
 
     """
-    TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "false", "true")
+    TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "true", "true")
 
 
-app_opay_channel_transaction_sum_d_task = PythonOperator(
-    task_id='app_opay_channel_transaction_sum_d_task',
+app_opay_pos_trans_sum_m_task = PythonOperator(
+    task_id='app_opay_pos_trans_sum_m_task',
     python_callable=execution_data_task_id,
     provide_context=True,
     dag=dag
 )
 
-# ods_sqoop_base_card_bin_df_prev_day_task >> app_opay_channel_transaction_sum_d_task
-
-dwd_opay_channel_transaction_base_di_prev_day_task >> app_opay_channel_transaction_sum_d_task
+dwd_opay_pos_transaction_record_di_task >> app_opay_pos_trans_sum_m_task
 
 
