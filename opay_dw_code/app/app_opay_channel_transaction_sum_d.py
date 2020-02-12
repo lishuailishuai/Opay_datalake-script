@@ -53,16 +53,16 @@ dwd_opay_channel_transaction_base_di_prev_day_task = OssSensor(
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
-ods_sqoop_base_card_bin_df_prev_day_task = OssSensor(
-    task_id='ods_sqoop_base_card_bin_df_prev_day_task',
-    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opay_dw_sqoop/opay_channel/card_bin",
-        pt='{{ds}}'
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
+#ods_sqoop_base_card_bin_df_prev_day_task = OssSensor(
+#   task_id='ods_sqoop_base_card_bin_df_prev_day_task',
+#    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+#        hdfs_path_str="opay_dw_sqoop/opay_channel/card_bin",
+#        pt='{{ds}}'
+#    ),
+#    bucket_name='opay-datalake',
+#    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+#    dag=dag
+# )
 
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
 def fun_task_timeout_monitor(ds,dag,**op_kwargs):
@@ -117,7 +117,7 @@ def app_opay_channel_transaction_sum_d_sql_task(ds):
            WHERE dt='{pt}'
              AND create_time BETWEEN date_format(date_sub('{pt}', 1), 'yyyy-MM-dd 23') AND date_format('{pt}', 'yyyy-MM-dd 23') ) a
         LEFT JOIN opay_dw.dim_opay_bank_response_message_df b ON a.bank_response_message=b.bank_response_message
-        LEFT JOIN (select * from opay_dw_ods.ods_sqoop_base_card_bin_df where dt='{pt}') c on a.bank=c.bin
+        LEFT JOIN (select * from opay_dw_ods.ods_sqoop_base_card_bin_df where dt='2020-02-11') c on a.bank=c.bin
         GROUP BY pay_channel,
                  out_channel_id,
                  supply_item,
@@ -164,6 +164,8 @@ app_opay_channel_transaction_sum_d_task = PythonOperator(
     dag=dag
 )
 
+# ods_sqoop_base_card_bin_df_prev_day_task >> app_opay_channel_transaction_sum_d_task
+
 dwd_opay_channel_transaction_base_di_prev_day_task >> app_opay_channel_transaction_sum_d_task
-ods_sqoop_base_card_bin_df_prev_day_task >> app_opay_channel_transaction_sum_d_task
+
 
