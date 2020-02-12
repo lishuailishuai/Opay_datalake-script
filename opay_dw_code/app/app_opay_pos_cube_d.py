@@ -36,7 +36,7 @@ args = {
     'email_on_retry': False,
 }
 
-dag = airflow.DAG('app_opay_pos_trans_sum_d',
+dag = airflow.DAG('app_opay_pos_cube_d',
                   schedule_interval="00 03 * * *",
                   default_args=args,
                   catchup=False)
@@ -86,11 +86,11 @@ task_timeout_monitor= PythonOperator(
 ##----------------------------------------- 变量 ---------------------------------------##
 db_name = "opay_dw"
 
-table_name = "app_opay_pos_trans_sum_d"
+table_name = "app_opay_pos_cube_d"
 hdfs_path = "oss://opay-datalake/opay/opay_dw/" + table_name
 
 
-def app_opay_pos_trans_sum_d_sql_task(ds):
+def app_opay_pos_cube_d_sql_task(ds):
     HQL = '''
 
     set mapred.max.split.size=1000000;
@@ -100,27 +100,85 @@ def app_opay_pos_trans_sum_d_sql_task(ds):
     INSERT overwrite TABLE {db}.{table} partition (country_code, dt)
     
     select 
-        pos_id, if(region is null, '-', region), t1.state, affiliate_bank_code, originator_type, order_status,
-        count(*) as order_cnt,
-        sum(amount) as order_amt,
-        sum(provider_share_amount) as provider_share_amt,
-        sum(msc_cost_amount) as msc_cost_amt,
-        sum(fee_amount) as fee_amt,
+        nvl(pos_id, 'ALL') as pos_id,
+        nvl(region, 'ALL') as region,
+        nvl(state, 'ALL') as state,
+        nvl(order_status, 'ALL') as order_status,
+        'trans' as target_type,
+        count(distinct affiliate_terminal_id) active_terms,
+        count(distinct originator_id) active_agents,
+        0 as bind_agents,
+        0 as bind_terms,
         country_code,
-        '{pt}' as dt
+        '{pt}'
     from (
         select 
-            pos_id, state, affiliate_bank_code, originator_type, order_status, country_code,
-            amount, provider_share_amount, msc_cost_amount, fee_amount
-        from opay_dw.dwd_opay_pos_transaction_record_di
-        where dt = '{pt}' and create_time BETWEEN date_format(date_sub('{pt}', 1), 'yyyy-MM-dd 23') AND date_format('{pt}', 'yyyy-MM-dd 23')
-    ) t1 left join (
+            pos_id, nvl(region, '-') as region, t1.state, order_status, affiliate_terminal_id, originator_id,
+            country_code
+        from (
+            select 
+                pos_id, state, order_status, country_code, affiliate_terminal_id, originator_id
+            from opay_dw.dwd_opay_pos_transaction_record_di
+            where dt = '{pt}' and create_time BETWEEN date_format(date_sub('{pt}', 1), 'yyyy-MM-dd 23') AND date_format('{pt}', 'yyyy-MM-dd 23')
+                and originator_type = 'USER' 
+        ) t1 left join (
+            select
+                state, region
+            from opay_dw.dim_opay_region_state_mapping_df
+            where dt = if('{pt}' <= '2020-02-10', '2020-02-10', '{pt}')
+        ) t2 on t1.state = t2.state
+    ) t3
+    group by pos_id, region, state, order_status, country_code
+    GROUPING SETS ( 
+        (pos_id, country_code),
+        (pos_id, order_status, country_code),
+        (pos_id, region, order_status, country_code),
+        (pos_id, state, order_status, country_code),
+        (region, order_status, country_code),
+        (region, country_code),
+        (state, order_status, country_code),
+        (state, country_code),
+        (order_status, country_code),
+        (country_code)
+    )
+    union all
+    select
+        nvl(pos_id, 'ALL') as pos_id,
+        nvl(region, 'ALL') as region,
+        nvl(state, 'ALL') as state,
+        'ALL' as order_status,
+        'terminal' as target_type,
+        0 as active_terms,
+        0 as active_agents,
+        count(distinct user_id) as bind_agents,
+        count(distinct terminal_id) as bind_terms,
+        country_code,
+        '{pt}'
+    from (
         select
-            state, region
-        from opay_dw.dim_opay_region_state_mapping_df
-        where dt = if('{pt}' <= '2020-02-10', '2020-02-10', '{pt}')
-    ) t2 on t1.state = t2.state
-    group by  pos_id, if(region is null, '-', region), t1.state, affiliate_bank_code, originator_type, order_status, country_code
+            pos_id, terminal_id, user_id, t4.state, nvl(t5.region, '-') as region, country_code
+        from (
+            SELECT 
+                pos_id, state, terminal_id, user_id, country_code
+            FROM opay_dw.dim_opay_pos_terminal_base_df
+            WHERE dt='{pt}' AND bind_status='Y' AND create_time<'{pt} 23:00:00' and originator_role='agent'
+        ) t4 left join (
+            select
+                state, region
+            from opay_dw.dim_opay_region_state_mapping_df
+            where dt = if('{pt}' <= '2020-02-10', '2020-02-10', '{pt}')
+        ) t5 on t5.state = t4.state
+    ) t6
+    group by pos_id, state, region, country_code
+    GROUPING SETS (
+        (pos_id, country_code),
+        (pos_id, region, country_code),
+        (pos_id, state, country_code),
+        (state, country_code),
+        (region, country_code),
+        (country_code)
+    )
+    
     
     
     
@@ -137,7 +195,7 @@ def execution_data_task_id(ds, **kargs):
     hive_hook = HiveCliHook()
 
     # 读取sql
-    _sql = app_opay_pos_trans_sum_d_sql_task(ds)
+    _sql = app_opay_pos_cube_d_sql_task(ds)
 
     logging.info('Executing: %s', _sql)
 
@@ -153,14 +211,14 @@ def execution_data_task_id(ds, **kargs):
     TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "true", "true")
 
 
-app_opay_pos_trans_sum_d_task = PythonOperator(
-    task_id='app_opay_pos_trans_sum_d_task',
+app_opay_pos_cube_d_task = PythonOperator(
+    task_id='app_opay_pos_cube_d_task',
     python_callable=execution_data_task_id,
     provide_context=True,
     dag=dag
 )
 
-dim_opay_pos_terminal_base_df_prev_day_task >> app_opay_pos_trans_sum_d_task
-dwd_opay_pos_transaction_record_di_task >> app_opay_pos_trans_sum_d_task
+dim_opay_pos_terminal_base_df_prev_day_task >> app_opay_pos_cube_d_task
+dwd_opay_pos_transaction_record_di_task >> app_opay_pos_cube_d_task
 
 

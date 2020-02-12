@@ -27,7 +27,7 @@ import os
 
 args = {
     'owner': 'xiedong',
-    'start_date': datetime(2020, 2, 10),
+    'start_date': datetime(2020, 2, 3),
     'depends_on_past': False,
     'retries': 3,
     'retry_delay': timedelta(minutes=2),
@@ -36,8 +36,8 @@ args = {
     'email_on_retry': False,
 }
 
-dag = airflow.DAG('app_opay_pos_trans_sum_d',
-                  schedule_interval="00 03 * * *",
+dag = airflow.DAG('app_opay_pos_trans_sum_w',
+                  schedule_interval="00 03 * * 1",
                   default_args=args,
                   catchup=False)
 
@@ -71,7 +71,8 @@ def fun_task_timeout_monitor(ds,dag,**op_kwargs):
     dag_ids=dag.dag_id
 
     msg = [
-        {"dag":dag, "db": "opay_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=NG/dt={pt}".format(pt=ds), "timeout": "3000"}
+        {"dag": dag, "db": "opay_dw", "table": "{dag_name}".format(dag_name=dag_ids),
+         "partition": "country_code=NG/dt={pt}".format(pt=airflow.macros.ds_add(ds, +6)), "timeout": "800"}
     ]
 
     TaskTimeoutMonitor().set_task_monitor(msg)
@@ -86,11 +87,11 @@ task_timeout_monitor= PythonOperator(
 ##----------------------------------------- 变量 ---------------------------------------##
 db_name = "opay_dw"
 
-table_name = "app_opay_pos_trans_sum_d"
+table_name = "app_opay_pos_trans_sum_w"
 hdfs_path = "oss://opay-datalake/opay/opay_dw/" + table_name
 
 
-def app_opay_pos_trans_sum_d_sql_task(ds):
+def app_opay_pos_trans_sum_w_sql_task(ds):
     HQL = '''
 
     set mapred.max.split.size=1000000;
@@ -107,13 +108,14 @@ def app_opay_pos_trans_sum_d_sql_task(ds):
         sum(msc_cost_amount) as msc_cost_amt,
         sum(fee_amount) as fee_amt,
         country_code,
-        '{pt}' as dt
+        date_sub(next_day('{pt}', 'mo'), 1) as dt
     from (
         select 
             pos_id, state, affiliate_bank_code, originator_type, order_status, country_code,
             amount, provider_share_amount, msc_cost_amount, fee_amount
         from opay_dw.dwd_opay_pos_transaction_record_di
-        where dt = '{pt}' and create_time BETWEEN date_format(date_sub('{pt}', 1), 'yyyy-MM-dd 23') AND date_format('{pt}', 'yyyy-MM-dd 23')
+        where dt between date_sub(next_day('{pt}', 'mo'), 7)  and date_sub(next_day('{pt}', 'mo'), 1) 
+                and create_time BETWEEN date_format(date_sub(next_day('{pt}', 'mo'), 8), 'yyyy-MM-dd 23') AND date_format(date_sub(next_day('{pt}', 'mo'), 1), 'yyyy-MM-dd 23') 
     ) t1 left join (
         select
             state, region
@@ -137,7 +139,7 @@ def execution_data_task_id(ds, **kargs):
     hive_hook = HiveCliHook()
 
     # 读取sql
-    _sql = app_opay_pos_trans_sum_d_sql_task(ds)
+    _sql = app_opay_pos_trans_sum_w_sql_task(ds)
 
     logging.info('Executing: %s', _sql)
 
@@ -150,17 +152,17 @@ def execution_data_task_id(ds, **kargs):
     第二个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
 
     """
-    TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "true", "true")
+    TaskTouchzSuccess().countries_touchz_success('{pt}'.format(pt=airflow.macros.ds_add(ds, +6)), db_name, table_name, hdfs_path, "true", "true")
 
 
-app_opay_pos_trans_sum_d_task = PythonOperator(
-    task_id='app_opay_pos_trans_sum_d_task',
+app_opay_pos_trans_sum_w_task = PythonOperator(
+    task_id='app_opay_pos_trans_sum_w_task',
     python_callable=execution_data_task_id,
     provide_context=True,
     dag=dag
 )
 
-dim_opay_pos_terminal_base_df_prev_day_task >> app_opay_pos_trans_sum_d_task
-dwd_opay_pos_transaction_record_di_task >> app_opay_pos_trans_sum_d_task
+dim_opay_pos_terminal_base_df_prev_day_task >> app_opay_pos_trans_sum_w_task
+dwd_opay_pos_transaction_record_di_task >> app_opay_pos_trans_sum_w_task
 
 
