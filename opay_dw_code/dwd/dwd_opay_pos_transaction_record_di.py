@@ -147,7 +147,7 @@ def dwd_opay_pos_transaction_record_di_sql_task(ds):
             where dt = if('{pt}' <= '2019-12-11', '2019-12-11', '{pt}')
         ),
         terminal_data as (
-            select pos_id, terminal_id from opay_dw.dim_opay_pos_terminal_base_df where dt = if('{pt}' <= '2019-12-30', '2019-12-30', '{pt}')
+            select pos_id, terminal_id from opay_dw.dim_opay_pos_terminal_base_df where dt = if('{pt}' <= '2020-01-02', '2020-01-02', '{pt}')
         )
     insert overwrite table {db}.{table} 
     partition(country_code, dt)
