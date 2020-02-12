@@ -84,7 +84,8 @@ hdfs_path = "oss://opay-datalake/opay/opay_dw/" + table_name
 def dwm_opay_user_scenario_last_tran_di_sql_task(ds):
     HQL = '''
 
-    
+    set  hive.exec.max.dynamic.partitions.pernode=1000;
+set hive.exec.max.dynamic.partitions =10000;
     set hive.exec.dynamic.partition.mode=nonstrict;
     set hive.exec.parallel=true;
     with tran as 
