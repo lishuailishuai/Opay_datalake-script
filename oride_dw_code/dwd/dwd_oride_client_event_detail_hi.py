@@ -106,24 +106,7 @@ def dwd_oride_client_event_detail_hi_sql_task(ds,hour):
         SET hive.exec.parallel=TRUE;
         SET hive.exec.dynamic.partition.mode=nonstrict;
         CREATE TEMPORARY FUNCTION from_json AS 'brickhouse.udf.json.FromJsonUDF';
-        with opay_ep_logv0_data as (
-            SELECT
-                get_json_object(message, '$.msg') as msg
-            FROM
-                oride_source.opay_ep_logv0
-            WHERE
-                dt='{pt}'
-                AND hour='{now_hour}'
-        ),
-        opay_ep_logv1_data as (
-            SELECT
-                message as msg
-            FROM
-                oride_source.opay_ep_logv1
-            WHERE
-                dt='{pt}'
-                AND hour='{now_hour}'
-        )
+        CREATE TEMPORARY FUNCTION to_json AS 'brickhouse.udf.json.ToJsonUDF';
 
         insert overwrite table oride_dw.{table} partition(country_code,dt,hour)
 
@@ -161,10 +144,18 @@ def dwd_oride_client_event_detail_hi_sql_task(ds,hour):
             oride_source.client_event LATERAL VIEW EXPLODE(events) es AS e
         WHERE
             dt='{pt}'
-            AND hour='{now_hour}'
+            AND hour='{now_hour}';
 
-        UNION
-
+        with opay_ep_logv0_data as (
+            SELECT
+                get_json_object(message, '$.msg') as msg
+            FROM
+                oride_source.opay_ep_logv0
+            WHERE
+                dt='{pt}'
+                AND hour='{now_hour}'
+        )
+        INSERT INTO TABLE oride_dw.dwd_oride_client_event_detail_hi partition(country_code,dt,hour)
         SELECT
             null as ip,
             null as server_ip,
@@ -195,10 +186,18 @@ def dwd_oride_client_event_detail_hi_sql_task(ds,hour):
             '{pt}' as dt,
             '{now_hour}' as hour
         FROM
-            opay_ep_logv0_data LATERAL VIEW EXPLODE(from_json(get_json_object(msg, '$.events'), array(named_struct("event_name", "", "event_time","", "event_value","", "page","", "source","")))) es AS e
+            opay_ep_logv0_data LATERAL VIEW EXPLODE(from_json(get_json_object(msg, '$.events'), array(named_struct("event_name", "", "event_time","", "event_value","", "page","", "source","")))) es AS e;
 
-        UNION
-
+         with opay_ep_logv1_data as (
+            SELECT
+                message as msg
+            FROM
+                oride_source.opay_ep_logv1
+            WHERE
+                dt='{pt}'
+                AND hour='{now_hour}'
+        )
+        INSERT INTO TABLE oride_dw.dwd_oride_client_event_detail_hi partition(country_code,dt,hour)
         SELECT
             null as ip,
             null as server_ip,
@@ -224,7 +223,7 @@ def dwd_oride_client_event_detail_hi_sql_task(ds,hour):
             e.en,
             null as page,
             null as source,
-            e.ev,
+            to_json(e.ev),
             'nal' as country_code,
             '{pt}' as dt,
             '{now_hour}' as hour
