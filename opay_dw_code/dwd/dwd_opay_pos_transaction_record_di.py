@@ -56,16 +56,16 @@ ods_sqoop_base_user_di_prev_day_task = OssSensor(
     dag=dag
 )
 
-ods_sqoop_base_merchant_df_prev_day_task = OssSensor(
-    task_id='ods_sqoop_base_merchant_df_prev_day_task',
-    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opay_dw_sqoop/opay_merchant/merchant",
-        pt='{{ds}}'
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
+# ods_sqoop_base_merchant_df_prev_day_task = OssSensor(
+#     task_id='ods_sqoop_base_merchant_df_prev_day_task',
+#     bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+#         hdfs_path_str="opay_dw_sqoop/opay_merchant/merchant",
+#         pt='{{ds}}'
+#     ),
+#     bucket_name='opay-datalake',
+#     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+#     dag=dag
+# )
 
 ods_sqoop_base_user_pos_transaction_record_di_prev_day_task = OssSensor(
     task_id='ods_sqoop_base_user_pos_transaction_record_di_prev_day_task',
@@ -246,7 +246,7 @@ dwd_opay_pos_transaction_record_di_task = PythonOperator(
 )
 
 ods_sqoop_base_user_di_prev_day_task >> dwd_opay_pos_transaction_record_di_task
-ods_sqoop_base_merchant_df_prev_day_task >> dwd_opay_pos_transaction_record_di_task
+# ods_sqoop_base_merchant_df_prev_day_task >> dwd_opay_pos_transaction_record_di_task
 ods_sqoop_base_user_pos_transaction_record_di_prev_day_task >> dwd_opay_pos_transaction_record_di_task
 dim_opay_pos_terminal_base_df_prev_day_task >> dwd_opay_pos_transaction_record_di_task
 ods_sqoop_base_merchant_pos_transaction_record_di_prev_day_task >> dwd_opay_pos_transaction_record_di_task
