@@ -105,7 +105,16 @@ def dwd_oride_client_event_detail_hi_sql_task(ds,hour):
     HQL='''
         SET hive.exec.parallel=TRUE;
         SET hive.exec.dynamic.partition.mode=nonstrict;
-
+        CREATE TEMPORARY FUNCTION from_json AS 'brickhouse.udf.json.FromJsonUDF';
+        with opay_ep_logv0_data as (
+            SELECT
+                get_json_object(message, '$.msg') as msg
+            FROM
+                oride_source.opay_ep_logv0
+            WHERE
+                dt='{pt}'
+                AND hour='{now_hour}'
+        )
         insert overwrite table oride_dw.{table} partition(country_code,dt,hour)
 
         SELECT
@@ -143,7 +152,41 @@ def dwd_oride_client_event_detail_hi_sql_task(ds,hour):
         WHERE
             dt='{pt}'
             AND hour='{now_hour}'
-        
+
+        UNION
+
+        SELECT
+            null as ip,
+            null as server_ip,
+            null as `timestamp`,
+            get_json_object(msg, '$.common.user_id'),
+            get_json_object(msg, '$.common.user_number'),
+            get_json_object(msg, '$.common.client_timestamp'),
+            get_json_object(msg, '$.common.platform'),
+            get_json_object(msg, '$.common.os_version'),
+            get_json_object(msg, '$.common.app_name'),
+            get_json_object(msg, '$.common.app_version'),
+            get_json_object(msg, '$.common.locale'),
+            get_json_object(msg, '$.common.device_id'),
+            get_json_object(msg, '$.common.device_screen'),
+            get_json_object(msg, '$.common.device_model'),
+            get_json_object(msg, '$.common.device_manufacturer'),
+            get_json_object(msg, '$.common.is_root'),
+            get_json_object(msg, '$.common.channel'),
+            get_json_object(msg, '$.common.subchannel'),
+            get_json_object(msg, '$.common.gaid'),
+            get_json_object(msg, '$.common.appsflyer_id'),
+            e.event_time,
+            e.event_name,
+            e.page,
+            e.source,
+            e.event_value,
+            'nal' as country_code,
+            '{pt}' as dt,
+            '{now_hour}' as hour
+        FROM
+            opay_ep_logv0_data LATERAL VIEW EXPLODE(from_json(get_json_object(msg, '$.events'), array(named_struct("event_name", "", "event_time","", "event_value","", "page","", "source","")))) es AS e
+
         ;
 '''.format(
         pt=ds,
