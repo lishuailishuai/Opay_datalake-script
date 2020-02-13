@@ -154,6 +154,7 @@ def dwd_oride_client_event_detail_hi_sql_task(ds,hour):
             WHERE
                 dt='{pt}'
                 AND hour='{now_hour}'
+                AND get_json_object(message, '$.type') in ('driver', 'passenger')
         )
         INSERT INTO TABLE oride_dw.dwd_oride_client_event_detail_hi partition(country_code,dt,hour)
         SELECT
@@ -196,6 +197,7 @@ def dwd_oride_client_event_detail_hi_sql_task(ds,hour):
             WHERE
                 dt='{pt}'
                 AND hour='{now_hour}'
+                AND get_json_object(message, '$.typ') in ('driver', 'passenger')
         )
         INSERT INTO TABLE oride_dw.dwd_oride_client_event_detail_hi partition(country_code,dt,hour)
         SELECT
