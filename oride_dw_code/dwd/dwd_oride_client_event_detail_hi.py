@@ -114,7 +114,17 @@ def dwd_oride_client_event_detail_hi_sql_task(ds,hour):
             WHERE
                 dt='{pt}'
                 AND hour='{now_hour}'
+        ),
+        opay_ep_logv1_data as (
+            SELECT
+                message as msg
+            FROM
+                oride_source.opay_ep_logv1
+            WHERE
+                dt='{pt}'
+                AND hour='{now_hour}'
         )
+
         insert overwrite table oride_dw.{table} partition(country_code,dt,hour)
 
         SELECT
@@ -187,6 +197,40 @@ def dwd_oride_client_event_detail_hi_sql_task(ds,hour):
         FROM
             opay_ep_logv0_data LATERAL VIEW EXPLODE(from_json(get_json_object(msg, '$.events'), array(named_struct("event_name", "", "event_time","", "event_value","", "page","", "source","")))) es AS e
 
+        UNION
+
+        SELECT
+            null as ip,
+            null as server_ip,
+            null as `timestamp`,
+            get_json_object(msg, '$.uid'),
+            get_json_object(msg, '$.uno'),
+            get_json_object(msg, '$.t'),
+            get_json_object(msg, '$.p'),
+            get_json_object(msg, '$.ov'),
+            get_json_object(msg, '$.an'),
+            get_json_object(msg, '$.av'),
+            get_json_object(msg, '$.l'),
+            get_json_object(msg, '$.did'),
+            get_json_object(msg, '$.dsc'),
+            get_json_object(msg, '$.dmo'),
+            get_json_object(msg, '$.dma'),
+            get_json_object(msg, '$.isr'),
+            get_json_object(msg, '$.ch'),
+            get_json_object(msg, '$.sch'),
+            get_json_object(msg, '$.gaid'),
+            get_json_object(msg, '$.aid'),
+            e.et,
+            e.en,
+            null as page,
+            null as source,
+            e.ev,
+            'nal' as country_code,
+            '{pt}' as dt,
+            '{now_hour}' as hour
+
+        FROM
+            opay_ep_logv1_data LATERAL VIEW EXPLODE(from_json(get_json_object(msg, '$.es'), array(named_struct("en", "", "et","", "ev", map("",""), "lat","", "lng","","cid", "", "cip", "")))) es AS e
         ;
 '''.format(
         pt=ds,
