@@ -132,6 +132,16 @@ ods_sqoop_base_business_collection_record_di_prev_day_task = OssSensor(
     dag=dag
 )
 
+ods_bd_agent_df_prev_day_task = OssSensor(
+    task_id='ods_bd_agent_df_prev_day_task',
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="opay_dw_sqoop/opay_agent_crm/bd_agent",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
 
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
 def fun_task_timeout_monitor(ds, dag, **op_kwargs):
@@ -233,6 +243,46 @@ def dwd_opay_transfer_of_account_record_di_sql_task(ds):
                 from opay_dw_ods.ods_sqoop_base_merchant_acquiring_record_di
                 where dt = '{pt}'
             ) m2 left join dim_service_scenario_data mp2 on m2.affiliate_id = mp2.trader_id and mp2.sub_service_type = m2.sub_service_type
+        ),
+        bd_agent_data as (
+            select 
+                cast(opay_id as string) as opay_id, bd_id, agent_status as bd_agent_status
+            from opay_dw_ods.ods_sqoop_base_bd_agent_df
+            where dt = '{pt}'
+        ),
+        ci_data as (
+            select 
+                order_no, amount, currency, 'USER' as originator_type, sender_id as originator_id, 'USER' as affiliate_type, recipient_id as affiliate_id, '-' as payment_order_no, 
+                    create_time, update_time, country, 'Cash In' as sub_service_type, order_status,
+                    error_code, error_msg, client_source, pay_channel as pay_way, '-' as business_type, 'Cash In' as top_consume_scenario, 'Cash In' as sub_consume_scenario,
+                    nvl(fee_amount, 0) as fee_amount, nvl(fee_pattern, '-') as fee_pattern, nvl(outward_id, '-') as outward_id, nvl(outward_type, '-') as outward_type, 
+                    bd_id as bd_admin_user_id, bd_agent_status
+            from (
+                select 
+                    order_no, amount, currency, 'USER' as originator_type, sender_id as originator_id, 'USER' as affiliate_type, recipient_id as affiliate_id, '-' as payment_order_no, 
+                    create_time, update_time, country, 'Cash In' as sub_service_type, order_status,
+                    error_code, error_msg, client_source, pay_channel as pay_way, '-' as business_type, 'Cash In' as top_consume_scenario, 'Cash In' as sub_consume_scenario,
+                    nvl(fee_amount, 0) as fee_amount, nvl(fee_pattern, '-') as fee_pattern, nvl(outward_id, '-') as outward_id, nvl(outward_type, '-') as outward_type
+                from opay_dw_ods.ods_sqoop_base_cash_in_record_di
+                where dt = '{pt}' 
+            ) ci left join bd_agent_data ba on ci.affiliate_id = ba.opay_id
+        ),
+        co_data as (
+            select
+                order_no, amount, currency, 'USER' as originator_type, sender_id as originator_id, 'USER' as affiliate_type, recipient_id as affiliate_id, '-' as payment_order_no, 
+                    create_time, update_time, country, 'Cash Out' as sub_service_type, order_status,
+                    error_code, error_msg, client_source, pay_channel as pay_way, '-' as business_type, 'Cash Out' as top_consume_scenario, 'Cash Out' as sub_consume_scenario,
+                    nvl(fee_amount, 0) as fee_amount, nvl(fee_pattern, '-') as fee_pattern, nvl(outward_id, '-') as outward_id, nvl(outward_type, '-') as outward_type,
+                    bd_id as bd_admin_user_id, bd_agent_status
+            from (
+                select 
+                    order_no, amount, currency, 'USER' as originator_type, sender_id as originator_id, 'USER' as affiliate_type, recipient_id as affiliate_id, '-' as payment_order_no, 
+                    create_time, update_time, country, 'Cash Out' as sub_service_type, order_status,
+                    error_code, error_msg, client_source, pay_channel as pay_way, '-' as business_type, 'Cash Out' as top_consume_scenario, 'Cash Out' as sub_consume_scenario,
+                    nvl(fee_amount, 0) as fee_amount, nvl(fee_pattern, '-') as fee_pattern, nvl(outward_id, '-') as outward_id, nvl(outward_type, '-') as outward_type
+                from opay_dw_ods.ods_sqoop_base_cash_out_record_di
+                where dt = '{pt}'
+            ) co left join bd_agent_data ba on co.originator_id = ba.opay_id
         )
     insert overwrite table {db}.{table} 
     partition(country_code, dt)
@@ -257,6 +307,7 @@ def dwd_opay_transfer_of_account_record_di_sql_task(ds):
         t1.error_code, t1.error_msg, t1.client_source, t1.pay_way, t1.business_type, 
         t1.top_consume_scenario, t1.sub_consume_scenario,
         t1.fee_amount, t1.fee_pattern, t1.outward_id, t1.outward_type,
+        bd_admin_user_id, bd_agent_status,
         case t1.country
             when 'NG' then 'NG'
             when 'NO' then 'NO'
@@ -284,7 +335,8 @@ def dwd_opay_transfer_of_account_record_di_sql_task(ds):
                     create_time, update_time, country, sub_service_type, 
                     order_status, error_code, error_msg, client_source, pay_way, business_type,
                     top_consume_scenario, sub_consume_scenario, 
-                    nvl(fee_amount, 0) as fee_amount, nvl(fee_pattern, '-') as fee_pattern, nvl(outward_id, '-') as outward_id, nvl(outward_type, '-') as outward_type
+                    nvl(fee_amount, 0) as fee_amount, nvl(fee_pattern, '-') as fee_pattern, nvl(outward_id, '-') as outward_id, nvl(outward_type, '-') as outward_type,
+                    null as bd_admin_user_id, null as bd_agent_status
         from m_aquiring_data
         union all
         select 
@@ -303,7 +355,8 @@ def dwd_opay_transfer_of_account_record_di_sql_task(ds):
                 when 'UNFREEZ_S' then 'FAIL'
                 end as order_status,
             '-' as error_code, error_msg, client_source, pay_channel as pay_way, business_type, 'AATransfer' as top_consume_scenario, 'AATransfer' as sub_consume_scenario,
-            nvl(fee_amount, 0) as fee_amount, nvl(fee_pattern, '-') as fee_pattern, nvl(outWardId, '-') as outward_id, nvl(outWardType, '-') as outward_type
+            nvl(fee_amount, 0) as fee_amount, nvl(fee_pattern, '-') as fee_pattern, nvl(outWardId, '-') as outward_id, nvl(outWardType, '-') as outward_type,
+            null as bd_admin_user_id, null as bd_agent_status
         from opay_dw_ods.ods_sqoop_base_user_transfer_user_record_di
         where dt = '{pt}'
         union all
@@ -312,32 +365,22 @@ def dwd_opay_transfer_of_account_record_di_sql_task(ds):
                     create_time, update_time, country, sub_service_type, order_status,
                     error_code, error_msg, client_source, pay_way, business_type,
                     top_consume_scenario, sub_consume_scenario, 
-                    nvl(fee_amount, 0) as fee_amount, nvl(fee_pattern, '-') as fee_pattern, nvl(outward_id, '-') as outward_id, nvl(outward_type, '-') as outward_type
+                    nvl(fee_amount, 0) as fee_amount, nvl(fee_pattern, '-') as fee_pattern, nvl(outward_id, '-') as outward_id, nvl(outward_type, '-') as outward_type,
+                    null as bd_admin_user_id, null as bd_agent_status
         from merchant_transfer_user_data
         union all
         select 
             order_no, amount, currency, sender_type as originator_type, sender_id as originator_id, recipient_type as affiliate_type, recipient_id as affiliate_id, platform_order_no as payment_order_no, 
             create_time, update_time, country, 'Consumption' as sub_service_type, order_status,
             error_code, error_msg, '-' as client_source, pay_channel as pay_way, '-' as business_type, 'OPay QR' as top_consume_scenario, 'QRCode' as sub_consume_scenario,
-            nvl(fee, 0) as fee_amount, nvl(fee_pattern, '-') as fee_pattern, nvl(outward_id, '-') as outward_id, nvl(outward_type, '-') as outward_type
+            nvl(fee, 0) as fee_amount, nvl(fee_pattern, '-') as fee_pattern, nvl(outward_id, '-') as outward_id, nvl(outward_type, '-') as outward_type,
+            null as bd_admin_user_id, null as bd_agent_status
         from opay_dw_ods.ods_sqoop_base_business_collection_record_di
         where dt = '{pt}'
         union all
-        select 
-            order_no, amount, currency, 'USER' as originator_type, sender_id as originator_id, 'USER' as affiliate_type, recipient_id as affiliate_id, '-' as payment_order_no, 
-            create_time, update_time, country, 'Cash In' as sub_service_type, order_status,
-            error_code, error_msg, client_source, pay_channel as pay_way, '-' as business_type, 'Cash In' as top_consume_scenario, 'Cash In' as sub_consume_scenario,
-            nvl(fee_amount, 0) as fee_amount, nvl(fee_pattern, '-') as fee_pattern, nvl(outward_id, '-') as outward_id, nvl(outward_type, '-') as outward_type
-        from opay_dw_ods.ods_sqoop_base_cash_in_record_di
-        where dt = '{pt}'
+        select * from ci_data
         union all
-        select 
-            order_no, amount, currency, 'USER' as originator_type, sender_id as originator_id, 'USER' as affiliate_type, recipient_id as affiliate_id, '-' as payment_order_no, 
-            create_time, update_time, country, 'Cash Out' as sub_service_type, order_status,
-            error_code, error_msg, client_source, pay_channel as pay_way, '-' as business_type, 'Cash Out' as top_consume_scenario, 'Cash Out' as sub_consume_scenario,
-            nvl(fee_amount, 0) as fee_amount, nvl(fee_pattern, '-') as fee_pattern, nvl(outward_id, '-') as outward_id, nvl(outward_type, '-') as outward_type
-        from opay_dw_ods.ods_sqoop_base_cash_out_record_di
-        where dt = '{pt}'
+        select * from co_data
 
     ) t1 
     left join dim_user_merchant_data t2 on t1.originator_id = t2.trader_id
@@ -386,3 +429,4 @@ ods_sqoop_base_merchant_transfer_user_record_di_prev_day_task >> dwd_opay_transf
 ods_sqoop_base_cash_in_record_di_prev_day_task >> dwd_opay_transfer_of_account_record_di_task
 ods_sqoop_base_cash_out_record_di_prev_day_task >> dwd_opay_transfer_of_account_record_di_task
 ods_sqoop_base_business_collection_record_di_prev_day_task >> dwd_opay_transfer_of_account_record_di_task
+ods_bd_agent_df_prev_day_task >> dwd_opay_transfer_of_account_record_di_task
