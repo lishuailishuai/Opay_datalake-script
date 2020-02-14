@@ -27,7 +27,7 @@ import os
 # 央行月报汇报指标
 #
 args = {
-    'owner': 'xiedong',
+    'owner': 'lishuai',
     'start_date': datetime(2019, 12, 1),
     'depends_on_past': False,
     'retries': 3,
@@ -44,15 +44,25 @@ dag = airflow.DAG('dwd_opay_client_event_base_di',
                   catchup=False)
 
 ##----------------------------------------- 依赖 ---------------------------------------##
-# 依赖前一天分区
-dwd_opay_client_event_base_di_prev_day_task = HivePartitionSensor(
-    task_id="dwd_opay_client_event_base_di_prev_day_task",
-    table="client_event",
+
+opay_ep_logv0_prev_hour_task = HivePartitionSensor(
+    task_id="opay_ep_logv0_prev_hour_task",
+    table="opay_ep_logv0",
     partition="dt='{{ ds }}' and hour='22'",
-    schema="opay_source",
+    schema="oride_source",
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
+
+opay_ep_logv1_prev_hour_task = HivePartitionSensor(
+    task_id="opay_ep_logv1_prev_hour_task",
+    table="opay_ep_logv1",
+    partition="dt='{{ ds }}' and hour='22'",
+    schema="oride_source",
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
 
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
 def fun_task_timeout_monitor(ds,dag,**op_kwargs):
@@ -81,30 +91,100 @@ hdfs_path="oss://opay-datalake/opay/opay_dw/" + table_name
 
 def dwd_opay_client_event_base_di_sql_task(ds):
     HQL='''
-    
-    set mapred.max.split.size=1000000;
-    set hive.exec.dynamic.partition.mode=nonstrict;
-    set hive.exec.parallel=true;
-    insert overwrite table {db}.{table} 
-    partition(country_code, dt)
-    select 
-        ip as client_ip, server_ip, 
-        from_unixtime(`timestamp`, 'yyyy-MM-dd HH:mm:ss') as server_time, `timestamp` as server_timestamp,
-        common.user_id, common.user_number as mobile, common.city_id, 
-        from_unixtime(cast(common.client_timestamp as BIGINT), 'yyyy-MM-dd HH:mm:ss') as client_report_time, cast(common.client_timestamp as BIGINT) as client_report_timestamp,
-        common.platform, common.os_version, common.app_name, common.app_version, common.locale, common.device_id, 
-        common.device_screen, common.device_model, common.device_manufacturer, common.is_root, common.channel, common.subchannel, 
-        common.gaid, common.appsflyer_id, 
-        from_unixtime(cast(cast(event.event_time as bigint) / 1000 as bigint), 'yyyy-MM-dd HH:mm:ss') as event_time, 
-        cast(cast(event.event_time as bigint) / 1000 as bigint) as event_timestamp,
-        event.event_name, event.page, event.source, event.event_value,
-        'nal' as country_code, '{pt}' as dt
-    from (
-      select 
-      *
-      from opay_source.client_event 
-      where (dt = '{pt}' and hour < 23) or (dt=date_sub('{pt}', 1) and hour = 23)
-    ) t1 lateral view explode(t1.events) event_value as event;
+        SET hive.exec.parallel=TRUE;
+        SET hive.exec.dynamic.partition.mode=nonstrict;
+        CREATE TEMPORARY FUNCTION from_json AS 'brickhouse.udf.json.FromJsonUDF';
+        CREATE TEMPORARY FUNCTION to_json AS 'brickhouse.udf.json.ToJsonUDF';
+        with opay_ep_logv0_data as (
+            SELECT
+                 `@timestamp` as time,get_json_object(message, '$.msg') as msg
+            FROM
+                oride_source.opay_ep_logv0
+            WHERE
+                dt='{pt}'
+                AND get_json_object(message, '$.type') in ('opay')
+        )
+        insert overwrite table {db}.{table} partition(country_code,dt)
+        SELECT
+            null as client_ip,
+            null as server_ip,
+            concat_ws(' ',substr(time,1,10),substr(time,12,8)) as server_time,
+            unix_timestamp(concat_ws(' ',substr(time,1,10),substr(time,12,8))) as server_timestamp,
+            get_json_object(msg, '$.common.user_id'),
+            get_json_object(msg, '$.common.user_number'),
+            null as city_id,
+            from_unixtime(cast(get_json_object(msg, '$.common.client_timestamp') as bingint),'yyyy-MM-dd HH:mm:ss'),
+            get_json_object(msg, '$.common.client_timestamp'),
+            get_json_object(msg, '$.common.platform'),
+            get_json_object(msg, '$.common.os_version'),
+            get_json_object(msg, '$.common.app_name'),
+            get_json_object(msg, '$.common.app_version'),
+            get_json_object(msg, '$.common.locale'),
+            get_json_object(msg, '$.common.device_id'),
+            get_json_object(msg, '$.common.device_screen'),
+            get_json_object(msg, '$.common.device_model'),
+            get_json_object(msg, '$.common.device_manufacturer'),
+            get_json_object(msg, '$.common.is_root'),
+            get_json_object(msg, '$.common.channel'),
+            get_json_object(msg, '$.common.subchannel'),
+            get_json_object(msg, '$.common.gaid'),
+            get_json_object(msg, '$.common.appsflyer_id'),
+            from_unixtime(cast(e.event_time as bigint) / 1000,'yyyy-MM-dd HH:mm:ss'),
+            cast(e.event_time as bigint) / 1000,
+            e.event_name,
+            e.page,
+            e.source,
+            e.event_value,
+            'nal' as country_code,
+            '{pt}' as dt
+        FROM
+            opay_ep_logv0_data LATERAL VIEW EXPLODE(from_json(get_json_object(msg, '$.events'), array(named_struct("event_name", "", "event_time","", "event_value","", "page","", "source","")))) es AS e;
+
+         with opay_ep_logv1_data as (
+            SELECT
+                `@timestamp` as time,message as msg
+            FROM
+                oride_source.opay_ep_logv1
+            WHERE
+                dt='{pt}'
+                AND get_json_object(message, '$.typ') in ('opay')
+        )
+        INSERT INTO TABLE {db}.{table} partition(country_code,dt)
+        SELECT
+            null as ip,
+            null as server_ip,
+            concat_ws(' ',substr(time,1,10),substr(time,12,8)) as server_time,
+            unix_timestamp(concat_ws(' ',substr(time,1,10),substr(time,12,8))) as server_timestamp,
+            get_json_object(msg, '$.uid'),
+            get_json_object(msg, '$.uno'),
+            null as city_id,
+            from_unixtime(cast(get_json_object(msg, '$.t') as bingint),'yyyy-MM-dd HH:mm:ss'),
+            get_json_object(msg, '$.t'),
+            get_json_object(msg, '$.p'),
+            get_json_object(msg, '$.ov'),
+            get_json_object(msg, '$.an'),
+            get_json_object(msg, '$.av'),
+            get_json_object(msg, '$.l'),
+            get_json_object(msg, '$.did'),
+            get_json_object(msg, '$.dsc'),
+            get_json_object(msg, '$.dmo'),
+            get_json_object(msg, '$.dma'),
+            get_json_object(msg, '$.isr'),
+            get_json_object(msg, '$.ch'),
+            get_json_object(msg, '$.sch'),
+            get_json_object(msg, '$.gaid'),
+            get_json_object(msg, '$.aid'),
+            from_unixtime(cast(e.et as bigint) / 1000,'yyyy-MM-dd HH:mm:ss'),
+            cast(e.et as bigint) / 1000,
+            e.en,
+            null as page,
+            null as source,
+            to_json(e.ev),
+            'nal' as country_code,
+            '{pt}' as dt
+        FROM
+            opay_ep_logv1_data LATERAL VIEW EXPLODE(from_json(get_json_object(msg, '$.es'), array(named_struct("en", "", "et","", "ev", map("",""), "lat","", "lng","","cid", "", "cip", "")))) es AS e
+        ;
     
     '''.format(
         pt=ds,
@@ -125,8 +205,6 @@ def execution_data_task_id(ds, **kargs):
     # 执行Hive
     hive_hook.run_cli(_sql)
 
-
-
     # 生成_SUCCESS
     """
     第一个参数true: 数据目录是有country_code分区。false 没有
@@ -143,4 +221,4 @@ dwd_opay_client_event_base_di_task = PythonOperator(
     dag=dag
 )
 
-dwd_opay_client_event_base_di_prev_day_task >> dwd_opay_client_event_base_di_task
+opay_ep_logv0_prev_hour_task >> opay_ep_logv1_prev_hour_task >> dwd_opay_client_event_base_di_task
