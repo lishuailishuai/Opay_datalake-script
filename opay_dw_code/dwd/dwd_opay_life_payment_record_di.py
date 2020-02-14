@@ -202,7 +202,7 @@ def dwd_opay_life_payment_record_di_sql_task(ds):
         t1.create_time, t1.update_time, t1.country, 'Life Payment' as top_service_type, t1.sub_service_type,
         t1.order_status, t1.error_code, t1.error_msg, nvl(t1.client_source, '-'), t1.pay_way, t1.pay_status, t1.top_consume_scenario, t1.sub_consume_scenario, t1.pay_amount,
         t1.fee_amount, t1.fee_pattern, t1.outward_id, t1.outward_type,
-        if(t4.fee_rate is null, 0, round(t1.amount * t4.fee_rate, 2)) as provider_share_amount,
+        if(t4.fee_rate is null or t1.order_status != 'SUCCESS', 0, round(t1.amount * t4.fee_rate, 2)) as provider_share_amount,
         case t1.country
             when 'NG' then 'NG'
             when 'NO' then 'NO'

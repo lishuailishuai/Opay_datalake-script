@@ -65,6 +65,8 @@ table_list = [
     ("oloan_auto","t_order_audit", "ocredit_db", "base",1,"true"),
     ("oloan_auto","t_order_related_user", "ocredit_db", "base",1,"true"),
     ("oloan_auto","t_order_vehicle_user", "ocredit_db", "base",1,"true"),
+    ("admin_auto","sys_user", "ocredit_db", "base",1,"true"),
+    ("admin_auto","sys_dept", "ocredit_db", "base",1,"true"),
 ]
 
 
