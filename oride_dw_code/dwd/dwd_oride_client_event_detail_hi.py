@@ -141,6 +141,10 @@ def dwd_oride_client_event_detail_hi_sql_task(ds,hour):
             e.page,
             e.source,
             e.event_value,
+            null,
+            null,
+            null,
+            null,
             'nal' as country_code,
             dt,
             hour
@@ -188,6 +192,10 @@ def dwd_oride_client_event_detail_hi_sql_task(ds,hour):
             e.page,
             e.source,
             e.event_value,
+            null,
+            null,
+            null,
+            null,
             'nal' as country_code,
             '{pt}' as dt,
             '{now_hour}' as hour
@@ -231,6 +239,10 @@ def dwd_oride_client_event_detail_hi_sql_task(ds,hour):
             null as page,
             null as source,
             to_json(e.ev),
+            e.lat,
+            e.lng,
+            e.cid,
+            e.cip,
             'nal' as country_code,
             '{pt}' as dt,
             '{now_hour}' as hour
