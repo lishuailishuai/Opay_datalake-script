@@ -252,10 +252,10 @@ def dwd_opay_transfer_of_account_record_di_sql_task(ds):
         ),
         ci_data as (
             select 
-                order_no, amount, currency, 'USER' as originator_type, sender_id as originator_id, 'USER' as affiliate_type, recipient_id as affiliate_id, '-' as payment_order_no, 
-                    create_time, update_time, country, 'Cash In' as sub_service_type, order_status,
-                    error_code, error_msg, client_source, pay_channel as pay_way, '-' as business_type, 'Cash In' as top_consume_scenario, 'Cash In' as sub_consume_scenario,
-                    nvl(fee_amount, 0) as fee_amount, nvl(fee_pattern, '-') as fee_pattern, nvl(outward_id, '-') as outward_id, nvl(outward_type, '-') as outward_type, 
+                order_no, amount, currency, originator_type, originator_id, affiliate_type, affiliate_id, payment_order_no, 
+                    create_time, update_time, country, sub_service_type, order_status,
+                    error_code, error_msg, client_source, pay_way, business_type, top_consume_scenario, sub_consume_scenario,
+                    fee_amount, fee_pattern, outward_id, outward_type, 
                     bd_id as bd_admin_user_id, bd_agent_status
             from (
                 select 
@@ -269,10 +269,10 @@ def dwd_opay_transfer_of_account_record_di_sql_task(ds):
         ),
         co_data as (
             select
-                order_no, amount, currency, 'USER' as originator_type, sender_id as originator_id, 'USER' as affiliate_type, recipient_id as affiliate_id, '-' as payment_order_no, 
-                    create_time, update_time, country, 'Cash Out' as sub_service_type, order_status,
-                    error_code, error_msg, client_source, pay_channel as pay_way, '-' as business_type, 'Cash Out' as top_consume_scenario, 'Cash Out' as sub_consume_scenario,
-                    nvl(fee_amount, 0) as fee_amount, nvl(fee_pattern, '-') as fee_pattern, nvl(outward_id, '-') as outward_id, nvl(outward_type, '-') as outward_type,
+                order_no, amount, currency, originator_type, originator_id, affiliate_type, affiliate_id, payment_order_no, 
+                    create_time, update_time, country, sub_service_type, order_status,
+                    error_code, error_msg, client_source, pay_way, business_type, top_consume_scenario, sub_consume_scenario,
+                    fee_amount, fee_pattern, outward_id, outward_type,
                     bd_id as bd_admin_user_id, bd_agent_status
             from (
                 select 
