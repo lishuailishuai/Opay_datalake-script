@@ -35,7 +35,7 @@ args = {
 }
 
 dag = airflow.DAG('dwd_oride_client_event_detail_hi',
-                  schedule_interval="30 * * * *",
+                  schedule_interval="10 * * * *",
                   default_args=args,
                   catchup=False)
 
@@ -92,7 +92,7 @@ def fun_task_timeout_monitor(ds,dag,execution_date,**op_kwargs):
     dag_ids=dag.dag_id
 
     tb = [
-        {"dag":dag,"db": "oride_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=nal/dt={pt}/hour={now_hour}".format(pt=ds,now_hour=execution_date.strftime("%H")), "timeout": "600"}
+        {"dag":dag,"db": "oride_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=nal/dt={pt}/hour={now_hour}".format(pt=ds,now_hour=execution_date.strftime("%H")), "timeout": "1200"}
     ]
 
     TaskTimeoutMonitor().set_task_monitor(tb)
