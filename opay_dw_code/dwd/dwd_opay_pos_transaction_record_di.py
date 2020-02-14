@@ -160,8 +160,15 @@ def dwd_opay_pos_transaction_record_di_sql_task(ds):
         'pos' as top_consume_scenario, 'pos' as sub_consume_scenario,
         t1.fee_amount, t1.fee_pattern, t1.outward_id, t1.outward_type, 
         nvl(t3.pos_id, '-') as pos_id, t2.state, 
-        if(cast(t1.amount * {pos_provider_share_0922_fee}  as decimal(10,2)) > 100000, 100000, cast(t1.amount * {pos_provider_share_0922_fee}  as decimal(10,2))) as provider_share_amount, 
-        if(cast(t1.amount * {msc_cost_0922_fee}  as decimal(10,2)) > 100000, 100000, cast(t1.amount * {msc_cost_0922_fee}  as decimal(10,2))) as msc_cost_amount,
+        case
+            when order_status = 'SUCCESS' then if(cast(t1.amount * {pos_provider_share_0922_fee}  as decimal(10,2)) > 100000, 100000, cast(t1.amount * {pos_provider_share_0922_fee}  as decimal(10,2)))
+            else 0
+        end as provider_share_amount,
+        
+        case
+            when order_status = 'SUCCESS' then if(cast(t1.amount * {msc_cost_0922_fee}  as decimal(10,2)) > 100000, 100000, cast(t1.amount * {msc_cost_0922_fee}  as decimal(10,2)))
+            else 0
+        end as msc_cost_amount,
         case t1.country
             when 'NG' then 'NG'
             when 'NO' then 'NO'
