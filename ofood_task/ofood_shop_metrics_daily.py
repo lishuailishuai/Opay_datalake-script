@@ -403,6 +403,7 @@ create_crm_data = BashOperator(
             set hive.strict.checks.cartesian.product=false;
             set hive.mapred.mode=nonstrict;
             set hive.auto.convert.join = false;
+            SET mapreduce.job.queuename=root.airflow;
             
             insert overwrite table ofood_bi.ofood_area_shop_metrics_info partition(dt = '${dt}')
             select 
