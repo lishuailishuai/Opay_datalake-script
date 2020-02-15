@@ -39,7 +39,6 @@ add_client_partitions = HiveOperator(
 export_to_mysql = HiveToMySqlTransfer(
     task_id='export_to_mysql',
     sql="""
-            SET mapreduce.job.queuename=root.airflow;
             SELECT
                 *,
                 from_unixtime(unix_timestamp())

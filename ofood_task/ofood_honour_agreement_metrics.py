@@ -383,6 +383,7 @@ create_shop_list_data = BashOperator(
 
         set hive.exec.parallel=true;
         set hive.exec.dynamic.partition.mode=nonstrict;
+        SET mapreduce.job.queuename=root.airflow;
         
         create temporary function isInArea as 'com.oride.udf.IsInArea' 
         USING JAR 'oss://opay-datalake/udf-1.0-SNAPSHOT-jar-with-dependencies.jar';
