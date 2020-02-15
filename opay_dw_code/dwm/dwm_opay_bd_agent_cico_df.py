@@ -154,4 +154,3 @@ dwm_opay_bd_agent_cico_df_task = PythonOperator(
 )
 
 dwd_opay_transfer_of_account_record_di_task >> dwm_opay_bd_agent_cico_df_task
-ods_bd_agent_df_prev_day_task >> dwm_opay_bd_agent_cico_df_task
