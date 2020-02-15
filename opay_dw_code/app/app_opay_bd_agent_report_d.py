@@ -124,7 +124,18 @@ def app_opay_bd_agent_report_d_sql_task(ds, ds_nodash):
                 sum(co_suc_order_amt) co_suc_order_amt,
                 sum(co_suc_order_cnt_m) co_suc_order_cnt_m,
                 sum(co_suc_order_amt_m) co_suc_order_amt_m
-            from bd_relation_data t0 join (
+            from (
+                select 
+                    bd_admin_user_id, 
+                    nvl(job_bd_user_id, '-') as job_bd_user_id,
+                    nvl(job_bdm_user_id, '-') as job_bdm_user_id,
+                    nvl(job_rm_user_id, '-') as job_rm_user_id,
+                    nvl(job_cm_user_id, '-') as job_cm_user_id,
+                    nvl(job_hcm_user_id, '-') as job_hcm_user_id,
+                    nvl(job_pic_user_id, '-') as job_pic_user_id
+                from opay_dw.dim_opay_bd_relation_df 
+                where dt = '{pt}'
+            ) t0 join (
                 select
                     *
                 from opay_dw.dwm_opay_bd_agent_cico_d
@@ -142,18 +153,6 @@ def app_opay_bd_agent_report_d_sql_task(ds, ds_nodash):
                 department_id as bd_admin_dept_id, job_id as bd_admin_job_id, leader_id as bd_admin_leader_id
             from opay_dw_ods.ods_sqoop_base_bd_admin_users_df 
             where dt = '{pt}' and job_id > 0
-        ),
-        bd_relation_data as (
-            select 
-                bd_admin_user_id, 
-                nvl(job_bd_user_id, '-') as job_bd_user_id,
-                nvl(job_bdm_user_id, '-') as job_bdm_user_id,
-                nvl(job_rm_user_id, '-') as job_rm_user_id,
-                nvl(job_cm_user_id, '-') as job_cm_user_id,
-                nvl(job_hcm_user_id, '-') as job_hcm_user_id,
-                nvl(job_pic_user_id, '-') as job_pic_user_id
-            from opay_dw.dim_opay_bd_relation_df 
-            where dt = '{pt}'
         ),
         cube_data as (
             select 
