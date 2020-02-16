@@ -45,9 +45,9 @@ dag = airflow.DAG('app_opay_user_device_d',
 # 依赖前一天分区
 dwd_opay_client_event_base_di_prev_day_task = HivePartitionSensor(
     task_id="dwd_opay_client_event_base_di_prev_day_task",
-    table="client_event",
-    partition="dt='{{ ds }}' and hour='22'",
-    schema="opay_source",
+    table="dwd_opay_client_event_base_di",
+    partition="dt='{{ ds }}'",
+    schema="opay_dw",
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
@@ -116,13 +116,13 @@ def app_opay_user_device_d_sql_task(ds):
              bb 
     from(
         select
-            common.user_id user_id,
-            common.device_id device_id,
-            common.user_number mobile,
-            `timestamp` bb,
-            row_number() over(partition by common.user_id,common.device_id order by `timestamp` desc) ff
-        from opay_source.client_event
-        where (dt = '{pt}' and hour < 23) or (dt=date_sub('{pt}', 1) and hour = 23) and common.device_id!=''
+            user_id ,
+            device_id ,
+            mobile,
+            server_timestamp bb,
+            row_number() over(partition by user_id,device_id order by server_timestamp desc) ff
+        from opay_dw.dwd_opay_client_event_base_di
+        where dt = '{pt}' and device_id!=''
        -- group by common.user_id,common.device_id
     ) c
     where c.ff=1
