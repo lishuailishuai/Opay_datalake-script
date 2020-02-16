@@ -45,9 +45,9 @@ dag = airflow.DAG('app_opay_device_d',
 # 依赖前一天分区
 dwd_opay_client_event_base_di_prev_day_task = HivePartitionSensor(
     task_id="dwd_opay_client_event_base_di_prev_day_task",
-    table="client_event",
-    partition="dt='{{ ds }}' and hour='22'",
-    schema="opay_source",
+    table="dwd_opay_client_event_base_di",
+    partition="dt='{{ ds }}'",
+    schema="opay_dw",
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
@@ -63,14 +63,13 @@ app_opay_device_d_prev_day_task = OssSensor(
     dag=dag
 )
 
-##----------------------------------------- 任务超时监控(下面的table名不能改成变量，因为之前手动回溯，日期范围给填错
-##太大了，所以删掉之前的dag,重新改了一下dag名) ---------------------------------------##
+##----------------------------------------- 任务超时监控##
 def fun_task_timeout_monitor(ds,dag,**op_kwargs):
 
     dag_ids=dag.dag_id
 
     msg = [
-        {"dag":dag, "db": "opay_dw", "table":"app_opay_device_d", "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "3000"}
+        {"dag":dag, "db": "opay_dw", "table":"{dag_name}", "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "3000"}
     ]
 
     TaskTimeoutMonitor().set_task_monitor(msg)
@@ -109,11 +108,11 @@ def app_opay_device_d_sql_task(ds):
     ) a
     full join
     (select
-        common.device_id device_id,
-        max(`timestamp`) bb
-    from opay_source.client_event
-    where (dt = '{pt}' and hour < 23) or (dt=date_sub('{pt}', 1) and hour = 23) and common.device_id!=''
-    group by common.device_id
+        device_id ,
+        max(server_timestamp) bb
+    from opay_dw.dwd_opay_client_event_base_di
+    where dt = '{pt}' and device_id!=''
+    group by device_id
     ) b
 on a.device_id=b.device_id;
 
