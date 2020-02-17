@@ -414,8 +414,47 @@ dwd_oride_order_anti_cheating_location_di_task = PythonOperator(
     dag=dag
 )
 
+location_to_hbase = HiveOperator(
+    task_id='location_to_hbase',
+    hql="""
+        INSERT OVERWRITE TABLE oride_hbase.dwd_oride_order_anti_cheating_location_di
+        SELECT
+            rowkey,
+            order_id,
+            user_id,
+            driver_id,
+            create_time,
+            status,
+            start_loc,
+            end_loc,
+            d_accept_order_click,
+            d_push_accept_order_click,
+            d_pick_up_passengers_sliding_arrived,
+            d_start_ride_sliding,
+            d_start_ride_sliding_arrived,
+            d_cancel_order,
+            p_request_a_ride_click,
+            p_successful_order_show,
+            p_rider_arrive_show,
+            p_start_ride_show,
+            p_complete_the_order_show,
+            p_successful_order_click_cancel,
+            d_loc_list,
+            p_loc_list,
+            country_code,
+            dt
+        FROM
+            oride_dw.dwd_oride_order_anti_cheating_location_di
+        WHERE
+            dt = '{{ ds }}'
+    """,
+    schema='oride_hbase',
+    dag=dag)
+
+
+
 dependence_dwd_oride_client_event_detail_hi_prev_day_task >> \
 dependence_ods_log_driver_track_data_hi_prev_day_task >> \
 dependence_ods_log_user_track_data_hi_prev_day_task >> \
 dependence_dwd_oride_order_base_include_test_di_prev_day_task >> \
-sleep_time >> dwd_oride_order_anti_cheating_location_di_task
+sleep_time >> dwd_oride_order_anti_cheating_location_di_task >> location_to_hbase
