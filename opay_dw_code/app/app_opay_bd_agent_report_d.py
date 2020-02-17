@@ -97,33 +97,13 @@ table_name="app_opay_bd_agent_report_d"
 hdfs_path="oss://opay-datalake/opay/opay_dw/"+table_name
 
 ##---- hive operator ---##
-def app_opay_bd_agent_report_d_sql_task(ds):
+def app_opay_bd_agent_report_d_sql_task(ds, ds_nodash):
     HQL='''
     
     set mapred.max.split.size=1000000;
     set hive.exec.dynamic.partition.mode=nonstrict;
     set hive.exec.parallel=true; --default false
-    with 
-        bd_data as (
-            select 
-                id as bd_admin_user_id, username as bd_admin_user_name, mobile as bd_admin_user_mobile,
-                department_id as bd_admin_dept_id, job_id as bd_admin_job_id, leader_id as bd_admin_leader_id
-            from opay_dw_ods.ods_sqoop_base_bd_admin_users_df 
-            where dt = '{pt}' and job_id > 0
-        ),
-        bd_relation_data as (
-            select 
-                bd_admin_user_id, 
-                nvl(job_bd_user_id, '-') as job_bd_user_id,
-                nvl(job_bdm_user_id, '-') as job_bdm_user_id,
-                nvl(job_rm_user_id, '-') as job_rm_user_id,
-                nvl(job_cm_user_id, '-') as job_cm_user_id,
-                nvl(job_hcm_user_id, '-') as job_hcm_user_id,
-                nvl(job_pic_user_id, '-') as job_pic_user_id
-            from opay_dw.dim_opay_bd_relation_df 
-            where dt = '{pt}'
-        ),
-        cube_data as (
+    create table if not exists test_db.bd_report_temp_{pt_str} as
             select 
                 nvl(t0.job_bd_user_id, 'ALL') as job_bd_user_id, 
                 nvl(t0.job_bdm_user_id, 'ALL') as job_bdm_user_id, 
@@ -144,7 +124,18 @@ def app_opay_bd_agent_report_d_sql_task(ds):
                 sum(co_suc_order_amt) co_suc_order_amt,
                 sum(co_suc_order_cnt_m) co_suc_order_cnt_m,
                 sum(co_suc_order_amt_m) co_suc_order_amt_m
-            from bd_relation_data t0 join (
+            from (
+                select 
+                    bd_admin_user_id, 
+                    nvl(job_bd_user_id, '-') as job_bd_user_id,
+                    nvl(job_bdm_user_id, '-') as job_bdm_user_id,
+                    nvl(job_rm_user_id, '-') as job_rm_user_id,
+                    nvl(job_cm_user_id, '-') as job_cm_user_id,
+                    nvl(job_hcm_user_id, '-') as job_hcm_user_id,
+                    nvl(job_pic_user_id, '-') as job_pic_user_id
+                from opay_dw.dim_opay_bd_relation_df 
+                where dt = '{pt}'
+            ) t0 join (
                 select
                     *
                 from opay_dw.dwm_opay_bd_agent_cico_d
@@ -154,7 +145,37 @@ def app_opay_bd_agent_report_d_sql_task(ds):
             grouping sets(
                 t0.job_bd_user_id, t0.job_bdm_user_id, t0.job_rm_user_id, 
                 t0.job_cm_user_id, t0.job_hcm_user_id, job_pic_user_id
-            )
+            );
+    with 
+        bd_data as (
+            select 
+                id as bd_admin_user_id, username as bd_admin_user_name, mobile as bd_admin_user_mobile,
+                department_id as bd_admin_dept_id, job_id as bd_admin_job_id, leader_id as bd_admin_leader_id
+            from opay_dw_ods.ods_sqoop_base_bd_admin_users_df 
+            where dt = '{pt}' and job_id > 0
+        ),
+        cube_data as (
+            select 
+                job_bd_user_id, 
+                job_bdm_user_id, 
+                job_rm_user_id,
+                job_cm_user_id,
+                job_hcm_user_id, 
+                job_pic_user_id, 
+                audited_agent_cnt_his, 
+                audited_agent_cnt_m, 
+                audited_agent_cnt,
+                rejected_agent_cnt_m,
+                rejected_agent_cnt,
+                ci_suc_order_cnt,
+                ci_suc_order_amt,
+                ci_suc_order_cnt_m,
+                ci_suc_order_amt_m,
+                co_suc_order_cnt,
+                co_suc_order_amt,
+                co_suc_order_cnt_m,
+                co_suc_order_amt_m
+            from test_db.bd_report_temp_{pt_str}
         )
         insert overwrite table {db}.{table} partition(country_code='NG', dt='{pt}')
         select 
@@ -213,23 +234,25 @@ def app_opay_bd_agent_report_d_sql_task(ds):
             from cube_data 
             where job_pic_user_id != 'ALL' and job_pic_user_id != '-'
         ) report 
-        left join bd_data bd on report.bd_admin_user_id = bd.bd_admin_user_id 
+        left join bd_data bd on report.bd_admin_user_id = bd.bd_admin_user_id ;
+        DROP TABLE IF EXISTS test_db.bd_report_temp_{pt_str}
         
        
     '''.format(
         pt=ds,
         table=table_name,
-        db=db_name
+        db=db_name,
+        pt_str=ds_nodash
     )
     return HQL
 
 ##---- hive operator end ---##
 
-def execution_data_task_id(ds, **kargs):
+def execution_data_task_id(ds, ds_nodash, **kargs):
     hive_hook = HiveCliHook()
 
     # 读取sql
-    _sql = app_opay_bd_agent_report_d_sql_task(ds)
+    _sql = app_opay_bd_agent_report_d_sql_task(ds, ds_nodash)
 
     logging.info('Executing: %s', _sql)
 
