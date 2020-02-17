@@ -135,6 +135,8 @@ def dwd_opay_client_event_base_di_sql_task(ds):
             e.page,
             e.source,
             e.event_value,
+            null,
+            null,
             'nal' as country_code,
             '{pt}' as dt
         FROM
@@ -151,13 +153,13 @@ def dwd_opay_client_event_base_di_sql_task(ds):
         )
         INSERT INTO TABLE {db}.{table} partition(country_code,dt)
         SELECT
-            null as ip,
+            e.cip as ip,
             null as server_ip,
             concat_ws(' ',substr(time,1,10),substr(time,12,8)) as server_time,
             unix_timestamp(concat_ws(' ',substr(time,1,10),substr(time,12,8))) as server_timestamp,
             get_json_object(msg, '$.uid'),
             get_json_object(msg, '$.uno'),
-            null as city_id,
+            e.cid as city_id,
             from_unixtime(cast(get_json_object(msg, '$.t') as bigint),'yyyy-MM-dd HH:mm:ss'),
             get_json_object(msg, '$.t'),
             get_json_object(msg, '$.p'),
@@ -180,6 +182,8 @@ def dwd_opay_client_event_base_di_sql_task(ds):
             null as page,
             null as source,
             to_json(e.ev),
+            e.lat,
+            e.lng,
             'nal' as country_code,
             '{pt}' as dt
         FROM
