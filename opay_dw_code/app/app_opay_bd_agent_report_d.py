@@ -105,46 +105,53 @@ def app_opay_bd_agent_report_d_sql_task(ds, ds_nodash):
     set hive.exec.parallel=true; --default false
     create table if not exists test_db.bd_report_temp_{pt_str} as
             select 
-                nvl(t0.job_bd_user_id, 'ALL') as job_bd_user_id, 
-                nvl(t0.job_bdm_user_id, 'ALL') as job_bdm_user_id, 
-                nvl(t0.job_rm_user_id, 'ALL') as job_rm_user_id,
-                nvl(t0.job_cm_user_id, 'ALL') as job_cm_user_id,
-                nvl(t0.job_hcm_user_id, 'ALL') as job_hcm_user_id, 
+                nvl(job_bd_user_id, 'ALL') as job_bd_user_id, 
+                nvl(job_bdm_user_id, 'ALL') as job_bdm_user_id, 
+                nvl(job_rm_user_id, 'ALL') as job_rm_user_id,
+                nvl(job_cm_user_id, 'ALL') as job_cm_user_id,
+                nvl(job_hcm_user_id, 'ALL') as job_hcm_user_id, 
                 nvl(job_pic_user_id, 'ALL') as job_pic_user_id, 
-                sum(audited_agent_cnt_his) as audited_agent_cnt_his, 
-                sum(audited_agent_cnt_m) audited_agent_cnt_m, 
-                sum(audited_agent_cnt) audited_agent_cnt,
-                sum(rejected_agent_cnt_m) rejected_agent_cnt_m,
-                sum(rejected_agent_cnt) rejected_agent_cnt,
-                sum(ci_suc_order_cnt) ci_suc_order_cnt,
-                sum(ci_suc_order_amt) ci_suc_order_amt,
-                sum(ci_suc_order_cnt_m) ci_suc_order_cnt_m,
-                sum(ci_suc_order_amt_m) ci_suc_order_amt_m,
-                sum(co_suc_order_cnt) co_suc_order_cnt,
-                sum(co_suc_order_amt) co_suc_order_amt,
-                sum(co_suc_order_cnt_m) co_suc_order_cnt_m,
-                sum(co_suc_order_amt_m) co_suc_order_amt_m
+                
+                sum(audit_suc_cnt) as audited_agent_cnt_his, 
+                sum(if(t2.business_date between date_format('${pt}', 'yyyy-MM-01') and '${pt}', audit_suc_cnt, 0)) as audited_agent_cnt_m, 
+                sum(if(t2.business_date = '${pt}', audit_suc_cnt, 0)) as audited_agent_cnt,
+                
+                sum(if(t2.business_date between date_format('${pt}', 'yyyy-MM-01') and '${pt}', audit_fail_cnt, 0)) as rejected_agent_cnt_m,
+                sum(if(t2.business_date = '${pt}', audit_fail_cnt, 0)) as rejected_agent_cnt,
+        
+                sum(if(t2.business_date = '${pt}', ci_suc_order_cnt, 0)) as ci_suc_order_cnt,
+                sum(if(t2.business_date = '${pt}', ci_suc_order_amt, 0)) as ci_suc_order_amt,
+                sum(if(t2.business_date between date_format('${pt}', 'yyyy-MM-01') and '${pt}', ci_suc_order_cnt, 0)) as ci_suc_order_cnt_m,
+                sum(if(t2.business_date between date_format('${pt}', 'yyyy-MM-01') and '${pt}', ci_suc_order_amt, 0)) as ci_suc_order_amt_m,
+                
+                sum(if(t2.business_date = '${pt}', co_suc_order_cnt, 0)) as co_suc_order_cnt,
+                sum(if(t2.business_date = '${pt}', co_suc_order_amt, 0)) as co_suc_order_amt,
+                sum(if(t2.business_date between date_format('${pt}', 'yyyy-MM-01') and '${pt}', co_suc_order_cnt, 0)) as co_suc_order_cnt_m,
+                sum(if(t2.business_date between date_format('${pt}', 'yyyy-MM-01') and '${pt}', co_suc_order_amt, 0)) as co_suc_order_amt_m
             from (
                 select 
                     bd_admin_user_id, 
-                    nvl(job_bd_user_id, '-') as job_bd_user_id,
-                    nvl(job_bdm_user_id, '-') as job_bdm_user_id,
-                    nvl(job_rm_user_id, '-') as job_rm_user_id,
-                    nvl(job_cm_user_id, '-') as job_cm_user_id,
-                    nvl(job_hcm_user_id, '-') as job_hcm_user_id,
-                    nvl(job_pic_user_id, '-') as job_pic_user_id
-                from opay_dw.dim_opay_bd_relation_df 
-                where dt = '{pt}'
-            ) t0 join (
-                select
-                    *
-                from opay_dw.dwm_opay_bd_agent_cico_d
-                where dt = '{pt}'
-            ) t1 on t0.bd_admin_user_id = t1.bd_admin_user_id
-            group by t0.job_bd_user_id, t0.job_bdm_user_id, t0.job_rm_user_id, t0.job_cm_user_id, t0.job_hcm_user_id, job_pic_user_id
+                    business_date, 
+                    audit_suc_cnt, 
+                    audit_fail_cnt,
+                    ci_suc_order_cnt,
+                    ci_suc_order_amt,
+                    
+                    co_suc_order_cnt,
+                    co_suc_order_amt
+                from opay_dw.dwm_opay_bd_agent_cico_df where dt = '${pt}'
+            ) t1 join (
+                select 
+                    bd_admin_user_id, bd_admin_user_name, bd_admin_job_id, bd_admin_status, 
+                    job_bd_user_id, job_bdm_user_id, job_rm_user_id, job_cm_user_id, job_hcm_user_id, job_pic_user_id,
+                    dt as business_date
+                from opay_dw.dim_opay_bd_relation_df
+                where dt <= '${pt}'
+            ) t2 on t1.bd_admin_user_id = t2.bd_admin_user_id and t1.business_date = t2.business_date
+            group by job_bd_user_id, job_bdm_user_id, job_rm_user_id, job_cm_user_id, job_hcm_user_id, job_pic_user_id
             grouping sets(
-                t0.job_bd_user_id, t0.job_bdm_user_id, t0.job_rm_user_id, 
-                t0.job_cm_user_id, t0.job_hcm_user_id, job_pic_user_id
+                job_bd_user_id, job_bdm_user_id, job_rm_user_id, 
+                job_cm_user_id, job_hcm_user_id, job_pic_user_id
             );
     with 
         bd_data as (
