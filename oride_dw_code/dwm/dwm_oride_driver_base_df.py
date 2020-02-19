@@ -573,6 +573,9 @@ select dri.driver_id,
             driver_amount.amount_agenter,--当日骑手份子钱-小老板抽成20%
             
             dri.fault,
+            dri.first_bind_time, --初次绑定时间 
+            dri.end_service_time,--专车司机结束收份子钱时间
+            ord.newest_driver_version, --司机端最新版本（接单）
 
             dri.country_code,
             dri.dt
