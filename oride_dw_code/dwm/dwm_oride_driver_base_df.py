@@ -567,6 +567,8 @@ select dri.driver_id,
             --司机首次在线时间
             driver_amount.amount_all,
             driver_amount.amount_agenter,--当日骑手份子钱-小老板抽成20%
+            
+            dri.fault,
 
             dri.country_code,
             dri.dt
