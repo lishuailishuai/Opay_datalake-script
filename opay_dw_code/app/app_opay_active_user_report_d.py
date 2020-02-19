@@ -447,6 +447,24 @@ def app_opay_active_user_report_d_sql_task(ds,ds_nodash):
                      count(distinct user_id) c 
                 from test_db.tran_{date}
                 group by role,top_consume_scenario
+                 union all
+                select 
+                     '{pt}' dt,
+                     role,
+                     'ALL' top_consume_scenario,
+                     'active_user_cnt_30d' target_type,
+                     count(distinct user_id) c 
+                from test_db.tran_{date}
+                group by role
+                 union all
+                select 
+                     '{pt}' dt,
+                     'ALL' role,
+                     top_consume_scenario,
+                     'active_user_cnt_30d' target_type,
+                     count(distinct user_id) c 
+                from test_db.tran_{date}
+                group by top_consume_scenario
                 union all
                 select 
                      '{pt}' dt,
@@ -456,6 +474,51 @@ def app_opay_active_user_report_d_sql_task(ds,ds_nodash):
                      count(distinct user_id) c 
                 from (select * from test_db.tran_{date} where dt>date_sub('{pt}',7)) mm
                 group by role,top_consume_scenario
+                union all
+                select 
+                     '{pt}' dt,
+                     role,
+                     'ALL' top_consume_scenario,
+                     'active_user_cnt_7d' target_type,
+                     count(distinct user_id) c 
+                from (select * from test_db.tran_{date} where dt>date_sub('{pt}',7)) mm
+                group by role
+                union all
+                select 
+                     '{pt}' dt,
+                     'ALL' role,
+                     top_consume_scenario,
+                     'active_user_cnt_7d' target_type,
+                     count(distinct user_id) c 
+                from (select * from test_db.tran_{date} where dt>date_sub('{pt}',7)) mm
+                group by top_consume_scenario
+                union all
+                select 
+                     '{pt}' dt,
+                     role,
+                     top_consume_scenario,
+                     'active_user_cnt_d' target_type,
+                     count(distinct user_id) c 
+                from (select * from test_db.tran_{date} where dt='{pt}') mm
+                group by role,top_consume_scenario
+                union all
+                select 
+                     '{pt}' dt,
+                     role,
+                     'ALL' top_consume_scenario,
+                     'active_user_cnt_d' target_type,
+                     count(distinct user_id) c 
+                from (select * from test_db.tran_{date} where dt='{pt}') mm
+                group by role
+                union all
+                select 
+                     '{pt}' dt,
+                     'ALL' role,
+                     top_consume_scenario,
+                     'active_user_cnt_d' target_type,
+                     count(distinct user_id) c 
+                from (select * from test_db.tran_{date} where dt='{pt}') mm
+                group by top_consume_scenario
                 
             ) m;
     DROP TABLE IF EXISTS test_db.user_base_{date};
