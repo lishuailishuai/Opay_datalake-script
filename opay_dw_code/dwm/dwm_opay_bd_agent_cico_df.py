@@ -25,7 +25,7 @@ import os
 
 args = {
     'owner': 'xiedong',
-    'start_date': datetime(2020, 1, 13),
+    'start_date': datetime(2020, 1, 16),
     'depends_on_past': False,
     'retries': 3,
     'retry_delay': timedelta(minutes=2),
@@ -34,23 +34,23 @@ args = {
     'email_on_retry': False,
 }
 
-dag = airflow.DAG('dim_opay_bd_relation_df',
-                  schedule_interval="00 01 * * *",
+dag = airflow.DAG('dwm_opay_bd_agent_cico_df',
+                  schedule_interval="20 02 * * *",
                   default_args=args
                   )
 
 ##----------------------------------------- 依赖 ---------------------------------------##
-
-ods_bd_admin_users_df_prev_day_task = OssSensor(
-    task_id='ods_bd_admin_users_prev_day_task',
+dwd_opay_transfer_of_account_record_di_task = OssSensor(
+    task_id='dwd_opay_transfer_of_account_record_di_task',
     bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opay_dw_sqoop/opay_agent_crm/bd_admin_users",
+        hdfs_path_str="opay/opay_dw/dwd_opay_transfer_of_account_record_di/country_code=NG",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
+
 
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
 def fun_task_timeout_monitor(ds,dag,**op_kwargs):
@@ -72,82 +72,50 @@ task_timeout_monitor= PythonOperator(
 
 ##----------------------------------------- 变量 ---------------------------------------##
 db_name="opay_dw"
-table_name="dim_opay_bd_relation_df"
+table_name="dwm_opay_bd_agent_cico_df"
 hdfs_path="oss://opay-datalake/opay/opay_dw/"+table_name
 
 ##---- hive operator ---##
-def dim_opay_bd_relation_df_sql_task(ds):
+def dwm_opay_bd_agent_cico_df_sql_task(ds):
     HQL='''
     
     set mapred.max.split.size=1000000;
-    set hive.exec.parallel=true;
     set hive.exec.dynamic.partition.mode=nonstrict;
-    with bd_data as (
+    set hive.exec.parallel=true; --default false
+    
+	insert overwrite table {db}.{table} partition(country_code='nal', dt='{pt}')
+	select 
+        coalesce(agent_data.bd_admin_user_id, cico_data.bd_admin_user_id) as bd_admin_user_id, 
+        coalesce(agent_data.business_date, cico_data.business_date) as business_date, 
+        nvl(agent_data.audit_suc_cnt, 0) as audit_suc_cnt, 
+        nvl(agent_data.audit_fail_cnt, 0) as audit_fail_cnt,
+        nvl(ci_suc_order_cnt, 0) as ci_suc_order_cnt,
+        nvl(ci_suc_order_amt, 0) as ci_suc_order_amt,
+        nvl(co_suc_order_cnt, 0) as co_suc_order_cnt,
+        nvl(co_suc_order_amt, 0) as co_suc_order_amt
+    from (
         select 
-            id, username, if(leader_id = 0, id, leader_id) leader_id, job_id, created_at, updated_at, status
-        from opay_dw_ods.ods_sqoop_base_bd_admin_users_df 
-        where dt = '{pt}' and job_id > 0
-    )  
-    insert overwrite table {db}.{table} partition (country_code = 'nal', dt = '{pt}')
-    select 
-          t6.id as bd_admin_user_id,
-          t6.username as bd_admin_user_name,
-          t6.job_id as bd_admin_job_id,
-          t6.status as bd_admin_status,
-          -- 第六季
-          case
-            when t6.job_id = 6 then t6.id 
-            else null
-            end as job_bd_user_id,
-          -- 第五季
-          case
-            when t5.job_id = 5 then t5.id 
-            when t6.job_id = 5 then t6.id
-            else null
-            end as job_bdm_user_id,    
-          -- 第四季
-          case
-            when t4.job_id = 4 then t4.id
-            when t6.job_id = 4 then t6.id
-            when t5.job_id = 4 then t5.id
-            
-            else null
-            end as job_rm_user_id,    
-          -- 第三季
-          case
-            when t3.job_id = 3 then t3.id
-            when t4.job_id = 3 then t4.id
-            when t5.job_id = 3 then t5.id
-            when t6.job_id = 3 then t6.id
-            else null
-            end as job_cm_user_id,   
-         -- 第二季
-          case
-            when t2.job_id = 2 then t2.id
-            when t3.job_id = 2 then t3.id
-            when t4.job_id = 2 then t4.id
-            when t5.job_id = 2 then t5.id
-            when t6.job_id = 2 then t6.id
-            else null
-            end as job_hcm_user_id,    
-        -- 第一季
-          case
-            when t1.job_id = 1 then t1.id
-            when t2.job_id = 1 then t2.id
-            when t3.job_id = 1 then t3.id
-            when t4.job_id = 1 then t4.id
-            when t5.job_id = 1 then t5.id
-            when t6.job_id = 1 then t6.id
-            else null
-            end as job_pic_user_id,
-            t6.created_at as create_time,
-            t6.updated_at as update_time
-      from bd_data t6
-      left join bd_data t5 on t6.leader_id = t5.id
-      left join bd_data t4 on t5.leader_id = t4.id
-      left join bd_data t3 on t4.leader_id = t3.id
-      left join bd_data t2 on t3.leader_id = t2.id
-      left join bd_data t1 on t2.leader_id = t1.id
+            bd_admin_user_id, dt as business_date, 
+            sum(if(to_agent_status = 1, 1, 0)) as audit_suc_cnt,
+            sum(if(to_agent_status = 2, 1, 0)) as audit_fail_cnt
+        from opay_dw.dwd_opay_bd_agent_change_log_di
+        where dt <= '{pt}'
+        group by bd_admin_user_id, dt
+    ) agent_data full join (
+        select 
+            bd_admin_user_id, dt as business_date, 
+            sum(if(sub_service_type='Cash In', amount, 0)) as ci_suc_order_amt,
+            sum(if(sub_service_type='Cash In', 1, 0)) as ci_suc_order_cnt,
+            sum(if(sub_service_type='Cash Out', amount, 0)) as co_suc_order_amt,
+            sum(if(sub_service_type='Cash Out', 1, 0)) as co_suc_order_cnt
+        from (
+            select
+                bd_admin_user_id, sub_service_type, amount, create_time, country_code, dt, row_number() over(partition by order_no order by update_time desc) rn
+            from opay_dw.dwd_opay_transfer_of_account_record_di
+            where dt between date_format('{pt}', 'yyyy-MM-01') and '{pt}' and order_status = 'SUCCESS' and sub_service_type in ('Cash In', 'Cash Out') and bd_agent_status = 1
+        ) t0 where rn = 1
+        group by bd_admin_user_id, dt
+    ) cico_data on agent_data.bd_admin_user_id = cico_data.bd_admin_user_id and agent_data.business_date = cico_data.business_date
     '''.format(
         pt=ds,
         table=table_name,
@@ -161,7 +129,7 @@ def execution_data_task_id(ds, **kargs):
     hive_hook = HiveCliHook()
 
     # 读取sql
-    _sql = dim_opay_bd_relation_df_sql_task(ds)
+    _sql = dwm_opay_bd_agent_cico_df_sql_task(ds)
 
     logging.info('Executing: %s', _sql)
 
@@ -178,11 +146,11 @@ def execution_data_task_id(ds, **kargs):
     """
     TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "true", "true")
 
-dim_opay_bd_relation_df_task = PythonOperator(
-    task_id='dim_opay_bd_relation_df_task',
+dwm_opay_bd_agent_cico_df_task = PythonOperator(
+    task_id='dwm_opay_bd_agent_cico_df_task',
     python_callable=execution_data_task_id,
     provide_context=True,
     dag=dag
 )
 
-ods_bd_admin_users_df_prev_day_task >> dim_opay_bd_relation_df_task
+dwd_opay_transfer_of_account_record_di_task >> dwm_opay_bd_agent_cico_df_task

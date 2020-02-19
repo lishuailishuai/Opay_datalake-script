@@ -40,7 +40,7 @@ args = {
 
 
 dag = airflow.DAG('dwd_opay_bd_agent_change_log_di',
-                  schedule_interval="00 02 * * *",
+                  schedule_interval="10 01 * * *",
                   default_args=args,
                   catchup=False)
 
@@ -145,7 +145,7 @@ def execution_data_task_id(ds, **kargs):
     第二个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
 
     """
-    TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "true", "true")
+    TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "true", "false")
 
 
 dwd_opay_bd_agent_change_log_di_task = PythonOperator(

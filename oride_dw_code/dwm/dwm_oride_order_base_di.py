@@ -158,8 +158,8 @@ def dwm_oride_order_base_di_sql_task(ds):
            from_unixtime(ord.create_time,'yyyy-MM-dd HH:mm:ss') as create_time,
            --下单时间
 
-           null as is_peak,
-           --是否高峰
+           if (cast(from_unixtime(ord.create_time,'HH') as int) between 16 and 20,1,0) as is_peak,
+           --是否高峰,高峰时段定义16点——20点
 
            ord.driver_id,
            --司机ID

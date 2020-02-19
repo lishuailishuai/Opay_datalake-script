@@ -24,7 +24,7 @@ args = {
     'email_on_retry': False,
     'on_success_callback':on_success_callback,
 }
-schedule_interval="30 01 * * *"
+schedule_interval="00 01 * * *"
 
 dag = airflow.DAG(
     'opay_source_sqoop_df',
@@ -84,7 +84,7 @@ table_list = [
     ("opay_account","account_user", "opay_account", "base", 2),
     ("opay_account","account_merchant", "opay_account", "base", 2),
     ("opay_account","accounting_merchant_record", "opay_account", "base", 1),
-    ("opay_account","accounting_record", "opay_account", "base", 1),
+    #("opay_account","accounting_record", "opay_account", "base", 1),
 
     ("opay_overlord","overlord_user", "opay_overlord", "base", 1),
     ("opay_overlord","terminal", "opay_overlord", "base", 1),

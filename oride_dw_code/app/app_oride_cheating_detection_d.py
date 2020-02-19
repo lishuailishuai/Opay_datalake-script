@@ -153,7 +153,7 @@ sleep_time = BashOperator(
 def base_data(**op_kwargs):
     cursor = get_hive_cursor()
     dt = op_kwargs.get('ds')
-    cursor.execute("SET mapred.job.queue.name=root.users.airflow")
+    cursor.execute("SET mapreduce.job.queuename=root.airflow")
     cursor.execute("SET hive.exec.parallel=true")
     hql = """
         SELECT
@@ -214,7 +214,7 @@ base_data_task = PythonOperator(
 def finish_data(**op_kwargs):
     cursor = get_hive_cursor()
     dt = op_kwargs.get('ds')
-    cursor.execute("SET mapred.job.queue.name=root.users.airflow")
+    cursor.execute("SET mapreduce.job.queuename=root.airflow")
     cursor.execute("SET hive.exec.parallel=true")
     hql = """
         SELECT
@@ -281,7 +281,7 @@ finish_data_task = PythonOperator(
 def first_user_data(**op_kwargs):
     cursor = get_hive_cursor()
     dt = op_kwargs.get('ds')
-    cursor.execute("SET mapred.job.queue.name=root.users.airflow")
+    cursor.execute("SET mapreduce.job.queuename=root.airflow")
     cursor.execute("SET hive.exec.parallel=true")
     hql = """
         SELECT 
@@ -350,7 +350,7 @@ first_user_data_task = PythonOperator(
 def first_driver_data(**op_kwargs):
     cursor = get_hive_cursor()
     dt = op_kwargs.get('ds')
-    cursor.execute("SET mapred.job.queue.name=root.users.airflow")
+    cursor.execute("SET mapreduce.job.queuename=root.airflow")
     cursor.execute("SET hive.exec.parallel=true")
     hql = """
         SELECT 

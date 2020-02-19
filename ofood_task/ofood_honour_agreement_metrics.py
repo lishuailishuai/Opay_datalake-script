@@ -198,6 +198,7 @@ create_bdm_dim_data = BashOperator(
         set hive.strict.checks.cartesian.product=false;
         set hive.mapred.mode=nonstrict;
         set hive.auto.convert.join = false;
+        SET mapreduce.job.queuename=root.airflow;
         
         with 
         
@@ -383,6 +384,7 @@ create_shop_list_data = BashOperator(
 
         set hive.exec.parallel=true;
         set hive.exec.dynamic.partition.mode=nonstrict;
+        SET mapreduce.job.queuename=root.airflow;
         
         create temporary function isInArea as 'com.oride.udf.IsInArea' 
         USING JAR 'oss://opay-datalake/udf-1.0-SNAPSHOT-jar-with-dependencies.jar';

@@ -104,6 +104,7 @@ create_bd_data = BashOperator(
             set hive.strict.checks.cartesian.product=false;
             set hive.mapred.mode=nonstrict;
             set hive.auto.convert.join = false;
+            SET mapreduce.job.queuename=root.airflow;
         
             with 
             bd_area as (

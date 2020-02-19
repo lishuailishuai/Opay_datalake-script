@@ -117,7 +117,7 @@ task_timeout_monitor = PythonOperator(
 
 def app_oride_client_advertising_d_sql_task(ds):
     HQL = '''
-    SET mapred.job.queue.name=root.users.airflow;
+    SET mapreduce.job.queuename=root.airflow;
     SET hive.exec.parallel=true;
     SET hive.exec.dynamic.partition=true;
     SET hive.exec.dynamic.partition.mode=nonstrict;
