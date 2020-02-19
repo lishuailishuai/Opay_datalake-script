@@ -4,7 +4,6 @@ from datetime import datetime, timedelta
 from airflow.operators.python_operator import PythonOperator
 from plugins.DingdingAlert import DingdingAlert
 import requests
-from airflow.models import Variable
 import logging
 
 
@@ -23,34 +22,26 @@ dag = airflow.DAG(
     schedule_interval="*/10 * * * *",
     default_args=args)
 
-UCLOUD_SERVER_LIST = [
-    '10.52.48.92',
-    '10.52.60.235'
-]
-
 ALI_SERVER_LIST = [
-    '10.52.5.218',
-    '10.52.5.219',
+    ('10.52.5.218', 8083)
+    ('10.52.5.219', 8083)
+    ('10.52.5.219', 18083)
 ]
 
-CONNECTORS_URL = 'http://%s:8083/connectors'
-STATUS_URL = 'http://%s:8083/connectors/%s/status'
-TASK_RESTART_URL = 'http://%s:8083/connectors/%s/tasks/%s/restart'
+CONNECTORS_URL = 'http://%s:%s/connectors'
+STATUS_URL = 'http://%s:%s/connectors/%s/status'
+TASK_RESTART_URL = 'http://%s:%s/connectors/%s/tasks/%s/restart'
 
 def connectors_status_check():
-    SERVER_LIST = None
-    flag = Variable.get("kafka_monitor_mode")
-    if flag == 'UCLOUD':
-        SERVER_LIST = UCLOUD_SERVER_LIST
-    elif flag == 'ALI':
-        SERVER_LIST = ALI_SERVER_LIST
+    SERVER_LIST = ALI_SERVER_LIST
 
-    for server_ip in SERVER_LIST:
-        url = CONNECTORS_URL % server_ip
+    for server_ip,server_port in SERVER_LIST:
+        url = CONNECTORS_URL % (server_ip, server_port)
         r = requests.get(url)
         connectors = r.json()
         for connector in connectors:
-            c_url = STATUS_URL % (server_ip, connector)
+            c_url = STATUS_URL % (server_ip, server_port, connector)
+            logging.info('connector url %s', c_url)
             c_r = requests.get(c_url)
             content = c_r.json()
             tasks = content['tasks']
@@ -69,9 +60,9 @@ def connectors_status_check():
                     )
                     dingding_alet.send(msg)
                     # 重启任务
-                    restart_url = TASK_RESTART_URL % (server_ip, connector, task['id'])
+                    restart_url = TASK_RESTART_URL % (server_ip, server_port, connector, task['id'])
                     requests.post(restart_url)
-                    logging.info('ip %s, connector %s, task id %d restart. url %s', server_ip, connector, task['id'], restart_url)
+                    logging.info('ip %s, port %s,  connector %s, task id %d restart. url %s', server_ip, server_port, connector, task['id'], restart_url)
 
 
 connectors_status = PythonOperator(
