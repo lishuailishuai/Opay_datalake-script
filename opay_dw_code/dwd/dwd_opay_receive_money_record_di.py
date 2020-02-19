@@ -40,7 +40,7 @@ args = {
 
 
 dag = airflow.DAG('dwd_opay_receive_money_record_di',
-                  schedule_interval="00 02 * * *",
+                  schedule_interval="20 01 * * *",
                   default_args=args,
                   catchup=False)
 

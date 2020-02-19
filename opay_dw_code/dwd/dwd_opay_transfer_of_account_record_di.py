@@ -39,7 +39,7 @@ args = {
 }
 
 dag = airflow.DAG('dwd_opay_transfer_of_account_record_di',
-                  schedule_interval="00 02 * * *",
+                  schedule_interval="20 01 * * *",
                   default_args=args,
                   catchup=False)
 
@@ -265,7 +265,7 @@ def dwd_opay_transfer_of_account_record_di_sql_task(ds):
                     nvl(fee_amount, 0) as fee_amount, nvl(fee_pattern, '-') as fee_pattern, nvl(outward_id, '-') as outward_id, nvl(outward_type, '-') as outward_type
                 from opay_dw_ods.ods_sqoop_base_cash_in_record_di
                 where dt = '{pt}' 
-            ) ci left join bd_agent_data ba on ci.affiliate_id = ba.opay_id
+            ) ci left join bd_agent_data ba on ci.originator_id = ba.opay_id
         ),
         co_data as (
             select
@@ -281,8 +281,8 @@ def dwd_opay_transfer_of_account_record_di_sql_task(ds):
                     error_code, error_msg, client_source, pay_channel as pay_way, '-' as business_type, 'Cash Out' as top_consume_scenario, 'Cash Out' as sub_consume_scenario,
                     nvl(fee_amount, 0) as fee_amount, nvl(fee_pattern, '-') as fee_pattern, nvl(outward_id, '-') as outward_id, nvl(outward_type, '-') as outward_type
                 from opay_dw_ods.ods_sqoop_base_cash_out_record_di
-                where dt = '{pt}'
-            ) co left join bd_agent_data ba on co.originator_id = ba.opay_id
+                where dt = '{pt}' 
+            ) co left join bd_agent_data ba on co.affiliate_id = ba.opay_id
         )
     insert overwrite table {db}.{table} 
     partition(country_code, dt)

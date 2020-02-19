@@ -44,108 +44,10 @@ dag = airflow.DAG('dwm_oride_driver_base_df',
 
 db_name = "oride_dw"
 table_name = "dwm_oride_driver_base_df"
+hdfs_path = "oss://opay-datalake/oride/oride_dw/" + table_name
 
 ##----------------------------------------- 依赖 ---------------------------------------##
-#获取变量
-code_map=eval(Variable.get("sys_flag"))
-
-#判断ufile(cdh环境)
-if code_map["id"].lower()=="ufile":
-    # 依赖前一天分区
-    dim_oride_driver_base_prev_day_task = UFileSensor(
-        task_id='dim_oride_driver_base_prev_day_task',
-        filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-            hdfs_path_str="oride/oride_dw/dim_oride_driver_base/country_code=NG",
-            pt='{{ds}}'
-        ),
-        bucket_name='opay-datalake',
-        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-        dag=dag
-    )
-
-    # 依赖前一天分区
-    oride_driver_timerange_prev_day_task = UFileSensor(
-        task_id='oride_driver_timerange_prev_day_task',
-        filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-            hdfs_path_str="oride/oride_dw_ods/ods_log_oride_driver_timerange",
-            pt='{{ds}}'
-        ),
-        bucket_name='opay-datalake',
-        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-        dag=dag
-    )
-
-    dwd_oride_order_base_include_test_di_prev_day_task = S3KeySensor(
-        task_id='dwd_oride_order_base_include_test_di_prev_day_task',
-        bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-            hdfs_path_str="oride/oride_dw/dwd_oride_order_base_include_test_di/country_code=NG",
-            pt='{{ds}}'
-        ),
-        bucket_name='opay-bi',
-        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-        dag=dag
-    )
-
-    dwd_oride_order_push_driver_detail_di_prev_day_task = UFileSensor(
-        task_id='dwd_oride_order_push_driver_detail_di_prev_day_task',
-        filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-            hdfs_path_str="oride/oride_dw/dwd_oride_order_push_driver_detail_di/country_code=nal",
-            pt='{{ds}}'
-        ),
-        bucket_name='opay-datalake',
-        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-        dag=dag
-    )
-
-    dwd_oride_driver_accept_order_show_detail_di_prev_day_task = UFileSensor(
-        task_id='dwd_oride_driver_accept_order_show_detail_di_prev_day_task',
-        filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-            hdfs_path_str="oride/oride_dw/dwd_oride_driver_accept_order_show_detail_di/country_code=nal",
-            pt='{{ds}}'
-        ),
-        bucket_name='opay-datalake',
-        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-        dag=dag
-    )
-
-    dwd_oride_driver_accept_order_click_detail_di_prev_day_task = UFileSensor(
-        task_id='dwd_oride_driver_accept_order_click_detail_di_prev_day_task',
-        filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-            hdfs_path_str="oride/oride_dw/dwd_oride_driver_accept_order_click_detail_di/country_code=nal",
-            pt='{{ds}}'
-        ),
-        bucket_name='opay-datalake',
-        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-        dag=dag
-    )
-
-    dwm_oride_driver_base_df_prev_day_task = UFileSensor(
-        task_id='dwm_oride_driver_base_df_prev_day_task',
-        filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-            hdfs_path_str="oride/oride_dw/dwm_oride_driver_base_df/country_code=nal",
-            pt='{{macros.ds_add(ds, -1)}}'
-        ),
-        bucket_name='opay-datalake',
-        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-        dag=dag
-    )
-
-    dwd_oride_driver_records_day_df_task = UFileSensor(
-        task_id='dwd_oride_driver_records_day_df_task',
-        filepath='{hdfs_path_str}/country_code=nal/dt={pt}/_SUCCESS'.format(
-            hdfs_path_str="oride/oride_dw/dwd_oride_driver_records_day_df",
-            pt='{{ds}}'
-        ),
-        bucket_name='opay-datalake',
-        poke_interval=60,
-        dag=dag
-    )
-
-    #路径
-    hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
-else:
-    print("成功")
-    dim_oride_driver_base_prev_day_task = OssSensor(
+dim_oride_driver_base_prev_day_task = OssSensor(
         task_id='dim_oride_driver_base_prev_day_task',
         bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
             hdfs_path_str="oride/oride_dw/dim_oride_driver_base/country_code=NG",
@@ -154,10 +56,10 @@ else:
         bucket_name='opay-datalake',
         poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
         dag=dag
-    )
+)
 
-    # 依赖前一天分区
-    oride_driver_timerange_prev_day_task = OssSensor(
+# 依赖前一天分区
+oride_driver_timerange_prev_day_task = OssSensor(
         task_id='oride_driver_timerange_prev_day_task',
         bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
             hdfs_path_str="oride/oride_dw_ods/ods_log_oride_driver_timerange",
@@ -166,9 +68,9 @@ else:
         bucket_name='opay-datalake',
         poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
         dag=dag
-    )
+)
 
-    dwd_oride_order_base_include_test_di_prev_day_task = OssSensor(
+dwd_oride_order_base_include_test_di_prev_day_task = OssSensor(
         task_id='dwd_oride_order_base_include_test_di_prev_day_task',
         bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
             hdfs_path_str="oride/oride_dw/dwd_oride_order_base_include_test_di/country_code=NG",
@@ -179,7 +81,7 @@ else:
         dag=dag
     )
 
-    dwd_oride_order_push_driver_detail_di_prev_day_task = OssSensor(
+dwd_oride_order_push_driver_detail_di_prev_day_task = OssSensor(
         task_id='dwd_oride_order_push_driver_detail_di_prev_day_task',
         bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
             hdfs_path_str="oride/oride_dw/dwd_oride_order_push_driver_detail_di/country_code=nal",
@@ -188,9 +90,9 @@ else:
         bucket_name='opay-datalake',
         poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
         dag=dag
-    )
+)
 
-    dwd_oride_driver_accept_order_show_detail_di_prev_day_task = OssSensor(
+dwd_oride_driver_accept_order_show_detail_di_prev_day_task = OssSensor(
         task_id='dwd_oride_driver_accept_order_show_detail_di_prev_day_task',
         bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
             hdfs_path_str="oride/oride_dw/dwd_oride_driver_accept_order_show_detail_di/country_code=nal",
@@ -199,9 +101,9 @@ else:
         bucket_name='opay-datalake',
         poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
         dag=dag
-    )
+)
 
-    dwd_oride_driver_accept_order_click_detail_di_prev_day_task = OssSensor(
+dwd_oride_driver_accept_order_click_detail_di_prev_day_task = OssSensor(
         task_id='dwd_oride_driver_accept_order_click_detail_di_prev_day_task',
         bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
             hdfs_path_str="oride/oride_dw/dwd_oride_driver_accept_order_click_detail_di/country_code=nal",
@@ -210,9 +112,9 @@ else:
         bucket_name='opay-datalake',
         poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
         dag=dag
-    )
+)
 
-    dwm_oride_driver_base_df_prev_day_task = OssSensor(
+dwm_oride_driver_base_df_prev_day_task = OssSensor(
         task_id='dwm_oride_driver_base_df_prev_day_task',
         bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
             hdfs_path_str="oride/oride_dw/dwm_oride_driver_base_df/country_code=nal",
@@ -221,9 +123,9 @@ else:
         bucket_name='opay-datalake',
         poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
         dag=dag
-    )
+)
 
-    dwd_oride_driver_records_day_df_task = OssSensor(
+dwd_oride_driver_records_day_df_task = OssSensor(
         task_id='dwd_oride_driver_records_day_df_task',
         bucket_key='{hdfs_path_str}/country_code=nal/dt={pt}/_SUCCESS'.format(
             hdfs_path_str="oride/oride_dw/dwd_oride_driver_records_day_df",
@@ -232,10 +134,7 @@ else:
         bucket_name='opay-datalake',
         poke_interval=60,
         dag=dag
-    )
-
-    # 路径
-    hdfs_path = "oss://opay-datalake/oride/oride_dw/" + table_name
+)
 
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
 
@@ -474,6 +373,8 @@ select dri.driver_id,
 
             driver_amount.amount_all,--'当日总收入'
             driver_amount.amount_agenter,--'当日骑手份子钱-小老板抽成20%'
+            
+            dri.fault,--正常0(停运)修理1(停运)无资料2(停运)事故3(停运)扣除4(欠缴)5
 
             dri.country_code as country_code,
             dri.dt as dt
@@ -666,6 +567,8 @@ select dri.driver_id,
             --司机首次在线时间
             driver_amount.amount_all,
             driver_amount.amount_agenter,--当日骑手份子钱-小老板抽成20%
+            
+            dri.fault,
 
             dri.country_code,
             dri.dt
