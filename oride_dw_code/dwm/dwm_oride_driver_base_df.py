@@ -375,6 +375,9 @@ select dri.driver_id,
             driver_amount.amount_agenter,--'当日骑手份子钱-小老板抽成20%'
             
             dri.fault,--正常0(停运)修理1(停运)无资料2(停运)事故3(停运)扣除4(欠缴)5
+            dri.first_bind_time, --初次绑定时间 
+            dri.end_service_time,--专车司机结束收份子钱时间
+            ord.newest_driver_version, --司机端最新版本（接单）
 
             dri.country_code as country_code,
             dri.dt as dt
@@ -441,7 +444,8 @@ select dri.driver_id,
                 sum(td_cannel_pick_dur) as td_cannel_pick_dur, --司机当天订单被取消时长
                 sum(is_strong_dispatch) as is_strong_dispatch, --用于判断司机是否有强派单
 
-                count(order_id) as succ_push_order_cnt  --该字段可以用于对比数据
+                count(order_id) as succ_push_order_cnt,  --该字段可以用于对比数据
+                max(driver_version) as newest_driver_version --司机端最新版本（接单）
 
                 FROM oride_dw.dwd_oride_order_base_include_test_di
                 WHERE dt='{pt}'

@@ -46,95 +46,10 @@ dag = airflow.DAG('dwm_oride_driver_finance_di',
 
 db_name = "oride_dw"
 table_name = "dwm_oride_driver_finance_di"
+hdfs_path = "oss://opay-datalake/oride/oride_dw/" + table_name
 
 ##----------------------------------------- 依赖 ---------------------------------------##
-#获取变量
-code_map=eval(Variable.get("sys_flag"))
-
-#判断ufile(cdh环境)
-if code_map["id"].lower()=="ufile":
-    # 依赖前一天分区
-    dim_oride_driver_base_prev_day_task = UFileSensor(
-        task_id='dim_oride_driver_base_prev_day_task',
-        filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-            hdfs_path_str="oride/oride_dw/dim_oride_driver_base/country_code=NG",
-            pt='{{ds}}'
-        ),
-        bucket_name='opay-datalake',
-        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-        dag=dag
-    )
-
-    dwd_oride_driver_records_day_df_prev_day_task = UFileSensor(
-        task_id='dwd_oride_driver_records_day_df_prev_day_task',
-        filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-            hdfs_path_str="oride/oride_dw/dwd_oride_driver_records_day_df/country_code=nal",
-            pt='{{ds}}'
-        ),
-        bucket_name='opay-datalake',
-        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-        dag=dag
-    )
-
-    dwd_oride_driver_recharge_records_df_prev_day_task = UFileSensor(
-        task_id='dwd_oride_driver_recharge_records_df_prev_day_task',
-        filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-            hdfs_path_str="oride/oride_dw/dwd_oride_driver_recharge_records_df/country_code=nal",
-            pt='{{ds}}'
-        ),
-        bucket_name='opay-datalake',
-        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-        dag=dag
-    )
-
-    dwd_oride_driver_reward_di_prev_day_task = UFileSensor(
-        task_id='dwd_oride_driver_reward_di_prev_day_task',
-        filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-            hdfs_path_str="oride/oride_dw/dwd_oride_driver_reward_di/country_code=nal",
-            pt='{{ds}}'
-        ),
-        bucket_name='opay-datalake',
-        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-        dag=dag
-    )
-
-    ods_data_driver_pay_records_prev_day_task = UFileSensor(
-        task_id='ods_data_driver_pay_records_prev_day_task',
-        filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-            hdfs_path_str="oride_dw_sqoop/oride_data/data_driver_pay_records",
-            pt='{{ds}}'
-        ),
-        bucket_name='opay-datalake',
-        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-        dag=dag
-    )
-
-    dwd_oride_finance_driver_repayment_df_prev_day_task = UFileSensor(
-        task_id='dwd_oride_finance_driver_repayment_df_prev_day_task',
-        filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-            hdfs_path_str="oride/oride_dw/dwd_oride_finance_driver_repayment_df/country_code=nal",
-            pt='{{ds}}'
-        ),
-        bucket_name='opay-datalake',
-        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-        dag=dag
-    )
-
-    dwd_oride_driver_balance_extend_df_prev_day_task = UFileSensor(
-        task_id='dwd_oride_driver_balance_extend_df_prev_day_task',
-        filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-            hdfs_path_str="oride/oride_dw/dwd_oride_driver_balance_extend_df/country_code=nal",
-            pt='{{ds}}'
-        ),
-        bucket_name='opay-datalake',
-        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-        dag=dag
-    )
-    #路径
-    hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
-else:
-    print("成功")
-    dim_oride_driver_base_prev_day_task = OssSensor(
+dim_oride_driver_base_prev_day_task = OssSensor(
         task_id='dim_oride_driver_base_prev_day_task',
         bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
             hdfs_path_str="oride/oride_dw/dim_oride_driver_base/country_code=NG",
@@ -143,9 +58,9 @@ else:
         bucket_name='opay-datalake',
         poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
         dag=dag
-    )
+)
 
-    dwd_oride_driver_records_day_df_prev_day_task = OssSensor(
+dwd_oride_driver_records_day_df_prev_day_task = OssSensor(
         task_id='dwd_oride_driver_records_day_df_prev_day_task',
         bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
             hdfs_path_str="oride/oride_dw/dwd_oride_driver_records_day_df/country_code=nal",
@@ -154,9 +69,9 @@ else:
         bucket_name='opay-datalake',
         poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
         dag=dag
-    )
+)
 
-    dwd_oride_driver_recharge_records_df_prev_day_task = OssSensor(
+dwd_oride_driver_recharge_records_df_prev_day_task = OssSensor(
         task_id='dwd_oride_driver_recharge_records_df_prev_day_task',
         bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
             hdfs_path_str="oride/oride_dw/dwd_oride_driver_recharge_records_df/country_code=nal",
@@ -165,9 +80,9 @@ else:
         bucket_name='opay-datalake',
         poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
         dag=dag
-    )
+)
 
-    dwd_oride_driver_reward_di_prev_day_task = OssSensor(
+dwd_oride_driver_reward_di_prev_day_task = OssSensor(
         task_id='dwd_oride_driver_reward_di_prev_day_task',
         bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
             hdfs_path_str="oride/oride_dw/dwd_oride_driver_reward_di/country_code=nal",
@@ -176,9 +91,9 @@ else:
         bucket_name='opay-datalake',
         poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
         dag=dag
-    )
+)
 
-    ods_data_driver_pay_records_prev_day_task = OssSensor(
+ods_data_driver_pay_records_prev_day_task = OssSensor(
         task_id='ods_data_driver_pay_records_prev_day_task',
         bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
             hdfs_path_str="oride_dw_sqoop/oride_data/data_driver_pay_records",
@@ -187,9 +102,9 @@ else:
         bucket_name='opay-datalake',
         poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
         dag=dag
-    )
+)
 
-    dwd_oride_finance_driver_repayment_df_prev_day_task = OssSensor(
+dwd_oride_finance_driver_repayment_df_prev_day_task = OssSensor(
         task_id='dwd_oride_finance_driver_repayment_df_prev_day_task',
         bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
             hdfs_path_str="oride/oride_dw/dwd_oride_finance_driver_repayment_df/country_code=nal",
@@ -198,9 +113,9 @@ else:
         bucket_name='opay-datalake',
         poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
         dag=dag
-    )
+)
 
-    dwd_oride_driver_balance_extend_df_prev_day_task = OssSensor(
+dwd_oride_driver_balance_extend_df_prev_day_task = OssSensor(
         task_id='dwd_oride_driver_balance_extend_df_prev_day_task',
         bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
             hdfs_path_str="oride/oride_dw/dwd_oride_driver_balance_extend_df/country_code=nal",
@@ -209,9 +124,7 @@ else:
         bucket_name='opay-datalake',
         poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
         dag=dag
-    )
-    # 路径
-    hdfs_path = "oss://opay-datalake/oride/oride_dw/" + table_name
+)
 
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
 
@@ -275,6 +188,7 @@ def dwm_oride_driver_finance_di_sql_task(ds):
            nvl(repay.act_repay_amount / repay.amount ,0) as act_repaid_numbers , --实际已还款期数
            nvl(if(repay.balance < 0,(repay.all_repay_amount-repay.act_repay_amount) / repay.amount,0),0) as conversion_overdue_days, --换算逾期天数
            --nvl(repay.all_repay_amount,0) as all_repay_amount, --总贷款金额=amount*numbers         
+           recharge.complain_amount,  --司机被投诉罚款
            
            dri.country_code,
            '{pt}' as dt
@@ -312,11 +226,12 @@ def dwm_oride_driver_finance_di_sql_task(ds):
         --资金调整金额,统计理论b端补贴用
         (
         select driver_id,
-               sum(amount) as recharge_amount  --资金调整金额
+               sum(if(amount_reason in(4,5,7),amount,0)) as recharge_amount,  --资金调整金额
+               sum(if(amount_reason=14,amount,0)) as complain_amount  --司机被投诉罚款
         from oride_dw.dwd_oride_driver_recharge_records_df 
         where dt='{pt}'
         and from_unixtime(created_at,'yyyy-MM-dd')='{pt}'
-        and amount_reason in(4,5,7)
+        and amount_reason in(4,5,7,14)
         group by driver_id
         ) recharge
         on dri.driver_id=recharge.driver_id
