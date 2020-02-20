@@ -101,8 +101,8 @@ table_list = [
     ("opay_fee","user_fee_record", "opay_fee", "base",3,"true"),
     ("opay_fee","merchant_fee_record", "opay_fee", "base",3,"true"),
 
-    ("opay_account","account_user_record", "opay_account", "base", 2,"false"),
-    ("opay_account","accounting_request_record", "opay_account", "base", 2,"false"),
+    #("opay_account","account_user_record", "opay_account", "base", 2,"false"),
+    #("opay_account","accounting_request_record", "opay_account", "base", 2,"false"),
 
     ("opay_activity","preferential_record", "opay_activity", "base",3,"false"),
 

@@ -318,6 +318,10 @@ for db_name, table_name, conn_id, prefix_name,priority_weight_nm in table_list:
         conn_conf_dict[conn_id] = BaseHook.get_connection(conn_id)
 
     hive_table_name = HIVE_TABLE % (prefix_name, table_name)
+    if table_name in ['data_opay_transaction']:
+        m=1
+    else:
+        m=12
     # sqoop import
     import_table = BashOperator(
         task_id='import_table_{}'.format(hive_table_name),
@@ -345,7 +349,7 @@ for db_name, table_name, conn_id, prefix_name,priority_weight_nm in table_list:
             password=conn_conf_dict[conn_id].password,
             table=table_name,
             ufile_path=UFILE_PATH % (db_name, table_name),
-            m=12
+            m=m
         ),
         dag=dag,
     )
