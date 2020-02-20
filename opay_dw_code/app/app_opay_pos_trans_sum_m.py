@@ -37,7 +37,7 @@ args = {
 }
 
 dag = airflow.DAG('app_opay_pos_trans_sum_m',
-                  schedule_interval="00 03 1 * *",
+                  schedule_interval="00 03 * * *",
                   default_args=args,
                   catchup=False)
 
@@ -97,14 +97,16 @@ def app_opay_pos_trans_sum_m_sql_task(ds):
         sum(msc_cost_amount) as msc_cost_amt,
         sum(fee_amount) as fee_amt,
         country_code,
-         date_format('{pt}', 'yyyy-MM-01') as dt
+         '{pt}'
     from (
-        select 
-            pos_id, state, affiliate_bank_code, originator_type, order_status, country_code,
-            amount, provider_share_amount, msc_cost_amount, fee_amount
-        from opay_dw.dwd_opay_pos_transaction_record_di
-        where dt between date_format('{pt}', 'yyyy-MM-01')  and  last_day('{pt}')
-                and create_time BETWEEN date_format(date_sub(date_format('{pt}', 'yyyy-MM-01'), 1), 'yyyy-MM-dd 23') AND date_format(last_day('{pt}'), 'yyyy-MM-dd 23') 
+        select * from 
+           (select 
+               pos_id, state, affiliate_bank_code, originator_type, order_status, country_code,
+                amount, provider_share_amount, msc_cost_amount, fee_amount,row_number()over(partition by order_no order by update_time desc) rn 
+           from opay_dw.dwd_opay_pos_transaction_record_di
+           where dt between date_format('{pt}', 'yyyy-MM-01')  and  '{pt}'
+                  and create_time BETWEEN date_format(date_sub(date_format('{pt}', 'yyyy-MM-01'), 1), 'yyyy-MM-dd 23') AND date_format('{pt}', 'yyyy-MM-dd 23') 
+           ) m where rn=1
     ) t1 left join (
         select
             state, region
