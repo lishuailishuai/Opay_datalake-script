@@ -187,7 +187,9 @@ def dwd_opay_client_event_base_di_sql_task(ds):
             'nal' as country_code,
             '{pt}' as dt
         FROM
-            opay_ep_logv1_data LATERAL VIEW EXPLODE(from_json(get_json_object(msg, '$.es'), array(named_struct("en", "", "et","", "ev", map("",""), "lat","", "lng","","cid", "", "cip", "")))) es AS e
+            opay_ep_logv1_data LATERAL VIEW EXPLODE(from_json(get_json_object(msg, '$.es'), array(named_struct("en", "", "et","", "ev", map("",""), "lat","", "lng","","cid", "", "cip", "", "bzp", "")))) es AS e
+        WHERE
+            e.bzp in ('RIDE', 'ORide', 'OCAR', 'OTRIKE') OR e.bzp is null
         ;
     
     '''.format(
