@@ -451,6 +451,17 @@ SELECT base.id as order_id,
        malice_brush_driver_deduct, --恶意刷单司机扣款
        malice_brush_user_reward,  --恶意刷单乘客奖励
        order_type, --订单类型 (0: 普通订单, 1: 顺路单)
+       price_mode, --计价模式(0 范围 1 固定)
+       pay.coupon_amount, 
+       --使用的优惠券金额
+       pay.bonus, 
+       --使用的奖励金
+       pay.balance,
+       -- 使用的余额
+       pay.opay_amount,
+       --opay 支付的金额
+       pay.tip_rake,
+       --小费抽成 
        nvl(country.country_code,'nal') as country_code,
 
        '{pt}' AS dt
@@ -490,8 +501,18 @@ LEFT OUTER JOIN
        amount AS pay_amount,
        --实付金额
 
-       `mode` AS pay_mode
+       `mode` AS pay_mode,
        --支付方式（0: 未知, 1: 线下支付, 2: opay, 3: 余额）
+       coupon_amount, 
+       --使用的优惠券金额
+       bonus, 
+       --使用的奖励金
+       balance,
+       -- 使用的余额
+       opay_amount,
+       --opay 支付的金额
+       tip_rake
+       --小费抽成      
 
 FROM oride_dw_ods.ods_sqoop_base_data_order_payment_df
 WHERE dt = '{pt}') pay ON base.id=pay.order_id

@@ -169,6 +169,8 @@ def dim_oride_driver_base_sql_task(ds):
         
         ext.LANGUAGE, --客户端语言
         
+        from_unixtime(ext.local_end_service_time,'yyyy-MM-dd HH:mm:ss') as end_service_time,--专车司机结束收份子钱时间
+        
         nvl(cit.country_code,'nal') AS country_code,--国家码字段
         
         '{pt}' as dt
@@ -223,7 +225,8 @@ def dim_oride_driver_base_sql_task(ds):
         country_id,  --所属国家
         (register_time+1*60*60) as local_register_time,
         (login_time+1*60*60) as local_login_time,
-        (first_bind_time+1*60*60) as local_first_bind_time
+        (first_bind_time+1*60*60) as local_first_bind_time,
+        (end_service_time+1*60*60) as local_end_service_time
         FROM oride_dw_ods.ods_sqoop_base_data_driver_extend_df
         WHERE dt = '{pt}'
     ) ext 

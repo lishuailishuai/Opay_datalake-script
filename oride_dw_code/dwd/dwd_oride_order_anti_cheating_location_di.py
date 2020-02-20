@@ -156,7 +156,7 @@ def dwd_oride_order_anti_cheating_location_di_sql_task(ds):
                    ,concat(end_lat,'_',end_lng)     AS end_loc
             FROM oride_dw.dwd_oride_order_base_include_test_di
             WHERE dt = '{pt}' 
-            AND status IN (5,6)  
+            AND status IN (4,5,6)  
         ) ord
         LEFT JOIN 
         (
