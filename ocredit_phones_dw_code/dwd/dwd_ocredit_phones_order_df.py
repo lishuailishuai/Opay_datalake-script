@@ -143,6 +143,7 @@ def dwd_ocredit_phones_order_df_sql_task(ds):
           loan_price, --手机价格(销售录入) 
           channel, --渠道： 1=销售 2=用户 
           product_category, --产品类型： 1 手机 2 汽车 3 摩托车 4 家电 5 电脑
+          substr((case when order_id='012020011001240073' then '2020-01-04' else to_date(create_time) end),1,10), --进件日期
           'nal' as country_code,
           '{pt}' as dt
 
