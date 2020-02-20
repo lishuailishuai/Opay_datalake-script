@@ -104,7 +104,7 @@ def app_ocredit_phones_order_d_sql_task(ds):
           '{pt}' as dt
           from
           ocredit_phones_dw.dwd_ocredit_phones_order_df
-          group by terms
+          group by terms,date_of_entry
           
 
     '''.format(
