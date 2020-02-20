@@ -43,16 +43,16 @@ dag = airflow.DAG('dim_opay_user_base_hf',
 
 ##----------------------------------------- 依赖 ---------------------------------------##
 
-ods_sqoop_base_user_hi_schedule_hour_task = OssSensor(
-    task_id='ods_sqoop_base_user_hi_schedule_hour_task',
-    bucket_key='{hdfs_path_str}/dt={pt}/hour={schedule_hour}/_SUCCESS'.format(
-        hdfs_path_str="opay_dw_sqoop_di/opay_user/user",
-        pt='{{ds}}'
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-),
+# ods_sqoop_base_user_hi_schedule_hour_task = OssSensor(
+#     task_id='ods_sqoop_base_user_hi_schedule_hour_task',
+#     bucket_key='{hdfs_path_str}/dt={pt}/hour={schedule_hour}/_SUCCESS'.format(
+#         hdfs_path_str="opay_dw_sqoop_di/opay_user/user",
+#         pt='{{ds}}'
+#     ),
+#     bucket_name='opay-datalake',
+#     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+#     dag=dag
+# ),
 dim_user_hf_NG_prev_schedule_hour_task = OssSensor(
     task_id='dim_user_hf_prev_schedule_hour_task',
     bucket_key='{hdfs_path_str}/country_code=NG/dt={locale_pt}/hour={last_locale_hour}/_SUCCESS'.format(
@@ -122,6 +122,7 @@ def dim_opay_user_base_hf_sql_task(ds):
         create_time,
         update_time,
         register_client,
+        date_format('{pt}', 'yyyy-MM-dd HH') as utc_date_hour,
         country_code,
         'locale_dt' as dt,
         'locale_hour' as hour
@@ -179,7 +180,8 @@ def dim_opay_user_base_hf_sql_task(ds):
                register_client,
                country_code
             from opay_dw.dim_opay_user_hf 
-            where concat(dt, " ", hour)>='last min locale_dt locale_hour' and concat(dt, " ", hour)>='last max locale_dt locale_hour' and utc_date_hour = date_format('{pt}', 'yyyy-MM-dd HH')
+            where concat(dt, " ", hour)>='last min locale_dt locale_hour' and concat(dt, " ", hour)>='last max locale_dt locale_hour' 
+                and utc_date_hour = from_unixtime(cast(unix_timestamp('{pt}', 'yyyy-MM-dd HH') - 3600 as BIGINT), 'yyyy-MM-dd HH')
             union all
             SELECT id,
                user_id,
