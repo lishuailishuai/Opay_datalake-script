@@ -248,7 +248,9 @@ def dwd_oride_client_event_detail_hi_sql_task(ds,hour):
             '{now_hour}' as hour
 
         FROM
-            opay_ep_logv1_data LATERAL VIEW EXPLODE(from_json(get_json_object(msg, '$.es'), array(named_struct("en", "", "et","", "ev", map("",""), "lat","", "lng","","cid", "", "cip", "")))) es AS e
+            opay_ep_logv1_data LATERAL VIEW EXPLODE(from_json(get_json_object(msg, '$.es'), array(named_struct("en", "", "et","", "ev", map("",""), "lat","", "lng","","cid", "", "cip", "", "bzp", "")))) es AS e
+        WHERE
+            e.bzp in ('RIDE', 'ORide', 'OCAR', 'OTRIKE') OR e.bzp is null
         ;
 '''.format(
         pt=ds,
