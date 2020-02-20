@@ -53,16 +53,16 @@ dag = airflow.DAG('dim_opay_user_base_hf',
 #     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
 #     dag=dag
 # ),
-dim_user_hf_NG_prev_schedule_hour_task = OssSensor(
-    task_id='dim_user_hf_prev_schedule_hour_task',
-    bucket_key='{hdfs_path_str}/country_code=NG/dt={locale_pt}/hour={last_locale_hour}/_SUCCESS'.format(
-        hdfs_path_str="opay_dw_sqoop_di/opay_user/user",
-        pt='{{ds}}'
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
+# dim_user_hf_NG_prev_schedule_hour_task = OssSensor(
+#     task_id='dim_user_hf_prev_schedule_hour_task',
+#     bucket_key='{hdfs_path_str}/country_code=NG/dt={locale_pt}/hour={last_locale_hour}/_SUCCESS'.format(
+#         hdfs_path_str="opay_dw_sqoop_di/opay_user/user",
+#         pt='{{ds}}'
+#     ),
+#     bucket_name='opay-datalake',
+#     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+#     dag=dag
+# )
 
 
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
