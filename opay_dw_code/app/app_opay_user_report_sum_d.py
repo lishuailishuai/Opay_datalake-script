@@ -105,7 +105,7 @@ hdfs_path = "oss://opay-datalake/opay/opay_dw/" + table_name
 def app_opay_user_report_sum_d_sql_task(ds):
     HQL = '''
     
-    set mapred.max.split.size=1000000;
+   
     set hive.exec.dynamic.partition.mode=nonstrict;
     set hive.exec.parallel=true;
     --总注册
@@ -117,7 +117,8 @@ def app_opay_user_report_sum_d_sql_task(ds):
           count(1) reg_user_cnt,
           NULL AS new_reg_user_cnt,
           NULL AS zero_bal_acct_cnt,
-          NULL AS first_pay_user_cnt
+          NULL AS first_pay_user_cnt,
+          state
         
    FROM
      (SELECT user_id,
@@ -125,7 +126,7 @@ def app_opay_user_report_sum_d_sql_task(ds):
              mobile,
              register_client,
              kyc_level,
-             dt,
+             dt,state,
              row_number() over(partition BY user_id
                                ORDER BY update_time DESC) rn
       FROM opay_dw.dim_opay_user_base_di
@@ -133,7 +134,8 @@ def app_opay_user_report_sum_d_sql_task(ds):
    WHERE rn = 1
    GROUP BY register_client,
             ROLE,
-            kyc_level),
+            kyc_level,
+            state),
 --当天新增
     user_reg_curr as 
    (SELECT nvl(register_client,'App') register_client,
@@ -143,12 +145,14 @@ def app_opay_user_report_sum_d_sql_task(ds):
           NULL AS reg_user_cnt,
           count(1) new_reg_user_cnt,
           NULL AS zero_bal_acct_cnt,
-          NULL AS first_pay_user_cnt
+          NULL AS first_pay_user_cnt,
+          state
     from opay_dw.dim_opay_user_base_di 
     where dt='{pt}' and create_time BETWEEN date_format(date_sub('{pt}', 1), 'yyyy-MM-dd 23') AND date_format('{pt}', 'yyyy-MM-dd 23')
     GROUP BY nvl(register_client,'App'),
             ROLE,
-            kyc_level
+            kyc_level,
+            state
    ),
 --用户余额信息
      balance AS
@@ -159,7 +163,8 @@ def app_opay_user_report_sum_d_sql_task(ds):
                   NULL AS reg_user_cnt,
                   NULL AS new_reg_user_cnt,
                   count(1) zero_bal_acct_cnt,
-                  NULL AS first_pay_user_cnt
+                  NULL AS first_pay_user_cnt,
+                  '-' state
    FROM opay_dw.dwd_opay_account_balance_df
    WHERE dt='{pt}'
      AND user_type='USER'
@@ -176,7 +181,8 @@ def app_opay_user_report_sum_d_sql_task(ds):
                       NULL AS reg_user_cnt,
                       NULL AS new_reg_user_cnt,
                       NULL AS zero_bal_acct_cnt,
-                      count(1) first_pay_user_cnt
+                      count(1) first_pay_user_cnt,
+                      '-' state
    FROM opay_dw.dwm_opay_user_first_tran_di
    WHERE dt='{pt}'
      AND originator_type='USER'
@@ -187,7 +193,8 @@ select register_client,ROLE,kyc_level,top_consume_scenario,
        sum(nvl(reg_user_cnt,0)) reg_user_cnt,
        sum(nvl(new_reg_user_cnt,0)) new_reg_user_cnt,
        sum(nvl(zero_bal_acct_cnt,0)) zero_bal_acct_cnt,
-       sum(nvl(first_pay_user_cnt,0)) first_pay_user_cnt
+       sum(nvl(first_pay_user_cnt,0)) first_pay_user_cnt,
+       state
 from 
    (SELECT * FROM user_reg
    UNION ALL
@@ -196,7 +203,7 @@ from
    SELECT * FROM balance
    UNION ALL
    SELECT * FROM first_tran) m 
-group by register_client,ROLE,kyc_level,top_consume_scenario
+group by register_client,ROLE,kyc_level,top_consume_scenario,state
 
     '''.format(
         pt=ds,

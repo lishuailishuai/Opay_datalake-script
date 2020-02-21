@@ -37,7 +37,7 @@ args = {
 }
 
 dag = airflow.DAG('app_opay_pos_cube_m',
-                  schedule_interval="00 03 1 * *",
+                  schedule_interval="00 03 * * *",
                   default_args=args,
                   catchup=False)
 
@@ -97,18 +97,21 @@ def app_opay_pos_cube_m_sql_task(ds):
         count(distinct affiliate_terminal_id) active_terms,
         count(distinct originator_id) active_agents,
         country_code,
-        date_format('{pt}', 'yyyy-MM-01') as dt
+        '{pt}'
     from (
         select 
             pos_id, nvl(region, '-') as region, t1.state, order_status, affiliate_terminal_id, originator_id,
             country_code
         from (
-            select 
-                pos_id, state, order_status, country_code, affiliate_terminal_id, originator_id
-            from opay_dw.dwd_opay_pos_transaction_record_di
-            where dt between date_format('{pt}', 'yyyy-MM-01')  and  last_day('{pt}')
-                and create_time BETWEEN date_format(date_sub(date_format('{pt}', 'yyyy-MM-01'), 1), 'yyyy-MM-dd 23') AND date_format(last_day('{pt}'), 'yyyy-MM-dd 23')
-                and originator_type = 'USER' 
+            select * from 
+               (select 
+                  pos_id, state, order_status, country_code, affiliate_terminal_id, originator_id,
+                  row_number()over(partition by order_no order by update_time desc) rn
+               from opay_dw.dwd_opay_pos_transaction_record_di
+               where dt between date_format('{pt}', 'yyyy-MM-01')  and  '{pt}'
+                   and create_time BETWEEN date_format(date_sub(date_format('{pt}', 'yyyy-MM-01'), 1), 'yyyy-MM-dd 23') AND date_format('{pt}', 'yyyy-MM-dd 23')
+                   and originator_type = 'USER' ) m 
+            where rn=1
         ) t1 left join (
             select
                 state, region

@@ -121,6 +121,11 @@ def app_oride_driver_data_report_sql_task(ds):
            ord.peak_finish_cnt,  --高峰完单量
            ord.evaluated_ord_total_score,  --被评价订单总得分
            ord.evaluated_ord_cnt, --被评价订单量
+           dri.group_id, --所属组id
+           dri_group.group_name, --所属组名字
+           dri.city_id, --城市id
+           cit.city_name, --城市名称
+           dri.product_id, --业务线
            dri.country_code, --国家编码
            dri.dt  --日期
     from (select *        
@@ -152,7 +157,17 @@ def app_oride_driver_data_report_sql_task(ds):
     from oride_dw.dwm_oride_order_base_di
     where dt='{pt}'
     group by driver_id) ord
-    on dri.driver_id=ord.driver_id;
+    on dri.driver_id=ord.driver_id
+    left join 
+    (select id,group_leader,group_name,group_leader_id 
+     from oride_dw.dwd_oride_driver_data_group_df 
+     where dt='{pt}') dri_group 
+     on dri.group_id=dri_group.id
+     left join
+     (select * 
+      from oride_dw.dim_oride_city
+      where dt='{pt}') cit
+      on dri.city_id=cit.city_id;
     '''.format(
         pt=ds,
         now_day=airflow.macros.ds_add(ds, +1),

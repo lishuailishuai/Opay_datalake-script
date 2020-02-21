@@ -4,6 +4,7 @@ from ast import literal_eval
 import datetime
 
 def GetLocalTime(utc_date_hour, country_code, gap_hour):
+    print(utc_date_hour)
     config = literal_eval(Variable.get("utc_locale_time_config"))
     time_zone = config[country_code]['time_zone']
     time_obj = datetime.datetime.strptime(utc_date_hour, "%Y-%m-%d %H")
