@@ -36,7 +36,7 @@ args = {
     'email_on_retry': False,
 }
 
-dag = airflow.DAG('dim_opay_user_base_hf',
+dag = airflow.DAG('dim_opay_bd_agent_base_hf',
                   schedule_interval="03 * * * *",
                   default_args=args,
                   catchup=False)
@@ -53,30 +53,6 @@ utc_hour = locals()
 
 ##----------------------------------------- 依赖 ---------------------------------------##
 
-# ods_sqoop_base_user_hi_schedule_hour_task = OssSensor(
-#     task_id='ods_sqoop_base_user_hi_schedule_hour_task',
-#     bucket_key='{hdfs_path_str}/dt={pt}/hour={utc_hour}/_SUCCESS'.format(
-#         hdfs_path_str="opay_dw_sqoop_di/opay_user/user",
-#         pt='{{ds}}'
-#     ),
-#     bucket_name='opay-datalake',
-#     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-#     dag=dag,
-#     utc_hour=utc_hour
-# ),
-#
-# dim_user_hf_NG_prev_schedule_hour_task = OssSensor(
-#     task_id='dim_user_hf_prev_schedule_hour_task',
-#     bucket_key='{hdfs_path_str}/country_code=NG/dt={ng_pre_locale_pt}/hour={ng_pre_locale_hour}/_SUCCESS'.format(
-#         hdfs_path_str="opay_dw_sqoop_di/opay_user/user",
-#         pt='{{ds}}'
-#     ),
-#     bucket_name='opay-datalake',
-#     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-#     dag=dag,
-#     ng_pre_locale_hour=ng_pre_locale_hour,
-#     ng_pre_locale_pt=ng_pre_locale_pt
-# )
 
 
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
@@ -101,11 +77,11 @@ task_timeout_monitor = PythonOperator(
 ##----------------------------------------- 变量 ---------------------------------------##
 db_name = "opay_dw"
 
-table_name = "dim_opay_user_base_hf"
+table_name = "dim_opay_bd_agent_base_hf"
 hdfs_path = "oss://opay-datalake/opay/opay_dw/" + table_name
 
 
-def dim_opay_user_base_hf_sql_task(ds):
+def dim_opay_bd_agent_base_hf_sql_task(ds):
     HQL = '''
 
     set hive.exec.dynamic.partition.mode=nonstrict;
@@ -114,33 +90,34 @@ def dim_opay_user_base_hf_sql_task(ds):
     
     select 
         id,
-        user_id,
-        mobile,
-        business_name,
+        agent_name,
+        agent_surname,
         first_name,
-        middle_name,
-        surname,
-        kyc_level,
-        kyc_update_time,
-        bvn,
-        birthday,
-        gender,
+        agent_middle_name,
+        agent_address,
+        agent_gender,
         country,
-        STATE,
-        city,
-        address,
-        lga,
-        ROLE,
-        referral_code,
-        referrer_code,
-        notification,
-        create_time,
-        update_time,
-        register_client,
-          agent_referrer_code,
-          photo,
-          big_picture,
-          nick_name,
+        agent_email,
+        opay_account,
+        user_id,
+        agent_bvn,
+        agent_state,
+        birthday,
+        phone,
+        agent_passport,
+        government_issued_photo,
+        bill_photo,
+        lng,
+        lat,
+        fence_id,
+        city_id,
+        agent_status,
+        create_id,
+        modify_id,
+        bd_admin_user_id,
+        agent_check_id,
+        created_time,
+        updated_time,
         date_format('{pt}', 'yyyy-MM-dd HH') as utc_date_hour,
         country_code,
         'locale_dt' as dt,  -- udf
@@ -148,99 +125,102 @@ def dim_opay_user_base_hf_sql_task(ds):
     from (
         select 
             id,
-            user_id,
-            mobile,
-            business_name,
+            agent_name,
+            agent_surname,
             first_name,
-            middle_name,
-            surname,
-            kyc_level,
-            kyc_update_time,
-            bvn,
-            birthday,
-            gender,
+            agent_middle_name,
+            agent_address,
+            agent_gender,
             country,
-            STATE,
-            city,
-            address,
-            lga,
-            ROLE,
-            referral_code,
-            referrer_code,
-            notification,
-            create_time,
-            update_time,
-            register_client,
-            agent_referrer_code,
-            photo,
-            big_picture,
-            nick_name,
+            agent_email,
+            opay_account,
+            user_id,
+            agent_bvn,
+            agent_state,
+            birthday,
+            phone,
+            agent_passport,
+            government_issued_photo,
+            bill_photo,
+            lng,
+            lat,
+            fence_id,
+            city_id,
+            agent_status,
+            create_id,
+            modify_id,
+            bd_admin_user_id,
+            agent_check_id,
+            created_time,
+            updated_time,
             country_code,
             row_number() over(partition by user_id order by update_time desc) rn
         from (
             SELECT 
-               id,
-               user_id,
-               mobile,
-               business_name,
-               first_name,
-               middle_name,
-               surname,
-               kyc_level,
-               kyc_update_time,
-               bvn,
-               birthday,
-               gender,
-               country,
-               STATE,
-               city,
-               address,
-               lga,
-               ROLE,
-               referral_code,
-               referrer_code,
-               notification,
-               create_time,
-               update_time,
-               register_client,
-               agent_referrer_code,
-               photo,
-               big_picture,
-               nick_name,
-               country_code
-            from opay_dw.dim_opay_user_base_hf 
+                id,
+                agent_name,
+                agent_surname,
+                first_name,
+                agent_middle_name,
+                agent_address,
+                agent_gender,
+                country,
+                agent_email,
+                opay_account,
+                user_id,
+                agent_bvn,
+                agent_state,
+                birthday,
+                phone,
+                agent_passport,
+                government_issued_photo,
+                bill_photo,
+                lng,
+                lat,
+                fence_id,
+                city_id,
+                agent_status,
+                create_id,
+                modify_id,
+                bd_admin_user_id,
+                agent_check_id,
+                created_time,
+                updated_time,
+                country_code
+            from opay_dw.dim_opay_bd_agent_base_hf 
             where concat(dt, " ", hour) >= 'last min locale_dt locale_hour' and concat(dt, " ", hour) <= 'last max locale_dt locale_hour' -- todo
                 and utc_date_hour = from_unixtime(cast(unix_timestamp('{pt}', 'yyyy-MM-dd HH') - 3600 as BIGINT), 'yyyy-MM-dd HH')
             union all
             SELECT 
                 id,
-                user_id,
-                mobile,
-                business_name,
+                agent_name,
+                agent_surname,
                 first_name,
-                middle_name,
-                surname,
-                kyc_level,
-                kyc_update_time,
-                bvn,
-                dob as birthday,
-                gender,
+                agent_middle_name,
+                agent_address,
+                agent_gender,
                 country,
-                STATE,
-                city,
-                address,
-                lga,
-                ROLE,
-                referral_code,
-                referrer_code,
-                notification,
-                from_unixtime(cast(unix_timestamp(create_time, 'yyyy-MM-dd HH:mm:ss') + 3600 as BIGINT), 'yyyy-MM-dd HH:mm:ss') as create_time, -- todo 使用udf函数
-                from_unixtime(cast(unix_timestamp(update_time, 'yyyy-MM-dd HH:mm:ss') + 3600 as BIGINT), 'yyyy-MM-dd HH:mm:ss') as update_time,
-                register_client,
-                agent_referrer_code,
-                photo,
-                big_picture,
-                nick_name,
+                agent_email,
+                opay_account,
+                user_id,
+                agent_bvn,
+                agent_state,
+                birthday,
+                phone,
+                agent_passport,
+                government_issued_photo,
+                bill_photo,
+                lng,
+                lat,
+                fence_id,
+                city_id,
+                agent_status,
+                create_id,
+                modify_id,
+                bd_admin_user_id,
+                agent_check_id,
+                from_unixtime(cast(unix_timestamp(created_at, 'yyyy-MM-dd HH:mm:ss') + 3600 as BIGINT), 'yyyy-MM-dd HH:mm:ss') as create_time, -- todo 使用udf函数
+                from_unixtime(cast(unix_timestamp(updated_at, 'yyyy-MM-dd HH:mm:ss') + 3600 as BIGINT), 'yyyy-MM-dd HH:mm:ss') as update_time,
                 'NG' AS country_code
             from opay_dw_ods.ods_binlog_base_user_hi 
             where concat(dt, " ", hour) = date_format('{pt}', 'yyyy-MM-dd HH') and `__deleted` = 'false'
@@ -261,7 +241,7 @@ def execution_data_task_id(ds, **kargs):
     hive_hook = HiveCliHook()
 
     # 读取sql
-    _sql = dim_opay_user_base_hf_sql_task(ds)
+    _sql = dim_opay_bd_agent_base_hf_sql_task(ds)
 
     logging.info('Executing: %s', _sql)
 
@@ -277,8 +257,8 @@ def execution_data_task_id(ds, **kargs):
     TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "true", "true")
 
 
-dim_opay_user_base_hf_task = PythonOperator(
-    task_id='dim_opay_user_base_hf_task',
+dim_opay_bd_agent_base_hf_task = PythonOperator(
+    task_id='dim_opay_bd_agent_base_hf_task',
     python_callable=execution_data_task_id,
     provide_context=True,
     dag=dag
