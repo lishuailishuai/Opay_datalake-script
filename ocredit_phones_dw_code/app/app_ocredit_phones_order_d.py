@@ -96,7 +96,7 @@ def app_ocredit_phones_order_d_sql_task(ds):
     
     select
           terms,--分期数
-          opay_id, --`进件数`
+          opay_id, --用户opayId
           count(distinct case when order_status='81' then opay_id else null end), --   `放款数` ,
           sum(case when order_status='81' then (loan_amount/100)*0.2712/100 else 0 end),--`贷款金额_USD` ,
           date_of_entry,--进件日期
@@ -105,7 +105,7 @@ def app_ocredit_phones_order_d_sql_task(ds):
           from
           ocredit_phones_dw.dwd_ocredit_phones_order_df
           where dt='{pt}'
-          group by terms,date_of_entry,dt
+          group by terms,date_of_entry,dt,opay_id
           
 
     '''.format(
