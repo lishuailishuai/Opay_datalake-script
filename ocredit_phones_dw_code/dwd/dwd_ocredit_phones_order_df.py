@@ -145,10 +145,11 @@ def dwd_ocredit_phones_order_df_sql_task(ds):
           product_category, --产品类型： 1 手机 2 汽车 3 摩托车 4 家电 5 电脑
           substr((case when order_id='012020011001240073' then '2020-01-04' else to_date(create_time) end),1,10), --进件日期
           'nal' as country_code,
-          '{pt}' as dt
+           dt
 
     from ocredit_phones_dw_ods.ods_sqoop_base_t_order_df
-    where user_id not in 
+    where dt='{pt}' and
+user_id not in 
 (
 '1209783514507214849', 
 '1209126038292123650',
