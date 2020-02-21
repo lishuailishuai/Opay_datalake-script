@@ -101,9 +101,10 @@ def app_ocredit_phones_order_d_sql_task(ds):
           sum(case when order_status='81' then (loan_amount/100)*0.2712/100 else 0 end),--`贷款金额_USD` ,
           date_of_entry,--进件日期
           'nal' as country_code,
-          '{pt}' as dt
+          dt
           from
           ocredit_phones_dw.dwd_ocredit_phones_order_df
+          where dt='{pt}'
           group by terms,date_of_entry
           
 
