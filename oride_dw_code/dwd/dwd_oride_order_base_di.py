@@ -489,7 +489,8 @@ FROM (select *
               from_unixtime((unix_timestamp(regexp_replace(regexp_replace(t.updated_at,'T',' '),'Z',''))+3600),'yyyy-MM-dd')='{pt}'
              )
          ) t1
-where t1.`__deleted` = 'false' and t1.order_by = 1) base
+where --t1.`__deleted` = 'false' and 
+t1.order_by = 1) base
 LEFT OUTER JOIN
 (SELECT id AS order_id,
        status AS pay_status,
