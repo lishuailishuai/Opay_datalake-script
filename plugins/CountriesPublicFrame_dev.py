@@ -464,7 +464,7 @@ class CountriesPublicFrame_dev(object):
 
                 print("------")
 
-                print(GetLocalTime('{}'.format(v_utc_time=self.ds+" "+self.hour),country_code_word,-1))
+                print(GetLocalTime('{v_utc_time}'.format(v_utc_time=self.ds+" "+self.hour),country_code_word,-1))
 
                 v_par_str="country_code='{country_code}',dt='{ds}',hour='{hour}'".format(ds=self.ds,hour=self.hour,country_code=country_code_word)
 
