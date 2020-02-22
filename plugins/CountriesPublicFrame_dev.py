@@ -26,7 +26,7 @@ from utils.get_local_time import GetLocalTime
 
 class CountriesPublicFrame_dev(object):
 
-    def __init__(self,v_is_open,v_ds,v_db_name,v_table_name,v_data_hdfs_path,v_country_partition="true",v_file_type="true",v_hour=None,v_frame_type="stand"):
+    def __init__(self,v_is_open,v_ds,v_db_name,v_table_name,v_data_hdfs_path,v_country_partition="true",v_file_type="true",v_hour=None,v_frame_type="stand",v_time_offset=0):
 
         self.dingding_alert = DingdingAlert('https://oapi.dingtalk.com/robot/send?access_token=928e66bef8d88edc89fe0f0ddd52bfa4dd28bd4b1d24ab4626c804df8878bb48')
 
@@ -47,6 +47,8 @@ class CountriesPublicFrame_dev(object):
         self.v_country_code_map=None
 
         self.country_code_list=""
+
+        self.time_offset=v_time_offset
 
         self.get_country_code()
 
@@ -458,15 +460,16 @@ class CountriesPublicFrame_dev(object):
             # 有国家分区 && 小时参数不为None && 多国家
             if self.country_partition.lower()=="true" and self.hour is not None and self.frame_type=="many":
 
-                print("+++++++")
-                print(country_code_word)
-                print(self.ds+" "+self.hour)
+                v_utc_time='{v_sys_utc}'.format(v_sys_utc=self.ds+" "+self.hour)
 
-                print("------")
+                #国家本地日期
+                v_local_date=GetLocalTime('{v_utc_time}'.format(v_utc_time=v_utc_time),country_code_word,self.time_offset)["date"]
 
-                print(GetLocalTime('{v_utc_time}'.format(v_utc_time=self.ds+" "+self.hour),country_code_word,-1))
+                #国家本地小时
+                v_local_hour=GetLocalTime('{v_utc_time}'.format(v_utc_time=v_utc_time),country_code_word,self.time_offset)["hour"]
 
-                v_par_str="country_code='{country_code}',dt='{ds}',hour='{hour}'".format(ds=self.ds,hour=self.hour,country_code=country_code_word)
+                #表分区，时间是本地时间
+                v_par_str="country_code='{country_code}',dt='{ds}',hour='{hour}'".format(ds=v_local_date,hour=v_local_hour,country_code=country_code_word)
 
                 alter_str=alter_str+"\n"+"alter table {db}.{table_name} drop partition({v_par});\n alter table {db}.{table_name} add partition({v_par});".format(v_par=v_par_str,table_name=self.table_name,db=self.db_name)
 
