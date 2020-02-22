@@ -42,7 +42,7 @@ class CountriesPublicFrame_dev(object):
         self.v_del_flag=0
 
         #stand:standalone many:many
-        self.frame_type=v_frame_type
+        self.frame_type=v_frame_type.lower()
 
         self.v_country_code_map=None
 
