@@ -370,8 +370,6 @@ class CountriesPublicFrame_dev(object):
                     #输出不同国家(本地时间)的数据路径(Local 小时级分区)
                     self.hdfs_data_dir_str=self.data_hdfs_path+"/country_code="+country_code_word+"/dt="+v_local_date+"/hour="+v_local_hour
 
-                    print(self.hdfs_data_dir_str)
-                    
                 #没有开通多国家业务(国家码默认nal)
                 if self.country_partition.lower()=="true" and self.is_open.lower()=="false":
 
@@ -417,9 +415,8 @@ class CountriesPublicFrame_dev(object):
                             self.data_not_file_type_touchz()
 
                         else:
-                            # test
-                            continue
-                            #object_task()
+                            
+                            object_task()
 
 
                     #数据为空也生成 Success 文件
