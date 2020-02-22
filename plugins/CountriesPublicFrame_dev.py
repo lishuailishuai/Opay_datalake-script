@@ -26,7 +26,7 @@ from utils.get_local_time import GetLocalTime
 
 class CountriesPublicFrame_dev(object):
 
-    def __init__(self,v_is_open,v_ds,v_db_name,v_table_name,v_data_hdfs_path,v_country_partition="true",v_file_type="true",v_hour=None,v_frame_type="stand",v_time_offset=0):
+    def __init__(self,v_is_open,v_ds,v_db_name,v_table_name,v_data_hdfs_path,v_country_partition="true",v_file_type="true",v_hour=None,v_frame_type="utc",v_time_offset=0):
 
         self.dingding_alert = DingdingAlert('https://oapi.dingtalk.com/robot/send?access_token=928e66bef8d88edc89fe0f0ddd52bfa4dd28bd4b1d24ab4626c804df8878bb48')
 
@@ -34,14 +34,14 @@ class CountriesPublicFrame_dev(object):
         self.hdfs_data_dir_str=""
         self.data_hdfs_path=v_data_hdfs_path
         self.db_name=v_db_name
-        self.ds=v_ds
+        self.utc_ds=v_ds
         self.country_partition=v_country_partition
         self.file_type=v_file_type
-        self.hour=v_hour
+        self.utc_hour=v_hour
         self.is_open=v_is_open
         self.v_del_flag=0
 
-        #stand:standalone many:many
+        #utc,local
         self.frame_type=v_frame_type.lower()
 
         self.v_country_code_map=None
@@ -69,6 +69,7 @@ class CountriesPublicFrame_dev(object):
             s=list(self.v_country_code_map.keys())
 
             self.country_code_list=",".join(s)
+
             
     def check_success_exist(self):
 
@@ -293,12 +294,12 @@ class CountriesPublicFrame_dev(object):
         try:
 
             #没有小时级分区
-            if self.hour is None:
+            if self.utc_hour is None:
                 #输出不同国家的数据路径(没有小时级分区)
-                self.hdfs_data_dir_str=self.data_hdfs_path+"/dt="+self.ds
+                self.hdfs_data_dir_str=self.data_hdfs_path+"/dt="+self.utc_ds
             else:
                 #输出不同国家的数据路径(有小时级分区)
-                self.hdfs_data_dir_str=self.data_hdfs_path+"/dt="+self.ds+"/hour="+self.hour
+                self.hdfs_data_dir_str=self.data_hdfs_path+"/dt="+self.utc_ds+"/hour="+self.utc_hour
         
             # 没有国家分区并且每个目录必须有数据才能生成 Success
             if self.country_partition.lower()=="false" and self.file_type.lower()=="true":
@@ -344,14 +345,30 @@ class CountriesPublicFrame_dev(object):
 
 
                 #没有小时级分区
-                if self.hour is None:
+                if self.utc_hour is None:
 
                     #输出不同国家的数据路径(没有小时级分区)
-                    self.hdfs_data_dir_str=self.data_hdfs_path+"/country_code="+country_code_word+"/dt="+self.ds
-                else:
+                    self.hdfs_data_dir_str=self.data_hdfs_path+"/country_code="+country_code_word+"/dt="+self.utc_ds
 
-                    #输出不同国家的数据路径(有小时级分区)
-                    self.hdfs_data_dir_str=self.data_hdfs_path+"/country_code="+country_code_word+"/dt="+self.ds+"/hour="+self.hour
+                #(多国家)UTC 小时分区
+                if self.utc_hour is not None and self.frame_type=="utc":
+
+                    #输出不同国家(UTC时间)的数据路径(UTC 小时级分区)
+                    self.hdfs_data_dir_str=self.data_hdfs_path+"/country_code="+country_code_word+"/dt="+self.utc_ds+"/hour="+self.utc_hour
+
+                #(多国家)Local 小时分区
+                if self.utc_hour is not None and self.frame_type=="local":
+
+                    v_utc_time='{v_sys_utc}'.format(v_sys_utc=self.utc_ds+" "+self.utc_hour)
+        
+                    #国家本地日期
+                    v_local_date=GetLocalTime('{v_utc_time}'.format(v_utc_time=v_utc_time),country_code_word,self.time_offset)["date"]
+        
+                    #国家本地小时
+                    v_local_hour=GetLocalTime('{v_utc_time}'.format(v_utc_time=v_utc_time),country_code_word,self.time_offset)["hour"]
+
+                    #输出不同国家(本地时间)的数据路径(Local 小时级分区)
+                    self.hdfs_data_dir_str=self.data_hdfs_path+"/country_code="+country_code_word+"/dt="+v_local_date+"/hour="+v_local_hour
 
 
                 #没有开通多国家业务(国家码默认nal)
@@ -417,24 +434,24 @@ class CountriesPublicFrame_dev(object):
 
             sys.exit(1)
 
-    # alter 语句
+    # alter 语句(包含单国家、多国家)
     def alter_partition(self):   
 
         alter_str=""
 
         # 没有国家分区 && 小时参数为None
-        if self.country_partition.lower()=="false" and self.hour is None:
+        if self.country_partition.lower()=="false" and self.utc_hour is None:
 
-            v_par_str="dt='{ds}'".format(ds=self.ds)
+            v_par_str="dt='{ds}'".format(ds=self.utc_ds)
 
             alter_str="alter table {db}.{table_name} drop partition({v_par});\n alter table {db}.{table_name} add partition({v_par});".format(v_par=v_par_str,table_name=self.table_name,db=self.db_name)
 
             return alter_str
             
         # 没有国家分区 && 小时参数不为None
-        if self.country_partition.lower()=="false" and self.hour is not None:
+        if self.country_partition.lower()=="false" and self.utc_hour is not None:
 
-            v_par_str="dt='{ds}',hour='{hour}'".format(ds=self.ds,hour=self.hour)
+            v_par_str="dt='{ds}',hour='{hour}'".format(ds=self.utc_ds,hour=self.utc_hour)
 
             alter_str="alter table {db}.{table_name} drop partition({v_par});\n alter table {db}.{table_name} add partition({v_par});".format(v_par=v_par_str,table_name=self.table_name,db=self.db_name)
 
@@ -444,27 +461,28 @@ class CountriesPublicFrame_dev(object):
         for country_code_word in self.country_code_list.split(","):
 
             # 有国家分区 && 小时参数为None
-            if self.country_partition.lower()=="true" and self.hour is None:
+            if self.country_partition.lower()=="true" and self.utc_hour is None:
 
-                v_par_str="country_code='{country_code}',dt='{ds}'".format(ds=self.ds,country_code=country_code_word)
+                v_par_str="country_code='{country_code}',dt='{ds}'".format(ds=self.utc_ds,country_code=country_code_word)
 
                 alter_str=alter_str+"\n"+"alter table {db}.{table_name} drop partition({v_par});\n alter table {db}.{table_name} add partition({v_par});".format(v_par=v_par_str,table_name=self.table_name,db=self.db_name)
 
-            # 有国家分区 && 小时参数不为None && 单国家
-            if self.country_partition.lower()=="true" and self.hour is not None and self.frame_type=="stand":
+            # 多国家(utc)分区 && 小时参数不为None && utc分区
+            if self.country_partition.lower()=="true" and self.utc_hour is not None and self.frame_type=="utc":
 
-                v_par_str="country_code='{country_code}',dt='{ds}',hour='{hour}'".format(ds=self.ds,hour=self.hour,country_code=country_code_word)
+                v_par_str="country_code='{country_code}',dt='{ds}',hour='{hour}'".format(ds=self.utc_ds,hour=self.utc_hour,country_code=country_code_word)
 
                 alter_str=alter_str+"\n"+"alter table {db}.{table_name} drop partition({v_par});\n alter table {db}.{table_name} add partition({v_par});".format(v_par=v_par_str,table_name=self.table_name,db=self.db_name)
             
-            # 有国家分区 && 小时参数不为None && 多国家
-            if self.country_partition.lower()=="true" and self.hour is not None and self.frame_type=="many":
+            # 多国家(本地时间)分区 && 小时参数不为None && 本地时间
+            if self.country_partition.lower()=="true" and self.utc_hour is not None and self.frame_type=="local":
 
-                v_utc_time='{v_sys_utc}'.format(v_sys_utc=self.ds+" "+self.hour)
-
+                #yyyy-MM-dd hh
+                v_utc_time='{v_sys_utc}'.format(v_sys_utc=self.utc_ds+" "+self.utc_hour)
+        
                 #国家本地日期
                 v_local_date=GetLocalTime('{v_utc_time}'.format(v_utc_time=v_utc_time),country_code_word,self.time_offset)["date"]
-
+        
                 #国家本地小时
                 v_local_hour=GetLocalTime('{v_utc_time}'.format(v_utc_time=v_utc_time),country_code_word,self.time_offset)["hour"]
 
