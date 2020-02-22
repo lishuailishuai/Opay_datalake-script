@@ -416,8 +416,8 @@ class CountriesPublicFrame_dev(object):
                             self.data_not_file_type_touchz()
 
                         else:
-                
-                            object_task()
+                            continue
+                            #object_task()
 
 
                     #数据为空也生成 Success 文件
