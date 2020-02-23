@@ -87,6 +87,8 @@ class CountriesPublicFrame_dev(object):
             #脚本执行时间(%Y-%m-%d %H:%M:%S)
             self.v_execute_time=item.get('execute_time', None)
 
+            print(self.v_execute_time)
+
             #脚本执行UTC日期
             self.utc_ds=(datetime.datetime.strptime(self.v_execute_time,'%Y-%m-%d %H:%M:%S')).strftime('%Y-%m-%d').strip()
 
