@@ -36,7 +36,7 @@ args = {
     'email_on_retry': False,
 }
 
-dag = airflow.DAG('app_ocredit_phones_order_d',
+dag = airflow.DAG('app_ocredit_phones_order_cube_d',
                   schedule_interval="30 02 * * *",
                   default_args=args,
                   catchup=False)
@@ -58,7 +58,7 @@ dwd_ocredit_phones_order_df_task = OssSensor(
 ##----------------------------------------- 变量 ---------------------------------------##
 
 db_name = "ocredit_phones_dw"
-table_name = "app_ocredit_phones_order_d"
+table_name = "app_ocredit_phones_order_cube_d"
 hdfs_path = "oss://opay-datalake/ocredit_phones/ocredit_phones_dw/" + table_name
 
 
@@ -85,7 +85,7 @@ task_timeout_monitor = PythonOperator(
 
 ##----------------------------------------- 脚本 ---------------------------------------##
 
-def app_ocredit_phones_order_d_sql_task(ds):
+def app_ocredit_phones_order_cube_d_sql_task(ds):
     HQL = '''
 
 
@@ -97,15 +97,17 @@ def app_ocredit_phones_order_d_sql_task(ds):
     select
           terms,--分期数
           opay_id, --用户opayId
+          date_of_entry,--进件日期
+          substr(date_of_entry,1,7),--进件月份
+          concat(date_add(next_day(date_of_entry,'MO'),-7),'_',date_add(next_day(date_of_entry,'MO'),-2)),--进件周
           count(distinct case when order_status='81' then opay_id else null end), --   `放款数` ,
           sum(case when order_status='81' then (loan_amount/100)*0.2712/100 else 0 end),--`贷款金额_USD` ,
-          date_of_entry,--进件日期
           'nal' as country_code,
           dt
           from
           ocredit_phones_dw.dwd_ocredit_phones_order_df
           where dt='{pt}'
-          group by terms,date_of_entry,dt,opay_id
+          group by terms,date_of_entry,dt,opay_id,substr(date_of_entry,1,7),concat(date_add(next_day(date_of_entry,'MO'),-7),'_',date_add(next_day(date_of_entry,'MO'),-2))
           
 
     '''.format(
@@ -149,7 +151,7 @@ def execution_data_task_id(ds, **kwargs):
 
     # 拼接SQL
 
-    _sql = "\n" + cf.alter_partition() + "\n" + app_ocredit_phones_order_d_sql_task(ds)
+    _sql = "\n" + cf.alter_partition() + "\n" + app_ocredit_phones_order_cube_d_sql_task(ds)
 
     logging.info('Executing: %s', _sql)
 
@@ -166,8 +168,8 @@ def execution_data_task_id(ds, **kwargs):
     cf.touchz_success()
 
 
-app_ocredit_phones_order_d_task = PythonOperator(
-    task_id='app_ocredit_phones_order_d_task',
+app_ocredit_phones_order_cube_d_task = PythonOperator(
+    task_id='app_ocredit_phones_order_cube_d_task',
     python_callable=execution_data_task_id,
     provide_context=True,
     op_kwargs={
@@ -178,4 +180,4 @@ app_ocredit_phones_order_d_task = PythonOperator(
     dag=dag
 )
 
-dwd_ocredit_phones_order_df_task >> app_ocredit_phones_order_d_task
+dwd_ocredit_phones_order_df_task >> app_ocredit_phones_order_cube_d_task
