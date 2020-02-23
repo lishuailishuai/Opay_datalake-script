@@ -41,7 +41,7 @@ class CountriesPublicFrame_dev(object):
         self.v_data_oss_path=None
         self.v_db_name=None
         self.v_is_country_partition=None
-        self.v_is_result_exist=None
+        self.v_is_result_force_exist=None
         self.utc_ds=None
         self.utc_hour=None
         self.v_is_countries_online=None
@@ -81,8 +81,8 @@ class CountriesPublicFrame_dev(object):
             #是否有国家分区(默认true)
             self.v_is_country_partition=item.get('is_country_partition', "true")
 
-            #数据文件是否存在(默认true)
-            self.v_is_result_exist=item.get('is_result_exist', "true")
+            #数据文件是否强制存在(默认true)
+            self.v_is_result_force_exist=item.get('is_result_force_exist', "true")
 
             #脚本执行时间(%Y-%m-%d %H:%M:%S)
             self.v_execute_time=item.get('execute_time', None)
@@ -309,24 +309,24 @@ class CountriesPublicFrame_dev(object):
         """
 
          # 没有国家分区并且每个目录必须有数据才能生成 Success
-        if self.v_is_country_partition.lower()=="false" and self.v_is_result_exist.lower()=="true":
+        if self.v_is_country_partition.lower()=="false" and self.v_is_result_force_exist.lower()=="true":
 
             self.not_exist_country_code_data_dir(self.data_file_type_touchz)
 
         # 没有国家分区并且数据为空也生成 Success
-        if self.v_is_country_partition.lower()=="false" and self.v_is_result_exist.lower()=="false":
+        if self.v_is_country_partition.lower()=="false" and self.v_is_result_force_exist.lower()=="false":
 
             self.not_exist_country_code_data_dir(self.data_not_file_type_touchz)
 
 
         #有国家分区并且每个目录必须有数据才能生成 Success
-        if self.v_is_country_partition.lower()=="true" and self.v_is_result_exist.lower()=="true":
+        if self.v_is_country_partition.lower()=="true" and self.v_is_result_force_exist.lower()=="true":
 
             self.exist_country_code_data_dir(self.data_file_type_touchz)
         
         
         #有国家分区并且数据为空也生成 Success
-        if self.v_is_country_partition.lower()=="true" and self.v_is_result_exist.lower()=="false":
+        if self.v_is_country_partition.lower()=="true" and self.v_is_result_force_exist.lower()=="false":
 
             self.exist_country_code_data_dir(self.data_not_file_type_touchz)
 
@@ -351,14 +351,14 @@ class CountriesPublicFrame_dev(object):
                 self.hdfs_data_dir_str=self.v_data_oss_path+"/dt="+self.utc_ds+"/hour="+self.utc_hour
         
             # 没有国家分区并且每个目录必须有数据才能生成 Success
-            if self.v_is_country_partition.lower()=="false" and self.v_is_result_exist.lower()=="true":
+            if self.v_is_country_partition.lower()=="false" and self.v_is_result_force_exist.lower()=="true":
 
                 object_task()
 
                 return
 
             # 没有国家分区并且数据为空也生成 Success
-            if self.v_is_country_partition.lower()=="false" and self.v_is_result_exist.lower()=="false":
+            if self.v_is_country_partition.lower()=="false" and self.v_is_result_force_exist.lower()=="false":
 
                 object_task()
 
@@ -423,12 +423,12 @@ class CountriesPublicFrame_dev(object):
                 if self.v_is_country_partition.lower()=="true" and self.v_is_countries_online.lower()=="false":
 
                     #必须有数据才可以生成Success 文件
-                    if self.v_is_result_exist.lower()=="true":
+                    if self.v_is_result_force_exist.lower()=="true":
 
                         object_task()
 
                     #数据为空也生成 Success 文件
-                    if self.v_is_result_exist.lower()=="false":
+                    if self.v_is_result_force_exist.lower()=="false":
                         
                         object_task()
 
@@ -451,7 +451,7 @@ class CountriesPublicFrame_dev(object):
                             continue
 
                     #必须有数据才可以生成Success 文件
-                    if self.v_is_result_exist.lower()=="true":
+                    if self.v_is_result_force_exist.lower()=="true":
 
                         #删除多国家分区使用
                         if self.v_del_flag==1:
@@ -469,7 +469,7 @@ class CountriesPublicFrame_dev(object):
 
 
                     #数据为空也生成 Success 文件
-                    if self.v_is_result_exist.lower()=="false":
+                    if self.v_is_result_force_exist.lower()=="false":
                         
                         object_task()
 
