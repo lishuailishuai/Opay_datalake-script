@@ -563,6 +563,8 @@ class CountriesPublicFrame_dev(object):
         #换算分钟
         #format_date=int(int(timeout)/60)
 
+        print(self.dag_id)
+
         self.dingding_alert.markdown_send("【及时性预警】",
 
             "Test <font color=#000000 size=3 face=\"微软雅黑\">【监控】</font><font color=#FF0000 size=3 face=\"微软雅黑\">及时性预警 </font>\n\n"+
