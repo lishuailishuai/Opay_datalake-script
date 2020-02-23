@@ -34,7 +34,13 @@ class CountriesPublicFrame_dev(object):
         #测试环境
         self.dingding_alert = DingdingAlert('https://oapi.dingtalk.com/robot/send?access_token=c08440c8e569bb38ec358833f9d577b7638af5aaefbd55e3fd748b798fecc4d4')
 
+        self.alert_url="http://8.208.14.165:8080/admin/airflow/tree?dag_id="
+
         self.items=args
+
+        self.dag_id=None
+
+        self.owner_name=None
 
         self.v_table_name=None
         self.hdfs_data_dir_str=None
@@ -65,6 +71,11 @@ class CountriesPublicFrame_dev(object):
         """
 
         for item in self.items:
+
+            #airflow dag
+            self.dag_id=item.get('dag', None)
+
+            self.owner_name=self.dag_id.default_args.get("owner")
            
             #是否开通多国家业务(默认true)
             self.v_is_countries_online=item.get('is_countries_online', "true")
@@ -252,7 +263,9 @@ class CountriesPublicFrame_dev(object):
             #数据为0，发微信报警通知
             if line_num[0] == str(0):
                 
-                self.dingding_alert.send('Test 调度系统任务 {jobname} 数据产出异常'.format(jobname=self.v_table_name))
+                #self.dingding_alert.send('Test 调度系统任务 {jobname} 数据产出异常'.format(jobname=self.v_table_name))
+
+                self.dingding_monitor()
 
                 logging.info("Error : {hdfs_data_dir} is empty".format(hdfs_data_dir=self.hdfs_data_dir_str))
                 sys.exit(1)
@@ -541,6 +554,31 @@ class CountriesPublicFrame_dev(object):
 
         return alter_str
 
+    def dingding_monitor(self):
+
+        url="""
+                {alter_url}{dag_id}
+            """.format(alter_url=self.alert_url,dag_id=self.dag_id)
+
+        #换算分钟
+        #format_date=int(int(timeout)/60)
+
+        self.dingding_alert.markdown_send("【及时性预警】",
+
+            "Test <font color=#000000 size=3 face=\"微软雅黑\">【监控】</font><font color=#FF0000 size=3 face=\"微软雅黑\">及时性预警 </font>\n\n"+
+
+            "**超时任务:** \n\n &nbsp;&nbsp;[{dag_id}]({url}) \n\n".format(
+                dag_id=self.dag_id,
+                url=url)+
+
+            "**负 责 人 :** &nbsp;&nbsp;{owner_name} \n\n".format(
+                owner_name=self.owner_name)+
+
+            "**等待路径:** &nbsp;&nbsp;{hdfs_dir_name} \n\n".format(
+                hdfs_dir_name=self.hdfs_data_dir_str)
+        )
+        
+        logging.info("任务超时... ...")
 
 
 
