@@ -38,6 +38,8 @@ class CountriesPublicFrame_dev(object):
 
         self.items=args
 
+        self.dag=None
+
         self.dag_id=None
 
         self.owner_name=None
@@ -73,9 +75,7 @@ class CountriesPublicFrame_dev(object):
         for item in self.items:
 
             #airflow dag
-            self.dag_id=item.get('dag', None)
-
-            self.owner_name=self.dag_id.default_args.get("owner")
+            self.dag=item.get('dag', None)
            
             #是否开通多国家业务(默认true)
             self.v_is_countries_online=item.get('is_countries_online', "true")
@@ -109,6 +109,19 @@ class CountriesPublicFrame_dev(object):
 
             #框架类型(utc[默认],local[使用本地时间产出])
             self.v_frame_type=item.get('frame_type', "utc")
+
+
+        if self.dag:
+
+            self.dag_id=self.dag.dag_id
+
+            self.owner_name=self.dag.default_args.get("owner")
+
+        else:
+
+            self.owner_name="Null"
+
+            self.dag_id = self.v_table_name
 
 
     def get_country_code(self):
