@@ -90,10 +90,10 @@ class CountriesPublicFrame_dev(object):
             print(self.v_execute_time)
 
             #脚本执行UTC日期
-            self.utc_ds=(datetime.datetime.strptime(self.v_execute_time,'%Y-%m-%d %H:%M:%S')).strftime('%Y-%m-%d').strip()
+            self.utc_ds=(datetime.strptime(self.v_execute_time,'%Y-%m-%d %H:%M:%S')).strftime('%Y-%m-%d').strip()
 
             #脚本执行UTC小时
-            self.utc_hour=(datetime.datetime.strptime(self.v_execute_time,'%Y-%m-%d %H:%M:%S')).strftime('%H').strip()
+            self.utc_hour=(datetime.strptime(self.v_execute_time,'%Y-%m-%d %H:%M:%S')).strftime('%H').strip()
 
             #是否开启小时级任务(默认false)
             self.v_is_hour_task=item.get('is_hour_task', "false")
