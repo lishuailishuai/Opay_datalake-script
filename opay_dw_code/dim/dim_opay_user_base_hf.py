@@ -202,7 +202,7 @@ def dim_opay_user_base_hf_sql_task(ds):
                country_code
             from opay_dw.dim_opay_user_base_hf 
             where concat(dt, " ", hour) between minLocalTimeRange('{config}', '{pt}', -1) and maxLocalTimeRange('{config}', '{pt}', -1) 
-                and utc_date_hour = from_unixtime(cast(unix_timestamp('{pt}', 'yyyy-MM-dd HH') - 3600 as BIGINT), 'yyyy-MM-dd HH')
+                and utc_date_hour = from_unixtime(cast(unix_timestamp('{pt}', 'yyyy-MM-dd HH') - 7200 as BIGINT), 'yyyy-MM-dd HH')
             union all
             SELECT 
                 id,
