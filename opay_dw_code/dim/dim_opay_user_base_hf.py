@@ -58,7 +58,7 @@ dim_opay_user_base_hf_pre_locale_task = OssSensor(
 )
 
 ods_opay_user_base_hi_check_task = OssSensor(
-        task_id='dwd_oride_client_event_detail_hi_hour_task',
+        task_id='ods_opay_user_base_hi_check_task',
         bucket_key='{hdfs_path_str}/dt={pt}/hour={hour}/_SUCCESS'.format(
             hdfs_path_str="opay_binlog/opay_user_db.opay_user.user",
             pt='{{ds}}',
