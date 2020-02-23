@@ -151,8 +151,8 @@ table_list = [
     #
     # ("opay_channel", "channel_transaction", "opay_channel", "base", 3, "opay_channel", "false")
 
-    ("opay_agent_crm", "bd_agent", "opay_agent_crm_db", "base", 3, "opay_agent_crm", "false")
-    ("opay_agent_crm", "bd_admin_users", "opay_agent_crm_db", "base", 3, "opay_agent_crm", "false")
+    ("opay_agent_crm", "bd_agent", "opay_agent_crm_db", "base", 3, "opay_agent_crm", "false"),
+    ("opay_agent_crm", "bd_admin_users", "opay_agent_crm_db", "base", 3, "opay_agent_crm", "false"),
     ("opay_agent_crm", "bd_agent_status_change_log", "opay_agent_crm_db", "base", 3, "opay_agent_crm", "false")
 ]
 
