@@ -596,7 +596,7 @@ class CountriesPublicFrame_dev(object):
                 hdfs_dir_name=self.hdfs_data_dir_str)
         )
         
-        logging.info("异常任务已发报警... ...")
+        logging.info("异常任务已发送报警群... ...")
 
 
 
