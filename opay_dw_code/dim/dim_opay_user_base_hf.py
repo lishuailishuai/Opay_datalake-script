@@ -27,7 +27,7 @@ import os
 
 args = {
     'owner': 'xiedong',
-    'start_date': datetime(2020, 2, 13),
+    'start_date': datetime(2020, 2, 20),
     'depends_on_past': False,
     'retries': 3,
     'retry_delay': timedelta(minutes=2),
@@ -37,47 +37,37 @@ args = {
 }
 
 dag = airflow.DAG('dim_opay_user_base_hf',
-                  schedule_interval="03 * * * *",
+                  schedule_interval="03 00 20 02 *",
                   default_args=args,
                   catchup=False)
 
-# 当前调度日期 在当地的时间
-ng_locale_hour = locals
-ng_locale_pt = locals
-# 当前调度日期 在当地的上一个小时的时间
-ng_pre_locale_hour = locals
-ng_pre_locale_pt = locals
-# 当前调度日期的小时
-utc_hour = locals()
-
+config = eval(Variable.get("utc_locale_time_config"))
+time_zone = config['NG']['time_zone']
 
 ##----------------------------------------- 依赖 ---------------------------------------##
+dim_opay_user_base_hf_pre_locale_task = OssSensor(
+    task_id='dim_opay_user_base_hf_pre_locale_task',
+    bucket_key='{hdfs_path_str}/country_code=NG/dt={pt}/hour={hour}/_SUCCESS'.format(
+        hdfs_path_str="opay/opay_dw/dim_opay_user_base_hf",
+        pt='{{{{(execution_date+macros.timedelta(hours=({time_zone}+{gap_hour}))).strftime("%Y-%m-%d")}}}}'.format(time_zone=time_zone,gap_hour=-1),
+        hour='{{{{(execution_date+macros.timedelta(hours=({time_zone}+{gap_hour}))).strftime("%H")}}}}'.format(time_zone=time_zone,gap_hour=-1)
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
 
-# ods_sqoop_base_user_hi_schedule_hour_task = OssSensor(
-#     task_id='ods_sqoop_base_user_hi_schedule_hour_task',
-#     bucket_key='{hdfs_path_str}/dt={pt}/hour={utc_hour}/_SUCCESS'.format(
-#         hdfs_path_str="opay_dw_sqoop_di/opay_user/user",
-#         pt='{{ds}}'
-#     ),
-#     bucket_name='opay-datalake',
-#     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-#     dag=dag,
-#     utc_hour=utc_hour
-# ),
-#
-# dim_user_hf_NG_prev_schedule_hour_task = OssSensor(
-#     task_id='dim_user_hf_prev_schedule_hour_task',
-#     bucket_key='{hdfs_path_str}/country_code=NG/dt={ng_pre_locale_pt}/hour={ng_pre_locale_hour}/_SUCCESS'.format(
-#         hdfs_path_str="opay_dw_sqoop_di/opay_user/user",
-#         pt='{{ds}}'
-#     ),
-#     bucket_name='opay-datalake',
-#     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-#     dag=dag,
-#     ng_pre_locale_hour=ng_pre_locale_hour,
-#     ng_pre_locale_pt=ng_pre_locale_pt
-# )
-
+ods_opay_user_base_hi_check_task = OssSensor(
+        task_id='dwd_oride_client_event_detail_hi_hour_task',
+        bucket_key='{hdfs_path_str}/dt={pt}/hour={hour}/_SUCCESS'.format(
+            hdfs_path_str="opay_binlog/opay_user_db.opay_user.user",
+            pt='{{ds}}',
+            hour='{{ execution_date.strftime("%H") }}'
+        ),
+        bucket_name='opay-datalake',
+        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+        dag=dag
+    )
 
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
 def fun_task_timeout_monitor(ds, dag, **op_kwargs):
@@ -85,7 +75,7 @@ def fun_task_timeout_monitor(ds, dag, **op_kwargs):
 
     msg = [
         {"dag": dag, "db": "opay_dw", "table": "{dag_name}".format(dag_name=dag_ids),
-         "partition": "country_code=NG/dt={pt}".format(pt=ds), "timeout": "3000"}
+         "partition": "country_code=NG/dt=2020-02-20/hour=00".format(pt=ds), "timeout": "3000"}
     ]
 
     TaskTimeoutMonitor().set_task_monitor(msg)
@@ -107,7 +97,9 @@ hdfs_path = "oss://opay-datalake/opay/opay_dw/" + table_name
 
 def dim_opay_user_base_hf_sql_task(ds):
     HQL = '''
-
+    CREATE temporary FUNCTION localeTime AS 'com.udf.dev.LocaleUDF' USING JAR 'oss://opay-datalake/test/pro_dev.jar';
+    CREATE temporary FUNCTION maxLocalTimeRange AS 'com.udf.dev.LocaleUDF' USING JAR 'oss://opay-datalake/test/pro_dev.jar';
+    CREATE temporary FUNCTION minLocalTimeRange AS 'com.udf.dev.LocaleUDF' USING JAR 'oss://opay-datalake/test/pro_dev.jar';
     set hive.exec.dynamic.partition.mode=nonstrict;
     set hive.exec.parallel=true;
     insert overwrite table {db}.{table} partition (country_code, dt, hour)
@@ -143,8 +135,8 @@ def dim_opay_user_base_hf_sql_task(ds):
           nick_name,
         date_format('{pt}', 'yyyy-MM-dd HH') as utc_date_hour,
         country_code,
-        'locale_dt' as dt,  -- udf
-        'locale_hour' as hour
+        date_format(localeTime('{config}', country_code, '{pt}', 0), 'yyyy-MM-dd') as dt,
+        hour(localeTime('{config}', country_code, '{pt}', 0)) as hour
     from (
         select 
             id,
@@ -209,7 +201,7 @@ def dim_opay_user_base_hf_sql_task(ds):
                nick_name,
                country_code
             from opay_dw.dim_opay_user_base_hf 
-            where concat(dt, " ", hour) >= 'last min locale_dt locale_hour' and concat(dt, " ", hour) <= 'last max locale_dt locale_hour' -- todo
+            where concat(dt, " ", hour) between minLocalTimeRange('{config}', '{pt}', -1) and maxLocalTimeRange('{config}', '{pt}', -1) 
                 and utc_date_hour = from_unixtime(cast(unix_timestamp('{pt}', 'yyyy-MM-dd HH') - 3600 as BIGINT), 'yyyy-MM-dd HH')
             union all
             SELECT 
@@ -234,8 +226,8 @@ def dim_opay_user_base_hf_sql_task(ds):
                 referral_code,
                 referrer_code,
                 notification,
-                from_unixtime(cast(unix_timestamp(create_time, 'yyyy-MM-dd HH:mm:ss') + 3600 as BIGINT), 'yyyy-MM-dd HH:mm:ss') as create_time, -- todo 使用udf函数
-                from_unixtime(cast(unix_timestamp(update_time, 'yyyy-MM-dd HH:mm:ss') + 3600 as BIGINT), 'yyyy-MM-dd HH:mm:ss') as update_time,
+                localeTime('{config}', 'NG', create_time, 0) as create_time,
+                localeTime('{config}', 'NG', update_time, 0) as update_time,
                 register_client,
                 agent_referrer_code,
                 photo,
@@ -251,7 +243,8 @@ def dim_opay_user_base_hf_sql_task(ds):
     '''.format(
         pt=ds,
         table=table_name,
-        db=db_name
+        db=db_name,
+        config=config
 
     )
     return HQL
@@ -284,5 +277,5 @@ dim_opay_user_base_hf_task = PythonOperator(
     dag=dag
 )
 
-
-
+dim_opay_user_base_hf_pre_locale_task >> dim_opay_user_base_hf_task
+ods_opay_user_base_hi_check_task >> dim_opay_user_base_hf_task
