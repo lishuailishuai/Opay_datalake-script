@@ -87,8 +87,6 @@ class CountriesPublicFrame_dev(object):
             #脚本执行时间(%Y-%m-%d %H:%M:%S)
             self.v_execute_time=item.get('execute_time', None)
 
-            print(self.v_execute_time)
-
             #脚本执行UTC日期
             self.utc_ds=(datetime.strptime(self.v_execute_time,'%Y-%m-%d %H:%M:%S')).strftime('%Y-%m-%d').strip()
 
@@ -129,7 +127,7 @@ class CountriesPublicFrame_dev(object):
 
         time.sleep(15)
 
-        print("debug-> check_success_exist")
+        logging.info("Check_Success_Exist")
 
         command="hadoop fs -ls {hdfs_data_dir}/_SUCCESS>/dev/null 2>/dev/null && echo 1 || echo 0".format(hdfs_data_dir=self.hdfs_data_dir_str)
 
@@ -160,7 +158,7 @@ class CountriesPublicFrame_dev(object):
 
         time.sleep(10)
 
-        print("debug-> delete_exist_partition")
+        logging.info("Delete_Exist_Partition")
 
         #删除语句
         del_command="hadoop fs -rm -r {hdfs_data_dir}".format(hdfs_data_dir=self.hdfs_data_dir_str)
@@ -203,7 +201,7 @@ class CountriesPublicFrame_dev(object):
 
         try:
 
-            print("debug-> data_not_file_type_touchz")
+            logging.info("Data_Not_File_Type_Touchz")
 
             mkdir_str="$HADOOP_HOME/bin/hadoop fs -mkdir -p {hdfs_data_dir}".format(hdfs_data_dir=self.hdfs_data_dir_str)
 
@@ -241,7 +239,7 @@ class CountriesPublicFrame_dev(object):
 
         try:
 
-            print("debug-> data_file_type_touchz") 
+            logging.info("Data_File_Type_Touchz") 
         
             #判断数据文件是否为0
             line_str="$HADOOP_HOME/bin/hadoop fs -du -s {hdfs_data_dir} | tail -1 | awk \'{{print $1}}\'".format(hdfs_data_dir=self.hdfs_data_dir_str)
@@ -290,6 +288,7 @@ class CountriesPublicFrame_dev(object):
 
         self.v_del_flag=1
 
+        #没有国家分区
         if self.v_is_country_partition.lower()=="false":
 
             self.not_exist_country_code_data_dir(self.delete_exist_partition)
