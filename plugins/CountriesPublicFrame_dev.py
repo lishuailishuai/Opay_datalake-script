@@ -252,7 +252,7 @@ class CountriesPublicFrame_dev(object):
             #数据为0，发微信报警通知
             if line_num[0] == str(0):
                 
-                self.dingding_alert.send('DW调度系统任务 {jobname} 数据产出异常'.format(jobname=self.v_table_name))
+                self.dingding_alert.send('Test 调度系统任务 {jobname} 数据产出异常'.format(jobname=self.v_table_name))
 
                 logging.info("Error : {hdfs_data_dir} is empty".format(hdfs_data_dir=self.hdfs_data_dir_str))
                 sys.exit(1)
