@@ -49,8 +49,8 @@ dim_opay_user_base_hf_pre_locale_task = OssSensor(
     task_id='dim_opay_user_base_hf_pre_locale_task',
     bucket_key='{hdfs_path_str}/country_code=NG/dt={pt}/hour={hour}/_SUCCESS'.format(
         hdfs_path_str="opay/opay_dw/dim_opay_user_base_hf",
-        pt='{{{{(execution_date+macros.timedelta(hours=({time_zone}+{gap_hour}))).strftime("%Y-%m-%d")}}}}'.format(time_zone=time_zone,gap_hour=-2),
-        hour='{{{{(execution_date+macros.timedelta(hours=({time_zone}+{gap_hour}))).strftime("%H")}}}}'.format(time_zone=time_zone,gap_hour=-2)
+        pt='{{{{(execution_date+macros.timedelta(hours=({time_zone}+{gap_hour}))).strftime("%Y-%m-%d")}}}}'.format(time_zone=time_zone,gap_hour=-1),
+        hour='{{{{(execution_date+macros.timedelta(hours=({time_zone}+{gap_hour}))).strftime("%H")}}}}'.format(time_zone=time_zone,gap_hour=-1)
     ),
     bucket_name='opay-datalake',
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
@@ -135,8 +135,8 @@ def dim_opay_user_base_hf_sql_task(ds):
           nick_name,
         date_format('{pt}', 'yyyy-MM-dd HH') as utc_date_hour,
         country_code,
-        date_format(localeTime('{config}', country_code, '{pt}', 0), 'yyyy-MM-dd') as dt,
-        hour(localeTime('{config}', country_code, '{pt}', 0)) as hour
+        date_format(localeTime('{\"NG\": {\"time_zone\":1}}', country_code, '{pt}', 0), 'yyyy-MM-dd') as dt,
+        hour(localeTime('{\"NG\": {\"time_zone\":1}}', country_code, '{pt}', 0)) as hour
     from (
         select 
             id,
@@ -201,8 +201,8 @@ def dim_opay_user_base_hf_sql_task(ds):
                nick_name,
                country_code
             from opay_dw.dim_opay_user_base_hf 
-            where concat(dt, " ", hour) between minLocalTimeRange('{config}', '{pt}', -1) and maxLocalTimeRange('{config}', '{pt}', -1) 
-                and utc_date_hour = from_unixtime(cast(unix_timestamp('{pt}', 'yyyy-MM-dd HH') - 7200 as BIGINT), 'yyyy-MM-dd HH')
+            where concat(dt, " ", hour) between minLocalTimeRange('{\"NG\": {\"time_zone\":1}}', '{pt}', -1) and maxLocalTimeRange('{\"NG\": {\"time_zone\":1}}', '{pt}', -1) 
+                and utc_date_hour = from_unixtime(cast(unix_timestamp('{pt}', 'yyyy-MM-dd HH') - 3600 as BIGINT), 'yyyy-MM-dd HH')
             union all
             SELECT 
                 id,
@@ -226,8 +226,8 @@ def dim_opay_user_base_hf_sql_task(ds):
                 referral_code,
                 referrer_code,
                 notification,
-                localeTime('{config}', 'NG', create_time, 0) as create_time,
-                localeTime('{config}', 'NG', update_time, 0) as update_time,
+                localeTime('{\"NG\": {\"time_zone\":1}}', 'NG', create_time, 0) as create_time,
+                localeTime('{\"NG\": {\"time_zone\":1}}', 'NG', update_time, 0) as update_time,
                 register_client,
                 agent_referrer_code,
                 photo,
