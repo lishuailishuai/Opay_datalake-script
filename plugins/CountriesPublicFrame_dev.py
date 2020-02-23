@@ -276,8 +276,7 @@ class CountriesPublicFrame_dev(object):
             #数据为0，发微信报警通知
             if line_num[0] == str(0):
                 
-                #self.dingding_alert.send('Test 调度系统任务 {jobname} 数据产出异常'.format(jobname=self.v_table_name))
-
+                #报警信息
                 self.dingding_monitor()
 
                 logging.info("Error : {hdfs_data_dir} is empty".format(hdfs_data_dir=self.hdfs_data_dir_str))
@@ -508,8 +507,12 @@ class CountriesPublicFrame_dev(object):
 
             sys.exit(1)
 
-    # alter 语句(包含单国家、多国家)
     def alter_partition(self):   
+
+        """
+            alter partition 语句(包含单国家、多国家)
+            
+        """
 
         alter_str=""
 
@@ -569,14 +572,14 @@ class CountriesPublicFrame_dev(object):
 
     def dingding_monitor(self):
 
+        """
+            钉钉报警群
+            
+        """
+
         url="""
                 {alter_url}{dag_id}
             """.format(alter_url=self.alert_url,dag_id=self.dag_id)
-
-        #换算分钟
-        #format_date=int(int(timeout)/60)
-
-        print(self.dag_id)
 
         self.dingding_alert.markdown_send("【及时性预警】",
 
@@ -593,7 +596,7 @@ class CountriesPublicFrame_dev(object):
                 hdfs_dir_name=self.hdfs_data_dir_str)
         )
         
-        logging.info("任务超时... ...")
+        logging.info("异常任务已发报警... ...")
 
 
 
