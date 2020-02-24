@@ -202,7 +202,7 @@ def dim_opay_bd_agent_hf_sql_task(ds, v_date):
                 agent_email,
                 opay_account,
                 cast(opay_id as string) as user_id,
-                agent_bvn,
+                cast(agent_bvn as string) as agent_bvn,
                 agent_state,
                 birthday,
                 phone,
