@@ -38,7 +38,7 @@ args = {
 }
 
 dag = airflow.DAG('dim_opay_user_base_hf',
-                  schedule_interval="03 23 19 02 *",
+                  schedule_interval="03 23 23 02 *",
                   default_args=args,
                   catchup=False)
 
@@ -108,6 +108,7 @@ def dim_opay_user_base_hf_sql_task(ds, v_date):
     
     set hive.exec.dynamic.partition.mode=nonstrict;
     set hive.exec.parallel=true;
+    set mapred.max.split.size=1000000;
     
     create table if not exists test_db.user_hf_001 as 
         SELECT 
