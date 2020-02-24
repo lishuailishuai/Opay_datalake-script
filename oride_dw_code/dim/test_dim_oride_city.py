@@ -142,7 +142,9 @@ def test_dim_oride_city_sql_task(ds):
     set hive.exec.parallel=true;
     set hive.exec.dynamic.partition.mode=nonstrict;
 
-select default.transPaymentType("{config}", 'NG', create_time, 0) locale_time, create_time from opay_dw.dim_opay_user_base_di where dt = '2020-02-20' limit 10;
+--select default.minLocalTimeRange("{config}", create_time, 0) locale_time, create_time from opay_dw.dim_opay_user_base_di where dt = '2020-02-20' limit 10;
+
+  select default.localTime("{config}", 'NG',create_time, 1) locale_time, create_time from opay_dw.dim_opay_user_base_di where dt = '2020-02-20' limit 10;
 
 '''.format(
         pt=ds,

@@ -28,7 +28,7 @@ import os
 
 args = {
     'owner': 'xiedong',
-    'start_date': datetime(2020, 2, 13),
+    'start_date': datetime(2020, 2, 24),
     'depends_on_past': False,
     'retries': 3,
     'retry_delay': timedelta(minutes=2),
@@ -38,7 +38,7 @@ args = {
 }
 
 dag = airflow.DAG('dim_opay_bd_agent_base_hf',
-                  schedule_interval="03 * * * *",
+                  schedule_interval="00 * * * *",
                   default_args=args,
                   catchup=False)
 
@@ -221,7 +221,7 @@ def dim_opay_bd_agent_base_hf_sql_task(ds, v_date):
                 agent_status,
                 create_id,
                 modify_id,
-                bd_admin_user_id,
+                bd_id as bd_admin_user_id,
                 agent_check_id,
                 localTime("{config}", 'NG', created_at, 0) as create_time,
                 localTime("{config}", 'NG', updated_at, 0) as update_time,
