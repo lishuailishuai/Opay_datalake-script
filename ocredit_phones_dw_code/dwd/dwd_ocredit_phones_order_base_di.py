@@ -22,7 +22,7 @@ import json
 import logging
 from airflow.models import Variable
 import requests
-import os,datetime
+import os
 from airflow.sensors import OssSensor
 
 args = {
@@ -194,7 +194,7 @@ def execution_data_task_id(ds, **kwargs):
         第二个参数v_hour: 小时级任务，需要使用
 
     """
-    if datetime.datetime.strptime(ds,'%Y-%m-%d %H:%M:%S').weekday() == 6:
+    if datetime.strptime(ds,'%Y-%m-%d').weekday() == 6:
         cf = CountriesPublicFrame("false", ds, db_name, table_name, hdfs_path, "true", "false")
     else:
         cf = CountriesPublicFrame("false", ds, db_name, table_name, hdfs_path, "true", "true")
