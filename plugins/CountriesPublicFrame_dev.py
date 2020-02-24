@@ -475,7 +475,7 @@ class CountriesPublicFrame_dev(object):
 
                             continue
 
-                    #必须有数据才可以生成Success 文件
+                    #业务开国很久，必须有数据才可以生成Success 文件
                     if self.v_is_result_force_exist.lower()=="true":
 
                         #删除多国家分区使用
