@@ -17,6 +17,7 @@ from airflow.sensors.hive_partition_sensor import HivePartitionSensor
 from airflow.sensors import UFileSensor
 from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
 from airflow.sensors import OssSensor
+from plugins.CountriesPublicFrame_dev import CountriesPublicFrame_dev
 
 from plugins.TaskTouchzSuccess import TaskTouchzSuccess
 import json
@@ -41,18 +42,39 @@ dag = airflow.DAG('dim_opay_bd_agent_base_hf',
                   default_args=args,
                   catchup=False)
 
-# 当前调度日期 在当地的时间
-ng_locale_hour = locals
-ng_locale_pt = locals
-# 当前调度日期 在当地的上一个小时的时间
-ng_pre_locale_hour = locals
-ng_pre_locale_pt = locals
-# 当前调度日期的小时
-utc_hour = locals()
+##----------------------------------------- 变量 ---------------------------------------##
+db_name = "opay_dw"
+table_name = "dim_opay_bd_agent_base_hf"
+hdfs_path = "oss://opay-datalake/opay/opay_dw/" + table_name
+config = eval(Variable.get("utc_locale_time_config"))
+time_zone = config['NG']['time_zone']
 
 
 ##----------------------------------------- 依赖 ---------------------------------------##
-
+### 检查上一个小时的本地时间依赖
+dim_opay_terminal_base_hf_pre_locale_task = OssSensor(
+    task_id='dim_opay_terminal_base_hf_pre_locale_task',
+    bucket_key='{hdfs_path_str}/country_code=NG/dt={pt}/hour={hour}/_SUCCESS'.format(
+        hdfs_path_str="opay/opay_dw/dim_opay_terminal_base_hf",
+        pt='{{{{(execution_date+macros.timedelta(hours=({time_zone}+{gap_hour}))).strftime("%Y-%m-%d")}}}}'.format(time_zone=time_zone,gap_hour=-1),
+        hour='{{{{(execution_date+macros.timedelta(hours=({time_zone}+{gap_hour}))).strftime("%H")}}}}'.format(time_zone=time_zone,gap_hour=-1)
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+### 检查当前小时的分区依赖
+ods_opay_terminal_base_hi_check_task = OssSensor(
+        task_id='ods_opay_terminal_base_hi_check_task',
+        bucket_key='{hdfs_path_str}/dt={pt}/hour={hour}/_SUCCESS'.format(
+            hdfs_path_str="opay_binlog/opay_merchant_overlord_recon_db.opay_overlord.terminal",
+            pt='{{ds}}',
+            hour='{{ execution_date.strftime("%H") }}'
+        ),
+        bucket_name='opay-datalake',
+        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+        dag=dag
+    )
 
 
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
@@ -74,14 +96,10 @@ task_timeout_monitor = PythonOperator(
     dag=dag
 )
 
-##----------------------------------------- 变量 ---------------------------------------##
-db_name = "opay_dw"
-
-table_name = "dim_opay_bd_agent_base_hf"
-hdfs_path = "oss://opay-datalake/opay/opay_dw/" + table_name
 
 
-def dim_opay_bd_agent_base_hf_sql_task(ds):
+
+def dim_opay_bd_agent_base_hf_sql_task(ds, v_date):
     HQL = '''
 
     set hive.exec.dynamic.partition.mode=nonstrict;
@@ -118,10 +136,10 @@ def dim_opay_bd_agent_base_hf_sql_task(ds):
         agent_check_id,
         created_time,
         updated_time,
-        date_format('{pt}', 'yyyy-MM-dd HH') as utc_date_hour,
+        date_format('{v_date}', 'yyyy-MM-dd HH') as utc_date_hour,
         country_code,
-        'locale_dt' as dt,  -- udf
-        'locale_hour' as hour
+        date_format(localeTime("{config}", country_code, '{v_date}', 0), 'yyyy-MM-dd') as dt,
+        date_format(localeTime("{config}", country_code, '{v_date}', 0), 'HH') as hour
     from (
         select 
             id,
@@ -188,8 +206,8 @@ def dim_opay_bd_agent_base_hf_sql_task(ds):
                 updated_time,
                 country_code
             from opay_dw.dim_opay_bd_agent_base_hf 
-            where concat(dt, " ", hour) >= 'last min locale_dt locale_hour' and concat(dt, " ", hour) <= 'last max locale_dt locale_hour' -- todo
-                and utc_date_hour = from_unixtime(cast(unix_timestamp('{pt}', 'yyyy-MM-dd HH') - 3600 as BIGINT), 'yyyy-MM-dd HH')
+            where concat(dt, " ", hour) between minLocalTimeRange("{config}", '{v_date}', -1) and maxLocalTimeRange("{config}", '{v_date}', -1) 
+                and utc_date_hour = from_unixtime(cast(unix_timestamp('{v_date}', 'yyyy-MM-dd HH') - 3600 as BIGINT), 'yyyy-MM-dd HH')
             union all
             SELECT 
                 id,
@@ -219,19 +237,21 @@ def dim_opay_bd_agent_base_hf_sql_task(ds):
                 modify_id,
                 bd_admin_user_id,
                 agent_check_id,
-                from_unixtime(cast(unix_timestamp(created_at, 'yyyy-MM-dd HH:mm:ss') + 3600 as BIGINT), 'yyyy-MM-dd HH:mm:ss') as create_time, -- todo 使用udf函数
-                from_unixtime(cast(unix_timestamp(updated_at, 'yyyy-MM-dd HH:mm:ss') + 3600 as BIGINT), 'yyyy-MM-dd HH:mm:ss') as update_time,
+                localeTime("{config}", 'NG', created_at, 0) as create_time,
+                localeTime("{config}", 'NG', updated_at, 0) as update_time,
                 'NG' AS country_code
             from opay_dw_ods.ods_binlog_base_user_hi 
-            where concat(dt, " ", hour) = date_format('{pt}', 'yyyy-MM-dd HH') and `__deleted` = 'false'
+            where concat(dt, " ", hour) = date_format('{v_date}', 'yyyy-MM-dd HH') and `__deleted` = 'false'
         ) t0 
     ) t1 where rn = 1
     
     
     '''.format(
         pt=ds,
+        v_date=v_date,
         table=table_name,
-        db=db_name
+        db=db_name,
+        config=config
 
     )
     return HQL
