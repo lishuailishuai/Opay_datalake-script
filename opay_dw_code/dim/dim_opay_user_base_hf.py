@@ -313,7 +313,7 @@ def execution_data_task_id(ds, dag, **kwargs):
 
     #_sql = "\n" + dim_opay_user_base_hf_sql_task(ds, v_date)
 
-    # logging.info('Executing: %s',_sql)
+    logging.info('Executing: %s',_sql)
 
     # 执行Hive
     hive_hook.run_cli(_sql)
