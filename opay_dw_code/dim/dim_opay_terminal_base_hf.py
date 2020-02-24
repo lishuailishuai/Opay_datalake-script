@@ -17,6 +17,7 @@ from airflow.sensors.hive_partition_sensor import HivePartitionSensor
 from airflow.sensors import UFileSensor
 from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
 from airflow.sensors import OssSensor
+from plugins.CountriesPublicFrame_dev import CountriesPublicFrame_dev
 
 from plugins.TaskTouchzSuccess import TaskTouchzSuccess
 import json
@@ -41,73 +42,48 @@ dag = airflow.DAG('dim_opay_terminal_base_hf',
                   default_args=args,
                   catchup=False)
 
-# 当前调度日期 在当地的时间
-ng_locale_hour = locals
-ng_locale_pt = locals
-# 当前调度日期 在当地的上一个小时的时间
-ng_pre_locale_hour = locals
-ng_pre_locale_pt = locals
-# 当前调度日期的小时
-utc_hour = locals()
+##----------------------------------------- 变量 ---------------------------------------##
+db_name = "opay_dw"
+table_name = "dim_opay_terminal_base_hf"
+hdfs_path = "oss://opay-datalake/opay/opay_dw/" + table_name
+config = eval(Variable.get("utc_locale_time_config"))
+time_zone = config['NG']['time_zone']
 
 
 ##----------------------------------------- 依赖 ---------------------------------------##
-
-# ods_sqoop_base_user_hi_schedule_hour_task = OssSensor(
-#     task_id='ods_sqoop_base_user_hi_schedule_hour_task',
-#     bucket_key='{hdfs_path_str}/dt={pt}/hour={utc_hour}/_SUCCESS'.format(
-#         hdfs_path_str="opay_dw_sqoop_di/opay_user/user",
-#         pt='{{ds}}'
-#     ),
-#     bucket_name='opay-datalake',
-#     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-#     dag=dag,
-#     utc_hour=utc_hour
-# ),
-#
-# dim_user_hf_NG_prev_schedule_hour_task = OssSensor(
-#     task_id='dim_user_hf_prev_schedule_hour_task',
-#     bucket_key='{hdfs_path_str}/country_code=NG/dt={ng_pre_locale_pt}/hour={ng_pre_locale_hour}/_SUCCESS'.format(
-#         hdfs_path_str="opay_dw_sqoop_di/opay_user/user",
-#         pt='{{ds}}'
-#     ),
-#     bucket_name='opay-datalake',
-#     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-#     dag=dag,
-#     ng_pre_locale_hour=ng_pre_locale_hour,
-#     ng_pre_locale_pt=ng_pre_locale_pt
-# )
+### 检查上一个小时的本地时间依赖
+dim_opay_terminal_base_hf_pre_locale_task = OssSensor(
+    task_id='dim_opay_terminal_base_hf_pre_locale_task',
+    bucket_key='{hdfs_path_str}/country_code=NG/dt={pt}/hour={hour}/_SUCCESS'.format(
+        hdfs_path_str="opay/opay_dw/dim_opay_terminal_base_hf",
+        pt='{{{{(execution_date+macros.timedelta(hours=({time_zone}+{gap_hour}))).strftime("%Y-%m-%d")}}}}'.format(time_zone=time_zone,gap_hour=-1),
+        hour='{{{{(execution_date+macros.timedelta(hours=({time_zone}+{gap_hour}))).strftime("%H")}}}}'.format(time_zone=time_zone,gap_hour=-1)
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+### 检查当前小时的分区依赖
+ods_opay_terminal_base_hi_check_task = OssSensor(
+        task_id='ods_opay_terminal_base_hi_check_task',
+        bucket_key='{hdfs_path_str}/dt={pt}/hour={hour}/_SUCCESS'.format(
+            hdfs_path_str="opay_binlog/opay_merchant_overlord_recon_db.opay_overlord.terminal",
+            pt='{{ds}}',
+            hour='{{ execution_date.strftime("%H") }}'
+        ),
+        bucket_name='opay-datalake',
+        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+        dag=dag
+    )
 
 
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
-def fun_task_timeout_monitor(ds, dag, **op_kwargs):
-    dag_ids = dag.dag_id
 
-    msg = [
-        {"dag": dag, "db": "opay_dw", "table": "{dag_name}".format(dag_name=dag_ids),
-         "partition": "country_code=NG/dt={pt}".format(pt=ds), "timeout": "3000"}
-    ]
-
-    TaskTimeoutMonitor().set_task_monitor(msg)
-
-
-task_timeout_monitor = PythonOperator(
-    task_id='task_timeout_monitor',
-    python_callable=fun_task_timeout_monitor,
-    provide_context=True,
-    dag=dag
-)
-
-##----------------------------------------- 变量 ---------------------------------------##
-db_name = "opay_dw"
-
-table_name = "dim_opay_terminal_base_hf"
-hdfs_path = "oss://opay-datalake/opay/opay_dw/" + table_name
-
-
-def dim_opay_terminal_base_hf_sql_task(ds):
+def dim_opay_terminal_base_hf_sql_task(ds, v_date):
     HQL = '''
-
+    CREATE temporary FUNCTION localTime AS 'com.udf.dev.LocaleUDF' USING JAR 'oss://opay-datalake/test/pro_dev.jar';
+    CREATE temporary FUNCTION maxLocalTimeRange AS 'com.udf.dev.MaxLocaleUDF' USING JAR 'oss://opay-datalake/test/pro_dev.jar';
+    CREATE temporary FUNCTION minLocalTimeRange AS 'com.udf.dev.MinLocaleUDF' USING JAR 'oss://opay-datalake/test/pro_dev.jar';
     set hive.exec.dynamic.partition.mode=nonstrict;
     set hive.exec.parallel=true;
     insert overwrite table {db}.{table} partition (country_code, dt, hour)
@@ -125,10 +101,10 @@ def dim_opay_terminal_base_hf_sql_task(ds):
         create_time,
         update_time,
         terminal_type,
-        date_format('{pt}', 'yyyy-MM-dd HH') as utc_date_hour,
+        date_format('{v_date}', 'yyyy-MM-dd HH') as utc_date_hour,
         country_code,
-        'locale_dt' as dt,  -- udf
-        'locale_hour' as hour
+        date_format(localTime("{config}", country_code, '{v_date}', 0), 'yyyy-MM-dd') as dt,
+        date_format(localTime("{config}", country_code, '{v_date}', 0), 'HH') as hour
     from (
         select 
             id,
@@ -161,8 +137,8 @@ def dim_opay_terminal_base_hf_sql_task(ds):
                 terminal_type,
                 country_code
             from opay_dw.dim_opay_terminal_base_hf 
-            where concat(dt, " ", hour) >= 'last min locale_dt locale_hour' and concat(dt, " ", hour) <= 'last max locale_dt locale_hour' -- todo
-                and utc_date_hour = from_unixtime(cast(unix_timestamp('{pt}', 'yyyy-MM-dd HH') - 3600 as BIGINT), 'yyyy-MM-dd HH')
+            where concat(dt, " ", hour) between minLocalTimeRange("{config}", '{v_date}', -1) and maxLocalTimeRange("{config}", '{v_date}', -1) 
+                and utc_date_hour = from_unixtime(cast(unix_timestamp('{v_date}', 'yyyy-MM-dd HH') - 3600 as BIGINT), 'yyyy-MM-dd HH')
             union all
             SELECT 
                 id,
@@ -174,49 +150,112 @@ def dim_opay_terminal_base_hf_sql_task(ds):
                 user_type as owner_type,
                 user_id as owner_id,
                 owner_name,
-                from_unixtime(cast(unix_timestamp(create_time, 'yyyy-MM-dd HH:mm:ss') + 3600 as BIGINT), 'yyyy-MM-dd HH:mm:ss') as create_time, -- todo 使用udf函数
-                from_unixtime(cast(unix_timestamp(update_time, 'yyyy-MM-dd HH:mm:ss') + 3600 as BIGINT), 'yyyy-MM-dd HH:mm:ss') as update_time,
+                localTime("{config}", 'NG', create_time, 0) as create_time,
+                localTime("{config}", 'NG', update_time, 0) as update_time,
                 terminal_type,
                 'NG' AS country_code
             from opay_dw_ods.ods_binlog_base_terminal_hi 
-            where concat(dt, " ", hour) = date_format('{pt}', 'yyyy-MM-dd HH') and `__deleted` = 'false'
+            where concat(dt, " ", hour) = date_format('{v_date}', 'yyyy-MM-dd HH') and `__deleted` = 'false'
         ) t0 
     ) t1 where rn = 1
     
     
     '''.format(
         pt=ds,
+        v_date=v_date,
         table=table_name,
-        db=db_name
+        db=db_name,
+        config=config
 
     )
     return HQL
 
 
-def execution_data_task_id(ds, **kargs):
+# 主流程
+def execution_data_task_id(ds, dag, **kwargs):
+    v_date = kwargs.get('v_execution_date')
+    v_day = kwargs.get('v_execution_day')
+    v_hour = kwargs.get('v_execution_hour')
+
     hive_hook = HiveCliHook()
 
-    # 读取sql
-    _sql = dim_opay_terminal_base_hf_sql_task(ds)
+    """
+        #功能函数
+            alter语句: alter_partition()
+            删除分区: delete_partition()
+            生产success: touchz_success()
 
-    logging.info('Executing: %s', _sql)
+        #参数
+            is_countries_online --是否开通多国家业务 默认(true 开通)
+            db_name --hive 数据库的名称
+            table_name --hive 表的名称
+            data_oss_path --oss 数据目录的地址
+            is_country_partition --是否有国家码分区,[默认(true 有country_code分区)]
+            is_result_force_exist --数据是否强行产出,[默认(true 必须有数据才生成_SUCCESS)] false 数据没有也生成_SUCCESS 
+            execute_time --当前脚本执行时间(%Y-%m-%d %H:%M:%S)
+            is_hour_task --是否开通小时级任务,[默认(false)]
+            frame_type --模板类型(只有 is_hour_task:'true' 时生效): utc 产出分区为utc时间，local 产出分区为本地时间,[默认(utc)]。
+
+        #读取sql
+            %_sql(ds,v_hour)
+
+    """
+
+    args = [
+        {
+            "dag": dag,
+            "is_countries_online": "true",
+            "db_name": db_name,
+            "table_name": table_name,
+            "data_oss_path": hdfs_path,
+            "is_country_partition": "true",
+            "is_result_force_exist": "true",
+            "execute_time": v_date,
+            "is_hour_task": "true",
+            "frame_type": "local"
+        }
+    ]
+
+    cf = CountriesPublicFrame_dev(args)
+
+    # 删除分区
+    # cf.delete_partition()
+
+    print(dim_opay_terminal_base_hf_sql_task(ds, v_date))
+
+    # 读取sql
+    # _sql="\n"+cf.alter_partition()+"\n"+test_dim_oride_city_sql_task(ds)
+
+    _sql = "\n" + dim_opay_terminal_base_hf_sql_task(ds, v_date)
+
+    # logging.info('Executing: %s',_sql)
 
     # 执行Hive
     hive_hook.run_cli(_sql)
 
-    # 生成_SUCCESS
-    """
-    第一个参数true: 数据目录是有country_code分区。false 没有
-    第二个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
+    # 熔断数据，如果数据不能为0
+    # check_key_data_cnt_task(ds)
 
-    """
-    TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "true", "true")
+    # 熔断数据
+    # check_key_data_task(ds)
+
+    # 生产success
+    cf.touchz_success()
 
 
 dim_opay_terminal_base_hf_task = PythonOperator(
     task_id='dim_opay_terminal_base_hf_task',
     python_callable=execution_data_task_id,
     provide_context=True,
+    op_kwargs={
+        'v_execution_date': '{{execution_date.strftime("%Y-%m-%d %H:%M:%S")}}',
+        'v_execution_day': '{{execution_date.strftime("%Y-%m-%d")}}',
+        'v_execution_hour': '{{execution_date.strftime("%H")}}',
+        'owner': '{{owner}}'
+    },
     dag=dag
 )
+
+dim_opay_terminal_base_hf_pre_locale_task >> dim_opay_terminal_base_hf_task
+ods_opay_terminal_base_hi_check_task >> dim_opay_terminal_base_hf_task
 

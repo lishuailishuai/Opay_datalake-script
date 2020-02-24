@@ -334,8 +334,8 @@ def dwm_oride_order_base_di_sql_task(ds):
            ord.tip,
            --小费
            
-           ord.surcharge,
-           --高速费
+           ord.pay_surcharge as surcharge,
+           --高速费,自20200223号开始底层升级为从payment表出
            
            ord.pax_insurance_price, 
            --乘客保险费

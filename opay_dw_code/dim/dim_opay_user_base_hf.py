@@ -42,10 +42,16 @@ dag = airflow.DAG('dim_opay_user_base_hf',
                   default_args=args,
                   catchup=False)
 
+
+##----------------------------------------- 变量 ---------------------------------------##
+db_name = "opay_dw"
+table_name = "dim_opay_user_base_hf"
+hdfs_path = "oss://opay-datalake/opay/opay_dw/" + table_name
 config = eval(Variable.get("utc_locale_time_config"))
 time_zone = config['NG']['time_zone']
 
 ##----------------------------------------- 依赖 ---------------------------------------##
+### 检查上一个小时的本地时间依赖
 dim_opay_user_base_hf_pre_locale_task = OssSensor(
     task_id='dim_opay_user_base_hf_pre_locale_task',
     bucket_key='{hdfs_path_str}/country_code=NG/dt={pt}/hour={hour}/_SUCCESS'.format(
@@ -57,7 +63,7 @@ dim_opay_user_base_hf_pre_locale_task = OssSensor(
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
-
+### 检查当前小时的分区依赖
 ods_opay_user_base_hi_check_task = OssSensor(
         task_id='ods_opay_user_base_hi_check_task',
         bucket_key='{hdfs_path_str}/dt={pt}/hour={hour}/_SUCCESS'.format(
@@ -76,7 +82,10 @@ ods_opay_user_base_hi_check_task = OssSensor(
 #
 #     msg = [
 #         {"dag": dag, "db": "opay_dw", "table": "{dag_name}".format(dag_name=dag_ids),
-#          "partition": "country_code=NG/dt=2020-02-20/hour=00".format(pt=ds), "timeout": "3000"}
+#          "partition": "country_code=NG/dt={pt}/hour={hour}".format(
+#              pt='{{{{(execution_date+macros.timedelta(hours=({time_zone}+{gap_hour}))).strftime("%Y-%m-%d")}}}}'.format(time_zone=time_zone, gap_hour=0),
+#              hour='{{{{(execution_date+macros.timedelta(hours=({time_zone}+{gap_hour}))).strftime("%H")}}}}'.format(time_zone=time_zone, gap_hour=0)
+#           ), "timeout": "3000"}
 #     ]
 #
 #     TaskTimeoutMonitor().set_task_monitor(msg)
@@ -89,20 +98,84 @@ ods_opay_user_base_hi_check_task = OssSensor(
 #     dag=dag
 # )
 
-##----------------------------------------- 变量 ---------------------------------------##
-db_name = "opay_dw"
-
-table_name = "dim_opay_user_base_hf"
-hdfs_path = "oss://opay-datalake/opay/opay_dw/" + table_name
 
 
-def dim_opay_user_base_hf_sql_task(ds):
+def dim_opay_user_base_hf_sql_task(ds, v_date):
     HQL = '''
-    CREATE temporary FUNCTION localeTime AS 'com.udf.dev.LocaleUDF' USING JAR 'oss://opay-datalake/test/pro_dev.jar';
+    CREATE temporary FUNCTION localTime AS 'com.udf.dev.LocaleUDF' USING JAR 'oss://opay-datalake/test/pro_dev.jar';
     CREATE temporary FUNCTION maxLocalTimeRange AS 'com.udf.dev.MaxLocaleUDF' USING JAR 'oss://opay-datalake/test/pro_dev.jar';
     CREATE temporary FUNCTION minLocalTimeRange AS 'com.udf.dev.MinLocaleUDF' USING JAR 'oss://opay-datalake/test/pro_dev.jar';
+    
     set hive.exec.dynamic.partition.mode=nonstrict;
     set hive.exec.parallel=true;
+    
+    create table if not exists test_db.user_hf_001 as 
+        SELECT 
+               id,
+               user_id,
+               mobile,
+               business_name,
+               first_name,
+               middle_name,
+               surname,
+               kyc_level,
+               kyc_update_time,
+               bvn,
+               birthday,
+               gender,
+               country,
+               STATE,
+               city,
+               address,
+               lga,
+               ROLE,
+               referral_code,
+               referrer_code,
+               notification,
+               create_time,
+               update_time,
+               register_client,
+               agent_referrer_code,
+               photo,
+               big_picture,
+               nick_name,
+               country_code
+            from opay_dw.dim_opay_user_base_hf 
+            where concat(dt, " ", hour) between minLocalTimeRange("{config}", '{v_date}', -1) and maxLocalTimeRange("{config}", '{v_date}', -1) 
+                and utc_date_hour = from_unixtime(cast(unix_timestamp('{v_date}', 'yyyy-MM-dd HH') - 3600 as BIGINT), 'yyyy-MM-dd HH')
+            union all
+            SELECT 
+                id,
+                user_id,
+                mobile,
+                business_name,
+                first_name,
+                middle_name,
+                surname,
+                kyc_level,
+                kyc_update_time,
+                bvn,
+                dob as birthday,
+                gender,
+                country,
+                STATE,
+                city,
+                address,
+                lga,
+                ROLE,
+                referral_code,
+                referrer_code,
+                notification,
+                localTime("{config}", 'NG', create_time, 0) as create_time,
+                localTime("{config}", 'NG', update_time, 0) as update_time,
+                register_client,
+                agent_referrer_code,
+                photo,
+                big_picture,
+                nick_name,
+                'NG' AS country_code
+            from opay_dw_ods.ods_binlog_base_user_hi 
+            where concat(dt, " ", hour) = date_format('{v_date}', 'yyyy-MM-dd HH') and `__deleted` = 'false';
     insert overwrite table {db}.{table} partition (country_code, dt, hour)
     
     select 
@@ -134,10 +207,10 @@ def dim_opay_user_base_hf_sql_task(ds):
           photo,
           big_picture,
           nick_name,
-        date_format('{pt}', 'yyyy-MM-dd HH') as utc_date_hour,
+        date_format('{v_date}', 'yyyy-MM-dd HH') as utc_date_hour,
         country_code,
-        date_format(localeTime('\{"NG": \{"time_zone":1\}\}', country_code, '{pt}', 0), 'yyyy-MM-dd') as dt,
-        hour(localeTime('\{"NG": \{"time_zone":1\}\}', country_code, '{pt}', 0)) as hour
+        date_format(localTime("{config}", country_code, '{v_date}', 0), 'yyyy-MM-dd') as dt,
+        date_format(localTime("{config}", country_code, '{v_date}', 0), 'HH') as hour
     from (
         select 
             id,
@@ -170,79 +243,13 @@ def dim_opay_user_base_hf_sql_task(ds):
             nick_name,
             country_code,
             row_number() over(partition by user_id order by update_time desc) rn
-        from (
-            SELECT 
-               id,
-               user_id,
-               mobile,
-               business_name,
-               first_name,
-               middle_name,
-               surname,
-               kyc_level,
-               kyc_update_time,
-               bvn,
-               birthday,
-               gender,
-               country,
-               STATE,
-               city,
-               address,
-               lga,
-               ROLE,
-               referral_code,
-               referrer_code,
-               notification,
-               create_time,
-               update_time,
-               register_client,
-               agent_referrer_code,
-               photo,
-               big_picture,
-               nick_name,
-               country_code
-            from opay_dw.dim_opay_user_base_hf 
-            where concat(dt, " ", hour) between minLocalTimeRange('\{"NG": \{"time_zone":1\}\}', '{pt}', -1) and maxLocalTimeRange('\{"NG": \{"time_zone":1\}\}', '{pt}', -1) 
-                and utc_date_hour = from_unixtime(cast(unix_timestamp('{pt}', 'yyyy-MM-dd HH') - 3600 as BIGINT), 'yyyy-MM-dd HH')
-            union all
-            SELECT 
-                id,
-                user_id,
-                mobile,
-                business_name,
-                first_name,
-                middle_name,
-                surname,
-                kyc_level,
-                kyc_update_time,
-                bvn,
-                dob as birthday,
-                gender,
-                country,
-                STATE,
-                city,
-                address,
-                lga,
-                ROLE,
-                referral_code,
-                referrer_code,
-                notification,
-                localeTime('\{"NG": \{"time_zone":1\}\}', 'NG', create_time, 0) as create_time,
-                localeTime('\{"NG": \{"time_zone":1\}\}', 'NG', update_time, 0) as update_time,
-                register_client,
-                agent_referrer_code,
-                photo,
-                big_picture,
-                nick_name,
-                'NG' AS country_code
-            from opay_dw_ods.ods_binlog_base_user_hi 
-            where concat(dt, " ", hour) = date_format('{pt}', 'yyyy-MM-dd HH') and `__deleted` = 'false'
-        ) t0 
+        from test_db.user_hf_001 t0 
     ) t1 where rn = 1
-    
+    DROP TABLE IF EXISTS test_db.user_hf_001
     
     '''.format(
         pt=ds,
+        v_date= v_date,
         table=table_name,
         db=db_name,
         config=config
@@ -257,7 +264,7 @@ def execution_data_task_id(ds, dag, **kwargs):
     v_day = kwargs.get('v_execution_day')
     v_hour = kwargs.get('v_execution_hour')
 
-    # hive_hook = HiveCliHook()
+    hive_hook = HiveCliHook()
 
     """
         #功能函数
@@ -301,13 +308,17 @@ def execution_data_task_id(ds, dag, **kwargs):
     # 删除分区
     # cf.delete_partition()
 
+    print(dim_opay_user_base_hf_sql_task(ds, v_date))
+
     # 读取sql
     # _sql="\n"+cf.alter_partition()+"\n"+test_dim_oride_city_sql_task(ds)
+
+    _sql = "\n" + dim_opay_user_base_hf_sql_task(ds, v_date)
 
     # logging.info('Executing: %s',_sql)
 
     # 执行Hive
-    # hive_hook.run_cli(_sql)
+    hive_hook.run_cli(_sql)
 
     # 熔断数据，如果数据不能为0
     # check_key_data_cnt_task(ds)
