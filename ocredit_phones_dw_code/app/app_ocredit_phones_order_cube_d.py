@@ -96,20 +96,27 @@ def app_ocredit_phones_order_cube_d_sql_task(ds):
     
     select
           terms,--分期数
-          opay_id, --用户opayId
+          count(distinct opay_id), --进件数量
           date_of_entry,--进件日期
           substr(date_of_entry,1,7),--进件月份
           concat(date_add(next_day(date_of_entry,'MO'),-7),'_',date_add(next_day(date_of_entry,'MO'),-2)),--进件周
           count(distinct case when order_status='81' then opay_id else null end), --   `放款数` ,
-          sum(case when order_status='81' then (loan_amount/100)*0.2712/100 else 0 end),--`贷款金额_USD` ,
+          round(sum(case when order_status='81' then (loan_amount/100)*0.2712/100 else 0 end),2),--`贷款金额_USD` ,
           'nal' as country_code,
-          dt
+          '{pt}' as dt
           from
-          ocredit_phones_dw.dwd_ocredit_phones_order_df
-          where dt='{pt}'
-          group by terms,date_of_entry,dt,opay_id,substr(date_of_entry,1,7),concat(date_add(next_day(date_of_entry,'MO'),-7),'_',date_add(next_day(date_of_entry,'MO'),-2))
-          
-
+          ocredit_phones_dw.dwd_ocredit_phones_order_di
+          group by terms,date_of_entry,substr(date_of_entry,1,7),concat(date_add(next_day(date_of_entry,'MO'),-7),'_',date_add(next_day(date_of_entry,'MO'),-2))
+          grouping sets(
+          date_of_entry,
+          concat(date_add(next_day(date_of_entry,'MO'),-7),'_',date_add(next_day(date_of_entry,'MO'),-2)),
+          substr(date_of_entry,1,7),
+          (terms,date_of_entry),
+          (terms,concat(date_add(next_day(date_of_entry,'MO'),-7),'_',date_add(next_day(date_of_entry,'MO'),-2))),  
+          (terms,substr(date_of_entry,1,7))
+          )
+    
+    
     '''.format(
         pt=ds,
         table=table_name,
