@@ -353,8 +353,8 @@ select
   , t1.utc_date_hour
 
   , t1.country as country_code
-  , date_format(localTime("{config}", t1.country, '{v_date}', 0), 'yyyy-MM-dd') as dt
-  , date_format(localTime("{config}", t1.country, '{v_date}', 0), 'HH') as hour
+  , date_format(default.localTime("{config}", t1.country, '{v_date}', 0), 'yyyy-MM-dd') as dt
+  , date_format(default.localTime("{config}", t1.country, '{v_date}', 0), 'HH') as hour
 
 from 
   union_result_different t1 
