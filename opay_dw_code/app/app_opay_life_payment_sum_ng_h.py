@@ -38,7 +38,7 @@ args = {
 }
 
 dag = airflow.DAG('app_opay_life_payment_sum_ng_h',
-                  schedule_interval="03 * * * *",
+                  schedule_interval="45 * * * *",
                   default_args=args,
                   catchup=False)
 
