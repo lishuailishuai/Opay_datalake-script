@@ -86,6 +86,10 @@ select
 
   ,count(1) as order_cnt
   ,sum(pay_amount) as pay_amount
+  
+  , 'NG' as country_code
+  , date_format('{v_date}', 'yyyy-MM-dd') as dt
+  , date_format('{v_date}', 'HH') as hour
 from
   (
   select 
