@@ -425,7 +425,7 @@ SELECT base.id as order_id,
        local_gov, --围栏ID
        estimate_id,  --预估价记录表id  
        gender, --性别:0.未设置 1.男 2.女
-       surcharge, --服务费
+       base.surcharge, --服务费
        user_agree_surcharge, --用户是否同意服务费(1同意 2 不同意)
        take_lng, --司机接单位置经度
        take_lat, --司机接单位置纬度
@@ -462,6 +462,8 @@ SELECT base.id as order_id,
        --opay 支付的金额
        pay.tip_rake,
        --小费抽成 
+       pay.surcharge as pay_surcharge,
+       --服务费
        nvl(country.country_code,'nal') as country_code,
 
        '{pt}' AS dt
@@ -489,7 +491,8 @@ FROM (select *
               from_unixtime((unix_timestamp(regexp_replace(regexp_replace(t.updated_at,'T',' '),'Z',''))+3600),'yyyy-MM-dd')='{pt}'
              )
          ) t1
-where t1.`__deleted` = 'false' and t1.order_by = 1) base
+where --t1.`__deleted` = 'false' and  -- 由于订单每天会将30天之前的订单移动到data_order_history表中，因此移动走的打标为deleted，但是这些订单状态有改变是需留存的，因此不要限定删除条件
+t1.order_by = 1) base
 LEFT OUTER JOIN
 (SELECT id AS order_id,
        status AS pay_status,
@@ -511,8 +514,10 @@ LEFT OUTER JOIN
        -- 使用的余额
        opay_amount,
        --opay 支付的金额
-       tip_rake
+       tip_rake,
        --小费抽成      
+       surcharge
+       --服务费
 
 FROM oride_dw_ods.ods_sqoop_base_data_order_payment_df
 WHERE dt = '{pt}') pay ON base.id=pay.order_id

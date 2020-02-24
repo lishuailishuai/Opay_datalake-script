@@ -187,7 +187,10 @@ def dwd_opay_client_event_base_di_sql_task(ds):
             'nal' as country_code,
             '{pt}' as dt
         FROM
-            opay_ep_logv1_data LATERAL VIEW EXPLODE(from_json(get_json_object(msg, '$.es'), array(named_struct("en", "", "et","", "ev", map("",""), "lat","", "lng","","cid", "", "cip", "")))) es AS e
+            opay_ep_logv1_data LATERAL VIEW EXPLODE(from_json(get_json_object(msg, '$.es'), array(named_struct("en", "", "et","", "ev", map("",""), "lat","", "lng","","cid", "", "cip", "", "bzp", "")))) es AS e
+        WHERE
+            e.bzp in ('HOME_MORE','CASHIN','CASHOUT','MYQR','QRSCAN','QR_COUPON','AJIRA','ADD_MONEY','BETTING','EASYCASH','ELECTRICITY','NEARBY_AGENT','PAYBILLPAYBILL_BANKING','PAYBILL_TV','PAYBILL_V2','TRANSFER','TV','VOUCHER','WATER','APPLICATION_MARKET','TRANSFER_MONEY','COMMON','SCAN_TO_PAY','MY_CODE','MERCHANT_AUTH','GROUPBY','EDUCATION','AIRTIME_DATA','SECURITY','REFER_FRIEND','REPORT_SCAM','ADD_CARD'
+) OR e.bzp is null
         ;
     
     '''.format(

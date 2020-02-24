@@ -35,7 +35,7 @@ args = {
 }
 
 dag = airflow.DAG('dim_opay_region_state_mapping_df',
-                  schedule_interval="00 01 * * *",
+                  schedule_interval="00 00 * * *",
                   default_args=args
                   )
 

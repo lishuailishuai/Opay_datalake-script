@@ -138,17 +138,20 @@ def app_opay_active_user_report_d_sql_task(ds,ds_nodash):
 
     set hive.exec.dynamic.partition.mode=nonstrict;
     set hive.exec.parallel=true;
+     DROP TABLE IF EXISTS test_db.user_base_{date};
+    DROP TABLE IF EXISTS test_db.login_{date};
+    DROP TABLE IF EXISTS test_db.tran_{date};
     create table if not exists test_db.user_base_{date} as 
-    SELECT user_id, ROLE,mobile
+    SELECT user_id, ROLE,mobile,state
      FROM
-          (SELECT user_id, ROLE,mobile, row_number() over(partition BY user_id ORDER BY update_time DESC) rn
+          (SELECT user_id, ROLE,mobile, state,row_number() over(partition BY user_id ORDER BY update_time DESC) rn
             FROM opay_dw.dim_opay_user_base_di
            WHERE dt<='{pt}' ) t1
      WHERE rn = 1;
                
     create table if not exists test_db.login_{date} as 
     select dt,
-           substr(from_unixtime(unix_timestamp(last_visit, 'yyyy-MM-dd HH:mm:ss')+3600),1,10) last_visit,a.user_id,role 
+           substr(from_unixtime(unix_timestamp(last_visit, 'yyyy-MM-dd HH:mm:ss')+3600),1,10) last_visit,a.user_id,role
      from 
           (select dt,user_id ,last_visit
              from opay_dw_ods.ods_sqoop_base_user_operator_df 
@@ -158,21 +161,21 @@ def app_opay_active_user_report_d_sql_task(ds,ds_nodash):
     on a.user_id=b.user_id;
     
        create table if not exists test_db.tran_{date} as
-    select top_consume_scenario,a.user_id,dt,role 
+    select top_consume_scenario,a.user_id,dt,a.role,b.state
     from 
               ( select 
-                    top_consume_scenario, originator_id user_id,dt
+                    top_consume_scenario, originator_id user_id,dt,originator_role role
                 from opay_dw.dwd_opay_transaction_record_di
                 where dt>date_sub('{pt}',30) and dt<='{pt}' and create_time BETWEEN date_format(date_sub(dt, 1), 'yyyy-MM-dd 23') AND date_format(dt, 'yyyy-MM-dd 23') 
                     and originator_type = 'USER' and originator_id is not null and originator_id != ''
-                group by originator_id,dt,top_consume_scenario
+                group by originator_id,dt,top_consume_scenario,originator_role
                 union all
                 select 
-                    top_consume_scenario, affiliate_id user_id,dt
+                    top_consume_scenario, affiliate_id user_id,dt,affiliate_role role
                 from opay_dw.dwd_opay_transaction_record_di
                 where dt>date_sub('{pt}',30) and dt<='{pt}' and create_time BETWEEN date_format(date_sub(dt, 1), 'yyyy-MM-dd 23') AND date_format(dt, 'yyyy-MM-dd 23') 
                     and affiliate_type = 'USER' and affiliate_id is not null and affiliate_id != ''
-                group by top_consume_scenario,affiliate_id,dt
+                group by top_consume_scenario,affiliate_id,dt,affiliate_role
               ) a 
     inner join 
               test_db.user_base_{date} b 
@@ -209,6 +212,7 @@ def app_opay_active_user_report_d_sql_task(ds,ds_nodash):
                 top_consume_scenario,
                 '-' register_client,
                 c,
+                state,
                 dt,
                 target_type
             FROM (
@@ -217,6 +221,7 @@ def app_opay_active_user_report_d_sql_task(ds,ds_nodash):
                     '-' ROLE,
                     '-' top_consume_scenario,
                     'bind_card_user_cnt' target_type,
+                    '-' state,
                     count(DISTINCT user_id ) c
                 FROM bind_card
                 GROUP BY dt
@@ -226,6 +231,7 @@ def app_opay_active_user_report_d_sql_task(ds,ds_nodash):
                     '-' ROLE,
                     '-' top_consume_scenario,
                     'bind_card_pay_user_cnt' target_type,
+                    '-' state,
                     count(DISTINCT CASE WHEN pay_status='1' THEN user_id END) c
                 FROM bind_card
                 GROUP BY dt
@@ -235,6 +241,7 @@ def app_opay_active_user_report_d_sql_task(ds,ds_nodash):
                     ROLE,
                     '-' top_consume_scenario,
                     'login_user_cnt_d' target_type,
+                    '-' state,
                     count(DISTINCT CASE WHEN last_visit='{pt}' THEN user_id END) c
                 FROM test_db.login_{date}
                 GROUP BY dt, ROLE
@@ -244,6 +251,7 @@ def app_opay_active_user_report_d_sql_task(ds,ds_nodash):
                     'ALL' ROLE,
                     '-' top_consume_scenario,
                     'login_user_cnt_d' target_type,
+                    '-' state,
                     count(DISTINCT CASE WHEN last_visit='{pt}' THEN user_id END) c
                 FROM test_db.login_{date}
                 GROUP BY dt
@@ -254,6 +262,7 @@ def app_opay_active_user_report_d_sql_task(ds,ds_nodash):
                     ROLE,
                     '-' top_consume_scenario,
                     'login_user_cnt_7d' target_type,
+                    '-' state,
                     count(DISTINCT CASE WHEN last_visit>date_sub('{pt}',7) AND last_visit<='{pt}' THEN user_id END) c
                 FROM test_db.login_{date}
                 GROUP BY dt, ROLE
@@ -263,6 +272,7 @@ def app_opay_active_user_report_d_sql_task(ds,ds_nodash):
                     'ALL' ROLE,
                     '-' top_consume_scenario,
                     'login_user_cnt_7d' target_type,
+                    '-' state,
                     count(DISTINCT CASE WHEN last_visit>date_sub('{pt}',7) AND last_visit<='{pt}' THEN user_id END) c
                 FROM test_db.login_{date}
                 GROUP BY dt
@@ -272,6 +282,7 @@ def app_opay_active_user_report_d_sql_task(ds,ds_nodash):
                     ROLE,
                     '-' top_consume_scenario,
                     'login_user_cnt_30d' target_type,
+                    '-' state,
                     count(DISTINCT CASE WHEN last_visit>date_sub('{pt}',30) AND last_visit<='{pt}' THEN user_id END) c
                 FROM test_db.login_{date}
                 GROUP BY dt, ROLE
@@ -281,6 +292,7 @@ def app_opay_active_user_report_d_sql_task(ds,ds_nodash):
                     'ALL' ROLE,
                     '-' top_consume_scenario,
                     'login_user_cnt_30d' target_type,
+                    '-' state,
                     count(DISTINCT CASE WHEN last_visit>date_sub('{pt}',30) AND last_visit<='{pt}' THEN user_id END) c
                 FROM test_db.login_{date}
                 GROUP BY dt
@@ -290,6 +302,7 @@ def app_opay_active_user_report_d_sql_task(ds,ds_nodash):
                     '-' ROLE,
                     '-' top_consume_scenario,
                     'owallet_bal_not_zero_user_cnt' target_type,
+                    '-' state,
                     count(DISTINCT user_id) c
                 FROM (select user_id from opay_dw.dwm_opay_user_balance_df where dt='{pt}' and owallet>0) m
                 UNION ALL 
@@ -298,6 +311,7 @@ def app_opay_active_user_report_d_sql_task(ds,ds_nodash):
                     '-' ROLE,
                     '-' top_consume_scenario,
                     'owealth_bal_not_zero_user_cnt' target_type,
+                    '-' state,
                     count(DISTINCT user_id) c
                 FROM (select user_id from opay_dw.dwm_opay_user_balance_df where dt='{pt}' and owealth>0) m1
                 UNION ALL 
@@ -306,6 +320,7 @@ def app_opay_active_user_report_d_sql_task(ds,ds_nodash):
                     '-' ROLE,
                     '-' top_consume_scenario,
                     'opay_bal_not_zero_user_cnt' target_type,
+                    '-' state,
                     count(DISTINCT user_id) c
                 FROM (select user_id from opay_dw.dwm_opay_user_balance_df where dt='{pt}' and opay>0) m2
         
@@ -315,6 +330,7 @@ def app_opay_active_user_report_d_sql_task(ds,ds_nodash):
                     '-' ROLE,
                     '-' top_consume_scenario,
                     'opay_bal_not_zero_user_cnt_7d' target_type,
+                    '-' state,
                      count(DISTINCT user_id) c
                 from 
                    (select user_id FROM opay_dw.dwm_opay_user_balance_df where dt='{pt}' and opay_7>0) m3
@@ -324,6 +340,7 @@ def app_opay_active_user_report_d_sql_task(ds,ds_nodash):
                     '-' ROLE,
                     '-' top_consume_scenario,
                     'opay_bal_not_zero_user_cnt_30d' target_type,
+                    '-' state,
                      count(DISTINCT user_id) c
                 FROM 
                    (select user_id FROM opay_dw.dwm_opay_user_balance_df where dt='{pt}' and opay_30>0)m4
@@ -333,6 +350,7 @@ def app_opay_active_user_report_d_sql_task(ds,ds_nodash):
                     '-' ROLE,
                     '-' top_consume_scenario,
                     'opay_active_user_cnt' target_type,
+                    '-' state,
                     count(DISTINCT user_id) c
                 FROM opay_active
                 GROUP BY dt
@@ -342,6 +360,7 @@ def app_opay_active_user_report_d_sql_task(ds,ds_nodash):
                     user_role role,
                     '-' top_consume_scenario,
                     'opay_bal_avg' target_type,
+                    '-' state,
                     sum(opay) c
                 from (select user_role,opay from opay_dw.dwm_opay_user_balance_df where dt='{pt}' and opay>0) m5
                 group by user_role
@@ -351,6 +370,7 @@ def app_opay_active_user_report_d_sql_task(ds,ds_nodash):
                     'ALL' role,
                     '-' top_consume_scenario,
                     'opay_bal_avg' target_type,
+                    '-' state,
                     sum(opay) c
                 from (select opay from opay_dw.dwm_opay_user_balance_df where dt='{pt}' and opay>0) m6
                 union all
@@ -359,6 +379,7 @@ def app_opay_active_user_report_d_sql_task(ds,ds_nodash):
                     user_role role,
                     '-' top_consume_scenario,
                     'opay_bal_avg_30d' target_type,
+                    '-' state,
                     sum(opay_30) c
                 from (select user_role,opay_30 from opay_dw.dwm_opay_user_balance_df where dt='{pt}' and opay_30>0) m7
                 group by user_role
@@ -368,6 +389,7 @@ def app_opay_active_user_report_d_sql_task(ds,ds_nodash):
                     'ALL' role,
                     '-' top_consume_scenario,
                     'opay_bal_avg_30d' target_type,
+                    '-' state,
                     sum(opay_30) c
                 from (select opay_30 from opay_dw.dwm_opay_user_balance_df where dt='{pt}' and opay_30>0) m8
                 union all
@@ -376,6 +398,7 @@ def app_opay_active_user_report_d_sql_task(ds,ds_nodash):
                     user_role role,
                     '-' top_consume_scenario,
                     'owealth_bal_avg' target_type,
+                    '-' state,
                     sum(owealth) c
                 from (select user_role,owealth from opay_dw.dwm_opay_user_balance_df where dt='{pt}' and owealth>0) m9
                 group by user_role
@@ -385,6 +408,7 @@ def app_opay_active_user_report_d_sql_task(ds,ds_nodash):
                     'ALL' role,
                     '-' top_consume_scenario,
                     'owealth_bal_avg' target_type,
+                    '-' state,
                     sum(owealth) c
                 from (select owealth from opay_dw.dwm_opay_user_balance_df where dt='{pt}' and owealth>0) m10
                 union all
@@ -393,6 +417,7 @@ def app_opay_active_user_report_d_sql_task(ds,ds_nodash):
                     user_role role,
                     '-' top_consume_scenario,
                     'owealth_bal_avg_30d' target_type,
+                    '-' state,
                     sum(owealth_30) c
                 from (select user_role,owealth_30 from opay_dw.dwm_opay_user_balance_df where dt='{pt}' and owealth_30>0) m11
                 group by user_role
@@ -402,6 +427,7 @@ def app_opay_active_user_report_d_sql_task(ds,ds_nodash):
                     'ALL' role,
                     '-' top_consume_scenario,
                     'owealth_bal_avg_30d' target_type,
+                    '-' state,
                     sum(owealth_30) c
                 from (select owealth_30 from opay_dw.dwm_opay_user_balance_df where dt='{pt}' and owealth_30>0) m12
                 union all
@@ -410,6 +436,7 @@ def app_opay_active_user_report_d_sql_task(ds,ds_nodash):
                     user_role role,
                     '-' top_consume_scenario,
                     'owallet_bal_avg' target_type,
+                    '-' state,
                     sum(owallet) c
                 from (select user_role,owallet from opay_dw.dwm_opay_user_balance_df where dt='{pt}' and owallet>0) m13
                 group by user_role
@@ -419,6 +446,7 @@ def app_opay_active_user_report_d_sql_task(ds,ds_nodash):
                     'ALL' role,
                     '-' top_consume_scenario,
                     'owallet_bal_avg' target_type,
+                    '-' state,
                     sum(owallet) c
                 from (select owallet from opay_dw.dwm_opay_user_balance_df where dt='{pt}' and owallet>0) m14
                 union all
@@ -427,6 +455,7 @@ def app_opay_active_user_report_d_sql_task(ds,ds_nodash):
                     user_role role,
                     '-' top_consume_scenario,
                     'owallet_bal_avg_30d' target_type,
+                    '-' state,
                     sum(owallet_30) c
                 from (select user_role,owallet_30 from opay_dw.dwm_opay_user_balance_df where dt='{pt}' and owallet_30>0) m15
                 group by user_role
@@ -436,6 +465,7 @@ def app_opay_active_user_report_d_sql_task(ds,ds_nodash):
                     'ALL' role,
                     '-' top_consume_scenario,
                     'owallet_bal_avg_30d' target_type,
+                    '-' state,
                     sum(owallet_30) c
                 from (select owallet_30 from opay_dw.dwm_opay_user_balance_df where dt='{pt}' and owallet_30>0) m16
                 union all
@@ -444,6 +474,17 @@ def app_opay_active_user_report_d_sql_task(ds,ds_nodash):
                      role,
                      top_consume_scenario,
                      'active_user_cnt_30d' target_type,
+                     state,
+                     count(distinct user_id) c 
+                from test_db.tran_{date}
+                group by role,top_consume_scenario,state
+                union all
+                select 
+                     '{pt}' dt,
+                     role,
+                     top_consume_scenario,
+                     'active_user_cnt_30d' target_type,
+                     'ALL' state,
                      count(distinct user_id) c 
                 from test_db.tran_{date}
                 group by role,top_consume_scenario
@@ -453,6 +494,7 @@ def app_opay_active_user_report_d_sql_task(ds,ds_nodash):
                      role,
                      'ALL' top_consume_scenario,
                      'active_user_cnt_30d' target_type,
+                     '-' state,
                      count(distinct user_id) c 
                 from test_db.tran_{date}
                 group by role
@@ -462,6 +504,7 @@ def app_opay_active_user_report_d_sql_task(ds,ds_nodash):
                      'ALL' role,
                      top_consume_scenario,
                      'active_user_cnt_30d' target_type,
+                     '-' state,
                      count(distinct user_id) c 
                 from test_db.tran_{date}
                 group by top_consume_scenario
@@ -471,6 +514,17 @@ def app_opay_active_user_report_d_sql_task(ds,ds_nodash):
                      role,
                      top_consume_scenario,
                      'active_user_cnt_7d' target_type,
+                     state,
+                     count(distinct user_id) c 
+                from (select * from test_db.tran_{date} where dt>date_sub('{pt}',7)) mm
+                group by role,top_consume_scenario,state
+                union all
+                select 
+                     '{pt}' dt,
+                     role,
+                     top_consume_scenario,
+                     'active_user_cnt_7d' target_type,
+                     'ALL' state,
                      count(distinct user_id) c 
                 from (select * from test_db.tran_{date} where dt>date_sub('{pt}',7)) mm
                 group by role,top_consume_scenario
@@ -480,6 +534,7 @@ def app_opay_active_user_report_d_sql_task(ds,ds_nodash):
                      role,
                      'ALL' top_consume_scenario,
                      'active_user_cnt_7d' target_type,
+                     '-' state,
                      count(distinct user_id) c 
                 from (select * from test_db.tran_{date} where dt>date_sub('{pt}',7)) mm
                 group by role
@@ -489,6 +544,7 @@ def app_opay_active_user_report_d_sql_task(ds,ds_nodash):
                      'ALL' role,
                      top_consume_scenario,
                      'active_user_cnt_7d' target_type,
+                     '-' state,
                      count(distinct user_id) c 
                 from (select * from test_db.tran_{date} where dt>date_sub('{pt}',7)) mm
                 group by top_consume_scenario
@@ -498,6 +554,17 @@ def app_opay_active_user_report_d_sql_task(ds,ds_nodash):
                      role,
                      top_consume_scenario,
                      'active_user_cnt_d' target_type,
+                     state,
+                     count(distinct user_id) c 
+                from (select * from test_db.tran_{date} where dt='{pt}') mm
+                group by role,top_consume_scenario,state
+                union all
+                select 
+                     '{pt}' dt,
+                     role,
+                     top_consume_scenario,
+                     'active_user_cnt_d' target_type,
+                     'ALL' state,
                      count(distinct user_id) c 
                 from (select * from test_db.tran_{date} where dt='{pt}') mm
                 group by role,top_consume_scenario
@@ -507,6 +574,7 @@ def app_opay_active_user_report_d_sql_task(ds,ds_nodash):
                      role,
                      'ALL' top_consume_scenario,
                      'active_user_cnt_d' target_type,
+                     '-' state,
                      count(distinct user_id) c 
                 from (select * from test_db.tran_{date} where dt='{pt}') mm
                 group by role
@@ -516,6 +584,7 @@ def app_opay_active_user_report_d_sql_task(ds,ds_nodash):
                      'ALL' role,
                      top_consume_scenario,
                      'active_user_cnt_d' target_type,
+                     '-' state,
                      count(distinct user_id) c 
                 from (select * from test_db.tran_{date} where dt='{pt}') mm
                 group by top_consume_scenario

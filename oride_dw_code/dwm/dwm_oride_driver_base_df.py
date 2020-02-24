@@ -378,6 +378,7 @@ select dri.driver_id,
             dri.first_bind_time, --初次绑定时间 
             dri.end_service_time,--专车司机结束收份子钱时间
             ord.newest_driver_version, --司机端最新版本（接单）
+            dri.group_id, --所属组id 
 
             dri.country_code as country_code,
             dri.dt as dt
@@ -576,6 +577,7 @@ select dri.driver_id,
             dri.first_bind_time, --初次绑定时间 
             dri.end_service_time,--专车司机结束收份子钱时间
             ord.newest_driver_version, --司机端最新版本（接单）
+            dri.group_id, --所属组id 
 
             dri.country_code,
             dri.dt

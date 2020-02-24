@@ -18,7 +18,7 @@ from airflow.sensors import UFileSensor
 from airflow.sensors import OssSensor
 from airflow.sensors.s3_key_sensor import S3KeySensor
 from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
-from plugins.CountriesPublicFrame import CountriesPublicFrame
+from plugins.CountriesPublicFrame_dev import CountriesPublicFrame_dev
 from plugins.TaskHourSuccessCountMonitor import TaskHourSuccessCountMonitor
 import json
 import logging
@@ -49,140 +49,90 @@ dag = airflow.DAG( 'test_dim_oride_city',
 db_name="test_db"
 table_name="test_dim_oride_city"
     
-
+hdfs_path="oss://opay-datalake/oride/test_db/"+table_name
 ##----------------------------------------- 依赖 ---------------------------------------## 
 
 
 #获取变量
-code_map=eval(Variable.get("sys_flag"))
+#code_map=eval(Variable.get("sys_flag"))
 
-#判断ufile(cdh环境)
-if code_map["id"].lower()=="ufile":
+config = eval(Variable.get("utc_locale_time_config"))
+print(config)
+time_zone = config['NG']['time_zone']
 
-    test_snappy_dev_01_tesk = S3KeySensor(
+
+test_snappy_dev_01_tesk = OssSensor(
     task_id='test_snappy_dev_01_tesk',
-    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw/test_snappy_dev_01",
-        pt='{{ds}}'
+    bucket_key='{hdfs_path_str}/dt={pt}/hour={hour}/_SUCCESS'.format(
+        hdfs_path_str="test",
+        pt='{{{{(execution_date+macros.timedelta(hours=({time_zone}+{gap_hour}))).strftime("%Y-%m-%d")}}}}'.format(time_zone=time_zone,gap_hour=-1),
+        hour='{{{{(execution_date+macros.timedelta(hours=({time_zone}+{gap_hour}))).strftime("%H")}}}}'.format(time_zone=time_zone,gap_hour=-1)
     ),
-    bucket_name='opay-bi',
+    bucket_name='opay-datalake',
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
-    )
-    
-    ods_sqoop_base_data_city_conf_df_tesk = UFileSensor(
-        task_id='ods_sqoop_base_data_city_conf_df_tesk',
-        filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-            hdfs_path_str="oride_dw_sqoop/oride_data/data_city_conf",
-            pt='{{ds}}'
-        ),
-        bucket_name='opay-datalake',
-        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-        dag=dag
-    )
-    
-    ods_sqoop_base_data_country_conf_df_tesk = UFileSensor(
-        task_id='ods_sqoop_base_data_country_conf_df_tesk',
-        filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-            hdfs_path_str="oride_dw_sqoop/oride_data/data_country_conf",
-            pt='{{ds}}'
-        ),
-        bucket_name='opay-datalake',
-        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-        dag=dag
-    )
-    
-    # 依赖前一天分区
-    ods_sqoop_base_weather_per_10min_df_task = UFileSensor(
-        task_id='ods_sqoop_base_weather_per_10min_df_task',
-        filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-            hdfs_path_str="oride_dw_sqoop/bi/weather_per_10min",
-            pt='{{ds}}'
-        ),
-        bucket_name='opay-datalake',
-        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-        dag=dag
-    )
-
-    #路径
-    hdfs_path="s3a://opay-bi/oride/oride_dw/"+table_name
-    
-
-else:
-
-    #print("成功")
-
-    test_snappy_dev_01_tesk = OssSensor(
-        task_id='test_snappy_dev_01_tesk',
-        bucket_key='{hdfs_path_str}/_SUCCESS'.format(
-            hdfs_path_str="test",
-            pt='{{ds}}'
-        ),
-        bucket_name='opay-datalake',
-        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-        dag=dag
-    )
-
-    ods_sqoop_base_data_city_conf_df_tesk = UFileSensor(
-        task_id='ods_sqoop_base_data_city_conf_df_tesk',
-        filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-            hdfs_path_str="oride_dw_sqoop/oride_data/data_city_conf",
-            pt='{{ds}}'
-        ),
-        bucket_name='opay-datalake',
-        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-        dag=dag
-    )
-    
-    ods_sqoop_base_data_country_conf_df_tesk = UFileSensor(
-        task_id='ods_sqoop_base_data_country_conf_df_tesk',
-        filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-            hdfs_path_str="oride_dw_sqoop/oride_data/data_country_conf",
-            pt='{{ds}}'
-        ),
-        bucket_name='opay-datalake',
-        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-        dag=dag
-    )
-    
-    # 依赖前一天分区
-    ods_sqoop_base_weather_per_10min_df_task = UFileSensor(
-        task_id='ods_sqoop_base_weather_per_10min_df_task',
-        filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-            hdfs_path_str="oride_dw_sqoop/bi/weather_per_10min",
-            pt='{{ds}}'
-        ),
-        bucket_name='opay-datalake',
-        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-        dag=dag
-    )
+)
 
 
-    hdfs_path="oss://opay-datalake/oride/test_db/"+table_name
+# test_snappy_dev_02_tesk = OssSensor(
+#     task_id='test_snappy_dev_02_tesk',
+#     bucket_key='{hdfs_path_str}/dt={pt}/hour={hour}/_SUCCESS'.format(
+#         hdfs_path_str="test",
+#         #pt=pt_date,
+#         #pt=GetLocalTime('{{{{(execution_date+macros.timedelta(hours={time_zone})).strftime("%Y-%m-%d")}}}}', 'NG',-1)['date'],
+#         #pt='{{{{(execution_date+macros.timedelta(hours={time_zone})).strftime("%Y-%m-%d")}}}}'.format(time_zone=2),
+#         hour='{{{{(execution_date+macros.timedelta(hours={time_zone})).strftime("%H")}}}}'.format(time_zone=2)
+#     ),
+#     bucket_name='opay-datalake',
+#     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+#     dag=dag
+# )
+
+
+ods_sqoop_base_data_city_conf_df_tesk = UFileSensor(
+    task_id='ods_sqoop_base_data_city_conf_df_tesk',
+    filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="oride_dw_sqoop/oride_data/data_city_conf",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
 
 ##----------------------------------------- 脚本 ---------------------------------------## 
 
 
-def fun_task_timeout_monitor(ds,dag,**op_kwargs):
+# def fun_task_timeout_monitor(ds,dag,**op_kwargs):
 
-    dag_ids=dag.dag_id
+#     dag_ids=dag.dag_id
 
-    tb = [
-        {"dag":dag,"db": "test_db", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "600"}
-    ]
+#     tb = [
+#         {"dag":dag,"db": "test_db", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "600"}
+#     ]
 
-    # tb = [
-    #     {"db": "test_db", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "600"}
-    # ]
+#     # tb = [
+#     #     {"db": "test_db", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "600"}
+#     # ]
 
-    TaskTimeoutMonitor().set_task_monitor(tb)
+#     #TaskTimeoutMonitor().set_task_monitor(tb)
 
-task_timeout_monitor= PythonOperator(
-    task_id='task_timeout_monitor',
-    python_callable=fun_task_timeout_monitor,
-    provide_context=True,
-    dag=dag
-)
+#     print(GetLocalTime('2020-02-20 10',"NG",-1))
+#     print(GetLocalTime('2020-02-20 10',"NG",0))
+#     print(GetLocalTime('2020-02-20 10',"NG",1))
+#     print(GetLocalTime('2020-02-20 10',"NG",2))
+
+#     print(GetLocalTime('2020-02-20 10',"NC",1))
+
+# task_timeout_monitor= PythonOperator(
+#     task_id='task_timeout_monitor',
+#     python_callable=fun_task_timeout_monitor,
+#     provide_context=True,
+#     dag=dag
+# )
+
+
 
 
 
@@ -192,106 +142,15 @@ def test_dim_oride_city_sql_task(ds):
     set hive.exec.parallel=true;
     set hive.exec.dynamic.partition.mode=nonstrict;
 
-INSERT overwrite TABLE {db}.{table} partition(country_code,dt)
-
-SELECT city_id,
-       --城市 ID
-
-       city_name,
-       --城市名称
-
-       nvl(cty.name,-1) as country_name,
-       --国家名称
-
-       shape,
-       --形状：1 圆形, 2 多边形
-
-       area,
-       --区域设置数据
-
-       product_id,
-       --开启的服务类型[1,2,99] 1 专车 2 快车 99 招手停
-
-       avoid_highway_type,
-       --可设置避开高速的服务类型[1,2] 1 专车 2 快车
-
-       validate,
-       --本条数据是否有效 0 无效，1 有效
-       
-       weather.weather, 
-       --该城市当天的天气
-
-       opening_time,--开启时间       
-
-       assign_type, --强派的服务类型[1,2,3] 1 专车 2 快车 3 keke车
-
-       nvl(cty.country_code,'nal') as country_code,
-       --二位国家码
-       
-       '{pt}' AS dt
-FROM
-  (SELECT id AS city_id,
-          --城市 ID
-
-          name AS city_name,
-          --城市名称
-
-          country,
-          --国家
-
-          shape,
-          --形状：1 圆形, 2 多边形
-
-          area,
-          --区域设置数据
-
-          serv_type AS product_id,
-          --开启的服务类型[1,2,99] 1 专车 2 快车 99 招手停
-
-          avoid_highway_type,
-          --可设置避开高速的服务类型[1,2] 1 专车 2 快车
-
-          validate, --本条数据是否有效 0 无效，1 有效
-
-          opening_time,--开启时间                
-          assign_type,--强派的服务类型[1,2,3] 1 专车 2 快车 3 keke车
-
-          allow_flagdown_type, --允许招手停的服务类型 
-                                
-          country_id --国家ID 
-
-FROM oride_dw_ods.ods_sqoop_base_data_city_conf_df
-   WHERE dt='{pt}') cit
-LEFT OUTER JOIN
-  (SELECT *
-   FROM oride_dw_ods.ods_sqoop_base_data_country_conf_df 
-   WHERE dt='{pt}') cty ON cit.country_id=cty.id
-left outer join
-(SELECT t.city AS city,
-              t.weather AS weather
-FROM
-  ( SELECT t.city,
-           t.weather,
-           row_number() over(partition BY t.city
-                             ORDER BY t.counts DESC) row_num  --城市一天的天气状况取一天当中某种天气持续最长时间的
-   FROM
-     ( SELECT city,
-              weather,
-              count(1) counts
-      FROM oride_dw_ods.ods_sqoop_base_weather_per_10min_df
-      WHERE dt = '{pt}'
-        AND daliy = '{pt}'
-      GROUP BY city,
-               weather ) t ) t
-WHERE t.row_num = 1) weather
-on lower(cit.city_name)=lower(weather.city)
+select default.transPaymentType("{config}", 'NG', create_time, 0) locale_time, create_time from opay_dw.dim_opay_user_base_di where dt = '2020-02-20' limit 10;
 
 '''.format(
         pt=ds,
         #now_day='{{macros.ds_add(ds, +1)}}',
         now_day=airflow.macros.ds_add(ds, +1),
         table=table_name,
-        db=db_name
+        db=db_name,
+        config=config
         )
     return HQL
 
@@ -367,61 +226,68 @@ def check_key_data_task(ds):
 
 
 #主流程
-def execution_data_task_id(ds,**kwargs):
+def execution_data_task_id(ds,dag,**kwargs):
 
     v_date=kwargs.get('v_execution_date')
     v_day=kwargs.get('v_execution_day')
     v_hour=kwargs.get('v_execution_hour')
 
-    #owner=kwargs.get('owner')
-
-    #print(owner)
-
     hive_hook = HiveCliHook()
-
-    v_info = [
-        {"table":"oride_data.oride_data.data_order","start_timeThour": "{v_day}T00".format(v_day=v_day), "end_dateThour": "{v_day}T23".format(v_day=v_day), "depend_dir": "oss://opay-datalake/oride_binlog"}
-    ]
-
-    #print(dag.)
-
-    cm=TaskHourSuccessCountMonitor(ds,v_info)
-
-    cm.HourSuccessCountMonitor()
 
     """
         #功能函数
-        alter语句: alter_partition
-        删除分区: delete_partition
-        生产success: touchz_success
+            alter语句: alter_partition()
+            删除分区: delete_partition()
+            生产success: touchz_success()
 
         #参数
-        第一个参数true: 所有国家是否上线。false 没有
-        第二个参数true: 数据目录是有country_code分区。false 没有
-        第三个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
+            is_countries_online --是否开通多国家业务 默认(true 开通)
+            db_name --hive 数据库的名称
+            table_name --hive 表的名称
+            data_oss_path --oss 数据目录的地址
+            is_country_partition --是否有国家码分区,[默认(true 有country_code分区)]
+            is_result_force_exist --数据是否强行产出,[默认(true 必须有数据才生成_SUCCESS)] false 数据没有也生成_SUCCESS 
+            execute_time --当前脚本执行时间(%Y-%m-%d %H:%M:%S)
+            is_hour_task --是否开通小时级任务,[默认(false)]
+            frame_type --模板类型(只有 is_hour_task:'true' 时生效): utc 产出分区为utc时间，local 产出分区为本地时间,[默认(utc)]。
 
         #读取sql
-        %_sql(ds,v_hour)
-
-        第一个参数ds: 天级任务
-        第二个参数v_hour: 小时级任务，需要使用
+            %_sql(ds,v_hour)
 
     """
 
-    #cf=CountriesPublicFrame("true",ds,db_name,table_name,hdfs_path,"true","true")
+    args=[
+            {
+            "dag":dag,
+            "is_countries_online":"true",
+            "db_name":db_name,
+            "table_name":table_name,
+            "data_oss_path":hdfs_path,
+            "is_country_partition":"true",
+            "is_result_force_exist":"true",
+            "execute_time":v_date,
+            "is_hour_task":"true",
+            "frame_type":"local"
+            }
+    ]
 
-    #cf.exist_country_code_data_dir_dev()
+
+    cf=CountriesPublicFrame_dev(args)
 
     #删除分区
     #cf.delete_partition()
 
+    print(test_dim_oride_city_sql_task(ds))
+
     #读取sql
     #_sql="\n"+cf.alter_partition()+"\n"+test_dim_oride_city_sql_task(ds)
+
+    _sql="\n"+test_dim_oride_city_sql_task(ds)
 
     #logging.info('Executing: %s',_sql)
 
     #执行Hive
-    #hive_hook.run_cli(_sql)
+    hive_hook.run_cli(_sql)
 
     #熔断数据，如果数据不能为0
     #check_key_data_cnt_task(ds)
@@ -430,7 +296,7 @@ def execution_data_task_id(ds,**kwargs):
     #check_key_data_task(ds)
 
     #生产success
-    #cf.touchz_success()
+    cf.touchz_success()
 
     
     
