@@ -37,14 +37,14 @@ args = {
     'email_on_retry': False,
 }
 
-dag = airflow.DAG('dim_opay_bd_agent_base_hf',
+dag = airflow.DAG('dim_opay_bd_agent_hf',
                   schedule_interval="00 * * * *",
                   default_args=args,
                   catchup=False)
 
 ##----------------------------------------- 变量 ---------------------------------------##
 db_name = "opay_dw"
-table_name = "dim_opay_bd_agent_base_hf"
+table_name = "dim_opay_bd_agent_hf"
 hdfs_path = "oss://opay-datalake/opay/opay_dw/" + table_name
 config = eval(Variable.get("utc_locale_time_config"))
 time_zone = config['NG']['time_zone']
@@ -52,10 +52,10 @@ time_zone = config['NG']['time_zone']
 
 ##----------------------------------------- 依赖 ---------------------------------------##
 ### 检查上一个小时的本地时间依赖
-dim_opay_terminal_base_hf_pre_locale_task = OssSensor(
-    task_id='dim_opay_terminal_base_hf_pre_locale_task',
+dim_opay_bd_agent_hf_pre_locale_task = OssSensor(
+    task_id='dim_opay_bd_agent_hf_pre_locale_task',
     bucket_key='{hdfs_path_str}/country_code=NG/dt={pt}/hour={hour}/_SUCCESS'.format(
-        hdfs_path_str="opay/opay_dw/dim_opay_terminal_base_hf",
+        hdfs_path_str="opay/opay_dw/dim_opay_bd_agent_hf",
         pt='{{{{(execution_date+macros.timedelta(hours=({time_zone}+{gap_hour}))).strftime("%Y-%m-%d")}}}}'.format(time_zone=time_zone,gap_hour=-1),
         hour='{{{{(execution_date+macros.timedelta(hours=({time_zone}+{gap_hour}))).strftime("%H")}}}}'.format(time_zone=time_zone,gap_hour=-1)
     ),
@@ -64,10 +64,10 @@ dim_opay_terminal_base_hf_pre_locale_task = OssSensor(
     dag=dag
 )
 ### 检查当前小时的分区依赖
-ods_opay_terminal_base_hi_check_task = OssSensor(
-        task_id='ods_opay_terminal_base_hi_check_task',
+ods_opay_bd_agent_base_hi_check_task = OssSensor(
+        task_id='ods_opay_bd_agent_base_hi_check_task',
         bucket_key='{hdfs_path_str}/dt={pt}/hour={hour}/_SUCCESS'.format(
-            hdfs_path_str="opay_binlog/opay_merchant_overlord_recon_db.opay_overlord.terminal",
+            hdfs_path_str="opay_binlog/opay_agent_crm.opay_agent_crm.bd_agent",
             pt='{{ds}}',
             hour='{{ execution_date.strftime("%H") }}'
         ),
@@ -83,7 +83,7 @@ ods_opay_terminal_base_hi_check_task = OssSensor(
 
 
 
-def dim_opay_bd_agent_base_hf_sql_task(ds, v_date):
+def dim_opay_bd_agent_hf_sql_task(ds, v_date):
     HQL = '''
     set hive.exec.dynamic.partition.mode=nonstrict;
     set hive.exec.parallel=true;
@@ -188,7 +188,7 @@ def dim_opay_bd_agent_base_hf_sql_task(ds, v_date):
                 created_time,
                 updated_time,
                 country_code
-            from opay_dw.dim_opay_bd_agent_base_hf 
+            from opay_dw.dim_opay_bd_agent_hf 
             where concat(dt, " ", hour) between default.minLocalTimeRange("{config}", '{v_date}', -1) and default.maxLocalTimeRange("{config}", '{v_date}', -1) 
                 and utc_date_hour = from_unixtime(cast(unix_timestamp('{v_date}', 'yyyy-MM-dd HH') - 3600 as BIGINT), 'yyyy-MM-dd HH')
             union all
@@ -244,7 +244,7 @@ def execution_data_task_id(ds, **kargs):
     hive_hook = HiveCliHook()
 
     # 读取sql
-    _sql = dim_opay_bd_agent_base_hf_sql_task(ds)
+    _sql = dim_opay_bd_agent_hf_sql_task(ds)
 
     logging.info('Executing: %s', _sql)
 
@@ -260,12 +260,96 @@ def execution_data_task_id(ds, **kargs):
     TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "true", "true")
 
 
-dim_opay_bd_agent_base_hf_task = PythonOperator(
-    task_id='dim_opay_bd_agent_base_hf_task',
+dim_opay_bd_agent_hf_task = PythonOperator(
+    task_id='dim_opay_bd_agent_hf_task',
     python_callable=execution_data_task_id,
     provide_context=True,
     dag=dag
 )
 
+# 主流程
+def execution_data_task_id(ds, dag, **kwargs):
+    v_date = kwargs.get('v_execution_date')
+    v_day = kwargs.get('v_execution_day')
+    v_hour = kwargs.get('v_execution_hour')
 
+    hive_hook = HiveCliHook()
+
+    """
+        #功能函数
+            alter语句: alter_partition()
+            删除分区: delete_partition()
+            生产success: touchz_success()
+
+        #参数
+            is_countries_online --是否开通多国家业务 默认(true 开通)
+            db_name --hive 数据库的名称
+            table_name --hive 表的名称
+            data_oss_path --oss 数据目录的地址
+            is_country_partition --是否有国家码分区,[默认(true 有country_code分区)]
+            is_result_force_exist --数据是否强行产出,[默认(true 必须有数据才生成_SUCCESS)] false 数据没有也生成_SUCCESS 
+            execute_time --当前脚本执行时间(%Y-%m-%d %H:%M:%S)
+            is_hour_task --是否开通小时级任务,[默认(false)]
+            frame_type --模板类型(只有 is_hour_task:'true' 时生效): utc 产出分区为utc时间，local 产出分区为本地时间,[默认(utc)]。
+
+        #读取sql
+            %_sql(ds,v_hour)
+
+    """
+
+    args = [
+        {
+            "dag": dag,
+            "is_countries_online": "true",
+            "db_name": db_name,
+            "table_name": table_name,
+            "data_oss_path": hdfs_path,
+            "is_country_partition": "true",
+            "is_result_force_exist": "true",
+            "execute_time": v_date,
+            "is_hour_task": "true",
+            "frame_type": "local"
+        }
+    ]
+
+    cf = CountriesPublicFrame_dev(args)
+
+    # 删除分区
+    # cf.delete_partition()
+
+    # 读取sql
+    _sql="\n"+cf.alter_partition()+"\n"+dim_opay_bd_agent_hf_sql_task(ds, v_date)
+
+    # _sql = "\n" + dim_opay_bd_agent_hf_sql_task(ds, v_date)
+
+    logging.info('Executing: %s',_sql)
+
+    # 执行Hive
+    hive_hook.run_cli(_sql)
+
+    # 熔断数据，如果数据不能为0
+    # check_key_data_cnt_task(ds)
+
+    # 熔断数据
+    # check_key_data_task(ds)
+
+    # 生产success
+    cf.touchz_success()
+
+
+dim_opay_bd_agent_hf_task = PythonOperator(
+    task_id='dim_opay_bd_agent_hf_task',
+    python_callable=execution_data_task_id,
+    provide_context=True,
+    op_kwargs={
+        'v_execution_date': '{{execution_date.strftime("%Y-%m-%d %H:%M:%S")}}',
+        'v_execution_day': '{{execution_date.strftime("%Y-%m-%d")}}',
+        'v_execution_hour': '{{execution_date.strftime("%H")}}',
+        'owner': '{{owner}}'
+    },
+    dag=dag
+)
+
+dim_opay_bd_agent_hf_pre_locale_task >> dim_opay_bd_agent_hf_task
+ods_opay_bd_agent_base_hi_check_task >> dim_opay_bd_agent_hf_task
 

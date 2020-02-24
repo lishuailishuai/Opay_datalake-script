@@ -311,14 +311,12 @@ def execution_data_task_id(ds, dag, **kwargs):
     # 删除分区
     # cf.delete_partition()
 
-    print(dim_opay_merchant_base_hf_sql_task(ds, v_date))
-
     # 读取sql
-    # _sql="\n"+cf.alter_partition()+"\n"+test_dim_oride_city_sql_task(ds)
+    _sql="\n"+cf.alter_partition()+"\n"+dim_opay_merchant_base_hf_sql_task(ds)
 
-    _sql = "\n" + dim_opay_merchant_base_hf_sql_task(ds, v_date)
+    # _sql = "\n" + dim_opay_merchant_base_hf_sql_task(ds, v_date)
 
-    # logging.info('Executing: %s',_sql)
+    logging.info('Executing: %s',_sql)
 
     # 执行Hive
     hive_hook.run_cli(_sql)
