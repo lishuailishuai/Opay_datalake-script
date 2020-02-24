@@ -42,6 +42,11 @@ dag = airflow.DAG('dim_opay_user_base_hf',
                   default_args=args,
                   catchup=False)
 
+
+##----------------------------------------- 变量 ---------------------------------------##
+db_name = "opay_dw"
+table_name = "dim_opay_user_base_hf"
+hdfs_path = "oss://opay-datalake/opay/opay_dw/" + table_name
 config = eval(Variable.get("utc_locale_time_config"))
 time_zone = config['NG']['time_zone']
 
@@ -90,11 +95,6 @@ ods_opay_user_base_hi_check_task = OssSensor(
 #     dag=dag
 # )
 
-##----------------------------------------- 变量 ---------------------------------------##
-db_name = "opay_dw"
-
-table_name = "dim_opay_user_base_hf"
-hdfs_path = "oss://opay-datalake/opay/opay_dw/" + table_name
 
 
 def dim_opay_user_base_hf_sql_task(ds, v_date):
