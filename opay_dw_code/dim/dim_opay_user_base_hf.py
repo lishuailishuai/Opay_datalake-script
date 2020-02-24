@@ -138,7 +138,7 @@ def dim_opay_user_base_hf_sql_task(ds, v_date):
         date_format('{v_date}', 'yyyy-MM-dd HH') as utc_date_hour,
         country_code,
         date_format(localeTime("{config}", country_code, '{v_date}', 0), 'yyyy-MM-dd') as dt,
-        hour(localeTime("{config}", country_code, '{v_date}', 0)) as hour
+        date_format(localeTime("{config}", country_code, '{v_date}', 0), 'HH') as hour
     from (
         select 
             id,
