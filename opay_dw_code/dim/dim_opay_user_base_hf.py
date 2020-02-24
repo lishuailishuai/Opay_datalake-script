@@ -105,8 +105,77 @@ def dim_opay_user_base_hf_sql_task(ds, v_date):
     CREATE temporary FUNCTION localTime AS 'com.udf.dev.LocaleUDF' USING JAR 'oss://opay-datalake/test/pro_dev.jar';
     CREATE temporary FUNCTION maxLocalTimeRange AS 'com.udf.dev.MaxLocaleUDF' USING JAR 'oss://opay-datalake/test/pro_dev.jar';
     CREATE temporary FUNCTION minLocalTimeRange AS 'com.udf.dev.MinLocaleUDF' USING JAR 'oss://opay-datalake/test/pro_dev.jar';
+    
     set hive.exec.dynamic.partition.mode=nonstrict;
     set hive.exec.parallel=true;
+    
+    create table if not exists test_db.user_hf_001 as 
+        SELECT 
+               id,
+               user_id,
+               mobile,
+               business_name,
+               first_name,
+               middle_name,
+               surname,
+               kyc_level,
+               kyc_update_time,
+               bvn,
+               birthday,
+               gender,
+               country,
+               STATE,
+               city,
+               address,
+               lga,
+               ROLE,
+               referral_code,
+               referrer_code,
+               notification,
+               create_time,
+               update_time,
+               register_client,
+               agent_referrer_code,
+               photo,
+               big_picture,
+               nick_name,
+               country_code
+            from opay_dw.dim_opay_user_base_hf 
+            where concat(dt, " ", hour) between minLocalTimeRange("{config}", '{v_date}', -1) and maxLocalTimeRange("{config}", '{v_date}', -1) 
+                and utc_date_hour = from_unixtime(cast(unix_timestamp('{v_date}', 'yyyy-MM-dd HH') - 3600 as BIGINT), 'yyyy-MM-dd HH')
+            union all
+            SELECT 
+                id,
+                user_id,
+                mobile,
+                business_name,
+                first_name,
+                middle_name,
+                surname,
+                kyc_level,
+                kyc_update_time,
+                bvn,
+                dob as birthday,
+                gender,
+                country,
+                STATE,
+                city,
+                address,
+                lga,
+                ROLE,
+                referral_code,
+                referrer_code,
+                notification,
+                localTime("{config}", 'NG', create_time, 0) as create_time,
+                localTime("{config}", 'NG', update_time, 0) as update_time,
+                register_client,
+                agent_referrer_code,
+                photo,
+                big_picture,
+                nick_name,
+                'NG' AS country_code
+            from opay_dw_ods.ods_binlog_base_user_hi 
+            where concat(dt, " ", hour) = date_format('{v_date}', 'yyyy-MM-dd HH') and `__deleted` = 'false';
     insert overwrite table {db}.{table} partition (country_code, dt, hour)
     
     select 
@@ -174,76 +243,9 @@ def dim_opay_user_base_hf_sql_task(ds, v_date):
             nick_name,
             country_code,
             row_number() over(partition by user_id order by update_time desc) rn
-        from (
-            SELECT 
-               id,
-               user_id,
-               mobile,
-               business_name,
-               first_name,
-               middle_name,
-               surname,
-               kyc_level,
-               kyc_update_time,
-               bvn,
-               birthday,
-               gender,
-               country,
-               STATE,
-               city,
-               address,
-               lga,
-               ROLE,
-               referral_code,
-               referrer_code,
-               notification,
-               create_time,
-               update_time,
-               register_client,
-               agent_referrer_code,
-               photo,
-               big_picture,
-               nick_name,
-               country_code
-            from opay_dw.dim_opay_user_base_hf 
-            where concat(dt, " ", hour) between minLocalTimeRange("{config}", '{v_date}', -1) and maxLocalTimeRange("{config}", '{v_date}', -1) 
-                and utc_date_hour = from_unixtime(cast(unix_timestamp('{v_date}', 'yyyy-MM-dd HH') - 3600 as BIGINT), 'yyyy-MM-dd HH')
-            union all
-            SELECT 
-                id,
-                user_id,
-                mobile,
-                business_name,
-                first_name,
-                middle_name,
-                surname,
-                kyc_level,
-                kyc_update_time,
-                bvn,
-                dob as birthday,
-                gender,
-                country,
-                STATE,
-                city,
-                address,
-                lga,
-                ROLE,
-                referral_code,
-                referrer_code,
-                notification,
-                localTime("{config}", 'NG', create_time, 0) as create_time,
-                localTime("{config}", 'NG', update_time, 0) as update_time,
-                register_client,
-                agent_referrer_code,
-                photo,
-                big_picture,
-                nick_name,
-                'NG' AS country_code
-            from opay_dw_ods.ods_binlog_base_user_hi 
-            where concat(dt, " ", hour) = date_format('{v_date}', 'yyyy-MM-dd HH') and `__deleted` = 'false'
-        ) t0 
+        from test_db.user_hf_001 t0 
     ) t1 where rn = 1
-    
+    DROP TABLE IF EXISTS test_db.user_hf_001
     
     '''.format(
         pt=ds,
