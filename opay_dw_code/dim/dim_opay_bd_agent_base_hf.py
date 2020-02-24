@@ -85,9 +85,6 @@ ods_opay_terminal_base_hi_check_task = OssSensor(
 
 def dim_opay_bd_agent_base_hf_sql_task(ds, v_date):
     HQL = '''
-    CREATE temporary FUNCTION default.localTime AS 'com.udf.dev.LocaleUDF' USING JAR 'oss://opay-datalake/test/pro_dev.jar';
-    CREATE temporary FUNCTION maxLocalTimeRange AS 'com.udf.dev.MaxLocaleUDF' USING JAR 'oss://opay-datalake/test/pro_dev.jar';
-    CREATE temporary FUNCTION minLocalTimeRange AS 'com.udf.dev.MinLocaleUDF' USING JAR 'oss://opay-datalake/test/pro_dev.jar';
     set hive.exec.dynamic.partition.mode=nonstrict;
     set hive.exec.parallel=true;
     insert overwrite table {db}.{table} partition (country_code, dt, hour)
