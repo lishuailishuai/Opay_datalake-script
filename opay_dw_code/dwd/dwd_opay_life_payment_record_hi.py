@@ -435,7 +435,7 @@ def execution_data_task_id(ds, dag, **kwargs):
     #print(dwd_opay_life_payment_record_hi_sql_task(ds, v_date))
 
     # 读取sql
-    _sql="\n"+cf.alter_partition()+"\n"+dwd_opay_life_payment_record_hi_sql_task(ds)
+    _sql="\n"+cf.alter_partition()+"\n"+dwd_opay_life_payment_record_hi_sql_task(ds, v_date)
 
     #_sql = "\n" + dwd_opay_life_payment_record_hi_sql_task(ds, v_date)
 
