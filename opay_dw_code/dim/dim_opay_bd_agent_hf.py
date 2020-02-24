@@ -115,8 +115,8 @@ def dim_opay_bd_agent_hf_sql_task(ds, v_date):
         modify_id,
         bd_admin_user_id,
         agent_check_id,
-        created_time,
-        updated_time,
+        create_time,
+        update_time,
         date_format('{v_date}', 'yyyy-MM-dd HH') as utc_date_hour,
         country_code,
         date_format(default.localTime("{config}", country_code, '{v_date}', 0), 'yyyy-MM-dd') as dt,
@@ -150,8 +150,8 @@ def dim_opay_bd_agent_hf_sql_task(ds, v_date):
             modify_id,
             bd_admin_user_id,
             agent_check_id,
-            created_time,
-            updated_time,
+            create_time,
+            update_time,
             country_code,
             row_number() over(partition by user_id order by update_time desc) rn
         from (
@@ -183,8 +183,8 @@ def dim_opay_bd_agent_hf_sql_task(ds, v_date):
                 modify_id,
                 bd_admin_user_id,
                 agent_check_id,
-                created_time,
-                updated_time,
+                create_time,
+                update_time,
                 country_code
             from opay_dw.dim_opay_bd_agent_hf 
             where concat(dt, " ", hour) between default.minLocalTimeRange("{config}", '{v_date}', -1) and default.maxLocalTimeRange("{config}", '{v_date}', -1) 
