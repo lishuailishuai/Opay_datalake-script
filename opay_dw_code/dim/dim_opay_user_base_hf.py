@@ -243,7 +243,7 @@ def dim_opay_user_base_hf_sql_task(ds):
     
     
     '''.format(
-        pt=ds,
+        pt='{{execution_date.strftime("%Y-%m-%d %H:%M:%S")}}',
         table=table_name,
         db=db_name,
         config=config
