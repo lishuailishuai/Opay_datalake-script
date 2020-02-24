@@ -22,7 +22,7 @@ import json
 import logging
 from airflow.models import Variable
 import requests
-import os,datetime
+import os
 from airflow.sensors import OssSensor
 
 args = {
