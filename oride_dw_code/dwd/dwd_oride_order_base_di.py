@@ -489,7 +489,8 @@ FROM (select *
               from_unixtime((unix_timestamp(regexp_replace(regexp_replace(t.updated_at,'T',' '),'Z',''))+3600),'yyyy-MM-dd')='{pt}'
              )
          ) t1
-where t1.`__deleted` = 'false' and t1.order_by = 1) base
+where --t1.`__deleted` = 'false' and  -- 由于订单每天会将30天之前的订单移动到data_order_history表中，因此移动走的打标为deleted，但是这些订单状态有改变是需留存的，因此不要限定删除条件
+t1.order_by = 1) base
 LEFT OUTER JOIN
 (SELECT id AS order_id,
        status AS pay_status,
