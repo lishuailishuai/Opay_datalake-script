@@ -149,7 +149,7 @@ def dwd_opay_client_event_base_di_sql_task(ds):
                 oride_source.opay_ep_logv1
             WHERE
                 dt='{pt}'
-                AND get_json_object(message, '$.typ') in ('opay')
+                
         )
         INSERT INTO TABLE {db}.{table} partition(country_code,dt)
         SELECT
