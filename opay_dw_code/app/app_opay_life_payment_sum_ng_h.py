@@ -84,7 +84,7 @@ def app_opay_life_payment_sum_ng_h_sql_task(ds, v_date):
         originator_role,
         order_status,
         count(*) as order_cnt,
-        sum(pay_amount) as pay_amount,
+        sum(amount) as order_amt,
         'NG' as country_code,
         date_format(default.localTime("{config}", country_code, '{v_date}', 0), 'yyyy-MM-dd') as dt,
         date_format(default.localTime("{config}", country_code, '{v_date}', 0), 'HH') as hour
@@ -97,7 +97,7 @@ def app_opay_life_payment_sum_ng_h_sql_task(ds, v_date):
         ,originator_type
         ,originator_role
         ,order_status
-        ,pay_amount
+        ,amount
         ,row_number() over(partition by order_no order by update_time desc) rn
       from
         opay_dw.dwd_opay_life_payment_record_hi
