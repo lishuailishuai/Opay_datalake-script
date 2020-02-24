@@ -149,7 +149,7 @@ def dwd_ocredit_phones_order_base_di_sql_task(ds):
     from ocredit_phones_dw_ods.ods_sqoop_base_t_order_df
     where dt='{pt}' and 
     (if(order_id='012020011001240073','2020-01-04',from_unixtime(unix_timestamp(create_time)+3600,'yyyy-MM-dd'))='{pt}' or
-    from_unixtime(unix_timestamp(update_time)+3600,'yyyy-MM-dd')='{pt}')
+    from_unixtime(unix_timestamp(update_time)+3600,'yyyy-MM-dd')='{pt}')  --自20200224号开始数据保留更新时间为当天的数据
 and
 user_id not in 
 (
