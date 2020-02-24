@@ -149,8 +149,7 @@ def dwd_ocredit_phones_order_di_sql_task(ds):
 
     from ocredit_phones_dw_ods.ods_sqoop_base_t_order_df
     where dt='{pt}' and 
-    case when order_id='012020011001240073' then '2020-01-04' else from_unixtime(unix_timestamp(create_time)+3600,'yyyy-MM-dd') end='{pt}' or
-    from_unixtime(unix_timestamp(update_time)+3600,'yyyy-MM-dd')='{pt}'
+    case when order_id='012020011001240073' then '2020-01-04' else from_unixtime(unix_timestamp(create_time)+3600,'yyyy-MM-dd') end='{pt}' 
 and
 user_id not in 
 (
