@@ -143,7 +143,7 @@ def dim_opay_terminal_base_hf_sql_task(ds, v_date):
                 terminal_provider_id,
                 pos_id,
                 terminal_id,
-                bank string,
+                bank,
                 bind_status,
                 user_type as owner_type,
                 user_id as owner_id,
