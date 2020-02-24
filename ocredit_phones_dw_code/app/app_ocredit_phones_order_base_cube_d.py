@@ -103,7 +103,7 @@ def app_ocredit_phones_order_base_cube_d_sql_task(ds):
           sum(if(order_status='81',(nvl(loan_amount,0)/100)*0.2712/100,0)) as loan_amount_usd,--`贷款金额_USD` ,
           '{pt}' as dt,
           'nal' as country_code
-    from ocredit_phones_dw.dwd_ocredit_phones_order_di
+    from ocredit_phones_dw.dwd_ocredit_phones_order_base_di
     where dt='{pt}' and date_of_entry=dt
     group by terms,date_of_entry,weekofyear(date_of_entry),month(date_of_entry)
     grouping sets(date_of_entry,
