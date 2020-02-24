@@ -57,6 +57,7 @@ hdfs_path="oss://opay-datalake/oride/test_db/"+table_name
 #code_map=eval(Variable.get("sys_flag"))
 
 config = eval(Variable.get("utc_locale_time_config"))
+print(config)
 time_zone = config['NG']['time_zone']
 
 
@@ -141,106 +142,20 @@ def test_dim_oride_city_sql_task(ds):
     set hive.exec.parallel=true;
     set hive.exec.dynamic.partition.mode=nonstrict;
 
-INSERT overwrite TABLE {db}.{table} partition(country_code,dt)
+add jar oss://opay-datalake/public_udf/pro_dev.jar;  
+create temporary function transPaymentType as 'com.udf.dev.LocaleUDF';
+create temporary function maxLocalTimeRange as 'com.udf.dev.MaxLocaleUDF';
+create temporary function minLocalTimeRange as 'com.udf.dev.MinLocaleUDF';
 
-SELECT city_id,
-       --城市 ID
-
-       city_name,
-       --城市名称
-
-       nvl(cty.name,-1) as country_name,
-       --国家名称
-
-       shape,
-       --形状：1 圆形, 2 多边形
-
-       area,
-       --区域设置数据
-
-       product_id,
-       --开启的服务类型[1,2,99] 1 专车 2 快车 99 招手停
-
-       avoid_highway_type,
-       --可设置避开高速的服务类型[1,2] 1 专车 2 快车
-
-       validate,
-       --本条数据是否有效 0 无效，1 有效
-       
-       weather.weather, 
-       --该城市当天的天气
-
-       opening_time,--开启时间       
-
-       assign_type, --强派的服务类型[1,2,3] 1 专车 2 快车 3 keke车
-
-       nvl(cty.country_code,'nal') as country_code,
-       --二位国家码
-       
-       '{pt}' AS dt
-FROM
-  (SELECT id AS city_id,
-          --城市 ID
-
-          name AS city_name,
-          --城市名称
-
-          country,
-          --国家
-
-          shape,
-          --形状：1 圆形, 2 多边形
-
-          area,
-          --区域设置数据
-
-          serv_type AS product_id,
-          --开启的服务类型[1,2,99] 1 专车 2 快车 99 招手停
-
-          avoid_highway_type,
-          --可设置避开高速的服务类型[1,2] 1 专车 2 快车
-
-          validate, --本条数据是否有效 0 无效，1 有效
-
-          opening_time,--开启时间                
-          assign_type,--强派的服务类型[1,2,3] 1 专车 2 快车 3 keke车
-
-          allow_flagdown_type, --允许招手停的服务类型 
-                                
-          country_id --国家ID 
-
-FROM oride_dw_ods.ods_sqoop_base_data_city_conf_df
-   WHERE dt='{pt}') cit
-LEFT OUTER JOIN
-  (SELECT *
-   FROM oride_dw_ods.ods_sqoop_base_data_country_conf_df 
-   WHERE dt='{pt}') cty ON cit.country_id=cty.id
-left outer join
-(SELECT t.city AS city,
-              t.weather AS weather
-FROM
-  ( SELECT t.city,
-           t.weather,
-           row_number() over(partition BY t.city
-                             ORDER BY t.counts DESC) row_num  --城市一天的天气状况取一天当中某种天气持续最长时间的
-   FROM
-     ( SELECT city,
-              weather,
-              count(1) counts
-      FROM oride_dw_ods.ods_sqoop_base_weather_per_10min_df
-      WHERE dt = '{pt}'
-        AND daliy = '{pt}'
-      GROUP BY city,
-               weather ) t ) t
-WHERE t.row_num = 1) weather
-on lower(cit.city_name)=lower(weather.city)
+select transPaymentType("{config}", 'NG', create_time, 0) locale_time, create_time from opay_dw.dim_opay_user_base_di where dt = '2020-02-20' limit 10;
 
 '''.format(
         pt=ds,
         #now_day='{{macros.ds_add(ds, +1)}}',
         now_day=airflow.macros.ds_add(ds, +1),
         table=table_name,
-        db=db_name
+        db=db_name,
+        config=config
         )
     return HQL
 
@@ -322,7 +237,7 @@ def execution_data_task_id(ds,dag,**kwargs):
     v_day=kwargs.get('v_execution_day')
     v_hour=kwargs.get('v_execution_hour')
 
-    #hive_hook = HiveCliHook()
+    hive_hook = HiveCliHook()
 
     """
         #功能函数
@@ -367,13 +282,17 @@ def execution_data_task_id(ds,dag,**kwargs):
     #删除分区
     #cf.delete_partition()
 
+    print(test_dim_oride_city_sql_task(ds))
+
     #读取sql
     #_sql="\n"+cf.alter_partition()+"\n"+test_dim_oride_city_sql_task(ds)
+
+    _sql="\n"+test_dim_oride_city_sql_task(ds)
 
     #logging.info('Executing: %s',_sql)
 
     #执行Hive
-    #hive_hook.run_cli(_sql)
+    hive_hook.run_cli(_sql)
 
     #熔断数据，如果数据不能为0
     #check_key_data_cnt_task(ds)
