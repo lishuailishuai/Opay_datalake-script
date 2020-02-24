@@ -464,6 +464,8 @@ SELECT base.id as order_id,
         --opay 支付的金额
         pay.tip_rake,
         --小费抽成 
+        pay.surcharge as pay_surcharge,
+        --服务费
         nvl(country.country_code,'nal') as country_code,
 
        '{pt}' AS dt
@@ -513,8 +515,10 @@ LEFT OUTER JOIN
        -- 使用的余额
        opay_amount,
        --opay 支付的金额
-       tip_rake
+       tip_rake,
        --小费抽成      
+       surcharge
+       --服务费
        
 FROM oride_dw_ods.ods_sqoop_base_data_order_payment_df
 WHERE dt = '{pt}') pay ON base.id=pay.order_id 
