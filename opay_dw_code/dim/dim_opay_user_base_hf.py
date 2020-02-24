@@ -97,7 +97,8 @@ table_name = "dim_opay_user_base_hf"
 hdfs_path = "oss://opay-datalake/opay/opay_dw/" + table_name
 
 
-def dim_opay_user_base_hf_sql_task(ds):
+def dim_opay_user_base_hf_sql_task(**kwargs):
+    v_date = kwargs.get('v_execution_date')
     HQL = '''
     CREATE temporary FUNCTION localeTime AS 'com.udf.dev.LocaleUDF' USING JAR 'oss://opay-datalake/test/pro_dev.jar';
     CREATE temporary FUNCTION maxLocalTimeRange AS 'com.udf.dev.MaxLocaleUDF' USING JAR 'oss://opay-datalake/test/pro_dev.jar';
@@ -243,7 +244,7 @@ def dim_opay_user_base_hf_sql_task(ds):
     
     
     '''.format(
-        pt='{{execution_date.strftime("%Y-%m-%d %H:%M:%S")}}',
+        pt=v_date,
         table=table_name,
         db=db_name,
         config=config
@@ -302,12 +303,12 @@ def execution_data_task_id(ds, dag, **kwargs):
     # 删除分区
     # cf.delete_partition()
 
-    print(dim_opay_user_base_hf_sql_task(ds))
+    print(dim_opay_user_base_hf_sql_task(kwargs))
 
     # 读取sql
     # _sql="\n"+cf.alter_partition()+"\n"+test_dim_oride_city_sql_task(ds)
 
-    _sql = "\n" + dim_opay_user_base_hf_sql_task(ds)
+    _sql = "\n" + dim_opay_user_base_hf_sql_task(kwargs)
 
     # logging.info('Executing: %s',_sql)
 
