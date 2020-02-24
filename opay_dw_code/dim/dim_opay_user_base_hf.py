@@ -46,6 +46,7 @@ config = eval(Variable.get("utc_locale_time_config"))
 time_zone = config['NG']['time_zone']
 
 ##----------------------------------------- 依赖 ---------------------------------------##
+### 检查上一个小时的本地时间依赖
 dim_opay_user_base_hf_pre_locale_task = OssSensor(
     task_id='dim_opay_user_base_hf_pre_locale_task',
     bucket_key='{hdfs_path_str}/country_code=NG/dt={pt}/hour={hour}/_SUCCESS'.format(
@@ -57,7 +58,7 @@ dim_opay_user_base_hf_pre_locale_task = OssSensor(
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
-
+### 检查当前小时的分区依赖
 ods_opay_user_base_hi_check_task = OssSensor(
         task_id='ods_opay_user_base_hi_check_task',
         bucket_key='{hdfs_path_str}/dt={pt}/hour={hour}/_SUCCESS'.format(
@@ -136,8 +137,8 @@ def dim_opay_user_base_hf_sql_task(ds):
           nick_name,
         date_format('{pt}', 'yyyy-MM-dd HH') as utc_date_hour,
         country_code,
-        date_format(localeTime('\{"NG": \{"time_zone":1\}\}', country_code, '{pt}', 0), 'yyyy-MM-dd') as dt,
-        hour(localeTime('\{"NG": \{"time_zone":1\}\}', country_code, '{pt}', 0)) as hour
+        date_format(localeTime("{config}", country_code, '{pt}', 0), 'yyyy-MM-dd') as dt,
+        hour(localeTime("{config}", country_code, '{pt}', 0)) as hour
     from (
         select 
             id,
@@ -202,7 +203,7 @@ def dim_opay_user_base_hf_sql_task(ds):
                nick_name,
                country_code
             from opay_dw.dim_opay_user_base_hf 
-            where concat(dt, " ", hour) between minLocalTimeRange('\{"NG": \{"time_zone":1\}\}', '{pt}', -1) and maxLocalTimeRange('\{"NG": \{"time_zone":1\}\}', '{pt}', -1) 
+            where concat(dt, " ", hour) between minLocalTimeRange("{config}", '{pt}', -1) and maxLocalTimeRange("{config}", '{pt}', -1) 
                 and utc_date_hour = from_unixtime(cast(unix_timestamp('{pt}', 'yyyy-MM-dd HH') - 3600 as BIGINT), 'yyyy-MM-dd HH')
             union all
             SELECT 
@@ -227,8 +228,8 @@ def dim_opay_user_base_hf_sql_task(ds):
                 referral_code,
                 referrer_code,
                 notification,
-                localeTime('\{"NG": \{"time_zone":1\}\}', 'NG', create_time, 0) as create_time,
-                localeTime('\{"NG": \{"time_zone":1\}\}', 'NG', update_time, 0) as update_time,
+                localeTime("{config}", 'NG', create_time, 0) as create_time,
+                localeTime("{config}", 'NG', update_time, 0) as update_time,
                 register_client,
                 agent_referrer_code,
                 photo,
