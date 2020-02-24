@@ -126,8 +126,8 @@ def dim_opay_merchant_base_hf_sql_task(ds, v_date):
         bank_account_name,
         date_format('{v_date}', 'yyyy-MM-dd HH') as utc_date_hour,
         country_code,
-        date_format(localeTime("{config}", country_code, '{v_date}', 0), 'yyyy-MM-dd') as dt,
-        date_format(localeTime("{config}", country_code, '{v_date}', 0), 'HH') as hour
+        date_format(default.localTime("{config}", country_code, '{v_date}', 0), 'yyyy-MM-dd') as dt,
+        date_format(default.localTime("{config}", country_code, '{v_date}', 0), 'HH') as hour
     from (
         select 
             merchant_id,
@@ -206,7 +206,7 @@ def dim_opay_merchant_base_hf_sql_task(ds, v_date):
                 bank_account_name,
                 country_code
             from opay_dw.dim_opay_merchant_base_hf 
-            where concat(dt, " ", hour) between minLocalTimeRange("{config}", '{v_date}', -1) and maxLocalTimeRange("{config}", '{v_date}', -1) 
+            where concat(dt, " ", hour) between default.minLocalTimeRange("{config}", '{v_date}', -1) and default.maxLocalTimeRange("{config}", '{v_date}', -1) 
                 and utc_date_hour = from_unixtime(cast(unix_timestamp('{v_date}', 'yyyy-MM-dd HH') - 3600 as BIGINT), 'yyyy-MM-dd HH')
             union all
             SELECT 
@@ -231,8 +231,8 @@ def dim_opay_merchant_base_hf_sql_task(ds, v_date):
                 skip_commit_stage,
                 disable_settlements,
                 settlement_period,
-                localeTime("{config}", 'NG', create_time, 0) as create_time,
-                localeTime("{config}", 'NG', update_time, 0) as update_time,
+                default.localTime("{config}", 'NG', create_time, 0) as create_time,
+                default.localTime("{config}", 'NG', update_time, 0) as update_time,
                 level,
                 icon_url,
                 contact_email,
