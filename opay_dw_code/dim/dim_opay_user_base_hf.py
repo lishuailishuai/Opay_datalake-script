@@ -17,6 +17,7 @@ from airflow.sensors.hive_partition_sensor import HivePartitionSensor
 from airflow.sensors import UFileSensor
 from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
 from airflow.sensors import OssSensor
+from plugins.CountriesPublicFrame_dev import CountriesPublicFrame_dev
 
 from plugins.TaskTouchzSuccess import TaskTouchzSuccess
 import json
@@ -70,23 +71,23 @@ ods_opay_user_base_hi_check_task = OssSensor(
     )
 
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
-def fun_task_timeout_monitor(ds, dag, **op_kwargs):
-    dag_ids = dag.dag_id
-
-    msg = [
-        {"dag": dag, "db": "opay_dw", "table": "{dag_name}".format(dag_name=dag_ids),
-         "partition": "country_code=NG/dt=2020-02-20/hour=00".format(pt=ds), "timeout": "3000"}
-    ]
-
-    TaskTimeoutMonitor().set_task_monitor(msg)
-
-
-task_timeout_monitor = PythonOperator(
-    task_id='task_timeout_monitor',
-    python_callable=fun_task_timeout_monitor,
-    provide_context=True,
-    dag=dag
-)
+# def fun_task_timeout_monitor(ds, dag, **op_kwargs):
+#     dag_ids = dag.dag_id
+#
+#     msg = [
+#         {"dag": dag, "db": "opay_dw", "table": "{dag_name}".format(dag_name=dag_ids),
+#          "partition": "country_code=NG/dt=2020-02-20/hour=00".format(pt=ds), "timeout": "3000"}
+#     ]
+#
+#     TaskTimeoutMonitor().set_task_monitor(msg)
+#
+#
+# task_timeout_monitor = PythonOperator(
+#     task_id='task_timeout_monitor',
+#     python_callable=fun_task_timeout_monitor,
+#     provide_context=True,
+#     dag=dag
+# )
 
 ##----------------------------------------- 变量 ---------------------------------------##
 db_name = "opay_dw"
@@ -250,30 +251,84 @@ def dim_opay_user_base_hf_sql_task(ds):
     return HQL
 
 
-def execution_data_task_id(ds, **kargs):
-    hive_hook = HiveCliHook()
+# 主流程
+def execution_data_task_id(ds, dag, **kwargs):
+    v_date = kwargs.get('v_execution_date')
+    v_day = kwargs.get('v_execution_day')
+    v_hour = kwargs.get('v_execution_hour')
+
+    # hive_hook = HiveCliHook()
+
+    """
+        #功能函数
+            alter语句: alter_partition()
+            删除分区: delete_partition()
+            生产success: touchz_success()
+
+        #参数
+            is_countries_online --是否开通多国家业务 默认(true 开通)
+            db_name --hive 数据库的名称
+            table_name --hive 表的名称
+            data_oss_path --oss 数据目录的地址
+            is_country_partition --是否有国家码分区,[默认(true 有country_code分区)]
+            is_result_force_exist --数据是否强行产出,[默认(true 必须有数据才生成_SUCCESS)] false 数据没有也生成_SUCCESS 
+            execute_time --当前脚本执行时间(%Y-%m-%d %H:%M:%S)
+            is_hour_task --是否开通小时级任务,[默认(false)]
+            frame_type --模板类型(只有 is_hour_task:'true' 时生效): utc 产出分区为utc时间，local 产出分区为本地时间,[默认(utc)]。
+
+        #读取sql
+            %_sql(ds,v_hour)
+
+    """
+
+    args = [
+        {
+            "dag": dag,
+            "is_countries_online": "true",
+            "db_name": db_name,
+            "table_name": table_name,
+            "data_oss_path": hdfs_path,
+            "is_country_partition": "true",
+            "is_result_force_exist": "true",
+            "execute_time": v_date,
+            "is_hour_task": "true",
+            "frame_type": "local"
+        }
+    ]
+
+    cf = CountriesPublicFrame_dev(args)
+
+    # 删除分区
+    # cf.delete_partition()
 
     # 读取sql
-    _sql = dim_opay_user_base_hf_sql_task(ds)
+    # _sql="\n"+cf.alter_partition()+"\n"+test_dim_oride_city_sql_task(ds)
 
-    logging.info('Executing: %s', _sql)
+    # logging.info('Executing: %s',_sql)
 
     # 执行Hive
-    hive_hook.run_cli(_sql)
+    # hive_hook.run_cli(_sql)
 
-    # 生成_SUCCESS
-    """
-    第一个参数true: 数据目录是有country_code分区。false 没有
-    第二个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
+    # 熔断数据，如果数据不能为0
+    # check_key_data_cnt_task(ds)
 
-    """
-    TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "true", "true")
+    # 熔断数据
+    # check_key_data_task(ds)
+
+    # 生产success
+    cf.touchz_success()
 
 
 dim_opay_user_base_hf_task = PythonOperator(
     task_id='dim_opay_user_base_hf_task',
     python_callable=execution_data_task_id,
     provide_context=True,
+    op_kwargs={
+        'v_execution_date': '{{execution_date.strftime("%Y-%m-%d %H:%M:%S")}}',
+        'v_execution_day': '{{execution_date.strftime("%Y-%m-%d")}}',
+        'v_execution_hour': '{{execution_date.strftime("%H")}}',
+        'owner': '{{owner}}'
+    },
     dag=dag
 )
 
