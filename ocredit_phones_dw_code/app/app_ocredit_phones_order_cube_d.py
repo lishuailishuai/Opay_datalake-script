@@ -43,10 +43,10 @@ dag = airflow.DAG('app_ocredit_phones_order_cube_d',
 
 ##----------------------------------------- 依赖 ---------------------------------------##
 
-dwd_ocredit_phones_order_df_task = OssSensor(
-    task_id='dwd_ocredit_phones_order_df_task',
+dwd_ocredit_phones_order_di_task = OssSensor(
+    task_id='dwd_ocredit_phones_order_di_task',
     bucket_key="{hdfs_path_str}/dt={pt}/_SUCCESS".format(
-        hdfs_path_str="ocredit_phones/ocredit_phones_dw/dwd_ocredit_phones_order_df/country_code=nal",
+        hdfs_path_str="ocredit_phones/ocredit_phones_dw/dwd_ocredit_phones_order_di/country_code=nal",
 
         pt="{{ds}}"
     ),
@@ -187,4 +187,4 @@ app_ocredit_phones_order_cube_d_task = PythonOperator(
     dag=dag
 )
 
-dwd_ocredit_phones_order_df_task >> app_ocredit_phones_order_cube_d_task
+dwd_ocredit_phones_order_di_task >> app_ocredit_phones_order_cube_d_task
