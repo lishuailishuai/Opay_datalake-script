@@ -238,34 +238,6 @@ def dim_opay_bd_agent_hf_sql_task(ds, v_date):
     return HQL
 
 
-def execution_data_task_id(ds, **kargs):
-    hive_hook = HiveCliHook()
-
-    # 读取sql
-    _sql = dim_opay_bd_agent_hf_sql_task(ds)
-
-    logging.info('Executing: %s', _sql)
-
-    # 执行Hive
-    hive_hook.run_cli(_sql)
-
-    # 生成_SUCCESS
-    """
-    第一个参数true: 数据目录是有country_code分区。false 没有
-    第二个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
-
-    """
-    TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "true", "true")
-
-
-dim_opay_bd_agent_hf_task = PythonOperator(
-    task_id='dim_opay_bd_agent_hf_task',
-    python_callable=execution_data_task_id,
-    provide_context=True,
-    dag=dag
-)
-
-
 # 主流程
 def execution_data_task_id(ds, dag, **kwargs):
     v_date = kwargs.get('v_execution_date')
@@ -316,12 +288,14 @@ def execution_data_task_id(ds, dag, **kwargs):
     # 删除分区
     # cf.delete_partition()
 
+    # print(dim_opay_terminal_base_hf_sql_task(ds, v_date))
+
     # 读取sql
-    _sql = "\n" + cf.alter_partition() + "\n" + dim_opay_bd_agent_hf_sql_task(ds, v_date)
+    _sql="\n"+cf.alter_partition()+"\n"+dim_opay_bd_agent_hf_sql_task(ds, v_date)
 
-    # _sql = "\n" + dim_opay_bd_agent_hf_sql_task(ds, v_date)
+    # _sql = "\n" + dim_opay_terminal_base_hf_sql_task(ds, v_date)
 
-    logging.info('Executing: %s', _sql)
+    logging.info('Executing: %s',_sql)
 
     # 执行Hive
     hive_hook.run_cli(_sql)
