@@ -78,30 +78,16 @@ ods_opay_terminal_base_hi_check_task = OssSensor(
 
 
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
-def fun_task_timeout_monitor(ds, dag, **op_kwargs):
-    dag_ids = dag.dag_id
 
-    msg = [
-        {"dag": dag, "db": "opay_dw", "table": "{dag_name}".format(dag_name=dag_ids),
-         "partition": "country_code=NG/dt={pt}".format(pt=ds), "timeout": "3000"}
-    ]
-
-    TaskTimeoutMonitor().set_task_monitor(msg)
-
-
-task_timeout_monitor = PythonOperator(
-    task_id='task_timeout_monitor',
-    python_callable=fun_task_timeout_monitor,
-    provide_context=True,
-    dag=dag
-)
 
 
 
 
 def dim_opay_bd_agent_base_hf_sql_task(ds, v_date):
     HQL = '''
-
+    CREATE temporary FUNCTION localTime AS 'com.udf.dev.LocaleUDF' USING JAR 'oss://opay-datalake/test/pro_dev.jar';
+    CREATE temporary FUNCTION maxLocalTimeRange AS 'com.udf.dev.MaxLocaleUDF' USING JAR 'oss://opay-datalake/test/pro_dev.jar';
+    CREATE temporary FUNCTION minLocalTimeRange AS 'com.udf.dev.MinLocaleUDF' USING JAR 'oss://opay-datalake/test/pro_dev.jar';
     set hive.exec.dynamic.partition.mode=nonstrict;
     set hive.exec.parallel=true;
     insert overwrite table {db}.{table} partition (country_code, dt, hour)
@@ -138,8 +124,8 @@ def dim_opay_bd_agent_base_hf_sql_task(ds, v_date):
         updated_time,
         date_format('{v_date}', 'yyyy-MM-dd HH') as utc_date_hour,
         country_code,
-        date_format(default.localTime("{config}", country_code, '{v_date}', 0), 'yyyy-MM-dd') as dt,
-        date_format(default.localTime("{config}", country_code, '{v_date}', 0), 'HH') as hour
+        date_format(localTime("{config}", country_code, '{v_date}', 0), 'yyyy-MM-dd') as dt,
+        date_format(localTime("{config}", country_code, '{v_date}', 0), 'HH') as hour
     from (
         select 
             id,
@@ -206,7 +192,7 @@ def dim_opay_bd_agent_base_hf_sql_task(ds, v_date):
                 updated_time,
                 country_code
             from opay_dw.dim_opay_bd_agent_base_hf 
-            where concat(dt, " ", hour) between default.minLocalTimeRange("{config}", '{v_date}', -1) and default.maxLocalTimeRange("{config}", '{v_date}', -1) 
+            where concat(dt, " ", hour) between minLocalTimeRange("{config}", '{v_date}', -1) and maxLocalTimeRange("{config}", '{v_date}', -1) 
                 and utc_date_hour = from_unixtime(cast(unix_timestamp('{v_date}', 'yyyy-MM-dd HH') - 3600 as BIGINT), 'yyyy-MM-dd HH')
             union all
             SELECT 
@@ -237,8 +223,8 @@ def dim_opay_bd_agent_base_hf_sql_task(ds, v_date):
                 modify_id,
                 bd_admin_user_id,
                 agent_check_id,
-                default.localTime("{config}", 'NG', created_at, 0) as create_time,
-                default.localTime("{config}", 'NG', updated_at, 0) as update_time,
+                localTime("{config}", 'NG', created_at, 0) as create_time,
+                localTime("{config}", 'NG', updated_at, 0) as update_time,
                 'NG' AS country_code
             from opay_dw_ods.ods_binlog_base_user_hi 
             where concat(dt, " ", hour) = date_format('{v_date}', 'yyyy-MM-dd HH') and `__deleted` = 'false'
