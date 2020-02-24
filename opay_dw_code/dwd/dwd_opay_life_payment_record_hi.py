@@ -467,6 +467,9 @@ dwd_opay_life_payment_record_hi_task = PythonOperator(
     dag=dag
 )
 
+dim_opay_merchant_base_hf_check_task >> dwd_opay_life_payment_record_hi_task
+dim_opay_user_base_hf_check_task >> dwd_opay_life_payment_record_hi_task
 ods_binlog_base_betting_topup_record_hi_check_task >> dwd_opay_life_payment_record_hi_task
+ods_binlog_base_airtime_topup_record_hi_check_task >> dwd_opay_life_payment_record_hi_task
 
 
