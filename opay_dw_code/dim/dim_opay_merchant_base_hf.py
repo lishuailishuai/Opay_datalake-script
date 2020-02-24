@@ -312,7 +312,7 @@ def execution_data_task_id(ds, dag, **kwargs):
     # cf.delete_partition()
 
     # 读取sql
-    _sql="\n"+cf.alter_partition()+"\n"+dim_opay_merchant_base_hf_sql_task(ds)
+    _sql="\n"+cf.alter_partition()+"\n"+dim_opay_merchant_base_hf_sql_task(ds, v_date)
 
     # _sql = "\n" + dim_opay_merchant_base_hf_sql_task(ds, v_date)
 
