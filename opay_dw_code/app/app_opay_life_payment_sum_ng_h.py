@@ -71,53 +71,51 @@ dwd_opay_life_payment_record_hi_check_task = OssSensor(
 def app_opay_life_payment_sum_ng_h_sql_task(ds, v_date):
     HQL = '''
 
-set mapred.max.split.size=1000000;
-set hive.exec.dynamic.partition.mode=nonstrict;
-set hive.exec.parallel=true;
-
-insert overwrite table opay_dw.app_opay_life_payment_sum_ng_h partition(country_code, dt, hour)
-select
-  create_date_hour
-  ,sub_consume_scenario
-  ,recharge_service_provider
-  ,originator_type
-  ,originator_role
-  ,order_status
-
-  ,count(1) as order_cnt
-  ,sum(pay_amount) as pay_amount
-  
-  , 'NG' as country_code
-  , date_format('{v_date}', 'yyyy-MM-dd') as dt
-  , date_format('{v_date}', 'HH') as hour
-from
-  (
-  select 
-    substr(create_time,13) as create_date_hour
-    ,sub_consume_scenario
-    ,recharge_service_provider
-    ,originator_type
-    ,originator_role
-    ,order_status
-    ,pay_amount
-    ,row_number() over(partition by order_no order by update_time desc) rn
-  from
-    opay_dw.dwd_opay_life_payment_record_hi
-  where
-    country_code = 'NG'
-    and concat(dt,' ',hour) >= date_format(default.localTime("{config}", 'NG', '{v_date}', -1), 'yyyy-MM-dd HH')
-    and concat(dt,' ',hour) <= date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'yyyy-MM-dd HH')
-  ) as a
-where
-  rn = 1
-group by
-  create_date_hour
-  ,sub_consume_scenario
-  ,recharge_service_provider
-  ,originator_type
-  ,originator_role
-  ,order_status
-;
+    set mapred.max.split.size=1000000;
+    set hive.exec.dynamic.partition.mode=nonstrict;
+    set hive.exec.parallel=true;
+    
+    insert overwrite table opay_dw.app_opay_life_payment_sum_ng_h partition(country_code, dt, hour)
+    select
+        create_date_hour,
+        sub_consume_scenario,
+        recharge_service_provider,
+        originator_type,
+        originator_role,
+        order_status,
+        count(*) as order_cnt,
+        sum(pay_amount) as pay_amount,
+        'NG' as country_code,
+        date_format(default.localTime("{config}", country_code, '{v_date}', 0), 'yyyy-MM-dd') as dt,
+        date_format(default.localTime("{config}", country_code, '{v_date}', 0), 'HH') as hour
+    from
+      (
+      select 
+        date_format(create_time, 'yyyy-MM-dd HH') as create_date_hour
+        ,sub_consume_scenario
+        ,recharge_service_provider
+        ,originator_type
+        ,originator_role
+        ,order_status
+        ,pay_amount
+        ,row_number() over(partition by order_no order by update_time desc) rn
+      from
+        opay_dw.dwd_opay_life_payment_record_hi
+      where
+        country_code = 'NG'
+        and concat(dt,' ',hour) >= date_format(default.localTime("{config}", 'NG', '{v_date}', -1), 'yyyy-MM-dd HH')
+        and concat(dt,' ',hour) <= date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'yyyy-MM-dd HH')
+      ) as a
+    where
+      rn = 1
+    group by
+      create_date_hour
+      ,sub_consume_scenario
+      ,recharge_service_provider
+      ,originator_type
+      ,originator_role
+      ,order_status
+    ;
 
 
 
