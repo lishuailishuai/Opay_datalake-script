@@ -427,7 +427,7 @@ SELECT base.id as order_id,
         local_gov, --围栏ID
         estimate_id,  --预估价记录表id   
         gender, --性别:0.未设置 1.男 2.女
-        surcharge, --服务费
+        base.surcharge, --服务费
         user_agree_surcharge, --用户是否同意服务费(1同意 2 不同意)
         take_lng, --司机接单位置经度
         take_lat, --司机接单位置纬度
