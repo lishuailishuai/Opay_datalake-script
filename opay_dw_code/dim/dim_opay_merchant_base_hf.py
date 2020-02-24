@@ -165,7 +165,7 @@ def dim_opay_merchant_base_hf_sql_task(ds, v_date):
                 business_developer,
                 bank_account_name,
                 country_code,
-            row_number() over(partition by user_id order by update_time desc) rn
+            row_number() over(partition by merchant_id order by update_time desc) rn
         from (
             SELECT 
                 merchant_id,
