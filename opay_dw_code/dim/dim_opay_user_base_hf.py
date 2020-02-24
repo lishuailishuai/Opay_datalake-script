@@ -244,7 +244,7 @@ def dim_opay_user_base_hf_sql_task(ds, v_date):
             country_code,
             row_number() over(partition by user_id order by update_time desc) rn
         from test_db.user_hf_001 t0 
-    ) t1 where rn = 1
+    ) t1 where rn = 1;
     DROP TABLE IF EXISTS test_db.user_hf_001
     
     '''.format(
