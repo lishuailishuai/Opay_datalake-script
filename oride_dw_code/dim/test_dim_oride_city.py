@@ -142,12 +142,7 @@ def test_dim_oride_city_sql_task(ds):
     set hive.exec.parallel=true;
     set hive.exec.dynamic.partition.mode=nonstrict;
 
-add jar oss://opay-datalake/public_udf/pro_dev.jar;  
-create temporary function transPaymentType as 'com.udf.dev.LocaleUDF';
-create temporary function maxLocalTimeRange as 'com.udf.dev.MaxLocaleUDF';
-create temporary function minLocalTimeRange as 'com.udf.dev.MinLocaleUDF';
-
-select transPaymentType("{config}", 'NG', create_time, 0) locale_time, create_time from opay_dw.dim_opay_user_base_di where dt = '2020-02-20' limit 10;
+select default.transPaymentType("{config}", 'NG', create_time, 0) locale_time, create_time from opay_dw.dim_opay_user_base_di where dt = '2020-02-20' limit 10;
 
 '''.format(
         pt=ds,
