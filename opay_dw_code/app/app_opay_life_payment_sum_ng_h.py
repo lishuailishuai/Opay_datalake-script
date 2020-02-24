@@ -86,8 +86,8 @@ def app_opay_life_payment_sum_ng_h_sql_task(ds, v_date):
         count(*) as order_cnt,
         sum(amount) as order_amt,
         'NG' as country_code,
-        date_format(default.localTime("{config}", country_code, '{v_date}', 0), 'yyyy-MM-dd') as dt,
-        date_format(default.localTime("{config}", country_code, '{v_date}', 0), 'HH') as hour
+        date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'yyyy-MM-dd') as dt,
+        date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'HH') as hour
     from
       (
       select 
