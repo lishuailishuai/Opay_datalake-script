@@ -220,8 +220,8 @@ def dim_opay_bd_agent_base_hf_sql_task(ds, v_date):
                 modify_id,
                 bd_id as bd_admin_user_id,
                 agent_check_id,
-                default.localTime("{config}", 'NG', created_at, 0) as create_time,
-                default.localTime("{config}", 'NG', updated_at, 0) as update_time,
+                default.localTime("{config}", 'NG', from_unixtime(cast(cast(created_at as bigint) / 1000 as bigint), 'yyyy-MM-dd HH:mm:ss'), 0) as create_time,
+                default.localTime("{config}", 'NG', from_unixtime(cast(cast(updated_at as bigint) / 1000 as bigint), 'yyyy-MM-dd HH:mm:ss'), 0) as update_time,
                 'NG' AS country_code
             from opay_dw_ods.ods_binlog_base_bd_agent_hi 
             where concat(dt, " ", hour) = date_format('{v_date}', 'yyyy-MM-dd HH') and `__deleted` = 'false'

@@ -148,8 +148,8 @@ def dim_opay_terminal_base_hf_sql_task(ds, v_date):
                 user_type as owner_type,
                 user_id as owner_id,
                 owner_name,
-                default.localTime("{config}", 'NG', create_time, 0) as create_time,
-                default.localTime("{config}", 'NG', update_time, 0) as update_time,
+                default.localTime("{config}", 'NG', from_unixtime(cast(cast(create_time as bigint) / 1000 as bigint), 'yyyy-MM-dd HH:mm:ss'), 0) as create_time,
+                default.localTime("{config}", 'NG', from_unixtime(cast(cast(update_time as bigint) / 1000 as bigint), 'yyyy-MM-dd HH:mm:ss'), 0) as update_time,
                 terminal_type,
                 'NG' AS country_code
             from opay_dw_ods.ods_binlog_base_terminal_hi 
