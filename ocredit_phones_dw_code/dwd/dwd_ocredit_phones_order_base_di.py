@@ -22,12 +22,12 @@ import json
 import logging
 from airflow.models import Variable
 import requests
-import os
+import os,datetime
 from airflow.sensors import OssSensor
 
 args = {
-    'owner': 'lishuai',
-    'start_date': datetime(2020, 2, 18),
+    'owner': 'lili.chen',
+    'start_date': datetime(2020, 2, 23),
     'depends_on_past': False,
     'retries': 3,
     'retry_delay': timedelta(minutes=2),
@@ -36,7 +36,7 @@ args = {
     'email_on_retry': False,
 }
 
-dag = airflow.DAG('dwd_ocredit_phones_order_di',
+dag = airflow.DAG('dwd_ocredit_phones_order_base_di',
                   schedule_interval="30 02 * * *",
                   default_args=args,
                   catchup=False)
@@ -58,7 +58,7 @@ ods_sqoop_base_t_order_df_task = OssSensor(
 ##----------------------------------------- 变量 ---------------------------------------##
 
 db_name = "ocredit_phones_dw"
-table_name = "dwd_ocredit_phones_order_di"
+table_name = "dwd_ocredit_phones_order_base_di"
 hdfs_path = "oss://opay-datalake/ocredit_phones/ocredit_phones_dw/" + table_name
 
 
@@ -85,7 +85,7 @@ task_timeout_monitor = PythonOperator(
 
 ##----------------------------------------- 脚本 ---------------------------------------##
 
-def dwd_ocredit_phones_order_di_sql_task(ds):
+def dwd_ocredit_phones_order_base_di_sql_task(ds):
     HQL = '''
 
 
@@ -95,7 +95,6 @@ def dwd_ocredit_phones_order_di_sql_task(ds):
     INSERT overwrite TABLE ocredit_phones_dw.{table} partition(country_code,dt)
 
     select
-          
           id, --无业务含义主键 
           order_id, --订单号 
           business_type, --订单类型  0:手机 1:车 
@@ -130,9 +129,9 @@ def dwd_ocredit_phones_order_di_sql_task(ds):
           store_id, --门店ID 
           store_name, --门店名称 
           is_delete, --0:未删除 1:已删除 
-          from_unixtime(unix_timestamp(create_time)+3600,'yyyy-MM-dd HH:mm:ss'), --创建时间 
-          from_unixtime(unix_timestamp(update_time)+3600,'yyyy-MM-dd HH:mm:ss'),--更新时间
-          from_unixtime(unix_timestamp(loan_time)+3600,'yyyy-MM-dd HH:mm:ss'),--放款时间 
+          from_unixtime(unix_timestamp(create_time)+3600,'yyyy-MM-dd HH:mm:ss') as create_time, --创建时间 
+          from_unixtime(unix_timestamp(update_time)+3600,'yyyy-MM-dd HH:mm:ss') as update_time,--更新时间
+          from_unixtime(unix_timestamp(loan_time)+3600,'yyyy-MM-dd HH:mm:ss') as loan_time,--放款时间 
           opr_id, --操作更新用户ID 
           risk_status, --风控审核状态：1通过 0拒绝 
           risk_reason, --风控审核结果 
@@ -143,13 +142,14 @@ def dwd_ocredit_phones_order_di_sql_task(ds):
           loan_price, --手机价格(销售录入) 
           channel, --渠道： 1=销售 2=用户 
           product_category, --产品类型： 1 手机 2 汽车 3 摩托车 4 家电 5 电脑
-          case when order_id='012020011001240073' then '2020-01-04' else from_unixtime(unix_timestamp(create_time)+3600,'yyyy-MM-dd') end, --进件日期
+          if(order_id='012020011001240073','2020-01-04',from_unixtime(unix_timestamp(create_time)+3600,'yyyy-MM-dd')) as date_of_entry, --进件日期
           'nal' as country_code,
           '{pt}' as dt
 
     from ocredit_phones_dw_ods.ods_sqoop_base_t_order_df
     where dt='{pt}' and 
-    case when order_id='012020011001240073' then '2020-01-04' else from_unixtime(unix_timestamp(create_time)+3600,'yyyy-MM-dd') end='{pt}' 
+    (if(order_id='012020011001240073','2020-01-04',from_unixtime(unix_timestamp(create_time)+3600,'yyyy-MM-dd'))='{pt}' or
+    from_unixtime(unix_timestamp(update_time)+3600,'yyyy-MM-dd')='{pt}')
 and
 user_id not in 
 (
@@ -160,13 +160,7 @@ user_id not in
 '1215642304343425026',
 '1226878328587288578'
 )
-and business_type = '0'
-    
-    
-
-    
-    
-
+and business_type = '0';
     '''.format(
         pt=ds,
         table=table_name,
@@ -200,15 +194,17 @@ def execution_data_task_id(ds, **kwargs):
         第二个参数v_hour: 小时级任务，需要使用
 
     """
-
-    cf = CountriesPublicFrame("false", ds, db_name, table_name, hdfs_path, "true", "true")
+    if datetime.datetime.strptime(ds,'%Y-%m-%d %H:%M:%S').weekday() == 6:
+        cf = CountriesPublicFrame("false", ds, db_name, table_name, hdfs_path, "true", "false")
+    else:
+        cf = CountriesPublicFrame("false", ds, db_name, table_name, hdfs_path, "true", "true")
 
     # 删除分区
     # cf.delete_partition()
 
     # 拼接SQL
 
-    _sql = "\n" + cf.alter_partition() + "\n" + dwd_ocredit_phones_order_di_sql_task(ds)
+    _sql = "\n" + cf.alter_partition() + "\n" + dwd_ocredit_phones_order_base_di_sql_task(ds)
 
     logging.info('Executing: %s', _sql)
 
@@ -225,8 +221,8 @@ def execution_data_task_id(ds, **kwargs):
     cf.touchz_success()
 
 
-dwd_ocredit_phones_order_di_task = PythonOperator(
-    task_id='dwd_ocredit_phones_order_di_task',
+dwd_ocredit_phones_order_base_di_task = PythonOperator(
+    task_id='dwd_ocredit_phones_order_base_di_task',
     python_callable=execution_data_task_id,
     provide_context=True,
     op_kwargs={
@@ -237,4 +233,4 @@ dwd_ocredit_phones_order_di_task = PythonOperator(
     dag=dag
 )
 
-ods_sqoop_base_t_order_df_task >> dwd_ocredit_phones_order_di_task
+ods_sqoop_base_t_order_df_task >> dwd_ocredit_phones_order_base_di_task
