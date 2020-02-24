@@ -50,7 +50,7 @@ config = eval(Variable.get("utc_locale_time_config"))
 time_zone = config['NG']['time_zone']
 
 ##----------------------------------------- 依赖 ---------------------------------------##
-### 检查最新的商户表的依赖
+### 检查当前小时的依赖
 dwd_opay_life_payment_record_hi_check_task = OssSensor(
     task_id='dwd_opay_life_payment_record_hi_check_task',
     bucket_key='{hdfs_path_str}/country_code=NG/dt={pt}/hour={hour}/_SUCCESS'.format(
@@ -59,6 +59,21 @@ dwd_opay_life_payment_record_hi_check_task = OssSensor(
             time_zone=time_zone, gap_hour=0),
         hour='{{{{(execution_date+macros.timedelta(hours=({time_zone}+{gap_hour}))).strftime("%H")}}}}'.format(
             time_zone=time_zone, gap_hour=0)
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
+### 检查上一个小时的依赖
+dwd_opay_life_payment_record_hi_pre_check_task = OssSensor(
+    task_id='dwd_opay_life_payment_record_hi_pre_check_task',
+    bucket_key='{hdfs_path_str}/country_code=NG/dt={pt}/hour={hour}/_SUCCESS'.format(
+        hdfs_path_str="opay/opay_dw/dwd_opay_life_payment_record_hi",
+        pt='{{{{(execution_date+macros.timedelta(hours=({time_zone}+{gap_hour}))).strftime("%Y-%m-%d")}}}}'.format(
+            time_zone=time_zone, gap_hour=-1),
+        hour='{{{{(execution_date+macros.timedelta(hours=({time_zone}+{gap_hour}))).strftime("%H")}}}}'.format(
+            time_zone=time_zone, gap_hour=-1)
     ),
     bucket_name='opay-datalake',
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
@@ -216,5 +231,6 @@ app_opay_life_payment_sum_ng_h_task = PythonOperator(
 )
 
 dwd_opay_life_payment_record_hi_check_task >> app_opay_life_payment_sum_ng_h_task
+dwd_opay_life_payment_record_hi_pre_check_task >> app_opay_life_payment_sum_ng_h_task
 
 
