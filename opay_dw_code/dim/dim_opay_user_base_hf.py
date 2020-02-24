@@ -97,8 +97,7 @@ table_name = "dim_opay_user_base_hf"
 hdfs_path = "oss://opay-datalake/opay/opay_dw/" + table_name
 
 
-def dim_opay_user_base_hf_sql_task(**kwargs):
-    v_date = kwargs.get('v_execution_date')
+def dim_opay_user_base_hf_sql_task(ds, v_date):
     HQL = '''
     CREATE temporary FUNCTION localeTime AS 'com.udf.dev.LocaleUDF' USING JAR 'oss://opay-datalake/test/pro_dev.jar';
     CREATE temporary FUNCTION maxLocalTimeRange AS 'com.udf.dev.MaxLocaleUDF' USING JAR 'oss://opay-datalake/test/pro_dev.jar';
@@ -136,10 +135,10 @@ def dim_opay_user_base_hf_sql_task(**kwargs):
           photo,
           big_picture,
           nick_name,
-        date_format('{pt}', 'yyyy-MM-dd HH') as utc_date_hour,
+        date_format('{v_date}', 'yyyy-MM-dd HH') as utc_date_hour,
         country_code,
-        date_format(localeTime("{config}", country_code, '{pt}', 0), 'yyyy-MM-dd') as dt,
-        hour(localeTime("{config}", country_code, '{pt}', 0)) as hour
+        date_format(localeTime("{config}", country_code, '{v_date}', 0), 'yyyy-MM-dd') as dt,
+        hour(localeTime("{config}", country_code, '{v_date}', 0)) as hour
     from (
         select 
             id,
@@ -204,8 +203,8 @@ def dim_opay_user_base_hf_sql_task(**kwargs):
                nick_name,
                country_code
             from opay_dw.dim_opay_user_base_hf 
-            where concat(dt, " ", hour) between minLocalTimeRange("{config}", '{pt}', -1) and maxLocalTimeRange("{config}", '{pt}', -1) 
-                and utc_date_hour = from_unixtime(cast(unix_timestamp('{pt}', 'yyyy-MM-dd HH') - 3600 as BIGINT), 'yyyy-MM-dd HH')
+            where concat(dt, " ", hour) between minLocalTimeRange("{config}", '{v_date}', -1) and maxLocalTimeRange("{config}", '{v_date}', -1) 
+                and utc_date_hour = from_unixtime(cast(unix_timestamp('{v_date}', 'yyyy-MM-dd HH') - 3600 as BIGINT), 'yyyy-MM-dd HH')
             union all
             SELECT 
                 id,
@@ -238,13 +237,14 @@ def dim_opay_user_base_hf_sql_task(**kwargs):
                 nick_name,
                 'NG' AS country_code
             from opay_dw_ods.ods_binlog_base_user_hi 
-            where concat(dt, " ", hour) = date_format('{pt}', 'yyyy-MM-dd HH') and `__deleted` = 'false'
+            where concat(dt, " ", hour) = date_format('{v_date}', 'yyyy-MM-dd HH') and `__deleted` = 'false'
         ) t0 
     ) t1 where rn = 1
     
     
     '''.format(
-        pt=v_date,
+        pt=ds,
+        v_date= v_date,
         table=table_name,
         db=db_name,
         config=config
@@ -303,12 +303,12 @@ def execution_data_task_id(ds, dag, **kwargs):
     # 删除分区
     # cf.delete_partition()
 
-    print(dim_opay_user_base_hf_sql_task(kwargs))
+    print(dim_opay_user_base_hf_sql_task(ds, v_date))
 
     # 读取sql
     # _sql="\n"+cf.alter_partition()+"\n"+test_dim_oride_city_sql_task(ds)
 
-    _sql = "\n" + dim_opay_user_base_hf_sql_task(kwargs)
+    _sql = "\n" + dim_opay_user_base_hf_sql_task(ds, v_date)
 
     # logging.info('Executing: %s',_sql)
 
