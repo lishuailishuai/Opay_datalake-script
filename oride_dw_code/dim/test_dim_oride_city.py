@@ -18,7 +18,7 @@ from airflow.sensors import UFileSensor
 from airflow.sensors import OssSensor
 from airflow.sensors.s3_key_sensor import S3KeySensor
 from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
-from plugins.CountriesPublicFrame import CountriesPublicFrame
+from plugins.CountriesPublicFrame_dev import CountriesPublicFrame_dev
 from plugins.TaskHourSuccessCountMonitor import TaskHourSuccessCountMonitor
 import json
 import logging
@@ -54,21 +54,39 @@ hdfs_path="oss://opay-datalake/oride/test_db/"+table_name
 
 
 #获取变量
-code_map=eval(Variable.get("sys_flag"))
+#code_map=eval(Variable.get("sys_flag"))
 
-#判断ufile(cdh环境)
+config = eval(Variable.get("utc_locale_time_config"))
+time_zone = config['NG']['time_zone']
 
 
 test_snappy_dev_01_tesk = OssSensor(
     task_id='test_snappy_dev_01_tesk',
-    bucket_key='{hdfs_path_str}/_SUCCESS'.format(
+    bucket_key='{hdfs_path_str}/dt={pt}/hour={hour}/_SUCCESS'.format(
         hdfs_path_str="test",
-        pt='{{ds}}'
+        pt='{{{{(execution_date+macros.timedelta(hours=({time_zone}+{gap_hour}))).strftime("%Y-%m-%d")}}}}'.format(time_zone=time_zone,gap_hour=-1),
+        hour='{{{{(execution_date+macros.timedelta(hours=({time_zone}+{gap_hour}))).strftime("%H")}}}}'.format(time_zone=time_zone,gap_hour=-1)
     ),
     bucket_name='opay-datalake',
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
+
+
+# test_snappy_dev_02_tesk = OssSensor(
+#     task_id='test_snappy_dev_02_tesk',
+#     bucket_key='{hdfs_path_str}/dt={pt}/hour={hour}/_SUCCESS'.format(
+#         hdfs_path_str="test",
+#         #pt=pt_date,
+#         #pt=GetLocalTime('{{{{(execution_date+macros.timedelta(hours={time_zone})).strftime("%Y-%m-%d")}}}}', 'NG',-1)['date'],
+#         #pt='{{{{(execution_date+macros.timedelta(hours={time_zone})).strftime("%Y-%m-%d")}}}}'.format(time_zone=2),
+#         hour='{{{{(execution_date+macros.timedelta(hours={time_zone})).strftime("%H")}}}}'.format(time_zone=2)
+#     ),
+#     bucket_name='opay-datalake',
+#     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+#     dag=dag
+# )
+
 
 ods_sqoop_base_data_city_conf_df_tesk = UFileSensor(
     task_id='ods_sqoop_base_data_city_conf_df_tesk',
@@ -97,13 +115,14 @@ ods_sqoop_base_data_city_conf_df_tesk = UFileSensor(
 #     #     {"db": "test_db", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "600"}
 #     # ]
 
-#     TaskTimeoutMonitor().set_task_monitor(tb)
+#     #TaskTimeoutMonitor().set_task_monitor(tb)
 
-#     print(GetLocalTime('2020-02-20 10',"NG",'-1'))
-#     print(GetLocalTime('2020-02-20 10',"NG",'0'))
-#     print(GetLocalTime('2020-02-20 10',"NG",'1'))
+#     print(GetLocalTime('2020-02-20 10',"NG",-1))
+#     print(GetLocalTime('2020-02-20 10',"NG",0))
+#     print(GetLocalTime('2020-02-20 10',"NG",1))
+#     print(GetLocalTime('2020-02-20 10',"NG",2))
 
-#     print(GetLocalTime('2020-02-20 10',"NC",'1'))
+#     print(GetLocalTime('2020-02-20 10',"NC",1))
 
 # task_timeout_monitor= PythonOperator(
 #     task_id='task_timeout_monitor',
@@ -111,6 +130,8 @@ ods_sqoop_base_data_city_conf_df_tesk = UFileSensor(
 #     provide_context=True,
 #     dag=dag
 # )
+
+
 
 
 
@@ -295,50 +316,53 @@ def check_key_data_task(ds):
 
 
 #主流程
-def execution_data_task_id(ds,**kwargs):
+def execution_data_task_id(ds,dag,**kwargs):
 
     v_date=kwargs.get('v_execution_date')
     v_day=kwargs.get('v_execution_day')
     v_hour=kwargs.get('v_execution_hour')
 
-    #owner=kwargs.get('owner')
-
-    #print(owner)
-
-    hive_hook = HiveCliHook()
-
-    # v_info = [
-    #     {"table":"oride_data.oride_data.data_order","start_timeThour": "{v_day}T00".format(v_day=v_day), "end_dateThour": "{v_day}T23".format(v_day=v_day), "depend_dir": "oss://opay-datalake/oride_binlog"}
-    # ]
-
-    # #print(dag.)
-
-    # cm=TaskHourSuccessCountMonitor(ds,v_info)
-
-    # cm.HourSuccessCountMonitor()
+    #hive_hook = HiveCliHook()
 
     """
         #功能函数
-        alter语句: alter_partition
-        删除分区: delete_partition
-        生产success: touchz_success
+            alter语句: alter_partition()
+            删除分区: delete_partition()
+            生产success: touchz_success()
 
         #参数
-        第一个参数true: 所有国家是否上线。false 没有
-        第二个参数true: 数据目录是有country_code分区。false 没有
-        第三个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
+            is_countries_online --是否开通多国家业务 默认(true 开通)
+            db_name --hive 数据库的名称
+            table_name --hive 表的名称
+            data_oss_path --oss 数据目录的地址
+            is_country_partition --是否有国家码分区,[默认(true 有country_code分区)]
+            is_result_force_exist --数据是否强行产出,[默认(true 必须有数据才生成_SUCCESS)] false 数据没有也生成_SUCCESS 
+            execute_time --当前脚本执行时间(%Y-%m-%d %H:%M:%S)
+            is_hour_task --是否开通小时级任务,[默认(false)]
+            frame_type --模板类型(只有 is_hour_task:'true' 时生效): utc 产出分区为utc时间，local 产出分区为本地时间,[默认(utc)]。
 
         #读取sql
-        %_sql(ds,v_hour)
-
-        第一个参数ds: 天级任务
-        第二个参数v_hour: 小时级任务，需要使用
+            %_sql(ds,v_hour)
 
     """
 
-    cf=CountriesPublicFrame("true",ds,db_name,table_name,hdfs_path,"true","true")
+    args=[
+            {
+            "dag":dag,
+            "is_countries_online":"true",
+            "db_name":db_name,
+            "table_name":table_name,
+            "data_oss_path":hdfs_path,
+            "is_country_partition":"true",
+            "is_result_force_exist":"true",
+            "execute_time":v_date,
+            "is_hour_task":"true",
+            "frame_type":"local"
+            }
+    ]
 
-    #cf.exist_country_code_data_dir_dev()
+
+    cf=CountriesPublicFrame_dev(args)
 
     #删除分区
     #cf.delete_partition()
