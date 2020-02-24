@@ -77,23 +77,26 @@ ods_opay_user_base_hi_check_task = OssSensor(
     )
 
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
-# def fun_task_timeout_monitor(ds, dag, **op_kwargs):
-#     dag_ids = dag.dag_id
-#
-#     msg = [
-#         {"dag": dag, "db": "opay_dw", "table": "{dag_name}".format(dag_name=dag_ids),
-#          "partition": "country_code=NG/dt=2020-02-20/hour=00".format(pt=ds), "timeout": "3000"}
-#     ]
-#
-#     TaskTimeoutMonitor().set_task_monitor(msg)
-#
-#
-# task_timeout_monitor = PythonOperator(
-#     task_id='task_timeout_monitor',
-#     python_callable=fun_task_timeout_monitor,
-#     provide_context=True,
-#     dag=dag
-# )
+def fun_task_timeout_monitor(ds, dag, **op_kwargs):
+    dag_ids = dag.dag_id
+
+    msg = [
+        {"dag": dag, "db": "opay_dw", "table": "{dag_name}".format(dag_name=dag_ids),
+         "partition": "country_code=NG/dt={pt}/hour={hour}".format(
+             pt='{{{{(execution_date+macros.timedelta(hours=({time_zone}+{gap_hour}))).strftime("%Y-%m-%d")}}}}'.format(time_zone=time_zone, gap_hour=0),
+             hour='{{{{(execution_date+macros.timedelta(hours=({time_zone}+{gap_hour}))).strftime("%H")}}}}'.format(time_zone=time_zone, gap_hour=0)
+          ), "timeout": "3000"}
+    ]
+
+    TaskTimeoutMonitor().set_task_monitor(msg)
+
+
+task_timeout_monitor = PythonOperator(
+    task_id='task_timeout_monitor',
+    python_callable=fun_task_timeout_monitor,
+    provide_context=True,
+    dag=dag
+)
 
 
 
