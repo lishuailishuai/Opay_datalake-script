@@ -28,7 +28,7 @@ import os
 
 args = {
     'owner': 'xiedong',
-    'start_date': datetime(2020, 2, 13),
+    'start_date': datetime(2020, 2, 24),
     'depends_on_past': False,
     'retries': 3,
     'retry_delay': timedelta(minutes=2),
@@ -38,7 +38,7 @@ args = {
 }
 
 dag = airflow.DAG('dim_opay_merchant_base_hf',
-                  schedule_interval="03 * * * *",
+                  schedule_interval="00 * * * *",
                   default_args=args,
                   catchup=False)
 
