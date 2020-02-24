@@ -81,7 +81,7 @@ ods_opay_terminal_base_hi_check_task = OssSensor(
 
 def dim_opay_terminal_base_hf_sql_task(ds, v_date):
     HQL = '''
-    CREATE temporary FUNCTION localTime AS 'com.udf.dev.LocaleUDF' USING JAR 'oss://opay-datalake/test/pro_dev.jar';
+    CREATE temporary FUNCTION default.localTime AS 'com.udf.dev.LocaleUDF' USING JAR 'oss://opay-datalake/test/pro_dev.jar';
     CREATE temporary FUNCTION maxLocalTimeRange AS 'com.udf.dev.MaxLocaleUDF' USING JAR 'oss://opay-datalake/test/pro_dev.jar';
     CREATE temporary FUNCTION minLocalTimeRange AS 'com.udf.dev.MinLocaleUDF' USING JAR 'oss://opay-datalake/test/pro_dev.jar';
     set hive.exec.dynamic.partition.mode=nonstrict;
@@ -103,8 +103,8 @@ def dim_opay_terminal_base_hf_sql_task(ds, v_date):
         terminal_type,
         date_format('{v_date}', 'yyyy-MM-dd HH') as utc_date_hour,
         country_code,
-        date_format(localTime("{config}", country_code, '{v_date}', 0), 'yyyy-MM-dd') as dt,
-        date_format(localTime("{config}", country_code, '{v_date}', 0), 'HH') as hour
+        date_format(default.localTime("{config}", country_code, '{v_date}', 0), 'yyyy-MM-dd') as dt,
+        date_format(default.localTime("{config}", country_code, '{v_date}', 0), 'HH') as hour
     from (
         select 
             id,
@@ -137,7 +137,7 @@ def dim_opay_terminal_base_hf_sql_task(ds, v_date):
                 terminal_type,
                 country_code
             from opay_dw.dim_opay_terminal_base_hf 
-            where concat(dt, " ", hour) between minLocalTimeRange("{config}", '{v_date}', -1) and maxLocalTimeRange("{config}", '{v_date}', -1) 
+            where concat(dt, " ", hour) between default.minLocalTimeRange("{config}", '{v_date}', -1) and default.maxLocalTimeRange("{config}", '{v_date}', -1) 
                 and utc_date_hour = from_unixtime(cast(unix_timestamp('{v_date}', 'yyyy-MM-dd HH') - 3600 as BIGINT), 'yyyy-MM-dd HH')
             union all
             SELECT 
@@ -150,8 +150,8 @@ def dim_opay_terminal_base_hf_sql_task(ds, v_date):
                 user_type as owner_type,
                 user_id as owner_id,
                 owner_name,
-                localTime("{config}", 'NG', create_time, 0) as create_time,
-                localTime("{config}", 'NG', update_time, 0) as update_time,
+                default.localTime("{config}", 'NG', create_time, 0) as create_time,
+                default.localTime("{config}", 'NG', update_time, 0) as update_time,
                 terminal_type,
                 'NG' AS country_code
             from opay_dw_ods.ods_binlog_base_terminal_hi 
