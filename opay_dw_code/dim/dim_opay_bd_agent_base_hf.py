@@ -206,7 +206,7 @@ def dim_opay_bd_agent_base_hf_sql_task(ds, v_date):
                 country,
                 agent_email,
                 opay_account,
-                user_id,
+                cast(opay_id as string) as user_id,
                 agent_bvn,
                 agent_state,
                 birthday,
@@ -226,7 +226,7 @@ def dim_opay_bd_agent_base_hf_sql_task(ds, v_date):
                 localTime("{config}", 'NG', created_at, 0) as create_time,
                 localTime("{config}", 'NG', updated_at, 0) as update_time,
                 'NG' AS country_code
-            from opay_dw_ods.ods_binlog_base_user_hi 
+            from opay_dw_ods.ods_binlog_base_bd_agent_hi 
             where concat(dt, " ", hour) = date_format('{v_date}', 'yyyy-MM-dd HH') and `__deleted` = 'false'
         ) t0 
     ) t1 where rn = 1
