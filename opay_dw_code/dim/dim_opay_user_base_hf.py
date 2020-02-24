@@ -110,8 +110,6 @@ def dim_opay_user_base_hf_sql_task(ds, v_date):
     set hive.exec.parallel=true;
     set mapred.max.split.size=1000000;
     
-    create table if not exists test_db.user_hf_001 as 
-        ;
     insert overwrite table {db}.{table} partition (country_code, dt, hour)
     
     select 
@@ -247,8 +245,7 @@ def dim_opay_user_base_hf_sql_task(ds, v_date):
             from opay_dw_ods.ods_binlog_base_user_hi 
             where concat(dt, " ", hour) = date_format('{v_date}', 'yyyy-MM-dd HH') and `__deleted` = 'false'
         ) t0 
-    ) t1 where rn = 1;
-    DROP TABLE IF EXISTS test_db.user_hf_001
+    ) t1 where rn = 1
     
     '''.format(
         pt=ds,
