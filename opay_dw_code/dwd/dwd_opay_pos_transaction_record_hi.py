@@ -143,7 +143,7 @@ def fun_task_timeout_monitor(ds,dag,execution_date,**op_kwargs):
 
     #小时级监控
     tb_hour_task = [
-        {"dag":dag,"db": "opay_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code={country_code}/dt={pt}/hour={now_hour}".format(country_code=v_country_code,pt=v_date,now_hour=v_hour), "timeout": "100"}
+        {"dag":dag,"db": "opay_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code={country_code}/dt={pt}/hour={now_hour}".format(country_code=v_country_code,pt=v_date,now_hour=v_hour), "timeout": "600"}
     ]
 
     TaskTimeoutMonitor().set_task_monitor(tb_hour_task)
