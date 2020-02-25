@@ -50,7 +50,7 @@ time_zone = config['NG']['time_zone']
 ##---当前小时------##
 dim_opay_user_base_hf_day_task = OssSensor(
     task_id='dim_opay_user_base_hf_day_task',
-    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+    bucket_key='{hdfs_path_str}/dt={pt}/hour={hour}/_SUCCESS'.format(
         hdfs_path_str="opay/opay_dw/dim_opay_user_base_hf",
         pt='{{{{(execution_date+macros.timedelta(hours=({time_zone}+{gap_hour}))).strftime("%Y-%m-%d")}}}}'.format(
             time_zone=time_zone, gap_hour=0),
@@ -65,7 +65,7 @@ dim_opay_user_base_hf_day_task = OssSensor(
 ##-----当前小时-----##
 dim_opay_terminal_base_hf_day_task = OssSensor(
     task_id='dim_opay_terminal_base_hf_day_task',
-    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+    bucket_key='{hdfs_path_str}/dt={pt}/hour={hour}/_SUCCESS'.format(
         hdfs_path_str="opay/opay_dw/dim_opay_terminal_base_hf",
         pt='{{{{(execution_date+macros.timedelta(hours=({time_zone}+{gap_hour}))).strftime("%Y-%m-%d")}}}}'.format(
             time_zone=time_zone, gap_hour=0),
