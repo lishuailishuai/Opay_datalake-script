@@ -180,7 +180,7 @@ def dim_opay_bd_agent_hf_sql_task(ds, v_date):
             create_time,
             update_time,
             country_code,
-            row_number() over(partition by user_id order by `__ts_ms` desc,`__file` desc,cast(`__pos` as int) desc) rn
+            row_number() over(partition by user_id order by update_time desc) rn
         from (
             SELECT 
                 id,
