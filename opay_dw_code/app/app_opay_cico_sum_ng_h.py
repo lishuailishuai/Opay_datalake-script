@@ -91,6 +91,69 @@ set mapred.max.split.size=1000000;
 set hive.exec.dynamic.partition.mode=nonstrict;
 set hive.exec.parallel=true;
 
+insert overwrite table opay_dw.app_opay_cico_sum_ng_h partition(country_code, dt, hour)
+select
+  create_date_hour
+  ,sub_service_type
+  ,state
+  ,region
+  ,order_status
+
+  ,count(1) as order_cnt
+  ,sum(amount) as order_amt
+
+  ,'NG' as country_code
+  ,date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'yyyy-MM-dd') as dt
+  ,date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'HH') as hour
+from
+  (
+  select
+    a.create_date_hour
+    ,a.sub_service_type
+    ,a.state
+    ,b.region
+    ,a.order_status
+    ,a.amount
+  from
+    (
+    select 
+      date_format(create_time, 'yyyy-MM-dd HH') as create_date_hour
+      ,sub_service_type
+      ,state
+      ,order_status
+      ,amount
+      ,row_number() over(partition by order_no order by update_time desc) rn
+    from
+      opay_dw.dwd_opay_cico_record_hi
+    where
+      country_code = 'NG'
+      and concat(dt,' ',hour) >= date_format(default.localTime("{config}", 'NG', '{v_date}', -1), 'yyyy-MM-dd HH')
+      and concat(dt,' ',hour) <= date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'yyyy-MM-dd HH')
+    ) as a
+  left join
+    (
+    select
+      state
+      , region
+    from 
+      opay_dw.dim_opay_region_state_mapping_df
+    where 
+      dt = if('{pt}' <= '2020-02-10', '2020-02-10', '{pt}')
+    ) as b
+  on
+    a.state = b.state
+  where
+    a.rn = 1
+  ) as c
+group by
+  create_date_hour
+  ,sub_service_type
+  ,state
+  ,region
+  ,order_status
+
+;
+
 
 
     '''.format(
