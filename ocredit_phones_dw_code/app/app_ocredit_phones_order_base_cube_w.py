@@ -108,7 +108,7 @@ def app_ocredit_phones_order_base_cube_w_sql_task(ds):
     from ocredit_phones_dw.dwd_ocredit_phones_order_base_df
     where dt='{pt}'
     and weekofyear(dt)-weekofyear(date_of_entry)>=0  --跨年后来考虑
-    and weekofyear(dt)-weekofyear(date_of_entry)<=4
+    and weekofyear(dt)-weekofyear(date_of_entry)<4
     group by terms,weekofyear(date_of_entry)
     grouping sets(weekofyear(date_of_entry),
           (terms,weekofyear(date_of_entry)))
