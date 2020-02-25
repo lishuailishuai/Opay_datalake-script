@@ -110,6 +110,47 @@ def dim_opay_merchant_base_hf_sql_task(ds, v_date):
     HQL = '''
     set hive.exec.dynamic.partition.mode=nonstrict;
     set hive.exec.parallel=true;
+    with ods_merchant_hi as (
+        SELECT 
+                merchant_id,
+                merchant_name,
+                merchant_status,
+                bank_card_no,
+                bank_country,
+                bank_code,
+                issue_bank,
+                bank_cipher_text,
+                bank_mac,
+                mobile,
+                account_number,
+                merchant_type,
+                category,
+                countries_code,
+                webhook_url,
+                allowed_to_go_live,
+                bank_settlement_enabled,
+                instant_settlement,
+                skip_commit_stage,
+                disable_settlements,
+                settlement_period,
+                create_time,
+                update_time
+                level,
+                icon_url,
+                contact_email,
+                merchant_desc,
+                merchant_website,
+                cac_document_url,
+                department,
+                address,
+                merchant_scope,
+                internal_merchant_desc,
+                business_developer,
+                bank_account_name,
+                row_number() over(partition by merchant_id order by `__ts_ms` desc,`__file` desc,cast(`__pos` as int) desc) rn
+            from opay_dw_ods.ods_binlog_base_merchant_hi 
+             where concat(dt, " ", hour) = date_format('{v_date}', 'yyyy-MM-dd HH') and `__deleted` = 'false'
+    )
     insert overwrite table {db}.{table} partition (country_code, dt, hour)
 
     select 
@@ -270,8 +311,7 @@ def dim_opay_merchant_base_hf_sql_task(ds, v_date):
                 business_developer,
                 bank_account_name,
                 'NG' as country_code
-            from opay_dw_ods.ods_binlog_base_merchant_hi 
-             where concat(dt, " ", hour) = date_format('{v_date}', 'yyyy-MM-dd HH') and `__deleted` = 'false'
+            from ods_merchant_hi where rn = 1
         ) t0 
     ) t1 where rn = 1
 
