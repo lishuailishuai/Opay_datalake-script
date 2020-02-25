@@ -102,7 +102,7 @@ select
   ,sum(amount) as order_amt
   ,'NG' as country_code
   ,date_format(create_date_hour, 'yyyy-MM-dd') as dt
-  ,date_format(create_date_hour, 'HH') as hour
+  ,substring(create_date_hour, 12, 13) as hour
 from
   (
   select 
