@@ -114,7 +114,6 @@ def dim_opay_user_base_hf_sql_task(ds, v_date):
     set hive.exec.parallel=true;
     set mapred.max.split.size=1000000;
     
-    insert overwrite table {db}.{table} partition (country_code, dt, hour)
     with ods_user_di as (
         SELECT 
                 id,
@@ -149,6 +148,7 @@ def dim_opay_user_base_hf_sql_task(ds, v_date):
             from opay_dw_ods.ods_binlog_base_user_hi 
             where concat(dt, " ", hour) = date_format('{v_date}', 'yyyy-MM-dd HH') and `__deleted` = 'false'
     )
+    insert overwrite table {db}.{table} partition (country_code, dt, hour)
     select 
         id,
         user_id,
