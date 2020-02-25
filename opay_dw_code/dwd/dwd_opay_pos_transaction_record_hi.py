@@ -231,6 +231,10 @@ union_result as (
     , '-' as outward_id
     , '-' as outward_type
     , date_format('{v_date}', 'yyyy-MM-dd HH') as utc_date_hour
+
+    , `__ts_ms` as ts
+    , `__file` as file
+    , cast(`__pos` as int) as pos
   from 
     opay_dw_ods.ods_binlog_base_user_pos_transaction_record_hi
   where 
@@ -266,6 +270,10 @@ union_result as (
     , '-' as outward_id
     , '-' as outward_type
     , date_format('{v_date}', 'yyyy-MM-dd HH') as utc_date_hour
+
+    , `__ts_ms` as ts
+    , `__file` as file
+    , cast(`__pos` as int) as pos
   from 
     opay_dw_ods.ods_binlog_base_merchant_pos_transaction_record_hi
   where 
@@ -329,7 +337,7 @@ union_result_different as (
       , outward_id
       , outward_type
       , utc_date_hour
-      , row_number() over(partition by order_no order by update_time desc) rn
+      , row_number() over(partition by order_no order by ts desc,file desc,pos desc) rn
     from
       union_result
     ) as a
