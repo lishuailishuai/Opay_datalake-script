@@ -27,7 +27,7 @@ import os
 
 args = {
     'owner': 'liushuzhen',
-    'start_date': datetime(2020, 2, 23),
+    'start_date': datetime(2020, 2, 24),
     'depends_on_past': False,
     'retries': 3,
     'retry_delay': timedelta(minutes=2),
@@ -36,7 +36,7 @@ args = {
     'email_on_retry': False,
 }
 
-dag = airflow.DAG('app_opay_active_user_report_cube',
+dag = airflow.DAG('app_opay_active_user_report_cube_d',
                   schedule_interval="30 02 * * *",
                   default_args=args,
                   catchup=False)
@@ -64,6 +64,7 @@ dim_opay_user_base_di_prev_day_task = OssSensor(
     dag=dag
 )
 
+
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
 def fun_task_timeout_monitor(ds, dag, **op_kwargs):
     dag_ids = dag.dag_id
@@ -86,11 +87,11 @@ task_timeout_monitor = PythonOperator(
 ##----------------------------------------- 变量 ---------------------------------------##
 db_name = "opay_dw"
 
-table_name = "app_opay_active_user_report_cube"
+table_name = "app_opay_active_user_report_cube_d"
 hdfs_path = "oss://opay-datalake/opay/opay_dw/" + table_name
 
 
-def app_opay_active_user_report_cube_sql_task(ds,ds_nodash):
+def app_opay_active_user_report_cube_d_sql_task(ds, ds_nodash):
     HQL = '''
     set  hive.exec.max.dynamic.partitions.pernode=1000;
     set hive.exec.dynamic.partition.mode=nonstrict;
@@ -124,11 +125,11 @@ def app_opay_active_user_report_cube_sql_task(ds,ds_nodash):
     inner join 
               test_db.user_base_cube_{date} b 
     on a.user_id=b.user_id;
-   
-    INSERT overwrite TABLE opay_dw.app_opay_active_user_report_cube partition (dt)
-    select nvl(top_consume_scenario,'-') top_consume_scenario,
-           nvl(role,'-') role,
-           nvl(state,'-') state,
+
+    INSERT overwrite TABLE opay_dw.app_opay_active_user_report_cube_d partition (dt)
+    select nvl(top_consume_scenario,'ALL') top_consume_scenario,
+           nvl(role,'ALL') role,
+           nvl(state,'ALL') state,
            count (distinct case when dt='{pt}' then user_id end) active_user_cnt_d,
            count (distinct case when dt>date_sub('{pt}',7) then user_id end) active_user_cnt_7d,
            count (distinct user_id) active_user_cnt_30d,
@@ -154,7 +155,7 @@ def execution_data_task_id(ds, ds_nodash, **kargs):
     hive_hook = HiveCliHook()
 
     # 读取sql
-    _sql = app_opay_active_user_report_cube_sql_task(ds,ds_nodash)
+    _sql = app_opay_active_user_report_cube_d_sql_task(ds, ds_nodash)
 
     logging.info('Executing: %s', _sql)
 
@@ -170,14 +171,14 @@ def execution_data_task_id(ds, ds_nodash, **kargs):
     TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "false", "true")
 
 
-app_opay_active_user_report_cube_task = PythonOperator(
-    task_id='app_opay_active_user_report_cube_task',
+app_opay_active_user_report_cube_d_task = PythonOperator(
+    task_id='app_opay_active_user_report_cube_d_task',
     python_callable=execution_data_task_id,
     provide_context=True,
     dag=dag
 )
 
-dwd_opay_transaction_record_di_prev_day_task >> app_opay_active_user_report_cube_task
-dim_opay_user_base_di_prev_day_task >> app_opay_active_user_report_cube_task
+dwd_opay_transaction_record_di_prev_day_task >> app_opay_active_user_report_cube_d_task
+dim_opay_user_base_di_prev_day_task >> app_opay_active_user_report_cube_d_task
 
 
