@@ -18,6 +18,7 @@ from airflow.sensors import UFileSensor
 from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
 from airflow.sensors import OssSensor
 from plugins.CountriesPublicFrame_dev import CountriesPublicFrame_dev
+from utils.get_local_time import GetLocalTime
 
 from plugins.TaskTouchzSuccess import TaskTouchzSuccess
 import json
@@ -77,26 +78,32 @@ ods_opay_user_base_hi_check_task = OssSensor(
     )
 
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
-# def fun_task_timeout_monitor(ds, dag, **op_kwargs):
-#     dag_ids = dag.dag_id
-#
-#     msg = [
-#         {"dag": dag, "db": "opay_dw", "table": "{dag_name}".format(dag_name=dag_ids),
-#          "partition": "country_code=NG/dt={pt}/hour={hour}".format(
-#              pt='{{{{(execution_date+macros.timedelta(hours=({time_zone}+{gap_hour}))).strftime("%Y-%m-%d")}}}}'.format(time_zone=time_zone, gap_hour=0),
-#              hour='{{{{(execution_date+macros.timedelta(hours=({time_zone}+{gap_hour}))).strftime("%H")}}}}'.format(time_zone=time_zone, gap_hour=0)
-#           ), "timeout": "3000"}
-#     ]
-#
-#     TaskTimeoutMonitor().set_task_monitor(msg)
-#
-#
-# task_timeout_monitor = PythonOperator(
-#     task_id='task_timeout_monitor',
-#     python_callable=fun_task_timeout_monitor,
-#     provide_context=True,
-#     dag=dag
-# )
+def fun_task_timeout_monitor(ds,dag,execution_date,**op_kwargs):
+
+    dag_ids=dag.dag_id
+
+    #监控国家
+    v_country_code='NG'
+
+    #时间偏移量
+    v_gap_hour=0
+
+    v_date=GetLocalTime(execution_date.strftime("%Y-%m-%d %H"),v_country_code,v_gap_hour)['date']
+    v_hour=GetLocalTime(execution_date.strftime("%Y-%m-%d %H"),v_country_code,v_gap_hour)['hour']
+
+    #小时级监控
+    tb_hour_task = [
+        {"dag":dag,"db": "opay_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code={country_code}/dt={pt}/hour={now_hour}".format(country_code=v_country_code,pt=v_date,now_hour=v_hour), "timeout": "100"}
+    ]
+
+    TaskTimeoutMonitor().set_task_monitor(tb_hour_task)
+
+task_timeout_monitor= PythonOperator(
+    task_id='task_timeout_monitor',
+    python_callable=fun_task_timeout_monitor,
+    provide_context=True,
+    dag=dag
+)
 
 
 
@@ -173,7 +180,7 @@ def dim_opay_user_base_hf_sql_task(ds, v_date):
             big_picture,
             nick_name,
             country_code,
-            row_number() over(partition by user_id order by update_time desc) rn
+            row_number() over(partition by user_id order by `__ts_ms` desc,`__file` desc,cast(`__pos` as int) desc) rn
         from (
             SELECT 
                id,
