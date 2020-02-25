@@ -112,6 +112,42 @@ def dim_opay_bd_agent_hf_sql_task(ds, v_date):
     HQL = '''
     set hive.exec.dynamic.partition.mode=nonstrict;
     set hive.exec.parallel=true;
+    
+    with ods_agent_hi as (
+        SELECT 
+                id,
+                agent_name,
+                agent_surname,
+                first_name,
+                agent_middle_name,
+                agent_address,
+                agent_gender,
+                country,
+                agent_email,
+                opay_account,
+                cast(opay_id as string) as user_id,
+                cast(agent_bvn as string) as agent_bvn,
+                agent_state,
+                birthday,
+                phone,
+                agent_passport,
+                government_issued_photo,
+                bill_photo,
+                lng,
+                lat,
+                fence_id,
+                city_id,
+                agent_status,
+                create_id,
+                modify_id,
+                bd_id as bd_admin_user_id,
+                agent_check_id,
+                created_at as create_time,
+                updated_at as update_time,
+                row_number() over(partition by opay_id order by `__ts_ms` desc,`__file` desc,cast(`__pos` as int) desc) rn
+            from opay_dw_ods.ods_binlog_base_bd_agent_hi 
+            where concat(dt, " ", hour) = date_format('{v_date}', 'yyyy-MM-dd HH') and `__deleted` = 'false'
+    )
     insert overwrite table {db}.{table} partition (country_code, dt, hour)
 
     select 
@@ -228,8 +264,8 @@ def dim_opay_bd_agent_hf_sql_task(ds, v_date):
                 country,
                 agent_email,
                 opay_account,
-                cast(opay_id as string) as user_id,
-                cast(agent_bvn as string) as agent_bvn,
+                user_id,
+                agent_bvn,
                 agent_state,
                 birthday,
                 phone,
@@ -245,11 +281,10 @@ def dim_opay_bd_agent_hf_sql_task(ds, v_date):
                 modify_id,
                 bd_id as bd_admin_user_id,
                 agent_check_id,
-                default.localTime("{config}", 'NG', from_unixtime(cast(cast(created_at as bigint) / 1000 as bigint), 'yyyy-MM-dd HH:mm:ss'), 0) as create_time,
-                default.localTime("{config}", 'NG', from_unixtime(cast(cast(updated_at as bigint) / 1000 as bigint), 'yyyy-MM-dd HH:mm:ss'), 0) as update_time,
+                default.localTime("{config}", 'NG', from_unixtime(cast(cast(create_time as bigint) / 1000 as bigint), 'yyyy-MM-dd HH:mm:ss'), 0) as create_time,
+                default.localTime("{config}", 'NG', from_unixtime(cast(cast(update_time as bigint) / 1000 as bigint), 'yyyy-MM-dd HH:mm:ss'), 0) as update_time,
                 'NG' AS country_code
-            from opay_dw_ods.ods_binlog_base_bd_agent_hi 
-            where concat(dt, " ", hour) = date_format('{v_date}', 'yyyy-MM-dd HH') and `__deleted` = 'false'
+            from ods_agent_hi where rn = 1
         ) t0 
     ) t1 where rn = 1
 

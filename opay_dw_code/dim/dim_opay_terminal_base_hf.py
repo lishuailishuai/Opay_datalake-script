@@ -112,6 +112,25 @@ def dim_opay_terminal_base_hf_sql_task(ds, v_date):
 
     set hive.exec.dynamic.partition.mode=nonstrict;
     set hive.exec.parallel=true;
+    
+    with ods_terminal_hi as (
+        SELECT 
+                id,
+                terminal_provider_id,
+                pos_id,
+                terminal_id,
+                bank,
+                bind_status,
+                user_type as owner_type,
+                user_id as owner_id,
+                owner_name,
+                create_time,
+                update_time,
+                terminal_type,
+                row_number() over(partition by terminal_id order by `__ts_ms` desc,`__file` desc,cast(`__pos` as int) desc) rn
+            from opay_dw_ods.ods_binlog_base_terminal_hi 
+            where concat(dt, " ", hour) = date_format('{v_date}', 'yyyy-MM-dd HH') and `__deleted` = 'false'    
+    )
     insert overwrite table {db}.{table} partition (country_code, dt, hour)
     
     select 
@@ -173,15 +192,14 @@ def dim_opay_terminal_base_hf_sql_task(ds, v_date):
                 terminal_id,
                 bank,
                 bind_status,
-                user_type as owner_type,
-                user_id as owner_id,
+                owner_type,
+                owner_id,
                 owner_name,
                 default.localTime("{config}", 'NG', from_unixtime(cast(cast(create_time as bigint) / 1000 as bigint), 'yyyy-MM-dd HH:mm:ss'), 0) as create_time,
                 default.localTime("{config}", 'NG', from_unixtime(cast(cast(update_time as bigint) / 1000 as bigint), 'yyyy-MM-dd HH:mm:ss'), 0) as update_time,
                 terminal_type,
                 'NG' AS country_code
-            from opay_dw_ods.ods_binlog_base_terminal_hi 
-            where concat(dt, " ", hour) = date_format('{v_date}', 'yyyy-MM-dd HH') and `__deleted` = 'false'
+            from ods_terminal_hi where rn = 1
         ) t0 
     ) t1 where rn = 1
     
