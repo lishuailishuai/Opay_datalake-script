@@ -50,7 +50,7 @@ time_zone = config['NG']['time_zone']
 ##---------上一小时------##
 dwd_opay_pos_transaction_record_hi_prev_day_task = OssSensor(
     task_id='dwd_opay_pos_transaction_record_hi_prev_day_task',
-    bucket_key='{hdfs_path_str}/dt={pt}/hour={hour}/_SUCCESS'.format(
+    bucket_key='{hdfs_path_str}/country_code=NG/dt={pt}/hour={hour}/_SUCCESS'.format(
         hdfs_path_str="opay/opay_dw/dwd_opay_pos_transaction_record_hi",
         pt='{{{{(execution_date+macros.timedelta(hours=({time_zone}+{gap_hour}))).strftime("%Y-%m-%d")}}}}'.format(
             time_zone=time_zone, gap_hour=-1),
@@ -65,7 +65,7 @@ dwd_opay_pos_transaction_record_hi_prev_day_task = OssSensor(
 ##---------当前小时--------##
 dwd_opay_pos_transaction_record_hi_day_task = OssSensor(
     task_id='dwd_opay_pos_transaction_record_hi_day_task',
-    bucket_key='{hdfs_path_str}/dt={pt}/hour={hour}/_SUCCESS'.format(
+    bucket_key='{hdfs_path_str}/country_code=NG/dt={pt}/hour={hour}/_SUCCESS'.format(
         hdfs_path_str="opay/opay_dw/dwd_opay_pos_transaction_record_hi",
         pt='{{{{(execution_date+macros.timedelta(hours=({time_zone}+{gap_hour}))).strftime("%Y-%m-%d")}}}}'.format(
             time_zone=time_zone, gap_hour=0),
@@ -123,8 +123,10 @@ def app_opay_pos_sum_ng_h_sql_task(ds,v_date):
 
     '''.format(
         pt=ds,
+        v_date=v_date,
         table=table_name,
-        db=db_name
+        db=db_name,
+        config=config
     )
     return HQL
 
