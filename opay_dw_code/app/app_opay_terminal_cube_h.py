@@ -85,12 +85,12 @@ def app_opay_terminal_cube_h_sql_task(ds, v_date):
     set hive.exec.dynamic.partition.mode=nonstrict;
     set hive.exec.parallel=true;
     with terminal as 
-    (SELECT * from opay_dw.dim_opay_terminal_base_hf
+    (SELECT owner_id,terminal_id from opay_dw.dim_opay_terminal_base_hf
      where bind_status='Y' and 
         concat(dt, " ", hour) = date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'yyyy-MM-dd HH')
     ),
     user1 as 
-    (select * from opay_dw.dim_opay_user_base_hf 
+    (select role,user_id,state from opay_dw.dim_opay_user_base_hf 
      where concat(dt, " ", hour) = date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'yyyy-MM-dd HH')
      and role='agent'
     )
@@ -109,13 +109,13 @@ def app_opay_terminal_cube_h_sql_task(ds, v_date):
           user1 b 
       on a.owner_id=b.user_id
       left join 
-         (select state,region from opay_dw.dim_opay_region_state_mapping_df where dt=if('{pt}' <= '2020-02-10', '2020-02-10', '{pt}') ) c 
+         (select state,region from opay_dw.dim_opay_region_state_mapping_df where dt=if('{pt}' <= '2020-02-10', '2020-02-10', date_add('{pt}',-1)) ) c 
       on b.state=c.state
       group by region,b.state
 
 
     '''.format(
-        pt=airflow.macros.ds_add(ds, -1),
+        pt=ds,
         v_date=v_date,
         table=table_name,
         db=db_name,

@@ -117,7 +117,7 @@ def app_opay_pos_sum_ng_h_sql_task(ds,v_date):
       (SELECT STATE,
               region
        FROM opay_dw.dim_opay_region_state_mapping_df
-       WHERE dt = if('{pt}' <= '2020-02-10', '2020-02-10', '{pt}') ) t2 ON t1.state = t2.state
+       WHERE dt = if('{pt}' <= '2020-02-10', '2020-02-10', date_add('{pt}',-1)) ) t2 ON t1.state = t2.state
     GROUP BY t1.STATE,
              pos_id,
              order_status,
@@ -126,7 +126,7 @@ def app_opay_pos_sum_ng_h_sql_task(ds,v_date):
              create_date_hour
 
     '''.format(
-        pt=airflow.macros.ds_add(ds, -1),
+        pt=ds,
         v_date=v_date,
         table=table_name,
         db=db_name,
@@ -172,7 +172,7 @@ def execution_data_task_id(ds, dag, **kwargs):
             "table_name": table_name,
             "data_oss_path": hdfs_path,
             "is_country_partition": "true",
-            "is_result_force_exist": "true",
+            "is_result_force_exist": "false",
             "execute_time": v_date,
             "is_hour_task": "true",
             "frame_type": "local"
