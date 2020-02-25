@@ -95,6 +95,7 @@ def app_ocredit_phones_order_base_cube_w_sql_task(ds):
     INSERT overwrite TABLE ocredit_phones_dw.{table} partition(country_code,dt)
     select nvl(terms,-10000) as terms,
            nvl(week_of_entry,'-10000') as week_of_entry,
+           concat_ws('-',regexp_replace(substr(date_add(minweek_of_entry,6),6,10),'-',''),regexp_replace(substr(minweek_of_entry,6,10),'-','')) as dateweek_of_entry, --所在周日期区间
            entry_cnt, --进件量
            loan_cnt,  --`放款数` ,
            loan_amount_usd, --`贷款金额_USD` 
@@ -102,6 +103,8 @@ def app_ocredit_phones_order_base_cube_w_sql_task(ds):
            '{pt}' as dt
     from(select terms,--分期数
           weekofyear(date_of_entry) as week_of_entry, --进件日期所在周
+          min(date_of_entry) as minweek_of_entry, --进件日期所在周对应最小日期
+          max(date_of_entry) as maxweek_of_entry, --进件日期所在周对应最大日期
           count(distinct opay_id) as entry_cnt, --进件量
           count(distinct (if(order_status='81',opay_id,null))) as loan_cnt, --`放款数` ,
           sum(if(order_status='81',(nvl(loan_amount,0)/100)*0.2712/100,0)) as loan_amount_usd --`贷款金额_USD` 
