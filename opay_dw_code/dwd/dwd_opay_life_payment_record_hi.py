@@ -163,7 +163,7 @@ dim_lp_commission_data as (
   from 
     opay_dw.dim_opay_life_payment_commission_df 
   where 
-    dt = '{pt}'
+    dt = date_add('{pt}',-1)
 ),
 
 union_result as (
