@@ -86,15 +86,16 @@ def app_opay_pos_sum_ng_h_sql_task(ds,v_date):
     set hive.exec.parallel=true;
     
     INSERT overwrite TABLE {db}.{table} partition (country_code, dt,hour)
-    SELECT t1.STATE,
+    SELECT create_date_hour,
+           t1.STATE,
            region,
            pos_id,
            order_status,
-           sum(amount) trans_amt,
-           count(1) trans_c,
+           sum(amount) order_amt,
+           count(1) order_cnt,
            country_code,
-           date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'yyyy-MM-dd') as dt,
-           date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'HH') as hour
+           date_format(create_date_hour, 'yyyy-MM-dd') as dt as dt,
+           substring(create_date_hour, 12, 2)  as hour
     FROM
       (SELECT STATE,pos_id,order_status,amount,country_code,create_date_hour
        FROM
@@ -108,6 +109,8 @@ def app_opay_pos_sum_ng_h_sql_task(ds,v_date):
           FROM opay_dw.dwd_opay_pos_transaction_record_hi
           WHERE concat(dt,' ',hour) >= date_format(default.localTime("{config}", 'NG', '{v_date}', -1), 'yyyy-MM-dd HH')
              and concat(dt,' ',hour) <= date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'yyyy-MM-dd HH')
+             and create_time >= date_format(default.localTime("{config}", 'NG', '{v_date}', -1), 'yyyy-MM-dd HH') 
+             and create_time <= date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'yyyy-MM-dd HH') 
           ) m
        WHERE rn=1) t1
     LEFT JOIN
@@ -119,7 +122,8 @@ def app_opay_pos_sum_ng_h_sql_task(ds,v_date):
              pos_id,
              order_status,
              region,
-             country_code
+             country_code,
+             create_date_hour
 
     '''.format(
         pt=ds,
