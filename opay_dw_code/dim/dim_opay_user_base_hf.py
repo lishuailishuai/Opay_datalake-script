@@ -260,7 +260,7 @@ def dim_opay_user_base_hf_sql_task(ds, v_date):
                 kyc_level,
                 kyc_update_time,
                 bvn,
-                dob as birthday,
+                birthday,
                 gender,
                 country,
                 STATE,
