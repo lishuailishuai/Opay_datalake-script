@@ -95,7 +95,7 @@ def app_ocredit_phones_order_base_cube_w_sql_task(ds):
     INSERT overwrite TABLE ocredit_phones_dw.{table} partition(country_code,dt)
     select nvl(terms,-10000) as terms,
            nvl(week_of_entry,'-10000') as week_of_entry,
-           concat_ws('-',regexp_replace(substr(date_add(minweek_of_entry,6),6,10),'-',''),regexp_replace(substr(minweek_of_entry,6,10),'-','')) as dateweek_of_entry, --所在周日期区间
+           concat_ws('-',regexp_replace(substr(minweek_of_entry,6,10),'-',''),regexp_replace(substr(date_add(minweek_of_entry,6),6,10),'-','')) as dateweek_of_entry, --所在周日期区间
            entry_cnt, --进件量
            loan_cnt,  --`放款数` ,
            loan_amount_usd, --`贷款金额_USD` 
