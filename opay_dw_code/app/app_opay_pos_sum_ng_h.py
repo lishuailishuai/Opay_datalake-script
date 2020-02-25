@@ -18,7 +18,6 @@ from airflow.sensors import UFileSensor
 from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
 from airflow.sensors import OssSensor
 from plugins.CountriesPublicFrame_dev import CountriesPublicFrame_dev
-
 from plugins.TaskTouchzSuccess import TaskTouchzSuccess
 import json
 import logging
@@ -27,8 +26,8 @@ import requests
 import os
 
 args = {
-    'owner': 'yuanfeng',
-    'start_date': datetime(2020, 2, 13),
+    'owner': 'liushuzhen',
+    'start_date': datetime(2020, 1, 23),
     'depends_on_past': False,
     'retries': 3,
     'retry_delay': timedelta(minutes=2),
@@ -37,116 +36,99 @@ args = {
     'email_on_retry': False,
 }
 
-dag = airflow.DAG('app_opay_life_payment_sum_ng_h',
-                  schedule_interval="45 * * * *",
+dag = airflow.DAG('app_opay_pos_sum_ng_h',
+                  schedule_interval="01 * * * *",
                   default_args=args,
                   catchup=False)
-
 ##----------------------------------------- 变量 ---------------------------------------##
 db_name = "opay_dw"
-table_name = "app_opay_life_payment_sum_ng_h"
+table_name = "app_opay_pos_sum_ng_h"
 hdfs_path = "oss://opay-datalake/opay/opay_dw/" + table_name
 config = eval(Variable.get("utc_locale_time_config"))
 time_zone = config['NG']['time_zone']
-
 ##----------------------------------------- 依赖 ---------------------------------------##
-### 检查当前小时的依赖
-dwd_opay_life_payment_record_hi_check_task = OssSensor(
-    task_id='dwd_opay_life_payment_record_hi_check_task',
-    bucket_key='{hdfs_path_str}/country_code=NG/dt={pt}/hour={hour}/_SUCCESS'.format(
-        hdfs_path_str="opay/opay_dw/dwd_opay_life_payment_record_hi",
-        pt='{{{{(execution_date+macros.timedelta(hours=({time_zone}+{gap_hour}))).strftime("%Y-%m-%d")}}}}'.format(
-            time_zone=time_zone, gap_hour=0),
-        hour='{{{{(execution_date+macros.timedelta(hours=({time_zone}+{gap_hour}))).strftime("%H")}}}}'.format(
-            time_zone=time_zone, gap_hour=0)
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
-
-### 检查上一个小时的依赖
-dwd_opay_life_payment_record_hi_pre_check_task = OssSensor(
-    task_id='dwd_opay_life_payment_record_hi_pre_check_task',
-    bucket_key='{hdfs_path_str}/country_code=NG/dt={pt}/hour={hour}/_SUCCESS'.format(
-        hdfs_path_str="opay/opay_dw/dwd_opay_life_payment_record_hi",
+##---------上一小时------##
+dwd_opay_transaction_record_hi_prev_day_task = OssSensor(
+    task_id='dwd_opay_transaction_record_hi_prev_day_task',
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="opay/opay_dw/dwd_opay_transaction_record_hi",
         pt='{{{{(execution_date+macros.timedelta(hours=({time_zone}+{gap_hour}))).strftime("%Y-%m-%d")}}}}'.format(
             time_zone=time_zone, gap_hour=-1),
         hour='{{{{(execution_date+macros.timedelta(hours=({time_zone}+{gap_hour}))).strftime("%H")}}}}'.format(
             time_zone=time_zone, gap_hour=-1)
+
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+##---------当前小时--------##
+dwd_opay_transaction_record_hi_day_task = OssSensor(
+    task_id='dwd_opay_transaction_record_hi_day_task',
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="opay/opay_dw/dwd_opay_transaction_record_hi",
+        pt='{{{{(execution_date+macros.timedelta(hours=({time_zone}+{gap_hour}))).strftime("%Y-%m-%d")}}}}'.format(
+            time_zone=time_zone, gap_hour=0),
+        hour='{{{{(execution_date+macros.timedelta(hours=({time_zone}+{gap_hour}))).strftime("%H")}}}}'.format(
+            time_zone=time_zone, gap_hour=0)
+
     ),
     bucket_name='opay-datalake',
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
 
-##----------------------------------------- 任务超时监控 ---------------------------------------##
 
-
-def app_opay_life_payment_sum_ng_h_sql_task(ds, v_date):
+def app_opay_pos_sum_ng_h_sql_task(ds,v_date):
     HQL = '''
 
-set mapred.max.split.size=1000000;
-set hive.exec.dynamic.partition.mode=nonstrict;
-set hive.exec.parallel=true;
+    set hive.exec.dynamic.partition.mode=nonstrict;
+    set hive.exec.parallel=true;
     
-insert overwrite table opay_dw.app_opay_life_payment_sum_ng_h partition(country_code, dt, hour)
-select
-  create_date_hour
-  ,sub_consume_scenario
-  ,recharge_service_provider
-  ,originator_type
-  ,originator_role
-  ,order_status
-  ,count(*) as order_cnt
-  ,sum(amount) as order_amt
-  ,'NG' as country_code
-  ,date_format(create_date_hour, 'yyyy-MM-dd') as dt
-  ,date_format(create_date_hour, 'HH') as hour
-from
-  (
-  select 
-    date_format(create_time, 'yyyy-MM-dd HH') as create_date_hour
-    ,sub_consume_scenario
-    ,recharge_service_provider
-    ,originator_type
-    ,originator_role
-    ,order_status
-    ,amount
-    ,row_number() over(partition by order_no order by update_time desc) rn
-  from
-    opay_dw.dwd_opay_life_payment_record_hi
-  where
-    country_code = 'NG'
-    and concat(dt,' ',hour) >= date_format(default.localTime("{config}", 'NG', '{v_date}', -1), 'yyyy-MM-dd HH')
-    and concat(dt,' ',hour) <= date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'yyyy-MM-dd HH')
-    and create_time >= date_format(default.localTime("{config}", 'NG', '{v_date}', -1), 'yyyy-MM-dd HH') 
-  ) as a
-where
-  rn = 1
-group by
-  create_date_hour
-  ,sub_consume_scenario
-  ,recharge_service_provider
-  ,originator_type
-  ,originator_role
-  ,order_status
-;
-
-
+    INSERT overwrite TABLE {db}.{table} partition (country_code, dt,hour)
+    SELECT t1.STATE,
+           region,
+           pos_id,
+           order_status,
+           sum(amount) trans_amt,
+           count(1) trans_c,
+           country_code,
+           date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'yyyy-MM-dd') as dt,
+           date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'HH') as hour
+    FROM
+      (SELECT STATE,pos_id,order_status,amount,country_code,create_date_hour
+       FROM
+         (SELECT amount,
+                 STATE,
+                 pos_id,
+                 order_status,
+                 country_code,
+                 date_format(create_time, 'yyyy-MM-dd HH') as create_date_hour,
+                 row_number()over(partition BY order_no ORDER BY update_time DESC) rn
+          FROM opay_dw.dwd_opay_pos_transaction_record_hi
+          WHERE concat(dt,' ',hour) >= date_format(default.localTime("{config}", 'NG', '{v_date}', -1), 'yyyy-MM-dd HH')
+             and concat(dt,' ',hour) <= date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'yyyy-MM-dd HH')
+          ) m
+       WHERE rn=1) t1
+    LEFT JOIN
+      (SELECT STATE,
+              region
+       FROM opay_dw.dim_opay_region_state_mapping_df
+       WHERE dt = if('{pt}' <= '2020-02-10', '2020-02-10', '{pt}') ) t2 ON t1.state = t2.state
+    GROUP BY t1.STATE,
+             pos_id,
+             order_status,
+             region,
+             country_code
 
     '''.format(
         pt=ds,
-        v_date=v_date,
         table=table_name,
-        db=db_name,
-        config=config
-
+        db=db_name
     )
     return HQL
 
 
-# 主流程
 def execution_data_task_id(ds, dag, **kwargs):
     v_date = kwargs.get('v_execution_date')
     v_day = kwargs.get('v_execution_day')
@@ -184,7 +166,7 @@ def execution_data_task_id(ds, dag, **kwargs):
             "table_name": table_name,
             "data_oss_path": hdfs_path,
             "is_country_partition": "true",
-            "is_result_force_exist": "false",
+            "is_result_force_exist": "true",
             "execute_time": v_date,
             "is_hour_task": "true",
             "frame_type": "local"
@@ -196,14 +178,14 @@ def execution_data_task_id(ds, dag, **kwargs):
     # 删除分区
     # cf.delete_partition()
 
-    # print(dwd_opay_life_payment_record_hi_sql_task(ds, v_date))
+    print(app_opay_pos_sum_ng_h_sql_task(ds, v_date))
 
     # 读取sql
-    _sql = "\n" + cf.alter_partition() + "\n" + app_opay_life_payment_sum_ng_h_sql_task(ds, v_date)
+    # _sql="\n"+cf.alter_partition()+"\n"+test_dim_oride_city_sql_task(ds)
 
-    # _sql = "\n" + dwd_opay_life_payment_record_hi_sql_task(ds, v_date)
+    _sql = "\n" + app_opay_pos_sum_ng_h_sql_task(ds, v_date)
 
-    logging.info('Executing: %s', _sql)
+    # logging.info('Executing: %s',_sql)
 
     # 执行Hive
     hive_hook.run_cli(_sql)
@@ -218,8 +200,8 @@ def execution_data_task_id(ds, dag, **kwargs):
     cf.touchz_success()
 
 
-app_opay_life_payment_sum_ng_h_task = PythonOperator(
-    task_id='app_opay_life_payment_sum_ng_h_task',
+app_opay_pos_sum_ng_h_task = PythonOperator(
+    task_id='app_opay_pos_sum_ng_h_task',
     python_callable=execution_data_task_id,
     provide_context=True,
     op_kwargs={
@@ -231,7 +213,9 @@ app_opay_life_payment_sum_ng_h_task = PythonOperator(
     dag=dag
 )
 
-dwd_opay_life_payment_record_hi_check_task >> app_opay_life_payment_sum_ng_h_task
-dwd_opay_life_payment_record_hi_pre_check_task >> app_opay_life_payment_sum_ng_h_task
+
+dwd_opay_transaction_record_hi_prev_day_task >> app_opay_pos_sum_ng_h_task
+dwd_opay_transaction_record_hi_day_task >> app_opay_pos_sum_ng_h_task
+
 
 
