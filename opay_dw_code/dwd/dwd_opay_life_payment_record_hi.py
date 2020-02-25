@@ -420,7 +420,7 @@ def execution_data_task_id(ds, dag, **kwargs):
             "table_name": table_name,
             "data_oss_path": hdfs_path,
             "is_country_partition": "true",
-            "is_result_force_exist": "true",
+            "is_result_force_exist": "false",
             "execute_time": v_date,
             "is_hour_task": "true",
             "frame_type": "local"
