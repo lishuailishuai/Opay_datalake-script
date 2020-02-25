@@ -37,14 +37,14 @@ args = {
     'email_on_retry': False,
 }
 
-dag = airflow.DAG('dwd_opay_pos_transaction_record_hi_task',
+dag = airflow.DAG('dwd_opay_pos_transaction_record_hi',
                   schedule_interval="40 * * * *",
                   default_args=args,
                   catchup=False)
 
 ##----------------------------------------- 变量 ---------------------------------------##
 db_name = "opay_dw"
-table_name = "dwd_opay_pos_transaction_record_hi_task"
+table_name = "dwd_opay_pos_transaction_record_hi"
 hdfs_path = "oss://opay-datalake/opay/opay_dw/" + table_name
 pos_provider_share_0922_fee=eval(Variable.get("pos_provider_share_0922_fee"))
 msc_cost_0922_fee=eval(Variable.get("msc_cost_0922_fee"))
@@ -464,7 +464,7 @@ dwd_opay_pos_transaction_record_hi_task = PythonOperator(
     dag=dag
 )
 
-dim_opay_merchant_base_hf_check_task >> _task
+dim_opay_merchant_base_hf_check_task >> dwd_opay_pos_transaction_record_hi_task
 dim_opay_user_base_hf_check_task >> dwd_opay_pos_transaction_record_hi_task
 dim_opay_terminal_base_hf_check_task >> dwd_opay_pos_transaction_record_hi_task
 ods_binlog_base_user_pos_transaction_record_hi_check_task >> dwd_opay_pos_transaction_record_hi_task
