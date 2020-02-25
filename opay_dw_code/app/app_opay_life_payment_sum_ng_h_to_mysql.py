@@ -139,7 +139,7 @@ def get_data_from_hive(ds, **op_kwargs):
 
     __data_only_mysql(
         mcursor,
-        "day='{pt}'".format(pt=ds)
+        "dt='{pt}'".format(pt=ds)
     )
 
     __data_to_mysql(
@@ -157,7 +157,7 @@ def get_data_from_hive(ds, **op_kwargs):
             'dt',
             'hour',
         ],
-        'day=VALUES(day)'
+        'dt=VALUES(dt)'
     )
 
     hive_cursor.close()
@@ -228,6 +228,7 @@ get_data_from_hive_task = PythonOperator(
     },
     dag=dag
 )
+
 
 app_opay_life_payment_sum_ng_h_check_task >> get_data_from_hive_task
 app_opay_life_payment_sum_ng_h_pre_check_task >> get_data_from_hive_task
