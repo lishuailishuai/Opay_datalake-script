@@ -37,7 +37,7 @@ args = {
 }
 
 dag = airflow.DAG('app_opay_pos_sum_ng_h',
-                  schedule_interval="01 * * * *",
+                  schedule_interval="45 * * * *",
                   default_args=args,
                   catchup=False)
 ##----------------------------------------- 变量 ---------------------------------------##
@@ -50,8 +50,8 @@ time_zone = config['NG']['time_zone']
 ##---------上一小时------##
 dwd_opay_pos_transaction_record_hi_prev_day_task = OssSensor(
     task_id='dwd_opay_pos_transaction_record_hi_prev_day_task',
-    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opay/opay_dw/dwd_opay_transaction_record_hi",
+    bucket_key='{hdfs_path_str}/dt={pt}/hour={hour}/_SUCCESS'.format(
+        hdfs_path_str="opay/opay_dw/dwd_opay_pos_transaction_record_hi",
         pt='{{{{(execution_date+macros.timedelta(hours=({time_zone}+{gap_hour}))).strftime("%Y-%m-%d")}}}}'.format(
             time_zone=time_zone, gap_hour=-1),
         hour='{{{{(execution_date+macros.timedelta(hours=({time_zone}+{gap_hour}))).strftime("%H")}}}}'.format(
@@ -65,8 +65,8 @@ dwd_opay_pos_transaction_record_hi_prev_day_task = OssSensor(
 ##---------当前小时--------##
 dwd_opay_pos_transaction_record_hi_day_task = OssSensor(
     task_id='dwd_opay_pos_transaction_record_hi_day_task',
-    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opay/opay_dw/dwd_opay_transaction_record_hi",
+    bucket_key='{hdfs_path_str}/dt={pt}/hour={hour}/_SUCCESS'.format(
+        hdfs_path_str="opay/opay_dw/dwd_opay_pos_transaction_record_hi",
         pt='{{{{(execution_date+macros.timedelta(hours=({time_zone}+{gap_hour}))).strftime("%Y-%m-%d")}}}}'.format(
             time_zone=time_zone, gap_hour=0),
         hour='{{{{(execution_date+macros.timedelta(hours=({time_zone}+{gap_hour}))).strftime("%H")}}}}'.format(
@@ -214,8 +214,8 @@ app_opay_pos_sum_ng_h_task = PythonOperator(
 )
 
 
-dwd_opay_transaction_record_hi_prev_day_task >> app_opay_pos_sum_ng_h_task
-dwd_opay_transaction_record_hi_day_task >> app_opay_pos_sum_ng_h_task
+dwd_opay_pos_transaction_record_hi_prev_day_task >> app_opay_pos_sum_ng_h_task
+dwd_opay_pos_transaction_record_hi_day_task >> app_opay_pos_sum_ng_h_task
 
 
 
