@@ -90,12 +90,11 @@ def app_opay_pos_sum_ng_h_sql_task(ds,v_date):
            region,
            pos_id,
            order_status,
-           create_date_hour,
            sum(amount) trans_amt,
            count(1) trans_c,
            country_code,
-           date_format(default.localTime("{config}", country_code, '{v_date}', 0), 'yyyy-MM-dd') as dt,
-           date_format(default.localTime("{config}", country_code, '{v_date}', 0), 'HH') as hour
+           date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'yyyy-MM-dd') as dt,
+           date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'HH') as hour
     FROM
       (SELECT STATE,pos_id,order_status,amount,country_code,create_date_hour
        FROM
@@ -107,11 +106,9 @@ def app_opay_pos_sum_ng_h_sql_task(ds,v_date):
                  date_format(create_time, 'yyyy-MM-dd HH') as create_date_hour,
                  row_number()over(partition BY order_no ORDER BY update_time DESC) rn
           FROM opay_dw.dwd_opay_pos_transaction_record_hi
-          WHERE concat(dt, " ", hour) between default.minLocalTimeRange("{config}", '{v_date}', -1)
-               and default.maxLocalTimeRange("{config}", '{v_date}', 0)
-              
-               
-            ) m
+          WHERE concat(dt,' ',hour) >= date_format(default.localTime("{config}", 'NG', '{v_date}', -1), 'yyyy-MM-dd HH')
+             and concat(dt,' ',hour) <= date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'yyyy-MM-dd HH')
+          ) m
        WHERE rn=1) t1
     LEFT JOIN
       (SELECT STATE,
@@ -122,8 +119,7 @@ def app_opay_pos_sum_ng_h_sql_task(ds,v_date):
              pos_id,
              order_status,
              region,
-             country_code,
-             create_date_hour
+             country_code
 
     '''.format(
         pt=ds,
