@@ -124,8 +124,7 @@ dim_merchant_data as (
   from 
     opay_dw.dim_opay_merchant_base_hf
   where 
-    country_code in ('NG','NC')
-    and concat(dt,' ',lpad(hour,2,'0')) >= default.minLocalTimeRange("{config}", '{v_date}', 0)
+    concat(dt,' ',lpad(hour,2,'0')) >= default.minLocalTimeRange("{config}", '{v_date}', 0)
     and concat(dt,' ',lpad(hour,2,'0')) <= default.maxLocalTimeRange("{config}", '{v_date}', 0) 
     and utc_date_hour = date_format("{v_date}", 'yyyy-MM-dd HH')
 ),
@@ -140,8 +139,7 @@ dim_user_merchant_data as (
   from 
     opay_dw.dim_opay_user_base_hf
   where 
-    country_code in ('NG','NC')
-    and concat(dt,' ',lpad(hour,2,'0')) >= default.minLocalTimeRange("{config}", '{v_date}', 0)
+    concat(dt,' ',lpad(hour,2,'0')) >= default.minLocalTimeRange("{config}", '{v_date}', 0)
     and concat(dt,' ',lpad(hour,2,'0')) <= default.maxLocalTimeRange("{config}", '{v_date}', 0) 
     and utc_date_hour = date_format("{v_date}", 'yyyy-MM-dd HH')
 
@@ -371,6 +369,8 @@ left join
 on 
   t4.sub_service_type = t1.sub_service_type 
   and t4.recharge_service_provider = t1.recharge_service_provider 
+
+
 
     '''.format(
         pt=ds,

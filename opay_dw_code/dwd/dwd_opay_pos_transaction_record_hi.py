@@ -144,8 +144,7 @@ with dim_user_merchant_data as (
   from  
     opay_dw.dim_opay_user_base_hf
   where 
-    country_code in ('NG','NC')
-    and concat(dt,' ',lpad(hour,2,'0')) >= default.minLocalTimeRange("{config}", '{v_date}', 0)
+    concat(dt,' ',lpad(hour,2,'0')) >= default.minLocalTimeRange("{config}", '{v_date}', 0)
     and concat(dt,' ',lpad(hour,2,'0')) <= default.maxLocalTimeRange("{config}", '{v_date}', 0) 
     and utc_date_hour = date_format("{v_date}", 'yyyy-MM-dd HH')
 
@@ -159,9 +158,8 @@ with dim_user_merchant_data as (
     , '-' as state
   from 
     opay_dw.dim_opay_merchant_base_hf
-  where 
-    country_code in ('NG','NC')
-    and concat(dt,' ',lpad(hour,2,'0')) >= default.minLocalTimeRange("{config}", '{v_date}', 0)
+  where  
+    concat(dt,' ',lpad(hour,2,'0')) >= default.minLocalTimeRange("{config}", '{v_date}', 0)
     and concat(dt,' ',lpad(hour,2,'0')) <= default.maxLocalTimeRange("{config}", '{v_date}', 0) 
     and utc_date_hour = date_format("{v_date}", 'yyyy-MM-dd HH')
 ),
@@ -173,8 +171,7 @@ terminal_data as (
   from 
     opay_dw.dim_opay_terminal_base_hf 
   where 
-    country_code in ('NG','NC')
-    and concat(dt,' ',lpad(hour,2,'0')) >= default.minLocalTimeRange("{config}", '{v_date}', 0)
+    concat(dt,' ',lpad(hour,2,'0')) >= default.minLocalTimeRange("{config}", '{v_date}', 0)
     and concat(dt,' ',lpad(hour,2,'0')) <= default.maxLocalTimeRange("{config}", '{v_date}', 0) 
     and utc_date_hour = date_format("{v_date}", 'yyyy-MM-dd HH')
 ),
@@ -368,6 +365,7 @@ left join
   terminal_data t3 
 on 
   t1.affiliate_terminal_id = t3.terminal_id;
+
 
 
     '''.format(
