@@ -115,7 +115,7 @@ def app_opay_terminal_cube_h_sql_task(ds, v_date):
 
 
     '''.format(
-        pt=ds,
+        pt=airflow.macros.ds_add(ds, -1),
         v_date=v_date,
         table=table_name,
         db=db_name,
