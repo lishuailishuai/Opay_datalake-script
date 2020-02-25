@@ -36,7 +36,7 @@ args = {
     'email_on_retry': False,
 }
 
-dag = airflow.DAG('app_ocredit_phones_order_base_cube_d',
+dag = airflow.DAG('app_ocredit_phones_order_base_cube_w',
                   schedule_interval="30 02 * * *",
                   default_args=args,
                   catchup=False)
@@ -58,7 +58,7 @@ dwd_ocredit_phones_order_base_df_task = OssSensor(
 ##----------------------------------------- 变量 ---------------------------------------##
 
 db_name = "ocredit_phones_dw"
-table_name = "app_ocredit_phones_order_base_cube_d"
+table_name = "app_ocredit_phones_order_base_cube_w"
 hdfs_path = "oss://opay-datalake/ocredit_phones/ocredit_phones_dw/" + table_name
 
 
@@ -85,7 +85,7 @@ task_timeout_monitor = PythonOperator(
 
 ##----------------------------------------- 脚本 ---------------------------------------##
 
-def app_ocredit_phones_order_base_cube_d_sql_task(ds):
+def app_ocredit_phones_order_base_cube_w_sql_task(ds):
     HQL = '''
 
 
@@ -94,23 +94,23 @@ def app_ocredit_phones_order_base_cube_d_sql_task(ds):
 
     INSERT overwrite TABLE ocredit_phones_dw.{table} partition(country_code,dt)
     select nvl(terms,-10000) as terms,
-           nvl(date_of_entry,'-10000') as date_of_entry,
+           nvl(week_of_entry,'-10000') as week_of_entry,
            entry_cnt, --进件量
            loan_cnt,  --`放款数` ,
            loan_amount_usd, --`贷款金额_USD` 
            'nal' as country_code,
            '{pt}' as dt
     from(select terms,--分期数
-          date_of_entry,--进件日期
+          weekofyear(date_of_entry) as week_of_entry, --进件日期所在周
           count(distinct opay_id) as entry_cnt, --进件量
           count(distinct (if(order_status='81',opay_id,null))) as loan_cnt, --`放款数` ,
           sum(if(order_status='81',(nvl(loan_amount,0)/100)*0.2712/100,0)) as loan_amount_usd --`贷款金额_USD` 
     from ocredit_phones_dw.dwd_ocredit_phones_order_base_df
     where dt='{pt}'
-    and substr(date_of_entry,1,7)=substr(dt,1,7)
-    group by terms,date_of_entry
-    grouping sets(date_of_entry,
-          (terms,date_of_entry))
+    and weekofyear(dt)-weekofyear(date_of_entry)<=4
+    group by terms,weekofyear(date_of_entry)
+    grouping sets(weekofyear(date_of_entry),
+          (terms,weekofyear(date_of_entry)))
           ) t;
         '''.format(
         pt=ds,
@@ -156,7 +156,7 @@ def execution_data_task_id(ds, **kwargs):
 
     # 拼接SQL
 
-    _sql = "\n" + cf.alter_partition() + "\n" + app_ocredit_phones_order_base_cube_d_sql_task(ds)
+    _sql = "\n" + cf.alter_partition() + "\n" + app_ocredit_phones_order_base_cube_w_sql_task(ds)
 
     logging.info('Executing: %s', _sql)
 
@@ -173,8 +173,8 @@ def execution_data_task_id(ds, **kwargs):
     cf.touchz_success()
 
 
-app_ocredit_phones_order_base_cube_d_task = PythonOperator(
-    task_id='app_ocredit_phones_order_base_cube_d_task',
+app_ocredit_phones_order_base_cube_w_task = PythonOperator(
+    task_id='app_ocredit_phones_order_base_cube_w_task',
     python_callable=execution_data_task_id,
     provide_context=True,
     op_kwargs={
@@ -185,4 +185,4 @@ app_ocredit_phones_order_base_cube_d_task = PythonOperator(
     dag=dag
 )
 
-dwd_ocredit_phones_order_base_df_task >> app_ocredit_phones_order_base_cube_d_task
+dwd_ocredit_phones_order_base_df_task >> app_ocredit_phones_order_base_cube_w_task
