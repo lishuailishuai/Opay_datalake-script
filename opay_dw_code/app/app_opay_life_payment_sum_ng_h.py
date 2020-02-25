@@ -209,7 +209,6 @@ app_opay_life_payment_sum_ng_h_task = PythonOperator(
     dag=dag
 )
 
-dwd_opay_life_payment_record_hi_check_task >> app_opay_life_payment_sum_ng_h_task
 dwd_opay_life_payment_record_hi_pre_check_task >> app_opay_life_payment_sum_ng_h_task
 
 
