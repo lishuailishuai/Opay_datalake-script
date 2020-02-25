@@ -93,16 +93,22 @@ def app_ocredit_phones_order_base_cube_d_sql_task(ds):
     set hive.exec.dynamic.partition.mode=nonstrict;
 
     INSERT overwrite TABLE ocredit_phones_dw.{table} partition(country_code,dt)
-
-    select terms,--分期数
+    select nvl(terms,-10000) as terms,
+           nvl(date_of_entry,'-10000') as date_of_entry,
+           nvl(week_of_entry,-10000) as week_of_entry,
+           nvl(month_of_entry,-10000) as month_of_entry,
+           entry_cnt,
+           loan_cnt,
+           loan_amount_usd,
+           'nal' as country_code,
+           '{pt}' as dt
+    from(select terms,--分期数
           date_of_entry,--进件日期
           weekofyear(date_of_entry) as week_of_entry, --进件日期所在周
           month(date_of_entry) as month_of_entry, --进件所在月
           count(distinct opay_id) as entry_cnt, --进件量
           count(distinct (if(order_status='81',opay_id,null))) as loan_cnt, --`放款数` ,
-          sum(if(order_status='81',(nvl(loan_amount,0)/100)*0.2712/100,0)) as loan_amount_usd,--`贷款金额_USD` ,
-          '{pt}' as dt,
-          'nal' as country_code
+          sum(if(order_status='81',(nvl(loan_amount,0)/100)*0.2712/100,0)) as loan_amount_usd --`贷款金额_USD` 
     from ocredit_phones_dw.dwd_ocredit_phones_order_base_di
     where dt='{pt}' and date_of_entry=dt
     group by terms,date_of_entry,weekofyear(date_of_entry),month(date_of_entry)
@@ -111,7 +117,7 @@ def app_ocredit_phones_order_base_cube_d_sql_task(ds):
           month(date_of_entry),
           (terms,date_of_entry),
           (terms,weekofyear(date_of_entry)),
-          (terms,month(date_of_entry)));
+          (terms,month(date_of_entry)))) t;
         '''.format(
         pt=ds,
         table=table_name,
