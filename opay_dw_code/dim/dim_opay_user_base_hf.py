@@ -115,7 +115,40 @@ def dim_opay_user_base_hf_sql_task(ds, v_date):
     set mapred.max.split.size=1000000;
     
     insert overwrite table {db}.{table} partition (country_code, dt, hour)
-    
+    with ods_user_di as (
+        SELECT 
+                id,
+                user_id,
+                mobile,
+                business_name,
+                first_name,
+                middle_name,
+                surname,
+                kyc_level,
+                kyc_update_time,
+                bvn,
+                dob as birthday,
+                gender,
+                country,
+                STATE,
+                city,
+                address,
+                lga,
+                ROLE,
+                referral_code,
+                referrer_code,
+                notification,
+                create_time,
+                update_time,
+                register_client,
+                agent_referrer_code,
+                photo,
+                big_picture,
+                nick_name,
+                row_number() over(partition by order_no order by `__ts_ms` desc,`__file` desc,cast(`__pos` as int) desc) rn
+            from opay_dw_ods.ods_binlog_base_user_hi 
+            where concat(dt, " ", hour) = date_format('{v_date}', 'yyyy-MM-dd HH') and `__deleted` = 'false'
+    )
     select 
         id,
         user_id,
@@ -247,8 +280,8 @@ def dim_opay_user_base_hf_sql_task(ds, v_date):
                 big_picture,
                 nick_name,
                 'NG' AS country_code
-            from opay_dw_ods.ods_binlog_base_user_hi 
-            where concat(dt, " ", hour) = date_format('{v_date}', 'yyyy-MM-dd HH') and `__deleted` = 'false'
+            from ods_user_di 
+            where rn = 1
         ) t0 
     ) t1 where rn = 1
     
