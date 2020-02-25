@@ -68,7 +68,7 @@ mysql_table = 'opay_dw.app_opay_life_payment_sum_ng_h'
 
 ### 检查当前小时的依赖
 app_opay_life_payment_sum_ng_h_check_task = OssSensor(
-    task_id='app_opay_life_payarcment_sum_ng_h_check_task',
+    task_id='app_opay_life_payment_sum_ng_h_check_task',
     bucket_key='{hdfs_path_str}/country_code=NG/dt={pt}/hour={hour}/_SUCCESS'.format(
         hdfs_path_str="opay/opay_dw/app_opay_life_payment_sum_ng_h",
         pt='{{{{(execution_date+macros.timedelta(hours=({time_zone}+{gap_hour}))).strftime("%Y-%m-%d")}}}}'.format(
