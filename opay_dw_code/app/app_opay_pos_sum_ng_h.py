@@ -214,8 +214,8 @@ app_opay_pos_sum_ng_h_task = PythonOperator(
 )
 
 
-dwd_opay_transaction_record_hi_prev_day_task >> app_opay_pos_sum_ng_h_task
-dwd_opay_transaction_record_hi_day_task >> app_opay_pos_sum_ng_h_task
+dwd_opay_pos_transaction_record_hi_prev_day_task >> app_opay_pos_sum_ng_h_task
+dwd_opay_pos_transaction_record_hi_day_task >> app_opay_pos_sum_ng_h_task
 
 
 
