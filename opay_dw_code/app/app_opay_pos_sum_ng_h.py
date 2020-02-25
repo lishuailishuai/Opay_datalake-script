@@ -93,8 +93,8 @@ def app_opay_pos_sum_ng_h_sql_task(ds,v_date):
            order_status,
            sum(amount) order_amt,
            count(1) order_cnt,
-           country_code,
-           date_format(create_date_hour, 'yyyy-MM-dd') as dt as dt,
+           'NG' country_code,
+           date_format(create_date_hour, 'yyyy-MM-dd') as dt,
            substring(create_date_hour, 12, 2)  as hour
     FROM
       (SELECT STATE,pos_id,order_status,amount,country_code,create_date_hour
