@@ -233,6 +233,10 @@ ci_data as (
     , bd_id as bd_admin_user_id
     , bd_agent_status
     , utc_date_hour
+    
+    , ts
+    , file
+    , pos
   from 
     (
     select 
@@ -261,6 +265,10 @@ ci_data as (
       , nvl(outward_id, '-') as outward_id
       , nvl(outward_type, '-') as outward_type
       , date_format('{v_date}', 'yyyy-MM-dd HH') as utc_date_hour
+
+    , `__ts_ms` as ts
+    , `__file` as file
+    , cast(`__pos` as int) as pos
     from 
       opay_dw_ods.ods_binlog_base_cash_in_record_hi
     where 
@@ -303,6 +311,10 @@ co_data as (
     , bd_id as bd_admin_user_id
     , bd_agent_status
     , utc_date_hour
+
+    , ts
+    , file
+    , pos
   from 
     (
     select 
@@ -331,6 +343,10 @@ co_data as (
       , nvl(outward_id, '-') as outward_id
       , nvl(outward_type, '-') as outward_type
       , date_format('{v_date}', 'yyyy-MM-dd HH') as utc_date_hour
+
+    , `__ts_ms` as ts
+    , `__file` as file
+    , cast(`__pos` as int) as pos
     from 
       opay_dw_ods.ods_binlog_base_cash_out_record_hi
     where 
@@ -403,7 +419,7 @@ union_result_different as (
       , bd_admin_user_id
       , bd_agent_status
       , utc_date_hour
-      , row_number() over(partition by order_no order by update_time desc) rn
+      , row_number() over(partition by order_no order by ts desc,file desc,pos desc) rn
     from
       (
       select * from ci_data
@@ -478,6 +494,7 @@ left join
   dim_user_merchant_data t3 
 on 
   t1.affiliate_id = t3.trader_id;
+
 
 
 
