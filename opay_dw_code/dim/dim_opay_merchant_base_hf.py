@@ -134,7 +134,7 @@ def dim_opay_merchant_base_hf_sql_task(ds, v_date):
                 disable_settlements,
                 settlement_period,
                 create_time,
-                update_time
+                update_time,
                 level,
                 icon_url,
                 contact_email,
