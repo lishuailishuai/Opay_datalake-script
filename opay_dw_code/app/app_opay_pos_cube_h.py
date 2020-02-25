@@ -116,8 +116,10 @@ def app_opay_pos_cube_h_sql_task(ds,v_date):
 
     '''.format(
         pt=ds,
+        v_date=v_date,
         table=table_name,
-        db=db_name
+        db=db_name,
+        config=config
     )
     return HQL
 
