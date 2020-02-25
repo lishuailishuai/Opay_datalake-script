@@ -101,8 +101,8 @@ select
   ,count(*) as order_cnt
   ,sum(amount) as order_amt
   ,'NG' as country_code
-  ,date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'yyyy-MM-dd') as dt
-  ,date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'HH') as hour
+  ,date_format(create_date_hour, 'yyyy-MM-dd') as dt
+  ,date_format(create_date_hour, 'HH') as hour
 from
   (
   select 
@@ -120,6 +120,7 @@ from
     country_code = 'NG'
     and concat(dt,' ',hour) >= date_format(default.localTime("{config}", 'NG', '{v_date}', -1), 'yyyy-MM-dd HH')
     and concat(dt,' ',hour) <= date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'yyyy-MM-dd HH')
+    and create_time >= date_format(default.localTime("{config}", 'NG', '{v_date}', -1), 'yyyy-MM-dd HH') 
   ) as a
 where
   rn = 1
