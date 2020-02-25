@@ -279,7 +279,7 @@ def dim_opay_bd_agent_hf_sql_task(ds, v_date):
                 agent_status,
                 create_id,
                 modify_id,
-                bd_id as bd_admin_user_id,
+                bd_admin_user_id,
                 agent_check_id,
                 default.localTime("{config}", 'NG', from_unixtime(cast(cast(create_time as bigint) / 1000 as bigint), 'yyyy-MM-dd HH:mm:ss'), 0) as create_time,
                 default.localTime("{config}", 'NG', from_unixtime(cast(cast(update_time as bigint) / 1000 as bigint), 'yyyy-MM-dd HH:mm:ss'), 0) as update_time,
