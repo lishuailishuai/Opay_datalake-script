@@ -225,9 +225,7 @@ union_result as (
     , nvl(outward_type, '-') as outward_type
     , date_format('{v_date}', 'yyyy-MM-dd HH') as utc_date_hour
 
-    , `__ts_ms` as ts
-    , `__file` as file
-    , cast(`__pos` as int) as pos
+    , row_number() over(partition by order_no order by `__ts_ms` desc,`__file` desc,cast(`__pos` as int) desc) rn
   from 
     opay_dw_ods.ods_binlog_base_betting_topup_record_hi
   where 
@@ -269,9 +267,7 @@ union_result as (
     , nvl(out_ward_type, '-') as outward_type
     , date_format('{v_date}', 'yyyy-MM-dd HH') as utc_date_hour
 
-    , `__ts_ms` as ts
-    , `__file` as file
-    , cast(`__pos` as int) as pos
+    , row_number() over(partition by order_no order by `__ts_ms` desc,`__file` desc,cast(`__pos` as int) desc) rn
   from 
     opay_dw_ods.ods_binlog_base_airtime_topup_record_hi
   where 
@@ -279,74 +275,6 @@ union_result as (
     and hour= date_format('{v_date}', 'HH')
     and `__deleted` = 'false'
 ),
-
-
-union_result_different as (
-  select
-    order_no
-    , amount
-    , currency
-    , originator_id
-    , affiliate_id
-    , recharge_service_provider
-    , recharge_account
-    , recharge_account_name
-    , recharge_set_meal
-    , create_time
-    , update_time
-    , country
-    , sub_service_type
-    , order_status
-    , error_code
-    , error_msg
-    , client_source
-    , pay_way
-    , pay_status
-    , top_consume_scenario
-    , sub_consume_scenario
-    , pay_amount
-    , fee_amount
-    , fee_pattern
-    , outward_id
-    , outward_type
-    , utc_date_hour
-  from
-    (
-    select
-      order_no
-      , amount
-      , currency
-      , originator_id
-      , affiliate_id
-      , recharge_service_provider
-      , recharge_account
-      , recharge_account_name
-      , recharge_set_meal
-      , create_time
-      , update_time
-      , country
-      , sub_service_type
-      , order_status
-      , error_code
-      , error_msg
-      , client_source
-      , pay_way
-      , pay_status
-      , top_consume_scenario
-      , sub_consume_scenario
-      , pay_amount
-      , fee_amount
-      , fee_pattern
-      , outward_id
-      , outward_type
-      , utc_date_hour
-      , row_number() over(partition by order_no order by ts desc,file desc,pos desc) rn
-    from
-      union_result
-    ) as a
-    where
-      rn=1
-)
 
 insert overwrite table opay_dw.dwd_opay_life_payment_record_hi partition(country_code, dt, hour)
 select 
@@ -392,7 +320,7 @@ select
   , date_format(default.localTime("{config}", t1.country, '{v_date}', 0), 'HH') as hour
 
 from 
-  union_result_different t1 
+  (select * from union_result where rn=1) t1 
 left join 
   dim_user_merchant_data t2 
 on 
@@ -405,8 +333,7 @@ left join
   dim_lp_commission_data t4 
 on 
   t4.sub_service_type = t1.sub_service_type 
-  and t4.recharge_service_provider = t1.recharge_service_provider 
-
+  and t4.recharge_service_provider = t1.recharge_service_provider ;
 
 
     '''.format(
