@@ -362,11 +362,13 @@ class CountriesAppFrame(object):
 
                 self.time_offset=i-int(self.v_utc_hour)
 
+                print(self.time_offset)
+
                 self.touchz_success_main()
 
-            else:
+        else:
 
-                #self.touchz_success_main()
+            #self.touchz_success_main()
 
 
 
