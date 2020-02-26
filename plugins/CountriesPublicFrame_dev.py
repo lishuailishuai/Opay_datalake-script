@@ -558,10 +558,10 @@ class CountriesPublicFrame_dev(object):
                 v_utc_time='{v_sys_utc}'.format(v_sys_utc=self.utc_ds+" "+self.utc_hour)
         
                 #国家本地日期
-                v_local_date=GetLocalTime('{v_utc_time}'.format(v_utc_time=v_utc_time),country_code_word,self.time_offset)["date"]
+                v_local_date=GetLocalTime('opay','{v_utc_time}'.format(v_utc_time=v_utc_time),country_code_word,self.time_offset)["date"]
         
                 #国家本地小时
-                v_local_hour=GetLocalTime('{v_utc_time}'.format(v_utc_time=v_utc_time),country_code_word,self.time_offset)["hour"]
+                v_local_hour=GetLocalTime('opay','{v_utc_time}'.format(v_utc_time=v_utc_time),country_code_word,self.time_offset)["hour"]
 
                 #表分区，时间是本地时间
                 v_par_str="country_code='{country_code}',dt='{ds}',hour='{hour}'".format(ds=v_local_date,hour=v_local_hour,country_code=country_code_word)
