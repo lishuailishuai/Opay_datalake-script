@@ -110,7 +110,7 @@ def app_opay_pos_sum_ng_h_sql_task(ds,v_date):
           WHERE concat(dt,' ',hour) >= date_format(default.localTime("{config}", 'NG', '{v_date}', -1), 'yyyy-MM-dd HH')
              and concat(dt,' ',hour) <= date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'yyyy-MM-dd HH')
              and create_time >= date_format(default.localTime("{config}", 'NG', '{v_date}', -1), 'yyyy-MM-dd HH') 
-             and create_time <= date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'yyyy-MM-dd HH') 
+             and create_time < date_format(default.localTime("{config}", 'NG', '{v_date}', 1), 'yyyy-MM-dd HH') 
           ) m
        WHERE rn=1) t1
     LEFT JOIN

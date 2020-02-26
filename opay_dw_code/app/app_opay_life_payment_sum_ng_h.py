@@ -121,7 +121,7 @@ from
     and concat(dt,' ',hour) >= date_format(default.localTime("{config}", 'NG', '{v_date}', -1), 'yyyy-MM-dd HH')
     and concat(dt,' ',hour) <= date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'yyyy-MM-dd HH')
     and create_time >= date_format(default.localTime("{config}", 'NG', '{v_date}', -1), 'yyyy-MM-dd HH') 
-    and create_time <= date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'yyyy-MM-dd HH') 
+    and create_time < date_format(default.localTime("{config}", 'NG', '{v_date}', 1), 'yyyy-MM-dd HH') 
   ) as a
 where
   rn = 1
