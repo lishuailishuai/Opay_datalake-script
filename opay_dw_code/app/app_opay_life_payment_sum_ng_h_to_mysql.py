@@ -123,7 +123,7 @@ def get_data_from_hive(ds, **op_kwargs):
         
     '''.format(
         pt=ds,
-        v_date='{{execution_date.strftime("%Y-%m-%d %H:%M:%S")}}',
+        v_date='{{{{execution_date.strftime("%Y-%m-%d %H:%M:%S")}}}}',
         table=table_name,
         db=db_name,
         config=config

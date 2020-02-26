@@ -17,10 +17,10 @@ def GetLocalTime(service_line,utc_date_hour, country_code, gap_hour):
 
     service_line_config_file=service_line.lower().strip()+"_time_zone_config"
 
-    print(service_line_config_file)
-
     #读取配置文件
     config = literal_eval(Variable.get(service_line_config_file))
+
+    country_code='NG'
 
     #读取国家码对应的[time_zone]
     time_zone = config[country_code]['time_zone']
