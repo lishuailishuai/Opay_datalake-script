@@ -338,7 +338,6 @@ on
 
 
 
-
     '''.format(
         pt=ds,
         v_date=v_date,
