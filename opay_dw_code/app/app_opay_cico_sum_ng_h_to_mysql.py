@@ -141,7 +141,7 @@ def get_data_from_hive(ds, execution_date, **op_kwargs):
             'region',
             'order_status',
             'order_cnt',
-            'order_amt'
+            'order_amt',
             'country_code',
             'dt',
             'hour'
