@@ -157,8 +157,7 @@ def get_data_from_hive(ds, execution_date,  **op_kwargs):
             'country_code',
             'dt',
             'hour',
-        ],
-        ''
+        ]
     )
 
     hive_cursor.close()
@@ -181,12 +180,12 @@ def __data_only_mysql(conn, column):
 
 
 # 数据集写入mysql
-def __data_to_mysql(conn, data, column, update=''):
+def __data_to_mysql(conn, data, column):
     isql = 'insert into {table} ({columns})'.format(
         table=mysql_table,
         columns=','.join(column)
     )
-    esql = '{0} values {1} on duplicate key update {2}'
+    esql = '{0} values {1}'
     sval = ''
     cnt = 0
     try:
@@ -204,16 +203,16 @@ def __data_to_mysql(conn, data, column, update=''):
                 sval += ',(\'{}\')'.format('\',\''.join([str(x) for x in row]))
             cnt += 1
             if cnt >= 1000:
-                logging.info(esql.format(isql, sval, update))
+                logging.info(esql.format(isql, sval))
                 logging.info('mysql insert rows:%d', cnt)
-                conn.execute(esql.format(isql, sval, update))
+                conn.execute(esql.format(isql, sval))
                 cnt = 0
                 sval = ''
 
         if cnt > 0 and sval != '':
-            logging.info(esql.format(isql, sval, update))
+            logging.info(esql.format(isql, sval))
             logging.info('mysql insert rows:%d', cnt)
-            conn.execute(esql.format(isql, sval, update))
+            conn.execute(esql.format(isql, sval))
 
     except BaseException as e:
         logging.info(e)
