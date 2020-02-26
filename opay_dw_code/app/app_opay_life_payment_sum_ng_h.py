@@ -200,6 +200,9 @@ def execution_data_task_id(ds, dag, **kwargs):
             execute_time --当前脚本执行时间(%Y-%m-%d %H:%M:%S)
             is_hour_task --是否开通小时级任务,[默认(false)]
             frame_type --模板类型(只有 is_hour_task:'true' 时生效): utc 产出分区为utc时间，local 产出分区为本地时间,[默认(utc)]。
+            is_offset --是否开启时间前后偏移(影响success 文件)
+            execute_time_offset --执行时间偏移值(-1、0、1),在当前执行时间上，前后偏移原有时间，用于产出前后小时分区
+            business_key --产品线名称
 
         #读取sql
             %_sql(ds,v_hour)
@@ -217,7 +220,10 @@ def execution_data_task_id(ds, dag, **kwargs):
             "is_result_force_exist": "false",
             "execute_time": v_date,
             "is_hour_task": "true",
-            "frame_type": "local"
+            "frame_type": "local",
+            "is_offset":"true",
+            "execute_time_offset":-1,
+            "business_key":"opay"
         }
     ]
 
