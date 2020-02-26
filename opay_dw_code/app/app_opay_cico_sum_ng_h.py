@@ -250,7 +250,7 @@ def execution_data_task_id(ds, dag, **kwargs):
         }
     ]
 
-    cf = CountriesPublicFrame_dev(args)
+    cf = CountriesAppFrame(args)
 
      # 读取sql
     _sql = "\n" + cf.alter_partition() + "\n" + app_opay_cico_sum_ng_h_sql_task(ds, v_date)
