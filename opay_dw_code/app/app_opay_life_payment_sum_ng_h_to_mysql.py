@@ -57,7 +57,7 @@ dag = airflow.DAG(
 db_name = "opay_dw"
 table_name = "app_opay_life_payment_sum_ng_h"
 hdfs_path = "oss://opay-datalake/opay/opay_dw/" + table_name
-config = eval(Variable.get("utc_locale_time_config"))
+config = eval(Variable.get("opay_time_zone_config"))
 time_zone = config['NG']['time_zone']
 mysql_table = 'opay_dw.app_opay_life_payment_sum_ng_h'
 

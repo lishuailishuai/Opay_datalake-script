@@ -50,7 +50,7 @@ table_name = "dwd_opay_pos_transaction_record_hi"
 hdfs_path = "oss://opay-datalake/opay/opay_dw/" + table_name
 pos_provider_share_0922_fee=eval(Variable.get("pos_provider_share_0922_fee"))
 msc_cost_0922_fee=eval(Variable.get("msc_cost_0922_fee"))
-config = eval(Variable.get("utc_locale_time_config"))
+config = eval(Variable.get("opay_time_zone_config"))
 time_zone = config['NG']['time_zone']
 
 ##----------------------------------------- 依赖 ---------------------------------------##
