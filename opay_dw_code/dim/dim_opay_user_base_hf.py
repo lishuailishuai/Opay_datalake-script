@@ -48,7 +48,7 @@ dag = airflow.DAG('dim_opay_user_base_hf',
 db_name = "opay_dw"
 table_name = "dim_opay_user_base_hf"
 hdfs_path = "oss://opay-datalake/opay/opay_dw/" + table_name
-config = eval(Variable.get("utc_locale_time_config"))
+config = eval(Variable.get("opay_time_zone_config"))
 time_zone = config['NG']['time_zone']
 
 ##----------------------------------------- 依赖 ---------------------------------------##
