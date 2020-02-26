@@ -65,7 +65,7 @@ class CountriesAppFrame(object):
         self.v_local_date=None
         self.v_local_hour=None
 
-        self.v_is_pro_tmp=None
+        self.v_time_offset=0
 
         self.v_execute_time_offset=0
 
@@ -146,10 +146,10 @@ class CountriesAppFrame(object):
         v_utc_time='{v_sys_utc}'.format(v_sys_utc=self.v_utc_ds+" "+self.v_utc_hour)
         
         #国家对应的本地日期
-        self.v_local_date=GetLocalTime('opay','{v_utc_time}'.format(v_utc_time=v_utc_time),country_code,self.v_execute_time_offset)["date"]
+        self.v_local_date=GetLocalTime('opay','{v_utc_time}'.format(v_utc_time=v_utc_time),country_code,self.v_time_offset)["date"]
         
         #国家对应的本地小时
-        self.v_local_hour=GetLocalTime('opay','{v_utc_time}'.format(v_utc_time=v_utc_time),country_code,self.v_execute_time_offset)["hour"]
+        self.v_local_hour=GetLocalTime('opay','{v_utc_time}'.format(v_utc_time=v_utc_time),country_code,self.v_time_offset)["hour"]
 
 
     def get_country_code(self):
@@ -359,6 +359,12 @@ class CountriesAppFrame(object):
 
     def touchz_success(self):
 
+        #偏移量小于0
+        if self.v_execute_time_offset<0:
+            v_flag=0
+        else:
+            v_flag=1
+
         if self.v_is_offset=="true" and self.v_is_hour_task=="true" and self.v_execute_time_offset!=0:
 
 
@@ -367,9 +373,11 @@ class CountriesAppFrame(object):
 
             for i in range(0,exe_num):
 
-                self.v_execute_time_offset=i
+                if v_flag==0 and i>0:
 
-                print(self.v_execute_time_offset)
+                    self.v_time_offset=int(-i)
+
+                print(self.v_time_offset)
 
                 self.touchz_success_main()
 
