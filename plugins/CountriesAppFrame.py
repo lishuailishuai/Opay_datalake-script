@@ -168,7 +168,9 @@ class CountriesAppFrame(object):
 
             s=list(self.v_country_code_map.keys())
 
-            self.country_code_list=",".join(s)
+            #self.country_code_list=",".join(s)
+
+            self.country_code_list="NG"
 
             
     def check_success_exist(self):
@@ -364,6 +366,8 @@ class CountriesAppFrame(object):
             exe_num=1+abs(self.v_execute_time_offset)
 
             for i in range(0,exe_num):
+
+                self.v_execute_time_offset=i
 
                 print(self.v_execute_time_offset)
 
