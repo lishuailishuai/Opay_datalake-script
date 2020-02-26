@@ -128,7 +128,7 @@ class CountriesAppFrame(object):
             #产品线名称
             self.v_business_key=item.get('business_key',None)
 
-            self.v_business_key=self.v_business_key.lower().strip()
+            
 
 
         if self.dag:
@@ -170,6 +170,10 @@ class CountriesAppFrame(object):
             logging.info("Business Key Is None")
 
             sys.exit(1)
+
+        else:
+
+            self.v_business_key=self.v_business_key.lower().strip()
 
         business_line_config_file =self.v_business_key+"_country_code_tag"
 
