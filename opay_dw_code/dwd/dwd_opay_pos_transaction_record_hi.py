@@ -219,9 +219,9 @@ union_result as (
     , pos_trade_req_id
     , transaction_reference
     , retrieval_reference_number
-    , default.localTime("{config}",if(nvl(country,'')='','NG',country),from_unixtime(cast(cast(create_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as create_time
-    , default.localTime("{config}",if(nvl(country,'')='','NG',country),from_unixtime(cast(cast(update_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as update_time
-    , if(nvl(country,'')='','NG',country) as country
+    , default.localTime("{config}",'NG',from_unixtime(cast(cast(create_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as create_time
+    , default.localTime("{config}",'NG',from_unixtime(cast(cast(update_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as update_time
+    , 'NG' as country
     , order_status
     , channel_code as error_code
     , channel_msg as error_msg
@@ -255,9 +255,9 @@ union_result as (
     , pos_trade_req_id
     , transaction_reference
     , retrieval_reference_number
-    , default.localTime("{config}",if(nvl(country,'')='','NG',country),from_unixtime(cast(cast(create_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as create_time
-    , default.localTime("{config}",if(nvl(country,'')='','NG',country),from_unixtime(cast(cast(update_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as update_time
-    , if(nvl(country,'')='','NG',country) as country
+    , default.localTime("{config}",'NG',from_unixtime(cast(cast(create_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as create_time
+    , default.localTime("{config}",'NG',from_unixtime(cast(cast(update_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as update_time
+    , 'NG' as country
     , order_status
     , channel_code as error_code
     , channel_msg as error_msg
@@ -335,6 +335,7 @@ left join
   terminal_data t3 
 on 
   t1.affiliate_terminal_id = t3.terminal_id;
+
 
 
 
