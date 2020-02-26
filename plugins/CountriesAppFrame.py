@@ -399,6 +399,10 @@ class CountriesAppFrame(object):
 
                     self.v_time_offset=int(-i)
 
+                else:
+                    
+                    self.v_time_offset=i
+
                 self.assign_touchz_success_class()
 
         else:
