@@ -27,6 +27,8 @@ import requests
 import os
 from utils.get_local_time import GetLocalTime
 
+from plugins.CountriesAppFrame import CountriesAppFrame 
+
 args = {
         'owner': 'yangmingze',
         'start_date': datetime(2019, 5, 20),
@@ -56,22 +58,22 @@ hdfs_path="oss://opay-datalake/oride/test_db/"+table_name
 #获取变量
 #code_map=eval(Variable.get("sys_flag"))
 
-config = eval(Variable.get("utc_locale_time_config"))
-print(config)
-time_zone = config['NG']['time_zone']
+# config = eval(Variable.get("utc_locale_time_config"))
+
+# time_zone = config['NG']['time_zone']
 
 
-test_snappy_dev_01_tesk = OssSensor(
-    task_id='test_snappy_dev_01_tesk',
-    bucket_key='{hdfs_path_str}/dt={pt}/hour={hour}/_SUCCESS'.format(
-        hdfs_path_str="test",
-        pt='{{{{(execution_date+macros.timedelta(hours=({time_zone}+{gap_hour}))).strftime("%Y-%m-%d")}}}}'.format(time_zone=time_zone,gap_hour=-1),
-        hour='{{{{(execution_date+macros.timedelta(hours=({time_zone}+{gap_hour}))).strftime("%H")}}}}'.format(time_zone=time_zone,gap_hour=-1)
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
+# test_snappy_dev_01_tesk = OssSensor(
+#     task_id='test_snappy_dev_01_tesk',
+#     bucket_key='{hdfs_path_str}/dt={pt}/hour={hour}/_SUCCESS'.format(
+#         hdfs_path_str="test",
+#         pt=GetLocalTime('{v_date}'.format(v_date='{{execution_date.strftime("%Y-%m-%d %H")}}') ,'NG',-1)['date'],
+#         hour='{{{{(execution_date+macros.timedelta(hours=({time_zone}+{gap_hour}))).strftime("%H")}}}}'.format(time_zone=time_zone,gap_hour=-1)
+#     ),
+#     bucket_name='opay-datalake',
+#     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+#     dag=dag
+# )
 
 
 # test_snappy_dev_02_tesk = OssSensor(
@@ -104,33 +106,38 @@ ods_sqoop_base_data_city_conf_df_tesk = UFileSensor(
 ##----------------------------------------- 脚本 ---------------------------------------## 
 
 
-# def fun_task_timeout_monitor(ds,dag,**op_kwargs):
+def fun_task_timeout_monitor(ds,dag,execution_date,**op_kwargs):
 
-#     dag_ids=dag.dag_id
+    dag_ids=dag.dag_id
 
-#     tb = [
-#         {"dag":dag,"db": "test_db", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "600"}
-#     ]
+    #监控国家
+    v_country_code='NG'
 
-#     # tb = [
-#     #     {"db": "test_db", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "600"}
-#     # ]
+    #时间偏移量
+    v_gap_hour=0
 
-#     #TaskTimeoutMonitor().set_task_monitor(tb)
+    v_date=GetLocalTime("opay",execution_date.strftime("%Y-%m-%d %H"),v_country_code,v_gap_hour)['date']
+    v_hour=GetLocalTime("opay",execution_date.strftime("%Y-%m-%d %H"),v_country_code,v_gap_hour)['hour']
 
-#     print(GetLocalTime('2020-02-20 10',"NG",-1))
-#     print(GetLocalTime('2020-02-20 10',"NG",0))
-#     print(GetLocalTime('2020-02-20 10',"NG",1))
-#     print(GetLocalTime('2020-02-20 10',"NG",2))
+    #样例：
+    #天级监控
+    tb_day_task = [
+        {"dag":dag,"db": "test_db", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code={country_code}/dt={pt}".format(pt=ds,country_code=v_country_code), "timeout": "600"}
+    ]
 
-#     print(GetLocalTime('2020-02-20 10',"NC",1))
+    #小时级监控
+    tb_hour_task = [
+        {"dag":dag,"db": "test_db", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code={country_code}/dt={pt}/hour={now_hour}".format(country_code=v_country_code,pt=v_date,now_hour=v_hour), "timeout": "100"}
+    ]
 
-# task_timeout_monitor= PythonOperator(
-#     task_id='task_timeout_monitor',
-#     python_callable=fun_task_timeout_monitor,
-#     provide_context=True,
-#     dag=dag
-# )
+    TaskTimeoutMonitor().set_task_monitor(tb_hour_task)
+
+task_timeout_monitor= PythonOperator(
+    task_id='task_timeout_monitor',
+    python_callable=fun_task_timeout_monitor,
+    provide_context=True,
+    dag=dag
+)
 
 
 
@@ -252,6 +259,9 @@ def execution_data_task_id(ds,dag,**kwargs):
             execute_time --当前脚本执行时间(%Y-%m-%d %H:%M:%S)
             is_hour_task --是否开通小时级任务,[默认(false)]
             frame_type --模板类型(只有 is_hour_task:'true' 时生效): utc 产出分区为utc时间，local 产出分区为本地时间,[默认(utc)]。
+            is_offset --是否开启时间前后偏移(影响success 文件)
+            execute_time_offset --执行时间偏移值(-1、0、1),在当前执行时间上，前后偏移原有时间，用于产出前后小时分区
+            business_key --产品线名称
 
         #读取sql
             %_sql(ds,v_hour)
@@ -266,30 +276,33 @@ def execution_data_task_id(ds,dag,**kwargs):
             "table_name":table_name,
             "data_oss_path":hdfs_path,
             "is_country_partition":"true",
-            "is_result_force_exist":"true",
+            "is_result_force_exist":"false",
             "execute_time":v_date,
             "is_hour_task":"true",
-            "frame_type":"local"
+            "frame_type":"local",
+            "is_offset":"true",
+            "execute_time_offset":-1,
+            "business_key":"opay"
             }
     ]
 
 
-    cf=CountriesPublicFrame_dev(args)
+    cf=CountriesAppFrame(args)
 
     #删除分区
     #cf.delete_partition()
 
-    print(test_dim_oride_city_sql_task(ds))
+    #print(test_dim_oride_city_sql_task(ds))
 
     #读取sql
     #_sql="\n"+cf.alter_partition()+"\n"+test_dim_oride_city_sql_task(ds)
 
-    _sql="\n"+test_dim_oride_city_sql_task(ds)
+    #_sql="\n"+test_dim_oride_city_sql_task(ds)
 
     #logging.info('Executing: %s',_sql)
 
     #执行Hive
-    hive_hook.run_cli(_sql)
+    #hive_hook.run_cli(_sql)
 
     #熔断数据，如果数据不能为0
     #check_key_data_cnt_task(ds)
