@@ -1,7 +1,4 @@
 # -*- coding: utf-8 -*-
-"""
-平台司机数据2019-08-31
-"""
 import airflow
 from airflow.operators.hive_operator import HiveOperator
 from airflow.operators.python_operator import PythonOperator
@@ -49,7 +46,7 @@ args = {
 
 dag = airflow.DAG(
     'app_opay_life_payment_sum_ng_h_to_mysql',
-    schedule_interval="50 * * * *",
+    schedule_interval="38 * * * *",
     default_args=args
 )
 
