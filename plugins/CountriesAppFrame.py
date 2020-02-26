@@ -67,6 +67,8 @@ class CountriesAppFrame(object):
 
         self.v_time_offset=0
 
+        self.v_business_key=None
+
         self.v_execute_time_offset=0
 
         self.get_mian_argument()
@@ -124,7 +126,7 @@ class CountriesAppFrame(object):
             self.v_execute_time_offset=int(item.get('execute_time_offset', 0))
 
             #产品线名称
-            self.v_business_key=(item.get('business_key', 0)).lower().strip()
+            self.v_business_key=(item.get('business_key',None)).lower().strip()
 
 
         if self.dag:
@@ -168,6 +170,8 @@ class CountriesAppFrame(object):
             sys.exit(1)
 
         business_line_config_file =self.v_business_key+"_country_code_tag"
+
+        print(business_line_config_file)
 
         if self.v_is_countries_online.lower()=="false":
 
