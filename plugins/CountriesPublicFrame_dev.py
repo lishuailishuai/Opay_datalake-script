@@ -436,10 +436,10 @@ class CountriesPublicFrame_dev(object):
                     v_utc_time='{v_sys_utc}'.format(v_sys_utc=self.utc_ds+" "+self.utc_hour)
         
                     #国家本地日期
-                    v_local_date=GetLocalTime('{v_utc_time}'.format(v_utc_time=v_utc_time),country_code_word,self.time_offset)["date"]
+                    v_local_date=GetLocalTime('opay','{v_utc_time}'.format(v_utc_time=v_utc_time),country_code_word,self.time_offset)["date"]
         
                     #国家本地小时
-                    v_local_hour=GetLocalTime('{v_utc_time}'.format(v_utc_time=v_utc_time),country_code_word,self.time_offset)["hour"]
+                    v_local_hour=GetLocalTime('opay','{v_utc_time}'.format(v_utc_time=v_utc_time),country_code_word,self.time_offset)["hour"]
 
                     #输出不同国家(本地时间)的数据路径(Local 小时级分区)
                     self.hdfs_data_dir_str=self.v_data_oss_path+"/country_code="+country_code_word+"/dt="+v_local_date+"/hour="+v_local_hour
