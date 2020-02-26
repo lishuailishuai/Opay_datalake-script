@@ -35,7 +35,7 @@ import os
 
 args = {
     'owner': 'lijialong',
-    'start_date': datetime(2020, 2, 24),
+    'start_date': datetime(2020, 2, 26),
     'depends_on_past': False,
     'retries': 3,
     'retry_delay': timedelta(minutes=5),
@@ -45,29 +45,24 @@ args = {
 }
 
 dag = airflow.DAG(
-    'app_opay_life_payment_sum_ng_h_to_mysql',
+    'app_opay_cico_sum_ng_h_to_mysql',
     schedule_interval="38 * * * *",
     default_args=args
 )
 
 ##----------------------------------- 变量 ----------------------------------##
-db_name = "opay_dw"
-table_name = "app_opay_life_payment_sum_ng_h"
-hdfs_path = "oss://opay-datalake/opay/opay_dw/" + table_name
 config = eval(Variable.get("opay_time_zone_config"))
 time_zone = config['NG']['time_zone']
-mysql_table = 'opay_dw.app_opay_life_payment_sum_ng_h'
-
+mysql_table = 'opay_dw.app_opay_cico_sum_ng_h'
 
 ##----------------------------------依赖数据源------------------------------##
 
 
-
 ### 检查当前小时的依赖
-app_opay_life_payment_sum_ng_h_check_task = OssSensor(
-    task_id='app_opay_life_payment_sum_ng_h_check_task',
+app_opay_cico_sum_ng_h_check_task = OssSensor(
+    task_id='app_opay_cico_sum_ng_h_check_task',
     bucket_key='{hdfs_path_str}/country_code=NG/dt={pt}/hour={hour}/_SUCCESS'.format(
-        hdfs_path_str="opay/opay_dw/app_opay_life_payment_sum_ng_h",
+        hdfs_path_str="opay/opay_dw/app_opay_cico_sum_ng_h",
         pt='{{{{(execution_date+macros.timedelta(hours=({time_zone}+{gap_hour}))).strftime("%Y-%m-%d")}}}}'.format(
             time_zone=time_zone, gap_hour=0),
         hour='{{{{(execution_date+macros.timedelta(hours=({time_zone}+{gap_hour}))).strftime("%H")}}}}'.format(
@@ -79,10 +74,10 @@ app_opay_life_payment_sum_ng_h_check_task = OssSensor(
 )
 
 ### 检查上一个小时的依赖
-app_opay_life_payment_sum_ng_h_pre_check_task = OssSensor(
-    task_id='app_opay_life_payment_sum_ng_h_pre_check_task',
+app_opay_cico_sum_ng_h_pre_check_task = OssSensor(
+    task_id='app_opay_cico_sum_ng_h_pre_check_task',
     bucket_key='{hdfs_path_str}/country_code=NG/dt={pt}/hour={hour}/_SUCCESS'.format(
-        hdfs_path_str="opay/opay_dw/app_opay_life_payment_sum_ng_h",
+        hdfs_path_str="opay/opay_dw/app_opay_cico_sum_ng_h",
         pt='{{{{(execution_date+macros.timedelta(hours=({time_zone}+{gap_hour}))).strftime("%Y-%m-%d")}}}}'.format(
             time_zone=time_zone, gap_hour=-1),
         hour='{{{{(execution_date+macros.timedelta(hours=({time_zone}+{gap_hour}))).strftime("%H")}}}}'.format(
@@ -97,32 +92,29 @@ app_opay_life_payment_sum_ng_h_pre_check_task = OssSensor(
 ##------------------------------------ SQL --------------------------------##
 
 # 从hive读取数据
-def get_data_from_hive(ds, execution_date,  **op_kwargs):
+def get_data_from_hive(ds, execution_date, **op_kwargs):
     # ds = op_kwargs.get('ds', time.strftime('%Y-%m-%d', time.localtime(time.time() - 86400)))
     hql = '''
         SELECT 
-            create_date_hour,  
-            sub_consume_scenario,      
-            recharge_service_provider,     
-            originator_type,      
-            originator_role,         
-            order_status,        
-            order_cnt,                
-            order_amt,                
-            country_code,               
-            dt,           
+            create_date_hour , 
+            sub_service_type , 
+            state , 
+            region , 
+            order_status , 
+            order_cnt , 
+            order_amt,
+            country_code , 
+            dt , 
             hour
-        from opay_dw.app_opay_life_payment_sum_ng_h
+        from opay_dw.app_opay_cico_sum_ng_h
         where 
         country_code = 'NG'
     and concat(dt,' ',hour) >= date_format(default.localTime("{config}", 'NG', '{v_date}', -1), 'yyyy-MM-dd HH')
     and concat(dt,' ',hour) <= date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'yyyy-MM-dd HH')
-        
+
     '''.format(
         pt=ds,
-        v_date= execution_date.strftime("%Y-%m-%d %H:%M:%S"),
-        table=table_name,
-        db=db_name,
+        v_date=execution_date.strftime("%Y-%m-%d %H:%M:%S"),
         config=config
     )
 
@@ -144,16 +136,15 @@ def get_data_from_hive(ds, execution_date,  **op_kwargs):
         hive_data,
         [
             'create_date_hour',
-            'sub_consume_scenario',
-            'recharge_service_provider',
-            'originator_type',
-            'originator_role',
+            'sub_service_type',
+            'state',
+            'region',
             'order_status',
             'order_cnt',
             'order_amt',
             'country_code',
             'dt',
-            'hour',
+            'hour'
         ]
     )
 
@@ -171,8 +162,8 @@ def __data_only_mysql(conn, execution_date):
             create_date_hour BETWEEN '{st}' AND '{et}'
     '''.format(
         table=mysql_table,
-        st=(execution_date+airflow.macros.timedelta(hours=time_zone-1)).strftime("%Y-%m-%d %H"),
-        et=(execution_date+airflow.macros.timedelta(hours=time_zone)).strftime("%Y-%m-%d %H"),
+        st=(execution_date + airflow.macros.timedelta(hours=time_zone - 1)).strftime("%Y-%m-%d %H"),
+        et=(execution_date + airflow.macros.timedelta(hours=time_zone)).strftime("%Y-%m-%d %H"),
     )
     try:
         logging.info(isql)
@@ -193,14 +184,14 @@ def __data_to_mysql(conn, data, column):
     sval = ''
     cnt = 0
     try:
-        for (create_date_hour,sub_consume_scenario,recharge_service_provider,
-            originator_type,originator_role,order_statu,order_cnt,
-            order_amt,country_code,dt,hour) in data:
+        for (create_date_hour,sub_service_type,state,region,
+            order_status,order_cnt,order_amt,country_code,dt,
+            hour) in data:
 
-            row = [create_date_hour,sub_consume_scenario,recharge_service_provider,
-            originator_type,originator_role,order_statu,order_cnt,
-            order_amt,country_code,dt,hour
-            ]
+            row = [create_date_hour,sub_service_type,state,region,
+                    order_status,order_cnt,order_amt,country_code,dt,
+                    hour
+                   ]
             if sval == '':
                 sval = '(\'{}\')'.format('\',\''.join([str(x) for x in row]))
             else:
@@ -237,6 +228,5 @@ get_data_from_hive_task = PythonOperator(
     dag=dag
 )
 
-
-app_opay_life_payment_sum_ng_h_check_task >> get_data_from_hive_task
-app_opay_life_payment_sum_ng_h_pre_check_task >> get_data_from_hive_task
+app_opay_cico_sum_ng_h_check_task >> get_data_from_hive_task
+app_opay_cico_sum_ng_h_pre_check_task >> get_data_from_hive_task
