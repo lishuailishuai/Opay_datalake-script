@@ -77,7 +77,33 @@ dwd_opay_pos_transaction_record_hi_day_task = OssSensor(
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
+##----------------------------------------- 任务超时监控 ---------------------------------------##
+def fun_task_timeout_monitor(ds,dag,execution_date,**op_kwargs):
 
+    dag_ids=dag.dag_id
+
+    #监控国家
+    v_country_code='NG'
+
+    #时间偏移量
+    v_gap_hour=0
+
+    v_date=GetLocalTime("opay",execution_date.strftime("%Y-%m-%d %H"),v_country_code,v_gap_hour)['date']
+    v_hour=GetLocalTime("opay",execution_date.strftime("%Y-%m-%d %H"),v_country_code,v_gap_hour)['hour']
+
+    #小时级监控
+    tb_hour_task = [
+        {"dag":dag,"db": "opay_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code={country_code}/dt={pt}/hour={now_hour}".format(country_code=v_country_code,pt=v_date,now_hour=v_hour), "timeout": "600"}
+    ]
+
+    TaskTimeoutMonitor().set_task_monitor(tb_hour_task)
+
+task_timeout_monitor= PythonOperator(
+    task_id='task_timeout_monitor',
+    python_callable=fun_task_timeout_monitor,
+    provide_context=True,
+    dag=dag
+)
 
 def app_opay_pos_sum_ng_h_sql_task(ds,v_date):
     HQL = '''
