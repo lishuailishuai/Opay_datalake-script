@@ -276,7 +276,7 @@ union_result as (
     dt = date_format('{v_date}', 'yyyy-MM-dd')
     and hour= date_format('{v_date}', 'HH')
     and `__deleted` = 'false'
-),
+)
 
 insert overwrite table opay_dw.dwd_opay_pos_transaction_record_hi partition(country_code, dt, hour)
 select 
