@@ -100,7 +100,7 @@ app_opay_life_payment_sum_ng_h_pre_check_task = OssSensor(
 ##------------------------------------ SQL --------------------------------##
 
 # 从hive读取数据
-def get_data_from_hive(ds, **op_kwargs):
+def get_data_from_hive(ds, execution_date,  **op_kwargs):
     # ds = op_kwargs.get('ds', time.strftime('%Y-%m-%d', time.localtime(time.time() - 86400)))
     hql = '''
         SELECT 
@@ -123,7 +123,7 @@ def get_data_from_hive(ds, **op_kwargs):
         
     '''.format(
         pt=ds,
-        v_date='{{{{execution_date.strftime("%Y-%m-%d %H:%M:%S")}}}}',
+        v_date= execution_date.strftime("%Y-%m-%d %H:%M:%S"),
         table=table_name,
         db=db_name,
         config=config
