@@ -26,6 +26,7 @@ from airflow.models import Variable
 import requests
 import os
 from utils.get_local_time import GetLocalTime
+from plugins.CountriesAppFrame import CountriesAppFrame
 
 
 args = {
