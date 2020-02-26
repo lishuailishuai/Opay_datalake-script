@@ -139,14 +139,15 @@ def get_data_from_hive(ds, execution_date,  **op_kwargs):
 
     __data_only_mysql(
         mcursor,
-        "dt='{pt}' AND hour='{hour}'".format(pt=ds,hour=(execution_date+macros.timedelta(hours=time_zone)).strftime("%H")
+        "dt='{pt}' AND hour='{hour}'".format(pt=ds, hour=(execution_date+macros.timedelta(hours=time_zone)).strftime("%H"))
     )
 
     __data_to_mysql(
         mcursor,
         hive_data,
         [
-            'create_date_hour','sub_consume_scenario',
+            'create_date_hour',
+            'sub_consume_scenario',
             'recharge_service_provider',
             'originator_type',
             'originator_role',
