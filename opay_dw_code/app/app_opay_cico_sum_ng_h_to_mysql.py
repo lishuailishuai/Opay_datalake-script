@@ -62,7 +62,7 @@ mysql_table = 'opay_dw.app_opay_cico_sum_ng_h'
 app_opay_cico_sum_ng_h_check_task = OssSensor(
     task_id='app_opay_cico_sum_ng_h_check_task',
     bucket_key='{hdfs_path_str}/country_code=NG/dt={pt}/hour={hour}/_SUCCESS'.format(
-        hdfs_path_str="opay/opay_dw/app_opay_pos_sum_ng_h",
+        hdfs_path_str="opay/opay_dw/app_opay_cico_sum_ng_h",
         pt='{{{{(execution_date+macros.timedelta(hours=({time_zone}+{gap_hour}))).strftime("%Y-%m-%d")}}}}'.format(
             time_zone=time_zone, gap_hour=0),
         hour='{{{{(execution_date+macros.timedelta(hours=({time_zone}+{gap_hour}))).strftime("%H")}}}}'.format(
@@ -77,7 +77,7 @@ app_opay_cico_sum_ng_h_check_task = OssSensor(
 app_opay_cico_sum_ng_h_pre_check_task = OssSensor(
     task_id='app_opay_cico_sum_ng_h_pre_check_task',
     bucket_key='{hdfs_path_str}/country_code=NG/dt={pt}/hour={hour}/_SUCCESS'.format(
-        hdfs_path_str="opay/opay_dw/app_opay_pos_sum_ng_h",
+        hdfs_path_str="opay/opay_dw/app_opay_cico_sum_ng_h",
         pt='{{{{(execution_date+macros.timedelta(hours=({time_zone}+{gap_hour}))).strftime("%Y-%m-%d")}}}}'.format(
             time_zone=time_zone, gap_hour=-1),
         hour='{{{{(execution_date+macros.timedelta(hours=({time_zone}+{gap_hour}))).strftime("%H")}}}}'.format(
