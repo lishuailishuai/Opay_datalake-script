@@ -107,7 +107,7 @@ def get_data_from_hive(ds, execution_date, **op_kwargs):
             dt, 
             hour 
 
-        from  oride_dw.app_opay_pos_sum_ng_h
+        from  opay_dw.app_opay_pos_sum_ng_h
         where 
         country_code = 'NG'
     and concat(dt,' ',hour) >= date_format(default.localTime("{config}", 'NG', '{v_date}', -1), 'yyyy-MM-dd HH')
