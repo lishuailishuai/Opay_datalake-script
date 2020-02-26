@@ -100,7 +100,7 @@ app_opay_life_payment_sum_ng_h_pre_check_task = OssSensor(
 ##------------------------------------ SQL --------------------------------##
 
 # 从hive读取数据
-def get_data_from_hive(ds, **op_kwargs):
+def get_data_from_hive(ds, execution_date,  **op_kwargs):
     # ds = op_kwargs.get('ds', time.strftime('%Y-%m-%d', time.localtime(time.time() - 86400)))
     hql = '''
         SELECT 
@@ -123,7 +123,7 @@ def get_data_from_hive(ds, **op_kwargs):
         
     '''.format(
         pt=ds,
-        v_date='{{{{execution_date.strftime("%Y-%m-%d %H:%M:%S")}}}}',
+        v_date= execution_date.strftime("%Y-%m-%d %H:%M:%S"),
         table=table_name,
         db=db_name,
         config=config
@@ -139,14 +139,15 @@ def get_data_from_hive(ds, **op_kwargs):
 
     __data_only_mysql(
         mcursor,
-        "dt='{pt}'".format(pt=ds)
+        execution_date
     )
 
     __data_to_mysql(
         mcursor,
         hive_data,
         [
-            'create_date_hour','sub_consume_scenario',
+            'create_date_hour',
+            'sub_consume_scenario',
             'recharge_service_provider',
             'originator_type',
             'originator_role',
@@ -156,8 +157,7 @@ def get_data_from_hive(ds, **op_kwargs):
             'country_code',
             'dt',
             'hour',
-        ],
-        'dt=VALUES(dt)'
+        ]
     )
 
     hive_cursor.close()
@@ -165,10 +165,17 @@ def get_data_from_hive(ds, **op_kwargs):
 
 
 # 数据集写入mysql前删除之前数据
-def __data_only_mysql(conn, column):
-    isql = 'delete from {table} {where_dt} ;'.format(
+def __data_only_mysql(conn, execution_date):
+    isql = '''
+        DELETE
+        FROM
+          {table}
+        WHERE
+            create_date_hour BETWEEN '{st}' AND '{et}'
+    '''.format(
         table=mysql_table,
-        where_dt='where' + ' ' + column
+        st=(execution_date+airflow.macros.timedelta(hours=time_zone-1)).strftime("%Y-%m-%d %H"),
+        et=(execution_date+airflow.macros.timedelta(hours=time_zone)).strftime("%Y-%m-%d %H"),
     )
     try:
         logging.info(isql)
@@ -180,12 +187,12 @@ def __data_only_mysql(conn, column):
 
 
 # 数据集写入mysql
-def __data_to_mysql(conn, data, column, update=''):
+def __data_to_mysql(conn, data, column):
     isql = 'insert into {table} ({columns})'.format(
         table=mysql_table,
         columns=','.join(column)
     )
-    esql = '{0} values {1} on duplicate key update {2}'
+    esql = '{0} values {1}'
     sval = ''
     cnt = 0
     try:
@@ -203,13 +210,17 @@ def __data_to_mysql(conn, data, column, update=''):
                 sval += ',(\'{}\')'.format('\',\''.join([str(x) for x in row]))
             cnt += 1
             if cnt >= 1000:
-                # logging.info(esql.format(isql, sval, update))
-                conn.execute(esql.format(isql, sval, update))
+                logging.info(esql.format(isql, sval))
+                logging.info('mysql insert rows:%d', cnt)
+                conn.execute(esql.format(isql, sval))
                 cnt = 0
                 sval = ''
 
         if cnt > 0 and sval != '':
-            conn.execute(esql.format(isql, sval, update))
+            logging.info(esql.format(isql, sval))
+            logging.info('mysql insert rows:%d', cnt)
+            conn.execute(esql.format(isql, sval))
+
     except BaseException as e:
         logging.info(e)
         sys.exit(1)
