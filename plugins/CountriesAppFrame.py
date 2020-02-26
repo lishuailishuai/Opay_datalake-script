@@ -120,8 +120,11 @@ class CountriesAppFrame(object):
             #是否开启时间前后偏移(影响success 文件)
             self.v_is_offset=item.get('is_offset', "false")
 
-            #-1、0、1
+            #执行时间偏移值 -1、0、1 产出的时间偏移量，用于产出前后小时分区
             self.v_execute_time_offset=int(item.get('execute_time_offset', 0))
+
+            #产品线名称
+            self.v_business_key=(item.get('business_key', 0)).lower().strip()
 
 
         if self.dag:
@@ -146,10 +149,10 @@ class CountriesAppFrame(object):
         v_utc_time='{v_sys_utc}'.format(v_sys_utc=self.v_utc_ds+" "+self.v_utc_hour)
         
         #国家对应的本地日期
-        self.v_local_date=GetLocalTime('opay','{v_utc_time}'.format(v_utc_time=v_utc_time),country_code,self.v_time_offset)["date"]
+        self.v_local_date=GetLocalTime(self.v_business_key,'{v_utc_time}'.format(v_utc_time=v_utc_time),country_code,self.v_time_offset)["date"]
         
         #国家对应的本地小时
-        self.v_local_hour=GetLocalTime('opay','{v_utc_time}'.format(v_utc_time=v_utc_time),country_code,self.v_time_offset)["hour"]
+        self.v_local_hour=GetLocalTime(self.v_business_key,'{v_utc_time}'.format(v_utc_time=v_utc_time),country_code,self.v_time_offset)["hour"]
 
 
     def get_country_code(self):
@@ -158,13 +161,21 @@ class CountriesAppFrame(object):
             获取当前表中所有二位国家码
         """
 
+        if self.v_business_key is None:
+
+            logging.info("Business Key Is None")
+
+            sys.exit(1)
+
+        business_line_config_file =self.v_business_key+"_country_code_tag"
+
         if self.v_is_countries_online.lower()=="false":
 
             self.country_code_list="nal"
 
         if self.v_is_countries_online.lower()=="true":
 
-            self.v_country_code_map = eval(Variable.get("country_code_dim"))
+            self.v_country_code_map = eval(Variable.get(business_line_config_file))
 
             s=list(self.v_country_code_map.keys())
 
@@ -359,14 +370,18 @@ class CountriesAppFrame(object):
 
     def touchz_success(self):
 
-        #偏移量小于0
+        """
+            生成 Success 函数
+        """
+
+        #执行时间偏移值为负数时
         if self.v_execute_time_offset<0:
             v_flag=0
         else:
             v_flag=1
 
+        # 同时满足 开启时间偏移、小时任务、执行时间偏移值 
         if self.v_is_offset=="true" and self.v_is_hour_task=="true" and self.v_execute_time_offset!=0:
-
 
             #执行次数(1+执行时间的偏移量)
             exe_num=1+abs(self.v_execute_time_offset)
@@ -377,17 +392,15 @@ class CountriesAppFrame(object):
 
                     self.v_time_offset=int(-i)
 
-                print(self.v_time_offset)
-
-                self.touchz_success_main()
+                self.assign_touchz_success_class()
 
         else:
         
-            self.touchz_success_main()
+            self.assign_touchz_success_class()
 
 
 
-    def touchz_success_main(self):
+    def assign_touchz_success_class(self):
 
         """
             生成 Success 函数
