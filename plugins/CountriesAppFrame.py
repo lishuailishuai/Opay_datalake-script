@@ -189,10 +189,7 @@ class CountriesAppFrame(object):
 
             s=list(self.v_country_code_map.keys())
 
-            #self.country_code_list=",".join(s)
-
-            self.country_code_list="NG"
-
+            self.country_code_list=",".join(s)
             
     def check_success_exist(self):
 
