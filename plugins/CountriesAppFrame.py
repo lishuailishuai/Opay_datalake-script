@@ -367,6 +367,7 @@ class CountriesAppFrame(object):
                 self.touchz_success_main()
 
         else:
+            pass
 
             #self.touchz_success_main()
 
