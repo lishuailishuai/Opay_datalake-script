@@ -158,7 +158,7 @@ def get_data_from_hive(ds, execution_date,  **op_kwargs):
             'dt',
             'hour',
         ],
-        'dt=VALUES(dt)'
+        ''
     )
 
     hive_cursor.close()
