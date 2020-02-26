@@ -126,7 +126,9 @@ class CountriesAppFrame(object):
             self.v_execute_time_offset=int(item.get('execute_time_offset', 0))
 
             #产品线名称
-            self.v_business_key=(item.get('business_key',None)).lower().strip()
+            self.v_business_key=item.get('business_key',None)
+
+            self.v_business_key=self.v_business_key.lower().strip()
 
 
         if self.dag:
