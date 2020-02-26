@@ -485,7 +485,7 @@ FROM
              if(t.cancel_wait_payment_time=0,0,(t.cancel_wait_payment_time + 1 * 60 * 60 * 1)) as local_cancel_wait_payment_time ,
              from_unixtime((unix_timestamp(regexp_replace(regexp_replace(t.updated_at,'T',' '),'Z',''))+3600),'yyyy-MM-dd HH:mm:ss') as updated_time,
 
-             row_number() over(partition by t.id order by t.`__ts_ms` desc) as order_by
+             row_number() over(partition by t.id order by t.`__ts_ms` desc,t.`__file` desc,cast(t.`__pos` as int) desc) as order_by
              
         FROM oride_dw_ods.ods_binlog_base_data_order_hi t
 
