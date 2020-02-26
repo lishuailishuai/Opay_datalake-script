@@ -167,7 +167,7 @@ class CountriesAppFrame(object):
 
         if self.v_business_key is None:
 
-            logging.info("Business Key Is None")
+            logging.info("Error: Business Key Is None (Quit ... ...)")
 
             sys.exit(1)
 
