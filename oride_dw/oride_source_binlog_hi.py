@@ -43,13 +43,12 @@ dag_monitor = airflow.DAG(
 
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
 
-def fun_task_timeout_monitor(ds, db_name, table_name, **op_kwargs):
+def fun_task_timeout_monitor(ds,db_name, table_name, **op_kwargs):
     tb = [
         {"db": db_name, "table": table_name, "partition": "dt={pt}".format(pt=ds), "timeout": "7200"}
     ]
 
     TaskTimeoutMonitor().set_task_monitor(tb)
-
 
 # 忽略数据量检查的table
 IGNORED_TABLE_LIST = [
