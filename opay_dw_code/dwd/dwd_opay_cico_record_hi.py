@@ -233,10 +233,7 @@ ci_data as (
     , bd_id as bd_admin_user_id
     , bd_agent_status
     , utc_date_hour
-    
-    , ts
-    , file
-    , pos
+    , rn
   from 
     (
     select 
@@ -266,9 +263,7 @@ ci_data as (
       , nvl(outward_type, '-') as outward_type
       , date_format('{v_date}', 'yyyy-MM-dd HH') as utc_date_hour
 
-    , `__ts_ms` as ts
-    , `__file` as file
-    , cast(`__pos` as int) as pos
+      , row_number() over(partition by order_no order by `__ts_ms` desc,`__file` desc,cast(`__pos` as int) desc) rn
     from 
       opay_dw_ods.ods_binlog_base_cash_in_record_hi
     where 
@@ -311,10 +306,7 @@ co_data as (
     , bd_id as bd_admin_user_id
     , bd_agent_status
     , utc_date_hour
-
-    , ts
-    , file
-    , pos
+    , rn
   from 
     (
     select 
@@ -344,9 +336,7 @@ co_data as (
       , nvl(outward_type, '-') as outward_type
       , date_format('{v_date}', 'yyyy-MM-dd HH') as utc_date_hour
 
-    , `__ts_ms` as ts
-    , `__file` as file
-    , cast(`__pos` as int) as pos
+      , row_number() over(partition by order_no order by `__ts_ms` desc,`__file` desc,cast(`__pos` as int) desc) rn
     from 
       opay_dw_ods.ods_binlog_base_cash_out_record_hi
     where 
@@ -391,42 +381,10 @@ union_result_different as (
     , utc_date_hour
   from
     (
-    select
-      order_no
-      , amount
-      , currency
-      , originator_type
-      , originator_id
-      , affiliate_type
-      , affiliate_id
-      , payment_order_no
-      , create_time
-      , update_time
-      , country
-      , sub_service_type
-      , order_status
-      , error_code
-      , error_msg
-      , client_source
-      , pay_way
-      , business_type
-      , top_consume_scenario
-      , sub_consume_scenario
-      , fee_amount
-      , fee_pattern
-      , outward_id
-      , outward_type
-      , bd_admin_user_id
-      , bd_agent_status
-      , utc_date_hour
-      , row_number() over(partition by order_no order by ts desc,file desc,pos desc) rn
-    from
-      (
-      select * from ci_data
-      union all
-      select * from co_data
-      ) as a
-    ) as b
+    select * from ci_data
+    union all
+    select * from co_data
+    ) as a
   where
     rn = 1
 )
@@ -494,7 +452,6 @@ left join
   dim_user_merchant_data t3 
 on 
   t1.affiliate_id = t3.trader_id;
-
 
 
 
@@ -600,5 +557,6 @@ dim_opay_user_base_hf_check_task >> dwd_opay_cico_record_hi_task
 dim_opay_bd_agent_hf_check_task >> dwd_opay_cico_record_hi_task
 ods_binlog_base_cash_in_record_hi_check_task >> dwd_opay_cico_record_hi_task
 ods_binlog_base_cash_out_record_hi_check_task >> dwd_opay_cico_record_hi_task
+
 
 

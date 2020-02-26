@@ -194,26 +194,13 @@ def execution_data_task_id(ds, dag, **kwargs):
 
     cf = CountriesPublicFrame_dev(args)
 
-    # 删除分区
-    # cf.delete_partition()
-
-    # print(dwd_opay_life_payment_record_hi_sql_task(ds, v_date))
-
     # 读取sql
     _sql = "\n" + cf.alter_partition() + "\n" + app_opay_life_payment_sum_ng_h_sql_task(ds, v_date)
-
-    # _sql = "\n" + dwd_opay_life_payment_record_hi_sql_task(ds, v_date)
 
     logging.info('Executing: %s', _sql)
 
     # 执行Hive
     hive_hook.run_cli(_sql)
-
-    # 熔断数据，如果数据不能为0
-    # check_key_data_cnt_task(ds)
-
-    # 熔断数据
-    # check_key_data_task(ds)
 
     # 生产success
     cf.touchz_success()

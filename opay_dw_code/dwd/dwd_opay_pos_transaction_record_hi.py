@@ -232,9 +232,7 @@ union_result as (
     , '-' as outward_type
     , date_format('{v_date}', 'yyyy-MM-dd HH') as utc_date_hour
 
-    , `__ts_ms` as ts
-    , `__file` as file
-    , cast(`__pos` as int) as pos
+    , row_number() over(partition by order_no order by `__ts_ms` desc,`__file` desc,cast(`__pos` as int) desc) rn
   from 
     opay_dw_ods.ods_binlog_base_user_pos_transaction_record_hi
   where 
@@ -271,78 +269,13 @@ union_result as (
     , '-' as outward_type
     , date_format('{v_date}', 'yyyy-MM-dd HH') as utc_date_hour
 
-    , `__ts_ms` as ts
-    , `__file` as file
-    , cast(`__pos` as int) as pos
+    , row_number() over(partition by order_no order by `__ts_ms` desc,`__file` desc,cast(`__pos` as int) desc) rn
   from 
     opay_dw_ods.ods_binlog_base_merchant_pos_transaction_record_hi
   where 
     dt = date_format('{v_date}', 'yyyy-MM-dd')
     and hour= date_format('{v_date}', 'HH')
     and `__deleted` = 'false'
-),
-
-union_result_different as (
-  select
-    order_no
-    , amount
-    , stamp_duty
-    , currency
-    , originator_type
-    , originator_id
-    , affiliate_terminal_id
-    , affiliate_terminal_provider_id
-    , affiliate_bank_code
-    , pos_trade_req_id
-    , transaction_reference
-    , retrieval_reference_number
-    , create_time
-    , update_time
-    , country
-    , order_status
-    , error_code
-    , error_msg
-    , transaction_type
-    , accounting_status
-    , fee_amount
-    , fee_pattern
-    , outward_id
-    , outward_type
-    , utc_date_hour
-  from
-    (
-    select
-      order_no
-      , amount
-      , stamp_duty
-      , currency
-      , originator_type
-      , originator_id
-      , affiliate_terminal_id
-      , affiliate_terminal_provider_id
-      , affiliate_bank_code
-      , pos_trade_req_id
-      , transaction_reference
-      , retrieval_reference_number
-      , create_time
-      , update_time
-      , country
-      , order_status
-      , error_code
-      , error_msg
-      , transaction_type
-      , accounting_status
-      , fee_amount
-      , fee_pattern
-      , outward_id
-      , outward_type
-      , utc_date_hour
-      , row_number() over(partition by order_no order by ts desc,file desc,pos desc) rn
-    from
-      union_result
-    ) as a
-  where 
-    rn = 1
 )
 
 insert overwrite table opay_dw.dwd_opay_pos_transaction_record_hi partition(country_code, dt, hour)
@@ -393,7 +326,7 @@ select
   , date_format(default.localTime("{config}", t1.country, '{v_date}', 0), 'HH') as hour
 
 from 
-  union_result_different as t1 
+  (select * from union_result where rn=1) as t1 
 left join 
   dim_user_merchant_data t2 
 on 
@@ -402,6 +335,7 @@ left join
   terminal_data t3 
 on 
   t1.affiliate_terminal_id = t3.terminal_id;
+
 
 
 
@@ -504,5 +438,6 @@ dim_opay_user_base_hf_check_task >> dwd_opay_pos_transaction_record_hi_task
 dim_opay_terminal_base_hf_check_task >> dwd_opay_pos_transaction_record_hi_task
 ods_binlog_base_user_pos_transaction_record_hi_check_task >> dwd_opay_pos_transaction_record_hi_task
 ods_binlog_base_merchant_pos_transaction_record_hi_check_task >> dwd_opay_pos_transaction_record_hi_task
+
 
 

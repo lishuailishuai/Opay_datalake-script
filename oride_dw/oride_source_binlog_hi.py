@@ -69,7 +69,7 @@ table_list = [
     ("oride_data", "data_driver_comment", "sqoop_db", "base", 3, "oride_db", "false"),
     ("oride_data", "data_driver_extend", "sqoop_db", "base", 3, "oride_db", "true"),
     ("oride_data", "data_order", "sqoop_db", "base", 3, "oride_db", "true"),
-    ("oride_data", "data_order_payment", "sqoop_db", "base", 3, "oride_db", "false"),
+    ("oride_data", "data_order_payment", "sqoop_db", "base", 3, "oride_db", "true"),
     ("oride_data", "data_user_extend", "sqoop_db", "base", 3, "oride_db", "true"),
     ("oride_data", "data_user_comment", "sqoop_db", "base", 3, "oride_db", "false"),
     ("oride_data", "data_user", "sqoop_db", "base", 3, "oride_db", "false"),
