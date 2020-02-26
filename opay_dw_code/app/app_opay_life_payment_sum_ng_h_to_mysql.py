@@ -139,7 +139,7 @@ def get_data_from_hive(ds, execution_date,  **op_kwargs):
 
     __data_only_mysql(
         mcursor,
-        "dt='{pt}' AND hour='{hour}'".format(pt=ds, hour=(execution_date+airflow.macros.timedelta(hours=time_zone)).strftime("%H"))
+        execution_date
     )
 
     __data_to_mysql(
@@ -165,10 +165,17 @@ def get_data_from_hive(ds, execution_date,  **op_kwargs):
 
 
 # 数据集写入mysql前删除之前数据
-def __data_only_mysql(conn, column):
-    isql = 'delete from {table} {where_dt} ;'.format(
+def __data_only_mysql(conn, execution_date):
+    isql = '''
+        DELETE
+        FROM
+          {table}
+        WHERE
+            create_date_hour BETWEEN '{st}' AND '{et}'
+    '''.format(
         table=mysql_table,
-        where_dt='where' + ' ' + column
+        st=(execution_date+airflow.macros.timedelta(hours=time_zone-1)).strftime("%Y-%m-%d %H"),
+        et=(execution_date+airflow.macros.timedelta(hours=time_zone)).strftime("%Y-%m-%d %H"),
     )
     try:
         logging.info(isql)
