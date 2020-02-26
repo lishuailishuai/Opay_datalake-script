@@ -62,12 +62,12 @@ class CountriesAppFrame(object):
 
         self.country_code_list=None
 
-        self.time_offset=0
-
         self.v_local_date=None
         self.v_local_hour=None
 
         self.v_is_pro_tmp=None
+
+        self.v_execute_time_offset=0
 
         self.get_mian_argument()
 
@@ -117,8 +117,11 @@ class CountriesAppFrame(object):
             #框架类型(utc[默认],local[使用本地时间产出])
             self.v_frame_type=item.get('frame_type', "utc")
 
+            #是否开启时间前后偏移(影响success 文件)
+            self.v_is_offset=item.get('is_offset', "false")
 
-            self.v_is_pro_tmp="true"
+            #-1、0、1
+            self.v_execute_time_offset=int(item.get('execute_time_offset', 0))
 
 
         if self.dag:
@@ -143,10 +146,10 @@ class CountriesAppFrame(object):
         v_utc_time='{v_sys_utc}'.format(v_sys_utc=self.v_utc_ds+" "+self.v_utc_hour)
         
         #国家对应的本地日期
-        self.v_local_date=GetLocalTime('opay','{v_utc_time}'.format(v_utc_time=v_utc_time),country_code,self.time_offset)["date"]
+        self.v_local_date=GetLocalTime('opay','{v_utc_time}'.format(v_utc_time=v_utc_time),country_code,self.v_execute_time_offset)["date"]
         
         #国家对应的本地小时
-        self.v_local_hour=GetLocalTime('opay','{v_utc_time}'.format(v_utc_time=v_utc_time),country_code,self.time_offset)["hour"]
+        self.v_local_hour=GetLocalTime('opay','{v_utc_time}'.format(v_utc_time=v_utc_time),country_code,self.v_execute_time_offset)["hour"]
 
 
     def get_country_code(self):
@@ -354,15 +357,15 @@ class CountriesAppFrame(object):
 
     def touchz_success(self):
 
-        self.time_offset=-1
+        if self.v_is_offset=="true" and self.v_is_hour_task=="true" and self.v_execute_time_offset!=0:
 
-        if self.v_is_pro_tmp=="true" and self.v_is_hour_task=="true":
 
-            for i in range(0,2):
+            #执行次数(1+执行时间的偏移量)
+            exe_num=1+abs(self.v_execute_time_offset)
 
-                self.time_offset=i-int(self.v_utc_hour)
+            for i in range(0,exe_num):
 
-                print(self.time_offset)
+                print(self.v_execute_time_offset)
 
                 self.touchz_success_main()
 
