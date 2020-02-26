@@ -116,8 +116,8 @@ def fun_task_timeout_monitor(ds,dag,execution_date,**op_kwargs):
     #时间偏移量
     v_gap_hour=0
 
-    v_date=GetLocalTime(execution_date.strftime("%Y-%m-%d %H"),v_country_code,v_gap_hour)['date']
-    v_hour=GetLocalTime(execution_date.strftime("%Y-%m-%d %H"),v_country_code,v_gap_hour)['hour']
+    v_date=GetLocalTime("opay",execution_date.strftime("%Y-%m-%d %H"),v_country_code,v_gap_hour)['date']
+    v_hour=GetLocalTime("opay",execution_date.strftime("%Y-%m-%d %H"),v_country_code,v_gap_hour)['hour']
 
     #小时级监控
     tb_hour_task = [
