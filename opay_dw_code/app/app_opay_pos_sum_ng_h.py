@@ -121,17 +121,20 @@ def app_opay_pos_sum_ng_h_sql_task(ds,v_date):
            order_status,
            sum(amount) order_amt,
            count(1) order_cnt,
+           originator_type,
            'NG' country_code,
            date_format(create_date_hour, 'yyyy-MM-dd') as dt,
            substring(create_date_hour, 12, 2)  as hour
+           
     FROM
-      (SELECT STATE,pos_id,order_status,amount,country_code,create_date_hour
+      (SELECT STATE,pos_id,order_status,amount,country_code,create_date_hour,originator_type
        FROM
          (SELECT amount,
                  STATE,
                  pos_id,
                  order_status,
                  country_code,
+                 originator_type,
                  date_format(create_time, 'yyyy-MM-dd HH') as create_date_hour,
                  row_number()over(partition BY order_no ORDER BY update_time DESC) rn
           FROM opay_dw.dwd_opay_pos_transaction_record_hi
@@ -151,7 +154,8 @@ def app_opay_pos_sum_ng_h_sql_task(ds,v_date):
              order_status,
              region,
              country_code,
-             create_date_hour
+             create_date_hour,
+             originator_type
 
     '''.format(
         pt=ds,
