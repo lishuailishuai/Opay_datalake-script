@@ -62,12 +62,14 @@ class CountriesAppFrame(object):
 
         self.country_code_list=None
 
-        self.time_offset=0
-
         self.v_local_date=None
         self.v_local_hour=None
 
-        self.v_is_pro_tmp=None
+        self.v_time_offset=0
+
+        self.v_business_key=None
+
+        self.v_execute_time_offset=0
 
         self.get_mian_argument()
 
@@ -117,8 +119,16 @@ class CountriesAppFrame(object):
             #框架类型(utc[默认],local[使用本地时间产出])
             self.v_frame_type=item.get('frame_type', "utc")
 
+            #是否开启时间前后偏移(影响success 文件)
+            self.v_is_offset=item.get('is_offset', "false")
 
-            self.v_is_pro_tmp="true"
+            #执行时间偏移值 -1、0、1 产出的时间偏移量，用于产出前后小时分区
+            self.v_execute_time_offset=int(item.get('execute_time_offset', 0))
+
+            #产品线名称
+            self.v_business_key=item.get('business_key',None)
+
+            
 
 
         if self.dag:
@@ -143,10 +153,10 @@ class CountriesAppFrame(object):
         v_utc_time='{v_sys_utc}'.format(v_sys_utc=self.v_utc_ds+" "+self.v_utc_hour)
         
         #国家对应的本地日期
-        self.v_local_date=GetLocalTime('opay','{v_utc_time}'.format(v_utc_time=v_utc_time),country_code,self.time_offset)["date"]
+        self.v_local_date=GetLocalTime(self.v_business_key,'{v_utc_time}'.format(v_utc_time=v_utc_time),country_code,self.v_time_offset)["date"]
         
         #国家对应的本地小时
-        self.v_local_hour=GetLocalTime('opay','{v_utc_time}'.format(v_utc_time=v_utc_time),country_code,self.time_offset)["hour"]
+        self.v_local_hour=GetLocalTime(self.v_business_key,'{v_utc_time}'.format(v_utc_time=v_utc_time),country_code,self.v_time_offset)["hour"]
 
 
     def get_country_code(self):
@@ -155,18 +165,31 @@ class CountriesAppFrame(object):
             获取当前表中所有二位国家码
         """
 
+        if self.v_business_key is None:
+
+            logging.info("Error: Business Key Is None (Quit ... ...)")
+
+            sys.exit(1)
+
+        else:
+
+            self.v_business_key=self.v_business_key.lower().strip()
+
+        business_line_config_file =self.v_business_key+"_country_code_tag"
+
+        print(business_line_config_file)
+
         if self.v_is_countries_online.lower()=="false":
 
             self.country_code_list="nal"
 
         if self.v_is_countries_online.lower()=="true":
 
-            self.v_country_code_map = eval(Variable.get("country_code_dim"))
+            self.v_country_code_map = eval(Variable.get(business_line_config_file))
 
             s=list(self.v_country_code_map.keys())
 
             self.country_code_list=",".join(s)
-
             
     def check_success_exist(self):
 
@@ -354,26 +377,41 @@ class CountriesAppFrame(object):
 
     def touchz_success(self):
 
-        self.time_offset=-1
+        """
+            生成 Success 函数
+        """
 
-        if self.v_is_pro_tmp=="true" and self.v_is_hour_task=="true":
+        #执行时间偏移值为负数时
+        if self.v_execute_time_offset<0:
+            v_flag=0
+        else:
+            v_flag=1
 
-            for i in range(0,2):
+        # 同时满足 开启时间偏移、小时任务、执行时间偏移值 
+        if self.v_is_offset=="true" and self.v_is_hour_task=="true" and self.v_execute_time_offset!=0:
 
-                self.time_offset=i-int(self.v_utc_hour)
+            #执行次数(1+执行时间的偏移量)
+            exe_num=1+abs(self.v_execute_time_offset)
 
-                print(self.time_offset)
+            for i in range(0,exe_num):
 
-                self.touchz_success_main()
+                if v_flag==0 and i>0:
+
+                    self.v_time_offset=int(-i)
+
+                else:
+                    
+                    self.v_time_offset=i
+
+                self.assign_touchz_success_class()
 
         else:
-            pass
-
-            #self.touchz_success_main()
-
+        
+            self.assign_touchz_success_class()
 
 
-    def touchz_success_main(self):
+
+    def assign_touchz_success_class(self):
 
         """
             生成 Success 函数
