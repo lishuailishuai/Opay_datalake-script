@@ -119,9 +119,9 @@ def app_opay_pos_sum_ng_h_sql_task(ds,v_date):
            region,
            pos_id,
            order_status,
+           originator_type,
            sum(amount) order_amt,
            count(1) order_cnt,
-           originator_type,
            'NG' country_code,
            date_format(create_date_hour, 'yyyy-MM-dd') as dt,
            substring(create_date_hour, 12, 2)  as hour
