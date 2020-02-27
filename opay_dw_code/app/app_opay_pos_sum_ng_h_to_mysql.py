@@ -96,16 +96,18 @@ def get_data_from_hive(ds, execution_date, **op_kwargs):
     # ds = op_kwargs.get('ds', time.strftime('%Y-%m-%d', time.localtime(time.time() - 86400)))
     hql = '''
         SELECT
-            create_date_hour , 
-            state , 
-            region, 
-            pos_id , 
-            order_status, 
-            order_amt , 
-            order_cnt ,
-            country_code, 
-            dt, 
-            hour 
+                
+            create_date_hour,
+            state,
+            region,
+            pos_id,
+            order_status,
+            originator_type,
+            order_amt,
+            order_cnt,
+            country_code,
+            dt,
+            hour
 
         from  opay_dw.app_opay_pos_sum_ng_h
         where 
@@ -141,6 +143,7 @@ def get_data_from_hive(ds, execution_date, **op_kwargs):
             'region',
             'pos_id',
             'order_status',
+            'originator_type',
             'order_amt',
             'order_cnt',
             'country_code',
@@ -186,11 +189,11 @@ def __data_to_mysql(conn, data, column):
     cnt = 0
     try:
         for (create_date_hour, state, region, pos_id,
-             order_status, order_amt, order_cnt, country_code,
+             order_status, originator_type, order_amt, order_cnt, country_code,
              dt, hour) in data:
 
             row = [create_date_hour, state, region, pos_id,
-                   order_status, order_amt, order_cnt, country_code,
+                   order_status, originator_type, order_amt, order_cnt, country_code,
                    dt, hour
                    ]
             if sval == '':
