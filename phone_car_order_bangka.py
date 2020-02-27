@@ -37,19 +37,6 @@ table_names = ['ocredit_phones_dw_ods.ods_sqoop_base_t_order_df',
 校验分区代码
 '''
 
-validate_partition_data = PythonOperator(
-    task_id='validate_partition_data',
-    python_callable=validate_partition,
-    provide_context=True,
-    op_kwargs={
-        # 验证table
-        "table_names": table_names,
-        # 任务名称
-        "task_name": "ocredit手机汽车业务绑卡数据"
-    },
-    dag=dag
-)
-
 phones_ods_sqoop_base_t_order_df_task = OssSensor(
     task_id='phones_ods_sqoop_base_t_order_df_task',
     bucket_key="{hdfs_path_str}/dt={pt}/_SUCCESS".format(
@@ -195,6 +182,6 @@ phone_car_order_bangka_email = PythonOperator(
     dag=dag
 )
 
-validate_partition_data >> phones_ods_sqoop_base_t_order_df_task >> phone_car_order_bangka_email
-validate_partition_data >> ods_sqoop_base_user_payment_instrument_df_task >> phone_car_order_bangka_email
-validate_partition_data >> carfinance_ods_sqoop_base_t_order_df_task >> phone_car_order_bangka_email
+phones_ods_sqoop_base_t_order_df_task >> phone_car_order_bangka_email
+ods_sqoop_base_user_payment_instrument_df_task >> phone_car_order_bangka_email
+carfinance_ods_sqoop_base_t_order_df_task >> phone_car_order_bangka_email
