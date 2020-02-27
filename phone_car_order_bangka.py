@@ -177,15 +177,15 @@ def send_phone_car_order_bangka_email(ds, **kwargs):
 
     # send mail
 
-    #email_to = Variable.get("oride_street_association_receivers").split()
-    email_to = ['lili.chen@opay-inc.com']
+    email_to = Variable.get("phone_car_order_bangka").split()
+    #email_to = ['lili.chen@opay-inc.com']
     result = is_alert(ds, table_names)
     if result:
         email_to = ['bigdata@opay-inc.com']
 
     email_subject = 'ocredit手机汽车业务绑卡数据{dt}'.format(dt=ds)
     email_body = ''
-    send_email(email_to, email_subject, email_body, [file_name1,file_name2], mime_charset='utf-8')
+    send_email(email_to, email_subject, email_body, [file_name1], mime_charset='utf-8')
 
 
 phone_car_order_bangka_email = PythonOperator(
