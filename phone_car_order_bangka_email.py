@@ -24,7 +24,7 @@ args = {
 }
 
 dag = airflow.DAG(
-    'phone_car_order_bangka',
+    'phone_car_order_bangka_email',
     schedule_interval="30 02 * * *",
     default_args=args)
 
@@ -182,4 +182,6 @@ phone_car_order_bangka_email = PythonOperator(
     dag=dag
 )
 
-phones_ods_sqoop_base_t_order_df_task >> carfinance_ods_sqoop_base_t_order_df_task >> ods_sqoop_base_user_payment_instrument_df_task >> phone_car_order_bangka_email
+phones_ods_sqoop_base_t_order_df_task >> phone_car_order_bangka_email
+carfinance_ods_sqoop_base_t_order_df_task >> phone_car_order_bangka_email
+ods_sqoop_base_user_payment_instrument_df_task >> phone_car_order_bangka_email
