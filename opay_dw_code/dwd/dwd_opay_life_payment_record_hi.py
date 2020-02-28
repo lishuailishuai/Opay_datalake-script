@@ -309,7 +309,7 @@ tv as (
 
     , row_number() over(partition by order_no order by `__ts_ms` desc,`__file` desc,cast(`__pos` as int) desc) rn
   from 
-    opay_dw_ods.ods_sqoop_base_tv_topup_record_di
+    opay_dw_ods.ods_binlog_base_tv_topup_record_hi
   where 
     dt = date_format('{v_date}', 'yyyy-MM-dd')
     and hour= date_format('{v_date}', 'HH')
@@ -348,7 +348,7 @@ mobiledata as (
 
     , row_number() over(partition by order_no order by `__ts_ms` desc,`__file` desc,cast(`__pos` as int) desc) rn
   from 
-    opay_dw_ods.ods_sqoop_base_mobiledata_topup_record_di
+    opay_dw_ods.ods_binlog_base_mobiledata_topup_record_hi
   where 
     dt = date_format('{v_date}', 'yyyy-MM-dd')
     and hour= date_format('{v_date}', 'HH')
@@ -387,7 +387,7 @@ electricity as (
 
     , row_number() over(partition by order_no order by `__ts_ms` desc,`__file` desc,cast(`__pos` as int) desc) rn
   from 
-    opay_dw_ods.ods_sqoop_base_electricity_topup_record_di
+    opay_dw_ods.ods_binlog_base_electricity_topup_record_hi
   where 
     dt = date_format('{v_date}', 'yyyy-MM-dd')
     and hour= date_format('{v_date}', 'HH')
@@ -495,6 +495,7 @@ left join
 on 
   t4.sub_service_type = t1.sub_service_type 
   and t4.recharge_service_provider = t1.recharge_service_provider ;
+
 
 
 
