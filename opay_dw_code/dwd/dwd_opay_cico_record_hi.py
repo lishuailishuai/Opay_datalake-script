@@ -275,6 +275,8 @@ ci_data as (
     bd_agent_data ba 
   on 
     ci.affiliate_id = ba.opay_id
+  where
+    ci.rn = 1
 ),
 
 co_data as (
@@ -348,6 +350,8 @@ co_data as (
     bd_agent_data ba 
   on 
     co.originator_id = ba.opay_id
+  where
+    co.rn = 1
 ),
 
 union_result_different as (
@@ -381,9 +385,9 @@ union_result_different as (
     , utc_date_hour
   from
     (
-    select * from ci_data where rn = 1
+    select * from ci_data
     union all
-    select * from co_data where rn = 1
+    select * from co_data
     ) as a
 )
 
