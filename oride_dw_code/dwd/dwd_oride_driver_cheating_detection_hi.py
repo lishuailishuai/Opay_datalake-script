@@ -1,11 +1,27 @@
+# -*- coding: utf-8 -*-
 import airflow
 from datetime import datetime, timedelta
 from airflow.operators.hive_operator import HiveOperator
+from airflow.operators.impala_plugin import ImpalaOperator
+from utils.connection_helper import get_hive_cursor
+from airflow.operators.python_operator import PythonOperator
+from airflow.contrib.hooks.redis_hook import RedisHook
+from airflow.hooks.hive_hooks import HiveCliHook
 from airflow.operators.hive_to_mysql import HiveToMySqlTransfer
 from airflow.operators.mysql_operator import MySqlOperator
-from airflow.sensors.hive_partition_sensor import HivePartitionSensor
+from airflow.operators.dagrun_operator import TriggerDagRunOperator
+from airflow.sensors.external_task_sensor import ExternalTaskSensor
 from airflow.operators.bash_operator import BashOperator
+from airflow.sensors.named_hive_partition_sensor import NamedHivePartitionSensor
+from airflow.sensors.hive_partition_sensor import HivePartitionSensor
+from airflow.sensors import UFileSensor
+from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
+from plugins.TaskTouchzSuccess import TaskTouchzSuccess
+import json
+import logging
 from airflow.models import Variable
+import requests
+import os
 
 args = {
     'owner': 'linan',
@@ -26,45 +42,46 @@ dag = airflow.DAG(
 
 db_name="oride_dw"
 table_name="dwd_oride_driver_cheating_detection_hi"
+hdfs_path = "oss://opay-datalake/oride/oride_dw/" + table_name
 
 ##----------------------------------------- 依赖 ---------------------------------------##
 
-#获取变量
-code_map=eval(Variable.get("sys_flag"))
-
-#判断ufile(cdh环境)
-if code_map["id"].lower()=="ufile":
-
-    server_event_task = HivePartitionSensor(
+server_event_task = HivePartitionSensor(
         task_id="server_event_task",
         table="server_event",
         partition="""dt='{{ ds }}' and hour='{{ execution_date.strftime("%H") }}'""",
         schema="oride_source",
         poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
         dag=dag
-    )
-    # 路径
-    hdfs_path="ufile://opay-datalake/oride/oride_dw/"+table_name
-else:
-    print("成功")
+)
 
-    server_event_task = HivePartitionSensor(
-        task_id="server_event_task",
-        table="server_event",
-        partition="""dt='{{ ds }}' and hour='{{ execution_date.strftime("%H") }}'""",
-        schema="oride_source",
-        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-        dag=dag
-    )
 
-    # 路径
-    hdfs_path = "oss://opay-datalake/oride/oride_dw/" + table_name
+##----------------------------------------- 任务超时监控 ---------------------------------------##
+
+def fun_task_timeout_monitor(ds, dag, execution_date, **op_kwargs):
+    dag_ids = dag.dag_id
+
+    tb = [
+        {"dag": dag, "db": "oride_dw", "table": "{dag_name}".format(dag_name=dag_ids),
+         "partition": "country_code=nal/dt={pt}/hour={now_hour}".format(pt=ds, now_hour=execution_date.strftime("%H")),
+         "timeout": "2400"}
+    ]
+
+    TaskTimeoutMonitor().set_task_monitor(tb)
+
+
+task_timeout_monitor = PythonOperator(
+    task_id='task_timeout_monitor',
+    python_callable=fun_task_timeout_monitor,
+    provide_context=True,
+    dag=dag
+)
+
+
 ##----------------------------------------- 脚本 ---------------------------------------##
 
-dwd_oride_driver_cheating_detection_hi_task = HiveOperator(
-    task_id='dwd_oride_driver_cheating_detection_hi_task',
-
-    hql='''
+def dwd_oride_driver_cheating_detection_hi_sql_task(ds, hour):
+    HQL = '''
         SET hive.exec.parallel=TRUE;
         SET hive.exec.dynamic.partition.mode=nonstrict;
 
@@ -103,47 +120,57 @@ dwd_oride_driver_cheating_detection_hi_task = HiveOperator(
         WHERE
             dt='{pt}'
             AND hour='{now_hour}'
-            AND e.event_name='invitation_code_click_confirm'
-
-        ;
-
-
+            AND e.event_name='invitation_code_click_confirm';   
 '''.format(
-        pt='{{ds}}',
-        now_day='{{ds}}',
-        now_hour='{{ execution_date.strftime("%H") }}',
-        table=table_name
-    ),
+        pt=ds,
+        now_day='{{macros.ds_add(ds, +1)}}',
+        now_hour=hour,
+        table=table_name,
+        db=db_name
+    )
+    return HQL
+
+
+# 主流程
+def execution_data_task_id(ds, **kwargs):
+    v_date = kwargs.get('v_execution_date')
+    v_day = kwargs.get('v_execution_day')
+    v_hour = kwargs.get('v_execution_hour')
+
+    hive_hook = HiveCliHook()
+
+    # 读取sql
+    _sql = dwd_oride_driver_cheating_detection_hi_sql_task(ds, v_hour)
+
+    logging.info('Executing: %s', _sql)
+
+    # 执行Hive
+    hive_hook.run_cli(_sql)
+
+    # 熔断数据
+    # check_key_data_task(ds)
+
+    # 生成_SUCCESS
+    """
+    第一个参数true: 数据目录是有country_code分区。false 没有
+    第二个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
+
+    """
+
+    TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "true", "false", v_hour)
+
+
+dwd_oride_driver_cheating_detection_hi_task = PythonOperator(
+    task_id='dwd_oride_driver_cheating_detection_hi_task',
+    python_callable=execution_data_task_id,
+    provide_context=True,
+    op_kwargs={
+        'v_execution_date': '{{execution_date.strftime("%Y-%m-%d %H:%M:%S")}}',
+        'v_execution_day': '{{execution_date.strftime("%Y-%m-%d")}}',
+        'v_execution_hour': '{{execution_date.strftime("%H")}}'
+    },
     dag=dag
 )
 
-# 生成_SUCCESS
-touchz_data_success = BashOperator(
-
-    task_id='touchz_data_success',
-
-    bash_command="""
-
-    #增加单独处理
-    $HADOOP_HOME/bin/hadoop fs -mkdir -p {hdfs_data_dir}
-    $HADOOP_HOME/bin/hadoop fs -touchz {hdfs_data_dir}/_SUCCESS
-
-    # line_num=`$HADOOP_HOME/bin/hadoop fs -du -s {hdfs_data_dir} | tail -1 | awk '{{print $1}}'`
-    # 
-    # if [ $line_num -eq 0 ]
-    # then
-    #     echo "FATAL {hdfs_data_dir} is empty"
-    #     exit 1
-    # else
-    #     echo "DATA EXPORT Successed ......"
-    #     $HADOOP_HOME/bin/hadoop fs -touchz {hdfs_data_dir}/_SUCCESS
-    # fi
-    """.format(
-        pt='{{ds}}',
-        now_day='{{macros.ds_add(ds, +1)}}',
-        hdfs_data_dir=hdfs_path + '/country_code=nal/dt={{ds}}/hour={{ execution_date.strftime("%H") }}'
-    ),
-    dag=dag)
-
-server_event_task >> dwd_oride_driver_cheating_detection_hi_task >> touchz_data_success
+server_event_task >> dwd_oride_driver_cheating_detection_hi_task
 
