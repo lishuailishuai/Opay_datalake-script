@@ -114,7 +114,7 @@ def app_opay_terminal_cube_h_sql_task(ds, v_date):
     set hive.exec.dynamic.partition.mode=nonstrict;
     set hive.exec.parallel=true;
     with terminal as 
-    (SELECT owner_id,terminal_id,pos_id from opay_dw.dim_opay_terminal_base_hf
+    (SELECT owner_id,terminal_id,pos_id,'NG' country_code from opay_dw.dim_opay_terminal_base_hf
      where bind_status='Y' and 
         concat(dt, " ", hour) = date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'yyyy-MM-dd HH')
     ),
@@ -123,25 +123,27 @@ def app_opay_terminal_cube_h_sql_task(ds, v_date):
      where concat(dt, " ", hour) = date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'yyyy-MM-dd HH')
      and role='agent'
     )
-
-        INSERT overwrite TABLE {db}.{table} partition (country_code, dt,hour)
-      select nvl(region,'ALL') region,
+      INSERT overwrite TABLE {db}.{table} partition (country_code, dt,hour)
+     select  nvl(region,'ALL') region,
              nvl(state,'ALL') state,
              nvl(pos_id,'ALL') pos_id,
-           count(distinct terminal_id end) bind_terms,
-           count(distinct owner_id end) bind_agents,
-           'NG' country_code,
-           date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'yyyy-MM-dd') as dt,
-           date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'HH') as hour
+             count(distinct terminal_id) bind_terms,
+             count(distinct owner_id ) bind_agents,
+             country_code,
+             date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'yyyy-MM-dd') as dt,
+             date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'HH') as hour
       from 
-          terminal a 
-      left join 
-          user1 b 
-      on a.owner_id=b.user_id
-      left join 
-         (select state,region from opay_dw.dim_opay_region_state_mapping_df where dt=if('{pt}' <= '2020-02-10', '2020-02-10', date_add('{pt}',-1)) ) c 
-      on b.state=c.state
-      group by region,b.state,a.pos_id
+          (select region,b.state,pos_id,country_code,terminal_id,owner_id 
+          from 
+              terminal a 
+          left join 
+              user1 b 
+          on a.owner_id=b.user_id
+          left join 
+             (select state,region from opay_dw.dim_opay_region_state_mapping_df where dt=if('{pt}' <= '2020-02-10', '2020-02-10', date_add('{pt}',-1)) ) c 
+          on b.state=c.state
+          )m 
+      group by region,state,pos_id,country_code
       GROUPING SETS (
         (pos_id, country_code),
         (pos_id, region, country_code),
