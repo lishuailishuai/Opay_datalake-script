@@ -298,6 +298,7 @@ union_result as (
     ,order_status
     ,error_code
     ,error_msg
+    ,transaction_type
     ,accounting_status
     ,fee_amount
     ,fee_pattern
