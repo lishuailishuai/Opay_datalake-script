@@ -25,7 +25,7 @@ args = {
 
 dag = airflow.DAG(
     'phone_car_order_bangka_email',
-    schedule_interval="30 02 * * *",
+    schedule_interval="20 02 * * *",
     default_args=args)
 
 table_names = ['ocredit_phones_dw_ods.ods_sqoop_base_t_order_df',

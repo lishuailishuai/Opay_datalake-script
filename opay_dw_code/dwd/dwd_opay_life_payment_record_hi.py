@@ -121,7 +121,7 @@ def fun_task_timeout_monitor(ds,dag,execution_date,**op_kwargs):
 
     #小时级监控
     tb_hour_task = [
-        {"dag":dag,"db": "opay_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code={country_code}/dt={pt}/hour={now_hour}".format(country_code=v_country_code,pt=v_date,now_hour=v_hour), "timeout": "600"}
+        {"dag":dag,"db": "opay_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code={country_code}/dt={pt}/hour={now_hour}".format(country_code=v_country_code,pt=v_date,now_hour=v_hour), "timeout": "1200"}
     ]
 
     TaskTimeoutMonitor().set_task_monitor(tb_hour_task)
@@ -140,6 +140,7 @@ task_timeout_monitor= PythonOperator(
 def dwd_opay_life_payment_record_hi_sql_task(ds, v_date):
     HQL = '''
     
+
 set mapred.max.split.size=1000000;
 set hive.exec.dynamic.partition.mode=nonstrict;
 set hive.exec.parallel=true;
@@ -153,8 +154,8 @@ dim_merchant_data as (
   from 
     opay_dw.dim_opay_merchant_base_hf
   where 
-    concat(dt,' ',lpad(hour,2,'0')) >= default.minLocalTimeRange("{config}", '{v_date}', 0)
-    and concat(dt,' ',lpad(hour,2,'0')) <= default.maxLocalTimeRange("{config}", '{v_date}', 0) 
+    concat(dt,' ',hour) >= default.minLocalTimeRange("{config}", '{v_date}', 0)
+    and concat(dt,' ',hour) <= default.maxLocalTimeRange("{config}", '{v_date}', 0) 
     and utc_date_hour = date_format("{v_date}", 'yyyy-MM-dd HH')
 ),
 
@@ -168,8 +169,8 @@ dim_user_merchant_data as (
   from 
     opay_dw.dim_opay_user_base_hf
   where 
-    concat(dt,' ',lpad(hour,2,'0')) >= default.minLocalTimeRange("{config}", '{v_date}', 0)
-    and concat(dt,' ',lpad(hour,2,'0')) <= default.maxLocalTimeRange("{config}", '{v_date}', 0) 
+    concat(dt,' ',hour) >= default.minLocalTimeRange("{config}", '{v_date}', 0)
+    and concat(dt,' ',hour) <= default.maxLocalTimeRange("{config}", '{v_date}', 0) 
     and utc_date_hour = date_format("{v_date}", 'yyyy-MM-dd HH')
 
   union all
@@ -195,7 +196,7 @@ dim_lp_commission_data as (
     dt = date_add('{pt}',-1)
 ),
 
-union_result as (
+betting as (
   select 
     order_no
     , amount
@@ -235,9 +236,9 @@ union_result as (
     and betting_provider != 'supabet' 
     and betting_provider is not null
     and `__deleted` = 'false'
+),
 
-  union all
-
+airtime as (
   select 
     order_no
     , amount
@@ -274,6 +275,166 @@ union_result as (
     dt = date_format('{v_date}', 'yyyy-MM-dd')
     and hour= date_format('{v_date}', 'HH')
     and `__deleted` = 'false'
+),
+
+tv as (
+  select 
+    order_no
+    , amount
+    , currency
+    , user_id as originator_id
+    , merchant_id as affiliate_id
+    , tv_provider as recharge_service_provider
+    , recipient_tv_account_no as recharge_account
+    , recipient_tv_account_name as recharge_account_name
+    , tv_plan as recharge_set_meal
+    , default.localTime("{config}",if(nvl(country,'')='','NG',country),from_unixtime(cast(cast(create_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as create_time
+    , default.localTime("{config}",if(nvl(country,'')='','NG',country),from_unixtime(cast(cast(update_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as update_time
+    , if(nvl(country,'')='','NG',country) as country
+    , 'TV' sub_service_type
+    , order_status
+    , error_code
+    , error_msg
+    , client_source
+    , pay_channel as pay_way
+    , pay_status
+    , 'TV' as top_consume_scenario
+    , 'TV' as sub_consume_scenario
+    , amount as pay_amount
+    , nvl(fee, 0) as fee_amount
+    , nvl(fee_pattern, '-') as fee_pattern
+    , nvl(outward_id, '-') as outward_id
+    , nvl(outward_type, '-') as outward_type
+    , date_format('{v_date}', 'yyyy-MM-dd HH') as utc_date_hour
+
+    , row_number() over(partition by order_no order by `__ts_ms` desc,`__file` desc,cast(`__pos` as int) desc) rn
+  from 
+    opay_dw_ods.ods_binlog_base_tv_topup_record_hi
+  where 
+    dt = date_format('{v_date}', 'yyyy-MM-dd')
+    and hour= date_format('{v_date}', 'HH')
+    and `__deleted` = 'false'
+),
+
+mobiledata as (
+  select 
+    order_no
+    , amount
+    , currency
+    , user_id as originator_id
+    , merchant_id as affiliate_id
+    , telecom_perator as recharge_service_provider
+    , recipient_mobile as recharge_account
+    , '-' as recharge_account_name
+    , '-' as recharge_set_meal
+    , default.localTime("{config}",if(nvl(country,'')='','NG',country),from_unixtime(cast(cast(create_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as create_time
+    , default.localTime("{config}",if(nvl(country,'')='','NG',country),from_unixtime(cast(cast(update_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as update_time
+    , if(nvl(country,'')='','NG',country) as country
+    , 'Mobiledata' sub_service_type
+    , order_status
+    , error_code
+    , error_msg
+    , client_source
+    , pay_channel as pay_way
+    , pay_status
+    , 'Mobiledata' as top_consume_scenario
+    , 'Mobiledata' as sub_consume_scenario
+    , amount as pay_amount
+    , nvl(fee_amount, 0) as fee_amount
+    , nvl(fee_pattern, '-') as fee_pattern
+    , nvl(out_ward_id, '-') as outward_id
+    , nvl(out_ward_type, '-') as outward_type
+    , date_format('{v_date}', 'yyyy-MM-dd HH') as utc_date_hour
+
+    , row_number() over(partition by order_no order by `__ts_ms` desc,`__file` desc,cast(`__pos` as int) desc) rn
+  from 
+    opay_dw_ods.ods_binlog_base_mobiledata_topup_record_hi
+  where 
+    dt = date_format('{v_date}', 'yyyy-MM-dd')
+    and hour= date_format('{v_date}', 'HH')
+    and `__deleted` = 'false'
+),
+
+electricity as (
+  select 
+    order_no
+    , amount
+    , currency
+    , user_id as originator_id
+    , merchant_id as affiliate_id
+    , recipient_elec_perator as recharge_service_provider
+    , recipient_elec_account as recharge_account
+    , '-' as recharge_account_name
+    , electricity_payment_plan as recharge_set_meal
+    , default.localTime("{config}",if(nvl(country,'')='','NG',country),from_unixtime(cast(cast(create_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as create_time
+    , default.localTime("{config}",if(nvl(country,'')='','NG',country),from_unixtime(cast(cast(update_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as update_time
+    , if(nvl(country,'')='','NG',country) as country
+    , 'Electricity' sub_service_type
+    , order_status
+    , error_code
+    , error_msg
+    , client_source
+    , pay_channel as pay_way
+    , pay_status
+    , 'Electricity' as top_consume_scenario
+    , 'Electricity' as sub_consume_scenario
+    , amount as pay_amount
+    , nvl(fee_amount, 0) as fee_amount
+    , nvl(fee_pattern, '-') as fee_pattern
+    , nvl(out_ward_id, '-') as outward_id
+    , nvl(out_ward_type, '-') as outward_type
+    , date_format('{v_date}', 'yyyy-MM-dd HH') as utc_date_hour
+
+    , row_number() over(partition by order_no order by `__ts_ms` desc,`__file` desc,cast(`__pos` as int) desc) rn
+  from 
+    opay_dw_ods.ods_binlog_base_electricity_topup_record_hi
+  where 
+    dt = date_format('{v_date}', 'yyyy-MM-dd')
+    and hour= date_format('{v_date}', 'HH')
+    and `__deleted` = 'false'
+),
+
+union_result as (
+  select
+    order_no
+    ,amount
+    ,currency
+    ,originator_id
+    ,affiliate_id
+    ,recharge_service_provider
+    ,recharge_account
+    ,recharge_account_name
+    ,recharge_set_meal
+    ,create_time
+    ,update_time
+    ,country
+    ,sub_service_type
+    ,order_status
+    ,error_code
+    ,error_msg
+    ,client_source
+    ,pay_way
+    ,pay_status
+    ,top_consume_scenario
+    ,sub_consume_scenario
+    ,pay_amount
+    ,fee_amount
+    ,fee_pattern
+    ,outward_id
+    ,outward_type
+    ,utc_date_hour
+  from
+    (
+    select * from betting where rn = 1
+    union all
+    select * from airtime where rn = 1
+    union all
+    select * from tv where rn = 1
+    union all
+    select * from mobiledata where rn = 1
+    union all
+    select * from electricity where rn = 1
+    ) as a
 )
 
 insert overwrite table opay_dw.dwd_opay_life_payment_record_hi partition(country_code, dt, hour)
@@ -320,7 +481,7 @@ select
   , date_format(default.localTime("{config}", t1.country, '{v_date}', 0), 'HH') as hour
 
 from 
-  (select * from union_result where rn=1) t1 
+  union_result as t1 
 left join 
   dim_user_merchant_data t2 
 on 
@@ -334,6 +495,8 @@ left join
 on 
   t4.sub_service_type = t1.sub_service_type 
   and t4.recharge_service_provider = t1.recharge_service_provider ;
+
+
 
 
     '''.format(
@@ -424,5 +587,6 @@ dim_opay_merchant_base_hf_check_task >> dwd_opay_life_payment_record_hi_task
 dim_opay_user_base_hf_check_task >> dwd_opay_life_payment_record_hi_task
 ods_binlog_base_betting_topup_record_hi_check_task >> dwd_opay_life_payment_record_hi_task
 ods_binlog_base_airtime_topup_record_hi_check_task >> dwd_opay_life_payment_record_hi_task
+
 
 

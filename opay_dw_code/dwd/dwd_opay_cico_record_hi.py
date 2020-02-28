@@ -141,7 +141,7 @@ def fun_task_timeout_monitor(ds,dag,execution_date,**op_kwargs):
 
     #小时级监控
     tb_hour_task = [
-        {"dag":dag,"db": "opay_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code={country_code}/dt={pt}/hour={now_hour}".format(country_code=v_country_code,pt=v_date,now_hour=v_hour), "timeout": "600"}
+        {"dag":dag,"db": "opay_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code={country_code}/dt={pt}/hour={now_hour}".format(country_code=v_country_code,pt=v_date,now_hour=v_hour), "timeout": "1200"}
     ]
 
     TaskTimeoutMonitor().set_task_monitor(tb_hour_task)
@@ -171,8 +171,8 @@ dim_user_merchant_data as (
   from 
     opay_dw.dim_opay_user_base_hf
   where 
-    concat(dt,' ',lpad(hour,2,'0')) >= default.minLocalTimeRange("{config}", '{v_date}', 0)
-    and concat(dt,' ',lpad(hour,2,'0')) <= default.maxLocalTimeRange("{config}", '{v_date}', 0) 
+    concat(dt,' ',hour) >= default.minLocalTimeRange("{config}", '{v_date}', 0)
+    and concat(dt,' ',hour) <= default.maxLocalTimeRange("{config}", '{v_date}', 0) 
     and utc_date_hour = date_format("{v_date}", 'yyyy-MM-dd HH')
 
   union all
@@ -186,8 +186,8 @@ dim_user_merchant_data as (
   from 
     opay_dw.dim_opay_merchant_base_hf
   where 
-    concat(dt,' ',lpad(hour,2,'0')) >= default.minLocalTimeRange("{config}", '{v_date}', 0)
-    and concat(dt,' ',lpad(hour,2,'0')) <= default.maxLocalTimeRange("{config}", '{v_date}', 0) 
+    concat(dt,' ',hour) >= default.minLocalTimeRange("{config}", '{v_date}', 0)
+    and concat(dt,' ',hour) <= default.maxLocalTimeRange("{config}", '{v_date}', 0) 
     and utc_date_hour = date_format("{v_date}", 'yyyy-MM-dd HH')
 ),
 
@@ -199,8 +199,8 @@ bd_agent_data as (
   from 
     opay_dw.dim_opay_bd_agent_hf
   where 
-    concat(dt,' ',lpad(hour,2,'0')) >= default.minLocalTimeRange("{config}", '{v_date}', 0)
-    and concat(dt,' ',lpad(hour,2,'0')) <= default.maxLocalTimeRange("{config}", '{v_date}', 0) 
+    concat(dt,' ',hour) >= default.minLocalTimeRange("{config}", '{v_date}', 0)
+    and concat(dt,' ',hour) <= default.maxLocalTimeRange("{config}", '{v_date}', 0) 
     and utc_date_hour = date_format("{v_date}", 'yyyy-MM-dd HH')
 ),
 
@@ -381,12 +381,10 @@ union_result_different as (
     , utc_date_hour
   from
     (
-    select * from ci_data
+    select * from ci_data where rn = 1
     union all
-    select * from co_data
+    select * from co_data where rn = 1
     ) as a
-  where
-    rn = 1
 )
 
 insert overwrite table opay_dw.dwd_opay_cico_record_hi partition(country_code, dt, hour)

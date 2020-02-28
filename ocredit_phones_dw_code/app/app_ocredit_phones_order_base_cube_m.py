@@ -98,13 +98,18 @@ def app_ocredit_phones_order_base_cube_m_sql_task(ds):
            entry_cnt, --进件量
            loan_cnt,  --`放款数` ,
            loan_amount_usd, --`贷款金额_USD` 
+           pre_amount,-- `初审通过量`
+           review_amount,-- `复审通过量`
            'nal' as country_code,
            '{pt}' as dt
     from(select terms,--分期数
           substr(date_of_entry,1,7) as month_of_entry, --进件所在月
           count(distinct opay_id) as entry_cnt, --进件量
           count(distinct (if(order_status='81',opay_id,null))) as loan_cnt, --`放款数` ,
-          sum(if(order_status='81',(nvl(loan_amount,0)/100)*0.2712/100,0)) as loan_amount_usd --`贷款金额_USD` 
+          sum(if(order_status='81',(nvl(loan_amount,0)/100)*0.2712/100,0)) as loan_amount_usd, --`贷款金额_USD`
+          count(distinct case when order_status not in (10,12,13,99) then opay_id else null end) as pre_amount,-- `初审通过量` 
+          count(distinct case when order_status not in (10,11,12,13,30,32,99) then opay_id else null end) as review_amount -- `复审通过量`
+           
     from ocredit_phones_dw.dwd_ocredit_phones_order_base_df
     where dt='{pt}'
     group by terms,substr(date_of_entry,1,7)
