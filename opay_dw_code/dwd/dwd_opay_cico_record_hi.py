@@ -381,12 +381,10 @@ union_result_different as (
     , utc_date_hour
   from
     (
-    select * from ci_data
+    select * from ci_data where rn = 1
     union all
-    select * from co_data
+    select * from co_data where rn = 1
     ) as a
-  where
-    rn = 1
 )
 
 insert overwrite table opay_dw.dwd_opay_cico_record_hi partition(country_code, dt, hour)
