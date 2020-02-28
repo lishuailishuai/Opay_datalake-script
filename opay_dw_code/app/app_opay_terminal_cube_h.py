@@ -29,7 +29,7 @@ from utils.get_local_time import GetLocalTime
 
 args = {
     'owner': 'liushuzhen',
-    'start_date': datetime(2020, 1, 23),
+    'start_date': datetime(2020, 2, 28),
     'depends_on_past': False,
     'retries': 3,
     'retry_delay': timedelta(minutes=2),
@@ -114,7 +114,7 @@ def app_opay_terminal_cube_h_sql_task(ds, v_date):
     set hive.exec.dynamic.partition.mode=nonstrict;
     set hive.exec.parallel=true;
     with terminal as 
-    (SELECT owner_id,terminal_id from opay_dw.dim_opay_terminal_base_hf
+    (SELECT owner_id,terminal_id,pos_id from opay_dw.dim_opay_terminal_base_hf
      where bind_status='Y' and 
         concat(dt, " ", hour) = date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'yyyy-MM-dd HH')
     ),
@@ -125,22 +125,31 @@ def app_opay_terminal_cube_h_sql_task(ds, v_date):
     )
 
         INSERT overwrite TABLE {db}.{table} partition (country_code, dt,hour)
-      select region,b.state,
-           count(distinct case when role='agent' then a.terminal_id end) bind_terms,
-           count(distinct case when role='agent' then a.owner_id end) bind_agents,
-           count(distinct b.user_id) all_agents,
+      select nvl(region,'ALL') region,
+             nvl(state,'ALL') state,
+             nvl(pos_id,'ALL') pos_id,
+           count(distinct terminal_id end) bind_terms,
+           count(distinct owner_id end) bind_agents,
            'NG' country_code,
            date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'yyyy-MM-dd') as dt,
            date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'HH') as hour
       from 
           terminal a 
-      full join 
+      left join 
           user1 b 
       on a.owner_id=b.user_id
       left join 
          (select state,region from opay_dw.dim_opay_region_state_mapping_df where dt=if('{pt}' <= '2020-02-10', '2020-02-10', date_add('{pt}',-1)) ) c 
       on b.state=c.state
-      group by region,b.state
+      group by region,b.state,a.pos_id
+      GROUPING SETS (
+        (pos_id, country_code),
+        (pos_id, region, country_code),
+        (pos_id, state, country_code),
+        (state, country_code),
+        (region, country_code),
+        (country_code)
+    )
 
 
     '''.format(
