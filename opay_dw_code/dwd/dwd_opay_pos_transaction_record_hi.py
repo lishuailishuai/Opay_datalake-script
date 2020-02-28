@@ -205,7 +205,7 @@ terminal_data as (
     and utc_date_hour = date_format("{v_date}", 'yyyy-MM-dd HH')
 ),
 
-union_result as (
+user_pos as (
   select 
     order_no
     , amount
@@ -239,9 +239,9 @@ union_result as (
     dt = date_format('{v_date}', 'yyyy-MM-dd')
     and hour= date_format('{v_date}', 'HH')
     and `__deleted` = 'false'
+),
 
-  union all
-
+merchant_pos as (
   select 
     order_no
     , amount
@@ -276,6 +276,40 @@ union_result as (
     dt = date_format('{v_date}', 'yyyy-MM-dd')
     and hour= date_format('{v_date}', 'HH')
     and `__deleted` = 'false'
+),
+
+union_result as (
+  select
+    order_no
+    ,amount
+    ,stamp_duty
+    ,currency
+    ,originator_type
+    ,originator_id
+    ,affiliate_terminal_id
+    ,affiliate_terminal_provider_id
+    ,affiliate_bank_code
+    ,pos_trade_req_id
+    ,transaction_reference
+    ,retrieval_reference_number
+    ,create_time
+    ,update_time
+    ,country
+    ,order_status
+    ,error_code
+    ,error_msg
+    ,accounting_status
+    ,fee_amount
+    ,fee_pattern
+    ,outward_id
+    ,outward_type
+    ,utc_date_hour
+  from
+    (
+    select * from user_pos where rn = 1
+    union all
+    select * from merchant_pos where rn = 1
+    ) as a
 )
 
 insert overwrite table opay_dw.dwd_opay_pos_transaction_record_hi partition(country_code, dt, hour)
@@ -326,7 +360,7 @@ select
   , date_format(default.localTime("{config}", t1.country, '{v_date}', 0), 'HH') as hour
 
 from 
-  (select * from union_result where rn=1) as t1 
+  union_result as t1 
 left join 
   dim_user_merchant_data t2 
 on 
