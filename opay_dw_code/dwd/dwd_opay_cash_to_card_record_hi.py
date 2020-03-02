@@ -293,8 +293,8 @@ def execution_data_task_id(ds, dag, **kwargs):
     cf.touchz_success()
 
 
-dwd_opay_cico_record_hi_task = PythonOperator(
-    task_id='dwd_opay_cico_record_hi_task',
+dwd_opay_cash_to_card_record_hi_task = PythonOperator(
+    task_id='dwd_opay_cash_to_card_record_hi_task',
     python_callable=execution_data_task_id,
     provide_context=True,
     op_kwargs={
@@ -306,7 +306,7 @@ dwd_opay_cico_record_hi_task = PythonOperator(
     dag=dag
 )
 
-#dim_opay_user_base_hf_check_task >> dwd_opay_cash_to_card_record_hi_sql_task
-#dim_opay_merchant_base_hf_check_task >> dwd_opay_cash_to_card_record_hi_sql_task
-#ods_binlog_base_user_transfer_card_record_hi_check_task >> dwd_opay_cash_to_card_record_hi_sql_task
-#ods_binlog_base_merchant_transfer_card_record_hi_check_task >> dwd_opay_cash_to_card_record_hi_sql_task
+dim_opay_user_base_hf_check_task >> dwd_opay_cash_to_card_record_hi_task
+dim_opay_merchant_base_hf_check_task >> dwd_opay_cash_to_card_record_hi_task
+ods_binlog_base_user_transfer_card_record_hi_check_task >> dwd_opay_cash_to_card_record_hi_task
+ods_binlog_base_merchant_transfer_card_record_hi_check_task >> dwd_opay_cash_to_card_record_hi_task
