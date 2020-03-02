@@ -457,7 +457,6 @@ insert overwrite table oride_dw.{table} partition(country_code,dt)
             from oride_dw.dwm_oride_order_base_di
             where month(dt) = month('{pt}') and city_id != 999001
                and is_finished_pay=1 and is_succ_pay=1 and pay_mode not in(0,1) and product_id<>99
-                      sum(if(is_finished_pay=1 and is_succ_pay=1 and pay_mode not in(0,1),pay_amount,0)) as online_pay_amount,  --当日线上实付金额12.18号开始,自12.26号再次变更，要所有线上支付单，统计c补
 
             group by city_id
         )c on  b.city_id =  c.city_id  
