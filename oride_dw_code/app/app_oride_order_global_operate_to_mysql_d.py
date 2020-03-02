@@ -438,9 +438,9 @@ insert overwrite table oride_dw.{table} partition(country_code,dt)
                select 
                 city_id,
 
-                sum(if(dt ='{pt}',recharge_amount,0))+sum(if(dt ='{pt}',reward_amount,0)) as b_subsidy_d,--B端补贴、天(实际b补)
+                sum(if(dt ='{pt}',nvl(recharge_amount,0) + nvl(reward_amount,0),0)) as b_subsidy_d,--B端补贴、天(实际b补)
 
-                sum(recharge_amount) + sum(reward_amount) as b_subsidy_m--B端补贴 月
+                sum(nvl(recharge_amount,0)) + sum(nvl(reward_amount,0)) as b_subsidy_m--B端补贴 月
 
             from oride_dw.dwm_oride_driver_finance_di 
             where  month(dt) = month('{pt}') and city_id != 999001 and driver_id <> 1
