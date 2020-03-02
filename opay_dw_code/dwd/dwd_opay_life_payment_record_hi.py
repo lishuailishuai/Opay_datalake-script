@@ -104,6 +104,45 @@ ods_binlog_base_airtime_topup_record_hi_check_task = OssSensor(
         dag=dag
     )
 
+### 检查当前小时的分区依赖
+ods_binlog_base_tv_topup_record_hi_check_task = OssSensor(
+        task_id='ods_binlog_base_tv_topup_record_hi_check_task',
+        bucket_key='{hdfs_path_str}/dt={pt}/hour={hour}/_SUCCESS'.format(
+            hdfs_path_str="opay_binlog/opay_transaction_db.opay_transaction.tv_topup_record",
+            pt='{{ds}}',
+            hour='{{ execution_date.strftime("%H") }}'
+        ),
+        bucket_name='opay-datalake',
+        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+        dag=dag
+    )
+
+### 检查当前小时的分区依赖
+ods_binlog_base_mobiledata_topup_record_hi_check_task = OssSensor(
+        task_id='ods_binlog_base_mobiledata_topup_record_hi_check_task',
+        bucket_key='{hdfs_path_str}/dt={pt}/hour={hour}/_SUCCESS'.format(
+            hdfs_path_str="opay_binlog/opay_transaction_db.opay_transaction.mobiledata_topup_record",
+            pt='{{ds}}',
+            hour='{{ execution_date.strftime("%H") }}'
+        ),
+        bucket_name='opay-datalake',
+        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+        dag=dag
+    )
+
+### 检查当前小时的分区依赖
+ods_binlog_base_electricity_topup_record_hi_check_task = OssSensor(
+        task_id='ods_binlog_base_electricity_topup_record_hi_check_task',
+        bucket_key='{hdfs_path_str}/dt={pt}/hour={hour}/_SUCCESS'.format(
+            hdfs_path_str="opay_binlog/opay_transaction_db.opay_transaction.electricity_topup_record",
+            pt='{{ds}}',
+            hour='{{ execution_date.strftime("%H") }}'
+        ),
+        bucket_name='opay-datalake',
+        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+        dag=dag
+    )
+
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
 def fun_task_timeout_monitor(ds,dag,execution_date,**op_kwargs):
@@ -591,6 +630,7 @@ dim_opay_merchant_base_hf_check_task >> dwd_opay_life_payment_record_hi_task
 dim_opay_user_base_hf_check_task >> dwd_opay_life_payment_record_hi_task
 ods_binlog_base_betting_topup_record_hi_check_task >> dwd_opay_life_payment_record_hi_task
 ods_binlog_base_airtime_topup_record_hi_check_task >> dwd_opay_life_payment_record_hi_task
-
-
+ods_binlog_base_tv_topup_record_hi_check_task >> dwd_opay_life_payment_record_hi_task
+ods_binlog_base_mobiledata_topup_record_hi_check_task >> dwd_opay_life_payment_record_hi_task
+ods_binlog_base_electricity_topup_record_hi_check_task >> dwd_opay_life_payment_record_hi_task
 
