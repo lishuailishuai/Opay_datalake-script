@@ -85,7 +85,7 @@ dim_opay_merchant_base_hf_check_task = OssSensor(
 ods_binlog_base_user_transfer_card_record_hi_check_task = OssSensor(
     task_id='ods_binlog_base_user_transfer_card_record_hi_check_task',
     bucket_key='{hdfs_path_str}/dt={pt}/hour={hour}/_SUCCESS'.format(
-        hdfs_path_str="opay_binlog/opay_transaction.opay_transaction.user_transfer_card_record",
+        hdfs_path_str="opay_binlog/opay_transaction_db.opay_transaction.user_transfer_card_record",
         pt='{{ds}}',
         hour='{{ execution_date.strftime("%H") }}'
     ),
@@ -97,7 +97,7 @@ ods_binlog_base_user_transfer_card_record_hi_check_task = OssSensor(
 ods_binlog_base_merchant_transfer_card_record_hi_check_task = OssSensor(
     task_id='ods_binlog_base_merchant_transfer_card_record_hi_check_task',
     bucket_key='{hdfs_path_str}/dt={pt}/hour={hour}/_SUCCESS'.format(
-        hdfs_path_str="opay_binlog/opay_transaction.opay_transaction.merchant_transfer_card_record",
+        hdfs_path_str="opay_binlog/opay_transaction_db.opay_transaction.merchant_transfer_card_record",
         pt='{{ds}}',
         hour='{{ execution_date.strftime("%H") }}'
     ),
