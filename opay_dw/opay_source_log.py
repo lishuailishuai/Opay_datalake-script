@@ -42,6 +42,7 @@ add_opay_source_partitions = HiveOperator(
             ALTER TABLE wap_topic_register_code  ADD IF NOT EXISTS PARTITION (dt = '{{ ds }}', hour = '{{ execution_date.strftime("%H") }}');    
             ALTER TABLE wap_topic_send_code  ADD IF NOT EXISTS PARTITION (dt = '{{ ds }}', hour = '{{ execution_date.strftime("%H") }}');        
             ALTER TABLE wap_topic_transfer_code   ADD IF NOT EXISTS PARTITION (dt = '{{ ds }}', hour = '{{ execution_date.strftime("%H") }}');   
+            ALTER TABLE service_data_tracking_app   ADD IF NOT EXISTS PARTITION (dt = '{{ ds }}', hour = '{{ execution_date.strftime("%H") }}');   
         """,
     schema='opay_source',
     dag=dag)
