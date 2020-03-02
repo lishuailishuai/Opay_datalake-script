@@ -151,6 +151,7 @@ dim_merchant_data as (
     merchant_id
     ,merchant_name
     ,merchant_type
+    , '-' as state
   from 
     opay_dw.dim_opay_merchant_base_hf
   where 
@@ -166,6 +167,7 @@ dim_user_merchant_data as (
     , `role` as trader_role
     , kyc_level as trader_kyc_level
     , 'USER' as trader_type
+    , state
   from 
     opay_dw.dim_opay_user_base_hf
   where 
@@ -181,6 +183,7 @@ dim_user_merchant_data as (
     , merchant_type as trader_role
     , '-' as trader_kyc_level
     , 'MERCHANT' as trader_type
+    , '-' as state
   from 
     dim_merchant_data
 ),
@@ -475,6 +478,7 @@ select
   , t1.outward_type
   , if(t4.fee_rate is null or t1.order_status != 'SUCCESS', 0, round(t1.amount * t4.fee_rate, 2)) as provider_share_amount
   , t1.utc_date_hour
+  , t2.state
 
   , t1.country as country_code
   , date_format(default.localTime("{config}", t1.country, '{v_date}', 0), 'yyyy-MM-dd') as dt
