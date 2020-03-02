@@ -27,7 +27,7 @@ from airflow.sensors import OssSensor
 
 args = {
     'owner': 'lishuai',
-    'start_date': datetime(2020, 2, 18),
+    'start_date': datetime(2020, 2, 29),
     'depends_on_past': False,
     'retries': 3,
     'retry_delay': timedelta(minutes=2),
@@ -36,17 +36,17 @@ args = {
     'email_on_retry': False,
 }
 
-dag = airflow.DAG('dwd_ocredit_phones_order_di',
+dag = airflow.DAG('dwd_ocredit_phones_repayment_detail_df',
                   schedule_interval="30 02 * * *",
                   default_args=args,
                   catchup=False)
 
 ##----------------------------------------- 依赖 ---------------------------------------##
 
-ods_sqoop_base_t_order_df_task = OssSensor(
-    task_id='ods_sqoop_base_t_order_df_task',
+ods_sqoop_base_t_repayment_detail_df_task = OssSensor(
+    task_id='ods_sqoop_base_t_repayment_detail_df_task',
     bucket_key="{hdfs_path_str}/dt={pt}/_SUCCESS".format(
-        hdfs_path_str="ocredit_phones_dw_sqoop/oloan/t_order",
+        hdfs_path_str="ocredit_phones_dw_sqoop/oloan/t_repayment_detail",
 
         pt="{{ds}}"
     ),
@@ -58,7 +58,7 @@ ods_sqoop_base_t_order_df_task = OssSensor(
 ##----------------------------------------- 变量 ---------------------------------------##
 
 db_name = "ocredit_phones_dw"
-table_name = "dwd_ocredit_phones_order_di"
+table_name = "dwd_ocredit_phones_repayment_detail_df"
 hdfs_path = "oss://opay-datalake/ocredit_phones/ocredit_phones_dw/" + table_name
 
 
@@ -85,7 +85,7 @@ task_timeout_monitor = PythonOperator(
 
 ##----------------------------------------- 脚本 ---------------------------------------##
 
-def dwd_ocredit_phones_order_di_sql_task(ds):
+def dwd_ocredit_phones_repayment_detail_df_sql_task(ds):
     HQL = '''
 
 
@@ -93,80 +93,49 @@ def dwd_ocredit_phones_order_di_sql_task(ds):
     set hive.exec.dynamic.partition.mode=nonstrict;
 
     INSERT overwrite TABLE ocredit_phones_dw.{table} partition(country_code,dt)
-
+    
     select
-          
-          id, --无业务含义主键 
-          order_id, --订单号 
-          business_type, --订单类型  0:手机 1:车 
-          user_id, --销售端用户ID 
-          opay_id, --用户opayId 
-          order_status, --订单状态：10 "等待初审"  11 "初核通过"  12 "初审失败"   30 "等待终审"  31 "复审通过"  32 "复审失败"   50 "待支付"  51 "支付中"  52 "支付失败"   70 "等待合同上传"  71 "合同等待审核"  72 "合同审核失败"  80 "等待放款"  81 "放款成功" 82 "放款中" 83 "放款失败" 99 "异常" 
-          pay_status, --0等待支付 1成功2失败 3支付回调中 
-          country, --国家 
-          city, --城市 
-          currency, --货币 
-          brand_id, --品牌id 
-          product_id, --产品ID 
-          product_type, --经营形式 1 自营 2 合作商 
-          product_num, --产品数量 
-          product_name, --产品名称 
-          product_pic, --产品图片 
-          product_version, --产品数据版本 
-          product_price, --产品售价 
-          down_payment, --首付金额 
-          loan_amount, --借款金额 
-          order_fee, --订单总金额=产品售价*产品数量(商品金额) 
-          terms, --期数 
-          payment_rate, --首付比例 
-          monthly_payment, --月还款金额 
-          monthly_principal, --月还本金 
-          monthly_fee, --月服务费 
-          unpaid_principal, --剩余本金 
-          f_product_id, --关联金融产品ID 
-          f_product_version, --关联金融产品数据版本 
-          merchant_id, --商户ID 
-          merchant_name, --商户名称 
-          store_id, --门店ID 
-          store_name, --门店名称 
-          is_delete, --0:未删除 1:已删除 
-          from_unixtime(unix_timestamp(create_time)+3600,'yyyy-MM-dd HH:mm:ss'), --创建时间 
-          from_unixtime(unix_timestamp(update_time)+3600,'yyyy-MM-dd HH:mm:ss'),--更新时间
-          from_unixtime(unix_timestamp(loan_time)+3600,'yyyy-MM-dd HH:mm:ss'),--放款时间 
-          opr_id, --操作更新用户ID 
-          risk_status, --风控审核状态：1通过 0拒绝 
-          risk_reason, --风控审核结果 
-          sale_name, --销售名称 
-          sale_phone, --销售电话 
-          remark, --备注、失败原因 
-          payment_status, --还款状态： 0未结清 3已结清 
-          loan_price, --手机价格(销售录入) 
-          channel, --渠道： 1=销售 2=用户 
-          product_category, --产品类型： 1 手机 2 汽车 3 摩托车 4 家电 5 电脑
-          case when order_id='012020011001240073' then '2020-01-04' else from_unixtime(unix_timestamp(create_time)+3600,'yyyy-MM-dd') end, --进件日期
+          id,--'主键'
+          pay_id,--'支付流水号'
+          repayment_id, -- '还款计划ID'
+          order_id, -- '订单ID'
+          user_id, -- '用户id'
+          contract_id, -- '合同编号' 
+          financial_product_id, -- '金融产品id'
+          business_type, -- '业务类型' 
+          sale_mode, -- '销售类型'
+          current_period, -- '当前还款期数'
+          current_repayment_status, -- '当前还款状态:(0:未还清，1:已还清)'
+          month_total_amount, -- '月还总额'
+          month_amount, -- '月还本金'
+          month_service_fee, -- '月服务费'
+          poundage, -- '手续费' 
+          current_interest_rate, -- '利息'
+          penalty_interest_rate, -- '罚息'
+          from_unixtime(unix_timestamp(repayment_time)+3600,'yyyy-MM-dd HH:mm:ss') as repayment_time,--'预计还款时间'
+          real_total_amount, -- '实还总额'
+          real_amount, -- '实还本金' 
+          real_service_fee, -- '实还服务费'
+          real_interest, -- '实还利息' 
+          real_poundage, -- '实还手续费'
+          real_penalty_interest, -- '实还罚息' 
+          from_unixtime(unix_timestamp(real_repayment_time)+3600,'yyyy-MM-dd HH:mm:ss') as real_repayment_time,-- '实际还款时间'
+          not_return_amount, -- '剩余本金' 
+          version, -- '版本号'
+          remark, -- '备注' 
+          from_unixtime(unix_timestamp(create_time)+3600,'yyyy-MM-dd HH:mm:ss') as create_time, --创建时间 
+          from_unixtime(unix_timestamp(update_time)+3600,'yyyy-MM-dd HH:mm:ss') as update_time,--更新时间
+          pay_type, -- '还款方式 0未扣款 1系统划扣 2人工减免结清'
+          allocated, -- '催收是否已分配  0未分配 1已分配'
+          allocated_user_id, -- '催收分配接收人用户id' 
+          allocated_user_name, -- '催收分配接收人用户名称' 
+          from_unixtime(unix_timestamp(allocated_time)+3600,'yyyy-MM-dd HH:mm:ss') as allocated_time,-- '催收分配时间'
+          collection_status, -- '催收状态 0未分配 1催收中 2已结案 3已关闭'
           'nal' as country_code,
           '{pt}' as dt
-
-    from ocredit_phones_dw_ods.ods_sqoop_base_t_order_df
-    where dt='{pt}' and 
-    case when order_id='012020011001240073' then '2020-01-04' else from_unixtime(unix_timestamp(create_time)+3600,'yyyy-MM-dd') end='{pt}' 
-and
-user_id not in 
-(
-'1209783514507214849', 
-'1209126038292123650',
-'1210903150317494274',
-'1214471918163460097',
-'1215642304343425026',
-'1226878328587288578'
-)
-and business_type = '0'
-    
-    
-
-    
-    
-
+    from ocredit_phones_dw_ods.ods_sqoop_base_t_repayment_detail_df
+    where dt='{pt}' 
+    and business_type = '0';
     '''.format(
         pt=ds,
         table=table_name,
@@ -205,13 +174,12 @@ def execution_data_task_id(ds, **kwargs):
     else:
         cf = CountriesPublicFrame("false", ds, db_name, table_name, hdfs_path, "true", "true")
 
-
     # 删除分区
     # cf.delete_partition()
 
     # 拼接SQL
 
-    _sql = "\n" + cf.alter_partition() + "\n" + dwd_ocredit_phones_order_di_sql_task(ds)
+    _sql = "\n" + cf.alter_partition() + "\n" + dwd_ocredit_phones_repayment_detail_df_sql_task(ds)
 
     logging.info('Executing: %s', _sql)
 
@@ -228,8 +196,8 @@ def execution_data_task_id(ds, **kwargs):
     cf.touchz_success()
 
 
-dwd_ocredit_phones_order_di_task = PythonOperator(
-    task_id='dwd_ocredit_phones_order_di_task',
+dwd_ocredit_phones_repayment_detail_df_task = PythonOperator(
+    task_id='dwd_ocredit_phones_repayment_detail_df_task',
     python_callable=execution_data_task_id,
     provide_context=True,
     op_kwargs={
@@ -240,4 +208,4 @@ dwd_ocredit_phones_order_di_task = PythonOperator(
     dag=dag
 )
 
-ods_sqoop_base_t_order_df_task >> dwd_ocredit_phones_order_di_task
+ods_sqoop_base_t_repayment_detail_df_task >> dwd_ocredit_phones_repayment_detail_df_task
