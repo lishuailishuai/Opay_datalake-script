@@ -378,7 +378,8 @@ insert overwrite table oride_dw.{table} partition(country_code,dt)
                     sum(if(is_finish = 1, order_onride_distance , 0)) as order_distance, --送驾距离
                     
                     --新gmv
-                    sum(if(is_finished_pay=1 and is_succ_pay=1 and product_id<>99 and pay_mode not in(0,1),price,0)) as online_pay_price,  --当日线上应付订单金额12.18号开始,自12.26号再次变更，要所有线上支付单，统计gmv和c补
+                    --sum(if(is_finished_pay=1 and is_succ_pay=1 and product_id<>99 and pay_mode not in(0,1),price,0)) as online_pay_price,  
+                    sum(if(is_finished_pay=1 and is_succ_pay=1 and product_id<>99 and pay_mode not in(0,1),nvl(price,0)+nvl(tip,0)+nvl(surcharge,0)+nvl(pax_insurance_price,0),0)) as online_pay_price,
                     sum(falsify) as falsify, --用户罚款，自12.25号开始该表接入
                     sum(falsify_driver_cancel) as falsify_driver_cancel --司机罚款，自12.25号开始该表接入
                     
@@ -451,11 +452,13 @@ insert overwrite table oride_dw.{table} partition(country_code,dt)
                 city_id,
                 sum(if(dt ='{pt}',price,0)) as c_gmv_d,
                 sum(price) as c_gmv_m,
-                sum(if(dt ='{pt}',price,0)) - sum(if(dt ='{pt}',pay_amount,0)) as c_subsidy_d, --C端补贴、天
-                sum(price) - sum(pay_amount) as c_subsidy_m
+                sum(if(dt ='{pt}',nvl(price,0)+nvl(tip,0)+nvl(surcharge,0)+nvl(pax_insurance_price,0),0)) - sum(if(dt ='{pt}',pay_amount,0)) as c_subsidy_d, --C端补贴、天
+                sum(nvl(price,0)+nvl(tip,0)+nvl(surcharge,0)+nvl(pax_insurance_price,0)) - sum(pay_amount) as c_subsidy_m
             from oride_dw.dwm_oride_order_base_di
             where month(dt) = month('{pt}') and city_id != 999001
                and is_finished_pay=1 and is_succ_pay=1 and pay_mode not in(0,1) and product_id<>99
+                      sum(if(is_finished_pay=1 and is_succ_pay=1 and pay_mode not in(0,1),pay_amount,0)) as online_pay_amount,  --当日线上实付金额12.18号开始,自12.26号再次变更，要所有线上支付单，统计c补
+
             group by city_id
         )c on  b.city_id =  c.city_id  
         group by b.city_id,b.b_subsidy_d,c.c_subsidy_d,c.c_gmv_d, c.c_gmv_m  
