@@ -132,7 +132,7 @@ def dwm_opay_user_last_tran_df_sql_task(ds):
       from opay_dw.dwd_opay_transaction_record_di a where dt='{pt}' and affiliate_id is not null and affiliate_id<>''
         and create_time BETWEEN date_format(date_sub('{pt}', 1), 'yyyy-MM-dd 23') AND date_format('{pt}', 'yyyy-MM-dd 23')
      )
-     INSERT overwrite TABLE opay_dw.dwm_opay_user_scenario_last_tran_df partition (country_code,dt)
+     INSERT overwrite TABLE opay_dw.dwm_opay_user_last_tran_df partition (country_code,dt)
      select COALESCE(a.order_no,b.order_no) order_no,
             COALESCE(a.create_time,b.tran_time) create_time,
             COALESCE(a.amount,b.amount) amount,
