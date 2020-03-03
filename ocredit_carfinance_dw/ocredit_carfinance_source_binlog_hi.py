@@ -219,7 +219,7 @@ def run_check_table(db_name, table_name, conn_id, hive_table_name, server_name, 
             ))
         )
         logging.info('Executing: %s', sql)
-        #hive_hook.run_cli(sql)
+        hive_hook.run_cli(sql)
 
     else:
         sqoopSchema = SqoopSchemaUpdate()
