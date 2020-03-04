@@ -40,7 +40,7 @@ args = {
 dag = airflow.DAG( 'dwd_oride_strategy_data_invite_df', 
     schedule_interval="10 02 * * *", 
     default_args=args,
-    catchup=False) 
+    )
 
 
 ##----------------------------------------- 依赖 ---------------------------------------## 

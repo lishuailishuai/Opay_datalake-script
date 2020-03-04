@@ -17,7 +17,6 @@ args = {
 dag = airflow.DAG(
     'oride_push_task',
     schedule_interval="00 08 * * *",
-    catchup=False,
     default_args=args)
 
 not_pay_push_task = PythonOperator(

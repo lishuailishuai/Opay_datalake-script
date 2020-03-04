@@ -42,7 +42,7 @@ args = {
 dag = airflow.DAG('dwd_opay_transaction_record_di',
                   schedule_interval="30 01 * * *",
                   default_args=args,
-                  catchup=False)
+                  )
 
 ##----------------------------------------- 依赖 ---------------------------------------##
 #依赖前一天分区

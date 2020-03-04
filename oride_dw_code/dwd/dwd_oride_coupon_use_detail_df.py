@@ -38,7 +38,7 @@ args = {
 dag = airflow.DAG('dwd_oride_coupon_use_detail_df',
                   schedule_interval="00 02 * * *",
                   default_args=args,
-                  catchup=False)
+                  )
 
 
 

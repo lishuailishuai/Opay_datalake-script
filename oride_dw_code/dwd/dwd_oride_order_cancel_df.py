@@ -42,7 +42,7 @@ args = {
 dag = airflow.DAG( 'dwd_oride_order_cancel_df', 
     schedule_interval="00 01 * * *",
     default_args=args,
-    catchup=False) 
+    )
 
 ##----------------------------------------- 变量 ---------------------------------------##
 

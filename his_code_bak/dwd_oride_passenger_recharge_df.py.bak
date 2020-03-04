@@ -27,7 +27,7 @@ args = {
 dag = airflow.DAG('dwd_oride_passenger_recharge_df',
                   schedule_interval="00 02 * * *",
                   default_args=args,
-                  catchup=False)
+                  )
 
 sleep_time = BashOperator(
     task_id='sleep_id',

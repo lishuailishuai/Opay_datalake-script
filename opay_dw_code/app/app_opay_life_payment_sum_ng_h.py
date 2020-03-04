@@ -42,8 +42,7 @@ args = {
 
 dag = airflow.DAG('app_opay_life_payment_sum_ng_h',
                   schedule_interval="35 * * * *",
-                  default_args=args,
-                  catchup=False)
+                  default_args=args)
 
 ##----------------------------------------- 变量 ---------------------------------------##
 db_name = "opay_dw"

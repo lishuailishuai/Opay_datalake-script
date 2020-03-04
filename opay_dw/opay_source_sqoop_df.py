@@ -105,6 +105,16 @@ table_list = [
     ("opay_agent_crm", "bd_admin_users", "opay_agent_crm_db", "base", 2),
 
     ("opay_channel", "card_bin", "opay_channel", "base", 3),
+
+    ("voucher_db", "opay_voucher_grab_hist", "voucher_db", "coupon", 3),
+    ("voucher_db", "voucher_batch_stat", "voucher_db", "coupon", 3),
+
+    ("ads_data", "coupon_batch", "ads_data", "coupon", 3),
+    ("ads_data", "coupon_package", "ads_data", "coupon", 3),
+    ("ads_data", "coupon_template", "ads_data", "coupon", 3),
+
+
+
 ]
 
 """

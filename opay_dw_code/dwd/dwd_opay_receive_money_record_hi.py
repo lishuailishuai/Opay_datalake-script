@@ -41,7 +41,7 @@ args = {
 dag = airflow.DAG('dwd_opay_receive_money_record_hi',
                   schedule_interval="30 * * * *",
                   default_args=args,
-                  catchup=False)
+                  )
 
 ##----------------------------------------- 变量 ---------------------------------------##
 db_name = "opay_dw"
@@ -184,7 +184,7 @@ def dwd_opay_receive_money_record_hi_sql_task(ds, v_date):
             scheme as affiliate_bank_scheme, 
             default.localTime("{config}",'NG',from_unixtime(cast(cast(create_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as create_time, 
             default.localTime("{config}",'NG',from_unixtime(cast(cast(update_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as update_time, 
-            country, order_status, '-' as error_code, fail_msg as error_msg, order_type, accounting_status,
+            'NG' country, order_status, '-' as error_code, fail_msg as error_msg, order_type, accounting_status,
             nvl(fee, 0) as fee_amount, nvl(fee_pattern, '-') as fee_pattern, nvl(outward_id, '-') as outward_id, 
             nvl(outward_type, '-') as outward_type
         from (select *,row_number() over(partition by order_no order by `__ts_ms` desc,`__file` desc,cast(`__pos` as int) desc) rn 
@@ -202,7 +202,7 @@ def dwd_opay_receive_money_record_hi_sql_task(ds, v_date):
             scheme as affiliate_bank_scheme, 
             default.localTime("{config}",'NG',from_unixtime(cast(cast(create_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as create_time, 
             default.localTime("{config}",'NG',from_unixtime(cast(cast(update_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as update_time, 
-            country, order_status, '-' as error_code, fail_msg as error_msg, order_type, accounting_status,
+            'NG' country, order_status, '-' as error_code, fail_msg as error_msg, order_type, accounting_status,
             nvl(fee, 0) as fee_amount, nvl(fee_pattern, '-') as fee_pattern, nvl(outward_id, '-') as outward_id, 
             nvl(outward_type, '-') as outward_type
         from (select *,row_number() over(partition by order_no order by `__ts_ms` desc,`__file` desc,cast(`__pos` as int) desc) rn 

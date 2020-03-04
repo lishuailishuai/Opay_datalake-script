@@ -38,7 +38,7 @@ args = {
 dag = airflow.DAG('dwd_pre_opos_payment_order_di',
                   schedule_interval="30 01 * * *",
                   default_args=args,
-                  catchup=False)
+                  )
 
 ##----------------------------------------- 依赖 ---------------------------------------##
 

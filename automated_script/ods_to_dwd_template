@@ -35,8 +35,7 @@ args = {
 
 dag = airflow.DAG(TABLE_NAME,
                   schedule_interval="30 02 * * *",
-                  default_args=args,
-                  catchup=False)
+                  default_args=args)
 
 sleep_time = BashOperator(
     task_id='sleep_id',

@@ -41,7 +41,7 @@ args = {
 dag = airflow.DAG('dim_opay_merchant_base_hf',
                   schedule_interval="25 * * * *",
                   default_args=args,
-                  catchup=False)
+                  )
 
 ##----------------------------------------- 变量 ---------------------------------------##
 db_name = "opay_dw"

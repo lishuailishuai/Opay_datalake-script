@@ -38,7 +38,7 @@ args = {
 dag = airflow.DAG('dwd_oride_passanger_location_event_di',
                   schedule_interval="30 3 * * *",
                   default_args=args,
-                  catchup=False)
+                  )
 
 sleep_time = BashOperator(
     task_id='sleep_id',

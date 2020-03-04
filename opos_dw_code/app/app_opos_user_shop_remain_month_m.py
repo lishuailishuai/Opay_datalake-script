@@ -38,7 +38,7 @@ args = {
 dag = airflow.DAG('app_opos_user_shop_remain_month_m',
                   schedule_interval="00 02 1 * *",
                   default_args=args,
-                  catchup=False)
+                  )
 
 ##----------------------------------------- 依赖 ---------------------------------------##
 

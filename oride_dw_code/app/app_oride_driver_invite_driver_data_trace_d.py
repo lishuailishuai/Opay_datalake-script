@@ -36,7 +36,7 @@ args = {
 dag = airflow.DAG('app_oride_driver_invite_driver_data_trace_d',
                   schedule_interval="00 03 * * *",
                   default_args=args,
-                  catchup=False)
+                  )
 
 ##----------------------------------------- 变量 ---------------------------------------##
 

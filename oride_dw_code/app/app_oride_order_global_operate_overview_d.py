@@ -40,7 +40,7 @@ args = {
 dag = airflow.DAG('app_oride_order_global_operate_overview_d',
                   schedule_interval="30 2 * * *",
                   default_args=args,
-                  catchup=False)
+                  )
 ##----------------------------------------- 变量 ---------------------------------------##
 
 db_name = "oride_dw"

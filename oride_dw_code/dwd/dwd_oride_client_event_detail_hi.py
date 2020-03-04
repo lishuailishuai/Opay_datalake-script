@@ -36,8 +36,7 @@ args = {
 
 dag = airflow.DAG('dwd_oride_client_event_detail_hi',
                   schedule_interval="10 * * * *",
-                  default_args=args,
-                  catchup=False)
+                  default_args=args)
 
 ##----------------------------------------- 变量 ---------------------------------------##
 

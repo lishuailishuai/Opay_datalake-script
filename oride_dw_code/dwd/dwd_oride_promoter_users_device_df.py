@@ -40,7 +40,7 @@ args = {
 dag = airflow.DAG( 'dwd_oride_promoter_users_device_df', 
     schedule_interval="00 02 * * *",
     default_args=args,
-    catchup=False) 
+    )
 
 ##----------------------------------------- 变量 ---------------------------------------##
 

@@ -37,7 +37,7 @@ args = {
 dag = airflow.DAG('dwd_driver_track_data_hi',
                   schedule_interval="30 * * * *",
                   default_args=args,
-                  catchup=False)
+                  )
 
 ##----------------------------------------- 变量 ---------------------------------------##
 

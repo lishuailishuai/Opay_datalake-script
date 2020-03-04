@@ -40,7 +40,7 @@ args = {
 dag = airflow.DAG('dwm_oride_driver_finance_di',
                   schedule_interval="40 00 * * *",
                   default_args=args,
-                  catchup=False)
+                  )
 
 ##----------------------------------------- 变量 ---------------------------------------##
 
@@ -189,6 +189,8 @@ def dwm_oride_driver_finance_di_sql_task(ds):
            nvl(if(repay.balance < 0,(repay.all_repay_amount-repay.act_repay_amount) / repay.amount,0),0) as conversion_overdue_days, --换算逾期天数
            --nvl(repay.all_repay_amount,0) as all_repay_amount, --总贷款金额=amount*numbers         
            recharge.complain_amount,  --司机被投诉罚款
+           recharge.repair_amount, --补录取份子钱
+           recharge.other_amount, --财务小项
            
            dri.country_code,
            '{pt}' as dt
@@ -227,11 +229,13 @@ def dwm_oride_driver_finance_di_sql_task(ds):
         (
         select driver_id,
                sum(if(amount_reason in(4,5,7),amount,0)) as recharge_amount,  --资金调整金额
-               sum(if(amount_reason=14,amount,0)) as complain_amount  --司机被投诉罚款
+               sum(if(amount_reason=14,amount,0)) as complain_amount,  --司机被投诉罚款
+               sum(if(amount_reason=1,amount,0)) as repair_amount, -- 补录份子钱
+               sum(if(amount_reason in (2,8,9,10,15,16,17,18),amount,0)) as  other_amount --财务小项
         from oride_dw.dwd_oride_driver_recharge_records_df 
         where dt='{pt}'
         and from_unixtime(created_at,'yyyy-MM-dd')='{pt}'
-        and amount_reason in(4,5,7,14)
+        and amount_reason in(4,5,7,14,2,8,9,10,15,16,17,18)
         group by driver_id
         ) recharge
         on dri.driver_id=recharge.driver_id

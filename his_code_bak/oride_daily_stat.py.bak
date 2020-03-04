@@ -18,7 +18,7 @@ args = {
 dag = airflow.DAG(
     'oride_daily_stat',
     schedule_interval="00 02 * * *",
-    catchup=False,
+    ,
     default_args=args)
 
 import_table_task = PythonOperator(

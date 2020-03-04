@@ -41,7 +41,7 @@ args = {
 dag = airflow.DAG('dwd_oride_order_anti_cheating_location_di',
                   schedule_interval="30 4 * * *",
                   default_args=args,
-                  catchup=False)
+                  )
 
 sleep_time = BashOperator(
     task_id='sleep_id',
