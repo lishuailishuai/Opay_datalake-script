@@ -76,7 +76,7 @@ table_list = [
 
 HIVE_DB = 'ocredit_carfinance_dw_ods'
 HIVE_TABLE = 'ods_binlog_%s_%s_hi'
-OSS_PATH = 'oss://opay-datalake/ocredit_carfinance_binlog/%s'
+OSS_PATH = 'oss://opay-datalake/ocredit_binlog/%s'
 ODS_CREATE_TABLE_SQL = '''
     CREATE EXTERNAL TABLE IF NOT EXISTS {db_name}.`{table_name}`(
         `__db` string COMMENT 'from deserializer', 
@@ -328,59 +328,6 @@ for db_name, table_name, conn_id, prefix_name, priority_weight_nm, server_name, 
     )
 
 
-    def merge_data(ds, server_name, db_name, table_name, mysql_table_name, v_execution_date, v_execution_day,
-                   v_execution_hour,
-                   **op_kwargs):
-
-        merge_target_file = merge_target_file_template.format(pt=v_execution_day,
-                                                              hour=v_execution_hour,
-                                                              table_name=mysql_table_name)
-
-        validate = '''
-            hadoop fs -test -e {merge_target_file}
-            if [ $? -eq 0 ] ;then 
-                echo 'exist' 
-                hadoop fs -rm {merge_target_file}
-            else 
-                echo 'path is not exist' 
-            fi 
-        '''.format(merge_target_file=merge_target_file)
-
-        logging.info(os.popen(validate).read())
-
-        command = HADOOP_MERGE_COMMAND_TEMPLATE.format(
-            binlog_dir=("{server_name}.{db_name}.{table_name}".format(
-                server_name=server_name,
-                db_name=db_name,
-                table_name=mysql_table_name
-            )),
-            pt=v_execution_day,
-            hour=v_execution_hour,
-            table_name=mysql_table_name,
-            merge_target_file=merge_target_file
-        )
-
-        logging.info(command)
-
-        logging.info(os.popen(command).read())
-
-        logging.info("DATA MERGE SUCCESS ........")
 
 
-    merge_data = PythonOperator(
-        task_id='merge_data_{}'.format(hive_table_name),
-        python_callable=merge_data,
-        provide_context=True,
-        op_kwargs={
-            'server_name': server_name,
-            'db_name': db_name,
-            'table_name': hive_table_name,
-            'mysql_table_name': table_name,
-            'v_execution_date': '{{execution_date.strftime("%Y-%m-%d %H:%M:%S")}}',
-            'v_execution_day': '{{execution_date.strftime("%Y-%m-%d")}}',
-            'v_execution_hour': '{{execution_date.strftime("%H")}}'
-        },
-        dag=dag
-    )
-
-    check_table >> merge_data >> add_partitions
+    check_table >> add_partitions
