@@ -38,7 +38,7 @@ args = {
 dag = airflow.DAG( 'dim_oride_city', 
     schedule_interval="10 00 * * *",
     default_args=args,
-    catchup=False) 
+    )
 
 ##----------------------------------------- 变量 ---------------------------------------##
 

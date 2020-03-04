@@ -38,8 +38,7 @@ args = {
 
 dag = airflow.DAG('app_opay_active_user_report_w',
                   schedule_interval="00 03 * * *",
-                  default_args=args,
-                  catchup=False)
+                  default_args=args)
 
 ##----------------------------------------- 依赖 ---------------------------------------##
 

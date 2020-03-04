@@ -40,7 +40,7 @@ args = {
 dag = airflow.DAG( 'dwd_oride_driver_pay_records_df', 
     schedule_interval="30 02 * * *", 
     default_args=args,
-    catchup=False) 
+    )
 
 
 ##----------------------------------------- 依赖 ---------------------------------------## 

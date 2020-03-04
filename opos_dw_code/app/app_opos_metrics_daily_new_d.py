@@ -38,7 +38,7 @@ args = {
 dag = airflow.DAG('app_opos_metrics_daily_new_d',
                   schedule_interval="30 02 * * *",
                   default_args=args,
-                  catchup=False)
+                  )
 
 ##----------------------------------------- 依赖 ---------------------------------------##
 

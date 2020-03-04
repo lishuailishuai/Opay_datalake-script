@@ -39,7 +39,7 @@ args = {
 dag = airflow.DAG('app_oride_order_skyeye_analysis_d',
                   schedule_interval="40 7 * * *",
                   default_args=args,
-                  catchup=False)
+                  )
 
 sleep_time = BashOperator(
     task_id='sleep_id',

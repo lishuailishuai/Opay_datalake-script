@@ -17,7 +17,7 @@ dag = airflow.DAG(
     'heat_map',
     schedule_interval="*/5 * * * *",
     default_args=args,
-    catchup=False,
+    ,
 )
 
 import_table_task = PythonOperator(

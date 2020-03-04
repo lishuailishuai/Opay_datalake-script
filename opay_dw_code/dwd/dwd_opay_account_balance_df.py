@@ -39,7 +39,7 @@ args = {
 dag = airflow.DAG('dwd_opay_account_balance_df',
                  schedule_interval="30 02 * * *",
                   default_args=args,
-                  catchup=False)
+                  )
 
 ##----------------------------------------- 依赖 ---------------------------------------##
 ods_sqoop_base_account_user_df_prev_day_task = OssSensor(

@@ -38,7 +38,7 @@ args = {
 dag = airflow.DAG('app_opos_shop_target_week_w',
                   schedule_interval="10 03 * * *",
                   default_args=args,
-                  catchup=False)
+                  )
 
 ##----------------------------------------- 依赖 ---------------------------------------##
 

@@ -41,7 +41,7 @@ args = {
 dag = airflow.DAG('dwd_opay_easycash_record_di',
                  schedule_interval="20 01 * * *",
                   default_args=args,
-                  catchup=False)
+                  )
 
 ##----------------------------------------- 依赖 ---------------------------------------##
 ods_sqoop_base_user_di_prev_day_task = OssSensor(

@@ -38,7 +38,7 @@ args = {
 dag = airflow.DAG('dim_oride_driver_whitelist_base',
                   schedule_interval="40 03 * * *",
                   default_args=args,
-                  catchup=False)
+                  )
 
 ##----------------------------------------- 变量 ---------------------------------------##
 

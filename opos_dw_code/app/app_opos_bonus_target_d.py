@@ -38,7 +38,7 @@ args = {
 dag = airflow.DAG('app_opos_bonus_target_d',
                   schedule_interval="00 03 * * *",
                   default_args=args,
-                  catchup=False)
+                  )
 
 ##----------------------------------------- 依赖 ---------------------------------------##
 

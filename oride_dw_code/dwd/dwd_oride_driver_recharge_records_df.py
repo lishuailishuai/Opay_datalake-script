@@ -38,7 +38,7 @@ args = {
 dag = airflow.DAG('dwd_oride_driver_recharge_records_df',
                   schedule_interval="20 00 * * *",
                   default_args=args,
-                  catchup=False)
+                  )
 
 
 ##----------------------------------------- 变量 ---------------------------------------##

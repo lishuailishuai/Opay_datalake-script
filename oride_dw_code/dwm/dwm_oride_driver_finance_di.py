@@ -40,7 +40,7 @@ args = {
 dag = airflow.DAG('dwm_oride_driver_finance_di',
                   schedule_interval="40 00 * * *",
                   default_args=args,
-                  catchup=False)
+                  )
 
 ##----------------------------------------- 变量 ---------------------------------------##
 

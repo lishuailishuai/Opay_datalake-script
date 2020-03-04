@@ -39,7 +39,7 @@ args = {
 dag = airflow.DAG('dwm_opay_user_last_tran_df',
                   schedule_interval="30 02 * * *",
                   default_args=args,
-                  catchup=False)
+                  )
 
 ##----------------------------------------- 依赖 ---------------------------------------##
 

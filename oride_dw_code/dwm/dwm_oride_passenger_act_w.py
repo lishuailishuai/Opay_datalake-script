@@ -28,7 +28,7 @@ args = {
 dag = airflow.DAG('dwm_oride_passenger_act_w',
                   schedule_interval="00 02 * * 1",
                   default_args=args,
-                  catchup=False
+
 )
 
 ##----------------------------------------- 变量 ---------------------------------------##

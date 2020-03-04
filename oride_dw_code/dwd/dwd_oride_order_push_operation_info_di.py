@@ -38,7 +38,7 @@ args = {
 dag = airflow.DAG('dwd_oride_order_push_operation_info_di',
                   schedule_interval="30 01 * * *",
                   default_args=args,
-                  catchup=False)
+                  )
 ##----------------------------------------- 变量 ---------------------------------------##
 
 db_name="oride_dw"

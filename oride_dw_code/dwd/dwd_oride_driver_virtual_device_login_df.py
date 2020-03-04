@@ -38,7 +38,7 @@ args = {
 dag = airflow.DAG('dwd_oride_driver_virtual_device_login_df',
                   schedule_interval="30 00 * * *",
                   default_args=args,
-                  catchup=False)
+                  )
 
 ##----------------------------------------- 变量 ---------------------------------------##
 

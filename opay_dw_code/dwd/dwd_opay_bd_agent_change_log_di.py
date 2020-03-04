@@ -42,7 +42,7 @@ args = {
 dag = airflow.DAG('dwd_opay_bd_agent_change_log_di',
                   schedule_interval="10 01 * * *",
                   default_args=args,
-                  catchup=False)
+                  )
 
 ##----------------------------------------- 依赖 ---------------------------------------##
 ods_bd_agent_status_change_log_di_prev_day_task = OssSensor(

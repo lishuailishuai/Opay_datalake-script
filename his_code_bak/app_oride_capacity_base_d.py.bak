@@ -35,7 +35,7 @@ args = {
 dag = airflow.DAG('app_oride_capacity_base_d',
                   schedule_interval="00 01 * * *",
                   default_args=args,
-                  catchup=False)
+                  )
 
 sleep_time = BashOperator(
     task_id='sleep_id',

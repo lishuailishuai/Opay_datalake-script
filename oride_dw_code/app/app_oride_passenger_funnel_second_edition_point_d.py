@@ -28,7 +28,7 @@ args = {
 dag = airflow.DAG('app_oride_passenger_funnel_second_edition_point_d',
                   schedule_interval="40 01 * * *",
                   default_args=args,
-                  catchup=False)
+                  )
 ##----------------------------------------- 变量 ---------------------------------------##
 db_name = "oride_dw"
 table_name = "app_oride_passenger_funnel_second_edition_point_d"

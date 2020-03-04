@@ -38,7 +38,7 @@ args = {
 dag = airflow.DAG('dim_opos_bd_relation_df',
                   schedule_interval="20 01 * * *",
                   default_args=args,
-                  catchup=False)
+                  )
 
 ##----------------------------------------- 依赖 ---------------------------------------##
 

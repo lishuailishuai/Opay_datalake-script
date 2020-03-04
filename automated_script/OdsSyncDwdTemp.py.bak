@@ -381,7 +381,7 @@ args = {
 dag = airflow.DAG( '"""+in_dwd_table_name+"""', 
     schedule_interval="00 01 * * *", 
     default_args=args,
-    catchup=False) 
+    )
 
 
 ##----------------------------------------- 依赖 ---------------------------------------## 

@@ -27,7 +27,7 @@ args = {
 dag = airflow.DAG('app_oride_driver_call_book_d',
                   schedule_interval="30 02 * * *",
                   default_args=args,
-                  catchup=False)
+                  )
 
 
 ##----------------------------------------- 依赖 ---------------------------------------##

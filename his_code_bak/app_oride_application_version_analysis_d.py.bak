@@ -37,7 +37,7 @@ args = {
 dag = airflow.DAG('app_oride_application_version_analysis_d',
                   schedule_interval="40 03 * * *",
                   default_args=args,
-                  catchup=False)
+                  )
 
 
 ##----------------------------------------- 依赖 ---------------------------------------##

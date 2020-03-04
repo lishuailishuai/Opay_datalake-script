@@ -34,7 +34,7 @@ args = {
 dag = airflow.DAG('app_oride_gps_d',
                   schedule_interval="00 3 * * *",
                   default_args=args,
-                  catchup=False)
+                  )
 ##----------------------------------------- 变量 ---------------------------------------##
 
 db_name = "oride_dw"

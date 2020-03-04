@@ -37,7 +37,7 @@ args = {
 dag = airflow.DAG('ods_opay_binlog_user_order_hi',
                   schedule_interval="15 * * * *",
                   default_args=args,
-                  catchup=False)
+                  )
 
 ##----------------------------------------- 依赖 ---------------------------------------##
 

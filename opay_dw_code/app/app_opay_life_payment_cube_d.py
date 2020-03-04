@@ -40,8 +40,7 @@ args = {
 
 dag = airflow.DAG('app_opay_life_payment_cube_d',
                   schedule_interval="00 03 * * *",
-                  default_args=args,
-                  catchup=False)
+                  default_args=args)
 
 ##----------------------------------------- 依赖 ---------------------------------------##
 
