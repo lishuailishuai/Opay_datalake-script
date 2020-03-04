@@ -340,6 +340,21 @@ def dwm_oride_order_base_di_sql_task(ds):
            ord.pax_insurance_price, 
            --乘客保险费
            
+           ord.coupon_amount,
+           --使用的优惠券金额
+           
+           ord.malice_brush_driver_deduct, 
+           --恶意刷单司机扣款
+           
+           ord.falsify_get, 
+           --取消罚款实际获得
+           
+           ord.falsify_get_driver_cancel, 
+            --司机取消罚款用户实际获得
+           
+            malice_brush_user_reward,  
+            --恶意刷单乘客奖励
+
  		   ord.country_code as country_code,
 
            ord.dt as dt
