@@ -349,12 +349,13 @@ def dwm_oride_order_base_di_sql_task(ds):
            ord.falsify_get, 
            --取消罚款实际获得
            
-           ord.falsify_get_driver_cancel, 
-            --司机取消罚款用户实际获得
            
             ord.malice_brush_user_reward,  
             --恶意刷单乘客奖励
-
+            
+            ord.falsify_get_driver_cancel, 
+            --司机取消罚款用户实际获得
+            
  		   ord.country_code as country_code,
 
            ord.dt as dt
