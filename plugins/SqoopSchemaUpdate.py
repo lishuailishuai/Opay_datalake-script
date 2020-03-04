@@ -209,6 +209,39 @@ class SqoopSchemaUpdate(object):
         return (mysql_schema, mysql_column)
 
     """
+    返回hive table 列名list
+    
+    """
+
+    def get_hive_column_name(self, hive_db, hive_table):
+        hive_schema = self.__get_hive_table_schema(hive_db, hive_table)
+        hive_columns = []
+        for column in hive_schema:
+            if str(column).find('__') > -1:
+                column = '`' + column + '`'
+                hive_columns.append(column)
+            else:
+                hive_columns.append(column)
+
+        logging.info(hive_columns)
+        return hive_columns
+
+    """
+    返回mysql table 列名list
+
+    """
+
+    def get_mysql_column_name(self, mysql_db, mysql_table, mysql_conn):
+        mysql_schema = self.__get_mysql_table_schema(mysql_db, mysql_table, mysql_conn)
+        mysql_names = []
+
+        for schema in mysql_schema:
+            mysql_names.append(schema['column'])
+
+        logging.info(mysql_names)
+        return mysql_names
+
+    """
     对比并更新hive数据表结构
     @:param **info 
     {
