@@ -137,6 +137,8 @@ def dwd_opay_client_event_base_di_sql_task(ds):
             e.event_value,
             null,
             null,
+            null,
+            null,
             'nal' as country_code,
             '{pt}' as dt
         FROM
@@ -184,6 +186,8 @@ def dwd_opay_client_event_base_di_sql_task(ds):
             to_json(e.ev),
             e.lat,
             e.lng,
+            get_json_object(msg, '$.tid'),
+            e.bzp,
             'nal' as country_code,
             '{pt}' as dt
         FROM
