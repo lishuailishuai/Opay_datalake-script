@@ -189,7 +189,7 @@ def dwd_opay_cash_to_card_record_hi_sql_task(ds,v_date):
             recipient_kyc_level as affiliate_bank_kyc_level, '-' as affiliate_bank_mobile, '-' as affiliate_bank_email,
             default.localTime("{config}",if(nvl(country,'')='','NG',country),from_unixtime(cast(cast(create_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as create_time, 
             default.localTime("{config}",if(nvl(country,'')='','NG',country),from_unixtime(cast(cast(update_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as update_time, 
-            country, order_status, error_code, error_msg, client_source, pay_channel as pay_way, business_type, pay_status,
+            'NG' country, order_status, error_code, error_msg, client_source, pay_channel as pay_way, business_type, pay_status,
             nvl(fee, 0) as fee_amount, nvl(fee_pattern, '-') as fee_pattern, nvl(outward_id, '-') as outward_id, nvl(outward_type, '-') as outward_type,
             date_format('{v_date}', 'yyyy-MM-dd HH') as utc_date_hour
         from 
@@ -208,7 +208,7 @@ def dwd_opay_cash_to_card_record_hi_sql_task(ds,v_date):
             recipient_kyc_level as affiliate_bank_kyc_level, customer_phone as affiliate_bank_mobile, customer_email as affiliate_bank_email,
             default.localTime("{config}",if(nvl(country,'')='','NG',country),from_unixtime(cast(cast(create_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as create_time, 
             default.localTime("{config}",if(nvl(country,'')='','NG',country),from_unixtime(cast(cast(update_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as update_time, 
-            country, order_status, error_code, error_msg, '-' as client_source, pay_channel as pay_way, business_type, pay_status,
+            'NG' country, order_status, error_code, error_msg, '-' as client_source, pay_channel as pay_way, business_type, pay_status,
             nvl(fee, 0) as fee_amount, nvl(fee_pattern, '-') as fee_pattern, nvl(outward_id, '-') as outward_id, nvl(outward_type, '-') as outward_type,
             date_format('{v_date}', 'yyyy-MM-dd HH') as utc_date_hour
         from (select *,row_number() over(partition by order_no order by `__ts_ms` desc,`__file` desc,cast(`__pos` as int) desc) rn
