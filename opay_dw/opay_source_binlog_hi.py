@@ -70,7 +70,7 @@ table_list = [
 
 
 
-    ("voucher_db", "voucher", "dw_binlog", "coupon", 3,"coupou_voucher","false"),
+    ("dw_binlog", "voucher", "dw_binlog", "coupon", 3,"coupou_voucher","false"),
 
 
     #("voucher_db", "opay_voucher_grab_hist", "voucher_db", "coupon", 3,"coupou","false"),
