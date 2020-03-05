@@ -94,6 +94,8 @@ table_list = [
     ("oloan","t_sms_log", "ocredit_db", "base",1,"true"),
     ("oloan","t_store_info", "ocredit_db", "base",1,"true"),
     ("oloan","t_user", "ocredit_db", "base",1,"true"),
+    ("oloan","t_contract_pic", "ocredit_db", "base",2,"true"),
+
 
     ("admin_guns","sys_user", "ocredit_db", "base",1,"true"),
     ("admin_guns","sys_dept", "ocredit_db", "base",1,"true"),
