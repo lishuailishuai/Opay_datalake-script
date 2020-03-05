@@ -466,6 +466,21 @@ SELECT base.id as order_id,
         --小费抽成 
         pay.surcharge as pay_surcharge,
         --服务费
+        
+        base.pay_type,
+        --支付类型(0:收银台 1:auto pay)
+        
+        base.scramble,
+        --是否抢单pk 0 否 1 是
+       
+        base.level,
+        --司机等级
+       
+        base.is_use_level_fee_rate,
+        -- 是否使用等级抽佣配置
+       
+        base.source_type,
+        --'订单来源(0.默认oride 1.h5)
         nvl(country.country_code,'nal') as country_code,
 
        '{pt}' AS dt
