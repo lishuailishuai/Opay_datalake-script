@@ -97,6 +97,7 @@ table_list = [
     ("oloan","t_contract_pic", "ocredit_db", "base",2,"true"),
 
 
+
     ("admin_guns","sys_user", "ocredit_db", "base",1,"true"),
     ("admin_guns","sys_dept", "ocredit_db", "base",1,"true"),
 
