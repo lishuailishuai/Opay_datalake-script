@@ -69,6 +69,19 @@ table_list = [
     ("opay_account", "accounting_request_record", "opay_account", "base", 2, "opay_account_requset_record", "false"),
 
 
+
+    ("voucher_db", "voucher", "voucher_db", "coupon", 3,"coupou_voucher","false"),
+
+
+    #("voucher_db", "opay_voucher_grab_hist", "voucher_db", "coupon", 3,"coupou","false"),
+    #("voucher_db", "voucher_batch_stat", "voucher_db", "coupon", 3,"coupou","false"),
+
+
+    #("ads_data", "coupon_batch", "ads_data", "coupon", 3,"ads_data","false"),
+    #("ads_data", "coupon_package", "ads_data", "coupon", 3,"ads_data","false"),
+    #("ads_data", "coupon_template", "ads_data", "coupon", 3,"ads_data","false"),
+
+
     # ("opay_user", "user_upgrade", "opay_user", "base", 3, "opay_user", "false"),
     # ("opay_user", "user_operator", "opay_user", "base", 1, "opay_user", "false"),
     # ("opay_user", "user_payment_instrument", "opay_user", "base", 1, "opay_user", "false"),
