@@ -132,7 +132,7 @@ def app_opay_user_report_sum_d_sql_task(ds):
       FROM opay_dw_ods.ods_sqoop_base_user_di
       WHERE dt<='{pt}' ) t1
    WHERE rn = 1
-   GROUP BY nvl(register_client,'App') register_client,
+   GROUP BY register_client,
             ROLE,
             kyc_level,
             state),
