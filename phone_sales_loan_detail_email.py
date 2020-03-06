@@ -197,9 +197,9 @@ def send_phone_sales_loan_detail_email(ds, **kwargs):
                 else null
                 end as `商品类型`,
                 f.passtime `信审通过时间`,
-                a.merchant_id `商户ID`,
+                cast(a.merchant_id as string) `商户ID`,
                 a.merchant_name `商户名称`,
-                a.store_id `门店ID`,
+                cast(a.store_id as string) `门店ID`,
                 a.store_name `门店名称`,
                 case 
                 when a.order_status=10 then '等待初审'
