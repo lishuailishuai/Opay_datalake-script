@@ -148,7 +148,25 @@ LEFT JOIN
           kyc_level,
           '' merchant_type,
           state,
-              country_code
+              CASE country
+           WHEN 'Nigeria' THEN 'NG'
+           WHEN 'Norway' THEN 'NO'
+           WHEN 'Ghana' THEN 'GH'
+           WHEN 'Botswana' THEN 'BW'
+           WHEN 'Ghana' THEN 'GH'
+           WHEN 'Kenya' THEN 'KE'
+           WHEN 'Malawi' THEN 'MW'
+           WHEN 'Mozambique' THEN 'MZ'
+           WHEN 'Poland' THEN 'PL'
+           WHEN 'South Africa' THEN 'ZA'
+           WHEN 'Sweden' THEN 'SE'
+           WHEN 'Tanzania' THEN 'TZ'
+           WHEN 'Uganda' THEN 'UG'
+           WHEN 'USA' THEN 'US'
+           WHEN 'Zambia' THEN 'ZM'
+           WHEN 'Zimbabwe' THEN 'ZW'
+           ELSE 'NG'
+       END AS country_code
    FROM
      (SELECT user_id,
              ROLE,
@@ -156,7 +174,7 @@ LEFT JOIN
              if(state is null or state = '', '-', state) as state,
              row_number()over(partition BY user_id
                               ORDER BY update_time DESC) rn,
-                         country_code
+                         country,
       FROM opay_dw_ods.ods_sqoop_base_user_di
       WHERE dt<='{pt}') m
    WHERE rn=1
