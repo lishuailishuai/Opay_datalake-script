@@ -174,7 +174,7 @@ LEFT JOIN
              if(state is null or state = '', '-', state) as state,
              row_number()over(partition BY user_id
                               ORDER BY update_time DESC) rn,
-                         country,
+                         country
       FROM opay_dw_ods.ods_sqoop_base_user_di
       WHERE dt<='{pt}') m
    WHERE rn=1
