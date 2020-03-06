@@ -52,10 +52,10 @@ dwd_opay_transaction_record_di_prev_day_task = OssSensor(
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
-dim_opay_user_base_di_prev_day_task = OssSensor(
-    task_id='dim_opay_user_base_di_prev_day_task',
+ods_sqoop_base_user_di_prev_day_task = OssSensor(
+    task_id='ods_sqoop_base_user_di_prev_day_task',
     bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opay/opay_dw/dim_opay_user_base_di/country_code=NG",
+        hdfs_path_str="opay_dw_sqoop_di/opay_user/user",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -101,7 +101,7 @@ def app_opay_active_user_cube_d_sql_task(ds, ds_nodash):
     SELECT user_id, ROLE,mobile,state
      FROM
           (SELECT user_id, ROLE,mobile, state,row_number() over(partition BY user_id ORDER BY update_time DESC) rn
-            FROM opay_dw.dim_opay_user_base_di
+            FROM opay_dw_ods.ods_sqoop_base_user_di
            WHERE dt<='{pt}' ) t1
      WHERE rn = 1;
       create table if not exists test_db.tran_cube_{date} as
@@ -178,6 +178,6 @@ app_opay_active_user_cube_d_task = PythonOperator(
 )
 
 dwd_opay_transaction_record_di_prev_day_task >> app_opay_active_user_cube_d_task
-dim_opay_user_base_di_prev_day_task >> app_opay_active_user_cube_d_task
+ods_sqoop_base_user_di_prev_day_task >> app_opay_active_user_cube_d_task
 
 

@@ -42,10 +42,10 @@ dag = airflow.DAG('app_opay_active_user_report_m',
 
 ##----------------------------------------- 依赖 ---------------------------------------##
 
-dim_opay_user_base_di_prev_day_task = OssSensor(
-    task_id='dim_opay_user_base_di_prev_day_task',
+ods_sqoop_base_user_di_prev_day_task = OssSensor(
+    task_id='ods_sqoop_base_user_di_prev_day_task',
     bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opay/opay_dw/dim_opay_user_base_di/country_code=NG",
+        hdfs_path_str="opay_dw_sqoop_di/opay_user/user",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -115,7 +115,7 @@ def app_opay_active_user_report_m_sql_task(ds,ds_nodash):
              mobile,
              row_number() over(partition BY user_id
                                ORDER BY update_time DESC) rn
-      FROM opay_dw.dim_opay_user_base_di
+      FROM opay_dw_ods.ods_sqoop_base_user_di
       WHERE dt<='{pt}' ) t1
    WHERE rn = 1;
    create table test_db.login_m_{date} as 
@@ -248,7 +248,7 @@ app_opay_active_user_report_m_task = PythonOperator(
     dag=dag
 )
 
-dim_opay_user_base_di_prev_day_task >> app_opay_active_user_report_m_task
+ods_sqoop_base_user_di_prev_day_task >> app_opay_active_user_report_m_task
 ods_sqoop_base_user_operator_df_prev_day_task >> app_opay_active_user_report_m_task
 dwm_opay_user_balance_df_prev_day_task >> app_opay_active_user_report_m_task
 
