@@ -48,9 +48,9 @@ hdfs_path = "oss://opay-datalake/oride/oride_dw/" + table_name
 
 ##----------------------------------------- 依赖 ---------------------------------------##
 
-depedence_dwm_oride_order_base_di_prev_day_task = UFileSensor(
+depedence_dwm_oride_order_base_di_prev_day_task = OssSensor(
     task_id='depedence_dwm_oride_order_base_di_prev_day_task',
-    filepath='{hdfs_path_str}/country_code=nal/dt={pt}/_SUCCESS'.format(
+    bucket_key='{hdfs_path_str}/country_code=nal/dt={pt}/_SUCCESS'.format(
         hdfs_path_str="oride/oride_dw/dwm_oride_order_base_di",
         pt='{{ds}}'
     ),
@@ -59,7 +59,6 @@ depedence_dwm_oride_order_base_di_prev_day_task = UFileSensor(
     dag=dag
 )
 
-# 依赖当天分区00点
 dependence_dwm_oride_driver_finance_di_prev_day_task = OssSensor(
     task_id='dependence_dwm_oride_driver_finance_di_prev_day_task',
     bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
@@ -103,6 +102,8 @@ def app_oride_finance_revenue_monitor_d_sql_task(ds):
       SET hive.exec.parallel=TRUE;
       set hive.exec.dynamic.partition.mode=nonstrict; 
       
+      insert overwrite table oride_dw.{table} partition(country_code,dt)
+
       SELECT
           ord.city_id,--城市id
           
@@ -176,7 +177,7 @@ def app_oride_finance_revenue_monitor_d_sql_task(ds):
             dt  
           from oride_dw.dwm_oride_order_base_di 
           where dt = '{pt}' and city_id != 99901 and product_id <>99
-          group by city_id,product_id,dt
+          group by city_id,product_id,dt,country_code
         )ord
         left join
         (
