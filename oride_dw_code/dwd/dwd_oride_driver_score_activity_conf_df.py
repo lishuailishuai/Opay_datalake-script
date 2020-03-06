@@ -27,7 +27,7 @@ from airflow.sensors import OssSensor
 
 args = {
     'owner': 'lishuai',
-    'start_date': datetime(2020, 3, 5),
+    'start_date': datetime(2020, 03, 05),
     'depends_on_past': False,
     'retries': 3,
     'retry_delay': timedelta(minutes=2),
