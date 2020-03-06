@@ -191,7 +191,9 @@ def dwm_oride_driver_finance_di_sql_task(ds):
            recharge.complain_amount,  --司机被投诉罚款
            recharge.repair_amount, --补录取份子钱
            recharge.other_amount, --财务小项
-           bal.balance as driver_balance, --司机余额(司机维度直接关联，全)
+           bal.balance as driver_balance, --司机余额(司机维度直接关联，全)  2020-03-05更新
+           if(bal.balance>0,recharge.theory_phone_amount,0) as  theory_phone_amount, --手机还款(理论) 2020-03-05更新
+           
            
            dri.country_code,
            '{pt}' as dt
@@ -232,11 +234,12 @@ def dwm_oride_driver_finance_di_sql_task(ds):
                sum(if(amount_reason in(4,5,7),amount,0)) as recharge_amount,  --资金调整金额
                sum(if(amount_reason=14,amount,0)) as complain_amount,  --司机被投诉罚款
                sum(if(amount_reason=1,amount,0)) as repair_amount, -- 补录份子钱
-               sum(if(amount_reason in (2,8,9,10,15,16,17,18),amount,0)) as  other_amount --财务小项
+               sum(if(amount_reason in (2,8,9,10,15,16,17,18),amount,0)) as  other_amount, --财务小项
+               sum(if(amount_reason =6 and amount_reason!=0,amount,0)) as theory_phone_amount  --手机还款(理论)
         from oride_dw.dwd_oride_driver_recharge_records_df 
         where dt='{pt}'
         and from_unixtime(created_at,'yyyy-MM-dd')='{pt}'
-        and amount_reason in(4,5,7,14,2,8,9,10,15,16,17,18)
+        and amount_reason in(4,5,7,14,2,8,9,10,15,16,17,18,6)
         group by driver_id
         ) recharge
         on dri.driver_id=recharge.driver_id
