@@ -276,7 +276,7 @@ def send_phone_sales_loan_detail_email(ds, **kwargs):
                     a.city`Region/地区`,
                     cast(a.merchant_id as string) `商户ID`,
                     a.merchant_name `商户名称`,
-                    a.store_id`POS/门店代码`,
+                    cast(a.store_id as string) `POS/门店代码`,
                     a.store_name`POS Name/门店名称 `,
                     cast(a.user_id as string) `SA_code/销售人员代码`,
                     k.simple_name `DMS名称`,
