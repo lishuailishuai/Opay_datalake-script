@@ -85,7 +85,7 @@ def dwd_opay_channel_transaction_base_di_sql_task(ds):
     set mapred.max.split.size=1000000;
     set hive.exec.dynamic.partition.mode=nonstrict;
     set hive.exec.parallel=true;
-    insert overwrite table {db}.{table} partition (dt)
+    insert overwrite table {db}.{table} partition (country_code,dt)
     SELECT id,
        request_id,
        order_no,
@@ -114,6 +114,7 @@ def dwd_opay_channel_transaction_base_di_sql_task(ds):
        retry_flag,
        create_time,
        update_time,
+       'NG' country_code,
        dt
     FROM opay_dw_ods.ods_sqoop_base_channel_transaction_di
     where dt='{pt}'
@@ -143,7 +144,7 @@ def execution_data_task_id(ds, **kargs):
     第二个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
 
     """
-    TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "false", "true")
+    TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "true", "true")
 
 
 dwd_opay_channel_transaction_base_di_task = PythonOperator(
