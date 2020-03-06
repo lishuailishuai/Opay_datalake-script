@@ -182,7 +182,7 @@ def dwm_oride_driver_finance_di_sql_task(ds):
            repay.amount,  --司机每期还款金额
            repay.numbers, --总期数,总贷款金额=amount*numbers，理论应还金额=amount*repaid_numbers
            repay.repaid_numbers,  --已还款期数,剩余还款期数=numbers-repaid_numbers
-           repay.balance,  --司机账户余额
+           repay.balance,  --司机账户余额(通过driver_repayment关联出来的，不全)
            repay.theory_repay_amount,  --理论应还金额
            nvl(repay.act_repay_amount, 0 ) act_repay_amount, --实际已还款金额
            nvl(repay.act_repay_amount / repay.amount ,0) as act_repaid_numbers , --实际已还款期数
@@ -191,6 +191,7 @@ def dwm_oride_driver_finance_di_sql_task(ds):
            recharge.complain_amount,  --司机被投诉罚款
            recharge.repair_amount, --补录取份子钱
            recharge.other_amount, --财务小项
+           bal.balance as driver_balance, --司机余额(司机维度直接关联，全)
            
            dri.country_code,
            '{pt}' as dt
@@ -344,8 +345,15 @@ def dwm_oride_driver_finance_di_sql_task(ds):
                 from oride_dw.dwd_oride_driver_balance_extend_df
                 where dt='{pt}'
             ) balance on repay.driver_id=balance.driver_id
-        ) repay
-        on dri.driver_id=repay.driver_id;
+        ) repay  on dri.driver_id=repay.driver_id
+        left join
+        (
+            select
+                        driver_id,
+                        balance 
+                    from oride_dw.dwd_oride_driver_balance_extend_df
+                    where dt='{pt}'
+        )bal  on bal.driver_id = dri.driver_id;
     '''.format(
         pt=ds,
         now_day=airflow.macros.ds_add(ds, +1),
