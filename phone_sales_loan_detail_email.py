@@ -492,8 +492,8 @@ def send_phone_sales_loan_detail_email(ds, **kwargs):
 
     # send mail
 
-    #email_to = Variable.get("phone_sales_loan_detail").split()
-    email_to = ['lili.chen@opay-inc.com']
+    email_to = Variable.get("phone_sales_loan_detail_email").split()
+    #email_to = ['lili.chen@opay-inc.com']
     result = is_alert(ds, table_names)
     if result:
         email_to = ['bigdata@opay-inc.com']
