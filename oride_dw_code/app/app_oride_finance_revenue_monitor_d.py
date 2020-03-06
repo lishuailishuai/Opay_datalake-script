@@ -227,7 +227,7 @@ def execution_data_task_id(ds, **kwargs):
             第二个参数v_hour: 小时级任务，需要使用
 
         """
-    cf = CountriesPublicFrame("false", ds, db_name, table_name, hdfs_path, "true", "true")
+    cf = CountriesPublicFrame("True", ds, db_name, table_name, hdfs_path, "true", "true")
 
     # 删除分区
     cf.delete_partition()
