@@ -73,8 +73,8 @@ table_list = [
     ("dw_binlog", "voucher", "dw_binlog", "coupon", 3,"coupou_voucher","false"),
 
 
-    #("voucher_db", "opay_voucher_grab_hist", "voucher_db", "coupon", 3,"coupou","false"),
-    #("voucher_db", "voucher_batch_stat", "voucher_db", "coupon", 3,"coupou","false"),
+    ("voucher_db", "opay_voucher_grab_hist", "voucher_db", "coupon", 3,"coupou_db","false"),
+    ("voucher_db", "voucher_batch_stat", "voucher_db", "coupon", 3,"coupou_db","false"),
 
 
     #("ads_data", "coupon_batch", "ads_data", "coupon", 3,"ads_data","false"),
