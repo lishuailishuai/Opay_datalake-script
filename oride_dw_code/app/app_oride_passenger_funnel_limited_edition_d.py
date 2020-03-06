@@ -131,7 +131,8 @@ def app_oride_passenger_funnel_limited_edition_d_sql_task(ds):
                 select 
                 country_code,
                 max(case when event_name='oride_show' then event_time_b end) ac_time,
-                max(case when event_name='choose_end_point_click' and line_numner=2 then event_time_b end) zd_time,
+                --max(case when event_name='choose_end_point_click' and line_numner=2 then event_time_b end) zd_time,
+                max(case when event_name='choose_end_point_click' then event_time_b end) zd_time,
                 max(case when event_name='request_a_ride_show' then event_time_b end) gj_time
                 from(
                     select *,row_number() over(partition by order_id,event_name,event_time_b order by event_time_b desc) line_numner from(
