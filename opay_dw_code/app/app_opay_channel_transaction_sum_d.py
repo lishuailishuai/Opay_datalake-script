@@ -127,7 +127,7 @@ def app_opay_channel_transaction_sum_d_sql_task(ds):
                  user_type,
                  c.brand,
                  c.bank_name,
-                 a.dt
+                 a.dt,
                  a.country_code
 
     '''.format(

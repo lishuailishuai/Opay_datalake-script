@@ -212,7 +212,7 @@ def app_opay_active_user_report_d_sql_task(ds,ds_nodash):
                 '-' register_client,
                 c,
                 state,
-                'NG' country_code
+                'NG' country_code,
                 dt,
                 target_type
             FROM (
