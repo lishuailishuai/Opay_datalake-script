@@ -317,7 +317,6 @@ def execution_data_task_id(ds, **kargs):
     """
     TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "true", "true")
 
-
 app_opos_metrics_daily_history_d_task = PythonOperator(
     task_id='app_opos_metrics_daily_history_d_task',
     python_callable=execution_data_task_id,
