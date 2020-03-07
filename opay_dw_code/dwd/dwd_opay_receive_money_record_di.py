@@ -123,7 +123,7 @@ def dwd_opay_receive_money_record_di_sql_task(ds):
                 trader_id, trader_name, trader_role, trader_kyc_level, if(state is null or state = '', '-', state) as state
             from (
                 select 
-                    user_id as trader_id, concat(first_name, ' ', middle_name, ' ', surname) as trader_name, `role` as trader_role, kyc_level as trader_kyc_level, state
+                    user_id as trader_id, concat(first_name, ' ', middle_name, ' ', surname) as trader_name, `role` as trader_role, kyc_level as trader_kyc_level, state,
                     row_number() over(partition by user_id order by update_time desc) rn
                 from opay_dw_ods.ods_sqoop_base_user_di
                 where dt <= '{pt}'
