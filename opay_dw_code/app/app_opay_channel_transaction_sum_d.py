@@ -45,7 +45,7 @@ dag = airflow.DAG('app_opay_channel_transaction_sum_d',
 dwd_opay_channel_transaction_base_di_prev_day_task = OssSensor(
     task_id='dwd_opay_channel_transaction_base_di_prev_day_task',
     bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opay/opay_dw/dwd_opay_channel_transaction_base_di",
+        hdfs_path_str="opay/opay_dw/dwd_opay_channel_transaction_base_di/country_code=NG",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -69,7 +69,7 @@ def fun_task_timeout_monitor(ds,dag,**op_kwargs):
     dag_ids=dag.dag_id
 
     msg = [
-        {"dag":dag, "db": "opay_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "dt={pt}".format(pt=ds), "timeout": "3000"}
+        {"dag":dag, "db": "opay_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=NG/dt={pt}".format(pt=ds), "timeout": "3000"}
     ]
 
     TaskTimeoutMonitor().set_task_monitor(msg)
@@ -94,7 +94,7 @@ def app_opay_channel_transaction_sum_d_sql_task(ds):
     
     set hive.exec.dynamic.partition.mode=nonstrict;
     set hive.exec.parallel=true;
-    insert overwrite table {db}.{table} partition (dt)
+    insert overwrite table {db}.{table} partition (country_code,dt)
      
         SELECT pay_channel,
                out_channel_id,
@@ -107,10 +107,11 @@ def app_opay_channel_transaction_sum_d_sql_task(ds):
                count(1) AS tran_c,
                c.brand,
                c.bank_name,
+               a.country_code,
                a.dt
         FROM
           (SELECT pay_channel,out_channel_id,supply_item,response_code,transaction_status,user_type,dt,bank_response_message,
-                  amount,
+                  amount,country_code,
                   cast(substr(AES_DECRYPT(UNHEX(bank_card_no), UNHEX('4132E08EA055A2B852DE8C214C885C2A')),1,6) as STRING) bank
            FROM opay_dw.dwd_opay_channel_transaction_base_di
            WHERE dt='{pt}'
@@ -127,6 +128,7 @@ def app_opay_channel_transaction_sum_d_sql_task(ds):
                  c.brand,
                  c.bank_name,
                  a.dt
+                 a.country_code
 
     '''.format(
         pt=ds,
@@ -153,7 +155,7 @@ def execution_data_task_id(ds, **kargs):
     第二个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
 
     """
-    TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "false", "true")
+    TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "true", "true")
 
 
 app_opay_channel_transaction_sum_d_task = PythonOperator(
