@@ -130,7 +130,7 @@ def dwd_opay_cico_record_di_sql_task(ds, ds_nodash):
     set mapred.max.split.size=1000000;
     set hive.exec.dynamic.partition.mode=nonstrict;
     set hive.exec.parallel=true;
-    create table if not exists test_db.cico_user_merchant_temp_{pt_str} as 
+    create table if not exists test_db.cico_user_temp_{pt_str} as 
         select 
                 trader_id, trader_name, trader_role, trader_kyc_level, state
             from (
@@ -139,12 +139,7 @@ def dwd_opay_cico_record_di_sql_task(ds, ds_nodash):
                     row_number() over(partition by user_id order by update_time desc) rn
                 from opay_dw_ods.ods_sqoop_base_user_di
                 where dt <= '{pt}'
-            ) uf where rn = 1
-            union all
-            select 
-                merchant_id as trader_id, merchant_name as trader_name, merchant_type as trader_role, '-' as trader_kyc_level, '-' as state
-            from opay_dw_ods.ods_sqoop_base_merchant_df
-            where dt = if('{pt}' <= '2019-12-11', '2019-12-11', '{pt}');
+            ) uf where rn = 1;
     with 
         dim_service_scenario_data as (
             select 
@@ -222,9 +217,9 @@ def dwd_opay_cico_record_di_sql_task(ds, ds_nodash):
         union all
         select * from co_data
     ) t1 
-    left join test_db.cico_user_merchant_temp_{pt_str} t2 on t1.originator_id = t2.trader_id
-    left join test_db.cico_user_merchant_temp_{pt_str} t3 on t1.affiliate_id = t3.trader_id;
-    DROP TABLE IF EXISTS test_db.cico_user_merchant_temp_{pt_str}
+    left join test_db.cico_user_temp_{pt_str} t2 on t1.originator_id = t2.trader_id
+    left join test_db.cico_user_temp_{pt_str} t3 on t1.affiliate_id = t3.trader_id;
+    DROP TABLE IF EXISTS test_db.cico_user_temp_{pt_str}
     '''.format(
         pt=ds,
         table=table_name,
