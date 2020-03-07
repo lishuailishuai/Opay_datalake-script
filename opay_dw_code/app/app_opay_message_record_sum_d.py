@@ -60,7 +60,7 @@ def fun_task_timeout_monitor(ds, dag, **op_kwargs):
 
     msg = [
         {"dag": dag, "db": "opay_dw", "table": "{dag_name}".format(dag_name=dag_ids),
-         "partition": "dt={pt}".format(pt=ds), "timeout": "3000"}
+         "partition": "country_code=NG/dt={pt}".format(pt=ds), "timeout": "3000"}
     ]
 
     TaskTimeoutMonitor().set_task_monitor(msg)
@@ -85,18 +85,19 @@ def app_opay_message_record_sum_d_sql_task(ds):
 
     set hive.exec.dynamic.partition.mode=nonstrict;
     set hive.exec.parallel=true;
-    insert overwrite table {db}.{table} partition (dt)
+    insert overwrite table {db}.{table} partition (country_code,dt)
    select template_name,
           message_type,
           message_channels,
           delivered_channel,
           status,
           count(1),
+          'NG' country_code,
           dt
    from opay_dw.dwd_opay_message_record_base_di 
    where dt='{pt}' and
          create_time BETWEEN date_format(date_sub('{pt}', 1), 'yyyy-MM-dd 23') AND date_format('{pt}', 'yyyy-MM-dd 23')
-   group by dt,template_name,message_type,message_channels,delivered_channel,status
+   group by dt,template_name,message_type,message_channels,delivered_channel,status,country_code
 
     '''.format(
         pt=ds,
@@ -123,7 +124,7 @@ def execution_data_task_id(ds, **kargs):
     第二个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
 
     """
-    TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "false", "true")
+    TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "true", "true")
 
 
 app_opay_message_record_sum_d_task = PythonOperator(

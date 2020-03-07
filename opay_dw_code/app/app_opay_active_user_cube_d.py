@@ -70,7 +70,7 @@ def fun_task_timeout_monitor(ds, dag, **op_kwargs):
 
     msg = [
         {"dag": dag, "db": "opay_dw", "table": "{dag_name}".format(dag_name=dag_ids),
-         "partition": "dt={pt}".format(pt=ds), "timeout": "3000"}
+         "partition": "country_code=NG/dt={pt}".format(pt=ds), "timeout": "3000"}
     ]
 
     TaskTimeoutMonitor().set_task_monitor(msg)
@@ -125,13 +125,14 @@ def app_opay_active_user_cube_d_sql_task(ds, ds_nodash):
               test_db.user_base_cube_{date} b 
     on a.user_id=b.user_id;
 
-    INSERT overwrite TABLE opay_dw.app_opay_active_user_cube_d partition (dt)
+    INSERT overwrite TABLE opay_dw.app_opay_active_user_cube_d partition (country_code,dt)
     select nvl(top_consume_scenario,'ALL') top_consume_scenario,
            nvl(role,'ALL') role,
            nvl(state,'ALL') state,
            count (distinct case when dt='{pt}' then user_id end) active_user_cnt_d,
            count (distinct case when dt>date_sub('{pt}',7) then user_id end) active_user_cnt_7d,
            count (distinct user_id) active_user_cnt_30d,
+           'NG' country_code,
            '{pt}' as dt
     from test_db.tran_cube_{date}
     group by top_consume_scenario,
@@ -167,7 +168,7 @@ def execution_data_task_id(ds, ds_nodash, **kargs):
     第二个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
 
     """
-    TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "false", "true")
+    TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "true", "true")
 
 
 app_opay_active_user_cube_d_task = PythonOperator(

@@ -113,7 +113,7 @@ def fun_task_timeout_monitor(ds,dag,**op_kwargs):
     dag_ids=dag.dag_id
 
     msg = [
-        {"dag":dag, "db": "opay_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "dt={pt}".format(pt=ds), "timeout": "3000"}
+        {"dag":dag, "db": "opay_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=NG/dt={pt}".format(pt=ds), "timeout": "3000"}
     ]
 
     TaskTimeoutMonitor().set_task_monitor(msg)
@@ -201,10 +201,10 @@ def app_opay_active_user_report_d_sql_task(ds,ds_nodash):
                (select user_id from test_db.login_{date} where last_visit<='{pt}') b 
             on a.user_id=b.user_id)
     
-    INSERT overwrite TABLE opay_dw.app_opay_active_user_report_d partition (dt,target_type)
+    INSERT overwrite TABLE opay_dw.app_opay_active_user_report_d partition (country_code,dt,target_type)
     
     SELECT 
-                '-' country_code,
+                
                 '-' city,
                 ROLE,
                 '-' kyc_level,
@@ -212,6 +212,7 @@ def app_opay_active_user_report_d_sql_task(ds,ds_nodash):
                 '-' register_client,
                 c,
                 state,
+                'NG' country_code,
                 dt,
                 target_type
             FROM (
@@ -622,7 +623,7 @@ def execution_data_task_id(ds, ds_nodash,  **kargs):
     第二个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
 
     """
-    TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "false", "true")
+    TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "true", "true")
 
 
 app_opay_active_user_report_d_task = PythonOperator(
