@@ -155,25 +155,7 @@ def dwd_opay_receive_money_record_hi_sql_task(ds, v_date):
         if(order_type = '0', 'PURCHASE', 'REFUND') as order_type, t1.accounting_status, 
         'receivemoney' as top_consume_scenario, 'receivemoney' as sub_consume_scenario,
         t1.fee_amount, t1.fee_pattern, t1.outward_id, t1.outward_type,date_format('{v_date}', 'yyyy-MM-dd HH') as utc_date_hour,state,
-        case t1.country
-            when 'NG' then 'NG'
-            when 'NO' then 'NO'
-            when 'GH' then 'GH'
-            when 'BW' then 'BW'
-            when 'GH' then 'GH'
-            when 'KE' then 'KE'
-            when 'MW' then 'MW'
-            when 'MZ' then 'MZ'
-            when 'PL' then 'PL'
-            when 'ZA' then 'ZA'
-            when 'SE' then 'SE'
-            when 'TZ' then 'TZ'
-            when 'UG' then 'UG'
-            when 'US' then 'US'
-            when 'ZM' then 'ZM'
-            when 'ZW' then 'ZW'
-            else 'NG'
-            end as country_code,
+         'NG' country_code,
         date_format(default.localTime("{config}", t1.country, '{v_date}', 0), 'yyyy-MM-dd') as dt,
         date_format(default.localTime("{config}", t1.country, '{v_date}', 0), 'HH') as hour
         
@@ -184,7 +166,7 @@ def dwd_opay_receive_money_record_hi_sql_task(ds, v_date):
             scheme as affiliate_bank_scheme, 
             default.localTime("{config}",'NG',from_unixtime(cast(cast(create_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as create_time, 
             default.localTime("{config}",'NG',from_unixtime(cast(cast(update_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as update_time, 
-            'NG' country, order_status, '-' as error_code, fail_msg as error_msg, order_type, accounting_status,
+            country, order_status, '-' as error_code, fail_msg as error_msg, order_type, accounting_status,
             nvl(fee, 0) as fee_amount, nvl(fee_pattern, '-') as fee_pattern, nvl(outward_id, '-') as outward_id, 
             nvl(outward_type, '-') as outward_type
         from (select *,row_number() over(partition by order_no order by `__ts_ms` desc,`__file` desc,cast(`__pos` as int) desc) rn 
@@ -202,7 +184,7 @@ def dwd_opay_receive_money_record_hi_sql_task(ds, v_date):
             scheme as affiliate_bank_scheme, 
             default.localTime("{config}",'NG',from_unixtime(cast(cast(create_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as create_time, 
             default.localTime("{config}",'NG',from_unixtime(cast(cast(update_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as update_time, 
-            'NG' country, order_status, '-' as error_code, fail_msg as error_msg, order_type, accounting_status,
+            country, order_status, '-' as error_code, fail_msg as error_msg, order_type, accounting_status,
             nvl(fee, 0) as fee_amount, nvl(fee_pattern, '-') as fee_pattern, nvl(outward_id, '-') as outward_id, 
             nvl(outward_type, '-') as outward_type
         from (select *,row_number() over(partition by order_no order by `__ts_ms` desc,`__file` desc,cast(`__pos` as int) desc) rn 
