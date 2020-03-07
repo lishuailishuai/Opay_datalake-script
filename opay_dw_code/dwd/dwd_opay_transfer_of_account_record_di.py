@@ -104,7 +104,7 @@ def fun_task_timeout_monitor(ds, dag, **op_kwargs):
     dag_ids = dag.dag_id
 
     msg = [
-        {"dag":dag, "db": "opay_db", "table": "{dag_name}".format(dag_name=dag_ids),
+        {"dag":dag, "db": "opay_dw", "table": "{dag_name}".format(dag_name=dag_ids),
          "partition": "country_code=NG/dt={pt}".format(pt=ds), "timeout": "3000"}
     ]
 
@@ -119,9 +119,9 @@ task_timeout_monitor = PythonOperator(
 )
 
 ##----------------------------------------- 变量 ---------------------------------------##
-db_name = "opay_db"
+db_name = "opay_dw"
 table_name = "dwd_opay_transfer_of_account_record_di"
-hdfs_path = "oss://opay-datalake/opay/opay_db/" + table_name
+hdfs_path = "oss://opay-datalake/opay/opay_dw/" + table_name
 
 
 def dwd_opay_transfer_of_account_record_di_sql_task(ds, ds_nodash):
