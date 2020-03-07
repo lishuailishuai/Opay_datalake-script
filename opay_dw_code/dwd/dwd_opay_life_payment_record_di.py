@@ -173,17 +173,18 @@ def dwd_opay_life_payment_record_di_sql_task(ds):
         ),
         dim_user_merchant_data as (
             select 
-                trader_id, trader_name, trader_role, trader_kyc_level, trader_type
+                trader_id, trader_name, trader_role, trader_kyc_level, trader_type, if(state is null or state = '', '-', state) as state
             from (
                 select 
-                    user_id as trader_id, concat(first_name, ' ', middle_name, ' ', surname) as trader_name, `role` as trader_role, kyc_level as trader_kyc_level, 'USER' as trader_type,
+                    user_id as trader_id, concat(first_name, ' ', middle_name, ' ', surname) as trader_name, `role` as trader_role, 
+                    kyc_level as trader_kyc_level, 'USER' as trader_type, state,
                     row_number() over(partition by user_id order by update_time desc) rn
                 from opay_dw_ods.ods_sqoop_base_user_di
                 where dt <= '{pt}'
             ) uf where rn = 1
             union all
             select 
-                merchant_id as trader_id, merchant_name as trader_name, merchant_type as trader_role, '-' as trader_kyc_level, 'MERCHANT' as trader_type
+                merchant_id as trader_id, merchant_name as trader_name, merchant_type as trader_role, '-' as trader_kyc_level, 'MERCHANT' as trader_type, '-' as state
             from dim_merchant_data
         ),
         dim_lp_commission_data as (
@@ -202,26 +203,8 @@ def dwd_opay_life_payment_record_di_sql_task(ds):
         t1.create_time, t1.update_time, t1.country, 'Life Payment' as top_service_type, t1.sub_service_type,
         t1.order_status, t1.error_code, t1.error_msg, nvl(t1.client_source, '-'), t1.pay_way, t1.pay_status, t1.top_consume_scenario, t1.sub_consume_scenario, t1.pay_amount,
         t1.fee_amount, t1.fee_pattern, t1.outward_id, t1.outward_type,
-        if(t4.fee_rate is null or t1.order_status != 'SUCCESS', 0, round(t1.amount * t4.fee_rate, 2)) as provider_share_amount,
-        case t1.country
-            when 'NG' then 'NG'
-            when 'NO' then 'NO'
-            when 'GH' then 'GH'
-            when 'BW' then 'BW'
-            when 'GH' then 'GH'
-            when 'KE' then 'KE'
-            when 'MW' then 'MW'
-            when 'MZ' then 'MZ'
-            when 'PL' then 'PL'
-            when 'ZA' then 'ZA'
-            when 'SE' then 'SE'
-            when 'TZ' then 'TZ'
-            when 'UG' then 'UG'
-            when 'US' then 'US'
-            when 'ZM' then 'ZM'
-            when 'ZW' then 'ZW'
-            else 'NG'
-            end as country_code,
+        if(t4.fee_rate is null or t1.order_status != 'SUCCESS', 0, round(t1.amount * t4.fee_rate, 2)) as provider_share_amount, t2.state,
+        'NG' as country_code,
         '{pt}' dt
 
     from (

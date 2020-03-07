@@ -132,7 +132,7 @@ def dwd_opay_transfer_of_account_record_di_sql_task(ds, ds_nodash):
     set hive.exec.parallel=true;
     create table if not exists test_db.toa_um_temp_{pt_str} as 
         select 
-                trader_id, trader_name, trader_role, trader_kyc_level, state
+                trader_id, trader_name, trader_role, trader_kyc_level, if(state is null or state = '', '-', state) as state
             from (
                 select 
                     user_id as trader_id, concat(first_name, ' ', middle_name, ' ', surname) as trader_name, `role` as trader_role, kyc_level as trader_kyc_level, state,
