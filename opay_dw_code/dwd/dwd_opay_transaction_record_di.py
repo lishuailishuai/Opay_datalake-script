@@ -111,6 +111,17 @@ dwd_opay_pos_transaction_record_di_task = OssSensor(
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
+
+dwd_opay_cico_record_di_task = OssSensor(
+    task_id='dwd_opay_cico_record_di_task',
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="opay/opay_dw/dwd_opay_cico_record_di/country_code=NG",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
 # dwd_opay_easycash_record_di_task = OssSensor(
 #     task_id='dwd_opay_easycash_record_di_task',
 #     bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
@@ -210,7 +221,7 @@ def dwd_opay_transaction_record_di_sql_task(ds):
         country_code, dt
     from opay_dw.dwd_opay_life_payment_record_di 
     where dt = '{pt}' 
-    union
+    union all
     select 
         order_no, amount, currency, 
         originator_type, originator_role, originator_kyc_level, originator_id, originator_name, 'OUT' as originator_money_flow,
@@ -221,7 +232,18 @@ def dwd_opay_transaction_record_di_sql_task(ds):
         country_code, dt
     from opay_dw.dwd_opay_transfer_of_account_record_di 
     where dt = '{pt}' 
-    union
+    union all
+    select 
+        order_no, amount, currency, 
+        originator_type, originator_role, originator_kyc_level, originator_id, originator_name, 'OUT' as originator_money_flow,
+        affiliate_type, affiliate_role, affiliate_id, affiliate_name, 'IN' as affiliate_money_flow,
+        create_time, update_time, top_service_type, sub_service_type, 
+        order_status, error_code, error_msg, client_source, pay_way, top_consume_scenario, sub_consume_scenario, 
+        fee_amount, fee_pattern, outward_id, outward_type,
+        country_code, dt
+    from opay_dw.dwd_opay_cico_record_di 
+    where dt = '{pt}' 
+    union all
     select 
         order_no, amount, currency, 
         originator_type, originator_role, originator_kyc_level, originator_id, originator_name, 'OUT' as originator_money_flow,
@@ -232,7 +254,7 @@ def dwd_opay_transaction_record_di_sql_task(ds):
         country_code, dt
     from opay_dw.dwd_opay_cash_to_card_record_di 
     where dt = '{pt}'
-    union
+    union all
     select * from dwd_opay_account_recharge_di
     '''.format(
         pt=ds,
@@ -278,3 +300,4 @@ dwd_opay_cash_to_card_record_di_task >> dwd_opay_transaction_record_di_task
 dwd_opay_topup_with_card_record_di_task >> dwd_opay_transaction_record_di_task
 dwd_opay_receive_money_record_di_task >> dwd_opay_transaction_record_di_task
 dwd_opay_pos_transaction_record_di_task >> dwd_opay_transaction_record_di_task
+dwd_opay_cico_record_di_task >> dwd_opay_transaction_record_di_task
