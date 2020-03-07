@@ -29,7 +29,7 @@ from airflow.sensors import OssSensor
 #
 args = {
     'owner': 'xiedong',
-    'start_date': datetime(2020, 03, 06),
+    'start_date': datetime(2020, 3, 6),
     'depends_on_past': False,
     'retries': 3,
     'retry_delay': timedelta(minutes=2),
@@ -141,11 +141,6 @@ def dwd_opay_cico_record_di_sql_task(ds, ds_nodash):
                 where dt <= '{pt}'
             ) uf where rn = 1;
     with 
-        dim_service_scenario_data as (
-            select 
-                sub_service_type, top_consume_scenario, sub_consume_scenario, trader_id
-            from opay_dw.dim_opay_service_scenario_mapping_df where dt = '{pt}'
-        ),
         bd_agent_data as (
             select 
                 cast(opay_id as string) as opay_id, bd_id, agent_status as bd_agent_status
