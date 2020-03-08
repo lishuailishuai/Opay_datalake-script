@@ -90,6 +90,7 @@ def dwd_oride_driver_score_activity_conf_df_sql_task(ds):
 
     set hive.exec.parallel=true;
     set hive.exec.dynamic.partition.mode=nonstrict;
+    CREATE TEMPORARY FUNCTION from_json AS 'brickhouse.udf.json.FromJsonUDF';
 
     INSERT overwrite TABLE oride_dw.{table} partition(country_code,dt)
 
