@@ -112,9 +112,11 @@ def dwd_oride_driver_score_activity_conf_df_sql_task(ds):
           cc.pick_dist_limit,--差单得分的接驾距离最低限制
           cc.score,--接驾距离超过最低限制的差单所得积分
           dd.enable,--完单积分状态
+          
           ff.start_time,--高峰期完单的开始时间
           ff.end_time,--高峰期完单的结束时间
           ff.score,--高峰期完单，每单得的积分
+          
           gg.score,--非高峰期完单，每单得的积分
           hh.enable,--骑手有责拒单状态
           hh.neg_score,--骑手拒单，每单减的积分
@@ -131,12 +133,14 @@ def dwd_oride_driver_score_activity_conf_df_sql_task(ds):
           --lateral view json_tuple(first_order_score,'1','2','3','4','5','6','7') bb as one,two,three,four,five,six,seven
           lateral view json_tuple(low_value_order_score,'enable','pick_dist_limit','score') cc as enable,pick_dist_limit,score
           lateral view json_tuple(finish_order_score,'enable','rush_hour','non_rush_hour') dd as enable,rush_hour,non_rush_hour
-          lateral view explode(split(regexp_replace(regexp_extract(rush_hour,'^\\[(.+)\\]$',1),'\\}}\\,\\{{', '\\}}\\|\\|\\{{'),'\\|\\|')) ee as e
-          lateral view json_tuple(e,'start_time','end_time','score') ff as start_time,end_time,score
+          
+          LATERAL VIEW EXPLODE(from_json(rush_hour,array(named_struct("start_time","end_time","score","")))) es AS ff
+          
           lateral view json_tuple(non_rush_hour,'score') gg as score
           lateral view json_tuple(driver_duty_cancel_score,'enable','neg_score') hh as enable,neg_score
           where dt='{pt}'
           
+        
           
     '''.format(
         pt=ds,
@@ -146,6 +150,7 @@ def dwd_oride_driver_score_activity_conf_df_sql_task(ds):
     return HQL
 
 ##  使用python字符串的format方法时，大括号是特殊转义字符，如果需要原始的大括号，用{{代替{, 用}}代替}  否则会报单个}的错误哦
+##  这里只能需要一个  用}}代替}，否则其他都报错
 
 
 # 主流程
