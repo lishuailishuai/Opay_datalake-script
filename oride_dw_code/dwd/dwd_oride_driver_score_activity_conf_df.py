@@ -98,7 +98,7 @@ def dwd_oride_driver_score_activity_conf_df_sql_task(ds):
           id,--'无业务含义主键'
           serv_type,--'服务类型'
           country_id,--'国家ID'
-          city_id,--城市ID
+          cast(city_id as bigint),--城市ID
           status,--状态 0:废弃 1:开启
           aa.enable,--每日首单积分状态
           aa.extra_score_for_new_pax,--每日首单额外积分
@@ -114,9 +114,9 @@ def dwd_oride_driver_score_activity_conf_df_sql_task(ds):
           cc.score,--接驾距离超过最低限制的差单所得积分
           dd.enable,--完单积分状态
           
-          ff.start_time,--高峰期完单的开始时间
-          ff.end_time,--高峰期完单的结束时间
-          ff.score,--高峰期完单，每单得的积分
+          cast(ff.start_time as bigint),--高峰期完单的开始时间
+          cast(ff.end_time as bigint),--高峰期完单的结束时间
+          cast(ff.score as bigint),--高峰期完单，每单得的积分
           
           gg.score,--非高峰期完单，每单得的积分
           hh.enable,--骑手有责拒单状态
