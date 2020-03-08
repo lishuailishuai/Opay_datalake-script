@@ -132,7 +132,7 @@ SELECT a.dt,
    INNER JOIN test_db.user_base_m_{date} b ON a.user_id=b.user_id;
    
 INSERT overwrite TABLE opay_dw.app_opay_active_user_report_m partition (country_code,dt,target_type)
-SELECT 
+SELECT     '_' country,
            '-' city,
                ROLE,
                '-' kyc_level,
