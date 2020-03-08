@@ -221,7 +221,7 @@ user_pos as (
     , retrieval_reference_number
     , default.localTime("{config}",'NG',from_unixtime(cast(cast(create_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as create_time
     , default.localTime("{config}",'NG',from_unixtime(cast(cast(update_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as update_time
-    , 'NG' as country
+    , country
     , order_status
     , channel_code as error_code
     , channel_msg as error_msg
@@ -257,7 +257,7 @@ merchant_pos as (
     , retrieval_reference_number
     , default.localTime("{config}",'NG',from_unixtime(cast(cast(create_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as create_time
     , default.localTime("{config}",'NG',from_unixtime(cast(cast(update_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as update_time
-    , 'NG' as country
+    , country
     , order_status
     , channel_code as error_code
     , channel_msg as error_msg
@@ -356,7 +356,7 @@ select
     end as msc_cost_amount
   , t1.utc_date_hour
 
-  , t1.country as country_code
+  , 'NG' as country_code
   , date_format(default.localTime("{config}", t1.country, '{v_date}', 0), 'yyyy-MM-dd') as dt
   , date_format(default.localTime("{config}", t1.country, '{v_date}', 0), 'HH') as hour
 

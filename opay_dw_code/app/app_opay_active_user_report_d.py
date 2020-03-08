@@ -204,7 +204,7 @@ def app_opay_active_user_report_d_sql_task(ds,ds_nodash):
     INSERT overwrite TABLE opay_dw.app_opay_active_user_report_d partition (country_code,dt,target_type)
     
     SELECT 
-                
+                '_' country,
                 '-' city,
                 ROLE,
                 '-' kyc_level,

@@ -249,9 +249,9 @@ betting as (
     , recipient_betting_account as recharge_account
     , recipient_betting_name as recharge_account_name
     , '-' as recharge_set_meal
-    , default.localTime("{config}",if(nvl(country,'')='','NG',country),from_unixtime(cast(cast(create_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as create_time
-    , default.localTime("{config}",if(nvl(country,'')='','NG',country),from_unixtime(cast(cast(update_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as update_time
-    , if(nvl(country,'')='','NG',country) as country
+    , default.localTime("{config}",'NG',from_unixtime(cast(cast(create_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as create_time
+    , default.localTime("{config}",'NG',from_unixtime(cast(cast(update_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as update_time
+    , 'NG' as country
     , 'Betting' sub_service_type
     , order_status
     , error_code
@@ -291,9 +291,9 @@ airtime as (
     , recipient_mobile as recharge_account
     , '-' as recharge_account_name
     , '-' as recharge_set_meal
-    , default.localTime("{config}",if(nvl(country,'')='','NG',country),from_unixtime(cast(cast(create_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as create_time
-    , default.localTime("{config}",if(nvl(country,'')='','NG',country),from_unixtime(cast(cast(update_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as update_time
-    , if(nvl(country,'')='','NG',country) as country
+    , default.localTime("{config}",'NG',from_unixtime(cast(cast(create_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as create_time
+    , default.localTime("{config}",'NG',from_unixtime(cast(cast(update_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as update_time
+    , 'NG' as country
     , 'Airtime' sub_service_type
     , order_status
     , error_code
@@ -330,9 +330,9 @@ tv as (
     , recipient_tv_account_no as recharge_account
     , recipient_tv_account_name as recharge_account_name
     , tv_plan as recharge_set_meal
-    , default.localTime("{config}",if(nvl(country,'')='','NG',country),from_unixtime(cast(cast(create_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as create_time
-    , default.localTime("{config}",if(nvl(country,'')='','NG',country),from_unixtime(cast(cast(update_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as update_time
-    , if(nvl(country,'')='','NG',country) as country
+    , default.localTime("{config}",'NG',from_unixtime(cast(cast(create_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as create_time
+    , default.localTime("{config}",'NG',from_unixtime(cast(cast(update_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as update_time
+    , 'NG' as country
     , 'TV' sub_service_type
     , order_status
     , error_code
@@ -369,9 +369,9 @@ mobiledata as (
     , recipient_mobile as recharge_account
     , '-' as recharge_account_name
     , '-' as recharge_set_meal
-    , default.localTime("{config}",if(nvl(country,'')='','NG',country),from_unixtime(cast(cast(create_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as create_time
-    , default.localTime("{config}",if(nvl(country,'')='','NG',country),from_unixtime(cast(cast(update_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as update_time
-    , if(nvl(country,'')='','NG',country) as country
+    , default.localTime("{config}",'NG',from_unixtime(cast(cast(create_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as create_time
+    , default.localTime("{config}",'NG',from_unixtime(cast(cast(update_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as update_time
+    , 'NG' as country
     , 'Mobiledata' sub_service_type
     , order_status
     , error_code
@@ -408,9 +408,9 @@ electricity as (
     , recipient_elec_account as recharge_account
     , '-' as recharge_account_name
     , electricity_payment_plan as recharge_set_meal
-    , default.localTime("{config}",if(nvl(country,'')='','NG',country),from_unixtime(cast(cast(create_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as create_time
-    , default.localTime("{config}",if(nvl(country,'')='','NG',country),from_unixtime(cast(cast(update_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as update_time
-    , if(nvl(country,'')='','NG',country) as country
+    , default.localTime("{config}",'NG',from_unixtime(cast(cast(create_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as create_time
+    , default.localTime("{config}",'NG',from_unixtime(cast(cast(update_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as update_time
+    , 'NG' as country
     , 'Electricity' sub_service_type
     , order_status
     , error_code
@@ -519,7 +519,7 @@ select
   , t1.utc_date_hour
   , t2.state
 
-  , t1.country as country_code
+  , 'NG' as country_code
   , date_format(default.localTime("{config}", t1.country, '{v_date}', 0), 'yyyy-MM-dd') as dt
   , date_format(default.localTime("{config}", t1.country, '{v_date}', 0), 'HH') as hour
 
