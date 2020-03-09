@@ -88,7 +88,7 @@ def dim_opay_bd_relation_df_sql_task(ds):
         from opay_dw_ods.ods_sqoop_base_bd_admin_users_df 
         where dt = '{pt}' and job_id > 0
     )  
-    insert overwrite table {db}.{table} partition (country_code = 'nal', dt = '{pt}')
+    insert overwrite table {db}.{table} partition (country_code = 'NG', dt = '{pt}')
     select 
           t6.id as bd_admin_user_id,
           t6.username as bd_admin_user_name,

@@ -97,7 +97,7 @@ def dwd_opay_bd_agent_change_log_di_sql_task(ds):
     set hive.exec.dynamic.partition.mode=nonstrict;
     set hive.exec.parallel=true;
     
-    insert overwrite table {db}.{table} partition(country_code = 'nal', dt = '{pt}')
+    insert overwrite table {db}.{table} partition(country_code = 'NG', dt = '{pt}')
     
     select 
         t1.id, t2.bd_admin_user_id, t1.bd_agent_id, cast(t1.user_id as string) as user_id, t1.create_time, t1.from_agent_status, t1.to_agent_status
