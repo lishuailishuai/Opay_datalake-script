@@ -135,9 +135,7 @@ def dwd_oride_driver_score_activity_conf_df_sql_task(ds):
           lateral view json_tuple(low_value_order_score,'enable','pick_dist_limit','score') cc as enable,pick_dist_limit,score
           lateral view json_tuple(finish_order_score,'enable','rush_hour','non_rush_hour') dd as enable,rush_hour,non_rush_hour
           
-          --LATERAL VIEW EXPLODE(from_json(regexp_replace(regexp_replace(rush_hour,':',':"'),',"','","'),array(named_struct("start_time","","end_time","","score","")))) es AS ff
-          
-            LATERAL VIEW EXPLODE(from_json(regexp_replace(regexp_replace(rush_hour,":",":""),","","",""),array(named_struct("start_time","","end_time","","score","")))) es AS ff
+          LATERAL VIEW EXPLODE(from_json(rush_hour,array(named_struct("start_time",cast(1 as bigint),"end_time",cast(1 as bigint),"score",cast(1 as bigint))))) es AS ff
           
           lateral view json_tuple(non_rush_hour,'score') gg as score
           lateral view json_tuple(driver_duty_cancel_score,'enable','neg_score') hh as enable,neg_score
@@ -152,7 +150,8 @@ def dwd_oride_driver_score_activity_conf_df_sql_task(ds):
     return HQL
 
 ##  使用python字符串的format方法时，大括号是特殊转义字符，如果需要原始的大括号，用{{代替{, 用}}代替}  否则会报单个}的错误哦
-##  这里只能需要一个  用}}代替}，否则其他都报错
+##  但是那个用{{进行python大括号转义符合python的语法，但是最终sql要在hive执行，两个{{是查不出来的，因为sql字符串中只有一个{
+##  所以只能使用自定义udf函数进行解析JSON数组了。
 
 
 # 主流程
