@@ -100,7 +100,7 @@ def dim_opay_terminal_base_df_sql_task(ds):
         update_time,
         terminal_type,
         'NG' AS country_code,
-        {pt} as dt
+        '{pt}' as dt
     from opay_dw_ods.ods_sqoop_base_terminal_df where dt = '{pt}' 
         and create_time<'{pt} 23:00:00'
 
