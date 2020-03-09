@@ -83,7 +83,7 @@ def dwm_opay_bd_agent_cico_df_sql_task(ds):
     set hive.exec.dynamic.partition.mode=nonstrict;
     set hive.exec.parallel=true; --default false
     
-	insert overwrite table {db}.{table} partition(country_code='nal', dt='{pt}')
+	insert overwrite table {db}.{table} partition(country_code='NG', dt='{pt}')
 	select 
         coalesce(agent_data.bd_admin_user_id, cico_data.bd_admin_user_id) as bd_admin_user_id, 
         coalesce(agent_data.business_date, cico_data.business_date) as business_date, 
