@@ -98,7 +98,7 @@ def dwd_oride_driver_score_activity_conf_df_sql_task(ds):
           id,--'无业务含义主键'
           serv_type,--'服务类型'
           country_id,--'国家ID'
-          cast(city_id as bigint),--城市ID
+          city_id,--城市ID
           status,--状态 0:废弃 1:开启
           aa.enable,--每日首单积分状态
           aa.extra_score_for_new_pax,--每日首单额外积分
@@ -129,7 +129,7 @@ def dwd_oride_driver_score_activity_conf_df_sql_task(ds):
           '{pt}' as dt
           from
           oride_dw_ods.ods_sqoop_base_data_driver_score_activity_conf_df
-          lateral view explode(split(regexp_extract(city_ids,'^\\[(.+)\\]$',1),',')) city as city_id
+          lateral view explode(split(regexp_extract(city_ids,'\^\\[(.+)\\]\$',1),',')) city as city_id
           lateral view json_tuple(first_order_score,'enable','extra_score_for_new_pax','first_order_score') aa as enable,extra_score_for_new_pax,first_order_score
           --lateral view json_tuple(first_order_score,'1','2','3','4','5','6','7') bb as one,two,three,four,five,six,seven
           lateral view json_tuple(low_value_order_score,'enable','pick_dist_limit','score') cc as enable,pick_dist_limit,score
