@@ -135,7 +135,7 @@ def dwd_oride_driver_score_activity_conf_df_sql_task(ds):
           lateral view json_tuple(low_value_order_score,'enable','pick_dist_limit','score') cc as enable,pick_dist_limit,score
           lateral view json_tuple(finish_order_score,'enable','rush_hour','non_rush_hour') dd as enable,rush_hour,non_rush_hour
           
-          LATERAL VIEW EXPLODE(rush_hour,array(named_struct("start_time","","end_time","","score",""))) es AS ff
+          LATERAL VIEW EXPLODE(from_json(rush_hour,array(named_struct("start_time","","end_time","","score","")))) es AS ff
           
           lateral view json_tuple(non_rush_hour,'score') gg as score
           lateral view json_tuple(driver_duty_cancel_score,'enable','neg_score') hh as enable,neg_score
