@@ -98,7 +98,7 @@ def dwd_oride_driver_score_activity_conf_df_sql_task(ds):
           id,--'无业务含义主键'
           serv_type,--'服务类型'
           country_id,--'国家ID'
-          city_id,--城市ID
+          cast(city_id as bigint),--城市ID
           status,--状态 0:废弃 1:开启
           aa.enable,--每日首单积分状态
           aa.extra_score_for_new_pax,--每日首单额外积分
