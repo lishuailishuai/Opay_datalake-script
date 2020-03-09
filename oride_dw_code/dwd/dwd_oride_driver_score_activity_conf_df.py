@@ -130,7 +130,7 @@ def dwd_oride_driver_score_activity_conf_df_sql_task(ds):
           from
           oride_dw_ods.ods_sqoop_base_data_driver_score_activity_conf_df
           --lateral view explode(split(regexp_extract(city_ids,'^\\[(.+)\\]$',1),',')) city as city_id
-          --lateral view explode(split(regexp_extract(city_ids,'\^\\[\(\.\+\)\\]\$',1),',')) city as city_id
+          lateral view explode(split(regexp_extract(city_ids,'\^\\[\(\.\+\)\\]\$',1),',')) city as city_id
           lateral view json_tuple(first_order_score,'enable','extra_score_for_new_pax','first_order_score') aa as enable,extra_score_for_new_pax,first_order_score
           --lateral view json_tuple(first_order_score,'1','2','3','4','5','6','7') bb as one,two,three,four,five,six,seven
           lateral view json_tuple(low_value_order_score,'enable','pick_dist_limit','score') cc as enable,pick_dist_limit,score
