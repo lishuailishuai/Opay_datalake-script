@@ -129,13 +129,15 @@ def dwd_oride_driver_score_activity_conf_df_sql_task(ds):
           '{pt}' as dt
           from
           oride_dw_ods.ods_sqoop_base_data_driver_score_activity_conf_df
+          LATERAL VIEW EXPLODE(from_json(get_json_object(finish_order_score,'$.rush_hour'),array(named_struct("start_time","","end_time","","score","")))) es AS ff
+          
           lateral view explode(split(regexp_extract(city_ids,'^\\[(.+)\\]$',1),',')) city as city_id
           lateral view json_tuple(first_order_score,'enable','extra_score_for_new_pax','first_order_score') aa as enable,extra_score_for_new_pax,first_order_score
           --lateral view json_tuple(first_order_score,'1','2','3','4','5','6','7') bb as one,two,three,four,five,six,seven
           lateral view json_tuple(low_value_order_score,'enable','pick_dist_limit','score') cc as enable,pick_dist_limit,score
           lateral view json_tuple(finish_order_score,'enable','rush_hour','non_rush_hour') dd as enable,rush_hour,non_rush_hour
           
-          LATERAL VIEW EXPLODE(from_json(get_json_object(finish_order_score,'$.rush_hour'),array(named_struct("start_time","","end_time","","score","")))) es AS ff
+          --LATERAL VIEW EXPLODE(from_json(get_json_object(finish_order_score,'$.rush_hour'),array(named_struct("start_time","","end_time","","score","")))) es AS ff
           
           lateral view json_tuple(non_rush_hour,'score') gg as score
           lateral view json_tuple(driver_duty_cancel_score,'enable','neg_score') hh as enable,neg_score
