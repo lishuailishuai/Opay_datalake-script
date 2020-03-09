@@ -135,25 +135,7 @@ def dwd_opay_account_balance_df_sql_task(ds):
                 kyc_level,
                 category,
                 '' merchant_type,
-                CASE country
-                    WHEN 'Nigeria' THEN 'NG'
-                    WHEN 'Norway' THEN 'NO'
-                    WHEN 'Ghana' THEN 'GH'
-                    WHEN 'Botswana' THEN 'BW'
-                    WHEN 'Ghana' THEN 'GH'
-                    WHEN 'Kenya' THEN 'KE'
-                    WHEN 'Malawi' THEN 'MW'
-                    WHEN 'Mozambique' THEN 'MZ'
-                    WHEN 'Poland' THEN 'PL'
-                    WHEN 'South Africa' THEN 'ZA'
-                    WHEN 'Sweden' THEN 'SE'
-                    WHEN 'Tanzania' THEN 'TZ'
-                    WHEN 'Uganda' THEN 'UG'
-                    WHEN 'USA' THEN 'US'
-                    WHEN 'Zambia' THEN 'ZM'
-                    WHEN 'Zimbabwe' THEN 'ZW'
-                    ELSE 'NG'
-                 END AS country_code,
+                'NG' AS country_code,
                  mobile
             FROM (
                 SELECT 
@@ -174,25 +156,7 @@ def dwd_opay_account_balance_df_sql_task(ds):
                     '' kyc_level,
                     category,
                     merchant_type,
-                    CASE countries_code
-                        WHEN 'NG' THEN 'NG'
-                        WHEN 'NO' THEN 'NO'
-                        WHEN 'GH' THEN 'GH'
-                        WHEN 'BW' THEN 'BW'
-                        WHEN 'GH' THEN 'GH'
-                        WHEN 'KE' THEN 'KE'
-                        WHEN 'MW' THEN 'MW'
-                        WHEN 'MZ' THEN 'MZ'
-                        WHEN 'PL' THEN 'PL'
-                        WHEN 'ZA' THEN 'ZA'
-                        WHEN 'SE' THEN 'SE'
-                        WHEN 'TZ' THEN 'TZ'
-                        WHEN 'UG' THEN 'UG'
-                        WHEN 'US' THEN 'US'
-                        WHEN 'ZM' THEN 'ZM'
-                        WHEN 'ZW' THEN 'ZW'
-                        ELSE 'NG'
-                        END AS country_code,
+                    'NG' AS country_code,
                         '-' as mobile
                 FROM opay_dw_ods.ods_sqoop_base_merchant_df
                 WHERE dt='{pt}' AND create_time<'{pt} 23:00:00'
@@ -215,7 +179,7 @@ def dwd_opay_account_balance_df_sql_task(ds):
         nvl(create_time, '-'),
         nvl(update_time, '-'),
         nvl(merchant_type, '-'),
-        nvl(country_code, '-'),
+        'NG' as country_code,
         '{pt}' dt
     from (
         SELECT 
