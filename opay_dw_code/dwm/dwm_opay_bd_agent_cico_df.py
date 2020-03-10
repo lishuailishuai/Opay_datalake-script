@@ -51,6 +51,17 @@ dwd_opay_cico_record_di_task = OssSensor(
     dag=dag
 )
 
+dwd_opay_bd_agent_change_log_di_task = OssSensor(
+    task_id='dwd_opay_bd_agent_change_log_di_task',
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="opay/opay_dw/dwd_opay_bd_agent_change_log_di/country_code=NG",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
 
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
 def fun_task_timeout_monitor(ds,dag,**op_kwargs):
@@ -154,3 +165,4 @@ dwm_opay_bd_agent_cico_df_task = PythonOperator(
 )
 
 dwd_opay_cico_record_di_task >> dwm_opay_bd_agent_cico_df_task
+dwd_opay_bd_agent_change_log_di_task >> dwm_opay_bd_agent_cico_df_task
