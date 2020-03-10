@@ -27,7 +27,7 @@ from airflow.sensors import OssSensor
 
 args = {
     'owner': 'lishuai',
-    'start_date': datetime(2020, 3, 5),
+    'start_date': datetime(2020, 3, 8),
     'depends_on_past': False,
     'retries': 3,
     'retry_delay': timedelta(minutes=2),
@@ -36,16 +36,16 @@ args = {
     'email_on_retry': False,
 }
 
-dag = airflow.DAG('dwd_oride_driver_score_activity_conf_df',
+dag = airflow.DAG('dwd_oride_driver_rights_conf_df',
                   schedule_interval="00 02 * * *",
                   default_args=args)
 
 ##----------------------------------------- 依赖 ---------------------------------------##
 
-ods_sqoop_base_data_driver_score_activity_conf_df_task = OssSensor(
-    task_id='ods_sqoop_base_data_driver_score_activity_conf_df_task',
+ods_sqoop_base_data_driver_rights_conf_df_task = OssSensor(
+    task_id='ods_sqoop_base_data_driver_rights_conf_df_task',
     bucket_key="{hdfs_path_str}/dt={pt}/_SUCCESS".format(
-        hdfs_path_str="oride_dw_sqoop/oride_data/data_driver_score_activity_conf",
+        hdfs_path_str="oride_dw_sqoop/oride_data/data_driver_rights_conf",
 
         pt="{{ds}}"
     ),
@@ -54,12 +54,12 @@ ods_sqoop_base_data_driver_score_activity_conf_df_task = OssSensor(
     dag=dag
 )
 
-
 ##----------------------------------------- 变量 ---------------------------------------##
 
 db_name = "oride_dw"
-table_name = "dwd_oride_driver_score_activity_conf_df"
+table_name = "dwd_oride_driver_rights_conf_df"
 hdfs_path = "oss://opay-datalake/oride/oride_dw/" + table_name
+
 
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
 
@@ -84,7 +84,7 @@ task_timeout_monitor = PythonOperator(
 
 ##----------------------------------------- 脚本 ---------------------------------------##
 
-def dwd_oride_driver_score_activity_conf_df_sql_task(ds):
+def dwd_oride_driver_rights_conf_df_sql_task(ds):
     HQL = '''
 
 
@@ -94,65 +94,36 @@ def dwd_oride_driver_score_activity_conf_df_sql_task(ds):
     
     INSERT overwrite TABLE oride_dw.{table} partition(country_code,dt)
 
-          select
-          id,--'无业务含义主键'
-          serv_type,--'服务类型'
-          country_id,--'国家ID'
-          city_id,--城市ID
-          status,--状态 0:废弃 1:开启
-          aa.enable,--每日首单积分状态
-          aa.extra_score_for_new_pax,--每日首单额外积分
-          get_json_object(aa.first_order_score,'$.1'),--每日首单首日积分
-          get_json_object(aa.first_order_score,'$.2'),--每日首单2日积分
-          get_json_object(aa.first_order_score,'$.3'),--每日首单3日积分
-          get_json_object(aa.first_order_score,'$.4'),--每日首单4日积分
-          get_json_object(aa.first_order_score,'$.5'),--每日首单5日积分
-          get_json_object(aa.first_order_score,'$.6'),--每日首单6日积分
-          get_json_object(aa.first_order_score,'$.7'),--每日首单7日积分
-          cc.enable,--差单状态
-          cc.pick_dist_limit,--差单得分的接驾距离最低限制
-          cc.score,--接驾距离超过最低限制的差单所得积分
-          dd.enable,--完单积分状态
-          
-          ff.start_time,--高峰期完单的开始时间
-          ff.end_time,--高峰期完单的结束时间
-          ff.score,--高峰期完单，每单得的积分
-          
-          gg.score,--非高峰期完单，每单得的积分
-          hh.enable,--骑手有责拒单状态
-          hh.neg_score,--骑手拒单，每单减的积分
-          from_unixtime(created_at),--创建时间
-          from_unixtime(updated_at),--更新时间
-          tag,--骑手标签
-          grab_score,--枪单积分
+    select
+          id,
+          serv_type,
+          aa.city_id,
+          from_unixtime(start_time),
+          from_unixtime(end_time),
+          status,
+          bbb.driver_level,
+          bbb.s_proportion,
+          bbb.e_proportion,
+          get_json_object(substr(bbb.type_rules,2,length(ccc.rewards)-2),'$.type'),
+          get_json_object(substr(bbb.type_rules,2,length(ccc.rewards)-2),'$.type_proportion'),
+          ccc.driver_level,
+          get_json_object(substr(ccc.type_rules,2,length(ccc.rewards)-2),'$.type'),
+          get_json_object(substr(ccc.type_rules,2,length(ccc.rewards)-2),'$.type_proportion'),
           'nal' as country_code,
           '{pt}' as dt
-          from
-          oride_dw_ods.ods_sqoop_base_data_driver_score_activity_conf_df
-          --lateral view explode(split(regexp_extract(city_ids,'^\\[(.+)\\]$',1),',')) city as city_id
-          lateral view explode(split(substr(city_ids,2,length(city_ids)-2),',')) city as city_id
-          lateral view json_tuple(first_order_score,'enable','extra_score_for_new_pax','first_order_score') aa as enable,extra_score_for_new_pax,first_order_score
-          --lateral view json_tuple(first_order_score,'1','2','3','4','5','6','7') bb as one,two,three,four,five,six,seven
-          lateral view json_tuple(low_value_order_score,'enable','pick_dist_limit','score') cc as enable,pick_dist_limit,score
-          lateral view json_tuple(finish_order_score,'enable','rush_hour','non_rush_hour') dd as enable,rush_hour,non_rush_hour
-          
-          LATERAL VIEW EXPLODE(from_json(rush_hour,array(named_struct("start_time",cast(1 as bigint),"end_time",cast(1 as bigint),"score",cast(1 as bigint))))) es AS ff
-          
-          lateral view json_tuple(non_rush_hour,'score') gg as score
-          lateral view json_tuple(driver_duty_cancel_score,'enable','neg_score') hh as enable,neg_score
+          from 
+          oride_dw_ods.ods_sqoop_base_data_driver_score_reward_conf_df
+          lateral view explode(split(substr(city_id,2,length(city_id)-2),',')) aa as city_id
+          LATERAL VIEW EXPLODE(from_json(driver_rules,array(named_struct("driver_level",cast(1 as bigint),"s_proportion",cast(1 as double),"e_proportion",cast(1 as double),"type_rules","")))) bb AS bbb
+          LATERAL VIEW EXPLODE(from_json(new_driver_rules,array(named_struct("driver_level",cast(1 as bigint),"type_rules","")))) cc AS ccc
           where dt='{pt}'
-          
-        
+
     '''.format(
         pt=ds,
         table=table_name,
         db=db_name
     )
     return HQL
-
-##  使用python字符串的format方法时，大括号是特殊转义字符，如果需要原始的大括号，用{{代替{, 用}}代替}  否则会报单个}的错误哦
-##  但是那个用{{进行python大括号转义符合python的语法，但是最终sql要在hive执行，两个{{是查不出来的，因为sql字符串中只有一个{
-##  所以只能使用自定义udf函数进行解析JSON数组了。
 
 
 # 主流程
@@ -187,7 +158,7 @@ def execution_data_task_id(ds, **kwargs):
 
     # 拼接SQL
 
-    _sql = "\n" + cf.alter_partition() + "\n" + dwd_oride_driver_score_activity_conf_df_sql_task(ds)
+    _sql = "\n" + cf.alter_partition() + "\n" + dwd_oride_driver_rights_conf_df_sql_task(ds)
 
     logging.info('Executing: %s', _sql)
 
@@ -204,8 +175,8 @@ def execution_data_task_id(ds, **kwargs):
     cf.touchz_success()
 
 
-dwd_oride_driver_score_activity_conf_df_task = PythonOperator(
-    task_id='dwd_oride_driver_score_activity_conf_df_task',
+dwd_oride_driver_rights_conf_df_task = PythonOperator(
+    task_id='dwd_oride_driver_rights_conf_df_task',
     python_callable=execution_data_task_id,
     provide_context=True,
     op_kwargs={
@@ -216,4 +187,4 @@ dwd_oride_driver_score_activity_conf_df_task = PythonOperator(
     dag=dag
 )
 
-ods_sqoop_base_data_driver_score_activity_conf_df_task >> dwd_oride_driver_score_activity_conf_df_task
+ods_sqoop_base_data_driver_rights_conf_df_task >> dwd_oride_driver_rights_conf_df_task
