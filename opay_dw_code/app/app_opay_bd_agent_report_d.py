@@ -43,7 +43,7 @@ dag = airflow.DAG('app_opay_bd_agent_report_d',
 dwm_opay_bd_agent_cico_df_task = OssSensor(
     task_id='dwm_opay_bd_agent_cico_df_task',
     bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opay/opay_dw/dwm_opay_bd_agent_cico_df/country_code=nal",
+        hdfs_path_str="opay/opay_dw/dwm_opay_bd_agent_cico_df/country_code=NG",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -54,7 +54,7 @@ dwm_opay_bd_agent_cico_df_task = OssSensor(
 dim_opay_bd_relation_df_task = OssSensor(
     task_id='dim_opay_bd_relation_df_task',
     bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opay/opay_dw/dim_opay_bd_relation_df/country_code=nal",
+        hdfs_path_str="opay/opay_dw/dim_opay_bd_relation_df/country_code=NG",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
