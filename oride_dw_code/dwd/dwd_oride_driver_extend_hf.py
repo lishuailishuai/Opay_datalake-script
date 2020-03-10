@@ -93,7 +93,7 @@ def dwd_oride_driver_extend_hf_sql_task(ds,hour):
         SET hive.exec.parallel=TRUE;
         SET hive.exec.dynamic.partition.mode=nonstrict;
 
-        insert overwrite table oride_dw.{table} partition(country_code,dt)
+        insert overwrite table oride_dw.{table} partition(country_code,dt,hour)
 
         SELECT
           id , -- '司机 ID',
