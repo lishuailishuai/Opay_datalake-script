@@ -400,7 +400,8 @@ def merge_pre_hi_data_task(hive_db, hive_h_his_table_name, hive_hi_table_name, p
                                                  now_hour)
 
 
-def merge_pre_hi_with_full_data_task(hive_db, hive_h_his_table_name,hive_hi_table_name, mysql_db_name, mysql_table_name, mysql_conn,
+def merge_pre_hi_with_full_data_task(hive_db, hive_h_his_table_name, hive_hi_table_name, mysql_db_name,
+                                     mysql_table_name, mysql_conn,
                                      sqoop_temp_db_name, sqoop_table_name,
                                      pt, now_hour, pre_day, pre_hour, **kwargs):
     sqoopSchema = SqoopSchemaUpdate()
@@ -548,8 +549,24 @@ for mysql_db_name, mysql_table_name, conn_id, prefix_name, priority_weight_nm, s
         dag=dag
     )
 
-    dependence_hive_hi_table_prev_day_task = OssSensor(
-        task_id='dependence_hive_hi_table_prev_day_task_{}'.format(hive_hi_table_name),
+    dependence_hive_hi_table_prev_day_full_merge_task = OssSensor(
+        task_id='dependence_hive_hi_table_prev_day_full_merge_task_{}'.format(hive_hi_table_name),
+        bucket_key='{hdfs_path_str}/dt={pt}/hour={hour}/_SUCCESS'.format(
+            hdfs_path_str="oride_binlog/%s" % (("{server_name}.{db_name}.{table_name}".format(
+                server_name=server_name,
+                db_name=mysql_db_name,
+                table_name=mysql_table_name
+            ))),
+            pt='{{ds}}',
+            hour='{{execution_date.strftime("%H")}}'
+        ),
+        bucket_name='opay-datalake',
+        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+        dag=dag
+    )
+
+    dependence_hive_hi_table_prev_day_merge_task = OssSensor(
+        task_id='dependence_hive_hi_table_prev_day_merge_task_{}'.format(hive_hi_table_name),
         bucket_key='{hdfs_path_str}/dt={pt}/hour={hour}/_SUCCESS'.format(
             hdfs_path_str="oride_binlog/%s" % (("{server_name}.{db_name}.{table_name}".format(
                 server_name=server_name,
@@ -618,5 +635,5 @@ for mysql_db_name, mysql_table_name, conn_id, prefix_name, priority_weight_nm, s
     )
 
     check_h_his_table >> validate_full_table_exist >> [add_partitions, import_table]
-    add_partitions >> dependence_hive_hi_table_prev_day_task >>  merge_pre_hi_data
-    import_table >> check_sqoop_table >> dependence_hive_hi_table_prev_day_task >> merge_pre_hi_with_full_data
+    add_partitions >> dependence_hive_hi_table_prev_day_merge_task >> merge_pre_hi_data
+    import_table >> check_sqoop_table >> dependence_hive_hi_table_prev_day_full_merge_task >> merge_pre_hi_with_full_data
