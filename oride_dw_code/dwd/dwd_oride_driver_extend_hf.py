@@ -133,11 +133,11 @@ def dwd_oride_driver_extend_hf_sql_task(ds,hour):
           country_id ,-- '所属国家',
           fee_free      ,-- '免佣金（0:不免佣金 1:免佣金）',
           version     ,-- '司机端版本号',
-          home_address   ,-- '顺路地址',
+          home_confirm ,-- '顺路地址是否确认 (0: 未确认 1: 已确认)',
+          home_address   ,-- '顺路地址'
+          home_status ,--'顺路地址状态 (0: 关闭 1: 开启)',
           home_lng  ,-- '顺路地址经度',
           home_lat  ,-- '顺路地址纬度',
-          home_confirm ,-- '顺路地址是否确认 (0: 未确认 1: 已确认)',
-          home_status ,--'顺路地址状态 (0: 关闭 1: 开启)',
           level     ,-- '司机等级',
           'nal' as country_code,
          '{pt}' as dt
@@ -164,7 +164,7 @@ def dwd_oride_driver_extend_hf_sql_task(ds,hour):
         ) t1
     where t1.`__deleted` = 'false' and t1.order_by = 1
 ) base;
-            ;
+            
 '''.format(
         pt=ds,
         table=table_name,
