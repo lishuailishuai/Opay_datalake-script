@@ -140,7 +140,8 @@ def dwd_oride_driver_extend_hf_sql_task(ds,hour):
           home_lat  ,-- '顺路地址纬度',
           level     ,-- '司机等级',
           'nal' as country_code,
-         '{pt}' as dt
+          '{pt}' as dt,
+          hour
     FROM
     (
      select
