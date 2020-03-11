@@ -166,6 +166,7 @@ def app_opay_active_user_report_d_sql_task(ds,ds_nodash):
                     top_consume_scenario, originator_id user_id,dt,originator_role role
                 from opay_dw.dwd_opay_transaction_record_di
                 where dt>date_sub('{pt}',30) and dt<='{pt}'  
+                    and date_format(create_time, 'yyyy-MM-dd') = dt
                     and originator_type = 'USER' and originator_id is not null and originator_id != ''
                 group by originator_id,dt,top_consume_scenario,originator_role
                 union all
@@ -173,7 +174,7 @@ def app_opay_active_user_report_d_sql_task(ds,ds_nodash):
                     top_consume_scenario, affiliate_id user_id,dt,affiliate_role role
                 from opay_dw.dwd_opay_transaction_record_di
                 where dt>date_sub('{pt}',30) and dt<='{pt}' 
-                    and and date_format(create_time, 'yyyy-MM-dd') = dt
+                    and date_format(create_time, 'yyyy-MM-dd') = dt
                     and affiliate_type = 'USER' and affiliate_id is not null and affiliate_id != ''
                 group by top_consume_scenario,affiliate_id,dt,affiliate_role
               ) a 
