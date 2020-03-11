@@ -117,7 +117,7 @@ def app_oride_user_funnel_aftord_d_sql_task(ds):
            sum(if(is_passanger_after_cancel=1 and is_arrive_receive_point=0,1,0)) as user_aftreply_befarri_cancel_cnt,  --应答后-司机到达前乘客取消量
            sum(if(is_passanger_after_cancel=1 and is_arrive_receive_point=1,1,0)) as user_aftreply_aftarri_cancel_cnt,  --应答后-司机到达后乘客取消量 
            
-           sum(if(is_passanger_before_cancel=1 and td_ord_to_cancel_dur>0 and td_ord_to_cancel_dur<3600,td_ord_to_cancel_dur,0)) as user_cancel_before_reply_dur,
+           sum(if(is_passanger_before_cancel=1 and ord_to_cancel_dur>0 and ord_to_cancel_dur<3600,ord_to_cancel_dur,0)) as user_cancel_before_reply_dur,
            --司机应答前乘客取消时长
            
            sum(if(take_order_dur>0 and take_order_dur<3600,take_order_dur,0)) as take_order_dur,   
