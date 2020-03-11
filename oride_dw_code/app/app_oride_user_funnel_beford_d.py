@@ -102,14 +102,14 @@ def app_oride_user_funnel_beford_d_sql_task(ds):
     with base as 
     (select user_id,
             event_name,
-            event_time,
-    				if(event_name='oride_show',1,if(event_name='choose_end_point_click',2,3)) as rn
+            cast(substr(event_time,1,10) as bigint) as event_time,
+    		if(event_name='oride_show',1,if(event_name='choose_end_point_click',2,3)) as rn
     from oride_dw.dwd_oride_client_event_detail_hi 
     where dt='{pt}'
-          and from_unixtime(cast(event_time as int),'yyyy-MM-dd')=dt
+          and from_unixtime(cast(substr(event_time,1,10) as bigint),'yyyy-MM-dd')=dt
          -- and app_version>='4.4.405' 
           and event_name in('oride_show','choose_end_point_click','request_a_ride_show')
-    group by user_id,event_name,event_time
+    group by user_id,event_name,cast(substr(event_time,1,10) as bigint)
     )
 
     insert overwrite table {db}.{table} partition(country_code,dt)
