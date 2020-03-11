@@ -64,6 +64,16 @@ dwd_opay_pos_transaction_record_di_task = OssSensor(
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
+ods_sqoop_base_user_di_prev_day_task = OssSensor(
+    task_id='ods_sqoop_base_user_di_prev_day_task',
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="opay_dw_sqoop_di/opay_user/user",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
 
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
 def fun_task_timeout_monitor(ds,dag,**op_kwargs):
@@ -96,6 +106,16 @@ def app_opay_pos_cube_d_sql_task(ds):
     set mapred.max.split.size=1000000;
     set hive.exec.dynamic.partition.mode=nonstrict;
     set hive.exec.parallel=true;
+    with 
+        um_data as (
+            SELECT 
+                user_id,ROLE
+            FROM (
+                SELECT user_id,ROLE,row_number()over(partition BY user_id ORDER BY update_time DESC) rn
+                FROM opay_dw_ods.ods_sqoop_base_user_di where dt<='{pt}' and role='agent') m
+            WHERE rn=1
+
+        )
     
     INSERT overwrite TABLE {db}.{table} partition (country_code, dt)
     
@@ -160,9 +180,11 @@ def app_opay_pos_cube_d_sql_task(ds):
             pos_id, terminal_id, user_id, t4.state, nvl(t5.region, '-') as region, country_code
         from (
             SELECT 
-                pos_id, state, terminal_id, user_id, country_code
-            FROM opay_dw.dim_opay_pos_terminal_base_df
-            WHERE dt='{pt}' AND bind_status='Y' AND create_time<'{pt} 24:00:00' and originator_role='agent'
+                pos_id, state, terminal_id, a.user_id, country_code
+            FROM (select * from opay_dw.dim_opay_pos_terminal_base_df
+                  WHERE dt='{pt}' AND bind_status='Y') a
+            inner join um_data b 
+            on a.user_id=b.user_id
         ) t4 left join (
             select
                 state, region
@@ -221,5 +243,6 @@ app_opay_pos_cube_d_task = PythonOperator(
 
 dim_opay_pos_terminal_base_df_prev_day_task >> app_opay_pos_cube_d_task
 dwd_opay_pos_transaction_record_di_task >> app_opay_pos_cube_d_task
+ods_sqoop_base_user_di_prev_day_task >> app_opay_pos_cube_d_task
 
 
