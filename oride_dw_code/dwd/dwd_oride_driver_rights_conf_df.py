@@ -104,18 +104,19 @@ def dwd_oride_driver_rights_conf_df_sql_task(ds):
           bbb.driver_level,
           bbb.s_proportion,
           bbb.e_proportion,
-          get_json_object(substr(bbb.type_rules,2,length(ccc.rewards)-2),'$.type'),
-          get_json_object(substr(bbb.type_rules,2,length(ccc.rewards)-2),'$.type_proportion'),
+          bbb.type_rules[0]["type"],
+          bbb.type_rules[0]["type_proportion"],
           ccc.driver_level,
-          get_json_object(substr(ccc.type_rules,2,length(ccc.rewards)-2),'$.type'),
-          get_json_object(substr(ccc.type_rules,2,length(ccc.rewards)-2),'$.type_proportion'),
+          ccc.type_rules[0]["type"],
+          ccc.type_rules[0]["type_proportion"],
           'nal' as country_code,
           '{pt}' as dt
           from 
-          oride_dw_ods.ods_sqoop_base_data_driver_score_reward_conf_df
+          oride_dw_ods.ods_sqoop_base_data_driver_rights_conf_df
           lateral view explode(split(substr(city_id,2,length(city_id)-2),',')) aa as city_id
-          LATERAL VIEW EXPLODE(from_json(driver_rules,array(named_struct("driver_level",cast(1 as bigint),"s_proportion",cast(1 as double),"e_proportion",cast(1 as double),"type_rules","")))) bb AS bbb
-          LATERAL VIEW EXPLODE(from_json(new_driver_rules,array(named_struct("driver_level",cast(1 as bigint),"type_rules","")))) cc AS ccc
+          LATERAL VIEW EXPLODE(from_json(driver_rules,array(named_struct("driver_level",cast(1 as bigint),"s_proportion",cast(1 as double),"e_proportion",cast(1 as double),
+          "type_rules",array(map("",1)))))) bb AS bbb
+          LATERAL VIEW EXPLODE(from_json(new_driver_rules,array(named_struct("driver_level",cast(1 as bigint),"type_rules",array(map("",1)))))) cc AS ccc
           where dt='{pt}'
 
     '''.format(
