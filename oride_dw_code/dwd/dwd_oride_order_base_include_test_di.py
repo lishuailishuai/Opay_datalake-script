@@ -488,7 +488,7 @@ SELECT base.id as order_id,
         if(base.wait_time>0 and base.take_time>0,(base.wait_time-base.take_time),0) as driver_arrive_car_point_dur,
         --司机接单到到达上车点时长
         
-        if(base.arrive_time>0>0,(base.arrive_time>0-base.create_time),0) as ord_to_arrive_dur,
+        if(base.arrive_time>0,(base.arrive_time>0-base.create_time),0) as ord_to_arrive_dur,
         --下单到送达总时长
             
         nvl(country.country_code,'nal') as country_code,
