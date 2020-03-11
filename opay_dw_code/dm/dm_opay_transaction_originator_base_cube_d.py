@@ -100,7 +100,7 @@ def dm_opay_transaction_originator_base_cube_d_sql_task(ds):
             country_code, top_service_type, sub_service_type, originator_type, originator_role, originator_kyc_level, originator_money_flow, order_status, client_source, 
             amount, originator_id
         from {db}.dwd_opay_transaction_record_di
-        where dt = '{pt}' and create_time BETWEEN date_format(date_sub('{pt}', 1), 'yyyy-MM-dd 23') AND date_format('{pt}', 'yyyy-MM-dd 23')
+        where dt = '{pt}' and date_format(create_time, 'yyyy-MM-dd') = dt
     ) t1
     group by country_code, top_service_type, sub_service_type, originator_type, originator_role, order_status, client_source
     GROUPING SETS ( 

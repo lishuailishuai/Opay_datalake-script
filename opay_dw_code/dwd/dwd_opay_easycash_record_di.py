@@ -88,6 +88,7 @@ task_timeout_monitor= PythonOperator(
 db_name="opay_dw"
 table_name = "dwd_opay_easycash_record_di"
 hdfs_path="oss://opay-datalake/opay/opay_dw/" + table_name
+config = eval(Variable.get("opay_time_zone_config"))
 
 
 
@@ -123,7 +124,9 @@ def dwd_opay_easycash_record_di_sql_task(ds):
         select 
             order_no, amount, currency, user_id as originator_id, 
             mobile as affiliate_mobile,
-            create_time, update_time, country, order_status, error_code, error_msg, next_step, accounting_status,
+            default.localTime("{config}", 'NG',create_time, 0) as create_time,
+            default.localTime("{config}", 'NG',update_time, 0) as update_time,  
+            country, order_status, error_code, error_msg, next_step, accounting_status,
             nvl(fee_amount, 0) as fee_amount, nvl(fee_pattern, '-') as fee_pattern, '-' as outward_id, '-' as outward_type
         from
         opay_dw_ods.ods_sqoop_base_user_easycash_record_di 
@@ -134,7 +137,8 @@ def dwd_opay_easycash_record_di_sql_task(ds):
     '''.format(
         pt=ds,
         db=db_name,
-        table=table_name
+        table=table_name,
+        config=config
     )
     return HQL
 

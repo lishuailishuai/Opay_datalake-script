@@ -479,6 +479,15 @@ SELECT base.id as order_id,
        base.source_type,
        --'订单来源(0.默认oride 1.h5)
        
+       if(base.cancel_time>0,(base.cancel_time - base.create_time),0) as td_ord_to_cancel_dur,
+        --当天下单到取消时长
+        
+       if(base.wait_time>0 and base.take_time>0,(base.wait_time-base.take_time),0) as driver_arrive_car_point_dur,
+        --司机接单到到达上车点时长
+        
+       if(base.arrive_time>0,(base.arrive_time-base.create_time),0) as ord_to_arrive_dur,
+        --下单到送达总时长
+       
        nvl(country.country_code,'nal') as country_code,
 
        '{pt}' AS dt

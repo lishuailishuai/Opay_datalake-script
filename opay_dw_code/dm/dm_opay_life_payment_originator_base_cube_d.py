@@ -97,7 +97,7 @@ def dm_opay_life_payment_originator_base_cube_d_sql_task(ds):
             amount
         from {db}.dwd_opay_life_payment_record_di
         where dt = '{pt}' 
-            and create_time BETWEEN date_format(date_sub('{pt}', 1), 'yyyy-MM-dd 23') AND date_format('{pt}', 'yyyy-MM-dd 23')
+            and date_format(create_time, 'yyyy-MM-dd') = dt
             and recharge_service_provider != '' and recharge_service_provider != 'supabet' and recharge_service_provider is not null
     ) t1
     group by country_code, sub_service_type, recharge_service_provider, originator_role, order_status

@@ -119,6 +119,7 @@ db_name="opay_dw"
 
 table_name = "dwd_opay_account_balance_df"
 hdfs_path="oss://opay-datalake/opay/opay_dw/" + table_name
+config = eval(Variable.get("opay_time_zone_config"))
 
 def dwd_opay_account_balance_df_sql_task(ds):
     HQL = '''
@@ -191,8 +192,8 @@ def dwd_opay_account_balance_df_sql_task(ds):
             currency,
             account_state,
             auth,
-            create_time,
-            update_time
+            default.localTime("{config}", 'NG',create_time, 0) as create_time,
+            default.localTime("{config}", 'NG',update_time, 0) as update_time
         FROM opay_dw_ods.ods_sqoop_base_account_merchant_df
         where dt='{pt}' and create_time<'{pt} 23:00:00'
         union all
@@ -205,8 +206,8 @@ def dwd_opay_account_balance_df_sql_task(ds):
             currency,
             account_state,
             auth,
-            create_time,
-            update_time
+            default.localTime("{config}", 'NG',create_time, 0) as create_time,
+            default.localTime("{config}", 'NG',update_time, 0) as update_time
         FROM opay_dw_ods.ods_sqoop_base_account_user_df where dt='{pt}' AND create_time<'{pt} 23:00:00'
     ) t0 inner join um_data t1 on t0.user_id = t1.user_id
     union all
@@ -231,16 +232,18 @@ def dwd_opay_account_balance_df_sql_task(ds):
     from (
          SELECT 
             user_id,'USER' user_type,'OWEALTH' account_type,share_acct_id account_no,balance,currency,acct_status account_state,memo auth,
-            create_time,update_time
+            create_time,
+            update_time
         FROM opay_owealth_ods.ods_sqoop_owealth_share_acct_df 
-        where dt='{pt}' and create_time<'{pt} 23:00:00'
+        where dt='{pt}' and date_format(create_time, 'yyyy-MM-dd') <= '{pt}'
     ) t2 inner join um_data t3 on t2.user_id = t3.mobile
    
    
     '''.format(
         pt=ds,
         table=table_name,
-        db=db_name
+        db=db_name,
+        config=config
         )
     return HQL
 

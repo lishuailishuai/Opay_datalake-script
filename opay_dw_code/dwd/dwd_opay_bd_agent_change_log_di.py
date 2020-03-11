@@ -88,7 +88,7 @@ task_timeout_monitor= PythonOperator(
 db_name = "opay_dw"
 table_name = "dwd_opay_bd_agent_change_log_di"
 hdfs_path="oss://opay-datalake/opay/opay_dw/" + table_name
-
+config = eval(Variable.get("opay_time_zone_config"))
 
 def dwd_opay_bd_agent_change_log_di_sql_task(ds):
     HQL='''
@@ -106,7 +106,9 @@ def dwd_opay_bd_agent_change_log_di_sql_task(ds):
             id, bd_agent_id, user_id, create_time, from_agent_status, to_agent_status
         from (
             select 
-                id, agent_id as bd_agent_id, opay_id as user_id, created_at as create_time, from_agent_status, to_agent_status,
+                id, agent_id as bd_agent_id, opay_id as user_id, 
+                default.localTime("{config}", 'NG',created_at, 0) as create_time,
+                from_agent_status, to_agent_status,
                 row_number() over(partition by opay_id order by created_at desc) rn
             from opay_dw_ods.ods_sqoop_base_bd_agent_status_change_log_di
             where dt = '{pt}'
@@ -115,12 +117,13 @@ def dwd_opay_bd_agent_change_log_di_sql_task(ds):
         select 
             id, bd_id as bd_admin_user_id
         from opay_dw_ods.ods_sqoop_base_bd_agent_df
-        where dt = '{pt}'
+        where dt = '{pt}' and created_at<'{pt} 23:00:00'
     ) t2 on t1.bd_agent_id = t2.id
     '''.format(
         pt=ds,
         table=table_name,
-        db=db_name
+        db=db_name,
+        config=config
     )
     return HQL
 

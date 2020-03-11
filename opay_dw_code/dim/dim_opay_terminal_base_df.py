@@ -77,7 +77,7 @@ db_name = "opay_dw"
 
 table_name = "dim_opay_terminal_base_df"
 hdfs_path = "oss://opay-datalake/opay/opay_dw/" + table_name
-
+config = eval(Variable.get("opay_time_zone_config"))
 
 def dim_opay_terminal_base_df_sql_task(ds):
     HQL = '''
@@ -96,8 +96,8 @@ def dim_opay_terminal_base_df_sql_task(ds):
         user_type as owner_type,
         user_id as owner_id,
         owner_name,
-        create_time,
-        update_time,
+        default.localTime("{config}", 'NG',create_time, 0) as create_time,
+        default.localTime("{config}", 'NG',update_time, 0) as update_time,
         terminal_type,
         'NG' AS country_code,
         '{pt}' as dt
@@ -107,7 +107,8 @@ def dim_opay_terminal_base_df_sql_task(ds):
     '''.format(
         pt=ds,
         table=table_name,
-        db=db_name
+        db=db_name,
+        config=config
     )
     return HQL
 

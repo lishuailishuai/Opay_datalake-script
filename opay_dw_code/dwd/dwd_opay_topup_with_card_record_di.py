@@ -111,6 +111,7 @@ task_timeout_monitor= PythonOperator(
 db_name = "opay_dw"
 table_name = "dwd_opay_topup_with_card_record_di"
 hdfs_path="oss://opay-datalake/opay/opay_dw/" + table_name
+config = eval(Variable.get("opay_time_zone_config"))
 
 
 def dwd_opay_topup_with_card_record_di_sql_task(ds):
@@ -154,7 +155,9 @@ def dwd_opay_topup_with_card_record_di_sql_task(ds):
             bind_card_id as affiliate_bind_card_id, bank_code as affiliate_bank_code, bank_name as affiliate_bank_name, 
             bank_account_no_encrypted as affiliate_bank_account_no_encrypted, bank_card_no_encrypted as affiliate_bank_card_no_encrypted,
              '-' as affiliate_bank_mobile, '-' as affiliate_bank_email, scheme as affiliate_bank_scheme, '-' as payment_order_no,
-            create_time, update_time, country, order_status, error_code, error_msg, client_source, pay_channel as pay_way, next_step, out_channel_id, business_type, accounting_status,
+            default.localTime("{config}", 'NG',create_time, 0) as create_time,
+            default.localTime("{config}", 'NG',update_time, 0) as update_time, 
+            country, order_status, error_code, error_msg, client_source, pay_channel as pay_way, next_step, out_channel_id, business_type, accounting_status,
             nvl(fee, 0) as fee_amount, nvl(fee_pattern, '-') as fee_pattern, nvl(outward_id, '-') as outward_id, nvl(outward_type, '-') as outward_type
         from opay_dw_ods.ods_sqoop_base_user_topup_record_di
         where dt = '{pt}'
@@ -164,7 +167,9 @@ def dwd_opay_topup_with_card_record_di_sql_task(ds):
             '-' as affiliate_bind_card_id, bank_code as affiliate_bank_code, bank_name as affiliate_bank_name, 
             bank_account_no_encrypted as affiliate_bank_account_no_encrypted, bank_card_no_encrypted as affiliate_bank_card_no_encrypted,
             customer_phone as affiliate_bank_mobile, customer_email as affiliate_bank_email, scheme as affiliate_bank_scheme, merchant_order_no as payment_order_no,
-            create_time, update_time, country, order_status, error_code, error_msg, '-' as client_source, pay_channel as pay_way, next_step, out_channel_id, '-' as business_type, accounting_status,
+            default.localTime("{config}", 'NG',create_time, 0) as create_time,
+            default.localTime("{config}", 'NG',update_time, 0) as update_time, 
+            country, order_status, error_code, error_msg, '-' as client_source, pay_channel as pay_way, next_step, out_channel_id, '-' as business_type, accounting_status,
             nvl(fee, 0) as fee_amount, nvl(fee_pattern, '-') as fee_pattern, nvl(outward_id, '-') as outward_id, nvl(outward_type, '-') as outward_type
         from opay_dw_ods.ods_sqoop_base_merchant_topup_record_di
         where dt = '{pt}'
@@ -173,7 +178,8 @@ def dwd_opay_topup_with_card_record_di_sql_task(ds):
     '''.format(
         pt=ds,
         table=table_name,
-        db=db_name
+        db=db_name,
+        config=config
     )
     return HQL
 
