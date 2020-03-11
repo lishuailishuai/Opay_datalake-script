@@ -99,6 +99,7 @@ def app_opay_life_payment_consume_sum_d_sql_task(ds):
         '{pt}' as dt
     from opay_dw.dwd_opay_life_payment_record_di
     where dt = '{pt}'
+          and date_format(create_time, 'yyyy-MM-dd') = '{pt}'
     group by sub_consume_scenario, recharge_service_provider, client_source, pay_way, originator_type, originator_role, order_status, country_code
     '''.format(
         pt=ds,

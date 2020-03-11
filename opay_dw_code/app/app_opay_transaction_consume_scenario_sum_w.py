@@ -111,7 +111,7 @@ def app_opay_transaction_consume_scenario_sum_w_sql_task(ds):
             row_number() over(partition by order_no order by update_time desc) rn
         from {db}.dwd_opay_transaction_record_di 
         where dt between date_sub(next_day('{pt}', 'mo'), 7)  and date_sub(next_day('{pt}', 'mo'), 1) 
-            and create_time BETWEEN date_format(date_sub(next_day('{pt}', 'mo'), 8), 'yyyy-MM-dd 23') AND date_format(date_sub(next_day('{pt}', 'mo'), 1), 'yyyy-MM-dd 23') 
+            and date_format(create_time, 'yyyy-MM-dd') between date_sub(next_day('{pt}', 'mo'), 7)  and date_sub(next_day('{pt}', 'mo'), 1)
     ) t1 where rn = 1
     group by country_code, top_consume_scenario, sub_consume_scenario, originator_type, originator_role, client_source, order_status
 

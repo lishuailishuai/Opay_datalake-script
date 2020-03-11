@@ -109,7 +109,8 @@ def app_opay_pos_cube_w_sql_task(ds):
                 pos_id, state, order_status, country_code, affiliate_terminal_id, originator_id
             from opay_dw.dwd_opay_pos_transaction_record_di
             where dt between date_sub(next_day('{pt}', 'mo'), 7)  and date_sub(next_day('{pt}', 'mo'), 1) 
-                and create_time BETWEEN date_format(date_sub(next_day('{pt}', 'mo'), 8), 'yyyy-MM-dd 23') AND date_format(date_sub(next_day('{pt}', 'mo'), 1), 'yyyy-MM-dd 23')
+                and date_format(create_time, 'yyyy-MM-dd') between date_sub(next_day('{pt}', 'mo'), 7)  and date_sub(next_day('{pt}', 'mo'), 1)
+                
                 and originator_type = 'USER' 
         ) t1 left join (
             select

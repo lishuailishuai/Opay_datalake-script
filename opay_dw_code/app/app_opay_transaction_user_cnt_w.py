@@ -88,7 +88,7 @@ def app_opay_transaction_user_cnt_w_sql_task(ds):
                 country_code, top_consume_scenario, nvl(client_source, '-') as client_source, originator_role, originator_kyc_level, originator_id
             from {db}.dwd_opay_transaction_record_di
             where dt between date_sub(next_day('{pt}', 'mo'), 7)  and date_sub(next_day('{pt}', 'mo'), 1) 
-                and create_time BETWEEN date_format(date_sub(next_day('{pt}', 'mo'), 8), 'yyyy-MM-dd 23') AND date_format(date_sub(next_day('{pt}', 'mo'), 1), 'yyyy-MM-dd 23') 
+                and date_format(create_time, 'yyyy-MM-dd') between date_sub(next_day('{pt}', 'mo'), 7)  and date_sub(next_day('{pt}', 'mo'), 1) 
                 and originator_type = 'USER' and originator_id is not null and originator_id != ''
         )
     insert overwrite table {db}.{table} partition(country_code, dt)

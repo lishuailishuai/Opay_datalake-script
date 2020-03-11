@@ -115,7 +115,7 @@ def app_opay_channel_transaction_sum_d_sql_task(ds):
                   cast(substr(AES_DECRYPT(UNHEX(bank_card_no), UNHEX('4132E08EA055A2B852DE8C214C885C2A')),1,6) as STRING) bank
            FROM opay_dw.dwd_opay_channel_transaction_base_di
            WHERE dt='{pt}'
-             AND create_time BETWEEN date_format(date_sub('{pt}', 1), 'yyyy-MM-dd 23') AND date_format('{pt}', 'yyyy-MM-dd 23') ) a
+                and date_format(create_time, 'yyyy-MM-dd') = dt ) a
         LEFT JOIN opay_dw.dim_opay_bank_response_message_df b ON a.bank_response_message=b.bank_response_message
         LEFT JOIN (select * from opay_dw_ods.ods_sqoop_base_card_bin_df where dt='2020-02-11') c on a.bank=c.bin
         GROUP BY pay_channel,

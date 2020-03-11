@@ -119,8 +119,9 @@ def app_opay_pos_cube_d_sql_task(ds):
             select 
                 pos_id, state, order_status, country_code, affiliate_terminal_id, originator_id
             from opay_dw.dwd_opay_pos_transaction_record_di
-            where dt = '{pt}' and create_time BETWEEN date_format(date_sub('{pt}', 1), 'yyyy-MM-dd 23') AND date_format('{pt}', 'yyyy-MM-dd 23')
-                and originator_type = 'USER' 
+            where dt = '{pt}' 
+                  and date_format(create_time, 'yyyy-MM-dd') = '{pt}'
+                  and originator_type = 'USER' 
         ) t1 left join (
             select
                 state, region
@@ -161,7 +162,7 @@ def app_opay_pos_cube_d_sql_task(ds):
             SELECT 
                 pos_id, state, terminal_id, user_id, country_code
             FROM opay_dw.dim_opay_pos_terminal_base_df
-            WHERE dt='{pt}' AND bind_status='Y' AND create_time<'{pt} 23:00:00' and originator_role='agent'
+            WHERE dt='{pt}' AND bind_status='Y' AND create_time<'{pt} 24:00:00' and originator_role='agent'
         ) t4 left join (
             select
                 state, region

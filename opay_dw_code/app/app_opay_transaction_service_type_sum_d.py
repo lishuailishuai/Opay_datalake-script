@@ -99,7 +99,7 @@ def app_opay_transaction_service_type_sum_d_sql_task(ds):
         country_code,
         '{pt}' as dt
     from {db}.dwd_opay_transaction_record_di 
-    where dt = '{pt}' and create_time BETWEEN date_format(date_sub('{pt}', 1), 'yyyy-MM-dd 23') AND date_format('{pt}', 'yyyy-MM-dd 23')
+    where dt = '{pt}' and date_format(create_time, 'yyyy-MM-dd') = '{pt}'
     group by country_code, top_service_type, sub_service_type, originator_type, originator_role, client_source, order_status
 
     '''.format(

@@ -110,15 +110,17 @@ def app_opay_active_user_cube_d_sql_task(ds, ds_nodash):
               ( select 
                     top_consume_scenario, originator_id user_id,dt,originator_role role
                 from opay_dw.dwd_opay_transaction_record_di
-                where dt>date_sub('{pt}',30) and dt<='{pt}' and create_time BETWEEN date_format(date_sub(dt, 1), 'yyyy-MM-dd 23') AND date_format(dt, 'yyyy-MM-dd 23') 
-                    and originator_type = 'USER' and originator_id is not null and originator_id != ''
+                where dt>date_sub('{pt}',30) and dt<='{pt}' 
+                      and date_format(create_time, 'yyyy-MM-dd') =dt
+                      and originator_type = 'USER' and originator_id is not null and originator_id != ''
                 group by originator_id,dt,top_consume_scenario,originator_role
                 union all
                 select 
                     top_consume_scenario, affiliate_id user_id,dt,affiliate_role role
                 from opay_dw.dwd_opay_transaction_record_di
-                where dt>date_sub('{pt}',30) and dt<='{pt}' and create_time BETWEEN date_format(date_sub(dt, 1), 'yyyy-MM-dd 23') AND date_format(dt, 'yyyy-MM-dd 23') 
-                    and affiliate_type = 'USER' and affiliate_id is not null and affiliate_id != ''
+                where dt>date_sub('{pt}',30) and dt<='{pt}' 
+                      and date_format(create_time, 'yyyy-MM-dd') =dt
+                      and affiliate_type = 'USER' and affiliate_id is not null and affiliate_id != ''
                 group by top_consume_scenario,affiliate_id,dt,affiliate_role
               ) a 
     inner join 

@@ -96,7 +96,7 @@ def app_opay_life_payment_cube_d_sql_task(ds):
         FROM opay_dw.dwd_opay_life_payment_record_di
         WHERE dt='{pt}'
           AND top_service_type='Life Payment'
-          AND create_time BETWEEN date_format(date_sub('{pt}', 1), 'yyyy-MM-dd 23') AND date_format('{pt}', 'yyyy-MM-dd 23')
+          and date_format(create_time, 'yyyy-MM-dd') = '{pt}'
     )
     
     INSERT overwrite TABLE opay_dw.app_opay_life_payment_cube_d partition (country_code='NG',dt='{pt}')

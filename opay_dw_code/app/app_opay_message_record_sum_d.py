@@ -95,8 +95,9 @@ def app_opay_message_record_sum_d_sql_task(ds):
           'NG' country_code,
           dt
    from opay_dw.dwd_opay_message_record_base_di 
-   where dt='{pt}' and
-         create_time BETWEEN date_format(date_sub('{pt}', 1), 'yyyy-MM-dd 23') AND date_format('{pt}', 'yyyy-MM-dd 23')
+   where dt='{pt}' 
+        and date_format(create_time, 'yyyy-MM-dd') = '{pt}'
+
    group by dt,template_name,message_type,message_channels,delivered_channel,status,country_code
 
     '''.format(

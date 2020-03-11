@@ -105,7 +105,7 @@ def app_opay_pos_trans_sum_m_sql_task(ds):
                 amount, provider_share_amount, msc_cost_amount, fee_amount,row_number()over(partition by order_no order by update_time desc) rn 
            from opay_dw.dwd_opay_pos_transaction_record_di
            where dt between date_format('{pt}', 'yyyy-MM-01')  and '{pt}'
-                  and create_time BETWEEN date_format(date_sub(date_format('{pt}', 'yyyy-MM-01'), 1), 'yyyy-MM-dd 23') AND date_format('{pt}', 'yyyy-MM-dd 23') 
+                  and date_format(create_time, 'yyyy-MM-dd') between date_format('{pt}', 'yyyy-MM-01')  and '{pt}' 
            ) m where rn=1
     ) t1 left join (
         select

@@ -103,7 +103,7 @@ def app_opay_pos_trans_sum_d_sql_task(ds):
             pos_id, state, affiliate_bank_code, originator_type, order_status, country_code,
             amount, provider_share_amount, msc_cost_amount, fee_amount
         from opay_dw.dwd_opay_pos_transaction_record_di
-        where dt = '{pt}' and create_time BETWEEN date_format(date_sub('{pt}', 1), 'yyyy-MM-dd 23') AND date_format('{pt}', 'yyyy-MM-dd 23')
+        where dt = '{pt}' and date_format(create_time, 'yyyy-MM-dd') = '{pt}'
     ) t1 left join (
         select
             state, region

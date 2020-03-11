@@ -98,7 +98,7 @@ def app_opay_transaction_user_cnt_d_sql_task(ds):
             select 
                     country_code, top_consume_scenario, nvl(client_source, '-') as client_source, originator_role, originator_kyc_level, originator_id
                 from {db}.dwd_opay_transaction_record_di
-                where dt = '{pt}' and create_time BETWEEN date_format(date_sub('{pt}', 1), 'yyyy-MM-dd 23') AND date_format('{pt}', 'yyyy-MM-dd 23') 
+                where dt = '{pt}' and date_format(create_time, 'yyyy-MM-dd') = '{pt}'
                     and originator_type = 'USER' and originator_id is not null and originator_id != ''
         ),
         trans_dau_data as (
