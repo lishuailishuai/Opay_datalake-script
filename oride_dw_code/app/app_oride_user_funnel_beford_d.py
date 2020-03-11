@@ -24,10 +24,11 @@ import os
 from plugins.TaskTouchzSuccess import TaskTouchzSuccess
 from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
 from airflow.sensors import OssSensor
+from plugins.CountriesPublicFrame import CountriesPublicFrame
 
 args = {
     'owner': 'lili.chen',
-    'start_date': datetime(2020, 3, 8),
+    'start_date': datetime(2020, 3, 10),
     'depends_on_past': False,
     'retries': 3,
     'retry_delay': timedelta(minutes=2),
@@ -194,32 +195,62 @@ def app_oride_user_funnel_beford_d_sql_task(ds):
     )
     return HQL
 
-
 # 主流程
-def execution_data_task_id(ds, **kargs):
+def execution_data_task_id(ds, **kwargs):
+    v_date = kwargs.get('v_execution_date')
+    v_day = kwargs.get('v_execution_day')
+    v_hour = kwargs.get('v_execution_hour')
+
     hive_hook = HiveCliHook()
 
+    """
+        #功能函数
+        alter语句: alter_partition
+        删除分区: delete_partition
+        生产success: touchz_success
+
+        #参数
+        第一个参数true: 所有国家是否上线。false 没有
+        第二个参数true: 数据目录是有country_code分区。false 没有
+        第三个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
+
+        #读取sql
+        %_sql(ds,v_hour)
+
+        第一个参数ds: 天级任务
+        第二个参数v_hour: 小时级任务，需要使用
+
+    """
+
+    cf = CountriesPublicFrame("false", ds, db_name, table_name, hdfs_path, "true", "true")
+
+    # 删除分区
+    cf.delete_partition()
+
     # 读取sql
-    _sql = app_oride_user_funnel_beford_d_sql_task(ds)
+    _sql = "\n" + cf.alter_partition() + "\n" + app_oride_user_funnel_beford_d_sql_task(ds)
 
     logging.info('Executing: %s', _sql)
 
     # 执行Hive
     hive_hook.run_cli(_sql)
 
-    # 生成_SUCCESS
-    """
-    第一个参数true: 数据目录是有country_code分区。false 没有
-    第二个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
+    # 熔断数据，如果数据不能为0
+    # check_key_data_cnt_task(ds)
 
-    """
-    TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "true", "true")
+    # 生产success
+    cf.touchz_success()
 
 
 app_oride_user_funnel_beford_d_task = PythonOperator(
     task_id='app_oride_user_funnel_beford_d_task',
     python_callable=execution_data_task_id,
     provide_context=True,
+    op_kwargs={
+        'v_execution_date': '{{execution_date.strftime("%Y-%m-%d %H:%M:%S")}}',
+        'v_execution_day': '{{execution_date.strftime("%Y-%m-%d")}}',
+        'v_execution_hour': '{{execution_date.strftime("%H")}}'
+    },
     dag=dag
 )
 
