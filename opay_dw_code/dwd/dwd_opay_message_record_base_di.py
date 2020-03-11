@@ -79,7 +79,7 @@ db_name = "opay_dw"
 
 table_name = "dwd_opay_message_record_base_di"
 hdfs_path = "oss://opay-datalake/opay/opay_dw/" + table_name
-
+config = eval(Variable.get("opay_time_zone_config"))
 
 def dwd_opay_message_record_base_di_sql_task(ds):
     HQL = '''
@@ -101,27 +101,9 @@ def dwd_opay_message_record_base_di_sql_task(ds):
     status,
     third_msg_id,
     remark,
-    create_time,
-    update_time,
-     CASE country_code
-           WHEN 'Nigeria' THEN 'NG'
-           WHEN 'Norway' THEN 'NO'
-           WHEN 'Ghana' THEN 'GH'
-           WHEN 'Botswana' THEN 'BW'
-           WHEN 'Ghana' THEN 'GH'
-           WHEN 'Kenya' THEN 'KE'
-           WHEN 'Malawi' THEN 'MW'
-           WHEN 'Mozambique' THEN 'MZ'
-           WHEN 'Poland' THEN 'PL'
-           WHEN 'South Africa' THEN 'ZA'
-           WHEN 'Sweden' THEN 'SE'
-           WHEN 'Tanzania' THEN 'TZ'
-           WHEN 'Uganda' THEN 'UG'
-           WHEN 'USA' THEN 'US'
-           WHEN 'Zambia' THEN 'ZM'
-           WHEN 'Zimbabwe' THEN 'ZW'
-           ELSE 'NG'
-      END AS country_code,
+    default.localTime("{config}", 'NG',create_time, 0) as create_time,
+    default.localTime("{config}", 'NG',update_time, 0) as update_time,
+    'NG' as country_code,
     dt
 from opay_dw_ods.ods_sqoop_base_message_record_di
     where dt='{pt}'
@@ -129,7 +111,8 @@ from opay_dw_ods.ods_sqoop_base_message_record_di
     '''.format(
         pt=ds,
         table=table_name,
-        db=db_name
+        db=db_name,
+        config=config
     )
     return HQL
 

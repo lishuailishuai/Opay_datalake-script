@@ -182,13 +182,18 @@ def dwm_oride_driver_finance_di_sql_task(ds):
            repay.amount,  --司机每期还款金额
            repay.numbers, --总期数,总贷款金额=amount*numbers，理论应还金额=amount*repaid_numbers
            repay.repaid_numbers,  --已还款期数,剩余还款期数=numbers-repaid_numbers
-           repay.balance,  --司机账户余额
+           repay.balance,  --司机账户余额(通过driver_repayment关联出来的，不全)
            repay.theory_repay_amount,  --理论应还金额
            nvl(repay.act_repay_amount, 0 ) act_repay_amount, --实际已还款金额
            nvl(repay.act_repay_amount / repay.amount ,0) as act_repaid_numbers , --实际已还款期数
            nvl(if(repay.balance < 0,(repay.all_repay_amount-repay.act_repay_amount) / repay.amount,0),0) as conversion_overdue_days, --换算逾期天数
            --nvl(repay.all_repay_amount,0) as all_repay_amount, --总贷款金额=amount*numbers         
            recharge.complain_amount,  --司机被投诉罚款
+           recharge.repair_amount, --补录取份子钱
+           recharge.other_amount, --财务小项
+           bal.balance as driver_balance, --司机余额(司机维度直接关联，全)  2020-03-05更新
+           if(bal.balance>0,recharge.theory_phone_amount,0) as  theory_phone_amount, --手机还款(理论) 2020-03-05更新
+           
            
            dri.country_code,
            '{pt}' as dt
@@ -227,11 +232,14 @@ def dwm_oride_driver_finance_di_sql_task(ds):
         (
         select driver_id,
                sum(if(amount_reason in(4,5,7),amount,0)) as recharge_amount,  --资金调整金额
-               sum(if(amount_reason=14,amount,0)) as complain_amount  --司机被投诉罚款
+               sum(if(amount_reason=14,amount,0)) as complain_amount,  --司机被投诉罚款
+               sum(if(amount_reason=1,amount,0)) as repair_amount, -- 补录份子钱
+               sum(if(amount_reason in (2,8,9,10,15,16,17,18),amount,0)) as  other_amount, --财务小项
+               sum(if(amount_reason =6 and amount_reason!=0,amount,0)) as theory_phone_amount  --手机还款(理论)
         from oride_dw.dwd_oride_driver_recharge_records_df 
         where dt='{pt}'
         and from_unixtime(created_at,'yyyy-MM-dd')='{pt}'
-        and amount_reason in(4,5,7,14)
+        and amount_reason in(4,5,7,14,2,8,9,10,15,16,17,18,6)
         group by driver_id
         ) recharge
         on dri.driver_id=recharge.driver_id
@@ -340,8 +348,15 @@ def dwm_oride_driver_finance_di_sql_task(ds):
                 from oride_dw.dwd_oride_driver_balance_extend_df
                 where dt='{pt}'
             ) balance on repay.driver_id=balance.driver_id
-        ) repay
-        on dri.driver_id=repay.driver_id;
+        ) repay  on dri.driver_id=repay.driver_id
+        left join
+        (
+            select
+                        driver_id,
+                        balance 
+                    from oride_dw.dwd_oride_driver_balance_extend_df
+                    where dt='{pt}'
+        )bal  on bal.driver_id = dri.driver_id;
     '''.format(
         pt=ds,
         now_day=airflow.macros.ds_add(ds, +1),

@@ -245,9 +245,9 @@ ci_data as (
       , 'USER' as affiliate_type
       , recipient_id as affiliate_id
       , '-' as payment_order_no
-      , default.localTime("{config}",if(nvl(country,'')='','NG',country),from_unixtime(cast(cast(create_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as create_time
-      , default.localTime("{config}",if(nvl(country,'')='','NG',country),from_unixtime(cast(cast(update_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as update_time
-      , if(nvl(country,'')='','NG',country) as country
+      , default.localTime("{config}",'NG',from_unixtime(cast(cast(create_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as create_time
+      , default.localTime("{config}",'NG',from_unixtime(cast(cast(update_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as update_time
+      , 'NG' as country
       , 'Cash In' as sub_service_type
       , order_status
       , error_code
@@ -320,9 +320,9 @@ co_data as (
       , 'USER' as affiliate_type
       , recipient_id as affiliate_id
       , '-' as payment_order_no
-      , default.localTime("{config}",if(nvl(country,'')='','NG',country),from_unixtime(cast(cast(create_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as create_time
-      , default.localTime("{config}",if(nvl(country,'')='','NG',country),from_unixtime(cast(cast(update_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as update_time
-      , if(nvl(country,'')='','NG',country) as country
+      , default.localTime("{config}",'NG',from_unixtime(cast(cast(create_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as create_time
+      , default.localTime("{config}",'NG',from_unixtime(cast(cast(update_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as update_time
+      , 'NG' as country
       , 'Cash Out' as sub_service_type
       , order_status
       , error_code
@@ -440,7 +440,7 @@ select
   , t2.state
   , t1.utc_date_hour
 
-  , t1.country as country_code
+  , 'NG' as country_code
   , date_format(default.localTime("{config}", t1.country, '{v_date}', 0), 'yyyy-MM-dd') as dt
   , date_format(default.localTime("{config}", t1.country, '{v_date}', 0), 'HH') as hour
 

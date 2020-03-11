@@ -29,7 +29,7 @@ from utils.get_local_time import GetLocalTime
 
 args = {
     'owner': 'liushuzhen',
-    'start_date': datetime(2020, 3, 3),
+    'start_date': datetime(2020, 3, 5),
     'depends_on_past': False,
     'retries': 3,
     'retry_delay': timedelta(minutes=2),
@@ -38,14 +38,14 @@ args = {
     'email_on_retry': False,
 }
 
-dag = airflow.DAG('dwd_opay_receive_money_record_hi',
+dag = airflow.DAG('dwd_opay_topup_with_card_record_hi',
                   schedule_interval="30 * * * *",
                   default_args=args,
-                  )
+                  catchup=False)
 
 ##----------------------------------------- 变量 ---------------------------------------##
 db_name = "opay_dw"
-table_name = "dwd_opay_receive_money_record_hi"
+table_name = "dwd_opay_topup_with_card_record_hi"
 hdfs_path = "oss://opay-datalake/opay/opay_dw/" + table_name
 config = eval(Variable.get("opay_time_zone_config"))
 time_zone = config['NG']['time_zone']
@@ -80,10 +80,10 @@ dim_opay_merchant_base_hf_check_task = OssSensor(
     dag=dag
 )
 ### 检查当前小时的分区依赖
-ods_binlog_base_user_receive_money_record_hi_check_task = OssSensor(
-    task_id='ods_binlog_base_user_receive_money_record_hi_check_task',
+ods_binlog_base_user_topup_record_hi_check_task = OssSensor(
+    task_id='ods_binlog_base_user_topup_record_hi_check_task',
     bucket_key='{hdfs_path_str}/dt={pt}/hour={hour}/_SUCCESS'.format(
-        hdfs_path_str="opay_binlog/opay_transaction_db.opay_transaction.user_receive_money_record",
+        hdfs_path_str="opay_binlog/opay_transaction_db.opay_transaction.user_topup_record",
         pt='{{ds}}',
         hour='{{ execution_date.strftime("%H") }}'
     ),
@@ -92,10 +92,10 @@ ods_binlog_base_user_receive_money_record_hi_check_task = OssSensor(
     dag=dag
 )
 
-ods_binlog_base_merchant_receive_money_record_hi_check_task = OssSensor(
-    task_id='ods_binlog_base_merchant_receive_money_record_hi_check_task',
+ods_binlog_base_merchant_topup_record_hi_check_task = OssSensor(
+    task_id='ods_binlog_base_merchant_topup_record_hi_check_task',
     bucket_key='{hdfs_path_str}/dt={pt}/hour={hour}/_SUCCESS'.format(
-        hdfs_path_str="opay_binlog/opay_transaction_db.opay_transaction.merchant_receive_money_record",
+        hdfs_path_str="opay_binlog/opay_transaction_db.opay_transaction.merchant_topup_record",
         pt='{{ds}}',
         hour='{{ execution_date.strftime("%H") }}'
     ),
@@ -108,7 +108,7 @@ ods_binlog_base_merchant_receive_money_record_hi_check_task = OssSensor(
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
 
 
-def dwd_opay_receive_money_record_hi_sql_task(ds, v_date):
+def dwd_opay_topup_with_card_record_hi_sql_task(ds, v_date):
     HQL = '''
 
     set hive.exec.dynamic.partition.mode=nonstrict;
@@ -147,56 +147,56 @@ def dwd_opay_receive_money_record_hi_sql_task(ds, v_date):
 
     insert overwrite table {db}.{table} 
     partition(country_code, dt,hour)
-    
+
     select 
         t1.order_no, t1.amount, t1.currency, t1.originator_type, t2.trader_role as originator_role, t2.trader_kyc_level as originator_kyc_level, t1.originator_id, t2.trader_name as originator_name,
-        replace(t1.affiliate_bank_account_code, '+234', '') as affiliate_bank_account_code, t1.affiliate_bank_account_name, t1.affiliate_bank_scheme, 
-        t1.create_time, t1.update_time, t1.country, t1.order_status, t1.error_code, t1.error_msg, 
-        if(order_type = '0', 'PURCHASE', 'REFUND') as order_type, t1.accounting_status, 
-        'receivemoney' as top_consume_scenario, 'receivemoney' as sub_consume_scenario,
+        t1.affiliate_bind_card_id, t1.affiliate_bank_code, t1.affiliate_bank_name, t1.affiliate_bank_account_no_encrypted, t1.affiliate_bank_card_no_encrypted, t1.affiliate_bank_mobile, t1.affiliate_bank_email,
+        t1.affiliate_bank_scheme, t1.payment_order_no, t1.create_time, t1.update_time, t1.country, t1.order_status, t1.error_code, t1.error_msg, t1.client_source,
+        t1.pay_way, t1.next_step, t1.out_channel_id, t1.business_type, t1.accounting_status, 
+        'TopupWithCard' as top_consume_scenario, 'TopupWithCard' as sub_consume_scenario, 
         t1.fee_amount, t1.fee_pattern, t1.outward_id, t1.outward_type,date_format('{v_date}', 'yyyy-MM-dd HH') as utc_date_hour,state,
-         'NG' country_code,
+         'NG' as country_code,
         date_format(default.localTime("{config}", t1.country, '{v_date}', 0), 'yyyy-MM-dd') as dt,
         date_format(default.localTime("{config}", t1.country, '{v_date}', 0), 'HH') as hour
         
     from (
         select 
             order_no, amount, currency, 'USER' as originator_type, user_id as originator_id, 
-            bank_account_code as affiliate_bank_account_code, bank_account_name as affiliate_bank_account_name, 
-            scheme as affiliate_bank_scheme, 
+            bind_card_id as affiliate_bind_card_id, bank_code as affiliate_bank_code, bank_name as affiliate_bank_name, 
+            bank_account_no_encrypted as affiliate_bank_account_no_encrypted, bank_card_no_encrypted as affiliate_bank_card_no_encrypted,
+             '-' as affiliate_bank_mobile, '-' as affiliate_bank_email, scheme as affiliate_bank_scheme, '-' as payment_order_no,
             default.localTime("{config}",'NG',from_unixtime(cast(cast(create_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as create_time, 
             default.localTime("{config}",'NG',from_unixtime(cast(cast(update_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as update_time, 
-            country, order_status, '-' as error_code, fail_msg as error_msg, order_type, accounting_status,
-            nvl(fee, 0) as fee_amount, nvl(fee_pattern, '-') as fee_pattern, nvl(outward_id, '-') as outward_id, 
-            nvl(outward_type, '-') as outward_type
-        from (select *,row_number() over(partition by order_no order by `__ts_ms` desc,`__file` desc,cast(`__pos` as int) desc) rn 
-              from opay_dw_ods.ods_binlog_base_user_receive_money_record_hi
+            country, order_status, error_code, error_msg, client_source, pay_channel as pay_way, next_step, out_channel_id, business_type, accounting_status,
+            nvl(fee, 0) as fee_amount, nvl(fee_pattern, '-') as fee_pattern, nvl(outward_id, '-') as outward_id, nvl(outward_type, '-') as outward_type
+        from (select *,row_number() over(partition by order_no order by `__ts_ms` desc,`__file` desc,cast(`__pos` as int) desc) rn
+              from opay_dw_ods.ods_binlog_base_user_topup_record_hi
               where 
-                 dt = date_format('{v_date}', 'yyyy-MM-dd')
-                 and hour= date_format('{v_date}', 'HH')
-                 and `__deleted` = 'false'
-             ) m
+                  dt = date_format('{v_date}', 'yyyy-MM-dd')
+                  and hour= date_format('{v_date}', 'HH')
+                  and `__deleted` = 'false'
+              )m
         where rn=1
         union all
         select 
             order_no, amount, currency, 'MERCHANT' as originator_type, merchant_id as originator_id, 
-            bank_account_code as affiliate_bank_account_code, bank_account_name as affiliate_bank_account_name, 
-            scheme as affiliate_bank_scheme, 
+            '-' as affiliate_bind_card_id, bank_code as affiliate_bank_code, bank_name as affiliate_bank_name, 
+            bank_account_no_encrypted as affiliate_bank_account_no_encrypted, bank_card_no_encrypted as affiliate_bank_card_no_encrypted,
+            customer_phone as affiliate_bank_mobile, customer_email as affiliate_bank_email, scheme as affiliate_bank_scheme, merchant_order_no as payment_order_no,
             default.localTime("{config}",'NG',from_unixtime(cast(cast(create_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as create_time, 
             default.localTime("{config}",'NG',from_unixtime(cast(cast(update_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as update_time, 
-            country, order_status, '-' as error_code, fail_msg as error_msg, order_type, accounting_status,
-            nvl(fee, 0) as fee_amount, nvl(fee_pattern, '-') as fee_pattern, nvl(outward_id, '-') as outward_id, 
-            nvl(outward_type, '-') as outward_type
-        from (select *,row_number() over(partition by order_no order by `__ts_ms` desc,`__file` desc,cast(`__pos` as int) desc) rn 
-              from opay_dw_ods.ods_binlog_base_merchant_receive_money_record_hi
+            country, order_status, error_code, error_msg, '-' as client_source, pay_channel as pay_way, next_step, out_channel_id, '-' as business_type, accounting_status,
+            nvl(fee, 0) as fee_amount, nvl(fee_pattern, '-') as fee_pattern, nvl(outward_id, '-') as outward_id, nvl(outward_type, '-') as outward_type
+        from (select *,row_number() over(partition by order_no order by `__ts_ms` desc,`__file` desc,cast(`__pos` as int) desc) rn
+              from opay_dw_ods.ods_binlog_base_merchant_topup_record_hi
               where 
-                 dt = date_format('{v_date}', 'yyyy-MM-dd')
-                 and hour= date_format('{v_date}', 'HH')
-                 and `__deleted` = 'false') m 
+                  dt = date_format('{v_date}', 'yyyy-MM-dd')
+                  and hour= date_format('{v_date}', 'HH')
+                  and `__deleted` = 'false'
+             )m 
         where rn=1
     ) t1 
     left join dim_user_merchant_data t2 on t1.originator_id = t2.trader_id
-        
     '''.format(
         pt=ds,
         v_date=v_date,
@@ -255,7 +255,7 @@ def execution_data_task_id(ds, dag, **kwargs):
     cf = CountriesPublicFrame_dev(args)
 
     # 读取sql
-    _sql = "\n" + cf.alter_partition() + "\n" + dwd_opay_receive_money_record_hi_sql_task(ds, v_date)
+    _sql = "\n" + cf.alter_partition() + "\n" + dwd_opay_topup_with_card_record_hi_sql_task(ds, v_date)
 
     logging.info('Executing: %s', _sql)
 
@@ -266,8 +266,8 @@ def execution_data_task_id(ds, dag, **kwargs):
     cf.touchz_success()
 
 
-dwd_opay_receive_money_record_hi_task = PythonOperator(
-    task_id='dwd_opay_receive_money_record_hi_task',
+dwd_opay_topup_with_card_record_hi_task = PythonOperator(
+    task_id='dwd_opay_topup_with_card_record_hi_task',
     python_callable=execution_data_task_id,
     provide_context=True,
     op_kwargs={
@@ -279,7 +279,7 @@ dwd_opay_receive_money_record_hi_task = PythonOperator(
     dag=dag
 )
 
-dim_opay_user_base_hf_check_task >> dwd_opay_receive_money_record_hi_task
-dim_opay_merchant_base_hf_check_task >> dwd_opay_receive_money_record_hi_task
-ods_binlog_base_user_receive_money_record_hi_check_task >> dwd_opay_receive_money_record_hi_task
-ods_binlog_base_merchant_receive_money_record_hi_check_task >> dwd_opay_receive_money_record_hi_task
+dim_opay_user_base_hf_check_task >> dwd_opay_topup_with_card_record_hi_task
+dim_opay_merchant_base_hf_check_task >> dwd_opay_topup_with_card_record_hi_task
+ods_binlog_base_user_topup_record_hi_check_task >> dwd_opay_topup_with_card_record_hi_task
+ods_binlog_base_merchant_topup_record_hi_check_task >> dwd_opay_topup_with_card_record_hi_task

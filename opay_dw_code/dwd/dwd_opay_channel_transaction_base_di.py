@@ -60,7 +60,7 @@ def fun_task_timeout_monitor(ds,dag,**op_kwargs):
     dag_ids=dag.dag_id
 
     msg = [
-        {"dag":dag, "db": "opay_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "dt={pt}".format(pt=ds), "timeout": "3000"}
+        {"dag":dag, "db": "opay_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=NG/dt={pt}".format(pt=ds), "timeout": "3000"}
     ]
 
     TaskTimeoutMonitor().set_task_monitor(msg)
@@ -77,6 +77,7 @@ db_name = "opay_dw"
 
 table_name = "dwd_opay_channel_transaction_base_di"
 hdfs_path = "oss://opay-datalake/opay/opay_dw/" + table_name
+config = eval(Variable.get("opay_time_zone_config"))
 
 
 def dwd_opay_channel_transaction_base_di_sql_task(ds):
@@ -85,7 +86,7 @@ def dwd_opay_channel_transaction_base_di_sql_task(ds):
     set mapred.max.split.size=1000000;
     set hive.exec.dynamic.partition.mode=nonstrict;
     set hive.exec.parallel=true;
-    insert overwrite table {db}.{table} partition (dt)
+    insert overwrite table {db}.{table} partition (country_code,dt)
     SELECT id,
        request_id,
        order_no,
@@ -112,8 +113,9 @@ def dwd_opay_channel_transaction_base_di_sql_task(ds):
        response_code,
        response_message,
        retry_flag,
-       create_time,
-       update_time,
+       default.localTime("{config}", 'NG',create_time, 0) as create_time,
+        default.localTime("{config}", 'NG',update_time, 0) as update_time, 
+       'NG' country_code,
        dt
     FROM opay_dw_ods.ods_sqoop_base_channel_transaction_di
     where dt='{pt}'
@@ -121,7 +123,8 @@ def dwd_opay_channel_transaction_base_di_sql_task(ds):
     '''.format(
         pt=ds,
         table=table_name,
-        db=db_name
+        db=db_name,
+        config=config
     )
     return HQL
 
@@ -143,7 +146,7 @@ def execution_data_task_id(ds, **kargs):
     第二个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
 
     """
-    TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "false", "true")
+    TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "true", "true")
 
 
 dwd_opay_channel_transaction_base_di_task = PythonOperator(

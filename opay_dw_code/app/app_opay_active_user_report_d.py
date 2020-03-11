@@ -42,10 +42,10 @@ dag = airflow.DAG('app_opay_active_user_report_d',
 
 ##----------------------------------------- 依赖 ---------------------------------------##
 
-dim_opay_user_base_di_prev_day_task = OssSensor(
-    task_id='dim_opay_user_base_di_prev_day_task',
+ods_sqoop_base_user_di_prev_day_task = OssSensor(
+    task_id='ods_sqoop_base_user_di_prev_day_task',
     bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opay/opay_dw/dim_opay_user_base_di/country_code=NG",
+        hdfs_path_str="opay_dw_sqoop_di/opay_user/user",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -113,7 +113,7 @@ def fun_task_timeout_monitor(ds,dag,**op_kwargs):
     dag_ids=dag.dag_id
 
     msg = [
-        {"dag":dag, "db": "opay_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "dt={pt}".format(pt=ds), "timeout": "3000"}
+        {"dag":dag, "db": "opay_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=NG/dt={pt}".format(pt=ds), "timeout": "3000"}
     ]
 
     TaskTimeoutMonitor().set_task_monitor(msg)
@@ -144,7 +144,7 @@ def app_opay_active_user_report_d_sql_task(ds,ds_nodash):
     SELECT user_id, ROLE,mobile,state
      FROM
           (SELECT user_id, ROLE,mobile, state,row_number() over(partition BY user_id ORDER BY update_time DESC) rn
-            FROM opay_dw.dim_opay_user_base_di
+            FROM opay_dw_ods.ods_sqoop_base_user_di
            WHERE dt<='{pt}' ) t1
      WHERE rn = 1;
                
@@ -165,14 +165,14 @@ def app_opay_active_user_report_d_sql_task(ds,ds_nodash):
               ( select 
                     top_consume_scenario, originator_id user_id,dt,originator_role role
                 from opay_dw.dwd_opay_transaction_record_di
-                where dt>date_sub('{pt}',30) and dt<='{pt}' and create_time BETWEEN date_format(date_sub(dt, 1), 'yyyy-MM-dd 23') AND date_format(dt, 'yyyy-MM-dd 23') 
+                where dt>date_sub('{pt}',30) and dt<='{pt}'  
                     and originator_type = 'USER' and originator_id is not null and originator_id != ''
                 group by originator_id,dt,top_consume_scenario,originator_role
                 union all
                 select 
                     top_consume_scenario, affiliate_id user_id,dt,affiliate_role role
                 from opay_dw.dwd_opay_transaction_record_di
-                where dt>date_sub('{pt}',30) and dt<='{pt}' and create_time BETWEEN date_format(date_sub(dt, 1), 'yyyy-MM-dd 23') AND date_format(dt, 'yyyy-MM-dd 23') 
+                where dt>date_sub('{pt}',30) and dt<='{pt}'
                     and affiliate_type = 'USER' and affiliate_id is not null and affiliate_id != ''
                 group by top_consume_scenario,affiliate_id,dt,affiliate_role
               ) a 
@@ -201,10 +201,10 @@ def app_opay_active_user_report_d_sql_task(ds,ds_nodash):
                (select user_id from test_db.login_{date} where last_visit<='{pt}') b 
             on a.user_id=b.user_id)
     
-    INSERT overwrite TABLE opay_dw.app_opay_active_user_report_d partition (dt,target_type)
+    INSERT overwrite TABLE opay_dw.app_opay_active_user_report_d partition (country_code,dt,target_type)
     
     SELECT 
-                '-' country_code,
+                '_' country,
                 '-' city,
                 ROLE,
                 '-' kyc_level,
@@ -212,6 +212,7 @@ def app_opay_active_user_report_d_sql_task(ds,ds_nodash):
                 '-' register_client,
                 c,
                 state,
+                'NG' country_code,
                 dt,
                 target_type
             FROM (
@@ -622,7 +623,7 @@ def execution_data_task_id(ds, ds_nodash,  **kargs):
     第二个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
 
     """
-    TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "false", "true")
+    TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "true", "true")
 
 
 app_opay_active_user_report_d_task = PythonOperator(
@@ -632,7 +633,7 @@ app_opay_active_user_report_d_task = PythonOperator(
     dag=dag
 )
 
-dim_opay_user_base_di_prev_day_task >> app_opay_active_user_report_d_task
+ods_sqoop_base_user_di_prev_day_task >> app_opay_active_user_report_d_task
 ods_sqoop_base_user_payment_instrument_df_prev_day_task >> app_opay_active_user_report_d_task
 ods_sqoop_base_user_operator_df_prev_day_task >> app_opay_active_user_report_d_task
 ods_sqoop_owealth_share_acct_df_prev_day_task >> app_opay_active_user_report_d_task

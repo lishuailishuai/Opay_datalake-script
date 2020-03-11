@@ -43,10 +43,10 @@ dag = airflow.DAG('app_opay_user_report_sum_d',
 
 ##----------------------------------------- 依赖 ---------------------------------------##
 
-dim_opay_user_base_di_prev_day_task = OssSensor(
-    task_id='dim_opay_user_base_di_prev_day_task',
+ods_sqoop_base_user_di_prev_day_task = OssSensor(
+    task_id='ods_sqoop_base_user_di_prev_day_task',
     bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opay/opay_dw/dim_opay_user_base_di/country_code=NG",
+        hdfs_path_str="opay_dw_sqoop_di/opay_user/user",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -82,7 +82,7 @@ def fun_task_timeout_monitor(ds, dag, **op_kwargs):
 
     msg = [
         {"dag":dag, "db": "opay_dw", "table": "{dag_name}".format(dag_name=dag_ids),
-         "partition": "dt={pt}".format(pt=ds), "timeout": "3000"}
+         "partition": "country_code=NG/dt={pt}".format(pt=ds), "timeout": "3000"}
     ]
 
     TaskTimeoutMonitor().set_task_monitor(msg)
@@ -124,12 +124,12 @@ def app_opay_user_report_sum_d_sql_task(ds):
      (SELECT user_id,
              ROLE,
              mobile,
-             register_client,
+             nvl(register_client,'App') register_client,
              kyc_level,
              dt,state,
              row_number() over(partition BY user_id
                                ORDER BY update_time DESC) rn
-      FROM opay_dw.dim_opay_user_base_di
+      FROM opay_dw_ods.ods_sqoop_base_user_di
       WHERE dt<='{pt}' ) t1
    WHERE rn = 1
    GROUP BY register_client,
@@ -147,7 +147,7 @@ def app_opay_user_report_sum_d_sql_task(ds):
           NULL AS zero_bal_acct_cnt,
           NULL AS first_pay_user_cnt,
           state
-    from opay_dw.dim_opay_user_base_di 
+    from opay_dw_ods.ods_sqoop_base_user_di 
     where dt='{pt}' and create_time BETWEEN date_format(date_sub('{pt}', 1), 'yyyy-MM-dd 23') AND date_format('{pt}', 'yyyy-MM-dd 23')
     GROUP BY nvl(register_client,'App'),
             ROLE,
@@ -188,7 +188,7 @@ def app_opay_user_report_sum_d_sql_task(ds):
      AND originator_type='USER'
    GROUP BY top_consume_scenario)
 
-INSERT overwrite TABLE opay_dw.app_opay_user_report_sum_d partition (dt='{pt}')
+INSERT overwrite TABLE opay_dw.app_opay_user_report_sum_d partition (country_code='NG',dt='{pt}')
 select register_client,ROLE,kyc_level,top_consume_scenario,
        sum(nvl(reg_user_cnt,0)) reg_user_cnt,
        sum(nvl(new_reg_user_cnt,0)) new_reg_user_cnt,
@@ -230,7 +230,7 @@ def execution_data_task_id(ds, **kargs):
     第二个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
 
     """
-    TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "false", "true")
+    TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "true", "true")
 
 
 app_opay_user_report_sum_d_task = PythonOperator(
@@ -240,7 +240,7 @@ app_opay_user_report_sum_d_task = PythonOperator(
     dag=dag
 )
 
-dim_opay_user_base_di_prev_day_task >> app_opay_user_report_sum_d_task
+ods_sqoop_base_user_di_prev_day_task >> app_opay_user_report_sum_d_task
 dwd_opay_account_balance_df_prev_day_task >> app_opay_user_report_sum_d_task
 dwm_opay_user_first_tran_di_prev_day_task >> app_opay_user_report_sum_d_task
 

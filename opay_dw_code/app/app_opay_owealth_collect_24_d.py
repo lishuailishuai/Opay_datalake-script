@@ -103,7 +103,7 @@ def fun_task_timeout_monitor(ds,dag,**op_kwargs):
     dag_ids=dag.dag_id
 
     msg = [
-        {"dag":dag, "db": "opay_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "dt={pt}".format(pt=ds), "timeout": "3000"}
+        {"dag":dag, "db": "opay_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=NG/dt={pt}".format(pt=ds), "timeout": "3000"}
     ]
 
     TaskTimeoutMonitor().set_task_monitor(msg)
@@ -170,7 +170,7 @@ def app_opay_owealth_collect_24_d_sql_task(ds):
           FROM opay_dw_ods.ods_sqoop_base_user_di
           WHERE dt <= '{pt}' ) t1
        WHERE rn = 1)
-    INSERT overwrite TABLE opay_dw.app_opay_owealth_collect_24_d partition (dt='{pt}')
+    INSERT overwrite TABLE opay_dw.app_opay_owealth_collect_24_d partition (country_code='NG',dt='{pt}')
     SELECT
     total_balance, --总的累计金额
      total_subscribe_amount,--总的申购金额
@@ -280,7 +280,7 @@ def execution_data_task_id(ds, **kargs):
     第二个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
 
     """
-    TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "false", "true")
+    TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "true", "true")
 
 
 app_opay_owealth_collect_24_d_task = PythonOperator(

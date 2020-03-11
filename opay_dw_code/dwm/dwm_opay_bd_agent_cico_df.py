@@ -40,10 +40,21 @@ dag = airflow.DAG('dwm_opay_bd_agent_cico_df',
                   )
 
 ##----------------------------------------- 依赖 ---------------------------------------##
-dwd_opay_transfer_of_account_record_di_task = OssSensor(
-    task_id='dwd_opay_transfer_of_account_record_di_task',
+dwd_opay_cico_record_di_task = OssSensor(
+    task_id='dwd_opay_cico_record_di_task',
     bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opay/opay_dw/dwd_opay_transfer_of_account_record_di/country_code=NG",
+        hdfs_path_str="opay/opay_dw/dwd_opay_cico_record_di/country_code=NG",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
+dwd_opay_bd_agent_change_log_di_task = OssSensor(
+    task_id='dwd_opay_bd_agent_change_log_di_task',
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="opay/opay_dw/dwd_opay_bd_agent_change_log_di/country_code=NG",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -58,7 +69,7 @@ def fun_task_timeout_monitor(ds,dag,**op_kwargs):
     dag_ids=dag.dag_id
 
     msg = [
-        {"dag":dag, "db": "opay_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "3000"}
+        {"dag":dag, "db": "opay_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=NG/dt={pt}".format(pt=ds), "timeout": "3000"}
     ]
 
     TaskTimeoutMonitor().set_task_monitor(msg)
@@ -83,7 +94,7 @@ def dwm_opay_bd_agent_cico_df_sql_task(ds):
     set hive.exec.dynamic.partition.mode=nonstrict;
     set hive.exec.parallel=true; --default false
     
-	insert overwrite table {db}.{table} partition(country_code='nal', dt='{pt}')
+	insert overwrite table {db}.{table} partition(country_code='NG', dt='{pt}')
 	select 
         coalesce(agent_data.bd_admin_user_id, cico_data.bd_admin_user_id) as bd_admin_user_id, 
         coalesce(agent_data.business_date, cico_data.business_date) as business_date, 
@@ -111,7 +122,7 @@ def dwm_opay_bd_agent_cico_df_sql_task(ds):
         from (
             select
                 bd_admin_user_id, sub_service_type, amount, create_time, country_code, dt, row_number() over(partition by order_no order by update_time desc) rn
-            from opay_dw.dwd_opay_transfer_of_account_record_di
+            from opay_dw.dwd_opay_cico_record_di
             where dt between date_format('{pt}', 'yyyy-MM-01') and '{pt}' and order_status = 'SUCCESS' and sub_service_type in ('Cash In', 'Cash Out') and bd_agent_status = 1
         ) t0 where rn = 1
         group by bd_admin_user_id, dt
@@ -153,4 +164,5 @@ dwm_opay_bd_agent_cico_df_task = PythonOperator(
     dag=dag
 )
 
-dwd_opay_transfer_of_account_record_di_task >> dwm_opay_bd_agent_cico_df_task
+dwd_opay_cico_record_di_task >> dwm_opay_bd_agent_cico_df_task
+dwd_opay_bd_agent_change_log_di_task >> dwm_opay_bd_agent_cico_df_task

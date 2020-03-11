@@ -156,7 +156,7 @@ task_timeout_monitor = PythonOperator(
 db_name = "opay_dw"
 table_name = "dwd_opay_life_payment_record_di"
 hdfs_path = "oss://opay-datalake/opay/opay_dw/" + table_name
-
+config = eval(Variable.get("opay_time_zone_config"))
 
 def dwd_opay_life_payment_record_di_sql_task(ds):
     HQL = '''
@@ -173,17 +173,18 @@ def dwd_opay_life_payment_record_di_sql_task(ds):
         ),
         dim_user_merchant_data as (
             select 
-                trader_id, trader_name, trader_role, trader_kyc_level, trader_type
+                trader_id, trader_name, trader_role, trader_kyc_level, trader_type, if(state is null or state = '', '-', state) as state
             from (
                 select 
-                    user_id as trader_id, concat(first_name, ' ', middle_name, ' ', surname) as trader_name, `role` as trader_role, kyc_level as trader_kyc_level, 'USER' as trader_type,
+                    user_id as trader_id, concat(first_name, ' ', middle_name, ' ', surname) as trader_name, `role` as trader_role, 
+                    kyc_level as trader_kyc_level, 'USER' as trader_type, state,
                     row_number() over(partition by user_id order by update_time desc) rn
                 from opay_dw_ods.ods_sqoop_base_user_di
                 where dt <= '{pt}'
             ) uf where rn = 1
             union all
             select 
-                merchant_id as trader_id, merchant_name as trader_name, merchant_type as trader_role, '-' as trader_kyc_level, 'MERCHANT' as trader_type
+                merchant_id as trader_id, merchant_name as trader_name, merchant_type as trader_role, '-' as trader_kyc_level, 'MERCHANT' as trader_type, '-' as state
             from dim_merchant_data
         ),
         dim_lp_commission_data as (
@@ -202,26 +203,8 @@ def dwd_opay_life_payment_record_di_sql_task(ds):
         t1.create_time, t1.update_time, t1.country, 'Life Payment' as top_service_type, t1.sub_service_type,
         t1.order_status, t1.error_code, t1.error_msg, nvl(t1.client_source, '-'), t1.pay_way, t1.pay_status, t1.top_consume_scenario, t1.sub_consume_scenario, t1.pay_amount,
         t1.fee_amount, t1.fee_pattern, t1.outward_id, t1.outward_type,
-        if(t4.fee_rate is null or t1.order_status != 'SUCCESS', 0, round(t1.amount * t4.fee_rate, 2)) as provider_share_amount,
-        case t1.country
-            when 'NG' then 'NG'
-            when 'NO' then 'NO'
-            when 'GH' then 'GH'
-            when 'BW' then 'BW'
-            when 'GH' then 'GH'
-            when 'KE' then 'KE'
-            when 'MW' then 'MW'
-            when 'MZ' then 'MZ'
-            when 'PL' then 'PL'
-            when 'ZA' then 'ZA'
-            when 'SE' then 'SE'
-            when 'TZ' then 'TZ'
-            when 'UG' then 'UG'
-            when 'US' then 'US'
-            when 'ZM' then 'ZM'
-            when 'ZW' then 'ZW'
-            else 'NG'
-            end as country_code,
+        if(t4.fee_rate is null or t1.order_status != 'SUCCESS', 0, round(t1.amount * t4.fee_rate, 2)) as provider_share_amount, t2.state,
+        'NG' as country_code,
         '{pt}' dt
 
     from (
@@ -229,7 +212,9 @@ def dwd_opay_life_payment_record_di_sql_task(ds):
             order_no, amount, currency, user_id as originator_id, 
             merchant_id as affiliate_id, 
             tv_provider as recharge_service_provider, recipient_tv_account_no as recharge_account, recipient_tv_account_name as recharge_account_name, tv_plan as recharge_set_meal,
-            create_time, update_time, country, 'TV' sub_service_type, 
+            default.localTime("{config}", 'NG',create_time, 0) as create_time,
+            default.localTime("{config}", 'NG',update_time, 0) as update_time,  
+            country, 'TV' sub_service_type, 
             order_status, error_code, error_msg, client_source, pay_channel as pay_way, pay_status, 'TV' as top_consume_scenario, 'TV' as sub_consume_scenario, amount as pay_amount,
             nvl(fee, 0) as fee_amount, nvl(fee_pattern, '-') as fee_pattern, nvl(outward_id, '-') as outward_id, nvl(outward_type, '-') as outward_type
         from opay_dw_ods.ods_sqoop_base_tv_topup_record_di
@@ -239,7 +224,9 @@ def dwd_opay_life_payment_record_di_sql_task(ds):
             order_no, amount, currency, user_id as originator_id,
             merchant_id as affiliate_id, 
             betting_provider as recharge_service_provider, recipient_betting_account as recharge_account, recipient_betting_name as recharge_account_name, '-' as recharge_set_meal,
-            create_time, update_time, country, 'Betting' sub_service_type,
+            default.localTime("{config}", 'NG',create_time, 0) as create_time,
+            default.localTime("{config}", 'NG',update_time, 0) as update_time,  
+            country, 'Betting' sub_service_type,
             order_status, error_code, error_msg, client_source, pay_channel as pay_way, pay_status, 'Betting' as top_consume_scenario, 'Betting' as sub_consume_scenario, 
             if(actual_pay_amount is null or actual_pay_amount = 0, amount, actual_pay_amount) as pay_amount, 
             nvl(fee_amount, 0) as fee_amount, nvl(fee_pattern, '-') as fee_pattern, nvl(outward_id, '-') as outward_id, nvl(outward_type, '-') as outward_type
@@ -251,7 +238,9 @@ def dwd_opay_life_payment_record_di_sql_task(ds):
             merchant_id as affiliate_id,
             telecom_perator as recharge_service_provider,
             recipient_mobile as recharge_account, '-' as recharge_account_name, '-' as recharge_set_meal,
-            create_time, update_time, country, 'Mobiledata' sub_service_type,
+            default.localTime("{config}", 'NG',create_time, 0) as create_time,
+            default.localTime("{config}", 'NG',update_time, 0) as update_time,  
+            country, 'Mobiledata' sub_service_type,
             order_status, error_code, error_msg, client_source, pay_channel as pay_way, pay_status, 'Mobiledata' as top_consume_scenario, 'Mobiledata' as sub_consume_scenario,
             amount as pay_amount,
             nvl(fee_amount, 0) as fee_amount, nvl(fee_pattern, '-') as fee_pattern, nvl(out_ward_id, '-') as outward_id, nvl(out_ward_type, '-') as outward_type
@@ -262,7 +251,9 @@ def dwd_opay_life_payment_record_di_sql_task(ds):
             order_no, amount, currency, user_id as originator_id,
             merchant_id as affiliate_id,
             telecom_perator as recharge_service_provider, recipient_mobile as recharge_account, '-' as recharge_account_name, '-' as recharge_set_meal,
-            create_time, update_time, country, 'Airtime' sub_service_type,
+            default.localTime("{config}", 'NG',create_time, 0) as create_time,
+            default.localTime("{config}", 'NG',update_time, 0) as update_time,  
+            country, 'Airtime' sub_service_type,
             order_status, error_code, error_msg, client_source, pay_channel as pay_way, pay_status, 'Airtime' as top_consume_scenario, 'Airtime' as sub_consume_scenario,
             if(actual_pay_amount is null or actual_pay_amount = 0, amount, actual_pay_amount) as pay_amount,
             nvl(fee_amount, 0) as fee_amount, nvl(fee_pattern, '-') as fee_pattern, nvl(out_ward_id, '-') as outward_id, nvl(out_ward_type, '-') as outward_type
@@ -273,7 +264,9 @@ def dwd_opay_life_payment_record_di_sql_task(ds):
             order_no, amount, currency, user_id as originator_id,
             merchant_id as affiliate_id,
             recipient_elec_perator as recharge_service_provider, recipient_elec_account as recharge_account, '-' as recharge_account_name, electricity_payment_plan as recharge_set_meal,
-            create_time, update_time, country, 'Electricity' sub_service_type,
+            default.localTime("{config}", 'NG',create_time, 0) as create_time,
+            default.localTime("{config}", 'NG',update_time, 0) as update_time, 
+            country, 'Electricity' sub_service_type,
             order_status, error_code, error_msg, client_source, pay_channel as pay_way, pay_status, 'Electricity' as top_consume_scenario, 'Electricity' as sub_consume_scenario,
             amount as pay_amount,
             nvl(fee_amount, 0) as fee_amount, nvl(fee_pattern, '-') as fee_pattern, nvl(out_ward_id, '-') as outward_id, nvl(out_ward_type, '-') as outward_type
@@ -286,7 +279,8 @@ def dwd_opay_life_payment_record_di_sql_task(ds):
     '''.format(
         pt=ds,
         table=table_name,
-        db=db_name
+        db=db_name,
+        config=config
     )
     return HQL
 

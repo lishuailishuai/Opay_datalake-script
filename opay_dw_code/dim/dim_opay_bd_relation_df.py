@@ -58,7 +58,7 @@ def fun_task_timeout_monitor(ds,dag,**op_kwargs):
     dag_ids=dag.dag_id
 
     msg = [
-        {"dag":dag, "db": "opay_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "3000"}
+        {"dag":dag, "db": "opay_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=NG/dt={pt}".format(pt=ds), "timeout": "3000"}
     ]
 
     TaskTimeoutMonitor().set_task_monitor(msg)
@@ -88,7 +88,7 @@ def dim_opay_bd_relation_df_sql_task(ds):
         from opay_dw_ods.ods_sqoop_base_bd_admin_users_df 
         where dt = '{pt}' and job_id > 0
     )  
-    insert overwrite table {db}.{table} partition (country_code = 'nal', dt = '{pt}')
+    insert overwrite table {db}.{table} partition (country_code = 'NG', dt = '{pt}')
     select 
           t6.id as bd_admin_user_id,
           t6.username as bd_admin_user_name,

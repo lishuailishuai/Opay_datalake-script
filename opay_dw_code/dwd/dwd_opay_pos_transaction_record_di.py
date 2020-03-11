@@ -123,6 +123,7 @@ table_name = "dwd_opay_pos_transaction_record_di"
 hdfs_path="oss://opay-datalake/opay/opay_dw/" + table_name
 pos_provider_share_0922_fee=eval(Variable.get("pos_provider_share_0922_fee"))
 msc_cost_0922_fee=eval(Variable.get("msc_cost_0922_fee"))
+config = eval(Variable.get("opay_time_zone_config"))
 
 def dwd_opay_pos_transaction_record_di_sql_task(ds):
     HQL='''
@@ -169,25 +170,7 @@ def dwd_opay_pos_transaction_record_di_sql_task(ds):
             when order_status = 'SUCCESS' then if(cast(t1.amount * {msc_cost_0922_fee}  as decimal(10,2)) > 100000, 100000, cast(t1.amount * {msc_cost_0922_fee}  as decimal(10,2)))
             else 0
         end as msc_cost_amount,
-        case t1.country
-            when 'NG' then 'NG'
-            when 'NO' then 'NO'
-            when 'GH' then 'GH'
-            when 'BW' then 'BW'
-            when 'GH' then 'GH'
-            when 'KE' then 'KE'
-            when 'MW' then 'MW'
-            when 'MZ' then 'MZ'
-            when 'PL' then 'PL'
-            when 'ZA' then 'ZA'
-            when 'SE' then 'SE'
-            when 'TZ' then 'TZ'
-            when 'UG' then 'UG'
-            when 'US' then 'US'
-            when 'ZM' then 'ZM'
-            when 'ZW' then 'ZW'
-            else 'NG'
-            end as country_code,
+        'NG' as country_code,
         '{pt}' dt
         
     from (
@@ -195,7 +178,9 @@ def dwd_opay_pos_transaction_record_di_sql_task(ds):
             order_no, amount, stamp_duty, currency, 'USER' as originator_type, user_id as originator_id, 
             terminal_id as affiliate_terminal_id, terminal_provider_id as affiliate_terminal_provider_id, bank_code as affiliate_bank_code,
             pos_trade_req_id, transaction_reference, retrieval_reference_number,
-            create_time, update_time, country, order_status, channel_code as error_code, channel_msg as error_msg, transaction_type, accounting_status,
+            default.localTime("{config}", 'NG',create_time, 0) as create_time,
+            default.localTime("{config}", 'NG',update_time, 0) as update_time,  
+            country, order_status, channel_code as error_code, channel_msg as error_msg, transaction_type, accounting_status,
             nvl(fee_amount, 0) as fee_amount, nvl(fee_pattern, '-') as fee_pattern, '-' as outward_id, '-' as outward_type
         from opay_dw_ods.ods_sqoop_base_user_pos_transaction_record_di
         where dt = '{pt}'
@@ -205,7 +190,9 @@ def dwd_opay_pos_transaction_record_di_sql_task(ds):
             
             terminal_id as affiliate_terminal_id, terminal_provider_id as affiliate_terminal_provider_id, bank_code as affiliate_bank_code,
             pos_trade_req_id, transaction_reference, retrieval_reference_number,
-            create_time, update_time, country, order_status, channel_code as error_code, channel_msg as error_msg, transaction_type, accounting_status,
+            default.localTime("{config}", 'NG',create_time, 0) as create_time,
+            default.localTime("{config}", 'NG',update_time, 0) as update_time,  
+            country, order_status, channel_code as error_code, channel_msg as error_msg, transaction_type, accounting_status,
             nvl(fee_amount, 0) as fee_amount, nvl(fee_pattern, '-') as fee_pattern, '-' as outward_id, '-' as outward_type
         from opay_dw_ods.ods_sqoop_base_merchant_pos_transaction_record_di
         where dt = '{pt}'
@@ -217,7 +204,8 @@ def dwd_opay_pos_transaction_record_di_sql_task(ds):
         table=table_name,
         db=db_name,
         pos_provider_share_0922_fee=pos_provider_share_0922_fee,
-        msc_cost_0922_fee=msc_cost_0922_fee
+        msc_cost_0922_fee=msc_cost_0922_fee,
+        config=config
     )
     return HQL
 

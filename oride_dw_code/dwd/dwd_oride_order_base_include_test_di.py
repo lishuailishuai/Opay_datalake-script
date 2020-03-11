@@ -466,6 +466,31 @@ SELECT base.id as order_id,
         --小费抽成 
         pay.surcharge as pay_surcharge,
         --服务费
+        
+        base.pay_type,
+        --支付类型(0:收银台 1:auto pay)
+        
+        base.scramble,
+        --是否抢单pk 0 否 1 是
+       
+        base.level,
+        --司机等级
+       
+        base.is_use_level_fee_rate,
+        -- 是否使用等级抽佣配置
+       
+        base.source_type,
+        --'订单来源(0.默认oride 1.h5)
+        
+        if(base.cancel_time>0,(base.cancel_time - base.create_time),0) as td_ord_to_cancel_dur,
+        --当天下单到取消时长
+        
+        if(base.wait_time>0 and base.take_time>0,(base.wait_time-base.take_time),0) as driver_arrive_car_point_dur,
+        --司机接单到到达上车点时长
+        
+        if(base.arrive_time>0,(base.arrive_time-base.create_time),0) as ord_to_arrive_dur,
+        --下单到送达总时长
+            
         nvl(country.country_code,'nal') as country_code,
 
        '{pt}' AS dt

@@ -88,6 +88,7 @@ task_timeout_monitor= PythonOperator(
 db_name="opay_dw"
 table_name = "dwd_opay_easycash_record_di"
 hdfs_path="oss://opay-datalake/opay/opay_dw/" + table_name
+config = eval(Variable.get("opay_time_zone_config"))
 
 
 
@@ -99,10 +100,10 @@ def dwd_opay_easycash_record_di_sql_task(ds):
     set hive.exec.parallel=true;
     with user_data as(
         select 
-                trader_id, trader_name, trader_role, trader_kyc_level
+                trader_id, trader_name, trader_role, trader_kyc_level, if(state is null or state = '', '-', state) as state
             from (
                 select 
-                    user_id as trader_id, concat(first_name, ' ', middle_name, ' ', surname) as trader_name, `role` as trader_role, kyc_level as trader_kyc_level, 
+                    user_id as trader_id, concat(first_name, ' ', middle_name, ' ', surname) as trader_name, `role` as trader_role, kyc_level as trader_kyc_level, state,
                     row_number() over(partition by user_id order by update_time desc) rn
                 from opay_dw_ods.ods_sqoop_base_user_di
                 where dt <= '{pt}'
@@ -115,33 +116,17 @@ def dwd_opay_easycash_record_di_sql_task(ds):
         t1.affiliate_mobile, 
         t1.create_time, t1.update_time, t1.country, t1.order_status, t1.error_code, t1.error_msg, t1.next_step, t1.accounting_status, 
         'easycash' as top_consume_scenario, 'easycash' as sub_consume_scenario,
-         t1.fee_amount, t1.fee_pattern, t1.outward_id, t1.outward_type,
-        case t1.country
-            when 'NG' then 'NG'
-            when 'NO' then 'NO'
-            when 'GH' then 'GH'
-            when 'BW' then 'BW'
-            when 'GH' then 'GH'
-            when 'KE' then 'KE'
-            when 'MW' then 'MW'
-            when 'MZ' then 'MZ'
-            when 'PL' then 'PL'
-            when 'ZA' then 'ZA'
-            when 'SE' then 'SE'
-            when 'TZ' then 'TZ'
-            when 'UG' then 'UG'
-            when 'US' then 'US'
-            when 'ZM' then 'ZM'
-            when 'ZW' then 'ZW'
-            else 'NG'
-            end as country_code,
+         t1.fee_amount, t1.fee_pattern, t1.outward_id, t1.outward_type, t2.state,
+        'NG' as country_code,
         '{pt}' as dt
     from 
     (
         select 
             order_no, amount, currency, user_id as originator_id, 
             mobile as affiliate_mobile,
-            create_time, update_time, country, order_status, error_code, error_msg, next_step, accounting_status,
+            default.localTime("{config}", 'NG',create_time, 0) as create_time,
+            default.localTime("{config}", 'NG',update_time, 0) as update_time,  
+            country, order_status, error_code, error_msg, next_step, accounting_status,
             nvl(fee_amount, 0) as fee_amount, nvl(fee_pattern, '-') as fee_pattern, '-' as outward_id, '-' as outward_type
         from
         opay_dw_ods.ods_sqoop_base_user_easycash_record_di 
@@ -152,7 +137,8 @@ def dwd_opay_easycash_record_di_sql_task(ds):
     '''.format(
         pt=ds,
         db=db_name,
-        table=table_name
+        table=table_name,
+        config=config
     )
     return HQL
 

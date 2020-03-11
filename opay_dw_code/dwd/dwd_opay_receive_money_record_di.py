@@ -110,6 +110,7 @@ task_timeout_monitor= PythonOperator(
 db_name = "opay_dw"
 table_name = "dwd_opay_receive_money_record_di"
 hdfs_path="oss://opay-datalake/opay/opay_dw/" + table_name
+config = eval(Variable.get("opay_time_zone_config"))
 
 
 def dwd_opay_receive_money_record_di_sql_task(ds):
@@ -120,17 +121,17 @@ def dwd_opay_receive_money_record_di_sql_task(ds):
     set hive.exec.parallel=true;
     with dim_user_merchant_data as (
             select 
-                trader_id, trader_name, trader_role, trader_kyc_level
+                trader_id, trader_name, trader_role, trader_kyc_level, if(state is null or state = '', '-', state) as state
             from (
                 select 
-                    user_id as trader_id, concat(first_name, ' ', middle_name, ' ', surname) as trader_name, `role` as trader_role, kyc_level as trader_kyc_level, 
+                    user_id as trader_id, concat(first_name, ' ', middle_name, ' ', surname) as trader_name, `role` as trader_role, kyc_level as trader_kyc_level, state,
                     row_number() over(partition by user_id order by update_time desc) rn
                 from opay_dw_ods.ods_sqoop_base_user_di
                 where dt <= '{pt}'
             ) uf where rn = 1
             union all
             select 
-                merchant_id as trader_id, merchant_name as trader_name, merchant_type as trader_role, '-' as trader_kyc_level
+                merchant_id as trader_id, merchant_name as trader_name, merchant_type as trader_role, '-' as trader_kyc_level, '-' as state
             from opay_dw_ods.ods_sqoop_base_merchant_df
             where dt = if('{pt}' <= '2019-12-11', '2019-12-11', '{pt}')
         )
@@ -143,26 +144,8 @@ def dwd_opay_receive_money_record_di_sql_task(ds):
         t1.create_time, t1.update_time, t1.country, t1.order_status, t1.error_code, t1.error_msg, 
         if(order_type = '0', 'PURCHASE', 'REFUND') as order_type, t1.accounting_status, 
         'receivemoney' as top_consume_scenario, 'receivemoney' as sub_consume_scenario,
-        t1.fee_amount, t1.fee_pattern, t1.outward_id, t1.outward_type,
-        case t1.country
-            when 'NG' then 'NG'
-            when 'NO' then 'NO'
-            when 'GH' then 'GH'
-            when 'BW' then 'BW'
-            when 'GH' then 'GH'
-            when 'KE' then 'KE'
-            when 'MW' then 'MW'
-            when 'MZ' then 'MZ'
-            when 'PL' then 'PL'
-            when 'ZA' then 'ZA'
-            when 'SE' then 'SE'
-            when 'TZ' then 'TZ'
-            when 'UG' then 'UG'
-            when 'US' then 'US'
-            when 'ZM' then 'ZM'
-            when 'ZW' then 'ZW'
-            else 'NG'
-            end as country_code,
+        t1.fee_amount, t1.fee_pattern, t1.outward_id, t1.outward_type, t2.state,
+        'NG' as country_code,
         '{pt}' dt
         
     from (
@@ -170,7 +153,9 @@ def dwd_opay_receive_money_record_di_sql_task(ds):
             order_no, amount, currency, 'USER' as originator_type, user_id as originator_id, 
             bank_account_code as affiliate_bank_account_code, bank_account_name as affiliate_bank_account_name, 
             scheme as affiliate_bank_scheme, 
-            create_time, update_time, country, order_status, '-' as error_code, fail_msg as error_msg, order_type, accounting_status,
+            default.localTime("{config}", 'NG',create_time, 0) as create_time,
+            default.localTime("{config}", 'NG',update_time, 0) as update_time,   
+            country, order_status, '-' as error_code, fail_msg as error_msg, order_type, accounting_status,
             nvl(fee, 0) as fee_amount, nvl(fee_pattern, '-') as fee_pattern, nvl(outward_id, '-') as outward_id, nvl(outward_type, '-') as outward_type
         from opay_dw_ods.ods_sqoop_base_user_receive_money_record_di
         where dt = '{pt}'
@@ -179,7 +164,9 @@ def dwd_opay_receive_money_record_di_sql_task(ds):
             order_no, amount, currency, 'MERCHANT' as originator_type, merchant_id as originator_id, 
             bank_account_code as affiliate_bank_account_code, bank_account_name as affiliate_bank_account_name, 
             scheme as affiliate_bank_scheme, 
-            create_time, update_time, country, order_status, '-' as error_code, fail_msg as error_msg, order_type, accounting_status,
+            default.localTime("{config}", 'NG',create_time, 0) as create_time,
+            default.localTime("{config}", 'NG',update_time, 0) as update_time,   
+            country, order_status, '-' as error_code, fail_msg as error_msg, order_type, accounting_status,
             nvl(fee, 0) as fee_amount, nvl(fee_pattern, '-') as fee_pattern, nvl(outward_id, '-') as outward_id, nvl(outward_type, '-') as outward_type
         from opay_dw_ods.ods_sqoop_base_merchant_receive_money_record_di
         where dt = '{pt}'
@@ -188,7 +175,8 @@ def dwd_opay_receive_money_record_di_sql_task(ds):
     '''.format(
         pt=ds,
         table=table_name,
-        db=db_name
+        db=db_name,
+        config=config
     )
     return HQL
 

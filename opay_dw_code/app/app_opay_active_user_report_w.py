@@ -42,10 +42,10 @@ dag = airflow.DAG('app_opay_active_user_report_w',
 
 ##----------------------------------------- 依赖 ---------------------------------------##
 
-dim_opay_user_base_di_prev_day_task = OssSensor(
-    task_id='dim_opay_user_base_di_prev_day_task',
+ods_sqoop_base_user_di_prev_day_task = OssSensor(
+    task_id='ods_sqoop_base_user_di_prev_day_task',
     bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opay/opay_dw/dim_opay_user_base_di/country_code=NG",
+        hdfs_path_str="opay_dw_sqoop_di/opay_user/user",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -70,7 +70,7 @@ def fun_task_timeout_monitor(ds,dag,**op_kwargs):
     dag_ids=dag.dag_id
 
     msg = [
-        {"dag":dag, "db": "opay_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "dt={pt}".format(pt=ds), "timeout": "3000"}
+        {"dag":dag, "db": "opay_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=NG/dt={pt}".format(pt=ds), "timeout": "3000"}
     ]
 
     TaskTimeoutMonitor().set_task_monitor(msg)
@@ -107,7 +107,7 @@ def app_opay_active_user_report_w_sql_task(ds,ds_nodash):
                 mobile,
              row_number() over(partition BY user_id
                                ORDER BY update_time DESC) rn
-      FROM opay_dw.dim_opay_user_base_di
+      FROM opay_dw_ods.ods_sqoop_base_user_di
       WHERE dt<='{pt}' ) t1
    WHERE rn = 1;
   create table test_db.login_w_{date} as 
@@ -123,14 +123,15 @@ SELECT a.dt,
       WHERE dt='{pt}') a
 INNER JOIN test_db.user_base_w_{date} b ON a.user_id=b.user_id;
 
-INSERT overwrite TABLE opay_dw.app_opay_active_user_report_w partition (dt,target_type)
-SELECT '-' country_code,
+INSERT overwrite TABLE opay_dw.app_opay_active_user_report_w partition (country_code,dt,target_type)
+SELECT     '_' country,
            '-' city,
                ROLE,
                '-' kyc_level,
                    '-' top_consume_scenario,
                    '-' register_client,
                        c,
+                       'NG' country_code,
                        dt,
                        target_type
 FROM (
@@ -187,7 +188,7 @@ def execution_data_task_id(ds, ds_nodash,  **kargs):
     第二个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
 
     """
-    TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "false", "true")
+    TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "true", "true")
 
 
 app_opay_active_user_report_w_task = PythonOperator(
@@ -197,7 +198,7 @@ app_opay_active_user_report_w_task = PythonOperator(
     dag=dag
 )
 
-dim_opay_user_base_di_prev_day_task >> app_opay_active_user_report_w_task
+ods_sqoop_base_user_di_prev_day_task >> app_opay_active_user_report_w_task
 ods_sqoop_base_user_operator_df_prev_day_task >> app_opay_active_user_report_w_task
 
 

@@ -58,15 +58,30 @@ IGNORED_TABLE_LIST = [
 
 '''
 导入数据的列表
-db_name,table_name,conn_id,prefix_name,priority_weight,server_name (采集配置，定位oss数据位置使用),是否验证数据存在
+
+同步表结构的表所属db,同步表结构表名,真实采集数据所属db名称,conn_id,prefix_name,priority_weight,server_name,是否验证数据存在
+schema_table_db_name,table_name,real_table_db_name,conn_id,prefix_name,priority_weight,server_name (采集配置，定位oss数据位置使用),是否验证数据存在
 '''
 #
 
 table_list = [
 
-    ("opay_bigorder", "user_order", "opay_bigorder", "base", 3, "opay_bigorder_user_order", "false"),
-    ("opay_account", "account_user_record", "opay_account", "base", 2, "opay_account_user_record", "false"),
-    ("opay_account", "accounting_request_record", "opay_account", "base", 2, "opay_account_requset_record", "false"),
+    ("opay_bigorder", "user_order","opay_bigorder", "opay_bigorder", "base", 3, "opay_bigorder_user_order", "false"),
+    ("opay_account", "account_user_record","opay_account", "opay_account", "base", 2, "opay_account_user_record", "false"),
+    ("opay_account", "accounting_request_record","opay_account", "opay_account", "base", 2, "opay_account_requset_record", "false"),
+
+
+
+    ("dw_binlog", "voucher", "voucher_db", "dw_binlog", "coupon", 3,"coupou_voucher","false"),
+
+
+    ("voucher_db", "opay_voucher_grab_hist" , "voucher_db",  "voucher_db", "coupon", 3,"coupou_db","false"),
+    ("voucher_db", "voucher_batch_stat" , "voucher_db", "voucher_db", "coupon", 3,"coupou_db","false"),
+
+
+    #("ads_data", "coupon_batch", "ads_data", "coupon", 3,"ads_data","false"),
+    #("ads_data", "coupon_package", "ads_data", "coupon", 3,"ads_data","false"),
+    #("ads_data", "coupon_template", "ads_data", "coupon", 3,"ads_data","false"),
 
 
     # ("opay_user", "user_upgrade", "opay_user", "base", 3, "opay_user", "false"),
@@ -87,8 +102,8 @@ table_list = [
     #
     # ("opay_overlord", "overlord_user", "opay_overlord", "base", 1, "opay_merchant_overlord_recon", "false"),
     #
-    ("opay_merchant", "merchant", "opay_merchant", "base", 1, "opay_merchant_overlord_recon_db", "false"),
-    ("opay_overlord", "terminal", "opay_overlord", "base", 1, "opay_merchant_overlord_recon_db", "false"),
+    ("opay_merchant", "merchant" , "opay_merchant", "opay_merchant", "base", 1, "opay_merchant_overlord_recon_db", "false"),
+    ("opay_overlord", "terminal" , "opay_overlord", "opay_overlord", "base", 1, "opay_merchant_overlord_recon_db", "false"),
 
     #
     # ("opay_sms", "message_template", "opay_sms", "base", 1, "opay_idgen_xxljob_apollo", "false"),
@@ -106,29 +121,29 @@ table_list = [
     # ("opay_sms", "message_record", "opay_sms", "base", 3, "opay_idgen_xxljob_apollo", "false"),
     #
     # ("opay_user", "user_email", "opay_user", "base", 3, "opay_user", "false"),
-    ("opay_user", "user", "opay_user", "base", 3, "opay_user_db", "false"),
+    ("opay_user", "user","opay_user", "opay_user", "base", 3, "opay_user_db", "false"),
     #
     #
     #
 
-    ("opay_transaction", "airtime_topup_record", "opay_transaction", "base", 3, "opay_transaction_db", "false"),
-    ("opay_transaction", "betting_topup_record", "opay_transaction", "base", 3, "opay_transaction_db", "false"),
-    ("opay_transaction", "merchant_pos_transaction_record", "opay_transaction", "base", 3, "opay_transaction_db", "false"),
-    ("opay_transaction", "user_pos_transaction_record", "opay_transaction", "base", 3, "opay_transaction_db", "false"),
-    ("opay_transaction", "cash_in_record", "opay_transaction", "base", 2, "opay_transaction_db", "false"),
-    ("opay_transaction", "cash_out_record", "opay_transaction", "base", 2, "opay_transaction_db", "false"),
-    ("opay_transaction", "merchant_acquiring_record", "opay_transaction", "base", 2, "opay_transaction_db", "false"),
-    ("opay_transaction", "merchant_transfer_user_record", "opay_transaction", "base", 2, "opay_transaction_db", "false"),
-    ("opay_transaction", "user_transfer_user_record", "opay_transaction", "base", 2, "opay_transaction_db", "false"),
-    ("opay_transaction", "user_topup_record", "opay_transaction", "base", 2, "opay_transaction_db", "false"),
-    ("opay_transaction", "merchant_topup_record", "opay_transaction", "base", 2, "opay_transaction_db", "false"),
-    ("opay_transaction", "tv_topup_record", "opay_transaction", "base", 2, "opay_transaction_db", "false"),
-    ("opay_transaction", "mobiledata_topup_record", "opay_transaction", "base", 2, "opay_transaction_db", "false"),
-    ("opay_transaction", "electricity_topup_record", "opay_transaction", "base", 2, "opay_transaction_db", "false"),
-    ("opay_transaction", "merchant_transfer_card_record", "opay_transaction", "base", 2, "opay_transaction_db", "false"),
-    ("opay_transaction", "user_transfer_card_record", "opay_transaction", "base", 2, "opay_transaction_db", "false"),
-    ("opay_transaction", "user_receive_money_record", "opay_transaction", "base", 2, "opay_transaction_db", "false"),
-    ("opay_transaction", "merchant_receive_money_record", "opay_transaction", "base", 2, "opay_transaction_db", "false"),
+    ("opay_transaction", "airtime_topup_record", "opay_transaction","opay_transaction", "base", 3, "opay_transaction_db", "false"),
+    ("opay_transaction", "betting_topup_record","opay_transaction", "opay_transaction", "base", 3, "opay_transaction_db", "false"),
+    ("opay_transaction", "merchant_pos_transaction_record","opay_transaction", "opay_transaction", "base", 3, "opay_transaction_db", "false"),
+    ("opay_transaction", "user_pos_transaction_record","opay_transaction", "opay_transaction", "base", 3, "opay_transaction_db", "false"),
+    ("opay_transaction", "cash_in_record","opay_transaction", "opay_transaction", "base", 2, "opay_transaction_db", "false"),
+    ("opay_transaction", "cash_out_record","opay_transaction", "opay_transaction", "base", 2, "opay_transaction_db", "false"),
+    ("opay_transaction", "merchant_acquiring_record","opay_transaction", "opay_transaction", "base", 2, "opay_transaction_db", "false"),
+    ("opay_transaction", "merchant_transfer_user_record","opay_transaction", "opay_transaction", "base", 2, "opay_transaction_db", "false"),
+    ("opay_transaction", "user_transfer_user_record","opay_transaction", "opay_transaction", "base", 2, "opay_transaction_db", "false"),
+    ("opay_transaction", "user_topup_record","opay_transaction", "opay_transaction", "base", 2, "opay_transaction_db", "false"),
+    ("opay_transaction", "merchant_topup_record","opay_transaction", "opay_transaction", "base", 2, "opay_transaction_db", "false"),
+    ("opay_transaction", "tv_topup_record","opay_transaction", "opay_transaction", "base", 2, "opay_transaction_db", "false"),
+    ("opay_transaction", "mobiledata_topup_record","opay_transaction", "opay_transaction", "base", 2, "opay_transaction_db", "false"),
+    ("opay_transaction", "electricity_topup_record","opay_transaction", "opay_transaction", "base", 2, "opay_transaction_db", "false"),
+    ("opay_transaction", "merchant_transfer_card_record","opay_transaction", "opay_transaction", "base", 2, "opay_transaction_db", "false"),
+    ("opay_transaction", "user_transfer_card_record","opay_transaction", "opay_transaction", "base", 2, "opay_transaction_db", "false"),
+    ("opay_transaction", "user_receive_money_record","opay_transaction", "opay_transaction", "base", 2, "opay_transaction_db", "false"),
+    ("opay_transaction", "merchant_receive_money_record","opay_transaction", "opay_transaction", "base", 2, "opay_transaction_db", "false"),
 
     # ("opay_transaction", "adjustment_decrease_record", "opay_transaction", "base", 3, "opay_transaction", "false"),
     # ("opay_transaction", "adjustment_increase_record", "opay_transaction", "base", 3, "opay_transaction", "false"),
@@ -163,9 +178,9 @@ table_list = [
     #
     # ("opay_channel", "channel_transaction", "opay_channel", "base", 3, "opay_channel", "false")
 
-    ("opay_agent_crm", "bd_agent", "opay_agent_crm_db", "base", 3, "opay_agent_crm", "false"),
-    ("opay_agent_crm", "bd_admin_users", "opay_agent_crm_db", "base", 3, "opay_agent_crm", "false"),
-    ("opay_agent_crm", "bd_agent_status_change_log", "opay_agent_crm_db", "base", 3, "opay_agent_crm", "false")
+    ("opay_agent_crm", "bd_agent" , "opay_agent_crm", "opay_agent_crm_db", "base", 3, "opay_agent_crm", "false"),
+    ("opay_agent_crm", "bd_admin_users" , "opay_agent_crm","opay_agent_crm_db", "base", 3, "opay_agent_crm", "false"),
+    ("opay_agent_crm", "bd_agent_status_change_log" , "opay_agent_crm", "opay_agent_crm_db", "base", 3, "opay_agent_crm", "false")
 ]
 
 HIVE_DB = 'opay_dw_ods'
@@ -217,7 +232,7 @@ table_dim_list = []
 table_not_core_list = []
 
 
-def add_partition(v_execution_date, v_execution_day, v_execution_hour, db_name, table_name, conn_id, hive_table_name,
+def add_partition(v_execution_date, v_execution_day, v_execution_hour, real_table_db_name, table_name, conn_id, hive_table_name,
                   server_name, hive_db, is_must_have_data, **kwargs):
     # 生成_SUCCESS
     """
@@ -231,7 +246,7 @@ def add_partition(v_execution_date, v_execution_day, v_execution_hour, db_name, 
         hive_table_name,
         OSS_PATH % ("{server_name}.{db_name}.{table_name}".format(
             server_name=server_name,
-            db_name=db_name,
+            db_name=real_table_db_name,
             table_name=table_name
         )), "false", is_must_have_data, v_execution_hour)
 
@@ -246,7 +261,7 @@ def add_partition(v_execution_date, v_execution_day, v_execution_hour, db_name, 
     return
 
 
-def run_check_table(db_name, table_name, conn_id, hive_table_name, server_name, **kwargs):
+def run_check_table(schema_table_db_name,real_table_db_name, table_name, conn_id, hive_table_name, server_name, **kwargs):
     # SHOW TABLES in oride_db LIKE 'data_aa'
     check_sql = 'SHOW TABLES in %s LIKE \'%s\'' % (HIVE_DB, hive_table_name)
     hive2_conn = HiveServer2Hook().get_conn()
@@ -266,7 +281,7 @@ def run_check_table(db_name, table_name, conn_id, hive_table_name, server_name, 
                     information_schema.columns
                 WHERE
                     table_schema='{db_name}' and table_name='{table_name}'
-            '''.format(db_name=db_name, table_name=table_name)
+            '''.format(db_name=schema_table_db_name, table_name=table_name)
         mysql_hook = MySqlHook(conn_id)
         mysql_conn = mysql_hook.get_conn()
         mysql_cursor = mysql_conn.cursor()
@@ -298,7 +313,7 @@ def run_check_table(db_name, table_name, conn_id, hive_table_name, server_name, 
             columns=",\n".join(rows),
             oss_path=OSS_PATH % ("{server_name}.{db_name}.{table_name}".format(
                 server_name=server_name,
-                db_name=db_name,
+                db_name=real_table_db_name,
                 table_name=table_name
             ))
         )
@@ -310,12 +325,12 @@ def run_check_table(db_name, table_name, conn_id, hive_table_name, server_name, 
         response = sqoopSchema.append_hive_schema(
             hive_db=HIVE_DB,
             hive_table=hive_table_name,
-            mysql_db=db_name,
+            mysql_db=schema_table_db_name,
             mysql_table=table_name,
             mysql_conn=conn_id,
             oss_path=OSS_PATH % ("{server_name}.{db_name}.{table_name}".format(
                 server_name=server_name,
-                db_name=db_name,
+                db_name=real_table_db_name,
                 table_name=table_name
             ))
         )
@@ -325,7 +340,7 @@ def run_check_table(db_name, table_name, conn_id, hive_table_name, server_name, 
 
 
 conn_conf_dict = {}
-for db_name, table_name, conn_id, prefix_name, priority_weight_nm, server_name, is_must_have_data in table_list:
+for schema_table_db_name,table_name,real_table_db_name, conn_id, prefix_name, priority_weight_nm, server_name, is_must_have_data in table_list:
     if conn_id not in conn_conf_dict:
         conn_conf_dict[conn_id] = BaseHook.get_connection(conn_id)
 
@@ -338,7 +353,8 @@ for db_name, table_name, conn_id, prefix_name, priority_weight_nm, server_name, 
         python_callable=run_check_table,
         provide_context=True,
         op_kwargs={
-            'db_name': db_name,
+            'schema_table_db_name': schema_table_db_name,
+            'real_table_db_name': real_table_db_name,
             'table_name': table_name,
             'conn_id': conn_id,
             'hive_table_name': hive_table_name,
@@ -354,7 +370,7 @@ for db_name, table_name, conn_id, prefix_name, priority_weight_nm, server_name, 
         python_callable=add_partition,
         provide_context=True,
         op_kwargs={
-            'db_name': db_name,
+            'real_table_db_name': real_table_db_name,
             'table_name': table_name,
             'conn_id': conn_id,
             'hive_table_name': hive_table_name,

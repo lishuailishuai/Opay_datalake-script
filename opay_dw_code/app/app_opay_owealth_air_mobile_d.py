@@ -70,7 +70,7 @@ def fun_task_timeout_monitor(ds,dag,**op_kwargs):
     dag_ids=dag.dag_id
 
     msg = [
-        {"dag":dag, "db": "opay_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "dt={pt}".format(pt=ds), "timeout": "3000"}
+        {"dag":dag, "db": "opay_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=NG/dt={pt}".format(pt=ds), "timeout": "3000"}
     ]
 
     TaskTimeoutMonitor().set_task_monitor(msg)
@@ -92,7 +92,7 @@ def app_opay_owealth_air_mobile_d_sql_task(ds):
     HQL = '''
     
     set mapred.max.split.size=1000000;
-        INSERT overwrite TABLE opay_dw.app_opay_owealth_air_mobile_d partition (dt='{pt}')
+        INSERT overwrite TABLE opay_dw.app_opay_owealth_air_mobile_d partition (country_code='NG',dt='{pt}')
         SELECT 
                airtime_amt,
                airtime_c,
@@ -149,7 +149,7 @@ def execution_data_task_id(ds, **kargs):
     第二个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
 
     """
-    TaskTouchzSuccess().countries_touchz_success(airflow.macros.ds_add(ds, +1), db_name, table_name, hdfs_path, "false",
+    TaskTouchzSuccess().countries_touchz_success(airflow.macros.ds_add(ds, +1), db_name, table_name, hdfs_path, "true",
                                                  "true")
 
 
