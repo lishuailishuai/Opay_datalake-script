@@ -356,6 +356,15 @@ def dwm_oride_order_base_di_sql_task(ds):
             ord.falsify_get_driver_cancel, 
             --司机取消罚款用户实际获得
             
+            ord.td_ord_to_cancel_dur,
+            --当天下单到取消时长
+            
+            ord.driver_arrive_car_point_dur,
+            --司机接单到到达上车点时长
+            
+            ord.ord_to_arrive_dur,
+            --下单送达总时长
+            
  		   ord.country_code as country_code,
 
            ord.dt as dt
