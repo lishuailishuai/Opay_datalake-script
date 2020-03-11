@@ -107,7 +107,7 @@ def app_oride_user_funnel_beford_d_sql_task(ds):
     from oride_dw.dwd_oride_client_event_detail_hi 
     where dt='{pt}'
           and from_unixtime(cast(event_time as int),'yyyy-MM-dd')=dt
-          and app_version>='4.4.405' 
+         -- and app_version>='4.4.405' 
           and event_name in('oride_show','choose_end_point_click','request_a_ride_show')
     group by user_id,event_name,event_time
     )
