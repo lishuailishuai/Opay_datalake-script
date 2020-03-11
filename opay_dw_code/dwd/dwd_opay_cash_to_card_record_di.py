@@ -112,7 +112,7 @@ task_timeout_monitor= PythonOperator(
 db_name = "opay_dw"
 table_name = "dwd_opay_cash_to_card_record_di"
 hdfs_path="oss://opay-datalake/opay/opay_dw/" + table_name
-
+config = eval(Variable.get("opay_time_zone_config"))
 
 def dwd_opay_cash_to_card_record_di_sql_task(ds):
     HQL='''
@@ -156,7 +156,9 @@ def dwd_opay_cash_to_card_record_di_sql_task(ds):
             recipient_bank_code as affiliate_bank_code, recipient_bank_name as affiliate_bank_name, 
             recipient_bank_account_no_encrypted as affiliate_bank_account_no_encrypted, recipient_bank_account_name as affiliate_bank_account_name, 
             recipient_kyc_level as affiliate_bank_kyc_level, '-' as affiliate_bank_mobile, '-' as affiliate_bank_email,
-            create_time, update_time, country, order_status, error_code, error_msg, client_source, pay_channel as pay_way, business_type, pay_status,
+            default.localTime("{config}", 'NG',create_time, 0) as create_time,
+            default.localTime("{config}", 'NG',update_time, 0) as update_time,
+            country, order_status, error_code, error_msg, client_source, pay_channel as pay_way, business_type, pay_status,
             nvl(fee, 0) as fee_amount, nvl(fee_pattern, '-') as fee_pattern, nvl(outward_id, '-') as outward_id, nvl(outward_type, '-') as outward_type
         from opay_dw_ods.ods_sqoop_base_user_transfer_card_record_di
         where dt = '{pt}'
@@ -166,7 +168,9 @@ def dwd_opay_cash_to_card_record_di_sql_task(ds):
             recipient_bank_code as affiliate_bank_code, recipient_bank_name as affiliate_bank_name, 
             recipient_bank_account_no_encrypted as affiliate_bank_account_no_encrypted, recipient_bank_account_name as affiliate_bank_account_name, 
             recipient_kyc_level as affiliate_bank_kyc_level, customer_phone as affiliate_bank_mobile, customer_email as affiliate_bank_email,
-            create_time, update_time, country, order_status, error_code, error_msg, '-' as client_source, pay_channel as pay_way, business_type, pay_status,
+            default.localTime("{config}", 'NG',create_time, 0) as create_time,
+            default.localTime("{config}", 'NG',update_time, 0) as update_time, 
+            country, order_status, error_code, error_msg, '-' as client_source, pay_channel as pay_way, business_type, pay_status,
             nvl(fee, 0) as fee_amount, nvl(fee_pattern, '-') as fee_pattern, nvl(outward_id, '-') as outward_id, nvl(outward_type, '-') as outward_type
         from opay_dw_ods.ods_sqoop_base_merchant_transfer_card_record_di
         where dt = '{pt}'
@@ -176,7 +180,8 @@ def dwd_opay_cash_to_card_record_di_sql_task(ds):
     '''.format(
         pt=ds,
         table=table_name,
-        db=db_name
+        db=db_name,
+        config=config
     )
     return HQL
 

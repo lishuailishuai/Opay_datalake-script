@@ -122,6 +122,7 @@ task_timeout_monitor = PythonOperator(
 db_name = "opay_dw"
 table_name = "dwd_opay_transfer_of_account_record_di"
 hdfs_path = "oss://opay-datalake/opay/opay_dw/" + table_name
+config = eval(Variable.get("opay_time_zone_config"))
 
 
 def dwd_opay_transfer_of_account_record_di_sql_task(ds, ds_nodash):
@@ -155,7 +156,8 @@ def dwd_opay_transfer_of_account_record_di_sql_task(ds, ds_nodash):
         merchant_transfer_user_data as (
             select 
                 order_no, amount, currency, originator_type, originator_id, affiliate_type, affiliate_id, payment_order_no, 
-                    create_time, update_time, country, m1.sub_service_type, order_status,
+                    create_time, update_time,
+                    country, m1.sub_service_type, order_status,
                     error_code, error_msg, client_source, pay_way, business_type,
                     case 
                         when mp1.top_consume_scenario is null then m1.sub_service_type
@@ -169,7 +171,9 @@ def dwd_opay_transfer_of_account_record_di_sql_task(ds, ds_nodash):
             from (
                 select 
                     order_no, amount, currency, 'MERCHANT' as originator_type, merchant_id as originator_id, recipient_type as affiliate_type, recipient_id as affiliate_id, merchant_order_no as payment_order_no, 
-                    create_time, update_time, country, 'AATransfer' as sub_service_type, order_status,
+                    default.localTime("{config}", 'NG',create_time, 0) as create_time,
+                    default.localTime("{config}", 'NG',update_time, 0) as update_time,  
+                    country, 'AATransfer' as sub_service_type, order_status,
                     '-' as error_code, error_msg, '-' as client_source, pay_channel as pay_way, business_type,
                     fee_amount, fee_pattern, outWardId as outward_id, outWardType as outward_type
                 from opay_dw_ods.ods_sqoop_base_merchant_transfer_user_record_di
@@ -193,7 +197,9 @@ def dwd_opay_transfer_of_account_record_di_sql_task(ds, ds_nodash):
             from (
                 select 
                     order_no, amount, currency, 'USER' as originator_type, user_id as originator_id, 'MERCHANT' as affiliate_type, merchant_id as affiliate_id, merchant_order_no as payment_order_no, 
-                    create_time, update_time, country, 'MAcquiring' as sub_service_type, 
+                    default.localTime("{config}", 'NG',create_time, 0) as create_time,
+                    default.localTime("{config}", 'NG',update_time, 0) as update_time,   
+                    country, 'MAcquiring' as sub_service_type, 
                     order_status, '-' as error_code, error_msg, '-' as client_source, pay_channel as pay_way, bussiness_type as business_type, 
                     fee as fee_amount, fee_pattern, outward_id, outward_type
                 from opay_dw_ods.ods_sqoop_base_merchant_acquiring_record_di
@@ -230,7 +236,9 @@ def dwd_opay_transfer_of_account_record_di_sql_task(ds, ds_nodash):
     from (
         select 
             order_no, amount, currency, originator_type, originator_id, affiliate_type, affiliate_id, payment_order_no, 
-                    create_time, update_time, country, sub_service_type, 
+            create_time,
+            update_time, 
+                    country, sub_service_type, 
                     order_status, error_code, error_msg, client_source, pay_way, business_type,
                     top_consume_scenario, sub_consume_scenario, 
                     nvl(fee_amount, 0) as fee_amount, nvl(fee_pattern, '-') as fee_pattern, nvl(outward_id, '-') as outward_id, nvl(outward_type, '-') as outward_type
@@ -238,7 +246,9 @@ def dwd_opay_transfer_of_account_record_di_sql_task(ds, ds_nodash):
         union all
         select 
             order_no, amount, currency, 'USER' as originator_type, user_id as originator_id, recipient_type as affiliate_type, recipient_id as affiliate_id, '-' as payment_order_no, 
-            create_time, update_time, country, 'AATransfer' as sub_service_type, 
+            default.localTime("{config}", 'NG',create_time, 0) as create_time,
+            default.localTime("{config}", 'NG',update_time, 0) as update_time, 
+            country, 'AATransfer' as sub_service_type, 
             case transfer_status
                 when 'CONFIRM_S' then 'SUCCESS'
                 when 'TRANSFER_S' then 'SUCCESS'
@@ -258,15 +268,19 @@ def dwd_opay_transfer_of_account_record_di_sql_task(ds, ds_nodash):
         union all
         select 
             order_no, amount, currency, originator_type, originator_id, affiliate_type, affiliate_id, payment_order_no, 
-                    create_time, update_time, country, sub_service_type, order_status,
-                    error_code, error_msg, client_source, pay_way, business_type,
-                    top_consume_scenario, sub_consume_scenario, 
-                    nvl(fee_amount, 0) as fee_amount, nvl(fee_pattern, '-') as fee_pattern, nvl(outward_id, '-') as outward_id, nvl(outward_type, '-') as outward_type
+            create_time,
+            update_time, 
+            country, sub_service_type, order_status,
+            error_code, error_msg, client_source, pay_way, business_type,
+            top_consume_scenario, sub_consume_scenario, 
+            nvl(fee_amount, 0) as fee_amount, nvl(fee_pattern, '-') as fee_pattern, nvl(outward_id, '-') as outward_id, nvl(outward_type, '-') as outward_type
         from merchant_transfer_user_data
         union all
         select 
             order_no, amount, currency, sender_type as originator_type, sender_id as originator_id, recipient_type as affiliate_type, recipient_id as affiliate_id, platform_order_no as payment_order_no, 
-            create_time, update_time, country, 'Consumption' as sub_service_type, order_status,
+            default.localTime("{config}", 'NG',create_time, 0) as create_time,
+            default.localTime("{config}", 'NG',update_time, 0) as update_time, 
+            country, 'Consumption' as sub_service_type, order_status,
             error_code, error_msg, '-' as client_source, pay_channel as pay_way, '-' as business_type, 'OPay QR' as top_consume_scenario, 'QRCode' as sub_consume_scenario,
             nvl(fee, 0) as fee_amount, nvl(fee_pattern, '-') as fee_pattern, nvl(outward_id, '-') as outward_id, nvl(outward_type, '-') as outward_type
         from opay_dw_ods.ods_sqoop_base_business_collection_record_di
@@ -280,7 +294,8 @@ def dwd_opay_transfer_of_account_record_di_sql_task(ds, ds_nodash):
         pt=ds,
         table=table_name,
         db=db_name,
-        pt_str=ds_nodash
+        pt_str=ds_nodash,
+        config=config
     )
     return HQL
 

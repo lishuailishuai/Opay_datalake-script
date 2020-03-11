@@ -77,6 +77,7 @@ db_name = "opay_dw"
 
 table_name = "dwd_opay_channel_transaction_base_di"
 hdfs_path = "oss://opay-datalake/opay/opay_dw/" + table_name
+config = eval(Variable.get("opay_time_zone_config"))
 
 
 def dwd_opay_channel_transaction_base_di_sql_task(ds):
@@ -112,8 +113,8 @@ def dwd_opay_channel_transaction_base_di_sql_task(ds):
        response_code,
        response_message,
        retry_flag,
-       create_time,
-       update_time,
+       default.localTime("{config}", 'NG',create_time, 0) as create_time,
+        default.localTime("{config}", 'NG',update_time, 0) as update_time, 
        'NG' country_code,
        dt
     FROM opay_dw_ods.ods_sqoop_base_channel_transaction_di
@@ -122,7 +123,8 @@ def dwd_opay_channel_transaction_base_di_sql_task(ds):
     '''.format(
         pt=ds,
         table=table_name,
-        db=db_name
+        db=db_name,
+        config=config
     )
     return HQL
 
