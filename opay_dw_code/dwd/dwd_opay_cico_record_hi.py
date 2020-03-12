@@ -437,7 +437,7 @@ select
   , t1.outward_type
   , t1.bd_admin_user_id
   , t1.bd_agent_status
-  , t2.state
+  , if(sub_service_type='Cash In',t2.state,t3.state) as state
   , t1.utc_date_hour
 
   , 'NG' as country_code
