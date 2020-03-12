@@ -64,7 +64,9 @@ db_name,table_name,conn_id,prefix_name,priority_weight,is_valid_success
 table_list = [
     ("opay_owealth","share_acct", "opay_owealth_db", "owealth",3,"true"),
     ("opay_owealth","share_order", "opay_owealth_db", "owealth",3,"true"),
-    ("opay_owealth","share_revenue_log", "opay_owealth_db", "owealth",3,"true")
+    ("opay_owealth","share_revenue_log", "opay_owealth_db", "owealth",3,"true"),
+    ("opay_owealth", "share_trans_record", "opay_owealth_db", "owealth", 3, "true")
+
 ]
 
 

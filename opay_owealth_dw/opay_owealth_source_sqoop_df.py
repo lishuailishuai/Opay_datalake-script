@@ -72,6 +72,7 @@ table_list = [
     ("opay_owealth", "owealth_purchase_record", "opay_owealth", "owealth", 3,"true"),
     ("opay_owealth", "owealth_user_subscribed", "opay_owealth", "owealth", 3,"true"),
     ("opay_owealth", "share_revenue_log", "opay_owealth_db", "owealth", 2,"true"),
+    ("opay_owealth", "share_trans_record", "opay_owealth_db", "owealth", 3,"true"),
 ]
 
 
