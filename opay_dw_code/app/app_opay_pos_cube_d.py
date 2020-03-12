@@ -43,10 +43,10 @@ dag = airflow.DAG('app_opay_pos_cube_d',
 
 ##----------------------------------------- 依赖 ---------------------------------------##
 
-dim_opay_pos_terminal_base_df_prev_day_task = OssSensor(
-   task_id='dim_opay_pos_terminal_base_df_prev_day_task',
+dim_opay_terminal_base_df_prev_day_task = OssSensor(
+   task_id='dim_opay_terminal_base_df_prev_day_task',
   bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opay/opay_dw/dim_opay_pos_terminal_base_df/country_code=NG",
+        hdfs_path_str="opay/opay_dw/dim_opay_terminal_base_df/country_code=NG",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -241,7 +241,7 @@ app_opay_pos_cube_d_task = PythonOperator(
     dag=dag
 )
 
-dim_opay_pos_terminal_base_df_prev_day_task >> app_opay_pos_cube_d_task
+dim_opay_terminal_base_df_prev_day_task >> app_opay_pos_cube_d_task
 dwd_opay_pos_transaction_record_di_task >> app_opay_pos_cube_d_task
 ods_sqoop_base_user_di_prev_day_task >> app_opay_pos_cube_d_task
 
