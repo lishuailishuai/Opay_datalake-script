@@ -45,7 +45,7 @@ dag = airflow.DAG('dwm_opay_user_last_visit_df',
 dwm_opay_user_last_visit_df_prev_day_task = OssSensor(
     task_id='dwm_opay_user_last_visit_df_prev_day_task',
     bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opay/opay_dw/dwm_opay_user_last_visit_df/country_code=nal",
+        hdfs_path_str="opay/opay_dw/dwm_opay_user_last_visit_df/country_code=NG",
         pt='{{macros.ds_add(ds, -1)}}'
     ),
     bucket_name='opay-datalake',
@@ -59,7 +59,7 @@ def fun_task_timeout_monitor(ds, dag, **op_kwargs):
 
     msg = [
         {"dag": dag, "db": "opay_dw", "table": "{dag_name}".format(dag_name=dag_ids),
-         "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "3000"}
+         "partition": "country_code=NG/dt={pt}".format(pt=ds), "timeout": "3000"}
     ]
 
     TaskTimeoutMonitor().set_task_monitor(msg)
@@ -124,7 +124,7 @@ select
   ,role
   ,last_visit
 
-  ,'nal' as country_code
+  ,'NG' as country_code
   ,'{pt}' as dt 
 FROM
   (
