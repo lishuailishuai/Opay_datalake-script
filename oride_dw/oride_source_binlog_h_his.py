@@ -68,8 +68,20 @@ db_name,table_name,conn_id,prefix_name,priority_weight,server_name (采集配置
 
 table_list = [
 
+    #oride
     # ("oride_data", "data_driver", "sqoop_db", "base", 3, "oride_db", "false"),
     ("oride_data", "data_driver_extend", "sqoop_db", "base", 3, "oride_db", "false"),
+    ("oride_data", "data_country_conf", "sqoop_db", "base", 3, "oride_db", "false"),
+    ("oride_data", "data_city_conf", "sqoop_db", "base", 3, "oride_db", "false"),
+    ("oride_data", "data_device", "sqoop_db", "base", 3, "oride_db", "false"),
+    ("oride_data", "data_driver_whitelist", "sqoop_db", "base", 3, "oride_db", "false"),
+    ("oride_data", "data_user", "sqoop_db", "base", 3, "oride_db", "false"),
+    ("oride_data", "data_user_whitelist", "sqoop_db", "base", 3, "oride_db", "false"),
+
+    #opay_spread
+    ("opay_spread", "rider_signups", "opay_spread_mysql", "mass", 3, "opay_spread_db", "false"),
+    ("opay_spread", "driver_group", "opay_spread_mysql", "mass", 3, "opay_spread_db", "false"),
+    ("opay_spread", "driver_team", "opay_spread_mysql", "mass", 3, "opay_spread_db", "false"),
 
 ]
 

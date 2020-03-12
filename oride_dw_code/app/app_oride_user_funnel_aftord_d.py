@@ -94,6 +94,7 @@ def app_oride_user_funnel_aftord_d_sql_task(ds):
     insert overwrite table {db}.{table} partition(country_code,dt)
     select city_id, --城市ID
            product_id, --业务线ID
+           concat_ws('_',user_version,client_os) as user_version_os, --乘客端版本号和操作系统
            count(distinct passenger_id) as ord_user_num, --下单乘客数   
            count(distinct (if(is_request=1,passenger_id,null))) as requested_user_num, --被接单乘客量
            count(distinct (if(is_finish=1,passenger_id,null))) as finish_user_num, --完单乘客量  
@@ -156,7 +157,9 @@ def app_oride_user_funnel_aftord_d_sql_task(ds):
     where dt='{pt}'
     group by city_id, --城市ID
              product_id, --业务线ID
-             country_code;
+             concat_ws('_',user_version,client_os), --乘客端版本号和操作系统
+             country_code
+    with cube;
     '''.format(
         pt=ds,
         table=table_name,
