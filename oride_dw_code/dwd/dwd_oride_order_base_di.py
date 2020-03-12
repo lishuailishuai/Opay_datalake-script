@@ -487,6 +487,9 @@ SELECT base.id as order_id,
         
        if(base.arrive_time>0,(base.arrive_time-base.create_time),0) as ord_to_arrive_dur,
         --下单到送达总时长
+        
+       base.client_os,
+       --乘客端操作系统
        
        nvl(country.country_code,'nal') as country_code,
 
