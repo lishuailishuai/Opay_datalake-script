@@ -250,7 +250,7 @@ merchant_transfer_user_data as (
       , merchant_order_no as payment_order_no
       , default.localTime("{config}",'NG',from_unixtime(cast(cast(create_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as create_time
       , default.localTime("{config}",'NG',from_unixtime(cast(cast(update_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as update_time
-      , 'NG' as country
+      , country
       , 'AATransfer' as sub_service_type
       , order_status
       , '-' as error_code
@@ -327,7 +327,7 @@ merchant_acquiring_data as (
       , merchant_order_no as payment_order_no
       , default.localTime("{config}",'NG',from_unixtime(cast(cast(create_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as create_time
       , default.localTime("{config}",'NG',from_unixtime(cast(cast(update_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as update_time
-      , 'NG' as country
+      , country
       , 'MAcquiring' as sub_service_type
       , order_status
       , '-' as error_code
@@ -398,7 +398,7 @@ user_transfer_user_data as (
       , '-' as payment_order_no
       , default.localTime("{config}",'NG',from_unixtime(cast(cast(create_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as create_time
       , default.localTime("{config}",'NG',from_unixtime(cast(cast(update_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as update_time
-      , 'NG' as country
+      , country
       , 'AATransfer' as sub_service_type
       , case transfer_status
         when 'CONFIRM_S' then 'SUCCESS'
@@ -493,8 +493,8 @@ select
   , t1.utc_date_hour
 
   , 'NG' as country_code
-  , date_format(default.localTime("{config}", t1.country, '{v_date}', 0), 'yyyy-MM-dd') as dt
-  , date_format(default.localTime("{config}", t1.country, '{v_date}', 0), 'HH') as hour
+  , date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'yyyy-MM-dd') as dt
+  , date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'HH') as hour
 from 
   union_result as  t1 
 left join 

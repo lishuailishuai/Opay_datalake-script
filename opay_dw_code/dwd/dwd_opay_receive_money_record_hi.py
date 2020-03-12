@@ -156,8 +156,8 @@ def dwd_opay_receive_money_record_hi_sql_task(ds, v_date):
         'receivemoney' as top_consume_scenario, 'receivemoney' as sub_consume_scenario,
         t1.fee_amount, t1.fee_pattern, t1.outward_id, t1.outward_type,date_format('{v_date}', 'yyyy-MM-dd HH') as utc_date_hour,state,
          'NG' country_code,
-        date_format(default.localTime("{config}", t1.country, '{v_date}', 0), 'yyyy-MM-dd') as dt,
-        date_format(default.localTime("{config}", t1.country, '{v_date}', 0), 'HH') as hour
+        date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'yyyy-MM-dd') as dt,
+        date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'HH') as hour
         
     from (
         select 
