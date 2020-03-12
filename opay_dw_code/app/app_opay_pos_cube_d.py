@@ -109,9 +109,9 @@ def app_opay_pos_cube_d_sql_task(ds):
     with 
         um_data as (
             SELECT 
-                user_id,ROLE
+                user_id,ROLE,state
             FROM (
-                SELECT user_id,ROLE,row_number()over(partition BY user_id ORDER BY update_time DESC) rn
+                SELECT user_id,ROLE,state,row_number()over(partition BY user_id ORDER BY update_time DESC) rn
                 FROM opay_dw_ods.ods_sqoop_base_user_di where dt<='{pt}' and role='agent') m
             WHERE rn=1
 
@@ -180,11 +180,11 @@ def app_opay_pos_cube_d_sql_task(ds):
             pos_id, terminal_id, user_id, t4.state, nvl(t5.region, '-') as region, country_code
         from (
             SELECT 
-                pos_id, state, terminal_id, a.user_id, country_code
+                pos_id, b.state, terminal_id, a.owner_id user_id, country_code
             FROM (select * from opay_dw.dim_opay_terminal_base_df
                   WHERE dt='{pt}' AND bind_status='Y') a
             inner join um_data b 
-            on a.user_id=b.user_id
+            on a.owner_id=b.user_id
         ) t4 left join (
             select
                 state, region
