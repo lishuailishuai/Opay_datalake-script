@@ -181,7 +181,7 @@ def app_opay_pos_cube_d_sql_task(ds):
         from (
             SELECT 
                 pos_id, state, terminal_id, a.user_id, country_code
-            FROM (select * from opay_dw.dim_opay_pos_terminal_base_df
+            FROM (select * from opay_dw.dim_opay_terminal_base_df
                   WHERE dt='{pt}' AND bind_status='Y') a
             inner join um_data b 
             on a.user_id=b.user_id
