@@ -149,15 +149,16 @@ def app_opay_active_user_report_d_sql_task(ds,ds_nodash):
      WHERE rn = 1;
                
     create table if not exists test_db.login_{date} as 
-    select dt,
-           substr(from_unixtime(unix_timestamp(last_visit, 'yyyy-MM-dd HH:mm:ss')+3600),1,10) last_visit,a.user_id,role
-     from 
-          (select dt,user_id ,last_visit
-             from opay_dw_ods.ods_sqoop_base_user_operator_df 
-             where dt='{pt}' and substr(from_unixtime(unix_timestamp(last_visit, 'yyyy-MM-dd HH:mm:ss')+3600),1,10) > date_sub('{pt}',30))a 
-    inner join 
-          test_db.user_base_{date} b 
-    on a.user_id=b.user_id;
+    select 
+        dt,
+        last_visit,
+        user_id,
+        role
+    from 
+        opay_dw.dwm_opay_user_last_visit_df
+    where 
+        dt='{pt}' 
+        and last_visit > date_sub('{pt}',30);
     
        create table if not exists test_db.tran_{date} as
     select top_consume_scenario,a.user_id,dt,a.role,b.state
