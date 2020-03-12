@@ -74,7 +74,18 @@ table_list = [
     ("oride_data", "data_user", "sqoop_db", "base", 3, "oride_db", "false"),
     ("oride_data", "data_user_recharge", "sqoop_db", "base", 3, "oride_db", "false"),
     ("oride_data", "data_driver_recharge_records", "sqoop_db", "base", 3, "oride_db", "false"),
-    ("oride_data", "data_driver_reward", "sqoop_db", "base", 3, "oride_db", "false")
+    ("oride_data", "data_driver_reward", "sqoop_db", "base", 3, "oride_db", "false"),
+    ("oride_data", "data_driver_pay_records", "sqoop_db", "base", 3, "oride_db", "false"),
+    ("oride_data", "data_driver_records_day", "sqoop_db", "base", 3, "oride_db", "false"),
+    ("oride_data", "data_driver_repayment", "sqoop_db", "base", 3, "oride_db", "false"),
+    ("oride_data", "data_driver_balance_extend", "sqoop_db", "base", 3, "oride_db", "false"),
+    ("oride_data", "data_country_conf", "sqoop_db", "base", 3, "oride_db", "false"),
+    ("oride_data", "data_city_conf", "sqoop_db", "base", 3, "oride_db", "false"),
+    ("oride_data", "data_device", "sqoop_db", "base", 3, "oride_db", "false"),
+    ("oride_data", "data_driver_whitelist", "sqoop_db", "base", 3, "oride_db", "false"),
+    ("oride_data", "data_user_whitelist", "sqoop_db", "base", 3, "oride_db", "false"),
+    ("oride_data", "data_user_estimate_records", "sqoop_db", "base", 3, "oride_db", "false"),
+
 ]
 
 HIVE_DB = 'oride_dw_ods'
