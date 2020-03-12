@@ -94,7 +94,7 @@ def dwd_oride_driver_score_reward_conf_df_sql_task(ds):
     
     INSERT overwrite TABLE oride_dw.{table} partition(country_code,dt)
     
-     select
+    select
           id,
           country_id,
           name,
@@ -102,9 +102,9 @@ def dwd_oride_driver_score_reward_conf_df_sql_task(ds):
           city_id,
           bb.use_type,
           ccc.driver_tag,
-          get_json_object(substr(ccc.rewards,2,length(ccc.rewards)-2),'$.start'),
-          get_json_object(substr(ccc.rewards,2,length(ccc.rewards)-2),'$.end'),
-          get_json_object(substr(ccc.rewards,2,length(ccc.rewards)-2),'$.reward'),
+          ccc.rewards[0]["start"],
+          ccc.rewards[0]["end"],
+          ccc.rewards[0]["reward"],
           from_unixtime(start_time),
           from_unixtime(end_time),
           status,
@@ -116,9 +116,10 @@ def dwd_oride_driver_score_reward_conf_df_sql_task(ds):
           oride_dw_ods.ods_sqoop_base_data_driver_score_reward_conf_df
           lateral view json_tuple(substr(rules,2,length(rules)-2),'use_type','option') aa as use_type,option
           lateral view explode(split(substr(use_type,2,length(use_type)-2),',')) bb as use_type
-          LATERAL VIEW EXPLODE(from_json(option,array(named_struct("driver_tag",cast(1 as bigint),"rewards","")))) cc AS ccc
+          LATERAL VIEW EXPLODE(from_json(option,array(named_struct("driver_tag",cast(1 as bigint),"rewards",array(map("",1)))))) cc AS ccc
           where dt='{pt}'
-
+     
+        
     '''.format(
         pt=ds,
         table=table_name,
