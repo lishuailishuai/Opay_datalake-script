@@ -88,9 +88,9 @@ table_list = [
     ("oride_data", "data_user_estimate_records", "sqoop_db", "base", 3, "oride_db", "false"),
 
     #opay_spread
-    ("opay_spread", "mass_rider_signups", "opay_spread_mysql", "base", 3, "opay_spread_db", "false"),
-    ("opay_spread", "mass_driver_group", "opay_spread_mysql", "base", 3, "opay_spread_db", "false"),
-    ("opay_spread", "mass_driver_team", "opay_spread_mysql", "base", 3, "opay_spread_db", "false"),
+    ("opay_spread", "rider_signups", "opay_spread_mysql", "base", 3, "opay_spread_db", "false"),
+    ("opay_spread", "driver_group", "opay_spread_mysql", "base", 3, "opay_spread_db", "false"),
+    ("opay_spread", "driver_team", "opay_spread_mysql", "base", 3, "opay_spread_db", "false"),
 
 ]
 
