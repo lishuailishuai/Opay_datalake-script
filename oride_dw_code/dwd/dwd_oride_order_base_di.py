@@ -136,7 +136,7 @@ SELECT base.id as order_id,
        nvl(city_id,-999) as city_id,
        --所属城市(-999 无效数据) 
 
-       serv_type AS product_id,
+       base.serv_type AS product_id,
        --订单车辆类型(0: 专快混合 1:driect[专车] 2: street[快车] 3:Otrike 99:招手停)
 
        user_id AS passenger_id,
@@ -181,7 +181,7 @@ SELECT base.id as order_id,
        dst_price,
        --距离价格
 
-       price,
+       base.price,
        -- 订单价格
 
        reward,
@@ -220,10 +220,10 @@ SELECT base.id as order_id,
        null as cancel_reason,
        --取消原因
 
-       status,
+       base.status,
        --订单状态 (0: wait assign, 1: pick up passenger, 2: wait passenger, 3: send passenger, 4: arrive destination, 5: finished, 6: cancel)
 
-       local_create_time as create_time,
+       base.local_create_time as create_time,
        -- 创建时间
 
        fraud,
@@ -250,7 +250,7 @@ SELECT base.id as order_id,
        base.updated_time as updated_time,
        --最后更新时间
 
-       from_unixtime(local_create_time,'yyyy-MM-dd') AS create_date,
+       from_unixtime(base.local_create_time,'yyyy-MM-dd') AS create_date,
        --创建日期(local_create_time,yyyy-MM-dd)
 
        (CASE
@@ -260,7 +260,7 @@ SELECT base.id as order_id,
        --当天是否接单(应答)
 
        (CASE
-            WHEN status IN (4,
+            WHEN base.status IN (4,
                             5) THEN 1
             ELSE 0
         END) AS is_td_finish,
@@ -274,7 +274,7 @@ SELECT base.id as order_id,
        --当天接驾时长（秒）
 
        (CASE
-            WHEN take_time <> 0 THEN take_time - create_time
+            WHEN take_time <> 0 THEN take_time - base.create_time
             ELSE 0
         END) AS td_take_dur,
        --当天应答时长（秒）
@@ -310,7 +310,7 @@ SELECT base.id as order_id,
        --当天计费时长（秒）
 
        (CASE
-            WHEN status = 5 
+            WHEN base.status = 5 
                  and finish_time>0
                  AND arrive_time > 0 THEN finish_time - arrive_time
             ELSE 0
@@ -318,7 +318,7 @@ SELECT base.id as order_id,
        --当天支付时长(秒)
 
        (CASE
-            WHEN status = 6
+            WHEN base.status = 6
                  AND (cancel_role = 3
                       OR cancel_role = 4) THEN 1
             ELSE 0
@@ -326,7 +326,7 @@ SELECT base.id as order_id,
        --是否当天系统取消
 
        (CASE
-            WHEN status = 6
+            WHEN base.status = 6
                  AND base.driver_id = 0
                  AND cancel_role = 1 THEN 1
             ELSE 0
@@ -334,7 +334,7 @@ SELECT base.id as order_id,
        --是否当天乘客应答前取消
 
        (CASE
-            WHEN status = 6
+            WHEN base.status = 6
                  AND base.driver_id <> 0
                  AND cancel_role = 1 THEN 1
             ELSE 0
@@ -342,23 +342,23 @@ SELECT base.id as order_id,
        --是否当天乘客应答后取消
 
        (CASE
-            WHEN status = 5 THEN 1
+            WHEN base.status = 5 THEN 1
             ELSE 0
         END) AS is_td_finish_pay,
        --是否当天完成支付
 
-       nvl(pay_amount,0) as pay_amount,
+       nvl(pay.amount,0) as pay_amount,
        --实付金额
 
-       pay.pay_mode as pay_mode,
+       pay.`mode` as pay_mode,
        --支付方式（0: 未知, 1: 线下支付, 2: opay, 3: 余额）,
 
-       pay_status, --支付类型（0: 支付中, 1: 成功, 2: 失败） 
+       pay.status as pay_status, --支付类型（0: 支付中, 1: 成功, 2: 失败） 
 
        '' as part_hour, --小时分区时间(yyyy-mm-dd HH)
 
        (CASE
-            WHEN status = 6
+            WHEN base.status = 6
                  AND base.driver_id <> 0
                  AND cancel_role = 2 THEN 1
             ELSE 0
@@ -366,7 +366,7 @@ SELECT base.id as order_id,
        --是否当天司机应答后取消
 
        (CASE
-            WHEN status in (4,5) and arrive_time>0
+            WHEN base.status in (4,5) and arrive_time>0
                  AND pickup_time > 0 THEN arrive_time - pickup_time
             ELSE 0
         END) AS td_finish_billing_dur,
@@ -379,28 +379,28 @@ SELECT base.id as order_id,
         END) AS td_finish_order_dur,
        --当天完成做单时长（分钟）  
        (CASE
-            WHEN (status = 6 AND base.driver_id <> 0)
+            WHEN (base.status = 6 AND base.driver_id <> 0)
                 THEN 1
             ELSE 0
         END) AS is_td_after_cancel,
        --是否当天应答后取消
 
        (CASE
-           WHEN status =6   AND cancel_role = 1 AND base.driver_id != 0
+           WHEN base.status =6   AND cancel_role = 1 AND base.driver_id != 0
                 THEN cancel_time - take_time
             ELSE 0
         END) AS td_passanger_after_cancel_time_dur,
        --当天乘客应答后取消时长(秒)
 
        (CASE
-           WHEN status =6   AND cancel_role = 2 
+           WHEN base.status =6   AND cancel_role = 2 
                 THEN cancel_time - take_time
             ELSE 0
         END) AS td_driver_after_cancel_time_dur,
        --当天司机应答后取消平均时长（秒） 
-       concat(serv_type,'_',driver_serv_type) as serv_union_type,  --业务类型，下单类型+司机类型(serv_type+driver_serv_type)
+       concat(base.serv_type,'_',driver_serv_type) as serv_union_type,  --业务类型，下单类型+司机类型(serv_type+driver_serv_type)
        pax_num, -- 乘客数量 
-       tip,  --小费
+       base.tip,  --小费
        trip_id, --'行程 ID'
        null as is_strong_dispatch,  
        --是否强制派单1:是，0:否
@@ -521,33 +521,11 @@ FROM (select *
 where --t1.`__deleted` = 'false' and  -- 由于订单每天会将30天之前的订单移动到data_order_history表中，因此移动走的打标为deleted，但是这些订单状态有改变是需留存的，因此不要限定删除条件
 t1.order_by = 1) base
 LEFT OUTER JOIN
-(SELECT id AS order_id,
-       status AS pay_status,
-       --支付类型（0: 支付中, 1: 成功, 2: 失败）
-
-       price AS pay_price,
-       --价格
-
-       amount AS pay_amount,
-       --实付金额
-
-       `mode` AS pay_mode,
-       --支付方式（0: 未知, 1: 线下支付, 2: opay, 3: 余额）
-       coupon_amount, 
-       --使用的优惠券金额
-       bonus, 
-       --使用的奖励金
-       balance,
-       -- 使用的余额
-       opay_amount,
-       --opay 支付的金额
-       tip_rake,
-       --小费抽成      
-       surcharge
-       --服务费
-
-FROM oride_dw_ods.ods_sqoop_base_data_order_payment_df
-WHERE dt = '{pt}') pay ON base.id=pay.order_id
+(SELECT *
+FROM oride_dw.dwd_oride_order_payment_base_di
+WHERE dt = '{pt}' 
+and from_unixtime(local_create_time,'yyyy-MM-dd')=dt) pay  --切换后只能保证当天下单或更新的订单对应的支付单是当天创建的才可以关联上【并且只保证当天下单当天产生支付的能准确关联】，如果要用支付表中的金额，建议自己关联
+ON base.id=pay.order_id
 
 left join
 (SELECT *

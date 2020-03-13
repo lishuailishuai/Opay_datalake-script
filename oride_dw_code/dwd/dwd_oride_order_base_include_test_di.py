@@ -523,7 +523,7 @@ FROM
          ) t1
 where t1.`__deleted` = 'false' and t1.order_by = 1) base
 LEFT OUTER JOIN
-(SELECT id AS order_id,
+(SELECT order_id,
        status AS pay_status,
        --支付类型（0: 支付中, 1: 成功, 2: 失败）
 
@@ -548,8 +548,10 @@ LEFT OUTER JOIN
        surcharge
        --服务费
        
-FROM oride_dw_ods.ods_sqoop_base_data_order_payment_df
-WHERE dt = '{pt}') pay ON base.id=pay.order_id 
+FROM oride_dw.dwd_oride_order_payment_base_di
+WHERE dt = '{pt}'
+and from_unixtime(local_create_time,'yyyy-MM-dd')=dt) pay  【只保证当天下单当天产生支付的能准确关联】
+ON base.id=pay.order_id 
 
 left join
 (SELECT *
