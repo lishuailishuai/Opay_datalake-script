@@ -92,74 +92,202 @@ def app_oride_user_funnel_aftord_d_sql_task(ds):
     set hive.mapred.mode=nonstrict;
 
     insert overwrite table {db}.{table} partition(country_code,dt)
-    select city_id, --城市ID
-           product_id, --业务线ID
-           concat_ws('_',user_version,client_os) as user_version_os, --乘客端版本号和操作系统
-           count(distinct passenger_id) as ord_user_num, --下单乘客数   
-           count(distinct (if(is_request=1,passenger_id,null))) as requested_user_num, --被接单乘客量
-           count(distinct (if(is_finish=1,passenger_id,null))) as finish_user_num, --完单乘客量  
-           count(distinct (if(is_finished_pay=1,passenger_id,null))) as finished_pay_user_num, --支付完单乘客量  
-           count(1) as ord_cnt, --下单量
-           sum(is_accpet_show) as push_driver_order_accpet_show_cnt,
-           -- 司机被推送订单数       两种展示方式都包包含
-           sum(is_request) as request_order_cnt,
-           --接单量或应答订单量
-           
-           sum(is_finish) as finish_ord_cnt, --完单量
-           sum(is_finished_pay) as finished_pay_ord_cnt,
-           --完成支付订单量
-           sum(if(is_finished_pay=1 and is_succ_pay=1,1,0)) as finish_pay, 
-           --当天成功完成支付，用于统计单均应付和单均实付
-           sum(is_passanger_before_cancel) as user_cancel_before_reply_cnt,
-           --应答前乘客取消量
-           
-           sum(if(is_driver_after_cancel=1 and is_arrive_receive_point=0,1,0)) as driver_arri_bef_cancel_cnt,  --应答后-司机到达接客点前取消量
-           sum(if(is_driver_after_cancel=1 and is_arrive_receive_point=1,1,0)) as driver_arri_aft_cancel_cnt,  --应答后-司机到达接客点后取消量
-           sum(if(is_passanger_after_cancel=1 and is_arrive_receive_point=0,1,0)) as user_aftreply_befarri_cancel_cnt,  --应答后-司机到达前乘客取消量
-           sum(if(is_passanger_after_cancel=1 and is_arrive_receive_point=1,1,0)) as user_aftreply_aftarri_cancel_cnt,  --应答后-司机到达后乘客取消量 
-           
-           sum(if(is_passanger_before_cancel=1 and ord_to_cancel_dur>0 and ord_to_cancel_dur<3600,ord_to_cancel_dur,0)) as user_cancel_before_reply_dur,
-           --司机应答前乘客取消时长
-           
-           sum(if(take_order_dur>0 and take_order_dur<3600,take_order_dur,0)) as take_order_dur,   
-           --应答订单时长  
-           sum(if(is_request=1 and driver_arrive_car_point_dur>0 and driver_arrive_car_point_dur<3600,driver_arrive_car_point_dur,0)) as driver_arrive_car_point_dur,
-           --司机到达上车点时长
-           
-           sum(if(is_request=1 and wait_order_dur>0 and wait_order_dur<3600,wait_order_dur,0)) as wait_order_dur,
-           --当天等待上车订单时长,司乘互找总时长
-              
-           sum(if(is_finish=1 and ord_to_arrive_dur>0 and ord_to_arrive_dur<5*3600,ord_to_arrive_dur,0)) as ord_to_arrive_dur,
-           --下单送达总时长
-           
-           sum(if(is_finish=1 and order_service_dur>0 and order_service_dur<5*3600,order_service_dur,0)) as order_service_dur, 
-           --订单服务时长（秒）
-           sum(request_order_distance_inpush) as request_order_distance_inpush,
-           --抢单阶段接驾距离(应答)
-           
-           sum(if(is_finish=1,order_onride_distance,0)) as order_onride_distance,
-           --完单送驾距离
-          
-           sum(if(is_finished_pay=1 and is_succ_pay=1,nvl(price,0)+nvl(tip,0)+nvl(surcharge,0)+nvl(pax_insurance_price,0),0)) as pay_price, 
-           --当日应付金额
-           
-           sum(if(is_finished_pay=1 and is_succ_pay=1,pay_amount,0)) as pay_amount, 
-           -- 当日实付金额
-           
-           sum(if(score is not null,1,0)) as user_evaluation_order_cnt ,
-           --乘客评价订单数量
-           
-           sum(if(score in(1,2),1,0)) as bad_feedback_finish_ord_cnt,
-            -- 差评完单量,有评价的肯定是完单，但是完单了不一定评价
-           country_code as country_code,
-           '{pt}' as dt
-    from oride_dw.dwm_oride_order_base_di 
-    where dt='{pt}'
-    group by city_id, --城市ID
-             product_id, --业务线ID
-             concat_ws('_',user_version,client_os), --乘客端版本号和操作系统
-             country_code
-    with cube;
+    select city_id,
+            product_id,
+            user_version_os,
+            ord_user_num,
+            requested_user_num,
+            finish_user_num,
+            finished_pay_user_num,
+            ord_cnt,
+            push_driver_order_accpet_show_cnt,
+            request_order_cnt,
+            finish_ord_cnt,
+            finished_pay_ord_cnt,
+            succ_finished_pay_ord_cnt,
+            user_cancel_before_reply_cnt,
+            driver_arri_bef_cancel_cnt,
+            driver_arri_aft_cancel_cnt,
+            user_aftreply_befarri_cancel_cnt,
+            user_aftreply_aftarri_cancel_cnt,
+            user_cancel_before_reply_dur,
+            take_order_dur,
+            driver_arrive_car_point_dur,
+            wait_order_dur,
+            ord_to_arrive_dur,
+            order_service_dur,
+            request_order_distance_inpush,
+            order_onride_distance,
+            pay_price,
+            pay_amount,
+            user_evaluation_order_cnt,
+            bad_feedback_finish_ord_cnt,
+            act_user_num_d, --活跃乘客数
+            valuation_cnt_d,--估价次数，前提必须是有登录[可以有城市、业务线]
+            login_to_valuation_dur_d,--登录到估价时长
+            valuation_to_ord_dur_d, --估价到下单时长[可以有城市、业务线]  
+            if(m.country_code='total','nal','nal') as country_code,
+            '{pt}' as dt   
+    from (select nvl(t1.city_id,-10000) as city_id,
+                nvl(t1.product_id,-10000) as product_id,
+                nvl(t1.user_version_os,'-10000') as user_version_os,
+                t1.ord_user_num,
+                t1.requested_user_num,
+                t1.finish_user_num,
+                t1.finished_pay_user_num,
+                t1.ord_cnt,
+                t1.push_driver_order_accpet_show_cnt,
+                t1.request_order_cnt,
+                t1.finish_ord_cnt,
+                t1.finished_pay_ord_cnt,
+                t1.succ_finished_pay_ord_cnt,
+                t1.user_cancel_before_reply_cnt,
+                t1.driver_arri_bef_cancel_cnt,
+                t1.driver_arri_aft_cancel_cnt,
+                t1.user_aftreply_befarri_cancel_cnt,
+                t1.user_aftreply_aftarri_cancel_cnt,
+                t1.user_cancel_before_reply_dur,
+                t1.take_order_dur,
+                t1.driver_arrive_car_point_dur,
+                t1.wait_order_dur,
+                t1.ord_to_arrive_dur,
+                t1.order_service_dur,
+                t1.request_order_distance_inpush,
+                t1.order_onride_distance,
+                t1.pay_price,
+                t1.pay_amount,
+                t1.user_evaluation_order_cnt,
+                t1.bad_feedback_finish_ord_cnt,
+                t2.act_user_num_d, --活跃乘客数
+                t2.valuation_cnt_d,--估价次数，前提必须是有登录[可以有城市、业务线]
+                t2.login_to_valuation_dur_d,--登录到估价时长
+                t2.valuation_to_ord_dur_d, --估价到下单时长[可以有城市、业务线]
+                nvl(t1.country_code,'total') as country_code         
+            from (select city_id, --城市ID
+                   product_id, --业务线ID
+                   concat_ws('_',user_version,client_os) as user_version_os, --乘客端版本号和操作系统
+                   count(distinct passenger_id) as ord_user_num, --下单乘客数   
+                   count(distinct (if(is_request=1,passenger_id,null))) as requested_user_num, --被接单乘客量
+                   count(distinct (if(is_finish=1,passenger_id,null))) as finish_user_num, --完单乘客量  
+                   count(distinct (if(is_finished_pay=1,passenger_id,null))) as finished_pay_user_num, --支付完单乘客量  
+                   count(1) as ord_cnt, --下单量
+                   sum(is_accpet_show) as push_driver_order_accpet_show_cnt,
+                   -- 司机被推送订单数       两种展示方式都包包含
+                   sum(is_request) as request_order_cnt,
+                   --接单量或应答订单量
+                   
+                   sum(is_finish) as finish_ord_cnt, --完单量
+                   sum(is_finished_pay) as finished_pay_ord_cnt,
+                   --完成支付订单量
+                   sum(if(is_finished_pay=1 and is_succ_pay=1,1,0)) as succ_finished_pay_ord_cnt, 
+                   --当天成功完成支付，用于统计单均应付和单均实付
+                   sum(is_passanger_before_cancel) as user_cancel_before_reply_cnt,
+                   --应答前乘客取消量
+                   
+                   sum(if(is_driver_after_cancel=1 and is_arrive_receive_point=0,1,0)) as driver_arri_bef_cancel_cnt,  --应答后-司机到达接客点前取消量
+                   sum(if(is_driver_after_cancel=1 and is_arrive_receive_point=1,1,0)) as driver_arri_aft_cancel_cnt,  --应答后-司机到达接客点后取消量
+                   sum(if(is_passanger_after_cancel=1 and is_arrive_receive_point=0,1,0)) as user_aftreply_befarri_cancel_cnt,  --应答后-司机到达前乘客取消量
+                   sum(if(is_passanger_after_cancel=1 and is_arrive_receive_point=1,1,0)) as user_aftreply_aftarri_cancel_cnt,  --应答后-司机到达后乘客取消量 
+                   
+                   avg(if(is_passanger_before_cancel=1 and ord_to_cancel_dur>0 and ord_to_cancel_dur<3600,ord_to_cancel_dur,0)) as user_cancel_before_reply_dur,
+                   --司机应答前乘客取消时长
+                   
+                   avg(if(take_order_dur>0 and take_order_dur<3600,take_order_dur,0)) as take_order_dur,   
+                   --应答订单时长  
+                   avg(if(is_request=1 and driver_arrive_car_point_dur>0 and driver_arrive_car_point_dur<3600,driver_arrive_car_point_dur,0)) as driver_arrive_car_point_dur,
+                   --司机到达上车点时长
+                   
+                   avg(if(is_request=1 and wait_order_dur>0 and wait_order_dur<3600,wait_order_dur,0)) as wait_order_dur,
+                   --当天等待上车订单时长,司乘互找总时长
+                      
+                   avg(if(is_finish=1 and ord_to_arrive_dur>0 and ord_to_arrive_dur<5*3600,ord_to_arrive_dur,0)) as ord_to_arrive_dur,
+                   --下单送达总时长
+                   
+                   avg(if(is_finish=1 and order_service_dur>0 and order_service_dur<5*3600,order_service_dur,0)) as order_service_dur, 
+                   --订单服务时长（秒）
+                   sum(request_order_distance_inpush) as request_order_distance_inpush,
+                   --抢单阶段接驾距离(应答)
+                   
+                   sum(if(is_finish=1,order_onride_distance,0)) as order_onride_distance,
+                   --完单送驾距离
+                  
+                   sum(if(is_finished_pay=1 and is_succ_pay=1,nvl(price,0)+nvl(tip,0)+nvl(surcharge,0)+nvl(pax_insurance_price,0),0)) as pay_price, 
+                   --当日应付金额
+                   
+                   sum(if(is_finished_pay=1 and is_succ_pay=1,pay_amount,0)) as pay_amount, 
+                   -- 当日实付金额
+                   
+                   sum(if(score is not null,1,0)) as user_evaluation_order_cnt ,
+                   --乘客评价订单数量
+                   
+                   sum(if(score in(1,2),1,0)) as bad_feedback_finish_ord_cnt,
+                    -- 差评完单量,有评价的肯定是完单，但是完单了不一定评价
+                   country_code as country_code,
+                   '{pt}' as dt
+            from oride_dw.dwm_oride_order_base_di 
+            where dt='{pt}'
+            group by city_id, --城市ID
+                     product_id, --业务线ID
+                     concat_ws('_',user_version,client_os), --乘客端版本号和操作系统
+                     country_code
+            with cube) t1
+            
+            left join 
+            
+            (SELECT -10000 AS city_id, --城市ID
+                     -10000 AS product_id, --业务线ID
+                     '-10000' AS user_version_os, --乘客端版本号和操作系统
+                     count(u.passenger_id) AS act_user_num_d, --活跃乘客数
+                     sum(if(rr.user_id IS NOT NULL,valuation_cnt,0)) AS valuation_cnt_d,--估价次数，前提必须是有登录[可以有城市、业务线]
+                     avg(if(t.user_id IS NOT NULL
+                            AND (t.create_time-unix_timestamp(u.login_time))>0
+                            AND (t.create_time-unix_timestamp(u.login_time))<15*60, (t.create_time-unix_timestamp(u.login_time)),0)) AS login_to_valuation_dur_d,--登录到估价时长
+                     avg(if(ord.passenger_id IS NOT NULL
+                            AND (ord.create_time-t.create_time)>0
+                            AND (ord.create_time-t.create_time)<15*60, (ord.create_time-t.create_time),0)) AS valuation_to_ord_dur_d, --估价到下单时长[可以有城市、业务线]
+                     'total' AS country_code
+                    FROM
+                      (SELECT passenger_id,
+                              login_time
+                       FROM oride_dw.dim_oride_passenger_base
+                       WHERE dt='{pt}'
+                         AND substr(login_time,1,10)=dt) u --当天活跃的乘客，即登录过的乘客
+                    LEFT JOIN
+                      (SELECT user_id,
+                              local_create_time AS create_time  --当天估价的乘客最新一次估价时间
+                       FROM
+                         (SELECT *,
+                                 row_number() over(partition BY user_id
+                                                   ORDER BY local_create_time DESC) AS rn
+                          FROM oride_dw.dwd_oride_passenger_estimate_records_di
+                          WHERE dt='{pt}'
+                            AND from_unixtime(local_create_time,'yyyy-MM-dd')=dt) r
+                       WHERE r.rn=1) t ON u.passenger_id=t.user_id
+                    LEFT JOIN
+                      (SELECT *
+                       FROM
+                         (SELECT passenger_id,
+                                 create_time,
+                                 row_number() over(partition BY passenger_id
+                                                   ORDER BY create_time DESC) AS rn
+                          FROM oride_dw.dwd_oride_order_base_include_test_di
+                          WHERE dt='{pt}'
+                            AND city_id<>999001
+                            AND driver_id<>1) a
+                       WHERE a.rn=1) ord --订单只能有一个乘客最新的下单
+                    ON t.user_id=ord.passenger_id
+                    LEFT JOIN
+                      (SELECT user_id,
+                              count(1) AS valuation_cnt--当天估价的乘客估价次数
+                    FROM oride_dw.dwd_oride_passenger_estimate_records_di
+                       WHERE dt='{pt}'
+                         AND from_unixtime(local_create_time,'yyyy-MM-dd')=dt
+                       GROUP BY user_id) rr ON u.passenger_id=rr.user_id) t2
+            on nvl(t1.city_id,-10000)=t2.city_id
+            and nvl(t1.product_id,-10000)=t2.product_id
+            and nvl(t1.user_version_os,-10000)=t2.user_version_os
+            and nvl(t1.country_code,'total')=t2.country_code) m
+    where m.country_code='total';
     '''.format(
         pt=ds,
         table=table_name,

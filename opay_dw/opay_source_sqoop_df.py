@@ -113,7 +113,7 @@ table_list = [
     ("ads_data", "coupon_package", "ads_data", "coupon", 3),
     ("ads_data", "coupon_template", "ads_data", "coupon", 3),
 
-
+    ("opay_activity", "voucher_record", "opay_activity", "coupon", 3),
 
 ]
 

@@ -59,10 +59,10 @@ ods_binlog_base_data_order_hi_prev_day_task = OssSensor(
 )
 
 # 依赖前一天分区
-ods_sqoop_base_data_order_payment_df_prev_day_task = OssSensor(
-    task_id='ods_sqoop_base_data_order_payment_df_prev_day_task',
+dwd_oride_order_payment_base_di_prev_day_task = OssSensor(
+    task_id='dwd_oride_order_payment_base_di_prev_day_task',
     bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride_dw_sqoop/oride_data/data_order_payment",
+        hdfs_path_str="oride/oride_dw/dwd_oride_order_payment_base_di",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -523,7 +523,7 @@ FROM
          ) t1
 where t1.`__deleted` = 'false' and t1.order_by = 1) base
 LEFT OUTER JOIN
-(SELECT id AS order_id,
+(SELECT order_id,
        status AS pay_status,
        --支付类型（0: 支付中, 1: 成功, 2: 失败）
 
@@ -548,8 +548,10 @@ LEFT OUTER JOIN
        surcharge
        --服务费
        
-FROM oride_dw_ods.ods_sqoop_base_data_order_payment_df
-WHERE dt = '{pt}') pay ON base.id=pay.order_id 
+FROM oride_dw.dwd_oride_order_payment_base_di
+WHERE dt = '{pt}'
+and from_unixtime(local_create_time,'yyyy-MM-dd')=dt) pay  --【只保证当天下单当天产生支付的能准确关联】
+ON base.id=pay.order_id 
 
 left join
 (SELECT *
@@ -667,5 +669,5 @@ dwd_oride_order_base_include_test_di_task = PythonOperator(
 )
 
 ods_binlog_base_data_order_hi_prev_day_task >> dwd_oride_order_base_include_test_di_task
-ods_sqoop_base_data_order_payment_df_prev_day_task >> dwd_oride_order_base_include_test_di_task
+dwd_oride_order_payment_base_di_prev_day_task >> dwd_oride_order_base_include_test_di_task
 ods_sqoop_base_data_country_conf_df_prev_day_task >> dwd_oride_order_base_include_test_di_task
