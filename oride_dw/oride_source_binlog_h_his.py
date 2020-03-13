@@ -68,7 +68,7 @@ db_name,table_name,conn_id,prefix_name,priority_weight,server_name (采集配置
 
 table_list = [
 
-    #oride
+    # oride
     # ("oride_data", "data_driver", "sqoop_db", "base", 3, "oride_db", "false"),
     ("oride_data", "data_driver_extend", "sqoop_db", "base", 3, "oride_db", "false"),
     ("oride_data", "data_country_conf", "sqoop_db", "base", 3, "oride_db", "false"),
@@ -78,7 +78,7 @@ table_list = [
     ("oride_data", "data_user", "sqoop_db", "base", 3, "oride_db", "false"),
     ("oride_data", "data_user_whitelist", "sqoop_db", "base", 3, "oride_db", "false"),
 
-    #opay_spread
+    # opay_spread
     ("opay_spread", "rider_signups", "opay_spread_mysql", "mass", 3, "opay_spread_db", "false"),
     ("opay_spread", "driver_group", "opay_spread_mysql", "mass", 3, "opay_spread_db", "false"),
     ("opay_spread", "driver_team", "opay_spread_mysql", "mass", 3, "opay_spread_db", "false"),
@@ -161,7 +161,7 @@ MERGE_HI_SQL = '''
     '{now_hour}' as hour
     from 
     {db_name}.`{hive_h_his_table_name}`
-    where dt = '{pt}' and hour = '{pre_hour}'
+    where dt = '{pre_hour_day}' and hour = '{pre_hour}'
     ;
     
 
@@ -376,7 +376,7 @@ def validate_full_table_exist_task(hive_h_his_table_name, mysql_table_name, **kw
         return 'add_partitions_{}'.format(hive_h_his_table_name)
 
 
-def merge_pre_hi_data_task(hive_db, hive_h_his_table_name, hive_hi_table_name, pt, now_hour, pre_hour, **kwargs):
+def merge_pre_hi_data_task(hive_db, hive_h_his_table_name, hive_hi_table_name, pt, now_hour,pre_hour_day, pre_hour, **kwargs):
     sqoopSchema = SqoopSchemaUpdate()
     hive_columns = sqoopSchema.get_hive_column_name(hive_db, hive_h_his_table_name)
 
@@ -386,6 +386,7 @@ def merge_pre_hi_data_task(hive_db, hive_h_his_table_name, hive_hi_table_name, p
         hive_hi_table_name=hive_hi_table_name,
         pt=pt,
         now_hour=now_hour,
+        pre_hour_day=pre_hour_day,
         pre_hour=pre_hour,
         columns=',\n'.join(hive_columns)
     )
@@ -415,7 +416,7 @@ def merge_pre_hi_data_task(hive_db, hive_h_his_table_name, hive_hi_table_name, p
 def merge_pre_hi_with_full_data_task(hive_db, hive_h_his_table_name, hive_hi_table_name, mysql_db_name,
                                      mysql_table_name, mysql_conn,
                                      sqoop_temp_db_name, sqoop_table_name,
-                                     pt, now_hour, pre_day, pre_hour, **kwargs):
+                                     pt, now_hour, pre_day,pre_hour_day, pre_hour, **kwargs):
     sqoopSchema = SqoopSchemaUpdate()
 
     hive_columns = sqoopSchema.get_hive_column_name(hive_db, hive_h_his_table_name)
@@ -605,6 +606,7 @@ for mysql_db_name, mysql_table_name, conn_id, prefix_name, priority_weight_nm, s
             'hive_hi_table_name': hive_hi_table_name,
             'pt': '{{execution_date.strftime("%Y-%m-%d")}}',
             'now_hour': '{{execution_date.strftime("%H")}}',
+            'pre_hour_day': '{{(execution_date+macros.timedelta(hours=-1)).strftime("%Y-%m-%d")}}',
             'pre_hour': '{{(execution_date+macros.timedelta(hours=-1)).strftime("%H")}}'
 
         },
@@ -624,6 +626,7 @@ for mysql_db_name, mysql_table_name, conn_id, prefix_name, priority_weight_nm, s
             'pt': '{{execution_date.strftime("%Y-%m-%d")}}',
             'pre_day': '{{macros.ds_add(ds, -1)}}',
             'now_hour': '{{execution_date.strftime("%H")}}',
+            'pre_hour_day': '{{(execution_date+macros.timedelta(hours=-1)).strftime("%Y-%m-%d")}}',
             'pre_hour': '{{(execution_date+macros.timedelta(hours=-1)).strftime("%H")}}',
             'mysql_db_name': mysql_db_name,
             'mysql_table_name': mysql_table_name,
