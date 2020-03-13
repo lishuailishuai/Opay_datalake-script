@@ -59,10 +59,10 @@ ods_binlog_base_data_order_hi_prev_day_task = OssSensor(
 )
 
 # 依赖前一天分区
-ods_sqoop_base_data_order_payment_df_prev_day_task = OssSensor(
-    task_id='ods_sqoop_base_data_order_payment_df_prev_day_task',
+dwd_oride_order_payment_base_di_prev_day_task = OssSensor(
+    task_id='dwd_oride_order_payment_base_di_prev_day_task',
     bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride_dw_sqoop/oride_data/data_order_payment",
+        hdfs_path_str="oride/oride_dw/dwd_oride_order_payment_base_di",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -669,5 +669,5 @@ dwd_oride_order_base_include_test_di_task = PythonOperator(
 )
 
 ods_binlog_base_data_order_hi_prev_day_task >> dwd_oride_order_base_include_test_di_task
-ods_sqoop_base_data_order_payment_df_prev_day_task >> dwd_oride_order_base_include_test_di_task
+dwd_oride_order_payment_base_di_prev_day_task >> dwd_oride_order_base_include_test_di_task
 ods_sqoop_base_data_country_conf_df_prev_day_task >> dwd_oride_order_base_include_test_di_task
