@@ -123,7 +123,7 @@ def app_opay_owealth_report_d_19_sql_task(ds):
                memo
        FROM opay_owealth_ods.ods_sqoop_owealth_share_order_hf
        WHERE dt='{pt}'
-          AND hour='17'
+          AND hour='18'
           AND status="S"
           AND create_time>='{yesterday} 19:00:00'
           AND create_time<'{pt} 19:00:00' 
@@ -145,7 +145,7 @@ def app_opay_owealth_report_d_19_sql_task(ds):
                create_time
         FROM opay_owealth_ods.ods_sqoop_owealth_share_trans_record_hf
         WHERE dt='{pt}'
-           and hour='17'
+           and hour='18'
           AND create_time<'{pt} 19:00:00' 
         ),
     user_role AS
