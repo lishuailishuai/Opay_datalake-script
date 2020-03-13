@@ -116,42 +116,49 @@ def app_opay_owealth_report_d_sql_task(ds):
     HQL = '''
 
     set mapred.max.split.size=1000000;
-        WITH order_base AS
-      (SELECT create_time,
+    WITH 
+    order_base AS
+       (SELECT create_time,
               order_type,
               trans_amount,
               user_id,
               memo
-       FROM opay_owealth_ods.ods_sqoop_owealth_share_order_df
-       WHERE dt='{pt}'
+        FROM opay_owealth_ods.ods_sqoop_owealth_share_order_df
+        WHERE dt='{pt}'
          AND status="S"
-         AND date_format(create_time,'yyyy-MM-dd')='{pt}'),
-         user_subscribed AS
-      (SELECT user_id,
+         AND date_format(create_time,'yyyy-MM-dd')='{pt}'
+        ),
+    user_subscribed AS
+       (SELECT user_id,
               date_format(update_time,'yyyy-MM-dd') update_date,
               subscribed,
               mobile
-       FROM opay_owealth_ods.ods_sqoop_owealth_owealth_user_subscribed_df
-       WHERE dt='{pt}'
-         AND create_time<'{pt} 24:00:00' ),
-         share_trans_record AS
-      (SELECT order_type,amount,date_format(create_time,'yyyy-MM-dd') create_date
-       FROM opay_owealth_ods.ods_sqoop_owealth_share_trans_record_df
-       WHERE dt='{pt}'
-         AND create_time<'{pt} 24:00:00' ),
-         user_role AS
-      (SELECT user_id,
+        FROM opay_owealth_ods.ods_sqoop_owealth_owealth_user_subscribed_df
+        WHERE dt='{pt}'
+          AND create_time<'{pt} 24:00:00' 
+        ),
+    share_trans_record AS
+       (SELECT order_type,
+               amount,
+               user_id,
+               date_format(create_time,'yyyy-MM-dd') create_date
+        FROM opay_owealth_ods.ods_sqoop_owealth_share_trans_record_df
+        WHERE dt='{pt}'
+          AND create_time<'{pt} 24:00:00' 
+        ),
+    user_role AS
+       (SELECT user_id,
               ROLE,
               mobile
-       FROM
-         (SELECT user_id,
+        FROM
+          (SELECT user_id,
                  ROLE,
                  mobile,
                  row_number() over(partition BY user_id
                                    ORDER BY update_time DESC) rn
-          FROM opay_dw_ods.ods_sqoop_base_user_di
-          WHERE dt <= '{pt}' ) t1
-       WHERE rn = 1)
+           FROM opay_dw_ods.ods_sqoop_base_user_di
+           WHERE dt <= '{pt}' ) t1
+        WHERE rn = 1)
        
     INSERT overwrite TABLE opay_dw.app_opay_owealth_report_d partition (country_code='NG',dt='{pt}')
     SELECT
@@ -204,7 +211,7 @@ def app_opay_owealth_report_d_sql_task(ds):
     LEFT JOIN
       (SELECT '{pt}' AS dt,
               nvl(role,'ALL') role,
-              count(DISTINCT CASE WHEN subscribed='Y' THEN a.user_id END) add_open_api_subscribe_user
+              count(DISTINCT CASE WHEN subscribed='Y' THEN a.user_id END) add_open_api_subscribe_user,
               count(DISTINCT CASE WHEN update_date='{pt}' and subscribed='Y' THEN a.user_id END)open_api_subscribe_user,
               count(DISTINCT CASE WHEN update_date='{pt}' and subscribed='N' THEN a.user_id END) close_api_subscribe_user
        FROM user_subscribed a
