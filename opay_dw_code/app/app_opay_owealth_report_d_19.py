@@ -27,7 +27,7 @@ import os
 
 args = {
     'owner': 'liushuzhen',
-    'start_date': datetime(2020, 3, 12),
+    'start_date': datetime(2020, 3, 11),
     'depends_on_past': False,
     'retries': 1,
     'retry_delay': timedelta(minutes=5),
