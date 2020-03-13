@@ -550,7 +550,7 @@ LEFT OUTER JOIN
        
 FROM oride_dw.dwd_oride_order_payment_base_di
 WHERE dt = '{pt}'
-and from_unixtime(local_create_time,'yyyy-MM-dd')=dt) pay  【只保证当天下单当天产生支付的能准确关联】
+and from_unixtime(local_create_time,'yyyy-MM-dd')=dt) pay  --【只保证当天下单当天产生支付的能准确关联】
 ON base.id=pay.order_id 
 
 left join
