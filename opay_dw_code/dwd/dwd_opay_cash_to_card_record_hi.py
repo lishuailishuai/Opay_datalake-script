@@ -160,8 +160,8 @@ def dwd_opay_cash_to_card_record_hi_sql_task(ds,v_date):
         t1.pay_status, 'ACTransfer' as top_consume_scenario, 'ACTransfer' as sub_consume_scenario,
         t1.fee_amount, t1.fee_pattern, t1.outward_id, t1.outward_type,t1.utc_date_hour,state,
         'NG' country_code,
-        date_format(default.localTime("{config}", t1.country, '{v_date}', 0), 'yyyy-MM-dd') as dt,
-        date_format(default.localTime("{config}", t1.country, '{v_date}', 0), 'HH') as hour
+        date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'yyyy-MM-dd') as dt,
+        date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'HH') as hour
 
     from (
         select 
@@ -169,8 +169,8 @@ def dwd_opay_cash_to_card_record_hi_sql_task(ds,v_date):
             recipient_bank_code as affiliate_bank_code, recipient_bank_name as affiliate_bank_name, 
             recipient_bank_account_no_encrypted as affiliate_bank_account_no_encrypted, recipient_bank_account_name as affiliate_bank_account_name, 
             recipient_kyc_level as affiliate_bank_kyc_level, '-' as affiliate_bank_mobile, '-' as affiliate_bank_email,
-            default.localTime("{config}",if(nvl(country,'')='','NG',country),from_unixtime(cast(cast(create_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as create_time, 
-            default.localTime("{config}",if(nvl(country,'')='','NG',country),from_unixtime(cast(cast(update_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as update_time, 
+            default.localTime("{config}",'NG',from_unixtime(cast(cast(create_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as create_time, 
+            default.localTime("{config}",'NG',from_unixtime(cast(cast(update_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as update_time, 
             country, order_status, error_code, error_msg, client_source, pay_channel as pay_way, business_type, pay_status,
             nvl(fee, 0) as fee_amount, nvl(fee_pattern, '-') as fee_pattern, nvl(outward_id, '-') as outward_id, nvl(outward_type, '-') as outward_type,
             date_format('{v_date}', 'yyyy-MM-dd HH') as utc_date_hour
@@ -188,8 +188,8 @@ def dwd_opay_cash_to_card_record_hi_sql_task(ds,v_date):
             recipient_bank_code as affiliate_bank_code, recipient_bank_name as affiliate_bank_name, 
             recipient_bank_account_no_encrypted as affiliate_bank_account_no_encrypted, recipient_bank_account_name as affiliate_bank_account_name, 
             recipient_kyc_level as affiliate_bank_kyc_level, customer_phone as affiliate_bank_mobile, customer_email as affiliate_bank_email,
-            default.localTime("{config}",if(nvl(country,'')='','NG',country),from_unixtime(cast(cast(create_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as create_time, 
-            default.localTime("{config}",if(nvl(country,'')='','NG',country),from_unixtime(cast(cast(update_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as update_time, 
+            default.localTime("{config}",'NG',from_unixtime(cast(cast(create_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as create_time, 
+            default.localTime("{config}",'NG',from_unixtime(cast(cast(update_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as update_time, 
             country, order_status, error_code, error_msg, '-' as client_source, pay_channel as pay_way, business_type, pay_status,
             nvl(fee, 0) as fee_amount, nvl(fee_pattern, '-') as fee_pattern, nvl(outward_id, '-') as outward_id, nvl(outward_type, '-') as outward_type,
             date_format('{v_date}', 'yyyy-MM-dd HH') as utc_date_hour

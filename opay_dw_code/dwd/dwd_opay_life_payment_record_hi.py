@@ -251,7 +251,7 @@ betting as (
     , '-' as recharge_set_meal
     , default.localTime("{config}",'NG',from_unixtime(cast(cast(create_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as create_time
     , default.localTime("{config}",'NG',from_unixtime(cast(cast(update_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as update_time
-    , 'NG' as country
+    , country
     , 'Betting' sub_service_type
     , order_status
     , error_code
@@ -293,7 +293,7 @@ airtime as (
     , '-' as recharge_set_meal
     , default.localTime("{config}",'NG',from_unixtime(cast(cast(create_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as create_time
     , default.localTime("{config}",'NG',from_unixtime(cast(cast(update_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as update_time
-    , 'NG' as country
+    , country
     , 'Airtime' sub_service_type
     , order_status
     , error_code
@@ -332,7 +332,7 @@ tv as (
     , tv_plan as recharge_set_meal
     , default.localTime("{config}",'NG',from_unixtime(cast(cast(create_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as create_time
     , default.localTime("{config}",'NG',from_unixtime(cast(cast(update_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as update_time
-    , 'NG' as country
+    , country
     , 'TV' sub_service_type
     , order_status
     , error_code
@@ -371,7 +371,7 @@ mobiledata as (
     , '-' as recharge_set_meal
     , default.localTime("{config}",'NG',from_unixtime(cast(cast(create_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as create_time
     , default.localTime("{config}",'NG',from_unixtime(cast(cast(update_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as update_time
-    , 'NG' as country
+    , country
     , 'Mobiledata' sub_service_type
     , order_status
     , error_code
@@ -410,7 +410,7 @@ electricity as (
     , electricity_payment_plan as recharge_set_meal
     , default.localTime("{config}",'NG',from_unixtime(cast(cast(create_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as create_time
     , default.localTime("{config}",'NG',from_unixtime(cast(cast(update_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as update_time
-    , 'NG' as country
+    , country
     , 'Electricity' sub_service_type
     , order_status
     , error_code
@@ -520,8 +520,8 @@ select
   , t2.state
 
   , 'NG' as country_code
-  , date_format(default.localTime("{config}", t1.country, '{v_date}', 0), 'yyyy-MM-dd') as dt
-  , date_format(default.localTime("{config}", t1.country, '{v_date}', 0), 'HH') as hour
+  , date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'yyyy-MM-dd') as dt
+  , date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'HH') as hour
 
 from 
   union_result as t1 

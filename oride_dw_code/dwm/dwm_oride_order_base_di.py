@@ -364,6 +364,10 @@ def dwm_oride_order_base_di_sql_task(ds):
             
             ord.ord_to_arrive_dur,
             --下单到送达总时长
+            ord.user_version, 
+            --乘客端版本（发单）
+            ord.client_os,
+            --乘客端操作系统
             
  		   ord.country_code as country_code,
 

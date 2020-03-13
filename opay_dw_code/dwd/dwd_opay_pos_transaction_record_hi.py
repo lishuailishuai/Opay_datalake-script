@@ -357,8 +357,8 @@ select
   , t1.utc_date_hour
 
   , 'NG' as country_code
-  , date_format(default.localTime("{config}", t1.country, '{v_date}', 0), 'yyyy-MM-dd') as dt
-  , date_format(default.localTime("{config}", t1.country, '{v_date}', 0), 'HH') as hour
+  , date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'yyyy-MM-dd') as dt
+  , date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'HH') as hour
 
 from 
   union_result as t1 
