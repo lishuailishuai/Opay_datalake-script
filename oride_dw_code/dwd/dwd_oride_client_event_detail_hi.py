@@ -255,6 +255,7 @@ def dwd_oride_client_event_detail_hi_sql_task(ds,hour):
             opay_ep_logv1_data LATERAL VIEW EXPLODE(from_json(get_json_object(msg, '$.es'), array(named_struct("en", "", "et","", "ev", map("",""), "lat","", "lng","","cid", "", "cip", "", "bzp", "")))) es AS e
         WHERE
             e.bzp in ('RIDE', 'ORide', 'OCAR', 'OTRIKE') OR e.bzp is null
+            and length(get_json_object(msg, '$.es')[0])!=2
         ;
 '''.format(
         pt=ds,
