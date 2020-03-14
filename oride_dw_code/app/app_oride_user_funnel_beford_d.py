@@ -188,7 +188,9 @@ def app_oride_user_funnel_beford_d_sql_task(ds):
 			 avg(if(event_name_a='request_a_ride_show'
 			        AND phone_number IS NOT NULL
 			        AND time_range1>0
-			        AND time_range1 < 15*60,time_range1,0)) AS valuation_to_order_dur--估价界面到下单平均时长
+			        AND time_range1 < 15*60,time_range1,0)) AS valuation_to_order_dur,--估价界面到下单平均时长
+			'nal' as country_code,
+			'{pt}' as dt
 			
 			FROM
 			  (SELECT a.tid AS tid_a,
