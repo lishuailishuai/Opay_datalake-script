@@ -156,7 +156,7 @@ def app_oride_user_funnel_beford_d_sql_task(ds):
              cast(substr(event_time,1,10) AS bigint),
              tid      
     )
-    
+    insert overwrite table {db}.{table} partition(country_code,dt)
     SELECT concat_ws('_',app_version,platform) AS user_version_os, --乘客端版本号和操作系统
 			 count(DISTINCT (if(event_name_a='oride_show',user_id_a,NULL))) AS active_user_num_m,--活跃乘客数
 			 count(DISTINCT (if(event_name_a='choose_end_point_click'
@@ -188,7 +188,9 @@ def app_oride_user_funnel_beford_d_sql_task(ds):
 			 avg(if(event_name_a='request_a_ride_show'
 			        AND phone_number IS NOT NULL
 			        AND time_range1>0
-			        AND time_range1 < 15*60,time_range1,0)) AS valuation_to_order_dur--估价界面到下单平均时长
+			        AND time_range1 < 15*60,time_range1,0)) AS valuation_to_order_dur,--估价界面到下单平均时长
+			'nal' as country_code,
+			'{pt}' as dt
 			
 			FROM
 			  (SELECT a.tid AS tid_a,
