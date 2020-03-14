@@ -44,7 +44,7 @@ dag = airflow.DAG(
 ##----------------------------------------- 依赖 ---------------------------------------##
 ods_sqoop_owealth_share_acct_hf_prev_day_task = OssSensor(
     task_id='ods_sqoop_owealth_share_acct_hf_prev_day_task',
-    bucket_key='{hdfs_path_str}/dt={pt}/hour=17/_SUCCESS'.format(
+    bucket_key='{hdfs_path_str}/dt={pt}/hour=18/_SUCCESS'.format(
         hdfs_path_str="opay_owealth_sqoop_hf/opay_owealth/share_acct",
         pt='{{macros.ds_add(ds, +1)}}'
     ),
@@ -55,7 +55,7 @@ ods_sqoop_owealth_share_acct_hf_prev_day_task = OssSensor(
 
 ods_sqoop_owealth_share_order_hf_prev_day_task = OssSensor(
     task_id='ods_sqoop_owealth_share_order_hf_prev_day_task',
-    bucket_key='{hdfs_path_str}/dt={pt}/hour=17/_SUCCESS'.format(
+    bucket_key='{hdfs_path_str}/dt={pt}/hour=18/_SUCCESS'.format(
         hdfs_path_str="opay_owealth_sqoop_hf/opay_owealth/share_order",
         pt='{{macros.ds_add(ds, +1)}}'
     ),
@@ -77,7 +77,7 @@ ods_sqoop_base_owealth_user_subscribed_hf_prev_day_task = OssSensor(
 
 ods_sqoop_owealth_share_revenue_log_hf_prev_day_task = OssSensor(
     task_id='ods_sqoop_owealth_share_revenue_log_hf_prev_day_task',
-    bucket_key='{hdfs_path_str}/dt={pt}/hour=17/_SUCCESS'.format(
+    bucket_key='{hdfs_path_str}/dt={pt}/hour=18/_SUCCESS'.format(
         hdfs_path_str="opay_owealth_sqoop_hf/opay_owealth/share_revenue_log",
         pt='{{macros.ds_add(ds, +1)}}'
     ),
@@ -120,7 +120,7 @@ def app_opay_owealth_collect_d_sql_task(ds):
           balance
    FROM opay_owealth_ods.ods_sqoop_owealth_share_acct_hf
    WHERE dt='{pt}'
-     AND hour='17'
+     AND hour='18'
      AND from_unixtime(unix_timestamp(create_time, 'yyyy-MM-dd HH:mm:ss')+3600)<'{pt} 19:00:00' ),
      order_base AS
   (SELECT create_time,
@@ -130,7 +130,7 @@ def app_opay_owealth_collect_d_sql_task(ds):
           memo
    FROM opay_owealth_ods.ods_sqoop_owealth_share_order_hf
    WHERE dt='{pt}'
-     AND hour='17'
+     AND hour='18'
      AND status="S"
      AND from_unixtime(unix_timestamp(create_time, 'yyyy-MM-dd HH:mm:ss')+3600)>='{yesterday} 19:00:00'
      AND from_unixtime(unix_timestamp(create_time, 'yyyy-MM-dd HH:mm:ss')+3600)<'{pt} 19:00:00' ),
@@ -146,7 +146,7 @@ def app_opay_owealth_collect_d_sql_task(ds):
   (SELECT *
    FROM opay_owealth_ods.ods_sqoop_owealth_share_revenue_log_hf
    WHERE dt='{pt}'
-     AND hour='17'
+     AND hour='18'
      AND from_unixtime(unix_timestamp(revenue_date, 'yyyy-MM-dd HH:mm:ss')+3600)>='{yesterday} 19:00:00' 
     AND from_unixtime(unix_timestamp(revenue_date, 'yyyy-MM-dd HH:mm:ss')+3600)<'{pt} 19:00:00' ) 
 INSERT overwrite TABLE opay_dw.app_opay_owealth_collect_d partition (country_code='NG',dt='{pt}')

@@ -44,7 +44,7 @@ dag = airflow.DAG(
 ##----------------------------------------- 依赖 ---------------------------------------##
 ods_sqoop_owealth_share_order_hf_prev_day_task = OssSensor(
     task_id='ods_sqoop_owealth_share_order_hf_prev_day_task',
-    bucket_key='{hdfs_path_str}/dt={pt}/hour=17/_SUCCESS'.format(
+    bucket_key='{hdfs_path_str}/dt={pt}/hour=18/_SUCCESS'.format(
         hdfs_path_str="opay_owealth_sqoop_hf/opay_owealth/share_order",
         pt='{{macros.ds_add(ds, +1)}}'
     ),
@@ -65,7 +65,7 @@ ods_sqoop_base_owealth_user_subscribed_hf_prev_day_task = OssSensor(
 )
 ods_sqoop_base_owealth_share_trans_record_hf_prev_day_task = OssSensor(
     task_id='ods_sqoop_base_owealth_share_trans_record_hf_prev_day_task',
-    bucket_key='{hdfs_path_str}/dt={pt}/hour=17/_SUCCESS'.format(
+    bucket_key='{hdfs_path_str}/dt={pt}/hour=18/_SUCCESS'.format(
         hdfs_path_str="opay_owealth_sqoop_hf/opay_owealth/share_trans_record",
         pt='{{macros.ds_add(ds, +1)}}'
     ),
@@ -158,7 +158,7 @@ def app_opay_owealth_report_d_19_sql_task(ds):
            and create_time<'{pt} 19:00:00' 
          )
        
-    --INSERT overwrite TABLE opay_dw.app_opay_owealth_report_d_19 partition (country_code='NG',dt='{pt}')
+    INSERT overwrite TABLE opay_dw.app_opay_owealth_report_d_19 partition (country_code='NG',dt='{pt}')
     SELECT
          balance, --余额（总的申购-总的赎回+总的利息）
          curr_subscribe_amount,--当天申购金额
