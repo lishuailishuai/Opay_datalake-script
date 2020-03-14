@@ -156,7 +156,7 @@ def app_oride_user_funnel_beford_d_sql_task(ds):
              cast(substr(event_time,1,10) AS bigint),
              tid      
     )
-    
+    insert overwrite table {db}.{table} partition(country_code,dt)
     SELECT concat_ws('_',app_version,platform) AS user_version_os, --乘客端版本号和操作系统
 			 count(DISTINCT (if(event_name_a='oride_show',user_id_a,NULL))) AS active_user_num_m,--活跃乘客数
 			 count(DISTINCT (if(event_name_a='choose_end_point_click'
