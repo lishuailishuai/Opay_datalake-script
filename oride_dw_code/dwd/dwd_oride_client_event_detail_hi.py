@@ -248,8 +248,8 @@ def dwd_oride_client_event_detail_hi_sql_task(ds,hour):
             get_json_object(msg, '$.tid'),
             get_json_object(e, '$.bzp'),
             'nal' as country_code,
-            '2020-03-13' as dt,
-            '09' as hour
+            '{pt}' as dt,
+            '{now_hour}' as hour
         FROM
             opay_ep_logv1_data LATERAL VIEW explode(split(regexp_replace(regexp_replace(get_json_object(msg, '$.es'), '\\\\]|\\\\[',''),'\\\\}}\\,\\\\{{','\\\\}}\\;\\\\{{'),'\\\\;')) es AS e
         WHERE
