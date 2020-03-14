@@ -69,6 +69,17 @@ dwd_oride_order_base_include_test_di_prev_day_task = OssSensor(
         dag=dag
     )
 
+dim_oride_passenger_base_prev_day_task = OssSensor(
+    task_id='dim_oride_passenger_base_prev_day_task',
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="oride/oride_dw/dim_oride_passenger_base/country_code=nal",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
 # ----------------------------------------- 任务超时监控 ---------------------------------------##
 
 def fun_task_timeout_monitor(ds, dag, **op_kwargs):
@@ -100,9 +111,13 @@ def app_oride_user_funnel_beford_d_sql_task(ds):
     set hive.mapred.mode=nonstrict;
     
     with base as 
-    (SELECT user_id,
+    (SELECT user_id,  --乘客ID
+           user_number,  --乘客电话
+           platform,  --操作系统
+           app_version, --app版本号
            event_name,
            cast(substr(event_time,1,10) AS bigint) AS event_time,
+           tid,
            CASE
                WHEN event_name='oride_show' THEN 1 --登录页面
     
@@ -117,99 +132,104 @@ def app_oride_user_funnel_beford_d_sql_task(ds):
                WHEN event_name='complete_the_order_show' THEN 6 --完单节点
     
                ELSE 7
-           END AS rn --完成支付节点    
+           END AS rn --完成支付节点
+    
     FROM oride_dw.dwd_oride_client_event_detail_hi
     WHERE dt='{pt}'
-      AND from_unixtime(cast(substr(event_time,1,10) AS bigint),'yyyy-MM-dd')=dt -- and app_version>='4.4.405'
+      AND from_unixtime(cast(substr(event_time,1,10) AS bigint),'yyyy-MM-dd')=dt 
     
-      AND event_name IN('oride_show',
-                        'choose_end_point_click',
-                        'request_a_ride_show',
-                        'success_request_a_ride',
-                        'successful_order_show',
-                        'complete_the_order_show',
-                        'complete_the_payment_show')
+      AND (event_name IN('choose_end_point_click',
+                         'request_a_ride_show',
+                         'success_request_a_ride',
+                         'successful_order_show',
+                         'complete_the_order_show',
+                         'complete_the_payment_show')
+           OR (event_name='oride_show'
+               AND lower(app_name) IN('oride passenger',
+                                      'oride',
+                                      'opay')))
     GROUP BY user_id,
+             user_number,
+             platform,
+             app_version,
              event_name,
-             cast(substr(event_time,1,10) AS bigint)
+             cast(substr(event_time,1,10) AS bigint),
+             tid      
     )
-
-    insert overwrite table {db}.{table} partition(country_code,dt)
-    select sum(t.active_user_num) as active_user_num,--活跃乘客数
-           sum(t.check_end_user_num) as check_end_user_num,--选择终点乘客数量
-           sum(t.arrive_valuation_user_num) as arrive_valuation_user_num, --到达估价页面乘客量
-           sum(t.check_end_cnt) as check_end_cnt,--选择终点次数
-           sum(t.valuation_cnt) as valuation_cnt,--估价次数
-           sum(t.login_to_check_end_dur) as login_to_check_end_dur,--登录到选择终点平均时长
-           sum(t.check_end_to_valuation_dur) as check_end_to_valuation_dur,--选择终点到预估价格平均时长
-           sum(t.login_to_valuation_dur) as login_to_valuation_dur,--登录到预估价格平均时长
-           sum(t.valuation_to_order_dur) as valuation_to_order_dur,--估价界面到下单平均时长
-           'nal' as country_code,
-           '{pt}' as dt    
-    from (select count(distinct if(event_name='oride_show',user_id,null))as active_user_num,--活跃乘客数
-           count(distinct if(event_name='choose_end_point_click',user_id,null)) as check_end_user_num,--选择终点乘客数量
-           sum(if(event_name='choose_end_point_click',1,null)) as check_end_cnt,--选择终点次数
-           count(distinct if(event_name='request_a_ride_show',user_id,null)) as arrive_valuation_user_num, --到达估价页面乘客量
-           sum(if(event_name='request_a_ride_show',1,null)) as valuation_cnt,--估价次数
-           null as login_to_check_end_dur,--登录到选择终点平均时长
-           null as check_end_to_valuation_dur,--选择终点到预估价格平均时长
-           null as login_to_valuation_dur,--登录到预估价格平均时长
-           null as valuation_to_order_dur--估价界面到下单平均时长
-    from base
-    union all
-    --以下统计乘客行为类指标    
-    SELECT null as active_user_num,--活跃乘客数
-           null as check_end_user_num,--选择终点乘客数量
-           null as check_end_cnt,--选择终点次数
-           null as arrive_valuation_user_num, --到达估价页面乘客量
-           null as valuation_cnt,--估价次数
-                 avg(if(event_name_a='choose_end_point_click' and event_name_b='oride_show' and (time_range>0 and time_range < 15*60),time_range,0)) as login_to_check_end_dur,--登录到选择终点平均时长
-           avg(if(event_name_a='request_a_ride_show' and event_name_b='choose_end_point_click' and (time_range>0 and time_range < 15*60),time_range,0)) as check_end_to_valuation_dur,--选择终点到预估价格平均时长
-           avg(if(event_name_a='request_a_ride_show' and event_name_b='oride_show' and (time_range>0 and time_range < 15*60),time_range,0)) as login_to_valuation_dur,--登录到预估价格平均时长
-           null as valuation_to_order_dur--估价界面到下单平均时长
-    FROM
-      (SELECT a.user_id AS user_id_a,
-              a.event_name AS event_name_a,
-              a.event_time AS event_time_a,
-              b.user_id AS user_id_b,
-              b.event_name AS event_name_b,
-              b.event_time AS event_time_b,
-              (a.event_time-b.event_time) as time_range,
-              row_number() over (partition BY a.user_id,a.event_name,b.event_name
-                                 ORDER BY a.event_time desc,b.event_time desc) AS rrn
-       FROM base a
-       inner JOIN base b ON a.user_id=b.user_id
-       AND a.event_time>b.event_time
-       and a.rn>b.rn) m
-    WHERE m.rrn=1 
-    union all
-    --以下统计预估价格界面到下单平均时长
-    select null as active_user_num,--活跃乘客数
-           null as check_end_user_num,--选择终点乘客数量
-           null as check_end_cnt,--选择终点次数
-           null as arrive_valuation_user_num, --到达估价页面乘客量
-           null as valuation_cnt,--估价次数
-           null as login_to_check_end_dur,--登录到选择终点平均时长
-           null as check_end_to_valuation_dur,--选择终点到预估价格平均时长
-           null as login_to_valuation_dur,--登录到预估价格平均时长
-           avg(if(time_range>0 and time_range < 15*60,time_range,0)) as valuation_to_order_dur--估价界面到下单平均时长
-    from (select ord.passenger_id,
-                 ord.create_time,
-                 t.user_id,
-                 t.event_name,
-                 t.event_time,
-                 (ord.create_time-t.event_time) as time_range,
-                 row_number() over (partition BY ord.passenger_id
-                                         ORDER BY ord.create_time desc,t.event_time desc) AS rrn
-            from (select passenger_id,create_time
-            from oride_dw.dwd_oride_order_base_include_test_di
-            where dt='{pt}' 
-            group by passenger_id,create_time) ord 
-            inner join
-            (select * from base where event_name='request_a_ride_show') t 
-            on ord.passenger_id=t.user_id
-            and ord.create_time>t.event_time) n
-            where n.rrn=1) t;
+    
+    SELECT concat_ws('_',app_version,platform) AS user_version_os, --乘客端版本号和操作系统
+			 count(DISTINCT (if(event_name_a='oride_show',user_id_a,NULL))) AS active_user_num_m,--活跃乘客数
+			 count(DISTINCT (if(event_name_a='choose_end_point_click'
+			                    AND event_name_b='oride_show',user_id_a,NULL))) AS check_end_user_num_m,--选择终点乘客数量
+			 count(DISTINCT (if(event_name_a='request_a_ride_show'
+			                    AND event_name_b='choose_end_point_click',user_id_a,NULL))) AS arrive_valuation_user_num_m, --到达估价页面乘客量
+			 count(DISTINCT (if(event_name_a='success_request_a_ride'
+			                    AND event_name_b='request_a_ride_show',user_id_a,NULL))) AS ord_user_num_m, --下单乘客数-m
+			 count(DISTINCT (if(event_name_a='successful_order_show'
+			                    AND event_name_b='success_request_a_ride',user_id_a,NULL))) AS request_user_num_m,--被接单乘客数量
+			 count(DISTINCT (if(event_name_a='complete_the_order_show'
+			                    AND event_name_b='successful_order_show',user_id_a,NULL))) AS finish_user_num_m,--完单乘客数量
+			 count(DISTINCT (if(event_name_a='complete_the_payment_show'
+			                    AND event_name_b='complete_the_order_show',user_id_a,NULL))) AS finished_pay_user_num_m,--完单支付乘客数量
+			 sum((if(event_name_a='request_a_ride_show'
+			         AND event_name_b='choose_end_point_click',1,0))) AS valuation_cnt_m,--估价次数
+			 avg(if(event_name_a='choose_end_point_click'
+			        AND event_name_b='oride_show'
+			        AND (time_range>0
+			             AND time_range < 15*60),time_range,0)) AS login_to_check_end_dur,--登录到选择终点平均时长
+			 avg(if(event_name_a='request_a_ride_show'
+			        AND event_name_b='choose_end_point_click'
+			        AND (time_range>0
+			             AND time_range < 15*60),time_range,0)) AS check_end_to_valuation_dur,--选择终点到预估价格平均时长
+			 avg(if(event_name_a='request_a_ride_show'
+			        AND event_name_b='oride_show'
+			        AND (time_range>0
+			             AND time_range < 15*60),time_range,0)) AS login_to_valuation_dur,--登录到预估价格平均时长
+			 avg(if(event_name_a='request_a_ride_show'
+			        AND phone_number IS NOT NULL
+			        AND time_range1>0
+			        AND time_range1 < 15*60,time_range1,0)) AS valuation_to_order_dur--估价界面到下单平均时长
+			
+			FROM
+			  (SELECT a.tid AS tid_a,
+			          a.user_id AS user_id_a,
+			          a.event_name AS event_name_a,
+			          a.event_time AS event_time_a,
+			          b.tid AS tid_b,
+			          b.user_id AS user_id_b,
+			          b.event_name AS event_name_b,
+			          b.event_time AS event_time_b,
+			          a.app_version,
+			          a.platform,
+			          (a.event_time-b.event_time) AS time_range,
+			          (a.event_time-ord.create_time) AS time_range1, --估价到下单时间差
+			 ord.phone_number
+			   FROM base a
+			   LEFT JOIN base b ON a.tid=b.tid
+			   AND a.event_time>b.event_time
+			   AND a.rn>b.rn
+			   LEFT JOIN
+			     (SELECT o.passenger_id,
+			             o.create_time,
+			             u.phone_number
+			      FROM
+			        (SELECT passenger_id,
+			                create_time
+			         FROM oride_dw.dwd_oride_order_base_include_test_di
+			         WHERE dt='{pt}'
+			         GROUP BY passenger_id,
+			                  create_time) o
+			      LEFT JOIN
+			        (SELECT *
+			         FROM oride_dw.dim_oride_passenger_base
+			         WHERE dt='{pt}'
+			           AND length(phone_number)=14) u 
+			      ON o.passenger_id=u.passenger_id) ord 
+			   ON (CASE WHEN a.event_name='request_a_ride_show' AND length(a.user_number) IN(10,14) 
+			            THEN substr(a.user_number,-10)
+			            END)=substr(ord.phone_number,-10)
+			   AND a.event_time>ord.create_time) m
+			GROUP BY concat_ws('_',app_version,platform);
     '''.format(
         pt=ds,
         table=table_name,
@@ -278,3 +298,4 @@ app_oride_user_funnel_beford_d_task = PythonOperator(
 
 dwd_oride_client_event_detail_hi_task >> app_oride_user_funnel_beford_d_task
 dwd_oride_order_base_include_test_di_prev_day_task >> app_oride_user_funnel_beford_d_task
+dim_oride_passenger_base_prev_day_task >> app_oride_user_funnel_beford_d_task
