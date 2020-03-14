@@ -52,7 +52,40 @@ hdfs_path = "oss://opay-datalake/oride/oride_dw/" + table_name
 dwm_oride_order_base_di_prev_day_task = OssSensor(
     task_id='dwm_oride_order_base_di_prev_day_task',
     bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw/dwm_oride_order_base_di/country_code=NG",
+        hdfs_path_str="oride/oride_dw/dwm_oride_order_base_di/country_code=nal",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
+dwd_oride_order_base_include_test_di_prev_day_task = OssSensor(
+    task_id='dwd_oride_order_base_include_test_di_prev_day_task',
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="oride/oride_dw/dwd_oride_order_base_include_test_di/country_code=NG",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
+dim_oride_passenger_base_prev_day_task = OssSensor(
+    task_id='dim_oride_passenger_base_prev_day_task',
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="oride/oride_dw/dim_oride_passenger_base/country_code=nal",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
+dwd_oride_passenger_estimate_records_di_prev_day_task = OssSensor(
+    task_id='dwd_oride_passenger_estimate_records_di_prev_day_task',
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="oride/oride_dw/dwd_oride_passenger_estimate_records_di/country_code=nal",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -69,7 +102,7 @@ def fun_task_timeout_monitor(ds, dag, **op_kwargs):
     tb = [
         {
             "dag": dag, "db": "oride_dw", "table": "{dag_name}".format(dag_name=dag_ids),
-            "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "1200"
+            "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "900"
         }
     ]
     TaskTimeoutMonitor().set_task_monitor(tb)
@@ -322,7 +355,7 @@ def execution_data_task_id(ds, **kwargs):
 
     """
 
-    cf = CountriesPublicFrame("true", ds, db_name, table_name, hdfs_path, "true", "true")
+    cf = CountriesPublicFrame("false", ds, db_name, table_name, hdfs_path, "true", "true")
 
     # 删除分区
     cf.delete_partition()
@@ -355,3 +388,6 @@ app_oride_user_funnel_aftord_d_task = PythonOperator(
 )
 
 dwm_oride_order_base_di_prev_day_task >> app_oride_user_funnel_aftord_d_task
+dwd_oride_order_base_include_test_di_prev_day_task >> app_oride_user_funnel_aftord_d_task
+dim_oride_passenger_base_prev_day_task >> app_oride_user_funnel_aftord_d_task
+dwd_oride_passenger_estimate_records_di_prev_day_task >> app_oride_user_funnel_aftord_d_task

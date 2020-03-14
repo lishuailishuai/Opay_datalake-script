@@ -236,25 +236,24 @@ def dwd_oride_client_event_detail_hi_sql_task(ds,hour):
             get_json_object(msg, '$.sch'),
             get_json_object(msg, '$.gaid'),
             get_json_object(msg, '$.aid'),
-            e.et,
-            e.en,
+            get_json_object(e, '$.et'),
+            get_json_object(e, '$.en'),
             null as page,
             null as source,
-            to_json(e.ev),
-            e.lat,
-            e.lng,
-            e.cid,
-            e.cip,
+            get_json_object(e, '$.ev'),
+            get_json_object(e, '$.lat'),
+            get_json_object(e, '$.lng'),
+            get_json_object(e, '$.cid'),
+            get_json_object(e, '$.cip'),
             get_json_object(msg, '$.tid'),
-            e.bzp,
+            get_json_object(e, '$.bzp'),
             'nal' as country_code,
-            '{pt}' as dt,
-            '{now_hour}' as hour
-
+            '2020-03-13' as dt,
+            '09' as hour
         FROM
-            opay_ep_logv1_data LATERAL VIEW EXPLODE(from_json(get_json_object(msg, '$.es'), array(named_struct("en", "", "et","", "ev", map("",""), "lat","", "lng","","cid", "", "cip", "", "bzp", "")))) es AS e
+            opay_ep_logv1_data LATERAL VIEW explode(split(regexp_replace(regexp_replace(get_json_object(msg, '$.es'), '\\\\]|\\\\[',''),'\\\\}}\\,\\\\{{','\\\\}}\\;\\\\{{'),'\\\\;')) es AS e
         WHERE
-            e.bzp in ('RIDE', 'ORide', 'OCAR', 'OTRIKE') OR e.bzp is null
+            get_json_object(e, '$.bzp') in ('RIDE', 'ORide', 'OCAR', 'OTRIKE') OR get_json_object(e, '$.bzp') is null
         ;
 '''.format(
         pt=ds,
@@ -262,7 +261,7 @@ def dwd_oride_client_event_detail_hi_sql_task(ds,hour):
         now_hour=hour,
         table=table_name,
         db=db_name
-        )
+    )
     return HQL
 
 #主流程
@@ -293,7 +292,7 @@ def execution_data_task_id(ds,**kwargs):
     """
 
     TaskTouchzSuccess().countries_touchz_success(ds,db_name,table_name,hdfs_path,"true","true",v_hour)
-    
+
 dwd_oride_client_event_detail_hi_task= PythonOperator(
     task_id='dwd_oride_client_event_detail_hi_task',
     python_callable=execution_data_task_id,
