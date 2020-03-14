@@ -126,7 +126,7 @@ def app_opay_owealth_report_d_sql_task(ds):
         FROM opay_owealth_ods.ods_sqoop_owealth_share_order_df
         WHERE dt='{pt}'
          AND status="S"
-         AND date_format(create_time,'yyyy-MM-dd')='{pt}'
+         AND date_format(update_time,'yyyy-MM-dd')='{pt}'
         ),
     user_subscribed AS
        (SELECT user_id,
@@ -135,7 +135,7 @@ def app_opay_owealth_report_d_sql_task(ds):
               mobile
         FROM opay_owealth_ods.ods_sqoop_owealth_owealth_user_subscribed_df
         WHERE dt='{pt}'
-          AND create_time<'{pt} 24:00:00' 
+          AND create_time<'{pt} 23:00:00' 
         ),
     share_trans_record AS
        (SELECT order_type,

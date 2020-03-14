@@ -91,7 +91,7 @@ def fun_task_timeout_monitor(ds, dag, **op_kwargs):
 
     msg = [
         {"dag": dag, "db": "opay_dw", "table": "{dag_name}".format(dag_name=dag_ids),
-         "partition": "country_code=NG/dt={pt}".format(pt=ds), "timeout": "3000"}
+         "partition": "country_code=NG/dt={pt}".format(pt=airflow.macros.ds_add(ds, +1)), "timeout": "3000"}
     ]
 
     TaskTimeoutMonitor().set_task_monitor(msg)
@@ -125,8 +125,8 @@ def app_opay_owealth_report_d_19_sql_task(ds):
        WHERE dt='{pt}'
           AND hour='18'
           AND status="S"
-          AND create_time>='{yesterday} 19:00:00'
-          AND create_time<'{pt} 19:00:00' 
+          AND update_time>='{yesterday} 19:00:00'
+          AND update_time<'{pt} 19:00:00' 
        ),
     user_subscribed AS
        (SELECT user_id,
@@ -136,7 +136,7 @@ def app_opay_owealth_report_d_19_sql_task(ds):
         FROM opay_dw_ods.ods_sqoop_base_owealth_user_subscribed_hf
         WHERE dt='{pt}'
            AND hour='18'
-           AND create_time<'{pt} 19:00:00' 
+           AND create_time<'{pt} 18:00:00' 
             ),
     share_trans_record AS
        (SELECT order_type,
@@ -155,7 +155,7 @@ def app_opay_owealth_report_d_19_sql_task(ds):
         FROM opay_dw_ods.ods_sqoop_base_user_hf 
         where dt='{pt}'
            and hour='18'
-           and create_time<'{pt} 19:00:00' 
+           and create_time<'{pt} 18:00:00' 
          )
        
     INSERT overwrite TABLE opay_dw.app_opay_owealth_report_d_19 partition (country_code='NG',dt='{pt}')
@@ -210,8 +210,8 @@ def app_opay_owealth_report_d_19_sql_task(ds):
       (SELECT '{pt}' AS dt,
               nvl(role,'ALL') role,
               count(DISTINCT CASE WHEN subscribed='Y' THEN a.user_id END) add_open_api_subscribe_user,
-              count(DISTINCT CASE WHEN update_time>'{yesterday} 19:00:00' and subscribed='Y' THEN a.user_id END)open_api_subscribe_user,
-              count(DISTINCT CASE WHEN update_time>'{yesterday} 19:00:00' and subscribed='N' THEN a.user_id END) close_api_subscribe_user
+              count(DISTINCT CASE WHEN update_time>'{yesterday} 18:00:00' and subscribed='Y' THEN a.user_id END)open_api_subscribe_user,
+              count(DISTINCT CASE WHEN update_time>'{yesterday} 18:00:00' and subscribed='N' THEN a.user_id END) close_api_subscribe_user
        FROM user_subscribed a
        INNER JOIN user_role b ON a.mobile=b.mobile
        GROUP BY ROLE
