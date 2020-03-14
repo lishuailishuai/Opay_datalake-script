@@ -52,7 +52,7 @@ hdfs_path = "oss://opay-datalake/oride/oride_dw/" + table_name
 dwm_oride_order_base_di_prev_day_task = OssSensor(
     task_id='dwm_oride_order_base_di_prev_day_task',
     bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw/dwm_oride_order_base_di/country_code=NG",
+        hdfs_path_str="oride/oride_dw/dwm_oride_order_base_di/country_code=nal",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
