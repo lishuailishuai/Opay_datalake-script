@@ -155,13 +155,13 @@ def dwd_opay_client_event_base_di_sql_task(ds):
         )
         INSERT INTO TABLE {db}.{table} partition(country_code,dt)
         SELECT
-            e.cip as ip,
+            get_json_object(e, '$.cip') as ip,
             null as server_ip,
             concat_ws(' ',substr(time,1,10),substr(time,12,8)) as server_time,
             unix_timestamp(concat_ws(' ',substr(time,1,10),substr(time,12,8))) as server_timestamp,
             get_json_object(msg, '$.uid'),
             get_json_object(msg, '$.uno'),
-            e.cid as city_id,
+            get_json_object(e, '$.cid') as city_id,
             from_unixtime(cast(get_json_object(msg, '$.t') as bigint),'yyyy-MM-dd HH:mm:ss'),
             get_json_object(msg, '$.t'),
             get_json_object(msg, '$.p'),
@@ -178,23 +178,26 @@ def dwd_opay_client_event_base_di_sql_task(ds):
             get_json_object(msg, '$.sch'),
             get_json_object(msg, '$.gaid'),
             get_json_object(msg, '$.aid'),
-            from_unixtime(cast(cast(e.et as bigint) / 1000 as bigint),'yyyy-MM-dd HH:mm:ss'),
-            cast(cast(e.et as bigint) / 1000 as bigint) ,
-            e.en,
+            from_unixtime(cast(cast(get_json_object(e, '$.et') as bigint) / 1000 as bigint),'yyyy-MM-dd HH:mm:ss'),
+            cast(cast(get_json_object(e, '$.et') as bigint) / 1000 as bigint) ,
+            get_json_object(e, '$.en'),
             null as page,
             null as source,
-            to_json(e.ev),
-            e.lat,
-            e.lng,
+            get_json_object(e, '$.ev'),
+            get_json_object(e, '$.lat'),
+            get_json_object(e, '$.lng'),
             get_json_object(msg, '$.tid'),
-            e.bzp,
+            get_json_object(e, '$.bzp'),
             'nal' as country_code,
             '{pt}' as dt
         FROM
-            opay_ep_logv1_data LATERAL VIEW EXPLODE(from_json(get_json_object(msg, '$.es'), array(named_struct("en", "", "et","", "ev", map("",""), "lat","", "lng","","cid", "", "cip", "", "bzp", "")))) es AS e
+            opay_ep_logv1_data LATERAL VIEW explode(split(regexp_replace(regexp_replace(get_json_object(msg, '$.es'), '\\\\]|\\\\[',''),'\\\\}}\\,\\\\{{','\\\\}}\\;\\\\{{'),'\\\\;')) es AS e
         WHERE
-            e.bzp in ('OPAY','HOME_MORE','CASHIN','CASHOUT','MYQR','QRSCAN','QR_COUPON','AJIRA','ADD_MONEY','BETTING','EASYCASH','ELECTRICITY','NEARBY_AGENT','PAYBILLPAYBILL_BANKING','PAYBILL_TV','PAYBILL_V2','TRANSFER','TV','VOUCHER','WATER','APPLICATION_MARKET','TRANSFER_MONEY','COMMON','SCAN_TO_PAY','MY_CODE','MERCHANT_AUTH','GROUPBY','EDUCATION','AIRTIME_DATA','SECURITY','REFER_FRIEND','REPORT_SCAM','ADD_CARD'
-) OR e.bzp is null
+            get_json_object(e, '$.bzp') in ('OPAY','HOME_MORE','CASHIN','CASHOUT','MYQR','QRSCAN','QR_COUPON','AJIRA','ADD_MONEY','BETTING','EASYCASH','ELECTRICITY','NEARBY_AGENT','PAYBILLPAYBILL_BANKING','PAYBILL_TV','PAYBILL_V2','TRANSFER','TV','VOUCHER','WATER','APPLICATION_MARKET','TRANSFER_MONEY','COMMON','SCAN_TO_PAY','MY_CODE','MERCHANT_AUTH','GROUPBY','EDUCATION','AIRTIME_DATA','SECURITY','REFER_FRIEND','REPORT_SCAM','ADD_CARD'
+) OR get_json_object(e, '$.bzp') is null 
+            
+            
+            
         ;
     
     '''.format(
