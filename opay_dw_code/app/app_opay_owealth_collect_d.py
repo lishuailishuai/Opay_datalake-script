@@ -121,7 +121,7 @@ def app_opay_owealth_collect_d_sql_task(ds):
    FROM opay_owealth_ods.ods_sqoop_owealth_share_acct_hf
    WHERE dt='{pt}'
      AND hour='18'
-     AND from_unixtime(unix_timestamp(create_time, 'yyyy-MM-dd HH:mm:ss')+3600)<'{pt} 19:00:00' ),
+     AND create_time<'{pt} 19:00:00' ),
      order_base AS
   (SELECT create_time,
           order_type,
@@ -132,8 +132,8 @@ def app_opay_owealth_collect_d_sql_task(ds):
    WHERE dt='{pt}'
      AND hour='18'
      AND status="S"
-     AND from_unixtime(unix_timestamp(create_time, 'yyyy-MM-dd HH:mm:ss')+3600)>='{yesterday} 19:00:00'
-     AND from_unixtime(unix_timestamp(create_time, 'yyyy-MM-dd HH:mm:ss')+3600)<'{pt} 19:00:00' ),
+     AND create_time>='{yesterday} 19:00:00'
+     AND create_time<'{pt} 19:00:00' ),
      user_subscribed AS
   (SELECT user_id,
           update_time,
@@ -147,8 +147,8 @@ def app_opay_owealth_collect_d_sql_task(ds):
    FROM opay_owealth_ods.ods_sqoop_owealth_share_revenue_log_hf
    WHERE dt='{pt}'
      AND hour='18'
-     AND from_unixtime(unix_timestamp(revenue_date, 'yyyy-MM-dd HH:mm:ss')+3600)>='{yesterday} 19:00:00' 
-    AND from_unixtime(unix_timestamp(revenue_date, 'yyyy-MM-dd HH:mm:ss')+3600)<'{pt} 19:00:00' ) 
+     AND revenue_date>='{yesterday} 19:00:00' 
+    AND revenue_date<'{pt} 19:00:00' ) 
 INSERT overwrite TABLE opay_dw.app_opay_owealth_collect_d partition (country_code='NG',dt='{pt}')
 
 SELECT total_balance, --总的累计金额
