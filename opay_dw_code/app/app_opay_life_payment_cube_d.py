@@ -117,6 +117,7 @@ def app_opay_life_payment_cube_d_sql_task(ds):
              order_status
     GROUPING SETS ( 
                 (sub_consume_scenario, recharge_service_provider, order_status), 
+                (sub_consume_scenario, recharge_service_provider, originator_role), 
                 (sub_consume_scenario,  recharge_service_provider), 
                 (sub_consume_scenario, originator_role, order_status), 
                 (sub_consume_scenario, order_status),
