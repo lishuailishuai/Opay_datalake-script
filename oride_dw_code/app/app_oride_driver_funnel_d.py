@@ -58,18 +58,6 @@ dwm_oride_driver_base_df_prev_day_task = OssSensor(
         dag=dag
 )
 
-dwd_oride_order_base_include_test_di_prev_day_task = OssSensor(
-        task_id='dwd_oride_order_base_include_test_di_prev_day_task',
-        bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-            hdfs_path_str="oride/oride_dw/dwd_oride_order_base_include_test_di/country_code=NG",
-            pt='{{ds}}'
-        ),
-        bucket_name='opay-datalake',
-        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-        dag=dag
-)
-
-
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
 
 def fun_task_timeout_monitor(ds, dag, **op_kwargs):
@@ -101,7 +89,7 @@ def app_oride_driver_funnel_d_sql_task(ds):
     insert overwrite table {db}.{table} partition(country_code,dt)
     SELECT city_id,
            product_id,
-           ord.driver_version, --司机版本号
+           newest_driver_version , --司机端最新版本号
          sum(if(fault<6,1,0)) AS survival_driver_num, --当天存活司机数
          sum(is_td_online) AS online_driver_num, --当天在线司机数
          sum(is_td_broadcast) AS broadcast_driver_num, --被播单司机数（算法push节点）
@@ -128,19 +116,9 @@ def app_oride_driver_funnel_d_sql_task(ds):
           (SELECT *
            FROM oride_dw.dwm_oride_driver_base_df
            WHERE dt='{pt}') dri
-        LEFT JOIN
-          (SELECT *
-           FROM
-             (SELECT driver_id,
-                     driver_version,
-                     row_number() over(partition BY driver_id
-                                       ORDER BY create_time DESC) AS rn
-              FROM oride_dw.dwd_oride_order_base_include_test_di
-              WHERE dt='{pt}') t
-           WHERE t.rn=1) ord ON dri.driver_id=ord.driver_id
         GROUP BY city_id,
                  product_id,
-                 ord.driver_version, --司机版本号
+                 newest_driver_version, --司机版本号
          country_code;
     '''.format(
         pt=ds,
@@ -209,4 +187,3 @@ app_oride_driver_funnel_d_task = PythonOperator(
 )
 
 dwm_oride_driver_base_df_prev_day_task >> app_oride_driver_funnel_d_task
-dwd_oride_order_base_include_test_di_prev_day_task >> app_oride_driver_funnel_d_task
