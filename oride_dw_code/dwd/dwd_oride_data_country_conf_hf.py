@@ -91,7 +91,7 @@ def dwd_oride_data_country_conf_hf_sql_task(ds, hour):
         SET hive.exec.parallel=TRUE;
         SET hive.exec.dynamic.partition.mode=nonstrict;
 
-        insert overwrite table oride_dw.{table} partition(country_code,dt,hour)
+        insert overwrite table oride_dw.{table} partition(dt,hour)
 
         SELECT id, --国家 ID
              name, --国家名称
