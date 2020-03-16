@@ -78,6 +78,8 @@ table_list = [
     ("voucher_db", "opay_voucher_grab_hist" , "voucher_db",  "voucher_db", "coupon", 3,"coupou_db","false"),
     ("voucher_db", "voucher_batch_stat" , "voucher_db", "voucher_db", "coupon", 3,"coupou_db","false"),
 
+    ("opay_activity", "voucher_record" , "opay_activity", "opay_activity", "coupon", 3,"opay_merchant_overlord_recon_db","false"),
+
 
     #("ads_data", "coupon_batch", "ads_data", "coupon", 3,"ads_data","false"),
     #("ads_data", "coupon_package", "ads_data", "coupon", 3,"ads_data","false"),
