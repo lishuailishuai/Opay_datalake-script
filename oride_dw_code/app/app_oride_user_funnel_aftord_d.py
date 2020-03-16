@@ -156,6 +156,7 @@ def app_oride_user_funnel_aftord_d_sql_task(ds):
             user_evaluation_order_cnt,
             bad_feedback_finish_ord_cnt,
             act_user_num_d, --活跃乘客数
+            valuation_user_num_d,  --估价乘客数
             valuation_cnt_d,--估价次数，前提必须是有登录[可以有城市、业务线]
             login_to_valuation_dur_d,--登录到估价时长
             valuation_to_ord_dur_d, --估价到下单时长[可以有城市、业务线]  
@@ -192,6 +193,7 @@ def app_oride_user_funnel_aftord_d_sql_task(ds):
                 t1.user_evaluation_order_cnt,
                 t1.bad_feedback_finish_ord_cnt,
                 t2.act_user_num_d, --活跃乘客数
+                t2.valuation_user_num_d,  --估价乘客数
                 t2.valuation_cnt_d,--估价次数，前提必须是有登录[可以有城市、业务线]
                 t2.login_to_valuation_dur_d,--登录到估价时长
                 t2.valuation_to_ord_dur_d, --估价到下单时长[可以有城市、业务线]
@@ -271,6 +273,7 @@ def app_oride_user_funnel_aftord_d_sql_task(ds):
                      -10000 AS product_id, --业务线ID
                      '-10000' AS user_version_os, --乘客端版本号和操作系统
                      count(u.passenger_id) AS act_user_num_d, --活跃乘客数
+                     count(if(rr.user_id IS NOT NULL,u.passenger_id,null)) as valuation_user_num_d,  --估价乘客数
                      sum(if(rr.user_id IS NOT NULL,valuation_cnt,0)) AS valuation_cnt_d,--估价次数，前提必须是有登录[可以有城市、业务线]
                      avg(if(t.user_id IS NOT NULL
                             AND (t.create_time-unix_timestamp(u.login_time))>0
