@@ -195,6 +195,6 @@ app_opay_active_user_report_w_task = PythonOperator(
 )
 
 ods_sqoop_base_user_di_prev_day_task >> app_opay_active_user_report_w_task
-ods_sqoop_base_user_operator_df_prev_day_task >> app_opay_active_user_report_w_task
+dwm_opay_user_last_visit_df_day_task >> app_opay_active_user_report_w_task
 
 
