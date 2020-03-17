@@ -153,6 +153,6 @@ app_opay_pos_trans_sum_d_task = PythonOperator(
     dag=dag
 )
 
-dwd_opay_pos_transaction_record_di_task >> app_opay_pos_trans_sum_d_task
+dwd_opay_cash_to_card_record_di_task >> app_opay_pos_trans_sum_d_task
 
 
