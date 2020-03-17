@@ -191,6 +191,7 @@ SELECT t1.passenger_id,
        -- 客户端语言
        
        null as device_id, --设备ID
+       from_unixtime(t2.protocol_time,'yyyy-MM-dd HH:mm:ss') as protocol_time, --签约/解约时间
 
        t1.country_code,
        '{pt}' AS dt
@@ -266,7 +267,8 @@ LEFT OUTER JOIN
           city_id,
           -- 注册城市
 
-          LANGUAGE -- 客户端语言
+          LANGUAGE, -- 客户端语言
+          protocol_time --签约/解约时间
 FROM oride_dw.dwd_oride_passenger_extend_df
    WHERE dt= '{pt}') t2 ON t1.passenger_id=t2.passenger_id;
 '''.format(
