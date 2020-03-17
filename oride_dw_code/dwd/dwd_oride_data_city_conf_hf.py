@@ -27,7 +27,7 @@ import os
 
 args = {
     'owner': 'lili.chen',
-    'start_date': datetime(2020, 3, 16),
+    'start_date': datetime(2020, 3, 17),
     'depends_on_past': False,
     'retries': 3,
     'retry_delay': timedelta(minutes=2),
@@ -36,7 +36,7 @@ args = {
     'email_on_retry': False,
 }
 
-dag = airflow.DAG('dwd_oride_data_country_conf_hf',
+dag = airflow.DAG('dwd_oride_data_city_conf_hf',
                   schedule_interval="35 * * * *",
                   default_args=args,
                   )
@@ -44,14 +44,14 @@ dag = airflow.DAG('dwd_oride_data_country_conf_hf',
 ##----------------------------------------- 变量 ---------------------------------------##
 
 db_name = "oride_dw"
-table_name = "dwd_oride_data_country_conf_hf"
+table_name = "dwd_oride_data_city_conf_hf"
 hdfs_path = "oss://opay-datalake/oride/oride_dw/" + table_name
 ##----------------------------------------- 依赖 ---------------------------------------##
 
-ods_binlog_base_data_country_conf_h_his_prev_day_task = OssSensor(
-    task_id='ods_binlog_base_data_country_conf_h_his_prev_day_task',
+ods_binlog_base_data_city_conf_h_his_prev_day_task = OssSensor(
+    task_id='ods_binlog_base_data_city_conf_h_his_prev_day_task',
     bucket_key='{hdfs_path_str}/dt={pt}/hour={now_hour}/_SUCCESS'.format(
-        hdfs_path_str="oride_h_his/ods_binlog_base_data_country_conf_h_his",
+        hdfs_path_str="oride_h_his/ods_binlog_base_data_city_conf_h_his",
         pt='{{ds}}',
         now_day='{{macros.ds_add(ds, +1)}}',
         now_hour='{{ execution_date.strftime("%H") }}'
@@ -86,39 +86,41 @@ task_timeout_monitor = PythonOperator(
 
 ##----------------------------------------- 脚本 ---------------------------------------##
 
-def dwd_oride_data_country_conf_hf_sql_task(ds, hour):
+def dwd_oride_data_city_conf_hf_sql_task(ds, hour):
     HQL = '''
         SET hive.exec.parallel=TRUE;
         SET hive.exec.dynamic.partition.mode=nonstrict;
 
         insert overwrite table oride_dw.{table} partition(dt,hour)
 
-        SELECT id, --国家 ID
-             name, --国家名称
-             country_code, --国家代码
-             currency_code, --货币代码
-             currency_symbol, --货币符号
-             phone_prefix, --电话号码前缀（国家）
-             local_phone_prefix, --电话号码前缀（本地）
-             phone_length, --电话号码长度（除国家码以外部分）
-             payment_min_amount, --最小支付金额
-             time_zone, --时区
-             have_opay_account, --是否有OPay账号
-             have_momo_account, --是否有Momo账号
-             '{pt}' AS dt,
-             hour
-            FROM
-              ( SELECT *
-               FROM
-                 (SELECT *,
-                         row_number() over(partition BY t.id
-                                           ORDER BY t.`__ts_ms` DESC,t.`__file` DESC,cast(t.`__pos` AS int) DESC) AS order_by
-                  FROM oride_dw_ods.ods_binlog_base_data_country_conf_h_his t
-                  WHERE dt='{pt}'
-                    AND hour='{now_hour}' 
-              ) t1
-            WHERE t1.`__deleted` = 'false'
-            AND t1.order_by = 1 ) base;
+        SELECT id, -- 城市 ID
+            name, -- 城市名称
+            country, -- 国家
+            shape, -- 形状：1 圆形, 2 多边形
+            area, -- 区域设置数据
+            serv_type, -- 开启的服务类型[1,2,99] 1 专车 2 快车 99 招手停
+            avoid_highway_type, -- 可设置避开高速的服务类型[1,2] 1 专车 2 快车
+            VALIDATE, -- 本条数据是否有效 0 无效，1 有效
+            opening_time, -- 开启时间
+            assign_type, -- 强派的服务类型[1,2,3] 1 专车 2 快车 3 keke车
+            allow_flagdown_type, -- 允许招手停的服务类型
+            country_id, -- 国家ID
+            recruit_serv_type, -- 招募后台服务类型展示使用
+            serv_time, -- 车型运行时间
+            merge_switch, -- 合并专快开关0.关闭 1.开'  
+             '{pt}' AS dt, 
+             hour 
+            FROM 
+              (SELECT * 
+               FROM 
+                 (SELECT *, 
+                         row_number() over(partition BY t.id 
+                                           ORDER BY t.`__ts_ms` DESC,t.`__file` DESC,cast(t.`__pos` AS int) DESC) AS order_by 
+                  FROM oride_dw_ods.ods_binlog_base_data_city_conf_h_his t 
+                  WHERE dt='{pt}' 
+                    AND hour='{now_hour}' ) t1 
+               WHERE t1.`__deleted` = 'false'
+                 AND t1.order_by = 1 ) base;
 '''.format(
         pt=ds,
         table=table_name,
@@ -160,7 +162,7 @@ def execution_data_task_id(ds, **kwargs):
     cf.delete_partition()
 
     # 读取sql
-    _sql = "\n" + cf.alter_partition() + "\n" + dwd_oride_data_country_conf_hf_sql_task(ds,v_hour)
+    _sql = "\n" + cf.alter_partition() + "\n" + dwd_oride_data_city_conf_hf_sql_task(ds,v_hour)
 
     logging.info('Executing: %s', _sql)
 
@@ -174,8 +176,8 @@ def execution_data_task_id(ds, **kwargs):
     cf.touchz_success()
 
 
-dwd_oride_data_country_conf_hf_task = PythonOperator(
-    task_id='dwd_oride_data_country_conf_hf_task',
+dwd_oride_data_city_conf_hf_task = PythonOperator(
+    task_id='dwd_oride_data_city_conf_hf_task',
     python_callable=execution_data_task_id,
     provide_context=True,
     op_kwargs={
@@ -186,4 +188,4 @@ dwd_oride_data_country_conf_hf_task = PythonOperator(
     dag=dag
 )
 
-ods_binlog_base_data_country_conf_h_his_prev_day_task >> dwd_oride_data_country_conf_hf_task
+ods_binlog_base_data_city_conf_h_his_prev_day_task >> dwd_oride_data_city_conf_hf_task
