@@ -113,7 +113,7 @@ def dwd_oride_data_country_conf_hf_sql_task(ds, hour):
                  (SELECT *,
                          row_number() over(partition BY t.id
                                            ORDER BY t.`__ts_ms` DESC,t.`__file` DESC,cast(t.`__pos` AS int) DESC) AS order_by
-                  FROM oride_dw_ods.ods_binlog_base_data_country_conf_hi t
+                  FROM oride_dw_ods.ods_binlog_base_data_country_conf_h_his t
                   WHERE dt='{pt}'
                     AND hour='{now_hour}' 
               ) t1
