@@ -36,21 +36,21 @@ args = {
     'email_on_retry': False,
 }
 
-dag = airflow.DAG('app_oride_driver_funnel_d',
+dag = airflow.DAG('app_oride_ord_funnel_d',
                   schedule_interval="45 01 * * *",
                   default_args=args)
 
 ##----------------------------------------- 变量 ---------------------------------------##
 
 db_name = "oride_dw"
-table_name = "app_oride_driver_funnel_d"
+table_name = "app_oride_ord_funnel_d"
 hdfs_path = "oss://opay-datalake/oride/oride_dw/" + table_name
 
 ##----------------------------------------- 依赖 ---------------------------------------##
-dwm_oride_driver_base_df_prev_day_task = OssSensor(
-        task_id='dwm_oride_driver_base_df_prev_day_task',
+dwm_oride_order_base_di_prev_day_task = OssSensor(
+        task_id='dwm_oride_order_base_di_prev_day_task',
         bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-            hdfs_path_str="oride/oride_dw/dwm_oride_driver_base_df/country_code=NG",
+            hdfs_path_str="oride/oride_dw/dwm_oride_order_base_di/country_code=NG",
             pt='{{ds}}'
         ),
         bucket_name='opay-datalake',
@@ -81,34 +81,35 @@ task_timeout_monitor = PythonOperator(
 
 ##----------------------------------------- 脚本 ---------------------------------------##
 
-def app_oride_driver_funnel_d_sql_task(ds):
+def app_oride_ord_funnel_d_sql_task(ds):
     HQL = '''
     SET hive.exec.parallel=true;
     SET hive.exec.dynamic.partition=true;
     SET hive.exec.dynamic.partition.mode=nonstrict;
     insert overwrite table {db}.{table} partition(country_code,dt)
-    SELECT city_id,
+    select city_id,
            product_id,
-           newest_driver_version , --司机端最新版本号
-         sum(if(fault<6,1,0)) AS survival_driver_num, --当天存活司机数
-         sum(is_td_online) AS online_driver_num, --当天在线司机数
-         sum(is_td_broadcast) AS broadcast_driver_num, --被播单司机数（算法push节点）
-         sum(is_td_succ_broadcast) AS succ_broadcast_driver_num, --被成功播单司机数（算法push节点）
-         sum(is_td_accpet_show) AS push_accept_show_driver_num, --被推送到司机端司机数（司机端push_show和accept_show点）
-         sum(is_td_accpet_click) AS accpet_click_driver_num, --被司机接单司机数（司机端click点）
-         sum(is_td_request) AS request_driver_num, --接单或应答司机数（订单表）
-         sum(is_td_finish) AS finish_driver_num, --完单司机数
-         sum(is_td_sign) AS new_sign_driver_num, --新增注册司机数
-         country_code AS country_code,
-         '{pt}' AS dt
-        FROM
-          (SELECT *
-           FROM oride_dw.dwm_oride_driver_base_df
-           WHERE dt='{pt}') dri
-        GROUP BY city_id,
-                 product_id,
-                 newest_driver_version, --司机版本号
-         country_code;
+           driver_version,  --司机版本号
+           count(1) as ord_cnt, --下单量
+           sum(is_broadcast) as broadcast_ord_cnt, --播单量
+           sum(is_succ_broadcast) as succ_broadcast_ord_cnt, --成功播单量
+           sum(is_accpet_show) as push_accept_show_ord_cnt, --推送给司机端订单量（司机端push_show和accept_show点）
+           sum(is_accpet_click) as accpet_click_ord_cnt, --司机端司机接单量（司机端click点）
+           sum(is_request) as request_ord_cnt, --接单或者应答单量（订单表）
+           sum(is_finish) as finish_ord_cnt, --完单量
+           sum(is_finished_pay) finished_pay_ord_cnt, --完成支付单量
+           sum(push_all_times_cnt) as broadcast_ord_times, --播单总次数
+           sum(succ_push_all_times) as succ_broadcast_ord_times, --成功播单总次数
+           sum(driver_show_times_cnt) as push_accept_show_ord_times, --推送给司机端订单总次数（司机端push_show和accept_show点）
+           sum(driver_click_times_cnt) as accpet_click_ord_times, --司机端司机接单总次数（司机端click点）
+           country_code as country_code,
+           '{pt}' as dt
+    from oride_dw.dwm_oride_order_base_di
+    where dt='{pt}'   
+    group by city_id,
+           product_id,
+           driver_version,
+           country_code;  
     '''.format(
         pt=ds,
         now_day=airflow.macros.ds_add(ds, +1),
@@ -149,7 +150,7 @@ def execution_data_task_id(ds, **kwargs):
     cf.delete_partition()
 
     # 读取sql
-    _sql = "\n" + cf.alter_partition() + "\n" + app_oride_driver_funnel_d_sql_task(ds)
+    _sql = "\n" + cf.alter_partition() + "\n" + app_oride_ord_funnel_d_sql_task(ds)
 
     logging.info('Executing: %s', _sql)
 
@@ -163,8 +164,8 @@ def execution_data_task_id(ds, **kwargs):
     cf.touchz_success()
 
 
-app_oride_driver_funnel_d_task = PythonOperator(
-    task_id='app_oride_driver_funnel_d_task',
+app_oride_ord_funnel_d_task = PythonOperator(
+    task_id='app_oride_ord_funnel_d_task',
     python_callable=execution_data_task_id,
     provide_context=True,
     op_kwargs={
@@ -175,4 +176,4 @@ app_oride_driver_funnel_d_task = PythonOperator(
     dag=dag
 )
 
-dwm_oride_driver_base_df_prev_day_task >> app_oride_driver_funnel_d_task
+dwm_oride_order_base_di_prev_day_task >> app_oride_ord_funnel_d_task
