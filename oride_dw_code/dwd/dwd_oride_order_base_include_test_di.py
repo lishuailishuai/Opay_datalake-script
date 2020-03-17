@@ -72,10 +72,10 @@ dwd_oride_order_payment_base_di_prev_day_task = OssSensor(
 
 
 # 依赖前一天分区
-ods_sqoop_base_data_country_conf_df_prev_day_task = OssSensor(
-    task_id='ods_sqoop_base_data_country_conf_df_prev_day_task',
-    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride_dw_sqoop/oride_data/data_country_conf",
+dwd_oride_data_country_conf_hf_prev_day_task = OssSensor(
+    task_id='dwd_oride_data_country_conf_hf_prev_day_task',
+    bucket_key='{hdfs_path_str}/dt={pt}/hour=23/_SUCCESS'.format(
+        hdfs_path_str="oride/oride_dw/dwd_oride_data_country_conf_hf",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -555,8 +555,8 @@ ON base.id=pay.order_id
 
 left join
 (SELECT *
-   FROM oride_dw_ods.ods_sqoop_base_data_country_conf_df 
-   WHERE dt='{pt}') country
+   FROM oride_dw.dwd_oride_data_country_conf_hf 
+   WHERE dt='{pt}' and hour='23') country
 on base.country_id=country.id;
 '''.format(
         pt=ds,
@@ -670,4 +670,4 @@ dwd_oride_order_base_include_test_di_task = PythonOperator(
 
 ods_binlog_base_data_order_hi_prev_day_task >> dwd_oride_order_base_include_test_di_task
 dwd_oride_order_payment_base_di_prev_day_task >> dwd_oride_order_base_include_test_di_task
-ods_sqoop_base_data_country_conf_df_prev_day_task >> dwd_oride_order_base_include_test_di_task
+dwd_oride_data_country_conf_hf_prev_day_task >> dwd_oride_order_base_include_test_di_task
