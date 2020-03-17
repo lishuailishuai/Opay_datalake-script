@@ -224,21 +224,21 @@ def app_oride_user_funnel_aftord_d_sql_task(ds):
                    sum(if(is_passanger_after_cancel=1 and is_arrive_receive_point=0,1,0)) as user_aftreply_befarri_cancel_cnt,  --应答后-司机到达前乘客取消量
                    sum(if(is_passanger_after_cancel=1 and is_arrive_receive_point=1,1,0)) as user_aftreply_aftarri_cancel_cnt,  --应答后-司机到达后乘客取消量 
                    
-                   avg(if(is_passanger_before_cancel=1 and ord_to_cancel_dur>0 and ord_to_cancel_dur<3600,ord_to_cancel_dur,0)) as user_cancel_before_reply_dur,
+                   sum(if(is_passanger_before_cancel=1 and ord_to_cancel_dur>0 and ord_to_cancel_dur<3600,ord_to_cancel_dur,0))/sum(is_passanger_before_cancel) as user_cancel_before_reply_dur,
                    --司机应答前乘客取消时长
                    
-                   avg(if(take_order_dur>0 and take_order_dur<3600,take_order_dur,0)) as take_order_dur,   
+                   sum(if(take_order_dur>0 and take_order_dur<3600,take_order_dur,0))/sum(is_request) as take_order_dur,   
                    --应答订单时长  
-                   avg(if(is_request=1 and driver_arrive_car_point_dur>0 and driver_arrive_car_point_dur<3600,driver_arrive_car_point_dur,0)) as driver_arrive_car_point_dur,
+                   sum(if(is_request=1 and driver_arrive_car_point_dur>0 and driver_arrive_car_point_dur<3600,driver_arrive_car_point_dur,0))/sum(is_request) as driver_arrive_car_point_dur,
                    --司机到达上车点时长
                    
-                   avg(if(is_request=1 and wait_order_dur>0 and wait_order_dur<3600,wait_order_dur,0)) as wait_order_dur,
+                   sum(if(is_request=1 and wait_order_dur>0 and wait_order_dur<3600,wait_order_dur,0))/sum(is_request) as wait_order_dur,
                    --当天等待上车订单时长,司乘互找总时长
                       
-                   avg(if(is_finish=1 and ord_to_arrive_dur>0 and ord_to_arrive_dur<5*3600,ord_to_arrive_dur,0)) as ord_to_arrive_dur,
+                   sum(if(is_finish=1 and ord_to_arrive_dur>0 and ord_to_arrive_dur<5*3600,ord_to_arrive_dur,0))/sum(is_finish) as ord_to_arrive_dur,
                    --下单送达总时长
                    
-                   avg(if(is_finish=1 and order_service_dur>0 and order_service_dur<5*3600,order_service_dur,0)) as order_service_dur, 
+                   sum(if(is_finish=1 and order_service_dur>0 and order_service_dur<5*3600,order_service_dur,0))/sum(is_finish) as order_service_dur, 
                    --订单服务时长（秒）
                    sum(request_order_distance_inpush) as request_order_distance_inpush,
                    --抢单阶段接驾距离(应答)
