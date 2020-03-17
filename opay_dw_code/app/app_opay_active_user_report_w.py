@@ -53,10 +53,10 @@ ods_sqoop_base_user_di_prev_day_task = OssSensor(
     dag=dag
 )
 
-ods_sqoop_base_user_operator_df_prev_day_task = OssSensor(
-    task_id='ods_sqoop_base_user_operator_df_prev_day_task',
+dwm_opay_user_last_visit_df_day_task = OssSensor(
+    task_id='dwm_opay_user_last_visit_df_day_task',
     bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opay_dw_sqoop/opay_user/user_operator",
+        hdfs_path_str="opay/opay_dw/dwm_opay_user_last_visit_df/country_code=NG",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -111,17 +111,13 @@ def app_opay_active_user_report_w_sql_task(ds,ds_nodash):
       WHERE dt<='{pt}' ) t1
    WHERE rn = 1;
   create table test_db.login_w_{date} as 
-SELECT a.dt,
-          a.user_id,
-          ROLE,
-          last_visit
+SELECT  dt,
+        user_id,
+        ROLE,
+        last_visit
    FROM
-     (SELECT dt,
-             user_id,
-             substr(from_unixtime(unix_timestamp(last_visit, 'yyyy-MM-dd HH:mm:ss')+3600),1,10) last_visit
-      FROM opay_dw_ods.ods_sqoop_base_user_operator_df
-      WHERE dt='{pt}') a
-INNER JOIN test_db.user_base_w_{date} b ON a.user_id=b.user_id;
+     opay_dw.dwm_opay_user_last_visit_df
+   where dt='{pt}' ;
 
 INSERT overwrite TABLE opay_dw.app_opay_active_user_report_w partition (country_code,dt,target_type)
 SELECT     '_' country,
