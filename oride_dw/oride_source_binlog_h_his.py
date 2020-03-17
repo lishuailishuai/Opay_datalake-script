@@ -77,6 +77,7 @@ table_list = [
     ("oride_data", "data_driver_whitelist", "sqoop_db", "base", 3, "oride_db", "false"),
     ("oride_data", "data_user", "sqoop_db", "base", 3, "oride_db", "false"),
     ("oride_data", "data_user_whitelist", "sqoop_db", "base", 3, "oride_db", "false"),
+    ("oride_data", "data_user_extend", "sqoop_db", "base", 3, "oride_db", "false"),
 
     # opay_spread
     ("opay_spread", "rider_signups", "opay_spread_mysql", "mass", 3, "opay_spread_db", "false"),
