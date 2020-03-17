@@ -123,7 +123,7 @@ def fun_task_timeout_monitor(ds, dag, **op_kwargs):
 
     msg = [
         {"dag":dag,"db": "oride_dw", "table": "{dag_name}".format(dag_name=dag_ids),
-         "partition": "country_code=NG/dt={pt}".format(pt=ds), "timeout": "800"}
+         "partition": "country_code=NG/dt={pt}".format(pt=ds), "timeout": "900"}
     ]
 
     TaskTimeoutMonitor().set_task_monitor(msg)
@@ -368,6 +368,8 @@ def dwm_oride_order_base_di_sql_task(ds):
             --乘客端版本（发单）
             ord.client_os,
             --乘客端操作系统
+            ord.driver_version,
+            --司机端版本（接单）
             
  		   ord.country_code as country_code,
 

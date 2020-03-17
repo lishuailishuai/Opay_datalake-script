@@ -145,15 +145,15 @@ def app_oride_finance_revenue_monitor_d_sql_task(ds):
           select  
             city_id,
             product_id,
-            sum(if(is_finished_pay=1 and is_succ_pay=1  and pay_mode not in(0,1),nvl(price,0)+nvl(tip,0)+nvl(surcharge,0)+nvl(pax_insurance_price,0),0)) as online_pay_price,--线上支付成功金额
+            sum(if(is_finished_pay=1 and is_succ_pay=1 and pay_mode not in(0,1) and status = 5 and product_id IN (1,2,3,4),nvl(price,0)+nvl(tip,0)+nvl(surcharge,0)+nvl(pax_insurance_price,0),0)) as online_pay_price,--线上支付成功金额
             
             sum(nvl(falsify,0)) as falsify, --用户罚款，自12.25号开始该表接入
             
             sum(nvl(falsify_driver_cancel,0)) as falsify_driver_cancel, --司机罚款，自12.25号开始该表接入
             
-            sum(if(is_finished_pay=1 and is_succ_pay=1 and pay_mode not in(0,1) ,nvl(price,0)+nvl(tip,0)+nvl(surcharge,0)+nvl(pax_insurance_price,0),0)) as c_subsidy_d,--c端补贴
+            sum(if(is_finished_pay=1 and is_succ_pay=1 and pay_mode not in(0,1) and status = 5 and product_id IN (1, 2,3,4),nvl(price,0)+nvl(tip,0)+nvl(surcharge,0)+nvl(pax_insurance_price,0)-nvl(pay_amount,0),0)) as c_subsidy_d,--c端补贴
             
-            sum(nvl(pay_amount,0)+nvl(coupon_amount,0)-nvl(driver_price,0)) as platform_commission, --平台抽成
+            sum(if(status = 5 and product_id IN (1,2,3,4),nvl(pay_amount,0)+nvl(coupon_amount,0)-nvl(driver_price,0),0)) as platform_commission, --平台抽成
         
             sum(nvl(malice_brush_driver_deduct,0)) as malice_brush_driver_deduct,
         
@@ -185,10 +185,10 @@ def app_oride_finance_revenue_monitor_d_sql_task(ds):
               product_id,
               sum(nvl(recharge_amount,0) + nvl(reward_amount,0)) as b_subsidy_d,--B端补贴、天(实际b补)
               sum(nvl(complain_amount,0)) as complain_amount,  --司机被投诉罚款
-              sum(nvl(repair_amount,0)) as  repair_amount, -- 补录份子钱
+              sum(if(product_id in (1,2,3,4),nvl(repair_amount,0),0)) as  repair_amount, -- 补录份子钱
               sum(nvl(other_amount,0)) as  other_amount,--财务小项
               sum(if(balance>0 and amount_agenter>0,nvl(amount_agenter,0),0)) as amount_agenter, --份子钱部分
-              sum(if(balance>0,nvl(theory_phone_amount,0),0)) as theory_phone_amount, --手机还款(理论)
+              sum(if(driver_balance>0,nvl(theory_phone_amount,0),0)) as theory_phone_amount, --手机还款(理论)
               dt
           from oride_dw.dwm_oride_driver_finance_di 
           where  dt = '{pt}'  and city_id != 999001 and driver_id <> 1

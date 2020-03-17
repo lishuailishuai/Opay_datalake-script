@@ -156,6 +156,7 @@ def app_oride_user_funnel_aftord_d_sql_task(ds):
             user_evaluation_order_cnt,
             bad_feedback_finish_ord_cnt,
             act_user_num_d, --活跃乘客数
+            valuation_user_num_d,  --估价乘客数
             valuation_cnt_d,--估价次数，前提必须是有登录[可以有城市、业务线]
             login_to_valuation_dur_d,--登录到估价时长
             valuation_to_ord_dur_d, --估价到下单时长[可以有城市、业务线]  
@@ -192,6 +193,7 @@ def app_oride_user_funnel_aftord_d_sql_task(ds):
                 t1.user_evaluation_order_cnt,
                 t1.bad_feedback_finish_ord_cnt,
                 t2.act_user_num_d, --活跃乘客数
+                t2.valuation_user_num_d,  --估价乘客数
                 t2.valuation_cnt_d,--估价次数，前提必须是有登录[可以有城市、业务线]
                 t2.login_to_valuation_dur_d,--登录到估价时长
                 t2.valuation_to_ord_dur_d, --估价到下单时长[可以有城市、业务线]
@@ -222,21 +224,21 @@ def app_oride_user_funnel_aftord_d_sql_task(ds):
                    sum(if(is_passanger_after_cancel=1 and is_arrive_receive_point=0,1,0)) as user_aftreply_befarri_cancel_cnt,  --应答后-司机到达前乘客取消量
                    sum(if(is_passanger_after_cancel=1 and is_arrive_receive_point=1,1,0)) as user_aftreply_aftarri_cancel_cnt,  --应答后-司机到达后乘客取消量 
                    
-                   avg(if(is_passanger_before_cancel=1 and ord_to_cancel_dur>0 and ord_to_cancel_dur<3600,ord_to_cancel_dur,0)) as user_cancel_before_reply_dur,
+                   avg(if(is_passanger_before_cancel=1 and ord_to_cancel_dur>0 and ord_to_cancel_dur<3600,ord_to_cancel_dur,null)) as user_cancel_before_reply_dur,
                    --司机应答前乘客取消时长
                    
-                   avg(if(take_order_dur>0 and take_order_dur<3600,take_order_dur,0)) as take_order_dur,   
+                   avg(if(take_order_dur>0 and take_order_dur<3600,take_order_dur,null)) as take_order_dur,   
                    --应答订单时长  
-                   avg(if(is_request=1 and driver_arrive_car_point_dur>0 and driver_arrive_car_point_dur<3600,driver_arrive_car_point_dur,0)) as driver_arrive_car_point_dur,
+                   avg(if(is_request=1 and driver_arrive_car_point_dur>0 and driver_arrive_car_point_dur<3600,driver_arrive_car_point_dur,null)) as driver_arrive_car_point_dur,
                    --司机到达上车点时长
                    
-                   avg(if(is_request=1 and wait_order_dur>0 and wait_order_dur<3600,wait_order_dur,0)) as wait_order_dur,
+                   avg(if(is_request=1 and wait_order_dur>0 and wait_order_dur<3600,wait_order_dur,null)) as wait_order_dur,
                    --当天等待上车订单时长,司乘互找总时长
                       
-                   avg(if(is_finish=1 and ord_to_arrive_dur>0 and ord_to_arrive_dur<5*3600,ord_to_arrive_dur,0)) as ord_to_arrive_dur,
+                   avg(if(is_finish=1 and ord_to_arrive_dur>0 and ord_to_arrive_dur<5*3600,ord_to_arrive_dur,null)) as ord_to_arrive_dur,
                    --下单送达总时长
                    
-                   avg(if(is_finish=1 and order_service_dur>0 and order_service_dur<5*3600,order_service_dur,0)) as order_service_dur, 
+                   avg(if(is_finish=1 and order_service_dur>0 and order_service_dur<5*3600,order_service_dur,null)) as order_service_dur, 
                    --订单服务时长（秒）
                    sum(request_order_distance_inpush) as request_order_distance_inpush,
                    --抢单阶段接驾距离(应答)
@@ -271,6 +273,7 @@ def app_oride_user_funnel_aftord_d_sql_task(ds):
                      -10000 AS product_id, --业务线ID
                      '-10000' AS user_version_os, --乘客端版本号和操作系统
                      count(u.passenger_id) AS act_user_num_d, --活跃乘客数
+                     count(if(rr.user_id IS NOT NULL,u.passenger_id,null)) as valuation_user_num_d,  --估价乘客数
                      sum(if(rr.user_id IS NOT NULL,valuation_cnt,0)) AS valuation_cnt_d,--估价次数，前提必须是有登录[可以有城市、业务线]
                      avg(if(t.user_id IS NOT NULL
                             AND (t.create_time-unix_timestamp(u.login_time))>0

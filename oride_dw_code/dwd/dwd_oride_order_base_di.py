@@ -38,7 +38,7 @@ args = {
 }
 
 dag = airflow.DAG('dwd_oride_order_base_di',
-                  schedule_interval="20 00 * * *",
+                  schedule_interval="30 00 * * *",
                   default_args=args,
                   )
 
@@ -75,16 +75,16 @@ dwd_oride_order_payment_base_di_prev_day_task = OssSensor(
 )
 
 # 依赖前一天分区
-ods_sqoop_base_data_country_conf_df_prev_day_task = OssSensor(
-        task_id='ods_sqoop_base_data_country_conf_df_prev_day_task',
-        bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-            hdfs_path_str="oride_dw_sqoop/oride_data/data_country_conf",
-            pt='{{ds}}'
-        ),
-        bucket_name='opay-datalake',
-        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-        dag=dag
-    )
+dwd_oride_data_country_conf_hf_prev_day_task = OssSensor(
+    task_id='dwd_oride_data_country_conf_hf_prev_day_task',
+    bucket_key='{hdfs_path_str}/dt={pt}/hour=23/_SUCCESS'.format(
+        hdfs_path_str="oride/oride_dw/dwd_oride_data_country_conf_hf",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
 
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
 
@@ -93,7 +93,7 @@ def fun_task_timeout_monitor(ds, dag, **op_kwargs):
 
     tb = [
         {"dag":dag,"db": "oride_dw", "table": "{dag_name}".format(dag_name=table_name),
-         "partition": "country_code=NG/dt={pt}".format(pt=ds), "timeout": "600"}
+         "partition": "country_code=NG/dt={pt}".format(pt=ds), "timeout": "1500"}
     ]
 
     TaskTimeoutMonitor().set_task_monitor(tb)
@@ -517,8 +517,8 @@ ON base.id=pay.order_id
 
 left join
 (SELECT *
-   FROM oride_dw_ods.ods_sqoop_base_data_country_conf_df 
-   WHERE dt='{pt}') country
+   FROM oride_dw.dwd_oride_data_country_conf_hf 
+   WHERE dt='{pt}' and hour='23') country
 on base.country_id=country.id;
 '''.format(
         pt=ds,
@@ -624,4 +624,4 @@ dwd_oride_order_base_di_task = PythonOperator(
 
 ods_binlog_data_order_hi_prev_day_task >> dwd_oride_order_base_di_task
 dwd_oride_order_payment_base_di_prev_day_task >> dwd_oride_order_base_di_task
-ods_sqoop_base_data_country_conf_df_prev_day_task >> dwd_oride_order_base_di_task
+dwd_oride_data_country_conf_hf_prev_day_task >> dwd_oride_order_base_di_task
