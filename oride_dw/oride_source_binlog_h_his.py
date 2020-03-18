@@ -29,7 +29,7 @@ args = {
     'email_on_retry': False,
     'on_success_callback': on_success_callback,
 }
-schedule_interval = "30 * * * *"
+schedule_interval = "20 * * * *"
 
 dag = airflow.DAG(
     'oride_source_binlog_h_his',
@@ -563,37 +563,9 @@ for mysql_db_name, mysql_table_name, conn_id, prefix_name, priority_weight_nm, s
         dag=dag
     )
 
-    dependence_hive_hi_table_prev_day_full_merge_task = OssSensor(
-        task_id='dependence_hive_hi_table_prev_day_full_merge_task_{}'.format(hive_hi_table_name),
-        bucket_key='{hdfs_path_str}/dt={pt}/hour={hour}/_SUCCESS'.format(
-            hdfs_path_str="oride_binlog/%s" % (("{server_name}.{db_name}.{table_name}".format(
-                server_name=server_name,
-                db_name=mysql_db_name,
-                table_name=mysql_table_name
-            ))),
-            pt='{{ds}}',
-            hour='{{execution_date.strftime("%H")}}'
-        ),
-        bucket_name='opay-datalake',
-        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-        dag=dag
-    )
 
-    dependence_hive_hi_table_prev_day_merge_task = OssSensor(
-        task_id='dependence_hive_hi_table_prev_day_merge_task_{}'.format(hive_hi_table_name),
-        bucket_key='{hdfs_path_str}/dt={pt}/hour={hour}/_SUCCESS'.format(
-            hdfs_path_str="oride_binlog/%s" % (("{server_name}.{db_name}.{table_name}".format(
-                server_name=server_name,
-                db_name=mysql_db_name,
-                table_name=mysql_table_name
-            ))),
-            pt='{{ds}}',
-            hour='{{execution_date.strftime("%H")}}'
-        ),
-        bucket_name='opay-datalake',
-        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-        dag=dag
-    )
+
+
 
     # merge_pre_hi_data_task
     merge_pre_hi_data = PythonOperator(
@@ -651,5 +623,5 @@ for mysql_db_name, mysql_table_name, conn_id, prefix_name, priority_weight_nm, s
     )
 
     check_h_his_table >> validate_full_table_exist >> [add_partitions, import_table]
-    add_partitions >> dependence_hive_hi_table_prev_day_merge_task >> merge_pre_hi_data
-    import_table >> check_sqoop_table >> dependence_hive_hi_table_prev_day_full_merge_task >> merge_pre_hi_with_full_data
+    add_partitions  >> merge_pre_hi_data
+    import_table >> check_sqoop_table  >> merge_pre_hi_with_full_data
