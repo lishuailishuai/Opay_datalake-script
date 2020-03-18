@@ -128,7 +128,7 @@ def dwd_oride_user_extend_hf_sql_task(ds, hour):
           (
           select 
               *,
-             row_number() over(partition by t.id order by t.`__ts_ms` desc,t.`__file` desc,cast(t.`__pos` as int) desc) as order_by
+    row_number() over(partition by t.id order by t.`__ts_ms` desc,t.`__file` desc,cast(t.`__pos` as int) desc) as order_by
           from
           oride_dw_ods.ods_binlog_base_data_user_extend_h_his t
           WHERE  dt='{pt}' and hour='{now_hour}'
