@@ -111,7 +111,7 @@ def dwd_oride_user_hf_sql_task(ds, hour):
                  *,
                row_number() over(partition by t.id order by t.`__ts_ms` desc,t.`__file` desc,cast(t.`__pos` as int) desc) as order_by
               from
-          ods_binlog_base_data_user_h_his t
+          oride_dw_ods.ods_binlog_base_data_user_h_his t
           WHERE  dt='{pt}' and hour='{now_hour}'
           )t1
           where t1.`__deleted` = 'false' and t1.order_by = 1
