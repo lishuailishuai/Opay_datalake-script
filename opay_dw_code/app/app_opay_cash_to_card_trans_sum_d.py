@@ -27,7 +27,7 @@ import os
 
 args = {
     'owner': 'liushuzhen',
-    'start_date': datetime(2020, 2, 10),
+    'start_date': datetime(2020, 3, 17),
     'depends_on_past': False,
     'retries': 3,
     'retry_delay': timedelta(minutes=2),
@@ -82,7 +82,7 @@ table_name = "app_opay_cash_to_card_trans_sum_d"
 hdfs_path = "oss://opay-datalake/opay/opay_dw/" + table_name
 
 
-def app_opay_pos_trans_sum_d_sql_task(ds):
+def app_opay_cash_to_card_trans_sum_d_sql_task(ds):
     HQL = '''
 
     set mapred.max.split.size=1000000;
@@ -92,7 +92,7 @@ def app_opay_pos_trans_sum_d_sql_task(ds):
     INSERT overwrite TABLE {db}.{table} partition (country_code, dt)
 
     select 
-        sub_consume_scenario, if(region is null, '-', region), t1.state, client_souce,out_channel_id,
+        sub_consume_scenario, if(region is null, '-', region), t1.state, client_source,out_channel_id,
         originator_role,originator_type, order_status,
         count(*) as order_cnt,
         sum(amount) as order_amt,
@@ -102,7 +102,7 @@ def app_opay_pos_trans_sum_d_sql_task(ds):
         '{pt}' as dt
     from (
         select 
-            sub_consume_scenario, state, client_souce, out_channel_id,originator_role,originator_type, order_status,
+            sub_consume_scenario, state, client_source, out_channel_id,originator_role,originator_type, order_status,
             country_code,amount, channel_amount, fee_amount
         from opay_dw.dwd_opay_cash_to_card_record_di
         where dt = '{pt}' and date_format(create_time, 'yyyy-MM-dd') = '{pt}'
@@ -112,8 +112,8 @@ def app_opay_pos_trans_sum_d_sql_task(ds):
         from opay_dw.dim_opay_region_state_mapping_df
         where dt = if('{pt}' <= '2020-02-10', '2020-02-10', '{pt}')
     ) t2 on t1.state = t2.state
-    group by sub_consume_scenario, if(region is null, '-', region), t1.state, client_souce,out_channel_id,
-             originator_role,originator_type, order_status
+    group by sub_consume_scenario, if(region is null, '-', region), t1.state, client_source,out_channel_id,
+             originator_role,originator_type, order_status,country_code
 
 
 
@@ -130,7 +130,7 @@ def execution_data_task_id(ds, **kargs):
     hive_hook = HiveCliHook()
 
     # 读取sql
-    _sql = app_opay_pos_trans_sum_d_sql_task(ds)
+    _sql = app_opay_cash_to_card_trans_sum_d_sql_task(ds)
 
     logging.info('Executing: %s', _sql)
 
@@ -146,13 +146,13 @@ def execution_data_task_id(ds, **kargs):
     TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "true", "true")
 
 
-app_opay_pos_trans_sum_d_task = PythonOperator(
-    task_id='app_opay_pos_trans_sum_d_task',
+app_opay_cash_to_card_trans_sum_d_task = PythonOperator(
+    task_id='app_opay_cash_to_card_trans_sum_d_task',
     python_callable=execution_data_task_id,
     provide_context=True,
     dag=dag
 )
 
-dwd_opay_cash_to_card_record_di_task >> app_opay_pos_trans_sum_d_task
+dwd_opay_cash_to_card_record_di_task >> app_opay_cash_to_card_trans_sum_d_task
 
 
