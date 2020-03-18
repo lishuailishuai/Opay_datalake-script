@@ -277,10 +277,10 @@ def app_oride_user_funnel_aftord_d_sql_task(ds):
                      sum(if(rr.user_id IS NOT NULL,valuation_cnt,0)) AS valuation_cnt_d,--估价次数，前提必须是有登录[可以有城市、业务线]
                      avg(if(t.user_id IS NOT NULL
                             AND (t.create_time-unix_timestamp(u.login_time))>0
-                            AND (t.create_time-unix_timestamp(u.login_time))<15*60, (t.create_time-unix_timestamp(u.login_time)),0)) AS login_to_valuation_dur_d,--登录到估价时长
+                            AND (t.create_time-unix_timestamp(u.login_time))<15*60, (t.create_time-unix_timestamp(u.login_time)),null)) AS login_to_valuation_dur_d,--登录到估价时长
                      avg(if(ord.passenger_id IS NOT NULL
                             AND (ord.create_time-t.create_time)>0
-                            AND (ord.create_time-t.create_time)<15*60, (ord.create_time-t.create_time),0)) AS valuation_to_ord_dur_d, --估价到下单时长[可以有城市、业务线]
+                            AND (ord.create_time-t.create_time)<15*60, (ord.create_time-t.create_time),null)) AS valuation_to_ord_dur_d, --估价到下单时长[可以有城市、业务线]
                      'total' AS country_code
                     FROM
                       (SELECT passenger_id,

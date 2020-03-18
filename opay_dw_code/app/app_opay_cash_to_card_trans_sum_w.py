@@ -36,7 +36,7 @@ args = {
     'email_on_retry': False,
 }
 
-dag = airflow.DAG('app_opay_cash_to_card_trans_sum_d',
+dag = airflow.DAG('app_opay_cash_to_card_trans_sum_w',
                   schedule_interval="00 03 * * *",
                   default_args=args,
                   )
@@ -78,11 +78,11 @@ task_timeout_monitor = PythonOperator(
 ##----------------------------------------- 变量 ---------------------------------------##
 db_name = "opay_dw"
 
-table_name = "app_opay_cash_to_card_trans_sum_d"
+table_name = "app_opay_cash_to_card_trans_sum_w"
 hdfs_path = "oss://opay-datalake/opay/opay_dw/" + table_name
 
 
-def app_opay_cash_to_card_trans_sum_d_sql_task(ds):
+def app_opay_cash_to_card_trans_sum_w_sql_task(ds):
     HQL = '''
 
     set mapred.max.split.size=1000000;
@@ -101,12 +101,15 @@ def app_opay_cash_to_card_trans_sum_d_sql_task(ds):
         country_code,
         '{pt}' as dt
     from (
-        select 
-            sub_consume_scenario, state, client_source, out_channel_id,originator_role,originator_type, order_status,
-            country_code,amount, channel_amount, fee_amount
-        from opay_dw.dwd_opay_cash_to_card_record_di
-        where dt = '{pt}' and date_format(create_time, 'yyyy-MM-dd') = '{pt}'
-    ) t1 left join (
+          select * from  
+            (select 
+               sub_consume_scenario, state, client_source, out_channel_id,originator_role,originator_type, order_status,
+               country_code,amount, channel_amount, fee_amount,row_number()over(partition by order_no order by update_time desc) rn
+            from opay_dw.dwd_opay_cash_to_card_record_di
+            where dt between date_sub(next_day('{pt}', 'mo'), 7)  and '{pt}'
+                  and date_format(create_time, 'yyyy-MM-dd') between date_sub(next_day('{pt}', 'mo'), 7)  and '{pt}') m 
+          where rn=1
+         ) t1 left join (
         select
             state, region
         from opay_dw.dim_opay_region_state_mapping_df
@@ -130,7 +133,7 @@ def execution_data_task_id(ds, **kargs):
     hive_hook = HiveCliHook()
 
     # 读取sql
-    _sql = app_opay_cash_to_card_trans_sum_d_sql_task(ds)
+    _sql = app_opay_cash_to_card_trans_sum_w_sql_task(ds)
 
     logging.info('Executing: %s', _sql)
 
@@ -146,13 +149,13 @@ def execution_data_task_id(ds, **kargs):
     TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "true", "true")
 
 
-app_opay_cash_to_card_trans_sum_d_task = PythonOperator(
-    task_id='app_opay_cash_to_card_trans_sum_d_task',
+app_opay_cash_to_card_trans_sum_w_task = PythonOperator(
+    task_id='app_opay_cash_to_card_trans_sum_w_task',
     python_callable=execution_data_task_id,
     provide_context=True,
     dag=dag
 )
 
-dwd_opay_cash_to_card_record_di_task >> app_opay_cash_to_card_trans_sum_d_task
+dwd_opay_cash_to_card_record_di_task >> app_opay_cash_to_card_trans_sum_w_task
 
 
