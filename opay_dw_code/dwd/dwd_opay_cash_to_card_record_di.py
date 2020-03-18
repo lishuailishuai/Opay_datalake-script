@@ -146,7 +146,8 @@ def dwd_opay_cash_to_card_record_di_sql_task(ds):
         t1.affiliate_bank_email, t1.create_time, t1.update_time, t1.country, 'Cash to Card' as top_service_type, 'ACTransfer' as sub_service_type, 
         t1.order_status, t1.error_code, t1.error_msg, t1.client_source, t1.pay_way, t1.business_type,
         t1.pay_status, 'ACTransfer' as top_consume_scenario, 'ACTransfer' as sub_consume_scenario,
-        t1.fee_amount, t1.fee_pattern, t1.outward_id, t1.outward_type, t2.state,out_channel_id,550 channel_amount,
+        t1.fee_amount, t1.fee_pattern, t1.outward_id, t1.outward_type, t2.state,out_channel_id,
+        case when order_status='SUCCESS' then 550 else 0 end channel_amount,
         'NG' as country_code,
         '{pt}' dt
         
