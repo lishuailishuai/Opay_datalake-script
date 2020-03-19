@@ -114,7 +114,9 @@ def dwd_opay_user_upgrade_agent_df_sql_task(ds):
         confirmed_overload_user_id,
         if(t2.aggregator_id is null, 'N', 'Y') as is_reseller,
         t2.update_time as reseller_time,
-        t2.aggregator_id
+        t2.aggregator_id,
+        'NG' as country_code,
+        '{pt}' as dt
     from (
         SELECT
             user_id, role, create_time
