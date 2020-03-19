@@ -107,6 +107,7 @@ def dwd_opay_user_upgrade_agent_df_sql_task(ds):
     set  hive.exec.max.dynamic.partitions.pernode=1000;
     set hive.exec.dynamic.partition.mode=nonstrict;
     set hive.exec.parallel=true;
+    insert overwrite table {db}.{table} partition(country_code, dt)
     select 
         t0.user_id, t0.role, 
         nvl(t1.upgrade_time, t0.create_time) as upgrade_time,
