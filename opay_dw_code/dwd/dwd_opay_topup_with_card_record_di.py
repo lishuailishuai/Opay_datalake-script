@@ -147,10 +147,10 @@ def dwd_opay_topup_with_card_record_di_sql_task(ds):
         'TopupWithCard' as top_consume_scenario, 'TopupWithCard' as sub_consume_scenario, 
         t1.fee_amount, t1.fee_pattern, t1.outward_id, t1.outward_type, t2.state,
          case
-            when order_status = 'SUCCESS' and out_channel_id='GTGIPS' then cast(amount*0.0075+1000 as decimal(10,2))
+            when order_status = 'SUCCESS' and out_channel_id='FLUTTERWAVE-MCAS' then cast(amount*0.005 as decimal(10,2))
             when order_status = 'SUCCESS' and out_channel_id='PAYSTACK' then cast(amount*0.008 as decimal(10,2))
-            when order_status = 'SUCCESS' and out_channel_id='INTERSWITCH' then cast(amount*0.0075+1200 as decimal(10,2))
-            when order_status = 'SUCCESS' and out_channel_id='FLUTTERWAVE' then cast(amount*0.005+700 as decimal(10,2))
+            when order_status = 'SUCCESS' and out_channel_id='INTERSWITCH' then cast(amount*0.0075 as decimal(10,2))
+            when order_status = 'SUCCESS' and out_channel_id='FLUTTERWAVE' then cast(amount*0.005 as decimal(10,2))
             else 0
         end as channel_amount,
         'NG' as country_code,
