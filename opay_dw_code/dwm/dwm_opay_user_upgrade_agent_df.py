@@ -125,7 +125,7 @@ def dwm_opay_user_upgrade_agent_df_sql_task(ds):
             accept_overload_user_Id as accept_overload_user_id, confirmed_overload_user_Id as confirmed_overload_user_id, 
             default.localTime("{config}", 'NG',upgrade_date, 0) as upgrade_time
         from opay_dw_ods.ods_sqoop_base_user_upgrade_df where dt = '{pt}'
-    ) t1 on t0.user_id = t1.accept_overload_user_Id
+    ) t1 on t0.user_id = t1.user_id
     left join (
         select
             user_id, merchant_id as aggregator_id, 
