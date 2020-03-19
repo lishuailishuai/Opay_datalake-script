@@ -37,7 +37,7 @@ args = {
 }
 
 dag = airflow.DAG('dwd_oride_data_city_conf_hf',
-                  schedule_interval="35 * * * *",
+                  schedule_interval="23 * * * *",
                   default_args=args,
                   )
 
