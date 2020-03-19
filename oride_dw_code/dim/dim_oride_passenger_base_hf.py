@@ -50,7 +50,7 @@ hdfs_path = "oss://opay-datalake/oride/oride_dw/" + table_name
 dwd_oride_user_hf_prev_day_task = OssSensor(
         task_id='dwd_oride_user_hf_prev_day_task',
         bucket_key='{hdfs_path_str}/dt={pt}/hour=23/_SUCCESS'.format(
-            hdfs_path_str="oride/oride_dw/dwd_oride_user_hf",
+            hdfs_path_str="oride/oride_dw/dwd_oride_user_hf/country_code=nal",
             pt='{{ds}}',
             now_day='{{macros.ds_add(ds, +1)}}'
         ),
@@ -62,7 +62,7 @@ dwd_oride_user_hf_prev_day_task = OssSensor(
 dwd_oride_user_extend_hf_prev_day_task = OssSensor(
         task_id='dwd_oride_user_extend_hf_prev_day_task',
         bucket_key='{hdfs_path_str}/dt={pt}/hour=23/_SUCCESS'.format(
-            hdfs_path_str="oride/oride_dw/dwd_oride_user_extend_hf",
+            hdfs_path_str="oride/oride_dw/dwd_oride_user_extend_hf/country_code=nal",
             pt='{{ds}}',
             now_day='{{macros.ds_add(ds, +1)}}'
         ),
