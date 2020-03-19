@@ -120,7 +120,7 @@ def dwd_opay_user_upgrade_agent_df_sql_task(ds):
     from (
         SELECT
             user_id, role, create_time
-        from dim_opay_user_base_df where dt = '{pt}' and role = 'agent'
+        from opay_dw.dim_opay_user_base_df where dt = '{pt}' and role = 'agent'
     ) t0 left join (
         select
             user_id, 
