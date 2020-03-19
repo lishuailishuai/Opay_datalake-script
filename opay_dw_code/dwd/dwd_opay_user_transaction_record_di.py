@@ -45,66 +45,11 @@ dag = airflow.DAG('dwd_opay_user_transaction_record_di',
                   )
 
 ##----------------------------------------- 依赖 ---------------------------------------##
-#依赖前一天分区
-dwd_opay_life_payment_record_di_task = OssSensor(
-    task_id='dwd_opay_life_payment_record_di_task',
-    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opay/opay_dw/dwd_opay_life_payment_record_di/country_code=NG",
-        pt='{{ds}}'
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
 
 dwd_opay_transfer_of_account_record_di_task = OssSensor(
     task_id='dwd_opay_transfer_of_account_record_di_task',
     bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
         hdfs_path_str="opay/opay_dw/dwd_opay_transfer_of_account_record_di/country_code=NG",
-        pt='{{ds}}'
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
-
-dwd_opay_cash_to_card_record_di_task = OssSensor(
-    task_id='dwd_opay_cash_to_card_record_di_task',
-    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opay/opay_dw/dwd_opay_cash_to_card_record_di/country_code=NG",
-        pt='{{ds}}'
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
-
-dwd_opay_topup_with_card_record_di_task = OssSensor(
-    task_id='dwd_opay_topup_with_card_record_di_task',
-    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opay/opay_dw/dwd_opay_topup_with_card_record_di/country_code=NG",
-        pt='{{ds}}'
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
-
-dwd_opay_receive_money_record_di_task = OssSensor(
-    task_id='dwd_opay_receive_money_record_di_task',
-    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opay/opay_dw/dwd_opay_receive_money_record_di/country_code=NG",
-        pt='{{ds}}'
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
-
-dwd_opay_pos_transaction_record_di_task = OssSensor(
-    task_id='dwd_opay_pos_transaction_record_di_task',
-    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opay/opay_dw/dwd_opay_pos_transaction_record_di/country_code=NG",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -122,16 +67,17 @@ dwd_opay_cico_record_di_task = OssSensor(
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
-# dwd_opay_easycash_record_di_task = OssSensor(
-#     task_id='dwd_opay_easycash_record_di_task',
-#     bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-#         hdfs_path_str="opay/opay_dw/dwd_opay_easycash_record_di/country_code=NG",
-#         pt='{{ds}}'
-#     ),
-#     bucket_name='opay-datalake',
-#     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-#     dag=dag
-# )
+
+dwd_opay_transaction_record_di_prev_day_task = OssSensor(
+    task_id='dwd_opay_transaction_record_di_prev_day_task',
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="opay/opay_dw/dwd_opay_transaction_record_di/country_code=NG",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
 def fun_task_timeout_monitor(ds,dag,**op_kwargs):
 
@@ -228,10 +174,6 @@ dwd_opay_user_transaction_record_di_task = PythonOperator(
     dag=dag
 )
 
-dwd_opay_life_payment_record_di_task >> dwd_opay_user_transaction_record_di_task
+dwd_opay_transaction_record_di_prev_day_task >> dwd_opay_user_transaction_record_di_task
 dwd_opay_transfer_of_account_record_di_task >> dwd_opay_user_transaction_record_di_task
-dwd_opay_cash_to_card_record_di_task >> dwd_opay_user_transaction_record_di_task
-dwd_opay_topup_with_card_record_di_task >> dwd_opay_user_transaction_record_di_task
-dwd_opay_receive_money_record_di_task >> dwd_opay_user_transaction_record_di_task
-dwd_opay_pos_transaction_record_di_task >> dwd_opay_user_transaction_record_di_task
 dwd_opay_cico_record_di_task >> dwd_opay_user_transaction_record_di_task
