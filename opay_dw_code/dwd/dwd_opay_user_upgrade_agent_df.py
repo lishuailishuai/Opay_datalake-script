@@ -36,8 +36,8 @@ args = {
     'email_on_retry': False,
 }
 
-dag = airflow.DAG('dwm_opay_user_upgrade_agent_df',
-                  schedule_interval="30 02 * * *",
+dag = airflow.DAG('dwd_opay_user_upgrade_agent_df',
+                  schedule_interval="10 01 * * *",
                   default_args=args,
                   )
 
@@ -97,12 +97,12 @@ task_timeout_monitor = PythonOperator(
 ##----------------------------------------- 变量 ---------------------------------------##
 db_name = "opay_dw"
 
-table_name = "dwm_opay_user_upgrade_agent_df"
+table_name = "dwd_opay_user_upgrade_agent_df"
 hdfs_path = "oss://opay-datalake/opay/opay_dw/" + table_name
 config = eval(Variable.get("opay_time_zone_config"))
 
 
-def dwm_opay_user_upgrade_agent_df_sql_task(ds):
+def dwd_opay_user_upgrade_agent_df_sql_task(ds):
     HQL = '''
     set  hive.exec.max.dynamic.partitions.pernode=1000;
     set hive.exec.dynamic.partition.mode=nonstrict;
@@ -147,7 +147,7 @@ def execution_data_task_id(ds, **kargs):
     hive_hook = HiveCliHook()
 
     # 读取sql
-    _sql = dwm_opay_user_upgrade_agent_df_sql_task(ds)
+    _sql = dwd_opay_user_upgrade_agent_df_sql_task(ds)
 
     logging.info('Executing: %s', _sql)
 
@@ -163,15 +163,15 @@ def execution_data_task_id(ds, **kargs):
     TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "true", "true")
 
 
-dwm_opay_user_upgrade_agent_df_task = PythonOperator(
-    task_id='dwm_opay_user_upgrade_agent_df_task',
+dwd_opay_user_upgrade_agent_df_task = PythonOperator(
+    task_id='dwd_opay_user_upgrade_agent_df_task',
     python_callable=execution_data_task_id,
     provide_context=True,
     dag=dag
 )
 
-dim_opay_user_base_df_prev_day_task >> dwm_opay_user_upgrade_agent_df_task
-ods_sqoop_base_user_reseller_df_check_task >> dwm_opay_user_upgrade_agent_df_task
-ods_sqoop_base_user_upgrade_df_check_task >> dwm_opay_user_upgrade_agent_df_task
+dim_opay_user_base_df_prev_day_task >> dwd_opay_user_upgrade_agent_df_task
+ods_sqoop_base_user_reseller_df_check_task >> dwd_opay_user_upgrade_agent_df_task
+ods_sqoop_base_user_upgrade_df_check_task >> dwd_opay_user_upgrade_agent_df_task
 
 
