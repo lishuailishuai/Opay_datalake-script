@@ -42,49 +42,49 @@ dag = airflow.DAG(
     default_args=args)
 
 ##----------------------------------------- 依赖 ---------------------------------------##
-ods_sqoop_owealth_share_order_df_prev_day_task = OssSensor(
-    task_id='ods_sqoop_owealth_share_order_df_prev_day_task',
-    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opay_owealth_ods/opay_owealth/share_order",
-        pt='{{ds}}'
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
+# ods_sqoop_owealth_share_order_df_prev_day_task = OssSensor(
+#     task_id='ods_sqoop_owealth_share_order_df_prev_day_task',
+#     bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+#         hdfs_path_str="opay_owealth_ods/opay_owealth/share_order",
+#         pt='{{ds}}'
+#     ),
+#     bucket_name='opay-datalake',
+#     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+#     dag=dag
+# )
 
-ods_sqoop_owealth_owealth_user_subscribed_df_prev_day_task = OssSensor(
-    task_id='ods_sqoop_owealth_owealth_user_subscribed_df_prev_day_task',
-    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opay_owealth_ods/opay_owealth/owealth_user_subscribed",
-        pt='{{ds}}'
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
+# ods_sqoop_owealth_owealth_user_subscribed_df_prev_day_task = OssSensor(
+#     task_id='ods_sqoop_owealth_owealth_user_subscribed_df_prev_day_task',
+#     bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+#         hdfs_path_str="opay_owealth_ods/opay_owealth/owealth_user_subscribed",
+#         pt='{{ds}}'
+#     ),
+#     bucket_name='opay-datalake',
+#     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+#     dag=dag
+# )
 
-ods_sqoop_owealth_owealth_share_trans_record_prev_day_task = OssSensor(
-    task_id='ods_sqoop_owealth_owealth_share_trans_record_prev_day_task',
-    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opay_owealth_ods/opay_owealth/share_trans_record",
-        pt='{{ds}}'
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
+# ods_sqoop_owealth_owealth_share_trans_record_prev_day_task = OssSensor(
+#     task_id='ods_sqoop_owealth_owealth_share_trans_record_prev_day_task',
+#     bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+#         hdfs_path_str="opay_owealth_ods/opay_owealth/share_trans_record",
+#         pt='{{ds}}'
+#     ),
+#     bucket_name='opay-datalake',
+#     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+#     dag=dag
+# )
 
-ods_sqoop_base_user_di_prev_day_task = OssSensor(
-    task_id='ods_sqoop_base_user_di_prev_day_task',
-    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opay_dw_sqoop_di/opay_user/user",
-        pt='{{ds}}'
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
+# ods_sqoop_base_user_di_prev_day_task = OssSensor(
+#     task_id='ods_sqoop_base_user_di_prev_day_task',
+#     bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+#         hdfs_path_str="opay_dw_sqoop_di/opay_user/user",
+#         pt='{{ds}}'
+#     ),
+#     bucket_name='opay-datalake',
+#     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+#     dag=dag
+# )
 
 
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
@@ -124,7 +124,7 @@ def app_opay_owealth_report_d_sql_task(ds):
               user_id,
               memo
         FROM opay_owealth_ods.ods_sqoop_owealth_share_order_df
-        WHERE dt='{pt}'
+        WHERE dt='2020-03-18'
          AND status="S"
          AND date_format(update_time,'yyyy-MM-dd')='{pt}'
         ),
@@ -134,8 +134,8 @@ def app_opay_owealth_report_d_sql_task(ds):
               subscribed,
               mobile
         FROM opay_owealth_ods.ods_sqoop_owealth_owealth_user_subscribed_df
-        WHERE dt='{pt}'
-          AND create_time<'{pt} 23:00:00' 
+        WHERE dt='2020-03-18'
+          AND update_time<'{pt} 23:00:00' 
         ),
     share_trans_record AS
        (SELECT order_type,
@@ -143,7 +143,7 @@ def app_opay_owealth_report_d_sql_task(ds):
                user_id,
                date_format(create_time,'yyyy-MM-dd') create_date
         FROM opay_owealth_ods.ods_sqoop_owealth_share_trans_record_df
-        WHERE dt='{pt}'
+        WHERE dt='2020-03-18'
           AND create_time<'{pt} 24:00:00' 
         ),
     user_role AS
@@ -257,10 +257,10 @@ app_opay_owealth_report_d_task = PythonOperator(
     dag=dag
 )
 
-ods_sqoop_owealth_share_order_df_prev_day_task >> app_opay_owealth_report_d_task
-ods_sqoop_owealth_owealth_user_subscribed_df_prev_day_task >> app_opay_owealth_report_d_task
-ods_sqoop_owealth_owealth_share_trans_record_prev_day_task >> app_opay_owealth_report_d_task
-ods_sqoop_base_user_di_prev_day_task >> app_opay_owealth_report_d_task
+# ods_sqoop_owealth_share_order_df_prev_day_task >> app_opay_owealth_report_d_task
+# ods_sqoop_owealth_owealth_user_subscribed_df_prev_day_task >> app_opay_owealth_report_d_task
+# ods_sqoop_owealth_owealth_share_trans_record_prev_day_task >> app_opay_owealth_report_d_task
+# ods_sqoop_base_user_di_prev_day_task >> app_opay_owealth_report_d_task
 
 
 
