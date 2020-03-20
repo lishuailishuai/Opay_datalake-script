@@ -184,7 +184,7 @@ def app_opay_user_report_sum_d_sql_task(ds):
                       count(1) first_pay_user_cnt,
                       '-' state
    FROM opay_dw.dwm_opay_user_first_trans_df
-   WHERE dt='{pt}' and originator_or_affiliate='originator' 
+   WHERE dt='{pt}'
          and date_format(trans_time,'yyyy-MM-dd')='{pt}'
    GROUP BY top_consume_scenario)
 
