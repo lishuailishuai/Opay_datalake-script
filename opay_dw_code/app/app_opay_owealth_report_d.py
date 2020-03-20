@@ -135,7 +135,7 @@ def app_opay_owealth_report_d_sql_task(ds):
               mobile
         FROM opay_owealth_ods.ods_sqoop_owealth_owealth_user_subscribed_df
         WHERE dt='2020-03-18'
-          AND create_time<'{pt} 23:00:00' 
+          AND update_time<'{pt} 23:00:00' 
         ),
     share_trans_record AS
        (SELECT order_type,
