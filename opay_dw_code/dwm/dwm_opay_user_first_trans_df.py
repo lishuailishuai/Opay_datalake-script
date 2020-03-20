@@ -37,7 +37,7 @@ args = {
 }
 
 dag = airflow.DAG('dwm_opay_user_first_trans_df',
-                  schedule_interval="20 02 * * *",
+                  schedule_interval="40 01 * * *",
                   default_args=args,
                   )
 
@@ -85,6 +85,23 @@ def dwm_opay_user_first_trans_df_sql_task(ds):
     set mapred.max.split.size=1000000;
     set hive.exec.dynamic.partition.mode=nonstrict;
     set hive.exec.parallel=true;
+    with user_first_trans_di as (
+        select 
+            order_no, trans_time, amount, currency,
+            user_id, user_role, 
+            top_service_type, sub_service_type, top_consume_scenario, sub_consume_scenario, originator_or_affiliate,
+            country_code
+        from (
+            select 
+                order_no, create_time as trans_time, amount, currency,
+                user_id, user_role, 
+                top_service_type, sub_service_type, top_consume_scenario, sub_consume_scenario, originator_or_affiliate,
+                country_code, 
+                row_number() over(partition by user_id order by create_time) rn
+            from opay_dw.dwd_opay_user_transaction_record_di
+            where dt = '{pt}' and user_id is not null
+        ) t0 where rn = 1
+    )
     insert overwrite table {db}.{table} partition(country_code, dt)
     select 
         order_no, trans_time, amount, currency, 
@@ -103,12 +120,11 @@ def dwm_opay_user_first_trans_df_sql_task(ds):
         '{pt}'
     from (
         select 
-            order_no, create_time as trans_time, amount, currency,
+            order_no, trans_time, amount, currency,
             user_id, user_role, 
             top_service_type, sub_service_type, top_consume_scenario, sub_consume_scenario, originator_or_affiliate,
             country_code
-        from opay_dw.dwd_opay_user_transaction_record_di 
-        where dt = '{pt}' and user_id is not null
+        from user_first_trans_di
     ) t0 left join (
         select 
             user_id
