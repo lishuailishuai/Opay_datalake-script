@@ -183,9 +183,9 @@ def app_opay_user_report_sum_d_sql_task(ds):
                       NULL AS zero_bal_acct_cnt,
                       count(1) first_pay_user_cnt,
                       '-' state
-   FROM opay_dw.dwm_opay_user_first_tran_di
-   WHERE dt='{pt}'
-     AND originator_type='USER'
+   FROM opay_dw.dwm_opay_user_first_trans_df
+   WHERE dt='{pt}' and originator_or_affiliate='originator' 
+         and date_format(trans_time,'yyyy-MM-dd')='{pt}'
    GROUP BY top_consume_scenario)
 
 INSERT overwrite TABLE opay_dw.app_opay_user_report_sum_d partition (country_code='NG',dt='{pt}')
