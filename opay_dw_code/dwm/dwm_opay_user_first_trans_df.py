@@ -99,7 +99,7 @@ def dwm_opay_user_first_trans_df_sql_task(ds):
                 country_code, 
                 row_number() over(partition by user_id order by create_time) rn
             from opay_dw.dwd_opay_user_transaction_record_di
-            where dt = '{pt}' and user_id is not null
+            where dt = '{pt}' and user_id is not null and user_id != ''
         ) t0 where rn = 1
     )
     insert overwrite table {db}.{table} partition(country_code, dt)
