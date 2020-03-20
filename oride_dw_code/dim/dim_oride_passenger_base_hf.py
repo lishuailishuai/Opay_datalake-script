@@ -169,7 +169,7 @@ def dim_oride_passenger_base_hf_sql_task(ds):
        -- 客户端语言
        
        null as device_id, --设备ID
-       from_unixtime(t2.protocol_time,'yyyy-MM-dd HH:mm:ss') as protocol_time, --签约/解约时间
+       from_unixtime(cast(t2.protocol_time as bigint),'yyyy-MM-dd HH:mm:ss') as protocol_time, --签约/解约时间
 
        t1.country_code,
        '{pt}' AS dt
