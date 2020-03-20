@@ -28,7 +28,7 @@ args = {
 
 dag = airflow.DAG(
     'ocredit_phones_overdue_report',
-    schedule_interval="50 02 * * *",
+    schedule_interval="50 01 * * *",
     default_args=args)
 
 ##----------------------------------------- 依赖 ---------------------------------------##
