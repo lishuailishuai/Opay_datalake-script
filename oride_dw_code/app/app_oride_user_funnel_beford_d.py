@@ -157,7 +157,24 @@ def app_oride_user_funnel_beford_d_sql_task(ds):
              tid      
     )
     insert overwrite table {db}.{table} partition(country_code,dt)
-    SELECT -10000 as city_id, --城市ID
+    select nvl(city_id,-10000) as city_id, --城市ID
+           nvl(product_id,-10000) as product_id, --业务线ID
+           nvl(user_version_os,'-10000') as user_version_os, --乘客端版本号和操作系统
+           active_user_num_m,--活跃乘客数
+           check_end_user_num_m,--选择终点乘客数量
+           arrive_valuation_user_num_m, --到达估价页面乘客量
+           ord_user_num_m, --下单乘客数-m
+           request_user_num_m,--被接单乘客数量
+           finish_user_num_m,--完单乘客数量
+           finished_pay_user_num_m,--完单支付乘客数量
+           valuation_cnt_m,--估价次数
+           login_to_check_end_dur,--登录到选择终点平均时长
+           check_end_to_valuation_dur,--选择终点到预估价格平均时长
+           login_to_valuation_dur,--登录到预估价格平均时长
+           valuation_to_order_dur,--估价界面到下单平均时长
+           'nal' as country_code,
+		   '{pt}' as dt
+    from (SELECT -10000 as city_id, --城市ID
            -10000 as product_id, --业务线ID
              concat_ws('_',app_version,platform) AS user_version_os, --乘客端版本号和操作系统
 			 count(DISTINCT (if(event_name_a='oride_show',user_id_a,NULL))) AS active_user_num_m,--活跃乘客数
@@ -190,9 +207,7 @@ def app_oride_user_funnel_beford_d_sql_task(ds):
 			 avg(if(event_name_a='request_a_ride_show'
 			        AND phone_number IS NOT NULL
 			        AND time_range1>0
-			        AND time_range1 < 15*60,time_range1,0)) AS valuation_to_order_dur,--估价界面到下单平均时长
-			'nal' as country_code,
-			'{pt}' as dt
+			        AND time_range1 < 15*60,time_range1,0)) AS valuation_to_order_dur--估价界面到下单平均时长
 			
 			FROM
 			  (SELECT a.tid AS tid_a,
@@ -233,7 +248,8 @@ def app_oride_user_funnel_beford_d_sql_task(ds):
 			            THEN substr(a.user_number,-10)
 			            END)=substr(ord.phone_number,-10)
 			   AND a.event_time>ord.create_time) m
-			GROUP BY concat_ws('_',app_version,platform);
+			GROUP BY concat_ws('_',app_version,platform)
+			with cube) t;
     '''.format(
         pt=ds,
         table=table_name,
