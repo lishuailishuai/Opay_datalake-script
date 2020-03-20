@@ -106,6 +106,36 @@ ods_binlog_base_merchant_topup_record_hi_check_task = OssSensor(
 
 
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
+def fun_task_timeout_monitor(ds, dag, execution_date, **op_kwargs):
+    dag_ids = dag.dag_id
+
+    # 监控国家
+    v_country_code = 'NG'
+
+    # 时间偏移量
+    v_gap_hour = 0
+
+    v_date = GetLocalTime("opay", execution_date.strftime("%Y-%m-%d %H"), v_country_code, v_gap_hour)['date']
+    v_hour = GetLocalTime("opay", execution_date.strftime("%Y-%m-%d %H"), v_country_code, v_gap_hour)['hour']
+
+    # 小时级监控
+    tb_hour_task = [
+        {"dag": dag, "db": "opay_dw", "table": "{dag_name}".format(dag_name=dag_ids),
+         "partition": "country_code={country_code}/dt={pt}/hour={now_hour}".format(country_code=v_country_code,
+                                                                                   pt=v_date, now_hour=v_hour),
+         "timeout": "1200"}
+    ]
+
+    TaskTimeoutMonitor().set_task_monitor(tb_hour_task)
+
+
+task_timeout_monitor = PythonOperator(
+    task_id='task_timeout_monitor',
+    python_callable=fun_task_timeout_monitor,
+    provide_context=True,
+    dag=dag
+)
+
 
 
 def dwd_opay_topup_with_card_record_hi_sql_task(ds, v_date):
