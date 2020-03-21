@@ -466,10 +466,10 @@ def monitor_task(ds, metrics_name, influx_db_query_sql, alert_value_name, compar
 
     ## 增加随机数延迟
 
-    sleep = random.randint(10, 300)
-
-    time.sleep(sleep)
-    logging.info(" =========  随机时间等待 : {} s ".format(sleep))
+    # sleep = random.randint(10, 300)
+    #
+    # time.sleep(sleep)
+    # logging.info(" =========  随机时间等待 : {} s ".format(sleep))
 
     influx_client = InfluxDBClient('10.52.5.233', 8086, 'bigdata', 'opay321', 'serverDB')
 
