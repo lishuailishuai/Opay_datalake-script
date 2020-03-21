@@ -28,8 +28,8 @@ args = {
 }
 
 dag = airflow.DAG(
-    'bussiness_alert',
-    schedule_interval="10,20,30,40,50 * * * *",
+    'bussiness_alert_3',
+    schedule_interval="18,28,38,48,58 * * * *",
     concurrency=15,
     default_args=args)
 
@@ -50,244 +50,292 @@ defalut_dingding_alert = "https://oapi.dingtalk.com/robot/send?access_token=ce12
 metrcis_list = [
 
     ####### 交易相关指标
-    ## Airtime
-    # 1
+
+    # 短息发送量
+    # 60
     (
-        'Trade_Airtime',
-        '''SELECT count(distinct("order_no")) AS "trade_cnt",count(distinct("user_id")) AS "trade_user_cnt" ,sum("amount") AS "trade_amount" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__source_table" = 'airtime_topup_record' AND "__op" = 'c') and time > {time} GROUP BY time(10m) ''',
-        'trade_alert_value',
+        'Channel_Message_Send_Chuanglan',
+        '''
+        SELECT count(distinct("id")) AS "message_send_cnt" FROM "OPAY_SMS_MESSAGE_EVENT" WHERE  "delivered_channel" = 'chuanglan' AND time > {time} GROUP BY time(10m)
+        ''',
+        'message_send_alert_value',
         7,
-        'trade_alert_level_1_address',
-        'trade_alert_level_2_address',
+        'message_alert_level_1_address',
+        'message_alert_level_2_address',
         False,
         3
     ),
 
-    # 2
+    # 短息发送成功量
+    # 61
     (
-        'Trade_Airtime_Success',
-        '''SELECT count(distinct("order_no")) AS "trade_success_cnt" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__source_table" = 'airtime_topup_record' AND "order_status" = 'SUCCESS') and time > {time} GROUP BY time(10m) ''',
-        'trade_alert_value',
+        'Channel_Message_Send_Success_Chuanglan',
+        '''
+        SELECT count(distinct("id")) AS "message_send_success_cnt" FROM "OPAY_SMS_MESSAGE_EVENT" WHERE ("status" = 'SUCCESS') AND "delivered_channel" = 'chuanglan' AND time > {time} GROUP BY time(10m)
+        ''',
+        'message_send_success_alert_value',
         7,
-        'trade_alert_level_1_address',
-        'trade_alert_level_2_address',
+        'message_alert_level_1_address',
+        'message_alert_level_2_address',
         False,
         3
     ),
 
-    ## Betting
-    # 3
+    ## cm
+
+    # 短息发送量
+    # 62
     (
-        'Trade_Betting',
-        '''SELECT count(distinct("order_no")) AS "trade_cnt",count(distinct("user_id")) AS "trade_user_cnt" ,sum("amount") AS "trade_amount" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__source_table" = 'betting_topup_record' AND "__op" = 'c') and time > {time} GROUP BY time(10m) ''',
-        'trade_alert_value',
+        'Channel_Message_Send_Cm',
+        '''
+        SELECT count(distinct("id")) AS "message_send_cnt" FROM "OPAY_SMS_MESSAGE_EVENT" WHERE  "delivered_channel" = 'cm' AND time > {time} GROUP BY time(10m)
+        ''',
+        'message_send_alert_value',
         7,
-        'trade_alert_level_1_address',
-        'trade_alert_level_2_address',
+        'message_alert_level_1_address',
+        'message_alert_level_2_address',
         False,
         3
     ),
 
-    # 5
+    # 短息发送成功量
+    # 63
     (
-        'Trade_Betting_Success',
-        '''SELECT count(distinct("order_no")) AS "trade_success_cnt" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__source_table" = 'betting_topup_record'  AND "order_status" = 'SUCCESS') and time > {time} GROUP BY time(10m) ''',
-        'trade_alert_value',
+        'Channel_Message_Send_Success_Cm',
+        '''
+        SELECT count(distinct("id")) AS "message_send_success_cnt" FROM "OPAY_SMS_MESSAGE_EVENT" WHERE ("status" = 'SUCCESS') AND "delivered_channel" = 'cm' AND time > {time} GROUP BY time(10m)
+        ''',
+        'message_send_success_alert_value',
         7,
-        'trade_alert_level_1_address',
-        'trade_alert_level_2_address',
+        'message_alert_level_1_address',
+        'message_alert_level_2_address',
         False,
         3
     ),
 
-    ## Electricity
-    # 6
+    ## dpb
+
+    # 短息发送量
+    # 64
     (
-        'Trade_Electricity',
-        '''SELECT count(distinct("order_no")) AS "trade_cnt",count(distinct("user_id")) AS "trade_user_cnt" ,sum("amount") AS "trade_amount" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__source_table" = 'electricity_topup_record'  AND "__op" = 'c') and time > {time} GROUP BY time(10m) ''',
-        'trade_alert_value',
+        'Channel_Message_Send_Dpb',
+        '''
+        SELECT count(distinct("id")) AS "message_send_cnt" FROM "OPAY_SMS_MESSAGE_EVENT" WHERE  "delivered_channel" = 'dpb' AND time > {time} GROUP BY time(10m)
+        ''',
+        'message_send_alert_value',
         7,
-        'trade_alert_level_1_address',
-        'trade_alert_level_2_address',
+        'message_alert_level_1_address',
+        'message_alert_level_2_address',
         False,
         3
     ),
 
-    # 7
+    # 短息发送成功量
+    # 65
     (
-        'Trade_Electricity_Success',
-        '''SELECT count(distinct("order_no")) AS "trade_success_cnt" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__source_table" = 'electricity_topup_record' AND "order_status" = 'SUCCESS') and time > {time} GROUP BY time(10m) ''',
-        'trade_alert_value',
+        'Channel_Message_Send_Success_Dpb',
+        '''
+        SELECT count(distinct("id")) AS "message_send_success_cnt" FROM "OPAY_SMS_MESSAGE_EVENT" WHERE ("status" = 'SUCCESS') AND "delivered_channel" = 'dpb' AND time > {time} GROUP BY time(10m)
+        ''',
+        'message_send_success_alert_value',
         7,
-        'trade_alert_level_1_address',
-        'trade_alert_level_2_address',
+        'message_alert_level_1_address',
+        'message_alert_level_2_address',
         False,
         3
     ),
 
-    ## TV
-    # 8
+    ## infobip
+
+    # 短息发送量
+    # 66
     (
-        'Trade_TV',
-        '''SELECT count(distinct("order_no")) AS "trade_cnt",count(distinct("user_id")) AS "trade_user_cnt" ,sum("amount") AS "trade_amount" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__source_table" = 'tv_topup_record' AND "__op" = 'c') and time > {time} GROUP BY time(10m) ''',
-        'trade_alert_value',
+        'Channel_Message_Send_Infobip',
+        '''
+        SELECT count(distinct("id")) AS "message_send_cnt" FROM "OPAY_SMS_MESSAGE_EVENT" WHERE  "delivered_channel" = 'infobip' AND time > {time} GROUP BY time(10m)
+        ''',
+        'message_send_alert_value',
         7,
-        'trade_alert_level_1_address',
-        'trade_alert_level_2_address',
+        'message_alert_level_1_address',
+        'message_alert_level_2_address',
         False,
         3
     ),
 
-    # 9
+    # 短息发送成功量
+    # 67
     (
-        'Trade_TV_Success',
-        '''SELECT count(distinct("order_no")) AS "trade_success_cnt" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__source_table" = 'tv_topup_record'  AND "order_status" = 'SUCCESS') and time > {time} GROUP BY time(10m) ''',
-        'trade_alert_value',
+        'Channel_Message_Send_Success_infobip',
+        '''
+        SELECT count(distinct("id")) AS "message_send_success_cnt" FROM "OPAY_SMS_MESSAGE_EVENT" WHERE ("status" = 'SUCCESS') AND "delivered_channel" = 'infobip' AND time > {time} GROUP BY time(10m)
+        ''',
+        'message_send_success_alert_value',
         7,
-        'trade_alert_level_1_address',
-        'trade_alert_level_2_address',
+        'message_alert_level_1_address',
+        'message_alert_level_2_address',
         False,
         3
     ),
 
-    ## Mobiledata
-    # 10
+    ## chuangadvert
+
+    # 短息发送量
+    # 68
     (
-        'Trade_Mobiledata',
-        '''SELECT count(distinct("order_no")) AS "trade_cnt",count(distinct("user_id")) AS "trade_user_cnt" ,sum("amount") AS "trade_amount" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__source_table" = 'mobiledata_topup_record'   AND "__op" = 'c') and time > {time} GROUP BY time(10m) ''',
-        'trade_alert_value',
+        'Channel_Message_Send_Chuangadvert',
+        '''
+        SELECT count(distinct("id")) AS "message_send_cnt" FROM "OPAY_SMS_MESSAGE_EVENT" WHERE  "delivered_channel" = 'chuangadvert' AND time > {time} GROUP BY time(10m)
+        ''',
+        'message_send_alert_value',
         7,
-        'trade_alert_level_1_address',
-        'trade_alert_level_2_address',
+        'message_alert_level_1_address',
+        'message_alert_level_2_address',
         False,
         3
     ),
 
-    # 11
+    # 短息发送成功量
+    # 69
     (
-        'Trade_Mobiledata_Success',
-        '''SELECT count(distinct("order_no")) AS "trade_success_cnt" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__source_table" = 'mobiledata_topup_record' AND "order_status" = 'SUCCESS') and time > {time} GROUP BY time(10m) ''',
-        'trade_alert_value',
+        'Channel_Message_Send_Success_Chuangadvert',
+        '''
+        SELECT count(distinct("id")) AS "message_send_success_cnt" FROM "OPAY_SMS_MESSAGE_EVENT" WHERE ("status" = 'SUCCESS') AND "delivered_channel" = 'chuangadvert' AND time > {time} GROUP BY time(10m)
+        ''',
+        'message_send_success_alert_value',
         7,
-        'trade_alert_level_1_address',
-        'trade_alert_level_2_address',
+        'message_alert_level_1_address',
+        'message_alert_level_2_address',
         False,
         3
     ),
 
-    ## Cash_In
-    # 12
+    ## infobipws
+
+    # 短息发送量
+    # 70
     (
-        'Trade_Cash_In',
-        '''SELECT count(distinct("order_no")) AS "trade_cnt",count(distinct("user_id")) AS "trade_user_cnt" ,sum("amount") AS "trade_amount" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__source_table" = 'cash_in_record' AND "__op" = 'c') and time > {time} GROUP BY time(10m) ''',
-        'trade_alert_value',
+        'Channel_Message_Send_Infobipws',
+        '''
+        SELECT count(distinct("id")) AS "message_send_cnt" FROM "OPAY_SMS_MESSAGE_EVENT" WHERE  "delivered_channel" = 'infobipws' AND time > {time} GROUP BY time(10m)
+        ''',
+        'message_send_alert_value',
         7,
-        'trade_alert_level_1_address',
-        'trade_alert_level_2_address',
+        'message_alert_level_1_address',
+        'message_alert_level_2_address',
         False,
         3
     ),
 
-    # 13
+    # 短息发送成功量
+    # 71
     (
-        'Trade_Cash_In_Success',
-        '''SELECT count(distinct("order_no")) AS "trade_success_cnt" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__source_table" = 'cash_in_record' AND "order_status" = 'SUCCESS') and time > {time} GROUP BY time(10m) ''',
-        'trade_alert_value',
+        'Channel_Message_Send_Success_Infobipws',
+        '''
+        SELECT count(distinct("id")) AS "message_send_success_cnt" FROM "OPAY_SMS_MESSAGE_EVENT" WHERE ("status" = 'SUCCESS') AND "delivered_channel" = 'infobipws' AND time > {time} GROUP BY time(10m)
+        ''',
+        'message_send_success_alert_value',
         7,
-        'trade_alert_level_1_address',
-        'trade_alert_level_2_address',
+        'message_alert_level_1_address',
+        'message_alert_level_2_address',
         False,
         3
     ),
 
-    ## Cash_Out
-    # 14
+    ## infobipvoice
+
+    # 短息发送量
+    # 72
     (
-        'Trade_Cash_Out',
-        '''SELECT count(distinct("order_no")) AS "trade_cnt",count(distinct("user_id")) AS "trade_user_cnt" ,sum("amount") AS "trade_amount" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__source_table" = 'cash_out_record' AND "__op" = 'c') and time > {time} GROUP BY time(10m) ''',
-        'trade_alert_value',
+        'Channel_Message_Send_Infobipvoice',
+        '''
+        SELECT count(distinct("id")) AS "message_send_cnt" FROM "OPAY_SMS_MESSAGE_EVENT" WHERE  "delivered_channel" = 'infobipvoice' AND time > {time} GROUP BY time(10m)
+        ''',
+        'message_send_alert_value',
         7,
-        'trade_alert_level_1_address',
-        'trade_alert_level_2_address',
+        'message_alert_level_1_address',
+        'message_alert_level_2_address',
         False,
         3
     ),
 
-    # 15
+    # 短息发送成功量
+    # 73
     (
-        'Trade_Cash_Out_Success',
-        '''SELECT count(distinct("order_no")) AS "trade_success_cnt" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__source_table" = 'cash_out_record' AND "order_status" = 'SUCCESS') and time > {time} GROUP BY time(10m) ''',
-        'trade_alert_value',
+        'Channel_Message_Send_Success_Infobipvoice',
+        '''
+        SELECT count(distinct("id")) AS "message_send_success_cnt" FROM "OPAY_SMS_MESSAGE_EVENT" WHERE ("status" = 'SUCCESS') AND "delivered_channel" = 'infobipvoice' AND time > {time} GROUP BY time(10m)
+        ''',
+        'message_send_success_alert_value',
         7,
-        'trade_alert_level_1_address',
-        'trade_alert_level_2_address',
+        'message_alert_level_1_address',
+        'message_alert_level_2_address',
         False,
         3
     ),
 
-    ## ACTransfer
-    # 16
+    ## chuangghana
+
+    # 短息发送量
+    # 74
     (
-        'Trade_ACTransfer',
-        '''SELECT count(distinct("order_no")) AS "trade_cnt",count(distinct("user_id")) AS "trade_user_cnt" ,sum("amount") AS "trade_amount" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__source_table" = 'user_transfer_card_record' or "__source_table" = 'merchant_transfer_card_record') AND "__op" = 'c' and time > {time} GROUP BY time(10m) ''',
-        'trade_alert_value',
+        'Channel_Message_Send_Chuangghana',
+        '''
+        SELECT count(distinct("id")) AS "message_send_cnt" FROM "OPAY_SMS_MESSAGE_EVENT" WHERE  "delivered_channel" = 'chuangghana' AND time > {time} GROUP BY time(10m)
+        ''',
+        'message_send_alert_value',
         7,
-        'trade_alert_level_1_address',
-        'trade_alert_level_2_address',
+        'message_alert_level_1_address',
+        'message_alert_level_2_address',
         False,
         3
     ),
 
-    # 17
+    # 短息发送成功量
+    # 75
     (
-        'Trade_ACTransfer_Success',
-        '''SELECT count(distinct("order_no")) AS "trade_success_cnt" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__source_table" = 'user_transfer_card_record' or "__source_table" = 'merchant_transfer_card_record') AND "order_status" = 'SUCCESS' and time > {time} GROUP BY time(10m) ''',
-        'trade_alert_value',
+        'Channel_Message_Send_Success_Chuangghana',
+        '''
+        SELECT count(distinct("id")) AS "message_send_success_cnt" FROM "OPAY_SMS_MESSAGE_EVENT" WHERE ("status" = 'SUCCESS') AND "delivered_channel" = 'chuangghana' AND time > {time} GROUP BY time(10m)
+        ''',
+        'message_send_success_alert_value',
         7,
-        'trade_alert_level_1_address',
-        'trade_alert_level_2_address',
+        'message_alert_level_1_address',
+        'message_alert_level_2_address',
         False,
         3
     ),
 
-    ## Pos
-    # 18
+    ## cmghana
+
+    # 短息发送量
+    # 76
     (
-        'Trade_Pos',
-        '''SELECT count(distinct("order_no")) AS "trade_cnt",count(distinct("user_id")) AS "trade_user_cnt" ,sum("amount") AS "trade_amount" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__source_table" = 'user_pos_transaction_record' or "__source_table" = 'merchant_pos_transaction_record') AND "__op" = 'c' and time > {time} GROUP BY time(10m) ''',
-        'trade_alert_value',
+        'Channel_Message_Send_Cmghana',
+        '''
+        SELECT count(distinct("id")) AS "message_send_cnt" FROM "OPAY_SMS_MESSAGE_EVENT" WHERE  "delivered_channel" = 'cmghana' AND time > {time} GROUP BY time(10m)
+        ''',
+        'message_send_alert_value',
         7,
-        'trade_alert_level_1_address',
-        'trade_alert_level_2_address',
+        'message_alert_level_1_address',
+        'message_alert_level_2_address',
         False,
         3
     ),
 
-    # 19
+    # 短息发送成功量
+    # 77
     (
-        'Trade_Pos_Success',
-        '''SELECT count(distinct("order_no")) AS "trade_success_cnt" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__source_table" = 'user_pos_transaction_record' or "__source_table" = 'merchant_pos_transaction_record')  AND "order_status" = 'SUCCESS' and time > {time} GROUP BY time(10m) ''',
-        'trade_alert_value',
+        'Channel_Message_Send_Success_Cmghana',
+        '''
+        SELECT count(distinct("id")) AS "message_send_success_cnt" FROM "OPAY_SMS_MESSAGE_EVENT" WHERE ("status" = 'SUCCESS') AND "delivered_channel" = 'cmghana' AND time > {time} GROUP BY time(10m)
+        ''',
+        'message_send_success_alert_value',
         7,
-        'trade_alert_level_1_address',
-        'trade_alert_level_2_address',
+        'message_alert_level_1_address',
+        'message_alert_level_2_address',
         False,
         3
     ),
-
-    ## TopupWithCard
-    # 20
-    (
-        'Trade_TopupWithCard',
-        '''SELECT count(distinct("order_no")) AS "trade_cnt",count(distinct("user_id")) AS "trade_user_cnt" ,sum("amount") AS "trade_amount" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__source_table" = 'user_topup_record' or "__source_table" = 'merchant_topup_record') AND "__op" = 'c' and time > {time} GROUP BY time(10m) ''',
-        'trade_alert_value',
-        7,
-        'trade_alert_level_1_address',
-        'trade_alert_level_2_address',
-        False,
-        3
-    ),
-
 
 ]
 
@@ -452,10 +500,10 @@ def monitor_task(ds, metrics_name, influx_db_query_sql, alert_value_name, compar
 
     ## 增加随机数延迟
 
-    sleep = random.randint(10, 300)
-
-    time.sleep(sleep)
-    logging.info(" =========  随机时间等待 : {} s ".format(sleep))
+    # sleep = random.randint(10, 300)
+    #
+    # time.sleep(sleep)
+    # logging.info(" =========  随机时间等待 : {} s ".format(sleep))
 
     influx_client = InfluxDBClient('10.52.5.233', 8086, 'bigdata', 'opay321', 'serverDB')
 
