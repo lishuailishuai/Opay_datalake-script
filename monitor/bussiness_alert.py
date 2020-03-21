@@ -20,7 +20,7 @@ args = {
     'start_date': datetime.datetime(2020, 3, 21),
     'depends_on_past': False,
     'retries': 1,
-    'retry_delay': datetime.timedelta(minutes=5),
+    'retry_delay': datetime.timedelta(minutes=1),
     # 'email': ['bigdata_dw@opay-inc.com'],
     # 'email_on_failure': True,
     # 'email_on_retry': False,
