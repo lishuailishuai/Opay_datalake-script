@@ -65,10 +65,10 @@ dwd_opay_account_balance_df_prev_day_task = OssSensor(
     dag=dag
 )
 
-dwm_opay_user_first_tran_di_prev_day_task = OssSensor(
-    task_id='dwm_opay_user_first_tran_di_prev_day_task',
+dwm_opay_user_first_trans_df_prev_day_task = OssSensor(
+    task_id='dwm_opay_user_first_trans_df_prev_day_task',
     bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opay/opay_dw/dwm_opay_user_first_tran_di/country_code=NG",
+        hdfs_path_str="opay/opay_dw/dwm_opay_user_first_trans_df/country_code=NG",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -242,6 +242,6 @@ app_opay_user_report_sum_d_task = PythonOperator(
 
 ods_sqoop_base_user_di_prev_day_task >> app_opay_user_report_sum_d_task
 dwd_opay_account_balance_df_prev_day_task >> app_opay_user_report_sum_d_task
-dwm_opay_user_first_tran_di_prev_day_task >> app_opay_user_report_sum_d_task
+dwm_opay_user_first_trans_df_prev_day_task >> app_opay_user_report_sum_d_task
 
 
