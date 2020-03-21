@@ -37,7 +37,7 @@ args = {
 }
 
 dag = airflow.DAG('app_ocredit_phones_order_base_cube_w',
-                  schedule_interval="30 02 * * *",
+                  schedule_interval="30 01 * * *",
                   default_args=args)
 
 ##----------------------------------------- 依赖 ---------------------------------------##
@@ -92,9 +92,10 @@ def app_ocredit_phones_order_base_cube_w_sql_task(ds):
     set hive.exec.dynamic.partition.mode=nonstrict;
 
     INSERT overwrite TABLE ocredit_phones_dw.{table} partition(country_code,dt)
-    select nvl(terms,-10000) as terms,
-           nvl(week_of_entry,'-10000') as week_of_entry,
-           concat_ws('-',regexp_replace(substr(minweek_of_entry,6,10),'-',''),regexp_replace(substr(date_add(minweek_of_entry,6),6,10),'-','')) as dateweek_of_entry, --所在周日期区间
+    
+           select nvl(terms,-10000) as terms,
+           0 as week_of_entry,
+           week_of_entry as dateweek_of_entry, --进件周日期区间
            entry_cnt, --进件量
            loan_cnt,  --`放款数` ,
            loan_amount_usd, --`贷款金额_USD` 
@@ -103,9 +104,7 @@ def app_ocredit_phones_order_base_cube_w_sql_task(ds):
            'nal' as country_code,
            '{pt}' as dt
     from(select terms,--分期数
-          weekofyear(date_of_entry) as week_of_entry, --进件日期所在周
-          min(date_of_entry) as minweek_of_entry, --进件日期所在周对应最小日期
-          max(date_of_entry) as maxweek_of_entry, --进件日期所在周对应最大日期
+          concat(date_add(next_day(date_of_entry,'MO'),-7),'_',date_add(next_day(date_of_entry,'MO'),-1)) as week_of_entry,--进件周日期区间
           count(distinct opay_id) as entry_cnt, --进件量
           count(distinct (if(order_status='81',opay_id,null))) as loan_cnt, --`放款数` ,
           sum(if(order_status='81',(nvl(loan_amount,0)/100)*0.2712/100,0)) as loan_amount_usd, --`贷款金额_USD` 
@@ -113,12 +112,11 @@ def app_ocredit_phones_order_base_cube_w_sql_task(ds):
           count(distinct case when order_status not in (10,11,12,13,30,32,99) then opay_id else null end) as review_amount -- `复审通过量`
     from ocredit_phones_dw.dwd_ocredit_phones_order_base_df
     where dt='{pt}'
-    and weekofyear(dt)-weekofyear(date_of_entry)>=0  --跨年后来考虑
-    and weekofyear(dt)-weekofyear(date_of_entry)<4
-    group by terms,weekofyear(date_of_entry)
-    grouping sets(weekofyear(date_of_entry),
-          (terms,weekofyear(date_of_entry)))
+    group by terms,concat(date_add(next_day(date_of_entry,'MO'),-7),'_',date_add(next_day(date_of_entry,'MO'),-1))
+    grouping sets((concat(date_add(next_day(date_of_entry,'MO'),-7),'_',date_add(next_day(date_of_entry,'MO'),-1))),
+          (terms,concat(date_add(next_day(date_of_entry,'MO'),-7),'_',date_add(next_day(date_of_entry,'MO'),-1))))
           ) t;
+          
         '''.format(
         pt=ds,
         table=table_name,

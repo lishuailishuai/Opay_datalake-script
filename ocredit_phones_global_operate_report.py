@@ -28,7 +28,7 @@ args = {
 
 dag = airflow.DAG(
     'ocredit_phones_global_operate_report',
-    schedule_interval="30 02 * * *",
+    schedule_interval="30 01 * * *",
     default_args=args)
 
 
@@ -75,34 +75,50 @@ def get_show_date(ds):
     tr_fmt = '''
             <tr>
             各位同事：<br/>
-            附件为截止到昨天的手机分期业务日报情况，主要内容如下：<br/>
-            1、当日情况：昨日{date_of_entry}进件{entry_cnt}笔，实际放款{loan_cnt}笔，转化率{business_rate}，其中3期进件{entry_cnt_3}笔，实际放款{loan_cnt_3}笔，转化率{business_rate_3}，6期进件{entry_cnt_6}笔，实际放款{loan_cnt_6}笔，转化率{business_rate_6}，
+            附件为截止到昨日{date_of_entry}的手机分期业务日报情况，主要内容如下：<br/>
+            1、当日情况：进件{entry_cnt}笔，实际放款{loan_cnt}笔，转化率{business_rate}，贷款金额{loan_amount_usd}美元，单笔件均{average_usd}美元；期限结构方面，3-6-4-8期放款结构占比分别为{rate_3}，{rate_6}，{rate_4}和{rate_8}
             </tr>
             '''
 
     sql = '''
-          select date_of_entry,entry_cnt,loan_cnt,business_rate,
-          entry_cnt_3,loan_cnt_3,business_rate_3,
-          entry_cnt_6,loan_cnt_6,business_rate_6
+          select date_of_entry,entry_cnt,loan_cnt,business_rate,loan_amount_usd,average_usd
+          ,concat(round(loan_cnt_3/loan_cnt*100,2),'%'),
+          concat(round(loan_cnt_6/loan_cnt*100,2),'%'),
+          concat(round(loan_cnt_4/loan_cnt*100,2),'%'),
+          concat(round(loan_cnt_8/loan_cnt*100,2),'%')
+          
           from(
-          select date_of_entry,
+           select date_of_entry,
           sum(entry_cnt) as entry_cnt,
           sum(loan_cnt) as loan_cnt,
-          sum(loan_amount_usd) as loan_amount_usd,
-          sum(average_usd) as average_usd,
+          format_number(sum(loan_amount_usd),0) as loan_amount_usd,
+          format_number(sum(average_usd),0) as average_usd,
           concat(sum(business_rate),'%') as business_rate,
           
           sum(entry_cnt_3) as entry_cnt_3,
           sum(loan_cnt_3) as loan_cnt_3,
-          sum(loan_amount_usd_3) as loan_amount_usd_3,
-          sum(average_usd_3) as average_usd_3,
+          format_number(sum(loan_amount_usd_3),0) as loan_amount_usd_3,
+          format_number(sum(average_usd_3),0) as average_usd_3,
           concat(sum(business_rate_3),'%') as business_rate_3,
           
           sum(entry_cnt_6) as entry_cnt_6,
           sum(loan_cnt_6) as loan_cnt_6,
-          sum(loan_amount_usd_6) as loan_amount_usd_6,
-          sum(average_usd_6) as average_usd_6,
-          concat(sum(business_rate_6),'%') as business_rate_6
+          format_number(sum(loan_amount_usd_6),0) as loan_amount_usd_6,
+          format_number(sum(average_usd_6),0) as average_usd_6,
+          concat(sum(business_rate_6),'%') as business_rate_6,
+          
+          
+          sum(entry_cnt_4) as entry_cnt_4,
+          sum(loan_cnt_4) as loan_cnt_4,
+          format_number(sum(loan_amount_usd_4),0) as loan_amount_usd_4,
+          format_number(sum(average_usd_4),0) as average_usd_4,
+          concat(sum(business_rate_4),'%') as business_rate_4,
+          
+          sum(entry_cnt_8) as entry_cnt_8,
+          sum(loan_cnt_8) as loan_cnt_8,
+          format_number(sum(loan_amount_usd_8),0) as loan_amount_usd_8,
+          format_number(sum(average_usd_8),0) as average_usd_8,
+          concat(sum(business_rate_8),'%') as business_rate_8
           
           from(
           select date_of_entry,
@@ -120,7 +136,17 @@ def get_show_date(ds):
           null as loan_cnt_6,
           null as loan_amount_usd_6,
           null as average_usd_6,
-          null as business_rate_6
+          null as business_rate_6,
+          null as entry_cnt_4,
+          null as loan_cnt_4,
+          null as loan_amount_usd_4,
+          null as average_usd_4,
+          null as business_rate_4,
+          null as entry_cnt_8,
+          null as loan_cnt_8,
+          null as loan_amount_usd_8,
+          null as average_usd_8,
+          null as business_rate_8
 
 
           from ocredit_phones_dw.app_ocredit_phones_order_base_cube_d
@@ -145,7 +171,17 @@ def get_show_date(ds):
           null as loan_cnt_6,
           null as loan_amount_usd_6,
           null as average_usd_6,
-          null as business_rate_6
+          null as business_rate_6,
+          null as entry_cnt_4,
+          null as loan_cnt_4,
+          null as loan_amount_usd_4,
+          null as average_usd_4,
+          null as business_rate_4,
+          null as entry_cnt_8,
+          null as loan_cnt_8,
+          null as loan_amount_usd_8,
+          null as average_usd_8,
+          null as business_rate_8
           
           from ocredit_phones_dw.app_ocredit_phones_order_base_cube_d
           where dt='{dt}'
@@ -169,16 +205,96 @@ def get_show_date(ds):
           loan_cnt as loan_cnt_6,
           round(loan_amount_usd,2) loan_amount_usd_6,
           round(loan_amount_usd/loan_cnt,2) average_usd_6,
-          round(loan_cnt/entry_cnt*100,2) business_rate_6
+          round(loan_cnt/entry_cnt*100,2) business_rate_6,
+          null as entry_cnt_4,
+          null as loan_cnt_4,
+          null as loan_amount_usd_4,
+          null as average_usd_4,
+          null as business_rate_4,
+          null as entry_cnt_8,
+          null as loan_cnt_8,
+          null as loan_amount_usd_8,
+          null as average_usd_8,
+          null as business_rate_8
 
           from ocredit_phones_dw.app_ocredit_phones_order_base_cube_d
           where dt='{dt}'
           and terms=6
           and substr(date_of_entry,1,7) = substr('{dt}',1,7)
           
+          
+          union all
+          select date_of_entry,
+          null as entry_cnt,
+          null as loan_cnt,
+          null as loan_amount_usd,
+          null as average_usd,
+          null as business_rate,
+          null as entry_cnt_3,
+          null as loan_cnt_3,
+          null as loan_amount_usd_3,
+          null as average_usd_3,
+          null as business_rate_3,
+          null as entry_cnt_6,
+          null as loan_cnt_6,
+          null as loan_amount_usd_6,
+          null as average_usd_6,
+          null as business_rate_6,
+          entry_cnt as entry_cnt_4,
+          loan_cnt as loan_cnt_4,
+          round(loan_amount_usd,2) loan_amount_usd_4,
+          round(loan_amount_usd/loan_cnt,2) average_usd_4,
+          round(loan_cnt/entry_cnt*100,2) business_rate_4,
+          null as entry_cnt_8,
+          null as loan_cnt_8,
+          null as loan_amount_usd_8,
+          null as average_usd_8,
+          null as business_rate_8
+          
+          from ocredit_phones_dw.app_ocredit_phones_order_base_cube_d
+          where dt='{dt}'
+          and terms=4
+          and substr(date_of_entry,1,7) = substr('{dt}',1,7)
+          
+          
+          
+          union all
+          select date_of_entry,
+          null as entry_cnt,
+          null as loan_cnt,
+          null as loan_amount_usd,
+          null as average_usd,
+          null as business_rate,
+          null as entry_cnt_3,
+          null as loan_cnt_3,
+          null as loan_amount_usd_3,
+          null as average_usd_3,
+          null as business_rate_3,
+          null as entry_cnt_6,
+          null as loan_cnt_6,
+          null as loan_amount_usd_6,
+          null as average_usd_6,
+          null as business_rate_6,
+          null as entry_cnt_4,
+          null as loan_cnt_4,
+          null as loan_amount_usd_4,
+          null as average_usd_4,
+          null as business_rate_4,
+          entry_cnt as entry_cnt_8,
+          loan_cnt as loan_cnt_8,
+          round(loan_amount_usd,2) loan_amount_usd_8,
+          round(loan_amount_usd/loan_cnt,2) average_usd_8,
+          round(loan_cnt/entry_cnt*100,2) business_rate_8
+          
+          from ocredit_phones_dw.app_ocredit_phones_order_base_cube_d
+          where dt='{dt}'
+          and terms=8
+          and substr(date_of_entry,1,7) = substr('{dt}',1,7)
+          
           ) a
           group by date_of_entry
-          order by date_of_entry
+          order by date_of_entry desc
+          
           ) a where date_of_entry='{dt}'
                
                
@@ -197,12 +313,14 @@ def get_show_date(ds):
             entry_cnt=data[1]
             loan_cnt=data[2]
             business_rate=data[3]
-            entry_cnt_3=data[4]
-            loan_cnt_3=data[5]
-            business_rate_3=data[6]
-            entry_cnt_6=data[7]
-            loan_cnt_6=data[8]
-            business_rate_6=data[9]
+
+            loan_amount_usd = data[4]
+            average_usd = data[5]
+
+            rate_3=data[6]
+            rate_6=data[7]
+            rate_4=data[8]
+            rate_8=data[9]
 
             row_html += tr_fmt.format(
 
@@ -210,53 +328,70 @@ def get_show_date(ds):
             entry_cnt = entry_cnt,
             loan_cnt = loan_cnt,
             business_rate = business_rate,
-            entry_cnt_3 = entry_cnt_3,
-            loan_cnt_3 = loan_cnt_3,
-            business_rate_3 = business_rate_3,
-            entry_cnt_6 = entry_cnt_6,
-            loan_cnt_6 = loan_cnt_6,
-            business_rate_6 = business_rate_6
+            loan_amount_usd = loan_amount_usd,
+            average_usd = average_usd,
+            rate_3 = rate_3,
+            rate_6 = rate_6,
+            rate_4=rate_4,
+            rate_8=rate_8
 
             )
 
     return row_html
 
 
+
+
+
 def get_show_month(ds):
     tr_fmt = '''
                <tr>
-            2、本月情况：截止到昨日{dt}进件{entry_cnt}笔，实际放款{loan_cnt}笔，转化率{business_rate}，其中3期进件{entry_cnt_3}笔，实际放款{loan_cnt_3}笔，转化率{business_rate_3}，6期进件{entry_cnt_6}笔，实际放款{loan_cnt_6}笔，转化率{business_rate_6}，<br/>
-            备注：业务转化率=放款量/进件量<br/>
-            以上敬请参考，如有疑问，随时沟通！
+            2、本月情况：进件{entry_cnt}笔，实际放款{loan_cnt}笔，转化率{business_rate}，贷款金额{loan_amount_usd}美元，单笔件均{average_usd}美元；期限结构方面，3-6-4-8期放款结构占比分别为{rate_3}，{rate_6}，{rate_4}和{rate_8}
             </tr>
             '''
 
     sql = '''
-          select 
-          entry_cnt,loan_cnt,business_rate,
-          entry_cnt_3,loan_cnt_3,business_rate_3,
-          entry_cnt_6,loan_cnt_6,business_rate_6
-          from(
           
+          select entry_cnt,loan_cnt,business_rate,loan_amount_usd,average_usd
+          ,concat(round(loan_cnt_3/loan_cnt*100,2),'%'),
+          concat(round(loan_cnt_6/loan_cnt*100,2),'%'),
+          concat(round(loan_cnt_4/loan_cnt*100,2),'%'),
+          concat(round(loan_cnt_8/loan_cnt*100,2),'%')
+          
+          
+          from(
           
           select month_of_entry,
           sum(entry_cnt) as entry_cnt,
           sum(loan_cnt) as loan_cnt,
-          sum(loan_amount_usd) as loan_amount_usd,
-          sum(average_usd) as average_usd,
+          format_number(sum(loan_amount_usd),0) as loan_amount_usd,
+          format_number(sum(average_usd),0) as average_usd,
           concat(sum(business_rate),'%') as business_rate,
           
           sum(entry_cnt_3) as entry_cnt_3,
           sum(loan_cnt_3) as loan_cnt_3,
-          sum(loan_amount_usd_3) as loan_amount_usd_3,
-          sum(average_usd_3) as average_usd_3,
+          format_number(sum(loan_amount_usd_3),0) as loan_amount_usd_3,
+          format_number(sum(average_usd_3),0) as average_usd_3,
           concat(sum(business_rate_3),'%') as business_rate_3,
           
           sum(entry_cnt_6) as entry_cnt_6,
           sum(loan_cnt_6) as loan_cnt_6,
-          sum(loan_amount_usd_6) as loan_amount_usd_6,
-          sum(average_usd_6) as average_usd_6,
-          concat(sum(business_rate_6),'%') as business_rate_6
+          format_number(sum(loan_amount_usd_6),0) as loan_amount_usd_6,
+          format_number(sum(average_usd_6),0) as average_usd_6,
+          concat(sum(business_rate_6),'%') as business_rate_6,
+          
+          
+          sum(entry_cnt_4) as entry_cnt_4,
+          sum(loan_cnt_4) as loan_cnt_4,
+          format_number(sum(loan_amount_usd_4),0) as loan_amount_usd_4,
+          format_number(sum(average_usd_4),0) as average_usd_4,
+          concat(sum(business_rate_4),'%') as business_rate_4,
+          
+          sum(entry_cnt_8) as entry_cnt_8,
+          sum(loan_cnt_8) as loan_cnt_8,
+          format_number(sum(loan_amount_usd_8),0) as loan_amount_usd_8,
+          format_number(sum(average_usd_8),0) as average_usd_8,
+          concat(sum(business_rate_8),'%') as business_rate_8
           
           from(
           select month_of_entry,
@@ -274,7 +409,17 @@ def get_show_month(ds):
           null as loan_cnt_6,
           null as loan_amount_usd_6,
           null as average_usd_6,
-          null as business_rate_6
+          null as business_rate_6,
+          null as entry_cnt_4,
+          null as loan_cnt_4,
+          null as loan_amount_usd_4,
+          null as average_usd_4,
+          null as business_rate_4,
+          null as entry_cnt_8,
+          null as loan_cnt_8,
+          null as loan_amount_usd_8,
+          null as average_usd_8,
+          null as business_rate_8
           
           
           from ocredit_phones_dw.app_ocredit_phones_order_base_cube_m
@@ -298,7 +443,18 @@ def get_show_month(ds):
           null as loan_cnt_6,
           null as loan_amount_usd_6,
           null as average_usd_6,
-          null as business_rate_6
+          null as business_rate_6,
+          null as entry_cnt_4,
+          null as loan_cnt_4,
+          null as loan_amount_usd_4,
+          null as average_usd_4,
+          null as business_rate_4,
+          null as entry_cnt_8,
+          null as loan_cnt_8,
+          null as loan_amount_usd_8,
+          null as average_usd_8,
+          null as business_rate_8
+          
           
           from ocredit_phones_dw.app_ocredit_phones_order_base_cube_m
           where dt='{dt}'
@@ -321,15 +477,94 @@ def get_show_month(ds):
           loan_cnt as loan_cnt_6,
           round(loan_amount_usd,2) loan_amount_usd_6,
           round(loan_amount_usd/loan_cnt,2) average_usd_6,
-          round(loan_cnt/entry_cnt*100,2) business_rate_6
+          round(loan_cnt/entry_cnt*100,2) business_rate_6,
+          null as entry_cnt_4,
+          null as loan_cnt_4,
+          null as loan_amount_usd_4,
+          null as average_usd_4,
+          null as business_rate_4,
+          null as entry_cnt_8,
+          null as loan_cnt_8,
+          null as loan_amount_usd_8,
+          null as average_usd_8,
+          null as business_rate_8
           
           from ocredit_phones_dw.app_ocredit_phones_order_base_cube_m
           where dt='{dt}'
           and terms=6
 
+
+
+            union all
+          select month_of_entry,
+          null as entry_cnt,
+          null as loan_cnt,
+          null as loan_amount_usd,
+          null as average_usd,
+          null as business_rate,
+          null as entry_cnt_3,
+          null as loan_cnt_3,
+          null as loan_amount_usd_3,
+          null as average_usd_3,
+          null as business_rate_3,
+          null as entry_cnt_6,
+          null as loan_cnt_6,
+          null as loan_amount_usd_6,
+          null as average_usd_6,
+          null as business_rate_6,
+          entry_cnt as entry_cnt_4,
+          loan_cnt as loan_cnt_4,
+          round(loan_amount_usd,2) loan_amount_usd_4,
+          round(loan_amount_usd/loan_cnt,2) average_usd_4,
+          round(loan_cnt/entry_cnt*100,2) business_rate_4,
+          null as entry_cnt_8,
+          null as loan_cnt_8,
+          null as loan_amount_usd_8,
+          null as average_usd_8,
+          null as business_rate_8
+          
+          from ocredit_phones_dw.app_ocredit_phones_order_base_cube_m
+          where dt='{dt}'
+          and terms=4
+          
+          
+           union all
+          select month_of_entry,
+          null as entry_cnt,
+          null as loan_cnt,
+          null as loan_amount_usd,
+          null as average_usd,
+          null as business_rate,
+          null as entry_cnt_3,
+          null as loan_cnt_3,
+          null as loan_amount_usd_3,
+          null as average_usd_3,
+          null as business_rate_3,
+          null as entry_cnt_6,
+          null as loan_cnt_6,
+          null as loan_amount_usd_6,
+          null as average_usd_6,
+          null as business_rate_6,
+          null as entry_cnt_4,
+          null as loan_cnt_4,
+          null as loan_amount_usd_4,
+          null as average_usd_4,
+          null as business_rate_4,
+          entry_cnt as entry_cnt_8,
+          loan_cnt as loan_cnt_8,
+          round(loan_amount_usd,2) loan_amount_usd_8,
+          round(loan_amount_usd/loan_cnt,2) average_usd_8,
+          round(loan_cnt/entry_cnt*100,2) business_rate_8
+          
+          from ocredit_phones_dw.app_ocredit_phones_order_base_cube_m
+          where dt='{dt}'
+          and terms=8
+
+
+
           ) a
           group by month_of_entry
-          order by month_of_entry
+          order by month_of_entry desc
           
           ) a where month_of_entry=substr('{dt}',1,7)
 
@@ -348,12 +583,12 @@ def get_show_month(ds):
             entry_cnt = data[0]
             loan_cnt = data[1]
             business_rate = data[2]
-            entry_cnt_3 = data[3]
-            loan_cnt_3 = data[4]
-            business_rate_3 = data[5]
-            entry_cnt_6 = data[6]
-            loan_cnt_6 = data[7]
-            business_rate_6 = data[8]
+            loan_amount_usd = data[3]
+            average_usd = data[4]
+            rate_3 = data[5]
+            rate_6 = data[6]
+            rate_4 = data[7]
+            rate_8 = data[8]
 
             row_html += tr_fmt.format(
 
@@ -361,17 +596,284 @@ def get_show_month(ds):
                 entry_cnt=entry_cnt,
                 loan_cnt=loan_cnt,
                 business_rate=business_rate,
-                entry_cnt_3=entry_cnt_3,
-                loan_cnt_3=loan_cnt_3,
-                business_rate_3=business_rate_3,
-                entry_cnt_6=entry_cnt_6,
-                loan_cnt_6=loan_cnt_6,
-                business_rate_6=business_rate_6
+                loan_amount_usd=loan_amount_usd,
+                average_usd=average_usd,
+                rate_3=rate_3,
+                rate_6=rate_6,
+                rate_4=rate_4,
+                rate_8=rate_8
 
             )
 
     return row_html
 
+
+def get_show_all(ds):
+    tr_fmt = '''
+               <tr>
+            3、累计情况：进件{entry_cnt}笔，实际放款{loan_cnt}笔，转化率{business_rate}，贷款金额{loan_amount_usd}美元，件均{average_usd}美元；期限结构方面，3-6-4-8期放款结构占比分别为{rate_3}，{rate_6}，{rate_4}和{rate_8}<br/>
+            备注：业务转化率=放款量/进件量<br/>
+            以上敬请参考，如有疑问，随时沟通！
+            </tr>
+            '''
+
+    sql = '''
+
+          select sum(entry_cnt),sum(loan_cnt),concat(round(sum(loan_cnt)/sum(entry_cnt) * 100, 2),'%') as business_rate,
+          format_number(sum(loan_amount_usd),0),format_number(sum(loan_amount_usd)/sum(loan_cnt),0) as  average_usd,
+          
+          concat(round(sum(loan_cnt_3)/sum(loan_cnt)*100,2),'%'),
+          concat(round(sum(loan_cnt_6)/sum(loan_cnt)*100,2),'%'),
+          concat(round(sum(loan_cnt_4)/sum(loan_cnt)*100,2),'%'),
+          concat(round(sum(loan_cnt_8)/sum(loan_cnt)*100,2),'%')
+
+          from(
+
+          select month_of_entry,
+          sum(entry_cnt) as entry_cnt,
+          sum(loan_cnt) as loan_cnt,
+          sum(loan_amount_usd) as loan_amount_usd,
+          sum(average_usd) as average_usd,
+          concat(sum(business_rate),'%') as business_rate,
+
+          sum(entry_cnt_3) as entry_cnt_3,
+          sum(loan_cnt_3) as loan_cnt_3,
+          sum(loan_amount_usd_3) as loan_amount_usd_3,
+          sum(average_usd_3) as average_usd_3,
+          concat(sum(business_rate_3),'%') as business_rate_3,
+
+          sum(entry_cnt_6) as entry_cnt_6,
+          sum(loan_cnt_6) as loan_cnt_6,
+          sum(loan_amount_usd_6) as loan_amount_usd_6,
+          sum(average_usd_6) as average_usd_6,
+          concat(sum(business_rate_6),'%') as business_rate_6,
+
+
+          sum(entry_cnt_4) as entry_cnt_4,
+          sum(loan_cnt_4) as loan_cnt_4,
+          sum(loan_amount_usd_4) as loan_amount_usd_4,
+          sum(average_usd_4) as average_usd_4,
+          concat(sum(business_rate_4),'%') as business_rate_4,
+
+          sum(entry_cnt_8) as entry_cnt_8,
+          sum(loan_cnt_8) as loan_cnt_8,
+          sum(loan_amount_usd_8) as loan_amount_usd_8,
+          sum(average_usd_8) as average_usd_8,
+          concat(sum(business_rate_8),'%') as business_rate_8
+
+          from(
+          select month_of_entry,
+          entry_cnt,
+          loan_cnt,
+          round(loan_amount_usd,2) loan_amount_usd,
+          round(loan_amount_usd/loan_cnt,2) average_usd,
+          round(loan_cnt/entry_cnt*100,2) business_rate,
+          null as entry_cnt_3,
+          null as loan_cnt_3,
+          null as loan_amount_usd_3,
+          null as average_usd_3,
+          null as business_rate_3,
+          null as entry_cnt_6,
+          null as loan_cnt_6,
+          null as loan_amount_usd_6,
+          null as average_usd_6,
+          null as business_rate_6,
+          null as entry_cnt_4,
+          null as loan_cnt_4,
+          null as loan_amount_usd_4,
+          null as average_usd_4,
+          null as business_rate_4,
+          null as entry_cnt_8,
+          null as loan_cnt_8,
+          null as loan_amount_usd_8,
+          null as average_usd_8,
+          null as business_rate_8
+
+
+          from ocredit_phones_dw.app_ocredit_phones_order_base_cube_m
+          where dt='{dt}'
+          and terms=-10000
+
+          union all
+
+          select month_of_entry,
+          null as entry_cnt,
+          null as loan_cnt,
+          null as loan_amount_usd,
+          null as average_usd,
+          null as business_rate,
+          entry_cnt as entry_cnt_3,
+          loan_cnt as loan_cnt_3,
+          round(loan_amount_usd,2) loan_amount_usd_3,
+          round(loan_amount_usd/loan_cnt,2) average_usd_3,
+          round(loan_cnt/entry_cnt*100,2) business_rate_3,
+          null as entry_cnt_6,
+          null as loan_cnt_6,
+          null as loan_amount_usd_6,
+          null as average_usd_6,
+          null as business_rate_6,
+          null as entry_cnt_4,
+          null as loan_cnt_4,
+          null as loan_amount_usd_4,
+          null as average_usd_4,
+          null as business_rate_4,
+          null as entry_cnt_8,
+          null as loan_cnt_8,
+          null as loan_amount_usd_8,
+          null as average_usd_8,
+          null as business_rate_8
+
+
+          from ocredit_phones_dw.app_ocredit_phones_order_base_cube_m
+          where dt='{dt}'
+          and terms=3
+
+
+          union all
+          select month_of_entry,
+          null as entry_cnt,
+          null as loan_cnt,
+          null as loan_amount_usd,
+          null as average_usd,
+          null as business_rate,
+          null as entry_cnt_3,
+          null as loan_cnt_3,
+          null as loan_amount_usd_3,
+          null as average_usd_3,
+          null as business_rate_3,
+          entry_cnt as entry_cnt_6,
+          loan_cnt as loan_cnt_6,
+          round(loan_amount_usd,2) loan_amount_usd_6,
+          round(loan_amount_usd/loan_cnt,2) average_usd_6,
+          round(loan_cnt/entry_cnt*100,2) business_rate_6,
+          null as entry_cnt_4,
+          null as loan_cnt_4,
+          null as loan_amount_usd_4,
+          null as average_usd_4,
+          null as business_rate_4,
+          null as entry_cnt_8,
+          null as loan_cnt_8,
+          null as loan_amount_usd_8,
+          null as average_usd_8,
+          null as business_rate_8
+
+          from ocredit_phones_dw.app_ocredit_phones_order_base_cube_m
+          where dt='{dt}'
+          and terms=6
+
+
+
+            union all
+          select month_of_entry,
+          null as entry_cnt,
+          null as loan_cnt,
+          null as loan_amount_usd,
+          null as average_usd,
+          null as business_rate,
+          null as entry_cnt_3,
+          null as loan_cnt_3,
+          null as loan_amount_usd_3,
+          null as average_usd_3,
+          null as business_rate_3,
+          null as entry_cnt_6,
+          null as loan_cnt_6,
+          null as loan_amount_usd_6,
+          null as average_usd_6,
+          null as business_rate_6,
+          entry_cnt as entry_cnt_4,
+          loan_cnt as loan_cnt_4,
+          round(loan_amount_usd,2) loan_amount_usd_4,
+          round(loan_amount_usd/loan_cnt,2) average_usd_4,
+          round(loan_cnt/entry_cnt*100,2) business_rate_4,
+          null as entry_cnt_8,
+          null as loan_cnt_8,
+          null as loan_amount_usd_8,
+          null as average_usd_8,
+          null as business_rate_8
+
+          from ocredit_phones_dw.app_ocredit_phones_order_base_cube_m
+          where dt='{dt}'
+          and terms=4
+
+
+           union all
+          select month_of_entry,
+          null as entry_cnt,
+          null as loan_cnt,
+          null as loan_amount_usd,
+          null as average_usd,
+          null as business_rate,
+          null as entry_cnt_3,
+          null as loan_cnt_3,
+          null as loan_amount_usd_3,
+          null as average_usd_3,
+          null as business_rate_3,
+          null as entry_cnt_6,
+          null as loan_cnt_6,
+          null as loan_amount_usd_6,
+          null as average_usd_6,
+          null as business_rate_6,
+          null as entry_cnt_4,
+          null as loan_cnt_4,
+          null as loan_amount_usd_4,
+          null as average_usd_4,
+          null as business_rate_4,
+          entry_cnt as entry_cnt_8,
+          loan_cnt as loan_cnt_8,
+          round(loan_amount_usd,2) loan_amount_usd_8,
+          round(loan_amount_usd/loan_cnt,2) average_usd_8,
+          round(loan_cnt/entry_cnt*100,2) business_rate_8
+
+          from ocredit_phones_dw.app_ocredit_phones_order_base_cube_m
+          where dt='{dt}'
+          and terms=8
+
+
+
+          ) a
+          group by month_of_entry
+          order by month_of_entry desc
+
+          ) a 
+
+
+
+                 '''.format(dt=ds,
+                            start_date=airflow.macros.ds_add(ds, -14))
+    cursor = get_hive_cursor()
+    logging.info('Executing: %s', sql)
+    cursor.execute(sql)
+    data_list = cursor.fetchall()
+    cursor.close()
+    row_html = ''
+    if len(data_list) > 0:
+        for data in data_list:
+            entry_cnt = data[0]
+            loan_cnt = data[1]
+            business_rate = data[2]
+            loan_amount_usd = data[3]
+            average_usd = data[4]
+            rate_3 = data[5]
+            rate_6 = data[6]
+            rate_4 = data[7]
+            rate_8 = data[8]
+
+            row_html += tr_fmt.format(
+
+                dt=ds,
+                entry_cnt=entry_cnt,
+                loan_cnt=loan_cnt,
+                business_rate=business_rate,
+                loan_amount_usd=loan_amount_usd,
+                average_usd=average_usd,
+                rate_3=rate_3,
+                rate_6=rate_6,
+                rate_4=rate_4,
+                rate_8=rate_8
+
+            )
+
+    return row_html
 
 
 def get_rows(ds):
@@ -402,7 +904,19 @@ def get_rows(ds):
                             <td>{}</td>
                             <td>{}</td>
                             <td>{}</td>
-                            <td>{}</td>                          
+                            <td>{}</td>  
+                            <!--4期产品-->
+                            <td>{}</td>
+                            <td>{}</td>
+                            <td>{}</td>
+                            <td>{}</td>
+                            <td>{}</td>   
+                            <!--8期产品-->
+                            <td>{}</td>
+                            <td>{}</td>
+                            <td>{}</td>
+                            <td>{}</td>
+                            <td>{}</td>                           
                     '''
     sql = '''
                
@@ -423,7 +937,20 @@ def get_rows(ds):
           sum(loan_cnt_6) as loan_cnt_6,
           format_number(sum(loan_amount_usd_6),0) as loan_amount_usd_6,
           format_number(sum(average_usd_6),0) as average_usd_6,
-          concat(sum(business_rate_6),'%') as business_rate_6
+          concat(sum(business_rate_6),'%') as business_rate_6,
+          
+          
+          sum(entry_cnt_4) as entry_cnt_4,
+          sum(loan_cnt_4) as loan_cnt_4,
+          format_number(sum(loan_amount_usd_4),0) as loan_amount_usd_4,
+          format_number(sum(average_usd_4),0) as average_usd_4,
+          concat(sum(business_rate_4),'%') as business_rate_4,
+          
+          sum(entry_cnt_8) as entry_cnt_8,
+          sum(loan_cnt_8) as loan_cnt_8,
+          format_number(sum(loan_amount_usd_8),0) as loan_amount_usd_8,
+          format_number(sum(average_usd_8),0) as average_usd_8,
+          concat(sum(business_rate_8),'%') as business_rate_8
           
           from(
           select date_of_entry,
@@ -441,7 +968,17 @@ def get_rows(ds):
           null as loan_cnt_6,
           null as loan_amount_usd_6,
           null as average_usd_6,
-          null as business_rate_6
+          null as business_rate_6,
+          null as entry_cnt_4,
+          null as loan_cnt_4,
+          null as loan_amount_usd_4,
+          null as average_usd_4,
+          null as business_rate_4,
+          null as entry_cnt_8,
+          null as loan_cnt_8,
+          null as loan_amount_usd_8,
+          null as average_usd_8,
+          null as business_rate_8
 
 
           from ocredit_phones_dw.app_ocredit_phones_order_base_cube_d
@@ -466,7 +1003,17 @@ def get_rows(ds):
           null as loan_cnt_6,
           null as loan_amount_usd_6,
           null as average_usd_6,
-          null as business_rate_6
+          null as business_rate_6,
+          null as entry_cnt_4,
+          null as loan_cnt_4,
+          null as loan_amount_usd_4,
+          null as average_usd_4,
+          null as business_rate_4,
+          null as entry_cnt_8,
+          null as loan_cnt_8,
+          null as loan_amount_usd_8,
+          null as average_usd_8,
+          null as business_rate_8
           
           from ocredit_phones_dw.app_ocredit_phones_order_base_cube_d
           where dt='{dt}'
@@ -490,11 +1037,90 @@ def get_rows(ds):
           loan_cnt as loan_cnt_6,
           round(loan_amount_usd,2) loan_amount_usd_6,
           round(loan_amount_usd/loan_cnt,2) average_usd_6,
-          round(loan_cnt/entry_cnt*100,2) business_rate_6
+          round(loan_cnt/entry_cnt*100,2) business_rate_6,
+          null as entry_cnt_4,
+          null as loan_cnt_4,
+          null as loan_amount_usd_4,
+          null as average_usd_4,
+          null as business_rate_4,
+          null as entry_cnt_8,
+          null as loan_cnt_8,
+          null as loan_amount_usd_8,
+          null as average_usd_8,
+          null as business_rate_8
 
           from ocredit_phones_dw.app_ocredit_phones_order_base_cube_d
           where dt='{dt}'
           and terms=6
+          and substr(date_of_entry,1,7) = substr('{dt}',1,7)
+          
+          
+          union all
+          select date_of_entry,
+          null as entry_cnt,
+          null as loan_cnt,
+          null as loan_amount_usd,
+          null as average_usd,
+          null as business_rate,
+          null as entry_cnt_3,
+          null as loan_cnt_3,
+          null as loan_amount_usd_3,
+          null as average_usd_3,
+          null as business_rate_3,
+          null as entry_cnt_6,
+          null as loan_cnt_6,
+          null as loan_amount_usd_6,
+          null as average_usd_6,
+          null as business_rate_6,
+          entry_cnt as entry_cnt_4,
+          loan_cnt as loan_cnt_4,
+          round(loan_amount_usd,2) loan_amount_usd_4,
+          round(loan_amount_usd/loan_cnt,2) average_usd_4,
+          round(loan_cnt/entry_cnt*100,2) business_rate_4,
+          null as entry_cnt_8,
+          null as loan_cnt_8,
+          null as loan_amount_usd_8,
+          null as average_usd_8,
+          null as business_rate_8
+          
+          from ocredit_phones_dw.app_ocredit_phones_order_base_cube_d
+          where dt='{dt}'
+          and terms=4
+          and substr(date_of_entry,1,7) = substr('{dt}',1,7)
+          
+          
+          
+          union all
+          select date_of_entry,
+          null as entry_cnt,
+          null as loan_cnt,
+          null as loan_amount_usd,
+          null as average_usd,
+          null as business_rate,
+          null as entry_cnt_3,
+          null as loan_cnt_3,
+          null as loan_amount_usd_3,
+          null as average_usd_3,
+          null as business_rate_3,
+          null as entry_cnt_6,
+          null as loan_cnt_6,
+          null as loan_amount_usd_6,
+          null as average_usd_6,
+          null as business_rate_6,
+          null as entry_cnt_4,
+          null as loan_cnt_4,
+          null as loan_amount_usd_4,
+          null as average_usd_4,
+          null as business_rate_4,
+          entry_cnt as entry_cnt_8,
+          loan_cnt as loan_cnt_8,
+          round(loan_amount_usd,2) loan_amount_usd_8,
+          round(loan_amount_usd/loan_cnt,2) average_usd_8,
+          round(loan_cnt/entry_cnt*100,2) business_rate_8
+          
+          from ocredit_phones_dw.app_ocredit_phones_order_base_cube_d
+          where dt='{dt}'
+          and terms=8
           and substr(date_of_entry,1,7) = substr('{dt}',1,7)
           
           ) a
@@ -552,7 +1178,19 @@ def get_month_rows(ds):
                             <td>{}</td>
                             <td>{}</td>
                             <td>{}</td>
-                            <td>{}</td>              
+                            <td>{}</td>  
+                            <!--4期产品-->
+                            <td>{}</td>
+                            <td>{}</td>
+                            <td>{}</td>
+                            <td>{}</td>
+                            <td>{}</td>
+                            <!--8期产品-->
+                            <td>{}</td>
+                            <td>{}</td>
+                            <td>{}</td>
+                            <td>{}</td>
+                            <td>{}</td>                    
                     '''
     sql = '''
                 
@@ -574,7 +1212,20 @@ def get_month_rows(ds):
           sum(loan_cnt_6) as loan_cnt_6,
           format_number(sum(loan_amount_usd_6),0) as loan_amount_usd_6,
           format_number(sum(average_usd_6),0) as average_usd_6,
-          concat(sum(business_rate_6),'%') as business_rate_6
+          concat(sum(business_rate_6),'%') as business_rate_6,
+          
+          
+          nvl(sum(entry_cnt_4),'') as entry_cnt_4,
+          nvl(sum(loan_cnt_4),'') as loan_cnt_4,
+          nvl(format_number(sum(loan_amount_usd_4),0),'') as loan_amount_usd_4,
+          nvl(format_number(sum(average_usd_4),0),'') as average_usd_4,
+          nvl(concat(sum(business_rate_4),'%'),'') as business_rate_4,
+          
+          nvl(sum(entry_cnt_8),'') as entry_cnt_8,
+          nvl(sum(loan_cnt_8),'') as loan_cnt_8,
+          nvl(format_number(sum(loan_amount_usd_8),0),'') as loan_amount_usd_8,
+          nvl(format_number(sum(average_usd_8),0),'') as average_usd_8,
+          nvl(concat(sum(business_rate_8),'%'),'') as business_rate_8
           
           from(
           select month_of_entry,
@@ -592,7 +1243,17 @@ def get_month_rows(ds):
           null as loan_cnt_6,
           null as loan_amount_usd_6,
           null as average_usd_6,
-          null as business_rate_6
+          null as business_rate_6,
+          null as entry_cnt_4,
+          null as loan_cnt_4,
+          null as loan_amount_usd_4,
+          null as average_usd_4,
+          null as business_rate_4,
+          null as entry_cnt_8,
+          null as loan_cnt_8,
+          null as loan_amount_usd_8,
+          null as average_usd_8,
+          null as business_rate_8
           
           
           from ocredit_phones_dw.app_ocredit_phones_order_base_cube_m
@@ -600,7 +1261,6 @@ def get_month_rows(ds):
           and terms=-10000
           
           union all
-
           select month_of_entry,
           null as entry_cnt,
           null as loan_cnt,
@@ -616,7 +1276,18 @@ def get_month_rows(ds):
           null as loan_cnt_6,
           null as loan_amount_usd_6,
           null as average_usd_6,
-          null as business_rate_6
+          null as business_rate_6,
+          null as entry_cnt_4,
+          null as loan_cnt_4,
+          null as loan_amount_usd_4,
+          null as average_usd_4,
+          null as business_rate_4,
+          null as entry_cnt_8,
+          null as loan_cnt_8,
+          null as loan_amount_usd_8,
+          null as average_usd_8,
+          null as business_rate_8
+          
           
           from ocredit_phones_dw.app_ocredit_phones_order_base_cube_m
           where dt='{dt}'
@@ -639,15 +1310,90 @@ def get_month_rows(ds):
           loan_cnt as loan_cnt_6,
           round(loan_amount_usd,2) loan_amount_usd_6,
           round(loan_amount_usd/loan_cnt,2) average_usd_6,
-          round(loan_cnt/entry_cnt*100,2) business_rate_6
+          round(loan_cnt/entry_cnt*100,2) business_rate_6,
+          null as entry_cnt_4,
+          null as loan_cnt_4,
+          null as loan_amount_usd_4,
+          null as average_usd_4,
+          null as business_rate_4,
+          null as entry_cnt_8,
+          null as loan_cnt_8,
+          null as loan_amount_usd_8,
+          null as average_usd_8,
+          null as business_rate_8
           
           from ocredit_phones_dw.app_ocredit_phones_order_base_cube_m
           where dt='{dt}'
           and terms=6
 
+
+          union all
+          select month_of_entry,
+          null as entry_cnt,
+          null as loan_cnt,
+          null as loan_amount_usd,
+          null as average_usd,
+          null as business_rate,
+          null as entry_cnt_3,
+          null as loan_cnt_3,
+          null as loan_amount_usd_3,
+          null as average_usd_3,
+          null as business_rate_3,
+          null as entry_cnt_6,
+          null as loan_cnt_6,
+          null as loan_amount_usd_6,
+          null as average_usd_6,
+          null as business_rate_6,
+          entry_cnt as entry_cnt_4,
+          loan_cnt as loan_cnt_4,
+          round(loan_amount_usd,2) loan_amount_usd_4,
+          round(loan_amount_usd/loan_cnt,2) average_usd_4,
+          round(loan_cnt/entry_cnt*100,2) business_rate_4,
+          null as entry_cnt_8,
+          null as loan_cnt_8,
+          null as loan_amount_usd_8,
+          null as average_usd_8,
+          null as business_rate_8
+          
+          from ocredit_phones_dw.app_ocredit_phones_order_base_cube_m
+          where dt='{dt}'
+          and terms=4
+          
+          
+        union all
+          select month_of_entry,
+          null as entry_cnt,
+          null as loan_cnt,
+          null as loan_amount_usd,
+          null as average_usd,
+          null as business_rate,
+          null as entry_cnt_3,
+          null as loan_cnt_3,
+          null as loan_amount_usd_3,
+          null as average_usd_3,
+          null as business_rate_3,
+          null as entry_cnt_6,
+          null as loan_cnt_6,
+          null as loan_amount_usd_6,
+          null as average_usd_6,
+          null as business_rate_6,
+          null as entry_cnt_4,
+          null as loan_cnt_4,
+          null as loan_amount_usd_4,
+          null as average_usd_4,
+          null as business_rate_4,
+          entry_cnt as entry_cnt_8,
+          loan_cnt as loan_cnt_8,
+          round(loan_amount_usd,2) loan_amount_usd_8,
+          round(loan_amount_usd/loan_cnt,2) average_usd_8,
+          round(loan_cnt/entry_cnt*100,2) business_rate_8
+          
+          from ocredit_phones_dw.app_ocredit_phones_order_base_cube_m
+          where dt='{dt}'
+          and terms=8
           ) a
           group by month_of_entry
-          order by month_of_entry
+          order by month_of_entry desc
 
 
                  '''.format(dt=ds,
@@ -690,7 +1436,19 @@ def get_week_rows(ds):
                             <td>{}</td>
                             <td>{}</td>
                             <td>{}</td>
-                            <td>{}</td>              
+                            <td>{}</td>         
+                            <!--4期产品-->
+                            <td>{}</td>
+                            <td>{}</td>
+                            <td>{}</td>
+                            <td>{}</td>
+                            <td>{}</td>
+                            <!--8期产品-->
+                            <td>{}</td>
+                            <td>{}</td>
+                            <td>{}</td>
+                            <td>{}</td>
+                            <td>{}</td>             
                     '''
     sql = '''
        
@@ -712,7 +1470,21 @@ def get_week_rows(ds):
           sum(loan_cnt_6) as loan_cnt_6,
           format_number(sum(loan_amount_usd_6),0) as loan_amount_usd_6,
           format_number(sum(average_usd_6),0) as average_usd_6,
-          concat(sum(business_rate_6),'%') as business_rate_6
+          concat(sum(business_rate_6),'%') as business_rate_6,
+          
+          nvl(sum(entry_cnt_4),'') as entry_cnt_4,
+          nvl(sum(loan_cnt_4),'') as loan_cnt_4,
+          nvl(format_number(sum(loan_amount_usd_4),0),'') as loan_amount_usd_4,
+          nvl(format_number(sum(average_usd_4),0),'') as average_usd_4,
+          nvl(concat(sum(business_rate_4),'%'),'') as business_rate_4,
+          
+          nvl(sum(entry_cnt_8),'') as entry_cnt_8,
+          nvl(sum(loan_cnt_8),'') as loan_cnt_8,
+          nvl(format_number(sum(loan_amount_usd_8),0),'') as loan_amount_usd_8,
+          nvl(format_number(sum(average_usd_8),0),'') as average_usd_8,
+          nvl(concat(sum(business_rate_8),'%'),'') as business_rate_8
+          
+          
           
           from(
           
@@ -732,7 +1504,17 @@ def get_week_rows(ds):
           null as loan_cnt_6,
           null as loan_amount_usd_6,
           null as average_usd_6,
-          null as business_rate_6
+          null as business_rate_6,
+          null as entry_cnt_4,
+          null as loan_cnt_4,
+          null as loan_amount_usd_4,
+          null as average_usd_4,
+          null as business_rate_4,
+          null as entry_cnt_8,
+          null as loan_cnt_8,
+          null as loan_amount_usd_8,
+          null as average_usd_8,
+          null as business_rate_8
           
           from ocredit_phones_dw.app_ocredit_phones_order_base_cube_w
           where dt='{dt}'
@@ -757,7 +1539,17 @@ def get_week_rows(ds):
           null as loan_cnt_6,
           null as loan_amount_usd_6,
           null as average_usd_6,
-          null as business_rate_6
+          null as business_rate_6,
+          null as entry_cnt_4,
+          null as loan_cnt_4,
+          null as loan_amount_usd_4,
+          null as average_usd_4,
+          null as business_rate_4,
+          null as entry_cnt_8,
+          null as loan_cnt_8,
+          null as loan_amount_usd_8,
+          null as average_usd_8,
+          null as business_rate_8
           
           from ocredit_phones_dw.app_ocredit_phones_order_base_cube_w
           where dt='{dt}'
@@ -781,15 +1573,95 @@ def get_week_rows(ds):
           loan_cnt as loan_cnt_6,
           round(loan_amount_usd,2) loan_amount_usd_6,
           round(loan_amount_usd/loan_cnt,2) average_usd_6,
-          round(loan_cnt/entry_cnt*100,2) business_rate_6
+          round(loan_cnt/entry_cnt*100,2) business_rate_6,
+          null as entry_cnt_4,
+          null as loan_cnt_4,
+          null as loan_amount_usd_4,
+          null as average_usd_4,
+          null as business_rate_4,
+          null as entry_cnt_8,
+          null as loan_cnt_8,
+          null as loan_amount_usd_8,
+          null as average_usd_8,
+          null as business_rate_8
 
           from ocredit_phones_dw.app_ocredit_phones_order_base_cube_w
           where dt='{dt}'
           and terms=6
           
+          
+          union all
+          select 
+          dateweek_of_entry,
+          null as entry_cnt,
+          null as loan_cnt,
+          null as loan_amount_usd,
+          null as average_usd,
+          null as business_rate,
+          null as entry_cnt_3,
+          null as loan_cnt_3,
+          null as loan_amount_usd_3,
+          null as average_usd_3,
+          null as business_rate_3,
+          null as entry_cnt_6,
+          null as loan_cnt_6,
+          null as loan_amount_usd_6,
+          null as average_usd_6,
+          null as business_rate_6,
+          entry_cnt as entry_cnt_4,
+          loan_cnt as loan_cnt_4,
+          round(loan_amount_usd,2) loan_amount_usd_4,
+          round(loan_amount_usd/loan_cnt,2) average_usd_4,
+          round(loan_cnt/entry_cnt*100,2) business_rate_4,
+          null as entry_cnt_8,
+          null as loan_cnt_8,
+          null as loan_amount_usd_8,
+          null as average_usd_8,
+          null as business_rate_8
+
+          from ocredit_phones_dw.app_ocredit_phones_order_base_cube_w
+          where dt='{dt}'
+          and terms=4
+          
+          
+          
+          union all
+          select 
+          dateweek_of_entry,
+          null as entry_cnt,
+          null as loan_cnt,
+          null as loan_amount_usd,
+          null as average_usd,
+          null as business_rate,
+          null as entry_cnt_3,
+          null as loan_cnt_3,
+          null as loan_amount_usd_3,
+          null as average_usd_3,
+          null as business_rate_3,
+          null as entry_cnt_6,
+          null as loan_cnt_6,
+          null as loan_amount_usd_6,
+          null as average_usd_6,
+          null as business_rate_6,
+          null as entry_cnt_4,
+          null as loan_cnt_4,
+          null as loan_amount_usd_4,
+          null as average_usd_4,
+          null as business_rate_4,
+          entry_cnt as entry_cnt_8,
+          loan_cnt as loan_cnt_8,
+          round(loan_amount_usd,2) loan_amount_usd_8,
+          round(loan_amount_usd/loan_cnt,2) average_usd_8,
+          round(loan_cnt/entry_cnt*100,2) business_rate_8
+
+          from ocredit_phones_dw.app_ocredit_phones_order_base_cube_w
+          where dt='{dt}'
+          and terms=8
+          
+          
           ) a
           group by dateweek_of_entry
-          order by dateweek_of_entry
+          order by dateweek_of_entry desc
 
 
 
@@ -816,9 +1688,11 @@ def send_report_email(ds, **kwargs):
     month_fmt = '''
                             <tr>
                                 <th colspan="1" style="text-align: center;">分类</th>
-                                <th colspan="5" style="text-align: center;">整体情况</th>
-                                <th colspan="5" style="text-align: center;">3期产品</th>
-                                <th colspan="5" style="text-align: center;">6期产品</th>
+                                <th colspan="5" style="text-align: center;">总体</th>
+                                <th colspan="5" style="text-align: center;">3期</th>
+                                <th colspan="5" style="text-align: center;">6期</th>
+                                <th colspan="5" style="text-align: center;">4期</th>
+                                <th colspan="5" style="text-align: center;">8期</th>
                             </tr>
                             <tr>
                             <!--分类-->
@@ -841,15 +1715,29 @@ def send_report_email(ds, **kwargs):
                             <th>贷款额_usd</th>
                             <th>件均_usd</th>
                             <th>业务转化率</th>
+                            <!--4期产品-->
+                            <th>进件量</th>
+                            <th>放款量</th>
+                            <th>贷款额_usd</th>
+                            <th>件均_usd</th>
+                            <th>业务转化率</th>
+                            <!--8期产品-->
+                            <th>进件量</th>
+                            <th>放款量</th>
+                            <th>贷款额_usd</th>
+                            <th>件均_usd</th>
+                            <th>业务转化率</th>
                         </tr>
     '''
 
     week_fmt = '''
                                 <tr>
                                     <th colspan="1" style="text-align: center;">分类</th>
-                                    <th colspan="5" style="text-align: center;">整体情况</th>
+                                    <th colspan="5" style="text-align: center;">总体</th>
                                     <th colspan="5" style="text-align: center;">3期产品</th>
                                     <th colspan="5" style="text-align: center;">6期产品</th>
+                                    <th colspan="5" style="text-align: center;">4期产品</th>
+                                    <th colspan="5" style="text-align: center;">8期产品</th>
                                 </tr>
                                 <tr>
                                 <!--分类-->
@@ -867,6 +1755,18 @@ def send_report_email(ds, **kwargs):
                                 <th>件均_usd</th>
                                 <th>业务转化率</th>
                                 <!--6期产品-->
+                                <th>进件量</th>
+                                <th>放款量</th>
+                                <th>贷款额_usd</th>
+                                <th>件均_usd</th>
+                                <th>业务转化率</th>
+                                <!--4期产品-->
+                                <th>进件量</th>
+                                <th>放款量</th>
+                                <th>贷款额_usd</th>
+                                <th>件均_usd</th>
+                                <th>业务转化率</th>
+                                <!--8期产品-->
                                 <th>进件量</th>
                                 <th>放款量</th>
                                 <th>贷款额_usd</th>
@@ -908,19 +1808,21 @@ def send_report_email(ds, **kwargs):
             
             {show_date}
             {show_month}
+            {show_all}
                 <table width="100%" class="table">
                     <caption>
-                        <h3>当月进件-放款转化情况</h3>
+                        <h3>当月每日进件-放款转化情况</h3>
                     </caption>
                 </table>
                 <table width="100%" class="table">
                     <thead>
                         <tr>
                             <th colspan="1" style="text-align: center;">分类</th>
-                            <th colspan="5" style="text-align: center;">整体情况</th>
-                            <th colspan="5" style="text-align: center;">3期产品</th>
-                            <th colspan="5" style="text-align: center;">6期产品</th>
-
+                            <th colspan="5" style="text-align: center;">总体</th>
+                            <th colspan="5" style="text-align: center;">3期</th>
+                            <th colspan="5" style="text-align: center;">6期</th>
+                            <th colspan="5" style="text-align: center;">4期</th>
+                            <th colspan="5" style="text-align: center;">8期</th>
                         </tr>
                         <tr>
                             <!--分类-->
@@ -943,6 +1845,19 @@ def send_report_email(ds, **kwargs):
                             <th>贷款额_usd</th>
                             <th>件均_usd</th>
                             <th>业务转化率</th>
+                            <!--4期产品-->
+                            <th>进件量</th>
+                            <th>放款量</th>
+                            <th>贷款额_usd</th>
+                            <th>件均_usd</th>
+                            <th>业务转化率</th>
+                            <!--8期产品-->
+                            <th>进件量</th>
+                            <th>放款量</th>
+                            <th>贷款额_usd</th>
+                            <th>件均_usd</th>
+                            <th>业务转化率</th>
+                            
                         </tr>
                     </thead>
                     <tbody>
@@ -965,7 +1880,7 @@ def send_report_email(ds, **kwargs):
                 
                 <table width="100%" class="table">
                 <caption>
-                    <h3>近4周进件-放款转化情况</h3>
+                    <h3>历史各周进件-放款转化情况</h3>
                 </caption>
                 </table>
                 <table width="100%" class="table">
@@ -989,7 +1904,8 @@ def send_report_email(ds, **kwargs):
                            month_fmt=month_fmt,
                            week_fmt=week_fmt,
                            show_date=get_show_date(ds),
-                           show_month=get_show_month(ds)
+                           show_month=get_show_month(ds),
+                           show_all=get_show_all(ds)
                            )  #
 
     logging.info("==============")

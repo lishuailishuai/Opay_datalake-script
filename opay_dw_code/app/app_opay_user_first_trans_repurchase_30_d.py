@@ -41,22 +41,11 @@ dag = airflow.DAG('app_opay_user_first_trans_repurchase_30_d',
 
 ##----------------------------------------- 依赖 ---------------------------------------##
 
-dwd_opay_transaction_record_di_prev_day_task = OssSensor(
-    task_id='dwd_opay_transaction_record_di_prev_day_task',
-    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opay/opay_dw/dwd_opay_transaction_record_di/country_code=NG",
-        pt='{{ds}}'
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
 
-
-dwm_opay_user_first_tran_di_prev_day_task = OssSensor(
-    task_id='dwm_opay_user_first_tran_di_prev_day_task',
+dwm_opay_user_first_trans_repurchase_di_prev_day_task = OssSensor(
+    task_id='dwm_opay_user_first_trans_repurchase_di_prev_day_task',
     bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opay/opay_dw/dwm_opay_user_first_tran_di/country_code=NG",
+        hdfs_path_str="opay/opay_dw/dwm_opay_user_first_trans_repurchase_di/country_code=NG",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -149,5 +138,4 @@ app_opay_user_first_trans_repurchase_30_d_task = PythonOperator(
     dag=dag
 )
 
-dwm_opay_user_first_tran_di_prev_day_task >> app_opay_user_first_trans_repurchase_30_d_task
-dwd_opay_transaction_record_di_prev_day_task >> app_opay_user_first_trans_repurchase_30_d_task
+dwm_opay_user_first_trans_repurchase_di_prev_day_task >> app_opay_user_first_trans_repurchase_30_d_task

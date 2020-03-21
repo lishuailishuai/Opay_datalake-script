@@ -37,7 +37,7 @@ args = {
 }
 
 dag = airflow.DAG('dwd_opay_account_balance_df',
-                 schedule_interval="30 02 * * *",
+                 schedule_interval="20 01 * * *",
                   default_args=args,
                   )
 

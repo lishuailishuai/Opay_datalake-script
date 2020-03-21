@@ -35,16 +35,16 @@ args = {
 }
 
 dag = airflow.DAG('dwm_opay_user_first_trans_repurchase_di',
-                  schedule_interval="00 03 * * *",
+                  schedule_interval="50 01 * * *",
                   default_args=args
                   )
 
 ##----------------------------------------- 依赖 ---------------------------------------##
 
-dwd_opay_transaction_record_di_prev_day_task = OssSensor(
-    task_id='dwd_opay_transaction_record_di_prev_day_task',
+dwd_opay_user_transaction_record_di_prev_day_task = OssSensor(
+    task_id='dwd_opay_user_transaction_record_di_prev_day_task',
     bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opay/opay_dw/dwd_opay_transaction_record_di/country_code=NG",
+        hdfs_path_str="opay/opay_dw/dwd_opay_user_transaction_record_di/country_code=NG",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -53,10 +53,10 @@ dwd_opay_transaction_record_di_prev_day_task = OssSensor(
 )
 
 
-dwm_opay_user_first_tran_di_prev_day_task = OssSensor(
-    task_id='dwm_opay_user_first_tran_di_prev_day_task',
+dwm_opay_user_first_trans_df_prev_day_task = OssSensor(
+    task_id='dwm_opay_user_first_trans_df_prev_day_task',
     bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opay/opay_dw/dwm_opay_user_first_tran_di/country_code=NG",
+        hdfs_path_str="opay/opay_dw/dwm_opay_user_first_trans_df/country_code=NG",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -106,15 +106,15 @@ def dwm_opay_user_first_trans_repurchase_di_sql_task(ds):
 	    t1.country_code, t1.dt
 	from (
 	    select 
-	        sub_consume_scenario, originator_id, sum(amount) as order_amt, count(*) order_cnt, country_code, '{pt}' as dt
-	    from opay_dw.dwd_opay_transaction_record_di
-	    where dt = '{pt}' and order_status = 'SUCCESS' and originator_type = 'USER'
-	    group by sub_consume_scenario, originator_id, country_code
+	        sub_consume_scenario, user_id as originator_id, sum(amount) as order_amt, count(*) order_cnt, country_code, '{pt}' as dt
+	    from opay_dw.dwd_opay_user_transaction_record_di
+	    where dt = '{pt}' and order_status = 'SUCCESS'
+	    group by sub_consume_scenario, user_id, country_code
 	) t1 join (
 	    select 
-	        sub_consume_scenario as first_sub_consume_scenario, originator_id, amount as first_trans_amount, dt as first_trans_date
-	    from opay_dw.dwm_opay_user_first_tran_di
-	    where dt <= '{pt}' and originator_type = 'USER'
+	        sub_consume_scenario as first_sub_consume_scenario, user_id as originator_id, amount as first_trans_amount, date_format(trans_time, 'yyyy-MM-dd') as first_trans_date
+	    from opay_dw.dwm_opay_user_first_trans_df
+	    where dt = if('{pt}' <= '2020-03-18', '2020-03-18', '{pt}')
 	) t2 on t1.originator_id = t2.originator_id
     '''.format(
         pt=ds,
@@ -153,5 +153,5 @@ dwm_opay_user_first_trans_repurchase_di_task = PythonOperator(
     dag=dag
 )
 
-dwm_opay_user_first_tran_di_prev_day_task >> dwm_opay_user_first_trans_repurchase_di_task
-dwd_opay_transaction_record_di_prev_day_task >> dwm_opay_user_first_trans_repurchase_di_task
+dwm_opay_user_first_trans_df_prev_day_task >> dwm_opay_user_first_trans_repurchase_di_task
+dwd_opay_user_transaction_record_di_prev_day_task >> dwm_opay_user_first_trans_repurchase_di_task
