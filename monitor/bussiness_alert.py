@@ -31,9 +31,7 @@ dag = airflow.DAG(
     schedule_interval="*/10 * * * *",
     default_args=args)
 
-influx_client = InfluxDBClient('10.52.5.233', 8086, 'bigdata', 'opay321', 'serverDB')
-redis_client = redis.Redis(host='r-d7o4oicvcs16n22tnu.redis.eu-west-1.rds.aliyuncs.com', port=6379, db=4,
-                           decode_responses=True)
+
 
 
 UTC_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
@@ -113,7 +111,7 @@ metrcis_list = [
 
     (
         'Trade_Electricity_Success',
-        '''SELECT count(distinct("order_no")) AS "trade_success_cnt" AS "trade_amount" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__source_table" = 'electricity_topup_record' AND "order_status" = 'SUCCESS') and time > {time} GROUP BY time(10m) ''',
+        '''SELECT count(distinct("order_no")) AS "trade_success_cnt" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__source_table" = 'electricity_topup_record' AND "order_status" = 'SUCCESS') and time > {time} GROUP BY time(10m) ''',
         'trade_alert_value',
         7,
         'trade_alert_level_1_address',
@@ -320,7 +318,7 @@ metrcis_list = [
 
     (
         'Trade_TakeRide_Success',
-        '''SELECT count(distinct("order_no")) AS "trade_success_cnt" AS "trade_amount" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__source_table" = 'merchant_acquiring_record') and "merchant_id" = '256619082800116' AND "order_status" = 'SUCCESS' and time > {time} GROUP BY time(10m) ''',
+        '''SELECT count(distinct("order_no")) AS "trade_success_cnt"  FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__source_table" = 'merchant_acquiring_record') and "merchant_id" = '256619082800116' AND "order_status" = 'SUCCESS' and time > {time} GROUP BY time(10m) ''',
         'trade_alert_value',
         7,
         'trade_alert_level_1_address',
@@ -1117,6 +1115,12 @@ metrcis_list = [
 ]
 
 
+def get_redis_client():
+    redis_client = redis.Redis(host='r-d7o4oicvcs16n22tnu.redis.eu-west-1.rds.aliyuncs.com', port=6379, db=4,
+                               decode_responses=True)
+    return redis_client
+
+
 def alert(metrics_name, last_value, compare_value, alert_value, last_seconds, compare_day_ago_second,
           alert_1_level_name,
           alert_2_level_name,
@@ -1131,6 +1135,8 @@ def alert(metrics_name, last_value, compare_value, alert_value, last_seconds, co
     alert_template = Variable.get(alert_template_name)
     alert_value_1 = alert_value[0]
     alert_value_2 = alert_value[1]
+
+    redis_client = get_redis_client()
 
     # 是否手动关闭预警
     if is_close_alert:
@@ -1164,6 +1170,7 @@ def alert(metrics_name, last_value, compare_value, alert_value, last_seconds, co
         print(" =========  LEVEL 1 预警成功 ....... ")
 
         key = "{}_{}".format(metrics_name, alert_template_name)
+
         alert_times = redis_client.get(key)
 
         print(" =========  预警记录次数 : {}  ".format(alert_times))
@@ -1190,12 +1197,18 @@ def alert(metrics_name, last_value, compare_value, alert_value, last_seconds, co
         alert_times += 1
         redis_client.set(key, alert_times)
 
+    redis_client.close()
+
 
 # 清除之前所有记录预警次数
 def clear_error_times(metrics_name, alert_template_name):
+    redis_client = get_redis_client()
+
     key = "{}_{}".format(metrics_name, alert_template_name)
     redis_client.set(key, 0)
     print(" =========  未发现异常，清除预警累计次数  {}  ..... ".format(key))
+
+    redis_client.close()
 
 
 # 判断小于
@@ -1260,6 +1273,8 @@ def monitor_task(ds, metrics_name, influx_db_query_sql, alert_value_name, compar
     last_time = 0
     data_map = dict()
 
+    influx_client = InfluxDBClient('10.52.5.233', 8086, 'bigdata', 'opay321', 'serverDB')
+
     date_time = datetime.datetime.strptime(ds, '%Y-%m-%d')
     time_condition = (date_time - datetime.timedelta(days=(compare_day + 1)))
     time_condition = int(time.mktime(time_condition.timetuple()))
@@ -1276,6 +1291,12 @@ def monitor_task(ds, metrics_name, influx_db_query_sql, alert_value_name, compar
 
     res = influx_client.query(query_sql)
     raw = res.raw
+
+    if raw['series'] is  None:
+        print(" =========  No data  ".format(str(raw)))
+        return
+
+
     values = raw['series'][0]['values']
     columns = raw['series'][0]['columns']
 
@@ -1338,6 +1359,8 @@ def monitor_task(ds, metrics_name, influx_db_query_sql, alert_value_name, compar
                           compare_day_ago_second,
                           alert_1_level_name,
                           alert_2_level_name, is_close_alert, columns[i])
+
+    influx_client.close()
 
 
 for metrics_name, influx_db_query_sql, alert_value_name, compare_day, alert_1_level_name, alert_2_level_name, is_close_alert, mode in metrcis_list:
