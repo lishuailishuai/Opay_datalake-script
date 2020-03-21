@@ -156,7 +156,7 @@ def app_ocredit_phones_risk_control_cube_d_sql_task(ds):
           ---round(avg(case when t2.s10 is not null then t2.s7 else null end),2) as `支付-合同流转用时(分)`,
           avg(case when t2.s10 is not null then t2.s8 else null end) as contract_review_average_minute,--`合同审核实际用时(分)`,
           ---round(avg(case when t2.s10 is not null then t2.s9 else null end),2) as `合同审核-放款流转用时(分)`,
-          avg(case when t2.s10 is not null then t2.s10 else null end) as total_use_average_minute,--`总用时(时)`
+          avg(case when t2.s10 is not null then t2.s10 else null end) as total_use_average_hour,--`总用时(时)`
           
           'nal' as country_code,
           '{pt}' as dt
