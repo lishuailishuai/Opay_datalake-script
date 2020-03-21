@@ -30,6 +30,7 @@ args = {
 dag = airflow.DAG(
     'bussiness_alert',
     schedule_interval="*/10 * * * *",
+    concurrency=1,
     default_args=args)
 
 UTC_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
