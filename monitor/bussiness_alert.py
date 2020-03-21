@@ -14,6 +14,7 @@ import requests
 from influxdb import InfluxDBClient
 import json
 import redis
+import random
 
 args = {
     'owner': 'linan',
@@ -30,9 +31,6 @@ dag = airflow.DAG(
     'bussiness_alert',
     schedule_interval="*/10 * * * *",
     default_args=args)
-
-
-
 
 UTC_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
 DATE_FORMAT = '%Y-%m-%d %H:%M:%S'
@@ -1273,6 +1271,13 @@ def monitor_task(ds, metrics_name, influx_db_query_sql, alert_value_name, compar
     last_time = 0
     data_map = dict()
 
+    ## 增加随机数延迟
+
+    sleep = random.randint(10, 300)
+
+    time.sleep(sleep)
+    print(" =========  随机时间等待 : {} s ".format(sleep))
+
     influx_client = InfluxDBClient('10.52.5.233', 8086, 'bigdata', 'opay321', 'serverDB')
 
     date_time = datetime.datetime.strptime(ds, '%Y-%m-%d')
@@ -1293,10 +1298,9 @@ def monitor_task(ds, metrics_name, influx_db_query_sql, alert_value_name, compar
     raw = res.raw
     series = raw.get('series')
 
-    if series is  None:
+    if series is None:
         print(" =========  No data  ".format(str(raw)))
         return
-
 
     values = series[0]['values']
     columns = series[0]['columns']
@@ -1337,8 +1341,10 @@ def monitor_task(ds, metrics_name, influx_db_query_sql, alert_value_name, compar
         else:
             compare_metrcis_value = int(compare_obj[i])
 
-        print(" =========  最新数据  时间 ：{}  , 指标值： {}  ".format(datetime.datetime.fromtimestamp(int(last_time)).strftime(DATE_FORMAT), last_metrcis_value))
-        print(" =========  对比日数据  时间 ：{}  , 指标值： {}  ".format(datetime.datetime.fromtimestamp(int(compare_day_ago_second)).strftime(DATE_FORMAT), compare_metrcis_value))
+        print(" =========  最新数据  时间 ：{}  , 指标值： {}  ".format(
+            datetime.datetime.fromtimestamp(int(last_time)).strftime(DATE_FORMAT), last_metrcis_value))
+        print(" =========  对比日数据  时间 ：{}  , 指标值： {}  ".format(
+            datetime.datetime.fromtimestamp(int(compare_day_ago_second)).strftime(DATE_FORMAT), compare_metrcis_value))
         print(" =========  预警阈值比例值  ： {}   {}  ".format(alert_value_1, alert_value_2))
         print(" =========  处理 mode  ： {}    ".format(mode))
 
