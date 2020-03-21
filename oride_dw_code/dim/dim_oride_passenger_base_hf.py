@@ -25,108 +25,86 @@ import requests
 import os
 
 args = {
-        'owner': 'chenghui',
-        'start_date': datetime(2019, 5, 20),
-        'depends_on_past': False,
-        'retries': 3,
-        'retry_delay': timedelta(minutes=2),
-        'email': ['bigdata_dw@opay-inc.com'],
-        'email_on_failure': True,
-        'email_on_retry': False,
-} 
+    'owner': 'lishuai',
+    'start_date': datetime(2020, 3, 18),
+    'depends_on_past': False,
+    'retries': 3,
+    'retry_delay': timedelta(minutes=2),
+    'email': ['bigdata_dw@opay-inc.com'],
+    'email_on_failure': True,
+    'email_on_retry': False,
+}
 
-dag = airflow.DAG( 'dim_oride_passenger_base', 
-    schedule_interval="35 00 * * *",
-    default_args=args,
-    )
+dag = airflow.DAG('dim_oride_passenger_base_hf',
+                  schedule_interval="40 00 * * *",
+                  default_args=args,
+                  )
 ##----------------------------------------- 变量 ---------------------------------------##
 
-db_name="oride_dw"
-table_name="dim_oride_passenger_base"
+db_name = "oride_dw"
+table_name = "dim_oride_passenger_base_hf"
+hdfs_path = "oss://opay-datalake/oride/oride_dw/" + table_name
+##----------------------------------------- 依赖 ---------------------------------------##
 
-##----------------------------------------- 依赖 ---------------------------------------## 
-#获取变量
-code_map=eval(Variable.get("sys_flag"))
 
-#判断ufile(cdh环境)
-if code_map["id"].lower()=="ufile":
-    #依赖前一天分区
-    ods_sqoop_base_data_user_df_prev_day_tesk=HivePartitionSensor(
-          task_id="ods_sqoop_base_data_user_df_prev_day_tesk",
-          table="ods_sqoop_base_data_user_df",
-          partition="dt='{{ds}}'",
-          schema="oride_dw_ods",
-          poke_interval=60, #依赖不满足时，一分钟检查一次依赖状态
-          dag=dag
-        )
-    #依赖前一天分区
-    dwd_oride_passenger_extend_df_prev_day_task = UFileSensor(
-        task_id='dwd_oride_passenger_extend_df_prev_day_task',
-        filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-            hdfs_path_str="oride/oride_dw/dwd_oride_passenger_extend_df/country_code=nal",
-            pt='{{ds}}'
+dwd_oride_user_hf_prev_day_task = OssSensor(
+        task_id='dwd_oride_user_hf_prev_day_task',
+        bucket_key='{hdfs_path_str}/dt={pt}/hour={hour}/_SUCCESS'.format(
+            hdfs_path_str="oride/oride_dw/dwd_oride_user_hf/country_code=nal",
+            pt='{{ds}}',
+            now_day='{{macros.ds_add(ds, +1)}}',
+            hour='{{ execution_date.strftime("%H") }}'
         ),
         bucket_name='opay-datalake',
         poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
         dag=dag
-    )
-    #路径
-    hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
-else:
-    ods_sqoop_base_data_user_df_prev_day_tesk = OssSensor(
-        task_id='ods_sqoop_base_data_user_df_prev_day_tesk',
-        bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-            hdfs_path_str="oride_dw_sqoop/oride_data/data_user",
-            pt='{{ds}}'
+)
+
+dwd_oride_user_extend_hf_prev_day_task = OssSensor(
+        task_id='dwd_oride_user_extend_hf_prev_day_task',
+        bucket_key='{hdfs_path_str}/dt={pt}/hour={hour}/_SUCCESS'.format(
+            hdfs_path_str="oride/oride_dw/dwd_oride_user_extend_hf/country_code=nal",
+            pt='{{ds}}',
+            now_day='{{macros.ds_add(ds, +1)}}',
+            hour='{{ execution_date.strftime("%H") }}'
         ),
         bucket_name='opay-datalake',
         poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
         dag=dag
-    )
-    # 依赖前一天分区
-    dwd_oride_passenger_extend_df_prev_day_task = OssSensor(
-        task_id='dwd_oride_passenger_extend_df_prev_day_task',
-        bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-            hdfs_path_str="oride/oride_dw/dwd_oride_passenger_extend_df/country_code=nal",
-            pt='{{ds}}'
-        ),
-        bucket_name='opay-datalake',
-        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-        dag=dag
-    )
-    # 路径
-    hdfs_path = "oss://opay-datalake/oride/oride_dw/" + table_name
+)
 
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
 
-def fun_task_timeout_monitor(ds,dag,**op_kwargs):
-
-    dag_ids=dag.dag_id
+def fun_task_timeout_monitor(ds, dag, **op_kwargs):
+    dag_ids = dag.dag_id
 
     msg = [
-        {"dag":dag,"db": "oride_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "1800"}
+        {"dag": dag, "db": "oride_dw", "table": "{dag_name}".format(dag_name=dag_ids),
+         "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "1800"}
     ]
 
     TaskTimeoutMonitor().set_task_monitor(msg)
 
-task_timeout_monitor= PythonOperator(
+
+task_timeout_monitor = PythonOperator(
     task_id='task_timeout_monitor',
     python_callable=fun_task_timeout_monitor,
     provide_context=True,
     dag=dag
 )
 
-##----------------------------------------- 脚本 ---------------------------------------## 
+
+##----------------------------------------- 脚本 ---------------------------------------##
 
 
-def dim_oride_passenger_base_sql_task(ds):
-
-    HQL='''
+def dim_oride_passenger_base_hf_sql_task(ds):
+    HQL = '''
     set hive.exec.parallel=true;
     set hive.exec.dynamic.partition.mode=nonstrict;
 
-INSERT overwrite TABLE {db}.{table} partition(country_code,dt)
-SELECT t1.passenger_id,
+    INSERT overwrite TABLE {db}.{table} partition(country_code,dt)
+    
+    SELECT t1.passenger_id,
        --乘客ID
 
        t1.phone_number,
@@ -191,7 +169,7 @@ SELECT t1.passenger_id,
        -- 客户端语言
        
        null as device_id, --设备ID
-       from_unixtime(t2.protocol_time,'yyyy-MM-dd HH:mm:ss') as protocol_time, --签约/解约时间
+       from_unixtime(cast(t2.protocol_time as bigint),'yyyy-MM-dd HH:mm:ss') as protocol_time, --签约/解约时间
 
        t1.country_code,
        '{pt}' AS dt
@@ -215,11 +193,16 @@ FROM
           --'最后更新时间'
 
           'nal' AS country_code --国家码字段
-
-   FROM oride_dw_ods.ods_sqoop_base_data_user_df
-   WHERE dt= '{pt}') t1
+FROM
+    ( 
+        SELECT *
+            FROM oride_dw.dwd_oride_user_hf
+        where dt='{pt}' and hour=22 
+          
+    ) dri 
+   ) t1
 LEFT OUTER JOIN
-  (SELECT passenger_id,
+  (SELECT id,
           -- 用户 ID
 
           avg_score,
@@ -269,23 +252,31 @@ LEFT OUTER JOIN
 
           LANGUAGE, -- 客户端语言
           protocol_time --签约/解约时间
-FROM oride_dw.dwd_oride_passenger_extend_df
-   WHERE dt= '{pt}') t2 ON t1.passenger_id=t2.passenger_id;
+        FROM
+       (
+        SELECT *
+            FROM oride_dw.dwd_oride_user_extend_hf
+        where dt='{pt}' and hour=22 
+      ) dri
+    ) t2 ON t1.passenger_id=t2.id;
+
+
 '''.format(
         pt=ds,
+        bef_yes_day=airflow.macros.ds_add(ds, -1),
+        now_day=airflow.macros.ds_add(ds, +1),
         table=table_name,
         db=db_name
-        )
+    )
     return HQL
 
 
-#熔断数据，如果数据重复，报错
+# 熔断数据，如果数据重复，报错
 def check_key_data_task(ds):
-
     cursor = get_hive_cursor()
 
-    #主键重复校验
-    check_sql='''
+    # 主键重复校验
+    check_sql = '''
     SELECT count(1)-count(distinct passenger_id) as cnt
       FROM {db}.{table}
       WHERE dt='{pt}'
@@ -294,7 +285,7 @@ def check_key_data_task(ds):
         now_day=airflow.macros.ds_add(ds, +1),
         table=table_name,
         db=db_name
-        )
+    )
 
     logging.info('Executing 主键重复校验: %s', check_sql)
 
@@ -312,20 +303,19 @@ def check_key_data_task(ds):
     return flag
 
 
-#主流程
-def execution_data_task_id(ds,**kargs):
-
+# 主流程
+def execution_data_task_id(ds, **kargs):
     hive_hook = HiveCliHook()
 
-    #读取sql
-    _sql=dim_oride_passenger_base_sql_task(ds)
+    # 读取sql
+    _sql = dim_oride_passenger_base_hf_sql_task(ds)
 
     logging.info('Executing: %s', _sql)
 
-    #执行Hive
+    # 执行Hive
     hive_hook.run_cli(_sql)
 
-    #熔断数据
+    # 熔断数据
     check_key_data_task(ds)
 
     # 生成_SUCCESS
@@ -336,13 +326,14 @@ def execution_data_task_id(ds,**kargs):
     """
     TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "true", "true")
 
-dim_oride_passenger_base_task = PythonOperator(
-    task_id='dim_oride_passenger_base_task',
+
+dim_oride_passenger_base_hf_task = PythonOperator(
+    task_id='dim_oride_passenger_base_hf_task',
     python_callable=execution_data_task_id,
     provide_context=True,
     dag=dag
 )
 
-ods_sqoop_base_data_user_df_prev_day_tesk>>dim_oride_passenger_base_task
-dwd_oride_passenger_extend_df_prev_day_task>>dim_oride_passenger_base_task
+dwd_oride_user_hf_prev_day_task >> dim_oride_passenger_base_hf_task
+dwd_oride_user_extend_hf_prev_day_task >> dim_oride_passenger_base_hf_task
 

@@ -123,6 +123,11 @@ def dwd_oride_passenger_extend_df_sql_task(ds):
             nvl(data_user_ext.language,data_user_ext_bef.language) as language,--'客户端语言', 
             nvl(data_user_ext.finish_order,data_user_ext_bef.finish_order) as finish_order,--'完单数量', 
             nvl(data_user_ext.mark,data_user_ext_bef.mark) as mark,--'按位通用标记'
+            nvl(data_user_ext.country_id,data_user_ext_bef.country_id) as country_id,  --所属国家
+            nvl(data_user_ext.gender,data_user_ext_bef.gender) as gender, --性别:0.未设置 1.男 2.女
+            nvl(data_user_ext.version,data_user_ext_bef.version) as version,  --乘客端版本号
+            nvl(data_user_ext.protocol_no,data_user_ext_bef.protocol_no) as protocol_no, --签约opay 免密支付协议号
+            nvl((data_user_ext.protocol_time+1*3600),data_user_ext_bef.protocol_time) as protocol_time, --签约/解约时间
             'nal' as country_code,
             '{pt}' as dt
         FROM

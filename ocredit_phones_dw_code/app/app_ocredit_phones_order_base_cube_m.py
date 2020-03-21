@@ -37,7 +37,7 @@ args = {
 }
 
 dag = airflow.DAG('app_ocredit_phones_order_base_cube_m',
-                  schedule_interval="30 02 * * *",
+                  schedule_interval="30 01 * * *",
                   default_args=args)
 
 ##----------------------------------------- 依赖 ---------------------------------------##

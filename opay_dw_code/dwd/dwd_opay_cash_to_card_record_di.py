@@ -146,7 +146,8 @@ def dwd_opay_cash_to_card_record_di_sql_task(ds):
         t1.affiliate_bank_email, t1.create_time, t1.update_time, t1.country, 'Cash to Card' as top_service_type, 'ACTransfer' as sub_service_type, 
         t1.order_status, t1.error_code, t1.error_msg, t1.client_source, t1.pay_way, t1.business_type,
         t1.pay_status, 'ACTransfer' as top_consume_scenario, 'ACTransfer' as sub_consume_scenario,
-        t1.fee_amount, t1.fee_pattern, t1.outward_id, t1.outward_type, t2.state,
+        t1.fee_amount, t1.fee_pattern, t1.outward_id, t1.outward_type, t2.state,out_channel_id,
+        case when order_status='SUCCESS' then 550 else 0 end channel_amount,
         'NG' as country_code,
         '{pt}' dt
         
@@ -159,7 +160,8 @@ def dwd_opay_cash_to_card_record_di_sql_task(ds):
             default.localTime("{config}", 'NG',create_time, 0) as create_time,
             default.localTime("{config}", 'NG',update_time, 0) as update_time,
             country, order_status, error_code, error_msg, client_source, pay_channel as pay_way, business_type, pay_status,
-            nvl(fee, 0) as fee_amount, nvl(fee_pattern, '-') as fee_pattern, nvl(outward_id, '-') as outward_id, nvl(outward_type, '-') as outward_type
+            nvl(fee, 0) as fee_amount, nvl(fee_pattern, '-') as fee_pattern, nvl(outward_id, '-') as outward_id, nvl(outward_type, '-') as outward_type,
+            out_channel_id
         from opay_dw_ods.ods_sqoop_base_user_transfer_card_record_di
         where dt = '{pt}'
         union all
@@ -171,7 +173,8 @@ def dwd_opay_cash_to_card_record_di_sql_task(ds):
             default.localTime("{config}", 'NG',create_time, 0) as create_time,
             default.localTime("{config}", 'NG',update_time, 0) as update_time, 
             country, order_status, error_code, error_msg, '-' as client_source, pay_channel as pay_way, business_type, pay_status,
-            nvl(fee, 0) as fee_amount, nvl(fee_pattern, '-') as fee_pattern, nvl(outward_id, '-') as outward_id, nvl(outward_type, '-') as outward_type
+            nvl(fee, 0) as fee_amount, nvl(fee_pattern, '-') as fee_pattern, nvl(outward_id, '-') as outward_id, nvl(outward_type, '-') as outward_type,
+            out_channel_id
         from opay_dw_ods.ods_sqoop_base_merchant_transfer_card_record_di
         where dt = '{pt}'
         

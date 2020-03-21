@@ -38,7 +38,7 @@ args = {
 }
 
 dag = airflow.DAG('dwd_oride_order_payment_base_di',
-                  schedule_interval="10 00 * * *",
+                  schedule_interval="20 00 * * *",
                   default_args=args,
                   )
 

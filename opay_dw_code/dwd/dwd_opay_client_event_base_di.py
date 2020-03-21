@@ -195,6 +195,37 @@ def dwd_opay_client_event_base_di_sql_task(ds):
         WHERE
             get_json_object(e, '$.bzp') in ('OPAY','HOME_MORE','CASHIN','CASHOUT','MYQR','QRSCAN','QR_COUPON','AJIRA','ADD_MONEY','BETTING','EASYCASH','ELECTRICITY','NEARBY_AGENT','PAYBILLPAYBILL_BANKING','PAYBILL_TV','PAYBILL_V2','TRANSFER','TV','VOUCHER','WATER','APPLICATION_MARKET','TRANSFER_MONEY','COMMON','SCAN_TO_PAY','MY_CODE','MERCHANT_AUTH','GROUPBY','EDUCATION','AIRTIME_DATA','SECURITY','REFER_FRIEND','REPORT_SCAM','ADD_CARD'
 ) OR get_json_object(e, '$.bzp') is null 
+              group by
+              get_json_object(e, '$.cip'),
+              concat_ws(' ',substr(time,1,10),substr(time,12,8)),
+              unix_timestamp(concat_ws(' ',substr(time,1,10),substr(time,12,8))),
+              get_json_object(msg, '$.uid'),
+              get_json_object(msg, '$.uno'),
+              get_json_object(e, '$.cid'),
+              from_unixtime(cast(get_json_object(msg, '$.t') as bigint),'yyyy-MM-dd HH:mm:ss'),
+              get_json_object(msg, '$.t'),
+              get_json_object(msg, '$.p'),
+              get_json_object(msg, '$.ov'),
+              get_json_object(msg, '$.an'),
+              get_json_object(msg, '$.av'),
+              get_json_object(msg, '$.l'),
+              get_json_object(msg, '$.did'),
+              get_json_object(msg, '$.dsc'),
+              get_json_object(msg, '$.dmo'),
+              get_json_object(msg, '$.dma'),
+              get_json_object(msg, '$.isr'),
+              get_json_object(msg, '$.ch'),
+              get_json_object(msg, '$.sch'),
+              get_json_object(msg, '$.gaid'),
+              get_json_object(msg, '$.aid'),
+              from_unixtime(cast(cast(get_json_object(e, '$.et') as bigint) / 1000 as bigint),'yyyy-MM-dd HH:mm:ss'),
+              cast(cast(get_json_object(e, '$.et') as bigint) / 1000 as bigint) ,
+              get_json_object(e, '$.en'),
+              get_json_object(e, '$.ev'),
+              get_json_object(e, '$.lat'),
+              get_json_object(e, '$.lng'),
+              get_json_object(msg, '$.tid'),
+              get_json_object(e, '$.bzp')
             
             
             

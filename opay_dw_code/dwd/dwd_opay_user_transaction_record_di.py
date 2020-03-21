@@ -16,18 +16,20 @@ from airflow.sensors.named_hive_partition_sensor import NamedHivePartitionSensor
 from airflow.sensors.hive_partition_sensor import HivePartitionSensor
 from airflow.sensors import UFileSensor
 from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
-from airflow.sensors import OssSensor
-
 from plugins.TaskTouchzSuccess import TaskTouchzSuccess
+from airflow.sensors import OssSensor
 import json
 import logging
 from airflow.models import Variable
 import requests
 import os
 
+##
+# 央行月报汇报指标
+#
 args = {
-    'owner': 'liushuzhen',
-    'start_date': datetime(2020, 1, 13),
+    'owner': 'xiedong',
+    'start_date': datetime(2020, 3, 18),
     'depends_on_past': False,
     'retries': 3,
     'retry_delay': timedelta(minutes=2),
@@ -36,16 +38,18 @@ args = {
     'email_on_retry': False,
 }
 
-dag = airflow.DAG('app_opay_active_user_report_w',
-                  schedule_interval="00 03 * * *",
-                  default_args=args)
+
+dag = airflow.DAG('dwd_opay_user_transaction_record_di',
+                  schedule_interval="30 01 * * *",
+                  default_args=args,
+                  )
 
 ##----------------------------------------- 依赖 ---------------------------------------##
 
-ods_sqoop_base_user_di_prev_day_task = OssSensor(
-    task_id='ods_sqoop_base_user_di_prev_day_task',
+dwd_opay_transfer_of_account_record_di_task = OssSensor(
+    task_id='dwd_opay_transfer_of_account_record_di_task',
     bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opay_dw_sqoop_di/opay_user/user",
+        hdfs_path_str="opay/opay_dw/dwd_opay_transfer_of_account_record_di/country_code=NG",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -53,10 +57,10 @@ ods_sqoop_base_user_di_prev_day_task = OssSensor(
     dag=dag
 )
 
-dwm_opay_user_last_visit_df_day_task = OssSensor(
-    task_id='dwm_opay_user_last_visit_df_day_task',
+dwd_opay_cico_record_di_task = OssSensor(
+    task_id='dwd_opay_cico_record_di_task',
     bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opay/opay_dw/dwm_opay_user_last_visit_df/country_code=NG",
+        hdfs_path_str="opay/opay_dw/dwd_opay_cico_record_di/country_code=NG",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -64,6 +68,16 @@ dwm_opay_user_last_visit_df_day_task = OssSensor(
     dag=dag
 )
 
+dwd_opay_transaction_record_di_prev_day_task = OssSensor(
+    task_id='dwd_opay_transaction_record_di_prev_day_task',
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="opay/opay_dw/dwd_opay_transaction_record_di/country_code=NG",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
 def fun_task_timeout_monitor(ds,dag,**op_kwargs):
 
@@ -84,99 +98,65 @@ task_timeout_monitor= PythonOperator(
 
 ##----------------------------------------- 变量 ---------------------------------------##
 db_name = "opay_dw"
+table_name = "dwd_opay_user_transaction_record_di"
+hdfs_path="oss://opay-datalake/opay/opay_dw/" + table_name
 
-table_name = "app_opay_active_user_report_w"
-hdfs_path = "oss://opay-datalake/opay/opay_dw/" + table_name
 
-
-def app_opay_active_user_report_w_sql_task(ds,ds_nodash):
-    HQL = '''
-
+def dwd_opay_user_transaction_record_di_sql_task(ds):
+    HQL='''
     set hive.exec.dynamic.partition.mode=nonstrict;
     set hive.exec.parallel=true;
-      DROP TABLE IF EXISTS test_db.user_base_w_{date};
-    DROP TABLE IF EXISTS test_db.login_w_{date};
+    set mapred.max.split.size=1000000;
     
-    create table test_db.user_base_w_{date} as 
-     SELECT user_id,
-          ROLE,
-         mobile
-     FROM
-        (SELECT user_id,
-                ROLE,
-                mobile,
-             row_number() over(partition BY user_id
-                               ORDER BY update_time DESC) rn
-      FROM opay_dw_ods.ods_sqoop_base_user_di
-      WHERE dt<='{pt}' ) t1
-   WHERE rn = 1;
-  create table test_db.login_w_{date} as 
-SELECT  dt,
-        user_id,
-        ROLE,
-        last_visit
-   FROM
-     opay_dw.dwm_opay_user_last_visit_df
-   where dt='{pt}' ;
-
-INSERT overwrite TABLE opay_dw.app_opay_active_user_report_w partition (country_code,dt,target_type)
-SELECT     '_' country,
-           '-' city,
-               ROLE,
-               '-' kyc_level,
-                   '-' top_consume_scenario,
-                   '-' register_client,
-                       c,
-                       'NG' country_code,
-                       dt,
-                       target_type
-FROM (
-SELECT dt,
-       ROLE,
-       'login_user_cnt_w' target_type,
-                           count(DISTINCT user_id) c
-FROM test_db.login_w_{date}
-WHERE last_visit>=date_sub(next_day('{pt}', 'mo'), 7)
-  AND last_visit<='{pt}'
-GROUP BY dt,
-         ROLE
-union all
-SELECT dt,
-      'ALL' ROLE,
-       'login_user_cnt_w' target_type,
-                           count(DISTINCT user_id) c
-FROM test_db.login_w_{date}
-WHERE last_visit>=date_sub(next_day('{pt}', 'mo'), 7)
-  AND last_visit<='{pt}'
-GROUP BY dt
-)m;
-
-  DROP TABLE IF EXISTS test_db.user_base_w_{date};
-    DROP TABLE IF EXISTS test_db.login_w_{date};
+    insert overwrite table {db}.{table} partition(country_code, dt)
+    select 
+        order_no, amount, currency, 
+        originator_id as user_id, originator_role as user_role, 'originator' as originator_or_affiliate, 
+        create_time, update_time, top_service_type, sub_service_type, order_status,
+        top_consume_scenario, sub_consume_scenario,
+        country_code, dt
+    from opay_dw.dwd_opay_transaction_record_di 
+    where dt = '{pt}' and originator_type = 'USER' 
+    union all
+    select 
+        order_no, amount, currency, 
+        affiliate_id as user_id, affiliate_role as user_role, 'affiliate' as originator_or_affiliate, 
+        create_time, update_time, top_service_type, sub_service_type, order_status,
+        top_consume_scenario, sub_consume_scenario,
+        country_code, dt
+    from opay_dw.dwd_opay_transfer_of_account_record_di
+    where dt = '{pt}' and sub_service_type = 'AATransfer' and affiliate_type = 'USER'
+    union all
+    select 
+        order_no, amount, currency, 
+        affiliate_id as user_id, affiliate_role as user_role, 'affiliate' as originator_or_affiliate, 
+        create_time, update_time, top_service_type, sub_service_type, order_status,
+        top_consume_scenario, sub_consume_scenario,
+        country_code, dt
+    from opay_dw.dwd_opay_cico_record_di
+    where dt = '{pt}' and affiliate_type = 'USER'
     
-
-
-
-
     '''.format(
         pt=ds,
         table=table_name,
-        db=db_name,
-        date=ds_nodash
+        db=db_name
     )
     return HQL
 
 
-def execution_data_task_id(ds, ds_nodash,  **kargs):
+
+# 主流程
+def execution_data_task_id(ds, **kargs):
     hive_hook = HiveCliHook()
 
     # 读取sql
-    _sql = app_opay_active_user_report_w_sql_task(ds,ds_nodash)
+    _sql = dwd_opay_user_transaction_record_di_sql_task(ds)
 
     logging.info('Executing: %s', _sql)
 
     # 执行Hive
     hive_hook.run_cli(_sql)
+
 
     # 生成_SUCCESS
     """
@@ -187,14 +167,13 @@ def execution_data_task_id(ds, ds_nodash,  **kargs):
     TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "true", "true")
 
 
-app_opay_active_user_report_w_task = PythonOperator(
-    task_id='app_opay_active_user_report_w_task',
+dwd_opay_user_transaction_record_di_task = PythonOperator(
+    task_id='dwd_opay_user_transaction_record_di_task',
     python_callable=execution_data_task_id,
     provide_context=True,
     dag=dag
 )
 
-ods_sqoop_base_user_di_prev_day_task >> app_opay_active_user_report_w_task
-dwm_opay_user_last_visit_df_day_task >> app_opay_active_user_report_w_task
-
-
+dwd_opay_transaction_record_di_prev_day_task >> dwd_opay_user_transaction_record_di_task
+dwd_opay_transfer_of_account_record_di_task >> dwd_opay_user_transaction_record_di_task
+dwd_opay_cico_record_di_task >> dwd_opay_user_transaction_record_di_task

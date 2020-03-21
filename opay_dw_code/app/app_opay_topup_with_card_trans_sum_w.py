@@ -27,7 +27,7 @@ import os
 
 args = {
     'owner': 'liushuzhen',
-    'start_date': datetime(2019, 12, 25),
+    'start_date': datetime(2020, 3, 18),
     'depends_on_past': False,
     'retries': 3,
     'retry_delay': timedelta(minutes=2),
@@ -36,17 +36,18 @@ args = {
     'email_on_retry': False,
 }
 
-dag = airflow.DAG('dwm_opay_user_first_tran_di',
+dag = airflow.DAG('app_opay_topup_with_card_trans_sum_w',
                   schedule_interval="00 03 * * *",
                   default_args=args,
                   )
 
 ##----------------------------------------- 依赖 ---------------------------------------##
 
-dwd_opay_transaction_record_di_prev_day_task = OssSensor(
-    task_id='dwd_opay_transaction_record_di_prev_day_task',
+
+dwd_opay_topup_with_card_record_di_task = OssSensor(
+    task_id='dwd_opay_topup_with_card_record_di_task',
     bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opay/opay_dw/dwd_opay_transaction_record_di/country_code=NG",
+        hdfs_path_str="opay/opay_dw/dwd_opay_topup_with_card_record_di/country_code=NG",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -54,18 +55,20 @@ dwd_opay_transaction_record_di_prev_day_task = OssSensor(
     dag=dag
 )
 
-##----------------------------------------- 任务超时监控 ---------------------------------------##
-def fun_task_timeout_monitor(ds,dag,**op_kwargs):
 
-    dag_ids=dag.dag_id
+##----------------------------------------- 任务超时监控 ---------------------------------------##
+def fun_task_timeout_monitor(ds, dag, **op_kwargs):
+    dag_ids = dag.dag_id
 
     msg = [
-        {"dag":dag, "db": "opay_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=NG/dt={pt}".format(pt=ds), "timeout": "3000"}
+        {"dag": dag, "db": "opay_dw", "table": "{dag_name}".format(dag_name=dag_ids),
+         "partition": "country_code=NG/dt={pt}".format(pt=ds), "timeout": "3000"}
     ]
 
     TaskTimeoutMonitor().set_task_monitor(msg)
 
-task_timeout_monitor= PythonOperator(
+
+task_timeout_monitor = PythonOperator(
     task_id='task_timeout_monitor',
     python_callable=fun_task_timeout_monitor,
     provide_context=True,
@@ -75,47 +78,47 @@ task_timeout_monitor= PythonOperator(
 ##----------------------------------------- 变量 ---------------------------------------##
 db_name = "opay_dw"
 
-table_name = "dwm_opay_user_first_tran_di"
+table_name = "app_opay_topup_with_card_trans_sum_w"
 hdfs_path = "oss://opay-datalake/opay/opay_dw/" + table_name
 
 
-def dwm_opay_user_first_tran_di_sql_task(ds):
+def app_opay_topup_with_card_trans_sum_w_sql_task(ds):
     HQL = '''
-    
+
     set mapred.max.split.size=1000000;
     set hive.exec.dynamic.partition.mode=nonstrict;
     set hive.exec.parallel=true;
-    INSERT overwrite TABLE opay_dw.dwm_opay_user_first_tran_di partition (country_code,dt)
-SELECT a.order_no,
-       a.create_time,
-       a.amount,
-       a.top_service_type,
-       a.sub_service_type,
-       a.originator_id,
-       a.originator_type,
-       a.originator_role,
-       a.originator_kyc_level,
-       a.originator_name,
-       a.top_consume_scenario,
-       a.sub_consume_scenario,
-       a.client_source,
-       a.country_code,
-       a.dt
-FROM
-  (SELECT m1.*
-   FROM
-     (SELECT m.*,
-             row_number()over(partition BY originator_id
-                              ORDER BY create_time) rn
-      FROM opay_dw.dwd_opay_transaction_record_di m
-      WHERE order_status='SUCCESS'
-        AND dt='{pt}') m1
-   WHERE rn=1) a
-LEFT JOIN
-  (SELECT *
-   FROM opay_dw.dwm_opay_user_first_tran_di
-   WHERE dt<'{pt}') b ON a.originator_id=b.originator_id
-WHERE b.originator_id IS NULL
+
+    INSERT overwrite TABLE {db}.{table} partition (country_code, dt)
+
+    select 
+        sub_consume_scenario, if(region is null, '-', region), t1.state, client_source,out_channel_id,
+        originator_role,originator_type, order_status,
+        count(*) as order_cnt,
+        sum(amount) as order_amt,
+        sum(channel_amount) as channel_amt,
+        sum(fee_amount) as fee_amt,
+        country_code,
+        '{pt}' as dt
+    from (
+          select * from  
+            (select 
+               sub_consume_scenario, state, client_source, out_channel_id,originator_role,originator_type, order_status,
+               country_code,amount, channel_amount, fee_amount,row_number()over(partition by order_no order by update_time desc) rn
+            from opay_dw.dwd_opay_topup_with_card_record_di
+            where dt between date_sub(next_day('{pt}', 'mo'), 7)  and '{pt}'
+                  and date_format(create_time, 'yyyy-MM-dd') between date_sub(next_day('{pt}', 'mo'), 7)  and '{pt}') m 
+          where rn=1
+         ) t1 left join (
+        select
+            state, region
+        from opay_dw.dim_opay_region_state_mapping_df
+        where dt = if('{pt}' <= '2020-02-10', '2020-02-10', '{pt}')
+    ) t2 on t1.state = t2.state
+    group by sub_consume_scenario, if(region is null, '-', region), t1.state, client_source,out_channel_id,
+             originator_role,originator_type, order_status,country_code
+
+
 
 
     '''.format(
@@ -130,7 +133,7 @@ def execution_data_task_id(ds, **kargs):
     hive_hook = HiveCliHook()
 
     # 读取sql
-    _sql = dwm_opay_user_first_tran_di_sql_task(ds)
+    _sql = app_opay_topup_with_card_trans_sum_w_sql_task(ds)
 
     logging.info('Executing: %s', _sql)
 
@@ -146,12 +149,13 @@ def execution_data_task_id(ds, **kargs):
     TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "true", "true")
 
 
-dwm_opay_user_first_tran_di_task = PythonOperator(
-    task_id='dwm_opay_user_first_tran_di_task',
+app_opay_topup_with_card_trans_sum_w_task = PythonOperator(
+    task_id='app_opay_topup_with_card_trans_sum_w_task',
     python_callable=execution_data_task_id,
     provide_context=True,
     dag=dag
 )
 
-dwd_opay_transaction_record_di_prev_day_task >> dwm_opay_user_first_tran_di_task
+dwd_opay_topup_with_card_record_di_task >> app_opay_topup_with_card_trans_sum_w_task
+
 

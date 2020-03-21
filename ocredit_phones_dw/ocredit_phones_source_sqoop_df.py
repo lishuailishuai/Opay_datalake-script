@@ -24,7 +24,7 @@ args = {
     'email_on_retry': False,
     'on_success_callback':on_success_callback,
 }
-schedule_interval="10 02 * * *"
+schedule_interval="10 01 * * *"
 
 dag = airflow.DAG(
     'ocredit_phones_source_sqoop_df',

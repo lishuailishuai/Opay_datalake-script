@@ -26,8 +26,8 @@ import requests
 import os
 
 args = {
-    'owner': 'yuanfeng',
-    'start_date': datetime(2020, 3, 10),
+    'owner': 'xiedong',
+    'start_date': datetime(2020, 3, 18),
     'depends_on_past': False,
     'retries': 3,
     'retry_delay': timedelta(minutes=2),
@@ -36,17 +36,39 @@ args = {
     'email_on_retry': False,
 }
 
-dag = airflow.DAG('dwm_opay_user_last_visit_df',
-                  schedule_interval="30 01 * * *",
+dag = airflow.DAG('dwd_opay_user_upgrade_agent_df',
+                  schedule_interval="10 01 * * *",
                   default_args=args,
                   )
 
 ##----------------------------------------- 依赖 ---------------------------------------##
-dwm_opay_user_last_visit_df_prev_day_task = OssSensor(
-    task_id='dwm_opay_user_last_visit_df_prev_day_task',
+dim_opay_user_base_df_prev_day_task = OssSensor(
+   task_id='dim_opay_user_base_df_prev_day_task',
+  bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="opay/opay_dw/dim_opay_user_base_df/country_code=NG",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+ )
+
+ods_sqoop_base_user_upgrade_df_check_task = OssSensor(
+    task_id='ods_sqoop_base_user_upgrade_df_check_task',
     bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opay/opay_dw/dwm_opay_user_last_visit_df/country_code=NG",
-        pt='{{macros.ds_add(ds, -1)}}'
+        hdfs_path_str="opay_dw_sqoop/opay_user/user_upgrade",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
+ods_sqoop_base_user_reseller_df_check_task = OssSensor(
+    task_id='ods_sqoop_base_user_reseller_df_check_task',
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="opay_dw_sqoop/opay_user/user_reseller",
+        pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
@@ -75,81 +97,51 @@ task_timeout_monitor = PythonOperator(
 ##----------------------------------------- 变量 ---------------------------------------##
 db_name = "opay_dw"
 
-table_name = "dwm_opay_user_last_visit_df"
+table_name = "dwd_opay_user_upgrade_agent_df"
 hdfs_path = "oss://opay-datalake/opay/opay_dw/" + table_name
+config = eval(Variable.get("opay_time_zone_config"))
 
 
-def dwm_opay_user_last_visit_df_sql_task(ds):
+def dwd_opay_user_upgrade_agent_df_sql_task(ds):
     HQL = '''
-
-
-set mapred.max.split.size=1000000;
-set hive.exec.dynamic.partition.mode=nonstrict;
-set hive.exec.parallel=true;
-
---昨天的全量数据
-with 
-yesterday_total as (
-  SELECT
-    user_id
-    ,role
-    ,last_visit
-  FROM
-    opay_dw.dwm_opay_user_last_visit_df
-  where
-    dt = '{yesterday}'
-),
-
---今天的增量数据
-today_increase as (
-  select 
-    uid as user_id
-    ,role
-    ,substr(from_unixtime(unix_timestamp(concat(dt,' ',hour,':00:00'), 'yyyy-MM-dd HH:mm:ss')+3600),0,10) as last_visit 
-  from 
-    opay_source.service_data_tracking_app 
-  where 
-    concat(dt,' ',hour)>='{yesterday} 23'
-    and concat(dt,' ',hour)<'{pt} 23'
-  group by 
-    uid
-    ,role
-    ,substr(from_unixtime(unix_timestamp(concat(dt,' ',hour,':00:00'), 'yyyy-MM-dd HH:mm:ss')+3600),0,10)
-)
-
---union后取最新
-insert overwrite table opay_dw.dwm_opay_user_last_visit_df partition(country_code, dt)
-select
-  user_id
-  ,role
-  ,last_visit
-
-  ,'NG' as country_code
-  ,'{pt}' as dt 
-FROM
-  (
-  SELECT
-    user_id
-    ,role
-    ,last_visit
-    ,row_number()over(partition by user_id order by last_visit desc) rn
-  FROM
-    (
-    select user_id,role,last_visit from yesterday_total
-    union all
-    select user_id,role,last_visit from today_increase
-    ) as a
-  ) as b
-where
-  rn=1
-;
-
+    set  hive.exec.max.dynamic.partitions.pernode=1000;
+    set hive.exec.dynamic.partition.mode=nonstrict;
+    set hive.exec.parallel=true;
+    insert overwrite table {db}.{table} partition(country_code, dt)
+    select 
+        t0.user_id, t0.role, 
+        nvl(t1.upgrade_time, t0.create_time) as upgrade_time,
+        accept_overload_user_id,
+        confirmed_overload_user_id,
+        if(t2.aggregator_id is null, 'N', 'Y') as is_reseller,
+        t2.update_time as reseller_time,
+        t2.aggregator_id,
+        'NG' as country_code,
+        '{pt}' as dt
+    from (
+        SELECT
+            user_id, role, create_time
+        from opay_dw.dim_opay_user_base_df where dt = '{pt}' and role = 'agent'
+    ) t0 left join (
+        select
+            user_id, 
+            accept_overload_user_Id as accept_overload_user_id, confirmed_overload_user_Id as confirmed_overload_user_id, 
+            default.localTime("{config}", 'NG',upgrade_date, 0) as upgrade_time
+        from opay_dw_ods.ods_sqoop_base_user_upgrade_df where dt = '{pt}'
+    ) t1 on t0.user_id = t1.user_id
+    left join (
+        select
+            user_id, merchant_id as aggregator_id, 
+            default.localTime("{config}", 'NG',update_time, 0) as update_time
+        from opay_dw_ods.ods_sqoop_base_user_reseller_df where dt = '{pt}' 
+    ) t2 on t0.user_id = t2.user_id
 
     '''.format(
         pt=ds,
         yesterday=airflow.macros.ds_add(ds, -1),
         table=table_name,
-        db=db_name
+        db=db_name,
+        config = config
     )
     return HQL
 
@@ -158,7 +150,7 @@ def execution_data_task_id(ds, **kargs):
     hive_hook = HiveCliHook()
 
     # 读取sql
-    _sql = dwm_opay_user_last_visit_df_sql_task(ds)
+    _sql = dwd_opay_user_upgrade_agent_df_sql_task(ds)
 
     logging.info('Executing: %s', _sql)
 
@@ -174,13 +166,15 @@ def execution_data_task_id(ds, **kargs):
     TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "true", "true")
 
 
-dwm_opay_user_last_visit_df_task = PythonOperator(
-    task_id='dwm_opay_user_last_visit_df_task',
+dwd_opay_user_upgrade_agent_df_task = PythonOperator(
+    task_id='dwd_opay_user_upgrade_agent_df_task',
     python_callable=execution_data_task_id,
     provide_context=True,
     dag=dag
 )
 
-dwm_opay_user_last_visit_df_prev_day_task >> dwm_opay_user_last_visit_df_task
+dim_opay_user_base_df_prev_day_task >> dwd_opay_user_upgrade_agent_df_task
+ods_sqoop_base_user_reseller_df_check_task >> dwd_opay_user_upgrade_agent_df_task
+ods_sqoop_base_user_upgrade_df_check_task >> dwd_opay_user_upgrade_agent_df_task
 
 

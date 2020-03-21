@@ -49,10 +49,10 @@ table_name="dwd_oride_driver_extend_hf"
 hdfs_path = "oss://opay-datalake/oride/oride_dw/" + table_name
 ##----------------------------------------- 依赖 ---------------------------------------##
 
-ods_binlog_base_data_driver_hi_prev_day_task = OssSensor(
-        task_id='ods_binlog_base_data_driver_hi_prev_day_task',
+ods_binlog_base_data_driver_extend_h_his_prev_day_task = OssSensor(
+        task_id='ods_binlog_base_data_driver_extend_h_his_prev_day_task',
         bucket_key='{hdfs_path_str}/dt={pt}/hour={now_hour}/_SUCCESS'.format(
-            hdfs_path_str="oride_binlog/oride_db.oride_data.data_driver",
+            hdfs_path_str="oride_h_his/ods_binlog_base_data_driver_extend_h_his",
             pt='{{ds}}',
             now_day='{{macros.ds_add(ds, +1)}}' ,
             now_hour='{{ execution_date.strftime("%H") }}'
@@ -209,4 +209,4 @@ dwd_oride_driver_extend_hf_task = PythonOperator(
     dag=dag
 )
 
-ods_binlog_base_data_driver_hi_prev_day_task >>  dwd_oride_driver_extend_hf_task
+ods_binlog_base_data_driver_extend_h_his_prev_day_task >>  dwd_oride_driver_extend_hf_task
