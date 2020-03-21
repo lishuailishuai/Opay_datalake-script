@@ -67,7 +67,7 @@ metrcis_list = [
 
     (
         'Trade_Airtime_Success',
-        '''SELECT count(distinct("order_no")) AS "trade_success_cnt" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__table" = 'airtime_topup_record' AND "order_status" = 'SUCCESS') and time > {time} GROUP BY time(10m) ''',
+        '''SELECT count(distinct("order_no")) AS "trade_success_cnt" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__source_table" = 'airtime_topup_record' AND "order_status" = 'SUCCESS') and time > {time} GROUP BY time(10m) ''',
         'trade_alert_value',
         7,
         'trade_alert_level_1_address',
@@ -79,7 +79,7 @@ metrcis_list = [
     ## Betting
     (
         'Trade_Betting',
-        '''SELECT count(distinct("order_no")) AS "trade_cnt",count(distinct("user_id")) AS "trade_user_cnt" ,sum("amount") AS "trade_amount" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__table" = 'betting_topup_record') and time > {time} GROUP BY time(10m) ''',
+        '''SELECT count(distinct("order_no")) AS "trade_cnt",count(distinct("user_id")) AS "trade_user_cnt" ,sum("amount") AS "trade_amount" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__source_table" = 'betting_topup_record' AND "__op" = 'c') and time > {time} GROUP BY time(10m) ''',
         'trade_alert_value',
         7,
         'trade_alert_level_1_address',
@@ -90,7 +90,7 @@ metrcis_list = [
 
     (
         'Trade_Betting_Success',
-        '''SELECT count(distinct("order_no")) AS "trade_success_cnt" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__table" = 'betting_topup_record' AND "order_status" = 'SUCCESS') and time > {time} GROUP BY time(10m) ''',
+        '''SELECT count(distinct("order_no")) AS "trade_success_cnt" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__source_table" = 'betting_topup_record'  AND "order_status" = 'SUCCESS') and time > {time} GROUP BY time(10m) ''',
         'trade_alert_value',
         7,
         'trade_alert_level_1_address',
@@ -102,7 +102,7 @@ metrcis_list = [
     ## Electricity
     (
         'Trade_Electricity',
-        '''SELECT count(distinct("order_no")) AS "trade_cnt",count(distinct("user_id")) AS "trade_user_cnt" ,sum("amount") AS "trade_amount" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__table" = 'electricity_topup_record') and time > {time} GROUP BY time(10m) ''',
+        '''SELECT count(distinct("order_no")) AS "trade_cnt",count(distinct("user_id")) AS "trade_user_cnt" ,sum("amount") AS "trade_amount" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__source_table" = 'electricity_topup_record'  AND "__op" = 'c') and time > {time} GROUP BY time(10m) ''',
         'trade_alert_value',
         7,
         'trade_alert_level_1_address',
@@ -113,7 +113,7 @@ metrcis_list = [
 
     (
         'Trade_Electricity_Success',
-        '''SELECT count(distinct("order_no")) AS "trade_success_cnt" AS "trade_amount" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__table" = 'electricity_topup_record' AND "order_status" = 'SUCCESS') and time > {time} GROUP BY time(10m) ''',
+        '''SELECT count(distinct("order_no")) AS "trade_success_cnt" AS "trade_amount" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__source_table" = 'electricity_topup_record' AND "order_status" = 'SUCCESS') and time > {time} GROUP BY time(10m) ''',
         'trade_alert_value',
         7,
         'trade_alert_level_1_address',
@@ -125,7 +125,7 @@ metrcis_list = [
     ## TV
     (
         'Trade_TV',
-        '''SELECT count(distinct("order_no")) AS "trade_cnt",count(distinct("user_id")) AS "trade_user_cnt" ,sum("amount") AS "trade_amount" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__table" = 'tv_topup_record') and time > {time} GROUP BY time(10m) ''',
+        '''SELECT count(distinct("order_no")) AS "trade_cnt",count(distinct("user_id")) AS "trade_user_cnt" ,sum("amount") AS "trade_amount" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__source_table" = 'tv_topup_record' AND "__op" = 'c') and time > {time} GROUP BY time(10m) ''',
         'trade_alert_value',
         7,
         'trade_alert_level_1_address',
@@ -136,7 +136,7 @@ metrcis_list = [
 
     (
         'Trade_TV_Success',
-        '''SELECT count(distinct("order_no")) AS "trade_success_cnt" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__table" = 'tv_topup_record' AND "order_status" = 'SUCCESS') and time > {time} GROUP BY time(10m) ''',
+        '''SELECT count(distinct("order_no")) AS "trade_success_cnt" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__source_table" = 'tv_topup_record'  AND "order_status" = 'SUCCESS') and time > {time} GROUP BY time(10m) ''',
         'trade_alert_value',
         7,
         'trade_alert_level_1_address',
@@ -148,7 +148,7 @@ metrcis_list = [
     ## Mobiledata
     (
         'Trade_Mobiledata',
-        '''SELECT count(distinct("order_no")) AS "trade_cnt",count(distinct("user_id")) AS "trade_user_cnt" ,sum("amount") AS "trade_amount" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__table" = 'mobiledata_topup_record') and time > {time} GROUP BY time(10m) ''',
+        '''SELECT count(distinct("order_no")) AS "trade_cnt",count(distinct("user_id")) AS "trade_user_cnt" ,sum("amount") AS "trade_amount" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__source_table" = 'mobiledata_topup_record'   AND "__op" = 'c') and time > {time} GROUP BY time(10m) ''',
         'trade_alert_value',
         7,
         'trade_alert_level_1_address',
@@ -159,7 +159,7 @@ metrcis_list = [
 
     (
         'Trade_Mobiledata_Success',
-        '''SELECT count(distinct("order_no")) AS "trade_success_cnt" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__table" = 'mobiledata_topup_record' AND "order_status" = 'SUCCESS') and time > {time} GROUP BY time(10m) ''',
+        '''SELECT count(distinct("order_no")) AS "trade_success_cnt" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__source_table" = 'mobiledata_topup_record' AND "order_status" = 'SUCCESS') and time > {time} GROUP BY time(10m) ''',
         'trade_alert_value',
         7,
         'trade_alert_level_1_address',
@@ -171,7 +171,7 @@ metrcis_list = [
     ## Cash_In
     (
         'Trade_Cash_In',
-        '''SELECT count(distinct("order_no")) AS "trade_cnt",count(distinct("user_id")) AS "trade_user_cnt" ,sum("amount") AS "trade_amount" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__table" = 'cash_in_record') and time > {time} GROUP BY time(10m) ''',
+        '''SELECT count(distinct("order_no")) AS "trade_cnt",count(distinct("user_id")) AS "trade_user_cnt" ,sum("amount") AS "trade_amount" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__source_table" = 'cash_in_record' AND "__op" = 'c') and time > {time} GROUP BY time(10m) ''',
         'trade_alert_value',
         7,
         'trade_alert_level_1_address',
@@ -182,7 +182,7 @@ metrcis_list = [
 
     (
         'Trade_Cash_In_Success',
-        '''SELECT count(distinct("order_no")) AS "trade_success_cnt" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__table" = 'cash_in_record' AND "order_status" = 'SUCCESS') and time > {time} GROUP BY time(10m) ''',
+        '''SELECT count(distinct("order_no")) AS "trade_success_cnt" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__source_table" = 'cash_in_record' AND "order_status" = 'SUCCESS') and time > {time} GROUP BY time(10m) ''',
         'trade_alert_value',
         7,
         'trade_alert_level_1_address',
@@ -194,7 +194,7 @@ metrcis_list = [
     ## Cash_Out
     (
         'Trade_Cash_Out',
-        '''SELECT count(distinct("order_no")) AS "trade_cnt",count(distinct("user_id")) AS "trade_user_cnt" ,sum("amount") AS "trade_amount" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__table" = 'cash_out_record') and time > {time} GROUP BY time(10m) ''',
+        '''SELECT count(distinct("order_no")) AS "trade_cnt",count(distinct("user_id")) AS "trade_user_cnt" ,sum("amount") AS "trade_amount" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__source_table" = 'cash_out_record' AND "__op" = 'c') and time > {time} GROUP BY time(10m) ''',
         'trade_alert_value',
         7,
         'trade_alert_level_1_address',
@@ -205,7 +205,7 @@ metrcis_list = [
 
     (
         'Trade_Cash_Out_Success',
-        '''SELECT count(distinct("order_no")) AS "trade_success_cnt" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__table" = 'cash_out_record' AND "order_status" = 'SUCCESS') and time > {time} GROUP BY time(10m) ''',
+        '''SELECT count(distinct("order_no")) AS "trade_success_cnt" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__source_table" = 'cash_out_record' AND "order_status" = 'SUCCESS') and time > {time} GROUP BY time(10m) ''',
         'trade_alert_value',
         7,
         'trade_alert_level_1_address',
@@ -217,7 +217,7 @@ metrcis_list = [
     ## ACTransfer
     (
         'Trade_ACTransfer',
-        '''SELECT count(distinct("order_no")) AS "trade_cnt",count(distinct("user_id")) AS "trade_user_cnt" ,sum("amount") AS "trade_amount" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__table" = 'user_transfer_card_record' or "__table" = 'merchant_transfer_card_record') and time > {time} GROUP BY time(10m) ''',
+        '''SELECT count(distinct("order_no")) AS "trade_cnt",count(distinct("user_id")) AS "trade_user_cnt" ,sum("amount") AS "trade_amount" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__source_table" = 'user_transfer_card_record' or "__source_table" = 'merchant_transfer_card_record') AND "__op" = 'c' and time > {time} GROUP BY time(10m) ''',
         'trade_alert_value',
         7,
         'trade_alert_level_1_address',
@@ -228,7 +228,7 @@ metrcis_list = [
 
     (
         'Trade_ACTransfer_Success',
-        '''SELECT count(distinct("order_no")) AS "trade_success_cnt" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__table" = 'user_transfer_card_record' or "__table" = 'merchant_transfer_card_record') AND "order_status" = 'SUCCESS' and time > {time} GROUP BY time(10m) ''',
+        '''SELECT count(distinct("order_no")) AS "trade_success_cnt" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__source_table" = 'user_transfer_card_record' or "__source_table" = 'merchant_transfer_card_record') AND "order_status" = 'SUCCESS' and time > {time} GROUP BY time(10m) ''',
         'trade_alert_value',
         7,
         'trade_alert_level_1_address',
@@ -240,7 +240,7 @@ metrcis_list = [
     ## Pos
     (
         'Trade_Pos',
-        '''SELECT count(distinct("order_no")) AS "trade_cnt",count(distinct("user_id")) AS "trade_user_cnt" ,sum("amount") AS "trade_amount" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__table" = 'user_pos_transaction_record' or "__table" = 'merchant_pos_transaction_record') and time > {time} GROUP BY time(10m) ''',
+        '''SELECT count(distinct("order_no")) AS "trade_cnt",count(distinct("user_id")) AS "trade_user_cnt" ,sum("amount") AS "trade_amount" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__source_table" = 'user_pos_transaction_record' or "__source_table" = 'merchant_pos_transaction_record') AND "__op" = 'c' and time > {time} GROUP BY time(10m) ''',
         'trade_alert_value',
         7,
         'trade_alert_level_1_address',
@@ -251,7 +251,7 @@ metrcis_list = [
 
     (
         'Trade_Pos_Success',
-        '''SELECT count(distinct("order_no")) AS "trade_success_cnt" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__table" = 'user_pos_transaction_record' or "__table" = 'merchant_pos_transaction_record')  AND "order_status" = 'SUCCESS' and time > {time} GROUP BY time(10m) ''',
+        '''SELECT count(distinct("order_no")) AS "trade_success_cnt" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__source_table" = 'user_pos_transaction_record' or "__source_table" = 'merchant_pos_transaction_record')  AND "order_status" = 'SUCCESS' and time > {time} GROUP BY time(10m) ''',
         'trade_alert_value',
         7,
         'trade_alert_level_1_address',
@@ -263,7 +263,7 @@ metrcis_list = [
     ## TopupWithCard
     (
         'Trade_TopupWithCard',
-        '''SELECT count(distinct("order_no")) AS "trade_cnt",count(distinct("user_id")) AS "trade_user_cnt" ,sum("amount") AS "trade_amount" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__table" = 'user_topup_record' or "__table" = 'merchant_topup_record') and time > {time} GROUP BY time(10m) ''',
+        '''SELECT count(distinct("order_no")) AS "trade_cnt",count(distinct("user_id")) AS "trade_user_cnt" ,sum("amount") AS "trade_amount" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__source_table" = 'user_topup_record' or "__source_table" = 'merchant_topup_record') AND "__op" = 'c' and time > {time} GROUP BY time(10m) ''',
         'trade_alert_value',
         7,
         'trade_alert_level_1_address',
@@ -274,7 +274,7 @@ metrcis_list = [
 
     (
         'Trade_TopupWithCard_Success',
-        '''SELECT count(distinct("order_no")) AS "trade_success_cnt" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__table" = 'user_topup_record' or "__table" = 'merchant_topup_record') AND "order_status" = 'SUCCESS' and time > {time} GROUP BY time(10m) ''',
+        '''SELECT count(distinct("order_no")) AS "trade_success_cnt" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__source_table" = 'user_topup_record' or "__source_table" = 'merchant_topup_record') AND "order_status" = 'SUCCESS' and time > {time} GROUP BY time(10m) ''',
         'trade_alert_value',
         7,
         'trade_alert_level_1_address',
@@ -286,7 +286,7 @@ metrcis_list = [
     ## Receivemoney
     (
         'Trade_Receivemoney',
-        '''SELECT count(distinct("order_no")) AS "trade_cnt",count(distinct("user_id")) AS "trade_user_cnt" ,sum("amount") AS "trade_amount" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__table" = 'user_receive_money_record' or "__table" = 'merchant_receive_money_record') and time > {time} GROUP BY time(10m) ''',
+        '''SELECT count(distinct("order_no")) AS "trade_cnt",count(distinct("user_id")) AS "trade_user_cnt" ,sum("amount") AS "trade_amount" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__source_table" = 'user_receive_money_record' or "__source_table" = 'merchant_receive_money_record') AND "__op" = 'c' and time > {time} GROUP BY time(10m) ''',
         'trade_alert_value',
         7,
         'trade_alert_level_1_address',
@@ -297,7 +297,7 @@ metrcis_list = [
 
     (
         'Trade_Receivemoney_Success',
-        '''SELECT count(distinct("order_no")) AS "trade_success_cnt" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__table" = 'user_receive_money_record' or "__table" = 'merchant_receive_money_record') AND "order_status" = 'SUCCESS' and time > {time} GROUP BY time(10m) ''',
+        '''SELECT count(distinct("order_no")) AS "trade_success_cnt" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__source_table" = 'user_receive_money_record' or "__source_table" = 'merchant_receive_money_record') AND "order_status" = 'SUCCESS' and time > {time} GROUP BY time(10m) ''',
         'trade_alert_value',
         7,
         'trade_alert_level_1_address',
@@ -309,7 +309,7 @@ metrcis_list = [
     ## TakeRide
     (
         'Trade_TakeRide',
-        '''SELECT count(distinct("order_no")) AS "trade_cnt",count(distinct("user_id")) AS "trade_user_cnt" ,sum("amount") AS "trade_amount" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__table" = 'merchant_acquiring_record') and "merchant_id" = '256619082800116' and time > {time} GROUP BY time(10m) ''',
+        '''SELECT count(distinct("order_no")) AS "trade_cnt",count(distinct("user_id")) AS "trade_user_cnt" ,sum("amount") AS "trade_amount" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__source_table" = 'merchant_acquiring_record' AND "__op" = 'c') and "merchant_id" = '256619082800116' and time > {time} GROUP BY time(10m) ''',
         'trade_alert_value',
         7,
         'trade_alert_level_1_address',
@@ -320,7 +320,7 @@ metrcis_list = [
 
     (
         'Trade_TakeRide_Success',
-        '''SELECT count(distinct("order_no")) AS "trade_success_cnt" AS "trade_amount" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__table" = 'merchant_acquiring_record') and "merchant_id" = '256619082800116' AND "order_status" = 'SUCCESS' and time > {time} GROUP BY time(10m) ''',
+        '''SELECT count(distinct("order_no")) AS "trade_success_cnt" AS "trade_amount" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__source_table" = 'merchant_acquiring_record') and "merchant_id" = '256619082800116' AND "order_status" = 'SUCCESS' and time > {time} GROUP BY time(10m) ''',
         'trade_alert_value',
         7,
         'trade_alert_level_1_address',
@@ -332,7 +332,7 @@ metrcis_list = [
     ## OrideSalary
     (
         'Trade_OrideSalary',
-        '''SELECT count(distinct("order_no")) AS "trade_cnt",count(distinct("user_id")) AS "trade_user_cnt" ,sum("amount") AS "trade_amount" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__table" = 'merchant_transfer_user_record') and "merchant_id" = '256619082800116' and time > {time} GROUP BY time(10m) ''',
+        '''SELECT count(distinct("order_no")) AS "trade_cnt",count(distinct("user_id")) AS "trade_user_cnt" ,sum("amount") AS "trade_amount" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__source_table" = 'merchant_transfer_user_record'  AND "__op" = 'c') and "merchant_id" = '256619082800116' and time > {time} GROUP BY time(10m) ''',
         'trade_alert_value',
         7,
         'trade_alert_level_1_address',
@@ -343,7 +343,7 @@ metrcis_list = [
 
     (
         'Trade_OrideSalary_Success',
-        '''SELECT count(distinct("order_no")) AS "trade_success_cnt" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__table" = 'merchant_transfer_user_record') and "merchant_id" = '256619082800116' AND "order_status" = 'SUCCESS' and time > {time} GROUP BY time(10m) ''',
+        '''SELECT count(distinct("order_no")) AS "trade_success_cnt" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__source_table" = 'merchant_transfer_user_record') and "merchant_id" = '256619082800116' AND "order_status" = 'SUCCESS' and time > {time} GROUP BY time(10m) ''',
         'trade_alert_value',
         7,
         'trade_alert_level_1_address',
@@ -355,7 +355,7 @@ metrcis_list = [
     ## Subscribe
     (
         'Trade_Subscribe',
-        '''SELECT count(distinct("order_no")) AS "trade_cnt",count(distinct("user_id")) AS "trade_user_cnt" ,sum("amount") AS "trade_amount" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__table" = 'merchant_acquiring_record') and "merchant_id" = '256619082801043' and time > {time} GROUP BY time(10m) ''',
+        '''SELECT count(distinct("order_no")) AS "trade_cnt",count(distinct("user_id")) AS "trade_user_cnt" ,sum("amount") AS "trade_amount" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__source_table" = 'merchant_acquiring_record'  AND "__op" = 'c') and "merchant_id" = '256619082801043' and time > {time} GROUP BY time(10m) ''',
         'trade_alert_value',
         7,
         'trade_alert_level_1_address',
@@ -366,7 +366,7 @@ metrcis_list = [
 
     (
         'Trade_Subscribe_Success',
-        '''SELECT count(distinct("order_no")) AS "trade_success_cnt" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__table" = 'merchant_acquiring_record') and "merchant_id" = '256619082801043' AND "order_status" = 'SUCCESS' and time > {time} GROUP BY time(10m) ''',
+        '''SELECT count(distinct("order_no")) AS "trade_success_cnt" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__source_table" = 'merchant_acquiring_record') and "merchant_id" = '256619082801043' AND "order_status" = 'SUCCESS' and time > {time} GROUP BY time(10m) ''',
         'trade_alert_value',
         7,
         'trade_alert_level_1_address',
@@ -378,7 +378,7 @@ metrcis_list = [
     ## Redeem
     (
         'Trade_Redeem',
-        '''SELECT count(distinct("order_no")) AS "trade_cnt",count(distinct("user_id")) AS "trade_user_cnt" ,sum("amount") AS "trade_amount" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__table" = 'merchant_transfer_user_record') and "merchant_id" = '256619082801043' and time > {time} GROUP BY time(10m) ''',
+        '''SELECT count(distinct("order_no")) AS "trade_cnt",count(distinct("user_id")) AS "trade_user_cnt" ,sum("amount") AS "trade_amount" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__source_table" = 'merchant_transfer_user_record' AND "__op" = 'c') and "merchant_id" = '256619082801043' and time > {time} GROUP BY time(10m) ''',
         'trade_alert_value',
         7,
         'trade_alert_level_1_address',
@@ -389,7 +389,7 @@ metrcis_list = [
 
     (
         'Trade_Redeem_Success',
-        '''SELECT count(distinct("order_no")) AS "trade_success_cnt" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__table" = 'merchant_transfer_user_record') and "merchant_id" = '256619082801043' AND "order_status" = 'SUCCESS' and time > {time} GROUP BY time(10m) ''',
+        '''SELECT count(distinct("order_no")) AS "trade_success_cnt" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__source_table" = 'merchant_transfer_user_record') and "merchant_id" = '256619082801043' AND "order_status" = 'SUCCESS' and time > {time} GROUP BY time(10m) ''',
         'trade_alert_value',
         7,
         'trade_alert_level_1_address',
@@ -401,7 +401,7 @@ metrcis_list = [
     ## Repayment
     (
         'Trade_Repayment',
-        '''SELECT count(distinct("order_no")) AS "trade_cnt",count(distinct("user_id")) AS "trade_user_cnt" ,sum("amount") AS "trade_amount" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__table" = 'merchant_acquiring_record') and "merchant_id" = '256619082800418' and time > {time} GROUP BY time(10m) ''',
+        '''SELECT count(distinct("order_no")) AS "trade_cnt",count(distinct("user_id")) AS "trade_user_cnt" ,sum("amount") AS "trade_amount" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__source_table" = 'merchant_acquiring_record' AND "__op" = 'c') and "merchant_id" = '256619082800418' and time > {time} GROUP BY time(10m) ''',
         'trade_alert_value',
         7,
         'trade_alert_level_1_address',
@@ -412,7 +412,7 @@ metrcis_list = [
 
     (
         'Trade_Repayment_Success',
-        '''SELECT count(distinct("order_no")) AS "trade_success_cnt" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__table" = 'merchant_acquiring_record') and "merchant_id" = '256619082800418' AND "order_status" = 'SUCCESS' and time > {time} GROUP BY time(10m) ''',
+        '''SELECT count(distinct("order_no")) AS "trade_success_cnt" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__source_table" = 'merchant_acquiring_record') and "merchant_id" = '256619082800418' AND "order_status" = 'SUCCESS' and time > {time} GROUP BY time(10m) ''',
         'trade_alert_value',
         7,
         'trade_alert_level_1_address',
@@ -424,7 +424,7 @@ metrcis_list = [
     ## Loan
     (
         'Trade_Loan',
-        '''SELECT count(distinct("order_no")) AS "trade_cnt",count(distinct("user_id")) AS "trade_user_cnt" ,sum("amount") AS "trade_amount" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__table" = 'merchant_transfer_user_record') and "merchant_id" = '256619082800418' and time > {time} GROUP BY time(10m) ''',
+        '''SELECT count(distinct("order_no")) AS "trade_cnt",count(distinct("user_id")) AS "trade_user_cnt" ,sum("amount") AS "trade_amount" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__source_table" = 'merchant_transfer_user_record' AND "__op" = 'c') and "merchant_id" = '256619082800418' and time > {time} GROUP BY time(10m) ''',
         'trade_alert_value',
         7,
         'trade_alert_level_1_address',
@@ -435,7 +435,7 @@ metrcis_list = [
 
     (
         'Trade_Loan_Success',
-        '''SELECT count(distinct("order_no")) AS "trade_success_cnt" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__table" = 'merchant_transfer_user_record') and "merchant_id" = '256619082800418' AND "order_status" = 'SUCCESS' and time > {time} GROUP BY time(10m) ''',
+        '''SELECT count(distinct("order_no")) AS "trade_success_cnt" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__source_table" = 'merchant_transfer_user_record') and "merchant_id" = '256619082800418' AND "order_status" = 'SUCCESS' and time > {time} GROUP BY time(10m) ''',
         'trade_alert_value',
         7,
         'trade_alert_level_1_address',
@@ -447,7 +447,7 @@ metrcis_list = [
     ## TakeOut
     (
         'Trade_TakeOut',
-        '''SELECT count(distinct("order_no")) AS "trade_cnt",count(distinct("user_id")) AS "trade_user_cnt" ,sum("amount") AS "trade_amount" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__table" = 'merchant_acquiring_record') and "merchant_id" = '256619082800041' and time > {time} GROUP BY time(10m) ''',
+        '''SELECT count(distinct("order_no")) AS "trade_cnt",count(distinct("user_id")) AS "trade_user_cnt" ,sum("amount") AS "trade_amount" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__source_table" = 'merchant_acquiring_record' AND "__op" = 'c') and "merchant_id" = '256619082800041' and time > {time} GROUP BY time(10m) ''',
         'trade_alert_value',
         7,
         'trade_alert_level_1_address',
@@ -458,7 +458,7 @@ metrcis_list = [
 
     (
         'Trade_TakeOut_Success',
-        '''SELECT count(distinct("order_no")) AS "trade_success_cnt" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__table" = 'merchant_acquiring_record') and "merchant_id" = '256619082800041' AND "order_status" = 'SUCCESS' and time > {time} GROUP BY time(10m) ''',
+        '''SELECT count(distinct("order_no")) AS "trade_success_cnt" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__source_table" = 'merchant_acquiring_record') and "merchant_id" = '256619082800041' AND "order_status" = 'SUCCESS' and time > {time} GROUP BY time(10m) ''',
         'trade_alert_value',
         7,
         'trade_alert_level_1_address',
@@ -470,7 +470,7 @@ metrcis_list = [
     ## FoodCashback
     (
         'Trade_FoodCashback',
-        '''SELECT count(distinct("order_no")) AS "trade_cnt",count(distinct("user_id")) AS "trade_user_cnt" ,sum("amount") AS "trade_amount" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__table" = 'merchant_transfer_user_record') and "merchant_id" = '256619082800041' and time > {time} GROUP BY time(10m) ''',
+        '''SELECT count(distinct("order_no")) AS "trade_cnt",count(distinct("user_id")) AS "trade_user_cnt" ,sum("amount") AS "trade_amount" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__source_table" = 'merchant_transfer_user_record' AND "__op" = 'c') and "merchant_id" = '256619082800041' and time > {time} GROUP BY time(10m) ''',
         'trade_alert_value',
         7,
         'trade_alert_level_1_address',
@@ -481,7 +481,7 @@ metrcis_list = [
 
     (
         'Trade_FoodCashback_Success',
-        '''SELECT count(distinct("order_no")) AS "trade_success_cnt" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__table" = 'merchant_transfer_user_record') and "merchant_id" = '256619082800041' AND "order_status" = 'SUCCESS' and time > {time} GROUP BY time(10m) ''',
+        '''SELECT count(distinct("order_no")) AS "trade_success_cnt" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__source_table" = 'merchant_transfer_user_record') and "merchant_id" = '256619082800041' AND "order_status" = 'SUCCESS' and time > {time} GROUP BY time(10m) ''',
         'trade_alert_value',
         7,
         'trade_alert_level_1_address',
@@ -493,7 +493,7 @@ metrcis_list = [
     ## QRCode
     (
         'Trade_QRCode',
-        '''SELECT count(distinct("order_no")) AS "trade_cnt",count(distinct("user_id")) AS "trade_user_cnt" ,sum("amount") AS "trade_amount" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__table" = 'merchant_acquiring_record') and "merchant_id" = '256619111336006' and time > {time} GROUP BY time(10m) ''',
+        '''SELECT count(distinct("order_no")) AS "trade_cnt",count(distinct("user_id")) AS "trade_user_cnt" ,sum("amount") AS "trade_amount" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__source_table" = 'merchant_acquiring_record' AND "__op" = 'c') and "merchant_id" = '256619111336006' and time > {time} GROUP BY time(10m) ''',
         'trade_alert_value',
         7,
         'trade_alert_level_1_address',
@@ -504,7 +504,7 @@ metrcis_list = [
 
     (
         'Trade_QRCode_Success',
-        '''SELECT count(distinct("order_no")) AS "trade_success_cnt" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__table" = 'merchant_acquiring_record') and "merchant_id" = '256619111336006' AND "order_status" = 'SUCCESS' and time > {time} GROUP BY time(10m) ''',
+        '''SELECT count(distinct("order_no")) AS "trade_success_cnt" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__source_table" = 'merchant_acquiring_record') and "merchant_id" = '256619111336006' AND "order_status" = 'SUCCESS' and time > {time} GROUP BY time(10m) ''',
         'trade_alert_value',
         7,
         'trade_alert_level_1_address',
@@ -516,7 +516,7 @@ metrcis_list = [
     ## QRCashback
     (
         'Trade_QRCashback',
-        '''SELECT count(distinct("order_no")) AS "trade_cnt",count(distinct("user_id")) AS "trade_user_cnt" ,sum("amount") AS "trade_amount" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__table" = 'merchant_transfer_user_record') and "merchant_id" = '256619102116029' and time > {time} GROUP BY time(10m) ''',
+        '''SELECT count(distinct("order_no")) AS "trade_cnt",count(distinct("user_id")) AS "trade_user_cnt" ,sum("amount") AS "trade_amount" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__source_table" = 'merchant_transfer_user_record' AND "__op" = 'c') and "merchant_id" = '256619102116029' and time > {time} GROUP BY time(10m) ''',
         'trade_alert_value',
         7,
         'trade_alert_level_1_address',
@@ -527,7 +527,7 @@ metrcis_list = [
 
     (
         'Trade_QRCashback_Success',
-        '''SELECT count(distinct("order_no")) AS "trade_success_cnt" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__table" = 'merchant_transfer_user_record') and "merchant_id" = '256619102116029' AND "order_status" = 'SUCCESS' and time > {time} GROUP BY time(10m) ''',
+        '''SELECT count(distinct("order_no")) AS "trade_success_cnt" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__source_table" = 'merchant_transfer_user_record') and "merchant_id" = '256619102116029' AND "order_status" = 'SUCCESS' and time > {time} GROUP BY time(10m) ''',
         'trade_alert_value',
         7,
         'trade_alert_level_1_address',
@@ -539,7 +539,7 @@ metrcis_list = [
     ## AATransfer
     (
         'Trade_AATransfer',
-        ''' SELECT count(distinct("order_no")) AS "trade_cnt",count(distinct("user_id")) AS "trade_user_cnt" ,sum("amount") AS "trade_amount" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__table" = 'user_transfer_user_record' OR "__table" = 'merchant_transfer_user_record' AND "merchant_id" != '256619082800116' AND "merchant_id" != '256619082801043' AND "merchant_id" != '256619082800418' AND "merchant_id" != '256619082800041' AND "merchant_id" != '256619102116029') AND time > {time}  GROUP BY time(10m) ''',
+        ''' SELECT count(distinct("order_no")) AS "trade_cnt",count(distinct("user_id")) AS "trade_user_cnt" ,sum("amount") AS "trade_amount" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__source_table" = 'user_transfer_user_record' OR "__source_table" = 'merchant_transfer_user_record') AND "__op" = 'c' AND "merchant_id" != '256619082800116' AND "merchant_id" != '256619082801043' AND "merchant_id" != '256619082800418' AND "merchant_id" != '256619082800041' AND "merchant_id" != '256619102116029' AND time > {time}  GROUP BY time(10m) ''',
         'trade_alert_value',
         7,
         'trade_alert_level_1_address',
@@ -550,7 +550,7 @@ metrcis_list = [
 
     (
         'Trade_AATransfer_Success',
-        ''' SELECT count(distinct("order_no")) AS "trade_success_cnt" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__table" = 'user_transfer_user_record' OR "__table" = 'merchant_transfer_user_record') AND ("order_status" = 'SUCCESS' or "transfer_status" = 'CONFIRM_S'  or "transfer_status" = 'TRANSFER_S') AND "merchant_id" != '256619082800116' AND "merchant_id" != '256619082801043' AND "merchant_id" != '256619082800418' AND "merchant_id" != '256619082800041' AND "merchant_id" != '256619102116029' AND time > {time}  GROUP BY time(10m) ''',
+        ''' SELECT count(distinct("order_no")) AS "trade_success_cnt" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__source_table" = 'user_transfer_user_record' OR "__source_table" = 'merchant_transfer_user_record') AND ("order_status" = 'SUCCESS' or "transfer_status" = 'CONFIRM_S'  or "transfer_status" = 'TRANSFER_S') AND "merchant_id" != '256619082800116' AND "merchant_id" != '256619082801043' AND "merchant_id" != '256619082800418' AND "merchant_id" != '256619082800041' AND "merchant_id" != '256619102116029' AND time > {time}  GROUP BY time(10m) ''',
         'trade_alert_value',
         7,
         'trade_alert_level_1_address',
@@ -562,7 +562,7 @@ metrcis_list = [
     ## MAcquiring
     (
         'Trade_MAcquiring',
-        '''SELECT count(distinct("order_no")) AS "trade_cnt",count(distinct("user_id")) AS "trade_user_cnt" ,sum("amount") AS "trade_amount" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__table" = 'merchant_acquiring_record' AND "merchant_id" != '256619082800116' AND "merchant_id" != '256619082801043' AND "merchant_id" != '256619082800418' AND "merchant_id" != '256619082800041' ) AND time > {time} GROUP BY time(10m) ''',
+        '''SELECT count(distinct("order_no")) AS "trade_cnt",count(distinct("user_id")) AS "trade_user_cnt" ,sum("amount") AS "trade_amount" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__source_table" = 'merchant_acquiring_record' AND "__op" = 'c'  AND "merchant_id" != '256619082800116' AND "merchant_id" != '256619082801043' AND "merchant_id" != '256619082800418' AND "merchant_id" != '256619082800041' ) AND time > {time} GROUP BY time(10m) ''',
         'trade_alert_value',
         7,
         'trade_alert_level_1_address',
@@ -573,7 +573,7 @@ metrcis_list = [
 
     (
         'Trade_MAcquiring_Success',
-        '''SELECT count(distinct("order_no")) AS "trade_success_cnt" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__table" = 'merchant_acquiring_record' AND "merchant_id" != '256619082800116' AND "merchant_id" != '256619082801043' AND "merchant_id" != '256619082800418' AND "merchant_id" != '256619082800041' ) AND "order_status" = 'SUCCESS' AND time > {time} GROUP BY time(10m) ''',
+        '''SELECT count(distinct("order_no")) AS "trade_success_cnt" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__source_table" = 'merchant_acquiring_record' AND "merchant_id" != '256619082800116' AND "merchant_id" != '256619082801043' AND "merchant_id" != '256619082800418' AND "merchant_id" != '256619082800041' ) AND "order_status" = 'SUCCESS' AND time > {time} GROUP BY time(10m) ''',
         'trade_alert_value',
         7,
         'trade_alert_level_1_address',
