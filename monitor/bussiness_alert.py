@@ -1291,14 +1291,15 @@ def monitor_task(ds, metrics_name, influx_db_query_sql, alert_value_name, compar
 
     res = influx_client.query(query_sql)
     raw = res.raw
+    series = raw.get('series')
 
-    if raw['series'] is  None:
+    if series is  None:
         print(" =========  No data  ".format(str(raw)))
         return
 
 
-    values = raw['series'][0]['values']
-    columns = raw['series'][0]['columns']
+    values = series[0]['values']
+    columns = series[0]['columns']
 
     for i in range(len(values)):
         line = values[i]
