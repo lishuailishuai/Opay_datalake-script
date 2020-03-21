@@ -37,7 +37,7 @@ args = {
 }
 
 dag = airflow.DAG('dwd_ocredit_phones_repayment_detail_df',
-                  schedule_interval="30 02 * * *",
+                  schedule_interval="30 01 * * *",
                   default_args=args)
 
 ##----------------------------------------- 依赖 ---------------------------------------##
