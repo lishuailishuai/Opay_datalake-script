@@ -1399,7 +1399,10 @@ def monitor_task(ds, metrics_name, influx_db_query_sql, alert_value_name, compar
     compare_day_ago_second = int(time.mktime(compare_day_ago.timetuple()))
 
     last_obj = data_map[last_time]
-    compare_obj = data_map[compare_day_ago_second]
+    compare_obj = data_map.get(compare_day_ago_second)
+    if compare_obj is None:
+        compare_obj = last_obj
+        logging.info(" =========  无对比日数据  ")
 
     for i in range(len(last_obj)):
         if i == 0:
