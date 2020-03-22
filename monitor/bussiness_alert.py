@@ -325,866 +325,866 @@ metrcis_list = [
     ),
 
     ## TakeRide
-    # # 24
-    # (
-    #     'Trade_TakeRide',
-    #     '''SELECT count(distinct("order_no")) AS "trade_cnt",count(distinct("user_id")) AS "trade_user_cnt" ,sum("amount") AS "trade_amount" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__source_table" = 'merchant_acquiring_record' AND "__op" = 'c') and "merchant_id" = '256619082800116' and time > {time} GROUP BY time(10m) ''',
-    #     'trade_alert_value',
-    #     7,
-    #     'trade_alert_level_1_address',
-    #     'trade_alert_level_2_address',
-    #     False,
-    #     3
-    # ),
-    #
-    # # 25
-    # (
-    #     'Trade_TakeRide_Success',
-    #     '''SELECT count(distinct("order_no")) AS "trade_success_cnt"  FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__source_table" = 'merchant_acquiring_record') and "merchant_id" = '256619082800116' AND "order_status" = 'SUCCESS' and time > {time} GROUP BY time(10m) ''',
-    #     'trade_alert_value',
-    #     7,
-    #     'trade_alert_level_1_address',
-    #     'trade_alert_level_2_address',
-    #     False,
-    #     3
-    # ),
-    #
-    # ## OrideSalary
-    # # 26
-    # (
-    #     'Trade_OrideSalary',
-    #     '''SELECT count(distinct("order_no")) AS "trade_cnt",count(distinct("user_id")) AS "trade_user_cnt" ,sum("amount") AS "trade_amount" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__source_table" = 'merchant_transfer_user_record'  AND "__op" = 'c') and "merchant_id" = '256619082800116' and time > {time} GROUP BY time(10m) ''',
-    #     'trade_alert_value',
-    #     7,
-    #     'trade_alert_level_1_address',
-    #     'trade_alert_level_2_address',
-    #     False,
-    #     3
-    # ),
-    #
-    # # 27
-    # (
-    #     'Trade_OrideSalary_Success',
-    #     '''SELECT count(distinct("order_no")) AS "trade_success_cnt" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__source_table" = 'merchant_transfer_user_record') and "merchant_id" = '256619082800116' AND "order_status" = 'SUCCESS' and time > {time} GROUP BY time(10m) ''',
-    #     'trade_alert_value',
-    #     7,
-    #     'trade_alert_level_1_address',
-    #     'trade_alert_level_2_address',
-    #     False,
-    #     3
-    # ),
-    #
-    # ## Subscribe
-    # # 28
-    # (
-    #     'Trade_Subscribe',
-    #     '''SELECT count(distinct("order_no")) AS "trade_cnt",count(distinct("user_id")) AS "trade_user_cnt" ,sum("amount") AS "trade_amount" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__source_table" = 'merchant_acquiring_record'  AND "__op" = 'c') and "merchant_id" = '256619082801043' and time > {time} GROUP BY time(10m) ''',
-    #     'trade_alert_value',
-    #     7,
-    #     'trade_alert_level_1_address',
-    #     'trade_alert_level_2_address',
-    #     False,
-    #     3
-    # ),
-    #
-    # # 29
-    # (
-    #     'Trade_Subscribe_Success',
-    #     '''SELECT count(distinct("order_no")) AS "trade_success_cnt" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__source_table" = 'merchant_acquiring_record') and "merchant_id" = '256619082801043' AND "order_status" = 'SUCCESS' and time > {time} GROUP BY time(10m) ''',
-    #     'trade_alert_value',
-    #     7,
-    #     'trade_alert_level_1_address',
-    #     'trade_alert_level_2_address',
-    #     False,
-    #     3
-    # ),
-    #
-    # ## Redeem
-    # # 30
-    # (
-    #     'Trade_Redeem',
-    #     '''SELECT count(distinct("order_no")) AS "trade_cnt",count(distinct("user_id")) AS "trade_user_cnt" ,sum("amount") AS "trade_amount" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__source_table" = 'merchant_transfer_user_record' AND "__op" = 'c') and "merchant_id" = '256619082801043' and time > {time} GROUP BY time(10m) ''',
-    #     'trade_alert_value',
-    #     7,
-    #     'trade_alert_level_1_address',
-    #     'trade_alert_level_2_address',
-    #     False,
-    #     3
-    # ),
-    #
-    # # 31
-    # (
-    #     'Trade_Redeem_Success',
-    #     '''SELECT count(distinct("order_no")) AS "trade_success_cnt" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__source_table" = 'merchant_transfer_user_record') and "merchant_id" = '256619082801043' AND "order_status" = 'SUCCESS' and time > {time} GROUP BY time(10m) ''',
-    #     'trade_alert_value',
-    #     7,
-    #     'trade_alert_level_1_address',
-    #     'trade_alert_level_2_address',
-    #     False,
-    #     3
-    # ),
-    #
-    # ## Repayment
-    # # 32
-    # (
-    #     'Trade_Repayment',
-    #     '''SELECT count(distinct("order_no")) AS "trade_cnt",count(distinct("user_id")) AS "trade_user_cnt" ,sum("amount") AS "trade_amount" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__source_table" = 'merchant_acquiring_record' AND "__op" = 'c') and "merchant_id" = '256619082800418' and time > {time} GROUP BY time(10m) ''',
-    #     'trade_alert_value',
-    #     7,
-    #     'trade_alert_level_1_address',
-    #     'trade_alert_level_2_address',
-    #     False,
-    #     3
-    # ),
-    #
-    # # 33
-    # (
-    #     'Trade_Repayment_Success',
-    #     '''SELECT count(distinct("order_no")) AS "trade_success_cnt" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__source_table" = 'merchant_acquiring_record') and "merchant_id" = '256619082800418' AND "order_status" = 'SUCCESS' and time > {time} GROUP BY time(10m) ''',
-    #     'trade_alert_value',
-    #     7,
-    #     'trade_alert_level_1_address',
-    #     'trade_alert_level_2_address',
-    #     False,
-    #     3
-    # ),
-    #
-    # ## Loan
-    # # 34
-    # (
-    #     'Trade_Loan',
-    #     '''SELECT count(distinct("order_no")) AS "trade_cnt",count(distinct("user_id")) AS "trade_user_cnt" ,sum("amount") AS "trade_amount" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__source_table" = 'merchant_transfer_user_record' AND "__op" = 'c') and "merchant_id" = '256619082800418' and time > {time} GROUP BY time(10m) ''',
-    #     'trade_alert_value',
-    #     7,
-    #     'trade_alert_level_1_address',
-    #     'trade_alert_level_2_address',
-    #     False,
-    #     3
-    # ),
-    #
-    # # 35
-    # (
-    #     'Trade_Loan_Success',
-    #     '''SELECT count(distinct("order_no")) AS "trade_success_cnt" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__source_table" = 'merchant_transfer_user_record') and "merchant_id" = '256619082800418' AND "order_status" = 'SUCCESS' and time > {time} GROUP BY time(10m) ''',
-    #     'trade_alert_value',
-    #     7,
-    #     'trade_alert_level_1_address',
-    #     'trade_alert_level_2_address',
-    #     False,
-    #     3
-    # ),
-    #
-    # ## TakeOut
-    # # 36
-    # (
-    #     'Trade_TakeOut',
-    #     '''SELECT count(distinct("order_no")) AS "trade_cnt",count(distinct("user_id")) AS "trade_user_cnt" ,sum("amount") AS "trade_amount" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__source_table" = 'merchant_acquiring_record' AND "__op" = 'c') and "merchant_id" = '256619082800041' and time > {time} GROUP BY time(10m) ''',
-    #     'trade_alert_value',
-    #     7,
-    #     'trade_alert_level_1_address',
-    #     'trade_alert_level_2_address',
-    #     False,
-    #     3
-    # ),
-    #
-    # # 37
-    # (
-    #     'Trade_TakeOut_Success',
-    #     '''SELECT count(distinct("order_no")) AS "trade_success_cnt" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__source_table" = 'merchant_acquiring_record') and "merchant_id" = '256619082800041' AND "order_status" = 'SUCCESS' and time > {time} GROUP BY time(10m) ''',
-    #     'trade_alert_value',
-    #     7,
-    #     'trade_alert_level_1_address',
-    #     'trade_alert_level_2_address',
-    #     False,
-    #     3
-    # ),
-    #
-    # ## FoodCashback
-    # # 38
-    # (
-    #     'Trade_FoodCashback',
-    #     '''SELECT count(distinct("order_no")) AS "trade_cnt",count(distinct("user_id")) AS "trade_user_cnt" ,sum("amount") AS "trade_amount" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__source_table" = 'merchant_transfer_user_record' AND "__op" = 'c') and "merchant_id" = '256619082800041' and time > {time} GROUP BY time(10m) ''',
-    #     'trade_alert_value',
-    #     7,
-    #     'trade_alert_level_1_address',
-    #     'trade_alert_level_2_address',
-    #     False,
-    #     3
-    # ),
-    #
-    # # 39
-    # (
-    #     'Trade_FoodCashback_Success',
-    #     '''SELECT count(distinct("order_no")) AS "trade_success_cnt" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__source_table" = 'merchant_transfer_user_record') and "merchant_id" = '256619082800041' AND "order_status" = 'SUCCESS' and time > {time} GROUP BY time(10m) ''',
-    #     'trade_alert_value',
-    #     7,
-    #     'trade_alert_level_1_address',
-    #     'trade_alert_level_2_address',
-    #     False,
-    #     3
-    # ),
-    #
-    # ## QRCode
-    # # 40
-    # (
-    #     'Trade_QRCode',
-    #     '''SELECT count(distinct("order_no")) AS "trade_cnt",count(distinct("user_id")) AS "trade_user_cnt" ,sum("amount") AS "trade_amount" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__source_table" = 'merchant_acquiring_record' AND "__op" = 'c') and "merchant_id" = '256619111336006' and time > {time} GROUP BY time(10m) ''',
-    #     'trade_alert_value',
-    #     7,
-    #     'trade_alert_level_1_address',
-    #     'trade_alert_level_2_address',
-    #     False,
-    #     3
-    # ),
-    #
-    # # 41
-    # (
-    #     'Trade_QRCode_Success',
-    #     '''SELECT count(distinct("order_no")) AS "trade_success_cnt" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__source_table" = 'merchant_acquiring_record') and "merchant_id" = '256619111336006' AND "order_status" = 'SUCCESS' and time > {time} GROUP BY time(10m) ''',
-    #     'trade_alert_value',
-    #     7,
-    #     'trade_alert_level_1_address',
-    #     'trade_alert_level_2_address',
-    #     False,
-    #     3
-    # ),
-    #
-    # ## QRCashback
-    # # 42
-    # (
-    #     'Trade_QRCashback',
-    #     '''SELECT count(distinct("order_no")) AS "trade_cnt",count(distinct("user_id")) AS "trade_user_cnt" ,sum("amount") AS "trade_amount" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__source_table" = 'merchant_transfer_user_record' AND "__op" = 'c') and "merchant_id" = '256619102116029' and time > {time} GROUP BY time(10m) ''',
-    #     'trade_alert_value',
-    #     7,
-    #     'trade_alert_level_1_address',
-    #     'trade_alert_level_2_address',
-    #     False,
-    #     3
-    # ),
-    #
-    # # 43
-    # (
-    #     'Trade_QRCashback_Success',
-    #     '''SELECT count(distinct("order_no")) AS "trade_success_cnt" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__source_table" = 'merchant_transfer_user_record') and "merchant_id" = '256619102116029' AND "order_status" = 'SUCCESS' and time > {time} GROUP BY time(10m) ''',
-    #     'trade_alert_value',
-    #     7,
-    #     'trade_alert_level_1_address',
-    #     'trade_alert_level_2_address',
-    #     False,
-    #     3
-    # ),
-    #
-    # ## AATransfer
-    # # 44
-    # (
-    #     'Trade_AATransfer',
-    #     ''' SELECT count(distinct("order_no")) AS "trade_cnt",count(distinct("user_id")) AS "trade_user_cnt" ,sum("amount") AS "trade_amount" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__source_table" = 'user_transfer_user_record' OR "__source_table" = 'merchant_transfer_user_record') AND "__op" = 'c' AND "merchant_id" != '256619082800116' AND "merchant_id" != '256619082801043' AND "merchant_id" != '256619082800418' AND "merchant_id" != '256619082800041' AND "merchant_id" != '256619102116029' AND time > {time}  GROUP BY time(10m) ''',
-    #     'trade_alert_value',
-    #     7,
-    #     'trade_alert_level_1_address',
-    #     'trade_alert_level_2_address',
-    #     False,
-    #     3
-    # ),
-    #
-    # # 45
-    # (
-    #     'Trade_AATransfer_Success',
-    #     ''' SELECT count(distinct("order_no")) AS "trade_success_cnt" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__source_table" = 'user_transfer_user_record' OR "__source_table" = 'merchant_transfer_user_record') AND ("order_status" = 'SUCCESS' or "transfer_status" = 'CONFIRM_S'  or "transfer_status" = 'TRANSFER_S') AND "merchant_id" != '256619082800116' AND "merchant_id" != '256619082801043' AND "merchant_id" != '256619082800418' AND "merchant_id" != '256619082800041' AND "merchant_id" != '256619102116029' AND time > {time}  GROUP BY time(10m) ''',
-    #     'trade_alert_value',
-    #     7,
-    #     'trade_alert_level_1_address',
-    #     'trade_alert_level_2_address',
-    #     False,
-    #     3
-    # ),
-    #
-    # ## MAcquiring
-    # # 46
-    # (
-    #     'Trade_MAcquiring',
-    #     '''SELECT count(distinct("order_no")) AS "trade_cnt",count(distinct("user_id")) AS "trade_user_cnt" ,sum("amount") AS "trade_amount" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__source_table" = 'merchant_acquiring_record' AND "__op" = 'c'  AND "merchant_id" != '256619082800116' AND "merchant_id" != '256619082801043' AND "merchant_id" != '256619082800418' AND "merchant_id" != '256619082800041' ) AND time > {time} GROUP BY time(10m) ''',
-    #     'trade_alert_value',
-    #     7,
-    #     'trade_alert_level_1_address',
-    #     'trade_alert_level_2_address',
-    #     False,
-    #     3
-    # ),
-    #
-    # # 47
-    # (
-    #     'Trade_MAcquiring_Success',
-    #     '''SELECT count(distinct("order_no")) AS "trade_success_cnt" FROM "OPAY_TRANSACTION_OP_EVENT" WHERE ("__source_table" = 'merchant_acquiring_record' AND "merchant_id" != '256619082800116' AND "merchant_id" != '256619082801043' AND "merchant_id" != '256619082800418' AND "merchant_id" != '256619082800041' ) AND "order_status" = 'SUCCESS' AND time > {time} GROUP BY time(10m) ''',
-    #     'trade_alert_value',
-    #     7,
-    #     'trade_alert_level_1_address',
-    #     'trade_alert_level_2_address',
-    #     False,
-    #     3
-    # ),
-    #
-    # ## 渠道 INTERSWITCH
-    #
-    # # 通道交易数
-    # # 48
-    # (
-    #     'Trade_Channel_INTERSWITCH',
-    #     '''SELECT count(distinct("id")) AS "channel_trade_cnt" FROM "OPAY_CHANNEL_TRANSACTION_EVENT" WHERE ("out_channel_id" = 'INTERSWITCH' AND "pay_channel" = 'QUICKPAYMENT') AND time > {time} GROUP BY time(10m)''',
-    #     'trade_channel_alert_value',
-    #     7,
-    #     'trade_channel_alert_level_1_address',
-    #     'trade_channel_alert_level_2_address',
-    #     False,
-    #     1
-    # ),
-    #
-    # # 通道系统交易成功数
-    # # 49
-    # (
-    #     'Trade_Channel_System_Success_INTERSWITCH',
-    #     '''SELECT count(distinct("id")) AS "trade_channel_system_success_cnt" FROM "OPAY_CHANNEL_TRANSACTION_EVENT" WHERE ("out_channel_id" = 'INTERSWITCH' AND "pay_channel" = 'QUICKPAYMENT') AND time > {time}
-    #     AND (
-    #     "transaction_status" = 'SUCCESS' or
-    #     "bank_response_message" = 'Transaction not Found' or
-    #     "bank_response_message" = 'Card Expiry is not in correct format' or
-    #     "bank_response_message" = 'Insufficient Funds' or
-    #     "bank_response_message" = 'Amount greater than daily transaction limit Card has expired Exceeds Withdrawal Limit Expired Card Lost Card or Pick-Up Not sufficient funds Error occurred while processing your request... Please contact merchant Insufficient Funds Token Not Generated. Customer Not Registered on Token Platform Transaction not Permitted to Cardholder Token Authorization Not Successful. Incorrect Token Supplied Do not honour Transaction Declined Exceeds Withdrawal Limit Issuer or Switch Inoperative The card holder was not authorised. This is used in 3-D Secure Authentication.' or
-    #     "bank_response_message" = 'Incorrect PIN' or
-    #     "bank_response_message" = 'Do Not Honor' or
-    #     "bank_response_message" = 'PIN tries exceeded' or
-    #     "bank_response_message" = 'No Card Record' or
-    #     "bank_response_message" = 'Expired card' or
-    #     "bank_response_message" = 'Token Authentication Failed. Incorrect Token Supplied.' or
-    #     "bank_response_message" = 'Your payment has exceeded the time required to pay Merchant is not enabled for international transactions.' or
-    #     "bank_response_message" = 'Lost Card' or
-    #     "bank_response_message" = 'Exceeds withdrawal amount limits' or
-    #     "bank_response_message" = 'Kindly enter the OTP sent to' or
-    #     "bank_response_message" = 'Error occured while processing your request Transaction was blocked by the Payment Server because it did not pass all risk checks.' or
-    #     "bank_response_message" = 'Invalid Transaction' or
-    #     "bank_response_message" = 'Lost Card or Pick-Up' or
-    #     "bank_response_message" = 'Insufficient Funds: Your card cannot be charged due to insufficient funds. Please try another card or fund your card and try again.' or
-    #     "bank_response_message" = 'Transaction not found' or
-    #     "bank_response_message" = 'Restricted Merchant' or
-    #     "bank_response_message" = 'invalid token supplied' or
-    #     "bank_response_message" = 'Insufficient Funds' or
-    #     "bank_response_message" = 'Wrong token or email passed' or
-    #     "bank_response_message" = 'Incorrect PIN' or
-    #     "bank_response_message" = 'Do Not Honour' or
-    #     "bank_response_message" = 'Suspected Fraud' or
-    #     "bank_response_message" = 'Invalid expiry' or
-    #     "bank_response_message" = 'Kindly enter the OTP sent to' or
-    #     "bank_response_message" = 'Function Not Permitted to Cardholder: Were sorry. We cannot charge your card due to bank restrictions. Please contact your bank or financial institution No Card Record Fee configuration not found PIN should not be more than 4 digits Failed to retrieve Card Card Issuer Unavailable Function Not Permitted to Cardholder NOAUTH_INTERNATIONAL PIN Tries Exceeded Card was not properly tokenised. Please contact support Lost Card: We are unable to verify your card or please contact your financial institution. In the meantime you can try another card Card number is invalid Exceeds Withdrawal Limi Insufficient funds Your payment has exceeded the time required to pay Token Authentication Failed. Incorrect Token Supplied.' or
-    #     "bank_response_message" = 'Your account does not seem to have a phone number or email or hardware token provisioned. Please contact your account officer.'
-    #     )GROUP BY time(10m)''',
-    #     'trade_channel_system_success_alert_value',
-    #     7,
-    #     'trade_channel_system_alert_level_1_address',
-    #     'trade_channel_system_alert_level_2_address',
-    #     False,
-    #     1
-    # ),
-    #
-    # # 通道业务交易成功数
-    # # 50
-    # (
-    #     'Trade_Channel_Bussiness_Success_INTERSWITCH',
-    #     '''SELECT count(distinct("id")) AS "trade_channel_bussiness_success_cnt" FROM "OPAY_CHANNEL_TRANSACTION_EVENT" WHERE ("transaction_status" = 'SUCCESS' AND "out_channel_id" = 'INTERSWITCH' AND "pay_channel" = 'QUICKPAYMENT') AND time > {time} GROUP BY time(10m)''',
-    #     'trade_channel_bussiness_success_alert_value',
-    #     7,
-    #     'trade_channel_bussiness_alert_level_1_address',
-    #     'trade_channel_bussiness_alert_level_2_address',
-    #     False,
-    #     1
-    # ),
-    #
-    # ## 渠道 PAYSTACK
-    #
-    # # 通道交易数
-    # # 51
-    # (
-    #     'Trade_Channel_PAYSTACK',
-    #     '''SELECT count(distinct("id")) AS "channel_trade_cnt" FROM "OPAY_CHANNEL_TRANSACTION_EVENT" WHERE ("out_channel_id" = 'PAYSTACK' AND "pay_channel" = 'QUICKPAYMENT') AND time > {time} GROUP BY time(10m)''',
-    #     'trade_channel_alert_value',
-    #     7,
-    #     'trade_channel_alert_level_1_address',
-    #     'trade_channel_alert_level_2_address',
-    #     False,
-    #     1
-    # ),
-    #
-    # # 通道系统交易成功数
-    # # 52
-    # (
-    #     'Trade_Channel_System_Success_PAYSTACK',
-    #     '''SELECT count(distinct("id")) AS "trade_channel_system_success_cnt" FROM "OPAY_CHANNEL_TRANSACTION_EVENT" WHERE ("out_channel_id" = 'PAYSTACK' AND "pay_channel" = 'QUICKPAYMENT') AND time > {time}
-    #     AND (
-    #     "transaction_status" = 'SUCCESS' or
-    #     "bank_response_message" = 'Transaction not Found' or
-    #     "bank_response_message" = 'Card Expiry is not in correct format' or
-    #     "bank_response_message" = 'Insufficient Funds' or
-    #     "bank_response_message" = 'Amount greater than daily transaction limit Card has expired Exceeds Withdrawal Limit Expired Card Lost Card or Pick-Up Not sufficient funds Error occurred while processing your request... Please contact merchant Insufficient Funds Token Not Generated. Customer Not Registered on Token Platform Transaction not Permitted to Cardholder Token Authorization Not Successful. Incorrect Token Supplied Do not honour Transaction Declined Exceeds Withdrawal Limit Issuer or Switch Inoperative The card holder was not authorised. This is used in 3-D Secure Authentication.' or
-    #     "bank_response_message" = 'Incorrect PIN' or
-    #     "bank_response_message" = 'Do Not Honor' or
-    #     "bank_response_message" = 'PIN tries exceeded' or
-    #     "bank_response_message" = 'No Card Record' or
-    #     "bank_response_message" = 'Expired card' or
-    #     "bank_response_message" = 'Token Authentication Failed. Incorrect Token Supplied.' or
-    #     "bank_response_message" = 'Your payment has exceeded the time required to pay Merchant is not enabled for international transactions.' or
-    #     "bank_response_message" = 'Lost Card' or
-    #     "bank_response_message" = 'Exceeds withdrawal amount limits' or
-    #     "bank_response_message" = 'Kindly enter the OTP sent to' or
-    #     "bank_response_message" = 'Error occured while processing your request Transaction was blocked by the Payment Server because it did not pass all risk checks.' or
-    #     "bank_response_message" = 'Invalid Transaction' or
-    #     "bank_response_message" = 'Lost Card or Pick-Up' or
-    #     "bank_response_message" = 'Insufficient Funds: Your card cannot be charged due to insufficient funds. Please try another card or fund your card and try again.' or
-    #     "bank_response_message" = 'Transaction not found' or
-    #     "bank_response_message" = 'Restricted Merchant' or
-    #     "bank_response_message" = 'invalid token supplied' or
-    #     "bank_response_message" = 'Insufficient Funds' or
-    #     "bank_response_message" = 'Wrong token or email passed' or
-    #     "bank_response_message" = 'Incorrect PIN' or
-    #     "bank_response_message" = 'Do Not Honour' or
-    #     "bank_response_message" = 'Suspected Fraud' or
-    #     "bank_response_message" = 'Invalid expiry' or
-    #     "bank_response_message" = 'Kindly enter the OTP sent to' or
-    #     "bank_response_message" = 'Function Not Permitted to Cardholder: Were sorry. We cannot charge your card due to bank restrictions. Please contact your bank or financial institution No Card Record Fee configuration not found PIN should not be more than 4 digits Failed to retrieve Card Card Issuer Unavailable Function Not Permitted to Cardholder NOAUTH_INTERNATIONAL PIN Tries Exceeded Card was not properly tokenised. Please contact support Lost Card: We are unable to verify your card or please contact your financial institution. In the meantime you can try another card Card number is invalid Exceeds Withdrawal Limi Insufficient funds Your payment has exceeded the time required to pay Token Authentication Failed. Incorrect Token Supplied.' or
-    #     "bank_response_message" = 'Your account does not seem to have a phone number or email or hardware token provisioned. Please contact your account officer.'
-    #     )
-    #
-    #     GROUP BY time(10m)''',
-    #     'trade_channel_system_success_alert_value',
-    #     7,
-    #     'trade_channel_alert_level_1_address',
-    #     'trade_channel_alert_level_2_address',
-    #     False,
-    #     1
-    # ),
-    #
-    # # 通道业务交易成功数
-    # # 53
-    # (
-    #     'Trade_Channel_Bussiness_Success_PAYSTACK',
-    #     '''SELECT count(distinct("id")) AS "trade_channel_bussiness_success_cnt" FROM "OPAY_CHANNEL_TRANSACTION_EVENT" WHERE ("transaction_status" = 'SUCCESS' AND "out_channel_id" = 'PAYSTACK' AND "pay_channel" = 'QUICKPAYMENT') AND time > {time} GROUP BY time(10m)''',
-    #     'trade_channel_bussiness_success_alert_value',
-    #     7,
-    #     'trade_channel_alert_level_1_address',
-    #     'trade_channel_alert_level_2_address',
-    #     False,
-    #     1
-    # ),
-    #
-    # ## 渠道 FLUTTERWAVE
-    #
-    # # 通道交易数
-    # # 54
-    # (
-    #     'Trade_Channel_FLUTTERWAVE',
-    #     '''SELECT count(distinct("id")) AS "channel_trade_cnt" FROM "OPAY_CHANNEL_TRANSACTION_EVENT" WHERE ("out_channel_id" = 'FLUTTERWAVE' AND "pay_channel" = 'QUICKPAYMENT') AND time > {time} GROUP BY time(10m)''',
-    #     'trade_channel_alert_value',
-    #     7,
-    #     'trade_channel_alert_level_1_address',
-    #     'trade_channel_alert_level_2_address',
-    #     False,
-    #     1
-    # ),
-    #
-    # # 通道系统交易成功数
-    # # 55
-    # (
-    #     'Trade_Channel_System_Success_FLUTTERWAVE',
-    #     '''SELECT count(distinct("id")) AS "trade_channel_system_success_cnt" FROM "OPAY_CHANNEL_TRANSACTION_EVENT" WHERE ("out_channel_id" = 'FLUTTERWAVE' AND "pay_channel" = 'QUICKPAYMENT') AND time > {time}
-    #     AND (
-    #     "transaction_status" = 'SUCCESS' or
-    #     "bank_response_message" = 'Transaction not Found' or
-    #     "bank_response_message" = 'Card Expiry is not in correct format' or
-    #     "bank_response_message" = 'Insufficient Funds' or
-    #     "bank_response_message" = 'Amount greater than daily transaction limit Card has expired Exceeds Withdrawal Limit Expired Card Lost Card or Pick-Up Not sufficient funds Error occurred while processing your request... Please contact merchant Insufficient Funds Token Not Generated. Customer Not Registered on Token Platform Transaction not Permitted to Cardholder Token Authorization Not Successful. Incorrect Token Supplied Do not honour Transaction Declined Exceeds Withdrawal Limit Issuer or Switch Inoperative The card holder was not authorised. This is used in 3-D Secure Authentication.' or
-    #     "bank_response_message" = 'Incorrect PIN' or
-    #     "bank_response_message" = 'Do Not Honor' or
-    #     "bank_response_message" = 'PIN tries exceeded' or
-    #     "bank_response_message" = 'No Card Record' or
-    #     "bank_response_message" = 'Expired card' or
-    #     "bank_response_message" = 'Token Authentication Failed. Incorrect Token Supplied.' or
-    #     "bank_response_message" = 'Your payment has exceeded the time required to pay Merchant is not enabled for international transactions.' or
-    #     "bank_response_message" = 'Lost Card' or
-    #     "bank_response_message" = 'Exceeds withdrawal amount limits' or
-    #     "bank_response_message" = 'Kindly enter the OTP sent to' or
-    #     "bank_response_message" = 'Error occured while processing your request Transaction was blocked by the Payment Server because it did not pass all risk checks.' or
-    #     "bank_response_message" = 'Invalid Transaction' or
-    #     "bank_response_message" = 'Lost Card or Pick-Up' or
-    #     "bank_response_message" = 'Insufficient Funds: Your card cannot be charged due to insufficient funds. Please try another card or fund your card and try again.' or
-    #     "bank_response_message" = 'Transaction not found' or
-    #     "bank_response_message" = 'Restricted Merchant' or
-    #     "bank_response_message" = 'invalid token supplied' or
-    #     "bank_response_message" = 'Insufficient Funds' or
-    #     "bank_response_message" = 'Wrong token or email passed' or
-    #     "bank_response_message" = 'Incorrect PIN' or
-    #     "bank_response_message" = 'Do Not Honour' or
-    #     "bank_response_message" = 'Suspected Fraud' or
-    #     "bank_response_message" = 'Invalid expiry' or
-    #     "bank_response_message" = 'Kindly enter the OTP sent to' or
-    #     "bank_response_message" = 'Function Not Permitted to Cardholder: Were sorry. We cannot charge your card due to bank restrictions. Please contact your bank or financial institution No Card Record Fee configuration not found PIN should not be more than 4 digits Failed to retrieve Card Card Issuer Unavailable Function Not Permitted to Cardholder NOAUTH_INTERNATIONAL PIN Tries Exceeded Card was not properly tokenised. Please contact support Lost Card: We are unable to verify your card or please contact your financial institution. In the meantime you can try another card Card number is invalid Exceeds Withdrawal Limi Insufficient funds Your payment has exceeded the time required to pay Token Authentication Failed. Incorrect Token Supplied.' or
-    #     "bank_response_message" = 'Your account does not seem to have a phone number or email or hardware token provisioned. Please contact your account officer.'
-    #     )
-    #     GROUP BY time(10m)''',
-    #     'trade_channel_system_success_alert_value',
-    #     7,
-    #     'trade_channel_alert_level_1_address',
-    #     'trade_channel_alert_level_2_address',
-    #     False,
-    #     1
-    # ),
-    #
-    # # 通道业务交易成功数
-    # # 56
-    # (
-    #     'Trade_Channel_Bussiness_Success_FLUTTERWAVE',
-    #     '''SELECT count(distinct("id")) AS "trade_channel_bussiness_success_cnt" FROM "OPAY_CHANNEL_TRANSACTION_EVENT" WHERE ("transaction_status" = 'SUCCESS' AND "out_channel_id" = 'FLUTTERWAVE' AND "pay_channel" = 'QUICKPAYMENT') AND time > {time} GROUP BY time(10m)''',
-    #     'trade_channel_bussiness_success_alert_value',
-    #     7,
-    #     'trade_channel_alert_level_1_address',
-    #     'trade_channel_alert_level_2_address',
-    #     False,
-    #     1
-    # ),
-    #
-    # ####### 用户相关指标 独立配置
-    #
-    # ## 注册用户
-    # # 57
-    # (
-    #     'User_New_Register_User',
-    #     '''
-    #     SELECT count(distinct("id")) AS "new_user_cnt" FROM "OPAY_REGISTER_USER_EVENT" WHERE time > {time} GROUP BY time(10m)
-    #     ''',
-    #     'user_register_alert_value',
-    #     7,
-    #     'user_register_alert_level_1_address',
-    #     'user_register_alert_level_2_address',
-    #     False,
-    #     1
-    # ),
-    #
-    # ## 登陆活跃用户数
-    # # 58
-    # (
-    #     'User_Active_User',
-    #     '''
-    #     SELECT count(distinct("UID")) AS "active_user_cnt" FROM "OPAY_ACTIVE_USER_EVENT" WHERE time > {time} GROUP BY time(10m)
-    #     ''',
-    #     'user_active_alert_value',
-    #     7,
-    #     'user_active_alert_level_1_address',
-    #     'user_active_alert_level_2_address',
-    #     False,
-    #     1
-    # ),
-    #
-    # ## 绑卡用户数
-    # # 59
-    # (
-    #     'User_Bind_Card_User',
-    #     '''
-    #     SELECT count(distinct("user_id")) AS "bind_card_user_cnt" FROM "OPAY_PAYMENT_INSTRUMENT_EVENT" WHERE time > {time} GROUP BY time(10m)
-    #     ''',
-    #     'user_bind_card_alert_value',
-    #     7,
-    #     'user_bind_card_alert_level_1_address',
-    #     'user_bind_card_alert_level_2_address',
-    #     False,
-    #     3
-    # ),
-    #
-    # ####### 短信 指标
-    #
-    # ## chuanglan
-    #
-    # # 短息发送量
-    # # 60
-    # (
-    #     'Channel_Message_Send_Chuanglan',
-    #     '''
-    #     SELECT count(distinct("id")) AS "message_send_cnt" FROM "OPAY_SMS_MESSAGE_EVENT" WHERE  "delivered_channel" = 'chuanglan' AND time > {time} GROUP BY time(10m)
-    #     ''',
-    #     'message_send_alert_value',
-    #     7,
-    #     'message_alert_level_1_address',
-    #     'message_alert_level_2_address',
-    #     False,
-    #     3
-    # ),
-    #
-    # # 短息发送成功量
-    # # 61
-    # (
-    #     'Channel_Message_Send_Success_Chuanglan',
-    #     '''
-    #     SELECT count(distinct("id")) AS "message_send_success_cnt" FROM "OPAY_SMS_MESSAGE_EVENT" WHERE ("status" = 'SUCCESS') AND "delivered_channel" = 'chuanglan' AND time > {time} GROUP BY time(10m)
-    #     ''',
-    #     'message_send_success_alert_value',
-    #     7,
-    #     'message_alert_level_1_address',
-    #     'message_alert_level_2_address',
-    #     False,
-    #     3
-    # ),
-    #
-    # ## cm
-    #
-    # # 短息发送量
-    # # 62
-    # (
-    #     'Channel_Message_Send_Cm',
-    #     '''
-    #     SELECT count(distinct("id")) AS "message_send_cnt" FROM "OPAY_SMS_MESSAGE_EVENT" WHERE  "delivered_channel" = 'cm' AND time > {time} GROUP BY time(10m)
-    #     ''',
-    #     'message_send_alert_value',
-    #     7,
-    #     'message_alert_level_1_address',
-    #     'message_alert_level_2_address',
-    #     False,
-    #     3
-    # ),
-    #
-    # # 短息发送成功量
-    # # 63
-    # (
-    #     'Channel_Message_Send_Success_Cm',
-    #     '''
-    #     SELECT count(distinct("id")) AS "message_send_success_cnt" FROM "OPAY_SMS_MESSAGE_EVENT" WHERE ("status" = 'SUCCESS') AND "delivered_channel" = 'cm' AND time > {time} GROUP BY time(10m)
-    #     ''',
-    #     'message_send_success_alert_value',
-    #     7,
-    #     'message_alert_level_1_address',
-    #     'message_alert_level_2_address',
-    #     False,
-    #     3
-    # ),
-    #
-    # ## dpb
-    #
-    # # 短息发送量
-    # # 64
-    # (
-    #     'Channel_Message_Send_Dpb',
-    #     '''
-    #     SELECT count(distinct("id")) AS "message_send_cnt" FROM "OPAY_SMS_MESSAGE_EVENT" WHERE  "delivered_channel" = 'dpb' AND time > {time} GROUP BY time(10m)
-    #     ''',
-    #     'message_send_alert_value',
-    #     7,
-    #     'message_alert_level_1_address',
-    #     'message_alert_level_2_address',
-    #     False,
-    #     3
-    # ),
-    #
-    # # 短息发送成功量
-    # # 65
-    # (
-    #     'Channel_Message_Send_Success_Dpb',
-    #     '''
-    #     SELECT count(distinct("id")) AS "message_send_success_cnt" FROM "OPAY_SMS_MESSAGE_EVENT" WHERE ("status" = 'SUCCESS') AND "delivered_channel" = 'dpb' AND time > {time} GROUP BY time(10m)
-    #     ''',
-    #     'message_send_success_alert_value',
-    #     7,
-    #     'message_alert_level_1_address',
-    #     'message_alert_level_2_address',
-    #     False,
-    #     3
-    # ),
-    #
-    # ## infobip
-    #
-    # # 短息发送量
-    # # 66
-    # (
-    #     'Channel_Message_Send_Infobip',
-    #     '''
-    #     SELECT count(distinct("id")) AS "message_send_cnt" FROM "OPAY_SMS_MESSAGE_EVENT" WHERE  "delivered_channel" = 'infobip' AND time > {time} GROUP BY time(10m)
-    #     ''',
-    #     'message_send_alert_value',
-    #     7,
-    #     'message_alert_level_1_address',
-    #     'message_alert_level_2_address',
-    #     False,
-    #     3
-    # ),
-    #
-    # # 短息发送成功量
-    # # 67
-    # (
-    #     'Channel_Message_Send_Success_infobip',
-    #     '''
-    #     SELECT count(distinct("id")) AS "message_send_success_cnt" FROM "OPAY_SMS_MESSAGE_EVENT" WHERE ("status" = 'SUCCESS') AND "delivered_channel" = 'infobip' AND time > {time} GROUP BY time(10m)
-    #     ''',
-    #     'message_send_success_alert_value',
-    #     7,
-    #     'message_alert_level_1_address',
-    #     'message_alert_level_2_address',
-    #     False,
-    #     3
-    # ),
-    #
-    # ## chuangadvert
-    #
-    # # 短息发送量
-    # # 68
-    # (
-    #     'Channel_Message_Send_Chuangadvert',
-    #     '''
-    #     SELECT count(distinct("id")) AS "message_send_cnt" FROM "OPAY_SMS_MESSAGE_EVENT" WHERE  "delivered_channel" = 'chuangadvert' AND time > {time} GROUP BY time(10m)
-    #     ''',
-    #     'message_send_alert_value',
-    #     7,
-    #     'message_alert_level_1_address',
-    #     'message_alert_level_2_address',
-    #     False,
-    #     3
-    # ),
-    #
-    # # 短息发送成功量
-    # # 69
-    # (
-    #     'Channel_Message_Send_Success_Chuangadvert',
-    #     '''
-    #     SELECT count(distinct("id")) AS "message_send_success_cnt" FROM "OPAY_SMS_MESSAGE_EVENT" WHERE ("status" = 'SUCCESS') AND "delivered_channel" = 'chuangadvert' AND time > {time} GROUP BY time(10m)
-    #     ''',
-    #     'message_send_success_alert_value',
-    #     7,
-    #     'message_alert_level_1_address',
-    #     'message_alert_level_2_address',
-    #     False,
-    #     3
-    # ),
-    #
-    # ## infobipws
-    #
-    # # 短息发送量
-    # # 70
-    # (
-    #     'Channel_Message_Send_Infobipws',
-    #     '''
-    #     SELECT count(distinct("id")) AS "message_send_cnt" FROM "OPAY_SMS_MESSAGE_EVENT" WHERE  "delivered_channel" = 'infobipws' AND time > {time} GROUP BY time(10m)
-    #     ''',
-    #     'message_send_alert_value',
-    #     7,
-    #     'message_alert_level_1_address',
-    #     'message_alert_level_2_address',
-    #     False,
-    #     3
-    # ),
-    #
-    # # 短息发送成功量
-    # # 71
-    # (
-    #     'Channel_Message_Send_Success_Infobipws',
-    #     '''
-    #     SELECT count(distinct("id")) AS "message_send_success_cnt" FROM "OPAY_SMS_MESSAGE_EVENT" WHERE ("status" = 'SUCCESS') AND "delivered_channel" = 'infobipws' AND time > {time} GROUP BY time(10m)
-    #     ''',
-    #     'message_send_success_alert_value',
-    #     7,
-    #     'message_alert_level_1_address',
-    #     'message_alert_level_2_address',
-    #     False,
-    #     3
-    # ),
-    #
-    # ## infobipvoice
-    #
-    # # 短息发送量
-    # # 72
-    # (
-    #     'Channel_Message_Send_Infobipvoice',
-    #     '''
-    #     SELECT count(distinct("id")) AS "message_send_cnt" FROM "OPAY_SMS_MESSAGE_EVENT" WHERE  "delivered_channel" = 'infobipvoice' AND time > {time} GROUP BY time(10m)
-    #     ''',
-    #     'message_send_alert_value',
-    #     7,
-    #     'message_alert_level_1_address',
-    #     'message_alert_level_2_address',
-    #     False,
-    #     3
-    # ),
-    #
-    # # 短息发送成功量
-    # # 73
-    # (
-    #     'Channel_Message_Send_Success_Infobipvoice',
-    #     '''
-    #     SELECT count(distinct("id")) AS "message_send_success_cnt" FROM "OPAY_SMS_MESSAGE_EVENT" WHERE ("status" = 'SUCCESS') AND "delivered_channel" = 'infobipvoice' AND time > {time} GROUP BY time(10m)
-    #     ''',
-    #     'message_send_success_alert_value',
-    #     7,
-    #     'message_alert_level_1_address',
-    #     'message_alert_level_2_address',
-    #     False,
-    #     3
-    # ),
-    #
-    # ## chuangghana
-    #
-    # # 短息发送量
-    # # 74
-    # (
-    #     'Channel_Message_Send_Chuangghana',
-    #     '''
-    #     SELECT count(distinct("id")) AS "message_send_cnt" FROM "OPAY_SMS_MESSAGE_EVENT" WHERE  "delivered_channel" = 'chuangghana' AND time > {time} GROUP BY time(10m)
-    #     ''',
-    #     'message_send_alert_value',
-    #     7,
-    #     'message_alert_level_1_address',
-    #     'message_alert_level_2_address',
-    #     False,
-    #     3
-    # ),
-    #
-    # # 短息发送成功量
-    # # 75
-    # (
-    #     'Channel_Message_Send_Success_Chuangghana',
-    #     '''
-    #     SELECT count(distinct("id")) AS "message_send_success_cnt" FROM "OPAY_SMS_MESSAGE_EVENT" WHERE ("status" = 'SUCCESS') AND "delivered_channel" = 'chuangghana' AND time > {time} GROUP BY time(10m)
-    #     ''',
-    #     'message_send_success_alert_value',
-    #     7,
-    #     'message_alert_level_1_address',
-    #     'message_alert_level_2_address',
-    #     False,
-    #     3
-    # ),
-    #
-    # ## cmghana
-    #
-    # # 短息发送量
-    # # 76
-    # (
-    #     'Channel_Message_Send_Cmghana',
-    #     '''
-    #     SELECT count(distinct("id")) AS "message_send_cnt" FROM "OPAY_SMS_MESSAGE_EVENT" WHERE  "delivered_channel" = 'cmghana' AND time > {time} GROUP BY time(10m)
-    #     ''',
-    #     'message_send_alert_value',
-    #     7,
-    #     'message_alert_level_1_address',
-    #     'message_alert_level_2_address',
-    #     False,
-    #     3
-    # ),
-    #
-    # # 短息发送成功量
-    # # 77
-    # (
-    #     'Channel_Message_Send_Success_Cmghana',
-    #     '''
-    #     SELECT count(distinct("id")) AS "message_send_success_cnt" FROM "OPAY_SMS_MESSAGE_EVENT" WHERE ("status" = 'SUCCESS') AND "delivered_channel" = 'cmghana' AND time > {time} GROUP BY time(10m)
-    #     ''',
-    #     'message_send_success_alert_value',
-    #     7,
-    #     'message_alert_level_1_address',
-    #     'message_alert_level_2_address',
-    #     False,
-    #     3
-    # ),
+    # 24
+    (
+        'Trade_TakeRide',
+        '''SELECT "trade_cnt" AS "trade_cnt","trade_user_cnt" AS "trade_user_cnt" ,"trade_amount" AS "trade_amount" FROM "OPAY_TRANSACTION_OP_EVENT_CQ_RESULT_8" WHERE time > {time}  ''',
+        'trade_alert_value',
+        7,
+        'trade_alert_level_1_address',
+        'trade_alert_level_2_address',
+        False,
+        3
+    ),
+
+    # 25
+    (
+        'Trade_TakeRide_Success',
+        '''SELECT "trade_success_cnt" AS "trade_success_cnt"  FROM "OPAY_TRANSACTION_OP_EVENT_CQ_RESULT_10" WHERE  and time > {time} ''',
+        'trade_alert_value',
+        7,
+        'trade_alert_level_1_address',
+        'trade_alert_level_2_address',
+        False,
+        3
+    ),
+
+    ## OrideSalary
+    # 26
+    (
+        'Trade_OrideSalary',
+        '''SELECT "trade_cnt" AS "trade_cnt","trade_user_cnt" AS "trade_user_cnt" ,"trade_amount" AS "trade_amount" FROM "OPAY_TRANSACTION_OP_EVENT_CQ_RESULT_9" WHERE time > {time}  ''',
+        'trade_alert_value',
+        7,
+        'trade_alert_level_1_address',
+        'trade_alert_level_2_address',
+        False,
+        3
+    ),
+
+    # 27
+    (
+        'Trade_OrideSalary_Success',
+        '''SELECT "trade_success_cnt" AS "trade_success_cnt" FROM "OPAY_TRANSACTION_OP_EVENT_CQ_RESULT_10" WHERE ("__source_table" = 'merchant_transfer_user_record') and time > {time} ''',
+        'trade_alert_value',
+        7,
+        'trade_alert_level_1_address',
+        'trade_alert_level_2_address',
+        False,
+        3
+    ),
+
+    ## Subscribe
+    # 28
+    (
+        'Trade_Subscribe',
+        '''SELECT "trade_cnt" AS "trade_cnt","trade_user_cnt" AS "trade_user_cnt" ,"trade_amount" AS "trade_amount" FROM "OPAY_TRANSACTION_OP_EVENT_CQ_RESULT_11" WHERE time > {time} ''',
+        'trade_alert_value',
+        7,
+        'trade_alert_level_1_address',
+        'trade_alert_level_2_address',
+        False,
+        3
+    ),
+
+    # 29
+    (
+        'Trade_Subscribe_Success',
+        '''SELECT "trade_success_cnt" AS "trade_success_cnt" FROM "OPAY_TRANSACTION_OP_EVENT_CQ_RESULT_13" WHERE ("__source_table" = 'merchant_acquiring_record')  and time > {time} ''',
+        'trade_alert_value',
+        7,
+        'trade_alert_level_1_address',
+        'trade_alert_level_2_address',
+        False,
+        3
+    ),
+
+    ## Redeem
+    # 30
+    (
+        'Trade_Redeem',
+        '''SELECT "trade_cnt" AS "trade_cnt","trade_user_cnt" AS "trade_user_cnt" ,"trade_amount" AS "trade_amount" FROM "OPAY_TRANSACTION_OP_EVENT_CQ_RESULT_12" WHERE  time > {time} ''',
+        'trade_alert_value',
+        7,
+        'trade_alert_level_1_address',
+        'trade_alert_level_2_address',
+        False,
+        3
+    ),
+
+    # 31
+    (
+        'Trade_Redeem_Success',
+        '''SELECT "trade_success_cnt" AS "trade_success_cnt" FROM "OPAY_TRANSACTION_OP_EVENT_CQ_RESULT_13" WHERE ("__source_table" = 'merchant_transfer_user_record')  and time > {time} ''',
+        'trade_alert_value',
+        7,
+        'trade_alert_level_1_address',
+        'trade_alert_level_2_address',
+        False,
+        3
+    ),
+
+    ## Repayment
+    # 32
+    (
+        'Trade_Repayment',
+        '''SELECT "trade_cnt" AS "trade_cnt","trade_user_cnt" AS "trade_user_cnt" ,"trade_amount" AS "trade_amount" FROM "OPAY_TRANSACTION_OP_EVENT_CQ_RESULT_14" WHERE  time > {time} ''',
+        'trade_alert_value',
+        7,
+        'trade_alert_level_1_address',
+        'trade_alert_level_2_address',
+        False,
+        3
+    ),
+
+    # 33
+    (
+        'Trade_Repayment_Success',
+        '''SELECT "trade_success_cnt" AS "trade_success_cnt" FROM "OPAY_TRANSACTION_OP_EVENT_CQ_RESULT_16" WHERE ("__source_table" = 'merchant_acquiring_record') and time > {time} ''',
+        'trade_alert_value',
+        7,
+        'trade_alert_level_1_address',
+        'trade_alert_level_2_address',
+        False,
+        3
+    ),
+
+    ## Loan
+    # 34
+    (
+        'Trade_Loan',
+        '''SELECT "trade_cnt" AS "trade_cnt","trade_user_cnt" AS "trade_user_cnt" ,"trade_amount" AS "trade_amount" FROM "OPAY_TRANSACTION_OP_EVENT_CQ_RESULT_15" WHERE time > {time} ''',
+        'trade_alert_value',
+        7,
+        'trade_alert_level_1_address',
+        'trade_alert_level_2_address',
+        False,
+        3
+    ),
+
+    # 35
+    (
+        'Trade_Loan_Success',
+        '''SELECT "trade_success_cnt" AS "trade_success_cnt" FROM "OPAY_TRANSACTION_OP_EVENT_CQ_RESULT_16" WHERE ("__source_table" = 'merchant_transfer_user_record')  and time > {time} ''',
+        'trade_alert_value',
+        7,
+        'trade_alert_level_1_address',
+        'trade_alert_level_2_address',
+        False,
+        3
+    ),
+
+    ## TakeOut
+    # 36
+    (
+        'Trade_TakeOut',
+        '''SELECT "trade_cnt" AS "trade_cnt","trade_user_cnt" AS "trade_user_cnt" ,"trade_amount" AS "trade_amount" FROM "OPAY_TRANSACTION_OP_EVENT_CQ_RESULT_17" WHERE  time > {time} ''',
+        'trade_alert_value',
+        7,
+        'trade_alert_level_1_address',
+        'trade_alert_level_2_address',
+        False,
+        3
+    ),
+
+    # 37
+    (
+        'Trade_TakeOut_Success',
+        '''SELECT "trade_success_cnt" AS "trade_success_cnt" FROM "OPAY_TRANSACTION_OP_EVENT_CQ_RESULT_19" WHERE ("__source_table" = 'merchant_acquiring_record') and time > {time}''',
+        'trade_alert_value',
+        7,
+        'trade_alert_level_1_address',
+        'trade_alert_level_2_address',
+        False,
+        3
+    ),
+
+    ## FoodCashback
+    # 38
+    (
+        'Trade_FoodCashback',
+        '''SELECT "trade_cnt" AS "trade_cnt","trade_user_cnt" AS "trade_user_cnt" ,"trade_amount" AS "trade_amount" FROM "OPAY_TRANSACTION_OP_EVENT_CQ_RESULT_18" WHERE  time > {time}  ''',
+        'trade_alert_value',
+        7,
+        'trade_alert_level_1_address',
+        'trade_alert_level_2_address',
+        False,
+        3
+    ),
+
+    # 39
+    (
+        'Trade_FoodCashback_Success',
+        '''SELECT "trade_success_cnt" AS "trade_success_cnt" FROM "OPAY_TRANSACTION_OP_EVENT_CQ_RESULT_19" WHERE ("__source_table" = 'merchant_transfer_user_record') and time > {time}  ''',
+        'trade_alert_value',
+        7,
+        'trade_alert_level_1_address',
+        'trade_alert_level_2_address',
+        False,
+        3
+    ),
+
+    ## QRCode
+    # 40
+    (
+        'Trade_QRCode',
+        '''SELECT "trade_cnt" AS "trade_cnt","trade_user_cnt" AS "trade_user_cnt" ,"trade_amount" AS "trade_amount" FROM "OPAY_TRANSACTION_OP_EVENT_CQ_RESULT_20" WHERE time > {time} ''',
+        'trade_alert_value',
+        7,
+        'trade_alert_level_1_address',
+        'trade_alert_level_2_address',
+        False,
+        3
+    ),
+
+    # 41
+    (
+        'Trade_QRCode_Success',
+        '''SELECT "trade_success_cnt" AS "trade_success_cnt" FROM "OPAY_TRANSACTION_OP_EVENT_CQ_RESULT_21" WHERE time > {time} ''',
+        'trade_alert_value',
+        7,
+        'trade_alert_level_1_address',
+        'trade_alert_level_2_address',
+        False,
+        3
+    ),
+
+    ## QRCashback
+    # 42
+    (
+        'Trade_QRCashback',
+        '''SELECT "trade_cnt" AS "trade_cnt","trade_user_cnt" AS "trade_user_cnt" ,"trade_amount" AS "trade_amount" FROM "OPAY_TRANSACTION_OP_EVENT_CQ_RESULT_22" WHERE time > {time} ''',
+        'trade_alert_value',
+        7,
+        'trade_alert_level_1_address',
+        'trade_alert_level_2_address',
+        False,
+        3
+    ),
+
+    # 43
+    (
+        'Trade_QRCashback_Success',
+        '''SELECT "trade_success_cnt" AS "trade_success_cnt" FROM "OPAY_TRANSACTION_OP_EVENT_CQ_RESULT_23" WHERE  time > {time} ''',
+        'trade_alert_value',
+        7,
+        'trade_alert_level_1_address',
+        'trade_alert_level_2_address',
+        False,
+        3
+    ),
+
+    ## AATransfer
+    # 44
+    (
+        'Trade_AATransfer',
+        ''' SELECT "trade_cnt" AS "trade_cnt","trade_user_cnt" AS "trade_user_cnt" ,"trade_amount" AS "trade_amount" FROM "OPAY_TRANSACTION_OP_EVENT_CQ_RESULT_24" WHERE time > {time} ''',
+        'trade_alert_value',
+        7,
+        'trade_alert_level_1_address',
+        'trade_alert_level_2_address',
+        False,
+        3
+    ),
+
+    # 45
+    (
+        'Trade_AATransfer_Success',
+        ''' SELECT "trade_success_cnt" AS "trade_success_cnt" FROM "OPAY_TRANSACTION_OP_EVENT_CQ_RESULT_25" WHERE time > {time}  ''',
+        'trade_alert_value',
+        7,
+        'trade_alert_level_1_address',
+        'trade_alert_level_2_address',
+        False,
+        3
+    ),
+
+    ## MAcquiring
+    # 46
+    (
+        'Trade_MAcquiring',
+        '''SELECT "trade_cnt" AS "trade_cnt","trade_user_cnt" AS "trade_user_cnt" ,"trade_amount" AS "trade_amount" FROM "OPAY_TRANSACTION_OP_EVENT_CQ_RESULT_26" WHERE  time > {time}  ''',
+        'trade_alert_value',
+        7,
+        'trade_alert_level_1_address',
+        'trade_alert_level_2_address',
+        False,
+        3
+    ),
+
+    # 47
+    (
+        'Trade_MAcquiring_Success',
+        '''SELECT "trade_success_cnt" AS "trade_success_cnt" FROM "OPAY_TRANSACTION_OP_EVENT_CQ_RESULT_27" WHERE  time > {time} ''',
+        'trade_alert_value',
+        7,
+        'trade_alert_level_1_address',
+        'trade_alert_level_2_address',
+        False,
+        3
+    ),
+
+    ## 渠道 INTERSWITCH
+
+    # 通道交易数
+    # 48
+    (
+        'Trade_Channel_INTERSWITCH',
+        '''SELECT count(distinct("id")) AS "channel_trade_cnt" FROM "OPAY_CHANNEL_TRANSACTION_EVENT" WHERE ("out_channel_id" = 'INTERSWITCH' AND "pay_channel" = 'QUICKPAYMENT') AND time > {time} GROUP BY time(10m)''',
+        'trade_channel_alert_value',
+        7,
+        'trade_channel_alert_level_1_address',
+        'trade_channel_alert_level_2_address',
+        False,
+        1
+    ),
+
+    # 通道系统交易成功数
+    # 49
+    (
+        'Trade_Channel_System_Success_INTERSWITCH',
+        '''SELECT count(distinct("id")) AS "trade_channel_system_success_cnt" FROM "OPAY_CHANNEL_TRANSACTION_EVENT" WHERE ("out_channel_id" = 'INTERSWITCH' AND "pay_channel" = 'QUICKPAYMENT') AND time > {time}
+        AND (
+        "transaction_status" = 'SUCCESS' or
+        "bank_response_message" = 'Transaction not Found' or
+        "bank_response_message" = 'Card Expiry is not in correct format' or
+        "bank_response_message" = 'Insufficient Funds' or
+        "bank_response_message" = 'Amount greater than daily transaction limit Card has expired Exceeds Withdrawal Limit Expired Card Lost Card or Pick-Up Not sufficient funds Error occurred while processing your request... Please contact merchant Insufficient Funds Token Not Generated. Customer Not Registered on Token Platform Transaction not Permitted to Cardholder Token Authorization Not Successful. Incorrect Token Supplied Do not honour Transaction Declined Exceeds Withdrawal Limit Issuer or Switch Inoperative The card holder was not authorised. This is used in 3-D Secure Authentication.' or
+        "bank_response_message" = 'Incorrect PIN' or
+        "bank_response_message" = 'Do Not Honor' or
+        "bank_response_message" = 'PIN tries exceeded' or
+        "bank_response_message" = 'No Card Record' or
+        "bank_response_message" = 'Expired card' or
+        "bank_response_message" = 'Token Authentication Failed. Incorrect Token Supplied.' or
+        "bank_response_message" = 'Your payment has exceeded the time required to pay Merchant is not enabled for international transactions.' or
+        "bank_response_message" = 'Lost Card' or
+        "bank_response_message" = 'Exceeds withdrawal amount limits' or
+        "bank_response_message" = 'Kindly enter the OTP sent to' or
+        "bank_response_message" = 'Error occured while processing your request Transaction was blocked by the Payment Server because it did not pass all risk checks.' or
+        "bank_response_message" = 'Invalid Transaction' or
+        "bank_response_message" = 'Lost Card or Pick-Up' or
+        "bank_response_message" = 'Insufficient Funds: Your card cannot be charged due to insufficient funds. Please try another card or fund your card and try again.' or
+        "bank_response_message" = 'Transaction not found' or
+        "bank_response_message" = 'Restricted Merchant' or
+        "bank_response_message" = 'invalid token supplied' or
+        "bank_response_message" = 'Insufficient Funds' or
+        "bank_response_message" = 'Wrong token or email passed' or
+        "bank_response_message" = 'Incorrect PIN' or
+        "bank_response_message" = 'Do Not Honour' or
+        "bank_response_message" = 'Suspected Fraud' or
+        "bank_response_message" = 'Invalid expiry' or
+        "bank_response_message" = 'Kindly enter the OTP sent to' or
+        "bank_response_message" = 'Function Not Permitted to Cardholder: Were sorry. We cannot charge your card due to bank restrictions. Please contact your bank or financial institution No Card Record Fee configuration not found PIN should not be more than 4 digits Failed to retrieve Card Card Issuer Unavailable Function Not Permitted to Cardholder NOAUTH_INTERNATIONAL PIN Tries Exceeded Card was not properly tokenised. Please contact support Lost Card: We are unable to verify your card or please contact your financial institution. In the meantime you can try another card Card number is invalid Exceeds Withdrawal Limi Insufficient funds Your payment has exceeded the time required to pay Token Authentication Failed. Incorrect Token Supplied.' or
+        "bank_response_message" = 'Your account does not seem to have a phone number or email or hardware token provisioned. Please contact your account officer.'
+        )GROUP BY time(10m)''',
+        'trade_channel_system_success_alert_value',
+        7,
+        'trade_channel_system_alert_level_1_address',
+        'trade_channel_system_alert_level_2_address',
+        False,
+        1
+    ),
+
+    # 通道业务交易成功数
+    # 50
+    (
+        'Trade_Channel_Bussiness_Success_INTERSWITCH',
+        '''SELECT count(distinct("id")) AS "trade_channel_bussiness_success_cnt" FROM "OPAY_CHANNEL_TRANSACTION_EVENT" WHERE ("transaction_status" = 'SUCCESS' AND "out_channel_id" = 'INTERSWITCH' AND "pay_channel" = 'QUICKPAYMENT') AND time > {time} GROUP BY time(10m)''',
+        'trade_channel_bussiness_success_alert_value',
+        7,
+        'trade_channel_bussiness_alert_level_1_address',
+        'trade_channel_bussiness_alert_level_2_address',
+        False,
+        1
+    ),
+
+    ## 渠道 PAYSTACK
+
+    # 通道交易数
+    # 51
+    (
+        'Trade_Channel_PAYSTACK',
+        '''SELECT count(distinct("id")) AS "channel_trade_cnt" FROM "OPAY_CHANNEL_TRANSACTION_EVENT" WHERE ("out_channel_id" = 'PAYSTACK' AND "pay_channel" = 'QUICKPAYMENT') AND time > {time} GROUP BY time(10m)''',
+        'trade_channel_alert_value',
+        7,
+        'trade_channel_alert_level_1_address',
+        'trade_channel_alert_level_2_address',
+        False,
+        1
+    ),
+
+    # 通道系统交易成功数
+    # 52
+    (
+        'Trade_Channel_System_Success_PAYSTACK',
+        '''SELECT count(distinct("id")) AS "trade_channel_system_success_cnt" FROM "OPAY_CHANNEL_TRANSACTION_EVENT" WHERE ("out_channel_id" = 'PAYSTACK' AND "pay_channel" = 'QUICKPAYMENT') AND time > {time}
+        AND (
+        "transaction_status" = 'SUCCESS' or
+        "bank_response_message" = 'Transaction not Found' or
+        "bank_response_message" = 'Card Expiry is not in correct format' or
+        "bank_response_message" = 'Insufficient Funds' or
+        "bank_response_message" = 'Amount greater than daily transaction limit Card has expired Exceeds Withdrawal Limit Expired Card Lost Card or Pick-Up Not sufficient funds Error occurred while processing your request... Please contact merchant Insufficient Funds Token Not Generated. Customer Not Registered on Token Platform Transaction not Permitted to Cardholder Token Authorization Not Successful. Incorrect Token Supplied Do not honour Transaction Declined Exceeds Withdrawal Limit Issuer or Switch Inoperative The card holder was not authorised. This is used in 3-D Secure Authentication.' or
+        "bank_response_message" = 'Incorrect PIN' or
+        "bank_response_message" = 'Do Not Honor' or
+        "bank_response_message" = 'PIN tries exceeded' or
+        "bank_response_message" = 'No Card Record' or
+        "bank_response_message" = 'Expired card' or
+        "bank_response_message" = 'Token Authentication Failed. Incorrect Token Supplied.' or
+        "bank_response_message" = 'Your payment has exceeded the time required to pay Merchant is not enabled for international transactions.' or
+        "bank_response_message" = 'Lost Card' or
+        "bank_response_message" = 'Exceeds withdrawal amount limits' or
+        "bank_response_message" = 'Kindly enter the OTP sent to' or
+        "bank_response_message" = 'Error occured while processing your request Transaction was blocked by the Payment Server because it did not pass all risk checks.' or
+        "bank_response_message" = 'Invalid Transaction' or
+        "bank_response_message" = 'Lost Card or Pick-Up' or
+        "bank_response_message" = 'Insufficient Funds: Your card cannot be charged due to insufficient funds. Please try another card or fund your card and try again.' or
+        "bank_response_message" = 'Transaction not found' or
+        "bank_response_message" = 'Restricted Merchant' or
+        "bank_response_message" = 'invalid token supplied' or
+        "bank_response_message" = 'Insufficient Funds' or
+        "bank_response_message" = 'Wrong token or email passed' or
+        "bank_response_message" = 'Incorrect PIN' or
+        "bank_response_message" = 'Do Not Honour' or
+        "bank_response_message" = 'Suspected Fraud' or
+        "bank_response_message" = 'Invalid expiry' or
+        "bank_response_message" = 'Kindly enter the OTP sent to' or
+        "bank_response_message" = 'Function Not Permitted to Cardholder: Were sorry. We cannot charge your card due to bank restrictions. Please contact your bank or financial institution No Card Record Fee configuration not found PIN should not be more than 4 digits Failed to retrieve Card Card Issuer Unavailable Function Not Permitted to Cardholder NOAUTH_INTERNATIONAL PIN Tries Exceeded Card was not properly tokenised. Please contact support Lost Card: We are unable to verify your card or please contact your financial institution. In the meantime you can try another card Card number is invalid Exceeds Withdrawal Limi Insufficient funds Your payment has exceeded the time required to pay Token Authentication Failed. Incorrect Token Supplied.' or
+        "bank_response_message" = 'Your account does not seem to have a phone number or email or hardware token provisioned. Please contact your account officer.'
+        )
+
+        GROUP BY time(10m)''',
+        'trade_channel_system_success_alert_value',
+        7,
+        'trade_channel_alert_level_1_address',
+        'trade_channel_alert_level_2_address',
+        False,
+        1
+    ),
+
+    # 通道业务交易成功数
+    # 53
+    (
+        'Trade_Channel_Bussiness_Success_PAYSTACK',
+        '''SELECT count(distinct("id")) AS "trade_channel_bussiness_success_cnt" FROM "OPAY_CHANNEL_TRANSACTION_EVENT" WHERE ("transaction_status" = 'SUCCESS' AND "out_channel_id" = 'PAYSTACK' AND "pay_channel" = 'QUICKPAYMENT') AND time > {time} GROUP BY time(10m)''',
+        'trade_channel_bussiness_success_alert_value',
+        7,
+        'trade_channel_alert_level_1_address',
+        'trade_channel_alert_level_2_address',
+        False,
+        1
+    ),
+
+    ## 渠道 FLUTTERWAVE
+
+    # 通道交易数
+    # 54
+    (
+        'Trade_Channel_FLUTTERWAVE',
+        '''SELECT count(distinct("id")) AS "channel_trade_cnt" FROM "OPAY_CHANNEL_TRANSACTION_EVENT" WHERE ("out_channel_id" = 'FLUTTERWAVE' AND "pay_channel" = 'QUICKPAYMENT') AND time > {time} GROUP BY time(10m)''',
+        'trade_channel_alert_value',
+        7,
+        'trade_channel_alert_level_1_address',
+        'trade_channel_alert_level_2_address',
+        False,
+        1
+    ),
+
+    # 通道系统交易成功数
+    # 55
+    (
+        'Trade_Channel_System_Success_FLUTTERWAVE',
+        '''SELECT count(distinct("id")) AS "trade_channel_system_success_cnt" FROM "OPAY_CHANNEL_TRANSACTION_EVENT" WHERE ("out_channel_id" = 'FLUTTERWAVE' AND "pay_channel" = 'QUICKPAYMENT') AND time > {time}
+        AND (
+        "transaction_status" = 'SUCCESS' or
+        "bank_response_message" = 'Transaction not Found' or
+        "bank_response_message" = 'Card Expiry is not in correct format' or
+        "bank_response_message" = 'Insufficient Funds' or
+        "bank_response_message" = 'Amount greater than daily transaction limit Card has expired Exceeds Withdrawal Limit Expired Card Lost Card or Pick-Up Not sufficient funds Error occurred while processing your request... Please contact merchant Insufficient Funds Token Not Generated. Customer Not Registered on Token Platform Transaction not Permitted to Cardholder Token Authorization Not Successful. Incorrect Token Supplied Do not honour Transaction Declined Exceeds Withdrawal Limit Issuer or Switch Inoperative The card holder was not authorised. This is used in 3-D Secure Authentication.' or
+        "bank_response_message" = 'Incorrect PIN' or
+        "bank_response_message" = 'Do Not Honor' or
+        "bank_response_message" = 'PIN tries exceeded' or
+        "bank_response_message" = 'No Card Record' or
+        "bank_response_message" = 'Expired card' or
+        "bank_response_message" = 'Token Authentication Failed. Incorrect Token Supplied.' or
+        "bank_response_message" = 'Your payment has exceeded the time required to pay Merchant is not enabled for international transactions.' or
+        "bank_response_message" = 'Lost Card' or
+        "bank_response_message" = 'Exceeds withdrawal amount limits' or
+        "bank_response_message" = 'Kindly enter the OTP sent to' or
+        "bank_response_message" = 'Error occured while processing your request Transaction was blocked by the Payment Server because it did not pass all risk checks.' or
+        "bank_response_message" = 'Invalid Transaction' or
+        "bank_response_message" = 'Lost Card or Pick-Up' or
+        "bank_response_message" = 'Insufficient Funds: Your card cannot be charged due to insufficient funds. Please try another card or fund your card and try again.' or
+        "bank_response_message" = 'Transaction not found' or
+        "bank_response_message" = 'Restricted Merchant' or
+        "bank_response_message" = 'invalid token supplied' or
+        "bank_response_message" = 'Insufficient Funds' or
+        "bank_response_message" = 'Wrong token or email passed' or
+        "bank_response_message" = 'Incorrect PIN' or
+        "bank_response_message" = 'Do Not Honour' or
+        "bank_response_message" = 'Suspected Fraud' or
+        "bank_response_message" = 'Invalid expiry' or
+        "bank_response_message" = 'Kindly enter the OTP sent to' or
+        "bank_response_message" = 'Function Not Permitted to Cardholder: Were sorry. We cannot charge your card due to bank restrictions. Please contact your bank or financial institution No Card Record Fee configuration not found PIN should not be more than 4 digits Failed to retrieve Card Card Issuer Unavailable Function Not Permitted to Cardholder NOAUTH_INTERNATIONAL PIN Tries Exceeded Card was not properly tokenised. Please contact support Lost Card: We are unable to verify your card or please contact your financial institution. In the meantime you can try another card Card number is invalid Exceeds Withdrawal Limi Insufficient funds Your payment has exceeded the time required to pay Token Authentication Failed. Incorrect Token Supplied.' or
+        "bank_response_message" = 'Your account does not seem to have a phone number or email or hardware token provisioned. Please contact your account officer.'
+        )
+        GROUP BY time(10m)''',
+        'trade_channel_system_success_alert_value',
+        7,
+        'trade_channel_alert_level_1_address',
+        'trade_channel_alert_level_2_address',
+        False,
+        1
+    ),
+
+    # 通道业务交易成功数
+    # 56
+    (
+        'Trade_Channel_Bussiness_Success_FLUTTERWAVE',
+        '''SELECT count(distinct("id")) AS "trade_channel_bussiness_success_cnt" FROM "OPAY_CHANNEL_TRANSACTION_EVENT" WHERE ("transaction_status" = 'SUCCESS' AND "out_channel_id" = 'FLUTTERWAVE' AND "pay_channel" = 'QUICKPAYMENT') AND time > {time} GROUP BY time(10m)''',
+        'trade_channel_bussiness_success_alert_value',
+        7,
+        'trade_channel_alert_level_1_address',
+        'trade_channel_alert_level_2_address',
+        False,
+        1
+    ),
+
+    ####### 用户相关指标 独立配置
+
+    ## 注册用户
+    # 57
+    (
+        'User_New_Register_User',
+        '''
+        SELECT count(distinct("id")) AS "new_user_cnt" FROM "OPAY_REGISTER_USER_EVENT" WHERE time > {time} GROUP BY time(10m)
+        ''',
+        'user_register_alert_value',
+        7,
+        'user_register_alert_level_1_address',
+        'user_register_alert_level_2_address',
+        False,
+        1
+    ),
+
+    ## 登陆活跃用户数
+    # 58
+    (
+        'User_Active_User',
+        '''
+        SELECT count(distinct("UID")) AS "active_user_cnt" FROM "OPAY_ACTIVE_USER_EVENT" WHERE time > {time} GROUP BY time(10m)
+        ''',
+        'user_active_alert_value',
+        7,
+        'user_active_alert_level_1_address',
+        'user_active_alert_level_2_address',
+        False,
+        1
+    ),
+
+    ## 绑卡用户数
+    # 59
+    (
+        'User_Bind_Card_User',
+        '''
+        SELECT count(distinct("user_id")) AS "bind_card_user_cnt" FROM "OPAY_PAYMENT_INSTRUMENT_EVENT" WHERE time > {time} GROUP BY time(10m)
+        ''',
+        'user_bind_card_alert_value',
+        7,
+        'user_bind_card_alert_level_1_address',
+        'user_bind_card_alert_level_2_address',
+        False,
+        3
+    ),
+
+    ####### 短信 指标
+
+    ## chuanglan
+
+    # 短息发送量
+    # 60
+    (
+        'Channel_Message_Send_Chuanglan',
+        '''
+        SELECT count(distinct("id")) AS "message_send_cnt" FROM "OPAY_SMS_MESSAGE_EVENT" WHERE  "delivered_channel" = 'chuanglan' AND time > {time} GROUP BY time(10m)
+        ''',
+        'message_send_alert_value',
+        7,
+        'message_alert_level_1_address',
+        'message_alert_level_2_address',
+        False,
+        3
+    ),
+
+    # 短息发送成功量
+    # 61
+    (
+        'Channel_Message_Send_Success_Chuanglan',
+        '''
+        SELECT count(distinct("id")) AS "message_send_success_cnt" FROM "OPAY_SMS_MESSAGE_EVENT" WHERE ("status" = 'SUCCESS') AND "delivered_channel" = 'chuanglan' AND time > {time} GROUP BY time(10m)
+        ''',
+        'message_send_success_alert_value',
+        7,
+        'message_alert_level_1_address',
+        'message_alert_level_2_address',
+        False,
+        3
+    ),
+
+    ## cm
+
+    # 短息发送量
+    # 62
+    (
+        'Channel_Message_Send_Cm',
+        '''
+        SELECT count(distinct("id")) AS "message_send_cnt" FROM "OPAY_SMS_MESSAGE_EVENT" WHERE  "delivered_channel" = 'cm' AND time > {time} GROUP BY time(10m)
+        ''',
+        'message_send_alert_value',
+        7,
+        'message_alert_level_1_address',
+        'message_alert_level_2_address',
+        False,
+        3
+    ),
+
+    # 短息发送成功量
+    # 63
+    (
+        'Channel_Message_Send_Success_Cm',
+        '''
+        SELECT count(distinct("id")) AS "message_send_success_cnt" FROM "OPAY_SMS_MESSAGE_EVENT" WHERE ("status" = 'SUCCESS') AND "delivered_channel" = 'cm' AND time > {time} GROUP BY time(10m)
+        ''',
+        'message_send_success_alert_value',
+        7,
+        'message_alert_level_1_address',
+        'message_alert_level_2_address',
+        False,
+        3
+    ),
+
+    ## dpb
+
+    # 短息发送量
+    # 64
+    (
+        'Channel_Message_Send_Dpb',
+        '''
+        SELECT count(distinct("id")) AS "message_send_cnt" FROM "OPAY_SMS_MESSAGE_EVENT" WHERE  "delivered_channel" = 'dpb' AND time > {time} GROUP BY time(10m)
+        ''',
+        'message_send_alert_value',
+        7,
+        'message_alert_level_1_address',
+        'message_alert_level_2_address',
+        False,
+        3
+    ),
+
+    # 短息发送成功量
+    # 65
+    (
+        'Channel_Message_Send_Success_Dpb',
+        '''
+        SELECT count(distinct("id")) AS "message_send_success_cnt" FROM "OPAY_SMS_MESSAGE_EVENT" WHERE ("status" = 'SUCCESS') AND "delivered_channel" = 'dpb' AND time > {time} GROUP BY time(10m)
+        ''',
+        'message_send_success_alert_value',
+        7,
+        'message_alert_level_1_address',
+        'message_alert_level_2_address',
+        False,
+        3
+    ),
+
+    ## infobip
+
+    # 短息发送量
+    # 66
+    (
+        'Channel_Message_Send_Infobip',
+        '''
+        SELECT count(distinct("id")) AS "message_send_cnt" FROM "OPAY_SMS_MESSAGE_EVENT" WHERE  "delivered_channel" = 'infobip' AND time > {time} GROUP BY time(10m)
+        ''',
+        'message_send_alert_value',
+        7,
+        'message_alert_level_1_address',
+        'message_alert_level_2_address',
+        False,
+        3
+    ),
+
+    # 短息发送成功量
+    # 67
+    (
+        'Channel_Message_Send_Success_infobip',
+        '''
+        SELECT count(distinct("id")) AS "message_send_success_cnt" FROM "OPAY_SMS_MESSAGE_EVENT" WHERE ("status" = 'SUCCESS') AND "delivered_channel" = 'infobip' AND time > {time} GROUP BY time(10m)
+        ''',
+        'message_send_success_alert_value',
+        7,
+        'message_alert_level_1_address',
+        'message_alert_level_2_address',
+        False,
+        3
+    ),
+
+    ## chuangadvert
+
+    # 短息发送量
+    # 68
+    (
+        'Channel_Message_Send_Chuangadvert',
+        '''
+        SELECT count(distinct("id")) AS "message_send_cnt" FROM "OPAY_SMS_MESSAGE_EVENT" WHERE  "delivered_channel" = 'chuangadvert' AND time > {time} GROUP BY time(10m)
+        ''',
+        'message_send_alert_value',
+        7,
+        'message_alert_level_1_address',
+        'message_alert_level_2_address',
+        False,
+        3
+    ),
+
+    # 短息发送成功量
+    # 69
+    (
+        'Channel_Message_Send_Success_Chuangadvert',
+        '''
+        SELECT count(distinct("id")) AS "message_send_success_cnt" FROM "OPAY_SMS_MESSAGE_EVENT" WHERE ("status" = 'SUCCESS') AND "delivered_channel" = 'chuangadvert' AND time > {time} GROUP BY time(10m)
+        ''',
+        'message_send_success_alert_value',
+        7,
+        'message_alert_level_1_address',
+        'message_alert_level_2_address',
+        False,
+        3
+    ),
+
+    ## infobipws
+
+    # 短息发送量
+    # 70
+    (
+        'Channel_Message_Send_Infobipws',
+        '''
+        SELECT count(distinct("id")) AS "message_send_cnt" FROM "OPAY_SMS_MESSAGE_EVENT" WHERE  "delivered_channel" = 'infobipws' AND time > {time} GROUP BY time(10m)
+        ''',
+        'message_send_alert_value',
+        7,
+        'message_alert_level_1_address',
+        'message_alert_level_2_address',
+        False,
+        3
+    ),
+
+    # 短息发送成功量
+    # 71
+    (
+        'Channel_Message_Send_Success_Infobipws',
+        '''
+        SELECT count(distinct("id")) AS "message_send_success_cnt" FROM "OPAY_SMS_MESSAGE_EVENT" WHERE ("status" = 'SUCCESS') AND "delivered_channel" = 'infobipws' AND time > {time} GROUP BY time(10m)
+        ''',
+        'message_send_success_alert_value',
+        7,
+        'message_alert_level_1_address',
+        'message_alert_level_2_address',
+        False,
+        3
+    ),
+
+    ## infobipvoice
+
+    # 短息发送量
+    # 72
+    (
+        'Channel_Message_Send_Infobipvoice',
+        '''
+        SELECT count(distinct("id")) AS "message_send_cnt" FROM "OPAY_SMS_MESSAGE_EVENT" WHERE  "delivered_channel" = 'infobipvoice' AND time > {time} GROUP BY time(10m)
+        ''',
+        'message_send_alert_value',
+        7,
+        'message_alert_level_1_address',
+        'message_alert_level_2_address',
+        False,
+        3
+    ),
+
+    # 短息发送成功量
+    # 73
+    (
+        'Channel_Message_Send_Success_Infobipvoice',
+        '''
+        SELECT count(distinct("id")) AS "message_send_success_cnt" FROM "OPAY_SMS_MESSAGE_EVENT" WHERE ("status" = 'SUCCESS') AND "delivered_channel" = 'infobipvoice' AND time > {time} GROUP BY time(10m)
+        ''',
+        'message_send_success_alert_value',
+        7,
+        'message_alert_level_1_address',
+        'message_alert_level_2_address',
+        False,
+        3
+    ),
+
+    ## chuangghana
+
+    # 短息发送量
+    # 74
+    (
+        'Channel_Message_Send_Chuangghana',
+        '''
+        SELECT count(distinct("id")) AS "message_send_cnt" FROM "OPAY_SMS_MESSAGE_EVENT" WHERE  "delivered_channel" = 'chuangghana' AND time > {time} GROUP BY time(10m)
+        ''',
+        'message_send_alert_value',
+        7,
+        'message_alert_level_1_address',
+        'message_alert_level_2_address',
+        False,
+        3
+    ),
+
+    # 短息发送成功量
+    # 75
+    (
+        'Channel_Message_Send_Success_Chuangghana',
+        '''
+        SELECT count(distinct("id")) AS "message_send_success_cnt" FROM "OPAY_SMS_MESSAGE_EVENT" WHERE ("status" = 'SUCCESS') AND "delivered_channel" = 'chuangghana' AND time > {time} GROUP BY time(10m)
+        ''',
+        'message_send_success_alert_value',
+        7,
+        'message_alert_level_1_address',
+        'message_alert_level_2_address',
+        False,
+        3
+    ),
+
+    ## cmghana
+
+    # 短息发送量
+    # 76
+    (
+        'Channel_Message_Send_Cmghana',
+        '''
+        SELECT count(distinct("id")) AS "message_send_cnt" FROM "OPAY_SMS_MESSAGE_EVENT" WHERE  "delivered_channel" = 'cmghana' AND time > {time} GROUP BY time(10m)
+        ''',
+        'message_send_alert_value',
+        7,
+        'message_alert_level_1_address',
+        'message_alert_level_2_address',
+        False,
+        3
+    ),
+
+    # 短息发送成功量
+    # 77
+    (
+        'Channel_Message_Send_Success_Cmghana',
+        '''
+        SELECT count(distinct("id")) AS "message_send_success_cnt" FROM "OPAY_SMS_MESSAGE_EVENT" WHERE ("status" = 'SUCCESS') AND "delivered_channel" = 'cmghana' AND time > {time} GROUP BY time(10m)
+        ''',
+        'message_send_success_alert_value',
+        7,
+        'message_alert_level_1_address',
+        'message_alert_level_2_address',
+        False,
+        3
+    ),
 
 ]
 
