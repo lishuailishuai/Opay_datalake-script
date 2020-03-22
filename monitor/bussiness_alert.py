@@ -1476,7 +1476,7 @@ for i in range(len(metrcis_list)):
         dag=dag
     )
 
-    if i <= len(metrcis_list_1):
+    if i <= len(metrcis_list_1) -1:
         [metrics_name, influx_db_query_sql, alert_value_name, compare_day, alert_1_level_name, alert_2_level_name,
          is_close_alert, mode] = metrcis_list_1[i]
 
@@ -1497,7 +1497,7 @@ for i in range(len(metrcis_list)):
             dag=dag
         )
 
-        if i <= len(metrcis_list_2):
+        if i <= len(metrcis_list_2) -1:
             [metrics_name, influx_db_query_sql, alert_value_name, compare_day, alert_1_level_name, alert_2_level_name,
              is_close_alert, mode] = metrcis_list_2[i]
 
@@ -1518,7 +1518,7 @@ for i in range(len(metrcis_list)):
                 dag=dag
             )
 
-            if i <= len(metrcis_list_3):
+            if i <= len(metrcis_list_3) -1:
                 [metrics_name, influx_db_query_sql, alert_value_name, compare_day, alert_1_level_name,
                  alert_2_level_name,
                  is_close_alert, mode] = metrcis_list_3[i]
