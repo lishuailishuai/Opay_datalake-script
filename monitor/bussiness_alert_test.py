@@ -30,7 +30,7 @@ args = {
 dag = airflow.DAG(
     'bussiness_alert_test',
     schedule_interval="10,20,30,40,50 * * * *",
-    concurrency=20,
+    concurrency=10,
     max_active_runs=1,
     default_args=args)
 
