@@ -18,7 +18,7 @@ import random
 
 args = {
     'owner': 'yangmingze',
-    'start_date': datetime.datetime(2020, 3, 22),
+    'start_date': datetime.datetime(2020, 3, 22,13),
     'depends_on_past': False,
     'retries': 1,
     'retry_delay': datetime.timedelta(minutes=1),
