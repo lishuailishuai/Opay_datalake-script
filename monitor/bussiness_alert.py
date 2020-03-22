@@ -287,9 +287,6 @@ metrcis_list = [
         3
     ),
 
-]
-
-metrcis_list_1 = [
     # 21
     (
         'Trade_TopupWithCard_Success',
@@ -539,9 +536,6 @@ metrcis_list_1 = [
         False,
         3
     ),
-]
-
-metrcis_list_2 = [
 
     # 41
     (
@@ -757,7 +751,7 @@ metrcis_list_2 = [
         "bank_response_message" = 'Function Not Permitted to Cardholder: Were sorry. We cannot charge your card due to bank restrictions. Please contact your bank or financial institution No Card Record Fee configuration not found PIN should not be more than 4 digits Failed to retrieve Card Card Issuer Unavailable Function Not Permitted to Cardholder NOAUTH_INTERNATIONAL PIN Tries Exceeded Card was not properly tokenised. Please contact support Lost Card: We are unable to verify your card or please contact your financial institution. In the meantime you can try another card Card number is invalid Exceeds Withdrawal Limi Insufficient funds Your payment has exceeded the time required to pay Token Authentication Failed. Incorrect Token Supplied.' or
         "bank_response_message" = 'Your account does not seem to have a phone number or email or hardware token provisioned. Please contact your account officer.'
         )
-    
+
         GROUP BY time(10m)''',
         'trade_channel_system_success_alert_value',
         7,
@@ -920,9 +914,6 @@ metrcis_list_2 = [
         False,
         3
     ),
-]
-
-metrcis_list_3 = [
 
     # 短息发送成功量
     # 61
@@ -1455,10 +1446,8 @@ def monitor_task(ds, metrics_name, influx_db_query_sql, alert_value_name, compar
     influx_client.close()
 
 
-for i in range(len(metrcis_list)):
-    [metrics_name, influx_db_query_sql, alert_value_name, compare_day, alert_1_level_name, alert_2_level_name,
-     is_close_alert, mode] = metrcis_list[i]
-
+for [metrics_name, influx_db_query_sql, alert_value_name, compare_day, alert_1_level_name, alert_2_level_name,
+     is_close_alert, mode] in metrcis_list:
     monitor = PythonOperator(
         task_id='monitor_task_{}'.format(metrics_name),
         python_callable=monitor_task,
@@ -1476,68 +1465,3 @@ for i in range(len(metrcis_list)):
         dag=dag
     )
 
-    if i <= len(metrcis_list_1) -1:
-        [metrics_name, influx_db_query_sql, alert_value_name, compare_day, alert_1_level_name, alert_2_level_name,
-         is_close_alert, mode] = metrcis_list_1[i]
-
-        monitor_1 = PythonOperator(
-            task_id='monitor_task_{}'.format(metrics_name),
-            python_callable=monitor_task,
-            provide_context=True,
-            op_kwargs={
-                'metrics_name': metrics_name,
-                'influx_db_query_sql': influx_db_query_sql,
-                'alert_value_name': alert_value_name,
-                'compare_day': compare_day,
-                'alert_1_level_name': alert_1_level_name,
-                'alert_2_level_name': alert_2_level_name,
-                'is_close_alert': is_close_alert,
-                'mode': mode
-            },
-            dag=dag
-        )
-
-        if i <= len(metrcis_list_2) -1:
-            [metrics_name, influx_db_query_sql, alert_value_name, compare_day, alert_1_level_name, alert_2_level_name,
-             is_close_alert, mode] = metrcis_list_2[i]
-
-            monitor_2 = PythonOperator(
-                task_id='monitor_task_{}'.format(metrics_name),
-                python_callable=monitor_task,
-                provide_context=True,
-                op_kwargs={
-                    'metrics_name': metrics_name,
-                    'influx_db_query_sql': influx_db_query_sql,
-                    'alert_value_name': alert_value_name,
-                    'compare_day': compare_day,
-                    'alert_1_level_name': alert_1_level_name,
-                    'alert_2_level_name': alert_2_level_name,
-                    'is_close_alert': is_close_alert,
-                    'mode': mode
-                },
-                dag=dag
-            )
-
-            if i <= len(metrcis_list_3) -1:
-                [metrics_name, influx_db_query_sql, alert_value_name, compare_day, alert_1_level_name,
-                 alert_2_level_name,
-                 is_close_alert, mode] = metrcis_list_3[i]
-
-                monitor_3 = PythonOperator(
-                    task_id='monitor_task_{}'.format(metrics_name),
-                    python_callable=monitor_task,
-                    provide_context=True,
-                    op_kwargs={
-                        'metrics_name': metrics_name,
-                        'influx_db_query_sql': influx_db_query_sql,
-                        'alert_value_name': alert_value_name,
-                        'compare_day': compare_day,
-                        'alert_1_level_name': alert_1_level_name,
-                        'alert_2_level_name': alert_2_level_name,
-                        'is_close_alert': is_close_alert,
-                        'mode': mode
-                    },
-                    dag=dag
-                )
-
-                monitor >> monitor_1 >> monitor_2 >> monitor_3
