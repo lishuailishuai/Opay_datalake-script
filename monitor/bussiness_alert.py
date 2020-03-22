@@ -163,6 +163,9 @@ metrcis_list = [
         3
     ),
 
+]
+
+metrcis_list_1 = [
     # 11
     (
         'Trade_Mobiledata_Success',
@@ -287,7 +290,6 @@ metrcis_list = [
         False,
         3
     ),
-
 
 ]
 
@@ -549,7 +551,10 @@ def monitor_task(ds, metrics_name, influx_db_query_sql, alert_value_name, compar
     influx_client.close()
 
 
-for metrics_name, influx_db_query_sql, alert_value_name, compare_day, alert_1_level_name, alert_2_level_name, is_close_alert, mode in metrcis_list:
+for i in range(len(metrcis_list)):
+
+    [metrics_name, influx_db_query_sql, alert_value_name, compare_day, alert_1_level_name, alert_2_level_name,
+     is_close_alert, mode] = metrcis_list[i]
     monitor = PythonOperator(
         task_id='monitor_task_{}'.format(metrics_name),
         python_callable=monitor_task,
@@ -566,3 +571,25 @@ for metrics_name, influx_db_query_sql, alert_value_name, compare_day, alert_1_le
         },
         dag=dag
     )
+
+    if i <= len(metrcis_list_1) - 1:
+        [metrics_name, influx_db_query_sql, alert_value_name, compare_day, alert_1_level_name, alert_2_level_name,
+         is_close_alert, mode] = metrcis_list_1[i]
+        monitor_1 = PythonOperator(
+            task_id='monitor_task_{}'.format(metrics_name),
+            python_callable=monitor_task,
+            provide_context=True,
+            op_kwargs={
+                'metrics_name': metrics_name,
+                'influx_db_query_sql': influx_db_query_sql,
+                'alert_value_name': alert_value_name,
+                'compare_day': compare_day,
+                'alert_1_level_name': alert_1_level_name,
+                'alert_2_level_name': alert_2_level_name,
+                'is_close_alert': is_close_alert,
+                'mode': mode
+            },
+            dag=dag
+        )
+
+        monitor >> monitor_1
