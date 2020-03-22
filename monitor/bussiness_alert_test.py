@@ -551,11 +551,11 @@ def monitor_task(ds, metrics_name, influx_db_query_sql, alert_value_name, compar
     influx_client.close()
 
 
-def influx_conn():
+# def influx_conn():
 
-    influx_client=InfluxDBClient('10.52.5.233', 8086, 'bigdata', 'opay321', 'serverDB')
+#     influx_client=InfluxDBClient('10.52.5.233', 8086, 'bigdata', 'opay321', 'serverDB')
 
-    return influx_client
+#     return influx_client
 
 
 conn_conf_dict={}
@@ -566,7 +566,10 @@ for metrics_name, influx_db_query_sql, alert_value_name, compare_day, alert_1_le
 
     if conn_id not in conn_conf_dict:
 
-        conn_conf_dict[conn_id] =influx_conn()
+        conn_conf_dict[conn_id] =InfluxDBClient('10.52.5.233', 8086, 'bigdata', 'opay321', 'serverDB')
+
+        #influx_client=conn_conf_dict[conn_id]
+
 
 
     monitor = PythonOperator(
@@ -582,7 +585,7 @@ for metrics_name, influx_db_query_sql, alert_value_name, compare_day, alert_1_le
             'alert_2_level_name': alert_2_level_name,
             'is_close_alert': is_close_alert,
             'mode': mode,
-            'influx_db_id':influx_conn()
+            'influx_db_id':conn_conf_dict[conn_id]
         },
         dag=dag
     )
