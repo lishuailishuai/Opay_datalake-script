@@ -446,7 +446,7 @@ def handle_mode_3(metrics_name, last_value, compare_value, alert_value_1, alert_
 
 
 def monitor_task(ds, metrics_name, influx_db_query_sql, alert_value_name, compare_day, alert_1_level_name,
-                 alert_2_level_name, is_close_alert, mode,influx_db_id **kwargs):
+                 alert_2_level_name, is_close_alert, mode,influx_db_id, **kwargs):
     last_time = 0
     data_map = dict()
 
