@@ -567,7 +567,7 @@ for metrics_name, influx_db_query_sql, alert_value_name, compare_day, alert_1_le
     if conn_id not in conn_conf_dict:
 
         conn_conf_dict[conn_id] =InfluxDBClient('10.52.5.233', 8086, 'bigdata', 'opay321', 'serverDB')
-
+        print("++++++++-----------------++++++++++")
         #influx_client=conn_conf_dict[conn_id]
 
 
