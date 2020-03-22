@@ -7,7 +7,6 @@ import logging
 import os
 from plugins.DingdingAlert import DingdingAlert
 import paramiko
-from scp import SCPClient
 import time
 import datetime, time
 import requests
