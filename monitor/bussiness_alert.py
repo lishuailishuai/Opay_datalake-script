@@ -18,7 +18,7 @@ import random
 
 args = {
     'owner': 'linan',
-    'start_date': datetime.datetime(2020, 3, 21),
+    'start_date': datetime.datetime(2020, 3, 22),
     'depends_on_past': False,
     'retries': 1,
     'retry_delay': datetime.timedelta(minutes=1),
@@ -30,7 +30,7 @@ args = {
 dag = airflow.DAG(
     'bussiness_alert',
     schedule_interval="10,20,30,40,50 * * * *",
-    concurrency=30,
+    concurrency=20,
     default_args=args)
 
 UTC_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
