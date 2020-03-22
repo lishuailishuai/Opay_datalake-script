@@ -398,10 +398,10 @@ def handle_mode_1(metrics_name, last_value, compare_value, alert_value_1, alert_
                   ):
     if last_value < int(compare_value * alert_value_1):
         alert_value_1 = int(alert_value_1 * 100)
-        alert(metrics_name, last_value, compare_value, [alert_value_1, ''], last_time,
-              compare_day_ago_second,
-              alert_1_level_name,
-              alert_2_level_name, is_close_alert, template_name)
+        # alert(metrics_name, last_value, compare_value, [alert_value_1, ''], last_time,
+        #       compare_day_ago_second,
+        #       alert_1_level_name,
+        #       alert_2_level_name, is_close_alert, template_name)
     else:
         clear_error_times(metrics_name, template_name)
 
@@ -416,10 +416,10 @@ def handle_mode_2(metrics_name, last_value, compare_value, alert_value_1, alert_
                   ):
     if last_value > int(compare_value * alert_value_2):
         alert_value_2 = int(alert_value_2 * 100)
-        alert(metrics_name, last_value, compare_value, ['', alert_value_2], last_time,
-              compare_day_ago_second,
-              alert_1_level_name,
-              alert_2_level_name, is_close_alert, template_name)
+        # alert(metrics_name, last_value, compare_value, ['', alert_value_2], last_time,
+        #       compare_day_ago_second,
+        #       alert_1_level_name,
+        #       alert_2_level_name, is_close_alert, template_name)
     else:
         clear_error_times(metrics_name, template_name)
 
@@ -437,10 +437,10 @@ def handle_mode_3(metrics_name, last_value, compare_value, alert_value_1, alert_
         alert_value_1 = int(alert_value_1 * 100)
         alert_value_2 = int(alert_value_2 * 100)
 
-        alert(metrics_name, last_value, compare_value, [alert_value_1, alert_value_2], last_time,
-              compare_day_ago_second,
-              alert_1_level_name,
-              alert_2_level_name, is_close_alert, template_name)
+        # alert(metrics_name, last_value, compare_value, [alert_value_1, alert_value_2], last_time,
+        #       compare_day_ago_second,
+        #       alert_1_level_name,
+        #       alert_2_level_name, is_close_alert, template_name)
     else:
         clear_error_times(metrics_name, template_name)
 
