@@ -253,7 +253,7 @@ metrcis_list = [
     # 18
     (
         'Trade_Pos',
-        '''SELECT "trade_cnt" AS "trade_cnt","trade_user_cnt" AS "trade_user_cnt" ,"trade_amount" AS "trade_amount" FROM "OPAY_TRANSACTION_OP_EVENT_CQ_RESULT_4" WHEREtime > {time} ''',
+        '''SELECT "trade_cnt" AS "trade_cnt","trade_user_cnt" AS "trade_user_cnt" ,"trade_amount" AS "trade_amount" FROM "OPAY_TRANSACTION_OP_EVENT_CQ_RESULT_4" WHERE time > {time} ''',
         'trade_alert_value',
         7,
         'trade_alert_level_1_address',
