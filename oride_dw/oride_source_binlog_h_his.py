@@ -231,6 +231,19 @@ def add_partition(v_execution_date, v_execution_day, v_execution_hour, db_name, 
     return
 
 
+def add_hi_partition(v_execution_date, v_execution_day, v_execution_hour, db_name, table_name, conn_id, hive_table_name,
+                     server_name, hive_db, is_must_have_data, **kwargs):
+    sql = '''
+            ALTER TABLE {hive_db}.{table} ADD IF NOT EXISTS PARTITION (dt = '{ds}', hour = '{hour}')
+        '''.format(hive_db=hive_db, table=hive_table_name, ds=v_execution_day, hour=v_execution_hour)
+
+    hive2_conn = HiveServer2Hook().get_conn()
+    cursor = hive2_conn.cursor()
+    cursor.execute(sql)
+
+    return
+
+
 def run_check_table(mysql_db_name, mysql_table_name, conn_id, hive_h_his_table_name, server_name, **kwargs):
     # SHOW TABLES in oride_db LIKE 'data_aa'
     check_sql = 'SHOW TABLES in %s LIKE \'%s\'' % (HIVE_DB, hive_h_his_table_name)
@@ -377,7 +390,8 @@ def validate_full_table_exist_task(hive_h_his_table_name, mysql_table_name, **kw
         return 'add_partitions_{}'.format(hive_h_his_table_name)
 
 
-def merge_pre_hi_data_task(hive_db, hive_h_his_table_name, hive_hi_table_name, pt, now_hour,pre_hour_day, pre_hour, **kwargs):
+def merge_pre_hi_data_task(hive_db, hive_h_his_table_name, hive_hi_table_name, pt, now_hour, pre_hour_day, pre_hour,
+                           **kwargs):
     sqoopSchema = SqoopSchemaUpdate()
     hive_columns = sqoopSchema.get_hive_column_name(hive_db, hive_h_his_table_name)
 
@@ -417,7 +431,7 @@ def merge_pre_hi_data_task(hive_db, hive_h_his_table_name, hive_hi_table_name, p
 def merge_pre_hi_with_full_data_task(hive_db, hive_h_his_table_name, hive_hi_table_name, mysql_db_name,
                                      mysql_table_name, mysql_conn,
                                      sqoop_temp_db_name, sqoop_table_name,
-                                     pt, now_hour, pre_day,pre_hour_day, pre_hour, **kwargs):
+                                     pt, now_hour, pre_day, pre_hour_day, pre_hour, **kwargs):
     sqoopSchema = SqoopSchemaUpdate()
 
     hive_columns = sqoopSchema.get_hive_column_name(hive_db, hive_h_his_table_name)
@@ -542,7 +556,7 @@ for mysql_db_name, mysql_table_name, conn_id, prefix_name, priority_weight_nm, s
         dag=dag
     )
 
-    # add partitions
+    # add h_his partitions
     add_partitions = PythonOperator(
         task_id='add_partitions_{}'.format(hive_h_his_table_name),
         priority_weight=priority_weight_nm,
@@ -563,9 +577,27 @@ for mysql_db_name, mysql_table_name, conn_id, prefix_name, priority_weight_nm, s
         dag=dag
     )
 
-
-
-
+    ## 脱离小时级增量绑定过程
+    # add_hi_partitions
+    add_hi_partitions = PythonOperator(
+        task_id='add_hi_partitions_{}'.format(hive_h_his_table_name),
+        priority_weight=priority_weight_nm,
+        python_callable=add_hi_partition,
+        provide_context=True,
+        op_kwargs={
+            'db_name': mysql_db_name,
+            'table_name': mysql_table_name,
+            'conn_id': conn_id,
+            'hive_table_name': hive_hi_table_name,
+            'server_name': server_name,
+            'hive_db': HIVE_DB,
+            'is_must_have_data': 'false',
+            'v_execution_date': '{{execution_date.strftime("%Y-%m-%d %H:%M:%S")}}',
+            'v_execution_day': '{{execution_date.strftime("%Y-%m-%d")}}',
+            'v_execution_hour': '{{execution_date.strftime("%H")}}',
+        },
+        dag=dag
+    )
 
     # merge_pre_hi_data_task
     merge_pre_hi_data = PythonOperator(
@@ -622,6 +654,6 @@ for mysql_db_name, mysql_table_name, conn_id, prefix_name, priority_weight_nm, s
         dag=dag_monitor
     )
 
-    check_h_his_table >> validate_full_table_exist >> [add_partitions, import_table]
-    add_partitions  >> merge_pre_hi_data
-    import_table >> check_sqoop_table  >> merge_pre_hi_with_full_data
+    check_h_his_table >> add_hi_partitions >> validate_full_table_exist >> [add_partitions, import_table]
+    add_partitions >> merge_pre_hi_data
+    import_table >> check_sqoop_table >> merge_pre_hi_with_full_data
