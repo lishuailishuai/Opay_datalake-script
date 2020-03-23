@@ -129,7 +129,9 @@ def dm_opay_user_trans_portrait_df_sql_task(ds):
         nvl(owealth_bal_avg_w, 0) as owealth_bal_avg_w, 
         nvl(owealth_bal_avg_m, 0) as owealth_bal_avg_m, 
         nvl(owealth_bal_avg_7d, 0) as owealth_bal_avg_7d, 
-        nvl(owealth_bal_avg_30d, 0) as owealth_bal_avg_30d
+        nvl(owealth_bal_avg_30d, 0) as owealth_bal_avg_30d,
+        'NG' as country_code,
+        '{pt}'
     
     
     from (
