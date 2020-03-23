@@ -32,34 +32,10 @@ dag = airflow.DAG(
     default_args=args)
 
 ##----------------------------------------- 依赖 ---------------------------------------##
-app_ocredit_phones_order_base_cube_d_task = OssSensor(
-    task_id='app_ocredit_phones_order_base_cube_d_task',
+app_ocredit_phones_risk_control_cube_d_task = OssSensor(
+    task_id='app_ocredit_phones_risk_control_cube_d_task',
     bucket_key="{hdfs_path_str}/dt={pt}/_SUCCESS".format(
-        hdfs_path_str="ocredit_phones/ocredit_phones_dw/app_ocredit_phones_order_base_cube_d/country_code=nal",
-
-        pt="{{ds}}"
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
-
-app_ocredit_phones_order_base_cube_m_task = OssSensor(
-    task_id='app_ocredit_phones_order_base_cube_m_task',
-    bucket_key="{hdfs_path_str}/dt={pt}/_SUCCESS".format(
-        hdfs_path_str="ocredit_phones/ocredit_phones_dw/app_ocredit_phones_order_base_cube_m/country_code=nal",
-
-        pt="{{ds}}"
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
-
-app_ocredit_phones_order_base_cube_w_task = OssSensor(
-    task_id='app_ocredit_phones_order_base_cube_w_task',
-    bucket_key="{hdfs_path_str}/dt={pt}/_SUCCESS".format(
-        hdfs_path_str="ocredit_phones/ocredit_phones_dw/app_ocredit_phones_order_base_cube_w/country_code=nal",
+        hdfs_path_str="ocredit_phones/ocredit_phones_dw/app_ocredit_phones_risk_control_cube_d/country_code=nal",
 
         pt="{{ds}}"
     ),
@@ -73,143 +49,26 @@ def get_show_date(ds):
     tr_fmt = '''
             <tr>
             各位同事：<br/>
-            附件为截止到昨天的手机分期全流程日报情况，主要内容如下：<br/>
-            1、当日情况：昨日{date_of_entry}进件{entry_cnt}笔，初审通过{pre_amount}笔，复审通过{review_amount}笔，风控通过率为{all_rate}，其中3期风控通过率为{all_rate_3}，6期风控通过率为{all_rate_6}；
+            附件为截止到昨日{dt}手机分期全流程日报情况，主要内容如下：<br/>
+            1、当日情况：进件{entry_opay_cnt}笔，初审通过率为{one_rate}，复审通过率为{two_rate}，风控通过率为{three_rate}；进件到放款总时效为{total_use_average_hour}时；
             </tr>
             '''
 
     sql = '''
-          select date_of_entry,entry_cnt,
-          pre_amount,review_amount,all_rate,
-          all_rate_3,all_rate_6
-          from(
-          select
-          date_of_entry,
-          sum(entry_cnt) as entry_cnt,
-          sum(pre_amount) as pre_amount,
-          sum(review_amount) as review_amount,
-          sum(loan_cnt) as loan_cnt,
-          concat(sum(pre_rate),'%') as pre_rate,
-          concat(sum(review_rate),'%') as review_rate,
-          concat(sum(all_rate),'%') as all_rate,
           
-          sum(entry_cnt_3) as entry_cnt_3,
-          sum(pre_amount_3) as pre_amount_3,
-          sum(review_amount_3) as review_amount_3,
-          sum(loan_cnt_3) as loan_cnt_3,
-          concat(sum(pre_rate_3),'%') as pre_rate_3,
-          concat(sum(review_rate_3),'%') as review_rate_3,
-          concat(sum(all_rate_3),'%') as all_rate_3,
-          
-          sum(entry_cnt_6) as entry_cnt_6,
-          sum(pre_amount_6) as pre_amount_6,
-          sum(review_amount_6) as review_amount_6,
-          sum(loan_cnt_6) as loan_cnt_6,
-          concat(sum(pre_rate_6),'%') as pre_rate_6,
-          concat(sum(review_rate_6),'%') as review_rate_6,
-          concat(sum(all_rate_6),'%') as all_rate_6
-          
-          from(
-          select
-          date_of_entry,
-          entry_cnt,
-          pre_amount,
-          review_amount,
-          loan_cnt,
-          round(pre_amount/entry_cnt*100,2) pre_rate,
-          round(review_amount/pre_amount*100,2) review_rate,
-          round(review_amount/entry_cnt*100,2) all_rate,
-          null as entry_cnt_3,
-          null as pre_amount_3,
-          null as review_amount_3,
-          null as loan_cnt_3,
-          null as pre_rate_3,
-          null as review_rate_3,
-          null as all_rate_3,
-          null as entry_cnt_6,
-          null as pre_amount_6,
-          null as review_amount_6,
-          null as loan_cnt_6,
-          null as pre_rate_6,
-          null as review_rate_6,
-          null as all_rate_6
-          
-          from ocredit_phones_dw.app_ocredit_phones_order_base_cube_d
-          where dt='{dt}'
-          and terms=-10000
-          and substr(date_of_entry,1,7) = substr('{dt}',1,7)
-          
-          union all
-          
-          select
-          date_of_entry,
-          null as entry_cnt,
-          null as pre_amount,
-          null as review_amount,
-          null as loan_cnt,
-          null as pre_rate,
-          null as review_rate,
-          null as all_rate,
-          entry_cnt as entry_cnt_3,
-          pre_amount as pre_amount_3,
-          review_amount as review_amount_3,
-          loan_cnt as loan_cnt_3,
-          round(pre_amount/entry_cnt*100,2) pre_rate_3,
-          round(review_amount/pre_amount*100,2) review_rate_3,
-          round(review_amount/entry_cnt*100,2) all_rate_3,
-          null as entry_cnt_6,
-          null as pre_amount_6,
-          null as review_amount_6,
-          null as loan_cnt_6,
-          null as pre_rate_6,
-          null as review_rate_6,
-          null as all_rate_6
-          
-          from ocredit_phones_dw.app_ocredit_phones_order_base_cube_d
-          where dt='{dt}'
-          and terms=3
-          and substr(date_of_entry,1,7) = substr('{dt}',1,7)
+          select entry_opay_cnt,concat(round(pre_amount/entry_opay_cnt*100,2),'%'),
+          concat(round(review_amount/pre_amount*100,2),'%'),
+          concat(round(review_amount/entry_opay_cnt*100,2),'%'),
+          round(total_use_average_hour,2)
+          from
+          ocredit_phones_dw.app_ocredit_phones_risk_control_cube_d 
+          where date_of_entry is not null
+          and dt='{dt}'
+          and date_of_entry='{dt}'
           
           
-          union all
-
-
-          select
-          date_of_entry,
-          null as entry_cnt,
-          null as pre_amount,
-          null as review_amount,
-          null as loan_cnt,
-          null as pre_rate,
-          null as review_rate,
-          null as all_rate,
-          null as entry_cnt_3,
-          null as pre_amount_3,
-          null as review_amount_3,
-          null as loan_cnt_3,
-          null as pre_rate_3,
-          null as review_rate_3,
-          null as all_rate_3,
-          entry_cnt as entry_cnt_6,
-          pre_amount as pre_amount_6,
-          review_amount as review_amount_6,
-          loan_cnt as loan_cnt_6,
-          round(pre_amount/entry_cnt*100,2) pre_rate_6,
-          round(review_amount/pre_amount*100,2) review_rate_6,
-          round(review_amount/entry_cnt*100,2) all_rate_6
           
-          from ocredit_phones_dw.app_ocredit_phones_order_base_cube_d
-          where dt='{dt}'
-          and terms=6
-          and substr(date_of_entry,1,7) = substr('{dt}',1,7)
           
-          ) a
-          group by date_of_entry
-          order by date_of_entry desc
-          ) a where date_of_entry='{dt}'
-
-
-
                  '''.format(dt=ds,
                             start_date=airflow.macros.ds_add(ds, -14))
     cursor = get_hive_cursor()
@@ -220,23 +79,20 @@ def get_show_date(ds):
     row_html = ''
     if len(data_list) > 0:
         for data in data_list:
-            date_of_entry = data[0]
-            entry_cnt = data[1]
-            pre_amount = data[2]
-            review_amount = data[3]
-            all_rate = data[4]
-            all_rate_3 = data[5]
-            all_rate_6 = data[6]
+            entry_opay_cnt = data[0]
+            one_rate = data[1]
+            two_rate = data[2]
+            three_rate = data[3]
+            total_use_average_hour = data[4]
+
 
             row_html += tr_fmt.format(
-
-                date_of_entry=date_of_entry,
-                entry_cnt=entry_cnt,
-                pre_amount=pre_amount,
-                review_amount = review_amount,
-                all_rate = all_rate,
-                all_rate_3 = all_rate_3,
-                all_rate_6 = all_rate_6
+                dt=ds,
+                entry_opay_cnt=entry_opay_cnt,
+                one_rate=one_rate,
+                two_rate=two_rate,
+                three_rate = three_rate,
+                total_use_average_hour = total_use_average_hour
 
             )
 
@@ -248,145 +104,73 @@ def get_show_date(ds):
 
 def get_show_month(ds):
     tr_fmt = '''
+            
             <tr>
-            2、本月情况：截止到昨日{dt}进件{entry_cnt}笔，初审通过{pre_amount}笔，复审通过{review_amount}笔，风控通过率为{all_rate}，其中3期风控通过率为{all_rate_3}，6期风控通过率为{all_rate_6}；<br/>
-            备注1：初审通过率=初审通过的/进件量<br/>
-            备注2：复审通过率=复审通过的/初审通过的<br/>
-            备注3：风控整体通过率=复审通过的/进件量<br/>
+            2、本月情况：进件{entry_opay_cnt}笔，初审通过率为{one_rate}，复审通过率为{two_rate}，风控通过率为{three_rate}；进件到放款总时效为{total_use_average_hour}时；
+            </tr>
+            '''
+
+    sql = '''
+         
+          select entry_opay_cnt,concat(round(pre_amount/entry_opay_cnt*100,2),'%'),
+          concat(round(review_amount/pre_amount*100,2),'%'),
+          concat(round(review_amount/entry_opay_cnt*100,2),'%'),
+          round(total_use_average_hour,2)
+          from
+          ocredit_phones_dw.app_ocredit_phones_risk_control_cube_d 
+          where month_of_entry is not null
+          and dt='{dt}'
+          and month_of_entry=substr('{dt}',1,7)
+
+                 '''.format(dt=ds,
+                            start_date=airflow.macros.ds_add(ds, -14))
+    cursor = get_hive_cursor()
+    logging.info('Executing: %s', sql)
+    cursor.execute(sql)
+    data_list = cursor.fetchall()
+    cursor.close()
+    row_html = ''
+    if len(data_list) > 0:
+        for data in data_list:
+            entry_opay_cnt = data[0]
+            one_rate = data[1]
+            two_rate = data[2]
+            three_rate = data[3]
+            total_use_average_hour = data[4]
+
+            row_html += tr_fmt.format(
+
+                dt=ds,
+                entry_opay_cnt=entry_opay_cnt,
+                one_rate=one_rate,
+                two_rate=two_rate,
+                three_rate=three_rate,
+                total_use_average_hour=total_use_average_hour
+            )
+
+    return row_html
+
+
+def get_show_all(ds):
+    tr_fmt = '''
+            <tr>
+            3、累计情况：进件{entry_opay_cnt}笔，初审通过率为{one_rate}，复审通过率为{two_rate}，风控通过率为{three_rate}；进件到放款总时效为{total_use_average_hour}时；<br/>
+            备注1：初审通过率=初审通过的/进件量，复审通过率=复审通过的/初审通过的，风控整体通过率=复审通过的/进件量<br/>
             以上敬请参考，如有疑问，随时沟通！
             </tr>
             '''
 
     sql = '''
-          select 
-          entry_cnt,pre_amount,review_amount,all_rate,
-          all_rate_3,all_rate_6
+                
+          select sum(entry_opay_cnt),concat(round(sum(pre_amount)/sum(entry_opay_cnt)*100,2),'%'),
+          concat(round(sum(review_amount)/sum(pre_amount)*100,2),'%'),
+          concat(round(sum(review_amount)/sum(entry_opay_cnt)*100,2),'%'),
+          round(sum(total_use_average_hour),2)
+          from
+          ocredit_phones_dw.app_ocredit_phones_risk_control_cube_d 
+          where month_of_entry is not null
+          and dt='{dt}'
           
-          from(
-          select
-          month_of_entry,
-          sum(entry_cnt) as entry_cnt,
-          sum(pre_amount) as pre_amount,
-          sum(review_amount) as review_amount,
-          sum(loan_cnt) as loan_cnt,
-          concat(sum(pre_rate),'%') as pre_rate,
-          concat(sum(review_rate),'%') as review_rate,
-          concat(sum(all_rate),'%') as all_rate,
-          
-          sum(entry_cnt_3) as entry_cnt_3,
-          sum(pre_amount_3) as pre_amount_3,
-          sum(review_amount_3) as review_amount_3,
-          sum(loan_cnt_3) as loan_cnt_3,
-          concat(sum(pre_rate_3),'%') as pre_rate_3,
-          concat(sum(review_rate_3),'%') as review_rate_3,
-          concat(sum(all_rate_3),'%') as all_rate_3,
-          
-          sum(entry_cnt_6) as entry_cnt_6,
-          sum(pre_amount_6) as pre_amount_6,
-          sum(review_amount_6) as review_amount_6,
-          sum(loan_cnt_6) as loan_cnt_6,
-          concat(sum(pre_rate_6),'%') as pre_rate_6,
-          concat(sum(review_rate_6),'%') as review_rate_6,
-          concat(sum(all_rate_6),'%') as all_rate_6
-          
-          from(
-          select
-          month_of_entry,
-          entry_cnt,
-          pre_amount,
-          review_amount,
-          loan_cnt,
-          round(pre_amount/entry_cnt*100,2) pre_rate,
-          round(review_amount/pre_amount*100,2) review_rate,
-          round(review_amount/entry_cnt*100,2) all_rate,
-          null as entry_cnt_3,
-          null as pre_amount_3,
-          null as review_amount_3,
-          null as loan_cnt_3,
-          null as pre_rate_3,
-          null as review_rate_3,
-          null as all_rate_3,
-          null as entry_cnt_6,
-          null as pre_amount_6,
-          null as review_amount_6,
-          null as loan_cnt_6,
-          null as pre_rate_6,
-          null as review_rate_6,
-          null as all_rate_6
-
-          from ocredit_phones_dw.app_ocredit_phones_order_base_cube_m
-          where dt='{dt}'
-          and terms=-10000
-          
-          
-          union all
-          
-          select
-          month_of_entry,
-          null as entry_cnt,
-          null as pre_amount,
-          null as review_amount,
-          null as loan_cnt,
-          null as pre_rate,
-          null as review_rate,
-          null as all_rate,
-          entry_cnt as entry_cnt_3,
-          pre_amount as pre_amount_3,
-          review_amount as review_amount_3,
-          loan_cnt as loan_cnt_3,
-          round(pre_amount/entry_cnt*100,2) pre_rate_3,
-          round(review_amount/pre_amount*100,2) review_rate_3,
-          round(review_amount/entry_cnt*100,2) all_rate_3,
-          null as entry_cnt_6,
-          null as pre_amount_6,
-          null as review_amount_6,
-          null as loan_cnt_6,
-          null as pre_rate_6,
-          null as review_rate_6,
-          null as all_rate_6
-          
-          from ocredit_phones_dw.app_ocredit_phones_order_base_cube_m
-          where dt='{dt}'
-          and terms=3
-          
-          
-          
-          union all
-
-
-          select
-          month_of_entry,
-          null as entry_cnt,
-          null as pre_amount,
-          null as review_amount,
-          null as loan_cnt,
-          null as pre_rate,
-          null as review_rate,
-          null as all_rate,
-          null as entry_cnt_3,
-          null as pre_amount_3,
-          null as review_amount_3,
-          null as loan_cnt_3,
-          null as pre_rate_3,
-          null as review_rate_3,
-          null as all_rate_3,
-          entry_cnt as entry_cnt_6,
-          pre_amount as pre_amount_6,
-          review_amount as review_amount_6,
-          loan_cnt as loan_cnt_6,
-          round(pre_amount/entry_cnt*100,2) pre_rate_6,
-          round(review_amount/pre_amount*100,2) review_rate_6,
-          round(review_amount/entry_cnt*100,2) all_rate_6
-          
-          from ocredit_phones_dw.app_ocredit_phones_order_base_cube_m
-          where dt='{dt}'
-          and terms=6
-          
-          ) a
-          group by month_of_entry
-          order by month_of_entry 
-          ) a where month_of_entry=substr('{dt}',1,7)
-
 
 
                  '''.format(dt=ds,
@@ -399,22 +183,20 @@ def get_show_month(ds):
     row_html = ''
     if len(data_list) > 0:
         for data in data_list:
-            entry_cnt = data[0]
-            pre_amount = data[1]
-            review_amount = data[2]
-            all_rate = data[3]
-            all_rate_3 = data[4]
-            all_rate_6 = data[5]
+            entry_opay_cnt = data[0]
+            one_rate = data[1]
+            two_rate = data[2]
+            three_rate = data[3]
+            total_use_average_hour = data[4]
 
             row_html += tr_fmt.format(
 
                 dt=ds,
-                entry_cnt=entry_cnt,
-                pre_amount=pre_amount,
-                review_amount = review_amount,
-                all_rate = all_rate,
-                all_rate_3 = all_rate_3,
-                all_rate_6 = all_rate_6
+                entry_opay_cnt=entry_opay_cnt,
+                one_rate=one_rate,
+                two_rate=two_rate,
+                three_rate=three_rate,
+                total_use_average_hour=total_use_average_hour
             )
 
     return row_html
@@ -440,150 +222,38 @@ def get_rows(ds):
                             <td>{}</td>
                             <td>{}</td>
                             <td>{}</td>
-                            <!--3期产品-->
                             <td>{}</td>
                             <td>{}</td>
                             <td>{}</td>
                             <td>{}</td>
                             <td>{}</td>
-                            <td>{}</td>
-                            <td>{}</td>
-                            <!--6期产品-->
-                            <td>{}</td>
-                            <td>{}</td>
-                            <td>{}</td>
-                            <td>{}</td>
-                            <td>{}</td>
-                            <td>{}</td>
-                            <td>{}</td>                       
+                                                 
                     '''
     sql = '''
 
-              
-              select
-          date_of_entry,
-          sum(entry_cnt) as entry_cnt,
-          sum(pre_amount) as pre_amount,
-          sum(review_amount) as review_amount,
-          sum(loan_cnt) as loan_cnt,
-          concat(sum(pre_rate),'%') as pre_rate,
-          concat(sum(review_rate),'%') as review_rate,
-          concat(sum(all_rate),'%') as all_rate,
-          
-          sum(entry_cnt_3) as entry_cnt_3,
-          sum(pre_amount_3) as pre_amount_3,
-          sum(review_amount_3) as review_amount_3,
-          sum(loan_cnt_3) as loan_cnt_3,
-          concat(sum(pre_rate_3),'%') as pre_rate_3,
-          concat(sum(review_rate_3),'%') as review_rate_3,
-          concat(sum(all_rate_3),'%') as all_rate_3,
-          
-          sum(entry_cnt_6) as entry_cnt_6,
-          sum(pre_amount_6) as pre_amount_6,
-          sum(review_amount_6) as review_amount_6,
-          sum(loan_cnt_6) as loan_cnt_6,
-          concat(sum(pre_rate_6),'%') as pre_rate_6,
-          concat(sum(review_rate_6),'%') as review_rate_6,
-          concat(sum(all_rate_6),'%') as all_rate_6
-          
-          from(
           select
           date_of_entry,
-          entry_cnt,
-          pre_amount,
-          review_amount,
-          loan_cnt,
-          round(pre_amount/entry_cnt*100,2) pre_rate,
-          round(review_amount/pre_amount*100,2) review_rate,
-          round(review_amount/entry_cnt*100,2) all_rate,
-          null as entry_cnt_3,
-          null as pre_amount_3,
-          null as review_amount_3,
-          null as loan_cnt_3,
-          null as pre_rate_3,
-          null as review_rate_3,
-          null as all_rate_3,
-          null as entry_cnt_6,
-          null as pre_amount_6,
-          null as review_amount_6,
-          null as loan_cnt_6,
-          null as pre_rate_6,
-          null as review_rate_6,
-          null as all_rate_6
+          entry_order_cnt,
+          entry_opay_cnt,
+          concat(round(pre_amount/entry_opay_cnt*100,2),'%'),
+          concat(round(review_amount/pre_amount*100,2),'%'),
           
-          from ocredit_phones_dw.app_ocredit_phones_order_base_cube_d
-          where dt='{dt}'
-          and terms=-10000
+          concat(round(loan_cnt/review_amount*100,2),'%'),
+          concat(round(review_amount/entry_opay_cnt*100,2),'%'),
+          concat(round(loan_cnt/entry_opay_cnt*100,2),'%'),
+          
+          round(pre_actual_average_minute,2),
+          round(review_actual_average_minute,2),
+          round(pay_actual_average_minute,2),
+          round(contract_review_average_minute,2),
+          round(total_use_average_hour,2)
+          
+          from
+          ocredit_phones_dw.app_ocredit_phones_risk_control_cube_d 
+          where date_of_entry is not null
+          and dt='{dt}'
           and substr(date_of_entry,1,7) = substr('{dt}',1,7)
-          
-          union all
-          
-          select
-          date_of_entry,
-          null as entry_cnt,
-          null as pre_amount,
-          null as review_amount,
-          null as loan_cnt,
-          null as pre_rate,
-          null as review_rate,
-          null as all_rate,
-          entry_cnt as entry_cnt_3,
-          pre_amount as pre_amount_3,
-          review_amount as review_amount_3,
-          loan_cnt as loan_cnt_3,
-          round(pre_amount/entry_cnt*100,2) pre_rate_3,
-          round(review_amount/pre_amount*100,2) review_rate_3,
-          round(review_amount/entry_cnt*100,2) all_rate_3,
-          null as entry_cnt_6,
-          null as pre_amount_6,
-          null as review_amount_6,
-          null as loan_cnt_6,
-          null as pre_rate_6,
-          null as review_rate_6,
-          null as all_rate_6
-          
-          from ocredit_phones_dw.app_ocredit_phones_order_base_cube_d
-          where dt='{dt}'
-          and terms=3
-          and substr(date_of_entry,1,7) = substr('{dt}',1,7)
-          
-          
-          union all
-
-
-          select
-          date_of_entry,
-          null as entry_cnt,
-          null as pre_amount,
-          null as review_amount,
-          null as loan_cnt,
-          null as pre_rate,
-          null as review_rate,
-          null as all_rate,
-          null as entry_cnt_3,
-          null as pre_amount_3,
-          null as review_amount_3,
-          null as loan_cnt_3,
-          null as pre_rate_3,
-          null as review_rate_3,
-          null as all_rate_3,
-          entry_cnt as entry_cnt_6,
-          pre_amount as pre_amount_6,
-          review_amount as review_amount_6,
-          loan_cnt as loan_cnt_6,
-          round(pre_amount/entry_cnt*100,2) pre_rate_6,
-          round(review_amount/pre_amount*100,2) review_rate_6,
-          round(review_amount/entry_cnt*100,2) all_rate_6
-          
-          from ocredit_phones_dw.app_ocredit_phones_order_base_cube_d
-          where dt='{dt}'
-          and terms=6
-          and substr(date_of_entry,1,7) = substr('{dt}',1,7)
-          
-          ) a
-          group by date_of_entry
           order by date_of_entry desc
-
 
 
 
@@ -624,149 +294,37 @@ def get_month_rows(ds):
                             <td>{}</td>
                             <td>{}</td>
                             <td>{}</td>
-                            <!--3期产品-->
                             <td>{}</td>
                             <td>{}</td>
                             <td>{}</td>
                             <td>{}</td>
                             <td>{}</td>
-                            <td>{}</td>
-                            <td>{}</td>
-                            <!--6期产品-->
-                            <td>{}</td>
-                            <td>{}</td>
-                            <td>{}</td>
-                            <td>{}</td>
-                            <td>{}</td>
-                            <td>{}</td>
-                            <td>{}</td>           
                     '''
     sql = '''
 
 
-                 select
+              select
           month_of_entry,
-          sum(entry_cnt) as entry_cnt,
-          sum(pre_amount) as pre_amount,
-          sum(review_amount) as review_amount,
-          sum(loan_cnt) as loan_cnt,
-          concat(sum(pre_rate),'%') as pre_rate,
-          concat(sum(review_rate),'%') as review_rate,
-          concat(sum(all_rate),'%') as all_rate,
+          entry_order_cnt,
+          entry_opay_cnt,
+          concat(round(pre_amount/entry_opay_cnt*100,2),'%'),
+          concat(round(review_amount/pre_amount*100,2),'%'),
           
-          sum(entry_cnt_3) as entry_cnt_3,
-          sum(pre_amount_3) as pre_amount_3,
-          sum(review_amount_3) as review_amount_3,
-          sum(loan_cnt_3) as loan_cnt_3,
-          concat(sum(pre_rate_3),'%') as pre_rate_3,
-          concat(sum(review_rate_3),'%') as review_rate_3,
-          concat(sum(all_rate_3),'%') as all_rate_3,
+          concat(round(loan_cnt/review_amount*100,2),'%'),
+          concat(round(review_amount/entry_opay_cnt*100,2),'%'),
+          concat(round(loan_cnt/entry_opay_cnt*100,2),'%'),
           
-          sum(entry_cnt_6) as entry_cnt_6,
-          sum(pre_amount_6) as pre_amount_6,
-          sum(review_amount_6) as review_amount_6,
-          sum(loan_cnt_6) as loan_cnt_6,
-          concat(sum(pre_rate_6),'%') as pre_rate_6,
-          concat(sum(review_rate_6),'%') as review_rate_6,
-          concat(sum(all_rate_6),'%') as all_rate_6
+          round(pre_actual_average_minute,2),
+          round(review_actual_average_minute,2),
+          round(pay_actual_average_minute,2),
+          round(contract_review_average_minute,2),
+          round(total_use_average_hour,2)
           
-          from(
-          select
-          month_of_entry,
-          entry_cnt,
-          pre_amount,
-          review_amount,
-          loan_cnt,
-          round(pre_amount/entry_cnt*100,2) pre_rate,
-          round(review_amount/pre_amount*100,2) review_rate,
-          round(review_amount/entry_cnt*100,2) all_rate,
-          null as entry_cnt_3,
-          null as pre_amount_3,
-          null as review_amount_3,
-          null as loan_cnt_3,
-          null as pre_rate_3,
-          null as review_rate_3,
-          null as all_rate_3,
-          null as entry_cnt_6,
-          null as pre_amount_6,
-          null as review_amount_6,
-          null as loan_cnt_6,
-          null as pre_rate_6,
-          null as review_rate_6,
-          null as all_rate_6
-
-          from ocredit_phones_dw.app_ocredit_phones_order_base_cube_m
-          where dt='{dt}'
-          and terms=-10000
-          
-          
-          union all
-          
-          select
-          month_of_entry,
-          null as entry_cnt,
-          null as pre_amount,
-          null as review_amount,
-          null as loan_cnt,
-          null as pre_rate,
-          null as review_rate,
-          null as all_rate,
-          entry_cnt as entry_cnt_3,
-          pre_amount as pre_amount_3,
-          review_amount as review_amount_3,
-          loan_cnt as loan_cnt_3,
-          round(pre_amount/entry_cnt*100,2) pre_rate_3,
-          round(review_amount/pre_amount*100,2) review_rate_3,
-          round(review_amount/entry_cnt*100,2) all_rate_3,
-          null as entry_cnt_6,
-          null as pre_amount_6,
-          null as review_amount_6,
-          null as loan_cnt_6,
-          null as pre_rate_6,
-          null as review_rate_6,
-          null as all_rate_6
-          
-          from ocredit_phones_dw.app_ocredit_phones_order_base_cube_m
-          where dt='{dt}'
-          and terms=3
-          
-          
-          
-          union all
-
-
-          select
-          month_of_entry,
-          null as entry_cnt,
-          null as pre_amount,
-          null as review_amount,
-          null as loan_cnt,
-          null as pre_rate,
-          null as review_rate,
-          null as all_rate,
-          null as entry_cnt_3,
-          null as pre_amount_3,
-          null as review_amount_3,
-          null as loan_cnt_3,
-          null as pre_rate_3,
-          null as review_rate_3,
-          null as all_rate_3,
-          entry_cnt as entry_cnt_6,
-          pre_amount as pre_amount_6,
-          review_amount as review_amount_6,
-          loan_cnt as loan_cnt_6,
-          round(pre_amount/entry_cnt*100,2) pre_rate_6,
-          round(review_amount/pre_amount*100,2) review_rate_6,
-          round(review_amount/entry_cnt*100,2) all_rate_6
-          
-          from ocredit_phones_dw.app_ocredit_phones_order_base_cube_m
-          where dt='{dt}'
-          and terms=6
-          
-          ) a
-          group by month_of_entry
-          order by month_of_entry 
-
+          from
+          ocredit_phones_dw.app_ocredit_phones_risk_control_cube_d 
+          where month_of_entry is not null
+          and dt='{dt}'
+          order by month_of_entry desc  
 
 
                  '''.format(dt=ds,
@@ -800,152 +358,38 @@ def get_week_rows(ds):
                             <td>{}</td>
                             <td>{}</td>
                             <td>{}</td>
-                            <!--3期产品-->
                             <td>{}</td>
                             <td>{}</td>
                             <td>{}</td>
                             <td>{}</td>
                             <td>{}</td>
-                            <td>{}</td>
-                            <td>{}</td>
-                            <!--6期产品-->
-                            <td>{}</td>
-                            <td>{}</td>
-                            <td>{}</td>
-                            <td>{}</td>
-                            <td>{}</td>
-                            <td>{}</td>
-                            <td>{}</td>            
                     '''
     sql = '''
 
 
-               select
-          dateweek_of_entry,
-          sum(entry_cnt) as entry_cnt,
-          sum(pre_amount) as pre_amount,
-          sum(review_amount) as review_amount,
-          sum(loan_cnt) as loan_cnt,
-          concat(sum(pre_rate),'%') as pre_rate,
-          concat(sum(review_rate),'%') as review_rate,
-          concat(sum(all_rate),'%') as all_rate,
-          
-          sum(entry_cnt_3) as entry_cnt_3,
-          sum(pre_amount_3) as pre_amount_3,
-          sum(review_amount_3) as review_amount_3,
-          sum(loan_cnt_3) as loan_cnt_3,
-          concat(sum(pre_rate_3),'%') as pre_rate_3,
-          concat(sum(review_rate_3),'%') as review_rate_3,
-          concat(sum(all_rate_3),'%') as all_rate_3,
-          
-          sum(entry_cnt_6) as entry_cnt_6,
-          sum(pre_amount_6) as pre_amount_6,
-          sum(review_amount_6) as review_amount_6,
-          sum(loan_cnt_6) as loan_cnt_6,
-          concat(sum(pre_rate_6),'%') as pre_rate_6,
-          concat(sum(review_rate_6),'%') as review_rate_6,
-          concat(sum(all_rate_6),'%') as all_rate_6
-          
-          from(
           select
-          dateweek_of_entry,
-          entry_cnt,
-          pre_amount,
-          review_amount,
-          loan_cnt,
-          round(pre_amount/entry_cnt*100,2) pre_rate,
-          round(review_amount/pre_amount*100,2) review_rate,
-          round(review_amount/entry_cnt*100,2) all_rate,
-          null as entry_cnt_3,
-          null as pre_amount_3,
-          null as review_amount_3,
-          null as loan_cnt_3,
-          null as pre_rate_3,
-          null as review_rate_3,
-          null as all_rate_3,
-          null as entry_cnt_6,
-          null as pre_amount_6,
-          null as review_amount_6,
-          null as loan_cnt_6,
-          null as pre_rate_6,
-          null as review_rate_6,
-          null as all_rate_6
+          week_of_entry,
+          entry_order_cnt,
+          entry_opay_cnt,
+          concat(round(pre_amount/entry_opay_cnt*100,2),'%'),
+          concat(round(review_amount/pre_amount*100,2),'%'),
           
-          from ocredit_phones_dw.app_ocredit_phones_order_base_cube_w
-          where dt='{dt}'
-          and terms=-10000
+          concat(round(loan_cnt/review_amount*100,2),'%'),
+          concat(round(review_amount/entry_opay_cnt*100,2),'%'),
+          concat(round(loan_cnt/entry_opay_cnt*100,2),'%'),
           
+          round(pre_actual_average_minute,2),
+          round(review_actual_average_minute,2),
+          round(pay_actual_average_minute,2),
+          round(contract_review_average_minute,2),
+          round(total_use_average_hour,2)
           
-          union all
+          from
+          ocredit_phones_dw.app_ocredit_phones_risk_control_cube_d 
+          where week_of_entry is not null
+          and dt='{dt}'
+          order by week_of_entry desc
           
-          select
-          dateweek_of_entry,
-          null as entry_cnt,
-          null as pre_amount,
-          null as review_amount,
-          null as loan_cnt,
-          null as pre_rate,
-          null as review_rate,
-          null as all_rate,
-          entry_cnt as entry_cnt_3,
-          pre_amount as pre_amount_3,
-          review_amount as review_amount_3,
-          loan_cnt as loan_cnt_3,
-          round(pre_amount/entry_cnt*100,2) pre_rate_3,
-          round(review_amount/pre_amount*100,2) review_rate_3,
-          round(review_amount/entry_cnt*100,2) all_rate_3,
-          null as entry_cnt_6,
-          null as pre_amount_6,
-          null as review_amount_6,
-          null as loan_cnt_6,
-          null as pre_rate_6,
-          null as review_rate_6,
-          null as all_rate_6
-          
-          from ocredit_phones_dw.app_ocredit_phones_order_base_cube_w
-          where dt='{dt}'
-          and terms=3
-          
-          
-          
-          union all
-
-
-          select
-          dateweek_of_entry,
-          null as entry_cnt,
-          null as pre_amount,
-          null as review_amount,
-          null as loan_cnt,
-          null as pre_rate,
-          null as review_rate,
-          null as all_rate,
-          null as entry_cnt_3,
-          null as pre_amount_3,
-          null as review_amount_3,
-          null as loan_cnt_3,
-          null as pre_rate_3,
-          null as review_rate_3,
-          null as all_rate_3,
-          entry_cnt as entry_cnt_6,
-          pre_amount as pre_amount_6,
-          review_amount as review_amount_6,
-          loan_cnt as loan_cnt_6,
-          round(pre_amount/entry_cnt*100,2) pre_rate_6,
-          round(review_amount/pre_amount*100,2) review_rate_6,
-          round(review_amount/entry_cnt*100,2) all_rate_6
-          
-          from ocredit_phones_dw.app_ocredit_phones_order_base_cube_w
-          where dt='{dt}'
-          and terms=6
-          
-          ) a
-          group by dateweek_of_entry
-          order by dateweek_of_entry 
-
-
-
-
 
                  '''.format(dt=ds,
                             start_date=airflow.macros.ds_add(ds, -14))
@@ -967,77 +411,46 @@ def send_report_email(ds, **kwargs):
     # logging.info("receivers:%s" % Variable.get("oride_global_operate_report_receivers"))
 
     month_fmt = '''
-                            <tr>
-                                <th colspan="1" style="text-align: center;">分类</th>
-                                <th colspan="7" style="text-align: center;">整体情况</th>
-                                <th colspan="7" style="text-align: center;">3期产品</th>
-                                <th colspan="7" style="text-align: center;">6期产品</th>
-                            </tr>
-                            <tr>
+                            
+                       <tr>
                             <!--分类-->
-                            <th>进件月份</th>
+                            <th>进件日期</th>
                             <!--整体情况-->
-                            <th>进件量</th>
-                            <th>初审通过量</th>
-                            <th>终审通过量</th>
-                            <th>放款量</th>
+                            <th>进件订单数</th>
+                            <th>进件用户数</th>
                             <th>初审通过率</th>
                             <th>复审通过率</th>
-                            <th>风控整体通过率</th>
-                            <!--3期产品-->
-                            <th>进件量</th>
-                            <th>初审通过量</th>
-                            <th>终审通过量</th>
-                            <th>放款量</th>
-                            <th>初审通过率</th>
-                            <th>复审通过率</th>
-                            <th>风控整体通过率</th>
-                            <!--6期产品-->
-                            <th>进件量</th>
-                            <th>初审通过量</th>
-                            <th>终审通过量</th>
-                            <th>放款量</th>
-                            <th>初审通过率</th>
-                            <th>复审通过率</th>
-                            <th>风控整体通过率</th>
+                            <th>复审到放款转化率</th>
+                            <th>进件到风控通过转化率</th>
+                            <th>进件到放款转化率</th>
+                            <th>初审实际用时（分）</th>
+                            <th>复审实际用时（分）</th>
+                            <th>支付实际用时（分）</th>
+                            <th>合同审核用时（分）</th>
+                            <th>总用时（时）</th>
                         </tr>
     '''
 
     week_fmt = '''
-                               <tr>
-                                <th colspan="1" style="text-align: center;">分类</th>
-                                <th colspan="7" style="text-align: center;">整体情况</th>
-                                <th colspan="7" style="text-align: center;">3期产品</th>
-                                <th colspan="7" style="text-align: center;">6期产品</th>
-                            </tr>
-                            <tr>
+                     <tr>
                             <!--分类-->
-                            <th>进件周</th>
+                            <th>进件日期</th>
                             <!--整体情况-->
-                            <th>进件量</th>
-                            <th>初审通过量</th>
-                            <th>终审通过量</th>
-                            <th>放款量</th>
+                            <th>进件订单数</th>
+                            <th>进件用户数</th>
                             <th>初审通过率</th>
                             <th>复审通过率</th>
-                            <th>风控整体通过率</th>
-                            <!--3期产品-->
-                            <th>进件量</th>
-                            <th>初审通过量</th>
-                            <th>终审通过量</th>
-                            <th>放款量</th>
-                            <th>初审通过率</th>
-                            <th>复审通过率</th>
-                            <th>风控整体通过率</th>
-                            <!--6期产品-->
-                            <th>进件量</th>
-                            <th>初审通过量</th>
-                            <th>终审通过量</th>
-                            <th>放款量</th>
-                            <th>初审通过率</th>
-                            <th>复审通过率</th>
-                            <th>风控整体通过率</th>
+                            <th>复审到放款转化率</th>
+                            <th>进件到风控通过转化率</th>
+                            <th>进件到放款转化率</th>
+                            <th>初审实际用时（分）</th>
+                            <th>复审实际用时（分）</th>
+                            <th>支付实际用时（分）</th>
+                            <th>合同审核用时（分）</th>
+                            <th>总用时（时）</th>
                         </tr>
+                        
+                        
         '''
 
     html_fmt = '''
@@ -1073,46 +486,30 @@ def send_report_email(ds, **kwargs):
 
             {show_date}
             {show_month}
+            {show_all}
                 <table width="100%" class="table">
                     <caption>
-                        <h3>当月风控全流程通过情况</h3>
+                        <h3>当月每日风控全流程通过情况</h3>
                     </caption>
                 </table>
                 <table width="100%" class="table">
                     <thead>
                        <tr>
-                                <th colspan="1" style="text-align: center;">分类</th>
-                                <th colspan="7" style="text-align: center;">整体情况</th>
-                                <th colspan="7" style="text-align: center;">3期产品</th>
-                                <th colspan="7" style="text-align: center;">6期产品</th>
-                            </tr>
-                            <tr>
                             <!--分类-->
                             <th>进件日期</th>
                             <!--整体情况-->
-                            <th>进件量</th>
-                            <th>初审通过量</th>
-                            <th>终审通过量</th>
-                            <th>放款量</th>
+                            <th>进件订单数</th>
+                            <th>进件用户数</th>
                             <th>初审通过率</th>
                             <th>复审通过率</th>
-                            <th>风控整体通过率</th>
-                            <!--3期产品-->
-                            <th>进件量</th>
-                            <th>初审通过量</th>
-                            <th>终审通过量</th>
-                            <th>放款量</th>
-                            <th>初审通过率</th>
-                            <th>复审通过率</th>
-                            <th>风控整体通过率</th>
-                            <!--6期产品-->
-                            <th>进件量</th>
-                            <th>初审通过量</th>
-                            <th>终审通过量</th>
-                            <th>放款量</th>
-                            <th>初审通过率</th>
-                            <th>复审通过率</th>
-                            <th>风控整体通过率</th>
+                            <th>复审到放款转化率</th>
+                            <th>进件到风控通过转化率</th>
+                            <th>进件到放款转化率</th>
+                            <th>初审实际用时（分）</th>
+                            <th>复审实际用时（分）</th>
+                            <th>支付实际用时（分）</th>
+                            <th>合同审核用时（分）</th>
+                            <th>总用时（时）</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -1135,7 +532,7 @@ def send_report_email(ds, **kwargs):
 
                 <table width="100%" class="table">
                 <caption>
-                    <h3>近4周风控全流程通过情况</h3>
+                    <h3>历史每周风控全流程通过情况</h3>
                 </caption>
                 </table>
                 <table width="100%" class="table">
@@ -1159,7 +556,8 @@ def send_report_email(ds, **kwargs):
                            month_fmt=month_fmt,
                            week_fmt=week_fmt,
                            show_date=get_show_date(ds),
-                           show_month=get_show_month(ds)
+                           show_month=get_show_month(ds),
+                           show_all=get_show_all(ds)
                            )  #
 
     logging.info("==============")
@@ -1172,6 +570,7 @@ def send_report_email(ds, **kwargs):
 
     # email_to = ['lili.chen@opay-inc.com']
     #email_to = ['shuai01.li@opay-inc.com','jiaying.kang@opay-inc.com']
+    #email_to = ['shuai01.li@opay-inc.com']
     # email_to = ['jiaying.kang@opay-inc.com']
     # send mail
 
@@ -1189,8 +588,5 @@ send_report = PythonOperator(
     dag=dag
 )
 
-app_ocredit_phones_order_base_cube_d_task >> send_report
-app_ocredit_phones_order_base_cube_m_task >> send_report
-app_ocredit_phones_order_base_cube_w_task >> send_report
-
+app_ocredit_phones_risk_control_cube_d_task >> send_report
 
