@@ -220,6 +220,19 @@ def add_partition(v_execution_date, v_execution_day, v_execution_hour, db_name, 
     return
 
 
+def add_hi_partition(v_execution_date, v_execution_day, v_execution_hour, db_name, table_name, conn_id, hive_table_name,
+                     server_name, hive_db, is_must_have_data, **kwargs):
+    sql = '''
+            ALTER TABLE {hive_db}.{table} ADD IF NOT EXISTS PARTITION (dt = '{ds}', hour = '{hour}')
+        '''.format(hive_db=hive_db, table=hive_table_name, ds=v_execution_day, hour=v_execution_hour)
+
+    hive2_conn = HiveServer2Hook().get_conn()
+    cursor = hive2_conn.cursor()
+    cursor.execute(sql)
+
+    return
+
+
 def run_check_table(mysql_db_name, mysql_table_name, conn_id, hive_all_hi_table_name, server_name, **kwargs):
     # SHOW TABLES in oride_db LIKE 'data_aa'
     check_sql = 'SHOW TABLES in %s LIKE \'%s\'' % (HIVE_DB, hive_all_hi_table_name)
@@ -553,37 +566,28 @@ for mysql_db_name, mysql_table_name, conn_id, prefix_name, priority_weight_nm, s
         dag=dag
     )
 
-    dependence_hive_hi_table_prev_day_merge_task = OssSensor(
-        task_id='dependence_hive_hi_table_prev_day_merge_task_{}'.format(hive_hi_table_name),
-        bucket_key='{hdfs_path_str}/dt={pt}/hour={hour}/_SUCCESS'.format(
-            hdfs_path_str="oride_binlog/%s" % (("{server_name}.{db_name}.{table_name}".format(
-                server_name=server_name,
-                db_name=mysql_db_name,
-                table_name=mysql_table_name
-            ))),
-            pt='{{ds}}',
-            hour='{{execution_date.strftime("%H")}}'
-        ),
-        bucket_name='opay-datalake',
-        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    ## 脱离小时级增量绑定过程
+    # add_hi_partitions
+    add_hi_partitions = PythonOperator(
+        task_id='add_hi_partitions_{}'.format(hive_all_hi_table_name),
+        priority_weight=priority_weight_nm,
+        python_callable=add_hi_partition,
+        provide_context=True,
+        op_kwargs={
+            'db_name': mysql_db_name,
+            'table_name': mysql_table_name,
+            'conn_id': conn_id,
+            'hive_table_name': hive_hi_table_name,
+            'server_name': server_name,
+            'hive_db': HIVE_DB,
+            'is_must_have_data': 'false',
+            'v_execution_date': '{{execution_date.strftime("%Y-%m-%d %H:%M:%S")}}',
+            'v_execution_day': '{{execution_date.strftime("%Y-%m-%d")}}',
+            'v_execution_hour': '{{execution_date.strftime("%H")}}',
+        },
         dag=dag
     )
 
-    dependence_hive_hi_table_prev_day_full_merge_task = OssSensor(
-        task_id='dependence_hive_hi_table_prev_day_full_merge_task_{}'.format(hive_hi_table_name),
-        bucket_key='{hdfs_path_str}/dt={pt}/hour={hour}/_SUCCESS'.format(
-            hdfs_path_str="oride_binlog/%s" % (("{server_name}.{db_name}.{table_name}".format(
-                server_name=server_name,
-                db_name=mysql_db_name,
-                table_name=mysql_table_name
-            ))),
-            pt='{{ds}}',
-            hour='{{execution_date.strftime("%H")}}'
-        ),
-        bucket_name='opay-datalake',
-        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-        dag=dag
-    )
 
     # merge_pre_hi_data_task
     merge_pre_hi_data = PythonOperator(
@@ -640,6 +644,6 @@ for mysql_db_name, mysql_table_name, conn_id, prefix_name, priority_weight_nm, s
         dag=dag_monitor
     )
 
-    check_all_hi_table >> validate_all_hi_table_exist >> [add_partitions, import_table]
-    add_partitions >> dependence_hive_hi_table_prev_day_merge_task >> merge_pre_hi_data
-    import_table >> check_sqoop_table >> dependence_hive_hi_table_prev_day_full_merge_task >> merge_pre_hi_with_full_data
+    check_all_hi_table >> add_hi_partitions >> validate_all_hi_table_exist >> [add_partitions, import_table]
+    add_partitions >> merge_pre_hi_data
+    import_table >> check_sqoop_table  >> merge_pre_hi_with_full_data
