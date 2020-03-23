@@ -105,7 +105,6 @@ def dm_opay_user_trans_portrait_df_sql_task(ds):
     
         t6.agent_first_trans_time, t6.agent_first_trans_service_type, 
         t6.agent_first_trans_originator_or_affiliate, t6.agent_first_trans_amount, 
-        if(t6.agent_first_trans_time is null or t5.first_trans_time is null, null, datediff(t6.agent_first_trans_time, t5.first_trans_time)) as agent_first_trans_time,
         if(t6.agent_first_trans_time is null or t2.upgrage_agent_time is null, null, datediff(t6.agent_first_trans_time, t2.upgrage_agent_time)) as agent_first_trans_upgrage_diff,
     
         t7.last_trans_time, t7.last_trans_service_type, t7.last_trans_originator_or_affiliate, 
