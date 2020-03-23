@@ -1247,12 +1247,12 @@ def alert(metrics_name, last_value, compare_value, alert_value, last_seconds, co
 
         alert_times = redis_client.get(key)
 
-        logging.info(" =========  预警记录次数 : {}  ".format(alert_times))
-
-        if alert_times == None:
+        if alert_times is None:
             alert_times = 1
         else:
             alert_times = int(alert_times)
+
+        logging.info(" =========  预警记录次数 : {}  ".format(alert_times))
 
         if alert_times >= 4:
             logging.info(" =========  进入 LEVEL 2  预警 .......")
