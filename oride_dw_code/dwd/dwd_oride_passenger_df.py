@@ -107,7 +107,7 @@ def dwd_oride_passenger_df_sql_task(ds):
             nvl(data_user.first_name,data_user_bef.first_name) as passenger_id,--'名'
             nvl(data_user.last_name,data_user_bef.last_name) as passenger_id,--'性'
             nvl(data_user.promoter_code,data_user_bef.promoter_code) as passenger_id,--'推广员代码'
-            nvl(data_user.updated_at,data_user_bef.updated_at) as passenger_id,--'最后更新时间', 
+            nvl(from_unixtime(unix_timestamp(data_user.updated_at)+3600,'yyyy-MM-dd'),data_user_bef.updated_at) as passenger_id,--'最后更新时间', 
             nvl(data_user.opay_id,data_user_bef.opay_id) as passenger_id,--'用户OPAYID'
             'nal' as country_code,
             '{pt}' as dt
