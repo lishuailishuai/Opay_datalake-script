@@ -141,7 +141,7 @@ def dwd_opay_user_transaction_record_df_sql_task(ds):
                 top_consume_scenario, sub_consume_scenario,
                 country_code
             from opay_dw.dwd_opay_user_transaction_record_df 
-            where dt = if('date_sub('{pt}', 1)' <= '2020-03-21', '2020-03-21', date_sub('{pt}', 1))
+            where dt = if(date_sub('{pt}', 1) <= '2020-03-21', '2020-03-21', date_sub('{pt}', 1))
             union all 
             select
                 order_no, amount, currency, 
