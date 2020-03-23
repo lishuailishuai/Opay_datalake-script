@@ -151,9 +151,9 @@ def app_opay_active_user_report_d_sql_task(ds,ds_nodash):
      DROP TABLE IF EXISTS test_db.user_base_{date};
     DROP TABLE IF EXISTS test_db.login_{date};
     create table if not exists test_db.user_base_{date} as 
-    SELECT user_id, ROLE,mobile,state,register_client,kyc_level
+    SELECT user_id, ROLE,mobile,state,register_client,kyc_level,create_time
      FROM
-          (SELECT user_id, ROLE,mobile, state,nvl(register_client,'App') register_client,kyc_level,
+          (SELECT user_id, ROLE,mobile, state,nvl(register_client,'App') register_client,kyc_level,create_time,
           row_number() over(partition BY user_id ORDER BY update_time DESC) rn
             FROM opay_dw_ods.ods_sqoop_base_user_di
            WHERE dt<='{pt}' ) t1
@@ -347,6 +347,7 @@ def app_opay_active_user_report_d_sql_task(ds,ds_nodash):
                     'opay_bal_not_zero_user_cnt_7d' target_type,
                     '-' state,
                     '-' kyc_level,
+                    '-' register_client,
                      count(DISTINCT user_id) c
                 from 
                    (select user_id FROM opay_dw.dwm_opay_user_balance_df where dt='{pt}' and opay_7>0) m3
@@ -522,7 +523,7 @@ def app_opay_active_user_report_d_sql_task(ds,ds_nodash):
                      kyc_level,
                      register_client,
                      count(1) c 
-                 from user_base_{date}
+                 from test_db.user_base_{date}
                  group by role,state,kyc_level,register_client
                  union all
                  select 
@@ -534,7 +535,7 @@ def app_opay_active_user_report_d_sql_task(ds,ds_nodash):
                      kyc_level,
                      register_client,
                      count(1) c 
-                 from user_base_{date} where dt='{pt}' and create_time BETWEEN date_format(date_sub('{pt}', 1), 'yyyy-MM-dd 23') AND date_format('{pt}', 'yyyy-MM-dd 23')
+                 from test_db.user_base_{date} where create_time BETWEEN date_format(date_sub('{pt}', 1), 'yyyy-MM-dd 23') AND date_format('{pt}', 'yyyy-MM-dd 23')
                  group by role,state,kyc_level,register_client
                  union all
                  select '{pt}' dt,
