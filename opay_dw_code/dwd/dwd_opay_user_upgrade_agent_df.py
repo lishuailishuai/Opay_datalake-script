@@ -109,7 +109,7 @@ def dwd_opay_user_upgrade_agent_df_sql_task(ds):
     set hive.exec.parallel=true;
     with user_upgrade_df as (
         select 
-            user_id, accept_overload_user_id, confirmed_overload_user_id, confirmed_overload_user_id, 
+            user_id, accept_overload_user_id, confirmed_overload_user_id, 
             default.localTime("{config}", 'NG',upgrade_date, 0) as upgrade_time
         from (
             select
@@ -135,11 +135,8 @@ def dwd_opay_user_upgrade_agent_df_sql_task(ds):
         SELECT
             user_id, role, create_time
         from opay_dw.dim_opay_user_base_df where dt = '{pt}' and role = 'agent'
-    ) t0 left join (
-        select
-            user_id, accept_overload_user_id, confirmed_overload_user_id, upgrade_time
-        from user_upgrade_df
-    ) t1 on t0.user_id = t1.user_id
+    ) t0 
+    left join user_upgrade_df t1 on t0.user_id = t1.user_id
     left join (
         select
             user_id, merchant_id as aggregator_id, 
