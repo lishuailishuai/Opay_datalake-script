@@ -116,7 +116,7 @@ def dwm_opay_user_trans_aggr_df_sql_task(ds):
         '{pt}' as dt
     from opay_dw.dwd_opay_user_transaction_record_df
     where dt = if('{pt}' <= '2020-03-21', '2020-03-21', '{pt}') 
-        and date_format(create_time, 'yyyy-MM-dd') >= date_sub('{pt}', 366) and user_id is not null and user_id != ''
+        and user_id is not null and user_id != ''
     group by user_id
     '''.format(
         pt=ds,
