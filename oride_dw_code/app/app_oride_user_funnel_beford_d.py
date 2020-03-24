@@ -163,6 +163,8 @@ def app_oride_user_funnel_beford_d_sql_task(ds):
            request_user_num_m,--被接单乘客数量
            finish_user_num_m,--完单乘客数量
            finished_pay_user_num_m,--完单支付乘客数量
+           login_cnt_m, --登录次数
+           chose_end_cnt_m,--选择终点次数
            valuation_cnt_m,--估价次数
            login_to_check_end_dur,--登录到选择终点平均时长
            check_end_to_valuation_dur,--选择终点到预估价格平均时长
@@ -186,6 +188,9 @@ def app_oride_user_funnel_beford_d_sql_task(ds):
 			                    AND event_name_b='successful_order_show',user_id_a,NULL))) AS finish_user_num_m,--完单乘客数量
 			 count(DISTINCT (if(event_name_a='complete_the_payment_show'
 			                    AND event_name_b='complete_the_order_show',user_id_a,NULL))) AS finished_pay_user_num_m,--完单支付乘客数量
+			 sum(if(event_name_a='oride_show',1,0)) as login_cnt_m, --登录次数
+			 sum((if(event_name_a='choose_end_point_click'
+			         AND event_name_b='oride_show',1,0))) AS chose_end_cnt_m,--选择终点次数
 			 sum((if(event_name_a='request_a_ride_show'
 			         AND event_name_b='choose_end_point_click',1,0))) AS valuation_cnt_m,--估价次数
 			 avg(if(event_name_a='choose_end_point_click'
