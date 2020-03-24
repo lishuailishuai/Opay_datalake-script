@@ -118,6 +118,28 @@ dwm_opay_user_first_trans_df_prev_day_task = OssSensor(
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
+ods_sqoop_base_merchant_df_prev_day_task = OssSensor(
+    task_id='ods_sqoop_base_merchant_df_prev_day_task',
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="opay_dw_sqoop/opay_merchant/merchant",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
+dwd_opay_user_upgrade_agent_df_day_task = OssSensor(
+    task_id='dwd_opay_user_upgrade_agent_df_day_task',
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="opay/opay_dw/dwd_opay_user_upgrade_agent_df/country_code=NG",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
 def fun_task_timeout_monitor(ds,dag,**op_kwargs):
 
@@ -561,6 +583,53 @@ def app_opay_active_user_report_d_sql_task(ds,ds_nodash):
                  WHERE dt='{pt}'
                        and date_format(trans_time,'yyyy-MM-dd')='{pt}'
                  GROUP BY top_consume_scenario
+                 union all
+                 select '{pt}' dt,
+                         '-' user_role,
+                         '-' top_consume_scenario,
+                         'total_aggregators' target_type,
+                         '-' state,
+                         '-' user_level,
+                         '-' register_client,
+                         count(distinct merchant_id) c 
+                 from opay_dw_ods.ods_sqoop_base_merchant_df
+                 WHERE dt='{pt}' and merchant_type='aggregator'
+                 union all
+                 select '{pt}' dt,
+                         '-' user_role,
+                         '-' top_consume_scenario,
+                         'new_aggregators' target_type,
+                         '-' state,
+                         '-' user_level,
+                         '-' register_client,
+                         count(distinct merchant_id) c
+                 from opay_dw_ods.ods_sqoop_base_merchant_df
+                 WHERE dt='{pt}' and merchant_type='aggregator' and 
+                       substr(from_unixtime(unix_timestamp(create_time, 'yyyy-MM-dd HH:mm:ss')+3600),1,10)='{pt}'
+                 union all
+                 select '{pt}' dt,
+                         '-' user_role,
+                         '-' top_consume_scenario,
+                         'total_subagent' target_type,
+                         '-' state,
+                         '-' user_level,
+                         '-' register_client,
+                         count(distinct user_id) c 
+                 from opay_dw.dwd_opay_user_upgrade_agent_df
+                 WHERE dt='{pt}' and is_reseller='Y'
+                 union all
+                 select '{pt}' dt,
+                         '-' user_role,
+                         '-' top_consume_scenario,
+                         'new_subagent' target_type,
+                         '-' state,
+                         '-' user_level,
+                         '-' register_client,
+                         count(distinct user_id) c 
+                 from opay_dw.dwd_opay_user_upgrade_agent_df
+                 WHERE dt='{pt}' and date_format(reseller_time,'yyyy-MM-dd')='{pt}'
+                 
+                 
             ) m;
     DROP TABLE IF EXISTS test_db.user_base_{date};
     DROP TABLE IF EXISTS test_db.login_{date};
@@ -611,5 +680,6 @@ ods_sqoop_owealth_share_acct_df_prev_day_task >> app_opay_active_user_report_d_t
 ods_sqoop_base_account_user_df_prev_day_task >> app_opay_active_user_report_d_task
 dwm_opay_user_balance_df_prev_day_task >> app_opay_active_user_report_d_task
 dwm_opay_user_first_trans_df_prev_day_task >> app_opay_active_user_report_d_task
-
+ods_sqoop_base_merchant_df_prev_day_task >> app_opay_active_user_report_d_task
+dwd_opay_user_upgrade_agent_df_day_task >> app_opay_active_user_report_d_task
 
