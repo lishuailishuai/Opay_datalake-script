@@ -313,12 +313,13 @@ def app_oride_user_funnel_aftord_d_sql_task(ds):
                        WHERE a.rn=1) ord --订单只能有一个乘客最新的下单
                     ON t.user_id=ord.passenger_id
                     LEFT JOIN
-                      (SELECT user_id,
-                              count(1) AS valuation_cnt--当天估价的乘客估价次数
+                      (select user_id,count(1) AS valuation_cnt--当天估价的乘客估价次数
+                      from (SELECT user_id,
+                              local_create_time
                     FROM oride_dw.dwd_oride_passenger_estimate_records_di
                        WHERE dt='{pt}'
                          AND from_unixtime(local_create_time,'yyyy-MM-dd')=dt
-                       GROUP BY user_id) rr ON u.passenger_id=rr.user_id) t2
+                       GROUP BY user_id,local_create_time)a group by user_id) rr ON u.passenger_id=rr.user_id) t2
             on nvl(t1.city_id,-10000)=t2.city_id
             and nvl(t1.product_id,-10000)=t2.product_id
             and nvl(t1.user_version_os,-10000)=t2.user_version_os
