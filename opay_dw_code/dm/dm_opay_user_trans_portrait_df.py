@@ -187,8 +187,7 @@ def dm_opay_user_trans_portrait_df_sql_task(ds):
             order_suc_cnt_w, order_suc_amt_w,
             order_suc_cnt_m, order_suc_amt_m, 
             order_suc_cnt_7d, order_suc_amt_7d,
-            order_suc_cnt_30d, order_suc_amt_30d,
-            order_suc_cnt, order_suc_amt
+            order_suc_cnt_30d, order_suc_amt_30d
         from opay_dw.dwm_opay_user_trans_aggr_df
         where dt = if('{pt}' <= '2020-03-22', '2020-03-22', '{pt}') 
     ) t8 on t1.user_id = t8.user_id
