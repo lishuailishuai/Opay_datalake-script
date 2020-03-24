@@ -340,7 +340,7 @@ metrcis_list = [
     # 25
     (
         'Trade_TakeRide_Success',
-        '''SELECT "trade_success_cnt" AS "trade_success_cnt"  FROM "OPAY_TRANSACTION_OP_EVENT_CQ_RESULT_10" WHERE  time > {time} ''',
+        '''SELECT "trade_success_cnt" AS "trade_success_cnt"  FROM "OPAY_TRANSACTION_OP_EVENT_CQ_RESULT_10" WHERE ("__source_table" = 'merchant_acquiring_record') and time > {time} ''',
         'trade_alert_value',
         7,
         'trade_alert_level_1_address',
