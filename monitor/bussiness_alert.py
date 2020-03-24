@@ -1217,8 +1217,8 @@ def alert(metrics_name, last_value, compare_value, alert_value, last_seconds, co
         dingding_level_1_alert = DingdingAlert(defalut_dingding_alert)
 
         dingding_level_1_alert.send(alert_template.format(
-            time=time,
-            compare_time=compare_time,
+            # time=time,
+            # compare_time=compare_time,
             metrics_name=metrics_name,
             last_value=last_value,
             compare_value=compare_value,
@@ -1232,8 +1232,8 @@ def alert(metrics_name, last_value, compare_value, alert_value, last_seconds, co
 
         dingding_level_1_alert = DingdingAlert(Variable.get(alert_1_level_name))
         dingding_level_1_alert.send(alert_template.format(
-            time=time,
-            compare_time=compare_time,
+            # time=time,
+            # compare_time=compare_time,
             metrics_name=metrics_name,
             last_value=last_value,
             compare_value=compare_value,
@@ -1258,8 +1258,8 @@ def alert(metrics_name, last_value, compare_value, alert_value, last_seconds, co
             logging.info(" =========  进入 LEVEL 2  预警 .......")
             dingding_level_2_alert = DingdingAlert(Variable.get(alert_2_level_name))
             dingding_level_2_alert.send(alert_template.format(
-                time=time,
-                compare_time=compare_time,
+                # time=time,
+                # compare_time=compare_time,
                 metrics_name=metrics_name,
                 last_value=last_value,
                 compare_value=compare_value,
