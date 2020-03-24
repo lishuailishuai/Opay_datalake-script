@@ -107,6 +107,19 @@ def dwd_opay_user_upgrade_agent_df_sql_task(ds):
     set  hive.exec.max.dynamic.partitions.pernode=1000;
     set hive.exec.dynamic.partition.mode=nonstrict;
     set hive.exec.parallel=true;
+    with user_upgrade_df as (
+        select 
+            user_id, accept_overload_user_id, confirmed_overload_user_id, confirmed_overload_user_id, 
+            default.localTime("{config}", 'NG',upgrade_date, 0) as upgrade_time
+        from (
+            select
+                user_id, 
+                accept_overload_user_Id as accept_overload_user_id, confirmed_overload_user_Id as confirmed_overload_user_id, 
+                upgrade_date,
+                row_number() over(partition by user_id order by upgrade_date desc) rn
+            from opay_dw_ods.ods_sqoop_base_user_upgrade_df where dt = '{pt}'
+        ) t0 where rn = 1
+    )
     insert overwrite table {db}.{table} partition(country_code, dt)
     select 
         t0.user_id, t0.role, 
@@ -124,10 +137,8 @@ def dwd_opay_user_upgrade_agent_df_sql_task(ds):
         from opay_dw.dim_opay_user_base_df where dt = '{pt}' and role = 'agent'
     ) t0 left join (
         select
-            user_id, 
-            accept_overload_user_Id as accept_overload_user_id, confirmed_overload_user_Id as confirmed_overload_user_id, 
-            default.localTime("{config}", 'NG',upgrade_date, 0) as upgrade_time
-        from opay_dw_ods.ods_sqoop_base_user_upgrade_df where dt = '{pt}'
+            user_id, accept_overload_user_id, confirmed_overload_user_id, upgrade_time
+        from user_upgrade_df
     ) t1 on t0.user_id = t1.user_id
     left join (
         select
