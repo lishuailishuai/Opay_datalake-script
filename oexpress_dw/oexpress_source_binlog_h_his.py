@@ -540,8 +540,8 @@ for mysql_db_name, mysql_table_name, conn_id, prefix_name, priority_weight_nm, s
     )
 
     # check table
-    check_sqoop_table = PythonOperator(
-        task_id='check_sqoop_table_{}'.format(sqoop_table_name),
+    check_binlog_table = PythonOperator(
+        task_id='check_binlog_table_{}'.format(sqoop_table_name),
         priority_weight=priority_weight_nm,
         python_callable=run_sqoop_check_table,
         provide_context=True,
@@ -654,4 +654,4 @@ for mysql_db_name, mysql_table_name, conn_id, prefix_name, priority_weight_nm, s
 
     check_h_his_table >> add_hi_partitions >> validate_full_table_exist >> [add_partitions, import_table]
     add_partitions >> merge_pre_hi_data
-    import_table >> check_sqoop_table >> merge_pre_hi_with_full_data
+    import_table >> check_binlog_table >> merge_pre_hi_with_full_data
