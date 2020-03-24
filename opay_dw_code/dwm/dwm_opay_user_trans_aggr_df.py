@@ -110,8 +110,8 @@ def dwm_opay_user_trans_aggr_df_sql_task(ds):
         sum(if(order_status = 'SUCCESS' and date_format(create_time, 'yyyy-MM-dd') between date_sub('{pt}', 30) and '{pt}', 1, 0)) as order_suc_cnt_30d,
         sum(if(order_status = 'SUCCESS' and date_format(create_time, 'yyyy-MM-dd') between date_sub('{pt}', 30) and '{pt}', amount, 0)) as order_suc_amt_30d,
         
-        sum(if(order_status = 'SUCCESS', 1, 0)) as order_suc_cnt, 
-        sum(if(order_status = 'SUCCESS', amount, 0)) as order_suc_amt,
+        sum(if(order_status = 'SUCCESS' and date_format(create_time, 'yyyy-MM-dd') <= '{pt}', 1, 0)) as order_suc_cnt, 
+        sum(if(order_status = 'SUCCESS' and date_format(create_time, 'yyyy-MM-dd') <= '{pt}', amount, 0)) as order_suc_amt,
 
         'NG' as country_code,
         '{pt}' as dt
