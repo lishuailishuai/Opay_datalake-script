@@ -414,7 +414,7 @@ def send_report_email(ds, **kwargs):
                             
                        <tr>
                             <!--分类-->
-                            <th>进件日期</th>
+                            <th>进件月</th>
                             <!--整体情况-->
                             <th>进件订单数</th>
                             <th>进件用户数</th>
@@ -434,7 +434,7 @@ def send_report_email(ds, **kwargs):
     week_fmt = '''
                      <tr>
                             <!--分类-->
-                            <th>进件日期</th>
+                            <th>进件周</th>
                             <!--整体情况-->
                             <th>进件订单数</th>
                             <th>进件用户数</th>

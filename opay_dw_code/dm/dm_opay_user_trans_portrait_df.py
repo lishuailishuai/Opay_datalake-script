@@ -92,7 +92,7 @@ def dm_opay_user_trans_portrait_df_sql_task(ds):
         t1.user_state, t1.user_city, t1.lga, t1.address, 
         t1.mobile, t1.register_time,
     
-        t2.upgrage_agent_time, t2.is_reseller, t2.reseller_time, t2.aggregator_id,
+        t2.upgrage_agent_time, if(t2.is_reseller is null, 'N', t2.is_reseller) as is_reseller, t2.reseller_time, t2.aggregator_id,
     
         t3.last_login_time, 
     
@@ -105,7 +105,6 @@ def dm_opay_user_trans_portrait_df_sql_task(ds):
     
         t6.agent_first_trans_time, t6.agent_first_trans_service_type, 
         t6.agent_first_trans_originator_or_affiliate, t6.agent_first_trans_amount, 
-        if(t6.agent_first_trans_time is null or t5.first_trans_time is null, null, datediff(t6.agent_first_trans_time, t5.first_trans_time)) as agent_first_trans_time,
         if(t6.agent_first_trans_time is null or t2.upgrage_agent_time is null, null, datediff(t6.agent_first_trans_time, t2.upgrage_agent_time)) as agent_first_trans_upgrage_diff,
     
         t7.last_trans_time, t7.last_trans_service_type, t7.last_trans_originator_or_affiliate, 
@@ -113,23 +112,25 @@ def dm_opay_user_trans_portrait_df_sql_task(ds):
         if(t6.agent_first_trans_time is null or t7.last_trans_time is null, null, datediff(t7.last_trans_time, t6.agent_first_trans_time)) as last_trans_to_agent_first_trans_diff,
         if(t7.last_trans_time is null, null, datediff('{pt}', t7.last_trans_time)) as last_trans_to_current_diff, 
     
-        order_cnt_d, order_suc_cnt_d, order_suc_amt_d, 
-        order_suc_cnt_w, order_suc_amt_w,
-        order_suc_cnt_m, order_suc_amt_m, 
-        order_suc_cnt_y, order_suc_amt_y,
-        order_suc_cnt_7d, order_suc_amt_7d,
-        order_suc_cnt_30d, order_suc_amt_30d,
+        nvl(order_cnt_d, 0) as order_cnt_d, nvl(order_suc_cnt_d, 0) as order_suc_cnt_d, nvl(order_suc_amt_d, 0) as order_suc_amt_d, 
+        nvl(order_suc_cnt_w, 0) as order_suc_cnt_w, nvl(order_suc_amt_w, 0) as order_suc_amt_w,
+        nvl(order_suc_cnt_m, 0) as order_suc_cnt_m, nvl(order_suc_amt_m, 0) as order_suc_amt_m, 
+        nvl(order_suc_cnt_y, 0) as order_suc_cnt_y, nvl(order_suc_amt_y, 0) as order_suc_amt_y,
+        nvl(order_suc_cnt_7d, 0) as order_suc_cnt_7d, nvl(order_suc_amt_7d, 0) as order_suc_amt_7d,
+        nvl(order_suc_cnt_30d, 0) as order_suc_cnt_30d, nvl(order_suc_amt_30d, 0) as order_suc_amt_30d,
     
-        owallet_bal, 
-        owallet_bal_avg_w, 
-        owallet_bal_avg_m, 
-        owallet_bal_avg_7d, 
-        owallet_bal_avg_30d, 
-        owealth_bal, 
-        owealth_bal_avg_w, 
-        owealth_bal_avg_m, 
-        owealth_bal_avg_7d, 
-        owealth_bal_avg_30d
+        nvl(owallet_bal, 0) as owallet_bal, 
+        nvl(owallet_bal_avg_w, 0) as owallet_bal_avg_w, 
+        nvl(owallet_bal_avg_m, 0) as owallet_bal_avg_m, 
+        nvl(owallet_bal_avg_7d, 0) as owallet_bal_avg_7d, 
+        nvl(owallet_bal_avg_30d, 0) as owallet_bal_avg_30d, 
+        nvl(owealth_bal, 0) as owealth_bal, 
+        nvl(owealth_bal_avg_w, 0) as owealth_bal_avg_w, 
+        nvl(owealth_bal_avg_m, 0) as owealth_bal_avg_m, 
+        nvl(owealth_bal_avg_7d, 0) as owealth_bal_avg_7d, 
+        nvl(owealth_bal_avg_30d, 0) as owealth_bal_avg_30d,
+        'NG' as country_code,
+        '{pt}'
     
     
     from (
@@ -163,7 +164,7 @@ def dm_opay_user_trans_portrait_df_sql_task(ds):
             amount as first_trans_amount
         from opay_dw.dwm_opay_user_first_trans_df
         where dt = '{pt}'
-    ) t5 on t1.user_id = t5.first_trans_amount
+    ) t5 on t1.user_id = t5.user_id
     left join (
         select 
             user_id, trans_time as agent_first_trans_time, sub_service_type as agent_first_trans_service_type, 
