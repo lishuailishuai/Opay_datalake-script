@@ -111,7 +111,8 @@ def app_oride_user_funnel_beford_d_sql_task(ds):
     set hive.mapred.mode=nonstrict;
     
     with base as 
-    (SELECT user_id,  --乘客ID
+    (select *          
+    from (SELECT user_id,  --乘客ID
            user_number,  --乘客电话
            platform,  --操作系统
            app_version, --app版本号
@@ -132,11 +133,13 @@ def app_oride_user_funnel_beford_d_sql_task(ds):
                WHEN event_name='complete_the_order_show' THEN 6 --完单节点
     
                ELSE 7
-           END AS rn --完成支付节点
+           END AS rn, --完成支付节点
+           row_number() over (partition by user_id,user_number,platform,app_version,event_name,tid order by event_time) as rn_time 
     
     FROM oride_dw.dwd_oride_client_event_detail_hi
     WHERE dt='{pt}'
       AND from_unixtime(cast(substr(event_time,1,10) AS bigint),'yyyy-MM-dd')=dt 
+      and tid is not null
     
       AND (event_name IN('choose_end_point_click',
                          'request_a_ride_show',
@@ -147,15 +150,9 @@ def app_oride_user_funnel_beford_d_sql_task(ds):
            OR (event_name='oride_show'
                AND lower(app_name) IN('oride passenger',
                                       'oride',
-                                      'opay')))
-    GROUP BY user_id,
-             user_number,
-             platform,
-             app_version,
-             event_name,
-             cast(substr(event_time,1,10) AS bigint),
-             tid      
-    )
+                                      'opay')))    
+    ) t where t.rn_time=1)
+    
     insert overwrite table {db}.{table} partition(country_code,dt)
     select nvl(city_id,-10000) as city_id, --城市ID
            nvl(product_id,-10000) as product_id, --业务线ID
@@ -195,19 +192,19 @@ def app_oride_user_funnel_beford_d_sql_task(ds):
 			 avg(if(event_name_a='choose_end_point_click'
 			        AND event_name_b='oride_show'
 			        AND (time_range>0
-			             AND time_range < 15*60),time_range,0)) AS login_to_check_end_dur,--登录到选择终点平均时长
+			             AND time_range < 15*60),time_range,null)) AS login_to_check_end_dur,--登录到选择终点平均时长
 			 avg(if(event_name_a='request_a_ride_show'
 			        AND event_name_b='choose_end_point_click'
 			        AND (time_range>0
-			             AND time_range < 15*60),time_range,0)) AS check_end_to_valuation_dur,--选择终点到预估价格平均时长
+			             AND time_range < 15*60),time_range,null)) AS check_end_to_valuation_dur,--选择终点到预估价格平均时长
 			 avg(if(event_name_a='request_a_ride_show'
 			        AND event_name_b='oride_show'
 			        AND (time_range>0
-			             AND time_range < 15*60),time_range,0)) AS login_to_valuation_dur,--登录到预估价格平均时长
+			             AND time_range < 15*60),time_range,null)) AS login_to_valuation_dur,--登录到预估价格平均时长
 			 avg(if(event_name_a='request_a_ride_show'
 			        AND phone_number IS NOT NULL
 			        AND time_range1>0
-			        AND time_range1 < 15*60,time_range1,0)) AS valuation_to_order_dur--估价界面到下单平均时长
+			        AND time_range1 < 15*60,time_range1,null)) AS valuation_to_order_dur--估价界面到下单平均时长
 			
 			FROM
 			  (SELECT a.tid AS tid_a,
