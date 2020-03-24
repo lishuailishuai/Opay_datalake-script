@@ -468,7 +468,7 @@ def merge_pre_hi_with_full_data_task(hive_db, hive_h_his_table_name, hive_hi_tab
     TaskTouchzSuccess().countries_touchz_success(pt, hive_db, hive_h_his_table_name,
                                                  H_HIS_OSS_PATH % hive_h_his_table_name,
                                                  "false",
-                                                 "true",
+                                                 "false",
                                                  now_hour)
 
 
