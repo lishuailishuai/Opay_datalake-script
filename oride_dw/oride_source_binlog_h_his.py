@@ -277,7 +277,7 @@ def run_check_table(mysql_db_name, mysql_table_name, conn_id, hive_h_his_table_n
             else:
                 col_name = result[0]
             if result[1] == 'timestamp' or result[1] == 'varchar' or result[1] == 'char' or result[1] == 'text' or \
-                    result[1] == 'longtext' or \
+                    result[1] == 'longtext' or result[1] == 'mediumtext' or \
                     result[1] == 'datetime':
                 data_type = 'string'
             elif result[1] == 'decimal':
