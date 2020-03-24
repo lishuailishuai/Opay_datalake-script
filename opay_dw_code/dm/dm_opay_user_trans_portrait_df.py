@@ -164,7 +164,7 @@ def dm_opay_user_trans_portrait_df_sql_task(ds):
             amount as first_trans_amount
         from opay_dw.dwm_opay_user_first_trans_df
         where dt = '{pt}'
-    ) t5 on t1.user_id = t5.first_trans_amount
+    ) t5 on t1.user_id = t5.user_id
     left join (
         select 
             user_id, trans_time as agent_first_trans_time, sub_service_type as agent_first_trans_service_type, 
