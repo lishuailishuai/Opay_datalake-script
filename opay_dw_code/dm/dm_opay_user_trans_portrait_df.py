@@ -129,6 +129,7 @@ def dm_opay_user_trans_portrait_df_sql_task(ds):
         nvl(owealth_bal_avg_m, 0) as owealth_bal_avg_m, 
         nvl(owealth_bal_avg_7d, 0) as owealth_bal_avg_7d, 
         nvl(owealth_bal_avg_30d, 0) as owealth_bal_avg_30d,
+        nvl(order_suc_cnt, 0) as order_suc_cnt, nvl(order_suc_amt, 0) as order_suc_amt,
         'NG' as country_code,
         '{pt}'
     
@@ -144,13 +145,13 @@ def dm_opay_user_trans_portrait_df_sql_task(ds):
         select
             user_id, upgrade_time as upgrage_agent_time, is_reseller, reseller_time, aggregator_id
         from opay_dw.dwd_opay_user_upgrade_agent_df 
-        where dt = '{pt}'
+        where dt = if('{pt}' <= '2020-03-18', '2020-03-18', '{pt}')
     ) t2 on t1.user_id = t2.user_id
     left join (
         select 
             user_id, last_visit as last_login_time
         from opay_dw.dwm_opay_user_last_visit_df 
-        where dt = '{pt}'
+        where dt = if('{pt}' <= '2020-03-01', '2020-03-01', '{pt}')
     ) t3 on t1.user_id = t3.user_id
     -- left join (
     -- 	select 
@@ -163,7 +164,7 @@ def dm_opay_user_trans_portrait_df_sql_task(ds):
             originator_or_affiliate as first_trans_originator_or_affiliate,
             amount as first_trans_amount
         from opay_dw.dwm_opay_user_first_trans_df
-        where dt = '{pt}'
+        where dt = if('{pt}' <= '2020-03-18', '2020-03-18', '{pt}')
     ) t5 on t1.user_id = t5.user_id
     left join (
         select 
@@ -171,7 +172,7 @@ def dm_opay_user_trans_portrait_df_sql_task(ds):
             originator_or_affiliate as agent_first_trans_originator_or_affiliate,
             amount as agent_first_trans_amount
         from opay_dw.dwm_opay_agent_first_trans_df
-        where dt = '{pt}'
+        where dt = if('{pt}' <= '2020-03-18', '2020-03-18', '{pt}')
     ) t6 on t1.user_id = t6.user_id
     left join (
         select
@@ -188,7 +189,8 @@ def dm_opay_user_trans_portrait_df_sql_task(ds):
             order_suc_cnt_m, order_suc_amt_m, 
             order_suc_cnt_y, order_suc_amt_y,
             order_suc_cnt_7d, order_suc_amt_7d,
-            order_suc_cnt_30d, order_suc_amt_30d
+            order_suc_cnt_30d, order_suc_amt_30d,
+            order_suc_cnt, order_suc_amt
         from opay_dw.dwm_opay_user_trans_aggr_df
         where dt = if('{pt}' <= '2020-03-22', '2020-03-22', '{pt}') 
     ) t8 on t1.user_id = t8.user_id
@@ -206,7 +208,7 @@ def dm_opay_user_trans_portrait_df_sql_task(ds):
             owealth_7 as owealth_bal_avg_7d, 
             owealth_30 as owealth_bal_avg_30d
         from opay_dw.dwm_opay_user_balance_df
-        where dt = '{pt}'
+        where dt = if('{pt}' <= '2019-12-11', '2019-12-11', '{pt}') 
     ) t9 on t1.user_id = t9.user_id
     
     
