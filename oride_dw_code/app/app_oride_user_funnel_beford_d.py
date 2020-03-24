@@ -58,27 +58,6 @@ dwd_oride_client_event_detail_hi_task = OssSensor(
         poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
         dag=dag
 )
-dwd_oride_order_base_include_test_di_prev_day_task = OssSensor(
-        task_id='dwd_oride_order_base_include_test_di_prev_day_task',
-        bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-            hdfs_path_str="oride/oride_dw/dwd_oride_order_base_include_test_di/country_code=NG",
-            pt='{{ds}}'
-        ),
-        bucket_name='opay-datalake',
-        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-        dag=dag
-    )
-
-dim_oride_passenger_base_prev_day_task = OssSensor(
-    task_id='dim_oride_passenger_base_prev_day_task',
-    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="oride/oride_dw/dim_oride_passenger_base/country_code=nal",
-        pt='{{ds}}'
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
 
 # ----------------------------------------- 任务超时监控 ---------------------------------------##
 
@@ -163,6 +142,8 @@ def app_oride_user_funnel_beford_d_sql_task(ds):
            request_user_num_m,--被接单乘客数量
            finish_user_num_m,--完单乘客数量
            finished_pay_user_num_m,--完单支付乘客数量
+           login_cnt_m, --登录次数
+           chose_end_cnt_m,--选择终点次数
            valuation_cnt_m,--估价次数
            login_to_check_end_dur,--登录到选择终点平均时长
            check_end_to_valuation_dur,--选择终点到预估价格平均时长
@@ -186,6 +167,9 @@ def app_oride_user_funnel_beford_d_sql_task(ds):
 			                    AND event_name_b='successful_order_show',user_id_a,NULL))) AS finish_user_num_m,--完单乘客数量
 			 count(DISTINCT (if(event_name_a='complete_the_payment_show'
 			                    AND event_name_b='complete_the_order_show',user_id_a,NULL))) AS finished_pay_user_num_m,--完单支付乘客数量
+			 sum(if(event_name_a='oride_show',1,0)) as login_cnt_m, --登录次数
+			 sum((if(event_name_a='choose_end_point_click'
+			         AND event_name_b='oride_show',1,0))) AS chose_end_cnt_m,--选择终点次数
 			 sum((if(event_name_a='request_a_ride_show'
 			         AND event_name_b='choose_end_point_click',1,0))) AS valuation_cnt_m,--估价次数
 			 avg(if(event_name_a='choose_end_point_click'
@@ -291,5 +275,3 @@ app_oride_user_funnel_beford_d_task = PythonOperator(
 )
 
 dwd_oride_client_event_detail_hi_task >> app_oride_user_funnel_beford_d_task
-dwd_oride_order_base_include_test_di_prev_day_task >> app_oride_user_funnel_beford_d_task
-dim_oride_passenger_base_prev_day_task >> app_oride_user_funnel_beford_d_task
