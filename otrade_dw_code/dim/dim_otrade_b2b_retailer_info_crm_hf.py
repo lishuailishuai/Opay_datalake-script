@@ -401,7 +401,7 @@ union_result as (
     ,updated_at
     ,certification_time
 
-    ,row_number() over(partition by id order by update_time desc) rn
+    ,row_number() over(partition by id order by updated_at desc) rn
   from
     (
     select * from last_hour_total
