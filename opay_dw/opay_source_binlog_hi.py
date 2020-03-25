@@ -187,16 +187,16 @@ table_list = [
 
     # opay_message_center
 
-    ("opay_message_center", "opay_message_statistic", "opay_message_center", "opay_message_statistic", "opay_message_center_db", "base", 3, "opay_message_center_db", "false"),
-    ("opay_message_center", "opay_push_task", "opay_message_center", "opay_push_task", "opay_message_center_db", "base", 3, "opay_message_center_db", "false"),
-    ("opay_message_center", "opay_user_tags_new", "opay_message_center", "opay_user_tags_new", "opay_message_center_db", "base", 3, "opay_message_center_db", "false"),
+    ("opay_message_center", "opay_message_statistic", "opay_message_center", "opay_message_statistic", "opay_message_center_db", "push", 3, "opay_message_center_db", "false"),
+    ("opay_message_center", "opay_push_task", "opay_message_center", "opay_push_task", "opay_message_center_db", "push", 3, "opay_message_center_db", "false"),
+    ("opay_message_center", "opay_user_tags_new", "opay_message_center", "opay_user_tags_new", "opay_message_center_db", "push", 3, "opay_message_center_db", "false"),
     ("opay_message_center", "opay_users", "opay_message_center", "opay_users", "opay_message_center_db", "base", 3, "opay_message_center_db", "false"),
 
 
     # 分表情况，schema 表与 实际定义表名作出区分
-    ("opay_message_center", "opay_messages_0", "opay_message_center", "opay_messages", "opay_message_center_db", "base", 3, "opay_message_center_opay_messages",
+    ("opay_message_center", "opay_messages_0", "opay_message_center", "opay_messages", "opay_message_center_db", "push", 3, "opay_message_center_opay_messages",
      "false"),
-    ("opay_message_center", "opay_user_specific_message_0", "opay_message_center", "opay_user_specific_message", "opay_message_center_db", "base", 3,
+    ("opay_message_center", "opay_user_specific_message_0", "opay_message_center", "opay_user_specific_message", "opay_message_center_db", "push", 3,
      "opay_message_center_opay_user_specific_message",
      "false"),
 
@@ -317,6 +317,7 @@ def run_check_table(schema_table_db_name, schema_table_name, target_table_db_nam
                 col_name = result[0]
             if result[1] == 'timestamp' or result[1] == 'varchar' or result[1] == 'char' or result[1] == 'text' or \
                     result[1] == 'longtext' or \
+                    result[1] == 'mediumtext' or \
                     result[1] == 'json' or \
                     result[1] == 'datetime':
                 data_type = 'string'
