@@ -40,7 +40,7 @@ args = {
 }
 
 dag = airflow.DAG('dim_otrade_b2b_supplier_info_hf',
-                  schedule_interval="20 * * * *",
+                  schedule_interval="30 * * * *",
                   default_args=args,
                   )
 
@@ -248,7 +248,6 @@ last_hour_total as (
 ),
 
 --2.然后取出最近一小时的增量数据,并关联bd信息,并去重
-with
 update_info as (
   select 
     v1.id
