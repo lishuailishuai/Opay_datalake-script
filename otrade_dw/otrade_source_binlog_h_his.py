@@ -20,7 +20,7 @@ import os
 
 args = {
     'owner': 'linan',
-    'start_date': datetime(2020, 3, 24),
+    'start_date': datetime(2020, 3, 25),
     'depends_on_past': False,
     'retries': 1,
     'retry_delay': timedelta(minutes=5),
@@ -29,17 +29,17 @@ args = {
     'email_on_retry': False,
     'on_success_callback': on_success_callback,
 }
-schedule_interval = "38 * * * *"
+schedule_interval = "20 * * * *"
 
 dag = airflow.DAG(
-    'otrade_source_binlog_all_hi',
+    'otrade_source_binlog_h_his',
     schedule_interval=schedule_interval,
     concurrency=40,
     max_active_runs=1,
     default_args=args)
 
 dag_monitor = airflow.DAG(
-    'otrade_source_binlog_all_hi_monitor',
+    'otrade_source_binlog_h_his_monitor',
     schedule_interval=schedule_interval,
     default_args=args)
 
@@ -68,34 +68,19 @@ db_name,table_name,conn_id,prefix_name,priority_weight,server_name (采集配置
 
 table_list = [
 
-    # otrade
-
-    ("otrade_crm", "otrade_business_details", "otrade_crm", "base", 3, "otrade_db", "false"),
-    ("otrade_crm", "bd_admin_users", "otrade_crm", "base", 3, "otrade_db", "false"),
-
-    ("otrade_user", "otrade_user", "otrade_user", "base", 3, "otrade_db", "false"),
-    ("otrade_user", "otrade_retailer_detail", "otrade_user", "base", 3, "otrade_db", "false"),
-    ("otrade_user", "otrade_supplier_detail", "otrade_user", "base", 3, "otrade_db", "false"),
-
-    ("otrade_product", "product_sku", "otrade_product", "base", 3, "otrade_db", "false"),
-    ("otrade_product", "product", "otrade_product", "base", 3, "otrade_db", "false"),
-    ("otrade_product", "category", "otrade_product", "base", 3, "otrade_db", "false"),
-    ("otrade_product", "product_shopping_cart", "otrade_product", "base", 3, "otrade_db", "false"),
-
-    ("otrade_order", "otrade_order", "otrade_order", "base", 3, "otrade_db", "false"),
-    ("otrade_order", "otrade_order_item", "otrade_order", "base", 3, "otrade_db", "false"),
-    ("otrade_order", "otrade_pay", "otrade_order", "base", 3, "otrade_db", "false"),
+    ("otrade_user", "otrade_city", "otrade_user", "base", 3, "otrade_db", "false"),
+    ("otrade_user", "otrade_country", "otrade_user", "base", 3, "otrade_db", "false"),
 
 ]
 
 HIVE_DB = 'otrade_dw_ods'
 HIVE_SQOOP_TEMP_DB = 'test_db'
-HIVE_ALL_HI_TABLE = 'ods_binlog_%s_%s_all_hi'
+HIVE_FULL_TABLE = 'ods_binlog_%s_%s_h_his'
 HIVE_HI_TABLE = 'ods_binlog_%s_%s_hi'
-HIVE_SQOOP_TEMP_TABLE = '%s_full'
+HIVE_SQOOP_TEMP_TABLE = '%s_%s_full'
 
 UFILE_PATH = Variable.get("OBJECT_STORAGE_PROTOCOL") + 'opay-datalake/temp/%s/%s'
-ALL_HI_OSS_PATH = 'oss://opay-datalake/otrade_all_hi/%s'
+H_HIS_OSS_PATH = 'oss://opay-datalake/otrade_h_his/%s'
 HI_OSS_PATH = 'oss://opay-datalake/otrade_binlog/%s'
 ODS_CREATE_TABLE_SQL = '''
     CREATE EXTERNAL TABLE IF NOT EXISTS {db_name}.`{table_name}`(
@@ -146,10 +131,10 @@ ODS_SQOOP_CREATE_TABLE_SQL = '''
     MSCK REPAIR TABLE test_db.`{table_name}`;
 '''
 
-ADD_HI_SQL = '''
+MERGE_HI_SQL = '''
     SET hive.exec.parallel=TRUE;
     SET hive.exec.dynamic.partition.mode=nonstrict;
-    insert overwrite table {db_name}.`{hive_all_hi_table_name}` partition(dt,hour)
+    insert overwrite table {db_name}.`{hive_h_his_table_name}` partition(dt,hour)
     select 
     {columns},
     '{pt}' as dt,
@@ -157,13 +142,23 @@ ADD_HI_SQL = '''
     from 
     {db_name}.`{hive_hi_table_name}`
     where dt = '{pt}' and hour = '{now_hour}'
+    union all 
+    select 
+    {columns},
+    '{pt}' as dt,
+    '{now_hour}' as hour
+    from 
+    {db_name}.`{hive_h_his_table_name}`
+    where dt = '{pre_hour_day}' and hour = '{pre_hour}'
     ;
+    
+
 '''
 
-ADD_FULL_SQL = '''
+MERGE_HI_WITH_FULL_SQL = '''
     SET hive.exec.parallel=TRUE;
     SET hive.exec.dynamic.partition.mode=nonstrict;
-    insert overwrite table {db_name}.`{hive_all_hi_table_name}` partition(dt,hour)
+    insert overwrite table {db_name}.`{hive_h_his_table_name}` partition(dt,hour)
     select 
     {columns},
     '{pt}' as dt,
@@ -171,9 +166,9 @@ ADD_FULL_SQL = '''
     from 
     {db_name}.`{hive_hi_table_name}`
     where dt = '{pt}' and hour = '{now_hour}'
-
+    
     union all 
-
+    
     select 
     '{mysql_db_name}' as `__db` , 
     '0' as `__server_id` , 
@@ -192,7 +187,7 @@ ADD_FULL_SQL = '''
     from 
     {sqoop_temp_db_name}.`{sqoop_table_name}`
     ;
-
+    
 
 '''
 
@@ -209,7 +204,7 @@ def add_partition(v_execution_date, v_execution_day, v_execution_hour, db_name, 
         v_execution_day,
         hive_db,
         hive_table_name,
-        ALL_HI_OSS_PATH % hive_table_name,
+        H_HIS_OSS_PATH % hive_table_name,
         "false", is_must_have_data, v_execution_hour)
 
     sql = '''
@@ -236,14 +231,14 @@ def add_hi_partition(v_execution_date, v_execution_day, v_execution_hour, db_nam
     return
 
 
-def run_check_table(mysql_db_name, mysql_table_name, conn_id, hive_all_hi_table_name, server_name, **kwargs):
+def run_check_table(mysql_db_name, mysql_table_name, conn_id, hive_h_his_table_name, server_name, **kwargs):
     # SHOW TABLES in oride_db LIKE 'data_aa'
-    check_sql = 'SHOW TABLES in %s LIKE \'%s\'' % (HIVE_DB, hive_all_hi_table_name)
+    check_sql = 'SHOW TABLES in %s LIKE \'%s\'' % (HIVE_DB, hive_h_his_table_name)
     hive2_conn = HiveServer2Hook().get_conn()
     cursor = hive2_conn.cursor()
     cursor.execute(check_sql)
     if len(cursor.fetchall()) == 0:
-        logging.info('Create Hive Table: %s.%s', HIVE_DB, hive_all_hi_table_name)
+        logging.info('Create Hive Table: %s.%s', HIVE_DB, hive_h_his_table_name)
         # get table column
         column_sql = '''
                 SELECT
@@ -269,7 +264,7 @@ def run_check_table(mysql_db_name, mysql_table_name, conn_id, hive_all_hi_table_
             else:
                 col_name = result[0]
             if result[1] == 'timestamp' or result[1] == 'varchar' or result[1] == 'char' or result[1] == 'text' or \
-                    result[1] == 'longtext' or \
+                    result[1] == 'longtext' or result[1] == 'mediumtext' or \
                     result[1] == 'datetime':
                 data_type = 'string'
             elif result[1] == 'decimal':
@@ -284,9 +279,9 @@ def run_check_table(mysql_db_name, mysql_table_name, conn_id, hive_all_hi_table_
         hive_hook = HiveCliHook()
         sql = ODS_CREATE_TABLE_SQL.format(
             db_name=HIVE_DB,
-            table_name=hive_all_hi_table_name,
+            table_name=hive_h_his_table_name,
             columns=",\n".join(rows),
-            oss_path=ALL_HI_OSS_PATH % hive_all_hi_table_name
+            oss_path=H_HIS_OSS_PATH % hive_h_his_table_name
         )
         logging.info('Executing: %s', sql)
         hive_hook.run_cli(sql)
@@ -295,11 +290,11 @@ def run_check_table(mysql_db_name, mysql_table_name, conn_id, hive_all_hi_table_
         sqoopSchema = SqoopSchemaUpdate()
         response = sqoopSchema.append_hive_schema(
             hive_db=HIVE_DB,
-            hive_table=hive_all_hi_table_name,
+            hive_table=hive_h_his_table_name,
             mysql_db=mysql_db_name,
             mysql_table=mysql_table_name,
             mysql_conn=conn_id,
-            oss_path=ALL_HI_OSS_PATH % hive_all_hi_table_name
+            oss_path=H_HIS_OSS_PATH % hive_h_his_table_name
         )
         if response:
             return True
@@ -349,7 +344,6 @@ def run_sqoop_check_table(mysql_db_name, mysql_table_name, conn_id, hive_table_n
             else:
                 col_name = result[0]
             if result[1] == 'timestamp' or result[1] == 'varchar' or result[1] == 'char' or result[1] == 'text' or \
-                    result[1] == 'longtext' or result[1] == 'mediumtext' or \
                     result[1] == 'datetime':
                 data_type = 'string'
             elif result[1] == 'decimal':
@@ -372,25 +366,25 @@ def run_sqoop_check_table(mysql_db_name, mysql_table_name, conn_id, hive_table_n
     return
 
 
-def validate_all_hi_table_exist_task(hive_all_hi_table_name, mysql_table_name, **kwargs):
-    check_sql = 'show partitions %s.%s' % (HIVE_DB, hive_all_hi_table_name)
+def validate_full_table_exist_task(hive_h_his_table_name, mysql_table_name, **kwargs):
+    check_sql = 'show partitions %s.%s' % (HIVE_DB, hive_h_his_table_name)
     hive2_conn = HiveServer2Hook().get_conn()
     cursor = hive2_conn.cursor()
     cursor.execute(check_sql)
     if len(cursor.fetchall()) == 0:
         return 'import_table_{}'.format(mysql_table_name)
     else:
-        return 'add_partitions_{}'.format(hive_all_hi_table_name)
+        return 'add_partitions_{}'.format(hive_h_his_table_name)
 
 
-def merge_pre_hi_data_task(hive_db, hive_all_hi_table_name, hive_hi_table_name,is_must_have_data, pt, now_hour, pre_hour_day, pre_hour,
+def merge_pre_hi_data_task(hive_db, hive_h_his_table_name, hive_hi_table_name,is_must_have_data, pt, now_hour, pre_hour_day, pre_hour,
                            **kwargs):
     sqoopSchema = SqoopSchemaUpdate()
-    hive_columns = sqoopSchema.get_hive_column_name(hive_db, hive_all_hi_table_name)
+    hive_columns = sqoopSchema.get_hive_column_name(hive_db, hive_h_his_table_name)
 
-    hql = ADD_HI_SQL.format(
+    hql = MERGE_HI_SQL.format(
         db_name=hive_db,
-        hive_all_hi_table_name=hive_all_hi_table_name,
+        hive_h_his_table_name=hive_h_his_table_name,
         hive_hi_table_name=hive_hi_table_name,
         pt=pt,
         now_hour=now_hour,
@@ -414,30 +408,30 @@ def merge_pre_hi_data_task(hive_db, hive_all_hi_table_name, hive_hi_table_name,i
     第二个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
 
     """
-    TaskTouchzSuccess().countries_touchz_success(pt, hive_db, hive_all_hi_table_name,
-                                                 ALL_HI_OSS_PATH % hive_all_hi_table_name,
+    TaskTouchzSuccess().countries_touchz_success(pt, hive_db, hive_h_his_table_name,
+                                                 H_HIS_OSS_PATH % hive_h_his_table_name,
                                                  "false",
                                                  is_must_have_data,
                                                  now_hour)
 
 
-def merge_pre_hi_with_full_data_task(hive_db, hive_all_hi_table_name, hive_hi_table_name, mysql_db_name,
+def merge_pre_hi_with_full_data_task(hive_db, hive_h_his_table_name, hive_hi_table_name, mysql_db_name,
                                      mysql_table_name, mysql_conn,
                                      sqoop_temp_db_name, sqoop_table_name,
                                      pt, now_hour, pre_day, pre_hour_day, pre_hour,is_must_have_data, **kwargs):
     sqoopSchema = SqoopSchemaUpdate()
 
-    hive_columns = sqoopSchema.get_hive_column_name(hive_db, hive_all_hi_table_name)
+    hive_columns = sqoopSchema.get_hive_column_name(hive_db, hive_h_his_table_name)
     mysql_columns = sqoopSchema.get_mysql_column_name(mysql_db_name, mysql_table_name, mysql_conn)
     pre_day_ms = int(time.mktime(time.strptime(pre_day, "%Y-%m-%d"))) * 1000
 
-    hql = ADD_FULL_SQL.format(
+    hql = MERGE_HI_WITH_FULL_SQL.format(
         columns=',\n'.join(hive_columns),
         pt=pt,
         now_hour=now_hour,
         db_name=hive_db,
         mysql_db_name=mysql_db_name,
-        hive_all_hi_table_name=hive_all_hi_table_name,
+        hive_h_his_table_name=hive_h_his_table_name,
         hive_hi_table_name=hive_hi_table_name,
         mysql_table_name=mysql_table_name,
         pre_day_ms=pre_day_ms,
@@ -458,10 +452,10 @@ def merge_pre_hi_with_full_data_task(hive_db, hive_all_hi_table_name, hive_hi_ta
     """
     第一个参数true: 数据目录是有country_code分区。false 没有
     第二个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
-
+    
     """
-    TaskTouchzSuccess().countries_touchz_success(pt, hive_db, hive_all_hi_table_name,
-                                                 ALL_HI_OSS_PATH % hive_all_hi_table_name,
+    TaskTouchzSuccess().countries_touchz_success(pt, hive_db, hive_h_his_table_name,
+                                                 H_HIS_OSS_PATH % hive_h_his_table_name,
                                                  "false",
                                                  is_must_have_data,
                                                  now_hour)
@@ -472,13 +466,13 @@ for mysql_db_name, mysql_table_name, conn_id, prefix_name, priority_weight_nm, s
     if conn_id not in conn_conf_dict:
         conn_conf_dict[conn_id] = BaseHook.get_connection(conn_id)
 
-    hive_all_hi_table_name = HIVE_ALL_HI_TABLE % (prefix_name, mysql_table_name)
+    hive_h_his_table_name = HIVE_FULL_TABLE % (prefix_name, mysql_table_name)
     hive_hi_table_name = HIVE_HI_TABLE % (prefix_name, mysql_table_name)
-    sqoop_table_name = HIVE_SQOOP_TEMP_TABLE % mysql_table_name
+    sqoop_table_name = HIVE_SQOOP_TEMP_TABLE % (mysql_db_name,mysql_table_name)
 
-    # check all_hi table 校验表是否存在
-    check_all_hi_table = PythonOperator(
-        task_id='check_all_hi_table_{}'.format(hive_all_hi_table_name),
+    # check h_his table 校验全量表是否存在
+    check_h_his_table = PythonOperator(
+        task_id='check_h_his_table_{}'.format(hive_h_his_table_name),
         priority_weight=priority_weight_nm,
         python_callable=run_check_table,
         provide_context=True,
@@ -486,20 +480,20 @@ for mysql_db_name, mysql_table_name, conn_id, prefix_name, priority_weight_nm, s
             'mysql_db_name': mysql_db_name,
             'mysql_table_name': mysql_table_name,
             'conn_id': conn_id,
-            'hive_all_hi_table_name': hive_all_hi_table_name,
+            'hive_h_his_table_name': hive_h_his_table_name,
             'server_name': server_name
         },
         dag=dag
     )
 
-    # 校验是否hive all_hi 表是否存在数据
-    validate_all_hi_table_exist = BranchPythonOperator(
-        task_id='validate_all_hi_table_exist_{}'.format(hive_all_hi_table_name),
+    # 校验是否hive全量表是否存在数据
+    validate_full_table_exist = BranchPythonOperator(
+        task_id='validate_full_table_exist_{}'.format(hive_h_his_table_name),
         provide_context=True,
-        python_callable=validate_all_hi_table_exist_task,
+        python_callable=validate_full_table_exist_task,
         op_kwargs={
             'mysql_table_name': mysql_table_name,
-            'hive_all_hi_table_name': hive_all_hi_table_name
+            'hive_h_his_table_name': hive_h_his_table_name
         },
         dag=dag,
     )
@@ -549,9 +543,9 @@ for mysql_db_name, mysql_table_name, conn_id, prefix_name, priority_weight_nm, s
         dag=dag
     )
 
-    # add partitions
+    # add h_his partitions
     add_partitions = PythonOperator(
-        task_id='add_partitions_{}'.format(hive_all_hi_table_name),
+        task_id='add_partitions_{}'.format(hive_h_his_table_name),
         priority_weight=priority_weight_nm,
         python_callable=add_partition,
         provide_context=True,
@@ -559,7 +553,7 @@ for mysql_db_name, mysql_table_name, conn_id, prefix_name, priority_weight_nm, s
             'db_name': mysql_db_name,
             'table_name': mysql_table_name,
             'conn_id': conn_id,
-            'hive_table_name': hive_all_hi_table_name,
+            'hive_table_name': hive_h_his_table_name,
             'server_name': server_name,
             'hive_db': HIVE_DB,
             'is_must_have_data': is_must_have_data,
@@ -573,7 +567,7 @@ for mysql_db_name, mysql_table_name, conn_id, prefix_name, priority_weight_nm, s
     ## 脱离小时级增量绑定过程
     # add_hi_partitions
     add_hi_partitions = PythonOperator(
-        task_id='add_hi_partitions_{}'.format(hive_all_hi_table_name),
+        task_id='add_hi_partitions_{}'.format(hive_h_his_table_name),
         priority_weight=priority_weight_nm,
         python_callable=add_hi_partition,
         provide_context=True,
@@ -594,13 +588,13 @@ for mysql_db_name, mysql_table_name, conn_id, prefix_name, priority_weight_nm, s
 
     # merge_pre_hi_data_task
     merge_pre_hi_data = PythonOperator(
-        task_id='merge_pre_hi_data_task_{}'.format(hive_all_hi_table_name),
+        task_id='merge_pre_hi_data_task_{}'.format(hive_h_his_table_name),
         priority_weight=priority_weight_nm,
         python_callable=merge_pre_hi_data_task,
         provide_context=True,
         op_kwargs={
             'hive_db': HIVE_DB,
-            'hive_all_hi_table_name': hive_all_hi_table_name,
+            'hive_h_his_table_name': hive_h_his_table_name,
             'hive_hi_table_name': hive_hi_table_name,
             'is_must_have_data':is_must_have_data,
             'pt': '{{execution_date.strftime("%Y-%m-%d")}}',
@@ -614,13 +608,13 @@ for mysql_db_name, mysql_table_name, conn_id, prefix_name, priority_weight_nm, s
 
     # merge_pre_hi_with_full_data_task
     merge_pre_hi_with_full_data = PythonOperator(
-        task_id='merge_pre_hi_with_full_data_task_{}'.format(hive_all_hi_table_name),
+        task_id='merge_pre_hi_with_full_data_task_{}'.format(hive_h_his_table_name),
         priority_weight=priority_weight_nm,
         python_callable=merge_pre_hi_with_full_data_task,
         provide_context=True,
         op_kwargs={
             'hive_db': HIVE_DB,
-            'hive_all_hi_table_name': hive_all_hi_table_name,
+            'hive_h_his_table_name': hive_h_his_table_name,
             'hive_hi_table_name': hive_hi_table_name,
             'pt': '{{execution_date.strftime("%Y-%m-%d")}}',
             'pre_day': '{{macros.ds_add(ds, -1)}}',
@@ -632,23 +626,23 @@ for mysql_db_name, mysql_table_name, conn_id, prefix_name, priority_weight_nm, s
             'mysql_conn': conn_id,
             'sqoop_temp_db_name': HIVE_SQOOP_TEMP_DB,
             'sqoop_table_name': sqoop_table_name,
-            'is_must_have_data':is_must_have_data
+            'is_must_have_data': is_must_have_data,
         },
         dag=dag
     )
 
     # 超时监控
     task_timeout_monitor = PythonOperator(
-        task_id='task_timeout_monitor_{}'.format(hive_all_hi_table_name),
+        task_id='task_timeout_monitor_{}'.format(hive_h_his_table_name),
         python_callable=fun_task_timeout_monitor,
         provide_context=True,
         op_kwargs={
             'db_name': HIVE_DB,
-            'table_name': hive_all_hi_table_name,
+            'table_name': hive_h_his_table_name,
         },
         dag=dag_monitor
     )
 
-    check_all_hi_table >> add_hi_partitions >> validate_all_hi_table_exist >> [add_partitions, import_table]
+    check_h_his_table >> add_hi_partitions >> validate_full_table_exist >> [add_partitions, import_table]
     add_partitions >> merge_pre_hi_data
     import_table >> check_sqoop_table >> merge_pre_hi_with_full_data
