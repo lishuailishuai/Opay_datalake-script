@@ -118,7 +118,7 @@ def app_oride_user_funnel_beford_d_sql_task(ds):
            row_number() over (partition by user_id,platform,app_version,event_name,tid order by event_time desc) as rn_time 
     
     FROM oride_dw.dwd_oride_client_event_detail_hi
-    WHERE dt='${pt}'
+    WHERE dt='{pt}'
       AND from_unixtime(cast(substr(event_time,1,10) AS bigint),'yyyy-MM-dd')=dt 
       and tid is not null
     
