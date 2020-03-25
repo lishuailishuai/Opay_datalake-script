@@ -90,7 +90,7 @@ HIVE_DB = 'oride_dw_ods'
 HIVE_SQOOP_TEMP_DB = 'test_db'
 HIVE_FULL_TABLE = 'ods_binlog_%s_%s_h_his'
 HIVE_HI_TABLE = 'ods_binlog_%s_%s_hi'
-HIVE_SQOOP_TEMP_TABLE = '%s_full'
+HIVE_SQOOP_TEMP_TABLE = '%s_%s_full'
 
 UFILE_PATH = Variable.get("OBJECT_STORAGE_PROTOCOL") + 'opay-datalake/temp/%s/%s'
 H_HIS_OSS_PATH = 'oss://opay-datalake/oride_h_his/%s'
@@ -481,7 +481,7 @@ for mysql_db_name, mysql_table_name, conn_id, prefix_name, priority_weight_nm, s
 
     hive_h_his_table_name = HIVE_FULL_TABLE % (prefix_name, mysql_table_name)
     hive_hi_table_name = HIVE_HI_TABLE % (prefix_name, mysql_table_name)
-    sqoop_table_name = HIVE_SQOOP_TEMP_TABLE % mysql_table_name
+    sqoop_table_name = HIVE_SQOOP_TEMP_TABLE % (mysql_db_name,mysql_table_name)
 
     # check h_his table 校验全量表是否存在
     check_h_his_table = PythonOperator(
