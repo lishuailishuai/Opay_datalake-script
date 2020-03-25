@@ -52,10 +52,10 @@ time_zone = config['NG']['time_zone']
 
 ##----------------------------------------- 依赖 ---------------------------------------##
 ### 检查最新的商户表的依赖
-dwd_otrade_bd_admin_users_hf_locale_task = OssSensor(
-    task_id='dwd_otrade_bd_admin_users_hf_locale_task',
+dwd_otrade_b2b_bd_admin_users_hf_locale_task = OssSensor(
+    task_id='dwd_otrade_b2b_bd_admin_users_hf_locale_task',
     bucket_key='{hdfs_path_str}/country_code=NG/dt={pt}/hour={hour}/_SUCCESS'.format(
-        hdfs_path_str="otrade/otrade_dw/dwd_otrade_bd_admin_users_hf",
+        hdfs_path_str="otrade/otrade_dw/dwd_otrade_b2b_bd_admin_users_hf",
         pt='{{{{(execution_date+macros.timedelta(hours=({time_zone}+{gap_hour}))).strftime("%Y-%m-%d")}}}}'.format(
             time_zone=time_zone, gap_hour=0),
         hour='{{{{(execution_date+macros.timedelta(hours=({time_zone}+{gap_hour}))).strftime("%H")}}}}'.format(
@@ -135,7 +135,7 @@ all_bd_info as (
     ,created_at
     ,updated_at
   from
-    otrade_dw.dwd_otrade_bd_admin_users_hf
+    otrade_dw.dwd_otrade_b2b_bd_admin_users_hf
   where 
     concat(dt,' ',hour) >= default.minLocalTimeRange("{config}", '{v_date}', 0)
     and concat(dt,' ',hour) <= default.maxLocalTimeRange("{config}", '{v_date}', 0) 
@@ -432,6 +432,6 @@ dim_otrade_b2b_bd_info_hf_task = PythonOperator(
     dag=dag
 )
 
-dwd_otrade_bd_admin_users_hf_locale_task >> dim_otrade_b2b_bd_info_hf_task
+dwd_otrade_b2b_bd_admin_users_hf_locale_task >> dim_otrade_b2b_bd_info_hf_task
 
 
