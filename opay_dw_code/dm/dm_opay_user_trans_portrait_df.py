@@ -149,7 +149,7 @@ def dm_opay_user_trans_portrait_df_sql_task(ds):
         select 
             user_id, last_visit as last_login_time
         from opay_dw.dwm_opay_user_last_visit_df 
-        where dt = if('{pt}' <= '2020-03-01', '2020-03-01', '{pt}')
+        where dt = if('{pt}' <= '2020-03-02', '2020-03-02', '{pt}')
     ) t3 on t1.user_id = t3.user_id
     -- left join (
     -- 	select 
