@@ -20,7 +20,7 @@ import os
 
 args = {
     'owner': 'linan',
-    'start_date': datetime(2020, 3, 3),
+    'start_date': datetime(2020, 3, 25),
     'depends_on_past': False,
     'retries': 1,
     'retry_delay': timedelta(minutes=5),
@@ -32,14 +32,14 @@ args = {
 schedule_interval = "20 * * * *"
 
 dag = airflow.DAG(
-    'oride_source_binlog_h_his',
+    'otrade_source_binlog_h_his',
     schedule_interval=schedule_interval,
     concurrency=40,
     max_active_runs=1,
     default_args=args)
 
 dag_monitor = airflow.DAG(
-    'oride_source_binlog_h_his_monitor',
+    'otrade_source_binlog_h_his_monitor',
     schedule_interval=schedule_interval,
     default_args=args)
 
@@ -68,33 +68,20 @@ db_name,table_name,conn_id,prefix_name,priority_weight,server_name (采集配置
 
 table_list = [
 
-    # oride
-    ("oride_data", "data_driver", "sqoop_db", "base", 3, "oride_db", "false"),
-    ("oride_data", "data_driver_extend", "sqoop_db", "base", 3, "oride_db", "false"),
-    ("oride_data", "data_country_conf", "sqoop_db", "base", 3, "oride_db", "false"),
-    ("oride_data", "data_city_conf", "sqoop_db", "base", 3, "oride_db", "false"),
-    ("oride_data", "data_device", "sqoop_db", "base", 3, "oride_db", "false"),
-    ("oride_data", "data_driver_whitelist", "sqoop_db", "base", 3, "oride_db", "false"),
-    ("oride_data", "data_user", "sqoop_db", "base", 3, "oride_db", "false"),
-    ("oride_data", "data_user_whitelist", "sqoop_db", "base", 3, "oride_db", "false"),
-    ("oride_data", "data_user_extend", "sqoop_db", "base", 3, "oride_db", "false"),
-
-    # opay_spread
-    ("opay_spread", "rider_signups", "opay_spread_mysql", "mass", 3, "opay_spread_db", "false"),
-    ("opay_spread", "driver_group", "opay_spread_mysql", "mass", 3, "opay_spread_db", "false"),
-    ("opay_spread", "driver_team", "opay_spread_mysql", "mass", 3, "opay_spread_db", "false"),
+    ("otrade_user", "otrade_city", "otrade_user", "base", 3, "otrade_db", "false"),
+    ("otrade_user", "otrade_country", "otrade_user", "base", 3, "otrade_db", "false"),
 
 ]
 
-HIVE_DB = 'oride_dw_ods'
+HIVE_DB = 'otrade_dw_ods'
 HIVE_SQOOP_TEMP_DB = 'test_db'
 HIVE_FULL_TABLE = 'ods_binlog_%s_%s_h_his'
 HIVE_HI_TABLE = 'ods_binlog_%s_%s_hi'
 HIVE_SQOOP_TEMP_TABLE = '%s_%s_full'
 
 UFILE_PATH = Variable.get("OBJECT_STORAGE_PROTOCOL") + 'opay-datalake/temp/%s/%s'
-H_HIS_OSS_PATH = 'oss://opay-datalake/oride_h_his/%s'
-HI_OSS_PATH = 'oss://opay-datalake/oride_binlog/%s'
+H_HIS_OSS_PATH = 'oss://opay-datalake/otrade_h_his/%s'
+HI_OSS_PATH = 'oss://opay-datalake/otrade_binlog/%s'
 ODS_CREATE_TABLE_SQL = '''
     CREATE EXTERNAL TABLE IF NOT EXISTS {db_name}.`{table_name}`(
         `__db` string COMMENT 'from deserializer', 

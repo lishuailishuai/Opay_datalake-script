@@ -89,7 +89,7 @@ HIVE_DB = 'oride_dw_ods'
 HIVE_SQOOP_TEMP_DB = 'test_db'
 HIVE_ALL_HI_TABLE = 'ods_binlog_%s_%s_all_hi'
 HIVE_HI_TABLE = 'ods_binlog_%s_%s_hi'
-HIVE_SQOOP_TEMP_TABLE = '%s_full'
+HIVE_SQOOP_TEMP_TABLE = '%s_%s_full'
 
 UFILE_PATH = Variable.get("OBJECT_STORAGE_PROTOCOL") + 'opay-datalake/temp/%s/%s'
 ALL_HI_OSS_PATH = 'oss://opay-datalake/oride_all_hi/%s'
@@ -380,7 +380,7 @@ def validate_all_hi_table_exist_task(hive_all_hi_table_name, mysql_table_name, *
         return 'add_partitions_{}'.format(hive_all_hi_table_name)
 
 
-def merge_pre_hi_data_task(hive_db, hive_all_hi_table_name, hive_hi_table_name, pt, now_hour, pre_hour_day, pre_hour,
+def merge_pre_hi_data_task(hive_db, hive_all_hi_table_name, hive_hi_table_name,is_must_have_data, pt, now_hour, pre_hour_day, pre_hour,
                            **kwargs):
     sqoopSchema = SqoopSchemaUpdate()
     hive_columns = sqoopSchema.get_hive_column_name(hive_db, hive_all_hi_table_name)
@@ -414,14 +414,14 @@ def merge_pre_hi_data_task(hive_db, hive_all_hi_table_name, hive_hi_table_name, 
     TaskTouchzSuccess().countries_touchz_success(pt, hive_db, hive_all_hi_table_name,
                                                  ALL_HI_OSS_PATH % hive_all_hi_table_name,
                                                  "false",
-                                                 "true",
+                                                 is_must_have_data,
                                                  now_hour)
 
 
 def merge_pre_hi_with_full_data_task(hive_db, hive_all_hi_table_name, hive_hi_table_name, mysql_db_name,
                                      mysql_table_name, mysql_conn,
                                      sqoop_temp_db_name, sqoop_table_name,
-                                     pt, now_hour, pre_day, pre_hour_day, pre_hour, **kwargs):
+                                     pt, now_hour, pre_day, pre_hour_day, pre_hour,is_must_have_data, **kwargs):
     sqoopSchema = SqoopSchemaUpdate()
 
     hive_columns = sqoopSchema.get_hive_column_name(hive_db, hive_all_hi_table_name)
@@ -460,7 +460,7 @@ def merge_pre_hi_with_full_data_task(hive_db, hive_all_hi_table_name, hive_hi_ta
     TaskTouchzSuccess().countries_touchz_success(pt, hive_db, hive_all_hi_table_name,
                                                  ALL_HI_OSS_PATH % hive_all_hi_table_name,
                                                  "false",
-                                                 "true",
+                                                 is_must_have_data,
                                                  now_hour)
 
 
@@ -471,7 +471,7 @@ for mysql_db_name, mysql_table_name, conn_id, prefix_name, priority_weight_nm, s
 
     hive_all_hi_table_name = HIVE_ALL_HI_TABLE % (prefix_name, mysql_table_name)
     hive_hi_table_name = HIVE_HI_TABLE % (prefix_name, mysql_table_name)
-    sqoop_table_name = HIVE_SQOOP_TEMP_TABLE % mysql_table_name
+    sqoop_table_name = HIVE_SQOOP_TEMP_TABLE % (mysql_db_name,mysql_table_name)
 
     # check all_hi table 校验表是否存在
     check_all_hi_table = PythonOperator(
@@ -600,6 +600,7 @@ for mysql_db_name, mysql_table_name, conn_id, prefix_name, priority_weight_nm, s
             'hive_db': HIVE_DB,
             'hive_all_hi_table_name': hive_all_hi_table_name,
             'hive_hi_table_name': hive_hi_table_name,
+            'is_must_have_data':is_must_have_data,
             'pt': '{{execution_date.strftime("%Y-%m-%d")}}',
             'now_hour': '{{execution_date.strftime("%H")}}',
             'pre_hour_day': '{{(execution_date+macros.timedelta(hours=-1)).strftime("%Y-%m-%d")}}',
@@ -628,7 +629,8 @@ for mysql_db_name, mysql_table_name, conn_id, prefix_name, priority_weight_nm, s
             'mysql_table_name': mysql_table_name,
             'mysql_conn': conn_id,
             'sqoop_temp_db_name': HIVE_SQOOP_TEMP_DB,
-            'sqoop_table_name': sqoop_table_name
+            'sqoop_table_name': sqoop_table_name,
+            'is_must_have_data': is_must_have_data,
         },
         dag=dag
     )

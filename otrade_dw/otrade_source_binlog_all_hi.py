@@ -29,7 +29,7 @@ args = {
     'email_on_retry': False,
     'on_success_callback': on_success_callback,
 }
-schedule_interval = "38 * * * *"
+schedule_interval = "23 * * * *"
 
 dag = airflow.DAG(
     'otrade_source_binlog_all_hi',
@@ -71,6 +71,8 @@ table_list = [
     # otrade
 
     ("otrade_crm", "otrade_business_details", "otrade_crm", "base", 3, "otrade_db", "false"),
+    ("otrade_crm", "bd_admin_users", "otrade_crm", "base", 3, "otrade_db", "false"),
+
     ("otrade_user", "otrade_user", "otrade_user", "base", 3, "otrade_db", "false"),
     ("otrade_user", "otrade_retailer_detail", "otrade_user", "base", 3, "otrade_db", "false"),
     ("otrade_user", "otrade_supplier_detail", "otrade_user", "base", 3, "otrade_db", "false"),
@@ -381,7 +383,7 @@ def validate_all_hi_table_exist_task(hive_all_hi_table_name, mysql_table_name, *
         return 'add_partitions_{}'.format(hive_all_hi_table_name)
 
 
-def merge_pre_hi_data_task(hive_db, hive_all_hi_table_name, hive_hi_table_name, pt, now_hour, pre_hour_day, pre_hour,
+def merge_pre_hi_data_task(hive_db, hive_all_hi_table_name, hive_hi_table_name,is_must_have_data, pt, now_hour, pre_hour_day, pre_hour,
                            **kwargs):
     sqoopSchema = SqoopSchemaUpdate()
     hive_columns = sqoopSchema.get_hive_column_name(hive_db, hive_all_hi_table_name)
@@ -415,14 +417,14 @@ def merge_pre_hi_data_task(hive_db, hive_all_hi_table_name, hive_hi_table_name, 
     TaskTouchzSuccess().countries_touchz_success(pt, hive_db, hive_all_hi_table_name,
                                                  ALL_HI_OSS_PATH % hive_all_hi_table_name,
                                                  "false",
-                                                 "true",
+                                                 is_must_have_data,
                                                  now_hour)
 
 
 def merge_pre_hi_with_full_data_task(hive_db, hive_all_hi_table_name, hive_hi_table_name, mysql_db_name,
                                      mysql_table_name, mysql_conn,
                                      sqoop_temp_db_name, sqoop_table_name,
-                                     pt, now_hour, pre_day, pre_hour_day, pre_hour, **kwargs):
+                                     pt, now_hour, pre_day, pre_hour_day, pre_hour,is_must_have_data, **kwargs):
     sqoopSchema = SqoopSchemaUpdate()
 
     hive_columns = sqoopSchema.get_hive_column_name(hive_db, hive_all_hi_table_name)
@@ -461,7 +463,7 @@ def merge_pre_hi_with_full_data_task(hive_db, hive_all_hi_table_name, hive_hi_ta
     TaskTouchzSuccess().countries_touchz_success(pt, hive_db, hive_all_hi_table_name,
                                                  ALL_HI_OSS_PATH % hive_all_hi_table_name,
                                                  "false",
-                                                 "true",
+                                                 is_must_have_data,
                                                  now_hour)
 
 
@@ -600,6 +602,7 @@ for mysql_db_name, mysql_table_name, conn_id, prefix_name, priority_weight_nm, s
             'hive_db': HIVE_DB,
             'hive_all_hi_table_name': hive_all_hi_table_name,
             'hive_hi_table_name': hive_hi_table_name,
+            'is_must_have_data':is_must_have_data,
             'pt': '{{execution_date.strftime("%Y-%m-%d")}}',
             'now_hour': '{{execution_date.strftime("%H")}}',
             'pre_hour_day': '{{(execution_date+macros.timedelta(hours=-1)).strftime("%Y-%m-%d")}}',
@@ -628,7 +631,8 @@ for mysql_db_name, mysql_table_name, conn_id, prefix_name, priority_weight_nm, s
             'mysql_table_name': mysql_table_name,
             'mysql_conn': conn_id,
             'sqoop_temp_db_name': HIVE_SQOOP_TEMP_DB,
-            'sqoop_table_name': sqoop_table_name
+            'sqoop_table_name': sqoop_table_name,
+            'is_must_have_data':is_must_have_data
         },
         dag=dag
     )

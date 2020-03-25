@@ -19,8 +19,8 @@ import time
 import os
 
 args = {
-    'owner': 'linan',
-    'start_date': datetime(2020, 3, 3),
+    'owner': 'lishuai',
+    'start_date': datetime(2020, 3, 25),
     'depends_on_past': False,
     'retries': 1,
     'retry_delay': timedelta(minutes=5),
@@ -32,14 +32,14 @@ args = {
 schedule_interval = "20 * * * *"
 
 dag = airflow.DAG(
-    'oride_source_binlog_h_his',
+    'opay_source_binlog_h_his',
     schedule_interval=schedule_interval,
     concurrency=40,
     max_active_runs=1,
     default_args=args)
 
 dag_monitor = airflow.DAG(
-    'oride_source_binlog_h_his_monitor',
+    'opay_source_binlog_h_his_monitor',
     schedule_interval=schedule_interval,
     default_args=args)
 
@@ -68,33 +68,24 @@ db_name,table_name,conn_id,prefix_name,priority_weight,server_name (采集配置
 
 table_list = [
 
-    # oride
-    ("oride_data", "data_driver", "sqoop_db", "base", 3, "oride_db", "false"),
-    ("oride_data", "data_driver_extend", "sqoop_db", "base", 3, "oride_db", "false"),
-    ("oride_data", "data_country_conf", "sqoop_db", "base", 3, "oride_db", "false"),
-    ("oride_data", "data_city_conf", "sqoop_db", "base", 3, "oride_db", "false"),
-    ("oride_data", "data_device", "sqoop_db", "base", 3, "oride_db", "false"),
-    ("oride_data", "data_driver_whitelist", "sqoop_db", "base", 3, "oride_db", "false"),
-    ("oride_data", "data_user", "sqoop_db", "base", 3, "oride_db", "false"),
-    ("oride_data", "data_user_whitelist", "sqoop_db", "base", 3, "oride_db", "false"),
-    ("oride_data", "data_user_extend", "sqoop_db", "base", 3, "oride_db", "false"),
+   #push
+    ("opay_message_center", "opay_message_statistic", "push_db", "push", 3, "opay_message_center_db", "false"),
+    ("opay_message_center", "opay_push_task", "push_db", "push", 3, "opay_message_center_db", "false"),
+    ("opay_message_center", "opay_user_tags_new", "push_db", "push", 3, "opay_message_center_db", "false"),
+    ("opay_message_center", "opay_users", "push_db", "push", 3, "opay_message_center_db", "false"),
 
-    # opay_spread
-    ("opay_spread", "rider_signups", "opay_spread_mysql", "mass", 3, "opay_spread_db", "false"),
-    ("opay_spread", "driver_group", "opay_spread_mysql", "mass", 3, "opay_spread_db", "false"),
-    ("opay_spread", "driver_team", "opay_spread_mysql", "mass", 3, "opay_spread_db", "false"),
 
 ]
 
-HIVE_DB = 'oride_dw_ods'
+HIVE_DB = 'opay_dw_ods'
 HIVE_SQOOP_TEMP_DB = 'test_db'
 HIVE_FULL_TABLE = 'ods_binlog_%s_%s_h_his'
 HIVE_HI_TABLE = 'ods_binlog_%s_%s_hi'
 HIVE_SQOOP_TEMP_TABLE = '%s_%s_full'
 
 UFILE_PATH = Variable.get("OBJECT_STORAGE_PROTOCOL") + 'opay-datalake/temp/%s/%s'
-H_HIS_OSS_PATH = 'oss://opay-datalake/oride_h_his/%s'
-HI_OSS_PATH = 'oss://opay-datalake/oride_binlog/%s'
+H_HIS_OSS_PATH = 'oss://opay-datalake/opay_h_his/%s'
+HI_OSS_PATH = 'oss://opay-datalake/opay_binlog/%s'
 ODS_CREATE_TABLE_SQL = '''
     CREATE EXTERNAL TABLE IF NOT EXISTS {db_name}.`{table_name}`(
         `__db` string COMMENT 'from deserializer', 
@@ -164,7 +155,7 @@ MERGE_HI_SQL = '''
     {db_name}.`{hive_h_his_table_name}`
     where dt = '{pre_hour_day}' and hour = '{pre_hour}'
     ;
-    
+
 
 '''
 
@@ -179,9 +170,9 @@ MERGE_HI_WITH_FULL_SQL = '''
     from 
     {db_name}.`{hive_hi_table_name}`
     where dt = '{pt}' and hour = '{now_hour}'
-    
+
     union all 
-    
+
     select 
     '{mysql_db_name}' as `__db` , 
     '0' as `__server_id` , 
@@ -200,7 +191,7 @@ MERGE_HI_WITH_FULL_SQL = '''
     from 
     {sqoop_temp_db_name}.`{sqoop_table_name}`
     ;
-    
+
 
 '''
 
@@ -357,7 +348,7 @@ def run_sqoop_check_table(mysql_db_name, mysql_table_name, conn_id, hive_table_n
             else:
                 col_name = result[0]
             if result[1] == 'timestamp' or result[1] == 'varchar' or result[1] == 'char' or result[1] == 'text' or \
-                    result[1] == 'datetime':
+                    result[1] == 'datetime' or result[1] == 'mediumtext':
                 data_type = 'string'
             elif result[1] == 'decimal':
                 data_type = result[1] + "(" + str(result[2]) + "," + str(result[3]) + ")"
@@ -390,7 +381,8 @@ def validate_full_table_exist_task(hive_h_his_table_name, mysql_table_name, **kw
         return 'add_partitions_{}'.format(hive_h_his_table_name)
 
 
-def merge_pre_hi_data_task(hive_db, hive_h_his_table_name, hive_hi_table_name,is_must_have_data, pt, now_hour, pre_hour_day, pre_hour,
+def merge_pre_hi_data_task(hive_db, hive_h_his_table_name, hive_hi_table_name, is_must_have_data, pt, now_hour,
+                           pre_hour_day, pre_hour,
                            **kwargs):
     sqoopSchema = SqoopSchemaUpdate()
     hive_columns = sqoopSchema.get_hive_column_name(hive_db, hive_h_his_table_name)
@@ -431,7 +423,7 @@ def merge_pre_hi_data_task(hive_db, hive_h_his_table_name, hive_hi_table_name,is
 def merge_pre_hi_with_full_data_task(hive_db, hive_h_his_table_name, hive_hi_table_name, mysql_db_name,
                                      mysql_table_name, mysql_conn,
                                      sqoop_temp_db_name, sqoop_table_name,
-                                     pt, now_hour, pre_day, pre_hour_day, pre_hour,is_must_have_data, **kwargs):
+                                     pt, now_hour, pre_day, pre_hour_day, pre_hour, is_must_have_data, **kwargs):
     sqoopSchema = SqoopSchemaUpdate()
 
     hive_columns = sqoopSchema.get_hive_column_name(hive_db, hive_h_his_table_name)
@@ -465,7 +457,7 @@ def merge_pre_hi_with_full_data_task(hive_db, hive_h_his_table_name, hive_hi_tab
     """
     第一个参数true: 数据目录是有country_code分区。false 没有
     第二个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
-    
+
     """
     TaskTouchzSuccess().countries_touchz_success(pt, hive_db, hive_h_his_table_name,
                                                  H_HIS_OSS_PATH % hive_h_his_table_name,
@@ -481,7 +473,7 @@ for mysql_db_name, mysql_table_name, conn_id, prefix_name, priority_weight_nm, s
 
     hive_h_his_table_name = HIVE_FULL_TABLE % (prefix_name, mysql_table_name)
     hive_hi_table_name = HIVE_HI_TABLE % (prefix_name, mysql_table_name)
-    sqoop_table_name = HIVE_SQOOP_TEMP_TABLE % (mysql_db_name,mysql_table_name)
+    sqoop_table_name = HIVE_SQOOP_TEMP_TABLE % (mysql_db_name, mysql_table_name)
 
     # check h_his table 校验全量表是否存在
     check_h_his_table = PythonOperator(
@@ -542,8 +534,8 @@ for mysql_db_name, mysql_table_name, conn_id, prefix_name, priority_weight_nm, s
     )
 
     # check table
-    check_sqoop_table = PythonOperator(
-        task_id='check_sqoop_table_{}'.format(sqoop_table_name),
+    check_binlog_table = PythonOperator(
+        task_id='check_binlog_table_{}'.format(sqoop_table_name),
         priority_weight=priority_weight_nm,
         python_callable=run_sqoop_check_table,
         provide_context=True,
@@ -609,7 +601,7 @@ for mysql_db_name, mysql_table_name, conn_id, prefix_name, priority_weight_nm, s
             'hive_db': HIVE_DB,
             'hive_h_his_table_name': hive_h_his_table_name,
             'hive_hi_table_name': hive_hi_table_name,
-            'is_must_have_data':is_must_have_data,
+            'is_must_have_data': is_must_have_data,
             'pt': '{{execution_date.strftime("%Y-%m-%d")}}',
             'now_hour': '{{execution_date.strftime("%H")}}',
             'pre_hour_day': '{{(execution_date+macros.timedelta(hours=-1)).strftime("%Y-%m-%d")}}',
@@ -658,4 +650,4 @@ for mysql_db_name, mysql_table_name, conn_id, prefix_name, priority_weight_nm, s
 
     check_h_his_table >> add_hi_partitions >> validate_full_table_exist >> [add_partitions, import_table]
     add_partitions >> merge_pre_hi_data
-    import_table >> check_sqoop_table >> merge_pre_hi_with_full_data
+    import_table >> check_binlog_table >> merge_pre_hi_with_full_data
