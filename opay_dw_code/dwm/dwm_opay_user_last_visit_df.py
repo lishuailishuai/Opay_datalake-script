@@ -26,7 +26,7 @@ import requests
 import os
 
 args = {
-    'owner': 'yuanfeng',
+    'owner': 'xiedong',
     'start_date': datetime(2020, 3, 10),
     'depends_on_past': False,
     'retries': 3,
@@ -37,7 +37,7 @@ args = {
 }
 
 dag = airflow.DAG('dwm_opay_user_last_visit_df',
-                  schedule_interval="30 01 * * *",
+                  schedule_interval="30 02 * * *",
                   default_args=args,
                   )
 
@@ -83,66 +83,48 @@ def dwm_opay_user_last_visit_df_sql_task(ds):
     HQL = '''
 
 
-set mapred.max.split.size=1000000;
-set hive.exec.dynamic.partition.mode=nonstrict;
-set hive.exec.parallel=true;
-
---昨天的全量数据
-with 
-yesterday_total as (
-  SELECT
-    user_id
-    ,role
-    ,last_visit
-  FROM
-    opay_dw.dwm_opay_user_last_visit_df
-  where
-    dt = '{yesterday}'
-),
-
---今天的增量数据
-today_increase as (
-  select 
-    uid as user_id
-    ,role
-    ,substr(from_unixtime(unix_timestamp(concat(dt,' ',hour,':00:00'), 'yyyy-MM-dd HH:mm:ss')+3600),0,10) as last_visit 
-  from 
-    opay_source.service_data_tracking_app 
-  where 
-    concat(dt,' ',hour)>='{yesterday} 23'
-    and concat(dt,' ',hour)<'{pt} 23'
-  group by 
-    uid
-    ,role
-    ,substr(from_unixtime(unix_timestamp(concat(dt,' ',hour,':00:00'), 'yyyy-MM-dd HH:mm:ss')+3600),0,10)
-)
-
---union后取最新
-insert overwrite table opay_dw.dwm_opay_user_last_visit_df partition(country_code, dt)
-select
-  user_id
-  ,role
-  ,last_visit
-
-  ,'NG' as country_code
-  ,'{pt}' as dt 
-FROM
-  (
-  SELECT
-    user_id
-    ,role
-    ,last_visit
-    ,row_number()over(partition by user_id order by last_visit desc) rn
-  FROM
-    (
-    select user_id,role,last_visit from yesterday_total
-    union all
-    select user_id,role,last_visit from today_increase
-    ) as a
-  ) as b
-where
-  rn=1
-;
+    set mapred.max.split.size=1000000;
+    set hive.exec.dynamic.partition.mode=nonstrict;
+    set hive.exec.parallel=true;
+    
+    with 
+    user_last_visit_di as (
+        select 
+           user_id, last_visit_time, country_code
+        from (
+            select    
+                uid as user_id,  
+                from_unixtime(cast(cast(t as bigint) / 1000 as bigint)+3600) as last_visit_time,
+                'NG' as country_code,
+                row_number() over(partition by uid order by t desc) rn
+            from opay_source.service_data_tracking_app 
+            where concat(dt, hour) 
+                between date_format(date_sub('{pt}', 1), 'yyyy-MM-dd 23')
+                    and date_format(date_add('{pt}', 1), 'yyyy-MM-dd 00')
+                and t is not null and t != ''
+                and servicedatatrackingapp='api_graphql_web_id' 
+                and ev in ('login version one','login version two','login version two again','registerSuccess to login')
+                and date_format(from_unixtime(cast(cast(t as bigint) / 1000 as bigint)+3600) , 'yyyy-MM-dd')= '{pt}'
+        ) t0  where rn = 1
+    )
+    
+    insert overwrite table {db}.{table} partition(country_code, dt)
+    select 
+        coalesce(t1.user_id, t0.user_id) as user_id,
+        coalesce(t1.last_visit_time, t0.last_visit_time) as last_visit_time,
+        coalesce(t1.country_code, t0.country_code) as country_code,
+        '{pt}' as dt
+    from (
+        SELECT 
+            user_id, last_visit_time,
+            country_code 
+        from opay_dw.dwm_opay_user_last_visit_df where dt = date_sub('{pt}', 1)
+    ) t0 full join (
+        select 
+            user_id, last_visit_time,
+            country_code
+        from user_last_visit_di
+    ) t1 on t0.user_id = t1.user_id;
 
 
     '''.format(
