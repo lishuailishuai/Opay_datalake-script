@@ -201,19 +201,19 @@ cm_info as (
 
 bdm_info as (
   select
-    id
-    ,name
-    ,job_id
-    ,job_name
-    ,mobile
-    ,username
-    ,leader_id
-    ,department_id
-    ,email
-    ,status
-    ,city_id
-    ,created_at
-    ,updated_at
+    v1.id
+    ,v1.name
+    ,v1.job_id
+    ,v1.job_name
+    ,v1.mobile
+    ,v1.username
+    ,v1.leader_id
+    ,v1.department_id
+    ,v1.email
+    ,v1.status
+    ,v1.city_id
+    ,v1.created_at
+    ,v1.updated_at
 
     ,nvl(v2.hcm_id,0) as hcm_id
     ,nvl(v2.hcm_name,'-') as hcm_name
@@ -233,19 +233,19 @@ bdm_info as (
 
 bd_info as (
   select
-    id
-    ,name
-    ,job_id
-    ,job_name
-    ,mobile
-    ,username
-    ,leader_id
-    ,department_id
-    ,email
-    ,status
-    ,city_id
-    ,created_at
-    ,updated_at
+    v1.id
+    ,v1.name
+    ,v1.job_id
+    ,v1.job_name
+    ,v1.mobile
+    ,v1.username
+    ,v1.leader_id
+    ,v1.department_id
+    ,v1.email
+    ,v1.status
+    ,v1.city_id
+    ,v1.created_at
+    ,v1.updated_at
 
     ,nvl(v2.hcm_id,0) as hcm_id
     ,nvl(v2.hcm_name,'-') as hcm_name
@@ -265,19 +265,19 @@ bd_info as (
 
 else_info as (
   select
-    id
-    ,name
-    ,job_id
-    ,job_name
-    ,mobile
-    ,username
-    ,leader_id
-    ,department_id
-    ,email
-    ,status
-    ,city_id
-    ,created_at
-    ,updated_at
+    v1.id
+    ,v1.name
+    ,v1.job_id
+    ,v1.job_name
+    ,v1.mobile
+    ,v1.username
+    ,v1.leader_id
+    ,v1.department_id
+    ,v1.email
+    ,v1.status
+    ,v1.city_id
+    ,v1.created_at
+    ,v1.updated_at
 
     ,0 as hcm_id
     ,'-' as hcm_name
@@ -288,7 +288,7 @@ else_info as (
     ,0 as bd_id
     ,'-' as bd_name
   from
-    all_bd_info 
+    all_bd_info as v1
   where
     job_id = 0
 ),
@@ -338,6 +338,7 @@ select
   ,date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'HH') as hour
 from
   unoin_result;
+
 
 
 
