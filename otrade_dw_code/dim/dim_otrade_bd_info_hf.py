@@ -128,7 +128,6 @@ all_bd_info as (
     ,city_id
     ,created_at
     ,updated_at
-    ,row_number() over(partition by id order by `__ts_ms` desc,`__file` desc,cast(`__pos` as int) desc) rn
   from
     otrade_dw.dwd_otrade_bd_admin_users_hf
   where 
