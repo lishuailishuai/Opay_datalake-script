@@ -317,6 +317,7 @@ def run_check_table(schema_table_db_name, schema_table_name, target_table_db_nam
                 col_name = result[0]
             if result[1] == 'timestamp' or result[1] == 'varchar' or result[1] == 'char' or result[1] == 'text' or \
                     result[1] == 'longtext' or \
+                    result[1] == 'json' or \
                     result[1] == 'datetime':
                 data_type = 'string'
             elif result[1] == 'decimal':
