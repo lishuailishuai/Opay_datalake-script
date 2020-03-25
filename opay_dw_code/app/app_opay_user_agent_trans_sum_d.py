@@ -88,12 +88,12 @@ def app_opay_user_agent_trans_sum_d_sql_task(ds):
     set mapred.max.split.size=1000000;
 
     insert overwrite table {db}.{table} partition(country_code, dt)
-    select m.user_id,is_reseller,reseller_time,aggregator_id,sub_service_type,trans_amt,trans_cnt
+    select m.user_id,is_reseller,reseller_time,aggregator_id,sub_service_type,trans_amt,trans_cnt,country_code,dt
     from 
-       (select user_id,sub_service_type,sum(amount) trans_amt,count(1) trans_cnt 
+       (select user_id,sub_service_type,country_code,dt,sum(amount) trans_amt,count(1) trans_cnt 
          from opay_dw.dwd_opay_user_transaction_record_di 
          where user_role='agent' and dt='{pt}' 
-         group by user_id,sub_service_type) m 
+         group by user_id,sub_service_type,country_code,dt) m 
     left join 
        (select user_id,is_reseller,reseller_time, aggregator_id from opay_dw.dwd_opay_user_upgrade_agent_df 
         where dt='{pt}') m1
