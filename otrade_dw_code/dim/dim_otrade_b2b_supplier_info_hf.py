@@ -525,4 +525,3 @@ ods_binlog_base_otrade_city_h_his_check_task >> dim_otrade_b2b_supplier_info_hf_
 ods_binlog_base_otrade_country_h_his_check_task >> dim_otrade_b2b_supplier_info_hf_task
 
 
-
