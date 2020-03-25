@@ -97,13 +97,13 @@ def app_oride_user_funnel_beford_d_sql_task(ds):
     from (SELECT user_id,  --乘客ID
            platform,  --操作系统
            app_version, --app版本号
-           event_name,
+           if(event_name in('choose_end_point_click','recommended_destination_click'),'choose_end_point_click',event_name) as event_name,
            cast(substr(event_time,1,10) AS bigint) AS event_time,
            tid,
            CASE
                WHEN event_name='oride_show' THEN 1 --登录页面
     
-               WHEN event_name='choose_end_point_click' THEN 2 --选择终点
+               WHEN event_name in('choose_end_point_click','recommended_destination_click') THEN 2 --选择终点
     
                WHEN event_name='request_a_ride_show' THEN 3 --估价页面
     
@@ -123,6 +123,7 @@ def app_oride_user_funnel_beford_d_sql_task(ds):
       and tid is not null
     
       AND (event_name IN('choose_end_point_click',
+                         'recommended_destination_click',
                          'request_a_ride_show',
                          'success_request_a_ride',
                          'successful_order_show',
