@@ -66,11 +66,11 @@ dwd_otrade_b2b_bd_admin_users_hf_check_pre_locale_task = OssSensor(
 )
 
 ### 检查当前小时的分区依赖
-###oss://opay-datalake/otrade_binlog/otrade_db.otrade_crm.bd_admin_users
-ods_binlog_base_bd_admin_users_hi_check_task = OssSensor(
-        task_id='ods_binlog_base_bd_admin_users_hi_check_task',
+###oss://opay-datalake/otrade_all_hi/ods_binlog_base_bd_admin_users_all_hi
+ods_binlog_base_bd_admin_users_all_hi_check_task = OssSensor(
+        task_id='ods_binlog_base_bd_admin_users_all_hi_check_task',
         bucket_key='{hdfs_path_str}/dt={pt}/hour={hour}/_SUCCESS'.format(
-            hdfs_path_str="otrade_binlog/otrade_db.otrade_crm.bd_admin_users",
+            hdfs_path_str="otrade_all_hi/ods_binlog_base_bd_admin_users_all_hi",
             pt='{{ds}}',
             hour='{{ execution_date.strftime("%H") }}'
         ),
@@ -340,7 +340,7 @@ dwd_otrade_b2b_bd_admin_users_hf_task = PythonOperator(
 )
 
 dwd_otrade_b2b_bd_admin_users_hf_check_pre_locale_task >> dwd_otrade_b2b_bd_admin_users_hf_task
-ods_binlog_base_bd_admin_users_hi_check_task >> dwd_otrade_b2b_bd_admin_users_hf_task
+ods_binlog_base_bd_admin_users_all_hi_check_task >> dwd_otrade_b2b_bd_admin_users_hf_task
 
 
 
