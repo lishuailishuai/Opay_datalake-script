@@ -886,7 +886,7 @@ metrcis_list = [
     (
         'User_Bind_Card_User',
         '''
-        SELECT count(distinct("user_id")) AS "bind_card_user_cnt" FROM "OPAY_PAYMENT_INSTRUMENT_EVENT" WHERE time > {time} GROUP BY time(10m)
+        SELECT count(distinct("user_id")) AS "bind_card_user_cnt" FROM "OPAY_PAYMENT_INSTRUMENT_EVENT" WHERE payment_type='1' AND pay_status='1' AND time > {time} GROUP BY time(10m)
         ''',
         'user_bind_card_alert_value',
         7,
