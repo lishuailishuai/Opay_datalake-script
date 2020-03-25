@@ -401,7 +401,7 @@ union_result as (
     ,updated_at
     ,certification_time
 
-    ,row_number() over(partition by id order by update_time desc) rn
+    ,row_number() over(partition by id order by updated_at desc) rn
   from
     (
     select * from last_hour_total
@@ -411,7 +411,7 @@ union_result as (
 )
 
 --4.最后插入数据
-insert overwrite table otrade_dw.dim_otrade_retailer_info_hf partition(country_code,dt,hour)
+insert overwrite table otrade_dw.dim_otrade_b2b_retailer_info_crm_hf partition(country_code,dt,hour)
 select
   id
   ,opay_id
