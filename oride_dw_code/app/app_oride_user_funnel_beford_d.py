@@ -90,7 +90,10 @@ def app_oride_user_funnel_beford_d_sql_task(ds):
     set hive.mapred.mode=nonstrict;
     
     with base as 
-    (select *    
+    (select * from (select *,
+            lag(rn,1,0) over(partition by user_id,platform,app_version,tid order by event_time) as rn_lag,
+            max(rn) over(partition by user_id,platform,app_version,tid) as rn_max,
+            sum(if(rn-lag(rn,1,0) over(partition by user_id,platform,app_version,tid order by event_time)=1,1,0)) over(partition by user_id,platform,app_version,tid) as rr
     from (SELECT user_id,  --乘客ID
            platform,  --操作系统
            app_version, --app版本号
@@ -129,7 +132,8 @@ def app_oride_user_funnel_beford_d_sql_task(ds):
                AND lower(app_name) IN('oride passenger',
                                       'oride',
                                       'opay')))    
-    ) t where t.rn_time=1)
+    ) t where t.rn_time=1) m  
+    where (m.rr=m.rn_max) or (m.rr<>m.rn_max and rn=1) )
     
     insert overwrite table {db}.{table} partition(country_code,dt)
     select nvl(city_id,-10000) as city_id, --城市ID
