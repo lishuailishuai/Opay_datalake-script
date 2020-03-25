@@ -388,7 +388,7 @@ def validate_full_table_exist_task(hive_h_his_table_name, mysql_table_name, **kw
         return 'add_partitions_{}'.format(hive_h_his_table_name)
 
 
-def merge_pre_hi_data_task(hive_db, hive_h_his_table_name, hive_hi_table_name, pt, now_hour, pre_hour_day, pre_hour,
+def merge_pre_hi_data_task(hive_db, hive_h_his_table_name, hive_hi_table_name,is_must_have_data, pt, now_hour, pre_hour_day, pre_hour,
                            **kwargs):
     sqoopSchema = SqoopSchemaUpdate()
     hive_columns = sqoopSchema.get_hive_column_name(hive_db, hive_h_his_table_name)
@@ -422,14 +422,14 @@ def merge_pre_hi_data_task(hive_db, hive_h_his_table_name, hive_hi_table_name, p
     TaskTouchzSuccess().countries_touchz_success(pt, hive_db, hive_h_his_table_name,
                                                  H_HIS_OSS_PATH % hive_h_his_table_name,
                                                  "false",
-                                                 "true",
+                                                 is_must_have_data,
                                                  now_hour)
 
 
 def merge_pre_hi_with_full_data_task(hive_db, hive_h_his_table_name, hive_hi_table_name, mysql_db_name,
                                      mysql_table_name, mysql_conn,
                                      sqoop_temp_db_name, sqoop_table_name,
-                                     pt, now_hour, pre_day, pre_hour_day, pre_hour, **kwargs):
+                                     pt, now_hour, pre_day, pre_hour_day, pre_hour,is_must_have_data, **kwargs):
     sqoopSchema = SqoopSchemaUpdate()
 
     hive_columns = sqoopSchema.get_hive_column_name(hive_db, hive_h_his_table_name)
@@ -468,7 +468,7 @@ def merge_pre_hi_with_full_data_task(hive_db, hive_h_his_table_name, hive_hi_tab
     TaskTouchzSuccess().countries_touchz_success(pt, hive_db, hive_h_his_table_name,
                                                  H_HIS_OSS_PATH % hive_h_his_table_name,
                                                  "false",
-                                                 "false",
+                                                 is_must_have_data,
                                                  now_hour)
 
 
@@ -607,6 +607,7 @@ for mysql_db_name, mysql_table_name, conn_id, prefix_name, priority_weight_nm, s
             'hive_db': HIVE_DB,
             'hive_h_his_table_name': hive_h_his_table_name,
             'hive_hi_table_name': hive_hi_table_name,
+            'is_must_have_data':is_must_have_data,
             'pt': '{{execution_date.strftime("%Y-%m-%d")}}',
             'now_hour': '{{execution_date.strftime("%H")}}',
             'pre_hour_day': '{{(execution_date+macros.timedelta(hours=-1)).strftime("%Y-%m-%d")}}',
@@ -635,7 +636,8 @@ for mysql_db_name, mysql_table_name, conn_id, prefix_name, priority_weight_nm, s
             'mysql_table_name': mysql_table_name,
             'mysql_conn': conn_id,
             'sqoop_temp_db_name': HIVE_SQOOP_TEMP_DB,
-            'sqoop_table_name': sqoop_table_name
+            'sqoop_table_name': sqoop_table_name,
+            'is_must_have_data': is_must_have_data,
         },
         dag=dag
     )

@@ -90,17 +90,20 @@ def app_oride_user_funnel_beford_d_sql_task(ds):
     set hive.mapred.mode=nonstrict;
     
     with base as 
-    (select *    
+    (select * from (select *,
+            lag(rn,1,0) over(partition by user_id,platform,app_version,tid order by event_time) as rn_lag,
+            max(rn) over(partition by user_id,platform,app_version,tid) as rn_max,
+            sum(if(rn-lag(rn,1,0) over(partition by user_id,platform,app_version,tid order by event_time)=1,1,0)) over(partition by user_id,platform,app_version,tid) as rr
     from (SELECT user_id,  --乘客ID
            platform,  --操作系统
            app_version, --app版本号
-           event_name,
+           if(event_name in('choose_end_point_click','recommended_destination_click'),'choose_end_point_click',event_name) as event_name,
            cast(substr(event_time,1,10) AS bigint) AS event_time,
            tid,
            CASE
                WHEN event_name='oride_show' THEN 1 --登录页面
     
-               WHEN event_name='choose_end_point_click' THEN 2 --选择终点
+               WHEN event_name in('choose_end_point_click','recommended_destination_click') THEN 2 --选择终点
     
                WHEN event_name='request_a_ride_show' THEN 3 --估价页面
     
@@ -120,6 +123,7 @@ def app_oride_user_funnel_beford_d_sql_task(ds):
       and tid is not null
     
       AND (event_name IN('choose_end_point_click',
+                         'recommended_destination_click',
                          'request_a_ride_show',
                          'success_request_a_ride',
                          'successful_order_show',
@@ -129,7 +133,8 @@ def app_oride_user_funnel_beford_d_sql_task(ds):
                AND lower(app_name) IN('oride passenger',
                                       'oride',
                                       'opay')))    
-    ) t where t.rn_time=1)
+    ) t where t.rn_time=1) m  
+    where (m.rr=m.rn_max) or (m.rr<>m.rn_max and rn=1) )
     
     insert overwrite table {db}.{table} partition(country_code,dt)
     select nvl(city_id,-10000) as city_id, --城市ID
