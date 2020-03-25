@@ -182,6 +182,8 @@ city_info as (
 bd_info as (
   select
     id  
+    ,job_id
+    ,job_name
     ,hcm_id
     ,hcm_name
     ,cm_id
@@ -380,11 +382,11 @@ union_result as (
     select * from last_hour_total
     union all
     select * from update_info
-    )
+    ) as a
 )
 
 --4.最后插入数据
-insert overwrite table otrade_dw.dwd_otrade_bd_admin_users_hf partition(country_code,dt,hour)
+insert overwrite table otrade_dw.dim_otrade_b2b_supplier_info_hf partition(country_code,dt,hour)
 select
   v1.id
   ,v1.user_id
