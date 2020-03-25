@@ -331,6 +331,7 @@ select
   ,status
   ,city_id
   ,created_at
+  ,updated_at
   ,date_format('{v_date}', 'yyyy-MM-dd HH') as utc_date_hour
 
   ,'NG' as country_code
