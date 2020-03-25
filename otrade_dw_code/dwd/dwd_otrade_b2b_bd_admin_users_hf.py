@@ -40,7 +40,7 @@ args = {
 }
 
 dag = airflow.DAG('dwd_otrade_b2b_bd_admin_users_hf',
-                  schedule_interval="20 * * * *",
+                  schedule_interval="28 * * * *",
                   default_args=args,
                   )
 
