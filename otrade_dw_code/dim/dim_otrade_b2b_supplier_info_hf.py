@@ -178,6 +178,26 @@ city_info as (
     v1.country_code = v2.id
 ),
 
+--0.bd信息
+bd_info as (
+  select
+    id  
+    ,hcm_id
+    ,hcm_name
+    ,cm_id
+    ,cm_name
+    ,bdm_id
+    ,bdm_name
+    ,bd_id
+    ,bd_name
+  from
+    otrade_dw.dim_otrade_b2b_bd_info_hf
+  where
+    concat(dt,' ',hour) >= default.minLocalTimeRange("{config}", '{v_date}', 0)
+    and concat(dt,' ',hour) <= default.maxLocalTimeRange("{config}", '{v_date}', 0) 
+    and utc_date_hour = date_format("{v_date}", 'yyyy-MM-dd HH')
+),
+
 --1.首先取出上一个小时全量的商铺数据
 last_hour_total as (
   select 
@@ -205,6 +225,8 @@ last_hour_total as (
     ,bd_invitation_code
     ,bd_id
 
+    ,job_id
+    ,job_name
     ,hcm_id
     ,hcm_name
     ,cm_id
@@ -253,6 +275,8 @@ update_info as (
     ,v1.bd_invitation_code
     ,v1.bd_id
 
+    ,nvl(v2.job_id,0) as job_id
+    ,nvl(v2.job_name,'-') as job_name
     ,nvl(v2.hcm_id,0) as hcm_id
     ,nvl(v2.hcm_name,'-') as hcm_name
     ,nvl(v2.cm_id,0) as cm_id
@@ -299,24 +323,7 @@ update_info as (
       and `__deleted` = 'false'
     ) as v1
   left join
-    (
-    select
-      id  
-      ,hcm_id
-      ,hcm_name
-      ,cm_id
-      ,cm_name
-      ,bdm_id
-      ,bdm_name
-      ,bd_id
-      ,bd_name
-    from
-      otrade_dw.dim_otrade_b2b_bd_info_hf
-    where
-      concat(dt,' ',hour) >= default.minLocalTimeRange("{config}", '{v_date}', 0)
-      and concat(dt,' ',hour) <= default.maxLocalTimeRange("{config}", '{v_date}', 0) 
-      and utc_date_hour = date_format("{v_date}", 'yyyy-MM-dd HH')
-    ) as v2
+    bd_info as v2
   on
     v1.bd_id = v2.id
   left join
@@ -354,6 +361,8 @@ union_result as (
     ,bd_invitation_code
     ,bd_id
 
+    ,job_id
+    ,job_name
     ,hcm_id
     ,hcm_name
     ,cm_id
@@ -402,6 +411,8 @@ select
   ,v1.bd_invitation_code
   ,v1.bd_id
 
+  ,v1.job_id
+  ,v1.job_name
   ,v1.hcm_id
   ,v1.hcm_name
   ,v1.cm_id
@@ -423,7 +434,6 @@ from
   union_result as v1
 where
   v1.rn=1;
-
 
 
     '''.format(
