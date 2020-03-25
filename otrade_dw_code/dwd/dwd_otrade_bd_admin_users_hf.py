@@ -79,6 +79,34 @@ ods_binlog_base_bd_admin_users_hi_check_task = OssSensor(
         dag=dag
     )
 
+##----------------------------------------- 任务超时监控 ---------------------------------------##
+def fun_task_timeout_monitor(ds,dag,execution_date,**op_kwargs):
+
+    dag_ids=dag.dag_id
+
+    #监控国家
+    v_country_code='NG'
+
+    #时间偏移量
+    v_gap_hour=0
+
+    v_date=GetLocalTime("otrade",execution_date.strftime("%Y-%m-%d %H"),v_country_code,v_gap_hour)['date']
+    v_hour=GetLocalTime("otrade",execution_date.strftime("%Y-%m-%d %H"),v_country_code,v_gap_hour)['hour']
+
+    #小时级监控
+    tb_hour_task = [
+        {"dag":dag,"db": "otrade_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code={country_code}/dt={pt}/hour={now_hour}".format(country_code=v_country_code,pt=v_date,now_hour=v_hour), "timeout": "3000"}
+    ]
+
+    TaskTimeoutMonitor().set_task_monitor(tb_hour_task)
+
+task_timeout_monitor= PythonOperator(
+    task_id='task_timeout_monitor',
+    python_callable=fun_task_timeout_monitor,
+    provide_context=True,
+    dag=dag
+)
+
 def dwd_otrade_bd_admin_users_hf_sql_task(ds, v_date):
     HQL = '''
 
@@ -157,7 +185,7 @@ update_info as (
       ,updated_at
       ,row_number() over(partition by id order by `__ts_ms` desc,`__file` desc,cast(`__pos` as int) desc) rn
     from
-      otrade_dw_ods.ods_binlog_base_bd_admin_users_hi
+      otrade_dw_ods.ods_binlog_base_bd_admin_users_all_hi
     where 
       concat(dt, " ", hour) = date_format('{v_date}', 'yyyy-MM-dd HH') 
       and `__deleted` = 'false'
