@@ -119,13 +119,16 @@ def app_opay_active_user_report_m_sql_task(ds,ds_nodash):
       WHERE dt<='{pt}' ) t1
    WHERE rn = 1;
    create table test_db.login_m_{date} as 
-SELECT dt,
-       user_id,
-        ROLE,
-        last_visit
-   FROM
-     opay_dw.dwm_opay_user_last_visit_df
-   where dt='{pt}';
+    select 
+        m.dt,
+        last_visit,
+        m.user_id,
+        role
+    from 
+        (select user_id,dt,date_format(last_visit_time,'yyyy-MM-dd') last_visit from opay_dw.dwm_opay_user_last_visit_df where dt='{pt}') m 
+    left join 
+        test_db.user_base_m_{date} m1
+    on m.user_id=m1.user_id;
    
 INSERT overwrite TABLE opay_dw.app_opay_active_user_report_m partition (country_code,dt,target_type)
 SELECT     '_' country,

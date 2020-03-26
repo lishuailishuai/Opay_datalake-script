@@ -134,7 +134,7 @@ def app_oride_user_funnel_beford_d_sql_task(ds):
                                       'oride',
                                       'opay')))    
     ) t where t.rn_time=1) m  
-    where (m.rr=m.rn_max) or (m.rr<>m.rn_max and rn=1) )
+    where (m.rr=m.rn_max) or (m.rr<>m.rn_max and rn=1) )  --只取以登录开始的连续event，如果中间断流，将过滤掉
     
     insert overwrite table {db}.{table} partition(country_code,dt)
     select nvl(city_id,-10000) as city_id, --城市ID
