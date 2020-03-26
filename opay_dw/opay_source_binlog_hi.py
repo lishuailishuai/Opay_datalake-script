@@ -69,7 +69,8 @@ table_list = [
     ("opay_bigorder", "user_order", "opay_bigorder", "user_order", "opay_bigorder", "base", 3, "opay_bigorder_user_order", "false"),
     ("opay_account", "account_user_record", "opay_account", "account_user_record", "opay_account", "base", 2, "opay_account_user_record","false"),
     ("opay_account", "accounting_request_record", "opay_account", "accounting_request_record", "opay_account", "base", 2, "opay_account_requset_record", "false"),
-
+    ("opay_account", "account_merchant", "opay_account", "account_merchant", "opay_account", "base", 2,"opay_account_db", "false"),
+    ("opay_account", "account_user", "opay_account", "account_user", "opay_account", "base", 2,"opay_account_db", "false"),
 
     ("dw_binlog", "voucher", "voucher_db", "voucher", "dw_binlog", "coupon", 3, "coupou_voucher", "false"),
 
@@ -120,10 +121,19 @@ table_list = [
     # ("opay_commission", "commission_top_up_record", "opay_commission", "base", 1,
     #  "opay_merchant_overlord_recon", "false"),
     #
-    # ("opay_sms", "message_record", "opay_sms", "base", 3, "opay_idgen_xxljob_apollo", "false"),
+
+    ("opay_sms", "message_record", "opay_sms","message_record", "opay_sms", "base", 3 , "opay_idgen_xxopay_idgen_xxljob_apollo_dbljob_apollo", "false"),
+
     #
     # ("opay_user", "user_email", "opay_user", "base", 3, "opay_user", "false"),
     ("opay_user", "user", "opay_user","user", "opay_user", "base", 3, "opay_user_db", "false"),
+    ("opay_user", "user_payment_instrument", "opay_user", "user_payment_instrument", "opay_user", "base", 3, "opay_user_db", "false"),
+    ("opay_user", "user_push_token", "opay_user", "user_push_token", "opay_user", "base", 3, "opay_user_db", "false"),
+    ("opay_user", "user_upgrade", "opay_user", "user_upgrade", "opay_user", "base", 3, "opay_user_db", "false"),
+    ("opay_user", "user_reseller", "opay_user", "user_reseller", "opay_user", "base", 3, "opay_user_db", "false"),
+    ("opay_user", "user_email", "opay_user", "user_email", "opay_user", "base", 3, "opay_user_db", "false"),
+    ("opay_user", "user_operator", "opay_user", "user_operator", "opay_user", "base", 3, "opay_user_db", "false"),
+
     #
     #
     #
@@ -147,38 +157,31 @@ table_list = [
     ("opay_transaction", "user_receive_money_record", "opay_transaction","user_receive_money_record", "opay_transaction", "base", 2,"opay_transaction_db", "false"),
     ("opay_transaction", "merchant_receive_money_record", "opay_transaction","merchant_receive_money_record", "opay_transaction", "base", 2, "opay_transaction_db", "false"),
 
-    # ("opay_transaction", "adjustment_decrease_record", "opay_transaction", "base", 3, "opay_transaction", "false"),
-    # ("opay_transaction", "adjustment_increase_record", "opay_transaction", "base", 3, "opay_transaction", "false"),
+    ("opay_transaction", "adjustment_decrease_record", "opay_transaction", "adjustment_decrease_record",
+     "opay_transaction", "base", 2, "opay_transaction_db", "false"),
+    ("opay_transaction", "adjustment_increase_record", "opay_transaction", "adjustment_increase_record",
+     "opay_transaction", "base", 2, "opay_transaction_db", "false"),
+    ("opay_transaction", "business_activity_record", "opay_transaction", "business_activity_record",
+     "opay_transaction", "base", 2, "opay_transaction_db", "false"),
+    ("opay_transaction", "receive_money_request_record", "opay_transaction", "receive_money_request_record",
+     "opay_transaction", "base", 2, "opay_transaction_db", "false"),
+    ("opay_transaction", "transfer_not_register_record", "opay_transaction", "transfer_not_register_record",
+     "opay_transaction", "base", 2, "opay_transaction_db", "false"),
 
-    # ("opay_transaction", "business_collection_record", "opay_transaction", "base", 3, "opay_transaction", "false"),
-    # ("opay_transaction", "electricity_topup_record", "opay_transaction", "base", 3, "opay_transaction", "false"),
-    # ("opay_transaction", "merchant_acquiring_record", "opay_transaction", "base", 3, "opay_transaction", "false"),
-
-    # ("opay_transaction", "merchant_receive_money_record", "opay_transaction", "base", 3, "opay_transaction", "false"),
-    # ("opay_transaction", "merchant_topup_record", "opay_transaction", "base", 3, "opay_transaction", "false"),
-    # ("opay_transaction", "merchant_transfer_card_record", "opay_transaction", "base", 3, "opay_transaction", "false"),
-    # ("opay_transaction", "merchant_transfer_user_record", "opay_transaction", "base", 3, "opay_transaction", "false"),
-    # ("opay_transaction", "mobiledata_topup_record", "opay_transaction", "base", 3, "opay_transaction", "false"),
-    # ("opay_transaction", "receive_money_request_record", "opay_transaction", "base", 3, "opay_transaction", "false"),
-    # ("opay_transaction", "transfer_not_register_record", "opay_transaction", "base", 3, "opay_transaction", "false"),
-    # ("opay_transaction", "tv_topup_record", "opay_transaction", "base", 3, "opay_transaction", "false"),
-    # ("opay_transaction", "user_easycash_record", "opay_transaction", "base", 3, "opay_transaction", "false"),
-
-    # ("opay_transaction", "user_receive_money_record", "opay_transaction", "base", 3, "opay_transaction", "false"),
-    # ("opay_transaction", "user_topup_record", "opay_transaction", "base", 3, "opay_transaction", "false"),
-    # ("opay_transaction", "user_transfer_card_record", "opay_transaction", "base", 3, "opay_transaction", "false"),
-    # ("opay_transaction", "user_transfer_user_record", "opay_transaction", "base", 3, "opay_transaction", "false"),
-
-    # ("opay_transaction", "business_activity_record", "opay_transaction", "base", 2, "opay_transaction", "false"),
-    # ("opay_transaction", "activity_record", "opay_transaction", "base", 2, "opay_transaction", "false"),
-    #
     # ("opay_fee", "user_fee_record", "opay_fee", "base", 3, "opay_merchant_overlord_recon", "false"),
     # ("opay_fee", "merchant_fee_record", "opay_fee", "base", 3, "opay_merchant_overlord_recon", "false"),
     #
     #
-    # ("opay_activity", "preferential_record", "opay_activity", "base", 3, "opay_merchant_overlord_recon", "false"),
+
+    ("opay_activity", "preferential_record", "opay_activity", "preferential_record", "opay_activity", "base", 3,
+     "opay_merchant_overlord_recon_db", "false"),
+
     #
     # ("opay_channel", "channel_transaction", "opay_channel", "base", 3, "opay_channel", "false")
+
+    ("opay_channel", "channel_transaction", "opay_channel","channel_transaction","opay_channel", "base", 3, "opay_channel_db", "false"),
+    ("opay_channel", "card_bin", "opay_channel", "card_bin","opay_channel",  "base", 3, "opay_channel_db","false"),
+    ("opay_channel", "openapi_scene_order", "opay_channel", "openapi_scene_order","opay_channel", "base", 3, "opay_channel_db","false"),
 
     ("opay_agent_crm", "bd_agent", "opay_agent_crm","bd_agent", "opay_agent_crm_db", "base", 3, "opay_agent_crm", "false"),
     ("opay_agent_crm", "bd_admin_users", "opay_agent_crm","bd_admin_users", "opay_agent_crm_db", "base", 3, "opay_agent_crm", "false"),
