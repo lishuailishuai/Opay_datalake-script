@@ -225,7 +225,7 @@ order_info as (
 )
 
 --2.插入数据
-insert overwrite table test_db.app_otrade_b2b_order_target_supplier_bd_di partition(country_code,dt)
+insert overwrite table otrade_dw.app_otrade_b2b_order_target_supplier_bd_di partition(country_code,dt)
 select
   nvl(v1.hcm_id,v2.hcm_id) as hcm_id
   ,nvl(v1.hcm_name,v2.hcm_name) as hcm_name
@@ -261,10 +261,13 @@ select
   ,nvl(v2.total_shop_cnt,0) as total_shop_cnt
   ,nvl(v1.pay_people,0) as pay_people
   ,nvl(v1.pay_suc_people,0) as pay_suc_people
+  
+  ,'NG' as country_code
+  ,'{pt}' as dt
 from
-  shop_info as v1
+  order_info as v1
 full join
-  order_info as v2
+  shop_info as v2
 on
   v1.hcm_id = v2.hcm_id
   and v1.cm_id = v2.cm_id
