@@ -143,7 +143,7 @@ def dwd_opay_cico_record_di_sql_task(ds, ds_nodash):
     with 
         bd_agent_data as (
             select 
-                user_id as opay_id, bd_id, agent_status as bd_agent_status
+                user_id as opay_id, bd_admin_user_id, agent_status as bd_agent_status
             from opay_dw.dim_opay_bd_agent_df
             where dt = '{pt}'
         ),
@@ -153,7 +153,7 @@ def dwd_opay_cico_record_di_sql_task(ds, ds_nodash):
                     create_time, update_time, country, sub_service_type, order_status,
                     error_code, error_msg, client_source, pay_way, business_type, top_consume_scenario, sub_consume_scenario,
                     fee_amount, fee_pattern, outward_id, outward_type, 
-                    bd_id as bd_admin_user_id, bd_agent_status
+                    bd_admin_user_id, bd_agent_status
             from (
                 select 
                     order_no, amount, currency, 'USER' as originator_type, sender_id as originator_id, 'USER' as affiliate_type, recipient_id as affiliate_id, '-' as payment_order_no, 
@@ -173,7 +173,7 @@ def dwd_opay_cico_record_di_sql_task(ds, ds_nodash):
                     country, sub_service_type, order_status,
                     error_code, error_msg, client_source, pay_way, business_type, top_consume_scenario, sub_consume_scenario,
                     fee_amount, fee_pattern, outward_id, outward_type,
-                    bd_id as bd_admin_user_id, bd_agent_status
+                    bd_admin_user_id, bd_agent_status
             from (
                 select 
                     order_no, amount, currency, 'USER' as originator_type, sender_id as originator_id, 'USER' as affiliate_type, recipient_id as affiliate_id, '-' as payment_order_no, 

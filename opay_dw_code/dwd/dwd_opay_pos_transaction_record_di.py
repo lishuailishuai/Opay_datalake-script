@@ -99,6 +99,18 @@ dim_opay_terminal_base_df_prev_day_task = OssSensor(
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
+
+dim_opay_bd_agent_df_prev_day_task = OssSensor(
+    task_id='dim_opay_bd_agent_df_prev_day_task',
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="opay/opay_dw/dim_opay_bd_agent_df/country_code=NG",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
 def fun_task_timeout_monitor(ds,dag,**op_kwargs):
 
@@ -152,6 +164,12 @@ def dwd_opay_pos_transaction_record_di_sql_task(ds):
                 pos_id, terminal_id 
             from opay_dw.dim_opay_terminal_base_df 
             where dt = if('{pt}' <= '2020-01-01', '2020-01-01', '{pt}')
+        ),
+        bd_agent_data as (
+            select 
+                user_id, bd_admin_user_id, agent_status as bd_agent_status
+            from opay_dw.dim_opay_bd_agent_df
+            where dt = '{pt}'
         )
     insert overwrite table {db}.{table} 
     partition(country_code, dt)
@@ -173,6 +191,7 @@ def dwd_opay_pos_transaction_record_di_sql_task(ds):
             when order_status = 'SUCCESS' then if(cast(t1.amount * {msc_cost_0922_fee}  as decimal(10,2)) > 100000, 100000, cast(t1.amount * {msc_cost_0922_fee}  as decimal(10,2)))
             else 0
         end as msc_cost_amount,
+        t4.bd_admin_user_id, t4.bd_agent_status,
         'NG' as country_code,
         '{pt}' dt
         
@@ -202,6 +221,8 @@ def dwd_opay_pos_transaction_record_di_sql_task(ds):
     ) t1 
     left join dim_user_merchant_data t2 on t1.originator_id = t2.trader_id
     left join terminal_data t3 on t1.affiliate_terminal_id = t3.terminal_id
+    left join bd_agent_data t4 on t1.originator_id = t4.user_id
+    
     '''.format(
         pt=ds,
         table=table_name,
@@ -248,3 +269,4 @@ ods_sqoop_base_merchant_df_prev_day_task >> dwd_opay_pos_transaction_record_di_t
 ods_sqoop_base_user_pos_transaction_record_di_prev_day_task >> dwd_opay_pos_transaction_record_di_task
 dim_opay_terminal_base_df_prev_day_task >> dwd_opay_pos_transaction_record_di_task
 ods_sqoop_base_merchant_pos_transaction_record_di_prev_day_task >> dwd_opay_pos_transaction_record_di_task
+dim_opay_bd_agent_df_prev_day_task >> dwd_opay_pos_transaction_record_di_task
