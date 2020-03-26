@@ -234,7 +234,7 @@ join_result as (
     last_hour_total as v2
   on
     v1.id = v2.id
-),
+)
 
 --04.关联最新的交易,匹配最新的首单时间
 insert overwrite table otrade_dw.dwm_otrade_b2b_retailer_crm_first_hf partition(country_code,dt,hour)
