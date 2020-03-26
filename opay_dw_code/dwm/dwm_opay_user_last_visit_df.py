@@ -90,22 +90,19 @@ def dwm_opay_user_last_visit_df_sql_task(ds):
     with 
     user_last_visit_di as (
         select 
-           user_id, last_visit_time, country_code
-        from (
-            select    
-                uid as user_id,  
-                from_unixtime(cast(cast(t as bigint) / 1000 as bigint)+3600) as last_visit_time,
-                'NG' as country_code,
-                row_number() over(partition by uid order by t desc) rn
-            from opay_source.service_data_tracking_app 
-            where concat(dt, hour) 
-                between date_format(date_sub('{pt}', 1), 'yyyy-MM-dd 23')
-                    and date_format(date_add('{pt}', 1), 'yyyy-MM-dd 00')
-                and t is not null and t != ''
-                and servicedatatrackingapp='api_graphql_web_id' 
-                and ev in ('login version one','login version two','login version two again','registerSuccess to login')
-                and date_format(from_unixtime(cast(cast(t as bigint) / 1000 as bigint)+3600) , 'yyyy-MM-dd')= '{pt}'
-        ) t0  where rn = 1
+           uid as user_id, 
+           from_unixtime(cast(max(cast(t as bigint)) / 1000 as bigint)+3600) as last_visit_time,
+           'NG' as country_code
+        from opay_source.service_data_tracking_app 
+        where concat(dt, hour) 
+            between date_format(date_sub('{pt}', 1), 'yyyy-MM-dd 23')
+                and date_format(date_add('{pt}', 1), 'yyyy-MM-dd 00')
+            and t is not null and t != ''
+            and servicedatatrackingapp='api_graphql_web_id' 
+            and ev in ('login version one','login version two','login version two again','registerSuccess to login')
+            and date_format(from_unixtime(cast(cast(t as bigint) / 1000 as bigint)+3600) , 'yyyy-MM-dd')= '{pt}'
+        group by uid
+    
     )
     
     insert overwrite table {db}.{table} partition(country_code, dt)

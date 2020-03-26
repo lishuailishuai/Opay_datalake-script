@@ -190,7 +190,7 @@ table_list = [
     ("opay_message_center", "opay_message_statistic", "opay_message_center", "opay_message_statistic", "opay_message_center_db", "push", 3, "opay_message_center_db", "false"),
     ("opay_message_center", "opay_push_task", "opay_message_center", "opay_push_task", "opay_message_center_db", "push", 3, "opay_message_center_db", "false"),
     ("opay_message_center", "opay_user_tags_new", "opay_message_center", "opay_user_tags_new", "opay_message_center_db", "push", 3, "opay_message_center_db", "false"),
-    ("opay_message_center", "opay_users", "opay_message_center", "opay_users", "opay_message_center_db", "base", 3, "opay_message_center_db", "false"),
+    ("opay_message_center", "opay_users", "opay_message_center", "opay_users", "opay_message_center_db", "push", 3, "opay_message_center_db", "false"),
 
 
     # 分表情况，schema 表与 实际定义表名作出区分

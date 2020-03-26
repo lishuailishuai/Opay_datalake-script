@@ -43,10 +43,65 @@ dag = airflow.DAG('dm_opay_user_trans_portrait_df',
 
 ##----------------------------------------- 依赖 ---------------------------------------##
 
-dwd_opay_user_transaction_record_df_prev_day_task = OssSensor(
-    task_id='dwd_opay_user_transaction_record_df_prev_day_task',
+dwm_opay_user_first_trans_df_prev_day_task = OssSensor(
+    task_id='dwm_opay_user_first_trans_df_prev_day_task',
     bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opay/opay_dw/dwd_opay_user_transaction_record_df/country_code=NG",
+        hdfs_path_str="opay/opay_dw/dwm_opay_user_first_trans_df/country_code=NG",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
+dwm_opay_agent_first_trans_df_prev_day_task = OssSensor(
+    task_id='dwm_opay_agent_first_trans_df_prev_day_task',
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="opay/opay_dw/dwm_opay_agent_first_trans_df/country_code=NG",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
+dwm_opay_user_last_trans_df_prev_day_task = OssSensor(
+    task_id='dwm_opay_user_last_trans_df_prev_day_task',
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="opay/opay_dw/dwm_opay_user_last_trans_df/country_code=NG",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
+dwm_opay_user_last_visit_df_prev_day_task = OssSensor(
+    task_id='dwm_opay_user_last_visit_df_prev_day_task',
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="opay/opay_dw/dwm_opay_user_last_visit_df/country_code=NG",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
+dwm_opay_user_trans_aggr_df_prev_day_task = OssSensor(
+    task_id='dwm_opay_user_trans_aggr_df_prev_day_task',
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="opay/opay_dw/dwm_opay_user_trans_aggr_df/country_code=NG",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
+dwm_opay_user_balance_df_prev_day_task = OssSensor(
+    task_id='dwm_opay_user_balance_df_prev_day_task',
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="opay/opay_dw/dwm_opay_user_balance_df/country_code=NG",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -147,9 +202,9 @@ def dm_opay_user_trans_portrait_df_sql_task(ds):
     ) t2 on t1.user_id = t2.user_id
     left join (
         select 
-            user_id, last_visit as last_login_time
+            user_id, last_visit_time as last_login_time
         from opay_dw.dwm_opay_user_last_visit_df 
-        where dt = if('{pt}' <= '2020-03-01', '2020-03-01', '{pt}')
+        where dt = if('{pt}' <= '2020-03-02', '2020-03-02', '{pt}')
     ) t3 on t1.user_id = t3.user_id
     -- left join (
     -- 	select 
@@ -188,7 +243,7 @@ def dm_opay_user_trans_portrait_df_sql_task(ds):
             order_suc_cnt_7d, order_suc_amt_7d,
             order_suc_cnt_30d, order_suc_amt_30d
         from opay_dw.dwm_opay_user_trans_aggr_df
-        where dt = if('{pt}' <= '2020-03-22', '2020-03-22', '{pt}') 
+        where dt = '{pt}'
     ) t8 on t1.user_id = t8.user_id
     left join (
         select
@@ -244,5 +299,10 @@ dm_opay_user_trans_portrait_df_task = PythonOperator(
     dag=dag
 )
 
-dwd_opay_user_transaction_record_df_prev_day_task >> dm_opay_user_trans_portrait_df_task
+dwm_opay_agent_first_trans_df_prev_day_task >> dm_opay_user_trans_portrait_df_task
+dwm_opay_user_first_trans_df_prev_day_task >> dm_opay_user_trans_portrait_df_task
+dwm_opay_user_balance_df_prev_day_task >> dm_opay_user_trans_portrait_df_task
+dwm_opay_user_last_visit_df_prev_day_task >> dm_opay_user_trans_portrait_df_task
+dwm_opay_user_last_trans_df_prev_day_task >> dm_opay_user_trans_portrait_df_task
+dwm_opay_user_trans_aggr_df_prev_day_task >> dm_opay_user_trans_portrait_df_task
 
