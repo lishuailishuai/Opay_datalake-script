@@ -129,16 +129,16 @@ ods_sqoop_base_merchant_df_prev_day_task = OssSensor(
     dag=dag
 )
 
-dwd_opay_user_upgrade_agent_df_day_task = OssSensor(
-    task_id='dwd_opay_user_upgrade_agent_df_day_task',
-    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opay/opay_dw/dwd_opay_user_upgrade_agent_df/country_code=NG",
-        pt='{{ds}}'
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
+# dwd_opay_user_upgrade_agent_df_day_task = OssSensor(
+#     task_id='dwd_opay_user_upgrade_agent_df_day_task',
+#     bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+#         hdfs_path_str="opay/opay_dw/dwd_opay_user_upgrade_agent_df/country_code=NG",
+#         pt='{{ds}}'
+#     ),
+#     bucket_name='opay-datalake',
+#     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+#     dag=dag
+# )
 
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
 def fun_task_timeout_monitor(ds,dag,**op_kwargs):
@@ -617,7 +617,7 @@ def app_opay_active_user_report_d_sql_task(ds,ds_nodash):
                          '-' register_client,
                          count(distinct user_id) c 
                  from opay_dw.dwd_opay_user_upgrade_agent_df
-                 WHERE dt='{pt}' and is_reseller='Y'
+                 WHERE dt = if('{pt}' <= '2020-03-18', '2020-03-18', '{pt}') and is_reseller='Y'
                  union all
                  select '{pt}' dt,
                          '-' user_role,
@@ -628,7 +628,7 @@ def app_opay_active_user_report_d_sql_task(ds,ds_nodash):
                          '-' register_client,
                          count(distinct user_id) c 
                  from opay_dw.dwd_opay_user_upgrade_agent_df
-                 WHERE dt='{pt}' and date_format(reseller_time,'yyyy-MM-dd')='{pt}'
+                 WHERE dt = if('{pt}' <= '2020-03-18', '2020-03-18', '{pt}') and date_format(reseller_time,'yyyy-MM-dd')='{pt}'
                  
                  
             ) m;
@@ -682,5 +682,5 @@ ods_sqoop_base_account_user_df_prev_day_task >> app_opay_active_user_report_d_ta
 dwm_opay_user_balance_df_prev_day_task >> app_opay_active_user_report_d_task
 dwm_opay_user_first_trans_df_prev_day_task >> app_opay_active_user_report_d_task
 ods_sqoop_base_merchant_df_prev_day_task >> app_opay_active_user_report_d_task
-dwd_opay_user_upgrade_agent_df_day_task >> app_opay_active_user_report_d_task
+#dwd_opay_user_upgrade_agent_df_day_task >> app_opay_active_user_report_d_task
 
