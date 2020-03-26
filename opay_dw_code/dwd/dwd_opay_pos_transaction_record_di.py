@@ -89,10 +89,10 @@ ods_sqoop_base_merchant_pos_transaction_record_di_prev_day_task = OssSensor(
     dag=dag
 )
 
-dim_opay_pos_terminal_base_df_prev_day_task = OssSensor(
-   task_id='dim_opay_pos_terminal_base_df_prev_day_task',
+dim_opay_terminal_base_df_prev_day_task = OssSensor(
+   task_id='dim_opay_terminal_base_df_prev_day_task',
    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opay/opay_dw/dim_opay_pos_terminal_base_df/country_code=NG",
+        hdfs_path_str="opay/opay_dw/dim_opay_terminal_base_df/country_code=NG",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -148,7 +148,7 @@ def dwd_opay_pos_transaction_record_di_sql_task(ds):
             where dt = if('{pt}' <= '2019-12-11', '2019-12-11', '{pt}')
         ),
         terminal_data as (
-            select pos_id, terminal_id from opay_dw.dim_opay_pos_terminal_base_df where dt = if('{pt}' <= '2020-01-12', '2020-01-12', '{pt}')
+            select pos_id, terminal_id from opay_dw.dim_opay_terminal_base_df where dt = if('{pt}' <= '2020-01-12', '2020-01-12', '{pt}')
         )
     insert overwrite table {db}.{table} 
     partition(country_code, dt)
@@ -243,5 +243,5 @@ dwd_opay_pos_transaction_record_di_task = PythonOperator(
 ods_sqoop_base_user_di_prev_day_task >> dwd_opay_pos_transaction_record_di_task
 ods_sqoop_base_merchant_df_prev_day_task >> dwd_opay_pos_transaction_record_di_task
 ods_sqoop_base_user_pos_transaction_record_di_prev_day_task >> dwd_opay_pos_transaction_record_di_task
-dim_opay_pos_terminal_base_df_prev_day_task >> dwd_opay_pos_transaction_record_di_task
+dim_opay_terminal_base_df_prev_day_task >> dwd_opay_pos_transaction_record_di_task
 ods_sqoop_base_merchant_pos_transaction_record_di_prev_day_task >> dwd_opay_pos_transaction_record_di_task
