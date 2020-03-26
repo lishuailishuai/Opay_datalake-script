@@ -93,6 +93,7 @@ set hive.exec.dynamic.partition.mode=nonstrict;
 set hive.strict.checks.cartesian.product=false;
 
 --0.查看店铺信息
+with
 order_info as (
   select
     shop_id
@@ -186,7 +187,7 @@ select
   ,country_name
   ,city
   ,city_name
-  
+
   ,order_amt
   ,order_cnt
   ,order_people
@@ -209,14 +210,6 @@ select
   ,'{pt}' as dt
 from
   order_info as v1
-full join
-  shop_info as v2
-on
-  v1.hcm_id = v2.hcm_id
-  and v1.cm_id = v2.cm_id
-  and v1.bdm_id = v2.bdm_id
-  and v1.bd_id = v2.bd_id
-  and v1.city = v2.city
 ;
 
 
