@@ -88,10 +88,10 @@ ods_sqoop_base_cash_out_record_di_prev_day_task = OssSensor(
     dag=dag
 )
 
-ods_bd_agent_df_prev_day_task = OssSensor(
-    task_id='ods_bd_agent_df_prev_day_task',
+dim_opay_bd_agent_df_prev_day_task = OssSensor(
+    task_id='dim_opay_bd_agent_df_prev_day_task',
     bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opay_dw_sqoop/opay_agent_crm/bd_agent",
+        hdfs_path_str="opay/opay_dw/dim_opay_bd_agent_df/country_code=NG",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -143,8 +143,8 @@ def dwd_opay_cico_record_di_sql_task(ds, ds_nodash):
     with 
         bd_agent_data as (
             select 
-                cast(opay_id as string) as opay_id, bd_id, agent_status as bd_agent_status
-            from opay_dw_ods.ods_sqoop_base_bd_agent_df
+                user_id as opay_id, bd_id, agent_status as bd_agent_status
+            from opay_dw.dim_opay_bd_agent_df
             where dt = '{pt}'
         ),
         ci_data as (
@@ -262,4 +262,4 @@ ods_sqoop_base_user_di_prev_day_task >> dwd_opay_cico_record_di_task
 ods_sqoop_base_merchant_df_prev_day_task >> dwd_opay_cico_record_di_task
 ods_sqoop_base_cash_in_record_di_prev_day_task >> dwd_opay_cico_record_di_task
 ods_sqoop_base_cash_out_record_di_prev_day_task >> dwd_opay_cico_record_di_task
-ods_bd_agent_df_prev_day_task >> dwd_opay_cico_record_di_task
+dim_opay_bd_agent_df_prev_day_task >> dwd_opay_cico_record_di_task
