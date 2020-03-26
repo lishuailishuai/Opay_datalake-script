@@ -157,7 +157,7 @@ def check_key_data_task(ds):
 
     #主键重复校验
     check_sql='''
-    select count(1)-count(distinct passenger_id) as cnt
+    select count(1)-count(distinct driver_id) as cnt
     from {db}.{table}
     where dt='{pt}'
     and country_code in ('nal')
