@@ -178,7 +178,7 @@ metrcis_list = [
     # 12
     (
         'Trade_Cash_In',
-        '''SELECT "trade_cnt" AS "trade_cnt","trade_user_cnt" AS "trade_user_cnt" ,"trade_amount" AS "trade_amount" FROM "OPAY_TRANSACTION_OP_EVENT_CQ_RESULT_1" WHERE ("__source_table" = 'cash_in_record') and time > {time} ''',
+        '''SELECT "trade_cnt" AS "trade_cnt","trade_user_cnt" AS "trade_user_cnt" ,"trade_amount" AS "trade_amount" FROM "OPAY_TRANSACTION_OP_EVENT_CQ_RESULT_28" WHERE ("__source_table" = 'cash_in_record') and time > {time} ''',
         'trade_alert_value',
         7,
         'trade_alert_level_1_address',
@@ -190,7 +190,7 @@ metrcis_list = [
     # 13
     (
         'Trade_Cash_In_Success',
-        '''SELECT "trade_success_cnt" AS "trade_success_cnt" FROM "OPAY_TRANSACTION_OP_EVENT_CQ_RESULT_2" WHERE ("__source_table" = 'cash_in_record' ) and time > {time} ''',
+        '''SELECT "trade_success_cnt" AS "trade_success_cnt" FROM "OPAY_TRANSACTION_OP_EVENT_CQ_RESULT_29" WHERE ("__source_table" = 'cash_in_record' ) and time > {time} ''',
         'trade_alert_value',
         7,
         'trade_alert_level_1_address',
@@ -203,7 +203,7 @@ metrcis_list = [
     # 14
     (
         'Trade_Cash_Out',
-        '''SELECT "trade_cnt" AS "trade_cnt","trade_user_cnt" AS "trade_user_cnt" ,"trade_amount" AS "trade_amount" FROM "OPAY_TRANSACTION_OP_EVENT_CQ_RESULT_1" WHERE ("__source_table" = 'cash_out_record') and time > {time}  ''',
+        '''SELECT "trade_cnt" AS "trade_cnt","trade_user_cnt" AS "trade_user_cnt" ,"trade_amount" AS "trade_amount" FROM "OPAY_TRANSACTION_OP_EVENT_CQ_RESULT_28" WHERE ("__source_table" = 'cash_out_record') and time > {time}  ''',
         'trade_alert_value',
         7,
         'trade_alert_level_1_address',
@@ -215,7 +215,7 @@ metrcis_list = [
     # 15
     (
         'Trade_Cash_Out_Success',
-        '''SELECT "trade_success_cnt" AS "trade_success_cnt" FROM "OPAY_TRANSACTION_OP_EVENT_CQ_RESULT_2" WHERE ("__source_table" = 'cash_out_record') and time > {time}''',
+        '''SELECT "trade_success_cnt" AS "trade_success_cnt" FROM "OPAY_TRANSACTION_OP_EVENT_CQ_RESULT_29" WHERE ("__source_table" = 'cash_out_record') and time > {time}''',
         'trade_alert_value',
         7,
         'trade_alert_level_1_address',
