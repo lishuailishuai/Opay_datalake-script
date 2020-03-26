@@ -38,24 +38,24 @@ args = {
     'email_on_retry': False,
 }
 
-dag = airflow.DAG('dwm_otrade_b2b_retailer_crm_first_hf',
+dag = airflow.DAG('dwm_otrade_b2b_supplier_first_hf',
                   schedule_interval="38 * * * *",
                   default_args=args,
                   )
 
 ##----------------------------------------- 变量 ---------------------------------------##
 db_name = "otrade_dw"
-table_name = "dwm_otrade_b2b_retailer_crm_first_hf"
+table_name = "dwm_otrade_b2b_supplier_first_hf"
 hdfs_path = "oss://opay-datalake/otrade/otrade_dw/" + table_name
 config = eval(Variable.get("otrade_time_zone_config"))
 time_zone = config['NG']['time_zone']
 
 ##----------------------------------------- 依赖 ---------------------------------------##
 ### 检查最新的商户表的依赖
-dwm_otrade_b2b_retailer_crm_first_hf_check_pre_locale_task = OssSensor(
-    task_id='dwm_otrade_b2b_retailer_crm_first_hf_check_pre_locale_task',
+dwm_otrade_b2b_supplier_first_hf_check_pre_locale_task = OssSensor(
+    task_id='dwm_otrade_b2b_supplier_first_hf_check_pre_locale_task',
     bucket_key='{hdfs_path_str}/country_code=NG/dt={pt}/hour={hour}/_SUCCESS'.format(
-        hdfs_path_str="otrade/otrade_dw/dwm_otrade_b2b_retailer_crm_first_hf",
+        hdfs_path_str="otrade/otrade_dw/dwm_otrade_b2b_supplier_first_hf",
         pt='{{{{(execution_date+macros.timedelta(hours=({time_zone}+{gap_hour}))).strftime("%Y-%m-%d")}}}}'.format(
             time_zone=time_zone, gap_hour=-1),
         hour='{{{{(execution_date+macros.timedelta(hours=({time_zone}+{gap_hour}))).strftime("%H")}}}}'.format(
@@ -67,11 +67,11 @@ dwm_otrade_b2b_retailer_crm_first_hf_check_pre_locale_task = OssSensor(
 )
 
 ### 检查最新的用户表的依赖
-###oss://opay-datalake/otrade/otrade_dw/dim_otrade_b2b_retailer_info_crm_hf
-dim_otrade_b2b_retailer_info_crm_hf_check_task = OssSensor(
-    task_id='dim_otrade_b2b_retailer_info_crm_hf_check_task',
+###oss://opay-datalake/otrade/otrade_dw/dim_otrade_b2b_supplier_info_hf
+dim_otrade_b2b_supplier_info_hf_check_task = OssSensor(
+    task_id='dim_otrade_b2b_supplier_info_hf_check_task',
     bucket_key='{hdfs_path_str}/country_code=NG/dt={pt}/hour={hour}/_SUCCESS'.format(
-        hdfs_path_str="otrade/otrade_dw/dim_otrade_b2b_retailer_info_crm_hf",
+        hdfs_path_str="otrade/otrade_dw/dim_otrade_b2b_supplier_info_hf",
         pt='{{{{(execution_date+macros.timedelta(hours=({time_zone}+{gap_hour}))).strftime("%Y-%m-%d")}}}}'.format(
             time_zone=time_zone, gap_hour=0),
         hour='{{{{(execution_date+macros.timedelta(hours=({time_zone}+{gap_hour}))).strftime("%H")}}}}'.format(
@@ -95,6 +95,7 @@ ods_binlog_base_otrade_order_all_hi_check_task = OssSensor(
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
+
 
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
 def fun_task_timeout_monitor(ds, dag, execution_date, **op_kwargs):
@@ -128,7 +129,7 @@ task_timeout_monitor = PythonOperator(
 )
 
 
-def dwm_otrade_b2b_retailer_crm_first_hf_sql_task(ds, v_date):
+def dwm_otrade_b2b_supplier_first_hf_sql_task(ds, v_date):
     HQL = '''
 
 set mapred.max.split.size=1000000;
@@ -142,7 +143,7 @@ last_hour_total as (
     id
     ,first_order_time
   from
-    otrade_dw.dwm_otrade_b2b_retailer_crm_first_hf
+    otrade_dw.dwm_otrade_b2b_supplier_first_hf
   where
     concat(dt, " ", hour) >= default.minLocalTimeRange("{config}", '{v_date}', -1) 
     and concat(dt, " ", hour) <= default.maxLocalTimeRange("{config}", '{v_date}', -1) 
@@ -152,14 +153,14 @@ last_hour_total as (
 --02.取最近一小时交易的零售商,并取出create_time
 retailer_trade_time as (
   select
-    payer
+    payee
     ,create_time
   from
     (
     select
-      payer
+      payee
       ,create_time
-      ,row_number() over(partition by payer order by create_time asc) rn
+      ,row_number() over(partition by payee order by create_time asc) rn
     from
       otrade_dw_ods.ods_binlog_base_otrade_order_all_hi
     where
@@ -175,33 +176,27 @@ retailer_trade_time as (
 join_result as (
   select
     v1.id
+    ,v1.user_id
     ,v1.opay_id
     ,v1.opay_account
+    ,v1.opay_company_account
+    ,v1.status
+    ,v1.supplier_type
     ,v1.first_name
     ,v1.last_name
     ,v1.other_name
-    ,v1.phone_number
-    ,v1.retailer_email
-    ,v1.address
-
     ,v1.country
+    ,v1.city
+
     ,v1.country_name
-    ,v1.city_id
     ,v1.city_name
 
-    ,v1.retailer_gender
-    ,v1.retailer_bvn
-    ,v1.shop_category
-    ,v1.door_head_photos
-    ,v1.shop_owner_photos
-    ,v1.cashier_desk_photos
-    ,v1.store_furnishings_photos
-    ,v1.department_id
-    ,v1.lng
-    ,v1.lat
-    ,v1.retailer_status
-    ,v1.fence_id
-    ,v1.create_user_id
+    ,v1.address
+    ,v1.email
+    ,v1.bvn
+    ,v1.phone_number
+    ,v1.second_phone_number
+    ,v1.bd_invitation_code
     ,v1.bd_id
 
     ,v1.job_id
@@ -215,16 +210,16 @@ join_result as (
     ,v1.bd_real_id
     ,v1.bd_name
 
-    ,v1.created_at
-    ,v1.updated_at
-    ,v1.certification_time
+    ,v1.earnest_money
+    ,v1.create_time
+    ,v1.update_time
     ,nvl(v2.first_order_time,'9999-12-31 00:00:00') as first_order_time
   from
     (
     select
       *
     from
-      otrade_dw.dim_otrade_b2b_retailer_info_crm_hf
+      otrade_dw.dim_otrade_b2b_supplier_info_hf
     where
       concat(dt,' ',hour) >= default.minLocalTimeRange("{config}", '{v_date}', 0)
       and concat(dt,' ',hour) <= default.maxLocalTimeRange("{config}", '{v_date}', 0) 
@@ -237,36 +232,30 @@ join_result as (
 )
 
 --04.关联最新的交易,匹配最新的首单时间
-insert overwrite table otrade_dw.dwm_otrade_b2b_retailer_crm_first_hf partition(country_code,dt,hour)
+insert overwrite table otrade_dw.dwm_otrade_b2b_supplier_first_hf partition(country_code,dt,hour)
 select
   v1.id
+  ,v1.user_id
   ,v1.opay_id
   ,v1.opay_account
+  ,v1.opay_company_account
+  ,v1.status
+  ,v1.supplier_type
   ,v1.first_name
   ,v1.last_name
   ,v1.other_name
-  ,v1.phone_number
-  ,v1.retailer_email
-  ,v1.address
-
   ,v1.country
+  ,v1.city
+
   ,v1.country_name
-  ,v1.city_id
   ,v1.city_name
 
-  ,v1.retailer_gender
-  ,v1.retailer_bvn
-  ,v1.shop_category
-  ,v1.door_head_photos
-  ,v1.shop_owner_photos
-  ,v1.cashier_desk_photos
-  ,v1.store_furnishings_photos
-  ,v1.department_id
-  ,v1.lng
-  ,v1.lat
-  ,v1.retailer_status
-  ,v1.fence_id
-  ,v1.create_user_id
+  ,v1.address
+  ,v1.email
+  ,v1.bvn
+  ,v1.phone_number
+  ,v1.second_phone_number
+  ,v1.bd_invitation_code
   ,v1.bd_id
 
   ,v1.job_id
@@ -280,9 +269,10 @@ select
   ,v1.bd_real_id
   ,v1.bd_name
 
-  ,v1.created_at
-  ,v1.updated_at
-  ,v1.certification_time
+  ,v1.earnest_money
+  ,v1.create_time
+  ,v1.update_time
+
   ,if(v1.first_order_time = '9999-12-31 00:00:00' and v2.create_time is not null,v2.create_time,v1.first_order_time) as first_order_time
   
   ,date_format('{v_date}', 'yyyy-MM-dd HH') as utc_date_hour
@@ -295,8 +285,11 @@ from
 left join
   retailer_trade_time as v2
 on
-  v1.opay_id = v2.payer
+  v1.opay_id = v2.payee
 ;
+
+
+
 
 
     '''.format(
@@ -358,7 +351,7 @@ def execution_data_task_id(ds, dag, **kwargs):
     cf = CountriesPublicFrame_dev(args)
 
     # 读取sql
-    _sql = "\n" + cf.alter_partition() + "\n" + dwm_otrade_b2b_retailer_crm_first_hf_sql_task(ds, v_date)
+    _sql = "\n" + cf.alter_partition() + "\n" + dwm_otrade_b2b_supplier_first_hf_sql_task(ds, v_date)
 
     logging.info('Executing: %s', _sql)
 
@@ -369,8 +362,8 @@ def execution_data_task_id(ds, dag, **kwargs):
     cf.touchz_success()
 
 
-dwm_otrade_b2b_retailer_crm_first_hf_task = PythonOperator(
-    task_id='dwm_otrade_b2b_retailer_crm_first_hf_task',
+dwm_otrade_b2b_supplier_first_hf_task = PythonOperator(
+    task_id='dwm_otrade_b2b_supplier_first_hf_task',
     python_callable=execution_data_task_id,
     provide_context=True,
     op_kwargs={
@@ -382,8 +375,8 @@ dwm_otrade_b2b_retailer_crm_first_hf_task = PythonOperator(
     dag=dag
 )
 
-dwm_otrade_b2b_retailer_crm_first_hf_check_pre_locale_task >> dwm_otrade_b2b_retailer_crm_first_hf_task
-dim_otrade_b2b_retailer_info_crm_hf_check_task >> dwm_otrade_b2b_retailer_crm_first_hf_task
-ods_binlog_base_otrade_order_all_hi_check_task >> dwm_otrade_b2b_retailer_crm_first_hf_task
+dwm_otrade_b2b_supplier_first_hf_check_pre_locale_task >> dwm_otrade_b2b_supplier_first_hf_task
+dim_otrade_b2b_supplier_info_hf_check_task >> dwm_otrade_b2b_supplier_first_hf_task
+ods_binlog_base_otrade_order_all_hi_check_task >> dwm_otrade_b2b_supplier_first_hf_task
 
 
