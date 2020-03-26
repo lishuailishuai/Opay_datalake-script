@@ -102,13 +102,13 @@ def dwd_oride_passenger_df_sql_task(ds):
         insert overwrite table {db}.{table} partition(country_code,dt)
 
         SELECT
-            nvl(data_user.id,data_user_bef.passenger_id) as passenger_id,--'用户 ID', 
-            nvl(data_user.phone_number,data_user_bef.phone_number) as passenger_id,--'手机号' 
-            nvl(data_user.first_name,data_user_bef.first_name) as passenger_id,--'名'
-            nvl(data_user.last_name,data_user_bef.last_name) as passenger_id,--'性'
-            nvl(data_user.promoter_code,data_user_bef.promoter_code) as passenger_id,--'推广员代码'
-            nvl(from_unixtime(unix_timestamp(data_user.updated_at)+3600,'yyyy-MM-dd'),data_user_bef.updated_at) as passenger_id,--'最后更新时间', 
-            nvl(data_user.opay_id,data_user_bef.opay_id) as passenger_id,--'用户OPAYID'
+            nvl(data_user.id,data_user_bef.passenger_id),--'用户 ID', 
+            nvl(data_user.phone_number,data_user_bef.phone_number),--'手机号' 
+            nvl(data_user.first_name,data_user_bef.first_name),--'名'
+            nvl(data_user.last_name,data_user_bef.last_name),--'性'
+            nvl(data_user.promoter_code,data_user_bef.promoter_code),--'推广员代码'
+            nvl(from_unixtime(unix_timestamp(data_user.updated_at)+3600,'yyyy-MM-dd'),data_user_bef.updated_at),--'最后更新时间', 
+            nvl(data_user.opay_id,data_user_bef.opay_id),--'用户OPAYID'
             'nal' as country_code,
             '{pt}' as dt
         FROM
