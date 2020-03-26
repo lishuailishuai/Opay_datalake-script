@@ -188,7 +188,8 @@ def app_opay_active_user_report_d_sql_task(ds,ds_nodash):
         m.user_id,
         role
     from 
-        (select user_id,dt,date_format(last_visit_time,'yyyy-MM-dd') last_visit from opay_dw.dwm_opay_user_last_visit_df where dt='{pt}' and last_visit > date_sub('{pt}',30)) m 
+        (select user_id,dt,date_format(last_visit_time,'yyyy-MM-dd') last_visit from opay_dw.dwm_opay_user_last_visit_df 
+         where dt='{pt}' and date_format(last_visit_time,'yyyy-MM-dd') > date_sub('{pt}',30)) m 
     left join 
         test_db.user_base_{date} m1
     on m.user_id=m1.user_id;
