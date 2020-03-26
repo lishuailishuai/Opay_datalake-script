@@ -212,7 +212,7 @@ retailer_info as (
 ),
 
 --3.最新一小时支付数据
-update_order_info as (
+update_pay_info as (
   select
     order_id
     ,opay_pay_id
@@ -221,6 +221,12 @@ update_order_info as (
     ,req_status
   from
     (
+    select
+      order_id
+      ,opay_pay_id
+      ,actual_amount
+      ,pay_status
+      ,req_status
       ,row_number() over(partition by order_id order by `__ts_ms` desc,`__file` desc,cast(`__pos` as int) desc) rn
     from
       otrade_dw_ods.ods_binlog_base_otrade_pay_all_hi
@@ -416,7 +422,7 @@ left join
 on
   v1.payer = v3.opay_id
 left join
-  update_order_info as v4
+  update_pay_info as v4
 on
   v1.order_id = v4.order_id
 ;
