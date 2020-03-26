@@ -62,10 +62,10 @@ dim_opay_bd_relation_df_task = OssSensor(
     dag=dag
 )
 
-ods_bd_admin_users_df_prev_day_task = OssSensor(
-    task_id='ods_bd_admin_users_prev_day_task',
+dim_opay_bd_admin_user_df_prev_day_task = OssSensor(
+    task_id='dim_opay_bd_admin_user_df_prev_day_task',
     bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opay_dw_sqoop/opay_agent_crm/bd_admin_users",
+        hdfs_path_str="opay/opay_dw/dim_opay_bd_admin_user_df/country_code=NG",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -156,10 +156,10 @@ def app_opay_bd_agent_report_d_sql_task(ds, ds_nodash):
     with 
         bd_data as (
             select 
-                id as bd_admin_user_id, username as bd_admin_user_name, mobile as bd_admin_user_mobile,
-                department_id as bd_admin_dept_id, job_id as bd_admin_job_id, leader_id as bd_admin_leader_id
-            from opay_dw_ods.ods_sqoop_base_bd_admin_users_df 
-            where dt = '{pt}' and job_id > 0
+                bd_admin_user_id, bd_admin_user_name, bd_admin_mobile,
+                department_id, bd_admin_job_id, bd_admin_leader_id
+            from opay_dw.dim_opay_bd_admin_user_df 
+            where dt = '{pt}' and bd_admin_job_id > 0
         ),
         cube_data as (
             select 
@@ -186,8 +186,8 @@ def app_opay_bd_agent_report_d_sql_task(ds, ds_nodash):
         )
         insert overwrite table {db}.{table} partition(country_code='NG', dt='{pt}')
         select 
-            bd.bd_admin_user_id, bd.bd_admin_user_name, bd.bd_admin_user_mobile, 
-            bd.bd_admin_dept_id, bd.bd_admin_job_id, bd.bd_admin_leader_id,
+            bd.bd_admin_user_id, bd.bd_admin_user_name, bd.bd_admin_mobile, 
+            bd.department_id, bd.bd_admin_job_id, bd.bd_admin_leader_id,
             audited_agent_cnt_his, audited_agent_cnt_m, audited_agent_cnt,
             rejected_agent_cnt_m, rejected_agent_cnt,
             ci_suc_order_cnt, ci_suc_order_amt, ci_suc_order_cnt_m, ci_suc_order_amt_m,
@@ -284,5 +284,5 @@ app_opay_bd_agent_report_d_task = PythonOperator(
 )
 
 dwm_opay_bd_agent_cico_df_task >> app_opay_bd_agent_report_d_task
-ods_bd_admin_users_df_prev_day_task >> app_opay_bd_agent_report_d_task
+dim_opay_bd_admin_user_df_prev_day_task >> app_opay_bd_agent_report_d_task
 dim_opay_bd_relation_df_task >> app_opay_bd_agent_report_d_task
