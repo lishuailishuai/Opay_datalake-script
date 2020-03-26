@@ -166,6 +166,11 @@ select
   ,retailer_first_order
   ,retailer_first_order_time
 
+  ,opay_pay_id
+  ,actual_amount
+  ,pay_status
+  ,req_status
+
   ,'NG' as country_code
   ,'{pt}' as dt
 from
@@ -243,6 +248,11 @@ from
     ,retailer_bd_name
     ,retailer_first_order
     ,retailer_first_order_time
+
+    ,opay_pay_id
+    ,actual_amount
+    ,pay_status
+    ,req_status
 
     ,row_number() over(partition by id order by update_time desc) rn
   from

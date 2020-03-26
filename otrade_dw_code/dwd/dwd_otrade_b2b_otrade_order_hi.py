@@ -97,6 +97,20 @@ ods_binlog_base_otrade_order_all_hi_check_task = OssSensor(
     dag=dag
 )
 
+### 检查当前小时的分区依赖
+###oss://opay-datalake/otrade_all_hi/ods_binlog_base_otrade_pay_all_hi
+ods_binlog_base_otrade_pay_all_hi_check_task = OssSensor(
+    task_id='ods_binlog_base_otrade_pay_all_hi_check_task',
+    bucket_key='{hdfs_path_str}/dt={pt}/hour={hour}/_SUCCESS'.format(
+        hdfs_path_str="otrade_all_hi/ods_binlog_base_otrade_pay_all_hi",
+        pt='{{ds}}',
+        hour='{{ execution_date.strftime("%H") }}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
 def fun_task_timeout_monitor(ds, dag, execution_date, **op_kwargs):
     dag_ids = dag.dag_id
@@ -195,6 +209,28 @@ retailer_info as (
     concat(dt,' ',hour) >= default.minLocalTimeRange("{config}", '{v_date}', 0)
     and concat(dt,' ',hour) <= default.maxLocalTimeRange("{config}", '{v_date}', 0) 
     and utc_date_hour = date_format("{v_date}", 'yyyy-MM-dd HH')
+),
+
+--3.最新一小时支付数据
+update_order_info as (
+  select
+    order_id
+    ,opay_pay_id
+    ,actual_amount
+    ,pay_status
+    ,req_status
+  from
+    (
+      ,row_number() over(partition by order_id order by `__ts_ms` desc,`__file` desc,cast(`__pos` as int) desc) rn
+    from
+      otrade_dw_ods.ods_binlog_base_otrade_pay_all_hi
+    where
+      dt = date_format('{v_date}', 'yyyy-MM-dd')
+      and hour= date_format('{v_date}', 'HH')
+      and `__deleted` = 'false'
+    ) as a
+  where
+    rn = 1
 ),
 
 --3.取订单最新一小时数据
@@ -359,6 +395,11 @@ select
   ,if(v1.create_time>=v3.retailer_first_order_time,0,1) as retailer_first_order
   ,nvl(v3.retailer_first_order_time,v1.create_time) as retailer_first_order_time
 
+  ,v4.opay_pay_id
+  ,v4.actual_amount
+  ,v4.pay_status
+  ,v4.req_status
+
   ,date_format('{v_date}', 'yyyy-MM-dd HH') as utc_date_hour
 
   ,'NG' as country_code
@@ -374,11 +415,11 @@ left join
   retailer_info as v3
 on
   v1.payer = v3.opay_id
+left join
+  update_order_info as v4
+on
+  v1.order_id = v4.order_id
 ;
-
-
-
-
 
 
 
@@ -468,6 +509,6 @@ dwd_otrade_b2b_otrade_order_hi_task = PythonOperator(
 dim_otrade_b2b_supplier_info_hf_check_task >> dwd_otrade_b2b_otrade_order_hi_task
 dwm_otrade_b2b_retailer_crm_first_hf_check_task >> dwd_otrade_b2b_otrade_order_hi_task
 ods_binlog_base_otrade_order_all_hi_check_task >> dwd_otrade_b2b_otrade_order_hi_task
-
+ods_binlog_base_otrade_pay_all_hi_check_task >> dwd_otrade_b2b_otrade_order_hi_task
 
 
