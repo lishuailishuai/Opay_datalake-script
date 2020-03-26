@@ -35,16 +35,16 @@ args = {
 }
 
 dag = airflow.DAG('dim_opay_bd_relation_df',
-                  schedule_interval="00 01 * * *",
+                  schedule_interval="10 01 * * *",
                   default_args=args
                   )
 
 ##----------------------------------------- 依赖 ---------------------------------------##
 
-ods_bd_admin_users_df_prev_day_task = OssSensor(
-    task_id='ods_bd_admin_users_prev_day_task',
+dim_opay_bd_admin_user_df_prev_day_task = OssSensor(
+    task_id='dim_opay_bd_admin_user_df_prev_day_task',
     bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opay_dw_sqoop/opay_agent_crm/bd_admin_users",
+        hdfs_path_str="opay/opay_dw/dim_opay_bd_admin_user_df/country_code=NG",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -84,70 +84,71 @@ def dim_opay_bd_relation_df_sql_task(ds):
     set hive.exec.dynamic.partition.mode=nonstrict;
     with bd_data as (
         select 
-            id, username, if(leader_id = 0, id, leader_id) leader_id, job_id, created_at, updated_at, status
-        from opay_dw_ods.ods_sqoop_base_bd_admin_users_df 
-        where dt = '{pt}' and job_id > 0
+            bd_admin_user_id, bd_admin_user_name, if(bd_admin_leader_id = 0, bd_admin_user_id, bd_admin_leader_id) bd_admin_leader_id,
+            bd_admin_job_id, create_time, update_time, status
+        from opay_dw.dim_opay_bd_admin_user_df 
+        where dt = '{pt}' and bd_admin_job_id > 0
     )  
     insert overwrite table {db}.{table} partition (country_code = 'NG', dt = '{pt}')
     select 
-          t6.id as bd_admin_user_id,
-          t6.username as bd_admin_user_name,
-          t6.job_id as bd_admin_job_id,
-          t6.status as bd_admin_status,
+          t6.bd_admin_user_id,
+          t6.bd_admin_user_name,
+          t6.bd_admin_job_id,
+          t6.status,
           -- 第六季
           case
-            when t6.job_id = 6 then t6.id 
+            when t6.bd_admin_job_id = 6 then t6.bd_admin_user_id 
             else null
             end as job_bd_user_id,
           -- 第五季
           case
-            when t5.job_id = 5 then t5.id 
-            when t6.job_id = 5 then t6.id
+            when t5.bd_admin_job_id = 5 then t5.bd_admin_user_id 
+            when t6.bd_admin_job_id = 5 then t6.bd_admin_user_id
             else null
             end as job_bdm_user_id,    
           -- 第四季
           case
-            when t4.job_id = 4 then t4.id
-            when t6.job_id = 4 then t6.id
-            when t5.job_id = 4 then t5.id
+            when t4.bd_admin_job_id = 4 then t4.bd_admin_user_id
+            when t6.bd_admin_job_id = 4 then t6.bd_admin_user_id
+            when t5.bd_admin_job_id = 4 then t5.bd_admin_user_id
             
             else null
             end as job_rm_user_id,    
           -- 第三季
           case
-            when t3.job_id = 3 then t3.id
-            when t4.job_id = 3 then t4.id
-            when t5.job_id = 3 then t5.id
-            when t6.job_id = 3 then t6.id
+            when t3.bd_admin_job_id = 3 then t3.bd_admin_user_id
+            when t4.bd_admin_job_id = 3 then t4.bd_admin_user_id
+            when t5.bd_admin_job_id = 3 then t5.bd_admin_user_id
+            when t6.bd_admin_job_id = 3 then t6.bd_admin_user_id
             else null
             end as job_cm_user_id,   
          -- 第二季
           case
-            when t2.job_id = 2 then t2.id
-            when t3.job_id = 2 then t3.id
-            when t4.job_id = 2 then t4.id
-            when t5.job_id = 2 then t5.id
-            when t6.job_id = 2 then t6.id
+            when t2.bd_admin_job_id = 2 then t2.bd_admin_user_id
+            when t3.bd_admin_job_id = 2 then t3.bd_admin_user_id
+            when t4.bd_admin_job_id = 2 then t4.bd_admin_user_id
+            when t5.bd_admin_job_id = 2 then t5.bd_admin_user_id
+            when t6.bd_admin_job_id = 2 then t6.bd_admin_user_id
             else null
             end as job_hcm_user_id,    
         -- 第一季
           case
-            when t1.job_id = 1 then t1.id
-            when t2.job_id = 1 then t2.id
-            when t3.job_id = 1 then t3.id
-            when t4.job_id = 1 then t4.id
-            when t5.job_id = 1 then t5.id
-            when t6.job_id = 1 then t6.id
+            when t1.bd_admin_job_id = 1 then t1.bd_admin_user_id
+            when t2.bd_admin_job_id = 1 then t2.bd_admin_user_id
+            when t3.bd_admin_job_id = 1 then t3.bd_admin_user_id
+            when t4.bd_admin_job_id = 1 then t4.bd_admin_user_id
+            when t5.bd_admin_job_id = 1 then t5.bd_admin_user_id
+            when t6.bd_admin_job_id = 1 then t6.bd_admin_user_id
             else null
             end as job_pic_user_id,
-            t6.created_at as create_time,
-            t6.updated_at as update_time
+            t6.create_time,
+            t6.update_time
       from bd_data t6
-      left join bd_data t5 on t6.leader_id = t5.id
-      left join bd_data t4 on t5.leader_id = t4.id
-      left join bd_data t3 on t4.leader_id = t3.id
-      left join bd_data t2 on t3.leader_id = t2.id
-      left join bd_data t1 on t2.leader_id = t1.id
+      left join bd_data t5 on t6.bd_admin_leader_id = t5.bd_admin_user_id
+      left join bd_data t4 on t5.bd_admin_leader_id = t4.bd_admin_user_id
+      left join bd_data t3 on t4.bd_admin_leader_id = t3.bd_admin_user_id
+      left join bd_data t2 on t3.bd_admin_leader_id = t2.bd_admin_user_id
+      left join bd_data t1 on t2.bd_admin_leader_id = t1.bd_admin_user_id
     '''.format(
         pt=ds,
         table=table_name,
@@ -185,4 +186,4 @@ dim_opay_bd_relation_df_task = PythonOperator(
     dag=dag
 )
 
-ods_bd_admin_users_df_prev_day_task >> dim_opay_bd_relation_df_task
+dim_opay_bd_admin_user_df_prev_day_task >> dim_opay_bd_relation_df_task
