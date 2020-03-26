@@ -71,8 +71,8 @@ table_list = [
    #push
     ("opay_message_center", "opay_message_statistic", "push_db", "push", 3, "opay_message_center_db", "false"),
     ("opay_message_center", "opay_push_task", "push_db", "push", 3, "opay_message_center_db", "false"),
-    ("opay_message_center", "opay_user_tags_new", "push_db", "push", 3, "opay_message_center_db", "false")
-
+    ("opay_message_center", "opay_user_tags_new", "push_db", "push", 3, "opay_message_center_db", "false"),
+    ("opay_message_center", "opay_users", "push_db", "push", 3, "opay_message_center_db", "false")
 ]
 
 HIVE_DB = 'opay_dw_ods'
