@@ -135,7 +135,7 @@ def dim_opay_bd_admin_user_hf_sql_task(ds, v_date):
             update_user_id as bd_admin_update_user_id,
             created_at as create_time,
             updated_at as update_time,    
-            row_number() over(partition by opay_id order by `__ts_ms` desc,`__file` desc,cast(`__pos` as int) desc) rn
+            row_number() over(partition by id order by `__ts_ms` desc,`__file` desc,cast(`__pos` as int) desc) rn
         from opay_dw_ods.ods_binlog_base_bd_admin_users_hi 
         where concat(dt, " ", hour) = date_format('{v_date}', 'yyyy-MM-dd HH') and `__deleted` = 'false'
     )
@@ -187,7 +187,7 @@ def dim_opay_bd_admin_user_hf_sql_task(ds, v_date):
             create_time,
             update_time,
             country_code,
-            row_number() over(partition by user_id order by update_time desc) rn
+            row_number() over(partition by bd_admin_user_id order by update_time desc) rn
         from (
             SELECT 
                 bd_admin_user_id, 
