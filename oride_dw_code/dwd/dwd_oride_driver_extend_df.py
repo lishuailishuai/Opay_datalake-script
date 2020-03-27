@@ -167,7 +167,7 @@ def dwd_oride_driver_extend_df_sql_task(ds):
           nvl(data_driver.last_trip_id,data_driver_bef.last_trip_id),--'最近一个行程的ID', 
           nvl(data_driver.assign_mode,data_driver_bef.assign_mode),--'强派模式 (0: 禁用 1: 启用)', 
           nvl(data_driver.auto_start,data_driver_bef.auto_start),--'自动开始 (0: 禁用 1: 启用)', 
-          nvl(data_driver.country_id,data_driver_bef.country_id),--'所属国家', 
+          nvl(data_driver.city_id,data_driver_bef.city_id),--'所属城市ID', 
           nvl(data_driver.fee_free,data_driver_bef.fee_free),--'免佣金（0:不免佣金 1:免佣金）', 
           nvl(data_driver.version,data_driver_bef.version),--'司机端版本号', 
           nvl(data_driver.home_address,data_driver_bef.home_address),--'顺路地址', 
