@@ -207,7 +207,7 @@ def dim_oride_driver_base_sql_task(ds):
         
         language, --客户端语言
         
-        country_id,  --所属国家
+        city_id,  --所属国家
 
         register_time as local_register_time,
 
