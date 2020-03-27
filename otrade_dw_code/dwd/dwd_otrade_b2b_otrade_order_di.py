@@ -371,6 +371,12 @@ dwd_otrade_b2b_otrade_order_di_task = PythonOperator(
     task_id='dwd_otrade_b2b_otrade_order_di_task',
     python_callable=execution_data_task_id,
     provide_context=True,
+    op_kwargs={
+        'v_execution_date': '{{execution_date.strftime("%Y-%m-%d %H:%M:%S")}}',
+        'v_execution_day': '{{execution_date.strftime("%Y-%m-%d")}}',
+        'v_execution_hour': '{{execution_date.strftime("%H")}}',
+        'owner': '{{owner}}'
+    },
     dag=dag
 )
 
