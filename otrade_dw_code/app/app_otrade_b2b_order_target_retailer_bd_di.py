@@ -94,6 +94,7 @@ set hive.exec.dynamic.partition.mode=nonstrict;
 set hive.strict.checks.cartesian.product=false;
 
 --1.销售情况分析
+with
 order_info as (
   select
     retailer_hcm_id as hcm_id
@@ -165,7 +166,7 @@ order_info as (
 --2.插入数据
 insert overwrite table otrade_dw.app_otrade_b2b_order_target_retailer_bd_di partition(country_code,dt)
 select
-  ,hcm_id
+  hcm_id
   ,hcm_name
   ,cm_id
   ,cm_name
