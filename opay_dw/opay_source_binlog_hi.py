@@ -181,7 +181,7 @@ table_list = [
 
     ("opay_channel", "channel_transaction", "opay_channel","channel_transaction","opay_channel", "base", 3, "opay_channel_db", "false"),
     ("opay_channel", "card_bin", "opay_channel", "card_bin","opay_channel",  "base", 3, "opay_channel_db","false"),
-    # ("opay_channel", "openapi_scene_order", "opay_channel", "openapi_scene_order","opay_channel", "base", 3, "opay_channel_db","false"),
+    ("opay_scene", "openapi_scene_order", "opay_scene", "openapi_scene_order","opay_scene", "base", 3, "opay_channel_db","false"),
 
     ("opay_agent_crm", "bd_agent", "opay_agent_crm","bd_agent", "opay_agent_crm_db", "base", 3, "opay_agent_crm", "false"),
     ("opay_agent_crm", "bd_admin_users", "opay_agent_crm","bd_admin_users", "opay_agent_crm_db", "base", 3, "opay_agent_crm", "false"),
