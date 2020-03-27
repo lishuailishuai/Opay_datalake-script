@@ -106,8 +106,18 @@ def dwm_opay_bd_agent_trans_df_sql_task(ds):
     
 	insert overwrite table {db}.{table} partition(country_code='NG', dt='{pt}')
 	select 
-        coalesce(agent_data.bd_admin_user_id, cico_data.bd_admin_user_id) as bd_admin_user_id, 
-        coalesce(agent_data.business_date, cico_data.business_date) as business_date, 
+        coalesce(
+            pos_trans_data.bd_admin_user_id, 
+            pos_distinct_data.bd_admin_user_id, 
+            agent_data.bd_admin_user_id, 
+            cico_data.bd_admin_user_id, 
+            terminal_data.bd_admin_user_id) as bd_admin_user_id, 
+        coalesce(
+            pos_trans_data.business_date, 
+            pos_distinct_data.business_date, 
+            agent_data.business_date, 
+            cico_data.business_date, 
+            terminal_data.business_date) as business_date, 
         nvl(agent_data.audit_suc_cnt, 0) as audit_suc_cnt, 
         nvl(agent_data.audit_fail_cnt, 0) as audit_fail_cnt,
         nvl(ci_suc_order_cnt, 0) as ci_suc_order_cnt,
@@ -163,7 +173,7 @@ def dwm_opay_bd_agent_trans_df_sql_task(ds):
             where dt = '{pt}'
         ) t1 on t0.user_id = t1.owner_id
         group by t0.bd_admin_user_id
-    ) terminal_data on agent_data.bd_admin_user_id = terminal_data.bd_admin_user_id and agent_data.business_date = terminal_data.business_date
+    ) terminal_data on cico_data.bd_admin_user_id = terminal_data.bd_admin_user_id and cico_data.business_date = terminal_data.business_date
     -- pos trans
     full join (
         select 
@@ -179,7 +189,7 @@ def dwm_opay_bd_agent_trans_df_sql_task(ds):
             where dt between date_format('{pt}', 'yyyy-MM-01') and '{pt}' and order_status = 'SUCCESS' and bd_agent_status = 1
         ) t0 where rn = 1 and date_format(create_date, 'yyyy-MM') = date_format('{pt}', 'yyyy-MM')
         group by bd_admin_user_id, create_date
-    ) pos_trans_data on agent_data.bd_admin_user_id = pos_trans_data.bd_admin_user_id and agent_data.business_date = pos_trans_data.business_date
+    ) pos_trans_data on terminal_data.bd_admin_user_id = pos_trans_data.bd_admin_user_id and terminal_data.business_date = pos_trans_data.business_date
     -- pos distinct
     full join (
         select 
@@ -195,7 +205,8 @@ def dwm_opay_bd_agent_trans_df_sql_task(ds):
             where dt between date_format('{pt}', 'yyyy-MM-01') and '{pt}' and bd_agent_status = 1
         ) t0 where rn = 1 and date_format(create_date, 'yyyy-MM') = date_format('{pt}', 'yyyy-MM')
         group by bd_admin_user_id
-    ) pos_distinct_data on agent_data.bd_admin_user_id = pos_distinct_data.bd_admin_user_id and agent_data.business_date = pos_distinct_data.business_date
+    ) pos_distinct_data on pos_trans_data.bd_admin_user_id = pos_distinct_data.bd_admin_user_id 
+        and pos_trans_data.business_date = pos_distinct_data.business_date
     '''.format(
         pt=ds,
         table=table_name,
