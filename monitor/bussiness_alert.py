@@ -351,27 +351,27 @@ metrcis_list = [
     # 24
     (
         'Trade_TakeRide',
-        '''SELECT "trade_cnt" AS "trade_cnt","trade_user_cnt" AS "trade_user_cnt" ,"trade_amount" AS "trade_amount" FROM "OPAY_TRANSACTION_OP_EVENT_CQ_RESULT_8" WHERE time > {time}  ''',
+        '''SELECT "trade_cnt" AS "trade_cnt","trade_user_cnt" AS "trade_user_cnt" ,"trade_amount" AS "trade_amount" FROM "OPAY_TRANSACTION_EVENT_TAKERIDE_CQ_RESULT" WHERE time > {time}  ''',
         'trade_alert_value',
         7,
         'trade_alert_level_1_address',
         'trade_alert_level_2_address',
         False,
         3,
-        'influx_address_1'
+        'influx_address_2'
     ),
 
     # 25
     (
         'Trade_TakeRide_Success',
-        '''SELECT "trade_success_cnt" AS "trade_success_cnt"  FROM "OPAY_TRANSACTION_OP_EVENT_CQ_RESULT_10" WHERE ("__source_table" = 'merchant_acquiring_record') and time > {time} ''',
+        '''SELECT "trade_success_cnt" AS "trade_success_cnt"  FROM "OPAY_TRANSACTION_EVENT_TAKERIDE_SUCCESS_CQ_RESULT" WHERE  time > {time} ''',
         'trade_alert_value',
         7,
         'trade_alert_level_1_address',
         'trade_alert_level_2_address',
         False,
         3,
-        'influx_address_1'
+        'influx_address_2'
     ),
 
     ## OrideSalary
@@ -405,27 +405,27 @@ metrcis_list = [
     # 28
     (
         'Trade_Subscribe',
-        '''SELECT "trade_cnt" AS "trade_cnt","trade_user_cnt" AS "trade_user_cnt" ,"trade_amount" AS "trade_amount" FROM "OPAY_TRANSACTION_OP_EVENT_CQ_RESULT_11" WHERE time > {time} ''',
+        '''SELECT "trade_cnt" AS "trade_cnt","trade_user_cnt" AS "trade_user_cnt" ,"trade_amount" AS "trade_amount" FROM "OPAY_TRANSACTION_EVENT_SUBSCRIBE_CQ_RESULT" WHERE time > {time} ''',
         'trade_alert_value',
         7,
         'trade_alert_level_1_address',
         'trade_alert_level_2_address',
         False,
         3,
-        'influx_address_1'
+        'influx_address_2'
     ),
 
     # 29
     (
         'Trade_Subscribe_Success',
-        '''SELECT "trade_success_cnt" AS "trade_success_cnt" FROM "OPAY_TRANSACTION_OP_EVENT_CQ_RESULT_13" WHERE ("__source_table" = 'merchant_acquiring_record')  and time > {time} ''',
+        '''SELECT "trade_success_cnt" AS "trade_success_cnt" FROM "OPAY_TRANSACTION_EVENT_SUBSCRIBE_SUCCESS_CQ_RESULT" WHERE time > {time} ''',
         'trade_alert_value',
         7,
         'trade_alert_level_1_address',
         'trade_alert_level_2_address',
         False,
         3,
-        'influx_address_1'
+        'influx_address_2'
     ),
 
     ## Redeem
@@ -459,27 +459,27 @@ metrcis_list = [
     # 32
     (
         'Trade_Repayment',
-        '''SELECT "trade_cnt" AS "trade_cnt","trade_user_cnt" AS "trade_user_cnt" ,"trade_amount" AS "trade_amount" FROM "OPAY_TRANSACTION_OP_EVENT_CQ_RESULT_14" WHERE  time > {time} ''',
+        '''SELECT "trade_cnt" AS "trade_cnt","trade_user_cnt" AS "trade_user_cnt" ,"trade_amount" AS "trade_amount" FROM "OPAY_TRANSACTION_EVENT_REPAYMENT_CQ_RESULT" WHERE  time > {time} ''',
         'trade_alert_value',
         7,
         'trade_alert_level_1_address',
         'trade_alert_level_2_address',
         False,
         3,
-        'influx_address_1'
+        'influx_address_2'
     ),
 
     # 33
     (
         'Trade_Repayment_Success',
-        '''SELECT "trade_success_cnt" AS "trade_success_cnt" FROM "OPAY_TRANSACTION_OP_EVENT_CQ_RESULT_16" WHERE ("__source_table" = 'merchant_acquiring_record') and time > {time} ''',
+        '''SELECT "trade_success_cnt" AS "trade_success_cnt" FROM "OPAY_TRANSACTION_EVENT_REPAYMENT_SUCCESS_CQ_RESULT" WHERE time > {time} ''',
         'trade_alert_value',
         7,
         'trade_alert_level_1_address',
         'trade_alert_level_2_address',
         False,
         3,
-        'influx_address_1'
+        'influx_address_2'
     ),
 
     ## Loan
@@ -513,27 +513,27 @@ metrcis_list = [
     # 36
     (
         'Trade_TakeOut',
-        '''SELECT "trade_cnt" AS "trade_cnt","trade_user_cnt" AS "trade_user_cnt" ,"trade_amount" AS "trade_amount" FROM "OPAY_TRANSACTION_OP_EVENT_CQ_RESULT_17" WHERE  time > {time} ''',
+        '''SELECT "trade_cnt" AS "trade_cnt","trade_user_cnt" AS "trade_user_cnt" ,"trade_amount" AS "trade_amount" FROM "OPAY_TRANSACTION_EVENT_TAKEOUT_CQ_RESULT" WHERE  time > {time} ''',
         'trade_alert_value',
         7,
         'trade_alert_level_1_address',
         'trade_alert_level_2_address',
         False,
         3,
-        'influx_address_1'
+        'influx_address_2'
     ),
 
     # 37
     (
         'Trade_TakeOut_Success',
-        '''SELECT "trade_success_cnt" AS "trade_success_cnt" FROM "OPAY_TRANSACTION_OP_EVENT_CQ_RESULT_19" WHERE ("__source_table" = 'merchant_acquiring_record') and time > {time}''',
+        '''SELECT "trade_success_cnt" AS "trade_success_cnt" FROM "OPAY_TRANSACTION_EVENT_TAKEOUT_SUCCESS_CQ_RESULT" WHERE  time > {time}''',
         'trade_alert_value',
         7,
         'trade_alert_level_1_address',
         'trade_alert_level_2_address',
         False,
         3,
-        'influx_address_1'
+        'influx_address_2'
     ),
 
     ## FoodCashback
@@ -567,27 +567,27 @@ metrcis_list = [
     # 40
     (
         'Trade_QRCode',
-        '''SELECT "trade_cnt" AS "trade_cnt","trade_user_cnt" AS "trade_user_cnt" ,"trade_amount" AS "trade_amount" FROM "OPAY_TRANSACTION_OP_EVENT_CQ_RESULT_20" WHERE time > {time} ''',
+        '''SELECT "trade_cnt" AS "trade_cnt","trade_user_cnt" AS "trade_user_cnt" ,"trade_amount" AS "trade_amount" FROM "OPAY_TRANSACTION_EVENT_QRCODE_CQ_RESULT" WHERE time > {time} ''',
         'trade_alert_value',
         7,
         'trade_alert_level_1_address',
         'trade_alert_level_2_address',
         False,
         3,
-        'influx_address_1'
+        'influx_address_2'
     ),
 
     # 41
     (
         'Trade_QRCode_Success',
-        '''SELECT "trade_success_cnt" AS "trade_success_cnt" FROM "OPAY_TRANSACTION_OP_EVENT_CQ_RESULT_21" WHERE time > {time} ''',
+        '''SELECT "trade_success_cnt" AS "trade_success_cnt" FROM "OPAY_TRANSACTION_EVENT_QRCODE_SUCCESS_CQ_RESULT" WHERE time > {time} ''',
         'trade_alert_value',
         7,
         'trade_alert_level_1_address',
         'trade_alert_level_2_address',
         False,
         3,
-        'influx_address_1'
+        'influx_address_2'
     ),
 
     ## QRCashback
@@ -648,20 +648,20 @@ metrcis_list = [
     # 46
     (
         'Trade_MAcquiring',
-        '''SELECT "trade_cnt" AS "trade_cnt","trade_user_cnt" AS "trade_user_cnt" ,"trade_amount" AS "trade_amount" FROM "OPAY_TRANSACTION_OP_EVENT_CQ_RESULT_26" WHERE  time > {time}  ''',
+        '''SELECT "trade_cnt" AS "trade_cnt","trade_user_cnt" AS "trade_user_cnt" ,"trade_amount" AS "trade_amount" FROM "OPAY_TRANSACTION_EVENT_MACQUIRING_CQ_RESULT" WHERE  time > {time}  ''',
         'trade_alert_value',
         7,
         'trade_alert_level_1_address',
         'trade_alert_level_2_address',
         False,
         3,
-        'influx_address_1'
+        'influx_address_2'
     ),
 
     # 47
     (
         'Trade_MAcquiring_Success',
-        '''SELECT "trade_success_cnt" AS "trade_success_cnt" FROM "OPAY_TRANSACTION_OP_EVENT_CQ_RESULT_27" WHERE  time > {time} ''',
+        '''SELECT "trade_success_cnt" AS "trade_success_cnt" FROM "OPAY_TRANSACTION_EVENT_MACQUIRING_SUCCESS_CQ_RESULT" WHERE  time > {time} ''',
         'trade_alert_value',
         7,
         'trade_alert_level_1_address',
