@@ -81,7 +81,7 @@ def fun_task_timeout_monitor(ds, dag, **op_kwargs):
 
     tb = [
         {"dag": dag, "db": "otrade_dw", "table": "{dag_name}".format(dag_name=dag_ids),
-         "partition": "country_code=NG/dt={pt}".format(pt=ds), "timeout": "3000"}
+         "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "3000"}
     ]
 
     TaskTimeoutMonitor().set_task_monitor(tb)
@@ -262,7 +262,7 @@ select
   ,nvl(v1.pay_people,0) as pay_people
   ,nvl(v1.pay_suc_people,0) as pay_suc_people
   
-  ,'NG' as country_code
+  ,'nal' as country_code
   ,'{pt}' as dt
 from
   order_info as v1

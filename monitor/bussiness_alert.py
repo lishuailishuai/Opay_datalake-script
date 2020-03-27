@@ -240,7 +240,7 @@ metrcis_list = [
     # 17
     (
         'Trade_ACTransfer_Success',
-        '''SELECT "trade_success_cnt" AS "trade_success_cnt" FROM "OPAY_TRANSACTION_OP_EVENT_CQ_RESULT_7" WHERE ("__source_table" = 'user_transfer_card_record' or "__source_table" = 'merchant_transfer_card_record') and time > {time} ''',
+        '''SELECT sum("trade_success_cnt") AS "trade_success_cnt" FROM "OPAY_TRANSACTION_OP_EVENT_CQ_RESULT_7" WHERE ("__source_table" = 'user_transfer_card_record' or "__source_table" = 'merchant_transfer_card_record') and time > {time} ''',
         'trade_alert_value',
         7,
         'trade_alert_level_1_address',
@@ -265,7 +265,7 @@ metrcis_list = [
     # 19
     (
         'Trade_Pos_Success',
-        '''SELECT "trade_success_cnt" AS "trade_success_cnt" FROM "OPAY_TRANSACTION_OP_EVENT_CQ_RESULT_7" WHERE ("__source_table" = 'user_pos_transaction_record' or "__source_table" = 'merchant_pos_transaction_record') and  time > {time} ''',
+        '''SELECT sum("trade_success_cnt") AS "trade_success_cnt" FROM "OPAY_TRANSACTION_OP_EVENT_CQ_RESULT_7" WHERE ("__source_table" = 'user_pos_transaction_record' or "__source_table" = 'merchant_pos_transaction_record') and  time > {time} ''',
         'trade_alert_value',
         7,
         'trade_alert_level_1_address',
@@ -290,7 +290,7 @@ metrcis_list = [
     # 21
     (
         'Trade_TopupWithCard_Success',
-        '''SELECT "trade_success_cnt" AS "trade_success_cnt" FROM "OPAY_TRANSACTION_OP_EVENT_CQ_RESULT_7" WHERE ("__source_table" = 'user_topup_record' or "__source_table" = 'merchant_topup_record') and time > {time} ''',
+        '''SELECT sum("trade_success_cnt") AS "trade_success_cnt" FROM "OPAY_TRANSACTION_OP_EVENT_CQ_RESULT_7" WHERE ("__source_table" = 'user_topup_record' or "__source_table" = 'merchant_topup_record') and time > {time} ''',
         'trade_alert_value',
         7,
         'trade_alert_level_1_address',
@@ -315,7 +315,7 @@ metrcis_list = [
     # 23
     (
         'Trade_Receivemoney_Success',
-        '''SELECT "trade_success_cnt" AS "trade_success_cnt" FROM "OPAY_TRANSACTION_OP_EVENT_CQ_RESULT_7" WHERE ("__source_table" = 'user_receive_money_record' or "__source_table" = 'merchant_receive_money_record')  and time > {time} ''',
+        '''SELECT sum("trade_success_cnt") AS "trade_success_cnt" FROM "OPAY_TRANSACTION_OP_EVENT_CQ_RESULT_7" WHERE ("__source_table" = 'user_receive_money_record' or "__source_table" = 'merchant_receive_money_record')  and time > {time} ''',
         'trade_alert_value',
         7,
         'trade_alert_level_1_address',
