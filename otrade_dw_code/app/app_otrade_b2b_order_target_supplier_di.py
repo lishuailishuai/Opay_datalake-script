@@ -87,7 +87,7 @@ task_timeout_monitor = PythonOperator(
 
 ##----------------------------------------- 脚本 ---------------------------------------##
 
-def dwd_otrade_b2b_otrade_order_di_sql_task(ds):
+def app_otrade_b2b_order_target_supplier_di_sql_task(ds):
     HQL = '''
 
 set hive.exec.parallel=true;
