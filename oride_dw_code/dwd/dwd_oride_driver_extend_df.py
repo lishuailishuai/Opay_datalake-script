@@ -198,7 +198,7 @@ def dwd_oride_driver_extend_df_sql_task(ds):
              ) t1
             where t1.`__deleted` = 'false' and t1.order_by = 1
         ) data_driver
-        on data_driver_bef.driver_id=data_driver.id;
+        on data_driver_bef.id=data_driver.id;
         
 '''.format(
         pt=ds,
