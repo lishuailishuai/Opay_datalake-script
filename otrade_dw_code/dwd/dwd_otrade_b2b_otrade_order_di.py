@@ -173,7 +173,7 @@ select
   ,pay_status
   ,req_status
 
-  ,'nal' as country_code
+  ,'NG' as country_code
   ,'{pt}' as dt
 from
   (
