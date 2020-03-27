@@ -339,7 +339,7 @@ def execution_data_task_id(ds,dag, **kargs):
             "is_country_partition":"true",
             "is_result_force_exist":"false",
             "execute_time":v_date,
-            "is_hour_task":"true",
+            "is_hour_task":"false",
             "frame_type":"local",
             "is_offset":"true",
             "execute_time_offset":-1,
