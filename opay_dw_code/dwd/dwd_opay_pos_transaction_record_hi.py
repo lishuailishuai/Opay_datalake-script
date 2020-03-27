@@ -29,7 +29,7 @@ from utils.get_local_time import GetLocalTime
 
 
 args = {
-    'owner': 'yuanfeng',
+    'owner': 'liushuzhen',
     'start_date': datetime(2020, 2, 13),
     'depends_on_past': False,
     'retries': 3,
@@ -125,8 +125,20 @@ ods_binlog_base_merchant_pos_transaction_record_hi_check_task = OssSensor(
     dag=dag
 )
 
+dim_opay_bd_agent_hf_check_task = OssSensor(
+    task_id='dim_opay_bd_agent_hf_check_task',
+    bucket_key='{hdfs_path_str}/country_code=NG/dt={pt}/hour={hour}/_SUCCESS'.format(
+        hdfs_path_str="opay/opay_dw/dim_opay_bd_agent_hf",
+        pt='{{{{(execution_date+macros.timedelta(hours=({time_zone}+{gap_hour}))).strftime("%Y-%m-%d")}}}}'.format(
+            time_zone=time_zone, gap_hour=0),
+        hour='{{{{(execution_date+macros.timedelta(hours=({time_zone}+{gap_hour}))).strftime("%H")}}}}'.format(
+            time_zone=time_zone, gap_hour=0)
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
 
-##----------------------------------------- 任务超时监控 ---------------------------------------##
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
 def fun_task_timeout_monitor(ds,dag,execution_date,**op_kwargs):
 
@@ -159,217 +171,205 @@ task_timeout_monitor= PythonOperator(
 def dwd_opay_pos_transaction_record_hi_sql_task(ds, v_date):
     HQL = '''
 
-set mapred.max.split.size=1000000;
-set hive.exec.dynamic.partition.mode=nonstrict;
-set hive.exec.parallel=true;
-
-with dim_user_merchant_data as (
-  select 
-    user_id as trader_id
-    , concat(first_name, ' ', middle_name, ' ', surname) as trader_name
-    , `role` as trader_role
-    , kyc_level as trader_kyc_level
-    , state
-  from  
-    opay_dw.dim_opay_user_base_hf
-  where 
-    concat(dt,' ',hour) >= default.minLocalTimeRange("{config}", '{v_date}', 0)
-    and concat(dt,' ',hour) <= default.maxLocalTimeRange("{config}", '{v_date}', 0) 
-    and utc_date_hour = date_format("{v_date}", 'yyyy-MM-dd HH')
-
-  union all
-
-  select 
-    merchant_id as trader_id
-    , merchant_name as trader_name
-    , merchant_type as trader_role
-    , '-' as trader_kyc_level
-    , '-' as state
-  from 
-    opay_dw.dim_opay_merchant_base_hf
-  where  
-    concat(dt,' ',hour) >= default.minLocalTimeRange("{config}", '{v_date}', 0)
-    and concat(dt,' ',hour) <= default.maxLocalTimeRange("{config}", '{v_date}', 0) 
-    and utc_date_hour = date_format("{v_date}", 'yyyy-MM-dd HH')
-),
-
-terminal_data as (
-  select 
-    pos_id
-    , terminal_id 
-  from 
-    opay_dw.dim_opay_terminal_base_hf 
-  where 
-    concat(dt,' ',hour) >= default.minLocalTimeRange("{config}", '{v_date}', 0)
-    and concat(dt,' ',hour) <= default.maxLocalTimeRange("{config}", '{v_date}', 0) 
-    and utc_date_hour = date_format("{v_date}", 'yyyy-MM-dd HH')
-),
-
-user_pos as (
-  select 
-    order_no
-    , amount
-    , stamp_duty
-    , currency
-    , 'USER' as originator_type
-    , user_id as originator_id
-    , terminal_id as affiliate_terminal_id
-    , terminal_provider_id as affiliate_terminal_provider_id
-    , bank_code as affiliate_bank_code
-    , pos_trade_req_id
-    , transaction_reference
-    , retrieval_reference_number
-    , default.localTime("{config}",'NG',from_unixtime(cast(cast(create_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as create_time
-    , default.localTime("{config}",'NG',from_unixtime(cast(cast(update_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as update_time
-    , country
-    , order_status
-    , channel_code as error_code
-    , channel_msg as error_msg
-    , transaction_type, accounting_status
-    , nvl(fee_amount, 0) as fee_amount
-    , nvl(fee_pattern, '-') as fee_pattern
-    , '-' as outward_id
-    , '-' as outward_type
-    , date_format('{v_date}', 'yyyy-MM-dd HH') as utc_date_hour
-
-    , row_number() over(partition by order_no order by `__ts_ms` desc,`__file` desc,cast(`__pos` as int) desc) rn
-  from 
-    opay_dw_ods.ods_binlog_base_user_pos_transaction_record_hi
-  where 
-    dt = date_format('{v_date}', 'yyyy-MM-dd')
-    and hour= date_format('{v_date}', 'HH')
-    and `__deleted` = 'false'
-),
-
-merchant_pos as (
-  select 
-    order_no
-    , amount
-    , stamp_duty
-    , currency
-    , 'MERCHANT' as originator_type
-    , merchant_id as originator_id
-    , terminal_id as affiliate_terminal_id
-    , terminal_provider_id as affiliate_terminal_provider_id
-    , bank_code as affiliate_bank_code
-    , pos_trade_req_id
-    , transaction_reference
-    , retrieval_reference_number
-    , default.localTime("{config}",'NG',from_unixtime(cast(cast(create_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as create_time
-    , default.localTime("{config}",'NG',from_unixtime(cast(cast(update_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as update_time
-    , country
-    , order_status
-    , channel_code as error_code
-    , channel_msg as error_msg
-    , transaction_type
-    , accounting_status
-    , nvl(fee_amount, 0) as fee_amount
-    , nvl(fee_pattern, '-') as fee_pattern
-    , '-' as outward_id
-    , '-' as outward_type
-    , date_format('{v_date}', 'yyyy-MM-dd HH') as utc_date_hour
-
-    , row_number() over(partition by order_no order by `__ts_ms` desc,`__file` desc,cast(`__pos` as int) desc) rn
-  from 
-    opay_dw_ods.ods_binlog_base_merchant_pos_transaction_record_hi
-  where 
-    dt = date_format('{v_date}', 'yyyy-MM-dd')
-    and hour= date_format('{v_date}', 'HH')
-    and `__deleted` = 'false'
-),
-
-union_result as (
-  select
-    order_no
-    ,amount
-    ,stamp_duty
-    ,currency
-    ,originator_type
-    ,originator_id
-    ,affiliate_terminal_id
-    ,affiliate_terminal_provider_id
-    ,affiliate_bank_code
-    ,pos_trade_req_id
-    ,transaction_reference
-    ,retrieval_reference_number
-    ,create_time
-    ,update_time
-    ,country
-    ,order_status
-    ,error_code
-    ,error_msg
-    ,transaction_type
-    ,accounting_status
-    ,fee_amount
-    ,fee_pattern
-    ,outward_id
-    ,outward_type
-    ,utc_date_hour
-  from
-    (
-    select * from user_pos where rn = 1
-    union all
-    select * from merchant_pos where rn = 1
-    ) as a
-)
-
-insert overwrite table opay_dw.dwd_opay_pos_transaction_record_hi partition(country_code, dt, hour)
-select 
-  t1.order_no
-  , t1.amount
-  , t1.stamp_duty
-  , t1.currency
-  , t1.originator_type
-  , t2.trader_role as originator_role
-  , t2.trader_kyc_level as originator_kyc_level
-  , t1.originator_id
-  , t2.trader_name as originator_name
-  , t1.affiliate_terminal_id
-  , t1.affiliate_terminal_provider_id
-  , t1.affiliate_bank_code
-  , t1.pos_trade_req_id
-  , t1.transaction_reference
-  , t1.retrieval_reference_number
-  , t1.create_time
-  , t1.update_time
-  , t1.country
-  , t1.order_status
-  , t1.error_code
-  , t1.error_msg
-  , t1.transaction_type
-  , t1.accounting_status
-  , 'pos' as top_consume_scenario
-  , 'pos' as sub_consume_scenario
-  , t1.fee_amount
-  , t1.fee_pattern
-  , t1.outward_id
-  , t1.outward_type
-  , nvl(t3.pos_id, '-') as pos_id
-  , t2.state
-  , case
-      when order_status = 'SUCCESS' then if(cast(t1.amount * {pos_provider_share_0922_fee}  as decimal(10,2)) > 100000, 100000, cast(t1.amount * {pos_provider_share_0922_fee}  as decimal(10,2)))
-      else 0
-    end as provider_share_amount
-  , case
-      when order_status = 'SUCCESS' then if(cast(t1.amount * {msc_cost_0922_fee}  as decimal(10,2)) > 100000, 100000, cast(t1.amount * {msc_cost_0922_fee}  as decimal(10,2)))
-      else 0
-    end as msc_cost_amount
-  , t1.utc_date_hour
-
-  , 'NG' as country_code
-  , date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'yyyy-MM-dd') as dt
-  , date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'HH') as hour
-
-from 
-  union_result as t1 
-left join 
-  dim_user_merchant_data t2 
-on 
-  t1.originator_id = t2.trader_id
-left join 
-  terminal_data t3 
-on 
-  t1.affiliate_terminal_id = t3.terminal_id;
+    set mapred.max.split.size=1000000;
+    set hive.exec.dynamic.partition.mode=nonstrict;
+    set hive.exec.parallel=true;
+    
+    with 
+        dim_user_merchant_data as (
+            select 
+                user_id as trader_id, 
+                concat(first_name, ' ', middle_name, ' ', surname) as trader_name, 
+                `role` as trader_role, 
+                kyc_level as trader_kyc_level, 
+                state
+            from opay_dw.dim_opay_user_base_hf
+            where 
+                concat(dt,' ',hour) >= default.minLocalTimeRange("{config}", '{v_date}', 0)
+                and concat(dt,' ',hour) <= default.maxLocalTimeRange("{config}", '{v_date}', 0) 
+                and utc_date_hour = date_format("{v_date}", 'yyyy-MM-dd HH')
+            union all
+            select 
+                merchant_id as trader_id, 
+                merchant_name as trader_name, 
+                merchant_type as trader_role, 
+                '-' as trader_kyc_level, 
+                '-' as state
+            from opay_dw.dim_opay_merchant_base_hf
+            where  concat(dt,' ',hour) >= default.minLocalTimeRange("{config}", '{v_date}', 0)
+                and concat(dt,' ',hour) <= default.maxLocalTimeRange("{config}", '{v_date}', 0) 
+                and utc_date_hour = date_format("{v_date}", 'yyyy-MM-dd HH')
+        ),
+    
+        terminal_data as (
+            select 
+                pos_id, terminal_id 
+            from opay_dw.dim_opay_terminal_base_hf 
+            where concat(dt,' ',hour) >= default.minLocalTimeRange("{config}", '{v_date}', 0)
+                and concat(dt,' ',hour) <= default.maxLocalTimeRange("{config}", '{v_date}', 0) 
+                and utc_date_hour = date_format("{v_date}", 'yyyy-MM-dd HH')
+        ),
+    
+        bd_agent_data as (
+            select 
+                user_id, bd_admin_user_id, agent_status as bd_agent_status
+            from opay_dw.dim_opay_bd_agent_hf
+            where concat(dt,' ',hour) >= default.minLocalTimeRange("{config}", '{v_date}', 0)
+                and concat(dt,' ',hour) <= default.maxLocalTimeRange("{config}", '{v_date}', 0) 
+                and utc_date_hour = date_format("{v_date}", 'yyyy-MM-dd HH')
+        ),
+    
+        user_pos as (
+            select 
+                order_no, 
+                amount,
+                stamp_duty,
+                currency,
+                'USER' as originator_type,
+                user_id as originator_id,
+                terminal_id as affiliate_terminal_id,
+                terminal_provider_id as affiliate_terminal_provider_id,
+                bank_code as affiliate_bank_code,
+                pos_trade_req_id,
+                transaction_reference,
+                retrieval_reference_number,
+                default.localTime("{config}",'NG',from_unixtime(cast(cast(create_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as create_time,
+                default.localTime("{config}",'NG',from_unixtime(cast(cast(update_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as update_time,
+                country,
+                order_status,
+                channel_code as error_code,
+                channel_msg as error_msg,
+                transaction_type, accounting_status,
+                nvl(fee_amount, 0) as fee_amount,
+                nvl(fee_pattern, '-') as fee_pattern,
+                '-' as outward_id,
+                '-' as outward_type,
+                date_format('{v_date}', 'yyyy-MM-dd HH') as utc_date_hour,
+                row_number() over(partition by order_no order by `__ts_ms` desc,`__file` desc,cast(`__pos` as int) desc) rn
+            from opay_dw_ods.ods_binlog_base_user_pos_transaction_record_hi
+            where dt = date_format('{v_date}', 'yyyy-MM-dd') 
+                and hour= date_format('{v_date}', 'HH') and `__deleted` = 'false'
+        ),
+    
+        merchant_pos as (
+            select 
+                order_no,
+                amount,
+                stamp_duty,
+                currency,
+                'MERCHANT' as originator_type,
+                merchant_id as originator_id,
+                terminal_id as affiliate_terminal_id,
+                terminal_provider_id as affiliate_terminal_provider_id,
+                bank_code as affiliate_bank_code,
+                pos_trade_req_id,
+                transaction_reference,
+                retrieval_reference_number,
+                default.localTime("{config}",'NG',from_unixtime(cast(cast(create_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as create_time,
+                default.localTime("{config}",'NG',from_unixtime(cast(cast(update_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as update_time,
+                country,
+                order_status,
+                channel_code as error_code,
+                channel_msg as error_msg,
+                transaction_type,
+                accounting_status,
+                nvl(fee_amount, 0) as fee_amount,
+                nvl(fee_pattern, '-') as fee_pattern,
+                '-' as outward_id,
+                '-' as outward_type,
+                date_format('{v_date}', 'yyyy-MM-dd HH') as utc_date_hour,
+                row_number() over(partition by order_no order by `__ts_ms` desc,`__file` desc,cast(`__pos` as int) desc) rn
+            from opay_dw_ods.ods_binlog_base_merchant_pos_transaction_record_hi
+            where dt = date_format('{v_date}', 'yyyy-MM-dd') 
+                and hour= date_format('{v_date}', 'HH') and `__deleted` = 'false'
+        ),
+    
+        union_result as (
+            select
+                order_no,
+                amount,
+                stamp_duty,
+                currency,
+                originator_type,
+                originator_id,
+                affiliate_terminal_id,
+                affiliate_terminal_provider_id,
+                affiliate_bank_code,
+                pos_trade_req_id,
+                transaction_reference,
+                retrieval_reference_number,
+                create_time,
+                update_time,
+                country,
+                order_status,
+                error_code,
+                error_msg,
+                transaction_type,
+                accounting_status,
+                fee_amount,
+                fee_pattern,
+                outward_id,
+                outward_type,
+                utc_date_hour
+            from (
+                select * from user_pos where rn = 1
+                union all
+                select * from merchant_pos where rn = 1
+            ) as a
+        )
+    
+    insert overwrite table opay_dw.dwd_opay_pos_transaction_record_hi partition(country_code, dt, hour)
+    select 
+        t1.order_no,
+        t1.amount,
+        t1.stamp_duty,
+        t1.currency,
+        t1.originator_type,
+        t2.trader_role as originator_role,
+        t2.trader_kyc_level as originator_kyc_level,
+        t1.originator_id,
+        t2.trader_name as originator_name,
+        t1.affiliate_terminal_id,
+        t1.affiliate_terminal_provider_id,
+        t1.affiliate_bank_code,
+        t1.pos_trade_req_id,
+        t1.transaction_reference,
+        t1.retrieval_reference_number,
+        t1.create_time,
+        t1.update_time,
+        t1.country,
+        t1.order_status,
+        t1.error_code,
+        t1.error_msg,
+        t1.transaction_type,
+        t1.accounting_status,
+        'pos' as top_consume_scenario,
+        'pos' as sub_consume_scenario,
+        t1.fee_amount,
+        t1.fee_pattern,
+        t1.outward_id,
+        t1.outward_type,
+        nvl(t3.pos_id, '-') as pos_id,
+        t2.state,
+        case
+            when order_status = 'SUCCESS' then if(cast(t1.amount * {pos_provider_share_0922_fee}  as decimal(10,2)) > 100000, 100000, cast(t1.amount * {pos_provider_share_0922_fee}  as decimal(10,2)))
+            else 0
+            end as provider_share_amount,
+        case
+            when order_status = 'SUCCESS' then if(cast(t1.amount * {msc_cost_0922_fee}  as decimal(10,2)) > 100000, 100000, cast(t1.amount * {msc_cost_0922_fee}  as decimal(10,2)))
+            else 0
+            end as msc_cost_amount,
+        t1.utc_date_hour,     
+        t4.bd_admin_user_id,
+        t4.bd_agent_status,
+        'NG' as country_code,
+        date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'yyyy-MM-dd') as dt,
+        date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'HH') as hour
+    
+    from union_result as t1 
+    left join dim_user_merchant_data t2 on t1.originator_id = t2.trader_id
+    left join terminal_data t3 on t1.affiliate_terminal_id = t3.terminal_id
+    left join bd_agent_data t4 on t1.originator_id = t4.user_id
 
 
 
@@ -465,6 +465,7 @@ dim_opay_user_base_hf_check_task >> dwd_opay_pos_transaction_record_hi_task
 dim_opay_terminal_base_hf_check_task >> dwd_opay_pos_transaction_record_hi_task
 ods_binlog_base_user_pos_transaction_record_hi_check_task >> dwd_opay_pos_transaction_record_hi_task
 ods_binlog_base_merchant_pos_transaction_record_hi_check_task >> dwd_opay_pos_transaction_record_hi_task
+dim_opay_bd_agent_hf_check_task >> dwd_opay_pos_transaction_record_hi_task
 
 
 
