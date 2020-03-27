@@ -54,7 +54,7 @@ dwd_opay_cico_record_di_task = OssSensor(
 dwd_opay_bd_agent_change_log_di_task = OssSensor(
     task_id='dwd_opay_bd_agent_change_log_di_task',
     bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opay/opay_dw/dwd_opay_bd_agent_change_log_di/country_code=NG",
+        hdfs_path_str="opay/opay_dw/dwd_opay_bd_agent_change_log_di/country_code=nal",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
