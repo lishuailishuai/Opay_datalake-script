@@ -166,16 +166,7 @@ def dwd_oride_driver_extend_df_sql_task(ds):
           nvl(data_driver.support_carpool,data_driver_bef.support_carpool),--'是否支持拼车', 
           nvl(data_driver.last_trip_id,data_driver_bef.last_trip_id),--'最近一个行程的ID', 
           nvl(data_driver.assign_mode,data_driver_bef.assign_mode),--'强派模式 (0: 禁用 1: 启用)', 
-          nvl(data_driver.auto_start,data_driver_bef.auto_start),--'自动开始 (0: 禁用 1: 启用)', 
-          nvl(data_driver.city_id,data_driver_bef.city_id),--'所属城市ID', 
-          nvl(data_driver.fee_free,data_driver_bef.fee_free),--'免佣金（0:不免佣金 1:免佣金）', 
-          nvl(data_driver.version,data_driver_bef.version),--'司机端版本号', 
-          nvl(data_driver.home_address,data_driver_bef.home_address),--'顺路地址', 
-          nvl(data_driver.home_lng,data_driver_bef.home_lng),--'顺路地址纬度', 
-          nvl(data_driver.home_lat,data_driver_bef.home_lat),--'顺路地址经度', 
-          nvl(data_driver.home_confirm,data_driver_bef.home_confirm),--'顺路地址是否确认 (0: 未确认 1: 已确认)', 
-          nvl(data_driver.home_status,data_driver_bef.home_status),--'顺路地址状态 (0: 关闭 1: 开启)', 
-          nvl(data_driver.level,data_driver_bef.level),--'司机等级'
+          nvl(data_driver.auto_start,data_driver_bef.auto_start),--'自动开始 (0: 禁用 1: 启用)',
 
           'nal' as country_code,
           '{pt}' as dt
