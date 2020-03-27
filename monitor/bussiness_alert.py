@@ -46,6 +46,7 @@ defalut_dingding_alert = "https://oapi.dingtalk.com/robot/send?access_token=ce12
 #  alert_2_level_address_name 二级预警地址,
 #  是否关闭预警，预警模板
 # alert_mode 判断大于小于规则关系（1 小于，2 大于，3 大于和小于）
+# influx_address_id  客户端选择访问influxDB 地址
 metrcis_list = [
 
     ####### 交易相关指标
@@ -59,7 +60,8 @@ metrcis_list = [
         'trade_alert_level_1_address',
         'trade_alert_level_2_address',
         False,
-        3
+        3,
+        'influx_address_1'
     ),
 
     # 2
@@ -71,7 +73,8 @@ metrcis_list = [
         'trade_alert_level_1_address',
         'trade_alert_level_2_address',
         False,
-        3
+        3,
+        'influx_address_1'
     ),
 
     ## Betting
@@ -84,7 +87,8 @@ metrcis_list = [
         'trade_alert_level_1_address',
         'trade_alert_level_2_address',
         False,
-        3
+        3,
+        'influx_address_1'
     ),
 
     # 5
@@ -96,7 +100,8 @@ metrcis_list = [
         'trade_alert_level_1_address',
         'trade_alert_level_2_address',
         False,
-        3
+        3,
+        'influx_address_1'
     ),
 
     ## Electricity
@@ -109,7 +114,8 @@ metrcis_list = [
         'trade_alert_level_1_address',
         'trade_alert_level_2_address',
         False,
-        3
+        3,
+        'influx_address_1'
     ),
 
     # 7
@@ -121,7 +127,8 @@ metrcis_list = [
         'trade_alert_level_1_address',
         'trade_alert_level_2_address',
         False,
-        3
+        3,
+        'influx_address_1'
     ),
 
     ## TV
@@ -134,7 +141,8 @@ metrcis_list = [
         'trade_alert_level_1_address',
         'trade_alert_level_2_address',
         False,
-        3
+        3,
+        'influx_address_1'
     ),
 
     # 9
@@ -146,7 +154,8 @@ metrcis_list = [
         'trade_alert_level_1_address',
         'trade_alert_level_2_address',
         False,
-        3
+        3,
+        'influx_address_1'
     ),
 
     ## Mobiledata
@@ -159,7 +168,8 @@ metrcis_list = [
         'trade_alert_level_1_address',
         'trade_alert_level_2_address',
         False,
-        3
+        3,
+        'influx_address_1'
     ),
 
     # 11
@@ -171,7 +181,8 @@ metrcis_list = [
         'trade_alert_level_1_address',
         'trade_alert_level_2_address',
         False,
-        3
+        3,
+        'influx_address_1'
     ),
 
     ## Cash_In
@@ -184,7 +195,8 @@ metrcis_list = [
         'trade_alert_level_1_address',
         'trade_alert_level_2_address',
         False,
-        3
+        3,
+        'influx_address_1'
     ),
 
     # 13
@@ -196,7 +208,8 @@ metrcis_list = [
         'trade_alert_level_1_address',
         'trade_alert_level_2_address',
         False,
-        3
+        3,
+        'influx_address_1'
     ),
 
     ## Cash_Out
@@ -209,7 +222,8 @@ metrcis_list = [
         'trade_alert_level_1_address',
         'trade_alert_level_2_address',
         False,
-        3
+        3,
+        'influx_address_1'
     ),
 
     # 15
@@ -221,7 +235,8 @@ metrcis_list = [
         'trade_alert_level_1_address',
         'trade_alert_level_2_address',
         False,
-        3
+        3,
+        'influx_address_1'
     ),
 
     ## ACTransfer
@@ -234,7 +249,8 @@ metrcis_list = [
         'trade_alert_level_1_address',
         'trade_alert_level_2_address',
         False,
-        3
+        3,
+        'influx_address_1'
     ),
 
     # 17
@@ -246,7 +262,8 @@ metrcis_list = [
         'trade_alert_level_1_address',
         'trade_alert_level_2_address',
         False,
-        3
+        3,
+        'influx_address_1'
     ),
 
     ## Pos
@@ -259,7 +276,8 @@ metrcis_list = [
         'trade_alert_level_1_address',
         'trade_alert_level_2_address',
         False,
-        3
+        3,
+        'influx_address_1'
     ),
 
     # 19
@@ -271,7 +289,8 @@ metrcis_list = [
         'trade_alert_level_1_address',
         'trade_alert_level_2_address',
         False,
-        3
+        3,
+        'influx_address_1'
     ),
 
     ## TopupWithCard
@@ -284,7 +303,8 @@ metrcis_list = [
         'trade_alert_level_1_address',
         'trade_alert_level_2_address',
         False,
-        3
+        3,
+        'influx_address_1'
     ),
 
     # 21
@@ -296,7 +316,8 @@ metrcis_list = [
         'trade_alert_level_1_address',
         'trade_alert_level_2_address',
         False,
-        3
+        3,
+        'influx_address_1'
     ),
 
     ## Receivemoney
@@ -309,7 +330,8 @@ metrcis_list = [
         'trade_alert_level_1_address',
         'trade_alert_level_2_address',
         False,
-        3
+        3,
+        'influx_address_1'
     ),
 
     # 23
@@ -321,7 +343,8 @@ metrcis_list = [
         'trade_alert_level_1_address',
         'trade_alert_level_2_address',
         False,
-        3
+        3,
+        'influx_address_1'
     ),
 
     ## TakeRide
@@ -334,7 +357,8 @@ metrcis_list = [
         'trade_alert_level_1_address',
         'trade_alert_level_2_address',
         False,
-        3
+        3,
+        'influx_address_1'
     ),
 
     # 25
@@ -346,7 +370,8 @@ metrcis_list = [
         'trade_alert_level_1_address',
         'trade_alert_level_2_address',
         False,
-        3
+        3,
+        'influx_address_1'
     ),
 
     ## OrideSalary
@@ -359,7 +384,8 @@ metrcis_list = [
         'trade_alert_level_1_address',
         'trade_alert_level_2_address',
         False,
-        3
+        3,
+        'influx_address_1'
     ),
 
     # 27
@@ -371,7 +397,8 @@ metrcis_list = [
         'trade_alert_level_1_address',
         'trade_alert_level_2_address',
         False,
-        3
+        3,
+        'influx_address_1'
     ),
 
     ## Subscribe
@@ -384,7 +411,8 @@ metrcis_list = [
         'trade_alert_level_1_address',
         'trade_alert_level_2_address',
         False,
-        3
+        3,
+        'influx_address_1'
     ),
 
     # 29
@@ -396,7 +424,8 @@ metrcis_list = [
         'trade_alert_level_1_address',
         'trade_alert_level_2_address',
         False,
-        3
+        3,
+        'influx_address_1'
     ),
 
     ## Redeem
@@ -409,7 +438,8 @@ metrcis_list = [
         'trade_alert_level_1_address',
         'trade_alert_level_2_address',
         False,
-        3
+        3,
+        'influx_address_1'
     ),
 
     # 31
@@ -421,7 +451,8 @@ metrcis_list = [
         'trade_alert_level_1_address',
         'trade_alert_level_2_address',
         False,
-        3
+        3,
+        'influx_address_1'
     ),
 
     ## Repayment
@@ -434,7 +465,8 @@ metrcis_list = [
         'trade_alert_level_1_address',
         'trade_alert_level_2_address',
         False,
-        3
+        3,
+        'influx_address_1'
     ),
 
     # 33
@@ -446,7 +478,8 @@ metrcis_list = [
         'trade_alert_level_1_address',
         'trade_alert_level_2_address',
         False,
-        3
+        3,
+        'influx_address_1'
     ),
 
     ## Loan
@@ -459,7 +492,8 @@ metrcis_list = [
         'trade_alert_level_1_address',
         'trade_alert_level_2_address',
         False,
-        3
+        3,
+        'influx_address_1'
     ),
 
     # 35
@@ -471,7 +505,8 @@ metrcis_list = [
         'trade_alert_level_1_address',
         'trade_alert_level_2_address',
         False,
-        3
+        3,
+        'influx_address_1'
     ),
 
     ## TakeOut
@@ -484,7 +519,8 @@ metrcis_list = [
         'trade_alert_level_1_address',
         'trade_alert_level_2_address',
         False,
-        3
+        3,
+        'influx_address_1'
     ),
 
     # 37
@@ -496,7 +532,8 @@ metrcis_list = [
         'trade_alert_level_1_address',
         'trade_alert_level_2_address',
         False,
-        3
+        3,
+        'influx_address_1'
     ),
 
     ## FoodCashback
@@ -509,7 +546,8 @@ metrcis_list = [
         'trade_alert_level_1_address',
         'trade_alert_level_2_address',
         False,
-        3
+        3,
+        'influx_address_1'
     ),
 
     # 39
@@ -521,7 +559,8 @@ metrcis_list = [
         'trade_alert_level_1_address',
         'trade_alert_level_2_address',
         False,
-        3
+        3,
+        'influx_address_1'
     ),
 
     ## QRCode
@@ -534,7 +573,8 @@ metrcis_list = [
         'trade_alert_level_1_address',
         'trade_alert_level_2_address',
         False,
-        3
+        3,
+        'influx_address_1'
     ),
 
     # 41
@@ -546,7 +586,8 @@ metrcis_list = [
         'trade_alert_level_1_address',
         'trade_alert_level_2_address',
         False,
-        3
+        3,
+        'influx_address_1'
     ),
 
     ## QRCashback
@@ -559,7 +600,8 @@ metrcis_list = [
         'trade_alert_level_1_address',
         'trade_alert_level_2_address',
         False,
-        3
+        3,
+        'influx_address_1'
     ),
 
     # 43
@@ -571,7 +613,8 @@ metrcis_list = [
         'trade_alert_level_1_address',
         'trade_alert_level_2_address',
         False,
-        3
+        3,
+        'influx_address_1'
     ),
 
     ## AATransfer
@@ -584,7 +627,8 @@ metrcis_list = [
         'trade_alert_level_1_address',
         'trade_alert_level_2_address',
         False,
-        3
+        3,
+        'influx_address_1'
     ),
 
     # 45
@@ -596,7 +640,8 @@ metrcis_list = [
         'trade_alert_level_1_address',
         'trade_alert_level_2_address',
         False,
-        3
+        3,
+        'influx_address_1'
     ),
 
     ## MAcquiring
@@ -609,7 +654,8 @@ metrcis_list = [
         'trade_alert_level_1_address',
         'trade_alert_level_2_address',
         False,
-        3
+        3,
+        'influx_address_1'
     ),
 
     # 47
@@ -621,7 +667,8 @@ metrcis_list = [
         'trade_alert_level_1_address',
         'trade_alert_level_2_address',
         False,
-        3
+        3,
+        'influx_address_1'
     ),
 
     ## 渠道 INTERSWITCH
@@ -636,7 +683,8 @@ metrcis_list = [
         'trade_channel_alert_level_1_address',
         'trade_channel_alert_level_2_address',
         False,
-        1
+        1,
+        'influx_address_1'
     ),
 
     # 通道系统交易成功数
@@ -682,7 +730,8 @@ metrcis_list = [
         'trade_channel_system_alert_level_1_address',
         'trade_channel_system_alert_level_2_address',
         False,
-        1
+        1,
+        'influx_address_1'
     ),
 
     # 通道业务交易成功数
@@ -695,7 +744,8 @@ metrcis_list = [
         'trade_channel_bussiness_alert_level_1_address',
         'trade_channel_bussiness_alert_level_2_address',
         False,
-        1
+        1,
+        'influx_address_1'
     ),
 
     ## 渠道 PAYSTACK
@@ -710,7 +760,8 @@ metrcis_list = [
         'trade_channel_alert_level_1_address',
         'trade_channel_alert_level_2_address',
         False,
-        1
+        1,
+        'influx_address_1'
     ),
 
     # 通道系统交易成功数
@@ -758,7 +809,8 @@ metrcis_list = [
         'trade_channel_alert_level_1_address',
         'trade_channel_alert_level_2_address',
         False,
-        1
+        1,
+        'influx_address_1'
     ),
 
     # 通道业务交易成功数
@@ -771,7 +823,8 @@ metrcis_list = [
         'trade_channel_alert_level_1_address',
         'trade_channel_alert_level_2_address',
         False,
-        1
+        1,
+        'influx_address_1'
     ),
 
     ## 渠道 FLUTTERWAVE
@@ -786,7 +839,8 @@ metrcis_list = [
         'trade_channel_alert_level_1_address',
         'trade_channel_alert_level_2_address',
         False,
-        1
+        1,
+        'influx_address_1'
     ),
 
     # 通道系统交易成功数
@@ -833,7 +887,8 @@ metrcis_list = [
         'trade_channel_alert_level_1_address',
         'trade_channel_alert_level_2_address',
         False,
-        1
+        1,
+        'influx_address_1'
     ),
 
     # 通道业务交易成功数
@@ -846,7 +901,8 @@ metrcis_list = [
         'trade_channel_alert_level_1_address',
         'trade_channel_alert_level_2_address',
         False,
-        1
+        1,
+        'influx_address_1'
     ),
 
     ####### 用户相关指标 独立配置
@@ -863,7 +919,8 @@ metrcis_list = [
         'user_register_alert_level_1_address',
         'user_register_alert_level_2_address',
         False,
-        1
+        1,
+        'influx_address_1'
     ),
 
     ## 登陆活跃用户数
@@ -878,7 +935,8 @@ metrcis_list = [
         'user_active_alert_level_1_address',
         'user_active_alert_level_2_address',
         False,
-        1
+        1,
+        'influx_address_1'
     ),
 
     ## 绑卡用户数
@@ -893,7 +951,8 @@ metrcis_list = [
         'user_bind_card_alert_level_1_address',
         'user_bind_card_alert_level_2_address',
         False,
-        3
+        3,
+        'influx_address_1'
     ),
 
     ####### 短信 指标
@@ -912,7 +971,8 @@ metrcis_list = [
         'message_alert_level_1_address',
         'message_alert_level_2_address',
         False,
-        3
+        3,
+        'influx_address_1'
     ),
 
     # 短息发送成功量
@@ -927,7 +987,8 @@ metrcis_list = [
         'message_alert_level_1_address',
         'message_alert_level_2_address',
         False,
-        3
+        3,
+        'influx_address_1'
     ),
 
     ## cm
@@ -944,7 +1005,8 @@ metrcis_list = [
         'message_alert_level_1_address',
         'message_alert_level_2_address',
         False,
-        3
+        3,
+        'influx_address_1'
     ),
 
     # 短息发送成功量
@@ -959,7 +1021,8 @@ metrcis_list = [
         'message_alert_level_1_address',
         'message_alert_level_2_address',
         False,
-        3
+        3,
+        'influx_address_1'
     ),
 
     ## dpb
@@ -976,7 +1039,8 @@ metrcis_list = [
         'message_alert_level_1_address',
         'message_alert_level_2_address',
         False,
-        3
+        3,
+        'influx_address_1'
     ),
 
     # 短息发送成功量
@@ -991,7 +1055,8 @@ metrcis_list = [
         'message_alert_level_1_address',
         'message_alert_level_2_address',
         False,
-        3
+        3,
+        'influx_address_1'
     ),
 
     ## infobip
@@ -1008,7 +1073,8 @@ metrcis_list = [
         'message_alert_level_1_address',
         'message_alert_level_2_address',
         False,
-        3
+        3,
+        'influx_address_1'
     ),
 
     # 短息发送成功量
@@ -1023,7 +1089,8 @@ metrcis_list = [
         'message_alert_level_1_address',
         'message_alert_level_2_address',
         False,
-        3
+        3,
+        'influx_address_1'
     ),
 
     ## chuangadvert
@@ -1040,7 +1107,8 @@ metrcis_list = [
         'message_alert_level_1_address',
         'message_alert_level_2_address',
         False,
-        3
+        3,
+        'influx_address_1'
     ),
 
     # 短息发送成功量
@@ -1055,7 +1123,8 @@ metrcis_list = [
         'message_alert_level_1_address',
         'message_alert_level_2_address',
         False,
-        3
+        3,
+        'influx_address_1'
     ),
 
     ## infobipws
@@ -1072,7 +1141,8 @@ metrcis_list = [
         'message_alert_level_1_address',
         'message_alert_level_2_address',
         False,
-        3
+        3,
+        'influx_address_1'
     ),
 
     # 短息发送成功量
@@ -1087,7 +1157,8 @@ metrcis_list = [
         'message_alert_level_1_address',
         'message_alert_level_2_address',
         False,
-        3
+        3,
+        'influx_address_1'
     ),
 
     ## infobipvoice
@@ -1104,7 +1175,8 @@ metrcis_list = [
         'message_alert_level_1_address',
         'message_alert_level_2_address',
         False,
-        3
+        3,
+        'influx_address_1'
     ),
 
     # 短息发送成功量
@@ -1119,7 +1191,8 @@ metrcis_list = [
         'message_alert_level_1_address',
         'message_alert_level_2_address',
         False,
-        3
+        3,
+        'influx_address_1'
     ),
 
     ## chuangghana
@@ -1136,7 +1209,8 @@ metrcis_list = [
         'message_alert_level_1_address',
         'message_alert_level_2_address',
         False,
-        3
+        3,
+        'influx_address_1'
     ),
 
     # 短息发送成功量
@@ -1151,7 +1225,8 @@ metrcis_list = [
         'message_alert_level_1_address',
         'message_alert_level_2_address',
         False,
-        3
+        3,
+        'influx_address_1'
     ),
 
     ## cmghana
@@ -1168,7 +1243,8 @@ metrcis_list = [
         'message_alert_level_1_address',
         'message_alert_level_2_address',
         False,
-        3
+        3,
+        'influx_address_1'
     ),
 
     # 短息发送成功量
@@ -1183,7 +1259,8 @@ metrcis_list = [
         'message_alert_level_1_address',
         'message_alert_level_2_address',
         False,
-        3
+        3,
+        'influx_address_1'
     ),
 
 ]
@@ -1343,18 +1420,13 @@ def handle_mode_3(metrics_name, last_value, compare_value, alert_value_1, alert_
 
 
 def monitor_task(ds, metrics_name, influx_db_query_sql, alert_value_name, compare_day, alert_1_level_name,
-                 alert_2_level_name, is_close_alert, mode, **kwargs):
+                 alert_2_level_name, is_close_alert, mode, influx_address_id, **kwargs):
     last_time = 0
     data_map = dict()
 
-    ## 增加随机数延迟
+    address = eval(Variable.get(influx_address_id))
 
-    # sleep = random.randint(10, 300)
-    #
-    # time.sleep(sleep)
-    # logging.info(" =========  随机时间等待 : {} s ".format(sleep))
-
-    influx_client = InfluxDBClient('10.52.5.233', 8086, 'bigdata', 'opay321', 'serverDB')
+    influx_client = InfluxDBClient(address[0], address[1], address[2], address[3], address[4])
 
     date_time = datetime.datetime.strptime(ds, '%Y-%m-%d')
     time_condition = (date_time - datetime.timedelta(days=(compare_day + 1)))
@@ -1450,7 +1522,7 @@ def monitor_task(ds, metrics_name, influx_db_query_sql, alert_value_name, compar
 
 
 for [metrics_name, influx_db_query_sql, alert_value_name, compare_day, alert_1_level_name, alert_2_level_name,
-     is_close_alert, mode] in metrcis_list:
+     is_close_alert, mode, influx_address_id] in metrcis_list:
     monitor = PythonOperator(
         task_id='monitor_task_{}'.format(metrics_name),
         python_callable=monitor_task,
@@ -1463,8 +1535,8 @@ for [metrics_name, influx_db_query_sql, alert_value_name, compare_day, alert_1_l
             'alert_1_level_name': alert_1_level_name,
             'alert_2_level_name': alert_2_level_name,
             'is_close_alert': is_close_alert,
-            'mode': mode
+            'mode': mode,
+            'influx_address_id': influx_address_id
         },
         dag=dag
     )
-
