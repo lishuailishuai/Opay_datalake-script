@@ -25,7 +25,7 @@ import requests
 import os
 
 args = {
-    'owner': 'lijialong',
+    'owner': 'lishuai',
     'start_date': datetime(2019, 10, 1),
     'depends_on_past': False,
     'retries': 3,
@@ -36,7 +36,7 @@ args = {
 }
 
 dag = airflow.DAG('dwd_oride_driver_extend_df',
-                  schedule_interval="50 00 * * *",
+                  schedule_interval="20 00 * * *",
                   default_args=args,
                   )
 
@@ -46,41 +46,31 @@ dag = airflow.DAG('dwd_oride_driver_extend_df',
 
 db_name="oride_dw"
 table_name="dwd_oride_driver_extend_df"
-
+hdfs_path = "oss://opay-datalake/oride/oride_dw/" + table_name
 ##----------------------------------------- 依赖 ---------------------------------------##
 
-#获取变量
-code_map=eval(Variable.get("sys_flag"))
+ods_binlog_base_data_driver_extend_hi_prev_day_task = OssSensor(
+    task_id='ods_binlog_base_data_driver_extend_hi_prev_day_task',
+    bucket_key='{hdfs_path_str}/dt={pt}/hour=23/_SUCCESS'.format(
+        hdfs_path_str="oride_binlog/oride_db.oride_data.data_driver_extend",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
 
-#判断ufile(cdh环境)
-if code_map["id"].lower()=="ufile":
-    # 依赖前一天分区
-    ods_sqoop_base_data_driver_extend_df_task = UFileSensor(
-        task_id='ods_sqoop_base_data_driver_extend_df_task',
-        filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-            hdfs_path_str="oride_dw_sqoop/oride_data/data_driver_extend",
-            pt='{{ds}}'
-        ),
-        bucket_name='opay-datalake',
-        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-        dag=dag
-    )
-    # 路径
-    hdfs_path="ufile://opay-datalake/oride/oride_dw/"+table_name
-else:
-    print("成功")
-    ods_sqoop_base_data_driver_extend_df_task = OssSensor(
-        task_id='ods_sqoop_base_data_driver_extend_df_task',
-        bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-            hdfs_path_str="oride_dw_sqoop/oride_data/data_driver_extend",
-            pt='{{ds}}'
-        ),
-        bucket_name='opay-datalake',
-        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-        dag=dag
-    )
-    # 路径
-    hdfs_path = "oss://opay-datalake/oride/oride_dw/" + table_name
+# 依赖前天分区
+dwd_oride_driver_extend_df_prev_day_tesk = OssSensor(
+    task_id='dwd_oride_driver_extend_df_prev_day_tesk',
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="oride/oride_dw/dwd_oride_driver_extend_df/country_code=nal",
+        pt='{{macros.ds_add(ds, -1)}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
 
 ##----------------------------------------- 任务超时监控 ---------------------------------------## 
 
@@ -111,56 +101,145 @@ def dwd_oride_driver_extend_df_sql_task(ds):
         SET hive.exec.parallel=TRUE;
         SET hive.exec.dynamic.partition.mode=nonstrict;
 
-        insert overwrite table oride_dw.{table} partition(country_code,dt)
+       insert overwrite table {db}.{table} partition(country_code,dt)
 
         SELECT
-            id,--司机 ID, 
-            serv_mode,--服务模式 (0: no service, 1: in service, 99:招手停), 
-            serv_status,--服务状态 (0: wait assign, 1: pick up, 2:wait, 3: send, 4:arrive, 5:pick order), 
-            order_rate,--接单率, 
-            assign_order,--派单数量, 
-            take_order,--接单数量, 
-            avg_score,--平均评分, 
-            total_score,--总评分, 
-            score_times,--评分次数, 
-            last_order_id,--最近一个订单的ID, 
-            if(register_time=0,0,(register_time + 1*60*60*1)) as register_time,--注册时间, 
-            if(login_time=0,0,(login_time + 1*60*60*1)) as login_time ,--最后登陆时间, 
-            is_bind,--状态 0 未绑定 1 已绑定, 
-            if(first_bind_time=0,0,(first_bind_time + 1*60*60*1)) as first_bind_time,--初次绑定时间, 
-            total_pay,--总计-已打款收入, 
-            inviter_role,--, 
-            inviter_id,--, 
-            block,--后台管理司机接单状态(0: 允许 1:不允许), 
-            serv_type,--1 专车 2 快车, 
-            serv_score,--司机服务分, 
-            local_gov_ids,--行会ID,json, 
-            updated_at,--最后更新时间, 
-            fault,--正常0(停运)修理1(停运)无资料2(停运)事故3(停运)扣除4(欠缴)5, 
-            city_id,--所属城市ID, 
-            language,--客户端语言, 
-            if(end_service_time=0,0,(end_service_time + 1*60*60*1) )as end_service_time ,--专车司机结束收份子钱时间, 
-            if(last_online_time=0,0,(last_online_time + 1*60*60*1) )as last_online_time,--最后上线时间, 
-            if(last_offline_time=0,0,(last_offline_time + 1*60*60*1)) as last_offline_time,--最后下线时间, 
-            avoid_highway,--避开高速 (0: 禁用 1: 启用), 
-            rongcloud_token,--融云token, 
-            support_carpool,--是否支持拼车, 
-            last_trip_id,--最近一个行程的ID, 
-            assign_mode,--强派模式 (0: 禁用 1: 启用), 
-            auto_start,--自动开始 (0: 禁用 1: 启用)
-            'nal' as country_code,
-            '{pt}' as dt
+          
+          nvl(data_driver.id,data_driver_bef.id),--'司机 ID', 
+          nvl(data_driver.serv_mode,data_driver_bef.serv_mode),--服务模式 (0: no service, 1: in service, 99:招手停)', 
+          nvl(data_driver.serv_status,data_driver_bef.serv_status),--'服务状态 (0: wait assign, 1: pick up, 2:wait, 3: send, 4:arrive, 5:pick order)', 
+          nvl(data_driver.order_rate,data_driver_bef.order_rate),--'接单率', 
+          nvl(data_driver.assign_order,data_driver_bef.assign_order),--'派单数量', 
+          nvl(data_driver.take_order,data_driver_bef.take_order),--'接单数量', 
+          nvl(data_driver.avg_score,data_driver_bef.avg_score),--'平均评分', 
+          nvl(data_driver.total_score,data_driver_bef.total_score),--'总评分', 
+          nvl(data_driver.score_times,data_driver_bef.score_times),--'评分次数', 
+          nvl(data_driver.last_order_id,data_driver_bef.last_order_id),--'最近一个订单的ID', 
+          case when data_driver.register_time=0 then 0
+          when data_driver.register_time!=0 and data_driver.register_time is not null then data_driver.register_time+3600
+          else data_driver_bef.register_time end,--'注册时间', 
+          
+          case when
+          data_driver.login_time=0 then 0
+          when data_driver.login_time!=0 and data_driver.login_time is not null then data_driver.login_time+3600
+          else data_driver_bef.login_time end,--'最后登陆时间',
+          
+          nvl(data_driver.is_bind,data_driver_bef.is_bind),--'状态 0 未绑定 1 已绑定', 
+          case when
+          data_driver.first_bind_time=0 then 0
+          when data_driver.first_bind_time!=0 and data_driver.first_bind_time is not null then data_driver.first_bind_time+3600
+          else data_driver_bef.first_bind_time end,--'初次绑定时间',
+          
+          nvl(data_driver.total_pay,data_driver_bef.total_pay),--'总计-已打款收入', 
+          nvl(data_driver.inviter_role,data_driver_bef.inviter_role),--'', 
+          nvl(data_driver.inviter_id,data_driver_bef.inviter_id),--'', 
+          nvl(data_driver.block,data_driver_bef.block),--'后台管理司机接单状态(0: 允许 1:不允许)', 
+          nvl(data_driver.serv_type,data_driver_bef.serv_type),--'1 专车 2 快车 3 科科车', 
+          nvl(data_driver.serv_score,data_driver_bef.serv_score),--'司机服务分', 
+          nvl(data_driver.local_gov_ids,data_driver_bef.local_gov_ids),--'行会ID,json', 
+          
+          nvl(from_unixtime((unix_timestamp(regexp_replace(regexp_replace(data_driver.updated_at,'T',' '),'Z',''))+3600),'yyyy-MM-dd HH:mm:ss'),data_driver_bef.updated_at),--'最后更新时间',
+          
+          
+          nvl(data_driver.fault,data_driver_bef.fault),--'正常0(停运)修理1(停运)无资料2(停运)事故3(停运)扣除4(欠缴)5', 
+          nvl(data_driver.city_id,data_driver_bef.city_id),--'所属城市ID', 
+          nvl(data_driver.language,data_driver_bef.language),--'客户端语言', 
+          case when
+          data_driver.end_service_time=0 then 0
+          when data_driver.end_service_time!=0 and data_driver.end_service_time is not null then data_driver.end_service_time+3600
+          else data_driver_bef.end_service_time end,--'专车司机结束收份子钱时间',
+          
+          
+          case when
+          data_driver.last_online_time=0 then 0
+          when data_driver.last_online_time!=0 and data_driver.last_online_time is not null then data_driver.last_online_time+3600
+          else data_driver_bef.last_online_time end,--'最后上线时间', 
+          
+          
+          case when
+          data_driver.last_offline_time=0 then 0
+          when data_driver.last_offline_time!=0 and data_driver.last_offline_time is not null then data_driver.last_offline_time+3600
+          else data_driver_bef.last_offline_time end,--'最后下线时间', 
+          
+          nvl(data_driver.avoid_highway,data_driver_bef.avoid_highway),--'避开高速 (0: 禁用 1: 启用)', 
+          nvl(data_driver.rongcloud_token,data_driver_bef.rongcloud_token),--'融云token', 
+          nvl(data_driver.support_carpool,data_driver_bef.support_carpool),--'是否支持拼车', 
+          nvl(data_driver.last_trip_id,data_driver_bef.last_trip_id),--'最近一个行程的ID', 
+          nvl(data_driver.assign_mode,data_driver_bef.assign_mode),--'强派模式 (0: 禁用 1: 启用)', 
+          nvl(data_driver.auto_start,data_driver_bef.auto_start),--'自动开始 (0: 禁用 1: 启用)', 
+          nvl(data_driver.country_id,data_driver_bef.country_id),--'所属国家', 
+          nvl(data_driver.fee_free,data_driver_bef.fee_free),--'免佣金（0:不免佣金 1:免佣金）', 
+          nvl(data_driver.version,data_driver_bef.version),--'司机端版本号', 
+          nvl(data_driver.home_address,data_driver_bef.home_address),--'顺路地址', 
+          nvl(data_driver.home_lng,data_driver_bef.home_lng),--'顺路地址纬度', 
+          nvl(data_driver.home_lat,data_driver_bef.home_lat),--'顺路地址经度', 
+          nvl(data_driver.home_confirm,data_driver_bef.home_confirm),--'顺路地址是否确认 (0: 未确认 1: 已确认)', 
+          nvl(data_driver.home_status,data_driver_bef.home_status),--'顺路地址状态 (0: 关闭 1: 开启)', 
+          nvl(data_driver.level,data_driver_bef.level),--'司机等级'
+
+          'nal' as country_code,
+          '{pt}' as dt
+
         FROM
-            oride_dw_ods.ods_sqoop_base_data_driver_extend_df
-        WHERE
-            dt='{pt}'
-        ;
+        (select * 
+        from oride_dw.dwd_oride_driver_extend_df
+        where dt='{bef_yes_day}') data_driver_bef
+        full outer join 
+        (
+            SELECT 
+                * 
+            FROM
+             (
+                SELECT 
+                    *,
+                     row_number() over(partition by t.id order by t.`__ts_ms` desc) as order_by
+                FROM oride_dw_ods.ods_binlog_base_data_driver_extend_hi  t
+                WHERE concat_ws(' ',dt,hour) BETWEEN '{bef_yes_day} 23' AND '{pt} 22'--取昨天1天数据与今天早上00数据
+             ) t1
+            where t1.`__deleted` = 'false' and t1.order_by = 1
+        ) data_driver
+        on data_driver_bef.driver_id=data_driver.id;
+        
 '''.format(
         pt=ds,
+        bef_yes_day=airflow.macros.ds_add(ds, -1),
         table=table_name,
         db=db_name
         )
     return HQL
+
+# 熔断数据，如果数据重复，报错
+def check_key_data_task(ds):
+    cursor = get_hive_cursor()
+
+    # 主键重复校验
+    check_sql = '''
+    select count(1)-count(distinct id) as cnt
+    from {db}.{table}
+    where dt='{pt}'
+    and country_code in ('nal')
+    '''.format(
+        pt=ds,
+        now_day=airflow.macros.ds_add(ds, +1),
+        table=table_name,
+        db=db_name
+    )
+
+    logging.info('Executing 主键重复校验: %s', check_sql)
+
+    cursor.execute(check_sql)
+
+    res = cursor.fetchone()
+
+    if res[0] > 1:
+        flag = 1
+        raise Exception("Error The primary key repeat !", res)
+        sys.exit(1)
+    else:
+        flag = 0
+        print("-----> Notice Data Export Success ......")
+
+    return flag
 
 
 # 主流程
@@ -194,4 +273,5 @@ dwd_oride_driver_extend_df_task = PythonOperator(
     dag=dag
 )
 
-ods_sqoop_base_data_driver_extend_df_task >>  dwd_oride_driver_extend_df_task
+ods_binlog_base_data_driver_extend_hi_prev_day_task >> dwd_oride_driver_extend_df_task
+dwd_oride_driver_extend_df_prev_day_tesk >> dwd_oride_driver_extend_df_task
