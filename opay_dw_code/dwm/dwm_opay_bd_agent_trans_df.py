@@ -140,7 +140,7 @@ def dwm_opay_bd_agent_trans_df_sql_task(ds):
                 bd_admin_user_id, sub_service_type, amount, date_format(create_time, 'yyyy-MM-dd') as create_date, row_number() over(partition by order_no order by update_time desc) rn
             from opay_dw.dwd_opay_cico_record_di
             where dt between date_format('{pt}', 'yyyy-MM-01') and '{pt}' and order_status = 'SUCCESS' and sub_service_type in ('Cash In', 'Cash Out') and bd_agent_status = 1
-        ) t0 where rn = 1
+        ) t0 where rn = 1 and date_format(create_date, 'yyyy-MM') = date_format('{pt}', 'yyyy-MM')
         group by bd_admin_user_id, create_date
     ) cico_data on agent_data.bd_admin_user_id = cico_data.bd_admin_user_id and agent_data.business_date = cico_data.business_date
     -- terminal
@@ -168,17 +168,17 @@ def dwm_opay_bd_agent_trans_df_sql_task(ds):
     full join (
         select 
             bd_admin_user_id, 
-            business_date, 
+            create_date as business_date, 
             sum(amount) as pos_suc_amt,
             count(*) as pos_suc_cnt
         from (
             select
-                bd_admin_user_id, amount, date_format(create_time, 'yyyy-MM-dd') as business_date, 
+                bd_admin_user_id, amount, date_format(create_time, 'yyyy-MM-dd') as create_date, 
                 row_number() over(partition by order_no order by update_time desc) rn
             from opay_dw.dwd_opay_pos_transaction_record_di
             where dt between date_format('{pt}', 'yyyy-MM-01') and '{pt}' and order_status = 'SUCCESS' and bd_agent_status = 1
-        ) t0 where rn = 1
-        group by bd_admin_user_id, business_date
+        ) t0 where rn = 1 and date_format(create_date, 'yyyy-MM') = date_format('{pt}', 'yyyy-MM')
+        group by bd_admin_user_id, create_date
     ) pos_trans_data on agent_data.bd_admin_user_id = pos_trans_data.bd_admin_user_id and agent_data.business_date = pos_trans_data.business_date
     -- pos distinct
     full join (
@@ -193,7 +193,7 @@ def dwm_opay_bd_agent_trans_df_sql_task(ds):
                 row_number() over(partition by order_no order by update_time desc) rn
             from opay_dw.dwd_opay_pos_transaction_record_di
             where dt between date_format('{pt}', 'yyyy-MM-01') and '{pt}' and bd_agent_status = 1
-        ) t0 where rn = 1
+        ) t0 where rn = 1 and date_format(create_date, 'yyyy-MM') = date_format('{pt}', 'yyyy-MM')
         group by bd_admin_user_id
     ) pos_distinct_data on agent_data.bd_admin_user_id = pos_distinct_data.bd_admin_user_id and agent_data.business_date = pos_distinct_data.business_date
     '''.format(

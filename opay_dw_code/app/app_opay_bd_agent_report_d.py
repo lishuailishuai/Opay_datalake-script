@@ -40,10 +40,10 @@ dag = airflow.DAG('app_opay_bd_agent_report_d',
                   )
 
 ##----------------------------------------- 依赖 ---------------------------------------##
-dwm_opay_bd_agent_cico_df_task = OssSensor(
-    task_id='dwm_opay_bd_agent_cico_df_task',
+dwm_opay_bd_agent_trans_df_task = OssSensor(
+    task_id='dwm_opay_bd_agent_trans_df_task',
     bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opay/opay_dw/dwm_opay_bd_agent_cico_df/country_code=NG",
+        hdfs_path_str="opay/opay_dw/dwm_opay_bd_agent_trans_df/country_code=NG",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -127,7 +127,17 @@ def app_opay_bd_agent_report_d_sql_task(ds, ds_nodash):
                 sum(if(t2.business_date = '{pt}', co_suc_order_cnt, 0)) as co_suc_order_cnt,
                 sum(if(t2.business_date = '{pt}', co_suc_order_amt, 0)) as co_suc_order_amt,
                 sum(if(t2.business_date between date_format('{pt}', 'yyyy-MM-01') and '{pt}', co_suc_order_cnt, 0)) as co_suc_order_cnt_m,
-                sum(if(t2.business_date between date_format('{pt}', 'yyyy-MM-01') and '{pt}', co_suc_order_amt, 0)) as co_suc_order_amt_m
+                sum(if(t2.business_date between date_format('{pt}', 'yyyy-MM-01') and '{pt}', co_suc_order_amt, 0)) as co_suc_order_amt_m,
+                
+                sum(bind_terminal_agent_cnt_his) as bind_terminal_agent_cnt_his,
+                sum(bind_terminal_agent_cnt_m) as bind_terminal_agent_cnt_m,
+                
+                sum(if(t2.business_date = '{pt}', pos_suc_amt, 0)) as pos_suc_amt,
+                sum(if(t2.business_date = '{pt}', pos_suc_cnt, 0)) as pos_suc_cnt,
+                sum(if(t2.business_date between date_format('{pt}', 'yyyy-MM-01') and '{pt}', pos_suc_amt, 0)) as pos_suc_amt_m,
+                sum(if(t2.business_date between date_format('{pt}', 'yyyy-MM-01') and '{pt}', pos_suc_cnt, 0)) as pos_suc_cnt_m,
+                sum(pos_agent_cnt_m) as pos_agent_cnt_m,
+                sum(pos_agent_cnt) as pos_agent_cnt
             from (
                 select 
                     bd_admin_user_id, 
@@ -138,8 +148,15 @@ def app_opay_bd_agent_report_d_sql_task(ds, ds_nodash):
                     ci_suc_order_amt,
                     
                     co_suc_order_cnt,
-                    co_suc_order_amt
-                from opay_dw.dwm_opay_bd_agent_cico_df where dt = '{pt}'
+                    co_suc_order_amt,
+                    bind_terminal_agent_cnt_his,
+                    bind_terminal_agent_cnt_m,
+                    pos_suc_amt,
+                    pos_suc_cnt,
+                    pos_agent_cnt_m,
+                    pos_agent_cnt
+                    
+                from opay_dw.dwm_opay_bd_agent_trans_df where dt = '{pt}'
             ) t1 join (
                 select 
                     bd_admin_user_id, bd_admin_user_name, bd_admin_job_id, bd_admin_status, 
@@ -181,7 +198,10 @@ def app_opay_bd_agent_report_d_sql_task(ds, ds_nodash):
                 co_suc_order_cnt,
                 co_suc_order_amt,
                 co_suc_order_cnt_m,
-                co_suc_order_amt_m
+                co_suc_order_amt_m,
+                bind_terminal_agent_cnt_his, bind_terminal_agent_cnt_m,
+                pos_suc_amt, pos_suc_cnt, pos_suc_amt_m, pos_suc_cnt_m, 
+                pos_agent_cnt_m, pos_agent_cnt
             from test_db.bd_report_temp_{pt_str}
         )
         insert overwrite table {db}.{table} partition(country_code='NG', dt='{pt}')
@@ -191,13 +211,19 @@ def app_opay_bd_agent_report_d_sql_task(ds, ds_nodash):
             audited_agent_cnt_his, audited_agent_cnt_m, audited_agent_cnt,
             rejected_agent_cnt_m, rejected_agent_cnt,
             ci_suc_order_cnt, ci_suc_order_amt, ci_suc_order_cnt_m, ci_suc_order_amt_m,
-            co_suc_order_cnt, co_suc_order_amt, co_suc_order_cnt_m, co_suc_order_amt_m
+            co_suc_order_cnt, co_suc_order_amt, co_suc_order_cnt_m, co_suc_order_amt_m,
+            bind_terminal_agent_cnt_his, bind_terminal_agent_cnt_m,
+            pos_suc_amt, pos_suc_cnt, pos_suc_amt_m, pos_suc_cnt_m, 
+            pos_agent_cnt_m, pos_agent_cnt
         from (
             select 
                 job_bd_user_id as bd_admin_user_id, audited_agent_cnt_his, audited_agent_cnt_m, audited_agent_cnt,
                 rejected_agent_cnt_m, rejected_agent_cnt,
                 ci_suc_order_cnt, ci_suc_order_amt, ci_suc_order_cnt_m, ci_suc_order_amt_m,
-                co_suc_order_cnt, co_suc_order_amt, co_suc_order_cnt_m, co_suc_order_amt_m
+                co_suc_order_cnt, co_suc_order_amt, co_suc_order_cnt_m, co_suc_order_amt_m,
+                bind_terminal_agent_cnt_his, bind_terminal_agent_cnt_m,
+                pos_suc_amt, pos_suc_cnt, pos_suc_amt_m, pos_suc_cnt_m, 
+                pos_agent_cnt_m, pos_agent_cnt
             from cube_data 
             where job_bd_user_id != 'ALL' and job_bd_user_id != '-'
             union all
@@ -205,7 +231,10 @@ def app_opay_bd_agent_report_d_sql_task(ds, ds_nodash):
                 job_bdm_user_id as bd_admin_user_id, audited_agent_cnt_his, audited_agent_cnt_m, audited_agent_cnt,
                 rejected_agent_cnt_m, rejected_agent_cnt,
                 ci_suc_order_cnt, ci_suc_order_amt, ci_suc_order_cnt_m, ci_suc_order_amt_m,
-                co_suc_order_cnt, co_suc_order_amt, co_suc_order_cnt_m, co_suc_order_amt_m
+                co_suc_order_cnt, co_suc_order_amt, co_suc_order_cnt_m, co_suc_order_amt_m,
+                bind_terminal_agent_cnt_his, bind_terminal_agent_cnt_m,
+                pos_suc_amt, pos_suc_cnt, pos_suc_amt_m, pos_suc_cnt_m, 
+                pos_agent_cnt_m, pos_agent_cnt
             from cube_data 
             where job_bdm_user_id != 'ALL' and job_bdm_user_id != '-'
             union all
@@ -213,7 +242,10 @@ def app_opay_bd_agent_report_d_sql_task(ds, ds_nodash):
                 job_rm_user_id as bd_admin_user_id, audited_agent_cnt_his, audited_agent_cnt_m, audited_agent_cnt,
                 rejected_agent_cnt_m, rejected_agent_cnt,
                 ci_suc_order_cnt, ci_suc_order_amt, ci_suc_order_cnt_m, ci_suc_order_amt_m,
-                co_suc_order_cnt, co_suc_order_amt, co_suc_order_cnt_m, co_suc_order_amt_m
+                co_suc_order_cnt, co_suc_order_amt, co_suc_order_cnt_m, co_suc_order_amt_m,
+                bind_terminal_agent_cnt_his, bind_terminal_agent_cnt_m,
+                pos_suc_amt, pos_suc_cnt, pos_suc_amt_m, pos_suc_cnt_m, 
+                pos_agent_cnt_m, pos_agent_cnt
             from cube_data 
             where job_rm_user_id != 'ALL' and job_rm_user_id != '-'
             union all
@@ -221,7 +253,10 @@ def app_opay_bd_agent_report_d_sql_task(ds, ds_nodash):
                 job_cm_user_id as bd_admin_user_id, audited_agent_cnt_his, audited_agent_cnt_m, audited_agent_cnt,
                 rejected_agent_cnt_m, rejected_agent_cnt,
                 ci_suc_order_cnt, ci_suc_order_amt, ci_suc_order_cnt_m, ci_suc_order_amt_m,
-                co_suc_order_cnt, co_suc_order_amt, co_suc_order_cnt_m, co_suc_order_amt_m
+                co_suc_order_cnt, co_suc_order_amt, co_suc_order_cnt_m, co_suc_order_amt_m,
+                bind_terminal_agent_cnt_his, bind_terminal_agent_cnt_m,
+                pos_suc_amt, pos_suc_cnt, pos_suc_amt_m, pos_suc_cnt_m, 
+                pos_agent_cnt_m, pos_agent_cnt
             from cube_data 
             where job_cm_user_id != 'ALL' and job_cm_user_id != '-'
             union all
@@ -229,7 +264,10 @@ def app_opay_bd_agent_report_d_sql_task(ds, ds_nodash):
                 job_hcm_user_id as bd_admin_user_id, audited_agent_cnt_his, audited_agent_cnt_m, audited_agent_cnt,
                 rejected_agent_cnt_m, rejected_agent_cnt,
                 ci_suc_order_cnt, ci_suc_order_amt, ci_suc_order_cnt_m, ci_suc_order_amt_m,
-                co_suc_order_cnt, co_suc_order_amt, co_suc_order_cnt_m, co_suc_order_amt_m
+                co_suc_order_cnt, co_suc_order_amt, co_suc_order_cnt_m, co_suc_order_amt_m,
+                bind_terminal_agent_cnt_his, bind_terminal_agent_cnt_m,
+                pos_suc_amt, pos_suc_cnt, pos_suc_amt_m, pos_suc_cnt_m, 
+                pos_agent_cnt_m, pos_agent_cnt
             from cube_data 
             where job_hcm_user_id != 'ALL' and job_hcm_user_id != '-'
             union all
@@ -237,7 +275,10 @@ def app_opay_bd_agent_report_d_sql_task(ds, ds_nodash):
                 job_pic_user_id as bd_admin_user_id, audited_agent_cnt_his, audited_agent_cnt_m, audited_agent_cnt,
                 rejected_agent_cnt_m, rejected_agent_cnt,
                 ci_suc_order_cnt, ci_suc_order_amt, ci_suc_order_cnt_m, ci_suc_order_amt_m,
-                co_suc_order_cnt, co_suc_order_amt, co_suc_order_cnt_m, co_suc_order_amt_m
+                co_suc_order_cnt, co_suc_order_amt, co_suc_order_cnt_m, co_suc_order_amt_m,
+                bind_terminal_agent_cnt_his, bind_terminal_agent_cnt_m,
+                pos_suc_amt, pos_suc_cnt, pos_suc_amt_m, pos_suc_cnt_m, 
+                pos_agent_cnt_m, pos_agent_cnt
             from cube_data 
             where job_pic_user_id != 'ALL' and job_pic_user_id != '-'
         ) report 
@@ -283,6 +324,6 @@ app_opay_bd_agent_report_d_task = PythonOperator(
     dag=dag
 )
 
-dwm_opay_bd_agent_cico_df_task >> app_opay_bd_agent_report_d_task
+dwm_opay_bd_agent_trans_df_task >> app_opay_bd_agent_report_d_task
 dim_opay_bd_admin_user_df_prev_day_task >> app_opay_bd_agent_report_d_task
 dim_opay_bd_relation_df_task >> app_opay_bd_agent_report_d_task
