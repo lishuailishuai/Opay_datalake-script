@@ -276,7 +276,7 @@ where
     return HQL
 
 # 主流程
-def execution_data_task_id(ds,dag, **kargs):
+def execution_data_task_id(ds,dag, **kwargs):
 
     v_date=kwargs.get('v_execution_date')
     v_day=kwargs.get('v_execution_day')
