@@ -55,24 +55,24 @@ ods_bd_agent_status_change_log_di_prev_day_task = OssSensor(
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
-
-ods_bd_agent_df_prev_day_task = OssSensor(
-    task_id='ods_bd_agent_df_prev_day_task',
+dim_opay_bd_agent_df_prev_day_task = OssSensor(
+    task_id='dim_opay_bd_agent_df_prev_day_task',
     bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opay_dw_sqoop/opay_agent_crm/bd_agent",
+        hdfs_path_str="opay/opay_dw/dim_opay_bd_agent_df/country_code=NG",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
+
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
 def fun_task_timeout_monitor(ds,dag,**op_kwargs):
 
     dag_ids=dag.dag_id
 
     msg = [
-        {"dag":dag, "db": "opay_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=NG/dt={pt}".format(pt=ds), "timeout": "3000"}
+        {"dag":dag, "db": "opay_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "3000"}
     ]
 
     TaskTimeoutMonitor().set_task_monitor(msg)
@@ -115,9 +115,9 @@ def dwd_opay_bd_agent_change_log_di_sql_task(ds):
         ) t0 where rn = 1
     ) t1 left join (
         select 
-            id, bd_id as bd_admin_user_id
-        from opay_dw_ods.ods_sqoop_base_bd_agent_df
-        where dt = '{pt}' and created_at<'{pt} 23:00:00'
+            id, bd_admin_user_id
+        from opay_dw.dim_opay_bd_agent_df
+        where dt = '{pt}'
     ) t2 on t1.bd_agent_id = t2.id
     '''.format(
         pt=ds,
@@ -158,5 +158,5 @@ dwd_opay_bd_agent_change_log_di_task = PythonOperator(
     dag=dag
 )
 
-ods_bd_agent_df_prev_day_task >> dwd_opay_bd_agent_change_log_di_task
+dim_opay_bd_agent_df_prev_day_task >> dwd_opay_bd_agent_change_log_di_task
 ods_bd_agent_status_change_log_di_prev_day_task >> dwd_opay_bd_agent_change_log_di_task

@@ -25,8 +25,6 @@ from airflow.models import Variable
 import requests
 import os
 
-from plugins.CountriesAppFrame import CountriesAppFrame
-
 args = {
     'owner': 'yuanfeng',
     'start_date': datetime(2020, 3, 24),
@@ -38,31 +36,31 @@ args = {
     'email_on_retry': False,
 }
 
-dag = airflow.DAG('dwd_otrade_b2b_otrade_order_di',
+dag = airflow.DAG('app_otrade_b2b_order_target_supplier_di',
                   schedule_interval="00 03 * * *",
                   default_args=args,
                   )
 
 ##----------------------------------------- 变量 ---------------------------------------##
 db_name = "otrade_dw"
-table_name = "dwd_otrade_b2b_otrade_order_di"
+table_name = "app_otrade_b2b_order_target_supplier_di"
 hdfs_path = "oss://opay-datalake/otrade/otrade_dw/" + table_name
 config = eval(Variable.get("otrade_time_zone_config"))
 time_zone = config['NG']['time_zone']
 
 ##----------------------------------------- 依赖 ---------------------------------------##
 
-dwd_otrade_b2b_otrade_order_hi_task = OssSensor(
-    task_id='dwd_otrade_b2b_otrade_order_hi_task',
-    bucket_key='{hdfs_path_str}/country_code=NG/dt={pt}/hour={hour}/_SUCCESS'.format(
-        hdfs_path_str="otrade/otrade_dw/dwd_otrade_b2b_otrade_order_hi",
-        pt='{{ds}}',
-        hour='23'
+dwd_otrade_b2b_otrade_order_di_task = OssSensor(
+    task_id='dwd_otrade_b2b_otrade_order_di_task',
+    bucket_key='{hdfs_path_str}/country_code=NG/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="otrade/otrade_dw/dwd_otrade_b2b_otrade_order_di",
+        pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
+
 
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
 
@@ -76,6 +74,7 @@ def fun_task_timeout_monitor(ds, dag, **op_kwargs):
 
     TaskTimeoutMonitor().set_task_monitor(tb)
 
+
 task_timeout_monitor = PythonOperator(
     task_id='task_timeout_monitor',
     python_callable=fun_task_timeout_monitor,
@@ -83,143 +82,24 @@ task_timeout_monitor = PythonOperator(
     dag=dag
 )
 
+
 ##----------------------------------------- 脚本 ---------------------------------------##
 
-def dwd_otrade_b2b_otrade_order_di_sql_task(ds):
+def app_otrade_b2b_order_target_supplier_di_sql_task(ds):
     HQL = '''
 
 set hive.exec.parallel=true;
 set hive.exec.dynamic.partition.mode=nonstrict;
 set hive.strict.checks.cartesian.product=false;
 
---1.去重后插入最终表中
-insert overwrite table otrade_dw.dwd_otrade_b2b_otrade_order_di partition(country_code,dt)
-select
-  id
-  ,pay_id
-  ,order_id
-  ,settle_id
-  ,original_order_id
-  ,order_type
-  ,payer
-  ,payee
-  ,payer_phone
-  ,payee_phone
-  ,payer_name
-  ,payee_name
-  ,supplier_type
-  ,source
-  ,shop_id
-  ,shop_name
-  ,order_status
-  ,refund_status
-  ,payable_amount
-  ,amount
-  ,fee_type
-  ,fee
-  ,fee_rate
-  ,handwork_fee
-  ,pay_channel
-  ,pay_type
-  ,pay_cur
-  ,pay_time
-  ,consign_time
-  ,confirm_time
-  ,receive_time
-  ,refund_type
-  ,create_time
-  ,update_time
-
-  ,status
-  ,country
-  ,city
-  ,country_name
-  ,city_name
-  ,bd_invitation_code
-  ,bd_invitation_id
-  ,hcm_id
-  ,hcm_name
-  ,cm_id
-  ,cm_name
-  ,bdm_id
-  ,bdm_name
-  ,bd_id
-  ,bd_name
-  ,first_order
-  ,first_order_time
-
-  ,retailer_first_name
-  ,retailer_last_name
-  ,retailer_phone_number
-  ,retailer_retailer_email
-  ,retailer_country
-  ,retailer_city
-  ,retailer_country_name
-  ,retailer_city_name
-  ,retailer_bd_invitation_id
-  ,retailer_hcm_id
-  ,retailer_hcm_name
-  ,retailer_cm_id
-  ,retailer_cm_name
-  ,retailer_bdm_id
-  ,retailer_bdm_name
-  ,retailer_bd_id
-  ,retailer_bd_name
-  ,retailer_first_order
-  ,retailer_first_order_time
-
-  ,opay_pay_id
-  ,actual_amount
-  ,pay_status
-  ,req_status
-
-  ,'nal' as country_code
-  ,'{pt}' as dt
-from
-  (
+--0.查看店铺信息
+with
+order_info as (
   select
-    id
-    ,pay_id
-    ,order_id
-    ,settle_id
-    ,original_order_id
-    ,order_type
-    ,payer
+    shop_id
     ,payee
-    ,payer_phone
-    ,payee_phone
-    ,payer_name
-    ,payee_name
-    ,supplier_type
-    ,source
-    ,shop_id
     ,shop_name
-    ,order_status
-    ,refund_status
-    ,payable_amount
-    ,amount
-    ,fee_type
-    ,fee
-    ,fee_rate
-    ,handwork_fee
-    ,pay_channel
-    ,pay_type
-    ,pay_cur
-    ,pay_time
-    ,consign_time
-    ,confirm_time
-    ,receive_time
-    ,refund_type
-    ,create_time
-    ,update_time
 
-    ,status
-    ,country
-    ,city
-    ,country_name
-    ,city_name
-    ,bd_invitation_code
-    ,bd_invitation_id
     ,hcm_id
     ,hcm_name
     ,cm_id
@@ -228,43 +108,111 @@ from
     ,bdm_name
     ,bd_id
     ,bd_name
-    ,first_order
-    ,first_order_time
   
-    ,retailer_first_name
-    ,retailer_last_name
-    ,retailer_phone_number
-    ,retailer_retailer_email
-    ,retailer_country
-    ,retailer_city
-    ,retailer_country_name
-    ,retailer_city_name
-    ,retailer_bd_invitation_id
-    ,retailer_hcm_id
-    ,retailer_hcm_name
-    ,retailer_cm_id
-    ,retailer_cm_name
-    ,retailer_bdm_id
-    ,retailer_bdm_name
-    ,retailer_bd_id
-    ,retailer_bd_name
-    ,retailer_first_order
-    ,retailer_first_order_time
-
-    ,opay_pay_id
-    ,actual_amount
-    ,pay_status
-    ,req_status
-
-    ,row_number() over(partition by id order by update_time desc) rn
+    ,country
+    ,country_name
+    ,city
+    ,city_name
+  
+    --下单分析
+    ,sum(if(order_type='pay',payable_amount,0)) as order_amt
+    ,count(if(order_type='pay',1,null)) as order_cnt
+    ,count(distinct(if(order_type='pay',payer,null))) as order_people
+    ,sum(if(order_type='pay' and retailer_first_order=1,payable_amount,0)) as first_order_amt
+    ,count(if(order_type='pay' and retailer_first_order=1,1,null)) as first_order_cnt
+    ,count(distinct(if(order_type='pay' and retailer_first_order=1,payer,null))) as first_order_people
+  
+    --销售分析
+    ,sum(if(order_type='pay',amount,0)) as pay_amt
+    ,count(if(order_type='pay' and pay_status = 3,1,null)) as pay_suc_cnt
+    ,count(if(order_type='pay' and pay_time is not null,1,null)) as pay_cnt
+  
+    --退款分析
+    ,count(if(order_type='pay' and order_status=0,1,null)) as refund_order_cnt
+    ,count(if(order_type='refund' and order_status=2,1,null)) as refund_suc_cnt
+    ,sum(if(order_type='refund' and order_status=2,payable_amount,0)) as refund_order_amt
+  
+    --收货分析
+    ,count(if(order_type='pay' and consign_time='{pt}',1,null)) as delivery_order_cnt
+    ,count(if(order_type='pay' and confirm_time='{pt}',1,null)) as receive_order_cnt
+    ,sum(if(order_type='pay' and confirm_time='{pt}',payable_amount,0)) as receive_order_amt
+  
+    --用户分析
+    ,count(distinct(if(order_type='pay' and pay_time is not null,payer,null))) as pay_people
+    ,count(distinct(if(order_type='pay' and pay_status = 3,payer,null))) as pay_suc_people
+  
+    ,country_code
+    ,dt
   from
-    otrade_dw.dwd_otrade_b2b_otrade_order_hi
+    otrade_dw.dwd_otrade_b2b_otrade_order_di
   where
     dt = '{pt}'
-  ) as a
-where
-  rn = 1
+  group by
+    shop_id
+    ,payee
+    ,shop_name
+
+    ,hcm_id
+    ,hcm_name
+    ,cm_id
+    ,cm_name
+    ,bdm_id
+    ,bdm_name
+    ,bd_id
+    ,bd_name
+    ,country
+    ,country_name
+    ,city
+    ,city_name
+    
+    ,country_code
+    ,dt
+)
+
+--2.插入数据
+insert overwrite table otrade_dw.app_otrade_b2b_order_target_supplier_di partition(country_code,dt)
+select
+  shop_id
+  ,payee
+  ,shop_name
+  ,hcm_id
+  ,hcm_name
+  ,cm_id
+  ,cm_name
+  ,bdm_id
+  ,bdm_name
+  ,bd_id
+  ,bd_name
+  ,country
+  ,country_name
+  ,city
+  ,city_name
+
+  ,order_amt
+  ,order_cnt
+  ,order_people
+  ,first_order_amt
+  ,first_order_cnt
+  ,first_order_people
+  ,pay_amt
+  ,pay_suc_cnt
+  ,pay_cnt
+  ,refund_order_cnt
+  ,refund_suc_cnt
+  ,refund_order_amt
+  ,delivery_order_cnt
+  ,receive_order_cnt
+  ,receive_order_amt
+  ,pay_people
+  ,pay_suc_people
+
+  ,'nal' as country_code
+  ,'{pt}' as dt
+from
+  order_info as v1
 ;
+
+
 
 
 '''.format(
@@ -280,7 +228,7 @@ def execution_data_task_id(ds, **kargs):
     hive_hook = HiveCliHook()
 
     # 读取sql
-    _sql = dwd_otrade_b2b_otrade_order_di_sql_task(ds)
+    _sql = app_otrade_b2b_order_target_supplier_di_sql_task(ds)
 
     logging.info('Executing: %s', _sql)
 
@@ -299,14 +247,14 @@ def execution_data_task_id(ds, **kargs):
     TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "true", "false")
 
 
-dwd_otrade_b2b_otrade_order_di_task = PythonOperator(
-    task_id='dwd_otrade_b2b_otrade_order_di_task',
+app_otrade_b2b_order_target_supplier_di_task = PythonOperator(
+    task_id='app_otrade_b2b_order_target_supplier_di_task',
     python_callable=execution_data_task_id,
     provide_context=True,
     dag=dag
 )
 
-dwd_otrade_b2b_otrade_order_hi_task >> dwd_otrade_b2b_otrade_order_di_task
+dwd_otrade_b2b_otrade_order_di_task >> app_otrade_b2b_order_target_supplier_di_task
 
 
 
