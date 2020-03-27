@@ -95,6 +95,7 @@ set hive.exec.dynamic.partition.mode=nonstrict;
 set hive.strict.checks.cartesian.product=false;
 
 --1.销售情况分析
+with
 order_info as (
   select
     payer
