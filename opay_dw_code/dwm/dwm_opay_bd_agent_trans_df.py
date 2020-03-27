@@ -34,7 +34,7 @@ args = {
     'email_on_retry': False,
 }
 
-dag = airflow.DAG('dwm_opay_bd_agent_cico_df',
+dag = airflow.DAG('dwm_opay_bd_agent_trans_df',
                   schedule_interval="30 01 * * *",
                   default_args=args
                   )
@@ -93,11 +93,11 @@ task_timeout_monitor= PythonOperator(
 
 ##----------------------------------------- 变量 ---------------------------------------##
 db_name="opay_dw"
-table_name="dwm_opay_bd_agent_cico_df"
+table_name="dwm_opay_bd_agent_trans_df"
 hdfs_path="oss://opay-datalake/opay/opay_dw/"+table_name
 
 ##---- hive operator ---##
-def dwm_opay_bd_agent_cico_df_sql_task(ds):
+def dwm_opay_bd_agent_trans_df_sql_task(ds):
     HQL='''
     
     set mapred.max.split.size=1000000;
@@ -209,7 +209,7 @@ def execution_data_task_id(ds, **kargs):
     hive_hook = HiveCliHook()
 
     # 读取sql
-    _sql = dwm_opay_bd_agent_cico_df_sql_task(ds)
+    _sql = dwm_opay_bd_agent_trans_df_sql_task(ds)
 
     logging.info('Executing: %s', _sql)
 
@@ -226,13 +226,13 @@ def execution_data_task_id(ds, **kargs):
     """
     TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "true", "true")
 
-dwm_opay_bd_agent_cico_df_task = PythonOperator(
-    task_id='dwm_opay_bd_agent_cico_df_task',
+dwm_opay_bd_agent_trans_df_task = PythonOperator(
+    task_id='dwm_opay_bd_agent_trans_df_task',
     python_callable=execution_data_task_id,
     provide_context=True,
     dag=dag
 )
 
-dwd_opay_cico_record_di_task >> dwm_opay_bd_agent_cico_df_task
-dwd_opay_bd_agent_change_log_di_task >> dwm_opay_bd_agent_cico_df_task
-dwd_opay_pos_transaction_record_di_task >> dwm_opay_bd_agent_cico_df_task
+dwd_opay_cico_record_di_task >> dwm_opay_bd_agent_trans_df_task
+dwd_opay_bd_agent_change_log_di_task >> dwm_opay_bd_agent_trans_df_task
+dwd_opay_pos_transaction_record_di_task >> dwm_opay_bd_agent_trans_df_task
