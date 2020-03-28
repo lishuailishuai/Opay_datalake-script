@@ -219,6 +219,8 @@ def run_check_table(db_name, table_name, conn_id, hive_table_name, server_name, 
                 data_type = 'string'
             elif result[1] == 'decimal':
                 data_type = result[1] + "(" + str(result[2]) + "," + str(result[3]) + ")"
+            elif result[1] == 'mediumint':
+                data_type = 'int'
             else:
                 data_type = result[1]
             rows.append(
