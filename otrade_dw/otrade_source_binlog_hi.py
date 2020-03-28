@@ -91,9 +91,10 @@ table_list = [
     ("opay_mall_platform", "mall_merchant", "opay_mall_platform", "mall", 3, "opay_mall_platform_db", "false"),
     ("opay_mall_platform", "nideshop_goods", "opay_mall_platform", "mall", 3, "opay_mall_platform_db", "false"),
     ("opay_mall_platform", "nideshop_product", "opay_mall_platform", "mall", 3, "opay_mall_platform_db", "false"),
-    ("opay_mall_platform", "nideshop_categroy", "opay_mall_platform", "mall", 3, "opay_mall_platform_db", "false"),
+    ("opay_mall_platform", "nideshop_category", "opay_mall_platform", "mall", 3, "opay_mall_platform_db", "false"),
 
 ]
+
 
 HIVE_DB = 'otrade_dw_ods'
 HIVE_TABLE = 'ods_binlog_%s_%s_hi'
