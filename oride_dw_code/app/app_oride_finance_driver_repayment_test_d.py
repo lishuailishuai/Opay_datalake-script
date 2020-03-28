@@ -133,7 +133,7 @@ else:
     dwm_oride_driver_base_df_tesk = OssSensor(
         task_id='dwm_oride_driver_base_df_tesk',
         bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-            hdfs_path_str="oride/oride_dw/dwm_oride_driver_base_df/country_code=nal",
+            hdfs_path_str="oride/oride_dw/dwm_oride_driver_base_df/country_code=NG",
             pt='{{ds}}'
         ),
         bucket_name='opay-datalake',

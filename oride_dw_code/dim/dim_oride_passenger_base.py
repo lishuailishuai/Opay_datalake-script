@@ -25,7 +25,7 @@ import requests
 import os
 
 args = {
-        'owner': 'chenghui',
+        'owner': 'lishuai',
         'start_date': datetime(2019, 5, 20),
         'depends_on_past': False,
         'retries': 3,
@@ -36,55 +36,17 @@ args = {
 } 
 
 dag = airflow.DAG( 'dim_oride_passenger_base', 
-    schedule_interval="35 00 * * *",
+    schedule_interval="25 00 * * *",
     default_args=args,
     )
 ##----------------------------------------- 变量 ---------------------------------------##
 
 db_name="oride_dw"
 table_name="dim_oride_passenger_base"
-
+hdfs_path = "oss://opay-datalake/oride/oride_dw/" + table_name
 ##----------------------------------------- 依赖 ---------------------------------------## 
-#获取变量
-code_map=eval(Variable.get("sys_flag"))
 
-#判断ufile(cdh环境)
-if code_map["id"].lower()=="ufile":
-    #依赖前一天分区
-    ods_sqoop_base_data_user_df_prev_day_tesk=HivePartitionSensor(
-          task_id="ods_sqoop_base_data_user_df_prev_day_tesk",
-          table="ods_sqoop_base_data_user_df",
-          partition="dt='{{ds}}'",
-          schema="oride_dw_ods",
-          poke_interval=60, #依赖不满足时，一分钟检查一次依赖状态
-          dag=dag
-        )
-    #依赖前一天分区
-    dwd_oride_passenger_extend_df_prev_day_task = UFileSensor(
-        task_id='dwd_oride_passenger_extend_df_prev_day_task',
-        filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-            hdfs_path_str="oride/oride_dw/dwd_oride_passenger_extend_df/country_code=nal",
-            pt='{{ds}}'
-        ),
-        bucket_name='opay-datalake',
-        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-        dag=dag
-    )
-    #路径
-    hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
-else:
-    ods_sqoop_base_data_user_df_prev_day_tesk = OssSensor(
-        task_id='ods_sqoop_base_data_user_df_prev_day_tesk',
-        bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-            hdfs_path_str="oride_dw_sqoop/oride_data/data_user",
-            pt='{{ds}}'
-        ),
-        bucket_name='opay-datalake',
-        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-        dag=dag
-    )
-    # 依赖前一天分区
-    dwd_oride_passenger_extend_df_prev_day_task = OssSensor(
+dwd_oride_passenger_extend_df_prev_day_task = OssSensor(
         task_id='dwd_oride_passenger_extend_df_prev_day_task',
         bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
             hdfs_path_str="oride/oride_dw/dwd_oride_passenger_extend_df/country_code=nal",
@@ -94,8 +56,17 @@ else:
         poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
         dag=dag
     )
-    # 路径
-    hdfs_path = "oss://opay-datalake/oride/oride_dw/" + table_name
+
+dwd_oride_passenger_df_prev_day_task = OssSensor(
+        task_id='dwd_oride_passenger_df_prev_day_task',
+        bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+            hdfs_path_str="oride/oride_dw/dwd_oride_passenger_df/country_code=nal",
+            pt='{{ds}}'
+        ),
+        bucket_name='opay-datalake',
+        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+        dag=dag
+    )
 
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
 
@@ -189,14 +160,14 @@ SELECT t1.passenger_id,
 
        t2.language,
        -- 客户端语言
-       
+
        null as device_id, --设备ID
        from_unixtime(t2.protocol_time,'yyyy-MM-dd HH:mm:ss') as protocol_time, --签约/解约时间
 
        t1.country_code,
        '{pt}' AS dt
 FROM
-  (SELECT id AS passenger_id,
+  (SELECT passenger_id,
           --'乘客ID'
 
           phone_number,
@@ -216,7 +187,7 @@ FROM
 
           'nal' AS country_code --国家码字段
 
-   FROM oride_dw_ods.ods_sqoop_base_data_user_df
+   FROM oride_dw.dwd_oride_passenger_df
    WHERE dt= '{pt}') t1
 LEFT OUTER JOIN
   (SELECT passenger_id,
@@ -343,6 +314,6 @@ dim_oride_passenger_base_task = PythonOperator(
     dag=dag
 )
 
-ods_sqoop_base_data_user_df_prev_day_tesk>>dim_oride_passenger_base_task
+dwd_oride_passenger_df_prev_day_task>>dim_oride_passenger_base_task
 dwd_oride_passenger_extend_df_prev_day_task>>dim_oride_passenger_base_task
 

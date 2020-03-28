@@ -413,20 +413,20 @@ for schema_table_db_name, schema_table_name, target_table_db_name, target_table_
         dag=dag
     )
 
-    validate_all_data = PythonOperator(
-        task_id='validate_data_{}'.format(hive_table_name),
-        priority_weight=priority_weight_nm,
-        python_callable=validata_data,
-        provide_context=True,
-        op_kwargs={
-            'db': HIVE_DB,
-            'table_name': hive_table_name,
-            'table_format': HIVE_TABLE,
-            'table_core_list': table_core_list,
-            'table_not_core_list': table_not_core_list
-        },
-        dag=dag
-    )
+    # validate_all_data = PythonOperator(
+    #     task_id='validate_data_{}'.format(hive_table_name),
+    #     priority_weight=priority_weight_nm,
+    #     python_callable=validata_data,
+    #     provide_context=True,
+    #     op_kwargs={
+    #         'db': HIVE_DB,
+    #         'table_name': hive_table_name,
+    #         'table_format': HIVE_TABLE,
+    #         'table_core_list': table_core_list,
+    #         'table_not_core_list': table_not_core_list
+    #     },
+    #     dag=dag
+    # )
 
     # if table_name in IGNORED_TABLE_LIST:
     #     add_partitions >> validate_all_data
