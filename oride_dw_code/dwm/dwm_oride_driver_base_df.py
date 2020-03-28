@@ -117,7 +117,7 @@ dwd_oride_driver_accept_order_click_detail_di_prev_day_task = OssSensor(
 dwm_oride_driver_base_df_prev_day_task = OssSensor(
         task_id='dwm_oride_driver_base_df_prev_day_task',
         bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-            hdfs_path_str="oride/oride_dw/dwm_oride_driver_base_df/country_code=NG",
+            hdfs_path_str="oride/oride_dw/dwm_oride_driver_base_df/country_code=nal",
             pt='{{macros.ds_add(ds, -1)}}'
         ),
         bucket_name='opay-datalake',
