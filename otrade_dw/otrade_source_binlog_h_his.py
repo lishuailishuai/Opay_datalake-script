@@ -29,7 +29,7 @@ args = {
     'email_on_retry': False,
     'on_success_callback': on_success_callback,
 }
-schedule_interval = "20 * * * *"
+schedule_interval = "23 * * * *"
 
 dag = airflow.DAG(
     'otrade_source_binlog_h_his',

@@ -26,7 +26,7 @@ args = {
     'email_on_retry': False,
     'on_success_callback': on_success_callback,
 }
-schedule_interval = "32 * * * *"
+schedule_interval = "20 * * * *"
 
 dag = airflow.DAG(
     'otrade_source_binlog_hi',
@@ -84,6 +84,14 @@ table_list = [
     ("otrade_order", "otrade_order", "otrade_order", "base", 3, "otrade_db", "false"),
     ("otrade_order", "otrade_order_item", "otrade_order", "base", 3, "otrade_db", "false"),
     ("otrade_order", "otrade_pay", "otrade_order", "base", 3, "otrade_db", "false"),
+
+    ("opay_mall_platform", "nideshop_cart", "opay_mall_platform", "mall", 3, "opay_mall_platform_db", "false"),
+    ("opay_mall_platform", "nideshop_order", "opay_mall_platform", "mall", 3, "opay_mall_platform_db", "false"),
+    ("opay_mall_platform", "nideshop_order_goods", "opay_mall_platform", "mall", 3, "opay_mall_platform_db", "false"),
+    ("opay_mall_platform", "mall_merchant", "opay_mall_platform", "mall", 3, "opay_mall_platform_db", "false"),
+    ("opay_mall_platform", "nideshop_goods", "opay_mall_platform", "mall", 3, "opay_mall_platform_db", "false"),
+    ("opay_mall_platform", "nideshop_product", "opay_mall_platform", "mall", 3, "opay_mall_platform_db", "false"),
+    ("opay_mall_platform", "nideshop_categroy", "opay_mall_platform", "mall", 3, "opay_mall_platform_db", "false"),
 
 ]
 
