@@ -51,7 +51,7 @@ hdfs_path = "oss://opay-datalake/oride/oride_dw/" + table_name
 
 ods_binlog_base_data_driver_extend_hi_prev_day_task = OssSensor(
     task_id='ods_binlog_base_data_driver_extend_hi_prev_day_task',
-    bucket_key='{hdfs_path_str}/dt={pt}/hour=23/_SUCCESS'.format(
+    bucket_key='{hdfs_path_str}/dt={pt}/hour=22/_SUCCESS'.format(
         hdfs_path_str="oride_binlog/oride_db.oride_data.data_driver_extend",
         pt='{{ds}}'
     ),
