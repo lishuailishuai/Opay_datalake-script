@@ -124,7 +124,7 @@ def app_opay_owealth_report_d_sql_task(ds):
               user_id,
               memo
         FROM opay_owealth_ods.ods_sqoop_owealth_share_order_df
-        WHERE dt='{pt}'
+        WHERE dt='2020-03-18'
          AND status="S"
          AND date_format(update_time,'yyyy-MM-dd')='{pt}'
         ),
@@ -134,7 +134,7 @@ def app_opay_owealth_report_d_sql_task(ds):
               subscribed,
               mobile
         FROM opay_owealth_ods.ods_sqoop_owealth_owealth_user_subscribed_df
-        WHERE dt='{pt}'
+        WHERE dt='2020-03-18'
           AND update_time<'{pt} 23:00:00' 
         ),
     share_trans_record AS
@@ -143,7 +143,7 @@ def app_opay_owealth_report_d_sql_task(ds):
                user_id,
                date_format(create_time,'yyyy-MM-dd') create_date
         FROM opay_owealth_ods.ods_sqoop_owealth_share_trans_record_df
-        WHERE dt='{pt}'
+        WHERE dt='2020-03-18'
           AND create_time<'{pt} 24:00:00' 
         ),
     user_role AS
