@@ -82,7 +82,7 @@ hdfs_path = "oss://opay-datalake/opay_dw_sqoop_di/opay_transaction/business_acti
 config = eval(Variable.get("opay_time_zone_config"))
 
 
-def ods_binlog_base_business_activity_record_hi_sql_task(ds):
+def ods_sqoop_base_business_activity_record_di_sql_task(ds):
     HQL = '''
 
     set hive.exec.dynamic.partition.mode=nonstrict;
@@ -140,7 +140,7 @@ def execution_data_task_id(ds, **kargs):
     hive_hook = HiveCliHook()
 
     # 读取sql
-    _sql = ods_binlog_base_business_activity_record_hi_sql_task(ds)
+    _sql = ods_sqoop_base_business_activity_record_di_sql_task(ds)
 
     logging.info('Executing: %s', _sql)
 
@@ -156,12 +156,12 @@ def execution_data_task_id(ds, **kargs):
     TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "false", "true")
 
 
-ods_binlog_base_business_activity_record_hi_task = PythonOperator(
-    task_id='ods_binlog_base_business_activity_record_hi_task',
+ods_sqoop_base_business_activity_record_di_task = PythonOperator(
+    task_id='ods_sqoop_base_business_activity_record_di_task',
     python_callable=execution_data_task_id,
     provide_context=True,
     dag=dag
 )
 
-ods_binlog_base_business_activity_record_hi_task >> ods_binlog_base_business_activity_record_hi_task
+ods_binlog_base_business_activity_record_hi_task >> ods_sqoop_base_business_activity_record_di_task
 
