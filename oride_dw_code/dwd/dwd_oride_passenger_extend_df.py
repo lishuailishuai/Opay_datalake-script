@@ -47,7 +47,7 @@ dag = airflow.DAG('dwd_oride_passenger_extend_df',
 
 ods_binlog_data_user_extend_hi_prev_day_task = OssSensor(
     task_id='ods_binlog_data_user_extend_hi_prev_day_task',
-    bucket_key='{hdfs_path_str}/dt={pt}/hour=23/_SUCCESS'.format(
+    bucket_key='{hdfs_path_str}/dt={pt}/hour=22/_SUCCESS'.format(
         hdfs_path_str="oride_binlog/oride_db.oride_data.data_user_extend",
         pt='{{ds}}'
     ),
@@ -79,7 +79,7 @@ def fun_task_timeout_monitor(ds,dag,**op_kwargs):
     dag_ids=dag.dag_id
 
     tb = [
-        {"dag":dag,"db": "oride_dw", "table":"{dag_name}".format(dag_name=table_name), "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "1500"}
+        {"dag":dag,"db": "oride_dw", "table":"{dag_name}".format(dag_name=table_name), "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "600"}
     ]
 
     TaskTimeoutMonitor().set_task_monitor(tb)
