@@ -27,7 +27,7 @@ from airflow.operators.python_operator import PythonOperator
 from airflow.sensors import OssSensor
 
 args = {
-    'owner': 'chenghui',
+    'owner': 'lishuai',
     'start_date': datetime(2019, 10, 30),
     'depends_on_past': False,
     'retries': 3,

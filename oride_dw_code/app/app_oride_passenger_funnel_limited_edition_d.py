@@ -25,7 +25,7 @@ from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
 from airflow.sensors import OssSensor
 
 args = {
-    'owner': 'chenghui',
+    'owner': 'lishuai',
     'start_date': datetime(2019, 11, 15),
     'depends_on_past': False,
     'retries': 3,

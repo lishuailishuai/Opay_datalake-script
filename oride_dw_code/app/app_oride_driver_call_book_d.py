@@ -22,7 +22,7 @@ from plugins.TaskTouchzSuccess import TaskTouchzSuccess
 
 
 args = {
-    'owner': 'chenghui',
+    'owner': 'lishuai',
     'start_date': datetime(2019, 11, 1),
     'depends_on_past': False,
     'retries': 3,
