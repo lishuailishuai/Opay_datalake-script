@@ -15,7 +15,7 @@ from airflow.sensors import OssSensor
 from airflow.models import Variable
 
 args = {
-    'owner':"chenghui",
+    'owner':"lishuai",
     'start_date': datetime(2019, 12, 1),
     'depends_on_past': False,
     'retries': 3,

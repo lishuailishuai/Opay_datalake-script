@@ -199,7 +199,7 @@ class SqoopSchemaUpdate(object):
         mysql_column = []
         for (column_name, data_type, column_comment, column_type) in res:
             mysql_schema.append({
-                'column': column_name,
+                'column': str(column_name).lower(),
                 'column_info': "`%s` %s " % (
                     column_name, self.mysql_type_to_hive.get(data_type.upper(), 'string'))
             })

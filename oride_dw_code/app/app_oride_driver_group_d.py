@@ -20,7 +20,7 @@ from airflow.sensors import OssSensor
 
 
 args = {
-    'owner': 'chenghui',
+    'owner': 'lishuai',
     'start_date': datetime(2019, 10, 31),
     'depends_on_past': False,
     'retries': 3,
@@ -84,7 +84,7 @@ else:
     print("成功")
     dim_oride_driver_base_task = OssSensor(
         task_id='dim_oride_driver_base_task',
-        bucket_key='{hdfs_path_str}/country_code=nal/dt={pt}/_SUCCESS'.format(
+        bucket_key='{hdfs_path_str}/country_code=NG/dt={pt}/_SUCCESS'.format(
             hdfs_path_str='oride/oride_dw/dim_oride_driver_base',
             pt='{{ds}}'
         ),

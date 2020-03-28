@@ -53,7 +53,7 @@ def fun_task_timeout_monitor(ds, db_name, table_name, **op_kwargs):
 # 忽略数据量检查的table
 IGNORED_TABLE_LIST = [
     'adjustment_decrease_record',
-    'merchant_receive_money_record',
+#    'merchant_receive_money_record',
     'merchant_fee_record',
     'user_fee_record'
 ]
@@ -67,7 +67,7 @@ db_name,table_name,conn_id,prefix_name,priority_weight,is_valid_success
 table_list = [
     ("opay_sms","message_record", "opay_sms", "base",3,"true"),
 
-    ("opay_user","user_email", "opay_user", "base",3,"true"),
+#    ("opay_user","user_email", "opay_user", "base",3,"true"),
     ("opay_user","user", "opay_user", "base",3,"true"),
 
     ("opay_bigorder","big_order", "opay_bigorder", "base",3,"true"),
@@ -80,7 +80,7 @@ table_list = [
     ("opay_transaction","electricity_topup_record", "opay_transaction", "base",3,"true"),
     ("opay_transaction","merchant_acquiring_record", "opay_transaction", "base",3,"true"),
     ("opay_transaction","merchant_pos_transaction_record", "opay_transaction", "base",3,"false"),
-    ("opay_transaction","merchant_receive_money_record", "opay_transaction", "base",3,"true"),
+#    ("opay_transaction","merchant_receive_money_record", "opay_transaction", "base",3,"true"),
     ("opay_transaction","merchant_topup_record", "opay_transaction", "base",3,"true"),
     ("opay_transaction","merchant_transfer_card_record", "opay_transaction", "base",3,"true"),
     ("opay_transaction","merchant_transfer_user_record", "opay_transaction", "base",3,"true"),
@@ -95,7 +95,7 @@ table_list = [
     ("opay_transaction","user_transfer_user_record", "opay_transaction", "base",3,"true"),
     ("opay_transaction", "cash_in_record", "opay_transaction", "base", 2,"false"),
     ("opay_transaction", "cash_out_record", "opay_transaction", "base", 2,"false"),
-    ("opay_transaction", "business_activity_record", "opay_transaction", "base", 2,"false"),
+ #   ("opay_transaction", "business_activity_record", "opay_transaction", "base", 2,"false"),
     ("opay_transaction", "activity_record", "opay_transaction", "base", 2,"false"),
 
     ("opay_fee","user_fee_record", "opay_fee", "base",3,"true"),
@@ -106,7 +106,7 @@ table_list = [
 
     ("opay_activity","preferential_record", "opay_activity", "base",3,"false"),
 
-    ("opay_channel","channel_transaction", "opay_channel", "base", 3, "false"),
+  #  ("opay_channel","channel_transaction", "opay_channel", "base", 3, "false"),
     ("opay_overlord","terminal_record", "opay_overlord", "base", 3, "false"),
 
     ("opay_agent_crm","bd_agent_status_change_log", "opay_agent_crm_db", "base", 3, "false"),

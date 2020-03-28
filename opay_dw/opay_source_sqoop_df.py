@@ -76,7 +76,7 @@ table_list = [
     ("opay_user", "user_token", "opay_user", "base", 1),
     ("opay_user", "user_telesale", "opay_user", "base", 1),
     ("opay_user", "user_reseller", "opay_user", "base", 1),
-    ("opay_user", "user_push_token", "opay_user", "base", 1),
+ #   ("opay_user", "user_push_token", "opay_user", "base", 1),
     ("opay_user", "user_operator", "opay_user", "base", 1),
     ("opay_user", "user_nearby_agent", "opay_user", "base", 1),
     ("opay_user", "user_message", "opay_user", "base", 1),
