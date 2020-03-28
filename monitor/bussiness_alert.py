@@ -54,189 +54,189 @@ metrcis_list = [
     # 1
     (
         'Trade_Airtime',
-        '''SELECT "trade_cnt" AS "trade_cnt","trade_user_cnt" AS "trade_user_cnt" ,"trade_amount" AS "trade_amount" FROM "OPAY_TRANSACTION_OP_EVENT_CQ_RESULT_1" WHERE ("__source_table" = 'airtime_topup_record') and time > {time} ''',
+        '''SELECT "trade_cnt" AS "trade_cnt","trade_user_cnt" AS "trade_user_cnt" ,"trade_amount" AS "trade_amount" FROM "OPAY_TRANSACTION_EVENT_AIRTIME_CQ_RESULT" WHERE  time > {time} ''',
         'trade_alert_value',
         7,
         'trade_alert_level_1_address',
         'trade_alert_level_2_address',
         False,
         3,
-        'influx_address_1'
+        'influx_address_2'
     ),
 
     # 2
     (
         'Trade_Airtime_Success',
-        '''SELECT "trade_success_cnt" AS "trade_success_cnt" FROM "OPAY_TRANSACTION_OP_EVENT_CQ_RESULT_2" WHERE ("__source_table" = 'airtime_topup_record') and time > {time}  ''',
+        '''SELECT "trade_success_cnt" AS "trade_success_cnt" FROM "OPAY_TRANSACTION_EVENT_AIRTIME_SUCCESS_CQ_RESULT" WHERE  time > {time}  ''',
         'trade_alert_value',
         7,
         'trade_alert_level_1_address',
         'trade_alert_level_2_address',
         False,
         3,
-        'influx_address_1'
+        'influx_address_2'
     ),
 
     ## Betting
     # 3
     (
         'Trade_Betting',
-        '''SELECT "trade_cnt" AS "trade_cnt","trade_user_cnt" AS "trade_user_cnt" ,"trade_amount" AS "trade_amount" FROM "OPAY_TRANSACTION_OP_EVENT_CQ_RESULT_1" WHERE ("__source_table" = 'betting_topup_record') and time > {time} ''',
+        '''SELECT "trade_cnt" AS "trade_cnt","trade_user_cnt" AS "trade_user_cnt" ,"trade_amount" AS "trade_amount" FROM "OPAY_TRANSACTION_EVENT_BETTING_CQ_RESULT" WHERE  time > {time} ''',
         'trade_alert_value',
         7,
         'trade_alert_level_1_address',
         'trade_alert_level_2_address',
         False,
         3,
-        'influx_address_1'
+        'influx_address_2'
     ),
 
     # 5
     (
         'Trade_Betting_Success',
-        '''SELECT "trade_success_cnt" AS "trade_success_cnt" FROM "OPAY_TRANSACTION_OP_EVENT_CQ_RESULT_2" WHERE ("__source_table" = 'betting_topup_record' ) and time > {time} ''',
+        '''SELECT "trade_success_cnt" AS "trade_success_cnt" FROM "OPAY_TRANSACTION_EVENT_BETTING_SUCCESS_CQ_RESULT" WHERE  time > {time} ''',
         'trade_alert_value',
         7,
         'trade_alert_level_1_address',
         'trade_alert_level_2_address',
         False,
         3,
-        'influx_address_1'
+        'influx_address_2'
     ),
 
     ## Electricity
     # 6
     (
         'Trade_Electricity',
-        '''SELECT "trade_cnt" AS "trade_cnt","trade_user_cnt" AS "trade_user_cnt" ,"trade_amount" AS "trade_amount" FROM "OPAY_TRANSACTION_OP_EVENT_CQ_RESULT_1" WHERE ("__source_table" = 'electricity_topup_record') and time > {time} ''',
+        '''SELECT "trade_cnt" AS "trade_cnt","trade_user_cnt" AS "trade_user_cnt" ,"trade_amount" AS "trade_amount" FROM "OPAY_TRANSACTION_EVENT_ELECTRICITY_CQ_RESULT" WHERE  time > {time} ''',
         'trade_alert_value',
         7,
         'trade_alert_level_1_address',
         'trade_alert_level_2_address',
         False,
         3,
-        'influx_address_1'
+        'influx_address_2'
     ),
 
     # 7
     (
         'Trade_Electricity_Success',
-        '''SELECT "trade_success_cnt" AS "trade_success_cnt" FROM "OPAY_TRANSACTION_OP_EVENT_CQ_RESULT_2" WHERE ("__source_table" = 'electricity_topup_record') and time > {time} ''',
+        '''SELECT "trade_success_cnt" AS "trade_success_cnt" FROM "OPAY_TRANSACTION_EVENT_ELECTRICITY_SUCCESS_CQ_RESULT" WHERE  time > {time} ''',
         'trade_alert_value',
         7,
         'trade_alert_level_1_address',
         'trade_alert_level_2_address',
         False,
         3,
-        'influx_address_1'
+        'influx_address_2'
     ),
 
     ## TV
     # 8
     (
         'Trade_TV',
-        '''SELECT "trade_cnt" AS "trade_cnt","trade_user_cnt" AS "trade_user_cnt" ,"trade_amount" AS "trade_amount" FROM "OPAY_TRANSACTION_OP_EVENT_CQ_RESULT_1" WHERE ("__source_table" = 'tv_topup_record') and time > {time}  ''',
+        '''SELECT "trade_cnt" AS "trade_cnt","trade_user_cnt" AS "trade_user_cnt" ,"trade_amount" AS "trade_amount" FROM "OPAY_TRANSACTION_EVENT_TV_CQ_RESULT" WHERE  time > {time}  ''',
         'trade_alert_value',
         7,
         'trade_alert_level_1_address',
         'trade_alert_level_2_address',
         False,
         3,
-        'influx_address_1'
+        'influx_address_2'
     ),
 
     # 9
     (
         'Trade_TV_Success',
-        '''SELECT "trade_success_cnt" AS "trade_success_cnt" FROM "OPAY_TRANSACTION_OP_EVENT_CQ_RESULT_2" WHERE ("__source_table" = 'tv_topup_record' ) and time > {time} ''',
+        '''SELECT "trade_success_cnt" AS "trade_success_cnt" FROM "OPAY_TRANSACTION_EVENT_TV_SUCCESS_CQ_RESULT" WHERE  time > {time} ''',
         'trade_alert_value',
         7,
         'trade_alert_level_1_address',
         'trade_alert_level_2_address',
         False,
         3,
-        'influx_address_1'
+        'influx_address_2'
     ),
 
     ## Mobiledata
     # 10
     (
         'Trade_Mobiledata',
-        '''SELECT "trade_cnt" AS "trade_cnt","trade_user_cnt" AS "trade_user_cnt" ,"trade_amount" AS "trade_amount" FROM "OPAY_TRANSACTION_OP_EVENT_CQ_RESULT_1" WHERE ("__source_table" = 'mobiledata_topup_record') and time > {time} ''',
+        '''SELECT "trade_cnt" AS "trade_cnt","trade_user_cnt" AS "trade_user_cnt" ,"trade_amount" AS "trade_amount" FROM "OPAY_TRANSACTION_EVENT_MOBILEDATA_CQ_RESULT" WHERE  time > {time} ''',
         'trade_alert_value',
         7,
         'trade_alert_level_1_address',
         'trade_alert_level_2_address',
         False,
         3,
-        'influx_address_1'
+        'influx_address_2'
     ),
 
     # 11
     (
         'Trade_Mobiledata_Success',
-        '''SELECT "trade_success_cnt" AS "trade_success_cnt" FROM "OPAY_TRANSACTION_OP_EVENT_CQ_RESULT_2" WHERE ("__source_table" = 'mobiledata_topup_record' ) and time > {time}''',
+        '''SELECT "trade_success_cnt" AS "trade_success_cnt" FROM "OPAY_TRANSACTION_EVENT_MOBILEDATA_SUCCESS_CQ_RESULT" WHERE  time > {time}''',
         'trade_alert_value',
         7,
         'trade_alert_level_1_address',
         'trade_alert_level_2_address',
         False,
         3,
-        'influx_address_1'
+        'influx_address_2'
     ),
 
     ## Cash_In
     # 12
     (
         'Trade_Cash_In',
-        '''SELECT "trade_cnt" AS "trade_cnt","trade_user_cnt" AS "trade_user_cnt" ,"trade_amount" AS "trade_amount" FROM "OPAY_TRANSACTION_OP_EVENT_CQ_RESULT_28" WHERE ("__source_table" = 'cash_in_record') and time > {time} ''',
+        '''SELECT "trade_cnt" AS "trade_cnt","trade_user_cnt" AS "trade_user_cnt" ,"trade_amount" AS "trade_amount" FROM "OPAY_TRANSACTION_EVENT_CASH_IN_CQ_RESULT" WHERE time > {time} ''',
         'trade_alert_value',
         7,
         'trade_alert_level_1_address',
         'trade_alert_level_2_address',
         False,
         3,
-        'influx_address_1'
+        'influx_address_2'
     ),
 
     # 13
     (
         'Trade_Cash_In_Success',
-        '''SELECT "trade_success_cnt" AS "trade_success_cnt" FROM "OPAY_TRANSACTION_OP_EVENT_CQ_RESULT_29" WHERE ("__source_table" = 'cash_in_record' ) and time > {time} ''',
+        '''SELECT "trade_success_cnt" AS "trade_success_cnt" FROM "OPAY_TRANSACTION_EVENT_CASH_IN_SUCCESS_CQ_RESULT" WHERE  time > {time} ''',
         'trade_alert_value',
         7,
         'trade_alert_level_1_address',
         'trade_alert_level_2_address',
         False,
         3,
-        'influx_address_1'
+        'influx_address_2'
     ),
 
     ## Cash_Out
     # 14
     (
         'Trade_Cash_Out',
-        '''SELECT "trade_cnt" AS "trade_cnt","trade_user_cnt" AS "trade_user_cnt" ,"trade_amount" AS "trade_amount" FROM "OPAY_TRANSACTION_OP_EVENT_CQ_RESULT_28" WHERE ("__source_table" = 'cash_out_record') and time > {time}  ''',
+        '''SELECT "trade_cnt" AS "trade_cnt","trade_user_cnt" AS "trade_user_cnt" ,"trade_amount" AS "trade_amount" FROM "OPAY_TRANSACTION_EVENT_CASH_OUT_CQ_RESULT" WHERE  time > {time}  ''',
         'trade_alert_value',
         7,
         'trade_alert_level_1_address',
         'trade_alert_level_2_address',
         False,
         3,
-        'influx_address_1'
+        'influx_address_2'
     ),
 
     # 15
     (
         'Trade_Cash_Out_Success',
-        '''SELECT "trade_success_cnt" AS "trade_success_cnt" FROM "OPAY_TRANSACTION_OP_EVENT_CQ_RESULT_29" WHERE ("__source_table" = 'cash_out_record') and time > {time}''',
+        '''SELECT "trade_success_cnt" AS "trade_success_cnt" FROM "OPAY_TRANSACTION_EVENT_CASH_OUT_SUCCESS_CQ_RESULT" WHERE  time > {time}''',
         'trade_alert_value',
         7,
         'trade_alert_level_1_address',
         'trade_alert_level_2_address',
         False,
         3,
-        'influx_address_1'
+        'influx_address_2'
     ),
 
     ## ACTransfer
