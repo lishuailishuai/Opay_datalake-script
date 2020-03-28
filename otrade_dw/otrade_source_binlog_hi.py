@@ -91,9 +91,10 @@ table_list = [
     ("opay_mall_platform", "mall_merchant", "opay_mall_platform", "mall", 3, "opay_mall_platform_db", "false"),
     ("opay_mall_platform", "nideshop_goods", "opay_mall_platform", "mall", 3, "opay_mall_platform_db", "false"),
     ("opay_mall_platform", "nideshop_product", "opay_mall_platform", "mall", 3, "opay_mall_platform_db", "false"),
-    ("opay_mall_platform", "nideshop_categroy", "opay_mall_platform", "mall", 3, "opay_mall_platform_db", "false"),
+    ("opay_mall_platform", "nideshop_category", "opay_mall_platform", "mall", 3, "opay_mall_platform_db", "false"),
 
 ]
+
 
 HIVE_DB = 'otrade_dw_ods'
 HIVE_TABLE = 'ods_binlog_%s_%s_hi'
@@ -214,7 +215,7 @@ def run_check_table(db_name, table_name, conn_id, hive_table_name, server_name, 
             else:
                 col_name = result[0]
             if result[1] == 'timestamp' or result[1] == 'varchar' or result[1] == 'char' or result[1] == 'text' or \
-                    result[1] == 'longtext' or result[1] == 'mediumtext' or \
+                    result[1] == 'longtext' or result[1] == 'mediumtext' or result[1] == 'enum' or \
                     result[1] == 'datetime':
                 data_type = 'string'
             elif result[1] == 'decimal':
@@ -305,20 +306,20 @@ for db_name, table_name, conn_id, prefix_name, priority_weight_nm, server_name, 
         dag=dag
     )
 
-    validate_all_data = PythonOperator(
-        task_id='validate_data_{}'.format(hive_table_name),
-        priority_weight=priority_weight_nm,
-        python_callable=validata_data,
-        provide_context=True,
-        op_kwargs={
-            'db': HIVE_DB,
-            'table_name': hive_table_name,
-            'table_format': HIVE_TABLE,
-            'table_core_list': table_core_list,
-            'table_not_core_list': table_not_core_list
-        },
-        dag=dag
-    )
+    # validate_all_data = PythonOperator(
+    #     task_id='validate_data_{}'.format(hive_table_name),
+    #     priority_weight=priority_weight_nm,
+    #     python_callable=validata_data,
+    #     provide_context=True,
+    #     op_kwargs={
+    #         'db': HIVE_DB,
+    #         'table_name': hive_table_name,
+    #         'table_format': HIVE_TABLE,
+    #         'table_core_list': table_core_list,
+    #         'table_not_core_list': table_not_core_list
+    #     },
+    #     dag=dag
+    # )
 
     # if table_name in IGNORED_TABLE_LIST:
     #     add_partitions >> validate_all_data

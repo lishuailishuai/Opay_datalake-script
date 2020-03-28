@@ -246,6 +246,37 @@ def dim_oride_driver_base_sql_task(ds):
     )
     return HQL
 
+# 熔断数据，如果数据重复，报错
+def check_key_data_task(ds):
+    cursor = get_hive_cursor()
+
+    # 主键重复校验
+    check_sql = '''
+    SELECT count(1)-count(distinct driver_id) as cnt
+      FROM {db}.{table}
+      WHERE dt='{pt}'
+    '''.format(
+        pt=ds,
+        now_day=airflow.macros.ds_add(ds, +1),
+        table=table_name,
+        db=db_name
+    )
+
+    logging.info('Executing 主键重复校验: %s', check_sql)
+
+    cursor.execute(check_sql)
+
+    res = cursor.fetchone()
+
+    if res[0] > 1:
+        flag = 1
+        raise Exception("Error The primary key repeat !", res)
+        sys.exit(1)
+    else:
+        flag = 0
+        print("-----> Notice Data Export Success ......")
+
+    return flag
 
 
 # 主流程
@@ -261,7 +292,7 @@ def execution_data_task_id(ds, **kargs):
     hive_hook.run_cli(_sql)
 
     # 熔断数据
-    #check_key_data_task(ds)
+    check_key_data_task(ds)
 
     # 生成_SUCCESS
     """

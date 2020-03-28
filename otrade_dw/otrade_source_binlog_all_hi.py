@@ -86,6 +86,15 @@ table_list = [
     ("otrade_order", "otrade_order_item", "otrade_order", "base", 3, "otrade_db", "false"),
     ("otrade_order", "otrade_pay", "otrade_order", "base", 3, "otrade_db", "false"),
 
+    ("opay_mall_platform", "nideshop_cart", "opay_mall_platform", "mall", 3, "opay_mall_platform_db", "false"),
+    ("opay_mall_platform", "nideshop_order", "opay_mall_platform", "mall", 3, "opay_mall_platform_db", "false"),
+    ("opay_mall_platform", "nideshop_order_goods", "opay_mall_platform", "mall", 3, "opay_mall_platform_db", "false"),
+    ("opay_mall_platform", "mall_merchant", "opay_mall_platform", "mall", 3, "opay_mall_platform_db", "false"),
+    ("opay_mall_platform", "nideshop_goods", "opay_mall_platform", "mall", 3, "opay_mall_platform_db", "false"),
+    ("opay_mall_platform", "nideshop_product", "opay_mall_platform", "mall", 3, "opay_mall_platform_db", "false"),
+    ("opay_mall_platform", "nideshop_category", "opay_mall_platform", "mall", 3, "opay_mall_platform_db", "false"),
+
+
 ]
 
 HIVE_DB = 'otrade_dw_ods'
@@ -269,11 +278,13 @@ def run_check_table(mysql_db_name, mysql_table_name, conn_id, hive_all_hi_table_
             else:
                 col_name = result[0]
             if result[1] == 'timestamp' or result[1] == 'varchar' or result[1] == 'char' or result[1] == 'text' or \
-                    result[1] == 'longtext' or \
+                    result[1] == 'longtext' or result[1] == 'mediumtext' or result[1] == 'enum' or \
                     result[1] == 'datetime':
                 data_type = 'string'
             elif result[1] == 'decimal':
                 data_type = result[1] + "(" + str(result[2]) + "," + str(result[3]) + ")"
+            elif result[1] == 'mediumint':
+                data_type = 'int'
             else:
                 data_type = result[1]
             rows.append(
@@ -349,11 +360,13 @@ def run_sqoop_check_table(mysql_db_name, mysql_table_name, conn_id, hive_table_n
             else:
                 col_name = result[0]
             if result[1] == 'timestamp' or result[1] == 'varchar' or result[1] == 'char' or result[1] == 'text' or \
-                    result[1] == 'longtext' or result[1] == 'mediumtext' or \
+                    result[1] == 'longtext' or result[1] == 'mediumtext' or result[1] == 'enum' or \
                     result[1] == 'datetime':
                 data_type = 'string'
             elif result[1] == 'decimal':
                 data_type = result[1] + "(" + str(result[2]) + "," + str(result[3]) + ")"
+            elif result[1] == 'mediumint':
+                data_type = 'int'
             else:
                 data_type = result[1]
             rows.append("`%s` %s comment '%s'" % (col_name, data_type, result[4]))
