@@ -75,7 +75,7 @@ task_timeout_monitor = PythonOperator(
 )
 
 ##----------------------------------------- 变量 ---------------------------------------##
-db_name = "opay_dw"
+db_name = "opay_dw_ods"
 
 table_name = "ods_sqoop_base_channel_transaction_di"
 hdfs_path = "oss://opay-datalake/opay_dw_sqoop_di/opay_channel/channel_transaction"
@@ -114,7 +114,7 @@ def ods_sqoop_base_channel_transaction_di_sql_task(ds):
        response_code,
        response_message,
        retry_flag,
-       as create_time,
+       create_time,
        update_time,
        {pt}
     from 
