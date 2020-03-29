@@ -113,7 +113,7 @@ def ods_sqoop_base_user_push_token_df_sql_task(ds):
     where rn=1)
     
     insert overwrite table {db}.{table} partition (dt)
-    select id,mobile,user_id,push_token,create_time,update_time,{pt}
+    select id,mobile,user_id,push_token,create_time,update_time,'{pt}'
     from 
        (select id,mobile,user_id,push_token,create_time,update_time,row_number()over(partition by id order by update_time desc) rn 
         from 

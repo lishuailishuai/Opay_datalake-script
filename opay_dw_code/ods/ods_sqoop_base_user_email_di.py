@@ -99,7 +99,7 @@ def ods_sqoop_base_user_email_di_sql_task(ds):
         email_verification_last_sent,
         create_time,
         update_time,
-        {pt}
+        '{pt}'
     from 
         (select *,row_number() over(partition by id order by `__ts_ms` desc,`__file` desc,cast(`__pos` as int) desc) rn
          FROM opay_dw_ods.ods_binlog_base_user_email_hi
