@@ -109,7 +109,7 @@ def ods_sqoop_base_user_push_token_df_sql_task(ds):
     from 
         (select *,row_number() over(partition by id order by `__ts_ms` desc,`__file` desc,cast(`__pos` as int) desc) rn
          FROM opay_dw_ods.ods_binlog_base_user_push_token_hi
-         where concat(dt,' ',hour) between '{pt_y} 23' and '{pt} 23') m 
+         where concat(dt,' ',hour) between '{pt_y} 23' and '{pt} 22') m 
     where rn=1)
     
     insert overwrite table {db}.{table} partition (dt)
