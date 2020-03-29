@@ -109,8 +109,8 @@ def ods_sqoop_base_merchant_receive_money_record_di_sql_task(ds):
         channel_id,
         channel_order_no,
         out_order_no,
-        create_time,
-        update_time,
+        from_unixtime(cast(cast(create_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss') create_time,
+        from_unixtime(cast(cast(update_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss') update_time,
         '{pt}'
     from 
         (select *,row_number() over(partition by id order by `__ts_ms` desc,`__file` desc,cast(`__pos` as int) desc) rn
