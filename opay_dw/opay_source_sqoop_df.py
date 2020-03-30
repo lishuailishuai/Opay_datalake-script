@@ -81,8 +81,8 @@ table_list = [
     ("opay_user", "user_nearby_agent", "opay_user", "base", 1),
     ("opay_user", "user_message", "opay_user", "base", 1),
 
-    ("opay_account","account_user", "opay_account", "base", 2),
-    ("opay_account","account_merchant", "opay_account", "base", 2),
+ #   ("opay_account","account_user", "opay_account", "base", 2),
+#    ("opay_account","account_merchant", "opay_account", "base", 2),
     ("opay_account","accounting_merchant_record", "opay_account", "base", 1),
     #("opay_account","accounting_record", "opay_account", "base", 1),
 
