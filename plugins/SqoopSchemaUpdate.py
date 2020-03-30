@@ -24,8 +24,23 @@ class SqoopSchemaUpdate(object):
         "BIGINT": "bigint",
         "FLOAT": "float",
         "DOUBLE": "double",
-        "DECIMAL": "decimal(38,2)"
+        "DECIMAL": "decimal(38,2)",
+        "VARCHAR" : 'string',
+        "TIMESTAMP": 'string',
+        "CHAR": 'string',
+        "TEXT": 'string',
+        "LONGTEXT": 'string',
+        "MEDIUMTEXT": 'string',
+        "ENUM": 'string',
+        "DATETIME": 'bigint'
     }
+
+    """
+        mysql 时间处理采集程序与sqoop之间转换问题类型
+    """
+    mysql_transfer_handle_time_type = [
+        'DATETIME'
+    ]
 
     hive_cursor = None
     mysql_cursor = {}
@@ -158,7 +173,8 @@ class SqoopSchemaUpdate(object):
             mysql_schema.append({
                 'column': column_name,
                 'column_info': "`%s` %s comment '%s'" % (
-                    column_name, self.mysql_type_to_hive.get(data_type.upper(), 'string'), column_comment)
+                    column_name, self.mysql_type_to_hive.get(data_type.upper(), 'string'), column_comment),
+                'column_type': data_type.upper().strip()
             })
 
         logging.info(mysql_schema)
@@ -240,6 +256,25 @@ class SqoopSchemaUpdate(object):
 
         logging.info(mysql_names)
         return mysql_names
+
+    """
+        返回merge 程序中需要增加时间字段特殊处理后的名称
+
+        """
+
+    def get_merge_mysql_column_name(self, mysql_db, mysql_table, mysql_conn):
+        mysql_schema = self.__get_mysql_table_schema(mysql_db, mysql_table, mysql_conn)
+        mysql_names = []
+
+        for schema in mysql_schema:
+            date_type = schema['column_type']
+            if date_type in self.mysql_transfer_handle_time_type:
+                mysql_names.append("unix_timestamp(%s,'yyyy-MM-dd HH:mm:ss.0') * 1000" % schema['column'])
+            else:
+                mysql_names.append(schema['column'])
+        logging.info(mysql_names)
+        return mysql_names
+
 
     """
     对比并更新hive数据表结构
@@ -364,5 +399,3 @@ class SqoopSchemaUpdate(object):
             logging.info("Exception Info::")
             logging.info(e)
             raise AirflowException('sqoop append hive schema error')
-
-        pass

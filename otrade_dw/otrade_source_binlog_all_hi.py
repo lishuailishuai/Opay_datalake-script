@@ -101,12 +101,13 @@ HIVE_DB = 'otrade_dw_ods'
 HIVE_SQOOP_TEMP_DB = 'test_db'
 HIVE_ALL_HI_TABLE = 'ods_binlog_%s_%s_all_hi'
 HIVE_HI_TABLE = 'ods_binlog_%s_%s_hi'
-HIVE_SQOOP_TEMP_TABLE = '%s_full'
+HIVE_SQOOP_TEMP_TABLE = '%s_%s_full'
 
 UFILE_PATH = Variable.get("OBJECT_STORAGE_PROTOCOL") + 'opay-datalake/temp/%s/%s'
 ALL_HI_OSS_PATH = 'oss://opay-datalake/otrade_all_hi/%s'
 HI_OSS_PATH = 'oss://opay-datalake/otrade_binlog/%s'
 ODS_CREATE_TABLE_SQL = '''
+    DROP TABLE {db_name}.`{table_name}`;
     CREATE EXTERNAL TABLE IF NOT EXISTS {db_name}.`{table_name}`(
         `__db` string COMMENT 'from deserializer', 
         `__server_id` string COMMENT 'from deserializer', 
@@ -278,9 +279,10 @@ def run_check_table(mysql_db_name, mysql_table_name, conn_id, hive_all_hi_table_
             else:
                 col_name = result[0]
             if result[1] == 'timestamp' or result[1] == 'varchar' or result[1] == 'char' or result[1] == 'text' or \
-                    result[1] == 'longtext' or result[1] == 'mediumtext' or result[1] == 'enum' or \
-                    result[1] == 'datetime':
+                    result[1] == 'longtext' or result[1] == 'mediumtext' or result[1] == 'enum':
                 data_type = 'string'
+            elif result[1] == 'datetime':
+                data_type = 'bigint'
             elif result[1] == 'decimal':
                 data_type = result[1] + "(" + str(result[2]) + "," + str(result[3]) + ")"
             elif result[1] == 'mediumint':
@@ -441,7 +443,7 @@ def merge_pre_hi_with_full_data_task(hive_db, hive_all_hi_table_name, hive_hi_ta
     sqoopSchema = SqoopSchemaUpdate()
 
     hive_columns = sqoopSchema.get_hive_column_name(hive_db, hive_all_hi_table_name)
-    mysql_columns = sqoopSchema.get_mysql_column_name(mysql_db_name, mysql_table_name, mysql_conn)
+    mysql_columns = sqoopSchema.get_merge_mysql_column_name(mysql_db_name, mysql_table_name, mysql_conn)
     pre_day_ms = int(time.mktime(time.strptime(pre_day, "%Y-%m-%d"))) * 1000
 
     hql = ADD_FULL_SQL.format(
@@ -487,7 +489,7 @@ for mysql_db_name, mysql_table_name, conn_id, prefix_name, priority_weight_nm, s
 
     hive_all_hi_table_name = HIVE_ALL_HI_TABLE % (prefix_name, mysql_table_name)
     hive_hi_table_name = HIVE_HI_TABLE % (prefix_name, mysql_table_name)
-    sqoop_table_name = HIVE_SQOOP_TEMP_TABLE % mysql_table_name
+    sqoop_table_name = HIVE_SQOOP_TEMP_TABLE % (mysql_db_name, mysql_table_name)
 
     # check all_hi table 校验表是否存在
     check_all_hi_table = PythonOperator(

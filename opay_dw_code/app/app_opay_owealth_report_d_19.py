@@ -38,7 +38,7 @@ args = {
 
 dag = airflow.DAG(
     'app_opay_owealth_report_d_19',
-    schedule_interval="00 18 * * *",
+    schedule_interval="35 18 * * *",
     default_args=args)
 
 ##----------------------------------------- 依赖 ---------------------------------------##
@@ -74,10 +74,10 @@ ods_sqoop_base_owealth_share_trans_record_hf_prev_day_task = OssSensor(
     dag=dag
 )
 
-ods_sqoop_base_user_hf_prev_day_task = OssSensor(
-    task_id='ods_sqoop_base_user_hf_prev_day_task',
+dim_opay_user_base_hf_check_task = OssSensor(
+    task_id='dim_opay_user_base_hf_check_task',
     bucket_key='{hdfs_path_str}/dt={pt}/hour=18/_SUCCESS'.format(
-        hdfs_path_str="opay_dw_sqoop_hf/opay_user/user",
+        hdfs_path_str="opay/opay_dw/dim_opay_user_base_hf/country_code=NG",
         pt='{{macros.ds_add(ds, +1)}}'
     ),
     bucket_name='opay-datalake',
@@ -152,10 +152,10 @@ def app_opay_owealth_report_d_19_sql_task(ds):
        (SELECT user_id,
               ROLE,
               mobile
-        FROM opay_dw_ods.ods_sqoop_base_user_hf 
+        FROM opay_dw.dim_opay_user_base_hf 
         where dt='{pt}'
            and hour='18'
-           and create_time<'{pt} 18:00:00' 
+           and create_time<'{pt} 19:00:00' 
          )
        
     INSERT overwrite TABLE opay_dw.app_opay_owealth_report_d_19 partition (country_code='NG',dt='{pt}')
@@ -261,7 +261,7 @@ app_opay_owealth_report_d_19_task = PythonOperator(
 ods_sqoop_base_owealth_share_trans_record_hf_prev_day_task >> app_opay_owealth_report_d_19_task
 ods_sqoop_owealth_share_order_hf_prev_day_task >> app_opay_owealth_report_d_19_task
 ods_sqoop_base_owealth_user_subscribed_hf_prev_day_task >> app_opay_owealth_report_d_19_task
-ods_sqoop_base_user_hf_prev_day_task >> app_opay_owealth_report_d_19_task
+dim_opay_user_base_hf_check_task >> app_opay_owealth_report_d_19_task
 #app_opay_owealth_report_d_19_task >> send_owealth_report
 
 
