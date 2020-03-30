@@ -331,9 +331,9 @@ update_info as (
       ,fence_id
       ,create_user_id
       ,bd_id
-      ,substr(created_at,0,19) as created_at
-      ,substr(updated_at,0,19) as updated_at
-      ,substr(certification_time,0,19) as certification_time
+      ,default.localTime("{config}",'NG',substr(created_at,0,19),'yyyy-MM-dd HH:mm:ss'),0) as created_at
+      ,default.localTime("{config}",'NG',substr(updated_at,0,19),'yyyy-MM-dd HH:mm:ss'),0) as updated_at
+      ,default.localTime("{config}",'NG',substr(certification_time,0,19),'yyyy-MM-dd HH:mm:ss'),0) as certification_time
       ,row_number() over(partition by id order by `__ts_ms` desc,`__file` desc,cast(`__pos` as int) desc) rn
     from
       otrade_dw_ods.ods_binlog_base_otrade_business_details_all_hi
