@@ -240,7 +240,7 @@ update_pay_info as (
     rn = 1
 ),
 
---3.取订单最新一小时数据
+--4.取订单最新一小时数据
 update_order_info as (
   select
     id
@@ -307,13 +307,13 @@ update_order_info as (
       ,pay_channel
       ,pay_type
       ,pay_cur
-      ,pay_time
-      ,consign_time
-      ,confirm_time
-      ,receive_time
+      ,default.localTime("{config}",'NG',from_unixtime(cast(pay_time/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as pay_time
+      ,default.localTime("{config}",'NG',from_unixtime(cast(consign_time/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as consign_time
+      ,default.localTime("{config}",'NG',from_unixtime(cast(confirm_time/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as confirm_time
+      ,default.localTime("{config}",'NG',from_unixtime(cast(receive_time/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as receive_time
       ,refund_type
-      ,create_time
-      ,update_time
+      ,default.localTime("{config}",'NG',from_unixtime(cast(create_time/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as create_time
+      ,default.localTime("{config}",'NG',from_unixtime(cast(update_time/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as update_time
       ,row_number() over(partition by id order by `__ts_ms` desc,`__file` desc,cast(`__pos` as int) desc) rn
     from
       otrade_dw_ods.ods_binlog_base_otrade_order_all_hi
