@@ -340,7 +340,7 @@ dwd_otrade_b2c_mall_merchant_hf_task = PythonOperator(
 )
 
 dwd_otrade_b2c_mall_merchant_hf_check_pre_locale_task >> dwd_otrade_b2c_mall_merchant_hf_task
-ods_binlog_base_bd_admin_users_all_hi_check_task >> dwd_otrade_b2c_mall_merchant_hf_task
+ods_binlog_mall_mall_merchant_all_hi_check_task >> dwd_otrade_b2c_mall_merchant_hf_task
 
 
 
