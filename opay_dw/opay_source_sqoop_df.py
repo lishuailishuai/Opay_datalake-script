@@ -75,7 +75,7 @@ table_list = [
     ("opay_user","user_payment_instrument", "opay_user", "base", 1),
     ("opay_user", "user_token", "opay_user", "base", 1),
     ("opay_user", "user_telesale", "opay_user", "base", 1),
-    ("opay_user", "user_reseller", "opay_user", "base", 1),
+    # ("opay_user", "user_reseller", "opay_user", "base", 1),
  #   ("opay_user", "user_push_token", "opay_user", "base", 1),
     ("opay_user", "user_operator", "opay_user", "base", 1),
     ("opay_user", "user_nearby_agent", "opay_user", "base", 1),
@@ -104,7 +104,7 @@ table_list = [
     ("opay_agent_crm", "bd_agent", "opay_agent_crm_db", "base", 2),
     ("opay_agent_crm", "bd_admin_users", "opay_agent_crm_db", "base", 2),
 
-    ("opay_channel", "card_bin", "opay_channel", "base", 3),
+    # ("opay_channel", "card_bin", "opay_channel", "base", 3),
 
     ("voucher_db", "opay_voucher_grab_hist", "voucher_db", "coupon", 3),
     ("voucher_db", "voucher_batch_stat", "voucher_db", "coupon", 3),
