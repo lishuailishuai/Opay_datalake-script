@@ -120,7 +120,7 @@ def ods_sqoop_base_card_bin_df_sql_task(ds):
                     *,
                     row_number() over(partition by id order by `__ts_ms` desc,`__file` desc,cast(`__pos` as int) desc) rn
                 FROM opay_dw_ods.ods_binlog_base_card_bin_hi
-                where concat(dt,' ',hour) between '{pt_y} 23' and '{pt} 22'
+                where concat(dt,' ',hour) between '{pt_y} 23' and '{pt} 22' and `__deleted` = 'false'
             ) m 
             where rn=1
         )

@@ -72,7 +72,7 @@ table_list = [
     ("opay_user","user_upgrade", "opay_user", "base",3),
     #("opay_user","user", "opay_db_3321", "base",1),
     ("opay_user","user_operator", "opay_user", "base", 1),
-    ("opay_user","user_payment_instrument", "opay_user", "base", 1),
+    # ("opay_user","user_payment_instrument", "opay_user", "base", 1),
     ("opay_user", "user_token", "opay_user", "base", 1),
     ("opay_user", "user_telesale", "opay_user", "base", 1),
     # ("opay_user", "user_reseller", "opay_user", "base", 1),

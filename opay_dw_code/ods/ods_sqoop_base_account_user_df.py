@@ -111,10 +111,13 @@ def ods_sqoop_base_account_user_df_sql_task(ds):
         from_unixtime(cast(cast(create_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss') create_time,
         from_unixtime(cast(cast(update_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss') update_time,
         signature
-    from 
-        (select *,row_number() over(partition by id order by `__ts_ms` desc,`__file` desc,cast(`__pos` as int) desc) rn
+    from (
+        select 
+            *,
+            row_number() over(partition by id order by `__ts_ms` desc,`__file` desc,cast(`__pos` as int) desc) rn
          FROM opay_dw_ods.ods_binlog_base_account_user_hi
-         where concat(dt,' ',hour) between '{pt_y} 23' and '{pt} 22') m 
+         where concat(dt,' ',hour) between '{pt_y} 23' and '{pt} 22' and `__deleted` = 'false'
+    ) m 
     where rn=1)
 
     insert overwrite table {db}.{table} partition (dt)
