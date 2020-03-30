@@ -99,6 +99,7 @@ def get_data_from_hive(ds, execution_date, **op_kwargs):
     # ds = op_kwargs.get('ds', time.strftime('%Y-%m-%d', time.localtime(time.time() - 86400)))
     hql = '''
         SELECT 
+            create_date_hour,
             bd_admin_user_id,
             bd_admin_user_name,
             bd_admin_user_mobile,
@@ -151,6 +152,7 @@ def get_data_from_hive(ds, execution_date, **op_kwargs):
         mcursor,
         hive_data,
         [
+            'create_date_hour',
             'bd_admin_user_id',
             'bd_admin_user_name',
             'bd_admin_user_mobile',
@@ -207,7 +209,8 @@ def __data_to_mysql(conn, data, column):
     sval = ''
     cnt = 0
     try:
-        for (bd_admin_user_id,
+        for (create_date_hour,
+            bd_admin_user_id,
             bd_admin_user_name,
             bd_admin_user_mobile,
             bd_admin_dept_id,
@@ -225,7 +228,9 @@ def __data_to_mysql(conn, data, column):
             dt,
             hour) in data:
 
-            row = [bd_admin_user_id,
+            row = [
+                create_date_hour,
+                bd_admin_user_id,
                 bd_admin_user_name,
                 bd_admin_user_mobile,
                 bd_admin_dept_id,
