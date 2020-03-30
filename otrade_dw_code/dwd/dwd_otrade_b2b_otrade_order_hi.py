@@ -149,6 +149,7 @@ def dwd_otrade_b2b_otrade_order_hi_sql_task(ds, v_date):
 set mapred.max.split.size=1000000;
 set hive.exec.dynamic.partition.mode=nonstrict;
 set hive.exec.parallel=true;
+set hive.strict.checks.cartesian.product=false;
 
 --1.先取得供应商信息
 with 
