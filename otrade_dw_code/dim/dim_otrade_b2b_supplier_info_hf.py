@@ -314,8 +314,8 @@ update_info as (
       ,bd_id
   
       ,earnest_money
-      ,default.localTime("{config}",'NG',substr(create_time,0,19),'yyyy-MM-dd HH:mm:ss'),0) as create_time
-      ,default.localTime("{config}",'NG',substr(update_time,0,19),'yyyy-MM-dd HH:mm:ss'),0) as update_time
+      ,default.localTime("{config}",'NG',substr(create_time,0,19),0) as create_time
+      ,default.localTime("{config}",'NG',substr(update_time,0,19),0) as update_time
       ,row_number() over(partition by id order by `__ts_ms` desc,`__file` desc,cast(`__pos` as int) desc) rn
     from
       otrade_dw_ods.ods_binlog_base_otrade_supplier_detail_all_hi
