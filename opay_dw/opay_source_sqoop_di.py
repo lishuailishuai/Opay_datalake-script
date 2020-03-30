@@ -65,7 +65,7 @@ db_name,table_name,conn_id,prefix_name,priority_weight,is_valid_success
 #
 
 table_list = [
-    ("opay_sms","message_record", "opay_sms", "base",3,"true"),
+    # ("opay_sms","message_record", "opay_sms", "base",3,"true"),
 
 #    ("opay_user","user_email", "opay_user", "base",3,"true"),
 #     ("opay_user","user", "opay_user", "base",3,"true"),

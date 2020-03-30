@@ -94,6 +94,7 @@ UFILE_PATH = Variable.get("OBJECT_STORAGE_PROTOCOL") + 'opay-datalake/temp/%s/%s
 H_HIS_OSS_PATH = 'oss://opay-datalake/oexpress_h_his/%s'
 HI_OSS_PATH = 'oss://opay-datalake/oexpress_binlog/%s'
 ODS_CREATE_TABLE_SQL = '''
+    DROP TABLE {db_name}.`{table_name}`;
     CREATE EXTERNAL TABLE IF NOT EXISTS {db_name}.`{table_name}`(
         `__db` string COMMENT 'from deserializer', 
         `__server_id` string COMMENT 'from deserializer', 
@@ -275,9 +276,10 @@ def run_check_table(mysql_db_name, mysql_table_name, conn_id, hive_h_his_table_n
             else:
                 col_name = result[0]
             if result[1] == 'timestamp' or result[1] == 'varchar' or result[1] == 'char' or result[1] == 'text' or \
-                    result[1] == 'longtext' or result[1] == 'mediumtext' or \
-                    result[1] == 'datetime':
+                    result[1] == 'longtext' or result[1] == 'mediumtext' :
                 data_type = 'string'
+            elif result[1] == 'datetime':
+                data_type = 'bigint'
             elif result[1] == 'decimal':
                 data_type = result[1] + "(" + str(result[2]) + "," + str(result[3]) + ")"
             else:
@@ -355,10 +357,13 @@ def run_sqoop_check_table(mysql_db_name, mysql_table_name, conn_id, hive_table_n
             else:
                 col_name = result[0]
             if result[1] == 'timestamp' or result[1] == 'varchar' or result[1] == 'char' or result[1] == 'text' or \
-                    result[1] == 'datetime' or result[1] == 'mediumtext':
+                    result[1] == 'longtext' or result[1] == 'mediumtext' or result[1] == 'enum' or \
+                    result[1] == 'datetime':
                 data_type = 'string'
             elif result[1] == 'decimal':
                 data_type = result[1] + "(" + str(result[2]) + "," + str(result[3]) + ")"
+            elif result[1] == 'mediumint':
+                data_type = 'int'
             else:
                 data_type = result[1]
             rows.append("`%s` %s comment '%s'" % (col_name, data_type, result[4]))
@@ -433,7 +438,7 @@ def merge_pre_hi_with_full_data_task(hive_db, hive_h_his_table_name, hive_hi_tab
     sqoopSchema = SqoopSchemaUpdate()
 
     hive_columns = sqoopSchema.get_hive_column_name(hive_db, hive_h_his_table_name)
-    mysql_columns = sqoopSchema.get_mysql_column_name(mysql_db_name, mysql_table_name, mysql_conn)
+    mysql_columns = sqoopSchema.get_merge_mysql_column_name(mysql_db_name, mysql_table_name, mysql_conn)
     pre_day_ms = int(time.mktime(time.strptime(pre_day, "%Y-%m-%d"))) * 1000
 
     hql = MERGE_HI_WITH_FULL_SQL.format(
