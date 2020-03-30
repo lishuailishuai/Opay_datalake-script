@@ -38,25 +38,14 @@ args = {
 
 dag = airflow.DAG(
     'app_opay_owealth_air_mobile_d',
-    schedule_interval="00 18 * * *",
+    schedule_interval="35 18 * * *",
     default_args=args)
 
 ##----------------------------------------- 依赖 ---------------------------------------##
-ods_sqoop_base_airtime_topup_record_hf_prev_day_task = OssSensor(
-    task_id='ods_sqoop_base_airtime_topup_record_hf_prev_day_task',
+dwd_opay_life_payment_record_hi_check_task = OssSensor(
+    task_id='dwd_opay_life_payment_record_hi_check_task',
     bucket_key='{hdfs_path_str}/dt={pt}/hour=18/_SUCCESS'.format(
-        hdfs_path_str="opay_dw_sqoop_hf/opay_transaction/airtime_topup_record",
-        pt='{{macros.ds_add(ds, +1)}}'
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
-
-ods_sqoop_base_mobiledata_topup_record_hf_prev_day_task = OssSensor(
-    task_id='ods_sqoop_base_mobiledata_topup_record_hf_prev_day_task',
-    bucket_key='{hdfs_path_str}/dt={pt}/hour=18/_SUCCESS'.format(
-        hdfs_path_str="opay_dw_sqoop_hf/opay_transaction/mobiledata_topup_record",
+        hdfs_path_str="opay/opay_dw/dwd_opay_life_payment_record_hi/country_code=NG",
         pt='{{macros.ds_add(ds, +1)}}'
     ),
     bucket_name='opay-datalake',
@@ -99,27 +88,30 @@ def app_opay_owealth_air_mobile_d_sql_task(ds):
                mobiledata_amt,
                mobiledata_c
         FROM
-          (SELECT dt,
+          (SELECT '{pt}' dt,
                   count(1) airtime_c,
                   sum(amount) airtime_amt
-           FROM opay_dw_ods.ods_sqoop_base_airtime_topup_record_hf
-           WHERE dt='{pt}'
-             AND hour='18'
-             AND from_unixtime(unix_timestamp(create_time, 'yyyy-MM-dd HH:mm:ss')+3600)>='{yesterday} 19:00:00'
-             AND from_unixtime(unix_timestamp(create_time, 'yyyy-MM-dd HH:mm:ss')+3600)<'{pt} 19:00:00'
-             AND order_status='SUCCESS'
-            group by dt) m
+           from 
+              (select amount,row_number() over(partition by order_no order by update_time desc) rn 
+               FROM opay_dw.opay_dw.dwd_opay_life_payment_record_hi
+               WHERE concat(dt,' ',hour) between '{yesterday} 19' and '{pt} 18'
+                  and create_time between '{yesterday} 19' and '{pt} 19'
+                  and sub_service_type='Airtime'
+                  AND order_status='SUCCESS') a 
+           where rn=1
+            ) m
         LEFT JOIN
-          (SELECT dt,
+          (SELECT '{pt}' dt,
                   count(1) mobiledata_c,
                   sum(amount) mobiledata_amt
-           FROM opay_dw_ods.ods_sqoop_base_mobiledata_topup_record_hf
-           WHERE dt='{pt}'
-             AND hour='18'
-             AND from_unixtime(unix_timestamp(create_time, 'yyyy-MM-dd HH:mm:ss')+3600)>='{yesterday} 19:00:00'
-             AND from_unixtime(unix_timestamp(create_time, 'yyyy-MM-dd HH:mm:ss')+3600)<'{pt} 19:00:00'
-             AND order_status='SUCCESS'
-           group by dt) m1 ON m.dt=m1.dt
+           from 
+              (select amount,row_number() over(partition by order_no order by update_time desc) rn 
+               FROM opay_dw.opay_dw.dwd_opay_life_payment_record_hi
+               WHERE concat(dt,' ',hour) between '{yesterday} 19' and '{pt} 18'
+                  and create_time between '{yesterday} 19' and '{pt} 19'
+                  and sub_service_type='Mobiledata'
+                  AND order_status='SUCCESS') a 
+           where rn=1) m1 ON m.dt=m1.dt
 
 
     '''.format(
@@ -311,6 +303,5 @@ send_air_mobile_report = PythonOperator(
     provide_context=True,
     dag=dag
 )
-ods_sqoop_base_airtime_topup_record_hf_prev_day_task >> app_opay_owealth_air_mobile_d_task
-ods_sqoop_base_mobiledata_topup_record_hf_prev_day_task >> app_opay_owealth_air_mobile_d_task
+dwd_opay_life_payment_record_hi_check_task >> app_opay_owealth_air_mobile_d_task
 app_opay_owealth_air_mobile_d_task >> send_air_mobile_report
