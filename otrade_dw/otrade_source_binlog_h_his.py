@@ -264,9 +264,10 @@ def run_check_table(mysql_db_name, mysql_table_name, conn_id, hive_h_his_table_n
             else:
                 col_name = result[0]
             if result[1] == 'timestamp' or result[1] == 'varchar' or result[1] == 'char' or result[1] == 'text' or \
-                    result[1] == 'longtext' or result[1] == 'mediumtext' or \
-                    result[1] == 'datetime':
+                    result[1] == 'longtext' or result[1] == 'mediumtext' :
                 data_type = 'string'
+            elif result[1] == 'datetime':
+                data_type = 'bigint'
             elif result[1] == 'decimal':
                 data_type = result[1] + "(" + str(result[2]) + "," + str(result[3]) + ")"
             else:
@@ -425,7 +426,7 @@ def merge_pre_hi_with_full_data_task(hive_db, hive_h_his_table_name, hive_hi_tab
     sqoopSchema = SqoopSchemaUpdate()
 
     hive_columns = sqoopSchema.get_hive_column_name(hive_db, hive_h_his_table_name)
-    mysql_columns = sqoopSchema.get_mysql_column_name(mysql_db_name, mysql_table_name, mysql_conn)
+    mysql_columns = sqoopSchema.get_merge_mysql_column_name(mysql_db_name, mysql_table_name, mysql_conn)
     pre_day_ms = int(time.mktime(time.strptime(pre_day, "%Y-%m-%d"))) * 1000
 
     hql = MERGE_HI_WITH_FULL_SQL.format(
