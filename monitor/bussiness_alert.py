@@ -256,7 +256,7 @@ metrcis_list = [
     # 17
     (
         'Trade_ACTransfer_Success',
-        '''SELECT sum("trade_success_cnt") AS "trade_success_cnt" FROM "OPAY_TRANSACTION_EVENT_ACTRANSFER_SUCCESS_CQ_RESULT" WHERE  time > {time} ''',
+        '''SELECT "trade_success_cnt" AS "trade_success_cnt" FROM "OPAY_TRANSACTION_EVENT_ACTRANSFER_SUCCESS_CQ_RESULT" WHERE  time > {time} ''',
         'trade_alert_value',
         7,
         'trade_alert_level_1_address',
@@ -283,7 +283,7 @@ metrcis_list = [
     # 19
     (
         'Trade_Pos_Success',
-        '''SELECT sum("trade_success_cnt") AS "trade_success_cnt" FROM "OPAY_TRANSACTION_EVENT_POS_SUCCESS_CQ_RESULT" WHERE  time > {time} ''',
+        '''SELECT "trade_success_cnt" AS "trade_success_cnt" FROM "OPAY_TRANSACTION_EVENT_POS_SUCCESS_CQ_RESULT" WHERE  time > {time} ''',
         'trade_alert_value',
         7,
         'trade_alert_level_1_address',
@@ -310,7 +310,7 @@ metrcis_list = [
     # 21
     (
         'Trade_TopupWithCard_Success',
-        '''SELECT sum("trade_success_cnt") AS "trade_success_cnt" FROM "OPAY_TRANSACTION_EVENT_TOPUPWITHCARD_SUCCESS_CQ_RESULT" WHERE  time > {time} ''',
+        '''SELECT "trade_success_cnt" AS "trade_success_cnt" FROM "OPAY_TRANSACTION_EVENT_TOPUPWITHCARD_SUCCESS_CQ_RESULT" WHERE  time > {time} ''',
         'trade_alert_value',
         7,
         'trade_alert_level_1_address',
@@ -337,7 +337,7 @@ metrcis_list = [
     # 23
     (
         'Trade_Receivemoney_Success',
-        '''SELECT sum("trade_success_cnt") AS "trade_success_cnt" FROM "OPAY_TRANSACTION_EVENT_RECEIVEMONEY_SUCCESS_CQ_RESULT" WHERE time > {time} ''',
+        '''SELECT "trade_success_cnt" AS "trade_success_cnt" FROM "OPAY_TRANSACTION_EVENT_RECEIVEMONEY_SUCCESS_CQ_RESULT" WHERE time > {time} ''',
         'trade_alert_value',
         7,
         'trade_alert_level_1_address',
