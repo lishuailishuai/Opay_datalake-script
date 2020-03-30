@@ -158,7 +158,7 @@ retailer_trade_time as (
     (
     select
       payer
-      ,create_time
+      ,default.localTime("{config}",'NG',from_unixtime(cast(create_time/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as create_time
       ,row_number() over(partition by payer order by create_time asc) rn
     from
       otrade_dw_ods.ods_binlog_base_otrade_order_all_hi
