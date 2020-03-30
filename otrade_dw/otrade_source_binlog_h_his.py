@@ -83,6 +83,7 @@ UFILE_PATH = Variable.get("OBJECT_STORAGE_PROTOCOL") + 'opay-datalake/temp/%s/%s
 H_HIS_OSS_PATH = 'oss://opay-datalake/otrade_h_his/%s'
 HI_OSS_PATH = 'oss://opay-datalake/otrade_binlog/%s'
 ODS_CREATE_TABLE_SQL = '''
+    DROP TABLE {db_name}.`{table_name}`;
     CREATE EXTERNAL TABLE IF NOT EXISTS {db_name}.`{table_name}`(
         `__db` string COMMENT 'from deserializer', 
         `__server_id` string COMMENT 'from deserializer', 
