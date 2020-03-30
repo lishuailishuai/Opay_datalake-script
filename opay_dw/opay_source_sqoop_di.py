@@ -68,7 +68,7 @@ table_list = [
     ("opay_sms","message_record", "opay_sms", "base",3,"true"),
 
 #    ("opay_user","user_email", "opay_user", "base",3,"true"),
-    ("opay_user","user", "opay_user", "base",3,"true"),
+#     ("opay_user","user", "opay_user", "base",3,"true"),
 
     ("opay_bigorder","big_order", "opay_bigorder", "base",3,"true"),
 
@@ -85,7 +85,7 @@ table_list = [
     ("opay_transaction","merchant_transfer_card_record", "opay_transaction", "base",3,"true"),
     ("opay_transaction","merchant_transfer_user_record", "opay_transaction", "base",3,"true"),
     ("opay_transaction","mobiledata_topup_record", "opay_transaction", "base",3,"true"),
-    ("opay_transaction","receive_money_request_record", "opay_transaction", "base",3,"true"),
+    # ("opay_transaction","receive_money_request_record", "opay_transaction", "base",3,"true"),
     ("opay_transaction","transfer_not_register_record", "opay_transaction", "base",3,"true"),
     ("opay_transaction","tv_topup_record", "opay_transaction", "base",3,"true"),
     ("opay_transaction","user_pos_transaction_record", "opay_transaction", "base",3,"false"),
@@ -113,7 +113,7 @@ table_list = [
 
     ("opay_account","account_user", "opay_account", "base", 2, "true"),
 
-    ("opay_scene","openapi_scene_order", "opay_channel", "base", 2, "false"),
+    # ("opay_scene","openapi_scene_order", "opay_channel", "base", 2, "false"),
 
 ]
 
