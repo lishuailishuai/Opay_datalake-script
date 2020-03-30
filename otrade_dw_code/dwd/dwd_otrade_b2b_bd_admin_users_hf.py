@@ -181,8 +181,8 @@ update_info as (
       ,avatar
       ,fcm_token
       ,city_id
-      ,created_at
-      ,updated_at
+      ,substr(created_at,0,19) as created_at
+      ,substr(updated_at,0,19) as updated_at
       ,row_number() over(partition by id order by `__ts_ms` desc,`__file` desc,cast(`__pos` as int) desc) rn
     from
       otrade_dw_ods.ods_binlog_base_bd_admin_users_all_hi
