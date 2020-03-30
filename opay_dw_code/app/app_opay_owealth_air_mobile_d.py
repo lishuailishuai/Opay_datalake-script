@@ -93,7 +93,7 @@ def app_opay_owealth_air_mobile_d_sql_task(ds):
                   sum(amount) airtime_amt
            from 
               (select amount,row_number() over(partition by order_no order by update_time desc) rn 
-               FROM opay_dw.opay_dw.dwd_opay_life_payment_record_hi
+               FROM opay_dw.dwd_opay_life_payment_record_hi
                WHERE concat(dt,' ',hour) between '{yesterday} 19' and '{pt} 18'
                   and create_time between '{yesterday} 19' and '{pt} 19'
                   and sub_service_type='Airtime'
@@ -106,7 +106,7 @@ def app_opay_owealth_air_mobile_d_sql_task(ds):
                   sum(amount) mobiledata_amt
            from 
               (select amount,row_number() over(partition by order_no order by update_time desc) rn 
-               FROM opay_dw.opay_dw.dwd_opay_life_payment_record_hi
+               FROM opay_dw.dwd_opay_life_payment_record_hi
                WHERE concat(dt,' ',hour) between '{yesterday} 19' and '{pt} 18'
                   and create_time between '{yesterday} 19' and '{pt} 19'
                   and sub_service_type='Mobiledata'
