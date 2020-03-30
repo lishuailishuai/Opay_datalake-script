@@ -130,12 +130,12 @@ def app_opay_owealth_report_d_sql_task(ds):
         ),
     user_subscribed AS
        (SELECT user_id,
-              date_format(update_time,'yyyy-MM-dd') update_date,
+              date_format(from_unixtime(unix_timestamp(update_time, 'yyyy-MM-dd HH:mm:ss')+3600),'yyyy-MM-dd') update_date,
               subscribed,
               mobile
         FROM opay_owealth_ods.ods_sqoop_owealth_owealth_user_subscribed_df
         WHERE dt='{pt}'
-          AND update_time<'{pt} 23:00:00' 
+          AND create_time<'{pt} 23:00:00' 
         ),
     share_trans_record AS
        (SELECT order_type,

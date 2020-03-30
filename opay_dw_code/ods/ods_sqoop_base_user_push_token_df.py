@@ -104,16 +104,16 @@ def ods_sqoop_base_user_push_token_df_sql_task(ds):
         mobile,
         user_id,
         push_token,
-        create_time,
-        update_time
+        from_unixtime(cast(cast(create_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss') create_time,
+        from_unixtime(cast(cast(update_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss') update_time
     from 
         (select *,row_number() over(partition by id order by `__ts_ms` desc,`__file` desc,cast(`__pos` as int) desc) rn
          FROM opay_dw_ods.ods_binlog_base_user_push_token_hi
-         where concat(dt,' ',hour) between '{pt_y} 23' and '{pt} 23') m 
+         where concat(dt,' ',hour) between '{pt_y} 23' and '{pt} 22') m 
     where rn=1)
     
     insert overwrite table {db}.{table} partition (dt)
-    select id,mobile,user_id,push_token,create_time,update_time,{pt}
+    select id,mobile,user_id,push_token,create_time,update_time,'{pt}'
     from 
        (select id,mobile,user_id,push_token,create_time,update_time,row_number()over(partition by id order by update_time desc) rn 
         from 

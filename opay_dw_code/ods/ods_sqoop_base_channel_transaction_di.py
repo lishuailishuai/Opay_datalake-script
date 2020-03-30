@@ -114,13 +114,13 @@ def ods_sqoop_base_channel_transaction_di_sql_task(ds):
        response_code,
        response_message,
        retry_flag,
-       create_time,
-       update_time,
-       {pt}
+       from_unixtime(cast(cast(create_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss') create_time,
+        from_unixtime(cast(cast(update_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss') update_time,
+       '{pt}'
     from 
         (select *,row_number() over(partition by id order by `__ts_ms` desc,`__file` desc,cast(`__pos` as int) desc) rn
          FROM opay_dw_ods.ods_binlog_base_channel_transaction_hi
-         where concat(dt,' ',hour) between '{pt_y} 23' and '{pt} 23') m 
+         where concat(dt,' ',hour) between '{pt_y} 23' and '{pt} 22') m 
     where rn=1
 
     '''.format(
