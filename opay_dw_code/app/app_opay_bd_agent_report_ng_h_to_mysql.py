@@ -115,7 +115,7 @@ def get_data_from_hive(ds, execution_date, **op_kwargs):
             pos_suc_cnt,
             country_code,
             dt,
-            hour,
+            hour
         from opay_dw.app_opay_bd_agent_report_ng_h
         where 
         country_code = 'NG'
