@@ -272,7 +272,7 @@ update_info as (
       ,brokerage_percent
       ,merchant_id
       ,default.localTime("{config}",'NG',from_unixtime(cast(end_time/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as end_time
-      ,default.localTime("{config}",'NG',from_unixtime(cast(success_time/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as success_time
+      ,success_time
       ,success_people
       ,group_price
       ,after_sale
