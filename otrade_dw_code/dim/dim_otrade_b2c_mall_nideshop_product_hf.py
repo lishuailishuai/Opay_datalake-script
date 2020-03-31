@@ -134,6 +134,158 @@ task_timeout_monitor = PythonOperator(
 def dim_otrade_b2c_mall_nideshop_product_hf_sql_task(ds, v_date):
     HQL = '''
 
+set mapred.max.split.size=1000000;
+set hive.exec.parallel=true;
+set hive.exec.dynamic.partition.mode=nonstrict;
+set hive.strict.checks.cartesian.product=false;
+
+--1.取出上一个小时的全量
+with
+category_info as (
+  select
+    id
+    ,name
+    ,parent_id
+    ,level
+  from
+    otrade_dw.dwd_otrade_b2c_mall_nideshop_category_hf
+  where 
+    concat(dt, " ", hour) >= default.minLocalTimeRange("{config}", '{v_date}', 0) 
+    and concat(dt, " ", hour) <= default.maxLocalTimeRange("{config}", '{v_date}', 0) 
+    and utc_date_hour = date_format("{v_date}", 'yyyy-MM-dd HH')
+),
+
+--2.种类层级表
+category_level_info as (
+  select
+    v4.id as one_level_id
+    ,v4.name as one_level_name
+    ,v4.parent_id as one_level_parent_id
+    ,v3.r_id as two_level_id
+    ,v3.r_name as two_level_name
+    ,v3.r_parent_id as two_parent_id
+    ,v3.l_id as three_level_id
+    ,v3.l_name as three_level_name
+    ,v3.l_parent_id as three_parent_id
+  from    
+    (
+    select
+      v1.id as l_id
+      ,v1.name as l_name
+      ,v1.parent_id as l_parent_id
+  
+      ,v2.id as r_id
+      ,v2.name as r_name
+      ,v2.parent_id as r_parent_id
+    from
+      category_info as v1
+    left join
+      category_info as v2
+    on
+      v1.parent_id = v2.id
+    ) as v3
+  left join
+    category_info as v4
+  on
+    v3.r_parent_id = v4.id
+),
+
+--3.sku信息
+sku_info as (
+  select
+    id as product_id
+    ,goods_id
+    ,retail_price as product_retail_price
+    ,market_price as product_market_price
+    ,group_price as product_group_price
+    ,goods_specification_name as product_name
+    ,merchant_id as product_merchant_id
+  from
+    otrade_dw.dwd_otrade_b2c_mall_nideshop_product_hf
+  where
+    concat(dt, " ", hour) >= default.minLocalTimeRange("{config}", '{v_date}', 0) 
+    and concat(dt, " ", hour) <= default.maxLocalTimeRange("{config}", '{v_date}', 0) 
+    and utc_date_hour = date_format("{v_date}", 'yyyy-MM-dd HH')
+),
+
+--4.spu信息
+spu_info as (
+  select
+    id as goods_id
+    ,category_id
+    ,name as goods_name
+    ,is_on_sale as goods_is_on_sale
+    ,is_delete as goods_is_delete
+    ,is_new as goods_is_new
+    ,is_secKill as goods_is_secKill
+    ,is_service as goods_is_service
+    ,is_app_exclusive as goods_is_app_exclusive
+    ,is_limited as goods_is_limited
+    ,is_hot as goods_is_hot
+    ,brokerage_percent as goods_brokerage_percent
+    ,merchant_id as goods_merchant_id
+    ,start_time as goods_start_time
+    ,end_time as goods_end_time
+    ,add_time as goods_add_time
+  from
+    otrade_dw.dwd_otrade_b2c_mall_nideshop_goods_hf
+  where
+    concat(dt, " ", hour) >= default.minLocalTimeRange("{config}", '{v_date}', 0) 
+    and concat(dt, " ", hour) <= default.maxLocalTimeRange("{config}", '{v_date}', 0) 
+    and utc_date_hour = date_format("{v_date}", 'yyyy-MM-dd HH')
+),
+
+--3.最后插入数据到表中
+insert overwrite table otrade_dw.dim_otrade_b2c_mall_nideshop_product_hf partition(country_code,dt,hour)
+select
+  v3.one_level_id
+  ,v3.one_level_name
+  ,v3.two_level_id
+  ,v3.two_level_name
+  ,v3.three_level_id
+  ,v3.three_level_name
+
+  ,v2.goods_id
+  ,v2.goods_name
+  ,v1.product_id
+  ,v1.product_name
+  ,v1.product_retail_price
+  ,v1.product_market_price
+  ,v1.product_group_price
+  ,v1.product_merchant_id
+
+  ,v2.goods_is_on_sale
+  ,v2.goods_is_delete
+  ,v2.goods_is_new
+  ,v2.goods_is_seckill
+  ,v2.goods_is_service
+  ,v2.goods_is_app_exclusive
+  ,v2.goods_is_limited
+  ,v2.goods_is_hot
+  ,v2.goods_brokerage_percent
+  ,v2.goods_merchant_id
+  ,v2.goods_start_time
+  ,v2.goods_end_time
+  ,v2.goods_add_time
+
+  ,date_format('{v_date}', 'yyyy-MM-dd HH') as utc_date_hour
+
+  ,'NG' as country_code
+  ,date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'yyyy-MM-dd') as dt
+  ,date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'HH') as hour
+from
+  sku_info as v1
+left join
+  spu_info as v2
+on
+  v1.goods_id = v2.goods_id
+left join
+  category_level_info as v3
+on
+  v2.category_id = v3.three_level_id
+;
+
+
 
 
 
