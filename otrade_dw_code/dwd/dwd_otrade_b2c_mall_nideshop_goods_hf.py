@@ -165,8 +165,6 @@ last_hour_total as (
     ,group_price
     ,after_sale
     ,weight
-    ,dt
-    ,hour
     ,utc_date_hour
   from
     otrade_dw.dwd_otrade_b2c_mall_nideshop_goods_hf
@@ -225,8 +223,6 @@ update_info as (
     ,group_price
     ,after_sale
     ,weight
-    ,dt
-    ,hour
     ,utc_date_hour
   from
     (
@@ -277,8 +273,6 @@ update_info as (
       ,group_price
       ,after_sale
       ,weight
-      ,dt
-      ,hour
       ,date_format('{v_date}', 'yyyy-MM-dd HH') as utc_date_hour
       ,row_number() over(partition by id order by `__ts_ms` desc,`__file` desc,cast(`__pos` as int) desc) rn
     from
@@ -340,8 +334,6 @@ union_result as (
     ,group_price
     ,after_sale
     ,weight
-    ,dt
-    ,hour
     ,row_number() over(partition by id order by utc_date_hour desc) rn
   from
     (
@@ -400,8 +392,6 @@ select
   ,group_price
   ,after_sale
   ,weight
-  ,dt
-  ,hour
   ,date_format('{v_date}', 'yyyy-MM-dd HH') as utc_date_hour
 
   ,'NG' as country_code
@@ -411,7 +401,7 @@ from
   union_result
 where
   rn = 1;
-        
+       
 
 
     '''.format(
