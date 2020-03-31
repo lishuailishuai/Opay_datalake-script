@@ -175,7 +175,7 @@ city_info as (
   left join
     (select * from otrade_dw_ods.ods_binlog_base_otrade_country_h_his where concat(dt, " ", hour) = date_format('{v_date}', 'yyyy-MM-dd HH') and `__deleted` = 'false') as v2
   on
-    v1.country_code = v2.id
+    v1.country_code = v2.code
 ),
 
 --0.bd信息
