@@ -104,7 +104,7 @@ table_list = [
     #("opay_account","account_user_record", "opay_account", "base", 2,"false"),
     #("opay_account","accounting_request_record", "opay_account", "base", 2,"false"),
 
-    ("opay_activity","preferential_record", "opay_activity", "base",3,"false"),
+    # ("opay_activity","preferential_record", "opay_activity", "base",3,"false"),
 
   #  ("opay_channel","channel_transaction", "opay_channel", "base", 3, "false"),
     ("opay_overlord","terminal_record", "opay_overlord", "base", 3, "false"),
