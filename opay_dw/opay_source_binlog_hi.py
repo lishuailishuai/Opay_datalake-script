@@ -122,7 +122,7 @@ table_list = [
     #  "opay_merchant_overlord_recon", "false"),
     #
 
-    ("opay_sms", "message_record", "opay_sms","message_record", "opay_sms", "base", 3 , "opay_idgen_xxopay_idgen_xxljob_apollo_dbljob_apollo", "false"),
+    ("opay_sms", "message_record", "opay_sms","message_record", "opay_sms", "base", 3 , "opay_idgen_xxljob_apollo_db", "false"),
 
     #
     # ("opay_user", "user_email", "opay_user", "base", 3, "opay_user", "false"),
