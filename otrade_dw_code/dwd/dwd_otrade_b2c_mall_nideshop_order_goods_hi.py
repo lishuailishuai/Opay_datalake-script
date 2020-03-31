@@ -27,10 +27,9 @@ import requests
 import os
 from utils.get_local_time import GetLocalTime
 
-
 args = {
     'owner': 'yuanfeng',
-    'start_date': datetime(2020, 3, 30),
+    'start_date': datetime(2020, 3, 31),
     'depends_on_past': False,
     'retries': 3,
     'retry_delay': timedelta(minutes=2),
@@ -39,75 +38,67 @@ args = {
     'email_on_retry': False,
 }
 
-dag = airflow.DAG('dwd_otrade_b2c_mall_merchant_hf',
+dag = airflow.DAG('dwd_otrade_b2c_mall_nideshop_order_goods_hi',
                   schedule_interval="25 * * * *",
                   default_args=args,
                   )
 
 ##----------------------------------------- 变量 ---------------------------------------##
 db_name = "otrade_dw"
-table_name = "dwd_otrade_b2c_mall_merchant_hf"
+table_name = "dwd_otrade_b2c_mall_nideshop_order_goods_hi"
 hdfs_path = "oss://opay-datalake/otrade/otrade_dw/" + table_name
 config = eval(Variable.get("otrade_time_zone_config"))
 time_zone = config['NG']['time_zone']
 
 ##----------------------------------------- 依赖 ---------------------------------------##
-### 检查最新的商户表的依赖
-dwd_otrade_b2c_mall_merchant_hf_check_pre_locale_task = OssSensor(
-    task_id='dwd_otrade_b2c_mall_merchant_hf_check_pre_locale_task',
-    bucket_key='{hdfs_path_str}/country_code=NG/dt={pt}/hour={hour}/_SUCCESS'.format(
-        hdfs_path_str="otrade/otrade_dw/dwd_otrade_b2c_mall_merchant_hf",
-        pt='{{{{(execution_date+macros.timedelta(hours=({time_zone}+{gap_hour}))).strftime("%Y-%m-%d")}}}}'.format(time_zone=time_zone,gap_hour=-1),
-        hour='{{{{(execution_date+macros.timedelta(hours=({time_zone}+{gap_hour}))).strftime("%H")}}}}'.format(time_zone=time_zone,gap_hour=-1)
+### 检查当前小时的分区依赖
+###oss://opay-datalake/otrade_all_hi/ods_binlog_mall_nideshop_order_goods_all_hi
+ods_binlog_mall_nideshop_order_goods_all_hi_check_task = OssSensor(
+    task_id='ods_binlog_base_bd_admin_users_all_hi_check_task',
+    bucket_key='{hdfs_path_str}/dt={pt}/hour={hour}/_SUCCESS'.format(
+        hdfs_path_str="otrade_all_hi/ods_binlog_mall_nideshop_order_goods_all_hi",
+        pt='{{ds}}',
+        hour='{{ execution_date.strftime("%H") }}'
     ),
     bucket_name='opay-datalake',
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
 
-### 检查当前小时的分区依赖
-###oss://opay-datalake/otrade_all_hi/ods_binlog_mall_mall_merchant_all_hi
-ods_binlog_mall_mall_merchant_all_hi_check_task = OssSensor(
-        task_id='ods_binlog_base_bd_admin_users_all_hi_check_task',
-        bucket_key='{hdfs_path_str}/dt={pt}/hour={hour}/_SUCCESS'.format(
-            hdfs_path_str="otrade_all_hi/ods_binlog_mall_mall_merchant_all_hi",
-            pt='{{ds}}',
-            hour='{{ execution_date.strftime("%H") }}'
-        ),
-        bucket_name='opay-datalake',
-        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-        dag=dag
-    )
 
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
-def fun_task_timeout_monitor(ds,dag,execution_date,**op_kwargs):
+def fun_task_timeout_monitor(ds, dag, execution_date, **op_kwargs):
+    dag_ids = dag.dag_id
 
-    dag_ids=dag.dag_id
+    # 监控国家
+    v_country_code = 'NG'
 
-    #监控国家
-    v_country_code='NG'
+    # 时间偏移量
+    v_gap_hour = 0
 
-    #时间偏移量
-    v_gap_hour=0
+    v_date = GetLocalTime("otrade", execution_date.strftime("%Y-%m-%d %H"), v_country_code, v_gap_hour)['date']
+    v_hour = GetLocalTime("otrade", execution_date.strftime("%Y-%m-%d %H"), v_country_code, v_gap_hour)['hour']
 
-    v_date=GetLocalTime("otrade",execution_date.strftime("%Y-%m-%d %H"),v_country_code,v_gap_hour)['date']
-    v_hour=GetLocalTime("otrade",execution_date.strftime("%Y-%m-%d %H"),v_country_code,v_gap_hour)['hour']
-
-    #小时级监控
+    # 小时级监控
     tb_hour_task = [
-        {"dag":dag,"db": "otrade_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code={country_code}/dt={pt}/hour={now_hour}".format(country_code=v_country_code,pt=v_date,now_hour=v_hour), "timeout": "3000"}
+        {"dag": dag, "db": "otrade_dw", "table": "{dag_name}".format(dag_name=dag_ids),
+         "partition": "country_code={country_code}/dt={pt}/hour={now_hour}".format(country_code=v_country_code,
+                                                                                   pt=v_date, now_hour=v_hour),
+         "timeout": "3000"}
     ]
 
     TaskTimeoutMonitor().set_task_monitor(tb_hour_task)
 
-task_timeout_monitor= PythonOperator(
+
+task_timeout_monitor = PythonOperator(
     task_id='task_timeout_monitor',
     python_callable=fun_task_timeout_monitor,
     provide_context=True,
     dag=dag
 )
 
-def dwd_otrade_b2c_mall_merchant_hf_sql_task(ds, v_date):
+
+def dwd_otrade_b2c_mall_nideshop_order_goods_hi_sql_task(ds, v_date):
     HQL = '''
 
 set mapred.max.split.size=1000000;
@@ -115,144 +106,52 @@ set hive.exec.parallel=true;
 set hive.exec.dynamic.partition.mode=nonstrict;
 set hive.strict.checks.cartesian.product=false;
 
---1.取出上一个小时的全量
-with
-last_hour_total as (
-  select
-    id
-    ,first_name
-    ,last_name
-    ,mobile
-    ,shop_name
-    ,email
-    ,company
-    ,account
-    ,account_name
-    ,taxation_no
-    ,cac_no
-    ,vat_file
-    ,vat_no
-    ,contact_addr
-    ,company_addr
-    ,create_time
-    ,update_time
-  from
-    otrade_dw.dwd_otrade_b2c_mall_merchant_hf
-  where 
-    concat(dt, " ", hour) >= default.minLocalTimeRange("{config}", '{v_date}', -1) 
-    and concat(dt, " ", hour) <= default.maxLocalTimeRange("{config}", '{v_date}', -1) 
-    and utc_date_hour = from_unixtime(cast(unix_timestamp('{v_date}', 'yyyy-MM-dd HH') - 3600 as BIGINT), 'yyyy-MM-dd HH')
-),
-
---2.取出上一个小时的最新增量数据
-update_info as (
-  select
-    id
-    ,first_name
-    ,last_name
-    ,mobile
-    ,shop_name
-    ,email
-    ,company
-    ,account
-    ,account_name
-    ,taxation_no
-    ,cac_no
-    ,vat_file
-    ,vat_no
-    ,contact_addr
-    ,company_addr
-    ,create_time
-    ,update_time
-  from
-    (
-    select
-      id
-      ,first_name
-      ,last_name
-      ,mobile
-      ,shop_name
-      ,email
-      ,company
-      ,account
-      ,account_name
-      ,taxation_no
-      ,cac_no
-      ,vat_file
-      ,vat_no
-      ,contact_addr
-      ,company_addr
-      ,default.localTime("{config}",'NG',substr(create_time,0,19),0) as create_time
-      ,default.localTime("{config}",'NG',substr(update_time,0,19),0) as update_time
-      ,row_number() over(partition by id order by `__ts_ms` desc,`__file` desc,cast(`__pos` as int) desc) rn
-    from
-      otrade_dw_ods.ods_binlog_mall_mall_merchant_all_hi
-    where 
-      concat(dt, " ", hour) = date_format('{v_date}', 'yyyy-MM-dd HH') 
-      and `__deleted` = 'false'
-    ) as a
-  where
-    rn = 1
-),
-
---3.将如上结果集汇合
-union_result as (
-  select
-    id
-    ,first_name
-    ,last_name
-    ,mobile
-    ,shop_name
-    ,email
-    ,company
-    ,account
-    ,account_name
-    ,taxation_no
-    ,cac_no
-    ,vat_file
-    ,vat_no
-    ,contact_addr
-    ,company_addr
-    ,create_time
-    ,update_time
-    ,row_number() over(partition by id order by update_time desc) rn
-  from
-    (
-    select * from last_hour_total
-    union all
-    select * from update_info
-    ) as a
-)
-
---4.最后将去重的结果集插入到表中
-insert overwrite table otrade_dw.dwd_otrade_b2c_mall_merchant_hf partition(country_code,dt,hour)
+--1.最后将去重的结果集插入到表中
+insert overwrite table otrade_dw.dwd_otrade_b2c_mall_nideshop_order_goods_hi partition(country_code,dt,hour)
 select
   id
-  ,first_name
-  ,last_name
+  ,order_id
+  ,goods_id
+  ,goods_name
+  ,goods_sn
+  ,product_id
+  ,number
+  ,market_price
+  ,retail_price
+  ,goods_specifition_name_value
+  ,is_real
+  ,goods_specifition_ids
+  ,list_pic_url
+  ,brand_id
+  ,customers
+  ,customers_name
+  ,country
+  ,province
+  ,city
+  ,district
+  ,address
   ,mobile
-  ,shop_name
-  ,email
-  ,company
-  ,account
-  ,account_name
-  ,taxation_no
-  ,cac_no
-  ,vat_file
-  ,vat_no
-  ,contact_addr
-  ,company_addr
-  ,create_time
-  ,update_time
+  ,consignee
+  ,shipping_id
+  ,shipping_name
+  ,shipping_no
+  ,shipping_status
+  ,order_price
+  ,goods_price
+  ,actual_price
+  ,coupon_id
+
   ,date_format('{v_date}', 'yyyy-MM-dd HH') as utc_date_hour
 
   ,'NG' as country_code
   ,date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'yyyy-MM-dd') as dt
   ,date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'HH') as hour
 from
-  union_result
+  otrade_dw_ods.ods_binlog_mall_nideshop_order_goods_all_hi
 where
-  rn = 1;
+  concat(dt, " ", hour) = date_format('{v_date}', 'yyyy-MM-dd HH') 
+  and `__deleted` = 'false'
+;
 
 
 
@@ -314,8 +213,8 @@ def execution_data_task_id(ds, dag, **kwargs):
 
     cf = CountriesPublicFrame_dev(args)
 
-   # 读取sql
-    _sql = "\n" + cf.alter_partition() + "\n" + dwd_otrade_b2c_mall_merchant_hf_sql_task(ds, v_date)
+    # 读取sql
+    _sql = "\n" + cf.alter_partition() + "\n" + dwd_otrade_b2c_mall_nideshop_order_goods_hi_sql_task(ds, v_date)
 
     logging.info('Executing: %s', _sql)
 
@@ -326,8 +225,8 @@ def execution_data_task_id(ds, dag, **kwargs):
     cf.touchz_success()
 
 
-dwd_otrade_b2c_mall_merchant_hf_task = PythonOperator(
-    task_id='dwd_otrade_b2c_mall_merchant_hf_task',
+dwd_otrade_b2c_mall_nideshop_order_goods_hi_task = PythonOperator(
+    task_id='dwd_otrade_b2c_mall_nideshop_order_goods_hi_task',
     python_callable=execution_data_task_id,
     provide_context=True,
     op_kwargs={
@@ -339,8 +238,7 @@ dwd_otrade_b2c_mall_merchant_hf_task = PythonOperator(
     dag=dag
 )
 
-dwd_otrade_b2c_mall_merchant_hf_check_pre_locale_task >> dwd_otrade_b2c_mall_merchant_hf_task
-ods_binlog_mall_mall_merchant_all_hi_check_task >> dwd_otrade_b2c_mall_merchant_hf_task
+ods_binlog_mall_nideshop_order_goods_all_hi_check_task >> dwd_otrade_b2c_mall_nideshop_order_goods_hi_task
 
 
 
