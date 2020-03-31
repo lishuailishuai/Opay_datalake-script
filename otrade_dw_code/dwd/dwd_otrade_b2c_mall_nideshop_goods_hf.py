@@ -241,7 +241,7 @@ update_info as (
       ,goods_brief
       ,goods_desc
       ,is_on_sale
-      ,add_time
+      ,default.localTime("{config}",'NG',from_unixtime(cast(add_time/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as add_time
       ,sort_order
       ,is_delete
       ,attribute_category
@@ -264,15 +264,15 @@ update_info as (
       ,market_price
       ,create_user_id
       ,update_user_id
-      ,update_time
+      ,default.localTime("{config}",'NG',from_unixtime(cast(update_time/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as update_time
       ,create_user_dept_id
       ,is_seckill
-      ,start_time
+      ,default.localTime("{config}",'NG',from_unixtime(cast(start_time/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as start_time
       ,is_service
       ,brokerage_percent
       ,merchant_id
-      ,end_time
-      ,success_time
+      ,default.localTime("{config}",'NG',from_unixtime(cast(end_time/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as end_time
+      ,default.localTime("{config}",'NG',from_unixtime(cast(success_time/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as success_time
       ,success_people
       ,group_price
       ,after_sale
