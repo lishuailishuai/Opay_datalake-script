@@ -38,14 +38,14 @@ args = {
     'email_on_retry': False,
 }
 
-dag = airflow.DAG('dwd_otrade_b2c_mall_nideshop_order_hf',
+dag = airflow.DAG('dwd_otrade_b2c_mall_nideshop_order_hi',
                   schedule_interval="25 * * * *",
                   default_args=args,
                   )
 
 ##----------------------------------------- 变量 ---------------------------------------##
 db_name = "otrade_dw"
-table_name = "dwd_otrade_b2c_mall_nideshop_order_hf"
+table_name = "dwd_otrade_b2c_mall_nideshop_order_hi"
 hdfs_path = "oss://opay-datalake/otrade/otrade_dw/" + table_name
 config = eval(Variable.get("otrade_time_zone_config"))
 time_zone = config['NG']['time_zone']
@@ -98,7 +98,7 @@ task_timeout_monitor = PythonOperator(
 )
 
 
-def dwd_otrade_b2c_mall_nideshop_order_hf_sql_task(ds, v_date):
+def dwd_otrade_b2c_mall_nideshop_order_hi_sql_task(ds, v_date):
     HQL = '''
 set mapred.max.split.size=1000000;
 set hive.exec.parallel=true;
@@ -106,7 +106,7 @@ set hive.exec.dynamic.partition.mode=nonstrict;
 set hive.strict.checks.cartesian.product=false;
 
 --1.最后将去重的结果集插入到表中
-insert overwrite table otrade_dw.dwd_otrade_b2c_mall_nideshop_order_hf partition(country_code,dt,hour)
+insert overwrite table otrade_dw.dwd_otrade_b2c_mall_nideshop_order_hi partition(country_code,dt,hour)
 select
   id
   ,order_sn
@@ -228,7 +228,7 @@ def execution_data_task_id(ds, dag, **kwargs):
     cf = CountriesPublicFrame_dev(args)
 
     # 读取sql
-    _sql = "\n" + cf.alter_partition() + "\n" + dwd_otrade_b2c_mall_nideshop_order_hf_sql_task(ds, v_date)
+    _sql = "\n" + cf.alter_partition() + "\n" + dwd_otrade_b2c_mall_nideshop_order_hi_sql_task(ds, v_date)
 
     logging.info('Executing: %s', _sql)
 
@@ -239,8 +239,8 @@ def execution_data_task_id(ds, dag, **kwargs):
     cf.touchz_success()
 
 
-dwd_otrade_b2c_mall_nideshop_order_hf_task = PythonOperator(
-    task_id='dwd_otrade_b2c_mall_nideshop_order_hf_task',
+dwd_otrade_b2c_mall_nideshop_order_hi_task = PythonOperator(
+    task_id='dwd_otrade_b2c_mall_nideshop_order_hi_task',
     python_callable=execution_data_task_id,
     provide_context=True,
     op_kwargs={
@@ -252,7 +252,7 @@ dwd_otrade_b2c_mall_nideshop_order_hf_task = PythonOperator(
     dag=dag
 )
 
-ods_binlog_mall_nideshop_order_all_hi_check_task >> dwd_otrade_b2c_mall_nideshop_order_hf_task
+ods_binlog_mall_nideshop_order_all_hi_check_task >> dwd_otrade_b2c_mall_nideshop_order_hi_task
 
 
 
