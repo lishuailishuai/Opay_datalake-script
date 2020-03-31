@@ -233,7 +233,7 @@ spu_info as (
     concat(dt, " ", hour) >= default.minLocalTimeRange("{config}", '{v_date}', 0) 
     and concat(dt, " ", hour) <= default.maxLocalTimeRange("{config}", '{v_date}', 0) 
     and utc_date_hour = date_format("{v_date}", 'yyyy-MM-dd HH')
-),
+)
 
 --3.最后插入数据到表中
 insert overwrite table otrade_dw.dim_otrade_b2c_mall_nideshop_product_hf partition(country_code,dt,hour)
