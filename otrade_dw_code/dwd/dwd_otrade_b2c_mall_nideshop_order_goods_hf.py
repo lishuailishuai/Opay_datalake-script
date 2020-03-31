@@ -38,25 +38,25 @@ args = {
     'email_on_retry': False,
 }
 
-dag = airflow.DAG('dwd_otrade_b2c_mall_nideshop_order_hf',
+dag = airflow.DAG('dwd_otrade_b2c_mall_nideshop_order_goods_hf',
                   schedule_interval="20 * * * *",
                   default_args=args,
                   )
 
 ##----------------------------------------- 变量 ---------------------------------------##
 db_name = "otrade_dw"
-table_name = "dwd_otrade_b2c_mall_nideshop_order_hf"
+table_name = "dwd_otrade_b2c_mall_nideshop_order_goods_hf"
 hdfs_path = "oss://opay-datalake/otrade/otrade_dw/" + table_name
 config = eval(Variable.get("otrade_time_zone_config"))
 time_zone = config['NG']['time_zone']
 
 ##----------------------------------------- 依赖 ---------------------------------------##
 ### 检查当前小时的分区依赖
-###oss://opay-datalake/otrade_all_hi/ods_binlog_mall_nideshop_order_all_hi
-ods_binlog_mall_nideshop_order_all_hi_check_task = OssSensor(
+###oss://opay-datalake/otrade_all_hi/ods_binlog_mall_nideshop_order_goods_all_hi
+ods_binlog_mall_nideshop_order_goods_all_hi_check_task = OssSensor(
     task_id='ods_binlog_base_bd_admin_users_all_hi_check_task',
     bucket_key='{hdfs_path_str}/dt={pt}/hour={hour}/_SUCCESS'.format(
-        hdfs_path_str="otrade_all_hi/ods_binlog_mall_nideshop_order_all_hi",
+        hdfs_path_str="otrade_all_hi/ods_binlog_mall_nideshop_order_goods_all_hi",
         pt='{{ds}}',
         hour='{{ execution_date.strftime("%H") }}'
     ),
@@ -98,61 +98,48 @@ task_timeout_monitor = PythonOperator(
 )
 
 
-def dwd_otrade_b2c_mall_nideshop_order_hf_sql_task(ds, v_date):
+def dwd_otrade_b2c_mall_nideshop_order_goods_hf_sql_task(ds, v_date):
     HQL = '''
+
 set mapred.max.split.size=1000000;
 set hive.exec.parallel=true;
 set hive.exec.dynamic.partition.mode=nonstrict;
 set hive.strict.checks.cartesian.product=false;
 
 --1.最后将去重的结果集插入到表中
-insert overwrite table otrade_dw.dwd_otrade_b2c_mall_nideshop_order_hf partition(country_code,dt,hour)
+insert overwrite table otrade_dw.dwd_otrade_b2c_mall_nideshop_order_goods_hf partition(country_code,dt,hour)
 select
   id
-  ,order_sn
-  ,user_id
-  ,order_status
-  ,shipping_status
-  ,pay_status
-  ,consignee
+  ,order_id
+  ,goods_id
+  ,goods_name
+  ,goods_sn
+  ,product_id
+  ,number
+  ,market_price
+  ,retail_price
+  ,goods_specifition_name_value
+  ,is_real
+  ,goods_specifition_ids
+  ,list_pic_url
+  ,brand_id
+  ,customers
+  ,customers_name
   ,country
   ,province
   ,city
   ,district
   ,address
   ,mobile
-  ,postscript
+  ,consignee
   ,shipping_id
   ,shipping_name
-  ,pay_id
-  ,pay_name
-  ,shipping_fee
-  ,actual_price
-  ,integral
-  ,integral_money
+  ,shipping_no
+  ,shipping_status
   ,order_price
   ,goods_price
-  ,default.localTime("{config}",'NG',from_unixtime(cast(add_time/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as add_time
-  ,default.localTime("{config}",'NG',from_unixtime(cast(confirm_time/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as confirm_time
-  ,default.localTime("{config}",'NG',from_unixtime(cast(pay_time/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as pay_time
-  ,freight_price
+  ,actual_price
   ,coupon_id
-  ,parent_id
-  ,coupon_price
-  ,callback_status
-  ,shipping_no
-  ,full_cut_price
-  ,order_type
-  ,brand_id
-  ,settlement_total_fee
-  ,all_price
-  ,all_order_id
-  ,promoter_id
-  ,brokerage
-  ,merchant_id
-  ,group_buying_id
-  ,user_mobile
-  ,opayid
 
   ,date_format('{v_date}', 'yyyy-MM-dd HH') as utc_date_hour
 
@@ -160,12 +147,11 @@ select
   ,date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'yyyy-MM-dd') as dt
   ,date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'HH') as hour
 from
-  otrade_dw_ods.ods_binlog_mall_nideshop_order_all_hi
+  otrade_dw_ods.ods_binlog_mall_nideshop_order_goods_all_hi
 where
   concat(dt, " ", hour) = date_format('{v_date}', 'yyyy-MM-dd HH') 
   and `__deleted` = 'false'
 ;
-
 
 
 
@@ -228,7 +214,7 @@ def execution_data_task_id(ds, dag, **kwargs):
     cf = CountriesPublicFrame_dev(args)
 
     # 读取sql
-    _sql = "\n" + cf.alter_partition() + "\n" + dwd_otrade_b2c_mall_nideshop_order_hf_sql_task(ds, v_date)
+    _sql = "\n" + cf.alter_partition() + "\n" + dwd_otrade_b2c_mall_nideshop_order_goods_hf_sql_task(ds, v_date)
 
     logging.info('Executing: %s', _sql)
 
@@ -239,8 +225,8 @@ def execution_data_task_id(ds, dag, **kwargs):
     cf.touchz_success()
 
 
-dwd_otrade_b2c_mall_nideshop_order_hf_task = PythonOperator(
-    task_id='dwd_otrade_b2c_mall_nideshop_order_hf_task',
+dwd_otrade_b2c_mall_nideshop_order_goods_hf_task = PythonOperator(
+    task_id='dwd_otrade_b2c_mall_nideshop_order_goods_hf_task',
     python_callable=execution_data_task_id,
     provide_context=True,
     op_kwargs={
@@ -252,7 +238,7 @@ dwd_otrade_b2c_mall_nideshop_order_hf_task = PythonOperator(
     dag=dag
 )
 
-ods_binlog_mall_nideshop_order_all_hi_check_task >> dwd_otrade_b2c_mall_nideshop_order_hf_task
+ods_binlog_mall_nideshop_order_goods_all_hi_check_task >> dwd_otrade_b2c_mall_nideshop_order_goods_hf_task
 
 
 
