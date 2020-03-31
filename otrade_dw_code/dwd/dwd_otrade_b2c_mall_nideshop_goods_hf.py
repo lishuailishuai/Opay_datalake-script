@@ -169,7 +169,7 @@ last_hour_total as (
     ,hour
     ,utc_date_hour
   from
-    otrade_dw.dwd_otrade_b2c_mall_nideshop_category_hf
+    otrade_dw.dwd_otrade_b2c_mall_nideshop_goods_hf
   where 
     concat(dt, " ", hour) >= default.minLocalTimeRange("{config}", '{v_date}', -1) 
     and concat(dt, " ", hour) <= default.maxLocalTimeRange("{config}", '{v_date}', -1) 
