@@ -189,7 +189,7 @@ union_result as (
 )
 
 --4.最后将去重的结果集插入到表中
-insert overwrite table otrade_dw.dwd_otrade_b2c_mall_merchant_hf partition(country_code,dt,hour)
+insert overwrite table otrade_dw.dwd_otrade_b2b_product_sku_hf partition(country_code,dt,hour)
 select
   id
   ,product_id
