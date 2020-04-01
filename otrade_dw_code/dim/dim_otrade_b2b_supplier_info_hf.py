@@ -248,6 +248,12 @@ select
   ,v1.earnest_money
   ,v1.create_time
   ,v1.update_time
+  
+  ,date_format('{v_date}', 'yyyy-MM-dd HH') as utc_date_hour
+
+  ,'NG' as country_code
+  ,date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'yyyy-MM-dd') as dt
+  ,date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'HH') as hour
 from
   supplier_info as v1
 left join
