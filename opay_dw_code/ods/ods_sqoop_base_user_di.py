@@ -118,8 +118,37 @@ def ods_sqoop_base_user_di_sql_task(ds):
         big_picture,
         nick_name,
         '{pt}'
-    from 
-        (select *,row_number() over(partition by id order by `__ts_ms` desc,`__file` desc,cast(`__pos` as int) desc) rn
+    from (
+        select 
+            id,
+            user_id,
+            mobile,
+            business_name,
+            first_name,
+            middle_name,
+            surname,
+            kyc_level,
+            kyc_update_time,
+            bvn,
+            dob,
+            gender,
+            country,
+            state,
+            city,
+            address,
+            lga,
+            role,
+            referral_code,
+            referrer_code,
+            notification,
+            create_time,
+            update_time,
+            register_client,
+            agent_referrer_code,
+            photo,
+            big_picture,
+            nick_name,
+            row_number() over(partition by id order by `__ts_ms` desc,`__file` desc,cast(`__pos` as int) desc) rn
          FROM opay_dw_ods.ods_binlog_base_user_hi
          where concat(dt,' ',hour) between '{pt_y} 23' and '{pt} 22' and `__deleted` = 'false'
          ) m 
