@@ -77,7 +77,7 @@ table_list = [
     ("admin_guns","sys_dept", "ocredit_db", "base",1, "ocredit_db","false")
 ]
 
-HIVE_DB = 'ocredit_phones_ods'
+HIVE_DB = 'ocredit_phones_dw_ods'
 HIVE_SQOOP_TEMP_DB = 'test_db'
 HIVE_FULL_TABLE = 'ods_binlog_%s_%s_h_his'
 HIVE_HI_TABLE = 'ods_binlog_%s_%s_hi'
