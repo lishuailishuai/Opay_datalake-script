@@ -147,10 +147,49 @@ select
   ,date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'yyyy-MM-dd') as dt
   ,date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'HH') as hour
 from
-  otrade_dw_ods.ods_binlog_mall_nideshop_order_goods_all_hi
+  (
+  select
+    id
+    ,order_id
+    ,goods_id
+    ,goods_name
+    ,goods_sn
+    ,product_id
+    ,number
+    ,market_price
+    ,retail_price
+    ,goods_specifition_name_value
+    ,is_real
+    ,goods_specifition_ids
+    ,list_pic_url
+    ,brand_id
+    ,customers
+    ,customers_name
+    ,country
+    ,province
+    ,city
+    ,district
+    ,address
+    ,mobile
+    ,consignee
+    ,shipping_id
+    ,shipping_name
+    ,shipping_no
+    ,shipping_status
+    ,order_price
+    ,goods_price
+    ,actual_price
+    ,coupon_id
+  
+    ,row_number() over(partition by id order by `__ts_ms` desc,`__file` desc,cast(`__pos` as int) desc) rn
+  from
+    otrade_dw_ods.ods_binlog_mall_nideshop_order_goods_all_hi
+  where
+    concat(dt, " ", hour) = date_format('{v_date}', 'yyyy-MM-dd HH') 
+    and `__deleted` = 'false'
+  ) as a
 where
-  concat(dt, " ", hour) = date_format('{v_date}', 'yyyy-MM-dd HH') 
-  and `__deleted` = 'false'
+  rn = 1
 ;
 
 
