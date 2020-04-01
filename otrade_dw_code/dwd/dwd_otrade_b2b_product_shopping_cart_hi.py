@@ -110,23 +110,11 @@ set hive.strict.checks.cartesian.product=false;
 insert overwrite table otrade_dw.dwd_otrade_b2b_product_shopping_cart_hi partition(country_code,dt,hour)
 select
   id
-  ,opay_pay_id
-  ,order_id
-  ,payer_id
-  ,payer_phone
-  ,pay_cur
-  ,actual_amount
-  ,pay_status
-  ,req_data
-  ,resp_data
-  ,notify_data
-  ,req_time
-  ,resp_time
-  ,notify_time
-  ,req_status
-  ,request_ip
+  ,user_id
+  ,sku_id
+  ,buy_num
   ,create_time
-  ,pay_time
+  ,update_time
 
   ,date_format('{v_date}', 'yyyy-MM-dd HH') as utc_date_hour
 
@@ -137,21 +125,9 @@ from
   (
   select
     id
-    ,opay_pay_id
-    ,order_id
-    ,payer_id
-    ,payer_phone
-    ,pay_cur
-    ,actual_amount
-    ,pay_status
-    ,req_data
-    ,resp_data
-    ,notify_data
-    ,default.localTime("{config}",'NG',from_unixtime(cast(req_time/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as req_time
-    ,default.localTime("{config}",'NG',from_unixtime(cast(resp_time/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as resp_time
-    ,default.localTime("{config}",'NG',from_unixtime(cast(notify_time/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as notify_time
-    ,req_status
-    ,request_ip
+    ,user_id
+    ,sku_id
+    ,buy_num
     ,default.localTime("{config}",'NG',from_unixtime(cast(create_time/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as create_time
     ,default.localTime("{config}",'NG',from_unixtime(cast(pay_time/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as pay_time
   
@@ -164,9 +140,6 @@ from
   ) as a
 where rn = 1
 ;
-
-
-
 
 
 
