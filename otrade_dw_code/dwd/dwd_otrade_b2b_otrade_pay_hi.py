@@ -38,14 +38,14 @@ args = {
     'email_on_retry': False,
 }
 
-dag = airflow.DAG('dwd_otrade_b2b_otrade_pay_di',
+dag = airflow.DAG('dwd_otrade_b2b_otrade_pay_hi',
                   schedule_interval="25 * * * *",
                   default_args=args,
                   )
 
 ##----------------------------------------- 变量 ---------------------------------------##
 db_name = "otrade_dw"
-table_name = "dwd_otrade_b2b_otrade_pay_di"
+table_name = "dwd_otrade_b2b_otrade_pay_hi"
 hdfs_path = "oss://opay-datalake/otrade/otrade_dw/" + table_name
 config = eval(Variable.get("otrade_time_zone_config"))
 time_zone = config['NG']['time_zone']
@@ -98,7 +98,7 @@ task_timeout_monitor = PythonOperator(
 )
 
 
-def dwd_otrade_b2b_otrade_pay_di_sql_task(ds, v_date):
+def dwd_otrade_b2b_otrade_pay_hi_sql_task(ds, v_date):
     HQL = '''
 
 set mapred.max.split.size=1000000;
@@ -230,7 +230,7 @@ def execution_data_task_id(ds, dag, **kwargs):
     cf = CountriesPublicFrame_dev(args)
 
     # 读取sql
-    _sql = "\n" + cf.alter_partition() + "\n" + dwd_otrade_b2b_otrade_pay_di_sql_task(ds, v_date)
+    _sql = "\n" + cf.alter_partition() + "\n" + dwd_otrade_b2b_otrade_pay_hi_sql_task(ds, v_date)
 
     logging.info('Executing: %s', _sql)
 
@@ -241,8 +241,8 @@ def execution_data_task_id(ds, dag, **kwargs):
     cf.touchz_success()
 
 
-dwd_otrade_b2b_otrade_pay_di_task = PythonOperator(
-    task_id='dwd_otrade_b2b_otrade_pay_di_task',
+dwd_otrade_b2b_otrade_pay_hi_task = PythonOperator(
+    task_id='dwd_otrade_b2b_otrade_pay_hi_task',
     python_callable=execution_data_task_id,
     provide_context=True,
     op_kwargs={
@@ -254,7 +254,7 @@ dwd_otrade_b2b_otrade_pay_di_task = PythonOperator(
     dag=dag
 )
 
-ods_binlog_base_otrade_pay_all_hi_check_task >> dwd_otrade_b2b_otrade_pay_di_task
+ods_binlog_base_otrade_pay_all_hi_check_task >> dwd_otrade_b2b_otrade_pay_hi_task
 
 
 
