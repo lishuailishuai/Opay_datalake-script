@@ -88,7 +88,7 @@ def ods_sqoop_base_transfer_not_register_record_di_sql_task(ds):
     set hive.exec.dynamic.partition.mode=nonstrict;
     set hive.exec.parallel=true;
     insert overwrite table {db}.{table} partition (dt)
-    SELECT id,
+    SELECT
         id,
         order_no,
         recipient_mobile,
