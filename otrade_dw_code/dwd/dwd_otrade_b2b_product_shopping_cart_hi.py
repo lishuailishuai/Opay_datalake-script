@@ -129,7 +129,7 @@ from
     ,sku_id
     ,buy_num
     ,default.localTime("{config}",'NG',from_unixtime(cast(create_time/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as create_time
-    ,default.localTime("{config}",'NG',from_unixtime(cast(pay_time/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as pay_time
+    ,default.localTime("{config}",'NG',from_unixtime(cast(update_time/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as update_time
   
     ,row_number() over(partition by id order by `__ts_ms` desc,`__file` desc,cast(`__pos` as int) desc) rn
   from
