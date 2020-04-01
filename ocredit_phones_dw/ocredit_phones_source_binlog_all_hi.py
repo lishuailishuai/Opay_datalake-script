@@ -92,7 +92,7 @@ HI_OSS_PATH_MARK='ocredit_phones_binlog'
 
 
 UFILE_PATH = Variable.get("OBJECT_STORAGE_PROTOCOL") + 'opay-datalake/temp/%s/%s'
-ALL_HI_OSS_PATH = 'oss://opay-datalake/'+ALL_HI_PATH_NAME+'/%s'
+ALL_HI_OSS_PATH = 'oss://opay-datalake/'+ALL_HI_PATH_MARK+'/%s'
 HI_OSS_PATH = 'oss://opay-datalake/'+HI_OSS_PATH_MARK+'/%s'
 ODS_CREATE_TABLE_SQL = '''
     CREATE EXTERNAL TABLE IF NOT EXISTS {db_name}.`{table_name}`(
