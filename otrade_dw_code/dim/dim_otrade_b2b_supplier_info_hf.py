@@ -52,22 +52,22 @@ config = eval(Variable.get("otrade_time_zone_config"))
 time_zone = config['NG']['time_zone']
 
 ##----------------------------------------- 依赖 ---------------------------------------##
-### 检查最新的商户表的依赖
-dim_otrade_b2b_supplier_info_hf_check_pre_locale_task = OssSensor(
-    task_id='dim_otrade_b2b_supplier_info_hf_check_pre_locale_task',
+### 检查最新的用户表的依赖
+###oss://opay-datalake/otrade/otrade_dw/dim_otrade_b2b_city_info_hf
+dim_otrade_b2b_city_info_hf_check_task = OssSensor(
+    task_id='dim_otrade_b2b_city_info_hf_check_task',
     bucket_key='{hdfs_path_str}/country_code=NG/dt={pt}/hour={hour}/_SUCCESS'.format(
-        hdfs_path_str="otrade/otrade_dw/dim_otrade_b2b_supplier_info_hf",
+        hdfs_path_str="otrade/otrade_dw/dim_otrade_b2b_city_info_hf",
         pt='{{{{(execution_date+macros.timedelta(hours=({time_zone}+{gap_hour}))).strftime("%Y-%m-%d")}}}}'.format(
-            time_zone=time_zone,gap_hour=-1),
+            time_zone=time_zone, gap_hour=0),
         hour='{{{{(execution_date+macros.timedelta(hours=({time_zone}+{gap_hour}))).strftime("%H")}}}}'.format(
-            time_zone=time_zone,gap_hour=-1)
+            time_zone=time_zone, gap_hour=0)
     ),
     bucket_name='opay-datalake',
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
 
-### 检查最新的用户表的依赖
 ###oss://opay-datalake/otrade/otrade_dw/dim_otrade_b2b_bd_info_hf
 dim_otrade_b2b_bd_info_hf_check_task = OssSensor(
     task_id='dim_otrade_b2b_bd_info_hf_check_task',
@@ -83,42 +83,15 @@ dim_otrade_b2b_bd_info_hf_check_task = OssSensor(
     dag=dag
 )
 
-### 检查当前小时的分区依赖
-###oss://opay-datalake/otrade_all_hi/ods_binlog_base_otrade_supplier_detail_all_hi
-ods_binlog_base_otrade_supplier_detail_all_hi_check_task = OssSensor(
-    task_id='ods_binlog_base_otrade_supplier_detail_all_hi_check_task',
-    bucket_key='{hdfs_path_str}/dt={pt}/hour={hour}/_SUCCESS'.format(
-        hdfs_path_str="otrade_all_hi/ods_binlog_base_otrade_supplier_detail_all_hi",
-        pt='{{ds}}',
-        hour='{{ execution_date.strftime("%H") }}'
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
-
-### 检查当前小时的分区依赖
-###oss://opay-datalake/otrade_h_his/ods_binlog_base_otrade_city_h_his
-ods_binlog_base_otrade_city_h_his_check_task = OssSensor(
-    task_id='ods_binlog_base_otrade_city_h_his_check_task',
-    bucket_key='{hdfs_path_str}/dt={pt}/hour={hour}/_SUCCESS'.format(
-        hdfs_path_str="otrade_h_his/ods_binlog_base_otrade_city_h_his",
-        pt='{{ds}}',
-        hour='{{ execution_date.strftime("%H") }}'
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
-
-### 检查当前小时的分区依赖
-###oss://opay-datalake/otrade_h_his/ods_binlog_base_otrade_country_h_his
-ods_binlog_base_otrade_country_h_his_check_task = OssSensor(
-    task_id='ods_binlog_base_otrade_country_h_his_check_task',
-    bucket_key='{hdfs_path_str}/dt={pt}/hour={hour}/_SUCCESS'.format(
-        hdfs_path_str="otrade_h_his/ods_binlog_base_otrade_country_h_his",
-        pt='{{ds}}',
-        hour='{{ execution_date.strftime("%H") }}'
+###oss://opay-datalake/otrade/otrade_dw/dwd_otrade_b2b_otrade_supplier_detail_hf
+dwd_otrade_b2b_otrade_supplier_detail_hf_check_task = OssSensor(
+    task_id='dwd_otrade_b2b_otrade_supplier_detail_hf_check_task',
+    bucket_key='{hdfs_path_str}/country_code=NG/dt={pt}/hour={hour}/_SUCCESS'.format(
+        hdfs_path_str="otrade/otrade_dw/dwd_otrade_b2b_otrade_supplier_detail_hf",
+        pt='{{{{(execution_date+macros.timedelta(hours=({time_zone}+{gap_hour}))).strftime("%Y-%m-%d")}}}}'.format(
+            time_zone=time_zone, gap_hour=0),
+        hour='{{{{(execution_date+macros.timedelta(hours=({time_zone}+{gap_hour}))).strftime("%H")}}}}'.format(
+            time_zone=time_zone, gap_hour=0)
     ),
     bucket_name='opay-datalake',
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
@@ -372,10 +345,8 @@ dim_otrade_b2b_supplier_info_hf_task = PythonOperator(
     dag=dag
 )
 
-dim_otrade_b2b_supplier_info_hf_check_pre_locale_task >> dim_otrade_b2b_supplier_info_hf_task
+dim_otrade_b2b_city_info_hf_check_task >> dim_otrade_b2b_supplier_info_hf_task
 dim_otrade_b2b_bd_info_hf_check_task >> dim_otrade_b2b_supplier_info_hf_task
-ods_binlog_base_otrade_supplier_detail_all_hi_check_task >> dim_otrade_b2b_supplier_info_hf_task
-ods_binlog_base_otrade_city_h_his_check_task >> dim_otrade_b2b_supplier_info_hf_task
-ods_binlog_base_otrade_country_h_his_check_task >> dim_otrade_b2b_supplier_info_hf_task
+dwd_otrade_b2b_otrade_supplier_detail_hf_check_task >> dim_otrade_b2b_supplier_info_hf_task
 
 
