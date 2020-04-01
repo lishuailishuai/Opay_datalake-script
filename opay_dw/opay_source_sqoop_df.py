@@ -73,25 +73,25 @@ table_list = [
     #("opay_user","user", "opay_db_3321", "base",1),
     ("opay_user","user_operator", "opay_user", "base", 1),
     # ("opay_user","user_payment_instrument", "opay_user", "base", 1),
-    ("opay_user", "user_token", "opay_user", "base", 1),
+    # ("opay_user", "user_token", "opay_user", "base", 1),
     ("opay_user", "user_telesale", "opay_user", "base", 1),
     # ("opay_user", "user_reseller", "opay_user", "base", 1),
  #   ("opay_user", "user_push_token", "opay_user", "base", 1),
     ("opay_user", "user_operator", "opay_user", "base", 1),
     ("opay_user", "user_nearby_agent", "opay_user", "base", 1),
-    ("opay_user", "user_message", "opay_user", "base", 1),
+    # ("opay_user", "user_message", "opay_user", "base", 1),
 
  #   ("opay_account","account_user", "opay_account", "base", 2),
 #    ("opay_account","account_merchant", "opay_account", "base", 2),
-    ("opay_account","accounting_merchant_record", "opay_account", "base", 1),
+#     ("opay_account","accounting_merchant_record", "opay_account", "base", 1),
     #("opay_account","accounting_record", "opay_account", "base", 1),
 
-    ("opay_overlord","overlord_user", "opay_overlord", "base", 1),
+    # ("opay_overlord","overlord_user", "opay_overlord", "base", 1),
     # ("opay_overlord","terminal", "opay_overlord", "base", 1),
 
     # ("opay_merchant","merchant", "opay_merchant", "base", 1),
 
-    ("opay_sms","message_template", "opay_sms", "base", 1),
+    # ("opay_sms","message_template", "opay_sms", "base", 1),
 
     ("opay_activity", "activity", "opay_activity", "base", 1),
     ("opay_activity", "activity_rules", "opay_activity", "base", 1),
