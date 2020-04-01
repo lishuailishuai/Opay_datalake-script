@@ -107,7 +107,7 @@ set hive.exec.dynamic.partition.mode=nonstrict;
 set hive.strict.checks.cartesian.product=false;
 
 --1.最后将去重的结果集插入到表中
-insert overwrite table otrade_dw.dwd_otrade_b2b_otrade_pay_di partition(country_code,dt,hour)
+insert overwrite table otrade_dw.dwd_otrade_b2b_otrade_pay_hi partition(country_code,dt,hour)
 select
   id
   ,opay_pay_id
