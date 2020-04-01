@@ -100,6 +100,7 @@ task_timeout_monitor = PythonOperator(
 
 def dwd_otrade_b2c_mall_nideshop_cart_hi_sql_task(ds, v_date):
     HQL = '''
+
 set mapred.max.split.size=1000000;
 set hive.exec.parallel=true;
 set hive.exec.dynamic.partition.mode=nonstrict;
@@ -134,10 +135,37 @@ select
   ,date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'yyyy-MM-dd') as dt
   ,date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'HH') as hour
 from
-  otrade_dw_ods.ods_binlog_mall_nideshop_cart_all_hi
-where
-  concat(dt, " ", hour) = date_format('{v_date}', 'yyyy-MM-dd HH') 
-  and `__deleted` = 'false'
+  (
+  select
+    id
+    ,user_id
+    ,session_id
+    ,goods_id
+    ,goods_sn
+    ,product_id
+    ,goods_name
+    ,market_price
+    ,retail_price
+    ,number
+    ,goods_specifition_name_value
+    ,goods_specifition_ids
+    ,checked
+    ,list_pic_url
+    ,customers
+    ,customers_name
+    ,merchant_id
+    ,user_mobile
+    ,opayid
+  
+    ,row_number() over(partition by id order by `__ts_ms` desc,`__file` desc,cast(`__pos` as int) desc) rn
+  from
+    otrade_dw_ods.ods_binlog_mall_nideshop_cart_all_hi
+  where
+    concat(dt, " ", hour) = date_format('{v_date}', 'yyyy-MM-dd HH') 
+    and `__deleted` = 'false'
+  ) as a
+  where
+    rn = 1
 ;
 
 

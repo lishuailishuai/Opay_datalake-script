@@ -30,7 +30,7 @@ from utils.get_local_time import GetLocalTime
 
 args = {
     'owner': 'yuanfeng',
-    'start_date': datetime(2020, 4,1),
+    'start_date': datetime(2020, 4, 1),
     'depends_on_past': False,
     'retries': 3,
     'retry_delay': timedelta(minutes=2),
@@ -39,24 +39,24 @@ args = {
     'email_on_retry': False,
 }
 
-dag = airflow.DAG('dwd_otrade_b2b_bd_admin_users_hf',
-                  schedule_interval="28 * * * *",
+dag = airflow.DAG('dwd_otrade_b2b_product_hf',
+                  schedule_interval="25 * * * *",
                   default_args=args,
                   )
 
 ##----------------------------------------- 变量 ---------------------------------------##
 db_name = "otrade_dw"
-table_name = "dwd_otrade_b2b_bd_admin_users_hf"
+table_name = "dwd_otrade_b2b_product_hf"
 hdfs_path = "oss://opay-datalake/otrade/otrade_dw/" + table_name
 config = eval(Variable.get("otrade_time_zone_config"))
 time_zone = config['NG']['time_zone']
 
 ##----------------------------------------- 依赖 ---------------------------------------##
 ### 检查最新的商户表的依赖
-dwd_otrade_b2b_bd_admin_users_hf_check_pre_locale_task = OssSensor(
-    task_id='dwd_otrade_b2b_bd_admin_users_hf_check_pre_locale_task',
+dwd_otrade_b2b_product_hf_check_pre_locale_task = OssSensor(
+    task_id='dwd_otrade_b2b_product_hf_check_pre_locale_task',
     bucket_key='{hdfs_path_str}/country_code=NG/dt={pt}/hour={hour}/_SUCCESS'.format(
-        hdfs_path_str="otrade/otrade_dw/dwd_otrade_b2b_bd_admin_users_hf",
+        hdfs_path_str="otrade/otrade_dw/dwd_otrade_b2b_product_hf",
         pt='{{{{(execution_date+macros.timedelta(hours=({time_zone}+{gap_hour}))).strftime("%Y-%m-%d")}}}}'.format(time_zone=time_zone,gap_hour=-1),
         hour='{{{{(execution_date+macros.timedelta(hours=({time_zone}+{gap_hour}))).strftime("%H")}}}}'.format(time_zone=time_zone,gap_hour=-1)
     ),
@@ -66,11 +66,11 @@ dwd_otrade_b2b_bd_admin_users_hf_check_pre_locale_task = OssSensor(
 )
 
 ### 检查当前小时的分区依赖
-###oss://opay-datalake/otrade_all_hi/ods_binlog_base_bd_admin_users_all_hi
-ods_binlog_base_bd_admin_users_all_hi_check_task = OssSensor(
+###oss://opay-datalake/otrade_all_hi/ods_binlog_base_product_all_hi
+ods_binlog_base_product_all_hi_check_task = OssSensor(
         task_id='ods_binlog_base_bd_admin_users_all_hi_check_task',
         bucket_key='{hdfs_path_str}/dt={pt}/hour={hour}/_SUCCESS'.format(
-            hdfs_path_str="otrade_all_hi/ods_binlog_base_bd_admin_users_all_hi",
+            hdfs_path_str="otrade_all_hi/ods_binlog_base_product_all_hi",
             pt='{{ds}}',
             hour='{{ execution_date.strftime("%H") }}'
         ),
@@ -107,36 +107,44 @@ task_timeout_monitor= PythonOperator(
     dag=dag
 )
 
-def dwd_otrade_b2b_bd_admin_users_hf_sql_task(ds, v_date):
+def dwd_otrade_b2b_product_hf_sql_task(ds, v_date):
     HQL = '''
 
 set mapred.max.split.size=1000000;
-set hive.exec.dynamic.partition.mode=nonstrict;
 set hive.exec.parallel=true;
+set hive.exec.dynamic.partition.mode=nonstrict;
+set hive.strict.checks.cartesian.product=false;
 
 --1.取出上一个小时的全量
 with
 last_hour_total as (
   select
     id
-    ,username
-    ,mobile
-    ,job_id
-    ,leader_id
-    ,staff_id
-    ,name
-    ,password
-    ,department_id
-    ,email
+    ,category_id
+    ,title
+    ,brand_id
+    ,brand
+    ,detail
+    ,images
+    ,opay_id
+    ,supplier_id
+    ,supplier_name
+    ,price_min
+    ,price_max
+    ,stock
+    ,stock_reduce_type
+    ,sales
+    ,original_price
+    ,starting_quantity
     ,status
-    ,remember_token
-    ,avatar
-    ,fcm_token
-    ,city_id
-    ,created_at
-    ,updated_at
+    ,create_time
+    ,update_time
+    ,shop_id
+    ,version
+    ,name_tags
+    ,goods_tags
   from
-    otrade_dw.dwd_otrade_b2b_bd_admin_users_hf
+    otrade_dw.dwd_otrade_b2b_product_hf
   where 
     concat(dt, " ", hour) >= default.minLocalTimeRange("{config}", '{v_date}', -1) 
     and concat(dt, " ", hour) <= default.maxLocalTimeRange("{config}", '{v_date}', -1) 
@@ -147,45 +155,60 @@ last_hour_total as (
 update_info as (
   select
     id
-    ,username
-    ,mobile
-    ,job_id
-    ,leader_id
-    ,staff_id
-    ,name
-    ,password
-    ,department_id
-    ,email
+    ,category_id
+    ,title
+    ,brand_id
+    ,brand
+    ,detail
+    ,images
+    ,opay_id
+    ,supplier_id
+    ,supplier_name
+    ,price_min
+    ,price_max
+    ,stock
+    ,stock_reduce_type
+    ,sales
+    ,original_price
+    ,starting_quantity
     ,status
-    ,remember_token
-    ,avatar
-    ,fcm_token
-    ,city_id
-    ,created_at
-    ,updated_at
+    ,create_time
+    ,update_time
+    ,shop_id
+    ,version
+    ,name_tags
+    ,goods_tags
   from
     (
     select
       id
-      ,username
-      ,mobile
-      ,job_id
-      ,leader_id
-      ,staff_id
-      ,name
-      ,password
-      ,department_id
-      ,email
+      ,category_id
+      ,title
+      ,brand_id
+      ,brand
+      ,detail
+      ,images
+      ,opay_id
+      ,supplier_id
+      ,supplier_name
+      ,price_min
+      ,price_max
+      ,stock
+      ,stock_reduce_type
+      ,sales
+      ,original_price
+      ,starting_quantity
       ,status
-      ,remember_token
-      ,avatar
-      ,fcm_token
-      ,city_id
-      ,default.localTime("{config}",'NG',substr(created_at,0,19),0) as created_at
-      ,default.localTime("{config}",'NG',substr(updated_at,0,19),0) as updated_at
+      ,default.localTime("{config}",'NG',from_unixtime(cast(create_time/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as create_time
+      ,default.localTime("{config}",'NG',from_unixtime(cast(update_time/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as update_time
+      ,shop_id
+      ,version
+      ,name_tags
+      ,goods_tags
+
       ,row_number() over(partition by id order by `__ts_ms` desc,`__file` desc,cast(`__pos` as int) desc) rn
     from
-      otrade_dw_ods.ods_binlog_base_bd_admin_users_all_hi
+      otrade_dw_ods.ods_binlog_base_product_all_hi
     where 
       concat(dt, " ", hour) = date_format('{v_date}', 'yyyy-MM-dd HH') 
       and `__deleted` = 'false'
@@ -198,23 +221,30 @@ update_info as (
 union_result as (
   select
     id
-    ,username
-    ,mobile
-    ,job_id
-    ,leader_id
-    ,staff_id
-    ,name
-    ,password
-    ,department_id
-    ,email
+    ,category_id
+    ,title
+    ,brand_id
+    ,brand
+    ,detail
+    ,images
+    ,opay_id
+    ,supplier_id
+    ,supplier_name
+    ,price_min
+    ,price_max
+    ,stock
+    ,stock_reduce_type
+    ,sales
+    ,original_price
+    ,starting_quantity
     ,status
-    ,remember_token
-    ,avatar
-    ,fcm_token
-    ,city_id
-    ,created_at
-    ,updated_at
-    ,row_number() over(partition by id order by updated_at desc) rn
+    ,create_time
+    ,update_time
+    ,shop_id
+    ,version
+    ,name_tags
+    ,goods_tags
+    ,row_number() over(partition by id order by update_time desc) rn
   from
     (
     select * from last_hour_total
@@ -224,25 +254,32 @@ union_result as (
 )
 
 --4.最后将去重的结果集插入到表中
-insert overwrite table otrade_dw.dwd_otrade_b2b_bd_admin_users_hf partition(country_code,dt,hour)
+insert overwrite table otrade_dw.dwd_otrade_b2b_product_hf partition(country_code,dt,hour)
 select
   id
-  ,username
-  ,mobile
-  ,job_id
-  ,leader_id
-  ,staff_id
-  ,name
-  ,password
-  ,department_id
-  ,email
+  ,category_id
+  ,title
+  ,brand_id
+  ,brand
+  ,detail
+  ,images
+  ,opay_id
+  ,supplier_id
+  ,supplier_name
+  ,price_min
+  ,price_max
+  ,stock
+  ,stock_reduce_type
+  ,sales
+  ,original_price
+  ,starting_quantity
   ,status
-  ,remember_token
-  ,avatar
-  ,fcm_token
-  ,city_id
-  ,created_at
-  ,updated_at
+  ,create_time
+  ,update_time
+  ,shop_id
+  ,version
+  ,name_tags
+  ,goods_tags
   ,date_format('{v_date}', 'yyyy-MM-dd HH') as utc_date_hour
 
   ,'NG' as country_code
@@ -252,6 +289,8 @@ from
   union_result
 where
   rn = 1;
+
+
 
 
 
@@ -315,7 +354,7 @@ def execution_data_task_id(ds, dag, **kwargs):
     cf = CountriesPublicFrame_dev(args)
 
    # 读取sql
-    _sql = "\n" + cf.alter_partition() + "\n" + dwd_otrade_b2b_bd_admin_users_hf_sql_task(ds, v_date)
+    _sql = "\n" + cf.alter_partition() + "\n" + dwd_otrade_b2b_product_hf_sql_task(ds, v_date)
 
     logging.info('Executing: %s', _sql)
 
@@ -326,8 +365,8 @@ def execution_data_task_id(ds, dag, **kwargs):
     cf.touchz_success()
 
 
-dwd_otrade_b2b_bd_admin_users_hf_task = PythonOperator(
-    task_id='dwd_otrade_b2b_bd_admin_users_hf_task',
+dwd_otrade_b2b_product_hf_task = PythonOperator(
+    task_id='dwd_otrade_b2b_product_hf_task',
     python_callable=execution_data_task_id,
     provide_context=True,
     op_kwargs={
@@ -339,8 +378,8 @@ dwd_otrade_b2b_bd_admin_users_hf_task = PythonOperator(
     dag=dag
 )
 
-dwd_otrade_b2b_bd_admin_users_hf_check_pre_locale_task >> dwd_otrade_b2b_bd_admin_users_hf_task
-ods_binlog_base_bd_admin_users_all_hi_check_task >> dwd_otrade_b2b_bd_admin_users_hf_task
+dwd_otrade_b2b_product_hf_check_pre_locale_task >> dwd_otrade_b2b_product_hf_task
+ods_binlog_base_product_all_hi_check_task >> dwd_otrade_b2b_product_hf_task
 
 
 

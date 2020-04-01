@@ -132,9 +132,9 @@ select
   ,integral_money
   ,order_price
   ,goods_price
-  ,default.localTime("{config}",'NG',from_unixtime(cast(add_time/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as add_time
-  ,default.localTime("{config}",'NG',from_unixtime(cast(confirm_time/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as confirm_time
-  ,default.localTime("{config}",'NG',from_unixtime(cast(pay_time/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as pay_time
+  ,add_time
+  ,confirm_time
+  ,pay_time
   ,freight_price
   ,coupon_id
   ,parent_id
@@ -160,11 +160,65 @@ select
   ,date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'yyyy-MM-dd') as dt
   ,date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'HH') as hour
 from
-  otrade_dw_ods.ods_binlog_mall_nideshop_order_all_hi
-where
-  concat(dt, " ", hour) = date_format('{v_date}', 'yyyy-MM-dd HH') 
-  and `__deleted` = 'false'
+  (
+  select
+    id
+    ,order_sn
+    ,user_id
+    ,order_status
+    ,shipping_status
+    ,pay_status
+    ,consignee
+    ,country
+    ,province
+    ,city
+    ,district
+    ,address
+    ,mobile
+    ,postscript
+    ,shipping_id
+    ,shipping_name
+    ,pay_id
+    ,pay_name
+    ,shipping_fee
+    ,actual_price
+    ,integral
+    ,integral_money
+    ,order_price
+    ,goods_price
+    ,default.localTime("{config}",'NG',from_unixtime(cast(add_time/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as add_time
+    ,default.localTime("{config}",'NG',from_unixtime(cast(confirm_time/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as confirm_time
+    ,default.localTime("{config}",'NG',from_unixtime(cast(pay_time/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as pay_time
+    ,freight_price
+    ,coupon_id
+    ,parent_id
+    ,coupon_price
+    ,callback_status
+    ,shipping_no
+    ,full_cut_price
+    ,order_type
+    ,brand_id
+    ,settlement_total_fee
+    ,all_price
+    ,all_order_id
+    ,promoter_id
+    ,brokerage
+    ,merchant_id
+    ,group_buying_id
+    ,user_mobile
+    ,opayid
+  
+    ,row_number() over(partition by id order by `__ts_ms` desc,`__file` desc,cast(`__pos` as int) desc) rn
+  from
+    otrade_dw_ods.ods_binlog_mall_nideshop_order_all_hi
+  where
+    concat(dt, " ", hour) = date_format('{v_date}', 'yyyy-MM-dd HH') 
+    and `__deleted` = 'false'
+  ) as a
+where 
+  rn = 1
 ;
+
 
 
 
