@@ -122,7 +122,7 @@ select
   ,refund_status
   ,sku_value
   ,zorder_status
-  ,default.localTime("{config}",'NG',from_unixtime(cast(create_time/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as create_time
+  ,create_time
   ,handwork_fee
 
   ,date_format('{v_date}', 'yyyy-MM-dd HH') as utc_date_hour
@@ -131,10 +131,36 @@ select
   ,date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'yyyy-MM-dd') as dt
   ,date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'HH') as hour
 from
-  otrade_dw_ods.ods_binlog_base_otrade_order_item_all_hi
-where
-  concat(dt, " ", hour) = date_format('{v_date}', 'yyyy-MM-dd HH') 
-  and `__deleted` = 'false'
+  (
+  select
+    id
+    ,zorder_id
+    ,order_id
+    ,market_price
+    ,sku_price
+    ,buy_num
+    ,total_amount
+    ,product_id
+    ,product_category_id
+    ,product_title
+    ,product_brand_id
+    ,product_brand
+    ,sku_id
+    ,product_image
+    ,refund_status
+    ,sku_value
+    ,zorder_status
+    ,default.localTime("{config}",'NG',from_unixtime(cast(create_time/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as create_time
+    ,handwork_fee
+  
+    ,row_number() over(partition by id order by `__ts_ms` desc,`__file` desc,cast(`__pos` as int) desc) rn
+  from
+    otrade_dw_ods.ods_binlog_base_otrade_order_item_all_hi
+  where
+    concat(dt, " ", hour) = date_format('{v_date}', 'yyyy-MM-dd HH') 
+    and `__deleted` = 'false'
+  ) as a
+where rn = 1
 ;
 
 
