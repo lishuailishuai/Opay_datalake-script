@@ -72,8 +72,8 @@ table_list = [
 
     ("opay_bigorder","big_order", "opay_bigorder", "base",3,"true"),
 
-    ("opay_transaction","adjustment_decrease_record", "opay_transaction", "base",3,"true"),
-    ("opay_transaction","adjustment_increase_record", "opay_transaction", "base",3,"false"),
+    # ("opay_transaction","adjustment_decrease_record", "opay_transaction", "base",3,"true"),
+    # ("opay_transaction","adjustment_increase_record", "opay_transaction", "base",3,"false"),
     ("opay_transaction","airtime_topup_record", "opay_transaction", "base",3,"true"),
     ("opay_transaction","betting_topup_record", "opay_transaction", "base",3,"true"),
     ("opay_transaction","business_collection_record", "opay_transaction", "base",3,"false"),
@@ -86,7 +86,7 @@ table_list = [
     ("opay_transaction","merchant_transfer_user_record", "opay_transaction", "base",3,"true"),
     ("opay_transaction","mobiledata_topup_record", "opay_transaction", "base",3,"true"),
     # ("opay_transaction","receive_money_request_record", "opay_transaction", "base",3,"true"),
-    ("opay_transaction","transfer_not_register_record", "opay_transaction", "base",3,"true"),
+    # ("opay_transaction","transfer_not_register_record", "opay_transaction", "base",3,"true"),
     ("opay_transaction","tv_topup_record", "opay_transaction", "base",3,"true"),
     ("opay_transaction","user_pos_transaction_record", "opay_transaction", "base",3,"false"),
     ("opay_transaction","user_receive_money_record", "opay_transaction", "base",3,"true"),
@@ -109,7 +109,7 @@ table_list = [
   #  ("opay_channel","channel_transaction", "opay_channel", "base", 3, "false"),
     ("opay_overlord","terminal_record", "opay_overlord", "base", 3, "false"),
 
-    ("opay_agent_crm","bd_agent_status_change_log", "opay_agent_crm_db", "base", 3, "false"),
+    # ("opay_agent_crm","bd_agent_status_change_log", "opay_agent_crm_db", "base", 3, "false"),
 
     ("opay_account","account_user", "opay_account", "base", 2, "true"),
 
