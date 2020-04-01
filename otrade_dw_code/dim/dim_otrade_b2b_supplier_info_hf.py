@@ -40,7 +40,7 @@ args = {
 }
 
 dag = airflow.DAG('dim_otrade_b2b_supplier_info_hf',
-                  schedule_interval="28 * * * *",
+                  schedule_interval="30 * * * *",
                   default_args=args,
                   )
 
