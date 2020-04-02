@@ -143,7 +143,7 @@ update_info as (
     (
     select
       payer as retailer_opayid
-      ,create_time as first_order_time
+      ,default.localTime("{config}",'NG',from_unixtime(cast(create_time/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as first_order_time
 
       ,row_number() over(partition by payer order by create_time asc) rn
     from

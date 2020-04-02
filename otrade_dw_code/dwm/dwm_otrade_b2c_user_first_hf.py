@@ -143,7 +143,7 @@ update_info as (
     (
     select
       opayid as user_opayid
-      ,add_time as first_order_time
+      ,default.localTime("{config}",'NG',from_unixtime(cast(add_time/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as first_order_time
 
       ,row_number() over(partition by opayid order by add_time asc) rn
     from
