@@ -161,11 +161,11 @@ category_level_info as (
     v4.id as one_level_id
     ,v4.name as one_level_name
     ,v4.parent_id as one_level_parent_id
-    ,v3.r_id as two_level_id
-    ,v3.r_name as two_level_name
+    ,nvl(v3.r_id,0) as two_level_id
+    ,nvl(v3.r_name,'-') as two_level_name
     ,v3.r_parent_id as two_parent_id
-    ,v3.l_id as three_level_id
-    ,v3.l_name as three_level_name
+    ,nvl(v3.l_id,0) as three_level_id
+    ,nvl(v3.l_name,'-') as three_level_name
     ,v3.l_parent_id as three_parent_id
   from    
     (
@@ -174,8 +174,8 @@ category_level_info as (
       ,v1.name as l_name
       ,v1.parent_id as l_parent_id
   
-      ,v2.id as r_id
-      ,v2.name as r_name
+      ,nvl(v2.id,0) as r_id
+      ,nvl(v2.name,'-') as r_name
       ,v2.parent_id as r_parent_id
     from
       category_info as v1
@@ -238,15 +238,15 @@ spu_info as (
 --3.最后插入数据到表中
 insert overwrite table otrade_dw.dim_otrade_b2c_mall_nideshop_product_hf partition(country_code,dt,hour)
 select
-  v3.one_level_id
-  ,v3.one_level_name
-  ,v3.two_level_id
-  ,v3.two_level_name
-  ,v3.three_level_id
-  ,v3.three_level_name
+  nvl(v3.one_level_id,0) as one_level_id
+  ,nvl(v3.one_level_name,'-') as one_level_name
+  ,nvl(v3.two_level_id,0) as two_level_id
+  ,nvl(v3.two_level_name,'-') as two_level_name
+  ,nvl(v3.three_level_id,0) as three_level_id
+  ,nvl(v3.three_level_name,'-') as three_level_name
 
-  ,v2.goods_id
-  ,v2.goods_name
+  ,nvl(v2.goods_id,0) as goods_id
+  ,nvl(v2.goods_name,'-') as goods_name
   ,v1.product_id
   ,v1.product_name
   ,v1.product_retail_price
@@ -284,7 +284,6 @@ left join
 on
   v2.category_id = v3.three_level_id
 ;
-
 
 
 
