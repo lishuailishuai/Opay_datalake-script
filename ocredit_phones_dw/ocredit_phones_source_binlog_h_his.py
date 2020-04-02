@@ -273,8 +273,10 @@ def run_check_table(mysql_db_name, mysql_table_name, conn_id, hive_h_his_table_n
                 col_name = result[0]
             if result[1] == 'timestamp' or result[1] == 'varchar' or result[1] == 'char' or result[1] == 'text' or \
                     result[1] == 'longtext' or result[1] == 'mediumtext' or \
-                    result[1] == 'datetime' or result[1] == 'json':
+                    result[1] == 'json':
                 data_type = 'string'
+            elif result[1] == 'datetime':
+                data_type = 'bigint'
             elif result[1] == 'decimal':
                 data_type = result[1] + "(" + str(result[2]) + "," + str(result[3]) + ")"
             else:
@@ -352,10 +354,15 @@ def run_sqoop_check_table(mysql_db_name, mysql_table_name, conn_id, hive_table_n
             else:
                 col_name = result[0]
             if result[1] == 'timestamp' or result[1] == 'varchar' or result[1] == 'char' or result[1] == 'text' or \
-                    result[1] == 'datetime' or result[1] == 'mediumtext' or result[1] == 'json':
+                    result[1] == 'datetime' or result[1] == 'mediumtext' or result[1] == 'enum' or result[1] == 'json':
                 data_type = 'string'
+                # elif result[1] == 'decimal':
+                #     data_type = result[1] + "(" + str(result[2]) + "," + str(result[3]) + ")"
+                # 有json表读取insert 部分，此处切换为double
             elif result[1] == 'decimal':
-                data_type = result[1] + "(" + str(result[2]) + "," + str(result[3]) + ")"
+                data_type = 'double'
+            elif result[1] == 'mediumint':
+                data_type = 'int'
             else:
                 data_type = result[1]
             rows.append("`%s` %s comment '%s'" % (col_name, data_type, result[4]))
