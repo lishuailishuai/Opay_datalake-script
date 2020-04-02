@@ -38,24 +38,24 @@ args = {
     'email_on_retry': False,
 }
 
-dag = airflow.DAG('dwm_otrade_b2b_retailer_crm_first_hf',
+dag = airflow.DAG('dwm_otrade_b2c_user_first_hf',
                   schedule_interval="26 * * * *",
                   default_args=args,
                   )
 
 ##----------------------------------------- 变量 ---------------------------------------##
 db_name = "otrade_dw"
-table_name = "dwm_otrade_b2b_retailer_crm_first_hf"
+table_name = "dwm_otrade_b2c_user_first_hf"
 hdfs_path = "oss://opay-datalake/otrade/otrade_dw/" + table_name
 config = eval(Variable.get("otrade_time_zone_config"))
 time_zone = config['NG']['time_zone']
 
 ##----------------------------------------- 依赖 ---------------------------------------##
 ### 检查最新的商户表的依赖
-dwm_otrade_b2b_retailer_crm_first_hf_check_pre_locale_task = OssSensor(
-    task_id='dwm_otrade_b2b_retailer_crm_first_hf_check_pre_locale_task',
+dwm_otrade_b2c_user_first_hf_check_pre_locale_task = OssSensor(
+    task_id='dwm_otrade_b2c_user_first_hf_check_pre_locale_task',
     bucket_key='{hdfs_path_str}/country_code=NG/dt={pt}/hour={hour}/_SUCCESS'.format(
-        hdfs_path_str="otrade/otrade_dw/dwm_otrade_b2b_retailer_crm_first_hf",
+        hdfs_path_str="otrade/otrade_dw/dwm_otrade_b2c_user_first_hf",
         pt='{{{{(execution_date+macros.timedelta(hours=({time_zone}+{gap_hour}))).strftime("%Y-%m-%d")}}}}'.format(
             time_zone=time_zone, gap_hour=-1),
         hour='{{{{(execution_date+macros.timedelta(hours=({time_zone}+{gap_hour}))).strftime("%H")}}}}'.format(
@@ -67,11 +67,11 @@ dwm_otrade_b2b_retailer_crm_first_hf_check_pre_locale_task = OssSensor(
 )
 
 ### 检查当前小时的分区依赖
-###oss://opay-datalake/otrade_all_hi/ods_binlog_base_otrade_order_all_hi
-ods_binlog_base_otrade_order_all_hi_check_task = OssSensor(
-    task_id='ods_binlog_base_otrade_order_all_hi_check_task',
+###oss://opay-datalake/otrade_all_hi/ods_binlog_mall_nideshop_order_all_hi
+ods_binlog_mall_nideshop_order_all_hi_check_task = OssSensor(
+    task_id='ods_binlog_base_bd_admin_users_all_hi_check_task',
     bucket_key='{hdfs_path_str}/dt={pt}/hour={hour}/_SUCCESS'.format(
-        hdfs_path_str="otrade_all_hi/ods_binlog_base_otrade_order_all_hi",
+        hdfs_path_str="otrade_all_hi/ods_binlog_mall_nideshop_order_all_hi",
         pt='{{ds}}',
         hour='{{ execution_date.strftime("%H") }}'
     ),
@@ -112,7 +112,7 @@ task_timeout_monitor = PythonOperator(
 )
 
 
-def dwm_otrade_b2b_retailer_crm_first_hf_sql_task(ds, v_date):
+def dwm_otrade_b2c_user_first_hf_sql_task(ds, v_date):
     HQL = '''
 
 set mapred.max.split.size=1000000;
@@ -120,15 +120,15 @@ set hive.exec.parallel=true;
 set hive.exec.dynamic.partition.mode=nonstrict;
 set hive.strict.checks.cartesian.product=false;
 
---01.取出上个小时的全量的数据
+--1.取出上一个小时的全量
 with
 last_hour_total as (
   select
-    retailer_opayid
+    user_opayid
     ,first_order_time
   from
-    otrade_dw.dwm_otrade_b2b_retailer_crm_first_hf
-  where
+    otrade_dw.dwm_otrade_b2c_user_first_hf
+  where 
     concat(dt, " ", hour) >= default.minLocalTimeRange("{config}", '{v_date}', -1) 
     and concat(dt, " ", hour) <= default.maxLocalTimeRange("{config}", '{v_date}', -1) 
     and utc_date_hour = from_unixtime(cast(unix_timestamp('{v_date}', 'yyyy-MM-dd HH') - 3600 as BIGINT), 'yyyy-MM-dd HH')
@@ -137,17 +137,17 @@ last_hour_total as (
 --2.取出上一个小时的最新增量数据
 update_info as (
   select
-    retailer_opayid
+    user_opayid
     ,first_order_time
   from
     (
     select
-      payer as retailer_opayid
-      ,default.localTime("{config}",'NG',from_unixtime(cast(create_time/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as first_order_time
+      opayid as user_opayid
+      ,default.localTime("{config}",'NG',from_unixtime(cast(add_time/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as first_order_time
 
-      ,row_number() over(partition by payer order by create_time asc) rn
+      ,row_number() over(partition by opayid order by add_time asc) rn
     from
-      otrade_dw_ods.ods_binlog_base_otrade_order_hi
+      otrade_dw_ods.ods_binlog_mall_nideshop_order_all_hi
     where 
       dt = date_format('{v_date}', 'yyyy-MM-dd')
       and hour= date_format('{v_date}', 'HH')
@@ -158,9 +158,9 @@ update_info as (
 )
 
 --3.最后将去重的结果集插入到表中
-insert overwrite table otrade_dw.dwm_otrade_b2b_retailer_crm_first_hf partition(country_code,dt,hour)
+insert overwrite table otrade_dw.dwm_otrade_b2c_user_first_hf partition(country_code,dt,hour)
 select
-  nvl(v1.retailer_opayid,v2.retailer_opayid) as retailer_opayid
+  nvl(v1.user_opayid,v2.user_opayid) as user_opayid
   ,nvl(v1.first_order_time,v2.first_order_time) as first_order_time
 
   ,date_format('{v_date}', 'yyyy-MM-dd HH') as utc_date_hour
@@ -173,7 +173,7 @@ from
 full join
   update_info as v2
 on
-  v1.retailer_opayid = v2.retailer_opayid
+  v1.user_opayid = v2.user_opayid
 ;
 
 
@@ -236,7 +236,7 @@ def execution_data_task_id(ds, dag, **kwargs):
     cf = CountriesPublicFrame_dev(args)
 
     # 读取sql
-    _sql = "\n" + cf.alter_partition() + "\n" + dwm_otrade_b2b_retailer_crm_first_hf_sql_task(ds, v_date)
+    _sql = "\n" + cf.alter_partition() + "\n" + dwm_otrade_b2c_user_first_hf_sql_task(ds, v_date)
 
     logging.info('Executing: %s', _sql)
 
@@ -247,8 +247,8 @@ def execution_data_task_id(ds, dag, **kwargs):
     cf.touchz_success()
 
 
-dwm_otrade_b2b_retailer_crm_first_hf_task = PythonOperator(
-    task_id='dwm_otrade_b2b_retailer_crm_first_hf_task',
+dwm_otrade_b2c_user_first_hf_task = PythonOperator(
+    task_id='dwm_otrade_b2c_user_first_hf_task',
     python_callable=execution_data_task_id,
     provide_context=True,
     op_kwargs={
@@ -260,7 +260,7 @@ dwm_otrade_b2b_retailer_crm_first_hf_task = PythonOperator(
     dag=dag
 )
 
-dwm_otrade_b2b_retailer_crm_first_hf_check_pre_locale_task >> dwm_otrade_b2b_retailer_crm_first_hf_task
-ods_binlog_base_otrade_order_all_hi_check_task >> dwm_otrade_b2b_retailer_crm_first_hf_task
+dwm_otrade_b2c_user_first_hf_check_pre_locale_task >> dwm_otrade_b2c_user_first_hf_task
+ods_binlog_mall_nideshop_order_all_hi_check_task >> dwm_otrade_b2c_user_first_hf_task
 
 

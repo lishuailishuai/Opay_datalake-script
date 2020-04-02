@@ -52,10 +52,10 @@ time_zone = config['NG']['time_zone']
 
 ##----------------------------------------- 依赖 ---------------------------------------##
 
-dwd_otrade_b2b_otrade_order_di_task = OssSensor(
-    task_id='dwd_otrade_b2b_otrade_order_di_task',
+dwd_otrade_b2b_order_collect_di_task = OssSensor(
+    task_id='dwd_otrade_b2b_order_collect_di_task',
     bucket_key='{hdfs_path_str}/country_code=NG/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="otrade/otrade_dw/dwd_otrade_b2b_otrade_order_di",
+        hdfs_path_str="otrade/otrade_dw/dwd_otrade_b2b_order_collect_di",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -141,7 +141,7 @@ order_info as (
     ,country_code
     ,dt
   from
-    otrade_dw.dwd_otrade_b2b_otrade_order_di
+    otrade_dw.dwd_otrade_b2b_order_collect_di
   where
     dt = '{pt}'
   group by
@@ -313,7 +313,7 @@ app_otrade_b2b_order_target_retailer_bd_di_task = PythonOperator(
     dag=dag
 )
 
-dwd_otrade_b2b_otrade_order_di_task >> app_otrade_b2b_order_target_retailer_bd_di_task
+dwd_otrade_b2b_order_collect_di_task >> app_otrade_b2b_order_target_retailer_bd_di_task
 
 
 
