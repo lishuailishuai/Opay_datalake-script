@@ -295,6 +295,7 @@ def run_check_table(mysql_db_name, mysql_table_name, conn_id, hive_all_hi_table_
         logging.info('Executing: %s', sql)
         hive_hook.run_cli(sql)
 
+
     else:
         sqoopSchema = SqoopSchemaUpdate()
         response = sqoopSchema.append_hive_schema(
