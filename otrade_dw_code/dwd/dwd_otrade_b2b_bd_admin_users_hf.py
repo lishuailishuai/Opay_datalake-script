@@ -30,7 +30,7 @@ from utils.get_local_time import GetLocalTime
 
 args = {
     'owner': 'yuanfeng',
-    'start_date': datetime(2020, 3, 25),
+    'start_date': datetime(2020, 4,1),
     'depends_on_past': False,
     'retries': 3,
     'retry_delay': timedelta(minutes=2),
@@ -40,7 +40,7 @@ args = {
 }
 
 dag = airflow.DAG('dwd_otrade_b2b_bd_admin_users_hf',
-                  schedule_interval="28 * * * *",
+                  schedule_interval="25 * * * *",
                   default_args=args,
                   )
 

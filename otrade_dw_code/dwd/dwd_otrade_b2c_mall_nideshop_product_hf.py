@@ -39,7 +39,7 @@ args = {
 }
 
 dag = airflow.DAG('dwd_otrade_b2c_mall_nideshop_product_hf',
-                  schedule_interval="28 * * * *",
+                  schedule_interval="25 * * * *",
                   default_args=args,
                   )
 
@@ -178,7 +178,7 @@ update_info as (
       ,market_price
       ,merchant_id
       ,group_price
-      ,create_time
+      ,default.localTime("{config}",'NG',from_unixtime(cast(create_time/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as create_time
       ,goods_specification_name
       ,locked_num
       ,product_image
@@ -239,7 +239,6 @@ select
   ,locked_num
   ,product_image
   ,specification_ids
-  ,utc_date_hour
   ,date_format('{v_date}', 'yyyy-MM-dd HH') as utc_date_hour
 
   ,'NG' as country_code

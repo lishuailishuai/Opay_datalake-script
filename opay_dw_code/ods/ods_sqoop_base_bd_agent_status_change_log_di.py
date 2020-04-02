@@ -27,7 +27,7 @@ import os
 
 args = {
     'owner': 'xiedong',
-    'start_date': datetime(2020, 3, 29),
+    'start_date': datetime(2020, 3, 31),
     'depends_on_past': False,
     'retries': 3,
     'retry_delay': timedelta(minutes=2),
@@ -36,17 +36,17 @@ args = {
     'email_on_retry': False,
 }
 
-dag = airflow.DAG('ods_sqoop_base_message_record_di',
+dag = airflow.DAG('ods_sqoop_base_bd_agent_status_change_log_di',
                   schedule_interval="30 00 * * *",
                   default_args=args,
                   )
 
 ##----------------------------------------- 依赖 ---------------------------------------##
 
-ods_binlog_message_record_check_hi_task = OssSensor(
-    task_id='ods_binlog_message_record_check_hi_task',
+ods_binlog_bd_agent_status_change_log_hi_check_task = OssSensor(
+    task_id='ods_binlog_bd_agent_status_change_log_hi_check_task',
     bucket_key='{hdfs_path_str}/dt={pt}/hour=22/_SUCCESS'.format(
-        hdfs_path_str="opay_binlog/opay_idgen_xxljob_apollo_db.opay_sms.message_record",
+        hdfs_path_str="opay_binlog/opay_agent_crm.opay_agent_crm.bd_agent_status_change_log",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -77,12 +77,12 @@ task_timeout_monitor = PythonOperator(
 ##----------------------------------------- 变量 ---------------------------------------##
 db_name = "opay_dw_ods"
 
-table_name = "ods_sqoop_base_message_record_di"
-hdfs_path = "oss://opay-datalake/opay_dw_sqoop_di/opay_sms/message_record"
+table_name = "ods_sqoop_base_bd_agent_status_change_log_di"
+hdfs_path = "oss://opay-datalake/opay_dw_sqoop_di/opay_activity/preferential_record"
 config = eval(Variable.get("opay_time_zone_config"))
 
 
-def ods_sqoop_base_message_record_di_sql_task(ds):
+def ods_sqoop_base_bd_agent_status_change_log_di_sql_task(ds):
     HQL = '''
 
     set hive.exec.dynamic.partition.mode=nonstrict;
@@ -90,25 +90,16 @@ def ods_sqoop_base_message_record_di_sql_task(ds):
     insert overwrite table {db}.{table} partition (dt)
     SELECT 
         id,
-        template_name,
-        country_code,
-        message_type,
-        mobile,
-        content,
-        params,
-        language,
-        message_channels,
-        retry_times ,
-        delivered_channel,
-        status,
-        third_msg_id,
-        remark,
-        from_unixtime(cast(cast(create_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss') create_time,
-        from_unixtime(cast(cast(update_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss') update_time,
-       '{pt}'
+        agent_id,
+        opay_account,
+        opay_id,
+        from_unixtime(cast(cast(created_at as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss') as created_at,
+        from_agent_status,
+        to_agent_status,
+        '{pt}'
     from 
         (select *,row_number() over(partition by id order by `__ts_ms` desc,`__file` desc,cast(`__pos` as int) desc) rn
-         FROM opay_dw_ods.ods_binlog_base_message_record_hi
+         FROM opay_dw_ods.ods_binlog_base_bd_agent_status_change_log_hi
          where concat(dt,' ',hour) between '{pt_y} 23' and '{pt} 22' and `__deleted` = 'false'
          ) m 
     where rn=1
@@ -127,7 +118,7 @@ def execution_data_task_id(ds, **kargs):
     hive_hook = HiveCliHook()
 
     # 读取sql
-    _sql = ods_sqoop_base_message_record_di_sql_task(ds)
+    _sql = ods_sqoop_base_bd_agent_status_change_log_di_sql_task(ds)
 
     logging.info('Executing: %s', _sql)
 
@@ -143,12 +134,12 @@ def execution_data_task_id(ds, **kargs):
     TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "false", "true")
 
 
-ods_sqoop_base_message_record_di_task = PythonOperator(
-    task_id='ods_sqoop_base_message_record_di_task',
+ods_sqoop_base_bd_agent_status_change_log_di_task = PythonOperator(
+    task_id='ods_sqoop_base_bd_agent_status_change_log_di_task',
     python_callable=execution_data_task_id,
     provide_context=True,
     dag=dag
 )
 
-ods_binlog_message_record_check_hi_task >> ods_sqoop_base_message_record_di_task
+ods_binlog_bd_agent_status_change_log_hi_check_task >> ods_sqoop_base_bd_agent_status_change_log_di_task
 

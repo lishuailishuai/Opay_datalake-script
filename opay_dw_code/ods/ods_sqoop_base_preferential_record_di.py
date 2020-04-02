@@ -36,17 +36,17 @@ args = {
     'email_on_retry': False,
 }
 
-dag = airflow.DAG('ods_sqoop_base_message_record_di',
+dag = airflow.DAG('ods_sqoop_base_preferential_record_di',
                   schedule_interval="30 00 * * *",
                   default_args=args,
                   )
 
 ##----------------------------------------- 依赖 ---------------------------------------##
 
-ods_binlog_message_record_check_hi_task = OssSensor(
-    task_id='ods_binlog_message_record_check_hi_task',
+ods_binlog_preferential_record_hi_check_task = OssSensor(
+    task_id='ods_binlog_preferential_record_hi_check_task',
     bucket_key='{hdfs_path_str}/dt={pt}/hour=22/_SUCCESS'.format(
-        hdfs_path_str="opay_binlog/opay_idgen_xxljob_apollo_db.opay_sms.message_record",
+        hdfs_path_str="opay_binlog/opay_merchant_overlord_recon_db.opay_activity.preferential_record",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -77,12 +77,12 @@ task_timeout_monitor = PythonOperator(
 ##----------------------------------------- 变量 ---------------------------------------##
 db_name = "opay_dw_ods"
 
-table_name = "ods_sqoop_base_message_record_di"
-hdfs_path = "oss://opay-datalake/opay_dw_sqoop_di/opay_sms/message_record"
+table_name = "ods_sqoop_base_preferential_record_di"
+hdfs_path = "oss://opay-datalake/opay_dw_sqoop_di/opay_activity/preferential_record"
 config = eval(Variable.get("opay_time_zone_config"))
 
 
-def ods_sqoop_base_message_record_di_sql_task(ds):
+def ods_sqoop_base_preferential_record_di_sql_task(ds):
     HQL = '''
 
     set hive.exec.dynamic.partition.mode=nonstrict;
@@ -90,25 +90,34 @@ def ods_sqoop_base_message_record_di_sql_task(ds):
     insert overwrite table {db}.{table} partition (dt)
     SELECT 
         id,
-        template_name,
-        country_code,
-        message_type,
-        mobile,
-        content,
-        params,
-        language,
-        message_channels,
-        retry_times ,
-        delivered_channel,
+        version,
+        activity_order_no,
+        user_id,
+        activity_id,
+        snapshot,
+        order_no,
+        order_amount,
+        payment_amount,
+        benefit_amount,
+        currency,
         status,
-        third_msg_id,
         remark,
         from_unixtime(cast(cast(create_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss') create_time,
         from_unixtime(cast(cast(update_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss') update_time,
-       '{pt}'
+        is_send_money,
+        activity_type,
+        recipient_merchant_id,
+        out_merchant_id,
+        service_type,
+        business_type,
+        pay_channel,
+        channel_user_id,
+        service_id,
+        merchant_settle_type,
+        '{pt}'
     from 
         (select *,row_number() over(partition by id order by `__ts_ms` desc,`__file` desc,cast(`__pos` as int) desc) rn
-         FROM opay_dw_ods.ods_binlog_base_message_record_hi
+         FROM opay_dw_ods.ods_binlog_base_preferential_record_hi
          where concat(dt,' ',hour) between '{pt_y} 23' and '{pt} 22' and `__deleted` = 'false'
          ) m 
     where rn=1
@@ -127,7 +136,7 @@ def execution_data_task_id(ds, **kargs):
     hive_hook = HiveCliHook()
 
     # 读取sql
-    _sql = ods_sqoop_base_message_record_di_sql_task(ds)
+    _sql = ods_sqoop_base_preferential_record_di_sql_task(ds)
 
     logging.info('Executing: %s', _sql)
 
@@ -143,12 +152,12 @@ def execution_data_task_id(ds, **kargs):
     TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "false", "true")
 
 
-ods_sqoop_base_message_record_di_task = PythonOperator(
-    task_id='ods_sqoop_base_message_record_di_task',
+ods_sqoop_base_preferential_record_di_task = PythonOperator(
+    task_id='ods_sqoop_base_preferential_record_di_task',
     python_callable=execution_data_task_id,
     provide_context=True,
     dag=dag
 )
 
-ods_binlog_message_record_check_hi_task >> ods_sqoop_base_message_record_di_task
+ods_binlog_preferential_record_hi_check_task >> ods_sqoop_base_preferential_record_di_task
 

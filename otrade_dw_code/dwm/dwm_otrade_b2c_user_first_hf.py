@@ -29,7 +29,7 @@ from utils.get_local_time import GetLocalTime
 
 args = {
     'owner': 'yuanfeng',
-    'start_date': datetime(2020, 3, 25),
+    'start_date': datetime(2020, 4, 2),
     'depends_on_past': False,
     'retries': 3,
     'retry_delay': timedelta(minutes=2),
@@ -38,34 +38,47 @@ args = {
     'email_on_retry': False,
 }
 
-dag = airflow.DAG('dim_otrade_b2b_bd_info_hf',
-                  schedule_interval="28 * * * *",
+dag = airflow.DAG('dwm_otrade_b2c_user_first_hf',
+                  schedule_interval="26 * * * *",
                   default_args=args,
                   )
 
 ##----------------------------------------- 变量 ---------------------------------------##
 db_name = "otrade_dw"
-table_name = "dim_otrade_b2b_bd_info_hf"
+table_name = "dwm_otrade_b2c_user_first_hf"
 hdfs_path = "oss://opay-datalake/otrade/otrade_dw/" + table_name
 config = eval(Variable.get("otrade_time_zone_config"))
 time_zone = config['NG']['time_zone']
 
 ##----------------------------------------- 依赖 ---------------------------------------##
 ### 检查最新的商户表的依赖
-dwd_otrade_b2b_bd_admin_users_hf_locale_task = OssSensor(
-    task_id='dwd_otrade_b2b_bd_admin_users_hf_locale_task',
+dwm_otrade_b2c_user_first_hf_check_pre_locale_task = OssSensor(
+    task_id='dwm_otrade_b2c_user_first_hf_check_pre_locale_task',
     bucket_key='{hdfs_path_str}/country_code=NG/dt={pt}/hour={hour}/_SUCCESS'.format(
-        hdfs_path_str="otrade/otrade_dw/dwd_otrade_b2b_bd_admin_users_hf",
+        hdfs_path_str="otrade/otrade_dw/dwm_otrade_b2c_user_first_hf",
         pt='{{{{(execution_date+macros.timedelta(hours=({time_zone}+{gap_hour}))).strftime("%Y-%m-%d")}}}}'.format(
-            time_zone=time_zone, gap_hour=0),
+            time_zone=time_zone, gap_hour=-1),
         hour='{{{{(execution_date+macros.timedelta(hours=({time_zone}+{gap_hour}))).strftime("%H")}}}}'.format(
-            time_zone=time_zone, gap_hour=0)
+            time_zone=time_zone, gap_hour=-1)
     ),
     bucket_name='opay-datalake',
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
 
+### 检查当前小时的分区依赖
+###oss://opay-datalake/otrade_all_hi/ods_binlog_mall_nideshop_order_all_hi
+ods_binlog_mall_nideshop_order_all_hi_check_task = OssSensor(
+    task_id='ods_binlog_base_bd_admin_users_all_hi_check_task',
+    bucket_key='{hdfs_path_str}/dt={pt}/hour={hour}/_SUCCESS'.format(
+        hdfs_path_str="otrade_all_hi/ods_binlog_mall_nideshop_order_all_hi",
+        pt='{{ds}}',
+        hour='{{ execution_date.strftime("%H") }}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
 
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
 def fun_task_timeout_monitor(ds, dag, execution_date, **op_kwargs):
@@ -99,254 +112,69 @@ task_timeout_monitor = PythonOperator(
 )
 
 
-def dim_otrade_b2b_bd_info_hf_sql_task(ds, v_date):
+def dwm_otrade_b2c_user_first_hf_sql_task(ds, v_date):
     HQL = '''
 
 set mapred.max.split.size=1000000;
-set hive.exec.dynamic.partition.mode=nonstrict;
 set hive.exec.parallel=true;
+set hive.exec.dynamic.partition.mode=nonstrict;
+set hive.strict.checks.cartesian.product=false;
 
---1.从ods中取出最近一个分区的全量数据,bd数据是每小时全量
+--1.取出上一个小时的全量
 with
-all_bd_info as (
+last_hour_total as (
   select
-    id
-    ,username
-    ,mobile
-    ,job_id
-    ,case
-      when job_id=1 then 'HCM'
-      when job_id=2 then 'CM'
-      when job_id=3 then 'BDM'
-      when job_id=4 then 'BD'
-      else '-'
-    end as job_name
-    ,leader_id
-    ,staff_id
-    ,name
-    ,password
-    ,department_id
-    ,email
-    ,status
-    ,remember_token
-    ,avatar
-    ,fcm_token
-    ,city_id
-    ,created_at
-    ,updated_at
+    user_opayid
+    ,first_order_time
   from
-    otrade_dw.dwd_otrade_b2b_bd_admin_users_hf
+    otrade_dw.dwm_otrade_b2c_user_first_hf
   where 
-    concat(dt,' ',hour) >= default.minLocalTimeRange("{config}", '{v_date}', 0)
-    and concat(dt,' ',hour) <= default.maxLocalTimeRange("{config}", '{v_date}', 0) 
-    and utc_date_hour = date_format("{v_date}", 'yyyy-MM-dd HH')
+    concat(dt, " ", hour) >= default.minLocalTimeRange("{config}", '{v_date}', -1) 
+    and concat(dt, " ", hour) <= default.maxLocalTimeRange("{config}", '{v_date}', -1) 
+    and utc_date_hour = from_unixtime(cast(unix_timestamp('{v_date}', 'yyyy-MM-dd HH') - 3600 as BIGINT), 'yyyy-MM-dd HH')
 ),
 
---2.分别取出每个层级的全量数据
-hcm_info as (
+--2.取出上一个小时的最新增量数据
+update_info as (
   select
-    id
-    ,name
-    ,job_id
-    ,job_name
-    ,mobile
-    ,username
-    ,leader_id
-    ,department_id
-    ,email
-    ,status
-    ,city_id
-    ,created_at
-    ,updated_at
-
-    ,id as hcm_id
-    ,name as hcm_name
-    ,0 as cm_id
-    ,'-' as cm_name
-    ,0 as bdm_id
-    ,'-' as bdm_name
-    ,0 as bd_id
-    ,'-' as bd_name
+    user_opayid
+    ,first_order_time
   from
-    all_bd_info
+    (
+    select
+      opayid as user_opayid
+      ,add_time as first_order_time
+
+      ,row_number() over(partition by opayid order by add_time asc) rn
+    from
+      otrade_dw_ods.ods_binlog_mall_nideshop_order_all_hi
+    where 
+      dt = date_format('{v_date}', 'yyyy-MM-dd')
+      and hour= date_format('{v_date}', 'HH')
+      and `__deleted` = 'false'
+    ) as a
   where
-    job_id = 1
-),
-
-cm_info as (
-  select
-    v1.id
-    ,v1.name
-    ,v1.job_id
-    ,v1.job_name
-    ,v1.mobile
-    ,v1.username
-    ,v1.leader_id
-    ,v1.department_id
-    ,v1.email
-    ,v1.status
-    ,v1.city_id
-    ,v1.created_at
-    ,v1.updated_at
-
-    ,nvl(v2.hcm_id,0) as hcm_id
-    ,nvl(v2.hcm_name,'-') as hcm_name
-    ,v1.id as cm_id
-    ,v1.name as cm_name
-    ,0 as bdm_id
-    ,'-' as bdm_name
-    ,0 as bd_id
-    ,'-' as bd_name
-  from
-    (select * from all_bd_info where job_id = 2) as v1
-  left join
-    hcm_info as v2
-  on
-    v1.leader_id = v2.id
-),
-
-bdm_info as (
-  select
-    v1.id
-    ,v1.name
-    ,v1.job_id
-    ,v1.job_name
-    ,v1.mobile
-    ,v1.username
-    ,v1.leader_id
-    ,v1.department_id
-    ,v1.email
-    ,v1.status
-    ,v1.city_id
-    ,v1.created_at
-    ,v1.updated_at
-
-    ,nvl(v2.hcm_id,0) as hcm_id
-    ,nvl(v2.hcm_name,'-') as hcm_name
-    ,nvl(v2.cm_id,0) as cm_id
-    ,nvl(v2.cm_name,'-') as cm_name
-    ,v1.id as bdm_id
-    ,v1.name as bdm_name
-    ,0 as bd_id
-    ,'-' as bd_name
-  from
-    (select * from all_bd_info where job_id = 3) as v1
-  left join
-    cm_info as v2
-  on
-    v1.leader_id = v2.id
-),
-
-bd_info as (
-  select
-    v1.id
-    ,v1.name
-    ,v1.job_id
-    ,v1.job_name
-    ,v1.mobile
-    ,v1.username
-    ,v1.leader_id
-    ,v1.department_id
-    ,v1.email
-    ,v1.status
-    ,v1.city_id
-    ,v1.created_at
-    ,v1.updated_at
-
-    ,nvl(v2.hcm_id,0) as hcm_id
-    ,nvl(v2.hcm_name,'-') as hcm_name
-    ,nvl(v2.cm_id,0) as cm_id
-    ,nvl(v2.cm_name,'-') as cm_name
-    ,nvl(v2.bdm_id,0) as bdm_id
-    ,nvl(v2.bdm_name,'-') as bdm_name
-    ,v1.id as bd_id
-    ,v1.name as bd_name
-  from
-    (select * from all_bd_info where job_id = 4) as v1
-  left join
-    bdm_info as v2
-  on
-    v1.leader_id = v2.id
-),
-
-else_info as (
-  select
-    v1.id
-    ,v1.name
-    ,v1.job_id
-    ,v1.job_name
-    ,v1.mobile
-    ,v1.username
-    ,v1.leader_id
-    ,v1.department_id
-    ,v1.email
-    ,v1.status
-    ,v1.city_id
-    ,v1.created_at
-    ,v1.updated_at
-
-    ,0 as hcm_id
-    ,'-' as hcm_name
-    ,0 as cm_id
-    ,'-' as cm_name
-    ,0 as bdm_id
-    ,'-' as bdm_name
-    ,0 as bd_id
-    ,'-' as bd_name
-  from
-    all_bd_info as v1
-  where
-    job_id = 0
-),
-
---3.将关联好的结果融合到一起
-unoin_result as (
-  select * from hcm_info
-  union all
-  select * from cm_info
-  union all
-  select * from bdm_info
-  union all
-  select * from bd_info
-  union all
-  select * from else_info
+    rn = 1
 )
 
---4.最后将数据插入info表中
-insert overwrite table otrade_dw.dim_otrade_b2b_bd_info_hf partition(country_code,dt,hour)
-select 
-  id
-  ,name
-  ,job_id
-  ,job_name
+--3.最后将去重的结果集插入到表中
+insert overwrite table otrade_dw.dwm_otrade_b2c_user_first_hf partition(country_code,dt,hour)
+select
+  nvl(v1.user_opayid,v2.user_opayid) as user_opayid
+  ,nvl(v1.first_order_time,v2.first_order_time) as first_order_time
 
-  ,hcm_id
-  ,hcm_name
-  ,cm_id
-  ,cm_name
-  ,bdm_id
-  ,bdm_name
-  ,bd_id
-  ,bd_name
-
-  ,mobile
-  ,username
-  ,leader_id
-  ,department_id
-  ,email
-  ,status
-  ,city_id
-  ,created_at
-  ,updated_at
   ,date_format('{v_date}', 'yyyy-MM-dd HH') as utc_date_hour
 
   ,'NG' as country_code
   ,date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'yyyy-MM-dd') as dt
   ,date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'HH') as hour
 from
-  unoin_result;
-
-
+  last_hour_total as v1
+full join
+  update_info as v2
+on
+  v1.user_opayid = v2.user_opayid
+;
 
 
     '''.format(
@@ -408,7 +236,7 @@ def execution_data_task_id(ds, dag, **kwargs):
     cf = CountriesPublicFrame_dev(args)
 
     # 读取sql
-    _sql = "\n" + cf.alter_partition() + "\n" + dim_otrade_b2b_bd_info_hf_sql_task(ds, v_date)
+    _sql = "\n" + cf.alter_partition() + "\n" + dwm_otrade_b2c_user_first_hf_sql_task(ds, v_date)
 
     logging.info('Executing: %s', _sql)
 
@@ -419,8 +247,8 @@ def execution_data_task_id(ds, dag, **kwargs):
     cf.touchz_success()
 
 
-dim_otrade_b2b_bd_info_hf_task = PythonOperator(
-    task_id='dim_otrade_b2b_bd_info_hf_task',
+dwm_otrade_b2c_user_first_hf_task = PythonOperator(
+    task_id='dwm_otrade_b2c_user_first_hf_task',
     python_callable=execution_data_task_id,
     provide_context=True,
     op_kwargs={
@@ -432,6 +260,7 @@ dim_otrade_b2b_bd_info_hf_task = PythonOperator(
     dag=dag
 )
 
-dwd_otrade_b2b_bd_admin_users_hf_locale_task >> dim_otrade_b2b_bd_info_hf_task
+dwm_otrade_b2c_user_first_hf_check_pre_locale_task >> dwm_otrade_b2c_user_first_hf_task
+ods_binlog_mall_nideshop_order_all_hi_check_task >> dwm_otrade_b2c_user_first_hf_task
 
 

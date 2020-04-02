@@ -27,7 +27,7 @@ import os
 
 args = {
     'owner': 'xiedong',
-    'start_date': datetime(2020, 3, 29),
+    'start_date': datetime(2020, 3, 30),
     'depends_on_past': False,
     'retries': 3,
     'retry_delay': timedelta(minutes=2),
@@ -36,23 +36,35 @@ args = {
     'email_on_retry': False,
 }
 
-dag = airflow.DAG('ods_sqoop_base_user_di',
-                  schedule_interval="30 00 * * *",
+dag = airflow.DAG('ods_sqoop_base_user_upgrade_df',
+                  schedule_interval="00 01 * * *",
                   default_args=args,
                   )
 
 ##----------------------------------------- 依赖 ---------------------------------------##
 
-ods_binlog_user_hi_check_task = OssSensor(
-    task_id='ods_binlog_user_hi_check_task',
+ods_binlog_user_upgrade_hi_check_task = OssSensor(
+    task_id='ods_binlog_user_upgrade_hi_check_task',
     bucket_key='{hdfs_path_str}/dt={pt}/hour=22/_SUCCESS'.format(
-        hdfs_path_str="opay_binlog/opay_user_db.opay_user.user",
+        hdfs_path_str="opay_binlog/opay_user_db.opay_user.user_upgrade",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
+
+ods_sqoop_user_upgrade_pre_check_task = OssSensor(
+    task_id='ods_sqoop_user_upgrade_pre_check_task',
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="opay_dw_sqoop/opay_user/user_upgrade",
+        pt='{{macros.ds_add(ds, -1)}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
 
 
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
@@ -77,82 +89,95 @@ task_timeout_monitor = PythonOperator(
 ##----------------------------------------- 变量 ---------------------------------------##
 db_name = "opay_dw_ods"
 
-table_name = "ods_sqoop_base_user_di"
-hdfs_path = "oss://opay-datalake/opay_dw_sqoop_di/opay_user/user"
+table_name = "ods_sqoop_base_user_upgrade_df"
+hdfs_path = "oss://opay-datalake/opay_dw_sqoop/opay_user/user_upgrade"
 config = eval(Variable.get("opay_time_zone_config"))
 
 
-def ods_sqoop_base_user_di_sql_task(ds):
+def ods_sqoop_base_user_upgrade_df_sql_task(ds):
     HQL = '''
 
     set hive.exec.dynamic.partition.mode=nonstrict;
     set hive.exec.parallel=true;
+    with 
+        user_upgrade_di as (
+            SELECT 
+                id,
+                user_id,
+                role,
+                upgrade_status,
+                accept_overload_user_id,
+                confirmed_overload_user_id,
+                doc_file,
+                doc_status,
+                upgrade_date,
+                upgrade_type,
+                from_unixtime(cast(cast(create_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss') as create_time,
+                from_unixtime(cast(cast(update_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss') as update_time
+            from (
+                select 
+                    *,
+                    row_number() over(partition by id order by `__ts_ms` desc,`__file` desc,cast(`__pos` as int) desc) rn
+                FROM opay_dw_ods.ods_binlog_base_user_upgrade_hi
+                where concat(dt,' ',hour) between '{pt_y} 23' and '{pt} 22' and `__deleted` = 'false'
+            ) m 
+            where rn=1
+        )
+    
     insert overwrite table {db}.{table} partition (dt)
-    SELECT 
+    select 
         id,
         user_id,
-        mobile,
-        business_name,
-        first_name,
-        middle_name,
-        surname,
-        kyc_level,
-        kyc_update_time,
-        bvn,
-        dob,
-        gender,
-        country,
-        state,
-        city,
-        address,
-        lga,
         role,
-        referral_code,
-        referrer_code,
-        notification,
-        from_unixtime(cast(cast(create_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss') create_time,
-        from_unixtime(cast(cast(update_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss') update_time,
-        register_client,
-        agent_referrer_code,
-        photo,
-        big_picture,
-        nick_name,
+        upgrade_status,
+        accept_overload_user_id,
+        confirmed_overload_user_id,
+        doc_file,
+        doc_status,
+        upgrade_date,
+        upgrade_type,
+        create_time,
+        update_time,
         '{pt}'
     from (
         select 
             id,
             user_id,
-            mobile,
-            replace(business_name, '\n', ' ') as business_name,
-            replace(first_name, '\n', ' ') as first_name,
-            replace(middle_name, '\n', ' ') as middle_name,
-            replace(surname, '\n', ' ') as surname,
-            kyc_level,
-            kyc_update_time,
-            replace(bvn, '\n', ' ') as bvn,
-            replace(dob, '\n', ' ') as dob,
-            replace(gender, '\n', ' ') as gender,
-            replace(country, '\n', ' ') as country,
-            replace(state, '\n', ' ') as state,
-            replace(city, '\n', ' ') as city,
-            replace(address, '\n', ' ') as address,
-            replace(lga, '\n', ' ') as lga,
-            replace(role, '\n', ' ') as role,
-            replace(referral_code, '\n', ' ') as referral_code,
-            replace(referrer_code, '\n', ' ') as referrer_code,
-            replace(notification, '\n', ' ') as notification,
+            role,
+            upgrade_status,
+            accept_overload_user_id,
+            confirmed_overload_user_id,
+            doc_file,
+            doc_status,
+            upgrade_date,
+            upgrade_type,
             create_time,
             update_time,
-            replace(register_client, '\n', ' ') as register_client,
-            replace(agent_referrer_code, '\n', ' ') as agent_referrer_code,
-            replace(photo,'\n', ' ') as photo,
-            replace(big_picture,'\n', ' ') as big_picture,
-            replace(nick_name,'\n', ' ') as nick_name,
-            row_number() over(partition by id order by `__ts_ms` desc,`__file` desc,cast(`__pos` as int) desc) rn
-         FROM opay_dw_ods.ods_binlog_base_user_hi
-         where concat(dt,' ',hour) between '{pt_y} 23' and '{pt} 22' and `__deleted` = 'false'
-         ) m 
-    where rn=1
+            row_number()over(partition by id order by update_time desc) rn 
+        from (
+            select 
+                id,
+                user_id,
+                role,
+                upgrade_status,
+                accept_overload_user_id,
+                confirmed_overload_user_id,
+                doc_file,
+                doc_status,
+                upgrade_date,
+                upgrade_type,
+                create_time,
+                update_time
+            from {db}.{table} 
+            where dt='{pt_y}' 
+            union all
+            select 
+                * 
+            from user_upgrade_di
+        )m
+    )m1 where rn=1
+    
+     
 
     '''.format(
         pt=ds,
@@ -168,7 +193,7 @@ def execution_data_task_id(ds, **kargs):
     hive_hook = HiveCliHook()
 
     # 读取sql
-    _sql = ods_sqoop_base_user_di_sql_task(ds)
+    _sql = ods_sqoop_base_user_upgrade_df_sql_task(ds)
 
     logging.info('Executing: %s', _sql)
 
@@ -184,12 +209,14 @@ def execution_data_task_id(ds, **kargs):
     TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "false", "true")
 
 
-ods_sqoop_base_user_di_task = PythonOperator(
-    task_id='ods_sqoop_base_user_di_task',
+ods_sqoop_base_user_upgrade_df_task = PythonOperator(
+    task_id='ods_sqoop_base_user_upgrade_df_task',
     python_callable=execution_data_task_id,
     provide_context=True,
     dag=dag
 )
 
-ods_binlog_user_hi_check_task >> ods_sqoop_base_user_di_task
+ods_binlog_user_upgrade_hi_check_task >> ods_sqoop_base_user_upgrade_df_task
+ods_sqoop_user_upgrade_pre_check_task >> ods_sqoop_base_user_upgrade_df_task
+
 
