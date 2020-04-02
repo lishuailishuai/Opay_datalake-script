@@ -143,7 +143,7 @@ update_info as (
     (
     select
       opayid as user_opayid
-      ,add_time as first_order_time
+      ,default.localTime("{config}",'NG',from_unixtime(cast(add_time/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as first_order_time
 
       ,row_number() over(partition by opayid order by add_time asc) rn
     from
@@ -158,7 +158,7 @@ update_info as (
 )
 
 --3.最后将去重的结果集插入到表中
-insert overwrite table otrade_dw.dwd_otrade_b2c_mall_merchant_hf partition(country_code,dt,hour)
+insert overwrite table otrade_dw.dwm_otrade_b2c_user_first_hf partition(country_code,dt,hour)
 select
   nvl(v1.user_opayid,v2.user_opayid) as user_opayid
   ,nvl(v1.first_order_time,v2.first_order_time) as first_order_time

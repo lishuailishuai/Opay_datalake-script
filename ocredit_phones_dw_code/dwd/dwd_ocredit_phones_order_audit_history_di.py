@@ -28,8 +28,8 @@ import os
 from utils.get_local_time import GetLocalTime
 
 args = {
-    'owner': 'yuanfeng',
-    'start_date': datetime(2020, 4, 2),
+    'owner': 'lili.chen',
+    'start_date': datetime(2020, 4, 1),
     'depends_on_past': False,
     'retries': 3,
     'retry_delay': timedelta(minutes=2),
@@ -38,40 +38,24 @@ args = {
     'email_on_retry': False,
 }
 
-dag = airflow.DAG('dwm_otrade_b2b_retailer_crm_first_hf',
-                  schedule_interval="26 * * * *",
+dag = airflow.DAG('dwd_ocredit_phones_order_audit_history_di',
+                  schedule_interval="30 00 * * *",
                   default_args=args,
                   )
 
 ##----------------------------------------- 变量 ---------------------------------------##
-db_name = "otrade_dw"
-table_name = "dwm_otrade_b2b_retailer_crm_first_hf"
-hdfs_path = "oss://opay-datalake/otrade/otrade_dw/" + table_name
-config = eval(Variable.get("otrade_time_zone_config"))
+db_name = "ocredit_phones_dw"
+table_name = "dwd_ocredit_phones_order_audit_history_di"
+hdfs_path = "oss://opay-datalake/opay/ocredit_phones_dw/" + table_name
+config = eval(Variable.get("ocredit_time_zone_config"))
 time_zone = config['NG']['time_zone']
-
 ##----------------------------------------- 依赖 ---------------------------------------##
-### 检查最新的商户表的依赖
-dwm_otrade_b2b_retailer_crm_first_hf_check_pre_locale_task = OssSensor(
-    task_id='dwm_otrade_b2b_retailer_crm_first_hf_check_pre_locale_task',
-    bucket_key='{hdfs_path_str}/country_code=NG/dt={pt}/hour={hour}/_SUCCESS'.format(
-        hdfs_path_str="otrade/otrade_dw/dwm_otrade_b2b_retailer_crm_first_hf",
-        pt='{{{{(execution_date+macros.timedelta(hours=({time_zone}+{gap_hour}))).strftime("%Y-%m-%d")}}}}'.format(
-            time_zone=time_zone, gap_hour=-1),
-        hour='{{{{(execution_date+macros.timedelta(hours=({time_zone}+{gap_hour}))).strftime("%H")}}}}'.format(
-            time_zone=time_zone, gap_hour=-1)
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
 
 ### 检查当前小时的分区依赖
-###oss://opay-datalake/otrade_all_hi/ods_binlog_base_otrade_order_all_hi
-ods_binlog_base_otrade_order_all_hi_check_task = OssSensor(
-    task_id='ods_binlog_base_otrade_order_all_hi_check_task',
-    bucket_key='{hdfs_path_str}/dt={pt}/hour={hour}/_SUCCESS'.format(
-        hdfs_path_str="otrade_all_hi/ods_binlog_base_otrade_order_all_hi",
+ods_binlog_base_t_order_audit_history_all_hi_check_task = OssSensor(
+    task_id='ods_binlog_base_t_order_audit_history_all_hi_check_task',
+    bucket_key='{hdfs_path_str}/dt={pt}/hour=23/_SUCCESS'.format(
+        hdfs_path_str="ocredit_phones_all_hi/ods_binlog_base_t_order_audit_history_all_hi",
         pt='{{ds}}',
         hour='{{ execution_date.strftime("%H") }}'
     ),
@@ -90,15 +74,15 @@ def fun_task_timeout_monitor(ds, dag, execution_date, **op_kwargs):
     # 时间偏移量
     v_gap_hour = 0
 
-    v_date = GetLocalTime("otrade", execution_date.strftime("%Y-%m-%d %H"), v_country_code, v_gap_hour)['date']
-    v_hour = GetLocalTime("otrade", execution_date.strftime("%Y-%m-%d %H"), v_country_code, v_gap_hour)['hour']
+    v_date = GetLocalTime("ocredit", execution_date.strftime("%Y-%m-%d %H"), v_country_code, v_gap_hour)['date']
+    v_hour = GetLocalTime("ocredit", execution_date.strftime("%Y-%m-%d %H"), v_country_code, v_gap_hour)['hour']
 
     # 小时级监控
     tb_hour_task = [
-        {"dag": dag, "db": "otrade_dw", "table": "{dag_name}".format(dag_name=dag_ids),
+        {"dag": dag, "db": "ocredit_phones_dw", "table": "{dag_name}".format(dag_name=dag_ids),
          "partition": "country_code={country_code}/dt={pt}/hour={now_hour}".format(country_code=v_country_code,
                                                                                    pt=v_date, now_hour=v_hour),
-         "timeout": "3000"}
+         "timeout": "1200"}
     ]
 
     TaskTimeoutMonitor().set_task_monitor(tb_hour_task)
@@ -112,78 +96,49 @@ task_timeout_monitor = PythonOperator(
 )
 
 
-def dwm_otrade_b2b_retailer_crm_first_hf_sql_task(ds, v_date):
+def dwd_ocredit_phones_order_audit_history_di_sql_task(ds, v_date):
     HQL = '''
 
-set mapred.max.split.size=1000000;
-set hive.exec.parallel=true;
-set hive.exec.dynamic.partition.mode=nonstrict;
-set hive.strict.checks.cartesian.product=false;
+    set hive.exec.dynamic.partition.mode=nonstrict;
+    set hive.exec.parallel=true;
 
---01.取出上个小时的全量的数据
-with
-last_hour_total as (
-  select
-    retailer_opayid
-    ,first_order_time
-  from
-    otrade_dw.dwm_otrade_b2b_retailer_crm_first_hf
-  where
-    concat(dt, " ", hour) >= default.minLocalTimeRange("{config}", '{v_date}', -1) 
-    and concat(dt, " ", hour) <= default.maxLocalTimeRange("{config}", '{v_date}', -1) 
-    and utc_date_hour = from_unixtime(cast(unix_timestamp('{v_date}', 'yyyy-MM-dd HH') - 3600 as BIGINT), 'yyyy-MM-dd HH')
-),
+    insert overwrite table {db}.{table} 
+    partition(country_code, dt)
 
---2.取出上一个小时的最新增量数据
-update_info as (
-  select
-    retailer_opayid
-    ,first_order_time
-  from
-    (
-    select
-      payer as retailer_opayid
-      ,default.localTime("{config}",'NG',from_unixtime(cast(create_time/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as first_order_time
+    select id,                  
+            user_id,             --用户ID               
+            order_id,            --订单ID               
+            audit_type,          --审核类型： 1初审 2复审      
+            audit_status,        --审核状态: 0初始 通过、拒绝    
+            reason_id,           --审核原因ID             
+            reason_description,  --原因描述               
+            audit_opr_id,        --审批操作人              
+            audit_opr_name,      --审批人名称              
+            create_time,         --创建日期               
+            update_time,         --修改日期               
+            remark,              --备注                 
+        t1.utc_date_hour,  --utc时间字段 
+        'NG' country_code,  --如果表中有国家编码直接上传国家编码
+        date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'yyyy-MM-dd') as dt
 
-      ,row_number() over(partition by payer order by create_time asc) rn
-    from
-      otrade_dw_ods.ods_binlog_base_otrade_order_hi
-    where 
-      dt = date_format('{v_date}', 'yyyy-MM-dd')
-      and hour= date_format('{v_date}', 'HH')
-      and `__deleted` = 'false'
-    ) as a
-  where
-    rn = 1
-)
-
---3.最后将去重的结果集插入到表中
-insert overwrite table otrade_dw.dwm_otrade_b2b_retailer_crm_first_hf partition(country_code,dt,hour)
-select
-  nvl(v1.retailer_opayid,v2.retailer_opayid) as retailer_opayid
-  ,nvl(v1.first_order_time,v2.first_order_time) as first_order_time
-
-  ,date_format('{v_date}', 'yyyy-MM-dd HH') as utc_date_hour
-
-  ,'NG' as country_code
-  ,date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'yyyy-MM-dd') as dt
-  ,date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'HH') as hour
-from
-  last_hour_total as v1
-full join
-  update_info as v2
-on
-  v1.retailer_opayid = v2.retailer_opayid
-;
-
-
+    from (select * from (select *,
+                 date_format('{v_date}', 'yyyy-MM-dd HH') as utc_date_hour,
+                 row_number() over(partition by id order by `__ts_ms` desc,`__file` desc,cast(`__pos` as int) desc) rn
+             from ocredit_phones_dw_ods.ods_binlog_base_t_order_audit_history_all_hi
+            where 
+                dt >= '{bef_yes_day}' --有可能多个国家时区不一样，如果要取昨天一天的本地数据，需要尽可能多的限定全采集的数据,有可能在前天分区或今天分区
+                and (substr(default.localTime("{config}",'NG',create_time,0),1,10)=date_format('{v_date}', 'yyyy-MM-dd') --按本地取昨天数据
+                or default.localTime("{config}",'NG',update_time,0)=date_format('{v_date}', 'yyyy-MM-dd'))
+                and `__deleted` = 'false') m
+        where rn=1
+    ) t1 ;
     '''.format(
         pt=ds,
         v_date=v_date,
+        bef_yes_day=airflow.macros.ds_add(ds, -1),
         table=table_name,
         db=db_name,
         config=config
-
     )
     return HQL
 
@@ -228,7 +183,7 @@ def execution_data_task_id(ds, dag, **kwargs):
             "is_country_partition": "true",
             "is_result_force_exist": "false",
             "execute_time": v_date,
-            "is_hour_task": "true",
+            "is_hour_task": "false",
             "frame_type": "local"
         }
     ]
@@ -236,7 +191,7 @@ def execution_data_task_id(ds, dag, **kwargs):
     cf = CountriesPublicFrame_dev(args)
 
     # 读取sql
-    _sql = "\n" + cf.alter_partition() + "\n" + dwm_otrade_b2b_retailer_crm_first_hf_sql_task(ds, v_date)
+    _sql = "\n" + cf.alter_partition() + "\n" + dwd_ocredit_phones_order_audit_history_di_sql_task(ds, v_date)
 
     logging.info('Executing: %s', _sql)
 
@@ -247,8 +202,8 @@ def execution_data_task_id(ds, dag, **kwargs):
     cf.touchz_success()
 
 
-dwm_otrade_b2b_retailer_crm_first_hf_task = PythonOperator(
-    task_id='dwm_otrade_b2b_retailer_crm_first_hf_task',
+dwd_ocredit_phones_order_audit_history_di_task = PythonOperator(
+    task_id='dwd_ocredit_phones_order_audit_history_di_task',
     python_callable=execution_data_task_id,
     provide_context=True,
     op_kwargs={
@@ -260,7 +215,4 @@ dwm_otrade_b2b_retailer_crm_first_hf_task = PythonOperator(
     dag=dag
 )
 
-dwm_otrade_b2b_retailer_crm_first_hf_check_pre_locale_task >> dwm_otrade_b2b_retailer_crm_first_hf_task
-ods_binlog_base_otrade_order_all_hi_check_task >> dwm_otrade_b2b_retailer_crm_first_hf_task
-
-
+ods_binlog_base_t_order_audit_history_all_hi_check_task >> dwd_ocredit_phones_order_audit_history_di_task
