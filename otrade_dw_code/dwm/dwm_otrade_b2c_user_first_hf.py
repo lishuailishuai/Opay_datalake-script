@@ -67,11 +67,11 @@ dwm_otrade_b2c_user_first_hf_check_pre_locale_task = OssSensor(
 )
 
 ### 检查当前小时的分区依赖
-###oss://opay-datalake/otrade_all_hi/ods_binlog_mall_nideshop_order_hi
-ods_binlog_mall_nideshop_order_hi_check_task = OssSensor(
-    task_id='ods_binlog_mall_nideshop_order_hi_check_task',
+###oss://opay-datalake/otrade_all_hi/ods_binlog_mall_nideshop_order_all_hi
+ods_binlog_mall_nideshop_order_all_hi_check_task = OssSensor(
+    task_id='ods_binlog_base_bd_admin_users_all_hi_check_task',
     bucket_key='{hdfs_path_str}/dt={pt}/hour={hour}/_SUCCESS'.format(
-        hdfs_path_str="otrade_all_hi/ods_binlog_mall_nideshop_order_hi",
+        hdfs_path_str="otrade_all_hi/ods_binlog_mall_nideshop_order_all_hi",
         pt='{{ds}}',
         hour='{{ execution_date.strftime("%H") }}'
     ),
@@ -79,7 +79,6 @@ ods_binlog_mall_nideshop_order_hi_check_task = OssSensor(
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
-
 
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
 def fun_task_timeout_monitor(ds, dag, execution_date, **op_kwargs):
@@ -148,7 +147,7 @@ update_info as (
 
       ,row_number() over(partition by opayid order by add_time asc) rn
     from
-      otrade_dw_ods.ods_binlog_mall_nideshop_order_hi
+      otrade_dw_ods.ods_binlog_mall_nideshop_order_all_hi
     where 
       dt = date_format('{v_date}', 'yyyy-MM-dd')
       and hour= date_format('{v_date}', 'HH')
@@ -262,6 +261,6 @@ dwm_otrade_b2c_user_first_hf_task = PythonOperator(
 )
 
 dwm_otrade_b2c_user_first_hf_check_pre_locale_task >> dwm_otrade_b2c_user_first_hf_task
-ods_binlog_mall_nideshop_order_hi_check_task >> dwm_otrade_b2c_user_first_hf_task
+ods_binlog_mall_nideshop_order_all_hi_check_task >> dwm_otrade_b2c_user_first_hf_task
 
 
