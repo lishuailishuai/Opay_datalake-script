@@ -51,58 +51,12 @@ config = eval(Variable.get("otrade_time_zone_config"))
 time_zone = config['NG']['time_zone']
 
 ##----------------------------------------- 依赖 ---------------------------------------##
-### 检查最新的用户表的依赖
-###oss://opay-datalake/otrade/otrade_dw/dim_otrade_b2b_supplier_info_hf
-dim_otrade_b2b_supplier_info_hf_check_task = OssSensor(
-    task_id='dim_otrade_b2b_supplier_info_hf_check_task',
-    bucket_key='{hdfs_path_str}/country_code=NG/dt={pt}/hour={hour}/_SUCCESS'.format(
-        hdfs_path_str="otrade/otrade_dw/dim_otrade_b2b_supplier_info_hf",
-        pt='{{{{(execution_date+macros.timedelta(hours=({time_zone}+{gap_hour}))).strftime("%Y-%m-%d")}}}}'.format(
-            time_zone=time_zone, gap_hour=0),
-        hour='{{{{(execution_date+macros.timedelta(hours=({time_zone}+{gap_hour}))).strftime("%H")}}}}'.format(
-            time_zone=time_zone, gap_hour=0)
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
-
-### 检查最新的用户表的依赖
-###oss://opay-datalake/otrade/otrade_dw/dwm_otrade_b2b_retailer_crm_first_hf
-dwm_otrade_b2b_retailer_crm_first_hf_check_task = OssSensor(
-    task_id='dwm_otrade_b2b_retailer_crm_first_hf_check_task',
-    bucket_key='{hdfs_path_str}/country_code=NG/dt={pt}/hour={hour}/_SUCCESS'.format(
-        hdfs_path_str="otrade/otrade_dw/dwm_otrade_b2b_retailer_crm_first_hf",
-        pt='{{{{(execution_date+macros.timedelta(hours=({time_zone}+{gap_hour}))).strftime("%Y-%m-%d")}}}}'.format(
-            time_zone=time_zone, gap_hour=0),
-        hour='{{{{(execution_date+macros.timedelta(hours=({time_zone}+{gap_hour}))).strftime("%H")}}}}'.format(
-            time_zone=time_zone, gap_hour=0)
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
-
 ### 检查当前小时的分区依赖
 ###oss://opay-datalake/otrade_all_hi/ods_binlog_base_otrade_order_all_hi
 ods_binlog_base_otrade_order_all_hi_check_task = OssSensor(
     task_id='ods_binlog_base_otrade_order_all_hi_check_task',
     bucket_key='{hdfs_path_str}/dt={pt}/hour={hour}/_SUCCESS'.format(
         hdfs_path_str="otrade_all_hi/ods_binlog_base_otrade_order_all_hi",
-        pt='{{ds}}',
-        hour='{{ execution_date.strftime("%H") }}'
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
-
-### 检查当前小时的分区依赖
-###oss://opay-datalake/otrade_all_hi/ods_binlog_base_otrade_pay_all_hi
-ods_binlog_base_otrade_pay_all_hi_check_task = OssSensor(
-    task_id='ods_binlog_base_otrade_pay_all_hi_check_task',
-    bucket_key='{hdfs_path_str}/dt={pt}/hour={hour}/_SUCCESS'.format(
-        hdfs_path_str="otrade_all_hi/ods_binlog_base_otrade_pay_all_hi",
         pt='{{ds}}',
         hour='{{ execution_date.strftime("%H") }}'
     ),
@@ -147,186 +101,11 @@ def dwd_otrade_b2b_otrade_order_hi_sql_task(ds, v_date):
     HQL = '''
 
 set mapred.max.split.size=1000000;
-set hive.exec.dynamic.partition.mode=nonstrict;
 set hive.exec.parallel=true;
+set hive.exec.dynamic.partition.mode=nonstrict;
 set hive.strict.checks.cartesian.product=false;
 
---1.先取得供应商信息
-with 
-supplier_info as (
-  select
-    id
-    ,opay_id
-    ,status
-    ,country
-    ,city
-    ,country_name
-    ,city_name
-    ,bd_invitation_code
-    ,bd_id as bd_invitation_id
-    ,hcm_id
-    ,hcm_name
-    ,cm_id
-    ,cm_name
-    ,bdm_id
-    ,bdm_name
-    ,bd_real_id as bd_id
-    ,bd_name
-    ,first_order_time
-  from
-    otrade_dw.dwm_otrade_b2b_supplier_first_hf
-  where
-    concat(dt,' ',hour) >= default.minLocalTimeRange("{config}", '{v_date}', 0)
-    and concat(dt,' ',hour) <= default.maxLocalTimeRange("{config}", '{v_date}', 0) 
-    and utc_date_hour = date_format("{v_date}", 'yyyy-MM-dd HH')
-),
-
---2.再取得付款方信息
-retailer_info as (
-  select
-    id
-    ,opay_id
-    ,first_name as retailer_first_name
-    ,last_name as retailer_last_name
-    ,phone_number as retailer_phone_number
-    ,retailer_email as retailer_retailer_email
-    ,country as retailer_country
-    ,country_name as retailer_country_name
-    ,city_id as retailer_city
-    ,city_name as retailer_city_name
-    ,bd_id as retailer_bd_invitation_id
-    ,hcm_id as retailer_hcm_id
-    ,hcm_name as retailer_hcm_name
-    ,cm_id as retailer_cm_id
-    ,cm_name as retailer_cm_name
-    ,bdm_id as retailer_bdm_id
-    ,bdm_name as retailer_bdm_name
-    ,bd_real_id as retailer_bd_id
-    ,bd_name as retailer_bd_name
-    ,first_order_time as retailer_first_order_time
-  from
-    otrade_dw.dwm_otrade_b2b_retailer_crm_first_hf
-  where
-    concat(dt,' ',hour) >= default.minLocalTimeRange("{config}", '{v_date}', 0)
-    and concat(dt,' ',hour) <= default.maxLocalTimeRange("{config}", '{v_date}', 0) 
-    and utc_date_hour = date_format("{v_date}", 'yyyy-MM-dd HH')
-),
-
---3.最新一小时支付数据
-update_pay_info as (
-  select
-    order_id
-    ,opay_pay_id
-    ,actual_amount
-    ,pay_status
-    ,req_status
-  from
-    (
-    select
-      order_id
-      ,opay_pay_id
-      ,actual_amount
-      ,pay_status
-      ,req_status
-      ,row_number() over(partition by order_id order by `__ts_ms` desc,`__file` desc,cast(`__pos` as int) desc) rn
-    from
-      otrade_dw_ods.ods_binlog_base_otrade_pay_all_hi
-    where
-      dt = date_format('{v_date}', 'yyyy-MM-dd')
-      and hour= date_format('{v_date}', 'HH')
-      and `__deleted` = 'false'
-    ) as a
-  where
-    rn = 1
-),
-
---4.取订单最新一小时数据
-update_order_info as (
-  select
-    id
-    ,pay_id
-    ,order_id
-    ,settle_id
-    ,original_order_id
-    ,order_type
-    ,payer
-    ,payee
-    ,payer_phone
-    ,payee_phone
-    ,payer_name
-    ,payee_name
-    ,supplier_type
-    ,source
-    ,shop_id
-    ,shop_name
-    ,order_status
-    ,refund_status
-    ,payable_amount
-    ,amount
-    ,fee_type
-    ,fee
-    ,fee_rate
-    ,handwork_fee
-    ,pay_channel
-    ,pay_type
-    ,pay_cur
-    ,pay_time
-    ,consign_time
-    ,confirm_time
-    ,receive_time
-    ,refund_type
-    ,create_time
-    ,update_time
-  from
-    (
-    select
-      id
-      ,pay_id
-      ,order_id
-      ,settle_id
-      ,original_order_id
-      ,order_type
-      ,payer
-      ,payee
-      ,payer_phone
-      ,payee_phone
-      ,payer_name
-      ,payee_name
-      ,supplier_type
-      ,source
-      ,shop_id
-      ,shop_name
-      ,order_status
-      ,refund_status
-      ,payable_amount
-      ,amount
-      ,fee_type
-      ,fee
-      ,fee_rate
-      ,handwork_fee
-      ,pay_channel
-      ,pay_type
-      ,pay_cur
-      ,default.localTime("{config}",'NG',from_unixtime(cast(pay_time/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as pay_time
-      ,default.localTime("{config}",'NG',from_unixtime(cast(consign_time/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as consign_time
-      ,default.localTime("{config}",'NG',from_unixtime(cast(confirm_time/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as confirm_time
-      ,default.localTime("{config}",'NG',from_unixtime(cast(receive_time/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as receive_time
-      ,refund_type
-      ,default.localTime("{config}",'NG',from_unixtime(cast(create_time/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as create_time
-      ,default.localTime("{config}",'NG',from_unixtime(cast(update_time/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as update_time
-      ,row_number() over(partition by id order by `__ts_ms` desc,`__file` desc,cast(`__pos` as int) desc) rn
-    from
-      otrade_dw_ods.ods_binlog_base_otrade_order_all_hi
-    where
-      dt = date_format('{v_date}', 'yyyy-MM-dd')
-      and hour= date_format('{v_date}', 'HH')
-      and `__deleted` = 'false'
-    ) as a
-  where
-    rn = 1
-)
-
---4.将数据关联后插入最终表中
+--1.将数据关联后插入最终表中
 insert overwrite table otrade_dw.dwd_otrade_b2b_otrade_order_hi partition(country_code,dt,hour)
 select
   v1.id
@@ -364,70 +143,58 @@ select
   ,v1.create_time
   ,v1.update_time
 
-  ,v2.status
-  ,v2.country
-  ,v2.city
-  ,v2.country_name
-  ,v2.city_name
-  ,v2.bd_invitation_code
-  ,v2.bd_invitation_id
-  ,v2.hcm_id
-  ,v2.hcm_name
-  ,v2.cm_id
-  ,v2.cm_name
-  ,v2.bdm_id
-  ,v2.bdm_name
-  ,v2.bd_id
-  ,v2.bd_name
-  ,if(v1.create_time>=v2.first_order_time,0,1) as first_order
-  ,nvl(v2.first_order_time,v1.create_time) as first_order_time
-
-  ,v3.retailer_first_name
-  ,v3.retailer_last_name
-  ,v3.retailer_phone_number
-  ,v3.retailer_retailer_email
-  ,v3.retailer_country
-  ,v3.retailer_city
-  ,v3.retailer_country_name
-  ,v3.retailer_city_name
-  ,v3.retailer_bd_invitation_id
-  ,v3.retailer_hcm_id
-  ,v3.retailer_hcm_name
-  ,v3.retailer_cm_id
-  ,v3.retailer_cm_name
-  ,v3.retailer_bdm_id
-  ,v3.retailer_bdm_name
-  ,v3.retailer_bd_id
-  ,v3.retailer_bd_name
-  ,if(v1.create_time>=v3.retailer_first_order_time,0,1) as retailer_first_order
-  ,nvl(v3.retailer_first_order_time,v1.create_time) as retailer_first_order_time
-
-  ,v4.opay_pay_id
-  ,v4.actual_amount
-  ,v4.pay_status
-  ,v4.req_status
-
   ,date_format('{v_date}', 'yyyy-MM-dd HH') as utc_date_hour
 
   ,'NG' as country_code
   ,date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'yyyy-MM-dd') as dt
   ,date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'HH') as hour
 from
-  update_order_info as v1
-left join
-  supplier_info as v2
-on
-  v1.shop_id = v2.id
-left join
-  retailer_info as v3
-on
-  v1.payer = v3.opay_id
-left join
-  update_pay_info as v4
-on
-  v1.order_id = v4.order_id
-;
+  (
+  select
+    id
+    ,pay_id
+    ,order_id
+    ,settle_id
+    ,original_order_id
+    ,order_type
+    ,payer
+    ,payee
+    ,payer_phone
+    ,payee_phone
+    ,payer_name
+    ,payee_name
+    ,supplier_type
+    ,source
+    ,shop_id
+    ,shop_name
+    ,order_status
+    ,refund_status
+    ,payable_amount
+    ,amount
+    ,fee_type
+    ,fee
+    ,fee_rate
+    ,handwork_fee
+    ,pay_channel
+    ,pay_type
+    ,pay_cur
+    ,default.localTime("{config}",'NG',from_unixtime(cast(pay_time/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as pay_time
+    ,default.localTime("{config}",'NG',from_unixtime(cast(consign_time/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as consign_time
+    ,default.localTime("{config}",'NG',from_unixtime(cast(confirm_time/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as confirm_time
+    ,default.localTime("{config}",'NG',from_unixtime(cast(receive_time/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as receive_time
+    ,refund_type
+    ,default.localTime("{config}",'NG',from_unixtime(cast(create_time/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as create_time
+    ,default.localTime("{config}",'NG',from_unixtime(cast(update_time/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as update_time
 
+    ,row_number() over(partition by id order by `__ts_ms` desc,`__file` desc,cast(`__pos` as int) desc) rn
+  from
+    otrade_dw_ods.ods_binlog_base_otrade_order_all_hi
+  where
+    dt = date_format('{v_date}', 'yyyy-MM-dd')
+    and hour= date_format('{v_date}', 'HH')
+    and `__deleted` = 'false'
+  ) as v1
+;
 
 
     '''.format(
@@ -513,9 +280,6 @@ dwd_otrade_b2b_otrade_order_hi_task = PythonOperator(
     dag=dag
 )
 
-dim_otrade_b2b_supplier_info_hf_check_task >> dwd_otrade_b2b_otrade_order_hi_task
-dwm_otrade_b2b_retailer_crm_first_hf_check_task >> dwd_otrade_b2b_otrade_order_hi_task
 ods_binlog_base_otrade_order_all_hi_check_task >> dwd_otrade_b2b_otrade_order_hi_task
-ods_binlog_base_otrade_pay_all_hi_check_task >> dwd_otrade_b2b_otrade_order_hi_task
 
 
