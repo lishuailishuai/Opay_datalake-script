@@ -29,7 +29,7 @@ from utils.get_local_time import GetLocalTime
 
 args = {
     'owner': 'yuanfeng',
-    'start_date': datetime(2020, 3, 26),
+    'start_date': datetime(2020, 4, 2),
     'depends_on_past': False,
     'retries': 3,
     'retry_delay': timedelta(minutes=2),
@@ -39,7 +39,7 @@ args = {
 }
 
 dag = airflow.DAG('dwm_otrade_b2b_supplier_first_hf',
-                  schedule_interval="38 * * * *",
+                  schedule_interval="26 * * * *",
                   default_args=args,
                   )
 
@@ -60,22 +60,6 @@ dwm_otrade_b2b_supplier_first_hf_check_pre_locale_task = OssSensor(
             time_zone=time_zone, gap_hour=-1),
         hour='{{{{(execution_date+macros.timedelta(hours=({time_zone}+{gap_hour}))).strftime("%H")}}}}'.format(
             time_zone=time_zone, gap_hour=-1)
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
-
-### 检查最新的用户表的依赖
-###oss://opay-datalake/otrade/otrade_dw/dim_otrade_b2b_supplier_info_hf
-dim_otrade_b2b_supplier_info_hf_check_task = OssSensor(
-    task_id='dim_otrade_b2b_supplier_info_hf_check_task',
-    bucket_key='{hdfs_path_str}/country_code=NG/dt={pt}/hour={hour}/_SUCCESS'.format(
-        hdfs_path_str="otrade/otrade_dw/dim_otrade_b2b_supplier_info_hf",
-        pt='{{{{(execution_date+macros.timedelta(hours=({time_zone}+{gap_hour}))).strftime("%Y-%m-%d")}}}}'.format(
-            time_zone=time_zone, gap_hour=0),
-        hour='{{{{(execution_date+macros.timedelta(hours=({time_zone}+{gap_hour}))).strftime("%H")}}}}'.format(
-            time_zone=time_zone, gap_hour=0)
     ),
     bucket_name='opay-datalake',
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
@@ -133,14 +117,15 @@ def dwm_otrade_b2b_supplier_first_hf_sql_task(ds, v_date):
     HQL = '''
 
 set mapred.max.split.size=1000000;
-set hive.exec.dynamic.partition.mode=nonstrict;
 set hive.exec.parallel=true;
+set hive.exec.dynamic.partition.mode=nonstrict;
+set hive.strict.checks.cartesian.product=false;
 
 --01.取出上个小时的全量的数据
 with
 last_hour_total as (
   select
-    id
+    supplier_opayid
     ,first_order_time
   from
     otrade_dw.dwm_otrade_b2b_supplier_first_hf
@@ -150,142 +135,46 @@ last_hour_total as (
     and utc_date_hour = from_unixtime(cast(unix_timestamp('{v_date}', 'yyyy-MM-dd HH') - 3600 as BIGINT), 'yyyy-MM-dd HH')
 ),
 
---02.取最近一小时交易的零售商,并取出create_time
-retailer_trade_time as (
+--2.取出上一个小时的最新增量数据
+update_info as (
   select
-    payee
-    ,create_time
+    supplier_opayid
+    ,first_order_time
   from
     (
     select
-      payee
-      ,default.localTime("{config}",'NG',from_unixtime(cast(create_time/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),0) as create_time
+      payee as supplier_opayid
+      ,create_time as first_order_time
+
       ,row_number() over(partition by payee order by create_time asc) rn
     from
-      otrade_dw_ods.ods_binlog_base_otrade_order_all_hi
-    where
+      otrade_dw_ods.ods_binlog_base_otrade_order_hi
+    where 
       dt = date_format('{v_date}', 'yyyy-MM-dd')
       and hour= date_format('{v_date}', 'HH')
       and `__deleted` = 'false'
     ) as a
   where
     rn = 1
-),
-
---03.将最近一小时的供应商表全量关联上一个小时的首单表
-join_result as (
-  select
-    v1.id
-    ,v1.user_id
-    ,v1.opay_id
-    ,v1.opay_account
-    ,v1.opay_company_account
-    ,v1.status
-    ,v1.supplier_type
-    ,v1.first_name
-    ,v1.last_name
-    ,v1.other_name
-    ,v1.country
-    ,v1.city
-
-    ,v1.country_name
-    ,v1.city_name
-
-    ,v1.address
-    ,v1.email
-    ,v1.bvn
-    ,v1.phone_number
-    ,v1.second_phone_number
-    ,v1.bd_invitation_code
-    ,v1.bd_id
-
-    ,v1.job_id
-    ,v1.job_name
-    ,v1.hcm_id
-    ,v1.hcm_name
-    ,v1.cm_id
-    ,v1.cm_name
-    ,v1.bdm_id
-    ,v1.bdm_name
-    ,v1.bd_real_id
-    ,v1.bd_name
-
-    ,v1.earnest_money
-    ,v1.create_time
-    ,v1.update_time
-    ,nvl(v2.first_order_time,'9999-12-31 00:00:00') as first_order_time
-  from
-    (
-    select
-      *
-    from
-      otrade_dw.dim_otrade_b2b_supplier_info_hf
-    where
-      concat(dt,' ',hour) >= default.minLocalTimeRange("{config}", '{v_date}', 0)
-      and concat(dt,' ',hour) <= default.maxLocalTimeRange("{config}", '{v_date}', 0) 
-      and utc_date_hour = date_format("{v_date}", 'yyyy-MM-dd HH')
-    ) as v1
-  left join
-    last_hour_total as v2
-  on
-    v1.id = v2.id
 )
 
---04.关联最新的交易,匹配最新的首单时间
+--3.最后将去重的结果集插入到表中
 insert overwrite table otrade_dw.dwm_otrade_b2b_supplier_first_hf partition(country_code,dt,hour)
 select
-  v1.id
-  ,v1.user_id
-  ,v1.opay_id
-  ,v1.opay_account
-  ,v1.opay_company_account
-  ,v1.status
-  ,v1.supplier_type
-  ,v1.first_name
-  ,v1.last_name
-  ,v1.other_name
-  ,v1.country
-  ,v1.city
+  nvl(v1.supplier_opayid,v2.supplier_opayid) as supplier_opayid
+  ,nvl(v1.first_order_time,v2.first_order_time) as first_order_time
 
-  ,v1.country_name
-  ,v1.city_name
-
-  ,v1.address
-  ,v1.email
-  ,v1.bvn
-  ,v1.phone_number
-  ,v1.second_phone_number
-  ,v1.bd_invitation_code
-  ,v1.bd_id
-
-  ,v1.job_id
-  ,v1.job_name
-  ,v1.hcm_id
-  ,v1.hcm_name
-  ,v1.cm_id
-  ,v1.cm_name
-  ,v1.bdm_id
-  ,v1.bdm_name
-  ,v1.bd_real_id
-  ,v1.bd_name
-
-  ,v1.earnest_money
-  ,v1.create_time
-  ,v1.update_time
-
-  ,if(v1.first_order_time = '9999-12-31 00:00:00' and v2.create_time is not null,v2.create_time,v1.first_order_time) as first_order_time
-  
   ,date_format('{v_date}', 'yyyy-MM-dd HH') as utc_date_hour
 
   ,'NG' as country_code
   ,date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'yyyy-MM-dd') as dt
   ,date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'HH') as hour
 from
-  join_result as v1
-left join
-  retailer_trade_time as v2
+  last_hour_total as v1
+full join
+  update_info as v2
 on
-  v1.opay_id = v2.payee
+  v1.supplier_opayid = v2.supplier_opayid
 ;
 
 
@@ -376,7 +265,6 @@ dwm_otrade_b2b_supplier_first_hf_task = PythonOperator(
 )
 
 dwm_otrade_b2b_supplier_first_hf_check_pre_locale_task >> dwm_otrade_b2b_supplier_first_hf_task
-dim_otrade_b2b_supplier_info_hf_check_task >> dwm_otrade_b2b_supplier_first_hf_task
 ods_binlog_base_otrade_order_all_hi_check_task >> dwm_otrade_b2b_supplier_first_hf_task
 
 
