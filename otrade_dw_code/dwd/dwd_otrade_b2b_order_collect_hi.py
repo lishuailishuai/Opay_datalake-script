@@ -188,7 +188,6 @@ supplier_info as (
     ,bdm_name
     ,bd_real_id as bd_id
     ,bd_name
-    ,first_order_time
   from
     otrade_dw.dim_otrade_b2b_supplier_info_hf
   where
@@ -219,7 +218,6 @@ retailer_info as (
     ,bdm_name as retailer_bdm_name
     ,bd_real_id as retailer_bd_id
     ,bd_name as retailer_bd_name
-    ,first_order_time as retailer_first_order_time
   from
     otrade_dw.dim_otrade_b2b_retailer_info_crm_hf
   where
@@ -295,7 +293,7 @@ order_info as (
     ,create_time
     ,update_time
   from
-    otrade_dw.dwd_otrade_b2b_order_collect_hi
+    otrade_dw.dwd_otrade_b2b_otrade_order_hi
   where
     concat(dt,' ',hour) >= default.minLocalTimeRange("{config}", '{v_date}', 0)
     and concat(dt,' ',hour) <= default.maxLocalTimeRange("{config}", '{v_date}', 0) 
@@ -404,7 +402,7 @@ on
 left join
   retailer_first_info as v4
 on
-  v1.payer = v4.opay_id
+  v1.payer = v4.retailer_opayid
 left join
   pay_info as v5
 on
