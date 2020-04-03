@@ -46,7 +46,7 @@ dag = airflow.DAG('dwd_ocredit_phones_order_base_di_test',
 ##----------------------------------------- 变量 ---------------------------------------##
 db_name = "ocredit_phones_dw"
 table_name = "dwd_ocredit_phones_order_base_di_test"
-hdfs_path = "oss://opay-datalake/opay/ocredit_phones_dw/" + table_name
+hdfs_path = "oss://opay-datalake/ocredit_phones/ocredit_phones_dw/" + table_name
 config = eval(Variable.get("ocredit_time_zone_config"))
 time_zone = config['NG']['time_zone']
 ##----------------------------------------- 依赖 ---------------------------------------##
