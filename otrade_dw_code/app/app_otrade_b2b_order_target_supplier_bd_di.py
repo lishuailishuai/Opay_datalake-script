@@ -195,7 +195,7 @@ order_info as (
     --店铺分析
     ,0 as new_shop_cnt
     ,count(distinct(if(order_type='pay',shop_id,null))) as order_shop_cnt
-    ,count(distinct(if(order_type='pay' and first_order = 1,shop_id,null))) as first_order_shop_cnt
+    ,0 as first_order_shop_cnt
     ,0 as total_shop_cnt
   
     --用户分析
