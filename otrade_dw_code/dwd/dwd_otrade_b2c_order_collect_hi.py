@@ -96,6 +96,21 @@ dwd_otrade_b2c_mall_nideshop_order_hi_check_task = OssSensor(
     dag=dag
 )
 
+###oss://opay-datalake/otrade/otrade_dw/dim_otrade_b2b_city_info_hf
+dim_otrade_b2b_city_info_hf_check_task = OssSensor(
+    task_id='dim_otrade_b2b_city_info_hf_check_task',
+    bucket_key='{hdfs_path_str}/country_code=NG/dt={pt}/hour={hour}/_SUCCESS'.format(
+        hdfs_path_str="otrade/otrade_dw/dim_otrade_b2b_city_info_hf",
+        pt='{{{{(execution_date+macros.timedelta(hours=({time_zone}+{gap_hour}))).strftime("%Y-%m-%d")}}}}'.format(
+            time_zone=time_zone, gap_hour=0),
+        hour='{{{{(execution_date+macros.timedelta(hours=({time_zone}+{gap_hour}))).strftime("%H")}}}}'.format(
+            time_zone=time_zone, gap_hour=0)
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
 def fun_task_timeout_monitor(ds, dag, execution_date, **op_kwargs):
     dag_ids = dag.dag_id
@@ -167,7 +182,22 @@ user_first_info as (
     and utc_date_hour = date_format("{v_date}", 'yyyy-MM-dd HH')
 ),
 
---3.订单相关
+--3.城市相关
+city_info as (
+  select
+    city_code
+    ,city_name
+    ,country_code
+    ,country_name
+  from
+    otrade_dw.dim_otrade_b2b_city_info_hf
+  where
+    concat(dt,' ',hour) >= default.minLocalTimeRange("{config}", '{v_date}', 0)
+    and concat(dt,' ',hour) <= default.maxLocalTimeRange("{config}", '{v_date}', 0) 
+    and utc_date_hour = date_format("{v_date}", 'yyyy-MM-dd HH')
+),
+
+--4.订单相关
 order_info as (
   select
     id
@@ -223,7 +253,7 @@ order_info as (
     and utc_date_hour = date_format("{v_date}", 'yyyy-MM-dd HH')
 )
 
---6.将数据关联后插入最终表中
+--5.将数据关联后插入最终表中
 insert overwrite table otrade_dw.dwd_otrade_b2c_order_collect_hi partition(country_code,dt,hour)
 select
   v1.id
@@ -283,6 +313,10 @@ select
   ,if(v1.add_time > v3.first_order_time,0,1) as first_order
   ,v3.first_order_time as first_order_time
 
+  --城市国家名称
+  ,v4.city_name
+  ,v4.country_name
+
   ,date_format('{v_date}', 'yyyy-MM-dd HH') as utc_date_hour
 
   ,'NG' as country_code
@@ -298,6 +332,10 @@ left join
   user_first_info as v3
 on
   v1.opayid = v3.user_opayid
+left join
+  city_info as v4
+on
+  v1.city = v4.city_code
 ;
 
 
@@ -389,4 +427,5 @@ dwd_otrade_b2c_order_collect_hi_task = PythonOperator(
 dwd_otrade_b2c_mall_merchant_hf_check_task >> dwd_otrade_b2c_order_collect_hi_task
 dwm_otrade_b2c_user_first_hf_check_task >> dwd_otrade_b2c_order_collect_hi_task
 dwd_otrade_b2c_mall_nideshop_order_hi_check_task >> dwd_otrade_b2c_order_collect_hi_task
+dim_otrade_b2b_city_info_hf_check_task >> dwd_otrade_b2c_order_collect_hi_task
 
