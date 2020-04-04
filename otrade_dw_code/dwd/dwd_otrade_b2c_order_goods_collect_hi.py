@@ -221,7 +221,7 @@ order_collect_info as (
     ,city_name
     ,country_name
   from
-    otrade_dw.dwd_otrade_b2c_order_goods_collect_hi
+    otrade_dw.dwd_otrade_b2c_order_collect_hi
   where
     concat(dt,' ',hour) >= default.minLocalTimeRange("{config}", '{v_date}', 0)
     and concat(dt,' ',hour) <= default.maxLocalTimeRange("{config}", '{v_date}', 0) 
@@ -229,7 +229,7 @@ order_collect_info as (
 ),
 
 --3.商品层级相关
-order_collect_info as (
+product_info as (
   select
     product_id
     ,one_level_id
@@ -348,7 +348,7 @@ left join
 on
   v1.order_id = v2.id
 left join
-  order_collect_info as v3
+  product_info as v3
 on
   v1.product_id = v3.product_id
 ;
