@@ -164,6 +164,9 @@ order_goods_info as (
   select
     merchant_id
   
+    --下单分析
+    ,sum(nvl(number,0)) as order_goods_amt
+
     --销售分析
     ,sum(if(length(pay_time)>9,nvl(number,0),0)) as pay_goods_cnt
   
@@ -187,10 +190,10 @@ product_info as (
     --商品分析
     ,count(distinct(goods_id)) as spu_on_sale
     ,count(distinct(product_id)) as sku_on_sale
-    ,count(if(substr(goods_add_time,0,10)='{pt}',distinct(product_id),null)) as new_sku_cnt
+    ,count(distinct(if(substr(goods_add_time,0,10)='{pt}',product_id,null))) as new_sku_cnt
 
     --秒杀分析
-    ,count(if(goods_is_secKill=2,distinct(goods_id),null)) as seckill_spu_cnt
+    ,count(distinct(if(goods_is_secKill=2,goods_id,null))) as seckill_spu_cnt
   from
     otrade_dw.dim_otrade_b2c_mall_nideshop_product_hf
   where
@@ -212,7 +215,7 @@ select
 
   --下单分析
   ,v1.order_amt
-  ,v1.order_goods_amt
+  ,v2.order_goods_amt
   ,v1.order_cnt
   ,v1.order_people
   ,v1.first_order_amt
@@ -251,6 +254,7 @@ left join
 on
   v1.merchant_id = v3.merchant_id
 ;
+
 
 
 '''.format(
