@@ -63,7 +63,7 @@ ods_binlog_base_data_city_conf_h_his_prev_day_task = OssSensor(
 
 
 sleep_time = BashOperator(
-    task_id='sleep_id',
+    task_id='sleep_time',
     depends_on_past=False,
     bash_command='sleep 10',
     dag=dag
