@@ -154,7 +154,7 @@ all_bd_info as (
     ,created_at
     ,updated_at
   from
-    otrade_dw.dwd_otrade_bd_admin_users_hf
+    otrade_dw.dwd_otrade_b2b_bd_admin_users_hf
   where 
     concat(dt,' ',hour) >= default.minLocalTimeRange("{config}", '{v_date}', 0)
     and concat(dt,' ',hour) <= default.maxLocalTimeRange("{config}", '{v_date}', 0) 
