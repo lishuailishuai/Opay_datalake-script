@@ -28,7 +28,7 @@ import os
 # 央行月报汇报指标
 #
 args = {
-    'owner': 'liushuzhen',
+    'owner': 'xiedong',
     'start_date': datetime(2020, 3, 24),
     'depends_on_past': False,
     'retries': 3,

@@ -28,7 +28,7 @@ from utils.get_local_time import GetLocalTime
 from plugins.CountriesAppFrame import CountriesAppFrame
 
 args = {
-    'owner': 'liushuzhen',
+    'owner': 'xiedong',
     'start_date': datetime(2020, 1, 23),
     'depends_on_past': False,
     'retries': 3,

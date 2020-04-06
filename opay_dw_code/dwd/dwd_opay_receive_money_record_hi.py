@@ -28,7 +28,7 @@ import os
 from utils.get_local_time import GetLocalTime
 
 args = {
-    'owner': 'liushuzhen',
+    'owner': 'xiedong',
     'start_date': datetime(2020, 3, 3),
     'depends_on_past': False,
     'retries': 3,

@@ -30,7 +30,7 @@ from plugins.CountriesAppFrame import CountriesAppFrame
 
 
 args = {
-    'owner': 'yuanfeng',
+    'owner': 'xiedong',
     'start_date': datetime(2020, 2, 13),
     'depends_on_past': False,
     'retries': 3,
