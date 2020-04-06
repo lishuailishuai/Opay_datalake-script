@@ -259,7 +259,7 @@ from
 left join
   bd_info as v2
 on
-  v1.bd_id = v2.id
+  v1.bd_invitation_code = v2.staff_id
 left join
   city_info as v3
 on
