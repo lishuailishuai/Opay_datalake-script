@@ -156,6 +156,7 @@ city_info as (
 bd_info as (
   select
     id  
+    ,staff_id
     ,job_id
     ,job_name
     ,hcm_id
