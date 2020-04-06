@@ -103,8 +103,27 @@ def dim_otrade_b2b_bd_info_hf_sql_task(ds, v_date):
     HQL = '''
 
 set mapred.max.split.size=1000000;
-set hive.exec.dynamic.partition.mode=nonstrict;
 set hive.exec.parallel=true;
+set hive.exec.dynamic.partition.mode=nonstrict;
+set hive.strict.checks.cartesian.product=false;
+
+/*
+--0.取出城市数据
+with
+city_info as (
+  select
+    v1.id as city_code
+    ,v1.name as city_name
+    ,v1.country_code
+    ,v2.name as country_name
+  from
+    (select * from otrade_dw_ods.ods_binlog_base_otrade_city_hi where concat(dt, " ", hour) = date_format('{v_date}', 'yyyy-MM-dd HH') and `__deleted` = 'false') as v1
+  left join
+    (select * from otrade_dw_ods.ods_binlog_base_otrade_country_hi where concat(dt, " ", hour) = date_format('{v_date}', 'yyyy-MM-dd HH') and `__deleted` = 'false') as v2
+  on
+    v1.country_code = v2.id
+),
+*/
 
 --1.从ods中取出最近一个分区的全量数据,bd数据是每小时全量
 with
@@ -135,7 +154,7 @@ all_bd_info as (
     ,created_at
     ,updated_at
   from
-    otrade_dw.dwd_otrade_b2b_bd_admin_users_hf
+    otrade_dw.dwd_otrade_bd_admin_users_hf
   where 
     concat(dt,' ',hour) >= default.minLocalTimeRange("{config}", '{v_date}', 0)
     and concat(dt,' ',hour) <= default.maxLocalTimeRange("{config}", '{v_date}', 0) 
@@ -146,6 +165,7 @@ all_bd_info as (
 hcm_info as (
   select
     id
+    ,staff_id
     ,name
     ,job_id
     ,job_name
@@ -176,6 +196,7 @@ hcm_info as (
 cm_info as (
   select
     v1.id
+    ,v1.staff_id
     ,v1.name
     ,v1.job_id
     ,v1.job_name
@@ -208,6 +229,7 @@ cm_info as (
 bdm_info as (
   select
     v1.id
+    ,v1.staff_id
     ,v1.name
     ,v1.job_id
     ,v1.job_name
@@ -240,6 +262,7 @@ bdm_info as (
 bd_info as (
   select
     v1.id
+    ,v1.staff_id
     ,v1.name
     ,v1.job_id
     ,v1.job_name
@@ -272,6 +295,7 @@ bd_info as (
 else_info as (
   select
     v1.id
+    ,v1.staff_id
     ,v1.name
     ,v1.job_id
     ,v1.job_name
@@ -316,10 +340,11 @@ unoin_result as (
 insert overwrite table otrade_dw.dim_otrade_b2b_bd_info_hf partition(country_code,dt,hour)
 select 
   id
+  ,staff_id
   ,name
   ,job_id
   ,job_name
-
+  
   ,hcm_id
   ,hcm_name
   ,cm_id
@@ -328,7 +353,7 @@ select
   ,bdm_name
   ,bd_id
   ,bd_name
-
+  
   ,mobile
   ,username
   ,leader_id
