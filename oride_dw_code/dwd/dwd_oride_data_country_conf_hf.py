@@ -61,6 +61,13 @@ ods_binlog_base_data_country_conf_h_his_prev_day_task = OssSensor(
     dag=dag
 )
 
+sleep_time = BashOperator(
+    task_id='sleep_time',
+    depends_on_past=False,
+    bash_command='sleep 10',
+    dag=dag
+)
+
 
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
 
@@ -186,4 +193,4 @@ dwd_oride_data_country_conf_hf_task = PythonOperator(
     dag=dag
 )
 
-ods_binlog_base_data_country_conf_h_his_prev_day_task >> dwd_oride_data_country_conf_hf_task
+ods_binlog_base_data_country_conf_h_his_prev_day_task >> sleep_time >> dwd_oride_data_country_conf_hf_task
