@@ -368,7 +368,6 @@ def run_sqoop_check_table(mysql_db_name, mysql_table_name, conn_id, hive_table_n
             rows.append("`%s` %s comment '%s'" % (col_name, data_type, result[4]))
         mysql_conn.close()
 
-
         # hive create table
         hive_hook = HiveCliHook()
         sql = ODS_SQOOP_CREATE_TABLE_SQL.format(

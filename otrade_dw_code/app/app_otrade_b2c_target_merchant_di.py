@@ -29,7 +29,7 @@ from plugins.CountriesAppFrame import CountriesAppFrame
 
 args = {
     'owner': 'yuanfeng',
-    'start_date': datetime(2020, 3, 24),
+    'start_date': datetime(2020, 4, 2),
     'depends_on_past': False,
     'retries': 3,
     'retry_delay': timedelta(minutes=2),
@@ -38,36 +38,23 @@ args = {
     'email_on_retry': False,
 }
 
-dag = airflow.DAG('app_otrade_b2b_order_target_supplier_bd_di',
+dag = airflow.DAG('app_otrade_b2c_target_merchant_di',
                   schedule_interval="00 03 * * *",
                   default_args=args,
                   )
 
 ##----------------------------------------- 变量 ---------------------------------------##
 db_name = "otrade_dw"
-table_name = "app_otrade_b2b_order_target_supplier_bd_di"
+table_name = "app_otrade_b2c_target_merchant_di"
 hdfs_path = "oss://opay-datalake/otrade/otrade_dw/" + table_name
 config = eval(Variable.get("otrade_time_zone_config"))
 time_zone = config['NG']['time_zone']
 
 ##----------------------------------------- 依赖 ---------------------------------------##
-
-dim_otrade_b2b_supplier_info_hf_task = OssSensor(
-    task_id='dim_otrade_b2b_supplier_info_hf_task',
-    bucket_key='{hdfs_path_str}/country_code=NG/dt={pt}/hour={hour}/_SUCCESS'.format(
-        hdfs_path_str="otrade/otrade_dw/dim_otrade_b2b_supplier_info_hf",
-        pt='{{ds}}',
-        hour='23'
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
-
-dwd_otrade_b2b_order_collect_di_task = OssSensor(
-    task_id='dwd_otrade_b2b_order_collect_di_task',
+dwd_otrade_b2c_order_collect_di_task = OssSensor(
+    task_id='dwd_otrade_b2c_order_collect_di_task',
     bucket_key='{hdfs_path_str}/country_code=NG/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="otrade/otrade_dw/dwd_otrade_b2b_order_collect_di",
+        hdfs_path_str="otrade/otrade_dw/dwd_otrade_b2c_order_collect_di",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -75,6 +62,29 @@ dwd_otrade_b2b_order_collect_di_task = OssSensor(
     dag=dag
 )
 
+dwd_otrade_b2c_order_goods_collect_di_task = OssSensor(
+    task_id='dwd_otrade_b2c_order_goods_collect_di_task',
+    bucket_key='{hdfs_path_str}/country_code=NG/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="otrade/otrade_dw/dwd_otrade_b2c_order_goods_collect_di",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
+###oss://opay-datalake/otrade/otrade_dw/dim_otrade_b2c_mall_nideshop_product_hf
+dim_otrade_b2c_mall_nideshop_product_hf_check_task = OssSensor(
+    task_id='dim_otrade_b2c_mall_nideshop_product_hf_check_task',
+    bucket_key='{hdfs_path_str}/country_code=NG/dt={pt}/hour={hour}/_SUCCESS'.format(
+        hdfs_path_str="otrade/otrade_dw/dim_otrade_b2c_mall_nideshop_product_hf",
+        pt='{{ds}}',
+        hour='23'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
 
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
 
@@ -99,184 +109,152 @@ task_timeout_monitor = PythonOperator(
 
 ##----------------------------------------- 脚本 ---------------------------------------##
 
-def app_otrade_b2b_order_target_supplier_bd_di_sql_task(ds):
+def app_otrade_b2c_target_merchant_di_sql_task(ds):
     HQL = '''
 
+set mapred.max.split.size=1000000;
 set hive.exec.parallel=true;
 set hive.exec.dynamic.partition.mode=nonstrict;
 set hive.strict.checks.cartesian.product=false;
 
---0.查看店铺信息
-with 
-shop_info as (
-  select
-    hcm_id
-    ,hcm_name
-    ,cm_id
-    ,cm_name
-    ,bdm_id
-    ,bdm_name
-    ,bd_id
-    ,bd_name
-  
-    ,country
-    ,country_name
-    ,city
-    ,city_name
-
-    ,country_code
-
-    ,count(if(substr(create_time,0,10) = '{pt}',1,null)) as new_shop_cnt
-    ,count(1) as total_shop_cnt
-  from
-    otrade_dw.dim_otrade_b2b_supplier_info_hf
-  where
-    dt = '{pt}'
-    and hour = '23'
-  group by
-    hcm_id
-    ,hcm_name
-    ,cm_id
-    ,cm_name
-    ,bdm_id
-    ,bdm_name
-    ,bd_id
-    ,bd_name
-  
-    ,country
-    ,country_name
-    ,city
-    ,city_name
-
-    ,country_code
-
-),
-
---1.销售情况分析
+--1.订单信息
+with
 order_info as (
   select
-    hcm_id
-    ,hcm_name
-    ,cm_id
-    ,cm_name
-    ,bdm_id
-    ,bdm_name
-    ,bd_id
-    ,bd_name
-  
+    merchant_id
+    ,merchant_name
     ,country
     ,country_name
     ,city
     ,city_name
   
     --下单分析
-    ,sum(if(order_type='pay',payable_amount,0)) as order_amt
-    ,count(if(order_type='pay',1,null)) as order_cnt
-    ,count(distinct(if(order_type='pay',payer,null))) as order_people
-    ,sum(if(order_type='pay' and retailer_first_order=1,payable_amount,0)) as first_order_amt
-    ,count(if(order_type='pay' and retailer_first_order=1,1,null)) as first_order_cnt
-    ,count(distinct(if(order_type='pay' and retailer_first_order=1,payer,null))) as first_order_people
+    ,sum(nvl(all_price,0)) as order_amt
+    ,count(1) as order_cnt
+    ,count(distinct(opayid)) as order_people
+    ,sum(if(first_order=1,nvl(all_price,0),0)) as first_order_amt
+    ,count(if(first_order=1,1,null)) as first_order_cnt
+    ,count(distinct(if(first_order=1,opayid,null))) as first_order_people
   
     --销售分析
-    ,sum(if(order_type='pay',amount,0)) as pay_amt
-    ,count(if(order_type='pay' and pay_status = 3,1,null)) as pay_suc_cnt
-    ,count(if(order_type='pay' and pay_time is not null,1,null)) as pay_cnt
-  
-    --退款分析
-    ,count(if(order_type='pay' and order_status=0,1,null)) as refund_order_cnt
-    ,count(if(order_type='refund' and order_status=2,1,null)) as refund_suc_cnt
-    ,sum(if(order_type='refund' and order_status=2,payable_amount,0)) as refund_order_amt
-  
-    --收货分析
-    ,count(if(order_type='pay' and consign_time='{pt}',1,null)) as delivery_order_cnt
-    ,count(if(order_type='pay' and confirm_time='{pt}',1,null)) as receive_order_cnt
-    ,sum(if(order_type='pay' and confirm_time='{pt}',payable_amount,0)) as receive_order_amt
-  
-    --店铺分析
-    ,0 as new_shop_cnt
-    ,count(distinct(if(order_type='pay',shop_id,null))) as order_shop_cnt
-    ,0 as first_order_shop_cnt
-    ,0 as total_shop_cnt
+    ,sum(if(length(pay_time)>9,nvl(actual_price,0),0)) as pay_amt
+    ,count(if(length(pay_time)>9,1,null)) as pay_suc_cnt
   
     --用户分析
-    ,count(distinct(if(order_type='pay' and pay_time is not null,payer,null))) as pay_people
-    ,count(distinct(if(order_type='pay' and pay_status = 3,payer,null))) as pay_suc_people
-  
-    ,country_code
-    ,dt
+    ,count(distinct(if(first_order=1,opayid,null))) as new_user_cnt
+    ,count(distinct(if(length(pay_time)>9,opayid,null))) as pay_user_cnt
+    ,0 as buy30_again_user_cnt
+
+    ,'NG' as country_code
   from
-    otrade_dw.dwd_otrade_b2b_order_collect_di
+    otrade_dw.dwd_otrade_b2c_order_collect_di
   where
     dt = '{pt}'
   group by
-    hcm_id
-    ,hcm_name
-    ,cm_id
-    ,cm_name
-    ,bdm_id
-    ,bdm_name
-    ,bd_id
-    ,bd_name
+    merchant_id
+    ,merchant_name
     ,country
     ,country_name
     ,city
     ,city_name
+),
+
+--2.商铺订单信息
+order_goods_info as (
+  select
+    merchant_id
+  
+    --下单分析
+    ,sum(nvl(number,0)) as order_goods_amt
+
+    --销售分析
+    ,sum(if(length(pay_time)>9,nvl(number,0),0)) as pay_goods_cnt
+  
+    --商品分析
+    ,count(distinct(product_id)) as sale_sku_cnt
+
+    ,'NG' as country_code
+  from
+    otrade_dw.dwd_otrade_b2c_order_goods_collect_di
+  where
+    dt = '{pt}'
+  group by
+    merchant_id
+),
+
+--3.商品分析
+product_info as (
+  select
+    product_merchant_id as merchant_id
     
-    ,country_code
-    ,dt
+    --商品分析
+    ,count(distinct(goods_id)) as spu_on_sale
+    ,count(distinct(product_id)) as sku_on_sale
+    ,count(distinct(if(substr(goods_add_time,0,10)='{pt}',product_id,null))) as new_sku_cnt
+
+    --秒杀分析
+    ,count(distinct(if(goods_is_secKill=2,goods_id,null))) as seckill_spu_cnt
+  from
+    otrade_dw.dim_otrade_b2c_mall_nideshop_product_hf
+  where
+    dt = '{pt}'
+    and hour = '23'
+  group by
+    product_merchant_id
 )
 
---2.插入数据
-insert overwrite table otrade_dw.app_otrade_b2b_order_target_supplier_bd_di partition(country_code,dt)
+--4.插入数据
+insert overwrite table otrade_dw.app_otrade_b2c_target_merchant_di partition(country_code,dt)
 select
-  nvl(v1.hcm_id,v2.hcm_id) as hcm_id
-  ,nvl(v1.hcm_name,v2.hcm_name) as hcm_name
-  ,nvl(v1.cm_id,v2.cm_id) as cm_id
-  ,nvl(v1.cm_name,v2.cm_name) as cm_name
-  ,nvl(v1.bdm_id,v2.bdm_id) as bdm_id
-  ,nvl(v1.bdm_name,v2.bdm_name) as bdm_name
-  ,nvl(v1.bd_id,v2.bd_id) as bd_id
-  ,nvl(v1.bd_name,v2.bd_name) as bd_name
-  ,nvl(v1.country,v2.country) as country
-  ,nvl(v1.country_name,v2.country_name) as country_name
-  ,nvl(v1.city,v2.city) as city
-  ,nvl(v1.city_name,v2.city_name) as city_name
+  v1.merchant_id
+  ,v1.merchant_name
+  ,v1.country
+  ,v1.country_name
+  ,v1.city
+  ,v1.city_name
 
-  ,nvl(v1.order_amt,0) as order_amt
-  ,nvl(v1.order_cnt,0) as order_cnt
-  ,nvl(v1.order_people,0) as order_people
-  ,nvl(v1.first_order_amt,0) as first_order_amt
-  ,nvl(v1.first_order_cnt,0) as first_order_cnt
-  ,nvl(v1.first_order_people,0) as first_order_people
-  ,nvl(v1.pay_amt,0) as pay_amt
-  ,nvl(v1.pay_suc_cnt,0) as pay_suc_cnt
-  ,nvl(v1.pay_cnt,0) as pay_cnt
-  ,nvl(v1.refund_order_cnt,0) as refund_order_cnt
-  ,nvl(v1.refund_suc_cnt,0) as refund_suc_cnt
-  ,nvl(v1.refund_order_amt,0) as refund_order_amt
-  ,nvl(v1.delivery_order_cnt,0) as delivery_order_cnt
-  ,nvl(v1.receive_order_cnt,0) as receive_order_cnt
-  ,nvl(v1.receive_order_amt,0) as receive_order_amt
-  ,nvl(v2.new_shop_cnt,0) as new_shop_cnt
-  ,nvl(v1.order_shop_cnt,0) as order_shop_cnt
-  ,nvl(v1.first_order_shop_cnt,0) as first_order_shop_cnt
-  ,nvl(v2.total_shop_cnt,0) as total_shop_cnt
-  ,nvl(v1.pay_people,0) as pay_people
-  ,nvl(v1.pay_suc_people,0) as pay_suc_people
-  
+  --下单分析
+  ,v1.order_amt
+  ,v2.order_goods_amt
+  ,v1.order_cnt
+  ,v1.order_people
+  ,v1.first_order_amt
+  ,v1.first_order_cnt
+  ,v1.first_order_people
+
+  --销售分析
+  ,v1.pay_amt
+  ,v1.pay_suc_cnt
+  ,v2.pay_goods_cnt
+
+  --商品分析
+  ,v3.spu_on_sale
+  ,v3.sku_on_sale
+  ,v3.new_sku_cnt
+  ,v2.sale_sku_cnt
+
+  --用户分析
+  ,v1.new_user_cnt
+  ,v1.pay_user_cnt
+  ,v1.buy30_again_user_cnt
+
+  --秒杀分析
+  ,v3.seckill_spu_cnt
+
   ,'NG' as country_code
   ,'{pt}' as dt
 from
   order_info as v1
-full join
-  shop_info as v2
+left join
+  order_goods_info as v2
 on
-  v1.hcm_id = v2.hcm_id
-  and v1.cm_id = v2.cm_id
-  and v1.bdm_id = v2.bdm_id
-  and v1.bd_id = v2.bd_id
-  and v1.city = v2.city
+  v1.merchant_id = v2.merchant_id
+left join
+  product_info as v3
+on
+  v1.merchant_id = v3.merchant_id
 ;
+
 
 
 '''.format(
@@ -297,7 +275,7 @@ def execution_data_task_id(ds, dag, **kwargs):
     hive_hook = HiveCliHook()
 
     # 读取sql
-    # _sql = app_otrade_b2b_order_target_supplier_bd_di_sql_task(ds)
+    # _sql = app_otrade_b2c_target_merchant_di_sql_task(ds)
 
     # logging.info('Executing: %s', _sql)
 
@@ -364,7 +342,7 @@ def execution_data_task_id(ds, dag, **kwargs):
     cf.delete_partition()
 
     # 读取sql
-    _sql = "\n" + cf.alter_partition() + "\n" + app_otrade_b2b_order_target_supplier_bd_di_sql_task(ds)
+    _sql = "\n" + cf.alter_partition() + "\n" + app_otrade_b2c_target_merchant_di_sql_task(ds)
 
     logging.info('Executing: %s', _sql)
 
@@ -375,8 +353,8 @@ def execution_data_task_id(ds, dag, **kwargs):
     cf.touchz_success()
 
 
-app_otrade_b2b_order_target_supplier_bd_di_task = PythonOperator(
-    task_id='app_otrade_b2b_order_target_supplier_bd_di_task',
+app_otrade_b2c_target_merchant_di_task = PythonOperator(
+    task_id='app_otrade_b2c_target_merchant_di_task',
     python_callable=execution_data_task_id,
     provide_context=True,
     op_kwargs={
@@ -388,9 +366,9 @@ app_otrade_b2b_order_target_supplier_bd_di_task = PythonOperator(
     dag=dag
 )
 
-dim_otrade_b2b_supplier_info_hf_task >> app_otrade_b2b_order_target_supplier_bd_di_task
-dwd_otrade_b2b_order_collect_di_task >> app_otrade_b2b_order_target_supplier_bd_di_task
-
+dwd_otrade_b2c_order_collect_di_task >> app_otrade_b2c_target_merchant_di_task
+dwd_otrade_b2c_order_goods_collect_di_task >> app_otrade_b2c_target_merchant_di_task
+dim_otrade_b2c_mall_nideshop_product_hf_check_task >> app_otrade_b2c_target_merchant_di_task
 
 
 
