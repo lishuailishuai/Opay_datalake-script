@@ -106,13 +106,17 @@ def ods_sqoop_base_user_reseller_df_sql_task(ds):
                 user_id,
                 merchant_id,
                 from_unixtime(cast(cast(create_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss') as create_time,
-                from_unixtime(cast(cast(update_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss') as update_time
+                if(`__deleted`='false', 
+                    from_unixtime(cast(cast(update_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),
+                    date_format(current_timestamp(), 'yyyy-MM-dd HH:mm:ss')
+                ) as update_time,
+                `__deleted` as physical_del
             from (
                 select 
                     *,
                     row_number() over(partition by id order by `__ts_ms` desc,`__file` desc,cast(`__pos` as int) desc) rn
                 FROM opay_dw_ods.ods_binlog_base_user_reseller_hi
-                where concat(dt,' ',hour) between '{pt_y} 23' and '{pt} 22' and `__deleted` = 'false'
+                where concat(dt,' ',hour) between '{pt_y} 23' and '{pt} 22'
             ) m 
             where rn=1
         )
@@ -124,6 +128,7 @@ def ods_sqoop_base_user_reseller_df_sql_task(ds):
         merchant_id,
         create_time,
         update_time,
+        physical_del,
         '{pt}'
     from (
         select 
@@ -132,14 +137,16 @@ def ods_sqoop_base_user_reseller_df_sql_task(ds):
             merchant_id,
             create_time,
             update_time,
-            row_number()over(partition by id order by update_time desc) rn 
+            physical_del,
+            row_number()over(partition by user_id order by update_time desc) rn 
         from (
             select 
                 id,
                 user_id,
                 merchant_id,
                 create_time,
-                update_time
+                update_time,
+                physical_del
             from {db}.{table} 
             where dt='{pt_y}' 
             union all
