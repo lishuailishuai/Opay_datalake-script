@@ -252,7 +252,7 @@ select
   ,v1.product_retail_price
   ,v1.product_market_price
   ,v1.product_group_price
-  ,v1.product_merchant_id
+  ,v2.goods_merchant_id as product_merchant_id
 
   ,v2.goods_is_on_sale
   ,v2.goods_is_delete
