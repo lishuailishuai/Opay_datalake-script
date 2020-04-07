@@ -141,7 +141,7 @@ def dwd_opay_user_upgrade_agent_df_sql_task(ds):
         select
             user_id, merchant_id as aggregator_id, 
             default.localTime("{config}", 'NG',update_time, 0) as update_time
-        from opay_dw_ods.ods_sqoop_base_user_reseller_df where dt = '{pt}' and physical_del = 'false'
+        from opay_dw_ods.ods_sqoop_base_user_reseller_df where dt = '{pt}' and nvl(physical_del, 'false') != 'true'
     ) t2 on t0.user_id = t2.user_id
 
     '''.format(
