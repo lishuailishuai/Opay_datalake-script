@@ -80,6 +80,7 @@ table_list = [
     ("otrade_product", "product", "otrade_product", "base", 3, "otrade_db", "false"),
     ("otrade_product", "category", "otrade_product", "base", 3, "otrade_db", "false"),
     ("otrade_product", "product_shopping_cart", "otrade_product", "base", 3, "otrade_db", "false"),
+    ("otrade_product", "product_sku_property", "otrade_product", "base", 3, "otrade_db", "false"),
 
     ("otrade_order", "otrade_order", "otrade_order", "base", 3, "otrade_db", "false"),
     ("otrade_order", "otrade_order_item", "otrade_order", "base", 3, "otrade_db", "false"),
