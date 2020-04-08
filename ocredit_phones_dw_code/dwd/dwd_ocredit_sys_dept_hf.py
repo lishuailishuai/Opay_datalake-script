@@ -182,7 +182,7 @@ def execution_data_task_id(ds, dag, **kwargs):
             "is_country_partition": "true",
             "is_result_force_exist": "false",
             "execute_time": v_date,
-            "is_hour_task": "false",
+            "is_hour_task": "true",
             "frame_type": "local"
         }
     ]
