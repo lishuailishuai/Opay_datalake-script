@@ -110,8 +110,8 @@ def ods_sqoop_coupon_opay_voucher_grab_hist_df_sql_task(ds):
                 voucher_id,
                 hist_start_ts,
                 hist_end_ts,
-                from_unixtime(cast(cast(create_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss') as create_time,
-                from_unixtime(cast(cast(update_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss') as update_time
+                concat(substr(create_time, 1, 10), ' ', substr(create_time, 12, 8)) as create_time,
+                concat(substr(update_time, 1, 10), ' ', substr(update_time, 12, 8)) as update_time
             from (
                 select 
                     *,
