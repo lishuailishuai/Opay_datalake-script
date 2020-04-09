@@ -376,30 +376,30 @@ metrcis_list = [
 
     ## OrideSalary
     # 26
-    (
-        'Trade_OrideSalary',
-        '''SELECT "trade_cnt" AS "trade_cnt","trade_user_cnt" AS "trade_user_cnt" ,"trade_amount" AS "trade_amount" FROM "OPAY_TRANSACTION_EVENT_ORIDESALARY_CQ_RESULT" WHERE time > {time}  ''',
-        'trade_alert_value',
-        7,
-        'trade_alert_level_1_address',
-        'trade_alert_level_2_address',
-        False,
-        3,
-        'influx_address_1'
-    ),
-
-    # 27
-    (
-        'Trade_OrideSalary_Success',
-        '''SELECT "trade_success_cnt" AS "trade_success_cnt" FROM "OPAY_TRANSACTION_EVENT_ORIDESALARY_SUCCESS_CQ_RESULT" WHERE  time > {time} ''',
-        'trade_alert_value',
-        7,
-        'trade_alert_level_1_address',
-        'trade_alert_level_2_address',
-        False,
-        3,
-        'influx_address_1'
-    ),
+    # (
+    #     'Trade_OrideSalary',
+    #     '''SELECT "trade_cnt" AS "trade_cnt","trade_user_cnt" AS "trade_user_cnt" ,"trade_amount" AS "trade_amount" FROM "OPAY_TRANSACTION_EVENT_ORIDESALARY_CQ_RESULT" WHERE time > {time}  ''',
+    #     'trade_alert_value',
+    #     7,
+    #     'trade_alert_level_1_address',
+    #     'trade_alert_level_2_address',
+    #     False,
+    #     3,
+    #     'influx_address_1'
+    # ),
+    #
+    # # 27
+    # (
+    #     'Trade_OrideSalary_Success',
+    #     '''SELECT "trade_success_cnt" AS "trade_success_cnt" FROM "OPAY_TRANSACTION_EVENT_ORIDESALARY_SUCCESS_CQ_RESULT" WHERE  time > {time} ''',
+    #     'trade_alert_value',
+    #     7,
+    #     'trade_alert_level_1_address',
+    #     'trade_alert_level_2_address',
+    #     False,
+    #     3,
+    #     'influx_address_1'
+    # ),
 
     ## Subscribe
     # 28
@@ -457,57 +457,57 @@ metrcis_list = [
 
     ## Repayment
     # 32
-    (
-        'Trade_Repayment',
-        '''SELECT "trade_cnt" AS "trade_cnt","trade_user_cnt" AS "trade_user_cnt" ,"trade_amount" AS "trade_amount" FROM "OPAY_TRANSACTION_EVENT_REPAYMENT_CQ_RESULT" WHERE  time > {time} ''',
-        'trade_alert_value',
-        7,
-        'trade_alert_level_1_address',
-        'trade_alert_level_2_address',
-        False,
-        3,
-        'influx_address_2'
-    ),
-
-    # 33
-    (
-        'Trade_Repayment_Success',
-        '''SELECT "trade_success_cnt" AS "trade_success_cnt" FROM "OPAY_TRANSACTION_EVENT_REPAYMENT_SUCCESS_CQ_RESULT" WHERE time > {time} ''',
-        'trade_alert_value',
-        7,
-        'trade_alert_level_1_address',
-        'trade_alert_level_2_address',
-        False,
-        3,
-        'influx_address_2'
-    ),
+    # (
+    #     'Trade_Repayment',
+    #     '''SELECT "trade_cnt" AS "trade_cnt","trade_user_cnt" AS "trade_user_cnt" ,"trade_amount" AS "trade_amount" FROM "OPAY_TRANSACTION_EVENT_REPAYMENT_CQ_RESULT" WHERE  time > {time} ''',
+    #     'trade_alert_value',
+    #     7,
+    #     'trade_alert_level_1_address',
+    #     'trade_alert_level_2_address',
+    #     False,
+    #     3,
+    #     'influx_address_2'
+    # ),
+    #
+    # # 33
+    # (
+    #     'Trade_Repayment_Success',
+    #     '''SELECT "trade_success_cnt" AS "trade_success_cnt" FROM "OPAY_TRANSACTION_EVENT_REPAYMENT_SUCCESS_CQ_RESULT" WHERE time > {time} ''',
+    #     'trade_alert_value',
+    #     7,
+    #     'trade_alert_level_1_address',
+    #     'trade_alert_level_2_address',
+    #     False,
+    #     3,
+    #     'influx_address_2'
+    # ),
 
     ## Loan
     # 34
-    (
-        'Trade_Loan',
-        '''SELECT "trade_cnt" AS "trade_cnt","trade_user_cnt" AS "trade_user_cnt" ,"trade_amount" AS "trade_amount" FROM "OPAY_TRANSACTION_EVENT_LOAN_CQ_RESULT" WHERE time > {time} ''',
-        'trade_alert_value',
-        7,
-        'trade_alert_level_1_address',
-        'trade_alert_level_2_address',
-        False,
-        3,
-        'influx_address_1'
-    ),
-
-    # 35
-    (
-        'Trade_Loan_Success',
-        '''SELECT "trade_success_cnt" AS "trade_success_cnt" FROM "OPAY_TRANSACTION_EVENT_LOAN_SUCCESS_CQ_RESULT" WHERE  time > {time} ''',
-        'trade_alert_value',
-        7,
-        'trade_alert_level_1_address',
-        'trade_alert_level_2_address',
-        False,
-        3,
-        'influx_address_1'
-    ),
+    # (
+    #     'Trade_Loan',
+    #     '''SELECT "trade_cnt" AS "trade_cnt","trade_user_cnt" AS "trade_user_cnt" ,"trade_amount" AS "trade_amount" FROM "OPAY_TRANSACTION_EVENT_LOAN_CQ_RESULT" WHERE time > {time} ''',
+    #     'trade_alert_value',
+    #     7,
+    #     'trade_alert_level_1_address',
+    #     'trade_alert_level_2_address',
+    #     False,
+    #     3,
+    #     'influx_address_1'
+    # ),
+    #
+    # # 35
+    # (
+    #     'Trade_Loan_Success',
+    #     '''SELECT "trade_success_cnt" AS "trade_success_cnt" FROM "OPAY_TRANSACTION_EVENT_LOAN_SUCCESS_CQ_RESULT" WHERE  time > {time} ''',
+    #     'trade_alert_value',
+    #     7,
+    #     'trade_alert_level_1_address',
+    #     'trade_alert_level_2_address',
+    #     False,
+    #     3,
+    #     'influx_address_1'
+    # ),
 
     ## TakeOut
     # 36
@@ -538,84 +538,84 @@ metrcis_list = [
 
     ## FoodCashback
     # 38
-    (
-        'Trade_FoodCashback',
-        '''SELECT "trade_cnt" AS "trade_cnt","trade_user_cnt" AS "trade_user_cnt" ,"trade_amount" AS "trade_amount" FROM "OPAY_TRANSACTION_EVENT_FOODCASHBACK_CQ_RESULT" WHERE  time > {time}  ''',
-        'trade_alert_value',
-        7,
-        'trade_alert_level_1_address',
-        'trade_alert_level_2_address',
-        False,
-        3,
-        'influx_address_1'
-    ),
-
-    # 39
-    (
-        'Trade_FoodCashback_Success',
-        '''SELECT "trade_success_cnt" AS "trade_success_cnt" FROM "OPAY_TRANSACTION_EVENT_FOODCASHBACK_SUCCESS_CQ_RESULT" WHERE  time > {time}  ''',
-        'trade_alert_value',
-        7,
-        'trade_alert_level_1_address',
-        'trade_alert_level_2_address',
-        False,
-        3,
-        'influx_address_1'
-    ),
+    # (
+    #     'Trade_FoodCashback',
+    #     '''SELECT "trade_cnt" AS "trade_cnt","trade_user_cnt" AS "trade_user_cnt" ,"trade_amount" AS "trade_amount" FROM "OPAY_TRANSACTION_EVENT_FOODCASHBACK_CQ_RESULT" WHERE  time > {time}  ''',
+    #     'trade_alert_value',
+    #     7,
+    #     'trade_alert_level_1_address',
+    #     'trade_alert_level_2_address',
+    #     False,
+    #     3,
+    #     'influx_address_1'
+    # ),
+    #
+    # # 39
+    # (
+    #     'Trade_FoodCashback_Success',
+    #     '''SELECT "trade_success_cnt" AS "trade_success_cnt" FROM "OPAY_TRANSACTION_EVENT_FOODCASHBACK_SUCCESS_CQ_RESULT" WHERE  time > {time}  ''',
+    #     'trade_alert_value',
+    #     7,
+    #     'trade_alert_level_1_address',
+    #     'trade_alert_level_2_address',
+    #     False,
+    #     3,
+    #     'influx_address_1'
+    # ),
 
     ## QRCode
     # 40
-    (
-        'Trade_QRCode',
-        '''SELECT "trade_cnt" AS "trade_cnt","trade_user_cnt" AS "trade_user_cnt" ,"trade_amount" AS "trade_amount" FROM "OPAY_TRANSACTION_EVENT_QRCODE_CQ_RESULT" WHERE time > {time} ''',
-        'trade_alert_value',
-        7,
-        'trade_alert_level_1_address',
-        'trade_alert_level_2_address',
-        False,
-        3,
-        'influx_address_2'
-    ),
-
-    # 41
-    (
-        'Trade_QRCode_Success',
-        '''SELECT "trade_success_cnt" AS "trade_success_cnt" FROM "OPAY_TRANSACTION_EVENT_QRCODE_SUCCESS_CQ_RESULT" WHERE time > {time} ''',
-        'trade_alert_value',
-        7,
-        'trade_alert_level_1_address',
-        'trade_alert_level_2_address',
-        False,
-        3,
-        'influx_address_2'
-    ),
+    # (
+    #     'Trade_QRCode',
+    #     '''SELECT "trade_cnt" AS "trade_cnt","trade_user_cnt" AS "trade_user_cnt" ,"trade_amount" AS "trade_amount" FROM "OPAY_TRANSACTION_EVENT_QRCODE_CQ_RESULT" WHERE time > {time} ''',
+    #     'trade_alert_value',
+    #     7,
+    #     'trade_alert_level_1_address',
+    #     'trade_alert_level_2_address',
+    #     False,
+    #     3,
+    #     'influx_address_2'
+    # ),
+    #
+    # # 41
+    # (
+    #     'Trade_QRCode_Success',
+    #     '''SELECT "trade_success_cnt" AS "trade_success_cnt" FROM "OPAY_TRANSACTION_EVENT_QRCODE_SUCCESS_CQ_RESULT" WHERE time > {time} ''',
+    #     'trade_alert_value',
+    #     7,
+    #     'trade_alert_level_1_address',
+    #     'trade_alert_level_2_address',
+    #     False,
+    #     3,
+    #     'influx_address_2'
+    # ),
 
     ## QRCashback
     # 42
-    (
-        'Trade_QRCashback',
-        '''SELECT "trade_cnt" AS "trade_cnt","trade_user_cnt" AS "trade_user_cnt" ,"trade_amount" AS "trade_amount" FROM "OPAY_TRANSACTION_EVENT_QRCASHBACK_CQ_RESULT" WHERE time > {time} ''',
-        'trade_alert_value',
-        7,
-        'trade_alert_level_1_address',
-        'trade_alert_level_2_address',
-        False,
-        3,
-        'influx_address_1'
-    ),
-
-    # 43
-    (
-        'Trade_QRCashback_Success',
-        '''SELECT "trade_success_cnt" AS "trade_success_cnt" FROM "OPAY_TRANSACTION_EVENT_QRCASHBACK_SUCCESS_CQ_RESULT" WHERE  time > {time} ''',
-        'trade_alert_value',
-        7,
-        'trade_alert_level_1_address',
-        'trade_alert_level_2_address',
-        False,
-        3,
-        'influx_address_1'
-    ),
+    # (
+    #     'Trade_QRCashback',
+    #     '''SELECT "trade_cnt" AS "trade_cnt","trade_user_cnt" AS "trade_user_cnt" ,"trade_amount" AS "trade_amount" FROM "OPAY_TRANSACTION_EVENT_QRCASHBACK_CQ_RESULT" WHERE time > {time} ''',
+    #     'trade_alert_value',
+    #     7,
+    #     'trade_alert_level_1_address',
+    #     'trade_alert_level_2_address',
+    #     False,
+    #     3,
+    #     'influx_address_1'
+    # ),
+    #
+    # # 43
+    # (
+    #     'Trade_QRCashback_Success',
+    #     '''SELECT "trade_success_cnt" AS "trade_success_cnt" FROM "OPAY_TRANSACTION_EVENT_QRCASHBACK_SUCCESS_CQ_RESULT" WHERE  time > {time} ''',
+    #     'trade_alert_value',
+    #     7,
+    #     'trade_alert_level_1_address',
+    #     'trade_alert_level_2_address',
+    #     False,
+    #     3,
+    #     'influx_address_1'
+    # ),
 
     ## AATransfer
     # 44
@@ -646,30 +646,30 @@ metrcis_list = [
 
     ## MAcquiring
     # 46
-    (
-        'Trade_MAcquiring',
-        '''SELECT "trade_cnt" AS "trade_cnt","trade_user_cnt" AS "trade_user_cnt" ,"trade_amount" AS "trade_amount" FROM "OPAY_TRANSACTION_EVENT_MACQUIRING_CQ_RESULT" WHERE  time > {time}  ''',
-        'trade_alert_value',
-        7,
-        'trade_alert_level_1_address',
-        'trade_alert_level_2_address',
-        False,
-        3,
-        'influx_address_2'
-    ),
-
-    # 47
-    (
-        'Trade_MAcquiring_Success',
-        '''SELECT "trade_success_cnt" AS "trade_success_cnt" FROM "OPAY_TRANSACTION_EVENT_MACQUIRING_SUCCESS_CQ_RESULT" WHERE  time > {time} ''',
-        'trade_alert_value',
-        7,
-        'trade_alert_level_1_address',
-        'trade_alert_level_2_address',
-        False,
-        3,
-        'influx_address_1'
-    ),
+    # (
+    #     'Trade_MAcquiring',
+    #     '''SELECT "trade_cnt" AS "trade_cnt","trade_user_cnt" AS "trade_user_cnt" ,"trade_amount" AS "trade_amount" FROM "OPAY_TRANSACTION_EVENT_MACQUIRING_CQ_RESULT" WHERE  time > {time}  ''',
+    #     'trade_alert_value',
+    #     7,
+    #     'trade_alert_level_1_address',
+    #     'trade_alert_level_2_address',
+    #     False,
+    #     3,
+    #     'influx_address_2'
+    # ),
+    #
+    # # 47
+    # (
+    #     'Trade_MAcquiring_Success',
+    #     '''SELECT "trade_success_cnt" AS "trade_success_cnt" FROM "OPAY_TRANSACTION_EVENT_MACQUIRING_SUCCESS_CQ_RESULT" WHERE  time > {time} ''',
+    #     'trade_alert_value',
+    #     7,
+    #     'trade_alert_level_1_address',
+    #     'trade_alert_level_2_address',
+    #     False,
+    #     3,
+    #     'influx_address_1'
+    # ),
 
     ## 渠道 INTERSWITCH
 
