@@ -106,57 +106,57 @@ metrcis_list = [
 
     ## Electricity
     # 6
-    (
-        'Trade_Electricity',
-        '''SELECT "trade_cnt" AS "trade_cnt","trade_user_cnt" AS "trade_user_cnt" ,"trade_amount" AS "trade_amount" FROM "OPAY_TRANSACTION_EVENT_ELECTRICITY_CQ_RESULT" WHERE  time > {time} ''',
-        'trade_alert_value',
-        7,
-        'trade_alert_level_1_address',
-        'trade_alert_level_2_address',
-        False,
-        3,
-        'influx_address_2'
-    ),
-
-    # 7
-    (
-        'Trade_Electricity_Success',
-        '''SELECT "trade_success_cnt" AS "trade_success_cnt" FROM "OPAY_TRANSACTION_EVENT_ELECTRICITY_SUCCESS_CQ_RESULT" WHERE  time > {time} ''',
-        'trade_alert_value',
-        7,
-        'trade_alert_level_1_address',
-        'trade_alert_level_2_address',
-        False,
-        3,
-        'influx_address_2'
-    ),
+    # (
+    #     'Trade_Electricity',
+    #     '''SELECT "trade_cnt" AS "trade_cnt","trade_user_cnt" AS "trade_user_cnt" ,"trade_amount" AS "trade_amount" FROM "OPAY_TRANSACTION_EVENT_ELECTRICITY_CQ_RESULT" WHERE  time > {time} ''',
+    #     'trade_alert_value',
+    #     7,
+    #     'trade_alert_level_1_address',
+    #     'trade_alert_level_2_address',
+    #     False,
+    #     3,
+    #     'influx_address_2'
+    # ),
+    #
+    # # 7
+    # (
+    #     'Trade_Electricity_Success',
+    #     '''SELECT "trade_success_cnt" AS "trade_success_cnt" FROM "OPAY_TRANSACTION_EVENT_ELECTRICITY_SUCCESS_CQ_RESULT" WHERE  time > {time} ''',
+    #     'trade_alert_value',
+    #     7,
+    #     'trade_alert_level_1_address',
+    #     'trade_alert_level_2_address',
+    #     False,
+    #     3,
+    #     'influx_address_2'
+    # ),
 
     ## TV
     # 8
-    (
-        'Trade_TV',
-        '''SELECT "trade_cnt" AS "trade_cnt","trade_user_cnt" AS "trade_user_cnt" ,"trade_amount" AS "trade_amount" FROM "OPAY_TRANSACTION_EVENT_TV_CQ_RESULT" WHERE  time > {time}  ''',
-        'trade_alert_value',
-        7,
-        'trade_alert_level_1_address',
-        'trade_alert_level_2_address',
-        False,
-        3,
-        'influx_address_2'
-    ),
-
-    # 9
-    (
-        'Trade_TV_Success',
-        '''SELECT "trade_success_cnt" AS "trade_success_cnt" FROM "OPAY_TRANSACTION_EVENT_TV_SUCCESS_CQ_RESULT" WHERE  time > {time} ''',
-        'trade_alert_value',
-        7,
-        'trade_alert_level_1_address',
-        'trade_alert_level_2_address',
-        False,
-        3,
-        'influx_address_2'
-    ),
+    # (
+    #     'Trade_TV',
+    #     '''SELECT "trade_cnt" AS "trade_cnt","trade_user_cnt" AS "trade_user_cnt" ,"trade_amount" AS "trade_amount" FROM "OPAY_TRANSACTION_EVENT_TV_CQ_RESULT" WHERE  time > {time}  ''',
+    #     'trade_alert_value',
+    #     7,
+    #     'trade_alert_level_1_address',
+    #     'trade_alert_level_2_address',
+    #     False,
+    #     3,
+    #     'influx_address_2'
+    # ),
+    #
+    # # 9
+    # (
+    #     'Trade_TV_Success',
+    #     '''SELECT "trade_success_cnt" AS "trade_success_cnt" FROM "OPAY_TRANSACTION_EVENT_TV_SUCCESS_CQ_RESULT" WHERE  time > {time} ''',
+    #     'trade_alert_value',
+    #     7,
+    #     'trade_alert_level_1_address',
+    #     'trade_alert_level_2_address',
+    #     False,
+    #     3,
+    #     'influx_address_2'
+    # ),
 
     ## Mobiledata
     # 10
@@ -322,57 +322,57 @@ metrcis_list = [
 
     ## Receivemoney
     # 22
-    (
-        'Trade_Receivemoney',
-        '''SELECT "trade_cnt" AS "trade_cnt","trade_user_cnt" AS "trade_user_cnt" ,"trade_amount" AS "trade_amount" FROM "OPAY_TRANSACTION_EVENT_RECEIVEMONEY_CQ_RESULT" WHERE  time > {time} ''',
-        'trade_alert_value',
-        7,
-        'trade_alert_level_1_address',
-        'trade_alert_level_2_address',
-        False,
-        3,
-        'influx_address_1'
-    ),
-
-    # 23
-    (
-        'Trade_Receivemoney_Success',
-        '''SELECT "trade_success_cnt" AS "trade_success_cnt" FROM "OPAY_TRANSACTION_EVENT_RECEIVEMONEY_SUCCESS_CQ_RESULT" WHERE time > {time} ''',
-        'trade_alert_value',
-        7,
-        'trade_alert_level_1_address',
-        'trade_alert_level_2_address',
-        False,
-        3,
-        'influx_address_1'
-    ),
+    # (
+    #     'Trade_Receivemoney',
+    #     '''SELECT "trade_cnt" AS "trade_cnt","trade_user_cnt" AS "trade_user_cnt" ,"trade_amount" AS "trade_amount" FROM "OPAY_TRANSACTION_EVENT_RECEIVEMONEY_CQ_RESULT" WHERE  time > {time} ''',
+    #     'trade_alert_value',
+    #     7,
+    #     'trade_alert_level_1_address',
+    #     'trade_alert_level_2_address',
+    #     False,
+    #     3,
+    #     'influx_address_1'
+    # ),
+    #
+    # # 23
+    # (
+    #     'Trade_Receivemoney_Success',
+    #     '''SELECT "trade_success_cnt" AS "trade_success_cnt" FROM "OPAY_TRANSACTION_EVENT_RECEIVEMONEY_SUCCESS_CQ_RESULT" WHERE time > {time} ''',
+    #     'trade_alert_value',
+    #     7,
+    #     'trade_alert_level_1_address',
+    #     'trade_alert_level_2_address',
+    #     False,
+    #     3,
+    #     'influx_address_1'
+    # ),
 
     ## TakeRide
     # 24
-    (
-        'Trade_TakeRide',
-        '''SELECT "trade_cnt" AS "trade_cnt","trade_user_cnt" AS "trade_user_cnt" ,"trade_amount" AS "trade_amount" FROM "OPAY_TRANSACTION_EVENT_TAKERIDE_CQ_RESULT" WHERE time > {time}  ''',
-        'trade_alert_value',
-        7,
-        'trade_alert_level_1_address',
-        'trade_alert_level_2_address',
-        False,
-        3,
-        'influx_address_2'
-    ),
-
-    # 25
-    (
-        'Trade_TakeRide_Success',
-        '''SELECT "trade_success_cnt" AS "trade_success_cnt"  FROM "OPAY_TRANSACTION_EVENT_TAKERIDE_SUCCESS_CQ_RESULT" WHERE  time > {time} ''',
-        'trade_alert_value',
-        7,
-        'trade_alert_level_1_address',
-        'trade_alert_level_2_address',
-        False,
-        3,
-        'influx_address_2'
-    ),
+    # (
+    #     'Trade_TakeRide',
+    #     '''SELECT "trade_cnt" AS "trade_cnt","trade_user_cnt" AS "trade_user_cnt" ,"trade_amount" AS "trade_amount" FROM "OPAY_TRANSACTION_EVENT_TAKERIDE_CQ_RESULT" WHERE time > {time}  ''',
+    #     'trade_alert_value',
+    #     7,
+    #     'trade_alert_level_1_address',
+    #     'trade_alert_level_2_address',
+    #     False,
+    #     3,
+    #     'influx_address_2'
+    # ),
+    #
+    # # 25
+    # (
+    #     'Trade_TakeRide_Success',
+    #     '''SELECT "trade_success_cnt" AS "trade_success_cnt"  FROM "OPAY_TRANSACTION_EVENT_TAKERIDE_SUCCESS_CQ_RESULT" WHERE  time > {time} ''',
+    #     'trade_alert_value',
+    #     7,
+    #     'trade_alert_level_1_address',
+    #     'trade_alert_level_2_address',
+    #     False,
+    #     3,
+    #     'influx_address_2'
+    # ),
 
     ## OrideSalary
     # 26
@@ -403,30 +403,30 @@ metrcis_list = [
 
     ## Subscribe
     # 28
-    (
-        'Trade_Subscribe',
-        '''SELECT "trade_cnt" AS "trade_cnt","trade_user_cnt" AS "trade_user_cnt" ,"trade_amount" AS "trade_amount" FROM "OPAY_TRANSACTION_EVENT_SUBSCRIBE_CQ_RESULT" WHERE time > {time} ''',
-        'trade_alert_value',
-        7,
-        'trade_alert_level_1_address',
-        'trade_alert_level_2_address',
-        False,
-        3,
-        'influx_address_2'
-    ),
-
-    # 29
-    (
-        'Trade_Subscribe_Success',
-        '''SELECT "trade_success_cnt" AS "trade_success_cnt" FROM "OPAY_TRANSACTION_EVENT_SUBSCRIBE_SUCCESS_CQ_RESULT" WHERE time > {time} ''',
-        'trade_alert_value',
-        7,
-        'trade_alert_level_1_address',
-        'trade_alert_level_2_address',
-        False,
-        3,
-        'influx_address_2'
-    ),
+    # (
+    #     'Trade_Subscribe',
+    #     '''SELECT "trade_cnt" AS "trade_cnt","trade_user_cnt" AS "trade_user_cnt" ,"trade_amount" AS "trade_amount" FROM "OPAY_TRANSACTION_EVENT_SUBSCRIBE_CQ_RESULT" WHERE time > {time} ''',
+    #     'trade_alert_value',
+    #     7,
+    #     'trade_alert_level_1_address',
+    #     'trade_alert_level_2_address',
+    #     False,
+    #     3,
+    #     'influx_address_2'
+    # ),
+    #
+    # # 29
+    # (
+    #     'Trade_Subscribe_Success',
+    #     '''SELECT "trade_success_cnt" AS "trade_success_cnt" FROM "OPAY_TRANSACTION_EVENT_SUBSCRIBE_SUCCESS_CQ_RESULT" WHERE time > {time} ''',
+    #     'trade_alert_value',
+    #     7,
+    #     'trade_alert_level_1_address',
+    #     'trade_alert_level_2_address',
+    #     False,
+    #     3,
+    #     'influx_address_2'
+    # ),
 
     ## Redeem
     # 30
@@ -511,30 +511,30 @@ metrcis_list = [
 
     ## TakeOut
     # 36
-    (
-        'Trade_TakeOut',
-        '''SELECT "trade_cnt" AS "trade_cnt","trade_user_cnt" AS "trade_user_cnt" ,"trade_amount" AS "trade_amount" FROM "OPAY_TRANSACTION_EVENT_TAKEOUT_CQ_RESULT" WHERE  time > {time} ''',
-        'trade_alert_value',
-        7,
-        'trade_alert_level_1_address',
-        'trade_alert_level_2_address',
-        False,
-        3,
-        'influx_address_2'
-    ),
-
-    # 37
-    (
-        'Trade_TakeOut_Success',
-        '''SELECT "trade_success_cnt" AS "trade_success_cnt" FROM "OPAY_TRANSACTION_EVENT_TAKEOUT_SUCCESS_CQ_RESULT" WHERE  time > {time}''',
-        'trade_alert_value',
-        7,
-        'trade_alert_level_1_address',
-        'trade_alert_level_2_address',
-        False,
-        3,
-        'influx_address_2'
-    ),
+    # (
+    #     'Trade_TakeOut',
+    #     '''SELECT "trade_cnt" AS "trade_cnt","trade_user_cnt" AS "trade_user_cnt" ,"trade_amount" AS "trade_amount" FROM "OPAY_TRANSACTION_EVENT_TAKEOUT_CQ_RESULT" WHERE  time > {time} ''',
+    #     'trade_alert_value',
+    #     7,
+    #     'trade_alert_level_1_address',
+    #     'trade_alert_level_2_address',
+    #     False,
+    #     3,
+    #     'influx_address_2'
+    # ),
+    #
+    # # 37
+    # (
+    #     'Trade_TakeOut_Success',
+    #     '''SELECT "trade_success_cnt" AS "trade_success_cnt" FROM "OPAY_TRANSACTION_EVENT_TAKEOUT_SUCCESS_CQ_RESULT" WHERE  time > {time}''',
+    #     'trade_alert_value',
+    #     7,
+    #     'trade_alert_level_1_address',
+    #     'trade_alert_level_2_address',
+    #     False,
+    #     3,
+    #     'influx_address_2'
+    # ),
 
     ## FoodCashback
     # 38
@@ -736,17 +736,17 @@ metrcis_list = [
 
     # 通道业务交易成功数
     # 50
-    (
-        'Trade_Channel_Bussiness_Success_INTERSWITCH',
-        '''SELECT count(distinct("id")) AS "trade_channel_bussiness_success_cnt" FROM "OPAY_CHANNEL_TRANSACTION_EVENT" WHERE ("transaction_status" = 'SUCCESS' AND "out_channel_id" = 'INTERSWITCH' AND "pay_channel" = 'QUICKPAYMENT') AND time > {time} GROUP BY time(10m)''',
-        'trade_channel_bussiness_success_alert_value',
-        7,
-        'trade_channel_bussiness_alert_level_1_address',
-        'trade_channel_bussiness_alert_level_2_address',
-        False,
-        1,
-        'influx_address_1'
-    ),
+    # (
+    #     'Trade_Channel_Bussiness_Success_INTERSWITCH',
+    #     '''SELECT count(distinct("id")) AS "trade_channel_bussiness_success_cnt" FROM "OPAY_CHANNEL_TRANSACTION_EVENT" WHERE ("transaction_status" = 'SUCCESS' AND "out_channel_id" = 'INTERSWITCH' AND "pay_channel" = 'QUICKPAYMENT') AND time > {time} GROUP BY time(10m)''',
+    #     'trade_channel_bussiness_success_alert_value',
+    #     7,
+    #     'trade_channel_bussiness_alert_level_1_address',
+    #     'trade_channel_bussiness_alert_level_2_address',
+    #     False,
+    #     1,
+    #     'influx_address_1'
+    # ),
 
     ## 渠道 PAYSTACK
 
@@ -815,17 +815,17 @@ metrcis_list = [
 
     # 通道业务交易成功数
     # 53
-    (
-        'Trade_Channel_Bussiness_Success_PAYSTACK',
-        '''SELECT count(distinct("id")) AS "trade_channel_bussiness_success_cnt" FROM "OPAY_CHANNEL_TRANSACTION_EVENT" WHERE ("transaction_status" = 'SUCCESS' AND "out_channel_id" = 'PAYSTACK' AND "pay_channel" = 'QUICKPAYMENT') AND time > {time} GROUP BY time(10m)''',
-        'trade_channel_bussiness_success_alert_value',
-        7,
-        'trade_channel_alert_level_1_address',
-        'trade_channel_alert_level_2_address',
-        False,
-        1,
-        'influx_address_1'
-    ),
+    # (
+    #     'Trade_Channel_Bussiness_Success_PAYSTACK',
+    #     '''SELECT count(distinct("id")) AS "trade_channel_bussiness_success_cnt" FROM "OPAY_CHANNEL_TRANSACTION_EVENT" WHERE ("transaction_status" = 'SUCCESS' AND "out_channel_id" = 'PAYSTACK' AND "pay_channel" = 'QUICKPAYMENT') AND time > {time} GROUP BY time(10m)''',
+    #     'trade_channel_bussiness_success_alert_value',
+    #     7,
+    #     'trade_channel_alert_level_1_address',
+    #     'trade_channel_alert_level_2_address',
+    #     False,
+    #     1,
+    #     'influx_address_1'
+    # ),
 
     ## 渠道 FLUTTERWAVE
 
@@ -893,17 +893,17 @@ metrcis_list = [
 
     # 通道业务交易成功数
     # 56
-    (
-        'Trade_Channel_Bussiness_Success_FLUTTERWAVE',
-        '''SELECT count(distinct("id")) AS "trade_channel_bussiness_success_cnt" FROM "OPAY_CHANNEL_TRANSACTION_EVENT" WHERE ("transaction_status" = 'SUCCESS' AND "out_channel_id" = 'FLUTTERWAVE' AND "pay_channel" = 'QUICKPAYMENT') AND time > {time} GROUP BY time(10m)''',
-        'trade_channel_bussiness_success_alert_value',
-        7,
-        'trade_channel_alert_level_1_address',
-        'trade_channel_alert_level_2_address',
-        False,
-        1,
-        'influx_address_1'
-    ),
+    # (
+    #     'Trade_Channel_Bussiness_Success_FLUTTERWAVE',
+    #     '''SELECT count(distinct("id")) AS "trade_channel_bussiness_success_cnt" FROM "OPAY_CHANNEL_TRANSACTION_EVENT" WHERE ("transaction_status" = 'SUCCESS' AND "out_channel_id" = 'FLUTTERWAVE' AND "pay_channel" = 'QUICKPAYMENT') AND time > {time} GROUP BY time(10m)''',
+    #     'trade_channel_bussiness_success_alert_value',
+    #     7,
+    #     'trade_channel_alert_level_1_address',
+    #     'trade_channel_alert_level_2_address',
+    #     False,
+    #     1,
+    #     'influx_address_1'
+    # ),
 
     ####### 用户相关指标 独立配置
 
@@ -941,19 +941,19 @@ metrcis_list = [
 
     ## 绑卡用户数
     # 59
-    (
-        'User_Bind_Card_User',
-        '''
-        SELECT count(distinct("user_id")) AS "bind_card_user_cnt" FROM "OPAY_PAYMENT_INSTRUMENT_EVENT" WHERE payment_type='1' AND pay_status='1' AND time > {time} GROUP BY time(10m)
-        ''',
-        'user_bind_card_alert_value',
-        7,
-        'user_bind_card_alert_level_1_address',
-        'user_bind_card_alert_level_2_address',
-        False,
-        3,
-        'influx_address_1'
-    ),
+    # (
+    #     'User_Bind_Card_User',
+    #     '''
+    #     SELECT count(distinct("user_id")) AS "bind_card_user_cnt" FROM "OPAY_PAYMENT_INSTRUMENT_EVENT" WHERE payment_type='1' AND pay_status='1' AND time > {time} GROUP BY time(10m)
+    #     ''',
+    #     'user_bind_card_alert_value',
+    #     7,
+    #     'user_bind_card_alert_level_1_address',
+    #     'user_bind_card_alert_level_2_address',
+    #     False,
+    #     3,
+    #     'influx_address_1'
+    # ),
 
     ####### 短信 指标
 
@@ -1029,103 +1029,103 @@ metrcis_list = [
 
     # 短息发送量
     # 64
-    (
-        'Channel_Message_Send_Dpb',
-        '''
-        SELECT count(distinct("id")) AS "message_send_cnt" FROM "OPAY_SMS_MESSAGE_EVENT" WHERE  "delivered_channel" = 'dpb' AND time > {time} GROUP BY time(10m)
-        ''',
-        'message_send_alert_value',
-        7,
-        'message_alert_level_1_address',
-        'message_alert_level_2_address',
-        False,
-        3,
-        'influx_address_1'
-    ),
+    # (
+    #     'Channel_Message_Send_Dpb',
+    #     '''
+    #     SELECT count(distinct("id")) AS "message_send_cnt" FROM "OPAY_SMS_MESSAGE_EVENT" WHERE  "delivered_channel" = 'dpb' AND time > {time} GROUP BY time(10m)
+    #     ''',
+    #     'message_send_alert_value',
+    #     7,
+    #     'message_alert_level_1_address',
+    #     'message_alert_level_2_address',
+    #     False,
+    #     3,
+    #     'influx_address_1'
+    # ),
 
     # 短息发送成功量
     # 65
-    (
-        'Channel_Message_Send_Success_Dpb',
-        '''
-        SELECT count(distinct("id")) AS "message_send_success_cnt" FROM "OPAY_SMS_MESSAGE_EVENT" WHERE ("status" = 'SUCCESS') AND "delivered_channel" = 'dpb' AND time > {time} GROUP BY time(10m)
-        ''',
-        'message_send_success_alert_value',
-        7,
-        'message_alert_level_1_address',
-        'message_alert_level_2_address',
-        False,
-        3,
-        'influx_address_1'
-    ),
+    # (
+    #     'Channel_Message_Send_Success_Dpb',
+    #     '''
+    #     SELECT count(distinct("id")) AS "message_send_success_cnt" FROM "OPAY_SMS_MESSAGE_EVENT" WHERE ("status" = 'SUCCESS') AND "delivered_channel" = 'dpb' AND time > {time} GROUP BY time(10m)
+    #     ''',
+    #     'message_send_success_alert_value',
+    #     7,
+    #     'message_alert_level_1_address',
+    #     'message_alert_level_2_address',
+    #     False,
+    #     3,
+    #     'influx_address_1'
+    # ),
 
     ## infobip
 
     # 短息发送量
-    # 66
-    (
-        'Channel_Message_Send_Infobip',
-        '''
-        SELECT count(distinct("id")) AS "message_send_cnt" FROM "OPAY_SMS_MESSAGE_EVENT" WHERE  "delivered_channel" = 'infobip' AND time > {time} GROUP BY time(10m)
-        ''',
-        'message_send_alert_value',
-        7,
-        'message_alert_level_1_address',
-        'message_alert_level_2_address',
-        False,
-        3,
-        'influx_address_1'
-    ),
+    # # 66
+    # (
+    #     'Channel_Message_Send_Infobip',
+    #     '''
+    #     SELECT count(distinct("id")) AS "message_send_cnt" FROM "OPAY_SMS_MESSAGE_EVENT" WHERE  "delivered_channel" = 'infobip' AND time > {time} GROUP BY time(10m)
+    #     ''',
+    #     'message_send_alert_value',
+    #     7,
+    #     'message_alert_level_1_address',
+    #     'message_alert_level_2_address',
+    #     False,
+    #     3,
+    #     'influx_address_1'
+    # ),
 
     # 短息发送成功量
     # 67
-    (
-        'Channel_Message_Send_Success_infobip',
-        '''
-        SELECT count(distinct("id")) AS "message_send_success_cnt" FROM "OPAY_SMS_MESSAGE_EVENT" WHERE ("status" = 'SUCCESS') AND "delivered_channel" = 'infobip' AND time > {time} GROUP BY time(10m)
-        ''',
-        'message_send_success_alert_value',
-        7,
-        'message_alert_level_1_address',
-        'message_alert_level_2_address',
-        False,
-        3,
-        'influx_address_1'
-    ),
+    # (
+    #     'Channel_Message_Send_Success_infobip',
+    #     '''
+    #     SELECT count(distinct("id")) AS "message_send_success_cnt" FROM "OPAY_SMS_MESSAGE_EVENT" WHERE ("status" = 'SUCCESS') AND "delivered_channel" = 'infobip' AND time > {time} GROUP BY time(10m)
+    #     ''',
+    #     'message_send_success_alert_value',
+    #     7,
+    #     'message_alert_level_1_address',
+    #     'message_alert_level_2_address',
+    #     False,
+    #     3,
+    #     'influx_address_1'
+    # ),
 
     ## chuangadvert
 
     # 短息发送量
     # 68
-    (
-        'Channel_Message_Send_Chuangadvert',
-        '''
-        SELECT count(distinct("id")) AS "message_send_cnt" FROM "OPAY_SMS_MESSAGE_EVENT" WHERE  "delivered_channel" = 'chuangadvert' AND time > {time} GROUP BY time(10m)
-        ''',
-        'message_send_alert_value',
-        7,
-        'message_alert_level_1_address',
-        'message_alert_level_2_address',
-        False,
-        3,
-        'influx_address_1'
-    ),
+    # (
+    #     'Channel_Message_Send_Chuangadvert',
+    #     '''
+    #     SELECT count(distinct("id")) AS "message_send_cnt" FROM "OPAY_SMS_MESSAGE_EVENT" WHERE  "delivered_channel" = 'chuangadvert' AND time > {time} GROUP BY time(10m)
+    #     ''',
+    #     'message_send_alert_value',
+    #     7,
+    #     'message_alert_level_1_address',
+    #     'message_alert_level_2_address',
+    #     False,
+    #     3,
+    #     'influx_address_1'
+    # ),
 
     # 短息发送成功量
     # 69
-    (
-        'Channel_Message_Send_Success_Chuangadvert',
-        '''
-        SELECT count(distinct("id")) AS "message_send_success_cnt" FROM "OPAY_SMS_MESSAGE_EVENT" WHERE ("status" = 'SUCCESS') AND "delivered_channel" = 'chuangadvert' AND time > {time} GROUP BY time(10m)
-        ''',
-        'message_send_success_alert_value',
-        7,
-        'message_alert_level_1_address',
-        'message_alert_level_2_address',
-        False,
-        3,
-        'influx_address_1'
-    ),
+    # (
+    #     'Channel_Message_Send_Success_Chuangadvert',
+    #     '''
+    #     SELECT count(distinct("id")) AS "message_send_success_cnt" FROM "OPAY_SMS_MESSAGE_EVENT" WHERE ("status" = 'SUCCESS') AND "delivered_channel" = 'chuangadvert' AND time > {time} GROUP BY time(10m)
+    #     ''',
+    #     'message_send_success_alert_value',
+    #     7,
+    #     'message_alert_level_1_address',
+    #     'message_alert_level_2_address',
+    #     False,
+    #     3,
+    #     'influx_address_1'
+    # ),
 
     ## infobipws
 
@@ -1199,69 +1199,69 @@ metrcis_list = [
 
     # 短息发送量
     # 74
-    (
-        'Channel_Message_Send_Chuangghana',
-        '''
-        SELECT count(distinct("id")) AS "message_send_cnt" FROM "OPAY_SMS_MESSAGE_EVENT" WHERE  "delivered_channel" = 'chuangghana' AND time > {time} GROUP BY time(10m)
-        ''',
-        'message_send_alert_value',
-        7,
-        'message_alert_level_1_address',
-        'message_alert_level_2_address',
-        False,
-        3,
-        'influx_address_1'
-    ),
+    # (
+    #     'Channel_Message_Send_Chuangghana',
+    #     '''
+    #     SELECT count(distinct("id")) AS "message_send_cnt" FROM "OPAY_SMS_MESSAGE_EVENT" WHERE  "delivered_channel" = 'chuangghana' AND time > {time} GROUP BY time(10m)
+    #     ''',
+    #     'message_send_alert_value',
+    #     7,
+    #     'message_alert_level_1_address',
+    #     'message_alert_level_2_address',
+    #     False,
+    #     3,
+    #     'influx_address_1'
+    # ),
 
     # 短息发送成功量
     # 75
-    (
-        'Channel_Message_Send_Success_Chuangghana',
-        '''
-        SELECT count(distinct("id")) AS "message_send_success_cnt" FROM "OPAY_SMS_MESSAGE_EVENT" WHERE ("status" = 'SUCCESS') AND "delivered_channel" = 'chuangghana' AND time > {time} GROUP BY time(10m)
-        ''',
-        'message_send_success_alert_value',
-        7,
-        'message_alert_level_1_address',
-        'message_alert_level_2_address',
-        False,
-        3,
-        'influx_address_1'
-    ),
+    # (
+    #     'Channel_Message_Send_Success_Chuangghana',
+    #     '''
+    #     SELECT count(distinct("id")) AS "message_send_success_cnt" FROM "OPAY_SMS_MESSAGE_EVENT" WHERE ("status" = 'SUCCESS') AND "delivered_channel" = 'chuangghana' AND time > {time} GROUP BY time(10m)
+    #     ''',
+    #     'message_send_success_alert_value',
+    #     7,
+    #     'message_alert_level_1_address',
+    #     'message_alert_level_2_address',
+    #     False,
+    #     3,
+    #     'influx_address_1'
+    # ),
 
     ## cmghana
 
     # 短息发送量
     # 76
-    (
-        'Channel_Message_Send_Cmghana',
-        '''
-        SELECT count(distinct("id")) AS "message_send_cnt" FROM "OPAY_SMS_MESSAGE_EVENT" WHERE  "delivered_channel" = 'cmghana' AND time > {time} GROUP BY time(10m)
-        ''',
-        'message_send_alert_value',
-        7,
-        'message_alert_level_1_address',
-        'message_alert_level_2_address',
-        False,
-        3,
-        'influx_address_1'
-    ),
+    # (
+    #     'Channel_Message_Send_Cmghana',
+    #     '''
+    #     SELECT count(distinct("id")) AS "message_send_cnt" FROM "OPAY_SMS_MESSAGE_EVENT" WHERE  "delivered_channel" = 'cmghana' AND time > {time} GROUP BY time(10m)
+    #     ''',
+    #     'message_send_alert_value',
+    #     7,
+    #     'message_alert_level_1_address',
+    #     'message_alert_level_2_address',
+    #     False,
+    #     3,
+    #     'influx_address_1'
+    # ),
 
     # 短息发送成功量
     # 77
-    (
-        'Channel_Message_Send_Success_Cmghana',
-        '''
-        SELECT count(distinct("id")) AS "message_send_success_cnt" FROM "OPAY_SMS_MESSAGE_EVENT" WHERE ("status" = 'SUCCESS') AND "delivered_channel" = 'cmghana' AND time > {time} GROUP BY time(10m)
-        ''',
-        'message_send_success_alert_value',
-        7,
-        'message_alert_level_1_address',
-        'message_alert_level_2_address',
-        False,
-        3,
-        'influx_address_1'
-    ),
+    # (
+    #     'Channel_Message_Send_Success_Cmghana',
+    #     '''
+    #     SELECT count(distinct("id")) AS "message_send_success_cnt" FROM "OPAY_SMS_MESSAGE_EVENT" WHERE ("status" = 'SUCCESS') AND "delivered_channel" = 'cmghana' AND time > {time} GROUP BY time(10m)
+    #     ''',
+    #     'message_send_success_alert_value',
+    #     7,
+    #     'message_alert_level_1_address',
+    #     'message_alert_level_2_address',
+    #     False,
+    #     3,
+    #     'influx_address_1'
+    # ),
 
 ]
 
