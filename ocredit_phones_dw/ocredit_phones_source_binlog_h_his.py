@@ -68,13 +68,13 @@ db_name,table_name,conn_id,prefix_name,priority_weight,server_name (采集配置
 
 table_list = [
 
-    ("oloan","t_financial_product_car", "ocredit_db", "base",1, "ocredit_db","false"),
-    ("oloan","t_financial_product_car_history", "ocredit_db", "base",1, "ocredit_db","false"),
-    ("oloan","t_merchant_info", "ocredit_db", "base",1, "ocredit_db","false"),
-    ("oloan","t_overdue_config", "ocredit_db", "base",1, "ocredit_db","false"),
-    ("oloan","t_store_info", "ocredit_db", "base",1, "ocredit_db","false"),
-    ("admin_guns","sys_user", "ocredit_db", "base",1, "ocredit_db","false"),
-    ("admin_guns","sys_dept", "ocredit_db", "base",1, "ocredit_db","false")
+    ("oloan","t_financial_product_car", "ocredit_db", "base",1, "ocredit_db_binlog","false"),
+    ("oloan","t_financial_product_car_history", "ocredit_db", "base",1, "ocredit_db_binlog","false"),
+    ("oloan","t_merchant_info", "ocredit_db", "base",1, "ocredit_db_binlog","false"),
+    ("oloan","t_overdue_config", "ocredit_db", "base",1, "ocredit_db_binlog","false"),
+    ("oloan","t_store_info", "ocredit_db", "base",1, "ocredit_db_binlog","false"),
+    ("admin_guns","sys_user", "ocredit_db", "base",1, "ocredit_db_binlog","false"),
+    ("admin_guns","sys_dept", "ocredit_db", "base",1, "ocredit_db_binlog","false")
 ]
 
 HIVE_DB = 'ocredit_phones_dw_ods'
@@ -125,6 +125,7 @@ ODS_CREATE_TABLE_SQL = '''
 '''
 
 ODS_SQOOP_CREATE_TABLE_SQL = '''
+    DROP TABLE {db_name}.`{table_name}`;
     CREATE EXTERNAL TABLE IF NOT EXISTS {db_name}.`{table_name}`(
         {columns}
     )

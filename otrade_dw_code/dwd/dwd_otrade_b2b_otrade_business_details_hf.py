@@ -219,7 +219,8 @@ update_info as (
     from
       otrade_dw_ods.ods_binlog_base_otrade_business_details_all_hi
     where 
-      concat(dt, " ", hour) = date_format('{v_date}', 'yyyy-MM-dd HH') 
+      dt = date_format('{v_date}', 'yyyy-MM-dd')
+      and hour= date_format('{v_date}', 'HH')
       and `__deleted` = 'false'
     ) as a
   where
