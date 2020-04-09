@@ -20,6 +20,7 @@ args = {
 dag = airflow.DAG(
     'kafka-connectors-monitor',
     schedule_interval="*/10 * * * *",
+    catchup = False,
     default_args=args)
 
 ALI_SERVER_LIST = [
