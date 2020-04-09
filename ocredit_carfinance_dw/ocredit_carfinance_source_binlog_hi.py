@@ -65,13 +65,13 @@ db_name,table_name,conn_id,prefix_name,priority_weight,server_name (采集配置
 
 table_list = [
 
-    ("oloan_auto","t_clue", "ocredit_db", "base",1, "ocredit_db","false"),
-    ("oloan_auto","t_order", "ocredit_db", "base",1, "ocredit_db","false"),
-    ("oloan_auto","t_order_audit", "ocredit_db", "base",1, "ocredit_db","false"),
-    ("oloan_auto","t_order_related_user", "ocredit_db", "base",1, "ocredit_db","false"),
-    ("oloan_auto","t_order_vehicle_user", "ocredit_db", "base",1, "ocredit_db","false"),
-    ("admin_auto","sys_user", "ocredit_db", "base",1, "ocredit_db","false"),
-    ("admin_auto","sys_dept", "ocredit_db", "base",1, "ocredit_db","false")
+    ("oloan_auto","t_clue", "ocredit_db", "base",1, "ocredit_db_binlog","false"),
+    ("oloan_auto","t_order", "ocredit_db", "base",1, "ocredit_db_binlog","false"),
+    ("oloan_auto","t_order_audit", "ocredit_db", "base",1, "ocredit_db_binlog","false"),
+    ("oloan_auto","t_order_related_user", "ocredit_db", "base",1, "ocredit_db_binlog","false"),
+    ("oloan_auto","t_order_vehicle_user", "ocredit_db", "base",1, "ocredit_db_binlog","false"),
+    ("admin_auto","sys_user", "ocredit_db", "base",1, "ocredit_db_binlog","false"),
+    ("admin_auto","sys_dept", "ocredit_db", "base",1, "ocredit_db_binlog","false")
 ]
 
 HIVE_DB = 'ocredit_carfinance_dw_ods'

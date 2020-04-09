@@ -68,17 +68,17 @@ db_name,table_name,conn_id,prefix_name,priority_weight,server_name (采集配置
 
 table_list = [
 
-    ("oloan","t_contract", "ocredit_db", "base",1, "ocredit_db","false"),
-    ("oloan","t_contract_approval_log", "ocredit_db", "base",1, "ocredit_db","false"),
-    ("oloan","t_financial_product_phone", "ocredit_db", "base",1, "ocredit_db","false"),
-    ("oloan","t_financial_product_phone_history", "ocredit_db", "base",1, "ocredit_db","false"),
-    ("oloan","t_order", "ocredit_db", "base",1, "ocredit_db","false"),
-    ("oloan","t_order_audit_history", "ocredit_db", "base",1, "ocredit_db","false"),
-    ("oloan","t_order_down_payment", "ocredit_db", "base",1, "ocredit_db","false"),
-    ("oloan","t_order_relate_user", "ocredit_db", "base",1, "ocredit_db","false"),
-    ("oloan","t_overdue_record", "ocredit_db", "base",1, "ocredit_db","false"),
-    ("oloan","t_repayment_detail", "ocredit_db", "base",1, "ocredit_db","false"),
-    ("oloan","t_repayment_plan", "ocredit_db", "base",1, "ocredit_db","false")
+    ("oloan","t_contract", "ocredit_db", "base",1, "ocredit_db_binlog","false"),
+    ("oloan","t_contract_approval_log", "ocredit_db", "base",1, "ocredit_db_binlog","false"),
+    ("oloan","t_financial_product_phone", "ocredit_db", "base",1, "ocredit_db_binlog","false"),
+    ("oloan","t_financial_product_phone_history", "ocredit_db", "base",1, "ocredit_db_binlog","false"),
+    ("oloan","t_order", "ocredit_db", "base",1, "ocredit_db_binlog","false"),
+    ("oloan","t_order_audit_history", "ocredit_db", "base",1, "ocredit_db_binlog","false"),
+    ("oloan","t_order_down_payment", "ocredit_db", "base",1, "ocredit_db_binlog","false"),
+    ("oloan","t_order_relate_user", "ocredit_db", "base",1, "ocredit_db_binlog","false"),
+    ("oloan","t_overdue_record", "ocredit_db", "base",1, "ocredit_db_binlog","false"),
+    ("oloan","t_repayment_detail", "ocredit_db", "base",1, "ocredit_db_binlog","false"),
+    ("oloan","t_repayment_plan", "ocredit_db", "base",1, "ocredit_db_binlog","false")
 ]
 
 HIVE_DB = 'ocredit_phones_dw_ods'
