@@ -63,9 +63,9 @@ def connectors_status_check():
                     )
                     dingding_alet.send(msg)
                     # 重启任务
-                    restart_url = TASK_RESTART_URL % (server_ip, server_port, connector, task['id'])
-                    requests.post(restart_url)
-                    logging.info('ip %s, port %s,  connector %s, task id %d restart. url %s', server_ip, server_port, connector, task['id'], restart_url)
+                    #restart_url = TASK_RESTART_URL % (server_ip, server_port, connector, task['id'])
+                    #requests.post(restart_url)
+                    #logging.info('ip %s, port %s,  connector %s, task id %d restart. url %s', server_ip, server_port, connector, task['id'], restart_url)
 
 
 connectors_status = PythonOperator(
