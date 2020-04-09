@@ -125,6 +125,7 @@ ODS_CREATE_TABLE_SQL = '''
 '''
 
 ODS_SQOOP_CREATE_TABLE_SQL = '''
+    DROP TABLE {db_name}.`{table_name}`;
     CREATE EXTERNAL TABLE IF NOT EXISTS {db_name}.`{table_name}`(
         {columns}
     )
