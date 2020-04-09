@@ -10,7 +10,7 @@ import logging
 args = {
     'owner': 'zhenqian.zhang',
     'start_date': datetime(2019, 10, 23),
-    'depends_on_past': True,
+    'depends_on_past': False,
     'retries': 1,
     'retry_delay': timedelta(minutes=5),
     'email': ['bigdata_dw@opay-inc.com'],
@@ -20,6 +20,8 @@ args = {
 dag = airflow.DAG(
     'kafka-connectors-monitor',
     schedule_interval="*/10 * * * *",
+    catchup=False,
+    max_active_runs=1,
     default_args=args)
 
 ALI_SERVER_LIST = [
