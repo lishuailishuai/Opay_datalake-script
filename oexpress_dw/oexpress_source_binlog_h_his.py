@@ -206,18 +206,6 @@ MERGE_HI_WITH_FULL_SQL = '''
 
 def add_partition(v_execution_date, v_execution_day, v_execution_hour, db_name, table_name, conn_id, hive_table_name,
                   server_name, hive_db, is_must_have_data, **kwargs):
-    # 生成_SUCCESS
-    """
-    第一个参数true: 数据目录是有country_code分区。false 没有
-    第二个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS
-
-    """
-    TaskTouchzSuccess().countries_touchz_success(
-        v_execution_day,
-        hive_db,
-        hive_table_name,
-        H_HIS_OSS_PATH % hive_table_name,
-        "false", is_must_have_data, v_execution_hour)
 
     sql = '''
             ALTER TABLE {hive_db}.{table} ADD IF NOT EXISTS PARTITION (dt = '{ds}', hour = '{hour}')
