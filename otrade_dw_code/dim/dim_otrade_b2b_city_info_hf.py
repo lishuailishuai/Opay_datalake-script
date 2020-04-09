@@ -132,14 +132,30 @@ select
   ,date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'yyyy-MM-dd') as dt
   ,date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'HH') as hour
 from
-  (select * from otrade_dw_ods.ods_binlog_base_otrade_city_h_his where concat(dt, " ", hour) = date_format('{v_date}', 'yyyy-MM-dd HH') and `__deleted` = 'false') as v1
+  (
+  select 
+    * 
+  from 
+    otrade_dw_ods.ods_binlog_base_otrade_city_h_his 
+  where 
+    dt = date_format('{v_date}', 'yyyy-MM-dd')
+    and hour= date_format('{v_date}', 'HH')
+    and `__deleted` = 'false'
+  ) as v1
 left join
-  (select * from otrade_dw_ods.ods_binlog_base_otrade_country_h_his where concat(dt, " ", hour) = date_format('{v_date}', 'yyyy-MM-dd HH') and `__deleted` = 'false') as v2
+  (
+  select 
+    * 
+  from 
+    otrade_dw_ods.ods_binlog_base_otrade_country_h_his 
+  where 
+    dt = date_format('{v_date}', 'yyyy-MM-dd')
+    and hour= date_format('{v_date}', 'HH')
+    and `__deleted` = 'false'
+  ) as v2
 on
   v1.country_code = v2.code
 ;
-
-
 
     '''.format(
         pt=ds,
