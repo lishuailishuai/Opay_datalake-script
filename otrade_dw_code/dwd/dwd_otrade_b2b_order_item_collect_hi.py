@@ -266,7 +266,7 @@ select
   ,v3.shop_id
   ,v3.shop_name
   ,v3.order_status
-  ,v3.order_refund_status
+  ,v3.refund_status as order_refund_status
   ,v3.payable_amount
   ,v3.amount
   ,v3.fee_type
