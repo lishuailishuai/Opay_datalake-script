@@ -104,7 +104,7 @@ def ods_sqoop_coupon_voucher_batch_stat_df_sql_task(ds):
             SELECT 
                 id,
                 send_count,
-                from_unixtime(cast(cast(update_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss') as update_time
+                concat(substr(update_time, 1, 10), ' ', substr(update_time, 12, 8)) as update_time
             from (
                 select 
                     *,
