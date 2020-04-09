@@ -38,24 +38,24 @@ args = {
     'email_on_retry': False,
 }
 
-dag = airflow.DAG('dwm_otrade_b2b_order_collect_di',
+dag = airflow.DAG('dwm_otrade_b2c_order_goods_collect_di',
                   schedule_interval="00 03 * * *",
                   default_args=args,
                   )
 
 ##----------------------------------------- 变量 ---------------------------------------##
 db_name = "otrade_dw"
-table_name = "dwm_otrade_b2b_order_collect_di"
+table_name = "dwm_otrade_b2c_order_goods_collect_di"
 hdfs_path = "oss://opay-datalake/otrade/otrade_dw/" + table_name
 config = eval(Variable.get("otrade_time_zone_config"))
 time_zone = config['NG']['time_zone']
 
 ##----------------------------------------- 依赖 ---------------------------------------##
 
-dwm_otrade_b2b_order_collect_hi_task = OssSensor(
-    task_id='dwm_otrade_b2b_order_collect_hi_task',
+dwm_otrade_b2c_order_goods_collect_hi_task = OssSensor(
+    task_id='dwm_otrade_b2c_order_goods_collect_hi_task',
     bucket_key='{hdfs_path_str}/country_code=NG/dt={pt}/hour={hour}/_SUCCESS'.format(
-        hdfs_path_str="otrade/otrade_dw/dwm_otrade_b2b_order_collect_hi",
+        hdfs_path_str="otrade/otrade_dw/dwm_otrade_b2c_order_goods_collect_hi",
         pt='{{ds}}',
         hour='23'
     ),
@@ -88,7 +88,7 @@ task_timeout_monitor = PythonOperator(
 
 ##----------------------------------------- 脚本 ---------------------------------------##
 
-def dwm_otrade_b2b_order_collect_di_sql_task(ds):
+def dwm_otrade_b2c_order_goods_collect_di_sql_task(ds):
     HQL = '''
 
 set mapred.max.split.size=1000000;
@@ -96,89 +96,87 @@ set hive.exec.parallel=true;
 set hive.exec.dynamic.partition.mode=nonstrict;
 set hive.strict.checks.cartesian.product=false;
 
---1.去重后插入最终表中
-insert overwrite table otrade_dw.dwm_otrade_b2b_order_collect_di partition(country_code,dt)
+--1.将数据关联后插入最终表中
+insert overwrite table otrade_dw.dwm_otrade_b2c_order_goods_collect_di partition(country_code,dt)
 select
   id
-  ,pay_id
   ,order_id
-  ,settle_id
-  ,original_order_id
-  ,order_type
-  ,payer
-  ,payee
-  ,payer_phone
-  ,payee_phone
-  ,payer_name
-  ,payee_name
-  ,supplier_type
-  ,source
-  ,shop_id
-  ,shop_name
-  ,order_status
-  ,refund_status
-  ,payable_amount
-  ,amount
-  ,fee_type
-  ,fee
-  ,fee_rate
-  ,handwork_fee
-  ,pay_channel
-  ,pay_type
-  ,pay_cur
-  ,pay_time
-  ,consign_time
-  ,confirm_time
-  ,receive_time
-  ,refund_type
-  ,create_time
-  ,update_time
-
-  --供应商商铺相关信息,即收款方
-  ,status
+  ,goods_id
+  ,goods_name
+  ,goods_sn
+  ,product_id
+  ,number
+  ,market_price
+  ,retail_price
+  ,goods_specifition_name_value
+  ,is_real
+  ,goods_specifition_ids
+  ,list_pic_url
+  ,brand_id
+  ,customers
+  ,customers_name
   ,country
+  ,province
   ,city
-  ,country_name
-  ,city_name
-  ,bd_invitation_code
-  ,bd_invitation_id
-  ,hcm_id
-  ,hcm_name
-  ,cm_id
-  ,cm_name
-  ,bdm_id
-  ,bdm_name
-  ,bd_id
-  ,bd_name
-
-  --零售商相关信息,即付款方
-  ,retailer_first_name
-  ,retailer_last_name
-  ,retailer_phone_number
-  ,retailer_retailer_email
-  ,retailer_country
-  ,retailer_city
-  ,retailer_country_name
-  ,retailer_city_name
-  ,retailer_bd_invitation_id
-  ,retailer_hcm_id
-  ,retailer_hcm_name
-  ,retailer_cm_id
-  ,retailer_cm_name
-  ,retailer_bdm_id
-  ,retailer_bdm_name
-  ,retailer_bd_id
-  ,retailer_bd_name
-
-  --零售商首单相关
-  ,retailer_first_order
-  ,retailer_first_order_time
-
-  --支付信息
-  ,opay_pay_id
-  ,actual_amount
+  ,district
+  ,address
+  ,mobile
+  ,consignee
+  ,shipping_id
+  ,shipping_name
+  ,shipping_no
+  ,shipping_status
+  ,order_price
+  ,goods_price
+  ,actual_price
+  ,coupon_id
+  ,order_sn
+  ,user_id
+  ,order_status
   ,pay_status
-  ,req_status
+  ,postscript
+  ,pay_id
+  ,pay_name
+  ,shipping_fee
+  ,integral
+  ,integral_money
+  ,add_time
+  ,confirm_time
+  ,pay_time
+  ,freight_price
+  ,parent_id
+  ,coupon_price
+  ,callback_status
+  ,full_cut_price
+  ,order_type
+  ,settlement_total_fee
+  ,all_price
+  ,all_order_id
+  ,promoter_id
+  ,brokerage
+  ,merchant_id
+  ,group_buying_id
+  ,user_mobile
+  ,opayid
+  ,merchant_name
+  ,merchant_mobile
+  ,merchant_account
+  ,merchant_account_name
+  ,merchant_create_date
+  ,first_order
+  ,first_order_time
+  ,city_name
+  ,country_name
+  ,one_level_id
+  ,one_level_name
+  ,two_level_id
+  ,two_level_name
+  ,three_level_id
+  ,three_level_name
+  ,product_name
+  ,product_retail_price
+  ,product_market_price
+  ,product_group_price
 
   ,'NG' as country_code
   ,'{pt}' as dt
@@ -186,91 +184,94 @@ from
   (
   select
     id
-    ,pay_id
     ,order_id
-    ,settle_id
-    ,original_order_id
-    ,order_type
-    ,payer
-    ,payee
-    ,payer_phone
-    ,payee_phone
-    ,payer_name
-    ,payee_name
-    ,supplier_type
-    ,source
-    ,shop_id
-    ,shop_name
-    ,order_status
-    ,refund_status
-    ,payable_amount
-    ,amount
-    ,fee_type
-    ,fee
-    ,fee_rate
-    ,handwork_fee
-    ,pay_channel
-    ,pay_type
-    ,pay_cur
-    ,pay_time
-    ,consign_time
-    ,confirm_time
-    ,receive_time
-    ,refund_type
-    ,create_time
-    ,update_time
-
-    ,status
+    ,goods_id
+    ,goods_name
+    ,goods_sn
+    ,product_id
+    ,number
+    ,market_price
+    ,retail_price
+    ,goods_specifition_name_value
+    ,is_real
+    ,goods_specifition_ids
+    ,list_pic_url
+    ,brand_id
+    ,customers
+    ,customers_name
     ,country
+    ,province
     ,city
-    ,country_name
-    ,city_name
-    ,bd_invitation_code
-    ,bd_invitation_id
-    ,hcm_id
-    ,hcm_name
-    ,cm_id
-    ,cm_name
-    ,bdm_id
-    ,bdm_name
-    ,bd_id
-    ,bd_name
-
-    ,retailer_first_name
-    ,retailer_last_name
-    ,retailer_phone_number
-    ,retailer_retailer_email
-    ,retailer_country
-    ,retailer_city
-    ,retailer_country_name
-    ,retailer_city_name
-    ,retailer_bd_invitation_id
-    ,retailer_hcm_id
-    ,retailer_hcm_name
-    ,retailer_cm_id
-    ,retailer_cm_name
-    ,retailer_bdm_id
-    ,retailer_bdm_name
-    ,retailer_bd_id
-    ,retailer_bd_name
-
-    ,retailer_first_order
-    ,retailer_first_order_time
-
-    ,opay_pay_id
-    ,actual_amount
+    ,district
+    ,address
+    ,mobile
+    ,consignee
+    ,shipping_id
+    ,shipping_name
+    ,shipping_no
+    ,shipping_status
+    ,order_price
+    ,goods_price
+    ,actual_price
+    ,coupon_id
+    ,order_sn
+    ,user_id
+    ,order_status
     ,pay_status
-    ,req_status
+    ,postscript
+    ,pay_id
+    ,pay_name
+    ,shipping_fee
+    ,integral
+    ,integral_money
+    ,add_time
+    ,confirm_time
+    ,pay_time
+    ,freight_price
+    ,parent_id
+    ,coupon_price
+    ,callback_status
+    ,full_cut_price
+    ,order_type
+    ,settlement_total_fee
+    ,all_price
+    ,all_order_id
+    ,promoter_id
+    ,brokerage
+    ,merchant_id
+    ,group_buying_id
+    ,user_mobile
+    ,opayid
+    ,merchant_name
+    ,merchant_mobile
+    ,merchant_account
+    ,merchant_account_name
+    ,merchant_create_date
+    ,first_order
+    ,first_order_time
+    ,city_name
+    ,country_name
+    ,one_level_id
+    ,one_level_name
+    ,two_level_id
+    ,two_level_name
+    ,three_level_id
+    ,three_level_name
+    ,product_name
+    ,product_retail_price
+    ,product_market_price
+    ,product_group_price
 
-    ,row_number() over(partition by id order by update_time desc) rn
+    ,row_number() over(partition by id order by utc_date_hour desc) rn
   from
-    otrade_dw.dwm_otrade_b2b_order_collect_hi
+    otrade_dw.dwm_otrade_b2c_order_goods_collect_hi
   where
     dt = '{pt}'
   ) as a
 where
   rn = 1
 ;
+
 
 
 '''.format(
@@ -291,7 +292,7 @@ def execution_data_task_id(ds, dag, **kwargs):
     hive_hook = HiveCliHook()
 
     # 读取sql
-    # _sql = dwm_otrade_b2b_order_collect_di_sql_task(ds)
+    # _sql = dwm_otrade_b2c_order_goods_collect_di_sql_task(ds)
 
     # logging.info('Executing: %s', _sql)
 
@@ -358,7 +359,7 @@ def execution_data_task_id(ds, dag, **kwargs):
     cf.delete_partition()
 
     # 读取sql
-    _sql = "\n" + cf.alter_partition() + "\n" + dwm_otrade_b2b_order_collect_di_sql_task(ds)
+    _sql = "\n" + cf.alter_partition() + "\n" + dwm_otrade_b2c_order_goods_collect_di_sql_task(ds)
 
     logging.info('Executing: %s', _sql)
 
@@ -369,8 +370,8 @@ def execution_data_task_id(ds, dag, **kwargs):
     cf.touchz_success()
 
 
-dwm_otrade_b2b_order_collect_di_task = PythonOperator(
-    task_id='dwm_otrade_b2b_order_collect_di_task',
+dwm_otrade_b2c_order_goods_collect_di_task = PythonOperator(
+    task_id='dwm_otrade_b2c_order_goods_collect_di_task',
     python_callable=execution_data_task_id,
     provide_context=True,
     op_kwargs={
@@ -382,7 +383,7 @@ dwm_otrade_b2b_order_collect_di_task = PythonOperator(
     dag=dag
 )
 
-dwm_otrade_b2b_order_collect_hi_task >> dwm_otrade_b2b_order_collect_di_task
+dwm_otrade_b2c_order_goods_collect_hi_task >> dwm_otrade_b2c_order_goods_collect_di_task
 
 
 
