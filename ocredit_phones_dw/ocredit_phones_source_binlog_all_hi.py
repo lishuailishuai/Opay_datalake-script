@@ -424,7 +424,7 @@ def merge_pre_hi_with_full_data_task(hive_db, hive_all_hi_table_name, hive_hi_ta
     sqoopSchema = SqoopSchemaUpdate()
 
     hive_columns = sqoopSchema.get_hive_column_name(hive_db, hive_all_hi_table_name)
-    mysql_columns = sqoopSchema.get_mysql_column_name(mysql_db_name, mysql_table_name, mysql_conn)
+    mysql_columns = sqoopSchema.get_merge_mysql_column_name(mysql_db_name, mysql_table_name, mysql_conn)
     pre_day_ms = int(time.mktime(time.strptime(pre_day, "%Y-%m-%d"))) * 1000
 
     hql = ADD_FULL_SQL.format(

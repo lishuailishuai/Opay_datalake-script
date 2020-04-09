@@ -29,7 +29,7 @@ from plugins.CountriesAppFrame import CountriesAppFrame
 
 args = {
     'owner': 'yuanfeng',
-    'start_date': datetime(2020, 4, 2),
+    'start_date': datetime(2020, 4, 9),
     'depends_on_past': False,
     'retries': 3,
     'retry_delay': timedelta(minutes=2),
@@ -38,14 +38,14 @@ args = {
     'email_on_retry': False,
 }
 
-dag = airflow.DAG('dwd_otrade_b2b_order_collect_di',
+dag = airflow.DAG('dwm_otrade_b2b_order_collect_di',
                   schedule_interval="00 03 * * *",
                   default_args=args,
                   )
 
 ##----------------------------------------- 变量 ---------------------------------------##
 db_name = "otrade_dw"
-table_name = "dwd_otrade_b2b_order_collect_di"
+table_name = "dwm_otrade_b2b_order_collect_di"
 hdfs_path = "oss://opay-datalake/otrade/otrade_dw/" + table_name
 config = eval(Variable.get("otrade_time_zone_config"))
 time_zone = config['NG']['time_zone']
@@ -63,6 +63,7 @@ dwd_otrade_b2b_order_collect_hi_task = OssSensor(
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
+
 
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
 
@@ -87,7 +88,7 @@ task_timeout_monitor = PythonOperator(
 
 ##----------------------------------------- 脚本 ---------------------------------------##
 
-def dwd_otrade_b2b_order_collect_di_sql_task(ds):
+def dwm_otrade_b2b_order_collect_di_sql_task(ds):
     HQL = '''
 
 set mapred.max.split.size=1000000;
@@ -96,7 +97,7 @@ set hive.exec.dynamic.partition.mode=nonstrict;
 set hive.strict.checks.cartesian.product=false;
 
 --1.去重后插入最终表中
-insert overwrite table otrade_dw.dwd_otrade_b2b_order_collect_di partition(country_code,dt)
+insert overwrite table otrade_dw.dwm_otrade_b2b_order_collect_di partition(country_code,dt)
 select
   id
   ,pay_id
@@ -234,7 +235,7 @@ from
     ,bdm_name
     ,bd_id
     ,bd_name
-  
+
     ,retailer_first_name
     ,retailer_last_name
     ,retailer_phone_number
@@ -252,7 +253,7 @@ from
     ,retailer_bdm_name
     ,retailer_bd_id
     ,retailer_bd_name
-    
+
     ,retailer_first_order
     ,retailer_first_order_time
 
@@ -290,7 +291,7 @@ def execution_data_task_id(ds, dag, **kwargs):
     hive_hook = HiveCliHook()
 
     # 读取sql
-    # _sql = dwd_otrade_b2b_order_collect_di_sql_task(ds)
+    # _sql = dwm_otrade_b2b_order_collect_di_sql_task(ds)
 
     # logging.info('Executing: %s', _sql)
 
@@ -357,7 +358,7 @@ def execution_data_task_id(ds, dag, **kwargs):
     cf.delete_partition()
 
     # 读取sql
-    _sql = "\n" + cf.alter_partition() + "\n" + dwd_otrade_b2b_order_collect_di_sql_task(ds)
+    _sql = "\n" + cf.alter_partition() + "\n" + dwm_otrade_b2b_order_collect_di_sql_task(ds)
 
     logging.info('Executing: %s', _sql)
 
@@ -368,8 +369,8 @@ def execution_data_task_id(ds, dag, **kwargs):
     cf.touchz_success()
 
 
-dwd_otrade_b2b_order_collect_di_task = PythonOperator(
-    task_id='dwd_otrade_b2b_order_collect_di_task',
+dwm_otrade_b2b_order_collect_di_task = PythonOperator(
+    task_id='dwm_otrade_b2b_order_collect_di_task',
     python_callable=execution_data_task_id,
     provide_context=True,
     op_kwargs={
@@ -381,7 +382,7 @@ dwd_otrade_b2b_order_collect_di_task = PythonOperator(
     dag=dag
 )
 
-dwd_otrade_b2b_order_collect_hi_task >> dwd_otrade_b2b_order_collect_di_task
+dwd_otrade_b2b_order_collect_hi_task >> dwm_otrade_b2b_order_collect_di_task
 
 
 
