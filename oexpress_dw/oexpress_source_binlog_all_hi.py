@@ -193,18 +193,7 @@ ADD_FULL_SQL = '''
 
 def add_partition(v_execution_date, v_execution_day, v_execution_hour, db_name, table_name, conn_id, hive_table_name,
                   server_name, hive_db, is_must_have_data, **kwargs):
-    # 生成_SUCCESS
-    """
-    第一个参数true: 数据目录是有country_code分区。false 没有
-    第二个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS
 
-    """
-    TaskTouchzSuccess().countries_touchz_success(
-        v_execution_day,
-        hive_db,
-        hive_table_name,
-        ALL_HI_OSS_PATH % hive_table_name,
-        "false", is_must_have_data, v_execution_hour)
 
     sql = '''
             ALTER TABLE {hive_db}.{table} ADD IF NOT EXISTS PARTITION (dt = '{ds}', hour = '{hour}')
@@ -539,8 +528,8 @@ for mysql_db_name, mysql_table_name, conn_id, prefix_name, priority_weight_nm, s
     )
 
     # check table
-    check_binlog_table = PythonOperator(
-        task_id='check_binlog_table_{}'.format(sqoop_table_name),
+    check_sqoop_table = PythonOperator(
+        task_id='check_sqoop_table_{}'.format(sqoop_table_name),
         priority_weight=priority_weight_nm,
         python_callable=run_sqoop_check_table,
         provide_context=True,
@@ -655,4 +644,4 @@ for mysql_db_name, mysql_table_name, conn_id, prefix_name, priority_weight_nm, s
 
     check_all_hi_table >> add_hi_partitions >> validate_all_hi_table_exist >> [add_partitions, import_table]
     add_partitions >> merge_pre_hi_data
-    import_table >> check_binlog_table >> merge_pre_hi_with_full_data
+    import_table >> check_sqoop_table >> merge_pre_hi_with_full_data

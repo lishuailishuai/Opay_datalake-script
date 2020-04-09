@@ -27,7 +27,7 @@ import os
 
 args = {
     'owner': 'xiedong',
-    'start_date': datetime(2020, 3, 29),
+    'start_date': datetime(2020, 4, 8),
     'depends_on_past': False,
     'retries': 3,
     'retry_delay': timedelta(minutes=2),
@@ -36,17 +36,17 @@ args = {
     'email_on_retry': False,
 }
 
-dag = airflow.DAG('ods_sqoop_base_user_reseller_df',
+dag = airflow.DAG('ods_sqoop_base_user_nearby_agent_df',
                   schedule_interval="00 01 * * *",
                   default_args=args,
                   )
 
 ##----------------------------------------- 依赖 ---------------------------------------##
 
-ods_binlog_user_reseller_hi_check_task = OssSensor(
-    task_id='ods_binlog_user_reseller_hi_check_task',
+ods_binlog_user_nearby_agent_hi_check_task = OssSensor(
+    task_id='ods_binlog_user_nearby_agent_hi_check_task',
     bucket_key='{hdfs_path_str}/dt={pt}/hour=22/_SUCCESS'.format(
-        hdfs_path_str="opay_binlog/opay_user_db.opay_user.user_reseller",
+        hdfs_path_str="opay_binlog/opay_user_db.opay_user.user_nearby_agent",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
@@ -54,10 +54,10 @@ ods_binlog_user_reseller_hi_check_task = OssSensor(
     dag=dag
 )
 
-ods_sqoop_user_reseller_df_pre_check_task = OssSensor(
-    task_id='ods_sqoop_user_reseller_df_pre_check_task',
+ods_sqoop_user_nearby_agent_pre_check_task = OssSensor(
+    task_id='ods_sqoop_user_nearby_agent_pre_check_task',
     bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opay_dw_sqoop/opay_user/user_reseller",
+        hdfs_path_str="opay_dw_sqoop/opay_user/user_nearby_agent",
         pt='{{macros.ds_add(ds, -1)}}'
     ),
     bucket_name='opay-datalake',
@@ -89,34 +89,46 @@ task_timeout_monitor = PythonOperator(
 ##----------------------------------------- 变量 ---------------------------------------##
 db_name = "opay_dw_ods"
 
-table_name = "ods_sqoop_base_user_reseller_df"
-hdfs_path = "oss://opay-datalake/opay_dw_sqoop/opay_user/user_reseller"
+table_name = "ods_sqoop_base_user_nearby_agent_df"
+hdfs_path = "oss://opay-datalake/opay_dw_sqoop/opay_user/user_nearby_agent"
 config = eval(Variable.get("opay_time_zone_config"))
 
 
-def ods_sqoop_base_user_reseller_df_sql_task(ds):
+def ods_sqoop_base_user_nearby_agent_df_sql_task(ds):
     HQL = '''
 
     set hive.exec.dynamic.partition.mode=nonstrict;
     set hive.exec.parallel=true;
     with 
-        card_reseller_di as (
+        user_nearby_agent_di as (
             SELECT 
                 id,
                 user_id,
-                merchant_id,
+                full_name,
+                mobile,
+                address,
+                outlets_photos,
+                longitude,
+                latitude,
+                status,
+                remark,
+                overload_user_id,
+                business_code,
+                geo_code,
+                address_to_verify,
+                outlets_photos_to_verify,
+                latitude_to_verify,
+                longitude_to_verify,
+                deleted,
+                from_unixtime(cast(cast(audit_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss') as audit_time,
                 from_unixtime(cast(cast(create_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss') as create_time,
-                if(`__deleted`='false', 
-                    from_unixtime(cast(cast(update_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss'),
-                    date_format(current_timestamp(), 'yyyy-MM-dd HH:mm:ss')
-                ) as update_time,
-                `__deleted` as physical_del
+                from_unixtime(cast(cast(update_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss') as update_time
             from (
                 select 
                     *,
-                    row_number() over(partition by user_id order by `__ts_ms` desc,`__file` desc,cast(`__pos` as int) desc) rn
-                FROM opay_dw_ods.ods_binlog_base_user_reseller_hi
-                where concat(dt,' ',hour) between '{pt_y} 23' and '{pt} 22'
+                    row_number() over(partition by id order by `__ts_ms` desc,`__file` desc,cast(`__pos` as int) desc) rn
+                FROM opay_dw_ods.ods_binlog_base_user_nearby_agent_hi
+                where concat(dt,' ',hour) between '{pt_y} 23' and '{pt} 22' and `__deleted` = 'false'
             ) m 
             where rn=1
         )
@@ -125,34 +137,79 @@ def ods_sqoop_base_user_reseller_df_sql_task(ds):
     select 
         id,
         user_id,
-        merchant_id,
+        full_name,
+        mobile,
+        address,
+        outlets_photos,
+        longitude,
+        latitude,
+        status,
+        remark,
+        overload_user_id,
+        business_code,
+        geo_code,
+        address_to_verify,
+        outlets_photos_to_verify,
+        latitude_to_verify,
+        longitude_to_verify,
+        deleted,
+        audit_time,
         create_time,
         update_time,
-        physical_del,
         '{pt}'
     from (
         select 
             id,
             user_id,
-            merchant_id,
+            full_name,
+            mobile,
+            address,
+            outlets_photos,
+            longitude,
+            latitude,
+            status,
+            remark,
+            overload_user_id,
+            business_code,
+            geo_code,
+            address_to_verify,
+            outlets_photos_to_verify,
+            latitude_to_verify,
+            longitude_to_verify,
+            deleted,
+            audit_time,
             create_time,
             update_time,
-            physical_del,
-            row_number()over(partition by user_id order by update_time desc) rn 
+            row_number()over(partition by id order by update_time desc) rn 
         from (
             select 
                 id,
                 user_id,
-                merchant_id,
+                full_name,
+                mobile,
+                address,
+                outlets_photos,
+                longitude,
+                latitude,
+                status,
+                remark,
+                overload_user_id,
+                business_code,
+                geo_code,
+                address_to_verify,
+                outlets_photos_to_verify,
+                latitude_to_verify,
+                longitude_to_verify,
+                deleted,
+                audit_time,
                 create_time,
-                update_time,
-                physical_del
+                update_time
             from {db}.{table} 
             where dt='{pt_y}' 
             union all
             select 
                 * 
-            from card_reseller_di
+            from user_nearby_agent_di
         )m
     )m1 where rn=1
     
@@ -172,7 +229,7 @@ def execution_data_task_id(ds, **kargs):
     hive_hook = HiveCliHook()
 
     # 读取sql
-    _sql = ods_sqoop_base_user_reseller_df_sql_task(ds)
+    _sql = ods_sqoop_base_user_nearby_agent_df_sql_task(ds)
 
     logging.info('Executing: %s', _sql)
 
@@ -188,14 +245,14 @@ def execution_data_task_id(ds, **kargs):
     TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "false", "true")
 
 
-ods_sqoop_base_user_reseller_df_task = PythonOperator(
-    task_id='ods_sqoop_base_user_reseller_df_task',
+ods_sqoop_base_user_nearby_agent_df_task = PythonOperator(
+    task_id='ods_sqoop_base_user_nearby_agent_df_task',
     python_callable=execution_data_task_id,
     provide_context=True,
     dag=dag
 )
 
-ods_binlog_user_reseller_hi_check_task >> ods_sqoop_base_user_reseller_df_task
-ods_sqoop_user_reseller_df_pre_check_task >> ods_sqoop_base_user_reseller_df_task
+ods_binlog_user_nearby_agent_hi_check_task >> ods_sqoop_base_user_nearby_agent_df_task
+ods_sqoop_user_nearby_agent_pre_check_task >> ods_sqoop_base_user_nearby_agent_df_task
 
 

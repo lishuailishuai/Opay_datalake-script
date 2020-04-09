@@ -28,35 +28,34 @@ import os
 from utils.get_local_time import GetLocalTime
 
 args = {
-    'owner': 'yuanfeng',
-    'start_date': datetime(2020, 3, 31),
+    'owner': 'lili.chen',
+    'start_date': datetime(2020, 4, 7),
     'depends_on_past': False,
     'retries': 3,
     'retry_delay': timedelta(minutes=2),
     'email': ['bigdata_dw@opay-inc.com'],
-    'email_on_failure': True,
+     'email_on_failure': True,
     'email_on_retry': False,
 }
 
-dag = airflow.DAG('dwd_otrade_b2c_mall_nideshop_order_goods_hi',
-                  schedule_interval="25 * * * *",
+dag = airflow.DAG('dwd_ocredit_sys_user_hf',
+                  schedule_interval="30 * * * *",
                   default_args=args,
                   )
 
 ##----------------------------------------- 变量 ---------------------------------------##
-db_name = "otrade_dw"
-table_name = "dwd_otrade_b2c_mall_nideshop_order_goods_hi"
-hdfs_path = "oss://opay-datalake/otrade/otrade_dw/" + table_name
-config = eval(Variable.get("otrade_time_zone_config"))
+db_name = "ocredit_phones_dw"
+table_name = "dwd_ocredit_sys_user_hf"
+hdfs_path = "oss://opay-datalake/ocredit_phones/ocredit_phones_dw/" + table_name
+config = eval(Variable.get("ocredit_time_zone_config"))
 time_zone = config['NG']['time_zone']
-
 ##----------------------------------------- 依赖 ---------------------------------------##
+
 ### 检查当前小时的分区依赖
-###oss://opay-datalake/otrade_all_hi/ods_binlog_mall_nideshop_order_goods_all_hi
-ods_binlog_mall_nideshop_order_goods_all_hi_check_task = OssSensor(
-    task_id='ods_binlog_base_bd_admin_users_all_hi_check_task',
+ods_binlog_base_sys_user_h_his_check_task = OssSensor(
+    task_id='ods_binlog_base_sys_user_h_his_check_task',
     bucket_key='{hdfs_path_str}/dt={pt}/hour={hour}/_SUCCESS'.format(
-        hdfs_path_str="otrade_all_hi/ods_binlog_mall_nideshop_order_goods_all_hi",
+        hdfs_path_str="ocredit_phones_h_his/ods_binlog_base_sys_user_h_his",
         pt='{{ds}}',
         hour='{{ execution_date.strftime("%H") }}'
     ),
@@ -64,7 +63,6 @@ ods_binlog_mall_nideshop_order_goods_all_hi_check_task = OssSensor(
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
-
 
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
 def fun_task_timeout_monitor(ds, dag, execution_date, **op_kwargs):
@@ -76,15 +74,15 @@ def fun_task_timeout_monitor(ds, dag, execution_date, **op_kwargs):
     # 时间偏移量
     v_gap_hour = 0
 
-    v_date = GetLocalTime("otrade", execution_date.strftime("%Y-%m-%d %H"), v_country_code, v_gap_hour)['date']
-    v_hour = GetLocalTime("otrade", execution_date.strftime("%Y-%m-%d %H"), v_country_code, v_gap_hour)['hour']
+    v_date = GetLocalTime("ocredit", execution_date.strftime("%Y-%m-%d %H"), v_country_code, v_gap_hour)['date']
+    v_hour = GetLocalTime("ocredit", execution_date.strftime("%Y-%m-%d %H"), v_country_code, v_gap_hour)['hour']
 
     # 小时级监控
     tb_hour_task = [
-        {"dag": dag, "db": "otrade_dw", "table": "{dag_name}".format(dag_name=dag_ids),
+        {"dag": dag, "db": "ocredit_phones_dw", "table": "{dag_name}".format(dag_name=dag_ids),
          "partition": "country_code={country_code}/dt={pt}/hour={now_hour}".format(country_code=v_country_code,
                                                                                    pt=v_date, now_hour=v_hour),
-         "timeout": "3000"}
+         "timeout": "600"}
     ]
 
     TaskTimeoutMonitor().set_task_monitor(tb_hour_task)
@@ -98,110 +96,55 @@ task_timeout_monitor = PythonOperator(
 )
 
 
-def dwd_otrade_b2c_mall_nideshop_order_goods_hi_sql_task(ds, v_date):
+def dwd_ocredit_sys_user_hf_sql_task(ds, v_date):
     HQL = '''
 
-set mapred.max.split.size=1000000;
-set hive.exec.parallel=true;
-set hive.exec.dynamic.partition.mode=nonstrict;
-set hive.strict.checks.cartesian.product=false;
+    set hive.exec.dynamic.partition.mode=nonstrict;
+    set hive.exec.parallel=true;
 
---1.最后将去重的结果集插入到表中
-insert overwrite table otrade_dw.dwd_otrade_b2c_mall_nideshop_order_goods_hi partition(country_code,dt,hour)
-select
-  id
-  ,order_id
-  ,goods_id
-  ,goods_name
-  ,goods_sn
-  ,product_id
-  ,number
-  ,market_price
-  ,retail_price
-  ,goods_specifition_name_value
-  ,is_real
-  ,goods_specifition_ids
-  ,list_pic_url
-  ,brand_id
-  ,customers
-  ,customers_name
-  ,country
-  ,province
-  ,city
-  ,district
-  ,address
-  ,mobile
-  ,consignee
-  ,shipping_id
-  ,shipping_name
-  ,shipping_no
-  ,shipping_status
-  ,order_price
-  ,goods_price
-  ,actual_price
-  ,coupon_id
+    insert overwrite table {db}.{table} 
+    partition(country_code, dt,hour)
 
-  ,date_format('{v_date}', 'yyyy-MM-dd HH') as utc_date_hour
+    select user_id,        --主键id                  
+            avatar,         --头像                    
+            account,        --账号                    
+            password,       --密码                    
+            salt,           --md5密码盐                
+            name,           --名字                    
+            birthday,       --生日                    
+            sex,            --性别(字典)                
+            email,          --电子邮件                  
+            phone,          --电话                    
+            role_id,        --角色id(多个逗号隔开)          
+            dept_id,        --部门id(多个逗号隔开)          
+            status,         --状态(字典)                
+            o_native,       --是否是非洲本地               
+            create_time,    --创建时间                  
+            create_user,    --创建人                   
+            update_time,    --更新时间                  
+            update_user,    --更新人                   
+            version,         --乐观锁      
+        t1.utc_date_hour,
+        'NG' country_code,  --如果表中有国家编码直接上传国家编码
+        date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'yyyy-MM-dd') as dt,
+        date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'HH') as hour
 
-  ,'NG' as country_code
-  ,date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'yyyy-MM-dd') as dt
-  ,date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'HH') as hour
-from
-  (
-  select
-    id
-    ,order_id
-    ,goods_id
-    ,goods_name
-    ,goods_sn
-    ,product_id
-    ,number
-    ,market_price
-    ,retail_price
-    ,goods_specifition_name_value
-    ,is_real
-    ,goods_specifition_ids
-    ,list_pic_url
-    ,brand_id
-    ,customers
-    ,customers_name
-    ,country
-    ,province
-    ,city
-    ,district
-    ,address
-    ,mobile
-    ,consignee
-    ,shipping_id
-    ,shipping_name
-    ,shipping_no
-    ,shipping_status
-    ,order_price
-    ,goods_price
-    ,actual_price
-    ,coupon_id
-  
-    ,row_number() over(partition by id order by `__ts_ms` desc,`__file` desc,cast(`__pos` as int) desc) rn
-  from
-    otrade_dw_ods.ods_binlog_mall_nideshop_order_goods_all_hi
-  where
-    dt = date_format('{v_date}', 'yyyy-MM-dd')
-    and hour= date_format('{v_date}', 'HH')
-    and `__deleted` = 'false'
-  ) as a
-where
-  rn = 1
-;
-
-
-
+    from (select * from (select *,
+                 date_format('{v_date}', 'yyyy-MM-dd HH') as utc_date_hour,
+                 row_number() over(partition by user_id order by `__ts_ms` desc,`__file` desc,cast(`__pos` as int) desc) rn
+             from ocredit_phones_dw_ods.ods_binlog_base_sys_user_h_his
+            where 
+                concat(dt, " ", hour) = date_format('{v_date}', 'yyyy-MM-dd HH')
+                and `__deleted` = 'false') m
+        where rn=1
+    ) t1 ;
     '''.format(
         pt=ds,
         v_date=v_date,
+        bef_yes_day=airflow.macros.ds_add(ds, -1),
         table=table_name,
         db=db_name,
         config=config
-
     )
     return HQL
 
@@ -254,7 +197,7 @@ def execution_data_task_id(ds, dag, **kwargs):
     cf = CountriesPublicFrame_dev(args)
 
     # 读取sql
-    _sql = "\n" + cf.alter_partition() + "\n" + dwd_otrade_b2c_mall_nideshop_order_goods_hi_sql_task(ds, v_date)
+    _sql = "\n" + cf.alter_partition() + "\n" + dwd_ocredit_sys_user_hf_sql_task(ds, v_date)
 
     logging.info('Executing: %s', _sql)
 
@@ -265,8 +208,8 @@ def execution_data_task_id(ds, dag, **kwargs):
     cf.touchz_success()
 
 
-dwd_otrade_b2c_mall_nideshop_order_goods_hi_task = PythonOperator(
-    task_id='dwd_otrade_b2c_mall_nideshop_order_goods_hi_task',
+dwd_ocredit_sys_user_hf_task = PythonOperator(
+    task_id='dwd_ocredit_sys_user_hf_task',
     python_callable=execution_data_task_id,
     provide_context=True,
     op_kwargs={
@@ -278,7 +221,4 @@ dwd_otrade_b2c_mall_nideshop_order_goods_hi_task = PythonOperator(
     dag=dag
 )
 
-ods_binlog_mall_nideshop_order_goods_all_hi_check_task >> dwd_otrade_b2c_mall_nideshop_order_goods_hi_task
-
-
-
+ods_binlog_base_sys_user_h_his_check_task >> dwd_ocredit_sys_user_hf_task

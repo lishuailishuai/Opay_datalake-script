@@ -27,7 +27,7 @@ import os
 
 args = {
     'owner': 'xiedong',
-    'start_date': datetime(2020, 4, 7),
+    'start_date': datetime(2020, 4, 8),
     'depends_on_past': False,
     'retries': 3,
     'retry_delay': timedelta(minutes=2),
@@ -36,23 +36,35 @@ args = {
     'email_on_retry': False,
 }
 
-dag = airflow.DAG('ods_sqoop_base_user_transfer_card_record_di',
-                  schedule_interval="30 00 * * *",
+dag = airflow.DAG('ods_sqoop_base_user_telesale_df',
+                  schedule_interval="00 01 * * *",
                   default_args=args,
                   )
 
 ##----------------------------------------- 依赖 ---------------------------------------##
 
-ods_binlog_base_user_transfer_card_record_check_hi_task = OssSensor(
-    task_id='ods_binlog_base_user_transfer_card_record_check_hi_task',
+ods_binlog_user_telesale_hi_check_task = OssSensor(
+    task_id='ods_binlog_user_telesale_hi_check_task',
     bucket_key='{hdfs_path_str}/dt={pt}/hour=22/_SUCCESS'.format(
-        hdfs_path_str="opay_binlog/opay_transaction_db.opay_transaction.user_transfer_card_record",
+        hdfs_path_str="opay_binlog/opay_user_db.opay_user.user_telesale",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
     dag=dag
 )
+
+ods_sqoop_user_telesale_pre_check_task = OssSensor(
+    task_id='ods_sqoop_user_telesale_pre_check_task',
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="opay_dw_sqoop/opay_user/user_telesale",
+        pt='{{macros.ds_add(ds, -1)}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
 
 
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
@@ -77,59 +89,75 @@ task_timeout_monitor = PythonOperator(
 ##----------------------------------------- 变量 ---------------------------------------##
 db_name = "opay_dw_ods"
 
-table_name = "ods_sqoop_base_user_transfer_card_record_di"
-hdfs_path = "oss://opay-datalake/opay_dw_sqoop_di/opay_transaction/user_transfer_card_record"
+table_name = "ods_sqoop_base_user_telesale_df"
+hdfs_path = "oss://opay-datalake/opay_dw_sqoop/opay_user/user_telesale"
 config = eval(Variable.get("opay_time_zone_config"))
 
 
-def ods_sqoop_base_user_transfer_card_record_di_sql_task(ds):
+def ods_sqoop_base_user_telesale_df_sql_task(ds):
     HQL = '''
 
     set hive.exec.dynamic.partition.mode=nonstrict;
     set hive.exec.parallel=true;
+    with 
+        user_telesale_di as (
+            SELECT 
+                id,
+                user_id,
+                referral_code,
+                team,
+                num,
+                from_unixtime(cast(cast(create_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss') as create_time,
+                from_unixtime(cast(cast(update_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss') as update_time
+            from (
+                select 
+                    *,
+                    row_number() over(partition by id order by `__ts_ms` desc,`__file` desc,cast(`__pos` as int) desc) rn
+                FROM opay_dw_ods.ods_binlog_base_user_telesale_hi
+                where concat(dt,' ',hour) between '{pt_y} 23' and '{pt} 22' and `__deleted` = 'false'
+            ) m 
+            where rn=1
+        )
+    
     insert overwrite table {db}.{table} partition (dt)
-    SELECT 
+    select 
         id,
-        order_no,
         user_id,
-        user_name,
-        user_mobile,
-        user_kyc_level,
-        amount,
-        fee,
-        fee_pattern,
-        outward_id,
-        outward_type,
-        country,
-        currency,
-        recipient_bank_code,
-        recipient_bank_name,
-        recipient_bank_account_no_encrypted,
-        recipient_bank_account_no_desensitized,
-        recipient_bank_account_name,
-        recipient_kyc_level,
-        recipient_bvn_encrypted,
-        message,
-        pay_channel,
-        order_status,
-        error_code,
-        error_msg,
-        pay_status,
-        out_channel_id,
-        out_order_no,
-        channel_order_no,
-        from_unixtime(cast(cast(create_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss') create_time,
-        from_unixtime(cast(cast(update_time as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss') update_time,
-        business_type,
-        client_source,
-        user_role,
+        referral_code,
+        team,
+        num,
+        create_time,
+        update_time,
         '{pt}'
-    from 
-        (select *,row_number() over(partition by id order by `__ts_ms` desc,`__file` desc,cast(`__pos` as int) desc) rn
-         FROM opay_dw_ods.ods_binlog_base_user_transfer_card_record_hi
-         where concat(dt,' ',hour) between '{pt_y} 23' and '{pt} 22' and `__deleted` = 'false'
-         ) m 
-    where rn=1
+    from (
+        select 
+            id,
+            user_id,
+            referral_code,
+            team,
+            num,
+            create_time,
+            update_time,
+            row_number()over(partition by id order by update_time desc) rn 
+        from (
+            select 
+                id,
+                user_id,
+                referral_code,
+                team,
+                num,
+                create_time,
+                update_time
+            from {db}.{table} 
+            where dt='{pt_y}' 
+            union all
+            select 
+                * 
+            from user_telesale_di
+        )m
+    )m1 where rn=1
+    
+     
 
     '''.format(
         pt=ds,
@@ -145,7 +173,7 @@ def execution_data_task_id(ds, **kargs):
     hive_hook = HiveCliHook()
 
     # 读取sql
-    _sql = ods_sqoop_base_user_transfer_card_record_di_sql_task(ds)
+    _sql = ods_sqoop_base_user_telesale_df_sql_task(ds)
 
     logging.info('Executing: %s', _sql)
 
@@ -161,12 +189,14 @@ def execution_data_task_id(ds, **kargs):
     TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "false", "true")
 
 
-ods_sqoop_base_user_transfer_card_record_di_task = PythonOperator(
-    task_id='ods_sqoop_base_user_transfer_card_record_di_task',
+ods_sqoop_base_user_telesale_df_task = PythonOperator(
+    task_id='ods_sqoop_base_user_telesale_df_task',
     python_callable=execution_data_task_id,
     provide_context=True,
     dag=dag
 )
 
-ods_binlog_base_user_transfer_card_record_check_hi_task >> ods_sqoop_base_user_transfer_card_record_di_task
+ods_binlog_user_telesale_hi_check_task >> ods_sqoop_base_user_telesale_df_task
+ods_sqoop_user_telesale_pre_check_task >> ods_sqoop_base_user_telesale_df_task
+
 

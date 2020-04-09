@@ -91,7 +91,7 @@ table_list = [
     ("opay_transaction","user_pos_transaction_record", "opay_transaction", "base",3,"false"),
     ("opay_transaction","user_receive_money_record", "opay_transaction", "base",3,"true"),
     ("opay_transaction","user_topup_record", "opay_transaction", "base",3,"true"),
-    ("opay_transaction","user_transfer_card_record", "opay_transaction", "base",3,"true"),
+    # ("opay_transaction","user_transfer_card_record", "opay_transaction", "base",3,"true"),
     ("opay_transaction","user_transfer_user_record", "opay_transaction", "base",3,"true"),
     ("opay_transaction", "cash_in_record", "opay_transaction", "base", 2,"false"),
     ("opay_transaction", "cash_out_record", "opay_transaction", "base", 2,"false"),

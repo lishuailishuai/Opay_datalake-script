@@ -29,7 +29,7 @@ from utils.get_local_time import GetLocalTime
 
 args = {
     'owner': 'yuanfeng',
-    'start_date': datetime(2020, 3, 31),
+    'start_date': datetime(2020, 4, 8),
     'depends_on_past': False,
     'retries': 3,
     'retry_delay': timedelta(minutes=2),
@@ -38,25 +38,24 @@ args = {
     'email_on_retry': False,
 }
 
-dag = airflow.DAG('dim_otrade_b2c_mall_nideshop_product_hf',
+dag = airflow.DAG('dwd_otrade_b2b_order_item_collect_hi',
                   schedule_interval="28 * * * *",
                   default_args=args,
                   )
 
 ##----------------------------------------- 变量 ---------------------------------------##
 db_name = "otrade_dw"
-table_name = "dim_otrade_b2c_mall_nideshop_product_hf"
+table_name = "dwd_otrade_b2b_order_item_collect_hi"
 hdfs_path = "oss://opay-datalake/otrade/otrade_dw/" + table_name
 config = eval(Variable.get("otrade_time_zone_config"))
 time_zone = config['NG']['time_zone']
 
 ##----------------------------------------- 依赖 ---------------------------------------##
-### 检查最新的用户表的依赖
-###oss://opay-datalake/otrade/otrade_dw/dwd_otrade_b2c_mall_nideshop_category_hf
-dwd_otrade_b2c_mall_nideshop_category_hf_check_task = OssSensor(
-    task_id='dwd_otrade_b2c_mall_nideshop_category_hf_check_task',
+###oss://opay-datalake/otrade/otrade_dw/dwd_otrade_b2b_category_hf
+dwd_otrade_b2b_category_hf_check_task = OssSensor(
+    task_id='dwd_otrade_b2b_category_hf_check_task',
     bucket_key='{hdfs_path_str}/country_code=NG/dt={pt}/hour={hour}/_SUCCESS'.format(
-        hdfs_path_str="otrade/otrade_dw/dwd_otrade_b2c_mall_nideshop_category_hf",
+        hdfs_path_str="otrade/otrade_dw/dwd_otrade_b2b_category_hf",
         pt='{{{{(execution_date+macros.timedelta(hours=({time_zone}+{gap_hour}))).strftime("%Y-%m-%d")}}}}'.format(
             time_zone=time_zone, gap_hour=0),
         hour='{{{{(execution_date+macros.timedelta(hours=({time_zone}+{gap_hour}))).strftime("%H")}}}}'.format(
@@ -67,12 +66,11 @@ dwd_otrade_b2c_mall_nideshop_category_hf_check_task = OssSensor(
     dag=dag
 )
 
-### 检查最新的用户表的依赖
-###oss://opay-datalake/otrade/otrade_dw/dwd_otrade_b2c_mall_nideshop_product_hf
-dwd_otrade_b2c_mall_nideshop_product_hf_check_task = OssSensor(
-    task_id='dwd_otrade_b2c_mall_nideshop_product_hf_check_task',
+###oss://opay-datalake/otrade/otrade_dw/dwd_otrade_b2b_order_collect_hi
+dwd_otrade_b2b_order_collect_hi_check_task = OssSensor(
+    task_id='dwd_otrade_b2b_order_collect_hi_check_task',
     bucket_key='{hdfs_path_str}/country_code=NG/dt={pt}/hour={hour}/_SUCCESS'.format(
-        hdfs_path_str="otrade/otrade_dw/dwd_otrade_b2c_mall_nideshop_product_hf",
+        hdfs_path_str="otrade/otrade_dw/dwd_otrade_b2b_order_collect_hi",
         pt='{{{{(execution_date+macros.timedelta(hours=({time_zone}+{gap_hour}))).strftime("%Y-%m-%d")}}}}'.format(
             time_zone=time_zone, gap_hour=0),
         hour='{{{{(execution_date+macros.timedelta(hours=({time_zone}+{gap_hour}))).strftime("%H")}}}}'.format(
@@ -83,12 +81,11 @@ dwd_otrade_b2c_mall_nideshop_product_hf_check_task = OssSensor(
     dag=dag
 )
 
-### 检查最新的用户表的依赖
-###oss://opay-datalake/otrade/otrade_dw/dwd_otrade_b2c_mall_nideshop_goods_hf
-dwd_otrade_b2c_mall_nideshop_goods_hf_check_task = OssSensor(
-    task_id='dwd_otrade_b2c_mall_nideshop_goods_hf_check_task',
+###oss://opay-datalake/otrade/otrade_dw/dwd_otrade_b2b_otrade_order_item_hi
+dwd_otrade_b2b_otrade_order_item_hi_check_task = OssSensor(
+    task_id='dwd_otrade_b2b_otrade_order_item_hi_check_task',
     bucket_key='{hdfs_path_str}/country_code=NG/dt={pt}/hour={hour}/_SUCCESS'.format(
-        hdfs_path_str="otrade/otrade_dw/dwd_otrade_b2c_mall_nideshop_goods_hf",
+        hdfs_path_str="otrade/otrade_dw/dwd_otrade_b2b_otrade_order_item_hi",
         pt='{{{{(execution_date+macros.timedelta(hours=({time_zone}+{gap_hour}))).strftime("%Y-%m-%d")}}}}'.format(
             time_zone=time_zone, gap_hour=0),
         hour='{{{{(execution_date+macros.timedelta(hours=({time_zone}+{gap_hour}))).strftime("%H")}}}}'.format(
@@ -131,7 +128,7 @@ task_timeout_monitor = PythonOperator(
 )
 
 
-def dim_otrade_b2c_mall_nideshop_product_hf_sql_task(ds, v_date):
+def dwd_otrade_b2b_order_item_collect_hi_sql_task(ds, v_date):
     HQL = '''
 
 set mapred.max.split.size=1000000;
@@ -139,16 +136,13 @@ set hive.exec.parallel=true;
 set hive.exec.dynamic.partition.mode=nonstrict;
 set hive.strict.checks.cartesian.product=false;
 
---1.取出上一个小时的全量
+--1.取出商铺层级信息
 with
 category_info as (
   select
-    id
-    ,name
-    ,parent_id
-    ,level
+    *
   from
-    otrade_dw.dwd_otrade_b2c_mall_nideshop_category_hf
+    otrade_dw.dwd_otrade_b2b_category_hf
   where 
     concat(dt, " ", hour) >= default.minLocalTimeRange("{config}", '{v_date}', 0) 
     and concat(dt, " ", hour) <= default.maxLocalTimeRange("{config}", '{v_date}', 0) 
@@ -158,115 +152,171 @@ category_info as (
 --2.种类层级表
 category_level_info as (
   select
-    v4.id as one_level_id
-    ,v4.name as one_level_name
-    ,v4.parent_id as one_level_parent_id
-    ,nvl(v3.r_id,0) as two_level_id
-    ,nvl(v3.r_name,'-') as two_level_name
-    ,v3.r_parent_id as two_parent_id
-    ,nvl(v3.l_id,0) as three_level_id
-    ,nvl(v3.l_name,'-') as three_level_name
-    ,v3.l_parent_id as three_parent_id
-  from    
+    v1.id as level3_id
+    ,v1.name as level3_name
+    ,v1.parent_id as level3_pid
+    ,nvl(v2.id,0) as level2_id
+    ,nvl(v2.name,'-') as level2_name
+    ,nvl(v2.parent_id,0) as level2_pid
+    ,nvl(v3.id,0) as level1_id
+    ,nvl(v3.name,'-') as level1_name
+    ,nvl(v3.parent_id,0) as level1_pid
+  from
+    (select * from category_info where level=3) v1
+  left join
+    category_info v2
+  on
+    v1.parent_id = v2.id
+  left join
+    category_info v3
+  on
+    v2.parent_id = v3.id
+),
+
+--3.取出截至目前最新的交易状态
+order_info as (
+  select
+    *
+  from
     (
     select
-      v1.id as l_id
-      ,v1.name as l_name
-      ,v1.parent_id as l_parent_id
-  
-      ,nvl(v2.id,0) as r_id
-      ,nvl(v2.name,'-') as r_name
-      ,v2.parent_id as r_parent_id
+      *
+      ,row_number() over(partition by order_id order by update_time desc) rn
     from
-      category_info as v1
-    left join
-      category_info as v2
-    on
-      v1.parent_id = v2.id
-    ) as v3
-  left join
-    category_info as v4
-  on
-    v3.r_parent_id = v4.id
+      otrade_dw.dwd_otrade_b2b_order_collect_hi as a
+    where
+      dt = substr(default.minLocalTimeRange("{config}", '{v_date}', 0),0,10)
+      and hour >= '00'
+      and hour <= substr(default.maxLocalTimeRange("{config}", '{v_date}', 0),12,2)
+    ) as b
+  where
+    rn = 1
 ),
 
---3.sku信息
-sku_info as (
+--4.取商品订单信息
+order_item_info as (
   select
-    id as product_id
-    ,goods_id
-    ,retail_price as product_retail_price
-    ,market_price as product_market_price
-    ,group_price as product_group_price
-    ,goods_specification_name as product_name
-    ,merchant_id as product_merchant_id
+    id
+    ,zorder_id
+    ,order_id
+    ,market_price
+    ,sku_price
+    ,buy_num
+    ,total_amount
+    ,product_id
+    ,product_category_id
+    ,product_title
+    ,product_brand_id
+    ,product_brand
+    ,sku_id
+    ,product_image
+    ,refund_status
+    ,sku_value
+    ,zorder_status
+    ,create_time
+    ,handwork_fee
   from
-    otrade_dw.dwd_otrade_b2c_mall_nideshop_product_hf
-  where
-    concat(dt, " ", hour) >= default.minLocalTimeRange("{config}", '{v_date}', 0) 
-    and concat(dt, " ", hour) <= default.maxLocalTimeRange("{config}", '{v_date}', 0) 
-    and utc_date_hour = date_format("{v_date}", 'yyyy-MM-dd HH')
-),
-
---4.spu信息
-spu_info as (
-  select
-    id as goods_id
-    ,category_id
-    ,name as goods_name
-    ,is_on_sale as goods_is_on_sale
-    ,is_delete as goods_is_delete
-    ,is_new as goods_is_new
-    ,is_secKill as goods_is_secKill
-    ,is_service as goods_is_service
-    ,is_app_exclusive as goods_is_app_exclusive
-    ,is_limited as goods_is_limited
-    ,is_hot as goods_is_hot
-    ,brokerage_percent as goods_brokerage_percent
-    ,merchant_id as goods_merchant_id
-    ,start_time as goods_start_time
-    ,end_time as goods_end_time
-    ,add_time as goods_add_time
-  from
-    otrade_dw.dwd_otrade_b2c_mall_nideshop_goods_hf
-  where
+    otrade_dw.dwd_otrade_b2b_otrade_order_item_hi
+  where 
     concat(dt, " ", hour) >= default.minLocalTimeRange("{config}", '{v_date}', 0) 
     and concat(dt, " ", hour) <= default.maxLocalTimeRange("{config}", '{v_date}', 0) 
     and utc_date_hour = date_format("{v_date}", 'yyyy-MM-dd HH')
 )
 
---3.最后插入数据到表中
-insert overwrite table otrade_dw.dim_otrade_b2c_mall_nideshop_product_hf partition(country_code,dt,hour)
+--5.最后将去重的结果集插入到表中
+insert overwrite table otrade_dw.dwd_otrade_b2b_order_item_collect_hi partition(country_code,dt,hour)
 select
-  nvl(v3.one_level_id,0) as one_level_id
-  ,nvl(v3.one_level_name,'-') as one_level_name
-  ,nvl(v3.two_level_id,0) as two_level_id
-  ,nvl(v3.two_level_name,'-') as two_level_name
-  ,nvl(v3.three_level_id,0) as three_level_id
-  ,nvl(v3.three_level_name,'-') as three_level_name
+  v1.id
+  ,v1.zorder_id
+  ,v1.order_id
+  ,nvl(v2.level1_id,0) as level1_id
+  ,nvl(v2.level1_name,'-') as level1_name
+  ,nvl(v2.level2_id,0) as level2_id
+  ,nvl(v2.level2_name,'-') as level2_name
+  ,v1.product_category_id as level3_id
+  ,nvl(v2.level3_name,'-') as level3_name
 
-  ,nvl(v2.goods_id,0) as goods_id
-  ,nvl(v2.goods_name,'-') as goods_name
   ,v1.product_id
-  ,v1.product_name
-  ,v1.product_retail_price
-  ,v1.product_market_price
-  ,v1.product_group_price
-  ,v2.goods_merchant_id as product_merchant_id
+  ,v1.product_title
+  ,v1.sku_id
+  ,v1.sku_value
+  ,v1.product_brand_id
+  ,v1.product_brand
+  ,v1.market_price
+  ,v1.sku_price
+  ,v1.buy_num
+  ,v1.total_amount
+  ,v1.refund_status
+  ,v1.zorder_status
+  ,v1.create_time
+  ,v1.handwork_fee
 
-  ,v2.goods_is_on_sale
-  ,v2.goods_is_delete
-  ,v2.goods_is_new
-  ,v2.goods_is_seckill
-  ,v2.goods_is_service
-  ,v2.goods_is_app_exclusive
-  ,v2.goods_is_limited
-  ,v2.goods_is_hot
-  ,v2.goods_brokerage_percent
-  ,v2.goods_merchant_id
-  ,v2.goods_start_time
-  ,v2.goods_end_time
-  ,v2.goods_add_time
+  ,v3.pay_id
+  ,v3.settle_id
+  ,v3.original_order_id
+  ,v3.order_type
+  ,v3.payer
+  ,v3.payee
+  ,v3.payer_phone
+  ,v3.payee_phone
+  ,v3.payer_name
+  ,v3.payee_name
+  ,v3.supplier_type
+  ,v3.source
+  ,v3.shop_id
+  ,v3.shop_name
+  ,v3.order_status
+  ,v3.refund_status as order_refund_status
+  ,v3.payable_amount
+  ,v3.amount
+  ,v3.fee_type
+  ,v3.fee
+  ,v3.fee_rate
+  ,v3.pay_channel
+  ,v3.pay_type
+  ,v3.pay_cur
+  ,v3.pay_time
+  ,v3.consign_time
+  ,v3.confirm_time
+  ,v3.receive_time
+  ,v3.refund_type
+  ,v3.create_time as order_create_time
+  ,v3.update_time as order_update_time
+  ,v3.status
+  ,v3.country
+  ,v3.city
+  ,v3.country_name
+  ,v3.city_name
+  ,v3.bd_invitation_code
+  ,v3.bd_invitation_id
+  ,v3.hcm_id
+  ,v3.hcm_name
+  ,v3.cm_id
+  ,v3.cm_name
+  ,v3.bdm_id
+  ,v3.bdm_name
+  ,v3.bd_id
+  ,v3.bd_name
+  ,v3.retailer_retailer_email
+  ,v3.retailer_country
+  ,v3.retailer_city
+  ,v3.retailer_country_name
+  ,v3.retailer_city_name
+  ,v3.retailer_bd_invitation_id
+  ,v3.retailer_hcm_id
+  ,v3.retailer_hcm_name
+  ,v3.retailer_cm_id
+  ,v3.retailer_cm_name
+  ,v3.retailer_bdm_id
+  ,v3.retailer_bdm_name
+  ,v3.retailer_bd_id
+  ,v3.retailer_bd_name
+  ,v3.retailer_first_order
+  ,v3.retailer_first_order_time
+  ,v3.opay_pay_id
+  ,v3.actual_amount
+  ,v3.pay_status
+  ,v3.req_status
 
   ,date_format('{v_date}', 'yyyy-MM-dd HH') as utc_date_hour
 
@@ -274,18 +324,16 @@ select
   ,date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'yyyy-MM-dd') as dt
   ,date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'HH') as hour
 from
-  sku_info as v1
+  order_item_info as v1
 left join
-  spu_info as v2
+  category_level_info as v2
 on
-  v1.goods_id = v2.goods_id
+  v1.product_category_id = v2.level3_id
 left join
-  category_level_info as v3
+  order_info as v3
 on
-  v2.category_id = v3.three_level_id
+  v1.order_id = v3.order_id
 ;
-
-
 
 
     '''.format(
@@ -347,7 +395,7 @@ def execution_data_task_id(ds, dag, **kwargs):
     cf = CountriesPublicFrame_dev(args)
 
     # 读取sql
-    _sql = "\n" + cf.alter_partition() + "\n" + dim_otrade_b2c_mall_nideshop_product_hf_sql_task(ds, v_date)
+    _sql = "\n" + cf.alter_partition() + "\n" + dwd_otrade_b2b_order_item_collect_hi_sql_task(ds, v_date)
 
     logging.info('Executing: %s', _sql)
 
@@ -358,8 +406,8 @@ def execution_data_task_id(ds, dag, **kwargs):
     cf.touchz_success()
 
 
-dim_otrade_b2c_mall_nideshop_product_hf_task = PythonOperator(
-    task_id='dim_otrade_b2c_mall_nideshop_product_hf_task',
+dwd_otrade_b2b_order_item_collect_hi_task = PythonOperator(
+    task_id='dwd_otrade_b2b_order_item_collect_hi_task',
     python_callable=execution_data_task_id,
     provide_context=True,
     op_kwargs={
@@ -371,8 +419,7 @@ dim_otrade_b2c_mall_nideshop_product_hf_task = PythonOperator(
     dag=dag
 )
 
-dwd_otrade_b2c_mall_nideshop_category_hf_check_task >> dim_otrade_b2c_mall_nideshop_product_hf_task
-dwd_otrade_b2c_mall_nideshop_product_hf_check_task >> dim_otrade_b2c_mall_nideshop_product_hf_task
-dwd_otrade_b2c_mall_nideshop_goods_hf_check_task >> dim_otrade_b2c_mall_nideshop_product_hf_task
-
+dwd_otrade_b2b_category_hf_check_task >> dwd_otrade_b2b_order_item_collect_hi_task
+dwd_otrade_b2b_order_collect_hi_check_task >> dwd_otrade_b2b_order_item_collect_hi_task
+dwd_otrade_b2b_otrade_order_item_hi_check_task >> dwd_otrade_b2b_order_item_collect_hi_task
 

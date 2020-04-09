@@ -68,17 +68,17 @@ db_name,table_name,conn_id,prefix_name,priority_weight,server_name (采集配置
 
 table_list = [
 
-    ("oloan","t_contract", "ocredit_db", "base",1, "ocredit_db","false"),
-    ("oloan","t_contract_approval_log", "ocredit_db", "base",1, "ocredit_db","false"),
-    ("oloan","t_financial_product_phone", "ocredit_db", "base",1, "ocredit_db","false"),
-    ("oloan","t_financial_product_phone_history", "ocredit_db", "base",1, "ocredit_db","false"),
-    ("oloan","t_order", "ocredit_db", "base",1, "ocredit_db","false"),
-    ("oloan","t_order_audit_history", "ocredit_db", "base",1, "ocredit_db","false"),
-    ("oloan","t_order_down_payment", "ocredit_db", "base",1, "ocredit_db","false"),
-    ("oloan","t_order_relate_user", "ocredit_db", "base",1, "ocredit_db","false"),
-    ("oloan","t_overdue_record", "ocredit_db", "base",1, "ocredit_db","false"),
-    ("oloan","t_repayment_detail", "ocredit_db", "base",1, "ocredit_db","false"),
-    ("oloan","t_repayment_plan", "ocredit_db", "base",1, "ocredit_db","false")
+    ("oloan","t_contract", "ocredit_db", "base",1, "ocredit_db_binlog","false"),
+    ("oloan","t_contract_approval_log", "ocredit_db", "base",1, "ocredit_db_binlog","false"),
+    ("oloan","t_financial_product_phone", "ocredit_db", "base",1, "ocredit_db_binlog","false"),
+    ("oloan","t_financial_product_phone_history", "ocredit_db", "base",1, "ocredit_db_binlog","false"),
+    ("oloan","t_order", "ocredit_db", "base",1, "ocredit_db_binlog","false"),
+    ("oloan","t_order_audit_history", "ocredit_db", "base",1, "ocredit_db_binlog","false"),
+    ("oloan","t_order_down_payment", "ocredit_db", "base",1, "ocredit_db_binlog","false"),
+    ("oloan","t_order_relate_user", "ocredit_db", "base",1, "ocredit_db_binlog","false"),
+    ("oloan","t_overdue_record", "ocredit_db", "base",1, "ocredit_db_binlog","false"),
+    ("oloan","t_repayment_detail", "ocredit_db", "base",1, "ocredit_db_binlog","false"),
+    ("oloan","t_repayment_plan", "ocredit_db", "base",1, "ocredit_db_binlog","false")
 ]
 
 HIVE_DB = 'ocredit_phones_dw_ods'
@@ -129,6 +129,7 @@ ODS_CREATE_TABLE_SQL = '''
 '''
 
 ODS_SQOOP_CREATE_TABLE_SQL = '''
+    DROP TABLE {db_name}.`{table_name}`;
     CREATE EXTERNAL TABLE IF NOT EXISTS {db_name}.`{table_name}`(
         {columns}
     )
@@ -196,18 +197,6 @@ ADD_FULL_SQL = '''
 
 def add_partition(v_execution_date, v_execution_day, v_execution_hour, db_name, table_name, conn_id, hive_table_name,
                   server_name, hive_db, is_must_have_data, **kwargs):
-    # 生成_SUCCESS
-    """
-    第一个参数true: 数据目录是有country_code分区。false 没有
-    第二个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS
-
-    """
-    TaskTouchzSuccess().countries_touchz_success(
-        v_execution_day,
-        hive_db,
-        hive_table_name,
-        ALL_HI_OSS_PATH % hive_table_name,
-        "false", is_must_have_data, v_execution_hour)
 
     sql = '''
             ALTER TABLE {hive_db}.{table} ADD IF NOT EXISTS PARTITION (dt = '{ds}', hour = '{hour}')
