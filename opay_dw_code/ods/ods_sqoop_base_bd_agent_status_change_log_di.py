@@ -114,34 +114,6 @@ def ods_sqoop_base_bd_agent_status_change_log_di_sql_task(ds):
     )
     return HQL
 
-#
-# def execution_data_task_id(ds, **kargs):
-#     hive_hook = HiveCliHook()
-#
-#     # 读取sql
-#     _sql = ods_sqoop_base_bd_agent_status_change_log_di_sql_task(ds)
-#
-#     logging.info('Executing: %s', _sql)
-#
-#     # 执行Hive
-#     hive_hook.run_cli(_sql)
-#
-#     # 生成_SUCCESS
-#     """
-#     第一个参数true: 数据目录是有country_code分区。false 没有
-#     第二个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS
-#
-#     """
-#     TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "false", "true")
-#
-#
-# ods_sqoop_base_bd_agent_status_change_log_di_task = PythonOperator(
-#     task_id='ods_sqoop_base_bd_agent_status_change_log_di_task',
-#     python_callable=execution_data_task_id,
-#     provide_context=True,
-#     dag=dag
-# )
-
 # 主流程
 def execution_data_task_id(ds, dag, **kwargs):
     v_execution_time = kwargs.get('v_execution_time')
@@ -155,7 +127,7 @@ def execution_data_task_id(ds, dag, **kwargs):
             "table_name": table_name,
             "data_oss_path": hdfs_path,
             "is_country_partition": "false",
-            "is_result_force_exist": "false",
+            "is_result_force_exist": "true",
             "execute_time": v_execution_time,
             "is_hour_task": "false",
             "frame_type": "utc",
