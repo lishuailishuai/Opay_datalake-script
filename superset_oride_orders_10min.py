@@ -814,7 +814,7 @@ def __data_to_mysql(conn, data, column, update=''):
             else:
                 sval += ',(\'{}\')'.format('\',\''.join([str(x) for x in row]))
             cnt += 1
-            if cnt >= 1000:
+            if cnt >= 500:
                 logging.info('data_to_mysql %s', esql.format(isql, sval, update))
                 conn.execute(esql.format(isql, sval, update))
                 cnt = 0
