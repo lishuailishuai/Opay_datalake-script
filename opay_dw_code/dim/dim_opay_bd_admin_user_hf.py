@@ -232,8 +232,8 @@ def dim_opay_bd_admin_user_hf_sql_task(ds, v_date):
                 fcm_token, 
                 bd_admin_create_user_id, 
                 bd_admin_update_user_id,    
-                default.localTime("{config}", 'NG', from_unixtime(cast(cast(create_time as bigint) / 1000 as bigint), 'yyyy-MM-dd HH:mm:ss'), 0) as create_time,
-                default.localTime("{config}", 'NG', from_unixtime(cast(cast(update_time as bigint) / 1000 as bigint), 'yyyy-MM-dd HH:mm:ss'), 0) as update_time,
+                default.localTime("{config}", 'NG', concat(substr(create_time, 1, 10), ' ', substr(create_time, 12, 8)), 0) as create_time,
+                default.localTime("{config}", 'NG', concat(substr(update_time, 1, 10), ' ', substr(update_time, 12, 8)), 0) as update_time,
                 'NG' AS country_code
             from ods_bd_admin_hi where rn = 1
         ) t0 

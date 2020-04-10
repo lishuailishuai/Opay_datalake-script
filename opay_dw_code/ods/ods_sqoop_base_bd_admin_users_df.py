@@ -119,8 +119,8 @@ def ods_sqoop_base_bd_admin_users_df_sql_task(ds):
                 fcm_token,
                 create_user_id,
                 update_user_id,
-                from_unixtime(cast(cast(created_at as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss') as created_at,
-                from_unixtime(cast(cast(updated_at as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss') as updated_at,
+                concat(substr(created_at, 1, 10), ' ', substr(created_at, 12, 8)) as created_at,
+                concat(substr(updated_at, 1, 10), ' ', substr(updated_at, 12, 8)) as updated_at,
                 city_id
             from (
                 select 

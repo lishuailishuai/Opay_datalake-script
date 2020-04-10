@@ -93,7 +93,7 @@ def ods_sqoop_base_bd_agent_status_change_log_di_sql_task(ds):
         agent_id,
         opay_account,
         opay_id,
-        from_unixtime(cast(cast(created_at as bigint)/1000 as bigint),'yyyy-MM-dd HH:mm:ss') as created_at,
+        concat(substr(created_at, 1, 10), ' ', substr(created_at, 12, 8)) as created_at,
         from_agent_status,
         to_agent_status,
         '{pt}'
