@@ -29,7 +29,7 @@ from utils.get_local_time import GetLocalTime
 
 args = {
     'owner': 'lili.chen',
-    'start_date': datetime(2020, 4, 1),
+    'start_date': datetime(2020, 4, 9),
     'depends_on_past': False,
     'retries': 3,
     'retry_delay': timedelta(minutes=2),
@@ -38,14 +38,14 @@ args = {
     'email_on_retry': False,
 }
 
-dag = airflow.DAG('dwd_ocredit_phones_order_base_di_test',
-                  schedule_interval="30 00 * * *",
+dag = airflow.DAG('dwd_ocredit_phones_order_base_hi',
+                  schedule_interval="30 * * * *",
                   default_args=args,
                   )
 
 ##----------------------------------------- 变量 ---------------------------------------##
 db_name = "ocredit_phones_dw"
-table_name = "dwd_ocredit_phones_order_base_di_test"
+table_name = "dwd_ocredit_phones_order_base_hi"
 hdfs_path = "oss://opay-datalake/ocredit_phones/ocredit_phones_dw/" + table_name
 config = eval(Variable.get("ocredit_time_zone_config"))
 time_zone = config['NG']['time_zone']
@@ -54,7 +54,7 @@ time_zone = config['NG']['time_zone']
 ### 检查当前小时的分区依赖
 ods_binlog_base_t_order_all_hi_check_task = OssSensor(
     task_id='ods_binlog_base_t_order_all_hi_check_task',
-    bucket_key='{hdfs_path_str}/dt={pt}/hour=23/_SUCCESS'.format(
+    bucket_key='{hdfs_path_str}/dt={pt}/hour={hour}/_SUCCESS'.format(
         hdfs_path_str="ocredit_phones_all_hi/ods_binlog_base_t_order_all_hi",
         pt='{{ds}}',
         hour='{{ execution_date.strftime("%H") }}'
@@ -80,7 +80,7 @@ def fun_task_timeout_monitor(ds, dag, execution_date, **op_kwargs):
     # 小时级监控
     tb_hour_task = [
         {"dag": dag, "db": "ocredit_phones_dw", "table": "{dag_name}".format(dag_name=dag_ids),
-         "partition": "country_code={country_code}/dt={pt}".format(country_code=v_country_code,
+         "partition": "country_code={country_code}/dt={pt}/hour={now_hour}".format(country_code=v_country_code,
                                                                                    pt=v_date, now_hour=v_hour),
          "timeout": "1200"}
     ]
@@ -96,14 +96,14 @@ task_timeout_monitor = PythonOperator(
 )
 
 
-def dwd_ocredit_phones_order_base_di_test_sql_task(ds, v_date):
+def dwd_ocredit_phones_order_base_hi_sql_task(ds, v_date):
     HQL = '''
 
     set hive.exec.dynamic.partition.mode=nonstrict;
     set hive.exec.parallel=true;
 
     insert overwrite table {db}.{table} 
-    partition(country_code, dt)
+    partition(country_code, dt,hour)
 
     select id, --无业务含义主键 
           order_id, --订单号 
@@ -155,17 +155,18 @@ def dwd_ocredit_phones_order_base_di_test_sql_task(ds, v_date):
           if(order_id='012020011001240073','2020-01-04',substr(default.localTime("{config}",'NG',create_time,0),1,10)) as date_of_entry, --进件日期
         t1.utc_date_hour,
         'NG' country_code,  --如果表中有国家编码直接上传国家编码
-        date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'yyyy-MM-dd') as dt
+        date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'yyyy-MM-dd') as dt,
+        date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'HH') as hour
 
     from (select * from (select *,
                  date_format('{v_date}', 'yyyy-MM-dd HH') as utc_date_hour,
-                 row_number() over(partition by order_id order by `__ts_ms` desc,`__file` desc,cast(`__pos` as int) desc) rn
+                 row_number() over(partition by id order by `__ts_ms` desc,`__file` desc,cast(`__pos` as int) desc) rn
              from ocredit_phones_dw_ods.ods_binlog_base_t_order_all_hi
             where 
-                dt >= '{bef_yes_day}' --有可能多个国家时区不一样，如果要取昨天一天的本地数据，需要尽可能多的限定全采集的数据
-                --concat_ws(' ',dt,hour) BETWEEN '{bef_yes_day} 23' AND '{pt} 22' --按utc取昨天数据
-                and (substr(default.localTime("{config}",'NG',create_time,0),1,10)=date_format('{v_date}', 'yyyy-MM-dd') --按本地取昨天数据
-                or default.localTime("{config}",'NG',update_time,0)=date_format('{v_date}', 'yyyy-MM-dd'))
+                --dt >= '{bef_yes_day}' --有可能多个国家时区不一样，如果要取昨天一天的本地数据，需要尽可能多的限定全采集的数据
+                concat(dt, " ", hour) = date_format('{v_date}', 'yyyy-MM-dd HH')
+              --  and (substr(default.localTime("{config}",'NG',create_time,0),1,10)=date_format('{v_date}', 'yyyy-MM-dd') --按本地取昨天数据
+              --  or default.localTime("{config}",'NG',update_time,0)=date_format('{v_date}', 'yyyy-MM-dd'))
                 and `__deleted` = 'false') m
         where rn=1
     ) t1 ;
@@ -220,7 +221,7 @@ def execution_data_task_id(ds, dag, **kwargs):
             "is_country_partition": "true",
             "is_result_force_exist": "false",
             "execute_time": v_date,
-            "is_hour_task": "false",
+            "is_hour_task": "true",
             "frame_type": "local"
         }
     ]
@@ -228,7 +229,7 @@ def execution_data_task_id(ds, dag, **kwargs):
     cf = CountriesPublicFrame_dev(args)
 
     # 读取sql
-    _sql = "\n" + cf.alter_partition() + "\n" + dwd_ocredit_phones_order_base_di_test_sql_task(ds, v_date)
+    _sql = "\n" + cf.alter_partition() + "\n" + dwd_ocredit_phones_order_base_hi_sql_task(ds, v_date)
 
     logging.info('Executing: %s', _sql)
 
@@ -239,8 +240,8 @@ def execution_data_task_id(ds, dag, **kwargs):
     cf.touchz_success()
 
 
-dwd_ocredit_phones_order_base_di_test_task = PythonOperator(
-    task_id='dwd_ocredit_phones_order_base_di_test_task',
+dwd_ocredit_phones_order_base_hi_task = PythonOperator(
+    task_id='dwd_ocredit_phones_order_base_hi_task',
     python_callable=execution_data_task_id,
     provide_context=True,
     op_kwargs={
@@ -252,4 +253,4 @@ dwd_ocredit_phones_order_base_di_test_task = PythonOperator(
     dag=dag
 )
 
-ods_binlog_base_t_order_all_hi_check_task >> dwd_ocredit_phones_order_base_di_test_task
+ods_binlog_base_t_order_all_hi_check_task >> dwd_ocredit_phones_order_base_hi_task
