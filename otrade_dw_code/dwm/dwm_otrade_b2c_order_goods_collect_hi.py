@@ -66,11 +66,11 @@ dwd_otrade_b2c_mall_nideshop_order_goods_hi_check_task = OssSensor(
     dag=dag
 )
 
-###oss://opay-datalake/otrade/otrade_dw/dwd_otrade_b2c_order_collect_hi
-dwd_otrade_b2c_order_collect_hi_check_task = OssSensor(
-    task_id='dwd_otrade_b2c_order_collect_hi_check_task',
+###oss://opay-datalake/otrade/otrade_dw/dwm_otrade_b2c_order_collect_hi
+dwm_otrade_b2c_order_collect_hi_check_task = OssSensor(
+    task_id='dwm_otrade_b2c_order_collect_hi_check_task',
     bucket_key='{hdfs_path_str}/country_code=NG/dt={pt}/hour={hour}/_SUCCESS'.format(
-        hdfs_path_str="otrade/otrade_dw/dwd_otrade_b2c_order_collect_hi",
+        hdfs_path_str="otrade/otrade_dw/dwm_otrade_b2c_order_collect_hi",
         pt='{{{{(execution_date+macros.timedelta(hours=({time_zone}+{gap_hour}))).strftime("%Y-%m-%d")}}}}'.format(
             time_zone=time_zone, gap_hour=0),
         hour='{{{{(execution_date+macros.timedelta(hours=({time_zone}+{gap_hour}))).strftime("%H")}}}}'.format(
@@ -221,7 +221,7 @@ order_collect_info as (
     ,city_name
     ,country_name
   from
-    otrade_dw.dwd_otrade_b2c_order_collect_hi
+    otrade_dw.dwm_otrade_b2c_order_collect_hi
   where
     concat(dt,' ',hour) >= default.minLocalTimeRange("{config}", '{v_date}', 0)
     and concat(dt,' ',hour) <= default.maxLocalTimeRange("{config}", '{v_date}', 0) 
@@ -438,6 +438,6 @@ dwm_otrade_b2c_order_goods_collect_hi_task = PythonOperator(
 )
 
 dwd_otrade_b2c_mall_nideshop_order_goods_hi_check_task >> dwm_otrade_b2c_order_goods_collect_hi_task
-dwd_otrade_b2c_order_collect_hi_check_task >> dwm_otrade_b2c_order_goods_collect_hi_task
+dwm_otrade_b2c_order_collect_hi_check_task >> dwm_otrade_b2c_order_goods_collect_hi_task
 dim_otrade_b2c_mall_nideshop_product_hf_check_task >> dwm_otrade_b2c_order_goods_collect_hi_task
 
