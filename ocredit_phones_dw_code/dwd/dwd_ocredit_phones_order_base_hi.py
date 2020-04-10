@@ -39,7 +39,7 @@ args = {
 }
 
 dag = airflow.DAG('dwd_ocredit_phones_order_base_hi',
-                  schedule_interval="30 00 * * *",
+                  schedule_interval="30 * * * *",
                   default_args=args,
                   )
 
