@@ -24,6 +24,7 @@ import logging
 from airflow.models import Variable
 import requests
 import os
+from plugins.CountriesAppFrame import CountriesAppFrame
 
 args = {
     'owner': 'xiedong',
@@ -117,30 +118,49 @@ from opay_dw_ods.ods_sqoop_base_message_record_di
     return HQL
 
 
-def execution_data_task_id(ds, **kargs):
+# 主流程
+def execution_data_task_id(ds, dag, **kwargs):
+    v_execution_time = kwargs.get('v_execution_time')
     hive_hook = HiveCliHook()
 
+    args = [
+        {
+            "dag": dag,
+            "is_countries_online": "true",
+            "db_name": db_name,
+            "table_name": table_name,
+            "data_oss_path": hdfs_path,
+            "is_country_partition": "false",
+            "is_result_force_exist": "false",
+            "execute_time": v_execution_time,
+            "is_hour_task": "false",
+            "frame_type": "local",
+            "business_key": "opay"
+        }
+    ]
+
+    cf = CountriesAppFrame(args)
+
     # 读取sql
-    _sql = dwd_opay_message_record_base_di_sql_task(ds)
+    _sql = "\n" + cf.alter_partition() + "\n" + dwd_opay_message_record_base_di_sql_task(ds)
 
     logging.info('Executing: %s', _sql)
 
     # 执行Hive
     hive_hook.run_cli(_sql)
 
-    # 生成_SUCCESS
-    """
-    第一个参数true: 数据目录是有country_code分区。false 没有
-    第二个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
-
-    """
-    TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "true", "true")
+    # 生产success
+    cf.touchz_success()
 
 
 dwd_opay_message_record_base_di_task = PythonOperator(
     task_id='dwd_opay_message_record_base_di_task',
     python_callable=execution_data_task_id,
     provide_context=True,
+    op_kwargs={
+        'v_execution_time': '{{execution_date.strftime("%Y-%m-%d %H:%M:%S")}}',
+        'owner': '{{owner}}'
+    },
     dag=dag
 )
 
