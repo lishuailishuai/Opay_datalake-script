@@ -164,7 +164,7 @@ def dwd_opay_account_balance_df_sql_task(ds):
                 WHERE dt='{pt}' AND create_time<'{pt} 23:00:00'
         )
        
-    insert overwrite table {db}.{table} partition (country_code,dt)
+    insert overwrite table {db}.{table} partition (country_code = 'NG', dt = '{pt}')
     select
         t0.user_id,
         user_type,
@@ -180,9 +180,7 @@ def dwd_opay_account_balance_df_sql_task(ds):
         nvl(auth, '-'),
         nvl(create_time, '-'),
         nvl(update_time, '-'),
-        nvl(merchant_type, '-'),
-        'NG' as country_code,
-        '{pt}' dt
+        nvl(merchant_type, '-')
     from (
         SELECT 
             merchant_id AS user_id,
