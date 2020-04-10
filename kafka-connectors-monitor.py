@@ -10,7 +10,7 @@ import logging
 args = {
     'owner': 'zhenqian.zhang',
     'start_date': datetime(2019, 10, 23),
-    'depends_on_past': True,
+    'depends_on_past': False,
     'retries': 1,
     'retry_delay': timedelta(minutes=5),
     'email': ['bigdata_dw@opay-inc.com'],
@@ -20,6 +20,8 @@ args = {
 dag = airflow.DAG(
     'kafka-connectors-monitor',
     schedule_interval="*/10 * * * *",
+    catchup=False,
+    max_active_runs=1,
     default_args=args)
 
 ALI_SERVER_LIST = [
@@ -61,9 +63,9 @@ def connectors_status_check():
                     )
                     dingding_alet.send(msg)
                     # 重启任务
-                    restart_url = TASK_RESTART_URL % (server_ip, server_port, connector, task['id'])
-                    requests.post(restart_url)
-                    logging.info('ip %s, port %s,  connector %s, task id %d restart. url %s', server_ip, server_port, connector, task['id'], restart_url)
+                    #restart_url = TASK_RESTART_URL % (server_ip, server_port, connector, task['id'])
+                    #requests.post(restart_url)
+                    #logging.info('ip %s, port %s,  connector %s, task id %d restart. url %s', server_ip, server_port, connector, task['id'], restart_url)
 
 
 connectors_status = PythonOperator(
