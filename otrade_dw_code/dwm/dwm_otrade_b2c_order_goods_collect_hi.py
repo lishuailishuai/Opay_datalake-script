@@ -29,7 +29,7 @@ from utils.get_local_time import GetLocalTime
 
 args = {
     'owner': 'yuanfeng',
-    'start_date': datetime(2020, 4, 4),
+    'start_date': datetime(2020, 4, 9),
     'depends_on_past': False,
     'retries': 3,
     'retry_delay': timedelta(minutes=2),
@@ -38,14 +38,14 @@ args = {
     'email_on_retry': False,
 }
 
-dag = airflow.DAG('dwd_otrade_b2c_order_goods_collect_hi',
+dag = airflow.DAG('dwm_otrade_b2c_order_goods_collect_hi',
                   schedule_interval="30 * * * *",
                   default_args=args,
                   )
 
 ##----------------------------------------- 变量 ---------------------------------------##
 db_name = "otrade_dw"
-table_name = "dwd_otrade_b2c_order_goods_collect_hi"
+table_name = "dwm_otrade_b2c_order_goods_collect_hi"
 hdfs_path = "oss://opay-datalake/otrade/otrade_dw/" + table_name
 config = eval(Variable.get("otrade_time_zone_config"))
 time_zone = config['NG']['time_zone']
@@ -128,7 +128,7 @@ task_timeout_monitor = PythonOperator(
 )
 
 
-def dwd_otrade_b2c_order_goods_collect_hi_sql_task(ds, v_date):
+def dwm_otrade_b2c_order_goods_collect_hi_sql_task(ds, v_date):
     HQL = '''
 
 set mapred.max.split.size=1000000;
@@ -251,7 +251,7 @@ product_info as (
 )
 
 --4.将数据关联后插入最终表中
-insert overwrite table otrade_dw.dwd_otrade_b2c_order_goods_collect_hi partition(country_code,dt,hour)
+insert overwrite table otrade_dw.dwm_otrade_b2c_order_goods_collect_hi partition(country_code,dt,hour)
 select
   v1.id
   ,v1.order_id
@@ -413,7 +413,7 @@ def execution_data_task_id(ds, dag, **kwargs):
     cf = CountriesPublicFrame_dev(args)
 
     # 读取sql
-    _sql = "\n" + cf.alter_partition() + "\n" + dwd_otrade_b2c_order_goods_collect_hi_sql_task(ds, v_date)
+    _sql = "\n" + cf.alter_partition() + "\n" + dwm_otrade_b2c_order_goods_collect_hi_sql_task(ds, v_date)
 
     logging.info('Executing: %s', _sql)
 
@@ -424,8 +424,8 @@ def execution_data_task_id(ds, dag, **kwargs):
     cf.touchz_success()
 
 
-dwd_otrade_b2c_order_goods_collect_hi_task = PythonOperator(
-    task_id='dwd_otrade_b2c_order_goods_collect_hi_task',
+dwm_otrade_b2c_order_goods_collect_hi_task = PythonOperator(
+    task_id='dwm_otrade_b2c_order_goods_collect_hi_task',
     python_callable=execution_data_task_id,
     provide_context=True,
     op_kwargs={
@@ -437,7 +437,7 @@ dwd_otrade_b2c_order_goods_collect_hi_task = PythonOperator(
     dag=dag
 )
 
-dwd_otrade_b2c_mall_nideshop_order_goods_hi_check_task >> dwd_otrade_b2c_order_goods_collect_hi_task
-dwd_otrade_b2c_order_collect_hi_check_task >> dwd_otrade_b2c_order_goods_collect_hi_task
-dim_otrade_b2c_mall_nideshop_product_hf_check_task >> dwd_otrade_b2c_order_goods_collect_hi_task
+dwd_otrade_b2c_mall_nideshop_order_goods_hi_check_task >> dwm_otrade_b2c_order_goods_collect_hi_task
+dwd_otrade_b2c_order_collect_hi_check_task >> dwm_otrade_b2c_order_goods_collect_hi_task
+dim_otrade_b2c_mall_nideshop_product_hf_check_task >> dwm_otrade_b2c_order_goods_collect_hi_task
 

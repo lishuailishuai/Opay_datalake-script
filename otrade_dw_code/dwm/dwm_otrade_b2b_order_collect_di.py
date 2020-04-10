@@ -52,10 +52,10 @@ time_zone = config['NG']['time_zone']
 
 ##----------------------------------------- 依赖 ---------------------------------------##
 
-dwd_otrade_b2b_order_collect_hi_task = OssSensor(
-    task_id='dwd_otrade_b2b_order_collect_hi_task',
+dwm_otrade_b2b_order_collect_hi_task = OssSensor(
+    task_id='dwm_otrade_b2b_order_collect_hi_task',
     bucket_key='{hdfs_path_str}/country_code=NG/dt={pt}/hour={hour}/_SUCCESS'.format(
-        hdfs_path_str="otrade/otrade_dw/dwd_otrade_b2b_order_collect_hi",
+        hdfs_path_str="otrade/otrade_dw/dwm_otrade_b2b_order_collect_hi",
         pt='{{ds}}',
         hour='23'
     ),
@@ -264,7 +264,7 @@ from
 
     ,row_number() over(partition by id order by update_time desc) rn
   from
-    otrade_dw.dwd_otrade_b2b_order_collect_hi
+    otrade_dw.dwm_otrade_b2b_order_collect_hi
   where
     dt = '{pt}'
   ) as a
@@ -382,7 +382,7 @@ dwm_otrade_b2b_order_collect_di_task = PythonOperator(
     dag=dag
 )
 
-dwd_otrade_b2b_order_collect_hi_task >> dwm_otrade_b2b_order_collect_di_task
+dwm_otrade_b2b_order_collect_hi_task >> dwm_otrade_b2b_order_collect_di_task
 
 
 

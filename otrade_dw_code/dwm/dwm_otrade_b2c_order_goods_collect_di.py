@@ -29,7 +29,7 @@ from plugins.CountriesAppFrame import CountriesAppFrame
 
 args = {
     'owner': 'yuanfeng',
-    'start_date': datetime(2020, 4, 2),
+    'start_date': datetime(2020, 4, 9),
     'depends_on_past': False,
     'retries': 3,
     'retry_delay': timedelta(minutes=2),
@@ -38,24 +38,24 @@ args = {
     'email_on_retry': False,
 }
 
-dag = airflow.DAG('dwd_otrade_b2c_order_goods_collect_di',
+dag = airflow.DAG('dwm_otrade_b2c_order_goods_collect_di',
                   schedule_interval="00 03 * * *",
                   default_args=args,
                   )
 
 ##----------------------------------------- 变量 ---------------------------------------##
 db_name = "otrade_dw"
-table_name = "dwd_otrade_b2c_order_goods_collect_di"
+table_name = "dwm_otrade_b2c_order_goods_collect_di"
 hdfs_path = "oss://opay-datalake/otrade/otrade_dw/" + table_name
 config = eval(Variable.get("otrade_time_zone_config"))
 time_zone = config['NG']['time_zone']
 
 ##----------------------------------------- 依赖 ---------------------------------------##
 
-dwd_otrade_b2c_order_goods_collect_hi_task = OssSensor(
-    task_id='dwd_otrade_b2c_order_goods_collect_hi_task',
+dwm_otrade_b2c_order_goods_collect_hi_task = OssSensor(
+    task_id='dwm_otrade_b2c_order_goods_collect_hi_task',
     bucket_key='{hdfs_path_str}/country_code=NG/dt={pt}/hour={hour}/_SUCCESS'.format(
-        hdfs_path_str="otrade/otrade_dw/dwd_otrade_b2c_order_goods_collect_hi",
+        hdfs_path_str="otrade/otrade_dw/dwm_otrade_b2c_order_goods_collect_hi",
         pt='{{ds}}',
         hour='23'
     ),
@@ -88,7 +88,7 @@ task_timeout_monitor = PythonOperator(
 
 ##----------------------------------------- 脚本 ---------------------------------------##
 
-def dwd_otrade_b2c_order_goods_collect_di_sql_task(ds):
+def dwm_otrade_b2c_order_goods_collect_di_sql_task(ds):
     HQL = '''
 
 set mapred.max.split.size=1000000;
@@ -97,7 +97,7 @@ set hive.exec.dynamic.partition.mode=nonstrict;
 set hive.strict.checks.cartesian.product=false;
 
 --1.将数据关联后插入最终表中
-insert overwrite table otrade_dw.dwd_otrade_b2c_order_goods_collect_di partition(country_code,dt)
+insert overwrite table otrade_dw.dwm_otrade_b2c_order_goods_collect_di partition(country_code,dt)
 select
   id
   ,order_id
@@ -261,10 +261,10 @@ from
     ,product_retail_price
     ,product_market_price
     ,product_group_price
-    
+
     ,row_number() over(partition by id order by utc_date_hour desc) rn
   from
-    otrade_dw.dwd_otrade_b2c_order_goods_collect_hi
+    otrade_dw.dwm_otrade_b2c_order_goods_collect_hi
   where
     dt = '{pt}'
   ) as a
@@ -292,7 +292,7 @@ def execution_data_task_id(ds, dag, **kwargs):
     hive_hook = HiveCliHook()
 
     # 读取sql
-    # _sql = dwd_otrade_b2c_order_goods_collect_di_sql_task(ds)
+    # _sql = dwm_otrade_b2c_order_goods_collect_di_sql_task(ds)
 
     # logging.info('Executing: %s', _sql)
 
@@ -359,7 +359,7 @@ def execution_data_task_id(ds, dag, **kwargs):
     cf.delete_partition()
 
     # 读取sql
-    _sql = "\n" + cf.alter_partition() + "\n" + dwd_otrade_b2c_order_goods_collect_di_sql_task(ds)
+    _sql = "\n" + cf.alter_partition() + "\n" + dwm_otrade_b2c_order_goods_collect_di_sql_task(ds)
 
     logging.info('Executing: %s', _sql)
 
@@ -370,8 +370,8 @@ def execution_data_task_id(ds, dag, **kwargs):
     cf.touchz_success()
 
 
-dwd_otrade_b2c_order_goods_collect_di_task = PythonOperator(
-    task_id='dwd_otrade_b2c_order_goods_collect_di_task',
+dwm_otrade_b2c_order_goods_collect_di_task = PythonOperator(
+    task_id='dwm_otrade_b2c_order_goods_collect_di_task',
     python_callable=execution_data_task_id,
     provide_context=True,
     op_kwargs={
@@ -383,7 +383,7 @@ dwd_otrade_b2c_order_goods_collect_di_task = PythonOperator(
     dag=dag
 )
 
-dwd_otrade_b2c_order_goods_collect_hi_task >> dwd_otrade_b2c_order_goods_collect_di_task
+dwm_otrade_b2c_order_goods_collect_hi_task >> dwm_otrade_b2c_order_goods_collect_di_task
 
 
 

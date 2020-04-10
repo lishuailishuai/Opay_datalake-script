@@ -66,11 +66,11 @@ dwd_otrade_b2b_category_hf_check_task = OssSensor(
     dag=dag
 )
 
-###oss://opay-datalake/otrade/otrade_dw/dwd_otrade_b2b_order_collect_hi
-dwd_otrade_b2b_order_collect_hi_check_task = OssSensor(
-    task_id='dwd_otrade_b2b_order_collect_hi_check_task',
+###oss://opay-datalake/otrade/otrade_dw/dwm_otrade_b2b_order_collect_hi
+dwm_otrade_b2b_order_collect_hi_check_task = OssSensor(
+    task_id='dwm_otrade_b2b_order_collect_hi_check_task',
     bucket_key='{hdfs_path_str}/country_code=NG/dt={pt}/hour={hour}/_SUCCESS'.format(
-        hdfs_path_str="otrade/otrade_dw/dwd_otrade_b2b_order_collect_hi",
+        hdfs_path_str="otrade/otrade_dw/dwm_otrade_b2b_order_collect_hi",
         pt='{{{{(execution_date+macros.timedelta(hours=({time_zone}+{gap_hour}))).strftime("%Y-%m-%d")}}}}'.format(
             time_zone=time_zone, gap_hour=0),
         hour='{{{{(execution_date+macros.timedelta(hours=({time_zone}+{gap_hour}))).strftime("%H")}}}}'.format(
@@ -183,7 +183,7 @@ order_info as (
       *
       ,row_number() over(partition by order_id order by update_time desc) rn
     from
-      otrade_dw.dwd_otrade_b2b_order_collect_hi as a
+      otrade_dw.dwm_otrade_b2b_order_collect_hi as a
     where
       dt = substr(default.minLocalTimeRange("{config}", '{v_date}', 0),0,10)
       and hour >= '00'
@@ -420,6 +420,6 @@ dwm_otrade_b2b_order_item_collect_hi_task = PythonOperator(
 )
 
 dwd_otrade_b2b_category_hf_check_task >> dwm_otrade_b2b_order_item_collect_hi_task
-dwd_otrade_b2b_order_collect_hi_check_task >> dwm_otrade_b2b_order_item_collect_hi_task
+dwm_otrade_b2b_order_collect_hi_check_task >> dwm_otrade_b2b_order_item_collect_hi_task
 dwd_otrade_b2b_otrade_order_item_hi_check_task >> dwm_otrade_b2b_order_item_collect_hi_task
 

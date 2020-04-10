@@ -69,7 +69,7 @@ dim_opay_bd_agent_hf_pre_locale_task = OssSensor(
 ods_opay_bd_agent_base_hi_check_task = OssSensor(
     task_id='ods_opay_bd_agent_base_hi_check_task',
     bucket_key='{hdfs_path_str}/dt={pt}/hour={hour}/_SUCCESS'.format(
-        hdfs_path_str="opay_binlog/opay_agent_crm.opay_agent_crm.bd_agent",
+        hdfs_path_str="opay_binlog/opay_agent_crm_binlog.opay_agent_crm.bd_agent",
         pt='{{ds}}',
         hour='{{ execution_date.strftime("%H") }}'
     ),
@@ -281,8 +281,8 @@ def dim_opay_bd_agent_hf_sql_task(ds, v_date):
                 modify_id,
                 bd_admin_user_id,
                 agent_check_id,
-                default.localTime("{config}", 'NG', from_unixtime(cast(cast(create_time as bigint) / 1000 as bigint), 'yyyy-MM-dd HH:mm:ss'), 0) as create_time,
-                default.localTime("{config}", 'NG', from_unixtime(cast(cast(update_time as bigint) / 1000 as bigint), 'yyyy-MM-dd HH:mm:ss'), 0) as update_time,
+                default.localTime("{config}", 'NG', concat(substr(create_time, 1, 10), ' ', substr(create_time, 12, 8)), 0) as create_time,
+                default.localTime("{config}", 'NG', concat(substr(update_time, 1, 10), ' ', substr(update_time, 12, 8)), 0) as update_time,
                 'NG' AS country_code
             from ods_agent_hi where rn = 1
         ) t0 
