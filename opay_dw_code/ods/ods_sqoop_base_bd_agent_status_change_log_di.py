@@ -79,7 +79,7 @@ task_timeout_monitor = PythonOperator(
 db_name = "opay_dw_ods"
 
 table_name = "ods_sqoop_base_bd_agent_status_change_log_di"
-hdfs_path = "oss://opay-datalake/opay_dw_sqoop_di/opay_activity/preferential_record"
+hdfs_path = "oss://opay-datalake/opay_dw_sqoop_di/opay_agent_crm/bd_agent_status_change_log"
 config = eval(Variable.get("opay_time_zone_config"))
 
 
