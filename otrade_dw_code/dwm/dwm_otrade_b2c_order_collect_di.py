@@ -216,7 +216,7 @@ from
 
     ,row_number() over(partition by id order by utc_date_hour desc) rn
   from
-    otrade_dw.dwm_otrade_b2b_order_collect_hi
+    otrade_dw.dwm_otrade_b2c_order_collect_hi
   where
     dt = '{pt}'
   ) as a
