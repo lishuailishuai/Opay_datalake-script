@@ -34,7 +34,7 @@ args = {
     'retries': 3,
     'retry_delay': timedelta(minutes=2),
     'email': ['bigdata_dw@opay-inc.com'],
-    #'email_on_failure': True,
+    'email_on_failure': True,
     'email_on_retry': False,
 }
 
