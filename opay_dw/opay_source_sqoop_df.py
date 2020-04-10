@@ -101,8 +101,8 @@ table_list = [
     ("opay_commission", "commission_order", "opay_commission", "base", 1),
     ("opay_commission", "commission_top_up_record", "opay_commission", "base", 1),
 
-    ("opay_agent_crm", "bd_agent", "opay_agent_crm_db", "base", 2),
-    ("opay_agent_crm", "bd_admin_users", "opay_agent_crm_db", "base", 2),
+    # ("opay_agent_crm", "bd_agent", "opay_agent_crm_db", "base", 2),
+    # ("opay_agent_crm", "bd_admin_users", "opay_agent_crm_db", "base", 2),
 
     # ("opay_channel", "card_bin", "opay_channel", "base", 3),
 
