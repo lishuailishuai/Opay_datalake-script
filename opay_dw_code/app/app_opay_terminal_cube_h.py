@@ -17,7 +17,6 @@ from airflow.sensors.hive_partition_sensor import HivePartitionSensor
 from airflow.sensors import UFileSensor
 from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
 from airflow.sensors import OssSensor
-from plugins.CountriesPublicFrame_dev import CountriesPublicFrame_dev
 from plugins.TaskTouchzSuccess import TaskTouchzSuccess
 import json
 import logging
@@ -25,6 +24,7 @@ from airflow.models import Variable
 import requests
 import os
 from utils.get_local_time import GetLocalTime
+from plugins.CountriesAppFrame import CountriesAppFrame
 
 
 args = {
@@ -205,11 +205,12 @@ def execution_data_task_id(ds, dag, **kwargs):
             "is_result_force_exist": "true",
             "execute_time": v_date,
             "is_hour_task": "true",
-            "frame_type": "local"
+            "frame_type": "local",
+            "business_key": "opay"
         }
     ]
 
-    cf = CountriesPublicFrame_dev(args)
+    cf = CountriesAppFrame(args)
 
     # 读取sql
     _sql = "\n" + cf.alter_partition() + "\n" + app_opay_terminal_cube_h_sql_task(ds, v_date)
