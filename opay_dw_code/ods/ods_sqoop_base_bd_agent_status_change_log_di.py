@@ -144,7 +144,7 @@ def ods_sqoop_base_bd_agent_status_change_log_di_sql_task(ds):
 
 # 主流程
 def execution_data_task_id(ds, dag, **kwargs):
-
+    v_execution_time = kwargs.get('v_execution_time')
     hive_hook = HiveCliHook()
 
     args = [
@@ -156,8 +156,9 @@ def execution_data_task_id(ds, dag, **kwargs):
             "data_oss_path": hdfs_path,
             "is_country_partition": "false",
             "is_result_force_exist": "false",
+            "execute_time": v_execution_time,
             "is_hour_task": "false",
-            "frame_type": "local"
+            "frame_type": "utc"
         }
     ]
 
@@ -179,6 +180,10 @@ ods_sqoop_base_bd_agent_status_change_log_di_task = PythonOperator(
     task_id='ods_sqoop_base_bd_agent_status_change_log_di_task',
     python_callable=execution_data_task_id,
     provide_context=True,
+    op_kwargs={
+        'v_execution_time': '{{execution_date.strftime("%Y-%m-%d %H:%M:%S")}}',
+        'owner': '{{owner}}'
+    },
     dag=dag
 )
 
