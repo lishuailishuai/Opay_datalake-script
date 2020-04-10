@@ -17,7 +17,7 @@ from airflow.sensors.hive_partition_sensor import HivePartitionSensor
 from airflow.sensors import UFileSensor
 from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
 from airflow.sensors import OssSensor
-from plugins.CountriesPublicFrame_dev import CountriesPublicFrame_dev
+from plugins.CountriesAppFrame import CountriesAppFrame
 
 from plugins.TaskTouchzSuccess import TaskTouchzSuccess
 import json
@@ -277,11 +277,12 @@ def execution_data_task_id(ds, dag, **kwargs):
             "is_result_force_exist": "false",
             "execute_time": v_date,
             "is_hour_task": "true",
-            "frame_type": "local"
+            "frame_type": "local",
+            "business_key": "opay"
         }
     ]
 
-    cf = CountriesPublicFrame_dev(args)
+    cf = CountriesAppFrame(args)
 
     # 读取sql
     _sql = "\n" + cf.alter_partition() + "\n" + dwd_opay_receive_money_record_hi_sql_task(ds, v_date)
