@@ -146,7 +146,7 @@ def execution_data_task_id(ds, dag, **kwargs):
             "is_result_force_exist": "false",
             "execute_time": v_execution_time,
             "is_hour_task": "false",
-            "frame_type": "utc",
+            "frame_type": "local",
             "business_key": "opay"
         }
     ]
