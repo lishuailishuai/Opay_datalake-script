@@ -139,9 +139,9 @@ def dwd_ocredit_phones_order_base_hi_sql_task(ds, v_date):
           store_id, --门店ID 
           store_name, --门店名称 
           is_delete, --0:未删除 1:已删除 
-          default.localTime("{config}",'NG',unix_timestamp(create_time),0) as create_time, --创建时间 
-          default.localTime("{config}",'NG',unix_timestamp(update_time),0) as update_time, --更新时间 
-          default.localTime("{config}",'NG',unix_timestamp(loan_time),0) as loan_time, --放款时间 
+          default.localTime("{config}",'NG',from_unixtime(create_time),0) as create_time, --创建时间 
+          default.localTime("{config}",'NG',from_unixtime(update_time),0) as update_time, --更新时间 
+          default.localTime("{config}",'NG',from_unixtime(loan_time),0) as loan_time, --放款时间 
           opr_id, --操作更新用户ID 
           risk_status, --风控审核状态：1通过 0拒绝 
           risk_reason, --风控审核结果 
@@ -152,7 +152,7 @@ def dwd_ocredit_phones_order_base_hi_sql_task(ds, v_date):
           loan_price, --手机价格(销售录入) 
           channel, --渠道： 1=销售 2=用户 
           product_category, --产品类型： 1 手机 2 汽车 3 摩托车 4 家电 5 电脑
-          if(order_id='012020011001240073','2020-01-04',substr(default.localTime("{config}",'NG',unix_timestamp(create_time),0),1,10)) as date_of_entry, --进件日期
+          if(order_id='012020011001240073','2020-01-04',substr(default.localTime("{config}",'NG',from_unixtime(create_time),0),1,10)) as date_of_entry, --进件日期
         t1.utc_date_hour,
         'NG' country_code,  --如果表中有国家编码直接上传国家编码
         date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'yyyy-MM-dd') as dt,
