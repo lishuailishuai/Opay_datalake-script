@@ -46,7 +46,7 @@ dag = airflow.DAG('ods_sqoop_base_bd_agent_df',
 ods_bd_agent_hi_check_task = OssSensor(
     task_id='ods_bd_agent_hi_check_task',
     bucket_key='{hdfs_path_str}/dt={pt}/hour=22/_SUCCESS'.format(
-        hdfs_path_str="opay_binlog/opay_agent_crm.opay_agent_crm.bd_agent",
+        hdfs_path_str="opay_binlog/opay_agent_crm_binlog.opay_agent_crm.bd_agent",
         pt='{{ds}}'
     ),
     bucket_name='opay-datalake',

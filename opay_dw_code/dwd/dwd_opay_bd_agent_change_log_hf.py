@@ -70,7 +70,7 @@ dwd_opay_bd_agent_change_log_hf_pre_locale_task = OssSensor(
 ods_bd_agent_status_change_log_hi_check_task = OssSensor(
     task_id='ods_bd_agent_status_change_log_hi_check_task',
     bucket_key='{hdfs_path_str}/dt={pt}/hour={hour}/_SUCCESS'.format(
-        hdfs_path_str="opay_binlog/opay_agent_crm.opay_agent_crm.bd_agent_status_change_log",
+        hdfs_path_str="opay_binlog/opay_agent_crm_binlog.opay_agent_crm.bd_agent_status_change_log",
         pt='{{ds}}',
         hour='{{ execution_date.strftime("%H") }}'
     ),
