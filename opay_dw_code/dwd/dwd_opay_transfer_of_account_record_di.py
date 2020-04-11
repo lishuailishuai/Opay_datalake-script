@@ -299,7 +299,7 @@ def dwd_opay_transfer_of_account_record_di_sql_task(ds, ds_nodash):
 
 
 # 主流程
-def execution_data_task_id(ds, dag, **kwargs):
+def execution_data_task_id(ds, ds_nodash, dag, **kwargs):
     v_execution_time = kwargs.get('v_execution_time')
     hive_hook = HiveCliHook()
 
@@ -322,7 +322,7 @@ def execution_data_task_id(ds, dag, **kwargs):
     cf = CountriesAppFrame(args)
 
     # 读取sql
-    _sql = "\n" + cf.alter_partition() + "\n" + dwd_opay_transfer_of_account_record_di_sql_task(ds)
+    _sql = "\n" + cf.alter_partition() + "\n" + dwd_opay_transfer_of_account_record_di_sql_task(ds, ds_nodash)
 
     logging.info('Executing: %s', _sql)
 
