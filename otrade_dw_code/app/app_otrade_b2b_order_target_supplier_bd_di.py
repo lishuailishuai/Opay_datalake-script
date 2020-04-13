@@ -206,7 +206,6 @@ retailer_info as (
     ,'lagos' as city_name
 
     ,count(if(substr(created_at,0,10) = '{pt}',1,null)) as new_register_people_cnt
-    ,count(1) as total_shop_cnt
   from
     otrade_dw.dim_otrade_b2b_retailer_info_crm_hf
   where
@@ -446,7 +445,7 @@ select
   ,nvl(v1.new_shop_cnt,0) as new_shop_cnt
   ,nvl(v5.order_shop_cnt,0) as order_shop_cnt
   ,nvl(v5.first_order_shop_cnt,0) as first_order_shop_cnt
-  ,nvl(v2.total_shop_cnt,0) as total_shop_cnt
+  ,nvl(v1.total_shop_cnt,0) as total_shop_cnt
   ,nvl(v5.register_order_shop_cnt,0) as register_order_shop_cnt
   ,nvl(v3.spu_on_sale,0) as spu_on_sale
   ,nvl(v3.sku_on_sale,0) as sku_on_sale
