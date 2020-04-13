@@ -133,11 +133,12 @@ def app_opay_bd_agent_pos_ng_h_sql_task(ds, v_date):
                 row_number() over(partition by order_no order by update_time desc) as rn
               from opay_dw.dwd_opay_pos_transaction_record_hi
               where country_code = 'NG' 
-                and dt between '{yesterday}' and '{pt}' 
+                and dt between date_sub(date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'yyyy-MM-dd'), 1) 
+                    and date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'yyyy-MM-dd')
                 and concat(dt,' ',hour) <= date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'yyyy-MM-dd HH')
                 and nvl(bd_agent_status, 0) = 1 and order_status = 'SUCCESS'
         ) t0 
-        where rn = 1 and create_date >= '{yesterday}'
+        where rn = 1 and create_date >= date_sub(date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'yyyy-MM-dd'), 1)
         group by bd_admin_user_id, originator_id, create_date
     ) t1 left join (
         select
