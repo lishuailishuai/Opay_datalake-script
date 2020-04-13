@@ -283,7 +283,6 @@ shopping_cart_info as (
     otrade_dw.dwm_otrade_b2b_shopping_cart_collect_di
   where
     dt = '{pt}'
-    and hour = '23'
   group by
     supplier_hcm_id
     ,supplier_hcm_name
@@ -343,7 +342,7 @@ order_info as (
     --用户分析
     ,count(distinct(if(order_type='pay' and substr(pay_time,0,10)='{pt}',payer,null))) as pay_people
     ,count(distinct(if(order_type='pay' and pay_status = 3,payer,null))) as pay_suc_people
-    0 as buy30_again_user_cnt
+    ,0 as buy30_again_user_cnt
     ,count(distinct(if(order_type='pay' and substr(retailer_create_time,0,10)='{pt}',payer,null))) as register_order_user_cnt
   from
     otrade_dw.dwm_otrade_b2b_order_collect_di
@@ -377,9 +376,9 @@ order_goods_info as (
     ,'2' as city
     ,'lagos' as city_name
 
-    ,sum(if(order_type='pay' and substr(create_time,0,10)='{pt}',nvl(buy_num),0)) as order_sku_cnt
-    ,sum(if(order_type='pay' and substr(create_time,0,10)='{pt}' and pay_status = 3,nvl(buy_num),0)) as pay_sku_cnt
-    ,sum(if(order_type='refund' and order_status=2,nvl(buy_num),0)) as refund_sku_cnt
+    ,sum(if(order_type='pay' and substr(create_time,0,10)='{pt}',nvl(buy_num,0),0)) as order_sku_cnt
+    ,sum(if(order_type='pay' and substr(create_time,0,10)='{pt}' and pay_status = 3,nvl(buy_num,0),0)) as pay_sku_cnt
+    ,sum(if(order_type='refund' and order_status=2,nvl(buy_num,0),0)) as refund_sku_cnt
     ,count(distinct(if(order_type='pay' and substr(create_time,0,10)='{pt}',sku_id,null))) as sale_sku_cnt
   from
     otrade_dw.dwm_otrade_b2b_order_item_collect_di
@@ -399,18 +398,18 @@ order_goods_info as (
 --7.插入数据
 insert overwrite table otrade_dw.app_otrade_b2b_order_target_supplier_bd_di partition(country_code,dt)
 select
-  hcm_id
-  ,hcm_name
-  ,cm_id
-  ,cm_name
-  ,bdm_id
-  ,bdm_name
-  ,bd_id
-  ,bd_name
-  ,country
-  ,country_name
-  ,city
-  ,city_name
+  v1.hcm_id
+  ,v1.hcm_name
+  ,v1.cm_id
+  ,v1.cm_name
+  ,v1.bdm_id
+  ,v1.bdm_name
+  ,v1.bd_id
+  ,v1.bd_name
+  ,v1.country
+  ,v1.country_name
+  ,v1.city
+  ,v1.city_name
 
   --购物车分析
   ,nvl(v4.shopping_cart_cnt,0) as shopping_cart_cnt
