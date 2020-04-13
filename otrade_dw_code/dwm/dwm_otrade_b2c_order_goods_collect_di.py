@@ -97,7 +97,7 @@ set hive.exec.dynamic.partition.mode=nonstrict;
 set hive.strict.checks.cartesian.product=false;
 
 --1.将数据关联后插入最终表中
-insert overwrite table otrade_dw.dwm_otrade_b2c_order_goods_collect_di partition(country_code,dt)
+insert overwrite table otrade_dw.dwm_otrade_b2c_order_goods_collect_di partition(country_code,dt,hour)
 select
   id
   ,order_id
@@ -261,7 +261,7 @@ from
     ,product_retail_price
     ,product_market_price
     ,product_group_price
-
+    
     ,row_number() over(partition by id order by utc_date_hour desc) rn
   from
     otrade_dw.dwm_otrade_b2c_order_goods_collect_hi
