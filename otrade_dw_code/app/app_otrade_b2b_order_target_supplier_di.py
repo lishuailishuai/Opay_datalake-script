@@ -283,7 +283,10 @@ order_goods_info as (
 --7.插入数据
 insert overwrite table otrade_dw.app_otrade_b2b_order_target_supplier_di partition(country_code,dt)
 select
-  v1.hcm_id
+  v1.shop_id
+  ,v1.payee
+  ,v1.shop_name
+  ,v1.hcm_id
   ,v1.hcm_name
   ,v1.cm_id
   ,v1.cm_name
@@ -327,6 +330,12 @@ select
   ,nvl(v5.receive_order_cnt,0) as receive_order_cnt
   ,nvl(v5.receive_order_amt,0) as receive_order_amt
 
+  --商品分析
+  ,nvl(v3.spu_on_sale,0) as spu_on_sale
+  ,nvl(v3.sku_on_sale,0) as sku_on_sale
+  ,nvl(v3.new_sku_cnt,0) as new_sku_cnt
+  ,nvl(v6.sale_sku_cnt,0) as sale_sku_cnt
+
   --用户分析
   ,nvl(v5.pay_people,0) as pay_people
   ,nvl(v5.pay_suc_people,0) as pay_suc_people
@@ -340,31 +349,19 @@ from
 left join
   goods_info as v3
 on
-  v1.hcm_id =     v3.hcm_id
-  and v1.cm_id =  v3.cm_id
-  and v1.bdm_id = v3.bdm_id
-  and v1.bd_id =  v3.bd_id
+  v1.shop_id =     v3.shop_id
 left join
   shopping_cart_info as v4
 on
-  v1.hcm_id =     v4.hcm_id
-  and v1.cm_id =  v4.cm_id
-  and v1.bdm_id = v4.bdm_id
-  and v1.bd_id =  v4.bd_id
+  v1.shop_id =     v4.shop_id
 left join
   order_info as v5
 on
-  v1.hcm_id =     v5.hcm_id
-  and v1.cm_id =  v5.cm_id
-  and v1.bdm_id = v5.bdm_id
-  and v1.bd_id =  v5.bd_id
+  v1.shop_id =     v5.shop_id
 left join
   order_goods_info as v6
 on
-  v1.hcm_id =     v6.hcm_id
-  and v1.cm_id =  v6.cm_id
-  and v1.bdm_id = v6.bdm_id
-  and v1.bd_id =  v6.bd_id
+  v1.shop_id =     v6.shop_id
 ;
 
 
