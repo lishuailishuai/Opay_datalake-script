@@ -116,16 +116,16 @@ order_info as (
     ,product_name
   
     --下单分析
-    ,sum(if(substr(add_time,0,10)='{pt}',nvl(all_price,0),0)) as order_amt
+    ,sum(if(substr(add_time,0,10)='{pt}',nvl(retail_price*number,0),0)) as order_amt
     ,sum(if(substr(add_time,0,10)='{pt}',nvl(number,0),0)) as order_goods_amt
     ,count(if(substr(add_time,0,10)='{pt}',1,null)) as order_cnt
     ,count(distinct(if(substr(add_time,0,10)='{pt}',opayid,null))) as order_people
-    ,sum(if(first_order=1 and substr(add_time,0,10)='{pt}',nvl(all_price,0),0)) as first_order_amt
+    ,sum(if(first_order=1 and substr(add_time,0,10)='{pt}',nvl(retail_price*number,0),0)) as first_order_amt
     ,count(if(first_order=1 and substr(add_time,0,10)='{pt}',1,null)) as first_order_cnt
     ,count(distinct(if(first_order=1 and substr(add_time,0,10)='{pt}',opayid,null))) as first_order_people
   
     --销售分析
-    ,sum(if(substr(pay_time,0,10)='{pt}',nvl(actual_price,0),0)) as pay_amt
+    ,sum(if(substr(pay_time,0,10)='{pt}',nvl(retail_price*number,0),0)) as pay_amt
     ,count(if(substr(pay_time,0,10)='{pt}',1,null)) as pay_suc_cnt
     ,sum(if(substr(pay_time,0,10)='{pt}',nvl(number,0),0)) as pay_goods_cnt
   
