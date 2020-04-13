@@ -319,6 +319,9 @@ select
   ,v3.req_status
 
   ,date_format('{v_date}', 'yyyy-MM-dd HH') as utc_date_hour
+  
+  ,v3.supplier_create_time
+  ,v3.retailer_create_time
 
   ,'NG' as country_code
   ,date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'yyyy-MM-dd') as dt
