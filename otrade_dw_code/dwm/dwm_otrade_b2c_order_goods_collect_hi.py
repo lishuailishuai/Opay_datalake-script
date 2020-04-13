@@ -218,6 +218,9 @@ order_collect_info as (
     ,merchant_create_date
     ,first_order
     ,first_order_time
+    ,country
+    ,province
+    ,city
     ,city_name
     ,country_name
   from
@@ -321,6 +324,9 @@ select
   ,v2.merchant_create_date
   ,v2.first_order
   ,v2.first_order_time
+  ,v2.country as order_country
+  ,v2.province as order_province
+  ,v2.city as order_city
   ,v2.city_name
   ,v2.country_name
 
