@@ -112,6 +112,21 @@ dwd_otrade_b2b_product_sku_property_hf_check_task = OssSensor(
     dag=dag
 )
 
+###oss://opay-datalake/otrade/otrade_dw/dim_otrade_b2b_supplier_info_hf
+dim_otrade_b2b_supplier_info_hf_check_task = OssSensor(
+    task_id='dim_otrade_b2b_supplier_info_hf_check_task',
+    bucket_key='{hdfs_path_str}/country_code=NG/dt={pt}/hour={hour}/_SUCCESS'.format(
+        hdfs_path_str="otrade/otrade_dw/dim_otrade_b2b_supplier_info_hf",
+        pt='{{{{(execution_date+macros.timedelta(hours=({time_zone}+{gap_hour}))).strftime("%Y-%m-%d")}}}}'.format(
+            time_zone=time_zone, gap_hour=0),
+        hour='{{{{(execution_date+macros.timedelta(hours=({time_zone}+{gap_hour}))).strftime("%H")}}}}'.format(
+            time_zone=time_zone, gap_hour=0)
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
 def fun_task_timeout_monitor(ds,dag,execution_date,**op_kwargs):
 
@@ -280,8 +295,9 @@ shop_info as (
   from
     otrade_dw.dim_otrade_b2b_supplier_info_hf
   where
-    dt = '{pt}'
-    and hour = '23'
+    concat(dt, " ", hour) >= default.minLocalTimeRange("{config}", '{v_date}', 0) 
+    and concat(dt, " ", hour) <= default.maxLocalTimeRange("{config}", '{v_date}', 0) 
+    and utc_date_hour = date_format("{v_date}", 'yyyy-MM-dd HH')
   group by
     id
     ,country
@@ -342,7 +358,7 @@ select
   ,v4.cm_name
   ,v4.bdm_id
   ,v4.bdm_name
-  ,v4.bd_real_id
+  ,v4.bd_id
   ,v4.bd_name
 
   ,'NG' as country_code
@@ -361,7 +377,7 @@ on
 left join
   shop_info as v4
 on
-  v1.shop_id = v4.id
+  v2.spu_shop_id = v4.id
 ;
 
 
@@ -453,4 +469,4 @@ dwd_otrade_b2b_category_hf_check_task >> dim_otrade_b2b_goods_info_hf_task
 dwd_otrade_b2b_product_hf_check_task >> dim_otrade_b2b_goods_info_hf_task
 dwd_otrade_b2b_product_sku_hf_check_task >> dim_otrade_b2b_goods_info_hf_task
 dwd_otrade_b2b_product_sku_property_hf_check_task >> dim_otrade_b2b_goods_info_hf_task
-
+dim_otrade_b2b_supplier_info_hf_check_task >> dim_otrade_b2b_goods_info_hf_task
