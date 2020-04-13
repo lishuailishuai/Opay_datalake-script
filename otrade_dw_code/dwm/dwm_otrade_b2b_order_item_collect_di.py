@@ -188,6 +188,8 @@ select
   ,actual_amount
   ,pay_status
   ,req_status
+  ,supplier_create_time
+  ,retailer_create_time
   
   ,'NG' as country_code
   ,'{pt}' as dt
@@ -283,6 +285,8 @@ from
     ,actual_amount
     ,pay_status
     ,req_status
+    ,supplier_create_time
+    ,retailer_create_time
 
     ,row_number() over(partition by id order by utc_date_hour desc) rn
   from
