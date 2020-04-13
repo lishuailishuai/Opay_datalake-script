@@ -59,8 +59,18 @@ IGNORED_TABLE_LIST = [
 '''
 导入数据的列表
 
-同步表结构的表所属db,同步表结构表名,真实采集数据所属db名称,采集数据后的表名称（非分表为原表名，分表为去除后缀名称）同时也作为hive ods表 中的中间表名,conn_id,prefix_name,priority_weight,server_name,是否验证数据存在
-schema_table_db_name,schema_table_name,target_table_db_name(采集配置，定位oss数据位置使用),target_table_name,conn_id,prefix_name,priority_weight,server_name (采集配置，定位oss数据位置使用),是否验证数据存在
+schema_table_db_name --同步表结构的表所属db
+schema_table_name --业务数据源 table
+target_table_db_name --(采集配置，定位oss数据位置使用),
+target_table_name --采集数据后的表名称（非分表为原表名，分表为去除后缀名称）同时也作为hive ods表 中的中间表名,
+conn_id --airflow 配置的mysql 连接变量
+prefix_name --划分业务线的名称，如 ods_opay_order_tab ,order就是订单业务线
+priority_weight --任务执行优先级
+server_name --source 文件中server_name(topic 前缀)
+is_must_have_data --否验证数据存在
+
+schema_table_db_name, schema_table_name, target_table_db_name, target_table_name, conn_id, prefix_name, priority_weight_nm, server_name, is_must_have_data
+
 '''
 #
 
@@ -72,7 +82,7 @@ table_list = [
     ("opay_account", "account_merchant", "opay_account", "account_merchant", "opay_account", "base", 2,"opay_account_db", "false"),
     ("opay_account", "account_user", "opay_account", "account_user", "opay_account", "base", 2,"opay_account_db", "false"),
 
-    ("dw_binlog", "voucher", "voucher_db", "voucher", "dw_binlog", "coupon", 3, "coupou_voucher", "false"),
+    ("dw_binlog", "voucher", "voucher_db", "voucher", "dw_binlog", "coupon", 3, "branch_coupou_voucher", "false"),
 
 
     ("voucher_db", "opay_voucher_grab_hist", "voucher_db","opay_voucher_grab_hist", "voucher_db", "coupon", 3, "coupou_db", "false"),
