@@ -259,6 +259,43 @@ sku_join_info as (
     sku_property_info as v2
   on
     v1.sku_id = v2.sku_id
+),
+
+--7.取出商铺bd信息
+shop_info as (
+  select
+    id
+    ,country
+    ,country_name
+    ,city
+    ,city_name
+    ,hcm_id
+    ,hcm_name
+    ,cm_id
+    ,cm_name
+    ,bdm_id
+    ,bdm_name
+    ,bd_real_id as bd_id
+    ,bd_name
+  from
+    otrade_dw.dim_otrade_b2b_supplier_info_hf
+  where
+    dt = '{pt}'
+    and hour = '23'
+  group by
+    id
+    ,country
+    ,country_name
+    ,city
+    ,city_name
+    ,hcm_id
+    ,hcm_name
+    ,cm_id
+    ,cm_name
+    ,bdm_id
+    ,bdm_name
+    ,bd_real_id
+    ,bd_name
 )
 
 --6.最后插入数据到表中
@@ -294,6 +331,19 @@ select
   ,v1.sku_create_time
 
   ,date_format('{v_date}', 'yyyy-MM-dd HH') as utc_date_hour
+  
+  ,v4.country
+  ,v4.country_name
+  ,v4.city
+  ,v4.city_name
+  ,v4.hcm_id
+  ,v4.hcm_name
+  ,v4.cm_id
+  ,v4.cm_name
+  ,v4.bdm_id
+  ,v4.bdm_name
+  ,v4.bd_real_id
+  ,v4.bd_name
 
   ,'NG' as country_code
   ,date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'yyyy-MM-dd') as dt
@@ -308,6 +358,10 @@ left join
   category_level_info as v3
 on
   v2.category_id = v3.level3_id
+left join
+  shop_info as v4
+on
+  v1.shop_id = v4.id
 ;
 
 
