@@ -165,9 +165,6 @@ select
   ,merchant_create_date
   ,first_order
   ,first_order_time
-  ,order_country
-  ,order_province
-  ,order_city
   ,city_name
   ,country_name
   ,one_level_id
@@ -252,9 +249,6 @@ from
     ,merchant_create_date
     ,first_order
     ,first_order_time
-    ,order_country
-    ,order_province
-    ,order_city
     ,city_name
     ,country_name
     ,one_level_id

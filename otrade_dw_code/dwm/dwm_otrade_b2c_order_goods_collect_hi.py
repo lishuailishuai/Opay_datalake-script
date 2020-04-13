@@ -272,9 +272,9 @@ select
   ,v1.brand_id
   ,v1.customers
   ,v1.customers_name
-  ,v1.country
-  ,v1.province
-  ,v1.city
+  ,v2.country
+  ,v2.province
+  ,v2.city
   ,v1.district
   ,v1.address
   ,v1.mobile
@@ -324,9 +324,6 @@ select
   ,v2.merchant_create_date
   ,v2.first_order
   ,v2.first_order_time
-  ,v2.country as order_country
-  ,v2.province as order_province
-  ,v2.city as order_city
   ,v2.city_name
   ,v2.country_name
 
@@ -358,6 +355,7 @@ left join
 on
   v1.product_id = v3.product_id
 ;
+
 
 
     '''.format(
