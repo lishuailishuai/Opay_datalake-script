@@ -64,6 +64,41 @@ dim_otrade_b2b_supplier_info_hf_task = OssSensor(
     dag=dag
 )
 
+dim_otrade_b2b_retailer_info_crm_hf_task = OssSensor(
+    task_id='dim_otrade_b2b_retailer_info_crm_hf_task',
+    bucket_key='{hdfs_path_str}/country_code=NG/dt={pt}/hour={hour}/_SUCCESS'.format(
+        hdfs_path_str="otrade/otrade_dw/dim_otrade_b2b_retailer_info_crm_hf",
+        pt='{{ds}}',
+        hour='23'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
+dim_otrade_b2b_goods_info_hf_task = OssSensor(
+    task_id='dim_otrade_b2b_goods_info_hf_task',
+    bucket_key='{hdfs_path_str}/country_code=NG/dt={pt}/hour={hour}/_SUCCESS'.format(
+        hdfs_path_str="otrade/otrade_dw/dim_otrade_b2b_goods_info_hf",
+        pt='{{ds}}',
+        hour='23'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
+dwm_otrade_b2b_shopping_cart_collect_di_task = OssSensor(
+    task_id='dwm_otrade_b2b_shopping_cart_collect_di_task',
+    bucket_key='{hdfs_path_str}/country_code=NG/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="otrade/otrade_dw/dwm_otrade_b2b_shopping_cart_collect_di",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
 dwm_otrade_b2b_order_collect_di_task = OssSensor(
     task_id='dwm_otrade_b2b_order_collect_di_task',
     bucket_key='{hdfs_path_str}/country_code=NG/dt={pt}/_SUCCESS'.format(
@@ -75,6 +110,16 @@ dwm_otrade_b2b_order_collect_di_task = OssSensor(
     dag=dag
 )
 
+dwm_otrade_b2b_order_item_collect_di_task = OssSensor(
+    task_id='dwm_otrade_b2b_order_item_collect_di_task',
+    bucket_key='{hdfs_path_str}/country_code=NG/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="otrade/otrade_dw/dwm_otrade_b2b_order_item_collect_di",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
 
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
 
@@ -102,13 +147,14 @@ task_timeout_monitor = PythonOperator(
 def app_otrade_b2b_order_target_supplier_bd_di_sql_task(ds):
     HQL = '''
 
+set mapred.max.split.size=1000000;
 set hive.exec.parallel=true;
 set hive.exec.dynamic.partition.mode=nonstrict;
 set hive.strict.checks.cartesian.product=false;
 
---0.查看店铺信息
+--1.查看店铺信息
 with 
-shop_info as (
+supplier_info as (
   select
     hcm_id
     ,hcm_name
@@ -119,12 +165,10 @@ shop_info as (
     ,bd_id
     ,bd_name
   
-    ,country
-    ,country_name
-    ,city
-    ,city_name
-
-    ,country_code
+    ,'NG' as country
+    ,'Nigeria' as country_name
+    ,'2' as city
+    ,'lagos' as city_name
 
     ,count(if(substr(create_time,0,10) = '{pt}',1,null)) as new_shop_cnt
     ,count(1) as total_shop_cnt
@@ -142,17 +186,116 @@ shop_info as (
     ,bdm_name
     ,bd_id
     ,bd_name
-  
-    ,country
-    ,country_name
-    ,city
-    ,city_name
-
-    ,country_code
-
 ),
 
---1.销售情况分析
+--2.零售商信息
+retailer_info as (
+  select
+    hcm_id
+    ,hcm_name
+    ,cm_id
+    ,cm_name
+    ,bdm_id
+    ,bdm_name
+    ,bd_id
+    ,bd_name
+  
+    ,'NG' as country
+    ,'Nigeria' as country_name
+    ,'2' as city
+    ,'lagos' as city_name
+
+    ,count(if(substr(created_at,0,10) = '{pt}',1,null)) as new_register_people_cnt
+    ,count(1) as total_shop_cnt
+  from
+    otrade_dw.dim_otrade_b2b_retailer_info_crm_hf
+  where
+    dt = '{pt}'
+    and hour = '23'
+  group by
+    hcm_id
+    ,hcm_name
+    ,cm_id
+    ,cm_name
+    ,bdm_id
+    ,bdm_name
+    ,bd_id
+    ,bd_name
+),
+
+--3.商品信息
+goods_info as (
+  select
+    hcm_id
+    ,hcm_name
+    ,cm_id
+    ,cm_name
+    ,bdm_id
+    ,bdm_name
+    ,bd_id
+    ,bd_name
+  
+    ,'NG' as country
+    ,'Nigeria' as country_name
+    ,'2' as city
+    ,'lagos' as city_name
+
+    ,count(distinct(spu_id)) as spu_on_sale
+    ,count(distinct(sku_id)) as sku_on_sale
+    ,count(distinct(if(substr(spu_create_time,0,10)='{pt}',spu_id,null))) as new_sku_cnt
+  from
+    otrade_dw.dim_otrade_b2b_goods_info_hf
+  where
+    dt = '{pt}'
+    and hour = '23'
+  group by
+    hcm_id
+    ,hcm_name
+    ,cm_id
+    ,cm_name
+    ,bdm_id
+    ,bdm_name
+    ,bd_id
+    ,bd_name
+),
+
+--4.查看购物车信息
+shopping_cart_info as (
+  select
+    supplier_hcm_id as hcm_id
+    ,supplier_hcm_name as hcm_name
+    ,supplier_cm_id as cm_id
+    ,supplier_cm_name as cm_name
+    ,supplier_bdm_id as bdm_id
+    ,supplier_bdm_name as bdm_name
+    ,supplier_bd_id as bd_id
+    ,supplier_bd_name as bd_name
+
+    ,'NG' as country
+    ,'Nigeria' as country_name
+    ,'2' as city
+    ,'lagos' as city_name
+
+    ,sum(if(substr(create_time,0,10)='{pt}',nvl(buy_num,0),0)) as shopping_cart_cnt
+    ,count(distinct(if(substr(create_time,0,10)='{pt}',sku_id,null))) as shopping_cart_sku_cnt
+    ,sum(if(substr(create_time,0,10)='{pt}',nvl(sku_price*buy_num,0),0)) as shopping_cart_amt
+  from
+    otrade_dw.dwm_otrade_b2b_shopping_cart_collect_di
+  where
+    dt = '{pt}'
+    and hour = '23'
+  group by
+    supplier_hcm_id
+    ,supplier_hcm_name
+    ,supplier_cm_id
+    ,supplier_cm_name
+    ,supplier_bdm_id
+    ,supplier_bdm_name
+    ,supplier_bd_id
+    ,supplier_bd_name
+),
+
+--5.销售情况分析
 order_info as (
   select
     hcm_id
@@ -164,23 +307,23 @@ order_info as (
     ,bd_id
     ,bd_name
   
-    ,country
-    ,country_name
-    ,city
-    ,city_name
-  
+    ,'NG' as country
+    ,'Nigeria' as country_name
+    ,'2' as city
+    ,'lagos' as city_name
+
     --下单分析
-    ,sum(if(order_type='pay',payable_amount,0)) as order_amt
-    ,count(if(order_type='pay',1,null)) as order_cnt
-    ,count(distinct(if(order_type='pay',payer,null))) as order_people
-    ,sum(if(order_type='pay' and retailer_first_order=1,payable_amount,0)) as first_order_amt
-    ,count(if(order_type='pay' and retailer_first_order=1,1,null)) as first_order_cnt
-    ,count(distinct(if(order_type='pay' and retailer_first_order=1,payer,null))) as first_order_people
+    ,sum(if(order_type='pay' and substr(create_time,0,10)='{pt}',payable_amount,0)) as order_amt
+    ,count(if(order_type='pay' and substr(create_time,0,10)='{pt}',1,null)) as order_cnt
+    ,count(distinct(if(order_type='pay' and substr(create_time,0,10)='{pt}',payer,null))) as order_people
+    ,sum(if(order_type='pay' and substr(create_time,0,10)='{pt}' and retailer_first_order=1,payable_amount,0)) as first_order_amt
+    ,count(if(order_type='pay' and substr(create_time,0,10)='{pt}' and retailer_first_order=1,1,null)) as first_order_cnt
+    ,count(distinct(if(order_type='pay' and substr(create_time,0,10)='{pt}' and retailer_first_order=1,payer,null))) as first_order_people
   
     --销售分析
-    ,sum(if(order_type='pay',amount,0)) as pay_amt
-    ,count(if(order_type='pay' and pay_status = 3,1,null)) as pay_suc_cnt
-    ,count(if(order_type='pay' and pay_time is not null,1,null)) as pay_cnt
+    ,sum(if(order_type='pay' and substr(create_time,0,10)='{pt}',amount,0)) as pay_amt
+    ,count(if(order_type='pay' and substr(create_time,0,10)='{pt}' and pay_status = 3,1,null)) as pay_suc_cnt
+    ,count(if(order_type='pay' and substr(pay_time,0,10)='{pt}',1,null)) as pay_cnt
   
     --退款分析
     ,count(if(order_type='pay' and order_status=0,1,null)) as refund_order_cnt
@@ -188,22 +331,20 @@ order_info as (
     ,sum(if(order_type='refund' and order_status=2,payable_amount,0)) as refund_order_amt
   
     --收货分析
-    ,count(if(order_type='pay' and consign_time='{pt}',1,null)) as delivery_order_cnt
-    ,count(if(order_type='pay' and confirm_time='{pt}',1,null)) as receive_order_cnt
-    ,sum(if(order_type='pay' and confirm_time='{pt}',payable_amount,0)) as receive_order_amt
+    ,count(if(order_type='pay' and substr(consign_time,0,10)='{pt}',1,null)) as delivery_order_cnt
+    ,count(if(order_type='pay' and substr(confirm_time,0,10)='{pt}',1,null)) as receive_order_cnt
+    ,sum(if(order_type='pay' and substr(confirm_time,0,10)='{pt}',payable_amount,0)) as receive_order_amt
   
     --店铺分析
-    ,0 as new_shop_cnt
-    ,count(distinct(if(order_type='pay',shop_id,null))) as order_shop_cnt
+    ,count(distinct(if(order_type='pay' and substr(create_time,0,10)='{pt}',shop_id,null))) as order_shop_cnt
     ,0 as first_order_shop_cnt
-    ,0 as total_shop_cnt
+    ,count(distinct(if(order_type='pay' and substr(supplier_create_time,0,10)='{pt}',shop_id,null))) as register_order_shop_cnt
   
     --用户分析
-    ,count(distinct(if(order_type='pay' and pay_time is not null,payer,null))) as pay_people
+    ,count(distinct(if(order_type='pay' and substr(pay_time,0,10)='{pt}',payer,null))) as pay_people
     ,count(distinct(if(order_type='pay' and pay_status = 3,payer,null))) as pay_suc_people
-  
-    ,country_code
-    ,dt
+    0 as buy30_again_user_cnt
+    ,count(distinct(if(order_type='pay' and substr(retailer_create_time,0,10)='{pt}',payer,null))) as register_order_user_cnt
   from
     otrade_dw.dwm_otrade_b2b_order_collect_di
   where
@@ -217,65 +358,148 @@ order_info as (
     ,bdm_name
     ,bd_id
     ,bd_name
-    ,country
-    ,country_name
-    ,city
-    ,city_name
-    
-    ,country_code
-    ,dt
+),
+
+--6.子订单信息
+order_goods_info as (
+  select
+    hcm_id
+    ,hcm_name
+    ,cm_id
+    ,cm_name
+    ,bdm_id
+    ,bdm_name
+    ,bd_id
+    ,bd_name
+  
+    ,'NG' as country
+    ,'Nigeria' as country_name
+    ,'2' as city
+    ,'lagos' as city_name
+
+    ,sum(if(order_type='pay' and substr(create_time,0,10)='{pt}',nvl(buy_num),0)) as order_sku_cnt
+    ,sum(if(order_type='pay' and substr(create_time,0,10)='{pt}' and pay_status = 3,nvl(buy_num),0)) as pay_sku_cnt
+    ,sum(if(order_type='refund' and order_status=2,nvl(buy_num),0)) as refund_sku_cnt
+    ,count(distinct(if(order_type='pay' and substr(create_time,0,10)='{pt}',sku_id,null))) as sale_sku_cnt
+  from
+    otrade_dw.dwm_otrade_b2b_order_item_collect_di
+  where
+    dt = '{pt}'
+  group by
+    hcm_id
+    ,hcm_name
+    ,cm_id
+    ,cm_name
+    ,bdm_id
+    ,bdm_name
+    ,bd_id
+    ,bd_name
 )
 
---2.插入数据
+--7.插入数据
 insert overwrite table otrade_dw.app_otrade_b2b_order_target_supplier_bd_di partition(country_code,dt)
 select
-  nvl(v1.hcm_id,v2.hcm_id) as hcm_id
-  ,nvl(v1.hcm_name,v2.hcm_name) as hcm_name
-  ,nvl(v1.cm_id,v2.cm_id) as cm_id
-  ,nvl(v1.cm_name,v2.cm_name) as cm_name
-  ,nvl(v1.bdm_id,v2.bdm_id) as bdm_id
-  ,nvl(v1.bdm_name,v2.bdm_name) as bdm_name
-  ,nvl(v1.bd_id,v2.bd_id) as bd_id
-  ,nvl(v1.bd_name,v2.bd_name) as bd_name
-  ,nvl(v1.country,v2.country) as country
-  ,nvl(v1.country_name,v2.country_name) as country_name
-  ,nvl(v1.city,v2.city) as city
-  ,nvl(v1.city_name,v2.city_name) as city_name
+  hcm_id
+  ,hcm_name
+  ,cm_id
+  ,cm_name
+  ,bdm_id
+  ,bdm_name
+  ,bd_id
+  ,bd_name
+  ,country
+  ,country_name
+  ,city
+  ,city_name
 
-  ,nvl(v1.order_amt,0) as order_amt
-  ,nvl(v1.order_cnt,0) as order_cnt
-  ,nvl(v1.order_people,0) as order_people
-  ,nvl(v1.first_order_amt,0) as first_order_amt
-  ,nvl(v1.first_order_cnt,0) as first_order_cnt
-  ,nvl(v1.first_order_people,0) as first_order_people
-  ,nvl(v1.pay_amt,0) as pay_amt
-  ,nvl(v1.pay_suc_cnt,0) as pay_suc_cnt
-  ,nvl(v1.pay_cnt,0) as pay_cnt
-  ,nvl(v1.refund_order_cnt,0) as refund_order_cnt
-  ,nvl(v1.refund_suc_cnt,0) as refund_suc_cnt
-  ,nvl(v1.refund_order_amt,0) as refund_order_amt
-  ,nvl(v1.delivery_order_cnt,0) as delivery_order_cnt
-  ,nvl(v1.receive_order_cnt,0) as receive_order_cnt
-  ,nvl(v1.receive_order_amt,0) as receive_order_amt
-  ,nvl(v2.new_shop_cnt,0) as new_shop_cnt
-  ,nvl(v1.order_shop_cnt,0) as order_shop_cnt
-  ,nvl(v1.first_order_shop_cnt,0) as first_order_shop_cnt
+  --购物车分析
+  ,nvl(v4.shopping_cart_cnt,0) as shopping_cart_cnt
+  ,nvl(v4.shopping_cart_sku_cnt,0) as shopping_cart_sku_cnt
+  ,nvl(v4.shopping_cart_amt,0) as shopping_cart_amt
+
+  --下单分析
+  ,nvl(v5.order_amt,0) as order_amt
+  ,nvl(v6.order_sku_cnt,0) as order_sku_cnt
+  ,nvl(v5.order_cnt,0) as order_cnt
+  ,nvl(v5.order_people,0) as order_people
+  ,nvl(v5.first_order_amt,0) as first_order_amt
+  ,nvl(v5.first_order_cnt,0) as first_order_cnt
+  ,nvl(v5.first_order_people,0) as first_order_people
+
+  --销售分析
+  ,nvl(v5.pay_amt,0) as pay_amt
+  ,nvl(v5.pay_suc_cnt,0) as pay_suc_cnt
+  ,nvl(v5.pay_cnt,0) as pay_cnt
+  ,nvl(v6.pay_sku_cnt,0) as pay_sku_cnt
+
+  --退款分析
+  ,nvl(v5.refund_order_cnt,0) as refund_order_cnt
+  ,nvl(v5.refund_suc_cnt,0) as refund_suc_cnt
+  ,nvl(v5.refund_order_amt,0) as refund_order_amt
+  ,nvl(v6.refund_sku_cnt,0) as refund_sku_cnt
+
+  --收货分析
+  ,nvl(v5.delivery_order_cnt,0) as delivery_order_cnt
+  ,nvl(v5.receive_order_cnt,0) as receive_order_cnt
+  ,nvl(v5.receive_order_amt,0) as receive_order_amt
+
+  --店铺分析
+  ,nvl(v1.new_shop_cnt,0) as new_shop_cnt
+  ,nvl(v5.order_shop_cnt,0) as order_shop_cnt
+  ,nvl(v5.first_order_shop_cnt,0) as first_order_shop_cnt
   ,nvl(v2.total_shop_cnt,0) as total_shop_cnt
-  ,nvl(v1.pay_people,0) as pay_people
-  ,nvl(v1.pay_suc_people,0) as pay_suc_people
+  ,nvl(v5.register_order_shop_cnt,0) as register_order_shop_cnt
+  ,nvl(v3.spu_on_sale,0) as spu_on_sale
+  ,nvl(v3.sku_on_sale,0) as sku_on_sale
+  ,nvl(v3.new_sku_cnt,0) as new_sku_cnt
+  ,nvl(v6.sale_sku_cnt,0) as sale_sku_cnt
+
+  --用户分析
+  ,nvl(v2.new_register_people_cnt,0) as new_register_people_cnt
+  ,nvl(v5.pay_people,0) as pay_people
+  ,nvl(v5.pay_suc_people,0) as pay_suc_people
+  ,nvl(v5.buy30_again_user_cnt,0) as buy30_again_user_cnt
+  ,nvl(v5.register_order_user_cnt,0) as register_order_user_cnt
   
   ,'NG' as country_code
   ,'{pt}' as dt
 from
-  order_info as v1
-full join
-  shop_info as v2
+  supplier_info as v1
+left join
+  retailer_info as v2
 on
   v1.hcm_id = v2.hcm_id
   and v1.cm_id = v2.cm_id
   and v1.bdm_id = v2.bdm_id
   and v1.bd_id = v2.bd_id
-  and v1.city = v2.city
+left join
+  goods_info as v3
+on
+  v1.hcm_id =     v3.hcm_id
+  and v1.cm_id =  v3.cm_id
+  and v1.bdm_id = v3.bdm_id
+  and v1.bd_id =  v3.bd_id
+left join
+  shopping_cart_info as v4
+on
+  v1.hcm_id =     v4.hcm_id
+  and v1.cm_id =  v4.cm_id
+  and v1.bdm_id = v4.bdm_id
+  and v1.bd_id =  v4.bd_id
+left join
+  order_info as v5
+on
+  v1.hcm_id =     v5.hcm_id
+  and v1.cm_id =  v5.cm_id
+  and v1.bdm_id = v5.bdm_id
+  and v1.bd_id =  v5.bd_id
+left join
+  order_goods_info as v6
+on
+  v1.hcm_id =     v6.hcm_id
+  and v1.cm_id =  v6.cm_id
+  and v1.bdm_id = v6.bdm_id
+  and v1.bd_id =  v6.bd_id
 ;
 
 
@@ -389,9 +613,9 @@ app_otrade_b2b_order_target_supplier_bd_di_task = PythonOperator(
 )
 
 dim_otrade_b2b_supplier_info_hf_task >> app_otrade_b2b_order_target_supplier_bd_di_task
+dim_otrade_b2b_retailer_info_crm_hf_task >> app_otrade_b2b_order_target_supplier_bd_di_task
+dim_otrade_b2b_goods_info_hf_task >> app_otrade_b2b_order_target_supplier_bd_di_task
+dwm_otrade_b2b_shopping_cart_collect_di_task >> app_otrade_b2b_order_target_supplier_bd_di_task
 dwm_otrade_b2b_order_collect_di_task >> app_otrade_b2b_order_target_supplier_bd_di_task
-
-
-
-
+dwm_otrade_b2b_order_item_collect_di_task >> app_otrade_b2b_order_target_supplier_bd_di_task
 
