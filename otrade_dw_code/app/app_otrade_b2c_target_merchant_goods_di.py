@@ -116,27 +116,28 @@ order_info as (
     ,product_name
   
     --下单分析
-    ,sum(nvl(all_price,0)) as order_amt
-    ,sum(nvl(number,0)) as order_goods_amt
-    ,count(1) as order_cnt
-    ,count(distinct(opayid)) as order_people
-    ,sum(if(first_order=1,nvl(all_price,0),0)) as first_order_amt
-    ,count(if(first_order=1,1,null)) as first_order_cnt
-    ,count(distinct(if(first_order=1,opayid,null))) as first_order_people
+    ,sum(if(substr(add_time,0,10)='{pt}',nvl(retail_price*number,0),0)) as order_amt
+    ,sum(if(substr(add_time,0,10)='{pt}',nvl(number,0),0)) as order_goods_amt
+    ,count(if(substr(add_time,0,10)='{pt}',1,null)) as order_cnt
+    ,count(distinct(if(substr(add_time,0,10)='{pt}',opayid,null))) as order_people
+    ,sum(if(first_order=1 and substr(add_time,0,10)='{pt}',nvl(retail_price*number,0),0)) as first_order_amt
+    ,count(if(first_order=1 and substr(add_time,0,10)='{pt}',1,null)) as first_order_cnt
+    ,count(distinct(if(first_order=1 and substr(add_time,0,10)='{pt}',opayid,null))) as first_order_people
   
     --销售分析
-    ,sum(if(length(pay_time)>9,nvl(actual_price,0),0)) as pay_amt
-    ,count(if(length(pay_time)>9,1,null)) as pay_suc_cnt
-    ,sum(if(length(pay_time)>9,nvl(number,0),0)) as pay_goods_cnt
+    ,sum(if(substr(pay_time,0,10)='{pt}',nvl(retail_price*number,0),0)) as pay_amt
+    ,count(if(substr(pay_time,0,10)='{pt}',1,null)) as pay_suc_cnt
+    ,sum(if(substr(pay_time,0,10)='{pt}',nvl(number,0),0)) as pay_goods_cnt
   
     --用户分析
-    ,count(distinct(if(length(pay_time)>9,opayid,null))) as pay_user_cnt
+    ,count(distinct(if(substr(pay_time,0,10)='{pt}',opayid,null))) as pay_user_cnt
 
     ,'NG' as country_code
   from
     otrade_dw.dwm_otrade_b2c_order_goods_collect_hi
   where
     dt = '{pt}'
+    and substr(add_time,0,10)='{pt}'
   group by
     merchant_id
     ,merchant_name
