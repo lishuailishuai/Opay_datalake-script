@@ -306,27 +306,15 @@ from
 left join
   shopping_cart_info as v4
 on
-  v2.hcm_id =     v4.hcm_id
-  and v2.cm_id =  v4.cm_id
-  and v2.bdm_id = v4.bdm_id
-  and v2.bd_id =  v4.bd_id
-  and v2.city =   v4.city
+  v2.payer =     v4.payer
 left join
   order_info as v5
 on
-  v2.hcm_id =     v5.hcm_id
-  and v2.cm_id =  v5.cm_id
-  and v2.bdm_id = v5.bdm_id
-  and v2.bd_id =  v5.bd_id
-  and v2.city =   v5.city
+  v2.payer =     v5.payer
 left join
   order_goods_info as v6
 on
-  v2.hcm_id =     v6.hcm_id
-  and v2.cm_id =  v6.cm_id
-  and v2.bdm_id = v6.bdm_id
-  and v2.bd_id =  v6.bd_id
-  and v2.city =   v6.city
+  v2.payer =     v6.payer
 ;
 
 
