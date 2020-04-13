@@ -261,7 +261,7 @@ from
     ,product_retail_price
     ,product_market_price
     ,product_group_price
-
+    
     ,row_number() over(partition by id order by utc_date_hour desc) rn
   from
     otrade_dw.dwm_otrade_b2c_order_goods_collect_hi
