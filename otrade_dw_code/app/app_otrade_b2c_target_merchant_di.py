@@ -150,6 +150,7 @@ order_info as (
     otrade_dw.dwm_otrade_b2c_order_collect_di
   where
     dt = '{pt}'
+    and substr(add_time,0,10)='{pt}'
   group by
     merchant_id
     ,merchant_name
