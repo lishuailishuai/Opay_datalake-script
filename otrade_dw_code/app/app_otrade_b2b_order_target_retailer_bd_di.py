@@ -143,7 +143,7 @@ retailer_info as (
   
     ,country
     ,country_name
-    ,city
+    ,city_id as city
     ,city_name
 
     ,count(if(substr(created_at,0,10) = '{pt}',1,null)) as new_register_people_cnt
@@ -164,7 +164,7 @@ retailer_info as (
 
     ,country
     ,country_name
-    ,city
+    ,city_id
     ,city_name
 ),
 
@@ -320,7 +320,7 @@ order_goods_info as (
 )
 
 --7.插入数据
-insert overwrite table otrade_dw.app_otrade_b2b_order_target_supplier_bd_di partition(country_code,dt)
+insert overwrite table otrade_dw.app_otrade_b2b_order_target_retailer_bd_di partition(country_code,dt)
 select
   v2.hcm_id
   ,v2.hcm_name
@@ -330,6 +330,7 @@ select
   ,v2.bdm_name
   ,v2.bd_id
   ,v2.bd_name
+
   ,v2.country
   ,v2.country_name
   ,v2.city
