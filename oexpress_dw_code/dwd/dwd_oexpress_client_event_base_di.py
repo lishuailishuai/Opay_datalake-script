@@ -101,7 +101,7 @@ def dwd_oexpress_client_event_base_di_sql_task(ds):
                 oride_source.opay_ep_logv0
             WHERE
                 dt='{pt}'
-                AND get_json_object(message, '$.type') in ('OTrade')
+                AND get_json_object(message, '$.type') in ('SENDER','OExpress')
         )
         insert overwrite table {db}.{table} partition(country_code,dt)
         SELECT
@@ -192,7 +192,7 @@ def dwd_oexpress_client_event_base_di_sql_task(ds):
         FROM
             opay_ep_logv1_data LATERAL VIEW explode(split(regexp_replace(regexp_replace(get_json_object(msg, '$.es'), '\\\\]|\\\\[',''),'\\\\}}\\,\\\\{{','\\\\}}\\;\\\\{{'),'\\\\;')) es AS e
         WHERE
-            get_json_object(e, '$.bzp') in ('OTrade') OR get_json_object(e, '$.bzp') is null 
+            get_json_object(e, '$.bzp') in ('SENDER','OExpress') OR get_json_object(e, '$.bzp') is null 
               group by
               get_json_object(e, '$.cip'),
               concat_ws(' ',substr(time,1,10),substr(time,12,8)),
