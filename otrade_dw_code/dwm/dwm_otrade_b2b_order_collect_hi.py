@@ -188,6 +188,7 @@ supplier_info as (
     ,bdm_name
     ,bd_real_id as bd_id
     ,bd_name
+    ,substr(create_time,0,10) as supplier_create_time
   from
     otrade_dw.dim_otrade_b2b_supplier_info_hf
   where
@@ -218,6 +219,7 @@ retailer_info as (
     ,bdm_name as retailer_bdm_name
     ,bd_real_id as retailer_bd_id
     ,bd_name as retailer_bd_name
+    ,substr(created_at,0,10) as retailer_create_time
   from
     otrade_dw.dim_otrade_b2b_retailer_info_crm_hf
   where
@@ -385,6 +387,9 @@ select
   ,v5.req_status
 
   ,date_format('{v_date}', 'yyyy-MM-dd HH') as utc_date_hour
+
+  ,v2.supplier_create_time
+  ,v3.retailer_create_time
 
   ,'NG' as country_code
   ,date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'yyyy-MM-dd') as dt
