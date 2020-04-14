@@ -17,7 +17,7 @@ from airflow.sensors.hive_partition_sensor import HivePartitionSensor
 from airflow.sensors import UFileSensor
 from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
 from airflow.sensors import OssSensor
-from plugins.CountriesPublicFrame_dev import CountriesPublicFrame_dev
+from plugins.CountriesAppFrame import CountriesAppFrame
 
 from plugins.TaskTouchzSuccess import TaskTouchzSuccess
 import json
@@ -29,7 +29,7 @@ from utils.get_local_time import GetLocalTime
 
 args = {
     'owner': 'lili.chen',
-    'start_date': datetime(2020, 4, 9),
+    'start_date': datetime(2020, 4, 14),
     'depends_on_past': False,
     'retries': 3,
     'retry_delay': timedelta(minutes=2),
@@ -158,7 +158,7 @@ def dwd_ocredit_phones_order_base_hi_sql_task(ds, v_date):
         date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'yyyy-MM-dd') as dt,
         date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'HH') as hour
 
-    from (select * from (select *,
+    from (select *,
                  date_format('{v_date}', 'yyyy-MM-dd HH') as utc_date_hour,
                  row_number() over(partition by id order by `__ts_ms` desc,`__file` desc,cast(`__pos` as int) desc) rn
              from ocredit_phones_dw_ods.ods_binlog_base_t_order_all_hi
@@ -168,8 +168,7 @@ def dwd_ocredit_phones_order_base_hi_sql_task(ds, v_date):
               --  and (substr(default.localTime("{config}",'NG',create_time,0),1,10)=date_format('{v_date}', 'yyyy-MM-dd') --按本地取昨天数据
               --  or default.localTime("{config}",'NG',update_time,0)=date_format('{v_date}', 'yyyy-MM-dd'))
                 and `__deleted` = 'false') m
-        where rn=1
-    ) t1 ;
+        where rn=1;
     '''.format(
         pt=ds,
         v_date=v_date,
@@ -222,11 +221,12 @@ def execution_data_task_id(ds, dag, **kwargs):
             "is_result_force_exist": "false",
             "execute_time": v_date,
             "is_hour_task": "true",
-            "frame_type": "local"
+            "frame_type": "local",
+            "business_key": "ocredit"
         }
     ]
 
-    cf = CountriesPublicFrame_dev(args)
+    cf = CountriesAppFrame(args)
 
     # 读取sql
     _sql = "\n" + cf.alter_partition() + "\n" + dwd_ocredit_phones_order_base_hi_sql_task(ds, v_date)
