@@ -60,9 +60,9 @@ IGNORED_TABLE_LIST = [
 导入数据的列表
 
 schema_table_db_name --同步表结构的表所属db
-schema_table_name --业务数据源 table
-target_table_db_name --(采集配置，定位oss数据位置使用),
-target_table_name --采集数据后的表名称（非分表为原表名，分表为去除后缀名称）同时也作为hive ods表 中的中间表名,
+schema_table_name --同步表结构表名
+target_table_db_name --真实采集数据所属db名称
+target_table_name --采集数据后的表名称（此参数和采集程序相关合并表的命名有关，常规命名方式为，非分表为原表名，分表为去除后缀名称）同时也作为hive ods表 中的中间表名
 conn_id --airflow 配置的mysql 连接变量
 prefix_name --划分业务线的名称，如 ods_opay_order_tab ,order就是订单业务线
 priority_weight --任务执行优先级

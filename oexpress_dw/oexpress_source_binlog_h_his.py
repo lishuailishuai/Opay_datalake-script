@@ -69,7 +69,7 @@ db_name,table_name,conn_id,prefix_name,priority_weight,server_name (采集配置
 table_list = [
 
     ("oexpress_data", "conf_sms", "oexpress_db", "base", 3, "oexpress_db", "false"),
-    ("oexpress_data", "data_device", "oexpress_db", "base", 3, "oexpress_db", "false"),
+    #("oexpress_data", "data_device", "oexpress_db", "base", 3, "oexpress_db", "false"),
     ("oexpress_data", "data_driver", "oexpress_db", "base", 3, "oexpress_db", "false"),
     ("oexpress_data", "data_driver_statements", "oexpress_db", "base", 3, "oexpress_db", "false"),
     ("oexpress_data", "data_driver_statements_salary", "oexpress_db", "base", 3, "oexpress_db", "false"),
