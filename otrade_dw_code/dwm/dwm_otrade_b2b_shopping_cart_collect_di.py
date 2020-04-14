@@ -116,6 +116,7 @@ select
   ,sku_name
   ,spu_brand_id
   ,spu_brand
+  ,sku_price
   ,supplier_opay_id
   ,supplier_name
   ,supplier_shop_id
@@ -173,6 +174,7 @@ from
     ,sku_name
     ,spu_brand_id
     ,spu_brand
+    ,sku_price
     ,supplier_opay_id
     ,supplier_name
     ,supplier_shop_id
