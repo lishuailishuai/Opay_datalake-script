@@ -272,6 +272,7 @@ select
   ,v2.sku_name
   ,v2.spu_brand_id
   ,v2.spu_brand
+  ,v2.sku_price
 
   ,v2.spu_supplier_id as supplier_opay_id
   ,v2.spu_supplier_name  as supplier_name
