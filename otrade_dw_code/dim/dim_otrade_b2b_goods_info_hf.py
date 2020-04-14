@@ -112,6 +112,21 @@ dwd_otrade_b2b_product_sku_property_hf_check_task = OssSensor(
     dag=dag
 )
 
+###oss://opay-datalake/otrade/otrade_dw/dim_otrade_b2b_supplier_info_hf
+dim_otrade_b2b_supplier_info_hf_check_task = OssSensor(
+    task_id='dim_otrade_b2b_supplier_info_hf_check_task',
+    bucket_key='{hdfs_path_str}/country_code=NG/dt={pt}/hour={hour}/_SUCCESS'.format(
+        hdfs_path_str="otrade/otrade_dw/dim_otrade_b2b_supplier_info_hf",
+        pt='{{{{(execution_date+macros.timedelta(hours=({time_zone}+{gap_hour}))).strftime("%Y-%m-%d")}}}}'.format(
+            time_zone=time_zone, gap_hour=0),
+        hour='{{{{(execution_date+macros.timedelta(hours=({time_zone}+{gap_hour}))).strftime("%H")}}}}'.format(
+            time_zone=time_zone, gap_hour=0)
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
 def fun_task_timeout_monitor(ds,dag,execution_date,**op_kwargs):
 
@@ -259,6 +274,44 @@ sku_join_info as (
     sku_property_info as v2
   on
     v1.sku_id = v2.sku_id
+),
+
+--7.取出商铺bd信息
+shop_info as (
+  select
+    id
+    ,country
+    ,country_name
+    ,city
+    ,city_name
+    ,hcm_id
+    ,hcm_name
+    ,cm_id
+    ,cm_name
+    ,bdm_id
+    ,bdm_name
+    ,bd_real_id as bd_id
+    ,bd_name
+  from
+    otrade_dw.dim_otrade_b2b_supplier_info_hf
+  where
+    concat(dt, " ", hour) >= default.minLocalTimeRange("{config}", '{v_date}', 0) 
+    and concat(dt, " ", hour) <= default.maxLocalTimeRange("{config}", '{v_date}', 0) 
+    and utc_date_hour = date_format("{v_date}", 'yyyy-MM-dd HH')
+  group by
+    id
+    ,country
+    ,country_name
+    ,city
+    ,city_name
+    ,hcm_id
+    ,hcm_name
+    ,cm_id
+    ,cm_name
+    ,bdm_id
+    ,bdm_name
+    ,bd_real_id
+    ,bd_name
 )
 
 --6.最后插入数据到表中
@@ -294,6 +347,19 @@ select
   ,v1.sku_create_time
 
   ,date_format('{v_date}', 'yyyy-MM-dd HH') as utc_date_hour
+  
+  ,v4.country
+  ,v4.country_name
+  ,v4.city
+  ,v4.city_name
+  ,v4.hcm_id
+  ,v4.hcm_name
+  ,v4.cm_id
+  ,v4.cm_name
+  ,v4.bdm_id
+  ,v4.bdm_name
+  ,v4.bd_id
+  ,v4.bd_name
 
   ,'NG' as country_code
   ,date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'yyyy-MM-dd') as dt
@@ -308,6 +374,10 @@ left join
   category_level_info as v3
 on
   v2.category_id = v3.level3_id
+left join
+  shop_info as v4
+on
+  v2.spu_shop_id = v4.id
 ;
 
 
@@ -399,4 +469,4 @@ dwd_otrade_b2b_category_hf_check_task >> dim_otrade_b2b_goods_info_hf_task
 dwd_otrade_b2b_product_hf_check_task >> dim_otrade_b2b_goods_info_hf_task
 dwd_otrade_b2b_product_sku_hf_check_task >> dim_otrade_b2b_goods_info_hf_task
 dwd_otrade_b2b_product_sku_property_hf_check_task >> dim_otrade_b2b_goods_info_hf_task
-
+dim_otrade_b2b_supplier_info_hf_check_task >> dim_otrade_b2b_goods_info_hf_task

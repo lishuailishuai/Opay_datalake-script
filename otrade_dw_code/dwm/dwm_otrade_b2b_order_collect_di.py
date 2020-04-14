@@ -179,6 +179,8 @@ select
   ,actual_amount
   ,pay_status
   ,req_status
+  ,supplier_create_time
+  ,retailer_create_time
 
   ,'NG' as country_code
   ,'{pt}' as dt
@@ -235,7 +237,7 @@ from
     ,bdm_name
     ,bd_id
     ,bd_name
-
+  
     ,retailer_first_name
     ,retailer_last_name
     ,retailer_phone_number
@@ -261,6 +263,8 @@ from
     ,actual_amount
     ,pay_status
     ,req_status
+    ,supplier_create_time
+    ,retailer_create_time
 
     ,row_number() over(partition by id order by update_time desc) rn
   from

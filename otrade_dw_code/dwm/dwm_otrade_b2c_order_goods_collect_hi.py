@@ -218,6 +218,9 @@ order_collect_info as (
     ,merchant_create_date
     ,first_order
     ,first_order_time
+    ,country
+    ,province
+    ,city
     ,city_name
     ,country_name
   from
@@ -269,9 +272,9 @@ select
   ,v1.brand_id
   ,v1.customers
   ,v1.customers_name
-  ,v1.country
-  ,v1.province
-  ,v1.city
+  ,v2.country
+  ,v2.province
+  ,v2.city
   ,v1.district
   ,v1.address
   ,v1.mobile
@@ -352,6 +355,7 @@ left join
 on
   v1.product_id = v3.product_id
 ;
+
 
 
     '''.format(
