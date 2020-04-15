@@ -156,7 +156,6 @@ def dwd_ocredit_phones_order_base_di_sql_task(ds, v_date):
           channel, --渠道： 1=销售 2=用户 
           product_category, --产品类型： 1 手机 2 汽车 3 摩托车 4 家电 5 电脑
           date_of_entry, --进件日期
-          utc_date_hour,
           country_code,  --如果表中有国家编码直接上传国家编码
           dt
     from (select *,row_number() over(partition by id order by utc_date_hour desc) as rn 
