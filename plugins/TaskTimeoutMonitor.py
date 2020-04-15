@@ -22,18 +22,19 @@ from html.parser import HTMLParser
 调用示例:
 from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
 
-def test_t11(**op_kwargs):
-    sub = TaskTimeoutMonitor()
-    tb = [
-        {"dag":dag,"db": "oride_dw", "table": "app_oride_driver_base_d", "partition": "aaaaa", "timeout": "60"},
-        {"dag":dag,"db": "oride_dw", "table": "app_oride_order_base_d", "partition": "type=all/country_code=nal/dt=2019-09-20", "timeout": "120"}
+def fun_task_timeout_monitor(ds,dag,**op_kwargs):
+
+    dag_ids=dag.dag_id
+
+    msg = [
+        {"dag":dag, "db": "opay_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=NG/dt={pt}".format(pt=ds), "timeout": "3000"}
     ]
 
-    sub.set_task_monitor(tb)
+    TaskTimeoutMonitor().set_task_monitor(msg)
 
-t1 = PythonOperator(
-    task_id='test_t1',
-    python_callable=test_t11,
+task_timeout_monitor= PythonOperator(
+    task_id='task_timeout_monitor',
+    python_callable=fun_task_timeout_monitor,
     provide_context=True,
     dag=dag
 )
