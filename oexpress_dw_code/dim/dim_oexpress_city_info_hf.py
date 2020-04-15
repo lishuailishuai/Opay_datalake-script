@@ -52,11 +52,11 @@ time_zone = config['NG']['time_zone']
 
 ##----------------------------------------- 依赖 ---------------------------------------##
 ### 检查当前小时的分区依赖
-###oss://opay-datalake/oexpress_all_hi/ods_binlog_base_conf_city_h_his
+###oss://opay-datalake/oexpress_h_his//ods_binlog_base_conf_city_h_his
 ods_binlog_base_conf_city_h_his_check_task = OssSensor(
     task_id='ods_binlog_base_conf_city_h_his_check_task',
     bucket_key='{hdfs_path_str}/dt={pt}/hour={hour}/_SUCCESS'.format(
-        hdfs_path_str="oexpress_all_hi/ods_binlog_base_conf_city_h_his",
+        hdfs_path_str="oexpress_h_his/ods_binlog_base_conf_city_h_his",
         pt='{{ds}}',
         hour='{{ execution_date.strftime("%H") }}'
     ),
@@ -66,11 +66,11 @@ ods_binlog_base_conf_city_h_his_check_task = OssSensor(
 )
 
 ### 检查当前小时的分区依赖
-###oss://opay-datalake/oexpress_all_hi/ods_binlog_base_conf_country_h_his
+###oss://opay-datalake/oexpress_h_his//ods_binlog_base_conf_country_h_his
 ods_binlog_base_conf_country_h_his_check_task = OssSensor(
     task_id='ods_binlog_base_conf_country_h_his_check_task',
     bucket_key='{hdfs_path_str}/dt={pt}/hour={hour}/_SUCCESS'.format(
-        hdfs_path_str="oexpress_all_hi/ods_binlog_base_conf_country_h_his",
+        hdfs_path_str="oexpress_h_his/ods_binlog_base_conf_country_h_his",
         pt='{{ds}}',
         hour='{{ execution_date.strftime("%H") }}'
     ),
