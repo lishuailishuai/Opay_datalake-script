@@ -228,7 +228,9 @@ from
   drver_info as v1
 left join
   city_info as v2
-v1.city_id = v2.city_id;
+on
+  v1.city_id = v2.city_id
+;
 
 
     '''.format(
