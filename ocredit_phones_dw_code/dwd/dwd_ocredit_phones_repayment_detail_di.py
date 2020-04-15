@@ -126,32 +126,32 @@ def dwd_ocredit_phones_repayment_detail_di_sql_task(ds, v_date):
             poundage,                   -- 手续费                                                                                     
             current_interest_rate,      -- 利息                                                                                      
             penalty_interest_rate,      -- 罚息                                                                                      
-            default.localTime("{config}",'NG',repayment_time,0) as repayment_time,             -- 预计还款时间                                                                                  
+            repayment_time,             -- 预计还款时间                                                                                  
             real_total_amount,          -- 实还总额                                                                                    
             real_amount,                -- 实还本金                                                                                    
             real_service_fee,           -- 实还服务费                                                                                   
             real_interest,              -- 实还利息                                                                                    
             real_poundage,              -- 实还手续费                                                                                   
             real_penalty_interest,      -- 实还罚息                                                                                    
-            default.localTime("{config}",'NG',real_repayment_time,0) as real_repayment_time,        -- 实际还款时间                                                                                  
+            real_repayment_time,        -- 实际还款时间                                                                                  
             not_return_amount,          -- 剩余本金                                                                                    
             version,                    -- 版本号                                                                                     
             remark,                     -- 备注                                                                                      
-            default.localTime("{config}",'NG',create_time,0) as create_time,                -- 创建时间                                                                                    
-            default.localTime("{config}",'NG',update_time,0) as update_time,                -- 更新时间                                                                                    
+            create_time,                -- 创建时间                                                                                    
+            update_time,                -- 更新时间                                                                                    
             pay_type,                   -- 还款方式 0未扣款 1系统划扣 2人工减免结清                                                                 
             allocated,                  -- 催收是否已分配  0未分配 1已分配                                                                      
             allocated_user_id,          -- 催收分配接收人用户id                                                                             
             allocated_user_name,        -- 催收分配接收人用户名称                                                                             
-            default.localTime("{config}",'NG',allocated_time,0) as allocated_time,             -- 催收分配时间                                                                                  
+            allocated_time,             -- 催收分配时间                                                                                  
             collection_status,          -- 催收状态 0未分配 1催收中 2已结案 3已关闭                                                                
-            default.localTime("{config}",'NG',allocated_over_time,0) as allocated_over_time,        -- 催收结案时间                                                                                  
+            allocated_over_time,        -- 催收结案时间                                                                                  
             total_deductions,           -- 减免总额                                                                                    
             allocated_user_leader_name, --          催收分配接收人组长名称                                                                    
-            default.localTime("{config}",'NG',recent_penalty_time,0) as recent_penalty_time,        -- 最新更新罚息时间                                                                                
+            recent_penalty_time,        -- 最新更新罚息时间                                                                                
             repay_version,               -- 支付版本号                                                   
-        'NG' country_code,  --如果表中有国家编码直接上传国家编码
-        date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'yyyy-MM-dd') as dt
+        country_code,  --如果表中有国家编码直接上传国家编码
+        dt
 
     from (select *,row_number() over(partition by repay_detail_id order by utc_date_hour desc) rn
              from ocredit_phones_dw.dwd_ocredit_phones_repayment_detail_hi
