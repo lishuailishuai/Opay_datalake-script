@@ -17,7 +17,6 @@ from airflow.sensors.hive_partition_sensor import HivePartitionSensor
 from airflow.sensors import UFileSensor
 from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
 from airflow.sensors import OssSensor
-from plugins.CountriesPublicFrame_dev import CountriesPublicFrame_dev
 
 from plugins.TaskTouchzSuccess import TaskTouchzSuccess
 import json
@@ -26,6 +25,7 @@ from airflow.models import Variable
 import requests
 import os
 from utils.get_local_time import GetLocalTime
+from plugins.CountriesAppFrame import CountriesAppFrame
 
 
 args = {
@@ -212,33 +212,8 @@ def dwm_opay_bd_agent_trans_hf_sql_task(ds, v_date):
 
 # 主流程
 def execution_data_task_id(ds, dag, **kwargs):
-    v_date = kwargs.get('v_execution_date')
-    v_day = kwargs.get('v_execution_day')
-    v_hour = kwargs.get('v_execution_hour')
-
+    v_execution_time = kwargs.get('v_execution_time')
     hive_hook = HiveCliHook()
-
-    """
-        #功能函数
-            alter语句: alter_partition()
-            删除分区: delete_partition()
-            生产success: touchz_success()
-
-        #参数
-            is_countries_online --是否开通多国家业务 默认(true 开通)
-            db_name --hive 数据库的名称
-            table_name --hive 表的名称
-            data_oss_path --oss 数据目录的地址
-            is_country_partition --是否有国家码分区,[默认(true 有country_code分区)]
-            is_result_force_exist --数据是否强行产出,[默认(true 必须有数据才生成_SUCCESS)] false 数据没有也生成_SUCCESS 
-            execute_time --当前脚本执行时间(%Y-%m-%d %H:%M:%S)
-            is_hour_task --是否开通小时级任务,[默认(false)]
-            frame_type --模板类型(只有 is_hour_task:'true' 时生效): utc 产出分区为utc时间，local 产出分区为本地时间,[默认(utc)]。
-
-        #读取sql
-            %_sql(ds,v_hour)
-
-    """
 
     args = [
         {
@@ -249,23 +224,22 @@ def execution_data_task_id(ds, dag, **kwargs):
             "data_oss_path": hdfs_path,
             "is_country_partition": "true",
             "is_result_force_exist": "false",
-            "execute_time": v_date,
+            "execute_time": v_execution_time,
             "is_hour_task": "true",
-            "frame_type": "local"
+            "frame_type": "local",
+            "business_key": "opay"
         }
     ]
 
-    cf = CountriesPublicFrame_dev(args)
+    cf = CountriesAppFrame(args)
 
-     # 读取sql
-    _sql = "\n" + cf.alter_partition() + "\n" + dwm_opay_bd_agent_trans_hf_sql_task(ds, v_date)
+    # 读取sql
+    _sql = "\n" + cf.alter_partition() + "\n" + dwm_opay_bd_agent_trans_hf_sql_task(ds)
 
     logging.info('Executing: %s', _sql)
 
     # 执行Hive
     hive_hook.run_cli(_sql)
-
-
 
     # 生产success
     cf.touchz_success()
@@ -276,9 +250,7 @@ dwm_opay_bd_agent_trans_hf_task = PythonOperator(
     python_callable=execution_data_task_id,
     provide_context=True,
     op_kwargs={
-        'v_execution_date': '{{execution_date.strftime("%Y-%m-%d %H:%M:%S")}}',
-        'v_execution_day': '{{execution_date.strftime("%Y-%m-%d")}}',
-        'v_execution_hour': '{{execution_date.strftime("%H")}}',
+        'v_execution_time': '{{execution_date.strftime("%Y-%m-%d %H:%M:%S")}}',
         'owner': '{{owner}}'
     },
     dag=dag

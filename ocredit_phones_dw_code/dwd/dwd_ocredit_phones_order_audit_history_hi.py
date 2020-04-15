@@ -29,7 +29,7 @@ from utils.get_local_time import GetLocalTime
 
 args = {
     'owner': 'lili.chen',
-    'start_date': datetime(2020, 4, 15),
+    'start_date': datetime(2020, 4, 14),
     'depends_on_past': False,
     'retries': 3,
     'retry_delay': timedelta(minutes=2),
@@ -38,24 +38,24 @@ args = {
     'email_on_retry': False,
 }
 
-dag = airflow.DAG('dwd_ocredit_sys_dept_hf',
-                  schedule_interval="30 * * * *",
+dag = airflow.DAG('dwd_ocredit_phones_order_audit_history_hi',
+                  schedule_interval="35 * * * *",
                   default_args=args,
                   )
 
 ##----------------------------------------- 变量 ---------------------------------------##
 db_name = "ocredit_phones_dw"
-table_name = "dwd_ocredit_sys_dept_hf"
+table_name = "dwd_ocredit_phones_order_audit_history_hi"
 hdfs_path = "oss://opay-datalake/ocredit_phones/ocredit_phones_dw/" + table_name
 config = eval(Variable.get("ocredit_time_zone_config"))
 time_zone = config['NG']['time_zone']
 ##----------------------------------------- 依赖 ---------------------------------------##
 
 ### 检查当前小时的分区依赖
-ods_binlog_base_sys_dept_h_his_check_task = OssSensor(
-    task_id='ods_binlog_base_sys_dept_h_his_check_task',
+ods_binlog_base_t_order_audit_history_all_hi_check_task = OssSensor(
+    task_id='ods_binlog_base_t_order_audit_history_all_hi_check_task',
     bucket_key='{hdfs_path_str}/dt={pt}/hour={hour}/_SUCCESS'.format(
-        hdfs_path_str="ocredit_phones_h_his/ods_binlog_base_sys_dept_h_his",
+        hdfs_path_str="ocredit_phones_all_hi/ods_binlog_base_t_order_audit_history_all_hi",
         pt='{{ds}}',
         hour='{{ execution_date.strftime("%H") }}'
     ),
@@ -96,7 +96,7 @@ task_timeout_monitor = PythonOperator(
 )
 
 
-def dwd_ocredit_sys_dept_hf_sql_task(ds, v_date):
+def dwd_ocredit_phones_order_audit_history_hi_sql_task(ds, v_date):
     HQL = '''
 
     set hive.exec.dynamic.partition.mode=nonstrict;
@@ -105,18 +105,18 @@ def dwd_ocredit_sys_dept_hf_sql_task(ds, v_date):
     insert overwrite table {db}.{table} 
     partition(country_code, dt,hour)
 
-    select dept_id,     -- 主键id                   
-            pid,         -- 父部门id                  
-            pids,        -- 父级ids                  
-            simple_name, -- 简称                     
-            full_name,   -- 全称                     
-            description, -- 描述                     
-            version,     -- 版本（乐观锁保留字段）            
-            sort,        -- 排序                     
-            default.localTime("{config}",'NG',create_time,0) as create_time, -- 创建时间                   
-            default.localTime("{config}",'NG',update_time,0) as update_time, -- 修改时间                   
-            create_user, -- 创建人                    
-            update_user,  -- 修改人             
+    select id,                  
+            user_id,             --用户ID               
+            order_id,            --订单ID               
+            audit_type,          --审核类型： 1初审 2复审      
+            audit_status,        --审核状态: 0初始 通过、拒绝    
+            reason_id,           --审核原因ID             
+            reason_description,  --原因描述               
+            audit_opr_id,        --审批操作人              
+            audit_opr_name,      --审批人名称              
+            default.localTime("{config}",'NG',create_time,0) as create_time,         --创建日期               
+            default.localTime("{config}",'NG',update_time,0) as update_time,         --修改日期               
+            remark,              --备注 
         utc_date_hour,
         'NG' country_code,  --如果表中有国家编码直接上传国家编码
         date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'yyyy-MM-dd') as dt,
@@ -124,11 +124,10 @@ def dwd_ocredit_sys_dept_hf_sql_task(ds, v_date):
 
     from (select *,
                  date_format('{v_date}', 'yyyy-MM-dd HH') as utc_date_hour,
-                 row_number() over(partition by dept_id order by `__ts_ms` desc,`__file` desc,cast(`__pos` as int) desc) rn
-             from ocredit_phones_dw_ods.ods_binlog_base_sys_dept_h_his
-            where 
-                concat(dt, " ", hour) = date_format('{v_date}', 'yyyy-MM-dd HH')
-                and `__deleted` = 'false') m
+                 row_number() over(partition by id order by `__ts_ms` desc,`__file` desc,cast(`__pos` as int) desc) rn
+             from ocredit_phones_dw_ods.ods_binlog_base_t_order_audit_history_all_hi
+            where concat(dt, " ", hour) = date_format('{v_date}', 'yyyy-MM-dd HH')
+                  and `__deleted` = 'false') m
         where rn=1;
     '''.format(
         pt=ds,
@@ -190,7 +189,7 @@ def execution_data_task_id(ds, dag, **kwargs):
     cf = CountriesAppFrame(args)
 
     # 读取sql
-    _sql = "\n" + cf.alter_partition() + "\n" + dwd_ocredit_sys_dept_hf_sql_task(ds, v_date)
+    _sql = "\n" + cf.alter_partition() + "\n" + dwd_ocredit_phones_order_audit_history_hi_sql_task(ds, v_date)
 
     logging.info('Executing: %s', _sql)
 
@@ -201,8 +200,8 @@ def execution_data_task_id(ds, dag, **kwargs):
     cf.touchz_success()
 
 
-dwd_ocredit_sys_dept_hf_task = PythonOperator(
-    task_id='dwd_ocredit_sys_dept_hf_task',
+dwd_ocredit_phones_order_audit_history_hi_task = PythonOperator(
+    task_id='dwd_ocredit_phones_order_audit_history_hi_task',
     python_callable=execution_data_task_id,
     provide_context=True,
     op_kwargs={
@@ -214,4 +213,4 @@ dwd_ocredit_sys_dept_hf_task = PythonOperator(
     dag=dag
 )
 
-ods_binlog_base_sys_dept_h_his_check_task >> dwd_ocredit_sys_dept_hf_task
+ods_binlog_base_t_order_audit_history_all_hi_check_task >> dwd_ocredit_phones_order_audit_history_hi_task
