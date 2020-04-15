@@ -78,8 +78,8 @@ table_list = [
     ("oexpress_data", "finance_settlements", "oexpress_db", "base", 3, "oexpress_db", "false"),
     ("oexpress_data", "conf_abnormal_category", "oexpress_db", "base", 3, "oexpress_db", "false"),
     ("oexpress_data", "conf_product_category", "oexpress_db", "base", 3, "oexpress_db", "false"),
-    ("oexpress_data", "data_device", "oexpress_db", "base", 3, "oexpress_db", "false")
-
+    ("oexpress_data", "data_device", "oexpress_db", "base", 3, "oexpress_db", "false"),
+    ("oexpress_data", "data_operation_log", "oexpress_db", "base", 3, "oexpress_db", "false"),
 ]
 
 HIVE_DB = 'oexpress_dw_ods'

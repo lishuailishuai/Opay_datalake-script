@@ -17,7 +17,7 @@ from airflow.sensors.hive_partition_sensor import HivePartitionSensor
 from airflow.sensors import UFileSensor
 from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
 from airflow.sensors import OssSensor
-from plugins.CountriesPublicFrame_dev import CountriesPublicFrame_dev
+from plugins.CountriesAppFrame import CountriesAppFrame
 
 from plugins.TaskTouchzSuccess import TaskTouchzSuccess
 import json
@@ -29,7 +29,7 @@ from utils.get_local_time import GetLocalTime
 
 args = {
     'owner': 'lili.chen',
-    'start_date': datetime(2020, 4, 1),
+    'start_date': datetime(2020, 4, 14),
     'depends_on_past': False,
     'retries': 3,
     'retry_delay': timedelta(minutes=2),
@@ -51,13 +51,16 @@ config = eval(Variable.get("ocredit_time_zone_config"))
 time_zone = config['NG']['time_zone']
 ##----------------------------------------- 依赖 ---------------------------------------##
 
-### 检查当前小时的分区依赖
-ods_binlog_base_t_order_audit_history_all_hi_check_task = OssSensor(
-    task_id='ods_binlog_base_t_order_audit_history_all_hi_check_task',
-    bucket_key='{hdfs_path_str}/dt={pt}/hour=23/_SUCCESS'.format(
-        hdfs_path_str="ocredit_phones_all_hi/ods_binlog_base_t_order_audit_history_all_hi",
-        pt='{{ds}}',
-        hour='{{ execution_date.strftime("%H") }}'
+### 检查本地时间t-1的依赖,这里要依赖最晚时区的国家
+dwd_ocredit_phones_order_audit_history_hi_check_task = OssSensor(
+    task_id='dwd_ocredit_phones_order_audit_history_hi_check_task',
+    bucket_key='{hdfs_path_str}/country_code=NG/dt={dt}/hour=23/_SUCCESS'.format(
+        hdfs_path_str="ocredit_phones/ocredit_phones_dw/dwd_ocredit_phones_order_audit_history_hi",
+        pt='{{{{(execution_date+macros.timedelta(hours=({time_zone}+{gap_hour}))).strftime("%Y-%m-%d")}}}}'.format(
+            time_zone=time_zone, gap_hour=0),
+        hour='{{{{(execution_date+macros.timedelta(hours=({time_zone}+{gap_hour}))).strftime("%H")}}}}'.format(
+            time_zone=time_zone, gap_hour=0),
+        dt='{{ds}}'
     ),
     bucket_name='opay-datalake',
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
@@ -117,21 +120,18 @@ def dwd_ocredit_phones_order_audit_history_di_sql_task(ds, v_date):
             create_time,         --创建日期               
             update_time,         --修改日期               
             remark,              --备注                 
-        t1.utc_date_hour,  --utc时间字段 
-        'NG' country_code,  --如果表中有国家编码直接上传国家编码
-        date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'yyyy-MM-dd') as dt
+        country_code,  --如果表中有国家编码直接上传国家编码
+        dt
 
-    from (select * from (select *,
-                 date_format('{v_date}', 'yyyy-MM-dd HH') as utc_date_hour,
-                 row_number() over(partition by id order by `__ts_ms` desc,`__file` desc,cast(`__pos` as int) desc) rn
-             from ocredit_phones_dw_ods.ods_binlog_base_t_order_audit_history_all_hi
+    from (select *,
+                 row_number() over(partition by id order by utc_date_hour desc) rn
+             from ocredit_phones_dw.dwd_ocredit_phones_order_audit_history_hi
             where 
-                dt >= '{bef_yes_day}' --有可能多个国家时区不一样，如果要取昨天一天的本地数据，需要尽可能多的限定全采集的数据,有可能在前天分区或今天分区
-                and (substr(default.localTime("{config}",'NG',create_time,0),1,10)=date_format('{v_date}', 'yyyy-MM-dd') --按本地取昨天数据
-                or default.localTime("{config}",'NG',update_time,0)=date_format('{v_date}', 'yyyy-MM-dd'))
-                and `__deleted` = 'false') m
-        where rn=1
-    ) t1 ;
+                dt=date_format("{v_date}", 'yyyy-MM-dd') 
+                and (substr(create_time,1,10)=date_format("{v_date}", 'yyyy-MM-dd') or
+                substr(update_time,1,10)=date_format("{v_date}", 'yyyy-MM-dd'))  --后续正常上线后，这个条件可以不限定，只是初始化当天需要限定
+                ) m
+        where rn=1;
     '''.format(
         pt=ds,
         v_date=v_date,
@@ -184,11 +184,12 @@ def execution_data_task_id(ds, dag, **kwargs):
             "is_result_force_exist": "false",
             "execute_time": v_date,
             "is_hour_task": "false",
-            "frame_type": "local"
+            "frame_type": "local",
+            "business_key": "ocredit"
         }
     ]
 
-    cf = CountriesPublicFrame_dev(args)
+    cf = CountriesAppFrame(args)
 
     # 读取sql
     _sql = "\n" + cf.alter_partition() + "\n" + dwd_ocredit_phones_order_audit_history_di_sql_task(ds, v_date)
@@ -215,4 +216,4 @@ dwd_ocredit_phones_order_audit_history_di_task = PythonOperator(
     dag=dag
 )
 
-ods_binlog_base_t_order_audit_history_all_hi_check_task >> dwd_ocredit_phones_order_audit_history_di_task
+dwd_ocredit_phones_order_audit_history_hi_check_task >> dwd_ocredit_phones_order_audit_history_di_task

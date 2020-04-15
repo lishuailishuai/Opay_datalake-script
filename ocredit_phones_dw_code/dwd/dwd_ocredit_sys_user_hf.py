@@ -17,7 +17,7 @@ from airflow.sensors.hive_partition_sensor import HivePartitionSensor
 from airflow.sensors import UFileSensor
 from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
 from airflow.sensors import OssSensor
-from plugins.CountriesPublicFrame_dev import CountriesPublicFrame_dev
+from plugins.CountriesAppFrame import CountriesAppFrame
 
 from plugins.TaskTouchzSuccess import TaskTouchzSuccess
 import json
@@ -29,7 +29,7 @@ from utils.get_local_time import GetLocalTime
 
 args = {
     'owner': 'lili.chen',
-    'start_date': datetime(2020, 4, 7),
+    'start_date': datetime(2020, 4, 15),
     'depends_on_past': False,
     'retries': 3,
     'retry_delay': timedelta(minutes=2),
@@ -119,25 +119,24 @@ def dwd_ocredit_sys_user_hf_sql_task(ds, v_date):
             dept_id,        --部门id(多个逗号隔开)          
             status,         --状态(字典)                
             o_native,       --是否是非洲本地               
-            create_time,    --创建时间                  
+            default.localTime("{config}",'NG',create_time,0) as create_time,    --创建时间                  
             create_user,    --创建人                   
-            update_time,    --更新时间                  
+            default.localTime("{config}",'NG',update_time,0) as update_time,    --更新时间                  
             update_user,    --更新人                   
             version,         --乐观锁      
-        t1.utc_date_hour,
+        utc_date_hour,
         'NG' country_code,  --如果表中有国家编码直接上传国家编码
         date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'yyyy-MM-dd') as dt,
         date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'HH') as hour
 
-    from (select * from (select *,
+    from (select *,
                  date_format('{v_date}', 'yyyy-MM-dd HH') as utc_date_hour,
                  row_number() over(partition by user_id order by `__ts_ms` desc,`__file` desc,cast(`__pos` as int) desc) rn
              from ocredit_phones_dw_ods.ods_binlog_base_sys_user_h_his
             where 
                 concat(dt, " ", hour) = date_format('{v_date}', 'yyyy-MM-dd HH')
                 and `__deleted` = 'false') m
-        where rn=1
-    ) t1 ;
+        where rn=1;
     '''.format(
         pt=ds,
         v_date=v_date,
@@ -190,11 +189,12 @@ def execution_data_task_id(ds, dag, **kwargs):
             "is_result_force_exist": "false",
             "execute_time": v_date,
             "is_hour_task": "true",
-            "frame_type": "local"
+            "frame_type": "local",
+            "business_key": "ocredit"
         }
     ]
 
-    cf = CountriesPublicFrame_dev(args)
+    cf = CountriesAppFrame(args)
 
     # 读取sql
     _sql = "\n" + cf.alter_partition() + "\n" + dwd_ocredit_sys_user_hf_sql_task(ds, v_date)
