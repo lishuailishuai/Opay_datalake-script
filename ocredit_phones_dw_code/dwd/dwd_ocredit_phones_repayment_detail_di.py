@@ -153,7 +153,7 @@ def dwd_ocredit_phones_repayment_detail_di_sql_task(ds, v_date):
         'NG' country_code,  --如果表中有国家编码直接上传国家编码
         date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'yyyy-MM-dd') as dt
 
-    from (select *,row_number() over(partition by id order by utc_date_hour desc) rn
+    from (select *,row_number() over(partition by repay_detail_id order by utc_date_hour desc) rn
              from ocredit_phones_dw.dwd_ocredit_phones_repayment_detail_hi
             where 
                 dt=date_format("{v_date}", 'yyyy-MM-dd') 
