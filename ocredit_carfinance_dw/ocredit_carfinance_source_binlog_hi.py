@@ -40,12 +40,12 @@ dag_monitor = airflow.DAG(
     schedule_interval=schedule_interval,
     default_args=args)
 
-
+ 
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
 
 def fun_task_timeout_monitor(ds, db_name, table_name, **op_kwargs):
     tb = [
-        {"db": db_name, "table": table_name, "partition": "dt={pt}".format(pt=ds), "timeout": "50"}
+        {"dag":dag,"db": db_name, "table": table_name, "partition": "dt={pt}".format(pt=ds), "timeout": "10","flag":"ods"}
     ]
 
     TaskTimeoutMonitor().set_task_monitor(tb)

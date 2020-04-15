@@ -62,6 +62,10 @@ class TaskTimeoutMonitor(object):
 
         self.hdfs_dir_name=None
 
+        self.layer_flag=None
+
+        self.dag_name=None
+
     def __del__(self):
         
         self.hive_cursor.close()
@@ -72,7 +76,7 @@ class TaskTimeoutMonitor(object):
     """
 
     #@asyncio.coroutine
-    def task_trigger(self,command,dag_id_name, timeout):
+    def task_trigger(self,command,dag_id_name,timeout):
 
         # timeout --时间偏移量
         # 时间偏移量= 任务正常执行结束时间(秒)+允许任务延迟的最大时间(秒)
@@ -106,13 +110,23 @@ class TaskTimeoutMonitor(object):
                 out.close()
     
                 logging.info("数据标识的返回值："+str(res))
+
+
+                if self.layer_flag=='ods':
+
+                    url="""
+                        {alter_url}{dag_id}
+                    """.format(alter_url=self.alert_url,dag_id=self.dag_name)
+
+                else:
+                    url="""
+                            {alter_url}{dag_id}
+                        """.format(alter_url=self.alert_url,dag_id=dag_id_name)
+
     
                 #判断数据文件是否生成
                 if res == '' or res == 'None' or res == '0':
 
-                    url="""
-                        {alter_url}{dag_id}
-                    """.format(alter_url=self.alert_url,dag_id=dag_id_name)
 
                     if sum_timeout >= int(timeout):
 
@@ -168,9 +182,14 @@ class TaskTimeoutMonitor(object):
             timeout = item.get('timeout', None)
             dag=item.get('dag', None)
 
+            #flag=ods 代表Ods 层
+            self.layer_flag=item.get('flag', None)
+
             if dag:
 
                 table=dag.dag_id
+
+                self.dag_name=dag.dag_id
 
                 self.owner_name=dag.default_args.get("owner")
 
@@ -180,7 +199,13 @@ class TaskTimeoutMonitor(object):
 
                 table = item.get('table', None)
 
+            #监控ods 采集使用
+            if self.layer_flag.lower().strip() == "ods":
 
+                table = item.get('table', None)
+
+
+            #参数如果不存在，退出
             if table is None or db is None or partition is None or timeout is None:
                 return None
 
@@ -188,9 +213,13 @@ class TaskTimeoutMonitor(object):
             hql = '''
                 DESCRIBE FORMATTED {db}.{table}
             '''.format(table=table, db=db)
+
             logging.info(hql)
+
             self.hive_cursor.execute(hql)
+
             res = self.hive_cursor.fetchall()
+
             for (col_name, col_type, col_comment) in res:
                 col_name = col_name.lower().strip()
                 if col_name == 'location:':
