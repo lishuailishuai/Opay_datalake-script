@@ -187,11 +187,11 @@ def send_b2c_merchant_goods_email(ds, **kwargs):
     cursor.close()
 
     # send mail
-    # email_to = Variable.get("otrade_b2c_merchant_goods_23h_email_list").split()
-    email_to = ['dong.xie@opay-inc.com', 'meiyuan.zhang@opay-inc.com']
+    email_to = Variable.get("otrade_b2c_merchant_goods_email_list").split()
+    # email_to = ['dong.xie@opay-inc.com', 'meiyuan.zhang@opay-inc.com']
     result = is_alert(airflow.macros.ds_add(ds, +1), table_names)
-    # if result:
-    #     email_to = ['bigdata@opay-inc.com']
+    if result:
+        email_to = ['bigdata@opay-inc.com']
 
     email_subject = 'B2C业务数据（商品维度数据）邮件报表 Lagos.{dt} 00点 至 22点'.format(dt=airflow.macros.ds_add(ds, +1))
     email_body = 'Lagos.{dt} 00点 至 22点 B2C业务数据（商品维度数据）邮件报表 见附件, 请查收'.format(dt=airflow.macros.ds_add(ds, +1))
