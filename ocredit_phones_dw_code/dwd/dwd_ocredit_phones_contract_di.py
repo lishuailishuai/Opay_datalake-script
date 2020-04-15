@@ -29,7 +29,7 @@ from utils.get_local_time import GetLocalTime
 
 args = {
     'owner': 'lili.chen',
-    'start_date': datetime(2020, 4, 1),
+    'start_date': datetime(2020, 4, 9),
     'depends_on_past': False,
     'retries': 3,
     'retry_delay': timedelta(minutes=2),
@@ -105,12 +105,13 @@ def dwd_ocredit_phones_contract_di_sql_task(ds, v_date):
     insert overwrite table {db}.{table} 
     partition(country_code, dt)
 
-    select contract_id,            --合同号                                                                                                
+    select id,
+            contract_id,            --合同号                                                                                                
             order_id,               --订单号                                                                                                
             create_user_id,         --创建人                                                                                                
-            default.localTime("{config}",'NG',create_time,0) as create_time,            --创建时间                                                                                               
+            create_time,            --创建时间                                                                                               
             update_user_id,         --修改人                                                                                                
-            default.localTime("{config}",'NG',update_time,0) as update_time,            --修改时间                                                                                               
+            update_time,            --修改时间                                                                                               
             contract_version,       --版本号                                                                                                
             down_payment_amount,    --首付金额                                                                                               
             loan_amount,            --贷款总额                                                                                               
@@ -134,31 +135,26 @@ def dwd_ocredit_phones_contract_di_sql_task(ds, v_date):
             user_home_address,      --用户家庭地址                                                                                             
             inviter_name,           --邀请人姓名                                                                                              
             inviter_phone,          --邀请人手机号                                                                                             
-            default.localTime("{config}",'NG',apply_time,0) as apply_time,             --申请时间                                                                                               
+            apply_time,             --申请时间                                                                                               
             auditor_id,             --审核员标识                                                                                              
             auditor_name,           --审核员姓名                                                                                              
-            default.localTime("{config}",'NG',last_audit_time_begin,0) as last_audit_time_begin,  --最后一次审核开始时间                                                                                         
-            default.localTime("{config}",'NG',last_audit_time,0) as last_audit_time,        --最后一次审核结束时间                                                                                         
-            default.localTime("{config}",'NG',final_audit_pass,0) as final_audit_pass,       --最终审核通过时间                                                                                           
+            last_audit_time_begin,  --最后一次审核开始时间                                                                                         
+            last_audit_time,        --最后一次审核结束时间                                                                                         
+            final_audit_pass,       --最终审核通过时间                                                                                           
             contract_status,        --状态，0：补充材料中；1：一审审核中；2：一审审核已通过；3：一审审核未通过；4：二审审核已通过；5：二审审核未通过；6：关闭；                                   
             is_lock,                --是否锁定，0：否；1：是；                                                                                      
             lock_holder_id,         --锁持有者                                                                                               
-            default.localTime("{config}",'NG',voucher_upload_time,0) as voucher_upload_time,     --合同凭证上传时间 
-        t1.utc_date_hour,
-        'NG' country_code,  --如果表中有国家编码直接上传国家编码
-        date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'yyyy-MM-dd') as dt
+            voucher_upload_time,     --合同凭证上传时间 
+            country_code,  --如果表中有国家编码直接上传国家编码
+            dt
 
-    from (select * from (select *,
-                 date_format('{v_date}', 'yyyy-MM-dd HH') as utc_date_hour,
-                 row_number() over(partition by contract_id order by `__ts_ms` desc,`__file` desc,cast(`__pos` as int) desc) rn
-             from ocredit_phones_dw_ods.ods_binlog_base_t_contract_all_hi
-            where 
-                dt >= '{bef_yes_day}' --有可能多个国家时区不一样，如果要取昨天一天的本地数据，需要尽可能多的限定全采集的数据,有可能在前天分区或今天分区
-                and (substr(default.localTime("{config}",'NG',create_time,0),1,10)=date_format('{v_date}', 'yyyy-MM-dd') --按本地取昨天数据
-                or default.localTime("{config}",'NG',update_time,0)=date_format('{v_date}', 'yyyy-MM-dd'))
-                and `__deleted` = 'false') m
-        where rn=1
-    ) t1 ;
+    from (select *,row_number() over(partition by id order by utc_date_hour desc) as rn 
+          from ocredit_phones_dw.dwd_ocredit_phones_contract_hi 
+          where dt=date_format("{v_date}", 'yyyy-MM-dd') 
+          and (substr(create_time,1,10)=date_format("{v_date}", 'yyyy-MM-dd') or
+          substr(update_time,1,10)=date_format("{v_date}", 'yyyy-MM-dd'))  --后续正常上线后，这个条件可以不限定，只是初始化当天需要限定
+          and business_type = '0'  --目前建模分业务线
+    ) t1 where t1.rn=1;
     '''.format(
         pt=ds,
         v_date=v_date,

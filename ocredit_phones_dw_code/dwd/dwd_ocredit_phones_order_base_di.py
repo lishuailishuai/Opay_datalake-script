@@ -161,7 +161,7 @@ def dwd_ocredit_phones_order_base_di_sql_task(ds, v_date):
     from (select *,row_number() over(partition by id order by utc_date_hour desc) as rn 
           from ocredit_phones_dw.dwd_ocredit_phones_order_base_hi
           where dt = date_format("{v_date}", 'yyyy-MM-dd') 
-          and (date_of_entry='{pt}' or substr(update_time,1,10)='{pt}')
+          and (date_of_entry='{pt}' or substr(update_time,1,10)='{pt}')  --后续正常上线后，这个条件可以不限定，只是初始化当天需要限定
           and user_id not in 
         (
         '1209783514507214849', 
