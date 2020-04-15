@@ -242,25 +242,6 @@ def execution_data_task_id(ds, dag, **kwargs):
 
     hive_hook = HiveCliHook()
 
-    # 读取sql
-    # _sql = dwm_otrade_b2c_order_collect_di_sql_task(ds)
-
-    # logging.info('Executing: %s', _sql)
-
-    # 执行Hive
-    # hive_hook.run_cli(_sql)
-
-    # 熔断数据
-    # check_key_data_task(ds)
-
-    # 生成_SUCCESS
-    """
-    第一个参数true: 数据目录是有country_code分区。false 没有
-    第二个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
-
-    """
-    # TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "true", "false")
-
     """
         #功能函数
             alter语句: alter_partition()
