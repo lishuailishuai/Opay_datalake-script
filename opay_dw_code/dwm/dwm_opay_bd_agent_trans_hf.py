@@ -17,7 +17,7 @@ from airflow.sensors.hive_partition_sensor import HivePartitionSensor
 from airflow.sensors import UFileSensor
 from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
 from airflow.sensors import OssSensor
-
+from plugins.CountriesAppFrame import CountriesAppFrame
 from plugins.TaskTouchzSuccess import TaskTouchzSuccess
 import json
 import logging
@@ -25,7 +25,6 @@ from airflow.models import Variable
 import requests
 import os
 from utils.get_local_time import GetLocalTime
-from plugins.CountriesAppFrame import CountriesAppFrame
 
 
 args = {
@@ -212,7 +211,10 @@ def dwm_opay_bd_agent_trans_hf_sql_task(ds, v_date):
 
 # 主流程
 def execution_data_task_id(ds, dag, **kwargs):
-    v_execution_time = kwargs.get('v_execution_time')
+    v_date = kwargs.get('v_execution_date')
+    v_day = kwargs.get('v_execution_day')
+    v_hour = kwargs.get('v_execution_hour')
+
     hive_hook = HiveCliHook()
 
     args = [
@@ -224,7 +226,7 @@ def execution_data_task_id(ds, dag, **kwargs):
             "data_oss_path": hdfs_path,
             "is_country_partition": "true",
             "is_result_force_exist": "false",
-            "execute_time": v_execution_time,
+            "execute_time": v_date,
             "is_hour_task": "true",
             "frame_type": "local",
             "business_key": "opay"
@@ -233,13 +235,15 @@ def execution_data_task_id(ds, dag, **kwargs):
 
     cf = CountriesAppFrame(args)
 
-    # 读取sql
-    _sql = "\n" + cf.alter_partition() + "\n" + dwm_opay_bd_agent_trans_hf_sql_task(ds)
+     # 读取sql
+    _sql = "\n" + cf.alter_partition() + "\n" + dwm_opay_bd_agent_trans_hf_sql_task(ds, v_date)
 
     logging.info('Executing: %s', _sql)
 
     # 执行Hive
     hive_hook.run_cli(_sql)
+
+
 
     # 生产success
     cf.touchz_success()
@@ -250,7 +254,9 @@ dwm_opay_bd_agent_trans_hf_task = PythonOperator(
     python_callable=execution_data_task_id,
     provide_context=True,
     op_kwargs={
-        'v_execution_time': '{{execution_date.strftime("%Y-%m-%d %H:%M:%S")}}',
+        'v_execution_date': '{{execution_date.strftime("%Y-%m-%d %H:%M:%S")}}',
+        'v_execution_day': '{{execution_date.strftime("%Y-%m-%d")}}',
+        'v_execution_hour': '{{execution_date.strftime("%H")}}',
         'owner': '{{owner}}'
     },
     dag=dag
