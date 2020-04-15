@@ -48,16 +48,19 @@ db_name = "ocredit_phones_dw"
 table_name = "dwd_ocredit_phones_contract_di"
 hdfs_path = "oss://opay-datalake/ocredit_phones/ocredit_phones_dw/" + table_name
 config = eval(Variable.get("ocredit_time_zone_config"))
-time_zone = config['NG']['time_zone']
+time_zone = config['NG']['time_zone'] #这里要依赖最晚时区的国家
 ##----------------------------------------- 依赖 ---------------------------------------##
 
-### 检查当前小时的分区依赖
-ods_binlog_base_t_contract_all_hi_check_task = OssSensor(
-    task_id='ods_binlog_base_t_contract_all_hi_check_task',
-    bucket_key='{hdfs_path_str}/dt={pt}/hour=23/_SUCCESS'.format(
-        hdfs_path_str="ocredit_phones_all_hi/ods_binlog_base_t_contract_all_hi",
-        pt='{{ds}}',
-        hour='{{ execution_date.strftime("%H") }}'
+### 检查本地时间t-1的依赖,这里要依赖最晚时区的国家
+dwd_ocredit_phones_contract_hi_check_task = OssSensor(
+    task_id='dwd_ocredit_phones_contract_hi_check_task',
+    bucket_key='{hdfs_path_str}/country_code=NG/dt={dt}/hour=23/_SUCCESS'.format(
+        hdfs_path_str="ocredit_phones/ocredit_phones_dw/dwd_ocredit_phones_contract_hi",
+        pt='{{{{(execution_date+macros.timedelta(hours=({time_zone}+{gap_hour}))).strftime("%Y-%m-%d")}}}}'.format(
+            time_zone=time_zone, gap_hour=0),
+        hour='{{{{(execution_date+macros.timedelta(hours=({time_zone}+{gap_hour}))).strftime("%H")}}}}'.format(
+            time_zone=time_zone, gap_hour=0),
+        dt='{{ds}}'
     ),
     bucket_name='opay-datalake',
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
@@ -239,4 +242,4 @@ dwd_ocredit_phones_contract_di_task = PythonOperator(
     dag=dag
 )
 
-ods_binlog_base_t_contract_all_hi_check_task >> dwd_ocredit_phones_contract_di_task
+dwd_ocredit_phones_contract_hi_check_task >> dwd_ocredit_phones_contract_di_task
