@@ -134,7 +134,7 @@ order_info as (
 
     ,'NG' as country_code
   from
-    otrade_dw.dwm_otrade_b2c_order_goods_collect_hi
+    otrade_dw.dwm_otrade_b2c_order_goods_collect_di
   where
     dt = '{pt}'
     and substr(add_time,0,10)='{pt}'

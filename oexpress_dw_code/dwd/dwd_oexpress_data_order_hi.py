@@ -17,7 +17,7 @@ from airflow.sensors.hive_partition_sensor import HivePartitionSensor
 from airflow.sensors import UFileSensor
 from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
 from airflow.sensors import OssSensor
-from plugins.CountriesAppFrame import CountriesAppFrame
+from plugins.CountriesPublicFrame_dev import CountriesPublicFrame_dev
 
 from plugins.TaskTouchzSuccess import TaskTouchzSuccess
 import json
@@ -28,34 +28,35 @@ import os
 from utils.get_local_time import GetLocalTime
 
 args = {
-    'owner': 'lili.chen',
-    'start_date': datetime(2020, 4, 14),
+    'owner': 'yuanfeng',
+    'start_date': datetime(2020, 4, 13),
     'depends_on_past': False,
     'retries': 3,
     'retry_delay': timedelta(minutes=2),
     'email': ['bigdata_dw@opay-inc.com'],
-     'email_on_failure': True,
+    'email_on_failure': True,
     'email_on_retry': False,
 }
 
-dag = airflow.DAG('dwd_ocredit_sys_user_hf',
-                  schedule_interval="30 * * * *",
+dag = airflow.DAG('dwd_oexpress_data_order_hi',
+                  schedule_interval="26 * * * *",
                   default_args=args,
                   )
 
 ##----------------------------------------- 变量 ---------------------------------------##
-db_name = "ocredit_phones_dw"
-table_name = "dwd_ocredit_sys_user_hf"
-hdfs_path = "oss://opay-datalake/ocredit_phones/ocredit_phones_dw/" + table_name
-config = eval(Variable.get("ocredit_time_zone_config"))
+db_name = "oexpress_dw"
+table_name = "dwd_oexpress_data_order_hi"
+hdfs_path = "oss://opay-datalake/oexpress/oexpress_dw/" + table_name
+config = eval(Variable.get("oexpress_time_zone_config"))
 time_zone = config['NG']['time_zone']
-##----------------------------------------- 依赖 ---------------------------------------##
 
+##----------------------------------------- 依赖 ---------------------------------------##
 ### 检查当前小时的分区依赖
-ods_binlog_base_sys_user_h_his_check_task = OssSensor(
-    task_id='ods_binlog_base_sys_user_h_his_check_task',
+###oss://opay-datalake/oexpress_all_hi/ods_binlog_base_data_order_all_hi
+ods_binlog_base_data_order_all_hi_check_task = OssSensor(
+    task_id='ods_binlog_base_data_order_all_hi_check_task',
     bucket_key='{hdfs_path_str}/dt={pt}/hour={hour}/_SUCCESS'.format(
-        hdfs_path_str="ocredit_phones_h_his/ods_binlog_base_sys_user_h_his",
+        hdfs_path_str="oexpress_all_hi/ods_binlog_base_data_order_all_hi",
         pt='{{ds}}',
         hour='{{ execution_date.strftime("%H") }}'
     ),
@@ -74,15 +75,15 @@ def fun_task_timeout_monitor(ds, dag, execution_date, **op_kwargs):
     # 时间偏移量
     v_gap_hour = 0
 
-    v_date = GetLocalTime("ocredit", execution_date.strftime("%Y-%m-%d %H"), v_country_code, v_gap_hour)['date']
-    v_hour = GetLocalTime("ocredit", execution_date.strftime("%Y-%m-%d %H"), v_country_code, v_gap_hour)['hour']
+    v_date = GetLocalTime("oexpress", execution_date.strftime("%Y-%m-%d %H"), v_country_code, v_gap_hour)['date']
+    v_hour = GetLocalTime("oexpress", execution_date.strftime("%Y-%m-%d %H"), v_country_code, v_gap_hour)['hour']
 
     # 小时级监控
     tb_hour_task = [
-        {"dag": dag, "db": "ocredit_phones_dw", "table": "{dag_name}".format(dag_name=dag_ids),
+        {"dag": dag, "db": "oexpress_dw", "table": "{dag_name}".format(dag_name=dag_ids),
          "partition": "country_code={country_code}/dt={pt}/hour={now_hour}".format(country_code=v_country_code,
                                                                                    pt=v_date, now_hour=v_hour),
-         "timeout": "600"}
+         "timeout": "3000"}
     ]
 
     TaskTimeoutMonitor().set_task_monitor(tb_hour_task)
@@ -96,55 +97,149 @@ task_timeout_monitor = PythonOperator(
 )
 
 
-def dwd_ocredit_sys_user_hf_sql_task(ds, v_date):
+def dwd_oexpress_data_order_hi_sql_task(ds, v_date):
     HQL = '''
 
-    set hive.exec.dynamic.partition.mode=nonstrict;
-    set hive.exec.parallel=true;
+set mapred.max.split.size=1000000;
+set hive.exec.parallel=true;
+set hive.exec.dynamic.partition.mode=nonstrict;
+set hive.strict.checks.cartesian.product=false;
 
-    insert overwrite table {db}.{table} 
-    partition(country_code, dt,hour)
+--1.将数据关联后插入最终表中
+insert overwrite table oexpress_dw.dwd_oexpress_data_order_hi partition(country_code,dt,hour)
+select
+  id
+  ,city_id
+  ,create_user_id
+  ,order_source
+  ,sender_cell
+  ,sender_first_name
+  ,sender_last_name
+  ,without_collect
+  ,ori_hub_id
+  ,ori_lat
+  ,ori_lng
+  ,ori_addr
+  ,ori_detailed_addr
+  ,receiver_cell
+  ,receiver_first_name
+  ,receiver_last_name
+  ,dest_hub_id
+  ,dest_lat
+  ,dest_lng
+  ,dest_addr
+  ,dest_detailed_addr
+  ,current_transport_id
+  ,current_hold_record_id
+  ,status
+  ,confirm_time
+  ,collected_time
+  ,finish_time
+  ,close_time
+  ,cancel_time
+  ,cancel_role
+  ,cancel_comment
+  ,product_category
+  ,product_category_name
+  ,basic_fee
+  ,weight_fee
+  ,insurance_fee
+  ,pickup_fee
+  ,tax_fee
+  ,deliver_fee
+  ,payment_method
+  ,price
+  ,weight
+  ,volume
+  ,comment
+  ,delivery_code
+  ,pickup_pic_url_list
+  ,delivered_pic_url_list
+  ,create_time
+  ,update_time
+  ,item_code
+  ,cash_received
+  ,use_universal_code
 
-    select user_id,        --主键id                  
-            avatar,         --头像                    
-            account,        --账号                    
-            password,       --密码                    
-            salt,           --md5密码盐                
-            name,           --名字                    
-            birthday,       --生日                    
-            sex,            --性别(字典)                
-            email,          --电子邮件                  
-            phone,          --电话                    
-            role_id,        --角色id(多个逗号隔开)          
-            dept_id,        --部门id(多个逗号隔开)          
-            status,         --状态(字典)                
-            o_native,       --是否是非洲本地               
-            default.localTime("{config}",'NG',create_time,0) as create_time,    --创建时间                  
-            create_user,    --创建人                   
-            default.localTime("{config}",'NG',update_time,0) as update_time,    --更新时间                  
-            update_user,    --更新人                   
-            version,         --乐观锁      
-        t1.utc_date_hour,
-        'NG' country_code,  --如果表中有国家编码直接上传国家编码
-        date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'yyyy-MM-dd') as dt,
-        date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'HH') as hour
+  ,date_format('{v_date}', 'yyyy-MM-dd HH') as utc_date_hour
 
-    from (select * from (select *,
-                 date_format('{v_date}', 'yyyy-MM-dd HH') as utc_date_hour,
-                 row_number() over(partition by user_id order by `__ts_ms` desc,`__file` desc,cast(`__pos` as int) desc) rn
-             from ocredit_phones_dw_ods.ods_binlog_base_sys_user_h_his
-            where 
-                concat(dt, " ", hour) = date_format('{v_date}', 'yyyy-MM-dd HH')
-                and `__deleted` = 'false') m
-        where rn=1
-    ) t1 ;
+  ,'NG' as country_code
+  ,date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'yyyy-MM-dd') as dt
+  ,date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'HH') as hour
+from
+  (
+  select
+    id
+    ,city_id
+    ,create_user_id
+    ,order_source
+    ,sender_cell
+    ,sender_first_name
+    ,sender_last_name
+    ,without_collect
+    ,ori_hub_id
+    ,ori_lat
+    ,ori_lng
+    ,ori_addr
+    ,ori_detailed_addr
+    ,receiver_cell
+    ,receiver_first_name
+    ,receiver_last_name
+    ,dest_hub_id
+    ,dest_lat
+    ,dest_lng
+    ,dest_addr
+    ,dest_detailed_addr
+    ,current_transport_id
+    ,current_hold_record_id
+    ,status
+    ,default.localTime("{config}",'NG',from_unixtime(cast(confirm_time as bigint),'yyyy-MM-dd HH:mm:ss'),0) as confirm_time
+    ,default.localTime("{config}",'NG',from_unixtime(cast(collected_time as bigint),'yyyy-MM-dd HH:mm:ss'),0) as collected_time
+    ,default.localTime("{config}",'NG',from_unixtime(cast(finish_time as bigint),'yyyy-MM-dd HH:mm:ss'),0) as finish_time
+    ,default.localTime("{config}",'NG',from_unixtime(cast(close_time as bigint),'yyyy-MM-dd HH:mm:ss'),0) as close_time
+    ,default.localTime("{config}",'NG',from_unixtime(cast(cancel_time as bigint),'yyyy-MM-dd HH:mm:ss'),0) as cancel_time
+    ,cancel_role
+    ,cancel_comment
+    ,product_category
+    ,product_category_name
+    ,basic_fee
+    ,weight_fee
+    ,insurance_fee
+    ,pickup_fee
+    ,tax_fee
+    ,deliver_fee
+    ,payment_method
+    ,price
+    ,weight
+    ,volume
+    ,comment
+    ,delivery_code
+    ,pickup_pic_url_list
+    ,delivered_pic_url_list
+    ,default.localTime("{config}",'NG',from_unixtime(cast(create_time as bigint),'yyyy-MM-dd HH:mm:ss'),0) as create_time
+    ,concat(substr(update_time,0,10),' ',substr(update_time,12,8)) as update_time
+    ,item_code
+    ,cash_received
+    ,use_universal_code
+
+    ,row_number() over(partition by id order by `__ts_ms` desc,`__file` desc,cast(`__pos` as int) desc) rn
+  from
+    oexpress_dw_ods.ods_binlog_base_data_order_all_hi
+  where
+    dt = date_format('{v_date}', 'yyyy-MM-dd')
+    and hour= date_format('{v_date}', 'HH')
+    and `__deleted` = 'false'
+  ) as v1
+;
+
+
     '''.format(
         pt=ds,
         v_date=v_date,
-        bef_yes_day=airflow.macros.ds_add(ds, -1),
         table=table_name,
         db=db_name,
         config=config
+
     )
     return HQL
 
@@ -190,15 +285,14 @@ def execution_data_task_id(ds, dag, **kwargs):
             "is_result_force_exist": "false",
             "execute_time": v_date,
             "is_hour_task": "true",
-            "frame_type": "local",
-            "business_key": "ocredit"
+            "frame_type": "local"
         }
     ]
 
-    cf = CountriesAppFrame(args)
+    cf = CountriesPublicFrame_dev(args)
 
     # 读取sql
-    _sql = "\n" + cf.alter_partition() + "\n" + dwd_ocredit_sys_user_hf_sql_task(ds, v_date)
+    _sql = "\n" + cf.alter_partition() + "\n" + dwd_oexpress_data_order_hi_sql_task(ds, v_date)
 
     logging.info('Executing: %s', _sql)
 
@@ -209,8 +303,8 @@ def execution_data_task_id(ds, dag, **kwargs):
     cf.touchz_success()
 
 
-dwd_ocredit_sys_user_hf_task = PythonOperator(
-    task_id='dwd_ocredit_sys_user_hf_task',
+dwd_oexpress_data_order_hi_task = PythonOperator(
+    task_id='dwd_oexpress_data_order_hi_task',
     python_callable=execution_data_task_id,
     provide_context=True,
     op_kwargs={
@@ -222,4 +316,6 @@ dwd_ocredit_sys_user_hf_task = PythonOperator(
     dag=dag
 )
 
-ods_binlog_base_sys_user_h_his_check_task >> dwd_ocredit_sys_user_hf_task
+ods_binlog_base_data_order_all_hi_check_task >> dwd_oexpress_data_order_hi_task
+
+

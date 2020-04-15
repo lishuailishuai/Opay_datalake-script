@@ -38,29 +38,26 @@ args = {
     'email_on_retry': False,
 }
 
-dag = airflow.DAG('dwd_ocredit_phones_contract_di',
-                  schedule_interval="30 00 * * *",
+dag = airflow.DAG('dwd_ocredit_phones_contract_hi',
+                  schedule_interval="35 * * * *",
                   default_args=args,
                   )
 
 ##----------------------------------------- 变量 ---------------------------------------##
 db_name = "ocredit_phones_dw"
-table_name = "dwd_ocredit_phones_contract_di"
+table_name = "dwd_ocredit_phones_contract_hi"
 hdfs_path = "oss://opay-datalake/ocredit_phones/ocredit_phones_dw/" + table_name
 config = eval(Variable.get("ocredit_time_zone_config"))
-time_zone = config['NG']['time_zone'] #这里要依赖最晚时区的国家
+time_zone = config['NG']['time_zone']
 ##----------------------------------------- 依赖 ---------------------------------------##
 
-### 检查本地时间t-1的依赖,这里要依赖最晚时区的国家
-dwd_ocredit_phones_contract_hi_check_task = OssSensor(
-    task_id='dwd_ocredit_phones_contract_hi_check_task',
-    bucket_key='{hdfs_path_str}/country_code=NG/dt={dt}/hour=23/_SUCCESS'.format(
-        hdfs_path_str="ocredit_phones/ocredit_phones_dw/dwd_ocredit_phones_contract_hi",
-        pt='{{{{(execution_date+macros.timedelta(hours=({time_zone}+{gap_hour}))).strftime("%Y-%m-%d")}}}}'.format(
-            time_zone=time_zone, gap_hour=0),
-        hour='{{{{(execution_date+macros.timedelta(hours=({time_zone}+{gap_hour}))).strftime("%H")}}}}'.format(
-            time_zone=time_zone, gap_hour=0),
-        dt='{{ds}}'
+### 检查当前小时的分区依赖
+ods_binlog_base_t_contract_all_hi_check_task = OssSensor(
+    task_id='ods_binlog_base_t_contract_all_hi_check_task',
+    bucket_key='{hdfs_path_str}/dt={pt}/hour={hour}/_SUCCESS'.format(
+        hdfs_path_str="ocredit_phones_all_hi/ods_binlog_base_t_contract_all_hi",
+        pt='{{ds}}',
+        hour='{{ execution_date.strftime("%H") }}'
     ),
     bucket_name='opay-datalake',
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
@@ -83,9 +80,9 @@ def fun_task_timeout_monitor(ds, dag, execution_date, **op_kwargs):
     # 小时级监控
     tb_hour_task = [
         {"dag": dag, "db": "ocredit_phones_dw", "table": "{dag_name}".format(dag_name=dag_ids),
-         "partition": "country_code={country_code}/dt={pt}".format(country_code=v_country_code,
+         "partition": "country_code={country_code}/dt={pt}/hour={now_hour}".format(country_code=v_country_code,
                                                                                    pt=v_date, now_hour=v_hour),
-         "timeout": "1200"}
+         "timeout": "600"}
     ]
 
     TaskTimeoutMonitor().set_task_monitor(tb_hour_task)
@@ -99,22 +96,22 @@ task_timeout_monitor = PythonOperator(
 )
 
 
-def dwd_ocredit_phones_contract_di_sql_task(ds, v_date):
+def dwd_ocredit_phones_contract_hi_sql_task(ds, v_date):
     HQL = '''
 
     set hive.exec.dynamic.partition.mode=nonstrict;
     set hive.exec.parallel=true;
 
     insert overwrite table {db}.{table} 
-    partition(country_code, dt)
+    partition(country_code, dt,hour)
 
-    select id,
+    select id, --无业务含义主键 
             contract_id,            --合同号                                                                                                
             order_id,               --订单号                                                                                                
             create_user_id,         --创建人                                                                                                
-            create_time,            --创建时间                                                                                               
+            default.localTime("{config}",'NG',from_unixtime(cast(create_time/1000 as bigint)),0) as create_time,            --创建时间                                                                                               
             update_user_id,         --修改人                                                                                                
-            update_time,            --修改时间                                                                                               
+            default.localTime("{config}",'NG',from_unixtime(cast(update_time/1000 as bigint)),0) as update_time,            --修改时间                                                                                               
             contract_version,       --版本号                                                                                                
             down_payment_amount,    --首付金额                                                                                               
             loan_amount,            --贷款总额                                                                                               
@@ -138,26 +135,28 @@ def dwd_ocredit_phones_contract_di_sql_task(ds, v_date):
             user_home_address,      --用户家庭地址                                                                                             
             inviter_name,           --邀请人姓名                                                                                              
             inviter_phone,          --邀请人手机号                                                                                             
-            apply_time,             --申请时间                                                                                               
+            default.localTime("{config}",'NG',from_unixtime(cast(apply_time/1000 as bigint)),0) as apply_time,             --申请时间                                                                                               
             auditor_id,             --审核员标识                                                                                              
             auditor_name,           --审核员姓名                                                                                              
-            last_audit_time_begin,  --最后一次审核开始时间                                                                                         
-            last_audit_time,        --最后一次审核结束时间                                                                                         
-            final_audit_pass,       --最终审核通过时间                                                                                           
+            default.localTime("{config}",'NG',from_unixtime(cast(last_audit_time_begin/1000 as bigint)),0) as last_audit_time_begin,  --最后一次审核开始时间                                                                                         
+            default.localTime("{config}",'NG',from_unixtime(cast(last_audit_time/1000 as bigint)),0) as last_audit_time,        --最后一次审核结束时间                                                                                         
+            default.localTime("{config}",'NG',from_unixtime(cast(final_audit_pass/1000 as bigint)),0) as final_audit_pass,       --最终审核通过时间                                                                                           
             contract_status,        --状态，0：补充材料中；1：一审审核中；2：一审审核已通过；3：一审审核未通过；4：二审审核已通过；5：二审审核未通过；6：关闭；                                   
             is_lock,                --是否锁定，0：否；1：是；                                                                                      
             lock_holder_id,         --锁持有者                                                                                               
-            voucher_upload_time,     --合同凭证上传时间 
-            country_code,  --如果表中有国家编码直接上传国家编码
-            dt
+            default.localTime("{config}",'NG',voucher_upload_time,0) as voucher_upload_time,     --合同凭证上传时间 
+        utc_date_hour,
+        'NG' country_code,  --如果表中有国家编码直接上传国家编码
+        date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'yyyy-MM-dd') as dt,
+        date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'HH') as hour
 
-    from (select *,row_number() over(partition by id order by utc_date_hour desc) as rn 
-          from ocredit_phones_dw.dwd_ocredit_phones_contract_hi 
-          where dt=date_format("{v_date}", 'yyyy-MM-dd') 
-          and (substr(create_time,1,10)=date_format("{v_date}", 'yyyy-MM-dd') or
-          substr(update_time,1,10)=date_format("{v_date}", 'yyyy-MM-dd'))  --后续正常上线后，这个条件可以不限定，只是初始化当天需要限定
-          and business_type = '0'  --目前建模分业务线
-    ) t1 where t1.rn=1;
+    from (select *,
+                 date_format('{v_date}', 'yyyy-MM-dd HH') as utc_date_hour,
+                 row_number() over(partition by id order by `__ts_ms` desc,`__file` desc,cast(`__pos` as int) desc) rn
+             from ocredit_phones_dw_ods.ods_binlog_base_t_contract_all_hi
+            where concat(dt, " ", hour) = date_format('{v_date}', 'yyyy-MM-dd HH')
+                  and `__deleted` = 'false') m
+        where rn=1;
     '''.format(
         pt=ds,
         v_date=v_date,
@@ -209,7 +208,7 @@ def execution_data_task_id(ds, dag, **kwargs):
             "is_country_partition": "true",
             "is_result_force_exist": "false",
             "execute_time": v_date,
-            "is_hour_task": "false",
+            "is_hour_task": "true",
             "frame_type": "local",
             "business_key": "ocredit"
         }
@@ -218,7 +217,7 @@ def execution_data_task_id(ds, dag, **kwargs):
     cf = CountriesAppFrame(args)
 
     # 读取sql
-    _sql = "\n" + cf.alter_partition() + "\n" + dwd_ocredit_phones_contract_di_sql_task(ds, v_date)
+    _sql = "\n" + cf.alter_partition() + "\n" + dwd_ocredit_phones_contract_hi_sql_task(ds, v_date)
 
     logging.info('Executing: %s', _sql)
 
@@ -229,8 +228,8 @@ def execution_data_task_id(ds, dag, **kwargs):
     cf.touchz_success()
 
 
-dwd_ocredit_phones_contract_di_task = PythonOperator(
-    task_id='dwd_ocredit_phones_contract_di_task',
+dwd_ocredit_phones_contract_hi_task = PythonOperator(
+    task_id='dwd_ocredit_phones_contract_hi_task',
     python_callable=execution_data_task_id,
     provide_context=True,
     op_kwargs={
@@ -242,4 +241,4 @@ dwd_ocredit_phones_contract_di_task = PythonOperator(
     dag=dag
 )
 
-dwd_ocredit_phones_contract_hi_check_task >> dwd_ocredit_phones_contract_di_task
+ods_binlog_base_t_contract_all_hi_check_task >> dwd_ocredit_phones_contract_hi_task

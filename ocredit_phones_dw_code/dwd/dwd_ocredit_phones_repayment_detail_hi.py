@@ -38,29 +38,26 @@ args = {
     'email_on_retry': False,
 }
 
-dag = airflow.DAG('dwd_ocredit_phones_repayment_detail_di',
-                  schedule_interval="30 00 * * *",
+dag = airflow.DAG('dwd_ocredit_phones_repayment_detail_hi',
+                  schedule_interval="35 * * * *",
                   default_args=args,
                   )
 
 ##----------------------------------------- 变量 ---------------------------------------##
 db_name = "ocredit_phones_dw"
-table_name = "dwd_ocredit_phones_repayment_detail_di"
+table_name = "dwd_ocredit_phones_repayment_detail_hi"
 hdfs_path = "oss://opay-datalake/ocredit_phones/ocredit_phones_dw/" + table_name
 config = eval(Variable.get("ocredit_time_zone_config"))
 time_zone = config['NG']['time_zone']
 ##----------------------------------------- 依赖 ---------------------------------------##
 
-### 检查本地时间t-1的依赖,这里要依赖最晚时区的国家
-dwd_ocredit_phones_repayment_detail_hi_check_task = OssSensor(
-    task_id='dwd_ocredit_phones_repayment_detail_hi_check_task',
-    bucket_key='{hdfs_path_str}/country_code=NG/dt={dt}/hour=23/_SUCCESS'.format(
-        hdfs_path_str="ocredit_phones/ocredit_phones_dw/dwd_ocredit_phones_repayment_detail_hi",
-        pt='{{{{(execution_date+macros.timedelta(hours=({time_zone}+{gap_hour}))).strftime("%Y-%m-%d")}}}}'.format(
-            time_zone=time_zone, gap_hour=0),
-        hour='{{{{(execution_date+macros.timedelta(hours=({time_zone}+{gap_hour}))).strftime("%H")}}}}'.format(
-            time_zone=time_zone, gap_hour=0),
-        dt='{{ds}}'
+### 检查当前小时的分区依赖
+ods_binlog_base_t_repayment_detail_all_hi_check_task = OssSensor(
+    task_id='ods_binlog_base_t_repayment_detail_all_hi_check_task',
+    bucket_key='{hdfs_path_str}/dt={pt}/hour={hour}/_SUCCESS'.format(
+        hdfs_path_str="ocredit_phones_all_hi/ods_binlog_base_t_repayment_detail_all_hi",
+        pt='{{ds}}',
+        hour='{{ execution_date.strftime("%H") }}'
     ),
     bucket_name='opay-datalake',
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
@@ -83,9 +80,9 @@ def fun_task_timeout_monitor(ds, dag, execution_date, **op_kwargs):
     # 小时级监控
     tb_hour_task = [
         {"dag": dag, "db": "ocredit_phones_dw", "table": "{dag_name}".format(dag_name=dag_ids),
-         "partition": "country_code={country_code}/dt={pt}".format(country_code=v_country_code,
+         "partition": "country_code={country_code}/dt={pt}/hour={now_hour}".format(country_code=v_country_code,
                                                                                    pt=v_date, now_hour=v_hour),
-         "timeout": "1200"}
+         "timeout": "600"}
     ]
 
     TaskTimeoutMonitor().set_task_monitor(tb_hour_task)
@@ -99,16 +96,16 @@ task_timeout_monitor = PythonOperator(
 )
 
 
-def dwd_ocredit_phones_repayment_detail_di_sql_task(ds, v_date):
+def dwd_ocredit_phones_repayment_detail_hi_sql_task(ds, v_date):
     HQL = '''
 
     set hive.exec.dynamic.partition.mode=nonstrict;
     set hive.exec.parallel=true;
 
     insert overwrite table {db}.{table} 
-    partition(country_code, dt)
+    partition(country_code, dt,hour)
 
-    select  repay_detail_id,            --  还款明细ID                                                                                 
+    select id as repay_detail_id,            --  还款明细ID                                                                                 
             pay_id,                     --  支付流水号                                                                                  
             repayment_id,               --  还款计划ID                                                                                 
             order_id,                   --  订单ID                                                                                   
@@ -150,16 +147,17 @@ def dwd_ocredit_phones_repayment_detail_di_sql_task(ds, v_date):
             allocated_user_leader_name, --          催收分配接收人组长名称                                                                    
             default.localTime("{config}",'NG',recent_penalty_time,0) as recent_penalty_time,        -- 最新更新罚息时间                                                                                
             repay_version,               -- 支付版本号                                                   
+        utc_date_hour,
         'NG' country_code,  --如果表中有国家编码直接上传国家编码
-        date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'yyyy-MM-dd') as dt
+        date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'yyyy-MM-dd') as dt,
+        date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'HH') as hour
 
-    from (select *,row_number() over(partition by repay_detail_id order by utc_date_hour desc) rn
-             from ocredit_phones_dw.dwd_ocredit_phones_repayment_detail_hi
-            where 
-                dt=date_format("{v_date}", 'yyyy-MM-dd') 
-                and (substr(create_time,1,10)=date_format("{v_date}", 'yyyy-MM-dd') or
-                substr(update_time,1,10)=date_format("{v_date}", 'yyyy-MM-dd'))  --后续正常上线后，这个条件可以不限定，只是初始化当天需要限定
-                and business_type=0) m
+    from (select *,
+                 date_format('{v_date}', 'yyyy-MM-dd HH') as utc_date_hour,
+                 row_number() over(partition by id order by `__ts_ms` desc,`__file` desc,cast(`__pos` as int) desc) rn
+             from ocredit_phones_dw_ods.ods_binlog_base_t_repayment_detail_all_hi
+            where concat(dt, " ", hour) = date_format('{v_date}', 'yyyy-MM-dd HH')
+                  and `__deleted` = 'false') m
         where rn=1;
     '''.format(
         pt=ds,
@@ -212,7 +210,7 @@ def execution_data_task_id(ds, dag, **kwargs):
             "is_country_partition": "true",
             "is_result_force_exist": "false",
             "execute_time": v_date,
-            "is_hour_task": "false",
+            "is_hour_task": "true",
             "frame_type": "local",
             "business_key": "ocredit"
         }
@@ -221,7 +219,7 @@ def execution_data_task_id(ds, dag, **kwargs):
     cf = CountriesAppFrame(args)
 
     # 读取sql
-    _sql = "\n" + cf.alter_partition() + "\n" + dwd_ocredit_phones_repayment_detail_di_sql_task(ds, v_date)
+    _sql = "\n" + cf.alter_partition() + "\n" + dwd_ocredit_phones_repayment_detail_hi_sql_task(ds, v_date)
 
     logging.info('Executing: %s', _sql)
 
@@ -232,8 +230,8 @@ def execution_data_task_id(ds, dag, **kwargs):
     cf.touchz_success()
 
 
-dwd_ocredit_phones_repayment_detail_di_task = PythonOperator(
-    task_id='dwd_ocredit_phones_repayment_detail_di_task',
+dwd_ocredit_phones_repayment_detail_hi_task = PythonOperator(
+    task_id='dwd_ocredit_phones_repayment_detail_hi_task',
     python_callable=execution_data_task_id,
     provide_context=True,
     op_kwargs={
@@ -245,4 +243,4 @@ dwd_ocredit_phones_repayment_detail_di_task = PythonOperator(
     dag=dag
 )
 
-dwd_ocredit_phones_repayment_detail_hi_check_task >> dwd_ocredit_phones_repayment_detail_di_task
+ods_binlog_base_t_repayment_detail_all_hi_check_task >> dwd_ocredit_phones_repayment_detail_hi_task
