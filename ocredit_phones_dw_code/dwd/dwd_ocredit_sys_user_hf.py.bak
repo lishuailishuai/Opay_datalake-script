@@ -29,7 +29,7 @@ from utils.get_local_time import GetLocalTime
 
 args = {
     'owner': 'lili.chen',
-    'start_date': datetime(2020, 4, 14),
+    'start_date': datetime(2020, 4, 15),
     'depends_on_past': False,
     'retries': 3,
     'retry_delay': timedelta(minutes=2),
