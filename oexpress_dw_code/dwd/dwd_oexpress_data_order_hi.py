@@ -100,6 +100,138 @@ task_timeout_monitor = PythonOperator(
 def dwd_oexpress_data_order_hi_sql_task(ds, v_date):
     HQL = '''
 
+set mapred.max.split.size=1000000;
+set hive.exec.parallel=true;
+set hive.exec.dynamic.partition.mode=nonstrict;
+set hive.strict.checks.cartesian.product=false;
+
+--1.将数据关联后插入最终表中
+insert overwrite table oexpress_dw.dwd_oexpress_data_order_hi partition(country_code,dt,hour)
+select
+  id
+  ,city_id
+  ,create_user_id
+  ,order_source
+  ,sender_cell
+  ,sender_first_name
+  ,sender_last_name
+  ,without_collect
+  ,ori_hub_id
+  ,ori_lat
+  ,ori_lng
+  ,ori_addr
+  ,ori_detailed_addr
+  ,receiver_cell
+  ,receiver_first_name
+  ,receiver_last_name
+  ,dest_hub_id
+  ,dest_lat
+  ,dest_lng
+  ,dest_addr
+  ,dest_detailed_addr
+  ,current_transport_id
+  ,current_hold_record_id
+  ,status
+  ,confirm_time
+  ,collected_time
+  ,finish_time
+  ,close_time
+  ,cancel_time
+  ,cancel_role
+  ,cancel_comment
+  ,product_category
+  ,product_category_name
+  ,basic_fee
+  ,weight_fee
+  ,insurance_fee
+  ,pickup_fee
+  ,tax_fee
+  ,deliver_fee
+  ,payment_method
+  ,price
+  ,weight
+  ,volume
+  ,comment
+  ,delivery_code
+  ,pickup_pic_url_list
+  ,delivered_pic_url_list
+  ,create_time
+  ,update_time
+  ,item_code
+  ,cash_received
+  ,use_universal_code
+
+  ,date_format('{v_date}', 'yyyy-MM-dd HH') as utc_date_hour
+
+  ,'NG' as country_code
+  ,date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'yyyy-MM-dd') as dt
+  ,date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'HH') as hour
+from
+  (
+  select
+    id
+    ,city_id
+    ,create_user_id
+    ,order_source
+    ,sender_cell
+    ,sender_first_name
+    ,sender_last_name
+    ,without_collect
+    ,ori_hub_id
+    ,ori_lat
+    ,ori_lng
+    ,ori_addr
+    ,ori_detailed_addr
+    ,receiver_cell
+    ,receiver_first_name
+    ,receiver_last_name
+    ,dest_hub_id
+    ,dest_lat
+    ,dest_lng
+    ,dest_addr
+    ,dest_detailed_addr
+    ,current_transport_id
+    ,current_hold_record_id
+    ,status
+    ,default.localTime("{config}",'NG',from_unixtime(cast(confirm_time as bigint),'yyyy-MM-dd HH:mm:ss'),0) as confirm_time
+    ,default.localTime("{config}",'NG',from_unixtime(cast(collected_time as bigint),'yyyy-MM-dd HH:mm:ss'),0) as collected_time
+    ,default.localTime("{config}",'NG',from_unixtime(cast(finish_time as bigint),'yyyy-MM-dd HH:mm:ss'),0) as finish_time
+    ,default.localTime("{config}",'NG',from_unixtime(cast(close_time as bigint),'yyyy-MM-dd HH:mm:ss'),0) as close_time
+    ,default.localTime("{config}",'NG',from_unixtime(cast(cancel_time as bigint),'yyyy-MM-dd HH:mm:ss'),0) as cancel_time
+    ,cancel_role
+    ,cancel_comment
+    ,product_category
+    ,product_category_name
+    ,basic_fee
+    ,weight_fee
+    ,insurance_fee
+    ,pickup_fee
+    ,tax_fee
+    ,deliver_fee
+    ,payment_method
+    ,price
+    ,weight
+    ,volume
+    ,comment
+    ,delivery_code
+    ,pickup_pic_url_list
+    ,delivered_pic_url_list
+    ,default.localTime("{config}",'NG',from_unixtime(cast(create_time as bigint),'yyyy-MM-dd HH:mm:ss'),0) as create_time
+    ,concat(substr(update_time,0,10),' ',substr(update_time,12,8)) as update_time
+    ,item_code
+    ,cash_received
+    ,use_universal_code
+
+    ,row_number() over(partition by id order by `__ts_ms` desc,`__file` desc,cast(`__pos` as int) desc) rn
+  from
+    oexpress_dw_ods.ods_binlog_base_data_order_all_hi
+  where
+    dt = date_format('{v_date}', 'yyyy-MM-dd')
+    and hour= date_format('{v_date}', 'HH')
+    and `__deleted` = 'false'
+  ) as v1
+;
+
 
     '''.format(
         pt=ds,
