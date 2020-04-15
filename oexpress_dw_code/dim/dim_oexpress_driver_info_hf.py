@@ -38,14 +38,14 @@ args = {
     'email_on_retry': False,
 }
 
-dag = airflow.DAG('dim_oexpress_city_info_hf',
-                  schedule_interval="26 * * * *",
+dag = airflow.DAG('dim_oexpress_driver_info_hf',
+                  schedule_interval="28 * * * *",
                   default_args=args,
                   )
 
 ##----------------------------------------- 变量 ---------------------------------------##
 db_name = "oexpress_dw"
-table_name = "dim_oexpress_city_info_hf"
+table_name = "dim_oexpress_driver_info_hf"
 hdfs_path = "oss://opay-datalake/oexpress/oexpress_dw/" + table_name
 config = eval(Variable.get("oexpress_time_zone_config"))
 time_zone = config['NG']['time_zone']
@@ -65,14 +65,15 @@ ods_binlog_base_conf_city_h_his_check_task = OssSensor(
     dag=dag
 )
 
-### 检查当前小时的分区依赖
-###oss://opay-datalake/oexpress_all_hi/ods_binlog_base_conf_country_h_his
-ods_binlog_base_conf_country_h_his_check_task = OssSensor(
-    task_id='ods_binlog_base_conf_country_h_his_check_task',
-    bucket_key='{hdfs_path_str}/dt={pt}/hour={hour}/_SUCCESS'.format(
-        hdfs_path_str="oexpress_all_hi/ods_binlog_base_conf_country_h_his",
-        pt='{{ds}}',
-        hour='{{ execution_date.strftime("%H") }}'
+###oss://opay-datalake/oexpress/oexpress_dw/dim_oexpress_city_info_hf
+dim_oexpress_city_info_hf_check_task = OssSensor(
+    task_id='dim_oexpress_city_info_hf_check_task',
+    bucket_key='{hdfs_path_str}/country_code=NG/dt={pt}/hour={hour}/_SUCCESS'.format(
+        hdfs_path_str="oexpress/oexpress_dw/dim_oexpress_city_info_hf",
+        pt='{{{{(execution_date+macros.timedelta(hours=({time_zone}+{gap_hour}))).strftime("%Y-%m-%d")}}}}'.format(
+            time_zone=time_zone, gap_hour=0),
+        hour='{{{{(execution_date+macros.timedelta(hours=({time_zone}+{gap_hour}))).strftime("%H")}}}}'.format(
+            time_zone=time_zone, gap_hour=0)
     ),
     bucket_name='opay-datalake',
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
@@ -111,7 +112,7 @@ task_timeout_monitor = PythonOperator(
 )
 
 
-def dim_oexpress_city_info_hf_sql_task(ds, v_date):
+def dim_oexpress_driver_info_hf_sql_task(ds, v_date):
     HQL = '''
 
 set mapred.max.split.size=1000000;
@@ -119,23 +120,55 @@ set hive.exec.parallel=true;
 set hive.exec.dynamic.partition.mode=nonstrict;
 set hive.strict.checks.cartesian.product=false;
 
---1.城市信息
+--1.取出最新数据
 with
-city_info as (
+drver_info as (
   select
-    city_id
-    ,city_name
+    id
+    ,name
+    ,phone_number
+    ,username
+    ,password
+    ,serv_type
+    ,license_number
+    ,identity_type
+    ,hub_id
+    ,working_status
+    ,identity_status
+    ,vehicle_id
+    ,plate_number
+    ,first_bind_time
+    ,created_at
+    ,updated_at
+    ,opay_account
     ,country_id
+    ,city_id
   from
     (
     select
-      id as city_id
-      ,name as city_name
+      id
+      ,name
+      ,phone_number
+      ,username
+      ,password
+      ,serv_type
+      ,license_number
+      ,identity_type
+      ,hub_id
+      ,working_status
+      ,identity_status
+      ,vehicle_id
+      ,plate_number
+      ,default.localTime("{config}",'NG',from_unixtime(cast(first_bind_time as bigint),'yyyy-MM-dd HH:mm:ss'),0) as first_bind_time
+      ,default.localTime("{config}",'NG',from_unixtime(cast(created_at as bigint),'yyyy-MM-dd HH:mm:ss'),0) as created_at
+      ,default.localTime("{config}",'NG',from_unixtime(cast(updated_at as bigint),'yyyy-MM-dd HH:mm:ss'),0) as updated_at
+      ,opay_account
       ,country_id
+      ,city_id
 
       ,row_number() over(partition by id order by `__ts_ms` desc,`__file` desc,cast(`__pos` as int) desc) rn
     from
-      oexpress_dw_ods.ods_binlog_base_conf_city_h_his
+      oexpress_dw_ods.ods_binlog_base_data_driver_h_his
     where 
       dt = date_format('{v_date}', 'yyyy-MM-dd')
       and hour= date_format('{v_date}', 'HH')
@@ -145,36 +178,46 @@ city_info as (
     rn = 1
 ),
 
---2.国家信息
-country_info as (
-  select 
-    country_id
+--2.取出城市信息
+city_info as (
+  select
+    city_id
+    ,city_name
+    ,country_id
     ,country_name
   from
-    (
-    select
-      id as country_id
-      ,name as country_name
-
-      ,row_number() over(partition by id order by `__ts_ms` desc,`__file` desc,cast(`__pos` as int) desc) rn
-    from
-      oexpress_dw_ods.ods_binlog_base_conf_country_h_his
-    where 
-      dt = date_format('{v_date}', 'yyyy-MM-dd')
-      and hour= date_format('{v_date}', 'HH')
-      and `__deleted` = 'false'
-    ) as a
+    oexpress_dw.dim_oexpress_city_info_hf
   where
-    rn = 1
+    concat(dt,' ',hour) >= default.minLocalTimeRange("{config}", '{v_date}', 0)
+    and concat(dt,' ',hour) <= default.maxLocalTimeRange("{config}", '{v_date}', 0) 
+    and utc_date_hour = date_format("{v_date}", 'yyyy-MM-dd HH')
 )
 
 --3.最后将去重的结果集插入到表中
-insert overwrite table oexpress_dw.dim_oexpress_city_info_hf partition(country_code,dt,hour)
+insert overwrite table oexpress_dw.dim_oexpress_driver_info_hf partition(country_code,dt,hour)
 select
-  v1.city_id
-  ,v1.city_name
+  v1.id
+  ,v1.name
+  ,v1.phone_number
+  ,v1.username
+  ,v1.password
+  ,v1.serv_type
+  ,v1.license_number
+  ,v1.identity_type
+  ,v1.hub_id
+  ,v1.working_status
+  ,v1.identity_status
+  ,v1.vehicle_id
+  ,v1.plate_number
+  ,v1.first_bind_time
+  ,v1.created_at
+  ,v1.updated_at
+  ,v1.opay_account
   ,v1.country_id
-  ,v2.country_name
+  ,v1.city_id
+
+  ,nvl(v2.city_name,'-') as city_name
+  ,nvl(v2.country_name,'-') as country_name
 
   ,date_format('{v_date}', 'yyyy-MM-dd HH') as utc_date_hour
 
@@ -182,12 +225,9 @@ select
   ,date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'yyyy-MM-dd') as dt
   ,date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'HH') as hour
 from
-  city_info as v1
-left join
-  country_info as v2
-on
-  v1.country_id = v2.country_id
-;
+  union_result
+where
+  rn = 1;
 
 
     '''.format(
@@ -249,7 +289,7 @@ def execution_data_task_id(ds, dag, **kwargs):
     cf = CountriesPublicFrame_dev(args)
 
     # 读取sql
-    _sql = "\n" + cf.alter_partition() + "\n" + dim_oexpress_city_info_hf_sql_task(ds, v_date)
+    _sql = "\n" + cf.alter_partition() + "\n" + dim_oexpress_driver_info_hf_sql_task(ds, v_date)
 
     logging.info('Executing: %s', _sql)
 
@@ -260,8 +300,8 @@ def execution_data_task_id(ds, dag, **kwargs):
     cf.touchz_success()
 
 
-dim_oexpress_city_info_hf_task = PythonOperator(
-    task_id='dim_oexpress_city_info_hf_task',
+dim_oexpress_driver_info_hf_task = PythonOperator(
+    task_id='dim_oexpress_driver_info_hf_task',
     python_callable=execution_data_task_id,
     provide_context=True,
     op_kwargs={
@@ -273,7 +313,7 @@ dim_oexpress_city_info_hf_task = PythonOperator(
     dag=dag
 )
 
-ods_binlog_base_conf_city_h_his_check_task >> dim_oexpress_city_info_hf_task
-ods_binlog_base_conf_country_h_his_check_task >> dim_oexpress_city_info_hf_task
+ods_binlog_base_conf_city_h_his_check_task >> dim_oexpress_driver_info_hf_task
+dim_oexpress_city_info_hf_check_task >> dim_oexpress_driver_info_hf_task
 
 
