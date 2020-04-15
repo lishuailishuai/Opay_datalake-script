@@ -225,9 +225,10 @@ select
   ,date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'yyyy-MM-dd') as dt
   ,date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'HH') as hour
 from
-  union_result
-where
-  rn = 1;
+  drver_info as v1
+left join
+  city_info as v2
+v1.city_id = v2.city_id;
 
 
     '''.format(
