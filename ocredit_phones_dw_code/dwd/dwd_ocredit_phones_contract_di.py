@@ -17,7 +17,7 @@ from airflow.sensors.hive_partition_sensor import HivePartitionSensor
 from airflow.sensors import UFileSensor
 from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
 from airflow.sensors import OssSensor
-from plugins.CountriesPublicFrame_dev import CountriesPublicFrame_dev
+from plugins.CountriesAppFrame import CountriesAppFrame
 
 from plugins.TaskTouchzSuccess import TaskTouchzSuccess
 import json
@@ -29,7 +29,7 @@ from utils.get_local_time import GetLocalTime
 
 args = {
     'owner': 'lili.chen',
-    'start_date': datetime(2020, 4, 9),
+    'start_date': datetime(2020, 4, 14),
     'depends_on_past': False,
     'retries': 3,
     'retry_delay': timedelta(minutes=2),
@@ -207,11 +207,12 @@ def execution_data_task_id(ds, dag, **kwargs):
             "is_result_force_exist": "false",
             "execute_time": v_date,
             "is_hour_task": "false",
-            "frame_type": "local"
+            "frame_type": "local",
+            "business_key": "ocredit"
         }
     ]
 
-    cf = CountriesPublicFrame_dev(args)
+    cf = CountriesAppFrame(args)
 
     # 读取sql
     _sql = "\n" + cf.alter_partition() + "\n" + dwd_ocredit_phones_contract_di_sql_task(ds, v_date)
