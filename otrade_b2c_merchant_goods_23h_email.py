@@ -138,7 +138,7 @@ def send_b2c_merchant_goods_email(ds, **kwargs):
     rows1 = cursor.fetchall()
 
 
-    file_name1 = '/tmp/b2c_merchant_goods_{dt}.xls'.format(dt=airflow.macros.ds_add(ds, +1))
+    file_name1 = '/tmp/b2c_merchant_goods_{dt}_23.xls'.format(dt=airflow.macros.ds_add(ds, +1))
 
     # 生成excel文件
     book1 = xlwt.Workbook()
