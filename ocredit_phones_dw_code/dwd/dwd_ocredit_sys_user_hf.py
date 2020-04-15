@@ -124,20 +124,19 @@ def dwd_ocredit_sys_user_hf_sql_task(ds, v_date):
             default.localTime("{config}",'NG',update_time,0) as update_time,    --更新时间                  
             update_user,    --更新人                   
             version,         --乐观锁      
-        t1.utc_date_hour,
+        utc_date_hour,
         'NG' country_code,  --如果表中有国家编码直接上传国家编码
         date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'yyyy-MM-dd') as dt,
         date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'HH') as hour
 
-    from (select * from (select *,
+    from (select *,
                  date_format('{v_date}', 'yyyy-MM-dd HH') as utc_date_hour,
                  row_number() over(partition by user_id order by `__ts_ms` desc,`__file` desc,cast(`__pos` as int) desc) rn
              from ocredit_phones_dw_ods.ods_binlog_base_sys_user_h_his
             where 
                 concat(dt, " ", hour) = date_format('{v_date}', 'yyyy-MM-dd HH')
                 and `__deleted` = 'false') m
-        where rn=1
-    ) t1 ;
+        where rn=1;
     '''.format(
         pt=ds,
         v_date=v_date,
