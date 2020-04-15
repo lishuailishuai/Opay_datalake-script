@@ -200,7 +200,7 @@ class TaskTimeoutMonitor(object):
                 table = item.get('table', None)
 
             #监控ods 采集使用
-            if self.layer_flag.lower().strip() == "ods":
+            if self.layer_flag == "ods":
 
                 table = item.get('table', None)
 
