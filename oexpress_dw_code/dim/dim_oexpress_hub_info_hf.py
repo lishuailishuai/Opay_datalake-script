@@ -195,8 +195,6 @@ select
   ,v1.address
   ,v1.lat
   ,v1.lng
-  ,v1.pick_up_area
-  ,v1.deliver_area
   ,v1.contact_person
   ,v1.contact_phone
   ,v1.status
