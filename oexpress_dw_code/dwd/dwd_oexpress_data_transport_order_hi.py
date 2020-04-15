@@ -272,4 +272,3 @@ dwd_oexpress_data_transport_order_hi_task = PythonOperator(
 
 ods_binlog_base_data_transport_order_all_hi_check_task >> dwd_oexpress_data_transport_order_hi_task
 
-
