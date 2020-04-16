@@ -17,6 +17,7 @@ from airflow.sensors.hive_partition_sensor import HivePartitionSensor
 from airflow.sensors import UFileSensor
 from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
 from plugins.TaskTouchzSuccess import TaskTouchzSuccess
+from plugins.CountriesAppFrame import CountriesAppFrame
 import json
 import logging
 from airflow.models import Variable
@@ -265,7 +266,7 @@ def dwd_oride_client_event_detail_hi_sql_task(ds,hour):
     return HQL
 
 #主流程
-def execution_data_task_id(ds,**kwargs):
+def execution_data_task_id(ds,dag,**kwargs):
 
     v_date=kwargs.get('v_execution_date')
     v_day=kwargs.get('v_execution_day')
@@ -273,25 +274,36 @@ def execution_data_task_id(ds,**kwargs):
 
     hive_hook = HiveCliHook()
 
-    #读取sql
-    _sql=dwd_oride_client_event_detail_hi_sql_task(ds,v_hour)
+    args = [
+        {
+            "dag": dag,
+            "is_countries_online": "true",
+            "db_name": db_name,
+            "table_name": table_name,
+            "data_oss_path": hdfs_path,
+            "is_country_partition": "true",
+            "is_result_force_exist": "false",
+            "execute_time": v_date,
+            "is_hour_task": "true",
+            "frame_type": "local",
+            "is_offset": "true",
+            "execute_time_offset": -1,
+            "business_key": "oride"
+        }
+    ]
+
+    cf = CountriesAppFrame(args)
+
+    # 读取sql
+    _sql = "\n" + cf.alter_partition() + "\n" + dwd_oride_client_event_detail_hi_sql_task(ds)
 
     logging.info('Executing: %s', _sql)
 
-    #执行Hive
+    # 执行Hive
     hive_hook.run_cli(_sql)
 
-    #熔断数据
-    #check_key_data_task(ds)
-
-    #生成_SUCCESS
-    """
-    第一个参数true: 数据目录是有country_code分区。false 没有
-    第二个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
-
-    """
-
-    TaskTouchzSuccess().countries_touchz_success(ds,db_name,table_name,hdfs_path,"true","true",v_hour)
+    # 生产success
+    cf.touchz_success()
 
 dwd_oride_client_event_detail_hi_task= PythonOperator(
     task_id='dwd_oride_client_event_detail_hi_task',
