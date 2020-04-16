@@ -114,7 +114,6 @@ config = eval(Variable.get("opay_time_zone_config"))
 def dwd_opay_receive_money_record_di_sql_task(ds):
     HQL='''
     
-    set mapred.max.split.size=1000000;
     set hive.exec.dynamic.partition.mode=nonstrict;
     set hive.exec.parallel=true;
     set hive.exec.compress.output=true;
