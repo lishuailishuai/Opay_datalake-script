@@ -20,8 +20,6 @@ from airflow.sensors.s3_key_sensor import S3KeySensor
 from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
 from plugins.TaskTouchzSuccess import TaskTouchzSuccess
 from plugins.CountriesPublicFrame import CountriesPublicFrame
-from plugins.CountriesAppFrame import CountriesAppFrame
-
 import json
 import logging
 from airflow.models import Variable
@@ -52,71 +50,72 @@ hdfs_path = "oss://opay-datalake/oride/oride_dw/" + table_name
 
 ##----------------------------------------- 依赖 ---------------------------------------##
 dependence_dwd_oride_order_base_include_test_di_prev_day_task = OssSensor(
-        task_id='dwd_oride_order_base_include_test_di_prev_day_task',
-        bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-            hdfs_path_str="oride/oride_dw/dwd_oride_order_base_include_test_di/country_code=NG",
-            pt='{{ds}}'
-        ),
-        bucket_name='opay-datalake',
-        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-        dag=dag
-    )
+    task_id='dwd_oride_order_base_include_test_di_prev_day_task',
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="oride/oride_dw/dwd_oride_order_base_include_test_di/country_code=NG",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
 
 dependence_dwd_oride_order_assign_driver_detail_di_prev_day_tesk = OssSensor(
-        task_id='dwd_oride_order_assign_driver_detail_di_prev_day_tesk',
-        bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-            hdfs_path_str="oride/oride_dw/dwd_oride_order_assign_driver_detail_di/country_code=nal",
-            pt='{{ds}}'
-        ),
-        bucket_name='opay-datalake',
-        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-        dag=dag
-    )
+    task_id='dwd_oride_order_assign_driver_detail_di_prev_day_tesk',
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="oride/oride_dw/dwd_oride_order_assign_driver_detail_di/country_code=nal",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
 
 dependence_dwd_oride_order_push_driver_detail_di_prev_day_tesk = OssSensor(
-        task_id='dwd_oride_order_push_driver_detail_di_prev_day_tesk',
-        bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-            hdfs_path_str="oride/oride_dw/dwd_oride_order_push_driver_detail_di/country_code=nal",
-            pt='{{ds}}'
-        ),
-        bucket_name='opay-datalake',
-        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-        dag=dag
-    )
+    task_id='dwd_oride_order_push_driver_detail_di_prev_day_tesk',
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="oride/oride_dw/dwd_oride_order_push_driver_detail_di/country_code=nal",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
 
 dependence_dwd_oride_driver_accept_order_show_detail_di_prev_day_task = OssSensor(
-        task_id='dwd_oride_driver_accept_order_show_detail_di_prev_day_task',
-        bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-            hdfs_path_str="oride/oride_dw/dwd_oride_driver_accept_order_show_detail_di/country_code=nal",
-            pt='{{ds}}'
-        ),
-        bucket_name='opay-datalake',
-        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-        dag=dag
-    )
+    task_id='dwd_oride_driver_accept_order_show_detail_di_prev_day_task',
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="oride/oride_dw/dwd_oride_driver_accept_order_show_detail_di/country_code=nal",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
 
 dependence_dwd_oride_driver_accept_order_click_detail_di_prev_day_task = OssSensor(
-        task_id='dwd_oride_driver_accept_order_click_detail_di_prev_day_task',
-        bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-            hdfs_path_str="oride/oride_dw/dwd_oride_driver_accept_order_click_detail_di/country_code=nal",
-            pt='{{ds}}'
-        ),
-        bucket_name='opay-datalake',
-        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-        dag=dag
-    )
+    task_id='dwd_oride_driver_accept_order_click_detail_di_prev_day_task',
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="oride/oride_dw/dwd_oride_driver_accept_order_click_detail_di/country_code=nal",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
 
 # 依赖前一天分区
 dependence_dwd_oride_order_mark_df_prev_day_task = OssSensor(
-        task_id='dwd_oride_order_mark_df_prev_day_task',
-        bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-            hdfs_path_str="oride/oride_dw/dwd_oride_order_mark_df/country_code=NG",
-            pt='{{ds}}'
-        ),
-        bucket_name='opay-datalake',
-        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-        dag=dag
-    )
+    task_id='dwd_oride_order_mark_df_prev_day_task',
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="oride/oride_dw/dwd_oride_order_mark_df/country_code=NG",
+        pt='{{ds}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
 
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
 
@@ -124,7 +123,7 @@ def fun_task_timeout_monitor(ds, dag, **op_kwargs):
     dag_ids = dag.dag_id
 
     msg = [
-        {"dag":dag,"db": "oride_dw", "table": "{dag_name}".format(dag_name=dag_ids),
+        {"dag": dag, "db": "oride_dw", "table": "{dag_name}".format(dag_name=dag_ids),
          "partition": "country_code=NG/dt={pt}".format(pt=ds), "timeout": "900"}
     ]
 
@@ -306,64 +305,64 @@ def dwm_oride_order_base_di_sql_task(ds):
 
            if(push1.assign_type=1,1,0) as is_strong_dispatch,
            --是否强派1：是，0:否
-           
+
            if(ord.cancel_reason<>'',1,0) as cancel_feedback,
            --是否有取消反馈
-           
+
            ord.status,
            --订单状态 (0: wait assign, 1: pick up passenger, 2: wait passenger, 3: send passenger, 4: arrive destination, 5: finished, 6: cancel,13:乘客取消待支付)
-           
+
            ord.estimate_price,  --预估价格
-           
+
            if(show.order_id is not null and driver_accept_show_times>0,1,0) as is_driver_accept_show, 
            --骑手端是否被展示（骑手端埋点数据，只是包含骑手端前端show部分）
-           
+
            if(ord.wait_time>0,1,0) as is_arrive_receive_point,
            --司机是否到达接客点
-           
+
            ord.pay_mode,
            --订单支付方式
-           
+
            ord.falsify, 
            --用户罚款
-           
+
            ord.falsify_driver_cancel, 
            --司机罚款
-           
+
            ord.driver_price, 
            --司机价格
-           
+
            ord.tip,
            --小费
-           
+
            ord.pay_surcharge as surcharge,
            --高速费,自20200223号开始底层升级为从payment表出
-           
+
            ord.pax_insurance_price, 
            --乘客保险费
-           
+
            ord.coupon_amount,
            --使用的优惠券金额
-           
+
            ord.malice_brush_driver_deduct, 
            --恶意刷单司机扣款
-           
+
            ord.falsify_get, 
            --取消罚款实际获得
-           
-           
+
+
             ord.malice_brush_user_reward,  
             --恶意刷单乘客奖励
-            
+
             ord.falsify_get_driver_cancel, 
             --司机取消罚款用户实际获得
-            
+
             ord.td_ord_to_cancel_dur as ord_to_cancel_dur,
             --当天下单到取消时长
-            
+
             ord.driver_arrive_car_point_dur,
             --司机接单到到达上车点时长
-            
+
             ord.ord_to_arrive_dur,
             --下单到送达总时长
             ord.user_version, 
@@ -372,7 +371,7 @@ def dwm_oride_order_base_di_sql_task(ds):
             --乘客端操作系统
             ord.driver_version,
             --司机端版本（接单）
-            
+
  		   ord.country_code as country_code,
 
            ord.dt as dt
@@ -486,34 +485,36 @@ def check_key_data_task(ds):
 
     return flag
 
-#主流程
-def execution_data_task_id(ds,dag,**kwargs):
 
-    v_date=kwargs.get('v_execution_date')
-    v_day=kwargs.get('v_execution_day')
-    v_hour=kwargs.get('v_execution_hour')
+# 主流程
+def execution_data_task_id(ds, **kwargs):
+    v_date = kwargs.get('v_execution_date')
+    v_day = kwargs.get('v_execution_day')
+    v_hour = kwargs.get('v_execution_hour')
 
     hive_hook = HiveCliHook()
+    """
+            #功能函数
+            alter语句: alter_partition
+            删除分区: delete_partition
+            生产success: touchz_success
 
-    args = [
-        {
-            "dag": dag,
-            "is_countries_online": "true",
-            "db_name": db_name,
-            "table_name": table_name,
-            "data_oss_path": hdfs_path,
-            "is_country_partition": "true",
-            "is_result_force_exist": "false",
-            "execute_time": v_date,
-            "is_hour_task": "false",
-            "frame_type": "local",
-            "is_offset": "true",
-            "execute_time_offset": -1,
-            "business_key": "oride"
-        }
-    ]
+            #参数
+            第一个参数true: 所有国家是否上线。false 没有
+            第二个参数true: 数据目录是有country_code分区。false 没有
+            第三个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
 
-    cf = CountriesAppFrame(args)
+            #读取sql
+            %_sql(ds,v_hour)
+
+            第一个参数ds: 天级任务
+            第二个参数v_hour: 小时级任务，需要使用
+
+        """
+    cf = CountriesPublicFrame("true", ds, db_name, table_name, hdfs_path, "true", "true")
+
+    # 删除分区
+    cf.delete_partition()
 
     # 读取sql
     _sql = "\n" + cf.alter_partition() + "\n" + dwm_oride_order_base_di_sql_task(ds)
@@ -522,6 +523,12 @@ def execution_data_task_id(ds,dag,**kwargs):
 
     # 执行Hive
     hive_hook.run_cli(_sql)
+
+    # 熔断数据，如果数据不能为0
+    # check_key_data_cnt_task(ds)
+
+    # 熔断数据
+    check_key_data_task(ds)
 
     # 生产success
     cf.touchz_success()
@@ -539,9 +546,9 @@ dwm_oride_order_base_di_task = PythonOperator(
     dag=dag
 )
 
-dependence_dwd_oride_order_base_include_test_di_prev_day_task >>dwm_oride_order_base_di_task
-dependence_dwd_oride_order_assign_driver_detail_di_prev_day_tesk >>dwm_oride_order_base_di_task
-dependence_dwd_oride_order_push_driver_detail_di_prev_day_tesk >>dwm_oride_order_base_di_task
-dependence_dwd_oride_driver_accept_order_show_detail_di_prev_day_task >>dwm_oride_order_base_di_task
-dependence_dwd_oride_driver_accept_order_click_detail_di_prev_day_task >>dwm_oride_order_base_di_task
-dependence_dwd_oride_order_mark_df_prev_day_task >>dwm_oride_order_base_di_task
+dependence_dwd_oride_order_base_include_test_di_prev_day_task >> dwm_oride_order_base_di_task
+dependence_dwd_oride_order_assign_driver_detail_di_prev_day_tesk >> dwm_oride_order_base_di_task
+dependence_dwd_oride_order_push_driver_detail_di_prev_day_tesk >> dwm_oride_order_base_di_task
+dependence_dwd_oride_driver_accept_order_show_detail_di_prev_day_task >> dwm_oride_order_base_di_task
+dependence_dwd_oride_driver_accept_order_click_detail_di_prev_day_task >> dwm_oride_order_base_di_task
+dependence_dwd_oride_order_mark_df_prev_day_task >> dwm_oride_order_base_di_task
