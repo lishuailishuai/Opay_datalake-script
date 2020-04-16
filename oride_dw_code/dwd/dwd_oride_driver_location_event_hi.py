@@ -157,7 +157,7 @@ def dwd_oride_location_driver_event_hi_sql_task(ds, execution_date):
 '''.format(
         pt=ds,
         now_day=ds,
-        now_hour=execution_date.strftime("%H"),
+        now_hour=execution_date,
         table=table_name,
         db=db_name
     )
