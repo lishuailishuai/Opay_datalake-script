@@ -184,6 +184,8 @@ from
     and hour= date_format('{v_date}', 'HH')
     and `__deleted` = 'false'
   ) as v1
+where
+  rn = 1
 ;
 
 

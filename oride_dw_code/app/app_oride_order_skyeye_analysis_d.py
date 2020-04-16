@@ -17,6 +17,7 @@ from airflow.sensors.hive_partition_sensor import HivePartitionSensor
 from airflow.sensors import UFileSensor
 from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
 from plugins.TaskTouchzSuccess import TaskTouchzSuccess
+from plugins.CountriesAppFrame import CountriesAppFrame
 import json
 import logging
 from airflow.models import Variable
@@ -48,52 +49,12 @@ sleep_time = BashOperator(
     dag=dag)
 ##----------------------------------------- 变量 ---------------------------------------##
 
+db_name = "oride_dw"
 table_name = "app_oride_order_skyeye_analysis_d"
+hdfs_path = "oss://opay-datalake/oride/oride_dw/" + table_name
 
 ##----------------------------------------- 依赖 ---------------------------------------##
-#获取变量
-code_map=eval(Variable.get("sys_flag"))
-
-#判断ufile(cdh环境)
-if code_map["id"].lower()=="ufile":
-
-    # 依赖前一天分区
-    dependence_dwd_oride_order_skyeye_di_prev_day_task = UFileSensor(
-        task_id='dwd_oride_order_skyeye_di_prev_day_task',
-        filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-            hdfs_path_str="oride/oride_dw/dwd_oride_order_skyeye_di/country_code=nal",
-            pt='{{ds}}'
-        ),
-        bucket_name='opay-datalake',
-        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-        dag=dag
-    )
-
-    dependence_dwd_oride_order_base_include_test_di_prev_day_task = S3KeySensor(
-        task_id='dwd_oride_order_base_include_test_di_prev_day_task',
-        bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-            hdfs_path_str="oride/oride_dw/dwd_oride_order_base_include_test_di/country_code=NG",
-            pt='{{ds}}'
-        ),
-        bucket_name='opay-bi',
-        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-        dag=dag
-    )
-    dependence_dim_oride_driver_base_prev_day_task = UFileSensor(
-        task_id='dim_oride_driver_base_prev_day_task',
-        filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-            hdfs_path_str="oride/oride_dw/dim_oride_driver_base/country_code=NG",
-            pt='{{ds}}'
-        ),
-        bucket_name='opay-datalake',
-        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-        dag=dag
-    )
-    hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
-
-else:
-    print("成功")
-    dependence_dwd_oride_order_skyeye_di_prev_day_task = OssSensor(
+dependence_dwd_oride_order_skyeye_di_prev_day_task = OssSensor(
         task_id='dwd_oride_order_skyeye_di_prev_day_task',
         bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
             hdfs_path_str="oride/oride_dw/dwd_oride_order_skyeye_di/country_code=nal",
@@ -104,7 +65,7 @@ else:
         dag=dag
     )
 
-    dependence_dwd_oride_order_base_include_test_di_prev_day_task = OssSensor(
+dependence_dwd_oride_order_base_include_test_di_prev_day_task = OssSensor(
         task_id='dwd_oride_order_base_include_test_di_prev_day_task',
         bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
             hdfs_path_str="oride/oride_dw/dwd_oride_order_base_include_test_di/country_code=NG",
@@ -114,7 +75,7 @@ else:
         poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
         dag=dag
     )
-    dependence_dim_oride_driver_base_prev_day_task = OssSensor(
+dependence_dim_oride_driver_base_prev_day_task = OssSensor(
         task_id='dim_oride_driver_base_prev_day_task',
         bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
             hdfs_path_str="oride/oride_dw/dim_oride_driver_base/country_code=NG",
@@ -124,8 +85,6 @@ else:
         poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
         dag=dag
     )
-    hdfs_path = "oss://opay-datalake/oride/oride_dw/" + table_name
-
 
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
 
@@ -147,15 +106,10 @@ task_timeout_monitor= PythonOperator(
 )
 
 ##----------------------------------------- 脚本 ---------------------------------------##
+def app_oride_order_skyeye_analysis_d_sql_task(ds):
+    HQL = '''
 
-##----------------------------------------- 脚本 ---------------------------------------##
-
-
-app_oride_order_skyeye_analysis_d_task = HiveOperator(
-    task_id='app_oride_order_skyeye_analysis_d_task',
-    hql='''
-
-    set hive.exec.parallel=true;
+      set hive.exec.parallel=true;
     set hive.exec.dynamic.partition.mode=nonstrict;
 
     insert overwrite TABLE oride_dw.{table} partition(country_code,dt)
@@ -205,36 +159,64 @@ app_oride_order_skyeye_analysis_d_task = HiveOperator(
         WHERE dt = '{pt}'
     ) c ON b.driver_id = c.driver_id
 '''.format(
-        pt='{{ds}}',
-        table=table_name
-    ),
-    schema='oride_dw',
-    dag=dag)
+        pt=ds,
+        table=table_name,
+        db=db_name
+    )
+    return HQL
 
-# 生成_SUCCESS
-touchz_data_success = BashOperator(
+#主流程
+def execution_data_task_id(ds,dag,**kwargs):
 
-    task_id='touchz_data_success',
+    v_date=kwargs.get('v_execution_date')
+    v_day=kwargs.get('v_execution_day')
+    v_hour=kwargs.get('v_execution_hour')
 
-    bash_command="""
-    line_num=`$HADOOP_HOME/bin/hadoop fs -du -s {hdfs_data_dir} | tail -1 | awk '{{print $1}}'`
+    hive_hook = HiveCliHook()
 
-    if [ $line_num -eq 0 ]
-    then
-        echo "FATAL {hdfs_data_dir} is empty"
-        exit 1
-    else
-        echo "DATA EXPORT Successed ......"
-        $HADOOP_HOME/bin/hadoop fs -touchz {hdfs_data_dir}/_SUCCESS
-    fi
-    """.format(
-        pt='{{ds}}',
-        now_day='{{macros.ds_add(ds, +1)}}',
-        hdfs_data_dir=hdfs_path + '/country_code=nal/dt={{ds}}'
-    ),
-    dag=dag)
+    args = [
+        {
+            "dag": dag,
+            "is_countries_online": "true",
+            "db_name": db_name,
+            "table_name": table_name,
+            "data_oss_path": hdfs_path,
+            "is_country_partition": "true",
+            "is_result_force_exist": "false",
+            "execute_time": v_date,
+            "is_hour_task": "false",
+            "frame_type": "local",
+            "is_offset": "true",
+            "execute_time_offset": -1,
+            "business_key": "oride"
+        }
+    ]
 
+    cf = CountriesAppFrame(args)
+
+    # 读取sql
+    _sql = "\n" + cf.alter_partition() + "\n" + app_oride_order_skyeye_analysis_d_sql_task(ds)
+
+    logging.info('Executing: %s', _sql)
+
+    # 执行Hive
+    hive_hook.run_cli(_sql)
+
+    # 生产success
+    cf.touchz_success()
+
+app_oride_order_skyeye_analysis_d_task = PythonOperator(
+    task_id='app_oride_order_skyeye_analysis_d_task',
+    python_callable=execution_data_task_id,
+    provide_context=True,
+    op_kwargs={
+        'v_execution_date': '{{execution_date.strftime("%Y-%m-%d %H:%M:%S")}}',
+        'v_execution_day': '{{execution_date.strftime("%Y-%m-%d")}}',
+        'v_execution_hour': '{{execution_date.strftime("%H")}}'
+    },
+    dag=dag
+)
 dependence_dwd_oride_order_skyeye_di_prev_day_task >> \
 dependence_dwd_oride_order_base_include_test_di_prev_day_task >> \
 dependence_dim_oride_driver_base_prev_day_task >> \
-sleep_time >> app_oride_order_skyeye_analysis_d_task >> touchz_data_success
+app_oride_order_skyeye_analysis_d_task

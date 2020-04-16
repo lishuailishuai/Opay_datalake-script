@@ -15,6 +15,7 @@ import re
 import logging
 from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
 from plugins.TaskTouchzSuccess import TaskTouchzSuccess
+from plugins.CountriesAppFrame import CountriesAppFrame
 from airflow.sensors.hive_partition_sensor import HivePartitionSensor
 from airflow.hooks.hive_hooks import HiveCliHook, HiveServer2Hook
 from airflow.sensors import OssSensor
@@ -39,14 +40,10 @@ dag = airflow.DAG('app_oride_gps_d',
 
 db_name = "oride_dw"
 table_name = "app_oride_gps_d"
+hdfs_path = "oss://opay-datalake/oride/oride_dw/" + table_name
 
 ##----------------------------------------- 依赖 ---------------------------------------##
-#获取变量
-code_map=eval(Variable.get("sys_flag"))
-
-#判断ufile(cdh环境)
-if code_map["id"].lower()=="ufile":
-    moto_locations_task = HivePartitionSensor(
+moto_locations_task = HivePartitionSensor(
         task_id="moto_locations_task",
         table="moto_locations",
         partition="dt='{{ds}}'",
@@ -54,20 +51,6 @@ if code_map["id"].lower()=="ufile":
         poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
         dag=dag
     )
-    hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
-
-else:
-    print("成功")
-    moto_locations_task = HivePartitionSensor(
-        task_id="moto_locations_task",
-        table="moto_locations",
-        partition="dt='{{ds}}'",
-        schema="oride_source",
-        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-        dag=dag
-    )
-    hdfs_path = "oss://opay-datalake/oride/oride_dw/" + table_name
-
 
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
 
@@ -136,33 +119,55 @@ def app_oride_gps_d_sql_task(ds):
     )
     return HQL
 
+#主流程
+def execution_data_task_id(ds,dag,**kwargs):
 
+    v_date=kwargs.get('v_execution_date')
+    v_day=kwargs.get('v_execution_day')
+    v_hour=kwargs.get('v_execution_hour')
 
-# 主流程
-def execution_data_task_id(ds, **kargs):
     hive_hook = HiveCliHook()
 
+    args = [
+        {
+            "dag": dag,
+            "is_countries_online": "true",
+            "db_name": db_name,
+            "table_name": table_name,
+            "data_oss_path": hdfs_path,
+            "is_country_partition": "true",
+            "is_result_force_exist": "false",
+            "execute_time": v_date,
+            "is_hour_task": "false",
+            "frame_type": "local",
+            "is_offset": "true",
+            "execute_time_offset": -1,
+            "business_key": "oride"
+        }
+    ]
+
+    cf = CountriesAppFrame(args)
+
     # 读取sql
-    _sql = app_oride_gps_d_sql_task(ds)
+    _sql = "\n" + cf.alter_partition() + "\n" + app_oride_gps_d_sql_task(ds)
 
     logging.info('Executing: %s', _sql)
 
     # 执行Hive
     hive_hook.run_cli(_sql)
 
-    # 生成_SUCCESS
-    """
-    第一个参数true: 数据目录是有country_code分区。false 没有
-    第二个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
-
-    """
-    TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "true", "true")
-
+    # 生产success
+    cf.touchz_success()
 
 app_oride_gps_d_task = PythonOperator(
     task_id='app_oride_gps_d_task',
     python_callable=execution_data_task_id,
     provide_context=True,
+    op_kwargs={
+        'v_execution_date': '{{execution_date.strftime("%Y-%m-%d %H:%M:%S")}}',
+        'v_execution_day': '{{execution_date.strftime("%Y-%m-%d")}}',
+        'v_execution_hour': '{{execution_date.strftime("%H")}}'
+    },
     dag=dag
 )
 

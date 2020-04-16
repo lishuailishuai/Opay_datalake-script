@@ -39,7 +39,7 @@ args = {
 }
 
 dag = airflow.DAG('dim_oexpress_driver_info_hf',
-                  schedule_interval="28 * * * *",
+                  schedule_interval="30 * * * *",
                   default_args=args,
                   )
 
@@ -52,11 +52,11 @@ time_zone = config['NG']['time_zone']
 
 ##----------------------------------------- 依赖 ---------------------------------------##
 ### 检查当前小时的分区依赖
-###oss://opay-datalake/oexpress_h_his/ods_binlog_base_conf_city_h_his
-ods_binlog_base_conf_city_h_his_check_task = OssSensor(
-    task_id='ods_binlog_base_conf_city_h_his_check_task',
+###oss://opay-datalake/oexpress_h_his/ods_binlog_base_data_driver_h_his
+ods_binlog_base_data_driver_h_his_check_task = OssSensor(
+    task_id='ods_binlog_base_data_driver_h_his_check_task',
     bucket_key='{hdfs_path_str}/dt={pt}/hour={hour}/_SUCCESS'.format(
-        hdfs_path_str="oexpress_h_his/ods_binlog_base_conf_city_h_his",
+        hdfs_path_str="oexpress_h_his/ods_binlog_base_data_driver_h_his",
         pt='{{ds}}',
         hour='{{ execution_date.strftime("%H") }}'
     ),
@@ -70,6 +70,21 @@ dim_oexpress_city_info_hf_check_task = OssSensor(
     task_id='dim_oexpress_city_info_hf_check_task',
     bucket_key='{hdfs_path_str}/country_code=NG/dt={pt}/hour={hour}/_SUCCESS'.format(
         hdfs_path_str="oexpress/oexpress_dw/dim_oexpress_city_info_hf",
+        pt='{{{{(execution_date+macros.timedelta(hours=({time_zone}+{gap_hour}))).strftime("%Y-%m-%d")}}}}'.format(
+            time_zone=time_zone, gap_hour=0),
+        hour='{{{{(execution_date+macros.timedelta(hours=({time_zone}+{gap_hour}))).strftime("%H")}}}}'.format(
+            time_zone=time_zone, gap_hour=0)
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
+###oss://opay-datalake/oexpress/oexpress_dw/dim_oexpress_hub_info_hf
+dim_oexpress_hub_info_hf_check_task = OssSensor(
+    task_id='dim_oexpress_hub_info_hf_check_task',
+    bucket_key='{hdfs_path_str}/country_code=NG/dt={pt}/hour={hour}/_SUCCESS'.format(
+        hdfs_path_str="oexpress/oexpress_dw/dim_oexpress_hub_info_hf",
         pt='{{{{(execution_date+macros.timedelta(hours=({time_zone}+{gap_hour}))).strftime("%Y-%m-%d")}}}}'.format(
             time_zone=time_zone, gap_hour=0),
         hour='{{{{(execution_date+macros.timedelta(hours=({time_zone}+{gap_hour}))).strftime("%H")}}}}'.format(
@@ -191,9 +206,30 @@ city_info as (
     concat(dt,' ',hour) >= default.minLocalTimeRange("{config}", '{v_date}', 0)
     and concat(dt,' ',hour) <= default.maxLocalTimeRange("{config}", '{v_date}', 0) 
     and utc_date_hour = date_format("{v_date}", 'yyyy-MM-dd HH')
+),
+
+--3.取出仓库信息
+hub_info as (
+  select
+    id
+    ,name as hub_name
+    ,address as hub_address
+    ,lat as hub_lat
+    ,lng as hub_lng
+    ,contact_person as hub_contact_person
+    ,contact_phone as hub_contact_phone
+    ,status as hub_status
+    ,created_at as hub_created_at
+    ,business_hours as hub_business_hours
+  from
+    oexpress_dw.dim_oexpress_hub_info_hf
+  where
+    concat(dt,' ',hour) >= default.minLocalTimeRange("{config}", '{v_date}', 0)
+    and concat(dt,' ',hour) <= default.maxLocalTimeRange("{config}", '{v_date}', 0) 
+    and utc_date_hour = date_format("{v_date}", 'yyyy-MM-dd HH')
 )
 
---3.最后将去重的结果集插入到表中
+--4.最后将去重的结果集插入到表中
 insert overwrite table oexpress_dw.dim_oexpress_driver_info_hf partition(country_code,dt,hour)
 select
   v1.id
@@ -219,6 +255,16 @@ select
   ,nvl(v2.city_name,'-') as city_name
   ,nvl(v2.country_name,'-') as country_name
 
+  ,v3.hub_name
+  ,v3.hub_address
+  ,v3.hub_lat
+  ,v3.hub_lng
+  ,v3.hub_contact_person
+  ,v3.hub_contact_phone
+  ,v3.hub_status
+  ,v3.hub_created_at
+  ,v3.hub_business_hours
+
   ,date_format('{v_date}', 'yyyy-MM-dd HH') as utc_date_hour
 
   ,'NG' as country_code
@@ -230,6 +276,10 @@ left join
   city_info as v2
 on
   v1.city_id = v2.city_id
+left join
+  hub_info as v3
+on
+  v1.hub_id = v3.id
 ;
 
 
@@ -316,7 +366,8 @@ dim_oexpress_driver_info_hf_task = PythonOperator(
     dag=dag
 )
 
-ods_binlog_base_conf_city_h_his_check_task >> dim_oexpress_driver_info_hf_task
+ods_binlog_base_data_driver_h_his_check_task >> dim_oexpress_driver_info_hf_task
 dim_oexpress_city_info_hf_check_task >> dim_oexpress_driver_info_hf_task
+dim_oexpress_hub_info_hf_check_task >> dim_oexpress_driver_info_hf_task
 
 

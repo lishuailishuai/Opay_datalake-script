@@ -39,7 +39,7 @@ args = {
 }
 
 dag = airflow.DAG('dwm_oexpress_transport_collect_hi',
-                  schedule_interval="28 * * * *",
+                  schedule_interval="42 * * * *",
                   default_args=args,
                   )
 
@@ -86,21 +86,6 @@ dwd_oexpress_data_transport_order_hi_check_task = OssSensor(
     task_id='dwd_oexpress_data_transport_order_hi_check_task',
     bucket_key='{hdfs_path_str}/country_code=NG/dt={pt}/hour={hour}/_SUCCESS'.format(
         hdfs_path_str="oexpress/oexpress_dw/dwd_oexpress_data_transport_order_hi",
-        pt='{{{{(execution_date+macros.timedelta(hours=({time_zone}+{gap_hour}))).strftime("%Y-%m-%d")}}}}'.format(
-            time_zone=time_zone, gap_hour=0),
-        hour='{{{{(execution_date+macros.timedelta(hours=({time_zone}+{gap_hour}))).strftime("%H")}}}}'.format(
-            time_zone=time_zone, gap_hour=0)
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
-
-###oss://opay-datalake/oexpress/oexpress_dw/dwd_oexpress_data_order_hi
-dwd_oexpress_data_order_hi_check_task = OssSensor(
-    task_id='dwd_oexpress_data_order_hi_check_task',
-    bucket_key='{hdfs_path_str}/country_code=NG/dt={pt}/hour={hour}/_SUCCESS'.format(
-        hdfs_path_str="oexpress/oexpress_dw/dwd_oexpress_data_order_hi",
         pt='{{{{(execution_date+macros.timedelta(hours=({time_zone}+{gap_hour}))).strftime("%Y-%m-%d")}}}}'.format(
             time_zone=time_zone, gap_hour=0),
         hour='{{{{(execution_date+macros.timedelta(hours=({time_zone}+{gap_hour}))).strftime("%H")}}}}'.format(
@@ -171,6 +156,13 @@ diver_info as (
     ,city_name as driver_city_name
     ,first_bind_time as driver_first_bind_time
     ,created_at as driver_created_at
+    ,hub_name as driver_hub_name
+    ,hub_address as driver_hub_address
+    ,hub_lat as driver_hub_lat
+    ,hub_lng as driver_hub_lng
+    ,hub_contact_person as driver_hub_contact_person
+    ,hub_contact_phone as driver_hub_contact_phone
+    ,hub_status as driver_hub_status
   from
     oexpress_dw.dim_oexpress_driver_info_hf
   where
@@ -244,63 +236,9 @@ transport_info as (
     concat(dt,' ',hour) >= default.minLocalTimeRange("{config}", '{v_date}', 0)
     and concat(dt,' ',hour) <= default.maxLocalTimeRange("{config}", '{v_date}', 0) 
     and utc_date_hour = date_format("{v_date}", 'yyyy-MM-dd HH')
-),
-
---4.订单信息
-order_info as (
-  select
-    id
-    ,city_id
-    ,create_user_id
-    ,order_source
-    ,sender_cell
-    ,sender_first_name
-    ,sender_last_name
-    ,without_collect
-    ,ori_addr
-    ,receiver_cell
-    ,receiver_first_name
-    ,receiver_last_name
-    ,dest_addr
-    ,current_transport_id
-    ,current_hold_record_id
-    ,status as order_status
-    ,confirm_time
-    ,collected_time
-    ,finish_time
-    ,close_time
-    ,cancel_time as order_cancel_time
-    ,cancel_role
-    ,cancel_comment
-    ,product_category
-    ,product_category_name
-    ,basic_fee
-    ,weight_fee
-    ,insurance_fee
-    ,pickup_fee
-    ,tax_fee
-    ,deliver_fee
-    ,payment_method
-    ,price
-    ,weight
-    ,volume
-    ,comment
-    ,delivery_code
-    ,pickup_pic_url_list
-    ,create_time as order_create_time
-    ,update_time as order_update_time
-    ,item_code
-    ,cash_received
-    ,use_universal_code
-  from
-    oexpress_dw.dwd_oexpress_data_order_hi
-  where
-    concat(dt,' ',hour) >= default.minLocalTimeRange("{config}", '{v_date}', 0)
-    and concat(dt,' ',hour) <= default.maxLocalTimeRange("{config}", '{v_date}', 0) 
-    and utc_date_hour = date_format("{v_date}", 'yyyy-MM-dd HH')
 )
 
---5.将信息关联后插入原表
+--4.将信息关联后插入原表
 insert overwrite table oexpress_dw.dwm_oexpress_transport_collect_hi partition(country_code,dt,hour)
 select
   v1.id
@@ -325,6 +263,13 @@ select
   ,v3.driver_city_name
   ,v3.driver_first_bind_time
   ,v3.driver_created_at
+  ,v3.driver_hub_name
+  ,v3.driver_hub_address
+  ,v3.driver_hub_lat
+  ,v3.driver_hub_lng
+  ,v3.driver_hub_contact_person
+  ,v3.driver_hub_contact_phone
+  ,v3.driver_hub_status
 
   --取货点仓库信息(原)
   ,v1.ori_lat
@@ -376,50 +321,6 @@ select
   ,v1.sequence_idx
   ,v1.estimated_distance
 
-  --订单信息
-  ,v2.city_id
-  ,v2.create_user_id
-  ,v2.order_source
-  ,v2.sender_cell
-  ,v2.sender_first_name
-  ,v2.sender_last_name
-  ,v2.without_collect
-  ,v2.ori_addr
-  ,v2.receiver_cell
-  ,v2.receiver_first_name
-  ,v2.receiver_last_name
-  ,v2.dest_addr
-  ,v2.current_transport_id
-  ,v2.current_hold_record_id
-  ,v2.order_status
-  ,v2.confirm_time
-  ,v2.collected_time
-  ,v2.finish_time
-  ,v2.close_time
-  ,v2.order_cancel_time
-  ,v2.cancel_role
-  ,v2.cancel_comment
-  ,v2.product_category
-  ,v2.product_category_name
-  ,v2.basic_fee
-  ,v2.weight_fee
-  ,v2.insurance_fee
-  ,v2.pickup_fee
-  ,v2.tax_fee
-  ,v2.deliver_fee
-  ,v2.payment_method
-  ,v2.price
-  ,v2.weight
-  ,v2.volume
-  ,v2.comment
-  ,v2.delivery_code
-  ,v2.pickup_pic_url_list
-  ,v2.order_create_time
-  ,v2.order_update_time
-  ,v2.item_code
-  ,v2.cash_received
-  ,v2.use_universal_code
-
   ,date_format('{v_date}', 'yyyy-MM-dd HH') as utc_date_hour
 
   ,'NG' as country_code
@@ -427,10 +328,6 @@ select
   ,date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'HH') as hour
 from
   transport_info as v1
-left join
-  order_info as v2
-on
-  v1.id = v2.current_transport_id
 left join
   diver_info as v3
 on
@@ -532,6 +429,5 @@ dwm_oexpress_transport_collect_hi_task = PythonOperator(
 dim_oexpress_driver_info_hf_check_task >> dwm_oexpress_transport_collect_hi_task
 dim_oexpress_hub_info_hf_check_task >> dwm_oexpress_transport_collect_hi_task
 dwd_oexpress_data_transport_order_hi_check_task >> dwm_oexpress_transport_collect_hi_task
-dwd_oexpress_data_order_hi_check_task >> dwm_oexpress_transport_collect_hi_task
 
 

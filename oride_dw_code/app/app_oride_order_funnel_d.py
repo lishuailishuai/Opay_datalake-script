@@ -18,6 +18,7 @@ from airflow.sensors import UFileSensor
 from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
 from plugins.TaskTouchzSuccess import TaskTouchzSuccess
 from plugins.CountriesPublicFrame import CountriesPublicFrame
+from plugins.CountriesAppFrame import CountriesAppFrame
 import json
 import logging
 from airflow.models import Variable
@@ -44,41 +45,10 @@ dag = airflow.DAG('app_oride_order_funnel_d',
 
 db_name = "oride_dw"
 table_name = "app_oride_order_funnel_d"
+hdfs_path = "oss://opay-datalake/oride/oride_dw/" + table_name
 
 ##----------------------------------------- 依赖 ---------------------------------------##
-#获取变量
-code_map=eval(Variable.get("sys_flag"))
-
-#判断ufile(cdh环境)
-if code_map["id"].lower()=="ufile":
-    # 依赖前一天分区
-    dwm_oride_order_base_di_prev_day_task = UFileSensor(
-        task_id='dwm_oride_order_base_di_prev_day_task',
-        filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-            hdfs_path_str="oride/oride_dw/dwm_oride_order_base_di/country_code=NG",
-            pt='{{ds}}'
-        ),
-        bucket_name='opay-datalake',
-        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-        dag=dag
-    )
-
-
-    dwm_oride_passenger_event_di_prev_day_task = UFileSensor(
-        task_id='dwm_oride_passenger_event_di_prev_day_task',
-        filepath='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-            hdfs_path_str="oride/oride_dw/dwm_oride_passenger_event_di/country_code=nal",
-            pt='{{ds}}'
-        ),
-        bucket_name='opay-datalake',
-        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-        dag=dag
-    )
-    hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
-
-else:
-    print("成功")
-    dwm_oride_order_base_di_prev_day_task = OssSensor(
+dwm_oride_order_base_di_prev_day_task = OssSensor(
         task_id='dwm_oride_order_base_di_prev_day_task',
         bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
             hdfs_path_str="oride/oride_dw/dwm_oride_order_base_di/country_code=NG",
@@ -89,7 +59,7 @@ else:
         dag=dag
     )
 
-    dwm_oride_passenger_event_di_prev_day_task = OssSensor(
+dwm_oride_passenger_event_di_prev_day_task = OssSensor(
         task_id='dwm_oride_passenger_event_di_prev_day_task',
         bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
             hdfs_path_str="oride/oride_dw/dwm_oride_passenger_event_di/country_code=nal",
@@ -99,8 +69,6 @@ else:
         poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
         dag=dag
     )
-    hdfs_path = "oss://opay-datalake/oride/oride_dw/" + table_name
-
 
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
 
@@ -230,36 +198,34 @@ def app_oride_order_funnel_d_sql_task(ds):
     )
     return HQL
 
+#主流程
+def execution_data_task_id(ds,dag,**kwargs):
 
-# 主流程
-def execution_data_task_id(ds, **kwargs):
-    v_date = kwargs.get('v_execution_date')
-    v_day = kwargs.get('v_execution_day')
-    v_hour = kwargs.get('v_execution_hour')
+    v_date=kwargs.get('v_execution_date')
+    v_day=kwargs.get('v_execution_day')
+    v_hour=kwargs.get('v_execution_hour')
 
     hive_hook = HiveCliHook()
-    """
-            #功能函数
-            alter语句: alter_partition
-            删除分区: delete_partition
-            生产success: touchz_success
 
-            #参数
-            第一个参数true: 所有国家是否上线。false 没有
-            第二个参数true: 数据目录是有country_code分区。false 没有
-            第三个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
+    args = [
+        {
+            "dag": dag,
+            "is_countries_online": "true",
+            "db_name": db_name,
+            "table_name": table_name,
+            "data_oss_path": hdfs_path,
+            "is_country_partition": "true",
+            "is_result_force_exist": "false",
+            "execute_time": v_date,
+            "is_hour_task": "false",
+            "frame_type": "local",
+            "is_offset": "true",
+            "execute_time_offset": -1,
+            "business_key": "oride"
+        }
+    ]
 
-            #读取sql
-            %_sql(ds,v_hour)
-
-            第一个参数ds: 天级任务
-            第二个参数v_hour: 小时级任务，需要使用
-
-        """
-    cf = CountriesPublicFrame("false", ds, db_name, table_name, hdfs_path, "true", "true")
-
-    # 删除分区
-    cf.delete_partition()
+    cf = CountriesAppFrame(args)
 
     # 读取sql
     _sql = "\n" + cf.alter_partition() + "\n" + app_oride_order_funnel_d_sql_task(ds)
@@ -269,12 +235,8 @@ def execution_data_task_id(ds, **kwargs):
     # 执行Hive
     hive_hook.run_cli(_sql)
 
-    # 熔断数据，如果数据不能为0
-    # check_key_data_cnt_task(ds)
-
     # 生产success
     cf.touchz_success()
-
 
 app_oride_order_funnel_d_task = PythonOperator(
     task_id='app_oride_order_funnel_d_task',
