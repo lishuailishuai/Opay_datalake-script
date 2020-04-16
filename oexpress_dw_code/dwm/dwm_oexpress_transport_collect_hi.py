@@ -39,7 +39,7 @@ args = {
 }
 
 dag = airflow.DAG('dwm_oexpress_transport_collect_hi',
-                  schedule_interval="28 * * * *",
+                  schedule_interval="42 * * * *",
                   default_args=args,
                   )
 
