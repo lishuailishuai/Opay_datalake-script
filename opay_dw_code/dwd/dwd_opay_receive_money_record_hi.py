@@ -140,6 +140,7 @@ task_timeout_monitor = PythonOperator(
 def dwd_opay_receive_money_record_hi_sql_task(ds, v_date):
     HQL = '''
 
+    set mapred.max.split.size=1000000;
     set hive.exec.dynamic.partition.mode=nonstrict;
     set hive.exec.parallel=true;
 

@@ -114,9 +114,17 @@ config = eval(Variable.get("opay_time_zone_config"))
 def dwd_opay_receive_money_record_di_sql_task(ds):
     HQL='''
     
-    set mapred.max.split.size=1000000;
     set hive.exec.dynamic.partition.mode=nonstrict;
     set hive.exec.parallel=true;
+    set hive.exec.compress.output=true;
+    set mapreduce.output.fileoutputformat.compress=true;
+    set hive.input.format=org.apache.hadoop.hive.ql.io.CombineHiveInputFormat;
+    set mapreduce.input.fileinputformat.split.maxsize=536870912;
+    set mapreduce.input.fileinputformat.split.minsize=16777216;
+    set mapreduce.input.fileinputformat.split.minsize.per.node=16777216;
+    set mapreduce.input.fileinputformat.split.minsize.per.rack=16777216;
+    set mapreduce.reduce.memory.mb=2048;
+    
     with dim_user_merchant_data as (
             select 
                 trader_id, trader_name, trader_role, trader_kyc_level, if(state is null or state = '', '-', state) as state

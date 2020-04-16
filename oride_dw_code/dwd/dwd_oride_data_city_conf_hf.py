@@ -19,6 +19,7 @@ from airflow.sensors import OssSensor
 from plugins.TaskTimeoutMonitor import TaskTimeoutMonitor
 from plugins.TaskTouchzSuccess import TaskTouchzSuccess
 from plugins.CountriesPublicFrame import CountriesPublicFrame
+from plugins.CountriesAppFrame import CountriesAppFrame
 import json
 import logging
 from airflow.models import Variable
@@ -136,37 +137,34 @@ def dwd_oride_data_city_conf_hf_sql_task(ds, hour):
     )
     return HQL
 
-# 主流程
-def execution_data_task_id(ds, **kwargs):
-    v_date = kwargs.get('v_execution_date')
-    v_day = kwargs.get('v_execution_day')
-    v_hour = kwargs.get('v_execution_hour')
+#主流程
+def execution_data_task_id(ds,dag,**kwargs):
+
+    v_date=kwargs.get('v_execution_date')
+    v_day=kwargs.get('v_execution_day')
+    v_hour=kwargs.get('v_execution_hour')
 
     hive_hook = HiveCliHook()
 
-    """
-        #功能函数
-        alter语句: alter_partition
-        删除分区: delete_partition
-        生产success: touchz_success
+    args = [
+        {
+            "dag": dag,
+            "is_countries_online": "false",
+            "db_name": db_name,
+            "table_name": table_name,
+            "data_oss_path": hdfs_path,
+            "is_country_partition": "false",
+            "is_result_force_exist": "false",
+            "execute_time": v_date,
+            "is_hour_task": "true",
+            "frame_type": "local",
+            "is_offset": "true",
+            "execute_time_offset": -1,
+            "business_key": "oride"
+        }
+    ]
 
-        #参数
-        第一个参数true: 所有国家是否上线。false 没有
-        第二个参数true: 数据目录是有country_code分区。false 没有
-        第三个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
-
-        #读取sql
-        %_sql(ds,v_hour)
-
-        第一个参数ds: 天级任务
-        第二个参数v_hour: 小时级任务，需要使用
-
-    """
-
-    cf = CountriesPublicFrame("false", ds, db_name, table_name, hdfs_path, "false", "true",v_hour)
-
-    # 删除分区
-    cf.delete_partition()
+    cf = CountriesAppFrame(args)
 
     # 读取sql
     _sql = "\n" + cf.alter_partition() + "\n" + dwd_oride_data_city_conf_hf_sql_task(ds,v_hour)
@@ -176,12 +174,8 @@ def execution_data_task_id(ds, **kwargs):
     # 执行Hive
     hive_hook.run_cli(_sql)
 
-    # 熔断数据，如果数据不能为0
-    # check_key_data_cnt_task(ds)
-
     # 生产success
     cf.touchz_success()
-
 
 dwd_oride_data_city_conf_hf_task = PythonOperator(
     task_id='dwd_oride_data_city_conf_hf_task',

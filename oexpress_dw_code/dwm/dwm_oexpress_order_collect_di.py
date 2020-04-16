@@ -38,24 +38,24 @@ args = {
     'email_on_retry': False,
 }
 
-dag = airflow.DAG('dwm_oexpress_transport_collect_di',
+dag = airflow.DAG('dwm_oexpress_order_collect_di',
                   schedule_interval="00 03 * * *",
                   default_args=args,
                   )
 
 ##----------------------------------------- 变量 ---------------------------------------##
 db_name = "oexpress_dw"
-table_name = "dwm_oexpress_transport_collect_di"
+table_name = "dwm_oexpress_order_collect_di"
 hdfs_path = "oss://opay-datalake/oexpress/oexpress_dw/" + table_name
 config = eval(Variable.get("oexpress_time_zone_config"))
 time_zone = config['NG']['time_zone']
 
 ##----------------------------------------- 依赖 ---------------------------------------##
 
-dwm_oexpress_transport_collect_hi_task = OssSensor(
-    task_id='dwm_oexpress_transport_collect_hi_task',
+dwm_oexpress_order_collect_hi_task = OssSensor(
+    task_id='dwm_oexpress_order_collect_hi_task',
     bucket_key='{hdfs_path_str}/country_code=NG/dt={pt}/hour={hour}/_SUCCESS'.format(
-        hdfs_path_str="oexpress/oexpress_dw/dwm_oexpress_transport_collect_hi",
+        hdfs_path_str="oexpress/oexpress_dw/dwm_oexpress_order_collect_hi",
         pt='{{ds}}',
         hour='23'
     ),
@@ -88,7 +88,7 @@ task_timeout_monitor = PythonOperator(
 
 ##----------------------------------------- 脚本 ---------------------------------------##
 
-def dwm_oexpress_transport_collect_di_sql_task(ds):
+def dwm_oexpress_order_collect_di_sql_task(ds):
     HQL = '''
 
 set mapred.max.split.size=1000000;
@@ -97,15 +97,82 @@ set hive.exec.dynamic.partition.mode=nonstrict;
 set hive.strict.checks.cartesian.product=false;
 
 --1.将信息关联后插入原表
-insert overwrite table oexpress_dw.dwm_oexpress_transport_collect_di partition(country_code,dt)
+insert overwrite table oexpress_dw.dwm_oexpress_order_collect_di partition(country_code,dt)
 select
   id
+  ,city_id
+  ,create_user_id
+  ,order_source
+  ,sender_cell
+  ,sender_first_name
+  ,sender_last_name
+  ,without_collect
+  ,ori_hub_id
+  ,ori_lat
+  ,ori_lng
+  ,ori_addr
+  ,ori_detailed_addr
+  ,ori_name
+  ,ori_country_id
+  ,ori_country_name
+  ,ori_city_id
+  ,ori_city_name
+  ,ori_contact_person
+  ,ori_contact_phone
+  ,ori_status
+  ,ori_created_at
+  ,ori_business_hours
+  ,receiver_cell
+  ,receiver_first_name
+  ,receiver_last_name
+  ,dest_hub_id
+  ,dest_lat
+  ,dest_lng
+  ,dest_addr
+  ,dest_detailed_addr
+  ,dest_name
+  ,dest_country_id
+  ,dest_country_name
+  ,dest_city_id
+  ,dest_city_name
+  ,dest_contact_person
+  ,dest_contact_phone
+  ,dest_status
+  ,dest_created_at
+  ,dest_business_hours
+  ,current_transport_id
+  ,current_hold_record_id
+  ,status
+  ,confirm_time
+  ,collected_time
+  ,finish_time
+  ,close_time
+  ,cancel_time
+  ,cancel_role
+  ,cancel_comment
+  ,product_category
+  ,product_category_name
+  ,basic_fee
+  ,weight_fee
+  ,insurance_fee
+  ,pickup_fee
+  ,tax_fee
+  ,deliver_fee
+  ,payment_method
+  ,price
+  ,weight
+  ,volume
+  ,comment
+  ,delivery_code
+  ,create_time
+  ,update_time
+  ,item_code
+  ,cash_received
+  ,use_universal_code
   ,order_id
   ,transport_type
-  ,status
+  ,transport_status
   ,driver_id
-
-  --承运人详细信息
   ,driver_name
   ,driver_phone_number
   ,driver_serv_type
@@ -128,45 +195,8 @@ select
   ,driver_hub_contact_person
   ,driver_hub_contact_phone
   ,driver_hub_status
-
-  --取货点仓库信息(原)
-  ,ori_lat
-  ,ori_lng
-  ,ori_hub_id
-  ,ori_name
-  ,ori_detailed_addr
-
-  --取货点仓库详细信息
-  ,ori_country_id
-  ,ori_country_name
-  ,ori_city_id
-  ,ori_city_name
-  ,ori_contact_person
-  ,ori_contact_phone
-  ,ori_status
-  ,ori_created_at
-  ,ori_business_hours
-
-  --送货点仓库信息(原)
-  ,dest_lat
-  ,dest_lng
-  ,dest_hub_id
-  ,dest_name
-  ,dest_detailed_addr
-
-  --送货点仓库详细信息
-  ,dest_country_id
-  ,dest_country_name
-  ,dest_city_id
-  ,dest_city_name
-  ,dest_contact_person
-  ,dest_contact_phone
-  ,dest_status
-  ,dest_created_at
-  ,dest_business_hours
-
-  ,create_time
-  ,update_time
+  ,transport_create_time
+  ,transport_update_time
   ,assigned_time
   ,collect_status
   ,collect_time
@@ -174,7 +204,6 @@ select
   ,closed_time
   ,reassign_time
   ,reassign_src_transport_id
-  ,cancel_time
   ,display_type
   ,sequence_idx
   ,estimated_distance
@@ -187,7 +216,7 @@ from
     *
     ,row_number() over(partition by id order by update_time desc) rn
   from
-    oexpress_dw.dwm_oexpress_transport_collect_hi
+    oexpress_dw.dwm_oexpress_order_collect_hi
   where
     dt = '{pt}'
   ) as a
@@ -214,7 +243,7 @@ def execution_data_task_id(ds, dag, **kwargs):
     hive_hook = HiveCliHook()
 
     # 读取sql
-    # _sql = dwm_oexpress_transport_collect_di_sql_task(ds)
+    # _sql = dwm_oexpress_order_collect_di_sql_task(ds)
 
     # logging.info('Executing: %s', _sql)
 
@@ -281,7 +310,7 @@ def execution_data_task_id(ds, dag, **kwargs):
     cf.delete_partition()
 
     # 读取sql
-    _sql = "\n" + cf.alter_partition() + "\n" + dwm_oexpress_transport_collect_di_sql_task(ds)
+    _sql = "\n" + cf.alter_partition() + "\n" + dwm_oexpress_order_collect_di_sql_task(ds)
 
     logging.info('Executing: %s', _sql)
 
@@ -292,8 +321,8 @@ def execution_data_task_id(ds, dag, **kwargs):
     cf.touchz_success()
 
 
-dwm_oexpress_transport_collect_di_task = PythonOperator(
-    task_id='dwm_oexpress_transport_collect_di_task',
+dwm_oexpress_order_collect_di_task = PythonOperator(
+    task_id='dwm_oexpress_order_collect_di_task',
     python_callable=execution_data_task_id,
     provide_context=True,
     op_kwargs={
@@ -305,6 +334,7 @@ dwm_oexpress_transport_collect_di_task = PythonOperator(
     dag=dag
 )
 
-dwm_oexpress_transport_collect_hi_task >> dwm_oexpress_transport_collect_di_task
+dwm_oexpress_order_collect_hi_task >> dwm_oexpress_order_collect_di_task
+
 
 
