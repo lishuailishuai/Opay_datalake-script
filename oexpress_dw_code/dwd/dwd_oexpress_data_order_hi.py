@@ -39,7 +39,7 @@ args = {
 }
 
 dag = airflow.DAG('dwd_oexpress_data_order_hi',
-                  schedule_interval="26 * * * *",
+                  schedule_interval="40 * * * *",
                   default_args=args,
                   )
 
