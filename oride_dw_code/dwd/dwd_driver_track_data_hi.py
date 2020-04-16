@@ -156,7 +156,7 @@ def execution_data_task_id(ds,dag,**kwargs):
     cf = CountriesAppFrame(args)
 
     # 读取sql
-    _sql = "\n" + cf.alter_partition() + "\n" + dwd_driver_track_data_hi_sql_task(ds)
+    _sql = "\n" + cf.alter_partition() + "\n" + dwd_driver_track_data_hi_sql_task(ds,v_hour)
 
     logging.info('Executing: %s', _sql)
 
