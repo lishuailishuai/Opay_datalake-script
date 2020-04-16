@@ -165,7 +165,7 @@ def execution_data_task_id(ds,dag,**kwargs):
     cf = CountriesAppFrame(args)
 
     # 读取sql
-    _sql = "\n" + cf.alter_partition() + "\n" + dwd_oride_data_country_conf_hf_sql_task(ds)
+    _sql = "\n"  + "\n" + dwd_oride_data_country_conf_hf_sql_task(ds)
 
     logging.info('Executing: %s', _sql)
 
