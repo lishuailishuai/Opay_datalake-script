@@ -156,6 +156,13 @@ diver_info as (
     ,city_name as driver_city_name
     ,first_bind_time as driver_first_bind_time
     ,created_at as driver_created_at
+    ,hub_name as driver_hub_name
+    ,hub_address as driver_hub_address
+    ,hub_lat as driver_hub_lat
+    ,hub_lng as driver_hub_lng
+    ,hub_contact_person as driver_hub_contact_person
+    ,hub_contact_phone as driver_hub_contact_phone
+    ,hub_status as driver_hub_status
   from
     oexpress_dw.dim_oexpress_driver_info_hf
   where
@@ -256,6 +263,13 @@ select
   ,v3.driver_city_name
   ,v3.driver_first_bind_time
   ,v3.driver_created_at
+  ,v3.driver_hub_name
+  ,v3.driver_hub_address
+  ,v3.driver_hub_lat
+  ,v3.driver_hub_lng
+  ,v3.driver_hub_contact_person
+  ,v3.driver_hub_contact_phone
+  ,v3.driver_hub_status
 
   --取货点仓库信息(原)
   ,v1.ori_lat
