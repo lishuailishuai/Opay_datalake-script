@@ -269,7 +269,7 @@ def run_check_table(mysql_db_name, mysql_table_name, conn_id, hive_h_his_table_n
                 
             # 有json表读取insert 部分，此处切换为double
             elif result[1] == 'decimal':
-                data_type = 'double'
+                data_type = 'decimal'
             else:
                 data_type = result[1]
             rows.append(
