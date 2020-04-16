@@ -266,7 +266,7 @@ def run_check_table(mysql_db_name, mysql_table_name, conn_id, hive_h_his_table_n
                     result[1] == 'longtext' or result[1] == 'mediumtext' or \
                     result[1] == 'datetime' or result[1] == 'json':
                 data_type = 'string'
-                
+
             # 有json表读取insert 部分，此处切换为double
             elif result[1] == 'decimal':
                 data_type = 'decimal'
@@ -301,7 +301,7 @@ def run_check_table(mysql_db_name, mysql_table_name, conn_id, hive_h_his_table_n
             return True
     return
 
-
+#检查sqoop 临时表是否存在
 def run_sqoop_check_table(mysql_db_name, mysql_table_name, conn_id, hive_table_name, **kwargs):
     sqoopSchema = SqoopSchemaUpdate()
     response = sqoopSchema.update_hive_schema(
@@ -536,7 +536,7 @@ for mysql_db_name, mysql_table_name, conn_id, prefix_name, priority_weight_nm, s
         dag=dag,
     )
 
-    # check table
+    # check sqoop table 创建临时表，用于初始化sqoop 采集
     check_binlog_table = PythonOperator(
         task_id='check_binlog_table_{}'.format(sqoop_table_name),
         priority_weight=priority_weight_nm,
