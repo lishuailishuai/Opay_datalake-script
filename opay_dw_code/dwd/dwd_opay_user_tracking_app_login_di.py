@@ -28,7 +28,7 @@ from plugins.CountriesAppFrame import CountriesAppFrame
 
 args = {
     'owner': 'xiedong',
-    'start_date': datetime(2020, 3, 10),
+    'start_date': datetime(2020, 3, 3),
     'depends_on_past': False,
     'retries': 3,
     'retry_delay': timedelta(minutes=2),
@@ -37,28 +37,25 @@ args = {
     'email_on_retry': False,
 }
 
-dag = airflow.DAG('dwm_opay_user_last_visit_df',
-                  schedule_interval="40 01 * * *",
+dag = airflow.DAG('dwd_opay_user_tracking_app_login_di',
+                  schedule_interval="30 01 * * *",
                   default_args=args,
                   )
 
-##----------------------------------------- 依赖 ---------------------------------------##
-dwm_opay_user_last_visit_df_prev_day_task = OssSensor(
-    task_id='dwm_opay_user_last_visit_df_prev_day_task',
-    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opay/opay_dw/dwm_opay_user_last_visit_df/country_code=NG",
-        pt='{{macros.ds_add(ds, -1)}}'
-    ),
-    bucket_name='opay-datalake',
-    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-    dag=dag
-)
+##----------------------------------------- 变量 ---------------------------------------##
+db_name = "opay_dw"
+table_name = "dwd_opay_user_tracking_app_login_di"
+hdfs_path = "oss://opay-datalake/opay/opay_dw/" + table_name
+config = eval(Variable.get("opay_time_zone_config"))
+time_zone = config['NG']['time_zone']
 
-dwd_opay_user_tracking_app_login_di_check_task = OssSensor(
-    task_id='dwd_opay_user_tracking_app_login_di_check_task',
-    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
-        hdfs_path_str="opay/opay_dw/dwd_opay_user_tracking_app_login_di/country_code=NG",
-        pt='{{ds}}'
+##----------------------------------------- 依赖 ---------------------------------------##
+
+service_data_tracking_app_prev_day_task = OssSensor(
+    task_id='service_data_tracking_app_prev_day_task',
+    bucket_key='{hdfs_path_str}/dt={pt}/hour=00/_SUCCESS'.format(
+        hdfs_path_str="opay_buried/service_data_tracking_app",
+        pt='{{macros.ds_add(ds, +1)}}'
     ),
     bucket_name='opay-datalake',
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
@@ -70,8 +67,7 @@ def fun_task_timeout_monitor(ds, dag, **op_kwargs):
     dag_ids = dag.dag_id
 
     msg = [
-        {"dag": dag, "db": "opay_dw", "table": "{dag_name}".format(dag_name=dag_ids),
-         "partition": "country_code=NG/dt={pt}".format(pt=ds), "timeout": "3000"}
+        {"dag": dag, "db": "opay_dw", "table": "{dag_name}".format(dag_name=dag_ids), "partition": "country_code=NG/dt={pt}".format(pt=ds), "timeout": "3000"}
     ]
 
     TaskTimeoutMonitor().set_task_monitor(msg)
@@ -84,14 +80,10 @@ task_timeout_monitor = PythonOperator(
     dag=dag
 )
 
-##----------------------------------------- 变量 ---------------------------------------##
-db_name = "opay_dw"
-
-table_name = "dwm_opay_user_last_visit_df"
-hdfs_path = "oss://opay-datalake/opay/opay_dw/" + table_name
 
 
-def dwm_opay_user_last_visit_df_sql_task(ds):
+
+def dwd_opay_user_tracking_app_login_di_sql_task(ds):
     HQL = '''
 
 
@@ -99,40 +91,32 @@ def dwm_opay_user_last_visit_df_sql_task(ds):
     set hive.exec.dynamic.partition.mode=nonstrict;
     set hive.exec.parallel=true;
     
-    with 
-    user_last_visit_di as (
-        select 
-           user_id, 
-           max(visit_time) as last_visit_time,
-           'NG' as country_code
-        from opay_dw.dwd_opay_user_tracking_app_login_di
-        where dt = '{pt}'
-        group by user_id
-    
-    )
-    
     insert overwrite table {db}.{table} partition(country_code, dt)
     select 
-        coalesce(t1.user_id, t0.user_id) as user_id,
-        coalesce(t1.last_visit_time, t0.last_visit_time) as last_visit_time,
-        coalesce(t1.country_code, t0.country_code) as country_code,
+        en as event_name,
+        ev as event_value,
+        servicedatatrackingapp as tracking_app_name,
+        uid as user_id, 
+        role,
+        kyc as kyc_level,
+        uno as mobile, 
+        deviceid as device_id,
+        if(size(split(location, "\\\|")) = 2, cast(split(location, "\\\|")[0] as decimal(11, 8)), 0.0) as longitude,
+        if(size(split(location, "\\\|")) = 2, cast(split(location, "\\\|")[1] as decimal(11, 8)), 0.0) as latitude,
+        model,
+        from_unixtime(cast(cast(t as bigint) / 1000 as bigint) + 3600) as visit_time,
+        'NG' as country_code,
         '{pt}' as dt
-    from (
-        SELECT 
-            user_id, last_visit_time,
-            country_code 
-        from opay_dw.dwm_opay_user_last_visit_df where dt = date_sub('{pt}', 1)
-    ) t0 full join (
-        select 
-            user_id, last_visit_time,
-            country_code
-        from user_last_visit_di
-    ) t1 on t0.user_id = t1.user_id;
-
-
+    from opay_source.service_data_tracking_app 
+    where concat(dt, hour) 
+        between date_format(date_sub('{pt}', 1), 'yyyy-MM-dd 23')
+            and date_format(date_add('{pt}', 1), 'yyyy-MM-dd 00')
+            and t is not null and t != ''
+            and servicedatatrackingapp='api_graphql_web_id'
+            and ev in ('login version one','login version two','login version two again','registerSuccess to login')
+            and date_format(from_unixtime(cast(cast(t as bigint) / 1000 as bigint)+3600) , 'yyyy-MM-dd')= '{pt}'
     '''.format(
         pt=ds,
-        yesterday=airflow.macros.ds_add(ds, -1),
         table=table_name,
         db=db_name
     )
@@ -163,7 +147,7 @@ def execution_data_task_id(ds, dag, **kwargs):
     cf = CountriesAppFrame(args)
 
     # 读取sql
-    _sql = "\n" + cf.alter_partition() + "\n" + dwm_opay_user_last_visit_df_sql_task(ds)
+    _sql = "\n" + cf.alter_partition() + "\n" + dwd_opay_user_tracking_app_login_di_sql_task(ds)
 
     logging.info('Executing: %s', _sql)
 
@@ -174,8 +158,8 @@ def execution_data_task_id(ds, dag, **kwargs):
     cf.touchz_success()
 
 
-dwm_opay_user_last_visit_df_task = PythonOperator(
-    task_id='dwm_opay_user_last_visit_df_task',
+dwd_opay_user_tracking_app_login_di_task = PythonOperator(
+    task_id='dwd_opay_user_tracking_app_login_di_task',
     python_callable=execution_data_task_id,
     provide_context=True,
     op_kwargs={
@@ -185,6 +169,6 @@ dwm_opay_user_last_visit_df_task = PythonOperator(
     dag=dag
 )
 
-dwm_opay_user_last_visit_df_prev_day_task >> dwm_opay_user_last_visit_df_task
-dwd_opay_user_tracking_app_login_di_check_task >> dwm_opay_user_last_visit_df_task
+service_data_tracking_app_prev_day_task >> dwd_opay_user_tracking_app_login_di_task
+
 
