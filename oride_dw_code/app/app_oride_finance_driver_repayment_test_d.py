@@ -313,7 +313,7 @@ def execution_data_task_id(ds,dag,**kwargs):
     cf = CountriesAppFrame(args)
 
     # 读取sql
-    _sql = "\n" + cf.alter_partition() + "\n" + app_oride_finance_driver_repayment_test_d_sql_task(ds)
+    _sql = "\n" + "\n" + app_oride_finance_driver_repayment_test_d_sql_task(ds)
 
     logging.info('Executing: %s', _sql)
 
