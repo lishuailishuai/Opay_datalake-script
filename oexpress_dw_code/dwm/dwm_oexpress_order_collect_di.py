@@ -164,8 +164,6 @@ select
   ,volume
   ,comment
   ,delivery_code
-  ,pickup_pic_url_list
-  ,delivered_pic_url_list
   ,create_time
   ,update_time
   ,item_code

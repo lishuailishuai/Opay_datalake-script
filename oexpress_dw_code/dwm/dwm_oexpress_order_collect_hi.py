@@ -261,8 +261,6 @@ select
   ,v1.volume
   ,v1.comment
   ,v1.delivery_code
-  ,v1.pickup_pic_url_list
-  ,v1.delivered_pic_url_list
   ,v1.create_time
   ,v1.update_time
   ,v1.item_code
