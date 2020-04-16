@@ -38,27 +38,42 @@ args = {
     'email_on_retry': False,
 }
 
-dag = airflow.DAG('dwd_oexpress_data_transport_order_hi',
-                  schedule_interval="40 * * * *",
+dag = airflow.DAG('dim_oexpress_admin_info_hf',
+                  schedule_interval="28 * * * *",
                   default_args=args,
                   )
 
 ##----------------------------------------- 变量 ---------------------------------------##
 db_name = "oexpress_dw"
-table_name = "dwd_oexpress_data_transport_order_hi"
+table_name = "dim_oexpress_admin_info_hf"
 hdfs_path = "oss://opay-datalake/oexpress/oexpress_dw/" + table_name
 config = eval(Variable.get("oexpress_time_zone_config"))
 time_zone = config['NG']['time_zone']
 
 ##----------------------------------------- 依赖 ---------------------------------------##
 ### 检查当前小时的分区依赖
-###oss://opay-datalake/oexpress_all_hi/ods_binlog_base_data_transport_order_all_hi
-ods_binlog_base_data_transport_order_all_hi_check_task = OssSensor(
-    task_id='ods_binlog_base_data_transport_order_all_hi_check_task',
+###oss://opay-datalake/oexpress_h_his/ods_binlog_base_system_admin_users_h_his
+ods_binlog_base_system_admin_users_h_his_check_task = OssSensor(
+    task_id='ods_binlog_base_system_admin_users_h_his_check_task',
     bucket_key='{hdfs_path_str}/dt={pt}/hour={hour}/_SUCCESS'.format(
-        hdfs_path_str="oexpress_all_hi/ods_binlog_base_data_transport_order_all_hi",
+        hdfs_path_str="oexpress_h_his/ods_binlog_base_system_admin_users_h_his",
         pt='{{ds}}',
         hour='{{ execution_date.strftime("%H") }}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
+###oss://opay-datalake/oexpress/oexpress_dw/dim_oexpress_city_info_hf
+dim_oexpress_city_info_hf_check_task = OssSensor(
+    task_id='dim_oexpress_city_info_hf_check_task',
+    bucket_key='{hdfs_path_str}/country_code=NG/dt={pt}/hour={hour}/_SUCCESS'.format(
+        hdfs_path_str="oexpress/oexpress_dw/dim_oexpress_city_info_hf",
+        pt='{{{{(execution_date+macros.timedelta(hours=({time_zone}+{gap_hour}))).strftime("%Y-%m-%d")}}}}'.format(
+            time_zone=time_zone, gap_hour=0),
+        hour='{{{{(execution_date+macros.timedelta(hours=({time_zone}+{gap_hour}))).strftime("%H")}}}}'.format(
+            time_zone=time_zone, gap_hour=0)
     ),
     bucket_name='opay-datalake',
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
@@ -97,7 +112,7 @@ task_timeout_monitor = PythonOperator(
 )
 
 
-def dwd_oexpress_data_transport_order_hi_sql_task(ds, v_date):
+def dim_oexpress_admin_info_hf_sql_task(ds, v_date):
     HQL = '''
 
 set mapred.max.split.size=1000000;
@@ -105,38 +120,65 @@ set hive.exec.parallel=true;
 set hive.exec.dynamic.partition.mode=nonstrict;
 set hive.strict.checks.cartesian.product=false;
 
---1.将数据关联后插入最终表中
-insert overwrite table oexpress_dw.dwd_oexpress_data_transport_order_hi partition(country_code,dt,hour)
+--1.取出最新数据
+with
+admin_info as (
+  select
+    id
+    ,name
+    ,role_type
+    ,country_id
+    ,city_ids
+    ,hub_ids
+    ,updated_at
+  from
+    (
+    select
+      id
+      ,name
+      ,role_type
+      ,country_id
+      ,substr(city_ids,2,length(city_ids)-2) as city_ids
+      ,substr(hub_ids,2,length(hub_ids)-2) as hub_ids
+      ,substr(updated_at,0,19) as updated_at
+
+      ,row_number() over(partition by id order by `__ts_ms` desc,`__file` desc,cast(`__pos` as int) desc) rn
+    from
+      oexpress_dw_ods.ods_binlog_base_system_admin_users_h_his
+    where 
+      dt = date_format('{v_date}', 'yyyy-MM-dd')
+      and hour= date_format('{v_date}', 'HH')
+      and `__deleted` = 'false'
+    ) as a
+  where
+    rn = 1
+),
+
+--2.取出城市信息
+city_info as (
+  select
+    city_id
+    ,city_name
+    ,country_id
+    ,country_name
+  from
+    oexpress_dw.dim_oexpress_city_info_hf
+  where
+    concat(dt,' ',hour) >= default.minLocalTimeRange("{config}", '{v_date}', 0)
+    and concat(dt,' ',hour) <= default.maxLocalTimeRange("{config}", '{v_date}', 0) 
+    and utc_date_hour = date_format("{v_date}", 'yyyy-MM-dd HH')
+)
+
+--3.最后将去重的结果集插入到表中
+insert overwrite table oexpress_dw.dim_oexpress_admin_info_hf partition(country_code,dt,hour)
 select
   id
-  ,order_id
-  ,transport_type
-  ,status
-  ,driver_id
-  ,ori_lat
-  ,ori_lng
-  ,ori_name
-  ,ori_detailed_addr
-  ,ori_hub_id
-  ,dest_lat
-  ,dest_lng
-  ,dest_name
-  ,dest_detailed_addr
-  ,dest_hub_id
-  ,create_time
-  ,update_time
-  ,assigned_time
-  ,collect_status
-  ,collect_time
-  ,delivered_time
-  ,delivered_pic_url_list
-  ,closed_time
-  ,reassign_time
-  ,reassign_src_transport_id
-  ,cancel_time
-  ,display_type
-  ,sequence_idx
-  ,estimated_distance
+  ,name
+  ,role_type
+  ,country_id
+  ,city_ids
+  ,hub_ids
+  ,updated_at
 
   ,date_format('{v_date}', 'yyyy-MM-dd HH') as utc_date_hour
 
@@ -144,46 +186,7 @@ select
   ,date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'yyyy-MM-dd') as dt
   ,date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'HH') as hour
 from
-  (
-  select
-    id
-    ,order_id
-    ,transport_type
-    ,status
-    ,driver_id
-    ,ori_lat
-    ,ori_lng
-    ,ori_name
-    ,ori_detailed_addr
-    ,ori_hub_id
-    ,dest_lat
-    ,dest_lng
-    ,dest_name
-    ,dest_detailed_addr
-    ,dest_hub_id
-    ,default.localTime("{config}",'NG',from_unixtime(cast(create_time as bigint),'yyyy-MM-dd HH:mm:ss'),0) as create_time
-    ,concat(substr(update_time,0,10),' ',substr(update_time,12,8)) as update_time
-    ,default.localTime("{config}",'NG',from_unixtime(cast(assigned_time as bigint),'yyyy-MM-dd HH:mm:ss'),0) as assigned_time
-    ,collect_status
-    ,default.localTime("{config}",'NG',from_unixtime(cast(collect_time as bigint),'yyyy-MM-dd HH:mm:ss'),0) as collect_time
-    ,default.localTime("{config}",'NG',from_unixtime(cast(delivered_time as bigint),'yyyy-MM-dd HH:mm:ss'),0) as delivered_time
-    ,delivered_pic_url_list
-    ,default.localTime("{config}",'NG',from_unixtime(cast(closed_time as bigint),'yyyy-MM-dd HH:mm:ss'),0) as closed_time
-    ,default.localTime("{config}",'NG',from_unixtime(cast(reassign_time as bigint),'yyyy-MM-dd HH:mm:ss'),0) as reassign_time
-    ,reassign_src_transport_id
-    ,default.localTime("{config}",'NG',from_unixtime(cast(cancel_time as bigint),'yyyy-MM-dd HH:mm:ss'),0) as cancel_time
-    ,display_type
-    ,sequence_idx
-    ,estimated_distance
-
-    ,row_number() over(partition by id order by `__ts_ms` desc,`__file` desc,cast(`__pos` as int) desc) rn
-  from
-    oexpress_dw_ods.ods_binlog_base_data_transport_order_all_hi
-  where
-    dt = date_format('{v_date}', 'yyyy-MM-dd')
-    and hour= date_format('{v_date}', 'HH')
-    and `__deleted` = 'false'
-  ) as v1
+  admin_info
 ;
 
 
@@ -246,7 +249,7 @@ def execution_data_task_id(ds, dag, **kwargs):
     cf = CountriesPublicFrame_dev(args)
 
     # 读取sql
-    _sql = "\n" + cf.alter_partition() + "\n" + dwd_oexpress_data_transport_order_hi_sql_task(ds, v_date)
+    _sql = "\n" + cf.alter_partition() + "\n" + dim_oexpress_admin_info_hf_sql_task(ds, v_date)
 
     logging.info('Executing: %s', _sql)
 
@@ -257,8 +260,8 @@ def execution_data_task_id(ds, dag, **kwargs):
     cf.touchz_success()
 
 
-dwd_oexpress_data_transport_order_hi_task = PythonOperator(
-    task_id='dwd_oexpress_data_transport_order_hi_task',
+dim_oexpress_admin_info_hf_task = PythonOperator(
+    task_id='dim_oexpress_admin_info_hf_task',
     python_callable=execution_data_task_id,
     provide_context=True,
     op_kwargs={
@@ -270,5 +273,7 @@ dwd_oexpress_data_transport_order_hi_task = PythonOperator(
     dag=dag
 )
 
-ods_binlog_base_data_transport_order_all_hi_check_task >> dwd_oexpress_data_transport_order_hi_task
+ods_binlog_base_system_admin_users_h_his_check_task >> dim_oexpress_admin_info_hf_task
+dim_oexpress_city_info_hf_check_task >> dim_oexpress_admin_info_hf_task
+
 

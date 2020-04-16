@@ -52,11 +52,11 @@ time_zone = config['NG']['time_zone']
 
 ##----------------------------------------- 依赖 ---------------------------------------##
 ### 检查当前小时的分区依赖
-###oss://opay-datalake/oexpress_all_hi/ods_binlog_base_conf_city_h_his
+###oss://opay-datalake/oexpress_h_his/ods_binlog_base_conf_city_h_his
 ods_binlog_base_conf_city_h_his_check_task = OssSensor(
     task_id='ods_binlog_base_conf_city_h_his_check_task',
     bucket_key='{hdfs_path_str}/dt={pt}/hour={hour}/_SUCCESS'.format(
-        hdfs_path_str="oexpress_all_hi/ods_binlog_base_conf_city_h_his",
+        hdfs_path_str="oexpress_h_his/ods_binlog_base_conf_city_h_his",
         pt='{{ds}}',
         hour='{{ execution_date.strftime("%H") }}'
     ),
@@ -225,9 +225,12 @@ select
   ,date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'yyyy-MM-dd') as dt
   ,date_format(default.localTime("{config}", 'NG', '{v_date}', 0), 'HH') as hour
 from
-  union_result
-where
-  rn = 1;
+  drver_info as v1
+left join
+  city_info as v2
+on
+  v1.city_id = v2.city_id
+;
 
 
     '''.format(
