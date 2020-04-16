@@ -112,14 +112,7 @@ ODS_CREATE_TABLE_SQL = '''
       `dt` string,
       `hour` string
     )
-    ROW FORMAT SERDE 
-        'org.openx.data.jsonserde.JsonSerDe' 
-    WITH SERDEPROPERTIES ( 
-        'ignore.malformed.json'='true') 
-    STORED AS INPUTFORMAT 
-        'org.apache.hadoop.mapred.TextInputFormat' 
-    OUTPUTFORMAT 
-        'org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat'
+    STORED AS orc
     LOCATION
       '{oss_path}';
     MSCK REPAIR TABLE {db_name}.`{table_name}`;
@@ -268,8 +261,8 @@ def run_check_table(mysql_db_name, mysql_table_name, conn_id, hive_h_his_table_n
                 data_type = 'string'
 
             # 有json表读取insert 部分，此处切换为double
-            elif result[1] == 'decimal':
-                data_type = 'decimal'
+            # elif result[1] == 'decimal':
+            #     data_type = 'decimal'
             else:
                 data_type = result[1]
             rows.append(
