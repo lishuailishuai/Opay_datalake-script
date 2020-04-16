@@ -97,7 +97,7 @@ set hive.exec.dynamic.partition.mode=nonstrict;
 set hive.strict.checks.cartesian.product=false;
 
 --1.将信息关联后插入原表
-insert overwrite table oexpress_dw.dwm_oexpress_transport_collect_di partition(country_code,dt,hour)
+insert overwrite table oexpress_dw.dwm_oexpress_transport_collect_di partition(country_code,dt)
 select
   id
   ,order_id
