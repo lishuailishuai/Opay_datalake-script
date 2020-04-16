@@ -249,6 +249,8 @@ def run_check_table(mysql_db_name, mysql_table_name, conn_id, hive_h_his_table_n
         mysql_cursor = mysql_conn.cursor()
         mysql_cursor.execute(column_sql)
         results = mysql_cursor.fetchall()
+        print("===============")
+        print(results)
         rows = []
         for result in results:
             if result[0] == 'dt':
@@ -265,6 +267,14 @@ def run_check_table(mysql_db_name, mysql_table_name, conn_id, hive_h_his_table_n
             #     data_type = 'decimal'
             else:
                 data_type = result[1]
+
+
+            print(result[4].type())
+            print(result[4])
+
+            print("--------------")
+
+            print("--------------")
             rows.append(
                 "`%s` %s comment '%s'" % (col_name, data_type, str(result[4]).replace('\n', '').replace('\r', '')))
         mysql_conn.close()
@@ -320,7 +330,8 @@ def run_sqoop_check_table(mysql_db_name, mysql_table_name, conn_id, hive_table_n
                 COLUMN_NAME,
                 DATA_TYPE,
                 NUMERIC_PRECISION,
-                NUMERIC_SCALE,COLUMN_COMMENT
+                NUMERIC_SCALE,
+                COLUMN_COMMENT
             FROM
                 information_schema.columns
             WHERE
