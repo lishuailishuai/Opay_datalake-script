@@ -23,7 +23,6 @@ import requests
 import os
 from airflow.hooks.hive_hooks import HiveCliHook
 from plugins.TaskTouchzSuccess import TaskTouchzSuccess
-from plugins.CountriesAppFrame import CountriesAppFrame
 from airflow.operators.python_operator import PythonOperator
 from airflow.sensors import OssSensor
 
@@ -44,7 +43,80 @@ dag = airflow.DAG('app_oride_cohort_w',
                   )
 
 ##----------------------------------------- 依赖 ---------------------------------------##
-dwm_oride_order_base_di_task = OssSensor(
+
+# 获取变量
+code_map = eval(Variable.get("sys_flag"))
+
+# 判断ufile(cdh环境)
+if code_map["id"].lower() == "ufile":
+    dwm_oride_order_base_di_task = UFileSensor(
+        task_id='dwm_oride_order_base_di_task',
+        filepath='{hdfs_path_str}/country_code=NG/dt={pt}/_SUCCESS'.format(
+            hdfs_path_str="oride/oride_dw/dwm_oride_order_base_di",
+            pt='{{ds}}'
+        ),
+        bucket_name='opay-datalake',
+        poke_interval=60,
+        dag=dag
+    )
+
+    dwm_oride_passenger_base_df_task = UFileSensor(
+        task_id='dwm_oride_passenger_base_df_task',
+        filepath='{hdfs_path_str}/country_code=nal/dt={pt}/_SUCCESS'.format(
+            hdfs_path_str="oride/oride_dw/dwm_oride_passenger_base_df",
+            pt='{{macros.ds_add(ds, +6)}}'
+        ),
+        bucket_name='opay-datalake',
+        poke_interval=60,
+        dag=dag
+    )
+
+    dwm_oride_driver_base_df_task = UFileSensor(
+        task_id='dwm_oride_driver_base_df_task',
+        filepath='{hdfs_path_str}/country_code=nal/dt={pt}/_SUCCESS'.format(
+            hdfs_path_str="oride/oride_dw/dwm_oride_driver_base_df",
+            pt='{{macros.ds_add(ds, +6)}}'
+        ),
+        bucket_name='opay-datalake',
+        poke_interval=60,
+        dag=dag
+    )
+
+    dwm_oride_passenger_act_w_task = UFileSensor(
+        task_id='dwm_oride_passenger_act_w_task',
+        filepath='{hdfs_path_str}/country_code=NG/dt={pt}/_SUCCESS'.format(
+            hdfs_path_str="oride/oride_dw/dwm_oride_passenger_act_w",
+            pt='{{macros.ds_add(ds, +6)}}'
+        ),
+        bucket_name='opay-datalake',
+        poke_interval=60,
+        dag=dag
+    )
+
+    dwm_oride_driver_act_w_task = UFileSensor(
+        task_id='dwm_oride_driver_act_w_task',
+        filepath='{hdfs_path_str}/country_code=NG/dt={pt}/_SUCCESS'.format(
+            hdfs_path_str="oride/oride_dw/dwm_oride_driver_act_w",
+            pt='{{macros.ds_add(ds, +6)}}'
+        ),
+        bucket_name='opay-datalake',
+        poke_interval=60,
+        dag=dag
+    )
+
+
+    ##----------------------------------------- 变量 ---------------------------------------##
+    def get_table_info(i):
+        table_names = ['app_oride_new_user_cohort_w',
+                       'app_oride_new_driver_cohort_w',
+                       'app_oride_act_user_cohort_w',
+                       'app_oride_act_driver_cohort_w']
+        hdfs_paths = "ufile://opay-datalake/oride/oride_dw/"
+        return table_names[i], hdfs_paths + table_names[i]
+else:
+    print("成功")
+
+    dwm_oride_order_base_di_task = OssSensor(
         task_id='dwm_oride_order_base_di_task',
         bucket_key='{hdfs_path_str}/country_code=NG/dt={pt}/_SUCCESS'.format(
             hdfs_path_str="oride/oride_dw/dwm_oride_order_base_di",
@@ -55,7 +127,7 @@ dwm_oride_order_base_di_task = OssSensor(
         dag=dag
     )
 
-dwm_oride_passenger_base_df_task = OssSensor(
+    dwm_oride_passenger_base_df_task = OssSensor(
         task_id='dwm_oride_passenger_base_df_task',
         bucket_key='{hdfs_path_str}/country_code=nal/dt={pt}/_SUCCESS'.format(
             hdfs_path_str="oride/oride_dw/dwm_oride_passenger_base_df",
@@ -66,7 +138,7 @@ dwm_oride_passenger_base_df_task = OssSensor(
         dag=dag
     )
 
-dwm_oride_driver_base_df_task = OssSensor(
+    dwm_oride_driver_base_df_task = OssSensor(
         task_id='dwm_oride_driver_base_df_task',
         bucket_key='{hdfs_path_str}/country_code=NG/dt={pt}/_SUCCESS'.format(
             hdfs_path_str="oride/oride_dw/dwm_oride_driver_base_df",
@@ -77,7 +149,7 @@ dwm_oride_driver_base_df_task = OssSensor(
         dag=dag
     )
 
-dwm_oride_passenger_act_w_task = OssSensor(
+    dwm_oride_passenger_act_w_task = OssSensor(
         task_id='dwm_oride_passenger_act_w_task',
         bucket_key='{hdfs_path_str}/country_code=NG/dt={pt}/_SUCCESS'.format(
             hdfs_path_str="oride/oride_dw/dwm_oride_passenger_act_w",
@@ -88,7 +160,7 @@ dwm_oride_passenger_act_w_task = OssSensor(
         dag=dag
     )
 
-dwm_oride_driver_act_w_task = OssSensor(
+    dwm_oride_driver_act_w_task = OssSensor(
         task_id='dwm_oride_driver_act_w_task',
         bucket_key='{hdfs_path_str}/country_code=NG/dt={pt}/_SUCCESS'.format(
             hdfs_path_str="oride/oride_dw/dwm_oride_driver_act_w",
@@ -100,16 +172,15 @@ dwm_oride_driver_act_w_task = OssSensor(
     )
 
 
-##----------------------------------------- 变量 ---------------------------------------##
-def get_table_info(i):
-    table_names = ['app_oride_new_user_cohort_w',
+    ##----------------------------------------- 变量 ---------------------------------------##
+    def get_table_info(i):
+        table_names = ['app_oride_new_user_cohort_w',
                        'app_oride_new_driver_cohort_w',
                        'app_oride_act_user_cohort_w',
                        'app_oride_act_driver_cohort_w']
-    hdfs_paths = "oss://opay-datalake/oride/oride_dw/"
-    return table_names[i], hdfs_paths + table_names[i]
+        hdfs_paths = "oss://opay-datalake/oride/oride_dw/"
+        return table_names[i], hdfs_paths + table_names[i]
 
-db_name = "oride_dw"
 
 def get_max_week(ds):
     sql = '''
@@ -131,17 +202,17 @@ def get_max_week(ds):
             max_week = week[0]
     return max_week
 
+
 ##----------------------------------------- 脚本 ---------------------------------------##
 
 
 def app_oride_new_user_cohort_w_sql_task(ds):
-
-    HQL='''set hive.exec.parallel=true;
+    HQL = '''set hive.exec.parallel=true;
     set hive.exec.dynamic.partition.mode=nonstrict;
     -- set hive.merge.mapredfiles=true;
     INSERT overwrite TABLE oride_dw.{table} partition(country_code,dt)
         --乘客新客留存数据统计【上线后的统计，上线后用每周的数据关联历史所有周的乘客新客数据】
-        
+
         select nvl(week_create_date,-10000) as week_create_date,
             nvl(m.weeks,-10000) as weeks,
             nvl(m.city_id,-10000) as city_id,
@@ -165,7 +236,7 @@ def app_oride_new_user_cohort_w_sql_task(ds):
                 count(if(new_user.passenger_id is not null,a.order_id,null)) as new_user_liucun_ord_cnt, --新客留存完单量
                 sum(if(new_user.passenger_id is not null,a.price,0)) as new_user_liucun_gmv, --新客留存完单gmv
                 sum(if(new_user.passenger_id is not null,a.distance,0)) as new_user_liucun_dis --新客留存完单里程     
-                
+
             from (
                 select passenger_id,city_id,
                     driver_serv_type as product_id,
@@ -192,7 +263,7 @@ def app_oride_new_user_cohort_w_sql_task(ds):
             on a.city_id=new_user.city_id
             and a.product_id=new_user.product_id
             and a.passenger_id=new_user.passenger_id
-        
+
             group by nvl(a.week_create_date,-10000),
             nvl(
                 if(a.week_create_date<new_user.week_create_date,
@@ -213,13 +284,12 @@ def app_oride_new_user_cohort_w_sql_task(ds):
 
 
 def app_oride_new_driver_cohort_w_sql_task(ds):
-
-    HQL='''set hive.exec.parallel=true;
+    HQL = '''set hive.exec.parallel=true;
     set hive.exec.dynamic.partition.mode=nonstrict;
     -- set hive.merge.mapredfiles=true;
      INSERT overwrite TABLE oride_dw.{table} partition(country_code,dt)
         --司机新客留存数据统计【上线后的统计，上线后用每周的数据关联历史所有周的司机新客数据,但是由于每天有些订单并不是终态数据，因此每次都需要重新判定新客和活跃】
-        
+
         select nvl(m.week_create_date,-10000) as week_create_date,
             nvl(m.weeks,-10000) as weeks,
             nvl(m.city_id,-10000) as city_id,
@@ -243,7 +313,7 @@ def app_oride_new_driver_cohort_w_sql_task(ds):
             count(if(new_driver.driver_id is not null,a.order_id,null)) as new_driver_liucun_ord_cnt, --新客留存完单量
             sum(if(new_driver.driver_id is not null,a.price,0)) as new_driver_liucun_gmv, --新客留存完单gmv
             sum(if(new_driver.driver_id is not null,a.distance,0)) as new_driver_liucun_dis --新客留存完单里程
-        
+
             from (
                 select driver_id,city_id,
                     driver_serv_type as product_id,
@@ -269,7 +339,7 @@ def app_oride_new_driver_cohort_w_sql_task(ds):
             on a.city_id=new_driver.city_id
             and a.product_id=new_driver.product_id
             and a.driver_id=new_driver.driver_id
-            
+
             group by nvl(a.week_create_date,-10000),
             nvl(
                 if(a.week_create_date<new_driver.week_create_date,
@@ -290,8 +360,7 @@ def app_oride_new_driver_cohort_w_sql_task(ds):
 
 
 def app_oride_act_user_cohort_w_sql_task(ds):
-
-    HQL='''set hive.exec.parallel=true;
+    HQL = '''set hive.exec.parallel=true;
     set hive.exec.dynamic.partition.mode=nonstrict;
     -- set hive.merge.mapredfiles=true;
      INSERT overwrite TABLE oride_dw.{table} partition(country_code,dt)
@@ -319,7 +388,7 @@ def app_oride_act_user_cohort_w_sql_task(ds):
             count(if(act_user.passenger_id is not null,a.order_id,null)) as act_user_liucun_ord_cnt, --活跃乘客留存完单量
             sum(if(act_user.passenger_id is not null,a.price,0)) as act_user_liucun_gmv, --活跃乘客留存完单gmv
             sum(if(act_user.passenger_id is not null,a.distance,0)) as act_user_liucun_dis --活跃乘客留存完单里程
-        
+
             from (
                 select passenger_id,city_id,
                     driver_serv_type as product_id,
@@ -355,7 +424,7 @@ def app_oride_act_user_cohort_w_sql_task(ds):
             with cube
         ) m
         where !(nvl(m.week_create_date,-10000)=-10000 or nvl(m.weeks,-10000)=-10000); 
-        
+
                  '''.format(
         pt=airflow.macros.ds_add(ds, +6),
         table=get_table_info(2)[0],
@@ -365,13 +434,12 @@ def app_oride_act_user_cohort_w_sql_task(ds):
 
 
 def app_oride_act_driver_cohort_w_sql_task(ds):
-
-    HQL='''set hive.exec.parallel=true;
+    HQL = '''set hive.exec.parallel=true;
     set hive.exec.dynamic.partition.mode=nonstrict;
     -- set hive.merge.mapredfiles=true;
     INSERT overwrite TABLE oride_dw.{table} partition(country_code,dt)
         --活跃司机留存数据统计【上线后的统计，上线后用每周的数据关联历史所有周的活跃司机数据】
-        
+
         select nvl(m.week_create_date,-10000) as week_create_date,
             nvl(m.weeks,-10000) as weeks,
             nvl(m.city_id,-10000) as city_id,
@@ -382,7 +450,7 @@ def app_oride_act_driver_cohort_w_sql_task(ds):
             act_driver_liucun_dis, --活跃司机留存完单里程
             'nal' as country_code,
             '{pt}' as dt
-        
+
         from(
             select nvl(a.week_create_date,-10000) as week_create_date,
             nvl(
@@ -396,7 +464,7 @@ def app_oride_act_driver_cohort_w_sql_task(ds):
             count(if(act_driver.driver_id is not null,a.order_id,null)) as act_driver_liucun_ord_cnt, --活跃司机留存完单量
             sum(if(act_driver.driver_id is not null,a.price,0)) as act_driver_liucun_gmv, --活跃司机留存完单gmv
             sum(if(act_driver.driver_id is not null,a.distance,0)) as act_driver_liucun_dis --活跃司机留存完单里程
-        
+
             from  (
                 select driver_id,city_id,
                     driver_serv_type as product_id,
@@ -439,184 +507,94 @@ def app_oride_act_driver_cohort_w_sql_task(ds):
     )
     return HQL
 
-#主流程
-def execution_new_user_task(ds,dag,**kwargs):
 
-    v_date=kwargs.get('v_execution_date')
-    v_day=kwargs.get('v_execution_day')
-    v_hour=kwargs.get('v_execution_hour')
-
+# 主流程
+def execution_new_user_task(ds, **kargs):
     hive_hook = HiveCliHook()
 
+    # 读取sql
+    _sql = app_oride_new_user_cohort_w_sql_task(ds)
+
+    logging.info('Executing: %s', _sql)
+
+    # 执行hive
+    hive_hook.run_cli(_sql)
+
+    # 生成_SUCCESS
+    """
+    第一个参数true: 数据目录是有country_code分区。false 没有
+    第二个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
+
+    """
+    pt = airflow.macros.ds_add(ds, +6)
     hdfs_path = get_table_info(0)[1]
-    table_name=get_table_info(0)[0]
+    TaskTouchzSuccess().countries_touchz_success(pt, "oride_dw", get_table_info(0)[0], hdfs_path, "true", "true")
 
-    args = [
-        {
-            "dag": dag,
-            "is_countries_online": "true",
-            "db_name": db_name,
-            "table_name": table_name,
-            "data_oss_path": hdfs_path,
-            "is_country_partition": "true",
-            "is_result_force_exist": "false",
-            "execute_time": v_date,
-            "is_hour_task": "false",
-            "frame_type": "local",
-            "is_offset": "true",
-            "execute_time_offset": -1,
-            "business_key": "oride"
-        }
-    ]
 
-    cf = CountriesAppFrame(args)
-
-    # 读取sql
-    _sql = "\n" + cf.alter_partition() + "\n" + app_oride_new_user_cohort_w_sql_task(ds)
-
-    logging.info('Executing: %s', _sql)
-
-    # 执行Hive
-    hive_hook.run_cli(_sql)
-
-    # 生产success
-    cf.touchz_success()
-
-def execution_new_driver_task(ds,dag,**kwargs):
-
-    v_date=kwargs.get('v_execution_date')
-    v_day=kwargs.get('v_execution_day')
-    v_hour=kwargs.get('v_execution_hour')
-
+def execution_new_driver_task(ds, **kargs):
     hive_hook = HiveCliHook()
 
+    # 读取sql
+    _sql = app_oride_new_driver_cohort_w_sql_task(ds)
+
+    # 执行hive
+    hive_hook.run_cli(_sql)
+
+    # 生成_SUCCESS
+    """
+    第一个参数true: 数据目录是有country_code分区。false 没有
+    第二个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
+
+    """
+    pt = airflow.macros.ds_add(ds, +6)
     hdfs_path = get_table_info(1)[1]
-    table_name=get_table_info(1)[0]
+    TaskTouchzSuccess().countries_touchz_success(pt, "oride_dw", get_table_info(1)[0], hdfs_path, "true", "true")
 
-    args = [
-        {
-            "dag": dag,
-            "is_countries_online": "true",
-            "db_name": db_name,
-            "table_name": table_name,
-            "data_oss_path": hdfs_path,
-            "is_country_partition": "true",
-            "is_result_force_exist": "false",
-            "execute_time": v_date,
-            "is_hour_task": "false",
-            "frame_type": "local",
-            "is_offset": "true",
-            "execute_time_offset": -1,
-            "business_key": "oride"
-        }
-    ]
 
-    cf = CountriesAppFrame(args)
-
-    # 读取sql
-    _sql = "\n" + cf.alter_partition() + "\n" + app_oride_new_driver_cohort_w_sql_task(ds)
-
-    logging.info('Executing: %s', _sql)
-
-    # 执行Hive
-    hive_hook.run_cli(_sql)
-
-    # 生产success
-    cf.touchz_success()
-
-def execution_act_user_task(ds,dag,**kwargs):
-
-    v_date=kwargs.get('v_execution_date')
-    v_day=kwargs.get('v_execution_day')
-    v_hour=kwargs.get('v_execution_hour')
-
+def execution_act_user_task(ds, **kargs):
     hive_hook = HiveCliHook()
 
+    # 读取sql
+    _sql = app_oride_act_user_cohort_w_sql_task(ds)
+
+    # 执行hive
+    hive_hook.run_cli(_sql)
+
+    # 生成_SUCCESS
+    """
+    第一个参数true: 数据目录是有country_code分区。false 没有
+    第二个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
+
+    """
+    pt = airflow.macros.ds_add(ds, +6)
     hdfs_path = get_table_info(2)[1]
-    table_name=get_table_info(2)[0]
+    TaskTouchzSuccess().countries_touchz_success(pt, "oride_dw", get_table_info(2)[0], hdfs_path, "true", "true")
 
-    args = [
-        {
-            "dag": dag,
-            "is_countries_online": "true",
-            "db_name": db_name,
-            "table_name": table_name,
-            "data_oss_path": hdfs_path,
-            "is_country_partition": "true",
-            "is_result_force_exist": "false",
-            "execute_time": v_date,
-            "is_hour_task": "false",
-            "frame_type": "local",
-            "is_offset": "true",
-            "execute_time_offset": -1,
-            "business_key": "oride"
-        }
-    ]
 
-    cf = CountriesAppFrame(args)
-
-    # 读取sql
-    _sql = "\n" + cf.alter_partition() + "\n" + app_oride_act_user_cohort_w_sql_task(ds)
-
-    logging.info('Executing: %s', _sql)
-
-    # 执行Hive
-    hive_hook.run_cli(_sql)
-
-    # 生产success
-    cf.touchz_success()
-
-def execution_act_driver_task(ds,dag,**kwargs):
-
-    v_date=kwargs.get('v_execution_date')
-    v_day=kwargs.get('v_execution_day')
-    v_hour=kwargs.get('v_execution_hour')
-
+def execution_act_driver_task(ds, **kargs):
     hive_hook = HiveCliHook()
 
-    hdfs_path = get_table_info(3)[1]
-    table_name=get_table_info(3)[0]
-
-    args = [
-        {
-            "dag": dag,
-            "is_countries_online": "true",
-            "db_name": db_name,
-            "table_name": table_name,
-            "data_oss_path": hdfs_path,
-            "is_country_partition": "true",
-            "is_result_force_exist": "false",
-            "execute_time": v_date,
-            "is_hour_task": "false",
-            "frame_type": "local",
-            "is_offset": "true",
-            "execute_time_offset": -1,
-            "business_key": "oride"
-        }
-    ]
-
-    cf = CountriesAppFrame(args)
-
     # 读取sql
-    _sql = "\n" + cf.alter_partition() + "\n" + app_oride_act_driver_cohort_w_sql_task(ds)
+    _sql = app_oride_act_driver_cohort_w_sql_task(ds)
 
-    logging.info('Executing: %s', _sql)
-
-    # 执行Hive
+    # 执行hive
     hive_hook.run_cli(_sql)
 
-    # 生产success
-    cf.touchz_success()
+    # 生成_SUCCESS
+    """
+    第一个参数true: 数据目录是有country_code分区。false 没有
+    第二个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
+
+    """
+    pt = airflow.macros.ds_add(ds, +6)
+    hdfs_path = get_table_info(3)[1]
+    TaskTouchzSuccess().countries_touchz_success(pt, "oride_dw", get_table_info(3)[0], hdfs_path, "true", "true")
+
 
 app_oride_new_user_cohort_w_task = PythonOperator(
     task_id='app_oride_new_user_cohort_w_task',
     python_callable=execution_new_user_task,
     provide_context=True,
-    op_kwargs={
-        'v_execution_date': '{{execution_date.strftime("%Y-%m-%d %H:%M:%S")}}',
-        'v_execution_day': '{{execution_date.strftime("%Y-%m-%d")}}',
-        'v_execution_hour': '{{execution_date.strftime("%H")}}'
-    },
     dag=dag
 )
 
@@ -624,11 +602,6 @@ app_oride_new_driver_cohort_w_task = PythonOperator(
     task_id='app_oride_new_driver_cohort_w_task',
     python_callable=execution_new_driver_task,
     provide_context=True,
-    op_kwargs={
-        'v_execution_date': '{{execution_date.strftime("%Y-%m-%d %H:%M:%S")}}',
-        'v_execution_day': '{{execution_date.strftime("%Y-%m-%d")}}',
-        'v_execution_hour': '{{execution_date.strftime("%H")}}'
-    },
     dag=dag
 )
 
@@ -636,11 +609,6 @@ app_oride_act_user_cohort_w_task = PythonOperator(
     task_id='app_oride_act_user_cohort_w_task',
     python_callable=execution_act_user_task,
     provide_context=True,
-    op_kwargs={
-        'v_execution_date': '{{execution_date.strftime("%Y-%m-%d %H:%M:%S")}}',
-        'v_execution_day': '{{execution_date.strftime("%Y-%m-%d")}}',
-        'v_execution_hour': '{{execution_date.strftime("%H")}}'
-    },
     dag=dag
 )
 
@@ -648,20 +616,14 @@ app_oride_act_driver_cohort_w_task = PythonOperator(
     task_id='app_oride_act_driver_cohort_w_task',
     python_callable=execution_act_driver_task,
     provide_context=True,
-    op_kwargs={
-        'v_execution_date': '{{execution_date.strftime("%Y-%m-%d %H:%M:%S")}}',
-        'v_execution_day': '{{execution_date.strftime("%Y-%m-%d")}}',
-        'v_execution_hour': '{{execution_date.strftime("%H")}}'
-    },
     dag=dag
 )
 
-
-dwm_oride_order_base_di_task>>app_oride_new_user_cohort_w_task
-dwm_oride_passenger_base_df_task>>app_oride_new_user_cohort_w_task
-dwm_oride_order_base_di_task>>app_oride_new_driver_cohort_w_task
-dwm_oride_driver_base_df_task>>app_oride_new_driver_cohort_w_task
-dwm_oride_order_base_di_task>>app_oride_act_user_cohort_w_task
-dwm_oride_passenger_act_w_task>>app_oride_act_user_cohort_w_task
-dwm_oride_order_base_di_task>>app_oride_act_driver_cohort_w_task
-dwm_oride_driver_act_w_task>>app_oride_act_driver_cohort_w_task
+dwm_oride_order_base_di_task >> app_oride_new_user_cohort_w_task
+dwm_oride_passenger_base_df_task >> app_oride_new_user_cohort_w_task
+dwm_oride_order_base_di_task >> app_oride_new_driver_cohort_w_task
+dwm_oride_driver_base_df_task >> app_oride_new_driver_cohort_w_task
+dwm_oride_order_base_di_task >> app_oride_act_user_cohort_w_task
+dwm_oride_passenger_act_w_task >> app_oride_act_user_cohort_w_task
+dwm_oride_order_base_di_task >> app_oride_act_driver_cohort_w_task
+dwm_oride_driver_act_w_task >> app_oride_act_driver_cohort_w_task

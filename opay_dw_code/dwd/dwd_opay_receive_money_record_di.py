@@ -117,6 +117,7 @@ def dwd_opay_receive_money_record_di_sql_task(ds):
     set mapred.max.split.size=1000000;
     set hive.exec.dynamic.partition.mode=nonstrict;
     set hive.exec.parallel=true;
+    
     with dim_user_merchant_data as (
             select 
                 trader_id, trader_name, trader_role, trader_kyc_level, if(state is null or state = '', '-', state) as state

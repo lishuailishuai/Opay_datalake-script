@@ -19,6 +19,7 @@ from airflow.operators.python_operator import PythonOperator
 from airflow.hooks.hive_hooks import HiveCliHook, HiveServer2Hook
 from plugins.CountriesPublicFrame import CountriesPublicFrame
 from plugins.TaskTouchzSuccess import TaskTouchzSuccess
+from plugins.CountriesAppFrame import CountriesAppFrame
 
 
 args = {
@@ -44,27 +45,7 @@ db_name = "oride_dw"
 table_name = "app_oride_driver_call_book_d"
 
 ##----------------------------------------- 依赖 ---------------------------------------##
-#获取变量
-code_map=eval(Variable.get("sys_flag"))
-
-#判断ufile(cdh环境)
-if code_map["id"].lower()=="ufile":
-    # 依赖 ufile://opay-datalake/oride/oride_dw/dwd_oride_client_event_detail_hi/country_code=nal/dt=2019-08-09/hour=06'
-    dependence_dwd_oride_client_event_detail_hi = UFileSensor(
-        task_id="dependence_dwd_oride_client_event_detail_hi",
-        filepath='{hdfs_path_str}/dt={pt}/hour=23'.format(
-            hdfs_path_str="oride/oride_dw/dwd_oride_client_event_detail_hi/country_code=nal",
-            pt='{{ ds }}'
-        ),
-        bucket_name='opay-datalake',
-        poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
-        dag=dag
-    )
-    #路径
-    hdfs_path = "ufile://opay-datalake/oride/oride_dw/" + table_name
-else:
-    print("成功")
-    dependence_dwd_oride_client_event_detail_hi = OssSensor(
+dependence_dwd_oride_client_event_detail_hi = OssSensor(
         task_id="dependence_dwd_oride_client_event_detail_hi",
         bucket_key='{hdfs_path_str}/dt={pt}/hour=23/_SUCCESS'.format(
             hdfs_path_str="oride/oride_dw/dwd_oride_client_event_detail_hi/country_code=nal",
@@ -74,8 +55,8 @@ else:
         poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
         dag=dag
     )
-    # 路径
-    hdfs_path = "oss://opay-datalake/oride/oride_dw/" + table_name
+# 路径
+hdfs_path = "oss://opay-datalake/oride/oride_dw/" + table_name
 ##----------------------------------------- 任务超时监控 ---------------------------------------##
 
 def fun_task_timeout_monitor(ds, dag, **op_kwargs):
@@ -192,9 +173,6 @@ def app_oride_driver_call_book_d_sql_task(ds):
 
 
 #主流程
-
-
-
 def dwd_oride_driver_call_record_mid(ds,**kargs):
     hive_hook=HiveCliHook()
 
@@ -205,26 +183,44 @@ def dwd_oride_driver_call_record_mid(ds,**kargs):
     # 执行Hive
     hive_hook.run_cli(_sql)
 
+def execution_data_task_id(ds,dag,**kwargs):
 
-
-def execution_data_task_id(ds,**kargs):
+    v_date=kwargs.get('v_execution_date')
+    v_day=kwargs.get('v_execution_day')
+    v_hour=kwargs.get('v_execution_hour')
 
     hive_hook = HiveCliHook()
+
+    args = [
+        {
+            "dag": dag,
+            "is_countries_online": "true",
+            "db_name": db_name,
+            "table_name": table_name,
+            "data_oss_path": hdfs_path,
+            "is_country_partition": "true",
+            "is_result_force_exist": "false",
+            "execute_time": v_date,
+            "is_hour_task": "false",
+            "frame_type": "local",
+            "is_offset": "true",
+            "execute_time_offset": -1,
+            "business_key": "oride"
+        }
+    ]
+
+    cf = CountriesAppFrame(args)
+
     # 读取sql
-    _sql = app_oride_driver_call_book_d_sql_task(ds)
+    _sql = "\n" + cf.alter_partition() + "\n" + app_oride_driver_call_book_d_sql_task(ds)
 
     logging.info('Executing: %s', _sql)
+
     # 执行Hive
     hive_hook.run_cli(_sql)
 
-    # 生成_SUCCESS
-    """
-    第一个参数true: 数据目录是有country_code分区。false 没有
-    第二个参数true: 数据有才生成_SUCCESS false 数据没有也生成_SUCCESS 
-
-    """
-    TaskTouchzSuccess().countries_touchz_success(ds, db_name, table_name, hdfs_path, "true", "true")
-
+    # 生产success
+    cf.touchz_success()
 
 dwd_oride_driver_call_record_mid_task = PythonOperator(
     task_id='dwd_oride_driver_call_record_mid_task',
@@ -237,6 +233,11 @@ app_oride_driver_call_book_d_task= PythonOperator(
     task_id='app_oride_driver_call_book_d_task',
     python_callable=execution_data_task_id,
     provide_context=True,
+    op_kwargs={
+        'v_execution_date': '{{execution_date.strftime("%Y-%m-%d %H:%M:%S")}}',
+        'v_execution_day': '{{execution_date.strftime("%Y-%m-%d")}}',
+        'v_execution_hour': '{{execution_date.strftime("%H")}}'
+    },
     dag=dag
 )
 
