@@ -171,7 +171,7 @@ select
   ,use_universal_code
   ,order_id
   ,transport_type
-  ,nsport_status
+  ,transport_status
   ,driver_id
   ,driver_name
   ,driver_phone_number
