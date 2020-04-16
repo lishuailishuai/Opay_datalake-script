@@ -67,7 +67,7 @@ def fun_task_timeout_monitor(ds,dag,**op_kwargs):
     dag_ids=dag.dag_id
 
     msg = [
-        {"dag":dag, "db": "opay_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=NG/dt={pt}".format(pt=ds), "timeout": "3000"}
+        {"dag":dag, "db": "opay_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "3000"}
     ]
 
     TaskTimeoutMonitor().set_task_monitor(msg)
@@ -185,7 +185,7 @@ def dwd_opay_client_event_base_di_sql_task(ds):
             get_json_object(e, '$.lng'),
             get_json_object(msg, '$.tid'),
             get_json_object(e, '$.bzp'),
-            'NG' as country_code,
+            'nal' as country_code,
             '{pt}' as dt
         FROM
             opay_ep_logv1_data LATERAL VIEW explode(split(regexp_replace(regexp_replace(get_json_object(msg, '$.es'), '\\\\]|\\\\[',''),'\\\\}}\\,\\\\{{','\\\\}}\\;\\\\{{'),'\\\\;')) es AS e
@@ -244,7 +244,7 @@ def execution_data_task_id(ds, dag, **kwargs):
     args = [
         {
             "dag": dag,
-            "is_countries_online": "true",
+            "is_countries_online": "false",
             "db_name": db_name,
             "table_name": table_name,
             "data_oss_path": hdfs_path,
