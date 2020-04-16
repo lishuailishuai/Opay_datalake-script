@@ -182,7 +182,7 @@ transport_info as (
   select
     *
   from
-    oexpress_dw.dwd_oexpress_data_transport_order_hi
+    oexpress_dw.dwm_oexpress_transport_collect_hi
   where
     concat(dt,' ',hour) >= default.minLocalTimeRange("{config}", '{v_date}', 0)
     and concat(dt,' ',hour) <= default.maxLocalTimeRange("{config}", '{v_date}', 0) 
