@@ -38,7 +38,7 @@ args = {
 }
 
 dag = airflow.DAG('dwm_opay_user_last_visit_df',
-                  schedule_interval="30 02 * * *",
+                  schedule_interval="40 01 * * *",
                   default_args=args,
                   )
 
@@ -48,6 +48,17 @@ dwm_opay_user_last_visit_df_prev_day_task = OssSensor(
     bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
         hdfs_path_str="opay/opay_dw/dwm_opay_user_last_visit_df/country_code=NG",
         pt='{{macros.ds_add(ds, -1)}}'
+    ),
+    bucket_name='opay-datalake',
+    poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
+    dag=dag
+)
+
+dwd_opay_user_tracking_app_login_di_check_task = OssSensor(
+    task_id='dwd_opay_user_tracking_app_login_di_check_task',
+    bucket_key='{hdfs_path_str}/dt={pt}/_SUCCESS'.format(
+        hdfs_path_str="opay/opay_dw/dwd_opay_user_tracking_app_login_di/country_code=NG",
+        pt='{{ds}}'
     ),
     bucket_name='opay-datalake',
     poke_interval=60,  # 依赖不满足时，一分钟检查一次依赖状态
@@ -91,18 +102,12 @@ def dwm_opay_user_last_visit_df_sql_task(ds):
     with 
     user_last_visit_di as (
         select 
-           uid as user_id, 
-           from_unixtime(cast(max(cast(t as bigint)) / 1000 as bigint)+3600) as last_visit_time,
+           user_id, 
+           max(visit_time) as last_visit_time,
            'NG' as country_code
-        from opay_source.service_data_tracking_app 
-        where concat(dt, hour) 
-            between date_format(date_sub('{pt}', 1), 'yyyy-MM-dd 23')
-                and date_format(date_add('{pt}', 1), 'yyyy-MM-dd 00')
-            and t is not null and t != ''
-            and servicedatatrackingapp='api_graphql_web_id' 
-            and ev in ('login version one','login version two','login version two again','registerSuccess to login')
-            and date_format(from_unixtime(cast(cast(t as bigint) / 1000 as bigint)+3600) , 'yyyy-MM-dd')= '{pt}'
-        group by uid
+        from opay_dw.dwd_opay_user_tracking_app_login_di
+        where dt = '{pt}'
+        group by user_id
     
     )
     
@@ -181,5 +186,5 @@ dwm_opay_user_last_visit_df_task = PythonOperator(
 )
 
 dwm_opay_user_last_visit_df_prev_day_task >> dwm_opay_user_last_visit_df_task
-
+dwd_opay_user_tracking_app_login_di_check_task >> dwm_opay_user_last_visit_df_task
 
