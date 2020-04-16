@@ -91,11 +91,6 @@ task_timeout_monitor = PythonOperator(
 def dwm_oexpress_transport_collect_di_sql_task(ds):
     HQL = '''
 
-set mapred.max.split.size=1000000;
-set hive.exec.parallel=true;
-set hive.exec.dynamic.partition.mode=nonstrict;
-set hive.strict.checks.cartesian.product=false;
-
 --1.将信息关联后插入原表
 insert overwrite table oexpress_dw.dwm_oexpress_transport_collect_di partition(country_code,dt)
 select
@@ -121,6 +116,13 @@ select
   ,driver_city_name
   ,driver_first_bind_time
   ,driver_created_at
+  ,driver_hub_name
+  ,driver_hub_address
+  ,driver_hub_lat
+  ,driver_hub_lng
+  ,driver_hub_contact_person
+  ,driver_hub_contact_phone
+  ,driver_hub_status
 
   --取货点仓库信息(原)
   ,ori_lat
