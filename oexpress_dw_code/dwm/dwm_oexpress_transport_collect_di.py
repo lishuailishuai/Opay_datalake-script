@@ -172,50 +172,6 @@ select
   ,sequence_idx
   ,estimated_distance
 
-  --订单信息
-  ,city_id
-  ,create_user_id
-  ,order_source
-  ,sender_cell
-  ,sender_first_name
-  ,sender_last_name
-  ,without_collect
-  ,ori_addr
-  ,receiver_cell
-  ,receiver_first_name
-  ,receiver_last_name
-  ,dest_addr
-  ,current_transport_id
-  ,current_hold_record_id
-  ,order_status
-  ,confirm_time
-  ,collected_time
-  ,finish_time
-  ,close_time
-  ,order_cancel_time
-  ,cancel_role
-  ,cancel_comment
-  ,product_category
-  ,product_category_name
-  ,basic_fee
-  ,weight_fee
-  ,insurance_fee
-  ,pickup_fee
-  ,tax_fee
-  ,deliver_fee
-  ,payment_method
-  ,price
-  ,weight
-  ,volume
-  ,comment
-  ,delivery_code
-  ,pickup_pic_url_list
-  ,order_create_time
-  ,order_update_time
-  ,item_code
-  ,cash_received
-  ,use_universal_code
-
   ,'NG' as country_code
   ,'{pt}' as dt
 from
