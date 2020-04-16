@@ -69,7 +69,6 @@ db_name,table_name,conn_id,prefix_name,priority_weight,server_name (采集配置
 table_list = [
 
     ("oexpress_data", "conf_sms", "oexpress_db", "base", 3, "oexpress_db", "false"),
-    #("oexpress_data", "data_device", "oexpress_db", "base", 3, "oexpress_db", "false"),
     ("oexpress_data", "data_driver", "oexpress_db", "base", 3, "oexpress_db", "false"),
     ("oexpress_data", "data_driver_statements", "oexpress_db", "base", 3, "oexpress_db", "false"),
     ("oexpress_data", "data_driver_statements_salary", "oexpress_db", "base", 3, "oexpress_db", "false"),
@@ -264,12 +263,13 @@ def run_check_table(mysql_db_name, mysql_table_name, conn_id, hive_h_his_table_n
             else:
                 col_name = result[0]
             if result[1] == 'timestamp' or result[1] == 'varchar' or result[1] == 'char' or result[1] == 'text' or \
-                    result[1] == 'longtext' or result[1] == 'mediumtext' :
+                    result[1] == 'longtext' or result[1] == 'mediumtext' or \
+                    result[1] == 'datetime' or result[1] == 'json':
                 data_type = 'string'
-            elif result[1] == 'datetime':
-                data_type = 'bigint'
+                
+            # 有json表读取insert 部分，此处切换为double
             elif result[1] == 'decimal':
-                data_type = result[1] + "(" + str(result[2]) + "," + str(result[3]) + ")"
+                data_type = 'double'
             else:
                 data_type = result[1]
             rows.append(
