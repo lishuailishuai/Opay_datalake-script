@@ -110,7 +110,7 @@ task_timeout_monitor = PythonOperator(
 ##----------------------------------------- 脚本 ---------------------------------------##
 
 
-def dwd_oride_location_driver_event_hi_sql_task(ds, execution_date):
+def dwd_oride_driver_cheating_detection_hi_sql_task(ds, hour):
     HQL = '''
     set hive.exec.parallel=true;
     set hive.exec.dynamic.partition.mode=nonstrict;
@@ -158,7 +158,7 @@ def dwd_oride_location_driver_event_hi_sql_task(ds, execution_date):
 '''.format(
         pt=ds,
         now_day=ds,
-        now_hour=execution_date.strftime("%H"),
+        now_hour=hour,
         table=table_name,
         db=db_name
     )
