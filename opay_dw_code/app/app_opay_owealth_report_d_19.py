@@ -271,7 +271,7 @@ app_opay_owealth_report_d_19_task = PythonOperator(
     python_callable=execution_data_task_id,
     provide_context=True,
     op_kwargs={
-        'v_execution_time': '{{execution_date.strftime("%Y-%m-%d %H:%M:%S")}}',
+        'v_execution_time': '{{(execution_date + macros.timedelta(days=1)).strftime("%Y-%m-%d %H:%M:%S")}}',
         'owner': '{{owner}}'
     },
     dag=dag
