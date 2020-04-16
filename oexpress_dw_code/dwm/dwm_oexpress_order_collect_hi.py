@@ -81,11 +81,11 @@ dwd_oexpress_data_order_hi_check_task = OssSensor(
     dag=dag
 )
 
-###oss://opay-datalake/oexpress/oexpress_dw/dwd_oexpress_data_transport_order_hi
-dwd_oexpress_data_transport_order_hi_check_task = OssSensor(
-    task_id='dwd_oexpress_data_transport_order_hi_check_task',
+###oss://opay-datalake/oexpress/oexpress_dw/dwm_oexpress_transport_collect_hi
+dwm_oexpress_transport_collect_hi_check_task = OssSensor(
+    task_id='dwm_oexpress_transport_collect_hi_check_task',
     bucket_key='{hdfs_path_str}/country_code=NG/dt={pt}/hour={hour}/_SUCCESS'.format(
-        hdfs_path_str="oexpress/oexpress_dw/dwd_oexpress_data_transport_order_hi",
+        hdfs_path_str="oexpress/oexpress_dw/dwm_oexpress_transport_collect_hi",
         pt='{{{{(execution_date+macros.timedelta(hours=({time_zone}+{gap_hour}))).strftime("%Y-%m-%d")}}}}'.format(
             time_zone=time_zone, gap_hour=0),
         hour='{{{{(execution_date+macros.timedelta(hours=({time_zone}+{gap_hour}))).strftime("%H")}}}}'.format(
@@ -415,6 +415,6 @@ dwm_oexpress_order_collect_hi_task = PythonOperator(
 
 dim_oexpress_hub_info_hf_check_task >> dwm_oexpress_order_collect_hi_task
 dwd_oexpress_data_order_hi_check_task >> dwm_oexpress_order_collect_hi_task
-dwd_oexpress_data_transport_order_hi_check_task >> dwm_oexpress_order_collect_hi_task
+dwm_oexpress_transport_collect_hi_check_task >> dwm_oexpress_order_collect_hi_task
 
 
