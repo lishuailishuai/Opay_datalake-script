@@ -211,7 +211,7 @@ city_info as (
 --3.取出仓库信息
 hub_info as (
   select
-    id as 
+    id
     ,name as hub_name
     ,address as hub_address
     ,lat as hub_lat
