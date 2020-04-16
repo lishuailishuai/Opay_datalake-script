@@ -290,6 +290,14 @@ def execution_data_task_id(ds,dag,**kwargs):
 
     cf = CountriesAppFrame(args)
 
+    # 读取sql
+    _sql = "\n" + cf.alter_partition() + "\n" + dim_oride_city_sql_task(ds)
+
+    logging.info('Executing: %s', _sql)
+
+    # 执行Hive
+    hive_hook.run_cli(_sql)
+
     # 生产success
     cf.touchz_success()
     
