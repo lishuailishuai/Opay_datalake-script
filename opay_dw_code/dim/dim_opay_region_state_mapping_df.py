@@ -46,7 +46,7 @@ def fun_task_timeout_monitor(ds,dag,**op_kwargs):
     dag_ids=dag.dag_id
 
     msg = [
-        {"dag":dag, "db": "opay_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=NG/dt={pt}".format(pt=ds), "timeout": "3000"}
+        {"dag":dag, "db": "opay_dw", "table":"{dag_name}".format(dag_name=dag_ids), "partition": "country_code=nal/dt={pt}".format(pt=ds), "timeout": "3000"}
     ]
 
     TaskTimeoutMonitor().set_task_monitor(msg)
@@ -71,7 +71,7 @@ def dim_opay_region_state_mapping_df_sql_task(ds):
     set hive.exec.dynamic.partition.mode=nonstrict;
     set hive.exec.parallel=true; --default false
     
-    insert overwrite table {db}.{table} partition(country_code='NG', dt='{pt}')
+    insert overwrite table {db}.{table} partition(country_code='nal', dt='{pt}')
     select 
         region, state
     from opay_dw_ods.ods_opay_region_state_mapping_df
@@ -91,7 +91,7 @@ def execution_data_task_id(ds, dag, **kwargs):
     args = [
         {
             "dag": dag,
-            "is_countries_online": "true",
+            "is_countries_online": "false",
             "db_name": db_name,
             "table_name": table_name,
             "data_oss_path": hdfs_path,
