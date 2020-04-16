@@ -269,7 +269,7 @@ def run_check_table(mysql_db_name, mysql_table_name, conn_id, hive_h_his_table_n
                 data_type = result[1]
 
 
-            print(result[4].type())
+            print(type(result[4]))
             print(result[4])
 
             print("--------------")
