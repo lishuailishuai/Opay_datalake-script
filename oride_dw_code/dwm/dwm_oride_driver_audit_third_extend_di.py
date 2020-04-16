@@ -162,7 +162,7 @@ def execution_data_task_id(ds,dag,**kwargs):
     args = [
         {
             "dag": dag,
-            "is_countries_online": "true",
+            "is_countries_online": "false",
             "db_name": db_name,
             "table_name": table_name,
             "data_oss_path": hdfs_path,

@@ -430,7 +430,7 @@ def execution_new_user_task(ds,dag,**kwargs):
     args = [
         {
             "dag": dag,
-            "is_countries_online": "true",
+            "is_countries_online": "false",
             "db_name": db_name,
             "table_name": table_name,
             "data_oss_path": hdfs_path,
@@ -472,7 +472,7 @@ def execution_new_driver_task(ds,dag,**kwargs):
     args = [
         {
             "dag": dag,
-            "is_countries_online": "true",
+            "is_countries_online": "false",
             "db_name": db_name,
             "table_name": table_name,
             "data_oss_path": hdfs_path,
@@ -514,7 +514,7 @@ def execution_act_user_task(ds,dag,**kwargs):
     args = [
         {
             "dag": dag,
-            "is_countries_online": "true",
+            "is_countries_online": "false",
             "db_name": db_name,
             "table_name": table_name,
             "data_oss_path": hdfs_path,
@@ -556,7 +556,7 @@ def execution_act_driver_task(ds,dag,**kwargs):
     args = [
         {
             "dag": dag,
-            "is_countries_online": "true",
+            "is_countries_online": "false",
             "db_name": db_name,
             "table_name": table_name,
             "data_oss_path": hdfs_path,
