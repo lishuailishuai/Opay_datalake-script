@@ -249,8 +249,7 @@ def run_check_table(mysql_db_name, mysql_table_name, conn_id, hive_h_his_table_n
         mysql_cursor = mysql_conn.cursor()
         mysql_cursor.execute(column_sql)
         results = mysql_cursor.fetchall()
-        print("===============")
-        print(results)
+
         rows = []
         for result in results:
             if result[0] == 'dt':
@@ -269,13 +268,6 @@ def run_check_table(mysql_db_name, mysql_table_name, conn_id, hive_h_his_table_n
             else:
                 data_type = result[1]
 
-
-            print(type(result[4]))
-            print(result[4].encode('utf8').decode('GBK'))
-
-            print("--------------")
-
-            print("--------------")
             rows.append(
                 "`%s` %s comment '%s'" % (col_name, data_type, str(result[4]).replace('\n', '').replace('\r', '')))
         mysql_conn.close()
